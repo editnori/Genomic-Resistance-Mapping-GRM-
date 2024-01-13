@@ -1,3 +1,5 @@
+# from asyncio import sleep
+import time
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, font
 import threading
@@ -14,7 +16,12 @@ import pandas as pd
 import numpy as np
 
 from kover import KoverDatasetCreator
-from ftp_downloader import FTPDownloadApp, DownloadWindow
+from ftp_downloader import (
+    FTPDownloadApp,
+    DownloadWindow,
+    get_last_metadata_update_date,
+    threaded,
+)
 
 
 class Page(Enum):
@@ -93,7 +100,7 @@ class App(customtkinter.CTk):
 
         # create navigation frame
         self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)
-        self.navigation_frame.grid(row=0, column=0, sticky="nsew")
+        self.navigation_frame.grid(row=0, column=0, sticky=tk.NSEW)
         self.navigation_frame.grid_rowconfigure(5, weight=1)
 
         self.navigation_frame_label = customtkinter.CTkLabel(
@@ -105,7 +112,7 @@ class App(customtkinter.CTk):
         )
         self.navigation_frame_label.grid(row=0, column=0, padx=20, pady=20)
 
-        self.home_button = customtkinter.CTkButton(
+        self.data_collection_frame_button = customtkinter.CTkButton(
             self.navigation_frame,
             corner_radius=0,
             height=80,
@@ -118,9 +125,9 @@ class App(customtkinter.CTk):
             anchor="w",
             command=lambda: self.select_frame_by_name(Page.DATA_COLLECTION_PAGE),
         )
-        self.home_button.grid(row=1, column=0, sticky="ew")
+        self.data_collection_frame_button.grid(row=1, column=0, sticky="ew")
 
-        self.frame_2_button = customtkinter.CTkButton(
+        self.preprocessing_frame_button = customtkinter.CTkButton(
             self.navigation_frame,
             corner_radius=0,
             height=80,
@@ -133,9 +140,9 @@ class App(customtkinter.CTk):
             anchor="w",
             command=lambda: self.select_frame_by_name(Page.PREPROCESSING_PAGE),
         )
-        self.frame_2_button.grid(row=2, column=0, sticky="ew")
+        self.preprocessing_frame_button.grid(row=2, column=0, sticky="ew")
 
-        self.frame_3_button = customtkinter.CTkButton(
+        self.kover_frame_button = customtkinter.CTkButton(
             self.navigation_frame,
             corner_radius=0,
             height=80,
@@ -148,9 +155,9 @@ class App(customtkinter.CTk):
             anchor="w",
             command=lambda: self.select_frame_by_name(Page.KOVER_LEARN_PAGE),
         )
-        self.frame_3_button.grid(row=3, column=0, sticky="ew")
+        self.kover_frame_button.grid(row=3, column=0, sticky="ew")
 
-        self.frame_4_button = customtkinter.CTkButton(
+        self.analysis_frame_button = customtkinter.CTkButton(
             self.navigation_frame,
             corner_radius=0,
             height=80,
@@ -163,7 +170,7 @@ class App(customtkinter.CTk):
             anchor="w",
             command=lambda: self.select_frame_by_name(Page.ANALYSIS_PAGE),
         )
-        self.frame_4_button.grid(row=4, column=0, sticky="ew")
+        self.analysis_frame_button.grid(row=4, column=0, sticky="ew")
 
         self.appearance_mode_menu = customtkinter.CTkOptionMenu(
             self.navigation_frame,
@@ -173,11 +180,13 @@ class App(customtkinter.CTk):
         self.appearance_mode_menu.grid(row=6, column=0, padx=20, pady=20, sticky="s")
 
         # create home frame
-        self.home_frame = customtkinter.CTkFrame(
+        self.data_collection_frame = customtkinter.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
         tab_view = customtkinter.CTkTabview(
-            self.home_frame, width=screen_width - 230, height=screen_height - 150
+            self.data_collection_frame,
+            width=screen_width - 230,
+            height=screen_height - 150,
         )
         tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
         tab_view.add("Genomes")
@@ -443,7 +452,7 @@ class App(customtkinter.CTk):
             width=150,
             text="View last update date",
             corner_radius=6,
-            command=self.get_last_metadata_update_date,
+            command=lambda: get_last_metadata_update_date(self.update_date),
         )
         self.viewupdate_date.place(x=250, y=120)
 
@@ -489,6 +498,7 @@ class App(customtkinter.CTk):
             corner_radius=15,
             border_width=2,
         )
+
         frame5.place(x=50, y=45)
         # Create a style
         style = ttk.Style(frame5)
@@ -501,7 +511,7 @@ class App(customtkinter.CTk):
 
         l2 = customtkinter.CTkLabel(
             master=frame5,
-            text="Lists available AMR datasets",
+            text="List available AMR datasets",
             font=("Century Gothic", 20),
         )
         l2.place(x=50, y=20)
@@ -592,12 +602,14 @@ class App(customtkinter.CTk):
         self.results_table.place(x=0, y=150)
 
         # create second frame
-        self.second_frame = customtkinter.CTkFrame(
+        self.preprocessing_frame = customtkinter.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
 
         tab_view = customtkinter.CTkTabview(
-            self.second_frame, width=screen_width - 230, height=screen_height - 150
+            self.preprocessing_frame,
+            width=screen_width - 230,
+            height=screen_height - 150,
         )
         tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
         tab_view.add("preprocessing")
@@ -712,9 +724,9 @@ class App(customtkinter.CTk):
         )
 
         self.scrollbar = tk.Scrollbar(outputscreen, command=self.cmd_output.yview)
-        self.scrollbar.grid(row=0, column=1, sticky="nsew")
+        self.scrollbar.grid(row=0, column=1, sticky=tk.NSEW)
         self.cmd_output["yscrollcommand"] = self.scrollbar.set
-        self.cmd_output.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+        self.cmd_output.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
         # create third frame
         self.kover_frame = customtkinter.CTkFrame(
@@ -915,9 +927,9 @@ class App(customtkinter.CTk):
         )
 
         self.scrollbar1 = tk.Scrollbar(outputscreen, command=self.cmd_output1.yview)
-        self.scrollbar1.grid(row=0, column=1, sticky="nsew")
+        self.scrollbar1.grid(row=0, column=1, sticky=tk.NSEW)
         self.cmd_output1["yscrollcommand"] = self.scrollbar1.set
-        self.cmd_output1.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+        self.cmd_output1.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
         create_dataset_frame = customtkinter.CTkFrame(
             tab_view.tab("split dataset"),
@@ -1123,9 +1135,9 @@ class App(customtkinter.CTk):
         )
 
         self.scrollbar2 = tk.Scrollbar(outputscreen, command=self.cmd_output2.yview)
-        self.scrollbar2.grid(row=0, column=1, sticky="nsew")
+        self.scrollbar2.grid(row=0, column=1, sticky=tk.NSEW)
         self.cmd_output2["yscrollcommand"] = self.scrollbar2.set
-        self.cmd_output2.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+        self.cmd_output2.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
         ##KOVER LEARN
 
@@ -1361,12 +1373,12 @@ class App(customtkinter.CTk):
         )
 
         self.scrollbar3 = tk.Scrollbar(outputscreen, command=self.cmd_output3.yview)
-        self.scrollbar3.grid(row=0, column=1, sticky="nsew")
+        self.scrollbar3.grid(row=0, column=1, sticky=tk.NSEW)
         self.cmd_output3["yscrollcommand"] = self.scrollbar3.set
-        self.cmd_output3.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+        self.cmd_output3.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
         # create fourth frame
-        self.fourth_frame = customtkinter.CTkFrame(
+        self.analysis_frame = customtkinter.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
 
@@ -2057,33 +2069,33 @@ class App(customtkinter.CTk):
                 self.progress_bar1["value"] = 0
                 self.size_label1.configure(text="")
 
+    @threaded
     def load_amr_data(self):
+        self.download_button4.configure(text="Loading..", state=tk.DISABLED)
         self.amr_metadata_file = filedialog.askopenfilename(
             filetypes=[("Text Files", "*.txt")]
         )
         if self.amr_metadata_file:
             self.amr = pd.read_table(
                 self.amr_metadata_file,
-                usecols=[
-                    "genome_id",
-                    "genome_name",
-                    "antibiotic",
-                    "resistant_phenotype",
-                ],
+                usecols=["genome_name", "antibiotic"],
                 converters={
-                    "genome_id": str,
                     "genome_name": lambda x: " ".join(x.lower().split()[:2]),
                 },
             )
             self.amr = self.amr.dropna()
 
             species_list = self.amr["genome_name"].unique()
-            species_list = ["All"] + sorted(list(species_list))
-            self.species_filter["values"] = species_list
+            species_list.sort()
+            species_list.put(0, "All")
+            self.species_filter["values"] = species_list.tolist()
             self.species_filter.set("All")
-            self.update_table(None)
+            self.species_filter.configure(state=tk.DISABLED)
+            self.update_table()
+            self.download_button4.configure(text="list", state=tk.NORMAL)
+            self.species_filter.configure(state=tk.NORMAL)
 
-    def update_table(self, event):
+    def update_table(self):
         selected_species = self.species_filter.get()
         if self.amr is not None:
             if selected_species == "All":
@@ -2092,43 +2104,54 @@ class App(customtkinter.CTk):
                 filtered_data = self.amr[self.amr["genome_name"] == selected_species]
 
             self.table.delete(*self.table.get_children())
-            total_items = 0
-            for index, row in filtered_data.iterrows():
+
+            for name, antibiotic in filtered_data.values:
                 self.table.insert(
-                    "", tk.END, values=(row["genome_name"], row["antibiotic"])
+                    "",
+                    tk.END,
+                    values=(name, antibiotic),
                 )
-                total_items += 1
-            self.total_label.config(text=f"Total: {total_items}")
+
+            self.total_label.config(text=f"Total: {len(filtered_data)}")
 
     def on_table_click(self, event):
-        item = self.table.selection()[0]  # Get the selected item
+        selected_items = self.table.selection()
+
+        if len(selected_items) == 0:
+            return
+
+        item = selected_items[0]  # Get the selected item
         selected_species = self.table.item(item, "values")[0]
         selected_antibiotics = self.table.item(item, "values")[1]
         selected_species = self.remove_square_brackets(selected_species)
         # Update the entry box with the selected species
+
         self.species_entry.delete(0, tk.END)  # Clear the current entry
-        self.species_entry.insert(0, selected_species)  #
         self.antibiotic_entry.delete(0, tk.END)  # Clear the current entry
+
+        self.species_entry.insert(0, selected_species)  #
         self.antibiotic_entry.insert(0, selected_antibiotics)
 
         # You can now display all the antibiotics for the selected species
         self.display_antibiotics_for_species(selected_species)
 
     def display_antibiotics_for_species(self, selected_species):
+        pass
         # Here, you can filter the dataset for the selected_species and display the antibiotics
         # You can use a new table or a label to display the antibiotics
         # Example:
-        antibiotics_for_species = self.get_antibiotics_for_species(selected_species)
+        # antibiotics_for_species = self.get_antibiotics_for_species(selected_species)
         # print(antibiotics_for_species)
         # self.display_antibiotics(antibiotics_for_species)
 
     def get_antibiotics_for_species(self, species):
+        pass
         # Filter the dataset to get antibiotics for the selected species
         # print(self.amr)
-        filtered_data = self.amr[
-            self.amr["genome_name"].str.strip("").str.lower() == species
-        ]
-        antibiotics = filtered_data["antibiotic"].unique()
+        # filtered_data = self.amr[
+        #     self.amr["genome_name"].str.strip("").str.lower() == species
+        # ]
+        # antibiotics = filtered_data["antibiotic"].unique()
         # print(filtered_data)
         # print(antibiotics)
 
@@ -2142,20 +2165,6 @@ class App(customtkinter.CTk):
         # Drop all genomes/antibiotic combinations for which we have contradictory measurements
         data = data.drop_duplicates(subset=["genome_id", "antibiotic"], keep=False)
         return data
-
-    def get_last_metadata_update_date(self):
-        PATRIC_FTP_BASE_URL = "ftp.bvbrc.org"
-        PATRIC_FTP_AMR_METADATA_URL = "/RELEASE_NOTES/PATRIC_genomes_AMR.txt"
-
-        try:
-            ftps = ftplib.FTP(PATRIC_FTP_BASE_URL)
-            ftps.login()
-            mod_time = ftps.sendcmd("MDTM " + PATRIC_FTP_AMR_METADATA_URL).split()[1]
-            last_update_time = datetime.strptime(mod_time, "%Y%m%d%H%M%S")
-            self.update_date.configure(text=f"Last Update Time: {last_update_time}")
-        except Exception as e:
-            print(e)
-            result_label.config(text=f"Error: {str(e)}")
 
     def sort_treeview_alphabetically(self, treeview, column, reverse=False):
         data = [(treeview.set(item, column), item) for item in treeview.get_children()]
@@ -2513,25 +2522,25 @@ class App(customtkinter.CTk):
             self.maxboundsize.place_forget()
 
     def select_frame_by_name(self, page: Page):
-        self.home_frame.grid_forget()
-        self.second_frame.grid_forget()
+        self.data_collection_frame.grid_forget()
+        self.preprocessing_frame.grid_forget()
         self.kover_frame.grid_forget()
-        self.fourth_frame.grid_forget()
+        self.analysis_frame.grid_forget()
 
-        self.home_button.configure(fg_color="transparent")
-        self.frame_2_button.configure(fg_color="transparent")
-        self.frame_3_button.configure(fg_color="transparent")
-        self.frame_4_button.configure(fg_color="transparent")
+        self.data_collection_frame_button.configure(fg_color="transparent")
+        self.preprocessing_frame_button.configure(fg_color="transparent")
+        self.kover_frame_button.configure(fg_color="transparent")
+        self.analysis_frame_button.configure(fg_color="transparent")
 
         if page == Page.DATA_COLLECTION_PAGE:
-            self.home_frame.grid(row=0, column=1, sticky="nsew")
-            self.home_button.configure(fg_color=("gray75", "gray25"))
+            self.data_collection_frame.grid(row=0, column=1, sticky=tk.NSEW)
+            self.data_collection_frame_button.configure(fg_color=("gray75", "gray25"))
         elif page == Page.PREPROCESSING_PAGE:
-            self.second_frame.grid(row=0, column=1, sticky="nsew")
-            self.frame_2_button.configure(fg_color=("gray75", "gray25"))
+            self.preprocessing_frame.grid(row=0, column=1, sticky=tk.NSEW)
+            self.preprocessing_frame_button.configure(fg_color=("gray75", "gray25"))
         elif page == Page.KOVER_LEARN_PAGE:
-            self.kover_frame.grid(row=0, column=1, sticky="nsew")
-            self.frame_3_button.configure(fg_color=("gray75", "gray25"))
+            self.kover_frame.grid(row=0, column=1, sticky=tk.NSEW)
+            self.kover_frame_button.configure(fg_color=("gray75", "gray25"))
         elif page == Page.ANALYSIS_PAGE:
-            self.fourth_frame.grid(row=0, column=1, sticky="nsew")
-            self.frame_4_button.configure(fg_color=("gray75", "gray25"))
+            self.analysis_frame.grid(row=0, column=1, sticky=tk.NSEW)
+            self.analysis_frame_button.configure(fg_color=("gray75", "gray25"))

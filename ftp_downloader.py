@@ -1,3 +1,5 @@
+from datetime import datetime
+import time
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from ftplib import FTP
@@ -5,6 +7,7 @@ from threading import Thread
 from concurrent.futures import Future
 import os
 from tkinter.ttk import Progressbar
+import traceback
 from typing import Optional
 
 from customtkinter import CTkButton, CTkLabel, CTkFrame
@@ -28,6 +31,21 @@ def threaded(fn):
     return wrapper
 
 
+@threaded
+def get_last_metadata_update_date(label: CTkLabel):
+    label.configure(text="Last Update Time: Loading...")
+    try:
+        ftps = FTP("ftp.bvbrc.org")
+        ftps.login()
+        mod_time = ftps.sendcmd(
+            "MDTM " + "/RELEASE_NOTES/PATRIC_genomes_AMR.txt"
+        ).split()[1]
+        last_update_time = datetime.strptime(mod_time, "%Y%m%d%H%M%S")
+        label.configure(text=f"Last Update Time: {last_update_time}")
+    except Exception:
+        print(traceback.format_exc())  # LOGGER
+
+
 class DownloadWindow:
     def __init__(
         self,
@@ -41,6 +59,7 @@ class DownloadWindow:
     ):
         self._capacity: int = 1
         self._is_downloading: bool = False
+        self._last_update_time: float = 0
 
         self._frame = frame
         self._download_button = download_button
@@ -67,7 +86,6 @@ class DownloadWindow:
             if self._select_path_button:
                 self._select_path_button.configure(state=tk.NORMAL)
             self._is_downloading = False
-        self._frame.update_idletasks()
 
     def is_downloading(self) -> bool:
         return self._is_downloading
@@ -75,24 +93,25 @@ class DownloadWindow:
     def set_path(self, path: str):
         if self._path_label:
             self._path_label.configure(text=path)
-        self._frame.update_idletasks()
 
     def get_path(self) -> Optional[str]:
-        if self._path_label:
-            return self._path_label["text"]
+        if self._path_label and self._path_label.cget("text"):
+            return self._path_label.cget("text")
         return None
 
     def set_capacity(self, capacity: int):
         self._capacity = capacity
 
     def set_progress_label(self, size: int):
-        if self._size_label:
-            self._size_label.configure(
-                text=f"Downloading: {size / 1_048_576:.2f} MB / {self._capacity / 1_048_576:.2f} MB"
-            )
-        if self._progress_bar:
-            self._progress_bar["value"] = size / self._capacity * 100
-        self._frame.update_idletasks()
+        current_time_ms = time.time_ns() / 1_000_000
+        if (current_time_ms - self._last_update_time) > 100 or size == self._capacity:
+            if self._size_label:
+                self._size_label.configure(
+                    text=f"Downloading: {size / 1_048_576:.2f} MB / {self._capacity / 1_048_576:.2f} MB"
+                )
+            if self._progress_bar:
+                self._progress_bar["value"] = size / self._capacity * 100
+            self._last_update_time = current_time_ms
 
     def set_buttons_commands(
         self,
@@ -127,25 +146,24 @@ class FTPDownloadApp:
 
     @threaded
     def download(self):
-        self.download_window.set_downloading(True)
         try:
+            self.download_window.set_downloading(True)
             filename = self.remote_path.rsplit("/", 2)[-1]
 
             if not self.download_window.get_path():
-                selected_path = os.getcwd()
+                raise IOError("No download path selected.")
             else:
                 selected_path = self.download_window.get_path()
 
             local_path = os.path.join(selected_path, filename)
 
             with open(local_path, "wb") as local_file:
+                print(local_path)
+                ftp = FTP("ftp.bvbrc.org")
+                ftp.login()
+                ftp.voidcmd("TYPE I")
+                self.download_window.set_capacity(ftp.size(self.remote_path))
                 with ftp.transfercmd(f"RETR {self.remote_path}") as conn:
-                    ftp = FTP("ftp.bvbrc.org")
-                    ftp.login()
-                    ftp.voidcmd("TYPE I")
-
-                    self.download_window.set_capacity(ftp.size(self.remote_path))
-
                     bytes_received = 0
                     while self.download_window.is_downloading() and (
                         data := conn.recv(1024)
@@ -153,14 +171,17 @@ class FTPDownloadApp:
                         local_file.write(data)
                         bytes_received += len(data)
                         self.download_window.set_progress_label(bytes_received)
-        except IOError as ioe:
+        except IOError:
             messagebox.showerror("Error", "Please change the download path.")
-            print("Error:", ioe)  # LOGGER
-        except Exception as e:
-            print("Error:", e)  # LOGGER
+            print(traceback.format_exc())  # LOGGER
+            self.download_window.set_downloading(False)
+        except Exception:
+            print(traceback.format_exc())  # LOGGER
+            self.download_window.set_downloading(False)
         finally:
             if ftp:
                 ftp.quit()
+            self.download_window.set_downloading(False)
 
     def cancel(self):
         if messagebox.askyesno(
