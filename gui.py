@@ -2,12 +2,11 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, font
 import threading
 import os
-import subprocess
+from subprocess import CalledProcessError, Popen, PIPE, run
 from datetime import datetime
-from ftplib import FTP
-import ftplib
 import csv
 import random
+from enum import Enum
 
 import customtkinter
 from PIL import Image
@@ -15,7 +14,14 @@ import pandas as pd
 import numpy as np
 
 from kover import KoverDatasetCreator
-from ftp_downloader import FTPDownloadApp
+from ftp_downloader import FTPDownloadApp, DownloadWindow
+
+
+class Page(Enum):
+    DATA_COLLECTION_PAGE = 0
+    PREPROCESSING_PAGE = 1
+    KOVER_LEARN_PAGE = 2
+    ANALYSIS_PAGE = 3
 
 
 class App(customtkinter.CTk):
@@ -27,7 +33,6 @@ class App(customtkinter.CTk):
 
         self.selected_directory = None
         self.genome_id = ""
-        self.ftp = None
         self.local_path = None
         customtkinter.set_appearance_mode("Dark")
         self.amr_metadata_file = None
@@ -111,7 +116,7 @@ class App(customtkinter.CTk):
             hover_color=("gray70", "gray30"),
             image=self.home_image,
             anchor="w",
-            command=self.home_button_event,
+            command=lambda: self.select_frame_by_name(Page.DATA_COLLECTION_PAGE),
         )
         self.home_button.grid(row=1, column=0, sticky="ew")
 
@@ -126,7 +131,7 @@ class App(customtkinter.CTk):
             hover_color=("gray70", "gray30"),
             image=self.chat_image,
             anchor="w",
-            command=self.frame_2_button_event,
+            command=lambda: self.select_frame_by_name(Page.PREPROCESSING_PAGE),
         )
         self.frame_2_button.grid(row=2, column=0, sticky="ew")
 
@@ -141,7 +146,7 @@ class App(customtkinter.CTk):
             hover_color=("gray70", "gray30"),
             image=self.add_user_image,
             anchor="w",
-            command=self.frame_3_button_event,
+            command=lambda: self.select_frame_by_name(Page.KOVER_LEARN_PAGE),
         )
         self.frame_3_button.grid(row=3, column=0, sticky="ew")
 
@@ -156,14 +161,14 @@ class App(customtkinter.CTk):
             hover_color=("gray70", "gray30"),
             image=self.add_user_image,
             anchor="w",
-            command=self.frame_4_button_event,
+            command=lambda: self.select_frame_by_name(Page.ANALYSIS_PAGE),
         )
         self.frame_4_button.grid(row=4, column=0, sticky="ew")
 
         self.appearance_mode_menu = customtkinter.CTkOptionMenu(
             self.navigation_frame,
             values=["Dark", "Light", "System"],
-            command=self.change_appearance_mode_event,
+            command=customtkinter.set_appearance_mode,
         )
         self.appearance_mode_menu.grid(row=6, column=0, padx=20, pady=20, sticky="s")
 
@@ -171,15 +176,15 @@ class App(customtkinter.CTk):
         self.home_frame = customtkinter.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
-        self.tabview = customtkinter.CTkTabview(
-            self.home_frame, width=screen_width - 100, height=screen_height - 150
+        tab_view = customtkinter.CTkTabview(
+            self.home_frame, width=screen_width - 230, height=screen_height - 150
         )
-        self.tabview.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
-        self.tabview.add("Genomes")
-        self.tabview.add("AMR")
+        tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
+        tab_view.add("Genomes")
+        tab_view.add("AMR")
 
         self.contigframe = customtkinter.CTkFrame(
-            self.tabview.tab("Genomes"),
+            tab_view.tab("Genomes"),
             width=320,
             height=400,
             corner_radius=15,
@@ -253,7 +258,7 @@ class App(customtkinter.CTk):
 
         # creating specific genome frame
         self.genomeframe = customtkinter.CTkFrame(
-            self.tabview.tab("Genomes"),
+            tab_view.tab("Genomes"),
             width=320,
             height=400,
             corner_radius=15,
@@ -327,7 +332,7 @@ class App(customtkinter.CTk):
 
         # creating genome metadata frame
         metadataframe = customtkinter.CTkFrame(
-            self.tabview.tab("Genomes"),
+            tab_view.tab("Genomes"),
             width=320,
             height=400,
             corner_radius=15,
@@ -384,21 +389,26 @@ class App(customtkinter.CTk):
             fg_color="transparent",
         )
         self.size_label2.place(x=50, y=370)
-        self.download_app = FTPDownloadApp(
+
+        self.download_window = DownloadWindow(
             metadataframe,
-            "RELEASE_NOTES/genome_metadata",
-            self.download_button2,
-            self.cancel_button2,
-            dirbtn2,
-            self.progress_bar2,
-            self.size_label2,
-            self.size_label2,
+            download_button=self.download_button2,
+            cancel_button=self.cancel_button2,
+            select_path_button=dirbtn2,
+            progress_bar=self.progress_bar2,
+            size_label=self.size_label2,
+            path_label=self.size_label2,
         )
+
+        self.download_app = FTPDownloadApp(
+            self.download_window, "RELEASE_NOTES/genome_metadata"
+        )
+
         # logic
 
         # creating AMR metadata frame
         frame4 = customtkinter.CTkFrame(
-            self.tabview.tab("AMR"),
+            tab_view.tab("AMR"),
             width=1000,
             height=400,
             corner_radius=15,
@@ -455,21 +465,25 @@ class App(customtkinter.CTk):
             master=frame4, text="", font=("Century Gothic", 10), fg_color="transparent"
         )
         self.size_label3.place(x=50, y=200)
-        self.download_app = FTPDownloadApp(
+
+        self.download_window2 = DownloadWindow(
             frame4,
-            "RELEASE_NOTES/PATRIC_genomes_AMR.txt",
             self.download_button3,
             self.cancel_button3,
             dirbtn3,
+            self.size_label3,
             self.progress_bar3,
             self.size_label3,
-            self.size_label3,
+        )
+
+        self.download_app = FTPDownloadApp(
+            self.download_window2, "RELEASE_NOTES/PATRIC_genomes_AMR.txt"
         )
         # logic
 
         # creating AMR metadata frame
         frame5 = customtkinter.CTkFrame(
-            self.tabview.tab("AMR"),
+            tab_view.tab("AMR"),
             width=500,
             height=400,
             corner_radius=15,
@@ -514,7 +528,7 @@ class App(customtkinter.CTk):
         self.table.bind("<ButtonRelease-1>", self.on_table_click)
 
         frame6 = customtkinter.CTkFrame(
-            self.tabview.tab("AMR"),
+            tab_view.tab("AMR"),
             width=800,
             height=400,
             corner_radius=15,
@@ -582,13 +596,13 @@ class App(customtkinter.CTk):
             self, corner_radius=0, fg_color="transparent"
         )
 
-        self.tabview2 = customtkinter.CTkTabview(
-            self.second_frame, width=screen_width - 100, height=screen_height - 150
+        tab_view = customtkinter.CTkTabview(
+            self.second_frame, width=screen_width - 230, height=screen_height - 150
         )
-        self.tabview2.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
-        self.tabview2.add("preprocessing")
+        tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
+        tab_view.add("preprocessing")
         self.controlpanel = customtkinter.CTkFrame(
-            self.tabview2.tab("preprocessing"),
+            tab_view.tab("preprocessing"),
             width=550,
             height=500,
             corner_radius=15,
@@ -667,46 +681,55 @@ class App(customtkinter.CTk):
             width=150,
             text="Run " + self.kmer_tool.get(),
             corner_radius=6,
-            command=self.run,
+            command=self.run_preprocessing,
         )
         self.runbtn.place(x=150, y=450)
 
         self.kmer_tool.trace_add("write", self.update_button_text)
 
-        self.outputscreen = customtkinter.CTkFrame(
-            self.tabview2.tab("preprocessing"),
+        custom_font = font.nametofont("TkDefaultFont")
+        custom_font.configure(size=12)
+
+        outputscreen = customtkinter.CTkFrame(
+            tab_view.tab("preprocessing"),
             width=650,
             height=650,
             corner_radius=15,
             border_width=2,
         )
-        self.outputscreen.place(x=700, y=20)
-        custom_font = font.nametofont("TkDefaultFont")
-        custom_font.configure(size=12)
+
+        outputscreen.place(x=800, y=20)
+        outputscreen.grid_propagate(False)
+        outputscreen.grid_rowconfigure(0, weight=1)
+        outputscreen.grid_columnconfigure(0, weight=1)
+
         self.cmd_output = tk.Text(
-            master=self.outputscreen,
+            master=outputscreen,
             height=650,
             width=650,
             state="disabled",
             font=custom_font,
         )
-        self.cmd_output.place(x=0, y=0)
-        # self.cmd_output.configure("error", foreground="red")
+
+        self.scrollbar = tk.Scrollbar(outputscreen, command=self.cmd_output.yview)
+        self.scrollbar.grid(row=0, column=1, sticky="nsew")
+        self.cmd_output["yscrollcommand"] = self.scrollbar.set
+        self.cmd_output.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
 
         # create third frame
         self.kover_frame = customtkinter.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
-        self.tabview = customtkinter.CTkTabview(
-            self.kover_frame, width=screen_width - 100, height=screen_height - 150
+        tab_view = customtkinter.CTkTabview(
+            self.kover_frame, width=screen_width - 230, height=screen_height - 150
         )
-        self.tabview.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
-        self.tabview.add("Create dataset")
-        self.tabview.add("split dataset")
-        self.tabview.add("kover learn")
+        tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
+        tab_view.add("Create dataset")
+        tab_view.add("split dataset")
+        tab_view.add("kover learn")
 
         create_dataset_frame = customtkinter.CTkFrame(
-            self.tabview.tab("Create dataset"),
+            tab_view.tab("Create dataset"),
             width=700,
             height=screen_height - 230,
             corner_radius=15,
@@ -870,29 +893,34 @@ class App(customtkinter.CTk):
         )
         self.phenotype_metadata_entry.place(x=50, y=550)
 
-        self.outputscreen = customtkinter.CTkFrame(
-            self.tabview.tab("Create dataset"),
-            width=550,
+        outputscreen = customtkinter.CTkFrame(
+            tab_view.tab("Create dataset"),
+            width=650,
             height=650,
             corner_radius=15,
             border_width=2,
         )
-        self.outputscreen.place(x=800, y=20)
-        custom_font = font.nametofont("TkDefaultFont")
-        custom_font.configure(size=7)
+
+        outputscreen.place(x=800, y=20)
+        outputscreen.grid_propagate(False)
+        outputscreen.grid_rowconfigure(0, weight=1)
+        outputscreen.grid_columnconfigure(0, weight=1)
+
         self.cmd_output1 = tk.Text(
-            master=self.outputscreen,
+            master=outputscreen,
             height=650,
             width=650,
             state="disabled",
             font=custom_font,
-            wrap="word",
         )
-        self.scrollbar = tk.Scrollbar(self.outputscreen, command=self.cmd_output1.yview)
-        self.cmd_output1.place(x=0, y=0)
+
+        self.scrollbar1 = tk.Scrollbar(outputscreen, command=self.cmd_output1.yview)
+        self.scrollbar1.grid(row=0, column=1, sticky="nsew")
+        self.cmd_output1["yscrollcommand"] = self.scrollbar1.set
+        self.cmd_output1.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
 
         create_dataset_frame = customtkinter.CTkFrame(
-            self.tabview.tab("split dataset"),
+            tab_view.tab("split dataset"),
             width=700,
             height=screen_height - 230,
             corner_radius=15,
@@ -1073,31 +1101,36 @@ class App(customtkinter.CTk):
         )
         self.split_btn.place(x=200, y=630)
 
-        self.outputscreen = customtkinter.CTkFrame(
-            self.tabview.tab("split dataset"),
-            width=550,
+        outputscreen = customtkinter.CTkFrame(
+            tab_view.tab("split dataset"),
+            width=650,
             height=650,
             corner_radius=15,
             border_width=2,
         )
-        self.outputscreen.place(x=800, y=20)
-        custom_font = font.nametofont("TkDefaultFont")
-        custom_font.configure(size=9)
+
+        outputscreen.place(x=800, y=20)
+        outputscreen.grid_propagate(False)
+        outputscreen.grid_rowconfigure(0, weight=1)
+        outputscreen.grid_columnconfigure(0, weight=1)
+
         self.cmd_output2 = tk.Text(
-            master=self.outputscreen,
+            master=outputscreen,
             height=650,
             width=650,
             state="disabled",
             font=custom_font,
-            wrap="word",
         )
-        self.scrollbar = tk.Scrollbar(self.outputscreen, command=self.cmd_output2.yview)
-        self.cmd_output2.place(x=0, y=0)
+
+        self.scrollbar2 = tk.Scrollbar(outputscreen, command=self.cmd_output2.yview)
+        self.scrollbar2.grid(row=0, column=1, sticky="nsew")
+        self.cmd_output2["yscrollcommand"] = self.scrollbar2.set
+        self.cmd_output2.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
 
         ##KOVER LEARN
 
         create_dataset_frame = customtkinter.CTkFrame(
-            self.tabview.tab("kover learn"),
+            tab_view.tab("kover learn"),
             width=700,
             height=screen_height - 230,
             corner_radius=15,
@@ -1306,26 +1339,31 @@ class App(customtkinter.CTk):
         )
         self.koverlearn_btn.place(x=200, y=630)
 
-        self.outputscreen = customtkinter.CTkFrame(
-            self.tabview.tab("kover learn"),
-            width=550,
+        outputscreen = customtkinter.CTkFrame(
+            tab_view.tab("kover learn"),
+            width=650,
             height=650,
             corner_radius=15,
             border_width=2,
         )
-        self.outputscreen.place(x=800, y=20)
-        custom_font = font.nametofont("TkDefaultFont")
-        custom_font.configure(size=9)
+
+        outputscreen.place(x=800, y=20)
+        outputscreen.grid_propagate(False)
+        outputscreen.grid_rowconfigure(0, weight=1)
+        outputscreen.grid_columnconfigure(0, weight=1)
+
         self.cmd_output3 = tk.Text(
-            master=self.outputscreen,
+            master=outputscreen,
             height=650,
             width=650,
             state="disabled",
             font=custom_font,
-            wrap="word",
         )
-        self.scrollbar = tk.Scrollbar(self.outputscreen, command=self.cmd_output2.yview)
-        self.cmd_output3.place(x=0, y=0)
+
+        self.scrollbar3 = tk.Scrollbar(outputscreen, command=self.cmd_output3.yview)
+        self.scrollbar3.grid(row=0, column=1, sticky="nsew")
+        self.cmd_output3["yscrollcommand"] = self.scrollbar3.set
+        self.cmd_output3.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
 
         # create fourth frame
         self.fourth_frame = customtkinter.CTkFrame(
@@ -1333,11 +1371,11 @@ class App(customtkinter.CTk):
         )
 
         # select default frame
-        self.select_frame_by_name("home")
+        self.select_frame_by_name(Page.DATA_COLLECTION_PAGE)
 
-    def run(self):
-        self.cmd_output["state"] = "normal"
-        self.cmd_output.delete("1.0", "end")
+    def run_preprocessing(self):
+        self.cmd_output["state"] = tk.NORMAL
+        self.cmd_output.delete("1.0", tk.END)
         if self.kmer_tool.get() == "Ray Surveyor":
             self.run_ray_surveyor()
         elif self.kmer_tool.get() == "DSK":
@@ -1357,7 +1395,7 @@ class App(customtkinter.CTk):
             or not kmer_length
         ):
             self.update_cmd_output(
-                "Please fill in all required fields.", self.cmd_output
+                "Please fill in all required fields.\n", self.cmd_output
             )
             return
 
@@ -1385,36 +1423,36 @@ class App(customtkinter.CTk):
             try:
                 self.update_cmd_output("Running Ray Surveyor...", self.cmd_output)
 
-                process = subprocess.Popen(
+                process = Popen(
                     ray_surveyor_command1,
                     shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=PIPE,
+                    stderr=PIPE,
                     universal_newlines=True,
                 )
-                self.display_realtime_output(process, self.cmd_output)
+                self.display_process_output(process, self.cmd_output)
 
-                process = subprocess.Popen(
+                process = Popen(
                     ray_surveyor_command2,
                     shell=True,
                     cwd=self.ray_surveyor_dir,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=PIPE,
+                    stderr=PIPE,
                     universal_newlines=True,
                 )
-                self.display_realtime_output(process, self.cmd_output)
+                self.display_process_output(process, self.cmd_output)
 
                 self.update_cmd_output(
                     "Ray Surveyor completed successfully.\n check the output at:"
                     + output_dir,
                     self.cmd_output,
                 )
-            except subprocess.CalledProcessError as e:
+            except CalledProcessError as e:
                 self.update_cmd_output(
                     "Ray Surveyor encountered an error.", self.cmd_output, "error"
                 )
-                self.update_cmd_output(e.stdout, "error", self.cmd_output)
-                self.update_cmd_output(e.stderr, "error", self.cmd_output)
+                self.update_cmd_output(e.stdout, self.cmd_output, "error")
+                self.update_cmd_output(e.stderr, self.cmd_output, "error")
 
         cmd_thread = threading.Thread(target=run_ray_surveyor_command)
         cmd_thread.start()
@@ -1443,9 +1481,9 @@ class App(customtkinter.CTk):
             # # Run the 'ls' command to list files in the dataset folder and save to list_reads
             # ls_command1 = f"cd { output_dir}"
 
-            # subprocess.run(ls_command1, shell=True, check=True,)
+            # run(ls_command1, shell=True, check=True,)
             ls_command = f" wsl ls -1 {dataset_folder}/* > list_reads_file"
-            subprocess.run(
+            run(
                 ls_command,
                 shell=True,
                 check=True,
@@ -1455,22 +1493,24 @@ class App(customtkinter.CTk):
             dsk_command = f"wsl bin/dsk/dsk -file list_reads_file -out-dir {dsk_output_dir} -kmer-size {kmer_length}"
             self.update_cmd_output("Running DSK...", self.cmd_output)
 
-            process = subprocess.Popen(
+            process = Popen(
                 dsk_command,
                 shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=PIPE,
+                stderr=PIPE,
                 universal_newlines=True,
             )
-            self.display_realtime_output(process, self.cmd_output)
+            self.display_process_output(process, self.cmd_output)
 
             self.update_cmd_output(
                 "DSK completed successfully. Output stored in:", dsk_output_dir
             )
-        except subprocess.CalledProcessError as e:
-            self.update_cmd_output("DSK encountered an error.", "error")
-            self.update_cmd_output(e.stdout, "error")
-            self.update_cmd_output(e.stderr, "error")
+        except CalledProcessError as e:
+            self.update_cmd_output(
+                "DSK encountered an error.", self.cmd_output, "error"
+            )
+            self.update_cmd_output(e.stdout, self.cmd_output, "error")
+            self.update_cmd_output(e.stderr, self.cmd_output, "error")
 
     def koverlearn_error(self):
         if not self.pickdataset_entry.get():
@@ -1539,14 +1579,14 @@ class App(customtkinter.CTk):
                         output_path1,
                     )
 
-                process = subprocess.Popen(
+                process = Popen(
                     command,
                     shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=PIPE,
+                    stderr=PIPE,
                     universal_newlines=True,
                 )
-                self.display_realtime_output(process, self.cmd_output3)
+                self.display_process_output(process, self.cmd_output3)
 
             except Exception as e:
                 # Handle any exceptions that occur during the dataset creation process
@@ -1626,14 +1666,14 @@ class App(customtkinter.CTk):
                     folds,
                     random_seed,
                 )
-                process = subprocess.Popen(
+                process = Popen(
                     command,
                     shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=PIPE,
+                    stderr=PIPE,
                     universal_newlines=True,
                 )
-                self.display_realtime_output(process, self.cmd_output2)
+                self.display_process_output(process, self.cmd_output2)
                 self.split_btn.configure(text="split dataset", state=tk.NORMAL)
 
     def errorcheck_create_dataset(self):
@@ -1700,8 +1740,8 @@ class App(customtkinter.CTk):
         thread.start()
 
     def kover_learn_thread(self):
-        self.cmd_output3["state"] = "normal"
-        self.cmd_output3.delete("1.0", "end")
+        self.cmd_output3["state"] = tk.NORMAL
+        self.cmd_output3.delete("1.0", tk.END)
         thread = threading.Thread(target=self.koverlearn)
         thread.start()
 
@@ -1748,15 +1788,15 @@ class App(customtkinter.CTk):
                     # Handle other dataset types if needed
                     pass
 
-                process = subprocess.Popen(
+                process = Popen(
                     command,
                     shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=PIPE,
+                    stderr=PIPE,
                     universal_newlines=True,
                 )
-                self.display_realtime_output(process, self.cmd_output1)
-                # self.display_realtime_output("Done!", self.cmd_output1)
+                self.display_process_output(process, self.cmd_output1)
+                # self.display_process_output("Done!", self.cmd_output1)
                 self.create_dataset_btn.configure(
                     text="create Dataset", state=tk.NORMAL
                 )
@@ -1939,35 +1979,6 @@ class App(customtkinter.CTk):
         self.download_thread = threading.Thread(target=download_genomes)
         self.download_thread.start()
 
-    def download_ftp(self, contigs_folder):
-        try:
-            self.ftp = FTP("ftp.bvbrc.org")
-            self.ftp.login()
-            self.ftp.voidcmd("TYPE I")
-            total_size = self.ftp.size(self.remote_path)
-            total_size_mb = total_size / (1024 * 1024)
-            filename = self.remote_path.split("/")[-1]
-            local_path = os.path.join(contigs_folder, filename)
-
-            with self.ftp.transfercmd("RETR " + self.remote_path) as conn:
-                with open(local_path, "wb") as local_file:
-                    bytes_received = 0
-                    while True:
-                        if self.cancel_download:
-                            break
-                        data = conn.recv(1024)
-                        if not data:
-                            break
-                        local_file.write(data)
-                        bytes_received += len(data)
-
-        except Exception as e:
-            messagebox.showerror("Error", e)
-            print("Error:", e)
-        finally:
-            if self.ftp:
-                self.ftp.quit()
-
     def cancelcontigs(self):
         if self.download_thread and self.download_thread.is_alive():
             if messagebox.askyesno(
@@ -2046,7 +2057,6 @@ class App(customtkinter.CTk):
                 self.progress_bar1["value"] = 0
                 self.size_label1.configure(text="")
 
-    # Function to read and display the AMR metadata in a table
     def load_amr_data(self):
         self.amr_metadata_file = filedialog.askopenfilename(
             filetypes=[("Text Files", "*.txt")]
@@ -2085,7 +2095,7 @@ class App(customtkinter.CTk):
             total_items = 0
             for index, row in filtered_data.iterrows():
                 self.table.insert(
-                    "", "end", values=(row["genome_name"], row["antibiotic"])
+                    "", tk.END, values=(row["genome_name"], row["antibiotic"])
                 )
                 total_items += 1
             self.total_label.config(text=f"Total: {total_items}")
@@ -2274,7 +2284,7 @@ class App(customtkinter.CTk):
         ):
             self.results_table.insert(
                 "",
-                "end",
+                tk.END,
                 values=(
                     "               " + name,
                     "                       " + id + "                       ",
@@ -2403,20 +2413,23 @@ class App(customtkinter.CTk):
                     f"-read-sample-assembly {file_name} {input_file}\n"
                 )
 
-    def display_realtime_output(self, process, output_target=None):
-
+    def display_process_output(self, process: Popen, output_target=None):
         for line in process.stdout:
             self.update_cmd_output(line, output_target)
         for line in process.stderr:
             self.update_cmd_output(line, output_target, "error")
 
-    def update_cmd_output(self, message, output_target=None, tag=None):
-        output_target["state"] = "normal"
-        # output_target.delete("1.0", "end")
-        output_target.insert(tk.END, message)
+    def update_cmd_output(self, message: str, output_target: tk.Text, tag: str = None):
+        output_target["state"] = tk.NORMAL
+
+        if tag:
+            output_target.insert(tk.END, f"{tag}: {message}")
+        else:
+            output_target.insert(tk.END, message)
+
         output_target.see(tk.END)
+        output_target["state"] = tk.DISABLED
         output_target.update_idletasks()
-        output_target["state"] = "disabled"
 
     def pickkover(self):
         file_path = filedialog.askopenfilename(
@@ -2499,50 +2512,26 @@ class App(customtkinter.CTk):
             self.maxboundsize_spinbox.place_forget()
             self.maxboundsize.place_forget()
 
-    def select_frame_by_name(self, name):
-        # set button color for selected button
-        self.home_button.configure(
-            fg_color=("gray75", "gray25") if name == "home" else "transparent"
-        )
-        self.frame_2_button.configure(
-            fg_color=("gray75", "gray25") if name == "frame_2" else "transparent"
-        )
-        self.frame_3_button.configure(
-            fg_color=("gray75", "gray25") if name == "frame_3" else "transparent"
-        )
-        self.frame_4_button.configure(
-            fg_color=("gray75", "gray25") if name == "frame_4" else "transparent"
-        )
+    def select_frame_by_name(self, page: Page):
+        self.home_frame.grid_forget()
+        self.second_frame.grid_forget()
+        self.kover_frame.grid_forget()
+        self.fourth_frame.grid_forget()
 
-        # show selected frame
-        if name == "home":
+        self.home_button.configure(fg_color="transparent")
+        self.frame_2_button.configure(fg_color="transparent")
+        self.frame_3_button.configure(fg_color="transparent")
+        self.frame_4_button.configure(fg_color="transparent")
+
+        if page == Page.DATA_COLLECTION_PAGE:
             self.home_frame.grid(row=0, column=1, sticky="nsew")
-        else:
-            self.home_frame.grid_forget()
-        if name == "frame_2":
+            self.home_button.configure(fg_color=("gray75", "gray25"))
+        elif page == Page.PREPROCESSING_PAGE:
             self.second_frame.grid(row=0, column=1, sticky="nsew")
-        else:
-            self.second_frame.grid_forget()
-        if name == "frame_3":
+            self.frame_2_button.configure(fg_color=("gray75", "gray25"))
+        elif page == Page.KOVER_LEARN_PAGE:
             self.kover_frame.grid(row=0, column=1, sticky="nsew")
-        else:
-            self.kover_frame.grid_forget()
-        if name == "frame_4":
+            self.frame_3_button.configure(fg_color=("gray75", "gray25"))
+        elif page == Page.ANALYSIS_PAGE:
             self.fourth_frame.grid(row=0, column=1, sticky="nsew")
-        else:
-            self.fourth_frame.grid_forget()
-
-    def home_button_event(self):
-        self.select_frame_by_name("home")
-
-    def frame_2_button_event(self):
-        self.select_frame_by_name("frame_2")
-
-    def frame_3_button_event(self):
-        self.select_frame_by_name("frame_3")
-
-    def frame_4_button_event(self):
-        self.select_frame_by_name("frame_4")
-
-    def change_appearance_mode_event(self, new_appearance_mode):
-        customtkinter.set_appearance_mode(new_appearance_mode)
+            self.frame_4_button.configure(fg_color=("gray75", "gray25"))
