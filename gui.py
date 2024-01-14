@@ -519,11 +519,9 @@ class App(customtkinter.CTk):
             master=frame5, text="list", corner_radius=6, command=self.load_amr_data
         )
         self.download_button4.place(x=50, y=50)
-        self.species_filter = ttk.Combobox(
-            master=frame5, values=["All"], state="readonly"
-        )
-        self.species_filter.set("All")
+        self.species_filter = ttk.Combobox(master=frame5, state="readonly")
         self.species_filter.bind("<<ComboboxSelected>>", self.update_table)
+        self.species_filter.bind("<KeyRelease>", self.update_table)
         self.species_filter.place(x=280, y=50)
         self.total_label = tk.Label(master=frame5, text="Total: 0")
         self.total_label.place(x=280, y=90)
@@ -2096,9 +2094,7 @@ class App(customtkinter.CTk):
 
             species_list = self.amr["genome_name"].unique()
             species_list.sort()
-            species_list.put(0, "All")
             self.species_filter["values"] = species_list.tolist()
-            self.species_filter.set("All")
             self.species_filter.configure(state=tk.DISABLED)
             self.update_table()
             self.species_filter.configure(state=tk.NORMAL)
@@ -2108,11 +2104,13 @@ class App(customtkinter.CTk):
         selected_species = self.species_filter.get()
         self.start = 0
         if len(self.amr) > 0:
-            if selected_species == "All":
+            if not selected_species:
                 self.filtered_data = self.amr
             else:
                 self.filtered_data = self.amr[
-                    self.amr["genome_name"] == selected_species
+                    self.amr["genome_name"].str.contains(
+                        pat=selected_species, case=False, regex=False
+                    )
                 ]
 
             self.table.delete(*self.table.get_children())
