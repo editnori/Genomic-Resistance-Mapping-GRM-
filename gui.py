@@ -529,13 +529,22 @@ class App(customtkinter.CTk):
         self.total_label.place(x=280, y=90)
         columns = ["Species", "Antibiotic"]
         self.table = ttk.Treeview(
-            master=frame5, columns=columns, show="headings", style="Treeview.Treeview"
+            master=frame5,
+            columns=columns,
+            show="headings",
+            style="Treeview.Treeview",
+            selectmode="browse",
         )
         self.table.place(x=50, y=130)
         for col in columns:
             self.table.heading(col, text=col)
             self.table.column(col, width=150)
-        self.table.bind("<ButtonRelease-1>", self.on_table_click)
+        self.table.bind("<Double-Button-1>", self.on_table_double_click)
+        self.table.bind("<MouseWheel>", self.on_table_scroll)
+
+        self.filtered_data = pd.DataFrame()
+        self.amr = pd.DataFrame()
+        self.start = 0
 
         frame6 = customtkinter.CTkFrame(
             tab_view.tab("AMR"),
@@ -2083,7 +2092,7 @@ class App(customtkinter.CTk):
                     "genome_name": lambda x: " ".join(x.lower().split()[:2]),
                 },
             )
-            self.amr = self.amr.dropna()
+            self.amr = self.amr.dropna().drop_duplicates()
 
             species_list = self.amr["genome_name"].unique()
             species_list.sort()
@@ -2092,35 +2101,66 @@ class App(customtkinter.CTk):
             self.species_filter.set("All")
             self.species_filter.configure(state=tk.DISABLED)
             self.update_table()
-            self.download_button4.configure(text="list", state=tk.NORMAL)
             self.species_filter.configure(state=tk.NORMAL)
+        self.download_button4.configure(text="list", state=tk.NORMAL)
 
-    def update_table(self):
+    def update_table(self, event=None):
         selected_species = self.species_filter.get()
-        if self.amr is not None:
+        self.start = 0
+        if len(self.amr) > 0:
             if selected_species == "All":
-                filtered_data = self.amr
+                self.filtered_data = self.amr
             else:
-                filtered_data = self.amr[self.amr["genome_name"] == selected_species]
+                self.filtered_data = self.amr[
+                    self.amr["genome_name"] == selected_species
+                ]
 
             self.table.delete(*self.table.get_children())
 
-            for name, antibiotic in filtered_data.values:
+            for name, antibiotic in self.filtered_data.values[:11]:
                 self.table.insert(
                     "",
                     tk.END,
                     values=(name, antibiotic),
                 )
 
-            self.total_label.config(text=f"Total: {len(filtered_data)}")
+            self.total_label.config(text=f"Total: {len(self.filtered_data)}")
 
-    def on_table_click(self, event):
-        selected_items = self.table.selection()
+    def on_table_scroll(self, event):
+        size = 11
+        data = self.filtered_data.values
+        if event.delta < 0 and self.start < len(data) - size:
+            self.start += 1
+            self.table.delete(self.table.get_children()[0])
+            self.table.insert(
+                "",
+                tk.END,
+                values=(data[self.start + size - 1][0], data[self.start + size - 1][1]),
+            )
+        elif event.delta > 0 and self.start > 0:
+            self.start -= 1
+            self.table.delete(self.table.get_children()[-1])
+            self.table.insert(
+                "",
+                0,
+                values=(data[self.start][0], data[self.start][1]),
+            )
+        # for name, antibiotic in self.filtered_data.values[
+        #     self.start : self.start + size
+        # ]:
+        #     self.table.insert(
+        #         "",
+        #         tk.END,
+        #         values=(name, antibiotic),
+        #     )
 
-        if len(selected_items) == 0:
+    def on_table_double_click(self, event):
+        selected_item = self.table.selection()
+
+        if not selected_item:
             return
 
-        item = selected_items[0]  # Get the selected item
+        item = selected_item  # Get the selected item
         selected_species = self.table.item(item, "values")[0]
         selected_antibiotics = self.table.item(item, "values")[1]
         selected_species = self.remove_square_brackets(selected_species)
