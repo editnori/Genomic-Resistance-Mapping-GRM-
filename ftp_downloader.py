@@ -104,13 +104,21 @@ class DownloadWindow:
 
     def set_progress_label(self, size: int):
         current_time_ms = time.time_ns() / 1_000_000
-        if (current_time_ms - self._last_update_time) > 100 or size == self._capacity:
+        if (current_time_ms - self._last_update_time) > 100:
             if self._size_label:
                 self._size_label.configure(
                     text=f"Downloading: {size / 1_048_576:.2f} MB / {self._capacity / 1_048_576:.2f} MB"
                 )
             if self._progress_bar:
                 self._progress_bar["value"] = size / self._capacity * 100
+            self._last_update_time = current_time_ms
+        elif size == self._capacity:
+            if self._size_label:
+                self._size_label.configure(
+                    text=f"Downloading: complete ({size / 1_048_576:.2f} MB)"
+                )
+            if self._progress_bar:
+                self._progress_bar["value"] = 0
             self._last_update_time = current_time_ms
 
     def set_buttons_commands(
@@ -158,7 +166,6 @@ class FTPDownloadApp:
             local_path = os.path.join(selected_path, filename)
 
             with open(local_path, "wb") as local_file:
-                print(local_path)
                 ftp = FTP("ftp.bvbrc.org")
                 ftp.login()
                 ftp.voidcmd("TYPE I")
