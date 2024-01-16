@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, font
+from idlelib.tooltip import OnHoverTooltipBase
 import threading
 import os
 from subprocess import CalledProcessError, Popen, PIPE, run
@@ -11,7 +12,6 @@ import traceback
 import customtkinter
 from PIL import Image
 import pandas as pd
-import numpy as np
 
 from kover import KoverDatasetCreator
 from ftp_downloader import (
@@ -32,6 +32,22 @@ class Page(Enum):
 class Key(int):
     UP = 38
     DOWN = 40
+
+
+class Hovertip(OnHoverTooltipBase):
+    def __init__(self, anchor_widget, text, hover_delay=1000):
+        super().__init__(anchor_widget, hover_delay=hover_delay)
+        self.text = text
+
+    def showcontents(self):
+        label = tk.Label(
+            self.tipwindow,
+            text=self.text,
+            justify=tk.LEFT,
+            relief=tk.SOLID,
+            borderwidth=1,
+        )
+        label.pack()
 
 
 class Table(ttk.Treeview):
@@ -730,7 +746,12 @@ class App(customtkinter.CTk):
             text="Numeric Phenotypes",
             command=self.update_amr_full,
         )
+
         self.numeric_phenotypes_checkbox.place(x=220, y=90)
+
+        Hovertip(
+            self.numeric_phenotypes_checkbox, "0: Resistant\n1: Susceptible\n2: Other"
+        )
 
         # Create a button to select the AMR metadata file
         self.save_table_button = customtkinter.CTkButton(
@@ -2450,20 +2471,24 @@ class App(customtkinter.CTk):
                         )
                     ]
 
+                total_resistant = len(
+                    self.results_table.filtered_data[
+                        self.results_table.filtered_data["resistant_phenotype"]
+                        == "Resistant"
+                    ]
+                )
+
+                total_susceptible = len(
+                    self.results_table.filtered_data[
+                        self.results_table.filtered_data["resistant_phenotype"]
+                        == "Susceptible"
+                    ]
+                )
+
                 if self.numeric_phenotypes_checkbox.get():
                     self.results_table.filtered_data = self.phenotype_mask(
                         self.results_table.filtered_data
                     )
-
-                total_resistant = np.sum(
-                    self.results_table.filtered_data["resistant_phenotype"]
-                    == "Resistant"
-                )
-
-                total_susceptible = np.sum(
-                    self.results_table.filtered_data["resistant_phenotype"]
-                    == "Susceptible"
-                )
 
                 total = len(self.results_table.filtered_data)
 
