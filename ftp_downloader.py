@@ -118,8 +118,6 @@ class DownloadWindow:
                 self._size_label.configure(
                     text=f"Downloading: complete ({size / 1_048_576:.2f} MB)"
                 )
-            if self._progress_bar:
-                self._progress_bar["value"] = 0
             self._last_update_time = current_time_ms
 
     def set_buttons_commands(

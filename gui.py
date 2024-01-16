@@ -45,13 +45,39 @@ class Table(ttk.Treeview):
         self.sort_ascending = False
         self.filtered_data: pd.DataFrame = pd.DataFrame()
 
+        self._mouse_pressed_before_focus = False
+
+        post_class_id = f"post-class-{int(id(self))}"
+
         bindtags = list(self.bindtags())
-        bindtags[0], bindtags[1] = bindtags[1], bindtags[0]
+        bindtags.insert(2, post_class_id)
         self.bindtags(bindtags)
 
         self.event_add("<<maneuver>>", "<MouseWheel>", "<Down>", "<Up>")
+        self.event_add("<<focus>>", "<ButtonPress>", "<FocusIn>")
 
-        self.bind("<<maneuver>>", self._on_maneuver)
+        self.bind_class(post_class_id, "<<maneuver>>", self._on_maneuver)
+
+        self.bind("<ButtonPress>", self._mouse_pressed)
+        self.bind("<FocusIn>", self._select_first)
+        self.bind("<FocusOut>", self.selection_clear)
+
+    def _mouse_pressed(self, Event=None):
+        self._mouse_pressed_before_focus = True
+
+    def _select_first(self, Event=None):
+        if self._mouse_pressed_before_focus:
+            self._mouse_pressed_before_focus = False
+            return
+
+        children = super().get_children()
+        if len(children) > 0:
+            super().selection_set(children[0])
+            super().focus(children[0])
+
+    def selection_clear(self, Event=None):
+        for i in super().selection():
+            super().selection_remove(i)
 
     def reset_view(self):
         super().delete(*super().get_children())
@@ -143,6 +169,7 @@ class App(customtkinter.CTk):
 
         self.selected_directory = None
         self.genome_id = ""
+        self.data_folder = "data"
         self.local_path = None
         self.amr_full = pd.DataFrame()
         customtkinter.set_appearance_mode("Dark")
@@ -627,7 +654,14 @@ class App(customtkinter.CTk):
         self.download_button4.place(x=50, y=60)
         self.species_filter = ttk.Combobox(master=frame5, state="readonly")
         self.species_filter.bind("<<ComboboxSelected>>", self.update_table)
+        self.species_filter.bind(
+            "<Control-BackSpace>", lambda e: self.species_filter.set("")
+        )
         self.species_filter.bind("<KeyRelease>", self.update_table)
+        self.species_filter.bind(
+            "<FocusOut>", lambda _: self.species_filter.selection_clear()
+        )
+
         self.species_filter.place(x=280, y=60)
         self.total_label = tk.Label(master=frame5, text="Total: not loaded")
         self.total_label.place(x=280, y=100)
@@ -640,6 +674,9 @@ class App(customtkinter.CTk):
             selectmode="browse",
             height=9,
         )
+
+        self.species_filter.bind("<Return>", lambda _: self.amr_list_table.focus_set())
+
         self.amr_list_table.load_size = 10
         self.amr_list_table.place(x=50, y=130)
         for col in columns:
@@ -667,17 +704,18 @@ class App(customtkinter.CTk):
             font=("Century Gothic", 20),
         )
         l2.place(x=50, y=20)
-        self.antibiotic_entry = customtkinter.CTkEntry(
-            master=frame6, width=150, placeholder_text="Antibiotic"
+        self.antibiotic_selection = ttk.Combobox(
+            master=frame6, state="readonly", width=18
         )
-        self.antibiotic_entry.bind("<KeyRelease>", self.update_amr_full)
-        self.antibiotic_entry.place(x=50, y=50)
+        self.antibiotic_selection.bind(
+            "<<ComboboxSelected>>", self.on_antibiotic_select
+        )
+        self.antibiotic_selection.place(x=50, y=50)
 
-        self.species_entry = customtkinter.CTkEntry(
-            master=frame6, width=150, placeholder_text="Species(optional)"
-        )
-        self.species_entry.bind("<KeyRelease>", self.update_amr_full)
-        self.species_entry.place(x=220, y=50)
+        self.species_selection = ttk.Combobox(master=frame6, state="readonly", width=18)
+
+        self.species_selection.bind("<<ComboboxSelected>>", self.update_amr_full)
+        self.species_selection.place(x=220, y=50)
 
         self.drop_intermediate = tk.BooleanVar(value=False)
         self.drop_intermediate_checkbox = customtkinter.CTkCheckBox(
@@ -690,7 +728,7 @@ class App(customtkinter.CTk):
 
         # Create a button to select the AMR metadata file
         self.save_table_button = customtkinter.CTkButton(
-            master=frame6, text="Download data", command=self.save_to_tsv
+            master=frame6, text="Export to .tsv", command=self.save_to_tsv
         )
         self.save_table_button.place(x=400, y=50)
         self.totaldata = tk.Label(master=frame6, text="Total phenotypes:")
@@ -716,6 +754,13 @@ class App(customtkinter.CTk):
             columns=columns,
             show="headings",
             height=8,
+        )
+
+        self.species_selection.bind(
+            "<Return>", lambda _: self.results_table.focus_set()
+        )
+        self.antibiotic_selection.bind(
+            "<Return>", lambda _: self.results_table.focus_set()
         )
 
         self.results_table.load_size = 9
@@ -2018,7 +2063,7 @@ class App(customtkinter.CTk):
         else:
             tsv_folder_path = os.path.join(
                 self.selected_directory,
-                self.datafolder,
+                self.data_folder,
                 *tsv_file_name_parts,
                 contigs_folder,
             )
@@ -2244,18 +2289,35 @@ class App(customtkinter.CTk):
 
             species_list = self.amr_list["genome_name"].unique()
             species_list.sort()
-            self.species_filter["values"] = species_list.tolist()
+            species_list = ["All"] + species_list.tolist()
+
+            antibiotic_list = self.amr_list["antibiotic"].unique()
+            antibiotic_list.sort()
+            antibiotic_list = ["All"] + antibiotic_list.tolist()
+
+            self.species_filter["values"] = species_list
+            self.species_filter.current(0)
             self.species_filter.configure(state=tk.DISABLED)
+
+            self.species_selection["values"] = species_list
+            self.species_selection.current(0)
+
+            self.antibiotic_selection["values"] = antibiotic_list
+            self.antibiotic_selection.current(0)
+
             self.update_table()
+            self.update_amr_full()
+
             self.species_filter.configure(state=tk.NORMAL)
         self.download_button4.configure(text="load amr list", state=tk.NORMAL)
 
     def update_table(self, event=None):
         selected_species = self.species_filter.get()
+        self.species_filter.set(selected_species)
         self.amr_list_table.load_start = 0
 
         if len(self.amr_list) > 0:
-            if not selected_species:
+            if not selected_species or selected_species == "All":
                 self.amr_list_table.filtered_data = self.amr_list
             else:
                 self.amr_list_table.filtered_data = self.amr_list[
@@ -2273,54 +2335,45 @@ class App(customtkinter.CTk):
                 text=f"Total: {len(self.amr_list_table.filtered_data)}"
             )
 
-    def on_table_select(self, event):
+    def on_antibiotic_select(self, event=None):
+        antibiotic = self.antibiotic_selection.get()
+
+        if antibiotic == "All":
+            filtered = self.amr_list["genome_name"].unique()
+            filtered.sort()
+            self.species_selection["values"] = ["All"] + filtered.tolist()
+        else:
+            filtered = self.amr_list[self.amr_list["antibiotic"] == antibiotic][
+                "genome_name"
+            ].unique()
+            filtered.sort()
+            self.species_selection["values"] = ["All"] + filtered.tolist()
+
+        self.species_selection.current(0)
+
+        self.update_amr_full()
+
+    def on_table_select(self, event=None):
         selected_item = self.amr_list_table.focus()
 
         if not selected_item:
             return
 
-        item = selected_item  # Get the selected item
-        selected_species: str = self.amr_list_table.item(item, "values")[0]
-        selected_antibiotics: str = self.amr_list_table.item(item, "values")[1]
-        # Update the entry box with the selected species
+        selected_species = self.amr_list_table.item(selected_item, "values")[0]
+        selected_antibiotics = self.amr_list_table.item(selected_item, "values")[1]
 
-        self.species_entry.delete(0, tk.END)  # Clear the current entry
-        self.antibiotic_entry.delete(0, tk.END)  # Clear the current entry
-
-        self.species_entry.insert(0, selected_species)
-        self.antibiotic_entry.insert(0, selected_antibiotics)
+        self.species_selection.set(selected_species)
+        self.antibiotic_selection.set(selected_antibiotics)
 
         self.update_amr_full()
 
-        # You can now display all the antibiotics for the selected species
-        self.display_antibiotics_for_species(selected_species)
-
-    def display_antibiotics_for_species(self, selected_species):
-        pass
-        # Here, you can filter the dataset for the selected_species and display the antibiotics
-        # You can use a new table or a label to display the antibiotics
-        # Example:
-        # antibiotics_for_species = self.get_antibiotics_for_species(selected_species)
-        # print(antibiotics_for_species)
-        # self.display_antibiotics(antibiotics_for_species)
-
-    def get_antibiotics_for_species(self, species):
-        pass
-        # Filter the dataset to get antibiotics for the selected species
-        # print(self.amr_list)
-        # filtered_data = self.amr_list[
-        #     self.amr_list["genome_name"].str.strip("").str.lower() == species
-        # ]
-        # antibiotics = filtered_data["antibiotic"].unique()
-        # print(filtered_data)
-        # print(antibiotics)
-
-        # return filtered_data["antibiotic"].unique()
-
     @threaded
     def update_amr_full(self, event=None):
-        antibiotic = self.antibiotic_entry.get()
-        species = self.species_entry.get()
+        antibiotic = self.antibiotic_selection.get()
+        species = self.species_selection.get()
+
+        self.antibiotic_selection.selection_clear()
+        self.species_selection.selection_clear()
 
         if len(self.amr_full) > 0:
             self.totalresistance_label.configure(
@@ -2331,26 +2384,27 @@ class App(customtkinter.CTk):
             )
             self.totaldata.configure(text="Total Phenotypes: ...")
             self.save_table_button.configure(state=tk.DISABLED)
-            self.species_entry.configure(state=tk.DISABLED)
-            self.antibiotic_entry.configure(state=tk.DISABLED)
+            self.species_selection.configure(state=tk.DISABLED)
+            self.antibiotic_selection.configure(state=tk.DISABLED)
 
             try:
-                if antibiotic:
+                self.results_table.filtered_data = self.amr_full
+
+                if antibiotic == "All" and species == "All":
+                    pass
+                elif antibiotic == "All":
                     self.results_table.filtered_data = self.amr_full[
-                        self.amr_full["genome_name"].str.contains(
-                            pat=species, case=False, regex=False
-                        )
+                        self.amr_full["genome_name"] == species
                     ]
-                    if species:
-                        self.results_table.filtered_data = (
-                            self.results_table.filtered_data[
-                                self.results_table.filtered_data[
-                                    "antibiotic"
-                                ].str.contains(pat=antibiotic, case=False, regex=False)
-                            ]
-                        )
+                elif species == "All":
+                    self.results_table.filtered_data = self.amr_full[
+                        self.amr_full["antibiotic"] == antibiotic
+                    ]
                 else:
-                    self.results_table.filtered_data = self.amr_full
+                    self.results_table.filtered_data = self.amr_full[
+                        (self.amr_full["antibiotic"] == antibiotic)
+                        & (self.amr_full["genome_name"] == species)
+                    ]
 
                 self.results_table.filtered_data = self.results_table.filtered_data[
                     ["genome_id", "genome_name", "resistant_phenotype", "measurement"]
@@ -2405,81 +2459,51 @@ class App(customtkinter.CTk):
                 messagebox.showerror("Error", "Error while reading the metadata file")
             finally:
                 self.save_table_button.configure(state=tk.NORMAL)
-                self.species_entry.configure(state=tk.NORMAL)
-                self.antibiotic_entry.configure(state=tk.NORMAL)
+                self.species_selection.configure(state="readonly")
+                self.antibiotic_selection.configure(state="readonly")
 
-    def save_description_to_tsv(self, species, antibiotics, file_path):
+    def save_description_to_tsv(self, species: str, antibiotics: str, file_path: str):
         with open(file_path, "w", newline="") as tsv_file:
             tsv_writer = csv.writer(tsv_file)
-            tsv_writer.writerow("Species: " + species)
-            tsv_writer.writerow("Antibiotics: " + antibiotics)
+            tsv_writer.writerow([f"Species: {species}"])
+            tsv_writer.writerow([f"Antibiotics: {antibiotics}"])
 
-    def save_all_table_to_tsv(self, treeview, file_path):
-        # Get the column headings from the treeview
-        columns = treeview["columns"]
-
-        # Open the TSV file for writing
+    def save_all_table_to_tsv(self, table: Table, file_path: str):
         with open(file_path, "w", newline="") as tsv_file:
+            columns = table.filtered_data.columns.tolist()
+
             tsv_writer = csv.writer(tsv_file, delimiter="\t")
 
-            # Write the column headings as the first row
             tsv_writer.writerow(columns)
 
-            # Iterate through the treeview items and write their values to the TSV file
-            for item in treeview.get_children():
-                row_data = [treeview.item(item, "values")]
-                tsv_writer.writerows(row_data)
+            tsv_writer.writerows(table.filtered_data.values)
 
-    def save_table_to_tsv(self, treeview, file_path):
-        # Open the TSV file for writing
+    def save_table_to_tsv(self, table: Table, file_path: str):
         with open(file_path, "w", newline="") as tsv_file:
             tsv_writer = csv.writer(tsv_file, delimiter="\t")
+            tsv_writer.writerows(table.filtered_data.iloc[:, [1, 2]].values)
 
-            # Iterate through the treeview items and write the values of the second and third columns to the TSV file
-            for item in treeview.get_children():
-                values = treeview.item(item, "values")
-                if values:
-                    # Only include the second and third values in the row_data
-                    row_data = [values[1], values[2]]
-                    tsv_writer.writerow(row_data)
-
+    @threaded
     def save_to_tsv(self):
-        if not self.selected_directory:
-            self.selected_directory = self.select_directory()
-            print(self.selected_directory)
-        species_text = self.species_entry.get().replace(" ", "-")
-        antibiotic_text = self.antibiotic_entry.get()
+        self.save_table_button.configure(state=tk.DISABLED, text="Saving...")
+        
+        selected_directory = filedialog.askdirectory()
 
-        if species_text and antibiotic_text:
-            file_name = f"{species_text}_{antibiotic_text}.tsv"
-            species = species_text
-            antibiotics = antibiotic_text
-        elif species_text:
-            file_name = f"{species_text}.tsv"
-            species = species_text
-            antibiotics = ""
-        elif antibiotic_text:
-            file_name = f"{antibiotic_text}.tsv"
-            species = ""
-            antibiotics = antibiotic_text
-        else:
-            # Prompt the user to enter either antibiotic or species
-            # You can display an error message or take appropriate action here
+        if not selected_directory:
+            self.save_table_button.configure(state=tk.NORMAL, text="Export to .tsv")
             return
 
-        file_name_parts = file_name.split("_")
-        self.datafolder = "data"
-        if len(file_name_parts) > 1:
-            tsv_folder_path = os.path.join(
-                self.selected_directory, self.datafolder, file_name_parts[0]
-            )
-            file_name_parts[1] = file_name_parts[1].split(".")[0]
-            tsv_folder_path = os.path.join(tsv_folder_path, file_name_parts[1])
-        else:
-            file_name = file_name.split(".")[0]
-            tsv_folder_path = os.path.join(
-                self.selected_directory, self.datafolder, file_name
-            )
+        species_text = self.species_selection.get().replace(" ", "-")
+        antibiotic_text = self.antibiotic_selection.get()
+
+        file_name = f"{species_text}_{antibiotic_text}.tsv"
+        species = species_text
+        antibiotics = antibiotic_text
+
+        tsv_folder_path = os.path.join(
+            selected_directory, self.data_folder, species_text
+        )
+        tsv_folder_path = os.path.join(tsv_folder_path, antibiotic_text)
 
         os.makedirs(tsv_folder_path, exist_ok=True)
 
@@ -2493,11 +2517,8 @@ class App(customtkinter.CTk):
         allfilename = f"{base_name}_full{extension}"
         file_path = os.path.join(tsv_folder_path, allfilename)
         self.save_all_table_to_tsv(self.results_table, file_path)
-        # Schedule a function to change it back to the original text after 2000 milliseconds (2 seconds)
-
-    def reset_button_text(self):
-        # Change the button text back to the original text
-        self.save_table_button.configure(text="Download data")
+        
+        self.save_table_button.configure(state=tk.NORMAL, text="Export to .tsv")
 
     def select_directory(self):
         # Use the filedialog to select a directory and set it in the FTPDownloadApp
