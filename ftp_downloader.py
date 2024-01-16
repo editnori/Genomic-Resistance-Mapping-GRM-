@@ -21,6 +21,7 @@ def threaded(fn):
             result = fn(*args, **kwargs)
             future.set_result(result)
         except Exception as exc:
+            traceback.print_exc()  # LOGGER
             future.set_exception(exc)
 
     def wrapper(*args, **kwargs):

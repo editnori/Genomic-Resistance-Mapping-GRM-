@@ -1,11 +1,9 @@
 # from asyncio import sleep
-import time
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, font
 import threading
 import os
 from subprocess import CalledProcessError, Popen, PIPE, run
-from datetime import datetime
 import csv
 import random
 from enum import Enum
@@ -30,6 +28,110 @@ class Page(Enum):
     PREPROCESSING_PAGE = 1
     KOVER_LEARN_PAGE = 2
     ANALYSIS_PAGE = 3
+
+
+class Key(int):
+    UP = 38
+    DOWN = 40
+
+
+class Table(ttk.Treeview):
+    def __init__(self, master, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.load_start: int = 0
+        self.load_size: int = 0
+        self.columns: tuple[str] = tuple(kwargs.get("columns", tuple()))
+        self.columns_order: list[str] = list(range(len(self.columns)))
+        self.sort_ascending = False
+        self.filtered_data: pd.DataFrame = pd.DataFrame()
+
+        bindtags = list(self.bindtags())
+        bindtags[0], bindtags[1] = bindtags[1], bindtags[0]
+        self.bindtags(bindtags)
+
+        self.event_add("<<maneuver>>", "<MouseWheel>", "<Down>", "<Up>")
+
+        self.bind("<<maneuver>>", self._on_maneuver)
+
+    def reset_view(self):
+        super().delete(*super().get_children())
+
+        if len(self.filtered_data) == 0:
+            return
+
+        for items in self.filtered_data.values[: self.load_size]:
+            super().insert(
+                "",
+                tk.END,
+                values=list(items),
+            )
+
+    def sort_by_column(self, column_index: int):
+        if len(self.filtered_data) == 0:
+            return
+
+        self.sort_ascending = (
+            not self.sort_ascending if self.columns_order[0] == column_index else True
+        )
+
+        self.columns_order.remove(column_index)
+        self.columns_order.insert(0, column_index)
+
+        columns = [self.filtered_data.columns[i] for i in self.columns_order]
+
+        self.filtered_data = self.filtered_data.sort_values(
+            by=columns,
+            ascending=[self.sort_ascending] * len(columns),
+        )
+
+        self.reset_view()
+
+    def heading(self, column, option=None, **kw):
+        super().heading(
+            column,
+            option,
+            command=lambda: self.sort_by_column(self.columns.index(column)),
+            **kw,
+        )
+
+    def _on_maneuver(self, event):
+        children = super().get_children()
+
+        if len(children) == 0:
+            return
+
+        selected_index = self.index(super().focus())
+
+        if (event.keycode == Key.DOWN or event.keycode == Key.UP) and (
+            0 < selected_index < self.load_size - 1
+        ):
+            return
+
+        if (event.delta < 0 or event.keycode == Key.DOWN) and self.load_start < len(
+            self.filtered_data
+        ) - self.load_size:
+            self.load_start += 1
+
+            super().delete(children[0])
+            super().insert(
+                "",
+                tk.END,
+                values=(
+                    list(
+                        self.filtered_data.values[self.load_start + self.load_size - 1]
+                    )
+                ),
+            )
+
+        elif (event.delta > 0 or event.keycode == Key.UP) and self.load_start > 0:
+            self.load_start -= 1
+
+            super().delete(children[-1])
+            super().insert(
+                "",
+                0,
+                values=list(self.filtered_data.values[self.load_start]),
+            )
 
 
 class App(customtkinter.CTk):
@@ -530,7 +632,7 @@ class App(customtkinter.CTk):
         self.total_label = tk.Label(master=frame5, text="Total: not loaded")
         self.total_label.place(x=280, y=100)
         columns = ["Species", "Antibiotic"]
-        self.amr_list_table = ttk.Treeview(
+        self.amr_list_table = Table(
             master=frame5,
             columns=columns,
             show="headings",
@@ -538,23 +640,17 @@ class App(customtkinter.CTk):
             selectmode="browse",
             height=9,
         )
+        self.amr_list_table.load_size = 10
         self.amr_list_table.place(x=50, y=130)
-        for index, col in enumerate(columns):
-            self.amr_list_table.heading(
-                col,
-                text=col,
-                command=lambda i=index: self.sort_amr_list_table(i),
-            )
+        for col in columns:
             self.amr_list_table.column(col, width=185)
-        self.amr_list_table.bind("<Double-1>", self.on_table_double_click)
-        self.amr_list_table.bind("<MouseWheel>", self.on_table_scroll)
+            self.amr_list_table.heading(col, text=col)
 
-        self.amr_list_columns_sort_order = list(range(len(columns)))
-        self.sort_amr_list_ascending = False
+        self.amr_list_table.bind("<Double-1>", self.on_table_select)
+        self.amr_list_table.bind("<Return>", self.on_table_select)
+        self.amr_list_table.bind("<space>", self.on_table_select)
 
-        self.filtered_data = pd.DataFrame()
         self.amr_list = pd.DataFrame()
-        self.start = 0
 
         frame6 = customtkinter.CTkFrame(
             tab_view.tab("AMR"),
@@ -585,7 +681,10 @@ class App(customtkinter.CTk):
 
         self.drop_intermediate = tk.BooleanVar(value=False)
         self.drop_intermediate_checkbox = customtkinter.CTkCheckBox(
-            master=frame6, text="Drop Intermediate", variable=self.drop_intermediate
+            master=frame6,
+            text="Drop Intermediate",
+            variable=self.drop_intermediate,
+            command=self.update_amr_full,
         )
         self.drop_intermediate_checkbox.place(x=50, y=90)
 
@@ -607,28 +706,25 @@ class App(customtkinter.CTk):
 
         # Create a table to display the results
         columns = [
-            "Genome Name",
             "Genome ID",
+            "Genome Name",
             "Phenotype",
             "Measurements",
         ]
-        self.results_table = ttk.Treeview(
+        self.results_table = Table(
             master=frame6,
             columns=columns,
             show="headings",
             height=8,
         )
-        for index, col in enumerate(columns):
-            self.results_table.heading(
-                col,
-                text=col,
-                command=lambda i=index: self.sort_results_table(i),
-            )
-            self.results_table.column(col, width=165)
+
+        self.results_table.load_size = 9
+
+        for col in columns:
+            self.results_table.column(col, width=150, anchor=tk.CENTER)
+            self.results_table.heading(col, text=col)
 
         self.results_table.place(x=50, y=150)
-        self.amr_full_columns_sort_order = list(range(len(columns)))
-        self.sort_amr_full_ascending = False
 
         # create second frame
         self.preprocessing_frame = customtkinter.CTkFrame(
@@ -1168,7 +1264,7 @@ class App(customtkinter.CTk):
         self.cmd_output2["yscrollcommand"] = self.scrollbar2.set
         self.cmd_output2.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
-        ##KOVER LEARN
+        # KOVER LEARN
 
         create_dataset_frame = customtkinter.CTkFrame(
             tab_view.tab("kover learn"),
@@ -1841,9 +1937,9 @@ class App(customtkinter.CTk):
                 self.create_dataset_btn.configure(
                     text="create Dataset", state=tk.NORMAL
                 )
-            except Exception as e:
+            except Exception:
                 # Handle any exceptions that occur during the dataset creation process
-                print(e.with_traceback())
+                traceback.print_exc()
 
             finally:
                 # Enable the button after the dataset creation process is complete
@@ -2115,29 +2211,36 @@ class App(customtkinter.CTk):
                     "antibiotic",
                     "resistant_phenotype",
                     "measurement",
-                    "measurement_sign",
-                    "measurement_value",
                     "measurement_unit",
                 ],
                 converters={
-                    "genome_id": str,
-                    "genome_name": lambda x: " ".join(x.lower().split()[:2]),
+                    "genome_id": float,
+                    "genome_name": lambda x: " ".join(x.lower().split()[:2])
+                    .replace("[", "")
+                    .replace("]", ""),
+                    "antibiotic": str,
+                    "resistant_phenotype": str,
+                    "measurement": str,
+                    "measurement_unit": str,
                 },
             )
 
-            self.amr_full = self.amr_full.drop_duplicates().dropna()
-            self.amr_full = self.amr_full[self.amr_full["genome_name"] != ""]
+            self.amr_full.drop_duplicates(inplace=True)
 
-            self.amr_list = pd.read_table(
-                amr_metadata_file,
-                usecols=["genome_name", "antibiotic"],
-                converters={
-                    "genome_name": lambda x: " ".join(x.lower().split()[:2]),
-                },
-            )
+            self.amr_full = self.amr_full[
+                (self.amr_full["genome_id"] != "")
+                & (self.amr_full["genome_name"] != "")
+                & (self.amr_full["antibiotic"] != "")
+                & (self.amr_full["resistant_phenotype"] != "")
+                & (self.amr_full["measurement"] != "")
+                & (self.amr_full["measurement_unit"] != "")
+            ]
 
-            self.amr_list = self.amr_list.drop_duplicates().dropna()
-            self.amr_list = self.amr_list[self.amr_list["genome_name"] != ""]
+            self.amr_full["measurement"] += self.amr_full["measurement_unit"]
+
+            self.amr_list = self.amr_full[
+                ["genome_name", "antibiotic"]
+            ].drop_duplicates()
 
             species_list = self.amr_list["genome_name"].unique()
             species_list.sort()
@@ -2149,57 +2252,29 @@ class App(customtkinter.CTk):
 
     def update_table(self, event=None):
         selected_species = self.species_filter.get()
-        self.start = 0
+        self.amr_list_table.load_start = 0
+
         if len(self.amr_list) > 0:
             if not selected_species:
-                self.filtered_data = self.amr_list
+                self.amr_list_table.filtered_data = self.amr_list
             else:
-                self.filtered_data = self.amr_list[
+                self.amr_list_table.filtered_data = self.amr_list[
                     self.amr_list["genome_name"].str.contains(
                         pat=selected_species, case=False, regex=False
                     )
                     | self.amr_list["antibiotic"].str.contains(
-                        pat=selected_species, case=False, regex=True
+                        pat=selected_species, case=False, regex=False
                     )
                 ]
 
-            data = self.filtered_data.values
+            self.amr_list_table.reset_view()
 
-            self.amr_list_table.delete(*self.amr_list_table.get_children())
-
-            for name, antibiotic in data[:10]:
-                self.amr_list_table.insert(
-                    "",
-                    tk.END,
-                    values=(name, antibiotic),
-                )
-
-            self.total_label.config(text=f"Total: {len(self.filtered_data)}")
-
-    def on_table_scroll(self, event):
-        size = 10
-
-        data = self.filtered_data.values
-
-        if event.delta < 0 and self.start < len(data) - size:
-            self.start += 1
-            self.amr_list_table.delete(self.amr_list_table.get_children()[0])
-            self.amr_list_table.insert(
-                "",
-                tk.END,
-                values=(data[self.start + size - 1][0], data[self.start + size - 1][1]),
-            )
-        elif event.delta > 0 and self.start > 0:
-            self.start -= 1
-            self.amr_list_table.delete(self.amr_list_table.get_children()[-1])
-            self.amr_list_table.insert(
-                "",
-                0,
-                values=(data[self.start][0], data[self.start][1]),
+            self.total_label.config(
+                text=f"Total: {len(self.amr_list_table.filtered_data)}"
             )
 
-    def on_table_double_click(self, event):
-        selected_item = self.amr_list_table.selection()
+    def on_table_select(self, event):
+        selected_item = self.amr_list_table.focus()
 
         if not selected_item:
             return
@@ -2207,7 +2282,6 @@ class App(customtkinter.CTk):
         item = selected_item  # Get the selected item
         selected_species: str = self.amr_list_table.item(item, "values")[0]
         selected_antibiotics: str = self.amr_list_table.item(item, "values")[1]
-        selected_species = selected_species.replace("[", "").replace("]", "")
         # Update the entry box with the selected species
 
         self.species_entry.delete(0, tk.END)  # Clear the current entry
@@ -2243,88 +2317,78 @@ class App(customtkinter.CTk):
 
         # return filtered_data["antibiotic"].unique()
 
-    def _remove_duplicates(self, data):
-        # Keep only one measurement for the same genome, antibiotic and phenotype
-        data = data.drop_duplicates(
-            subset=["genome_id", "antibiotic", "resistant_phenotype"], keep="first"
-        )
-        # Drop all genomes/antibiotic combinations for which we have contradictory measurements
-        data = data.drop_duplicates(subset=["genome_id", "antibiotic"], keep=False)
-        return data
-
-    def sort_amr_list_table(self, column_index: int):
-        if len(self.filtered_data) == 0:
-            return
-        self.update_amr_list_column_sort(column_index)
-        self.filtered_data.sort_values(
-            by=[self.amr_list.columns[i] for i in self.amr_list_columns_sort_order],
-            inplace=True,
-            ascending=[self.sort_amr_list_ascending] * len(self.amr_list.columns),
-        )
-        self.update_table()
-
-    def sort_results_table(self, column_index: int):
-        if len(self.amr_full) == 0:
-            return
-        self.update_amr_full_column_sort(column_index)
-        self.amr_full.sort_values(
-            by=[self.amr_full.columns[i] for i in self.amr_full_columns_sort_order],
-            inplace=True,
-            ascending=[self.sort_amr_full_ascending] * len(self.amr_full.columns),
-        )
-        self.update_amr_full()
-
-    def update_amr_full_column_sort(self, column_index: int):
-        if self.amr_full_columns_sort_order[0] == column_index:
-            self.sort_amr_full_ascending = not self.sort_amr_full_ascending
-        else:
-            self.sort_amr_full_ascending = True
-        self.amr_full_columns_sort_order.remove(column_index)
-        self.amr_full_columns_sort_order.insert(0, column_index)
-
-    def update_amr_list_column_sort(self, column_index: int):
-        if self.amr_list_columns_sort_order[0] == column_index:
-            self.sort_amr_list_ascending = not self.sort_amr_list_ascending
-        else:
-            self.sort_amr_list_ascending = True
-        self.amr_list_columns_sort_order.remove(column_index)
-        self.amr_list_columns_sort_order.insert(0, column_index)
-
+    @threaded
     def update_amr_full(self, event=None):
         antibiotic = self.antibiotic_entry.get()
         species = self.species_entry.get()
 
-        if (antibiotic or species) and len(self.amr_full) > 0:
+        if len(self.amr_full) > 0:
+            self.totalresistance_label.configure(
+                text="Total resistance phenotypes available: ..."
+            )
+            self.totalsusceptible_label.configure(
+                text="Total susceptible phenotypes available: ..."
+            )
+            self.totaldata.configure(text="Total Phenotypes: ...")
+            self.save_table_button.configure(state=tk.DISABLED)
+            self.species_entry.configure(state=tk.DISABLED)
+            self.antibiotic_entry.configure(state=tk.DISABLED)
+
             try:
                 if antibiotic:
-                    amr = self.amr_full.loc[self.amr_full.antibiotic == antibiotic]
+                    self.results_table.filtered_data = self.amr_full[
+                        self.amr_full["genome_name"].str.contains(
+                            pat=species, case=False, regex=False
+                        )
+                    ]
+                    if species:
+                        self.results_table.filtered_data = (
+                            self.results_table.filtered_data[
+                                self.results_table.filtered_data[
+                                    "antibiotic"
+                                ].str.contains(pat=antibiotic, case=False, regex=False)
+                            ]
+                        )
+                else:
+                    self.results_table.filtered_data = self.amr_full
 
-                if species:
-                    species = species.replace("[", "").replace("]", "").lower()
-                    amr = self.amr_full.loc[self.amr_full.amr["genome_name"] == species]
-
-                amr = self._remove_duplicates(amr)
-                amr = amr.loc[amr.resistant_phenotype != "Not defined"]
+                self.results_table.filtered_data = self.results_table.filtered_data[
+                    ["genome_id", "genome_name", "resistant_phenotype", "measurement"]
+                ]
 
                 if self.drop_intermediate.get():
-                    amr = amr.loc[amr.resistant_phenotype != "Intermediate"]
+                    self.results_table.filtered_data = self.results_table.filtered_data[
+                        self.results_table.filtered_data["resistant_phenotype"]
+                        != "Intermediate"
+                    ]
 
-                numeric_phenotypes = np.zeros(amr.shape[0], dtype=np.uint8)
-                numeric_phenotypes[amr.resistant_phenotype.values == "Resistant"] = 1
+                numeric_phenotypes = np.zeros(
+                    self.results_table.filtered_data.shape[0], dtype=np.uint8
+                )
                 numeric_phenotypes[
-                    amr.resistant_phenotype.values == "Non-susceptible"
+                    self.results_table.filtered_data["resistant_phenotype"]
+                    == "Resistant"
                 ] = 1
                 numeric_phenotypes[
-                    amr.resistant_phenotype.values == "Nonsusceptible"
+                    self.results_table.filtered_data["resistant_phenotype"]
+                    == "Non-susceptible"
                 ] = 1
-                numeric_phenotypes[amr.resistant_phenotype.values == "Intermediate"] = 2
                 numeric_phenotypes[
-                    amr.resistant_phenotype.values == "Susceptible-dose dependent"
+                    self.results_table.filtered_data["resistant_phenotype"]
+                    == "Nonsusceptible"
+                ] = 1
+                numeric_phenotypes[
+                    self.results_table.filtered_data["resistant_phenotype"]
+                    == "Intermediate"
+                ] = 2
+                numeric_phenotypes[
+                    self.results_table.filtered_data["resistant_phenotype"]
+                    == "Susceptible-dose dependent"
                 ] = 2
 
                 total_resistant = np.sum(numeric_phenotypes == 1)
                 total_susceptible = np.sum(numeric_phenotypes == 0)
-                total = np.sum(numeric_phenotypes)
+                total = len(numeric_phenotypes)
 
                 self.totalresistance_label.configure(
                     text=f"Total resistance phenotypes available:{total_resistant}"
@@ -2333,36 +2397,16 @@ class App(customtkinter.CTk):
                     text=f"Total susceptible phenotypes available:{total_susceptible}"
                 )
 
-                amr["Measurement"] = (
-                    amr["measurement_sign"].astype(str)
-                    + amr["measurement_value"].astype(str)
-                    + amr["measurement_unit"].astype(str)
-                )
+                self.results_table.reset_view()
 
-                self.results_table.delete(*self.results_table.get_children())
-                for name, id, phenotype, measurement in zip(
-                    amr["genome_name"].values,
-                    amr["genome_id"].values,
-                    numeric_phenotypes,
-                    amr["Measurement"].values,
-                ):
-                    self.results_table.insert(
-                        "",
-                        tk.END,
-                        values=(
-                            "               " + name,
-                            "                       " + id + "                       ",
-                            phenotype,
-                            "              " + measurement,
-                        ),
-                    )
-
-                selected_items = self.results_table.get_children()
-                number_of_rows = len(selected_items)
-                self.totaldata.configure(text=f"Total Phenotypes:{number_of_rows}")
+                self.totaldata.configure(text=f"Total Phenotypes:{total}")
             except Exception:
                 traceback.print_exc()
                 messagebox.showerror("Error", "Error while reading the metadata file")
+            finally:
+                self.save_table_button.configure(state=tk.NORMAL)
+                self.species_entry.configure(state=tk.NORMAL)
+                self.antibiotic_entry.configure(state=tk.NORMAL)
 
     def save_description_to_tsv(self, species, antibiotics, file_path):
         with open(file_path, "w", newline="") as tsv_file:
