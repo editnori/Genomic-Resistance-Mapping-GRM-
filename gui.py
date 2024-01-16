@@ -2485,16 +2485,20 @@ class App(customtkinter.CTk):
 
     @threaded
     def save_to_tsv(self):
-        self.save_table_button.configure(state=tk.DISABLED, text="Saving...")
+        species_text = self.species_selection.get().replace(" ", "-")
+        antibiotic_text = self.antibiotic_selection.get()
         
+        if species_text == "" or antibiotic_text == "":
+            messagebox.showerror("Error", "Please load amr data first.")
+            return
+        
+        self.save_table_button.configure(state=tk.DISABLED, text="Saving...")
+
         selected_directory = filedialog.askdirectory()
 
         if not selected_directory:
             self.save_table_button.configure(state=tk.NORMAL, text="Export to .tsv")
             return
-
-        species_text = self.species_selection.get().replace(" ", "-")
-        antibiotic_text = self.antibiotic_selection.get()
 
         file_name = f"{species_text}_{antibiotic_text}.tsv"
         species = species_text
@@ -2517,7 +2521,7 @@ class App(customtkinter.CTk):
         allfilename = f"{base_name}_full{extension}"
         file_path = os.path.join(tsv_folder_path, allfilename)
         self.save_all_table_to_tsv(self.results_table, file_path)
-        
+
         self.save_table_button.configure(state=tk.NORMAL, text="Export to .tsv")
 
     def select_directory(self):
