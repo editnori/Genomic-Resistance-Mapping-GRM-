@@ -1,4 +1,3 @@
-# from asyncio import sleep
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, font
 import threading
@@ -81,6 +80,8 @@ class Table(ttk.Treeview):
 
     def reset_view(self):
         super().delete(*super().get_children())
+
+        self.load_start = 0
 
         if len(self.filtered_data) == 0:
             return
@@ -717,14 +718,19 @@ class App(customtkinter.CTk):
         self.species_selection.bind("<<ComboboxSelected>>", self.update_amr_full)
         self.species_selection.place(x=220, y=50)
 
-        self.drop_intermediate = tk.BooleanVar(value=False)
         self.drop_intermediate_checkbox = customtkinter.CTkCheckBox(
             master=frame6,
             text="Drop Intermediate",
-            variable=self.drop_intermediate,
             command=self.update_amr_full,
         )
         self.drop_intermediate_checkbox.place(x=50, y=90)
+
+        self.numeric_phenotypes_checkbox = customtkinter.CTkCheckBox(
+            master=frame6,
+            text="Numeric Phenotypes",
+            command=self.update_amr_full,
+        )
+        self.numeric_phenotypes_checkbox.place(x=220, y=90)
 
         # Create a button to select the AMR metadata file
         self.save_table_button = customtkinter.CTkButton(
@@ -2367,6 +2373,28 @@ class App(customtkinter.CTk):
 
         self.update_amr_full()
 
+    def phenotype_mask(self, data_frame: pd.DataFrame):
+        numeric_phenotypes = data_frame.copy()
+
+        numeric_phenotypes.loc[
+            ~numeric_phenotypes["resistant_phenotype"].isin(
+                ["Resistant", "Susceptible"]
+            ),
+            "resistant_phenotype",
+        ] = 2
+
+        numeric_phenotypes.loc[
+            numeric_phenotypes["resistant_phenotype"] == "Susceptible",
+            "resistant_phenotype",
+        ] = 0
+
+        numeric_phenotypes.loc[
+            numeric_phenotypes["resistant_phenotype"] == "Resistant",
+            "resistant_phenotype",
+        ] = 1
+
+        return numeric_phenotypes
+
     @threaded
     def update_amr_full(self, event=None):
         antibiotic = self.antibiotic_selection.get()
@@ -2410,39 +2438,34 @@ class App(customtkinter.CTk):
                     ["genome_id", "genome_name", "resistant_phenotype", "measurement"]
                 ]
 
-                if self.drop_intermediate.get():
+                if self.drop_intermediate_checkbox.get():
                     self.results_table.filtered_data = self.results_table.filtered_data[
-                        self.results_table.filtered_data["resistant_phenotype"]
-                        != "Intermediate"
+                        (
+                            self.results_table.filtered_data["resistant_phenotype"]
+                            == "Resistant"
+                        )
+                        | (
+                            self.results_table.filtered_data["resistant_phenotype"]
+                            == "Susceptible"
+                        )
                     ]
 
-                numeric_phenotypes = np.zeros(
-                    self.results_table.filtered_data.shape[0], dtype=np.uint8
-                )
-                numeric_phenotypes[
+                if self.numeric_phenotypes_checkbox.get():
+                    self.results_table.filtered_data = self.phenotype_mask(
+                        self.results_table.filtered_data
+                    )
+
+                total_resistant = np.sum(
                     self.results_table.filtered_data["resistant_phenotype"]
                     == "Resistant"
-                ] = 1
-                numeric_phenotypes[
-                    self.results_table.filtered_data["resistant_phenotype"]
-                    == "Non-susceptible"
-                ] = 1
-                numeric_phenotypes[
-                    self.results_table.filtered_data["resistant_phenotype"]
-                    == "Nonsusceptible"
-                ] = 1
-                numeric_phenotypes[
-                    self.results_table.filtered_data["resistant_phenotype"]
-                    == "Intermediate"
-                ] = 2
-                numeric_phenotypes[
-                    self.results_table.filtered_data["resistant_phenotype"]
-                    == "Susceptible-dose dependent"
-                ] = 2
+                )
 
-                total_resistant = np.sum(numeric_phenotypes == 1)
-                total_susceptible = np.sum(numeric_phenotypes == 0)
-                total = len(numeric_phenotypes)
+                total_susceptible = np.sum(
+                    self.results_table.filtered_data["resistant_phenotype"]
+                    == "Susceptible"
+                )
+
+                total = len(self.results_table.filtered_data)
 
                 self.totalresistance_label.configure(
                     text=f"Total resistance phenotypes available:{total_resistant}"
@@ -2487,11 +2510,11 @@ class App(customtkinter.CTk):
     def save_to_tsv(self):
         species_text = self.species_selection.get().replace(" ", "-")
         antibiotic_text = self.antibiotic_selection.get()
-        
+
         if species_text == "" or antibiotic_text == "":
             messagebox.showerror("Error", "Please load amr data first.")
             return
-        
+
         self.save_table_button.configure(state=tk.DISABLED, text="Saving...")
 
         selected_directory = filedialog.askdirectory()
