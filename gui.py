@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, font
-from idlelib.tooltip import OnHoverTooltipBase
+
 import threading
 import os
 from subprocess import CalledProcessError, Popen, PIPE, run
@@ -9,11 +9,13 @@ import random
 from enum import Enum
 import traceback
 
-import customtkinter
+import customtkinter as ctk
 from PIL import Image
 import pandas as pd
 
 from kover import KoverDatasetCreator
+from hovertip import Hovertip
+from table import Table
 from ftp_downloader import (
     FTPDownloadApp,
     DownloadWindow,
@@ -29,241 +31,110 @@ class Page(Enum):
     ANALYSIS_PAGE = 3
 
 
-class Key(int):
-    UP = 38
-    DOWN = 40
+class Path(str):
+    RAY_SURVEYOR = "raysurveyor/"
+    DATA = "data/"
+    IMAGES = "ui/test_images/"
+    FOREST_DARK = "ui/forest-dark.tcl"
+    RAY = "bin/ray/Ray"
 
 
-class Hovertip(OnHoverTooltipBase):
-    def __init__(self, anchor_widget, text, hover_delay=1000):
-        super().__init__(anchor_widget, hover_delay=hover_delay)
-        self.text = text
-
-    def showcontents(self):
-        label = tk.Label(
-            self.tipwindow,
-            text=self.text,
-            justify=tk.LEFT,
-            relief=tk.SOLID,
-            borderwidth=1,
-        )
-        label.pack()
-
-
-class Table(ttk.Treeview):
-    def __init__(self, master, *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
-
-        self.tag_configure("all", background="#313131")
-
-        self.load_start: int = 0
-        self.load_size: int = kwargs.get("height", 0) + 1
-        self.columns: tuple[str] = tuple(kwargs.get("columns", tuple()))
-        self.columns_order: list[str] = list(range(len(self.columns)))
-        self.sort_ascending = False
-        self.filtered_data: pd.DataFrame = pd.DataFrame()
-
-        self._mouse_pressed_before_focus = False
-
-        post_class_id = f"post-class-{int(id(self))}"
-
-        bindtags = list(self.bindtags())
-        bindtags.insert(2, post_class_id)
-        self.bindtags(bindtags)
-
-        self.event_add("<<maneuver>>", "<MouseWheel>", "<Down>", "<Up>")
-        self.event_add("<<focus>>", "<ButtonPress>", "<FocusIn>")
-
-        self.bind_class(post_class_id, "<<maneuver>>", self._on_maneuver)
-
-        self.bind("<ButtonPress>", self._mouse_pressed)
-        self.bind("<FocusIn>", self._select_first)
-        self.bind("<FocusOut>", self.selection_clear)
-
-    def _mouse_pressed(self, Event=None):
-        self._mouse_pressed_before_focus = True
-
-    def _select_first(self, Event=None):
-        if self._mouse_pressed_before_focus:
-            self._mouse_pressed_before_focus = False
-            return
-
-        children = super().get_children()
-        if len(children) > 0:
-            super().selection_set(children[0])
-            super().focus(children[0])
-
-    def selection_clear(self, Event=None):
-        for i in super().selection():
-            super().selection_remove(i)
-
-    def reset_view(self):
-        super().delete(*super().get_children())
-
-        self.load_start = 0
-
-        if len(self.filtered_data) == 0:
-            return
-
-        for items in self.filtered_data.values[: self.load_size]:
-            super().insert(
-                "",
-                tk.END,
-                values=list(items),
-                tags=("all",),
-            )
-
-    def sort_by_column(self, column_index: int):
-        if len(self.filtered_data) == 0:
-            return
-
-        self.sort_ascending = (
-            not self.sort_ascending if self.columns_order[0] == column_index else True
-        )
-
-        self.columns_order.remove(column_index)
-        self.columns_order.insert(0, column_index)
-
-        columns = [self.filtered_data.columns[i] for i in self.columns_order]
-
-        self.filtered_data = self.filtered_data.sort_values(
-            by=columns,
-            ascending=[self.sort_ascending] * len(columns),
-        )
-
-        self.reset_view()
-
-    def heading(self, column, option=None, **kw):
-        super().heading(
-            column,
-            option,
-            command=lambda: self.sort_by_column(self.columns.index(column)),
-            **kw,
-        )
-
-    def _on_maneuver(self, event):
-        children = super().get_children()
-
-        if len(children) == 0:
-            return
-
-        selected_index = self.index(super().focus())
-
-        if (event.keycode == Key.DOWN or event.keycode == Key.UP) and (
-            0 < selected_index < self.load_size - 1
-        ):
-            return
-
-        if (event.delta < 0 or event.keycode == Key.DOWN) and self.load_start < len(
-            self.filtered_data
-        ) - self.load_size:
-            self.load_start += 1
-
-            super().delete(children[0])
-            super().insert(
-                "",
-                tk.END,
-                values=(
-                    list(
-                        self.filtered_data.values[self.load_start + self.load_size - 1]
-                    )
-                ),
-                tags=("all",),
-            )
-
-        elif (event.delta > 0 or event.keycode == Key.UP) and self.load_start > 0:
-            self.load_start -= 1
-
-            super().delete(children[-1])
-            super().insert(
-                "",
-                0,
-                values=list(self.filtered_data.values[self.load_start]),
-                tags=("all",),
-            )
-
-
-class App(customtkinter.CTk):
+class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.ray_executable = "../bin/ray/Ray"
-        self.ray_surveyor_dir = "raysurveyor"
+        self.setup_window()
 
-        self.selected_directory = None
-        self.genome_id = ""
-        self.data_folder = "data"
-        self.local_path = None
-        self.amr_full = pd.DataFrame()
-        self.kmer_tool = tk.StringVar()
-        self.kmer_tool.set("Ray Surveyor")
-        self.dataset_folder = tk.StringVar()
-        self.output_dir = tk.StringVar()
-        self.metatsv_file_path = tk.StringVar()
-        self.desctsv_file_path = tk.StringVar()
-        self.selected_kover = tk.StringVar()
-        self.selected_kmer_matrix = tk.StringVar()
+        self.setup_style()
+
+        self.load_images(Path.IMAGES)
+
+        self.create_navigation_frame()
+
+        self.create_data_collection_page()
+
+        self.create_preprocessing_page()
+
+        self.create_kover_learn_page()
+
+        self.create_analysis_page()
+
+        self.set_page(Page.DATA_COLLECTION_PAGE)
+
+    def setup_window(self):
         self.title("Genome analysis tool")
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
 
-        self.geometry(f"{screen_width}x{screen_height-100}")
+        self.screen_width = self.winfo_screenwidth()
+        self.screen_height = self.winfo_screenheight()
 
+        self.geometry(f"{self.screen_width}x{self.screen_height - 100}")
         self.geometry("+0+0")
 
-        # set grid layout 1x2
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        # load images with light and dark mode image
-        image_path = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "ui/test_images"
-        )
-        self.logo_image = customtkinter.CTkImage(
-            Image.open(os.path.join(image_path, "CustomTkinter_logo_single.png")),
+    def setup_style(self):
+        self.style = ttk.Style(self)
+        self.tk.call("source", Path.FOREST_DARK)
+        self.style.theme_use("forest-dark")
+
+        self.custom_font = font.nametofont("TkDefaultFont")
+        self.custom_font.configure(size=12)
+
+    def load_images(self, path: str) -> dict[ctk.CTkImage]:
+        self.images = {}
+
+        self.images["logo"] = ctk.CTkImage(
+            Image.open(path + "CustomTkinter_logo_single.png"),
             size=(26, 26),
         )
-        self.large_test_image = customtkinter.CTkImage(
-            Image.open(os.path.join(image_path, "large_test_image.png")),
+
+        self.images["large_test"] = ctk.CTkImage(
+            Image.open(path + "large_test_image.png"),
             size=(500, 150),
         )
-        self.image_icon_image = customtkinter.CTkImage(
-            Image.open(os.path.join(image_path, "image_icon_light.png")), size=(20, 20)
+
+        self.images["icon"] = ctk.CTkImage(
+            Image.open(path + "image_icon_light.png"), size=(20, 20)
         )
-        self.home_image = customtkinter.CTkImage(
-            light_image=Image.open(os.path.join(image_path, "database-dark.png")),
-            dark_image=Image.open(os.path.join(image_path, "database-light1.png")),
+
+        self.images["home"] = ctk.CTkImage(
+            light_image=Image.open(path + "database-dark.png"),
+            dark_image=Image.open(path + "database-light1.png"),
             size=(30, 30),
         )
-        self.chat_image = customtkinter.CTkImage(
-            light_image=Image.open(os.path.join(image_path, "preprocessing.png")),
-            dark_image=Image.open(os.path.join(image_path, "preprocessing.png")),
+
+        prepocessing_image = Image.open(path + "preprocessing.png")
+
+        self.images["chat"] = ctk.CTkImage(
+            light_image=prepocessing_image,
+            dark_image=prepocessing_image,
             size=(30, 30),
         )
-        self.add_user_image = customtkinter.CTkImage(
-            light_image=Image.open(os.path.join(image_path, "add_user_dark.png")),
-            dark_image=Image.open(os.path.join(image_path, "add_user_light.png")),
+
+        self.images["add_user"] = ctk.CTkImage(
+            light_image=Image.open(path + "add_user_dark.png"),
+            dark_image=Image.open(path + "add_user_light.png"),
             size=(20, 20),
         )
 
-        style = ttk.Style(self)
-        self.tk.call("source", "ui/forest-dark.tcl")
-        style.theme_use("forest-dark")
+    def create_navigation_frame(self):
+        self.navigation_frame = ctk.CTkFrame(self, corner_radius=0)
 
-        self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)
         self.navigation_frame.grid(row=0, column=0, sticky=tk.NSEW)
         self.navigation_frame.grid_rowconfigure(5, weight=1)
 
-        self.navigation_frame_label = customtkinter.CTkLabel(
+        self.navigation_frame_label = ctk.CTkLabel(
             self.navigation_frame,
-            text="  Patric ",
-            image=self.logo_image,
+            text="Patric",
+            image=self.images["logo"],
             compound="left",
-            font=customtkinter.CTkFont(size=15, weight="bold"),
+            font=ctk.CTkFont(size=15, weight="bold"),
         )
+
         self.navigation_frame_label.grid(row=0, column=0, padx=20, pady=20)
 
-        self.data_collection_frame_button = customtkinter.CTkButton(
+        self.data_collection_frame_button = ctk.CTkButton(
             self.navigation_frame,
             corner_radius=0,
             height=80,
@@ -272,13 +143,14 @@ class App(customtkinter.CTk):
             fg_color="transparent",
             text_color=("gray10", "gray90"),
             hover_color=("gray70", "gray30"),
-            image=self.home_image,
+            image=self.images["home"],
             anchor="w",
-            command=lambda: self.select_frame_by_name(Page.DATA_COLLECTION_PAGE),
+            command=lambda: self.set_page(Page.DATA_COLLECTION_PAGE),
         )
+
         self.data_collection_frame_button.grid(row=1, column=0, sticky="ew")
 
-        self.preprocessing_frame_button = customtkinter.CTkButton(
+        self.preprocessing_frame_button = ctk.CTkButton(
             self.navigation_frame,
             corner_radius=0,
             height=80,
@@ -287,13 +159,14 @@ class App(customtkinter.CTk):
             fg_color="transparent",
             text_color=("gray10", "gray90"),
             hover_color=("gray70", "gray30"),
-            image=self.chat_image,
+            image=self.images["chat"],
             anchor="w",
-            command=lambda: self.select_frame_by_name(Page.PREPROCESSING_PAGE),
+            command=lambda: self.set_page(Page.PREPROCESSING_PAGE),
         )
+
         self.preprocessing_frame_button.grid(row=2, column=0, sticky="ew")
 
-        self.kover_frame_button = customtkinter.CTkButton(
+        self.kover_frame_button = ctk.CTkButton(
             self.navigation_frame,
             corner_radius=0,
             height=80,
@@ -302,13 +175,14 @@ class App(customtkinter.CTk):
             fg_color="transparent",
             text_color=("gray10", "gray90"),
             hover_color=("gray70", "gray30"),
-            image=self.add_user_image,
+            image=self.images["add_user"],
             anchor="w",
-            command=lambda: self.select_frame_by_name(Page.KOVER_LEARN_PAGE),
+            command=lambda: self.set_page(Page.KOVER_LEARN_PAGE),
         )
+
         self.kover_frame_button.grid(row=3, column=0, sticky="ew")
 
-        self.analysis_frame_button = customtkinter.CTkButton(
+        self.analysis_frame_button = ctk.CTkButton(
             self.navigation_frame,
             corner_radius=0,
             height=80,
@@ -317,56 +191,60 @@ class App(customtkinter.CTk):
             fg_color="transparent",
             text_color=("gray10", "gray90"),
             hover_color=("gray70", "gray30"),
-            image=self.add_user_image,
+            image=self.images["add_user"],
             anchor="w",
-            command=lambda: self.select_frame_by_name(Page.ANALYSIS_PAGE),
+            command=lambda: self.set_page(Page.ANALYSIS_PAGE),
         )
+
         self.analysis_frame_button.grid(row=4, column=0, sticky="ew")
 
-        self.appearance_mode_menu = customtkinter.CTkOptionMenu(
+        self.appearance_mode_menu = ctk.CTkOptionMenu(
             self.navigation_frame,
             values=["Dark", "Light", "System"],
-            command=customtkinter.set_appearance_mode,
+            command=ctk.set_appearance_mode,
         )
+
         self.appearance_mode_menu.grid(row=6, column=0, padx=20, pady=20, sticky="s")
 
-        # create home frame
-        self.data_collection_frame = customtkinter.CTkFrame(
+    def create_data_collection_page(self):
+        self.data_collection_frame = ctk.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
-        tab_view = customtkinter.CTkTabview(
-            self.data_collection_frame,
-            width=screen_width - 230,
-            height=screen_height - 150,
-        )
-        tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
-        tab_view.add("Genomes")
-        tab_view.add("AMR")
 
-        self.contigframe = customtkinter.CTkFrame(
-            tab_view.tab("Genomes"),
+        data_collection_tab_view = ctk.CTkTabview(
+            self.data_collection_frame,
+            width=self.screen_width - 230,
+            height=self.screen_height - 150,
+        )
+        data_collection_tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
+        data_collection_tab_view.add("Genomes")
+        data_collection_tab_view.add("AMR")
+
+        self.contig_frame = ctk.CTkFrame(
+            data_collection_tab_view.tab("Genomes"),
             width=320,
             height=400,
             corner_radius=15,
             border_width=2,
         )
-        self.contigframe.place(x=50, y=45)
+        self.contig_frame.place(x=50, y=45)
 
-        l2 = customtkinter.CTkLabel(
-            master=self.contigframe,
+        contig_label = ctk.CTkLabel(
+            master=self.contig_frame,
             text="Contigs for specific Genome",
             font=("Century Gothic", 20),
         )
-        l2.place(x=50, y=45)
 
-        self.entry1 = customtkinter.CTkEntry(
-            master=self.contigframe, width=220, placeholder_text="Genome Id"
+        contig_label.grid(row=0, column=1, padx=50, pady=45)
+
+        self.entry1 = ctk.CTkEntry(
+            master=self.contig_frame, width=220, placeholder_text="Genome Id"
         )
         self.entry1.place(x=50, y=110)
 
         # Create custom button
-        self.dirbtn = customtkinter.CTkButton(
-            master=self.contigframe,
+        self.dirbtn = ctk.CTkButton(
+            master=self.contig_frame,
             width=220,
             text="Select directory",
             corner_radius=6,
@@ -375,9 +253,9 @@ class App(customtkinter.CTk):
             border_color="#FFCC70",
             command=self.select_directory,
         )
-        self.dirbtn.place(x=50, y=165)
-        self.loadtsv_button = customtkinter.CTkButton(
-            master=self.contigframe,
+        self.dirbtn.grid(row=1, column=1, padx=50, pady=45)
+        self.loadtsv_button = ctk.CTkButton(
+            master=self.contig_frame,
             width=220,
             text="Load bulk Genomes ids",
             corner_radius=6,
@@ -385,16 +263,16 @@ class App(customtkinter.CTk):
         )
         self.loadtsv_button.place(x=50, y=200)
 
-        self.download_button = customtkinter.CTkButton(
-            master=self.contigframe,
+        self.download_button = ctk.CTkButton(
+            master=self.contig_frame,
             width=220,
             text="Download",
             corner_radius=6,
             command=self.download_contigs,
         )
         self.download_button.place(x=50, y=245)
-        self.cancel_button = customtkinter.CTkButton(
-            master=self.contigframe,
+        self.cancel_button = ctk.CTkButton(
+            master=self.contig_frame,
             width=220,
             text="Cancel",
             corner_radius=6,
@@ -404,12 +282,12 @@ class App(customtkinter.CTk):
         self.cancel_button.place(x=50, y=290)
 
         self.progress_bar = ttk.Progressbar(
-            master=self.contigframe, length=200, mode="determinate"
+            master=self.contig_frame, length=200, mode="determinate"
         )
         self.progress_bar.place(x=50, y=340)
 
-        self.size_label = customtkinter.CTkLabel(
-            master=self.contigframe,
+        self.size_label = ctk.CTkLabel(
+            master=self.contig_frame,
             text="",
             font=("Century Gothic", 10),
             fg_color="transparent",
@@ -417,8 +295,8 @@ class App(customtkinter.CTk):
         self.size_label.place(x=50, y=370)
 
         # creating specific genome frame
-        self.genomeframe = customtkinter.CTkFrame(
-            tab_view.tab("Genomes"),
+        self.genomeframe = ctk.CTkFrame(
+            data_collection_tab_view.tab("Genomes"),
             width=320,
             height=400,
             corner_radius=15,
@@ -426,20 +304,20 @@ class App(customtkinter.CTk):
         )
         self.genomeframe.place(x=500, y=45)
 
-        l2 = customtkinter.CTkLabel(
+        feature_label = ctk.CTkLabel(
             master=self.genomeframe,
             text="Features for specific Genome",
             font=("Century Gothic", 20),
         )
-        l2.place(x=50, y=45)
+        feature_label.place(x=50, y=45)
 
-        self.entry2 = customtkinter.CTkEntry(
+        self.entry2 = ctk.CTkEntry(
             master=self.genomeframe, width=220, placeholder_text="Genome Id"
         )
         self.entry2.place(x=50, y=110)
 
         # Create custom button
-        dirbtn1 = customtkinter.CTkButton(
+        dirbtn1 = ctk.CTkButton(
             master=self.genomeframe,
             width=220,
             text="Select directory",
@@ -450,7 +328,7 @@ class App(customtkinter.CTk):
             command=self.select_directory,
         )
         dirbtn1.place(x=50, y=165)
-        self.loadtsv_button1 = customtkinter.CTkButton(
+        self.loadtsv_button1 = ctk.CTkButton(
             master=self.genomeframe,
             width=220,
             text="Load bulk Genomes ids",
@@ -459,7 +337,7 @@ class App(customtkinter.CTk):
         )
         self.loadtsv_button1.place(x=50, y=200)
 
-        self.download_button1 = customtkinter.CTkButton(
+        self.download_button1 = ctk.CTkButton(
             master=self.genomeframe,
             width=220,
             text="Download",
@@ -467,7 +345,7 @@ class App(customtkinter.CTk):
             command=self.downloadfeatures,
         )
         self.download_button1.place(x=50, y=245)
-        self.cancel_button1 = customtkinter.CTkButton(
+        self.cancel_button1 = ctk.CTkButton(
             master=self.genomeframe,
             width=220,
             text="Cancel",
@@ -482,7 +360,7 @@ class App(customtkinter.CTk):
         )
         self.progress_bar1.place(x=50, y=340)
 
-        self.size_label1 = customtkinter.CTkLabel(
+        self.size_label1 = ctk.CTkLabel(
             master=self.genomeframe,
             text="",
             font=("Century Gothic", 10),
@@ -491,8 +369,8 @@ class App(customtkinter.CTk):
         self.size_label1.place(x=50, y=370)
 
         # creating genome metadata frame
-        metadataframe = customtkinter.CTkFrame(
-            tab_view.tab("Genomes"),
+        metadataframe = ctk.CTkFrame(
+            data_collection_tab_view.tab("Genomes"),
             width=320,
             height=400,
             corner_radius=15,
@@ -500,15 +378,15 @@ class App(customtkinter.CTk):
         )
         metadataframe.place(x=900, y=45)
 
-        l2 = customtkinter.CTkLabel(
+        metadata_label = ctk.CTkLabel(
             master=metadataframe,
             text="Latest metadata for Genomes",
             font=("Century Gothic", 20),
         )
-        l2.place(x=50, y=45)
+        metadata_label.place(x=50, y=45)
 
         # Create custom button
-        dirbtn2 = customtkinter.CTkButton(
+        dirbtn2 = ctk.CTkButton(
             master=metadataframe,
             width=220,
             text="Select directory",
@@ -520,7 +398,7 @@ class App(customtkinter.CTk):
         )
         dirbtn2.place(x=50, y=165)
 
-        self.download_button2 = customtkinter.CTkButton(
+        self.download_button2 = ctk.CTkButton(
             master=metadataframe,
             width=220,
             text="Download",
@@ -528,7 +406,7 @@ class App(customtkinter.CTk):
             command=self,
         )
         self.download_button2.place(x=50, y=240)
-        self.cancel_button2 = customtkinter.CTkButton(
+        self.cancel_button2 = ctk.CTkButton(
             master=metadataframe,
             width=220,
             text="Cancel",
@@ -542,7 +420,7 @@ class App(customtkinter.CTk):
         )
         self.progress_bar2.place(x=50, y=340)
 
-        self.size_label2 = customtkinter.CTkLabel(
+        self.size_label2 = ctk.CTkLabel(
             master=metadataframe,
             text="",
             font=("Century Gothic", 10),
@@ -567,8 +445,8 @@ class App(customtkinter.CTk):
         # logic
 
         # creating AMR metadata frame
-        frame4 = customtkinter.CTkFrame(
-            tab_view.tab("AMR"),
+        frame4 = ctk.CTkFrame(
+            data_collection_tab_view.tab("AMR"),
             width=1000,
             height=400,
             corner_radius=15,
@@ -576,17 +454,17 @@ class App(customtkinter.CTk):
         )
         frame4.place(x=50, y=470)
 
-        l2 = customtkinter.CTkLabel(
+        metadata_amr_label = ctk.CTkLabel(
             master=frame4, text="Latest metadata for AMR", font=("Century Gothic", 20)
         )
-        l2.place(x=50, y=45)
+        metadata_amr_label.place(x=50, y=45)
 
         # Create custom button
-        self.update_date = customtkinter.CTkLabel(
+        self.update_date = ctk.CTkLabel(
             master=frame4, text="", font=("Century Gothic", 12), fg_color="transparent"
         )
         self.update_date.place(x=50, y=90)
-        dirbtn3 = customtkinter.CTkButton(
+        dirbtn3 = ctk.CTkButton(
             master=frame4,
             width=150,
             text="Select directory",
@@ -598,7 +476,7 @@ class App(customtkinter.CTk):
         )
         dirbtn3.place(x=50, y=120)
 
-        self.viewupdate_date = customtkinter.CTkButton(
+        self.viewupdate_date = ctk.CTkButton(
             master=frame4,
             width=150,
             text="View last update date",
@@ -607,11 +485,11 @@ class App(customtkinter.CTk):
         )
         self.viewupdate_date.place(x=250, y=120)
 
-        self.download_button3 = customtkinter.CTkButton(
+        self.download_button3 = ctk.CTkButton(
             master=frame4, width=150, text="Download", corner_radius=6, command=self
         )
         self.download_button3.place(x=450, y=120)
-        self.cancel_button3 = customtkinter.CTkButton(
+        self.cancel_button3 = ctk.CTkButton(
             master=frame4, width=150, text="Cancel", corner_radius=6, command=self
         )
         self.cancel_button3.place(x=650, y=120)
@@ -621,7 +499,7 @@ class App(customtkinter.CTk):
         )
         self.progress_bar3.place(x=50, y=190)
 
-        self.size_label3 = customtkinter.CTkLabel(
+        self.size_label3 = ctk.CTkLabel(
             master=frame4, text="", font=("Century Gothic", 10), fg_color="transparent"
         )
         self.size_label3.place(x=50, y=200)
@@ -642,8 +520,8 @@ class App(customtkinter.CTk):
         # logic
 
         # creating AMR metadata frame
-        amr_frame = customtkinter.CTkFrame(
-            tab_view.tab("AMR"),
+        amr_frame = ctk.CTkFrame(
+            data_collection_tab_view.tab("AMR"),
             width=500,
             height=400,
             corner_radius=15,
@@ -652,13 +530,13 @@ class App(customtkinter.CTk):
 
         amr_frame.place(x=50, y=45)
 
-        l2 = customtkinter.CTkLabel(
+        list_amr_label = ctk.CTkLabel(
             master=amr_frame,
             text="List available AMR datasets",
             font=("Century Gothic", 20),
         )
-        l2.place(x=50, y=20)
-        self.download_button4 = customtkinter.CTkButton(
+        list_amr_label.place(x=50, y=20)
+        self.download_button4 = ctk.CTkButton(
             master=amr_frame,
             text="load amr list",
             corner_radius=6,
@@ -700,8 +578,8 @@ class App(customtkinter.CTk):
 
         self.amr_list = pd.DataFrame()
 
-        frame6 = customtkinter.CTkFrame(
-            tab_view.tab("AMR"),
+        frame6 = ctk.CTkFrame(
+            data_collection_tab_view.tab("AMR"),
             width=800,
             height=400,
             corner_radius=15,
@@ -709,12 +587,12 @@ class App(customtkinter.CTk):
         )
         frame6.place(x=580, y=45)
         # Create input fields for antibiotic and species
-        l2 = customtkinter.CTkLabel(
+        full_amr_label = ctk.CTkLabel(
             master=frame6,
             text="Get amr data by species and antibiotic",
             font=("Century Gothic", 20),
         )
-        l2.place(x=50, y=20)
+        full_amr_label.place(x=50, y=20)
         self.antibiotic_selection = ttk.Combobox(
             master=frame6, state="readonly", width=18
         )
@@ -728,14 +606,14 @@ class App(customtkinter.CTk):
         self.species_selection.bind("<<ComboboxSelected>>", self.update_amr_full)
         self.species_selection.place(x=220, y=50)
 
-        self.drop_intermediate_checkbox = customtkinter.CTkCheckBox(
+        self.drop_intermediate_checkbox = ctk.CTkCheckBox(
             master=frame6,
             text="Drop Intermediate",
             command=self.update_amr_full,
         )
         self.drop_intermediate_checkbox.place(x=50, y=90)
 
-        self.numeric_phenotypes_checkbox = customtkinter.CTkCheckBox(
+        self.numeric_phenotypes_checkbox = ctk.CTkCheckBox(
             master=frame6,
             text="Numeric Phenotypes",
             command=self.update_amr_full,
@@ -748,7 +626,7 @@ class App(customtkinter.CTk):
         )
 
         # Create a button to select the AMR metadata file
-        self.save_table_button = customtkinter.CTkButton(
+        self.save_table_button = ctk.CTkButton(
             master=frame6, text="Export to .tsv", command=self.save_to_tsv
         )
         self.save_table_button.place(x=400, y=50)
@@ -790,32 +668,32 @@ class App(customtkinter.CTk):
 
         self.results_table.place(x=50, y=150)
 
-        # create second frame
-        self.preprocessing_frame = customtkinter.CTkFrame(
+    def create_preprocessing_page(self):
+        self.preprocessing_frame = ctk.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
 
-        tab_view = customtkinter.CTkTabview(
+        preprocessing_tab_view = ctk.CTkTabview(
             self.preprocessing_frame,
-            width=screen_width - 230,
-            height=screen_height - 150,
+            width=self.screen_width - 230,
+            height=self.screen_height - 150,
         )
-        tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
-        tab_view.add("preprocessing")
-        self.controlpanel = customtkinter.CTkFrame(
-            tab_view.tab("preprocessing"),
+        preprocessing_tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
+        preprocessing_tab_view.add("preprocessing")
+        self.controlpanel = ctk.CTkFrame(
+            preprocessing_tab_view.tab("preprocessing"),
             width=550,
             height=500,
             corner_radius=15,
             border_width=2,
         )
         self.controlpanel.place(x=50, y=20)
-        l2 = customtkinter.CTkLabel(
+        l2 = ctk.CTkLabel(
             master=self.controlpanel, text="Control panel", font=("Century Gothic", 20)
         )
         l2.place(x=50, y=45)
 
-        self.datasetbtn = customtkinter.CTkButton(
+        self.datasetbtn = ctk.CTkButton(
             master=self.controlpanel,
             width=220,
             text="Pick dataset",
@@ -827,7 +705,7 @@ class App(customtkinter.CTk):
         )
         self.datasetbtn.place(x=50, y=150)
 
-        self.entry1 = customtkinter.CTkEntry(
+        self.entry1 = ctk.CTkEntry(
             master=self.controlpanel,
             width=380,
             placeholder_text="Dataset path",
@@ -835,7 +713,7 @@ class App(customtkinter.CTk):
         )
         self.entry1.place(x=50, y=200)
 
-        self.outputbtn = customtkinter.CTkButton(
+        self.outputbtn = ctk.CTkButton(
             master=self.controlpanel,
             width=220,
             text="Pick output directory",
@@ -847,7 +725,7 @@ class App(customtkinter.CTk):
         )
         self.outputbtn.place(x=50, y=250)
 
-        self.entry2 = customtkinter.CTkEntry(
+        self.entry2 = ctk.CTkEntry(
             master=self.controlpanel,
             width=380,
             placeholder_text="Output directory path",
@@ -855,29 +733,33 @@ class App(customtkinter.CTk):
         )
         self.entry2.place(x=50, y=300)
 
-        l3 = customtkinter.CTkLabel(
+        l3 = ctk.CTkLabel(
             master=self.controlpanel,
             text="Enter kmer length",
             font=("Century Gothic", 15),
         )
         l3.place(x=50, y=350)
-        self.kmer_length = customtkinter.CTkEntry(
+        self.kmer_length = ctk.CTkEntry(
             master=self.controlpanel, width=100, placeholder_text="kmer length"
         )
         self.kmer_length.place(x=50, y=400)
-        l4 = customtkinter.CTkLabel(
+        l4 = ctk.CTkLabel(
             master=self.controlpanel, text="Pick kmer tool", font=("Century Gothic", 15)
         )
         l4.place(x=300, y=350)
+
+        self.kmer_tool = tk.StringVar(value="Ray Surveyor")
+
         self.kmertool_filter = ttk.Combobox(
             master=self.controlpanel,
             textvariable=self.kmer_tool,
             values=["Ray Surveyor", "DSK"],
             state="readonly",
         )
+
         self.kmertool_filter.place(x=300, y=400)
 
-        self.runbtn = customtkinter.CTkButton(
+        self.runbtn = ctk.CTkButton(
             master=self.controlpanel,
             width=150,
             text="Run " + self.kmer_tool.get(),
@@ -888,11 +770,8 @@ class App(customtkinter.CTk):
 
         self.kmer_tool.trace_add("write", self.update_button_text)
 
-        custom_font = font.nametofont("TkDefaultFont")
-        custom_font.configure(size=12)
-
-        outputscreen = customtkinter.CTkFrame(
-            tab_view.tab("preprocessing"),
+        outputscreen = ctk.CTkFrame(
+            preprocessing_tab_view.tab("preprocessing"),
             width=650,
             height=650,
             corner_radius=15,
@@ -909,7 +788,7 @@ class App(customtkinter.CTk):
             height=650,
             width=650,
             state="disabled",
-            font=custom_font,
+            font=self.custom_font,
         )
 
         self.scrollbar = tk.Scrollbar(outputscreen, command=self.cmd_output.yview)
@@ -917,28 +796,28 @@ class App(customtkinter.CTk):
         self.cmd_output["yscrollcommand"] = self.scrollbar.set
         self.cmd_output.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
-        # create third frame
-        self.kover_frame = customtkinter.CTkFrame(
-            self, corner_radius=0, fg_color="transparent"
+    def create_kover_learn_page(self):
+        self.kover_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        kover_tab_view = ctk.CTkTabview(
+            self.kover_frame,
+            width=self.screen_width - 230,
+            height=self.screen_height - 150,
         )
-        tab_view = customtkinter.CTkTabview(
-            self.kover_frame, width=screen_width - 230, height=screen_height - 150
-        )
-        tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
-        tab_view.add("Create dataset")
-        tab_view.add("split dataset")
-        tab_view.add("kover learn")
+        kover_tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
+        kover_tab_view.add("Create dataset")
+        kover_tab_view.add("split dataset")
+        kover_tab_view.add("kover learn")
 
-        create_dataset_frame = customtkinter.CTkFrame(
-            tab_view.tab("Create dataset"),
+        create_dataset_frame = ctk.CTkFrame(
+            kover_tab_view.tab("Create dataset"),
             width=700,
-            height=screen_height - 230,
+            height=self.screen_height - 230,
             corner_radius=15,
             border_width=2,
         )
         create_dataset_frame.place(x=50, y=20)
 
-        l1 = customtkinter.CTkLabel(
+        l1 = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Create Dataset",
             font=("Century Gothic", 20),
@@ -946,7 +825,7 @@ class App(customtkinter.CTk):
         l1.place(x=50, y=45)
 
         # Selection option for dataset type
-        dataset_type_label = customtkinter.CTkLabel(
+        dataset_type_label = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Select Dataset Type",
             font=("Century Gothic", 15),
@@ -963,7 +842,7 @@ class App(customtkinter.CTk):
         dataset_type_menu.place(x=50, y=150)
         dataset_type_menu.bind("<<ComboboxSelected>>", self.on_dataset_type_selected)
         # Buttons to pick dataset, output directory, phenotype description, phenotype metadata
-        self.pickdataset1_btn = customtkinter.CTkButton(
+        self.pickdataset1_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick Dataset",
@@ -975,7 +854,7 @@ class App(customtkinter.CTk):
         )
         self.pickdataset1_btn.place(x=50, y=200)
 
-        self.pickdataset1_entry = customtkinter.CTkEntry(
+        self.pickdataset1_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=380,
             placeholder_text="Dataset path",
@@ -983,7 +862,7 @@ class App(customtkinter.CTk):
         )
         self.pickdataset1_entry.place(x=50, y=250)
 
-        self.pickoutput_btn = customtkinter.CTkButton(
+        self.pickoutput_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick Output Directory",
@@ -995,7 +874,7 @@ class App(customtkinter.CTk):
         )
         self.pickoutput_btn.place(x=50, y=300)
 
-        self.pickoutput_entry = customtkinter.CTkEntry(
+        self.pickoutput_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=380,
             placeholder_text="Output directory path",
@@ -1003,7 +882,7 @@ class App(customtkinter.CTk):
         )
         self.pickoutput_entry.place(x=50, y=350)
 
-        self.phenotype_desc_btn = customtkinter.CTkButton(
+        self.phenotype_desc_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick Phenotype Description",
@@ -1015,7 +894,7 @@ class App(customtkinter.CTk):
         )
         self.phenotype_desc_btn.place(x=50, y=400)
 
-        self.phenotype_desc_entry = customtkinter.CTkEntry(
+        self.phenotype_desc_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=380,
             placeholder_text="Phenotype description path",
@@ -1024,7 +903,7 @@ class App(customtkinter.CTk):
         self.phenotype_desc_entry.place(x=50, y=450)
 
         # Kmer entry with max kmer length 128
-        self.kmer_label = customtkinter.CTkLabel(
+        self.kmer_label = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Enter Kmer Length (max 128)",
             font=("Century Gothic", 15),
@@ -1044,7 +923,7 @@ class App(customtkinter.CTk):
         self.kmer_length_spinbox.place(x=50, y=630)
 
         # Compression level input (0 to 9)
-        compression_label = customtkinter.CTkLabel(
+        compression_label = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Enter Compression Level (0-9)",
             font=("Century Gothic", 15),
@@ -1065,7 +944,7 @@ class App(customtkinter.CTk):
         self.compression_spinbox.place(x=300, y=630)
 
         # Create button to initiate the dataset creation
-        self.create_dataset_btn = customtkinter.CTkButton(
+        self.create_dataset_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=150,
             text="Create Dataset",
@@ -1074,7 +953,7 @@ class App(customtkinter.CTk):
         )
         self.create_dataset_btn.place(x=500, y=630)
 
-        phenotype_metadata_btn = customtkinter.CTkButton(
+        phenotype_metadata_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick Phenotype Metadata",
@@ -1086,7 +965,7 @@ class App(customtkinter.CTk):
         )
         phenotype_metadata_btn.place(x=50, y=500)
 
-        self.phenotype_metadata_entry = customtkinter.CTkEntry(
+        self.phenotype_metadata_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=380,
             placeholder_text="Phenotype metadata path",
@@ -1094,8 +973,8 @@ class App(customtkinter.CTk):
         )
         self.phenotype_metadata_entry.place(x=50, y=550)
 
-        outputscreen = customtkinter.CTkFrame(
-            tab_view.tab("Create dataset"),
+        outputscreen = ctk.CTkFrame(
+            kover_tab_view.tab("Create dataset"),
             width=650,
             height=650,
             corner_radius=15,
@@ -1112,7 +991,7 @@ class App(customtkinter.CTk):
             height=650,
             width=650,
             state="disabled",
-            font=custom_font,
+            font=self.custom_font,
         )
 
         self.scrollbar1 = tk.Scrollbar(outputscreen, command=self.cmd_output1.yview)
@@ -1120,22 +999,22 @@ class App(customtkinter.CTk):
         self.cmd_output1["yscrollcommand"] = self.scrollbar1.set
         self.cmd_output1.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
-        create_dataset_frame = customtkinter.CTkFrame(
-            tab_view.tab("split dataset"),
+        create_dataset_frame = ctk.CTkFrame(
+            kover_tab_view.tab("split dataset"),
             width=700,
-            height=screen_height - 230,
+            height=self.screen_height - 230,
             corner_radius=15,
             border_width=2,
         )
         create_dataset_frame.place(x=50, y=20)
-        l1 = customtkinter.CTkLabel(
+        l1 = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Split Dataset",
             font=("Century Gothic", 20),
         )
         l1.place(x=50, y=45)
 
-        dataset_btn = customtkinter.CTkButton(
+        dataset_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick kover Dataset",
@@ -1147,7 +1026,7 @@ class App(customtkinter.CTk):
         )
         dataset_btn.place(x=50, y=150)
 
-        dataset_entry = customtkinter.CTkEntry(
+        dataset_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=380,
             placeholder_text="Dataset path",
@@ -1155,7 +1034,7 @@ class App(customtkinter.CTk):
         )
         dataset_entry.place(x=50, y=200)
 
-        output_btn = customtkinter.CTkButton(
+        output_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick Output Directory",
@@ -1167,7 +1046,7 @@ class App(customtkinter.CTk):
         )
         output_btn.place(x=50, y=250)
 
-        output_entry = customtkinter.CTkEntry(
+        output_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=380,
             placeholder_text="Output directory path",
@@ -1175,7 +1054,7 @@ class App(customtkinter.CTk):
         )
         output_entry.place(x=50, y=300)
 
-        l1 = customtkinter.CTkLabel(
+        l1 = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Train size(%)",
             font=("Century Gothic", 16),
@@ -1193,7 +1072,7 @@ class App(customtkinter.CTk):
 
         self.trainsize_spinbox.place(x=170, y=355)
 
-        trainlabel = customtkinter.CTkLabel(
+        trainlabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Use train ids and tests",
             font=("Century Gothic", 16),
@@ -1213,11 +1092,11 @@ class App(customtkinter.CTk):
         train_options_menu.bind("<<ComboboxSelected>>", self.toggle_train_test_widgets)
 
         self.foldvar = tk.StringVar(value="2")
-        foldlabel = customtkinter.CTkLabel(
+        foldlabel = ctk.CTkLabel(
             master=create_dataset_frame, text="Folds", font=("Century Gothic", 16)
         )
         foldlabel.place(x=50, y=400)
-        foldentry = customtkinter.CTkEntry(
+        foldentry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=80,
             placeholder_text="Enter number of folds",
@@ -1226,18 +1105,18 @@ class App(customtkinter.CTk):
 
         foldentry.place(x=100, y=400)
 
-        randomseedlabel = customtkinter.CTkLabel(
+        randomseedlabel = ctk.CTkLabel(
             master=create_dataset_frame, text="Random seed", font=("Century Gothic", 16)
         )
         randomseedlabel.place(x=200, y=400)
-        self.randomseedentry = customtkinter.CTkEntry(
+        self.randomseedentry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=100,
             placeholder_text="random seed",
         )
 
         self.randomseedentry.place(x=330, y=400)
-        randomseed_btn = customtkinter.CTkButton(
+        randomseed_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=150,
             text="Generate random seed",
@@ -1245,7 +1124,7 @@ class App(customtkinter.CTk):
         )
         randomseed_btn.place(x=450, y=400)
 
-        self.trainids_btn = customtkinter.CTkButton(
+        self.trainids_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick Train ids file",
@@ -1256,14 +1135,14 @@ class App(customtkinter.CTk):
             command=self.browse_dataset,
         )
 
-        self.trainids_entry = customtkinter.CTkEntry(
+        self.trainids_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=200,
             placeholder_text="train ids file path",
             textvariable=self.dataset_folder,
         )
 
-        self.testids_btn = customtkinter.CTkButton(
+        self.testids_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick Test ids file",
@@ -1274,27 +1153,27 @@ class App(customtkinter.CTk):
             command=self.browse_dataset,
         )
 
-        self.testids_entry = customtkinter.CTkEntry(
+        self.testids_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=200,
             placeholder_text="train ids file path",
             textvariable=self.dataset_folder,
         )
 
-        self.uniqueidlabel = customtkinter.CTkLabel(
+        self.uniqueidlabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Unique split id",
             font=("Century Gothic", 16),
         )
         self.uniqueidlabel.place(x=50, y=450)
-        self.uniqueidentry = customtkinter.CTkEntry(
+        self.uniqueidentry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=100,
             placeholder_text="Eg. split1",
         )
 
         self.uniqueidentry.place(x=180, y=450)
-        self.split_btn = customtkinter.CTkButton(
+        self.split_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=150,
             text="Split dataset",
@@ -1302,8 +1181,8 @@ class App(customtkinter.CTk):
         )
         self.split_btn.place(x=200, y=630)
 
-        outputscreen = customtkinter.CTkFrame(
-            tab_view.tab("split dataset"),
+        outputscreen = ctk.CTkFrame(
+            kover_tab_view.tab("split dataset"),
             width=650,
             height=650,
             corner_radius=15,
@@ -1320,32 +1199,30 @@ class App(customtkinter.CTk):
             height=650,
             width=650,
             state="disabled",
-            font=custom_font,
+            font=self.custom_font,
         )
 
         self.scrollbar2 = tk.Scrollbar(outputscreen, command=self.cmd_output2.yview)
         self.scrollbar2.grid(row=0, column=1, sticky=tk.NSEW)
         self.cmd_output2["yscrollcommand"] = self.scrollbar2.set
         self.cmd_output2.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
-
-        # KOVER LEARN
-
-        create_dataset_frame = customtkinter.CTkFrame(
-            tab_view.tab("kover learn"),
+        
+        create_dataset_frame = ctk.CTkFrame(
+            kover_tab_view.tab("kover learn"),
             width=700,
-            height=screen_height - 230,
+            height=self.screen_height - 230,
             corner_radius=15,
             border_width=2,
         )
         create_dataset_frame.place(x=50, y=20)
 
-        l1 = customtkinter.CTkLabel(
+        l1 = ctk.CTkLabel(
             master=create_dataset_frame, text="Kover learn", font=("Century Gothic", 20)
         )
         l1.place(x=50, y=45)
 
         # Selection option for dataset type
-        dataset_type_label = customtkinter.CTkLabel(
+        dataset_type_label = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Select kover learn Type",
             font=("Century Gothic", 15),
@@ -1362,7 +1239,7 @@ class App(customtkinter.CTk):
         learn_type_menu.place(x=50, y=150)
         learn_type_menu.bind("<<ComboboxSelected>>", self.on_learn_type_selected)
         # Buttons to pick dataset, output directory, phenotype description, phenotype metadata
-        self.pickdataset_btn = customtkinter.CTkButton(
+        self.pickdataset_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick Dataset",
@@ -1374,7 +1251,7 @@ class App(customtkinter.CTk):
         )
         self.pickdataset_btn.place(x=50, y=200)
 
-        self.pickdataset_entry = customtkinter.CTkEntry(
+        self.pickdataset_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=380,
             placeholder_text="Dataset path",
@@ -1382,7 +1259,7 @@ class App(customtkinter.CTk):
         )
         self.pickdataset_entry.place(x=280, y=200)
 
-        self.pickoutput_btn = customtkinter.CTkButton(
+        self.pickoutput_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=220,
             text="Pick Output Directory",
@@ -1394,7 +1271,7 @@ class App(customtkinter.CTk):
         )
         self.pickoutput_btn.place(x=50, y=250)
 
-        self.pickoutput_entry = customtkinter.CTkEntry(
+        self.pickoutput_entry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=380,
             placeholder_text="Output directory path",
@@ -1402,20 +1279,20 @@ class App(customtkinter.CTk):
         )
         self.pickoutput_entry.place(x=280, y=250)
 
-        self.hyperparameterlabel = customtkinter.CTkLabel(
+        self.hyperparameterlabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Hyper-parameter:",
             font=("Century Gothic", 12),
         )
         self.hyperparameterlabel.place(x=50, y=300)
-        self.hyperparameterentry = customtkinter.CTkEntry(
+        self.hyperparameterentry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=300,
             placeholder_text="Enter hyperparamters eg: 0.1 0.178 0.316",
         )
         self.hyperparameterentry.place(x=180, y=300)
 
-        self.modellabel = customtkinter.CTkLabel(
+        self.modellabel = ctk.CTkLabel(
             master=create_dataset_frame, text="Model type:", font=("Century Gothic", 12)
         )
         self.modellabel.place(x=50, y=350)
@@ -1430,13 +1307,13 @@ class App(customtkinter.CTk):
         )
         self.model_type_menu.place(x=130, y=350)
 
-        splitidentifierlabel = customtkinter.CTkLabel(
+        splitidentifierlabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Split identifier",
             font=("Century Gothic", 12),
         )
         splitidentifierlabel.place(x=280, y=350)
-        self.splitidentifierentry = customtkinter.CTkEntry(
+        self.splitidentifierentry = ctk.CTkEntry(
             master=create_dataset_frame,
             width=200,
             placeholder_text="Enter split identifier in the dataset",
@@ -1444,7 +1321,7 @@ class App(customtkinter.CTk):
 
         self.splitidentifierentry.place(x=370, y=350)
 
-        self.maxrulelabel = customtkinter.CTkLabel(
+        self.maxrulelabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Maximum rules :",
             font=("Century Gothic", 12),
@@ -1462,7 +1339,7 @@ class App(customtkinter.CTk):
 
         self.maxrules_spinbox.place(x=150, y=400)
 
-        self.maxequivrulelabel = customtkinter.CTkLabel(
+        self.maxequivrulelabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Maximum equivalent rules :",
             font=("Century Gothic", 12),
@@ -1480,7 +1357,7 @@ class App(customtkinter.CTk):
 
         self.maxequivrules_spinbox.place(x=460, y=400)
 
-        hptypelabel = customtkinter.CTkLabel(
+        hptypelabel = ctk.CTkLabel(
             master=create_dataset_frame, text="Hp choice :", font=("Century Gothic", 12)
         )
         hptypelabel.place(x=50, y=450)
@@ -1495,7 +1372,7 @@ class App(customtkinter.CTk):
         )
         self.hp_type_menu.place(x=130, y=450)
 
-        self.maxboundsize = customtkinter.CTkLabel(
+        self.maxboundsize = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Max bound genome size :",
             font=("Century Gothic", 12),
@@ -1513,18 +1390,18 @@ class App(customtkinter.CTk):
 
         self.hp_type_menu.bind("<<ComboboxSelected>>", self.toggle_max_bound_widgets)
 
-        randomseedlabel = customtkinter.CTkLabel(
+        randomseedlabel = ctk.CTkLabel(
             master=create_dataset_frame, text="Random seed", font=("Century Gothic", 12)
         )
         randomseedlabel.place(x=50, y=500)
-        self.randomseedentry2 = customtkinter.CTkEntry(
+        self.randomseedentry2 = ctk.CTkEntry(
             master=create_dataset_frame,
             width=100,
             placeholder_text="random seed",
         )
 
         self.randomseedentry2.place(x=180, y=500)
-        randomseed_btn2 = customtkinter.CTkButton(
+        randomseed_btn2 = ctk.CTkButton(
             master=create_dataset_frame,
             width=150,
             text="Generate random seed",
@@ -1532,7 +1409,7 @@ class App(customtkinter.CTk):
         )
         randomseed_btn2.place(x=300, y=500)
 
-        self.koverlearn_btn = customtkinter.CTkButton(
+        self.koverlearn_btn = ctk.CTkButton(
             master=create_dataset_frame,
             width=150,
             text="kover learn",
@@ -1540,8 +1417,8 @@ class App(customtkinter.CTk):
         )
         self.koverlearn_btn.place(x=200, y=630)
 
-        outputscreen = customtkinter.CTkFrame(
-            tab_view.tab("kover learn"),
+        outputscreen = ctk.CTkFrame(
+            kover_tab_view.tab("kover learn"),
             width=650,
             height=650,
             corner_radius=15,
@@ -1558,7 +1435,7 @@ class App(customtkinter.CTk):
             height=650,
             width=650,
             state="disabled",
-            font=custom_font,
+            font=self.custom_font,
         )
 
         self.scrollbar3 = tk.Scrollbar(outputscreen, command=self.cmd_output3.yview)
@@ -1566,13 +1443,34 @@ class App(customtkinter.CTk):
         self.cmd_output3["yscrollcommand"] = self.scrollbar3.set
         self.cmd_output3.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
-        # create fourth frame
-        self.analysis_frame = customtkinter.CTkFrame(
+    def create_analysis_page(self):
+        self.analysis_frame = ctk.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
 
-        # select default frame
-        self.select_frame_by_name(Page.DATA_COLLECTION_PAGE)
+    def set_page(self, page: Page):
+        self.data_collection_frame.grid_forget()
+        self.preprocessing_frame.grid_forget()
+        self.kover_frame.grid_forget()
+        self.analysis_frame.grid_forget()
+
+        self.data_collection_frame_button.configure(fg_color="transparent")
+        self.preprocessing_frame_button.configure(fg_color="transparent")
+        self.kover_frame_button.configure(fg_color="transparent")
+        self.analysis_frame_button.configure(fg_color="transparent")
+
+        if page == Page.DATA_COLLECTION_PAGE:
+            self.data_collection_frame.grid(row=0, column=1, sticky=tk.NSEW)
+            self.data_collection_frame_button.configure(fg_color=("gray75", "gray25"))
+        elif page == Page.PREPROCESSING_PAGE:
+            self.preprocessing_frame.grid(row=0, column=1, sticky=tk.NSEW)
+            self.preprocessing_frame_button.configure(fg_color=("gray75", "gray25"))
+        elif page == Page.KOVER_LEARN_PAGE:
+            self.kover_frame.grid(row=0, column=1, sticky=tk.NSEW)
+            self.kover_frame_button.configure(fg_color=("gray75", "gray25"))
+        elif page == Page.ANALYSIS_PAGE:
+            self.analysis_frame.grid(row=0, column=1, sticky=tk.NSEW)
+            self.analysis_frame_button.configure(fg_color=("gray75", "gray25"))
 
     def run_preprocessing(self):
         self.cmd_output["state"] = tk.NORMAL
@@ -2687,27 +2585,3 @@ class App(customtkinter.CTk):
         else:
             self.maxboundsize_spinbox.place_forget()
             self.maxboundsize.place_forget()
-
-    def select_frame_by_name(self, page: Page):
-        self.data_collection_frame.grid_forget()
-        self.preprocessing_frame.grid_forget()
-        self.kover_frame.grid_forget()
-        self.analysis_frame.grid_forget()
-
-        self.data_collection_frame_button.configure(fg_color="transparent")
-        self.preprocessing_frame_button.configure(fg_color="transparent")
-        self.kover_frame_button.configure(fg_color="transparent")
-        self.analysis_frame_button.configure(fg_color="transparent")
-
-        if page == Page.DATA_COLLECTION_PAGE:
-            self.data_collection_frame.grid(row=0, column=1, sticky=tk.NSEW)
-            self.data_collection_frame_button.configure(fg_color=("gray75", "gray25"))
-        elif page == Page.PREPROCESSING_PAGE:
-            self.preprocessing_frame.grid(row=0, column=1, sticky=tk.NSEW)
-            self.preprocessing_frame_button.configure(fg_color=("gray75", "gray25"))
-        elif page == Page.KOVER_LEARN_PAGE:
-            self.kover_frame.grid(row=0, column=1, sticky=tk.NSEW)
-            self.kover_frame_button.configure(fg_color=("gray75", "gray25"))
-        elif page == Page.ANALYSIS_PAGE:
-            self.analysis_frame.grid(row=0, column=1, sticky=tk.NSEW)
-            self.analysis_frame_button.configure(fg_color=("gray75", "gray25"))
