@@ -53,8 +53,11 @@ class Hovertip(OnHoverTooltipBase):
 class Table(ttk.Treeview):
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
+
+        self.tag_configure("all", background="#313131")
+
         self.load_start: int = 0
-        self.load_size: int = 0
+        self.load_size: int = kwargs.get("height", 0) + 1
         self.columns: tuple[str] = tuple(kwargs.get("columns", tuple()))
         self.columns_order: list[str] = list(range(len(self.columns)))
         self.sort_ascending = False
@@ -107,6 +110,7 @@ class Table(ttk.Treeview):
                 "",
                 tk.END,
                 values=list(items),
+                tags=("all",),
             )
 
     def sort_by_column(self, column_index: int):
@@ -164,6 +168,7 @@ class Table(ttk.Treeview):
                         self.filtered_data.values[self.load_start + self.load_size - 1]
                     )
                 ),
+                tags=("all",),
             )
 
         elif (event.delta > 0 or event.keycode == Key.UP) and self.load_start > 0:
@@ -174,6 +179,7 @@ class Table(ttk.Treeview):
                 "",
                 0,
                 values=list(self.filtered_data.values[self.load_start]),
+                tags=("all",),
             )
 
 
@@ -189,7 +195,6 @@ class App(customtkinter.CTk):
         self.data_folder = "data"
         self.local_path = None
         self.amr_full = pd.DataFrame()
-        customtkinter.set_appearance_mode("Dark")
         self.kmer_tool = tk.StringVar()
         self.kmer_tool.set("Ray Surveyor")
         self.dataset_folder = tk.StringVar()
@@ -199,15 +204,11 @@ class App(customtkinter.CTk):
         self.selected_kover = tk.StringVar()
         self.selected_kmer_matrix = tk.StringVar()
         self.title("Genome analysis tool")
-        # Get the screen resolution
-        # Get the screen resolution
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
 
-        # Set the window size to the screen resolution
         self.geometry(f"{screen_width}x{screen_height-100}")
 
-        # Position the window at the top left corner of the screen
         self.geometry("+0+0")
 
         # set grid layout 1x2
@@ -245,7 +246,10 @@ class App(customtkinter.CTk):
             size=(20, 20),
         )
 
-        # create navigation frame
+        style = ttk.Style(self)
+        self.tk.call("source", "ui/forest-dark.tcl")
+        style.theme_use("forest-dark")
+
         self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)
         self.navigation_frame.grid(row=0, column=0, sticky=tk.NSEW)
         self.navigation_frame.grid_rowconfigure(5, weight=1)
@@ -638,7 +642,7 @@ class App(customtkinter.CTk):
         # logic
 
         # creating AMR metadata frame
-        frame5 = customtkinter.CTkFrame(
+        amr_frame = customtkinter.CTkFrame(
             tab_view.tab("AMR"),
             width=500,
             height=400,
@@ -646,30 +650,22 @@ class App(customtkinter.CTk):
             border_width=2,
         )
 
-        frame5.place(x=50, y=45)
-        # Create a style
-        style = ttk.Style(frame5)
-
-        # Import the tcl file
-        frame5.tk.call("source", "ui/forest-dark.tcl")
-
-        # Set the theme with the theme_use method
-        style.theme_use("forest-dark")
+        amr_frame.place(x=50, y=45)
 
         l2 = customtkinter.CTkLabel(
-            master=frame5,
+            master=amr_frame,
             text="List available AMR datasets",
             font=("Century Gothic", 20),
         )
         l2.place(x=50, y=20)
         self.download_button4 = customtkinter.CTkButton(
-            master=frame5,
+            master=amr_frame,
             text="load amr list",
             corner_radius=6,
             command=self.load_amr_data,
         )
         self.download_button4.place(x=50, y=60)
-        self.species_filter = ttk.Combobox(master=frame5, state="readonly")
+        self.species_filter = ttk.Combobox(master=amr_frame, state="readonly")
         self.species_filter.bind("<<ComboboxSelected>>", self.update_table)
         self.species_filter.bind(
             "<Control-BackSpace>", lambda e: self.species_filter.set("")
@@ -680,21 +676,19 @@ class App(customtkinter.CTk):
         )
 
         self.species_filter.place(x=280, y=60)
-        self.total_label = tk.Label(master=frame5, text="Total: not loaded")
+        self.total_label = tk.Label(master=amr_frame, text="Total: not loaded")
         self.total_label.place(x=280, y=100)
         columns = ["Species", "Antibiotic"]
         self.amr_list_table = Table(
-            master=frame5,
+            master=amr_frame,
             columns=columns,
             show="headings",
-            style="Treeview.Treeview",
             selectmode="browse",
             height=9,
         )
 
         self.species_filter.bind("<Return>", lambda _: self.amr_list_table.focus_set())
 
-        self.amr_list_table.load_size = 10
         self.amr_list_table.place(x=50, y=130)
         for col in columns:
             self.amr_list_table.column(col, width=185)
@@ -789,8 +783,6 @@ class App(customtkinter.CTk):
         self.antibiotic_selection.bind(
             "<Return>", lambda _: self.results_table.focus_set()
         )
-
-        self.results_table.load_size = 9
 
         for col in columns:
             self.results_table.column(col, width=150, anchor=tk.CENTER)
@@ -2493,15 +2485,15 @@ class App(customtkinter.CTk):
                 total = len(self.results_table.filtered_data)
 
                 self.totalresistance_label.configure(
-                    text=f"Total resistance phenotypes available:{total_resistant}"
+                    text=f"Total resistance phenotypes available: {total_resistant}"
                 )
                 self.totalsusceptible_label.configure(
-                    text=f"Total susceptible phenotypes available:{total_susceptible}"
+                    text=f"Total susceptible phenotypes available: {total_susceptible}"
                 )
 
                 self.results_table.reset_view()
 
-                self.totaldata.configure(text=f"Total Phenotypes:{total}")
+                self.totaldata.configure(text=f"Total Phenotypes: {total}")
             except Exception:
                 traceback.print_exc()
                 messagebox.showerror("Error", "Error while reading the metadata file")
