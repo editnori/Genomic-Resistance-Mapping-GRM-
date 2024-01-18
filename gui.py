@@ -16,6 +16,7 @@ import pandas as pd
 from kover import KoverDatasetCreator
 from hovertip import Hovertip
 from table import Table
+from label import Label
 from ftp_downloader import (
     FTPDownloadApp,
     DownloadWindow,
@@ -49,6 +50,8 @@ class App(ctk.CTk):
 
         self.load_images(Path.IMAGES)
 
+        self.to_remove()  # remove this line when done
+
         self.create_navigation_frame()
 
         self.create_data_collection_page()
@@ -81,12 +84,14 @@ class App(ctk.CTk):
         self.custom_font = font.nametofont("TkDefaultFont")
         self.custom_font.configure(size=12)
 
+        self.default_font = lambda size: ("Century Gothic", size)
+
     def load_images(self, path: str) -> dict[ctk.CTkImage]:
         self.images = {}
 
         self.images["logo"] = ctk.CTkImage(
             Image.open(path + "CustomTkinter_logo_single.png"),
-            size=(26, 26),
+            size=(25, 25),
         )
 
         self.images["large_test"] = ctk.CTkImage(
@@ -95,13 +100,13 @@ class App(ctk.CTk):
         )
 
         self.images["icon"] = ctk.CTkImage(
-            Image.open(path + "image_icon_light.png"), size=(20, 20)
+            Image.open(path + "image_icon_light.png"), size=(25, 25)
         )
 
         self.images["home"] = ctk.CTkImage(
             light_image=Image.open(path + "database-dark.png"),
             dark_image=Image.open(path + "database-light1.png"),
-            size=(30, 30),
+            size=(25, 25),
         )
 
         prepocessing_image = Image.open(path + "preprocessing.png")
@@ -109,16 +114,20 @@ class App(ctk.CTk):
         self.images["chat"] = ctk.CTkImage(
             light_image=prepocessing_image,
             dark_image=prepocessing_image,
-            size=(30, 30),
+            size=(25, 25),
         )
 
         self.images["add_user"] = ctk.CTkImage(
             light_image=Image.open(path + "add_user_dark.png"),
             dark_image=Image.open(path + "add_user_light.png"),
-            size=(20, 20),
+            size=(25, 25),
         )
 
     def create_navigation_frame(self):
+        button_height = 80
+        button_text_color = ("gray10", "gray90")
+        button_hover_color = ("gray70", "gray30")
+
         self.navigation_frame = ctk.CTkFrame(self, corner_radius=0)
 
         self.navigation_frame.grid(row=0, column=0, sticky=tk.NSEW)
@@ -128,21 +137,21 @@ class App(ctk.CTk):
             self.navigation_frame,
             text="Patric",
             image=self.images["logo"],
+            padx=10,
             compound="left",
             font=ctk.CTkFont(size=15, weight="bold"),
         )
 
-        self.navigation_frame_label.grid(row=0, column=0, padx=20, pady=20)
+        self.navigation_frame_label.grid(row=0, column=0, pady=20)
 
         self.data_collection_frame_button = ctk.CTkButton(
             self.navigation_frame,
             corner_radius=0,
-            height=80,
-            border_spacing=10,
+            height=button_height,
             text="Data collection",
-            fg_color="transparent",
-            text_color=("gray10", "gray90"),
-            hover_color=("gray70", "gray30"),
+            border_spacing=10,
+            text_color=button_text_color,
+            hover_color=button_hover_color,
             image=self.images["home"],
             anchor="w",
             command=lambda: self.set_page(Page.DATA_COLLECTION_PAGE),
@@ -153,12 +162,11 @@ class App(ctk.CTk):
         self.preprocessing_frame_button = ctk.CTkButton(
             self.navigation_frame,
             corner_radius=0,
-            height=80,
-            border_spacing=10,
+            height=button_height,
             text="Data preprocessing",
-            fg_color="transparent",
-            text_color=("gray10", "gray90"),
-            hover_color=("gray70", "gray30"),
+            border_spacing=10,
+            text_color=button_text_color,
+            hover_color=button_hover_color,
             image=self.images["chat"],
             anchor="w",
             command=lambda: self.set_page(Page.PREPROCESSING_PAGE),
@@ -169,12 +177,11 @@ class App(ctk.CTk):
         self.kover_frame_button = ctk.CTkButton(
             self.navigation_frame,
             corner_radius=0,
-            height=80,
-            border_spacing=10,
+            height=button_height,
             text="Kover learn",
-            fg_color="transparent",
-            text_color=("gray10", "gray90"),
-            hover_color=("gray70", "gray30"),
+            border_spacing=10,
+            text_color=button_text_color,
+            hover_color=button_hover_color,
             image=self.images["add_user"],
             anchor="w",
             command=lambda: self.set_page(Page.KOVER_LEARN_PAGE),
@@ -185,12 +192,11 @@ class App(ctk.CTk):
         self.analysis_frame_button = ctk.CTkButton(
             self.navigation_frame,
             corner_radius=0,
-            height=80,
-            border_spacing=10,
+            height=button_height,
             text="Analysis",
-            fg_color="transparent",
-            text_color=("gray10", "gray90"),
-            hover_color=("gray70", "gray30"),
+            border_spacing=10,
+            text_color=button_text_color,
+            hover_color=button_hover_color,
             image=self.images["add_user"],
             anchor="w",
             command=lambda: self.set_page(Page.ANALYSIS_PAGE),
@@ -204,184 +210,142 @@ class App(ctk.CTk):
             command=ctk.set_appearance_mode,
         )
 
-        self.appearance_mode_menu.grid(row=6, column=0, padx=20, pady=20, sticky="s")
+        self.appearance_mode_menu.grid(row=6, column=0, pady=15, sticky="s")
 
     def create_data_collection_page(self):
-        self.data_collection_frame = ctk.CTkFrame(
-            self, corner_radius=0, fg_color="transparent"
-        )
+        self.data_collection_frame = ctk.CTkFrame(self, fg_color="transparent")
 
-        data_collection_tab_view = ctk.CTkTabview(
-            self.data_collection_frame,
-            width=self.screen_width - 230,
-            height=self.screen_height - 150,
-        )
-        data_collection_tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
-        data_collection_tab_view.add("Genomes")
-        data_collection_tab_view.add("AMR")
+        self.data_collection_tab_view = ctk.CTkTabview(self.data_collection_frame)
 
-        self.contig_frame = ctk.CTkFrame(
-            data_collection_tab_view.tab("Genomes"),
-            width=320,
-            height=400,
+        self.data_collection_tab_view.pack(fill=tk.BOTH, expand=True)
+        self.data_collection_tab_view.add("Genomes")
+        self.data_collection_tab_view.add("AMR")
+
+        self.create_genomes_tab()
+
+        self.create_amr_tab()
+
+    def create_genomes_tab(self):
+        self.genomes_frame = ctk.CTkFrame(self.data_collection_tab_view.tab("Genomes"))
+
+        self.genomes_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+        self.genome_data_frame = ctk.CTkFrame(
+            self.genomes_frame,
             corner_radius=15,
             border_width=2,
         )
-        self.contig_frame.place(x=50, y=45)
 
-        contig_label = ctk.CTkLabel(
-            master=self.contig_frame,
-            text="Contigs for specific Genome",
-            font=("Century Gothic", 20),
+        self.genome_data_frame.pack(side=tk.LEFT, padx=20)
+
+        self.genome_data_frame_label = ctk.CTkLabel(
+            master=self.genome_data_frame,
+            text="Genome Data",
+            font=self.default_font(20),
         )
 
-        contig_label.grid(row=0, column=1, padx=50, pady=45)
+        self.genome_data_frame_label.pack(padx=40, pady=(45, 50), fill=tk.X)
 
-        self.entry1 = ctk.CTkEntry(
-            master=self.contig_frame, width=220, placeholder_text="Genome Id"
+        self.genome_data_frame_checkbox_frame = ctk.CTkFrame(
+            master=self.genome_data_frame, fg_color="transparent"
         )
-        self.entry1.place(x=50, y=110)
 
-        # Create custom button
-        self.dirbtn = ctk.CTkButton(
-            master=self.contig_frame,
-            width=220,
-            text="Select directory",
+        self.genome_data_frame_checkbox_frame.pack(padx=50, pady=5, fill=tk.X)
+
+        self.genome_data_frame_contig_checkbox = ctk.CTkCheckBox(
+            master=self.genome_data_frame_checkbox_frame,
+            text="Contigs",
+        )
+
+        self.genome_data_frame_contig_checkbox.pack(side=tk.LEFT)
+
+        self.genome_data_frame_feature_checkbox = ctk.CTkCheckBox(
+            master=self.genome_data_frame_checkbox_frame,
+            text="Features",
+        )
+
+        self.genome_data_frame_feature_checkbox.pack(side=tk.LEFT)
+
+        self.genome_data_frame_load_frame = ctk.CTkFrame(
+            master=self.genome_data_frame, fg_color="transparent"
+        )
+
+        self.genome_data_frame_load_frame.pack(padx=50, pady=5, fill=tk.X)
+
+        self.genome_data_frame_bulk_checkbox = ctk.CTkCheckBox(
+            master=self.genome_data_frame_load_frame,
+            text="bulk",
+            command=self.toggle_bulk_download,
+        )
+
+        self.genome_data_frame_bulk_checkbox.grid(row=0, column=0, sticky=tk.W)
+
+        self.genome_data_frame_entry = ctk.CTkEntry(
+            master=self.genome_data_frame_load_frame, placeholder_text="Genome ID"
+        )
+
+        self.genome_data_frame_entry.grid(row=0, column=1, sticky=tk.W)
+
+        self.genome_data_frame_bulk_button = ctk.CTkButton(
+            master=self.genome_data_frame_load_frame,
+            text="Load IDs",
             corner_radius=6,
+            command=self.select_genome_data_directory,
+        )
+
+        self.genome_data_frame_path_saved = ""
+
+        self.genome_data_frame_path = Label(
+            master=self.genome_data_frame,
+            text=self.genome_data_frame_path_saved,
+            fg_color="transparent",
+            width=37,
+            anchor="w",
+        )
+
+        self.genome_data_frame_path.pack(padx=50, pady=5, fill=tk.X)
+
+        self.genome_data_frame_download_button = ctk.CTkButton(
+            master=self.genome_data_frame,
+            text="Download",
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.select_directory,
+            command=self.download_genome_data,
         )
-        self.dirbtn.grid(row=1, column=1, padx=50, pady=45)
-        self.loadtsv_button = ctk.CTkButton(
-            master=self.contig_frame,
-            width=220,
-            text="Load bulk Genomes ids",
-            corner_radius=6,
-            command=self.select_tsv_file,
-        )
-        self.loadtsv_button.place(x=50, y=200)
 
-        self.download_button = ctk.CTkButton(
-            master=self.contig_frame,
-            width=220,
-            text="Download",
-            corner_radius=6,
-            command=self.download_contigs,
-        )
-        self.download_button.place(x=50, y=245)
-        self.cancel_button = ctk.CTkButton(
-            master=self.contig_frame,
-            width=220,
-            text="Cancel",
-            corner_radius=6,
-            command=self.cancelcontigs,
-            state=tk.DISABLED,
-        )
-        self.cancel_button.place(x=50, y=290)
+        self.genome_data_frame_download_button.pack(padx=50, pady=5, fill=tk.X)
 
-        self.progress_bar = ttk.Progressbar(
-            master=self.contig_frame, length=200, mode="determinate"
+        self.genome_data_frame_progress_bar = ttk.Progressbar(
+            master=self.genome_data_frame, mode="determinate"
         )
-        self.progress_bar.place(x=50, y=340)
 
-        self.size_label = ctk.CTkLabel(
-            master=self.contig_frame,
+        self.genome_data_frame_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
+
+        self.genome_data_frame_size_label = ctk.CTkLabel(
+            master=self.genome_data_frame,
+            font=self.default_font(10),
+            fg_color="transparent",
             text="",
-            font=("Century Gothic", 10),
-            fg_color="transparent",
+            anchor="w",
         )
-        self.size_label.place(x=50, y=370)
 
-        # creating specific genome frame
-        self.genomeframe = ctk.CTkFrame(
-            data_collection_tab_view.tab("Genomes"),
-            width=320,
-            height=400,
-            corner_radius=15,
-            border_width=2,
-        )
-        self.genomeframe.place(x=500, y=45)
-
-        feature_label = ctk.CTkLabel(
-            master=self.genomeframe,
-            text="Features for specific Genome",
-            font=("Century Gothic", 20),
-        )
-        feature_label.place(x=50, y=45)
-
-        self.entry2 = ctk.CTkEntry(
-            master=self.genomeframe, width=220, placeholder_text="Genome Id"
-        )
-        self.entry2.place(x=50, y=110)
-
-        # Create custom button
-        dirbtn1 = ctk.CTkButton(
-            master=self.genomeframe,
-            width=220,
-            text="Select directory",
-            corner_radius=6,
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            command=self.select_directory,
-        )
-        dirbtn1.place(x=50, y=165)
-        self.loadtsv_button1 = ctk.CTkButton(
-            master=self.genomeframe,
-            width=220,
-            text="Load bulk Genomes ids",
-            corner_radius=6,
-            command=self.select_tsv_file,
-        )
-        self.loadtsv_button1.place(x=50, y=200)
-
-        self.download_button1 = ctk.CTkButton(
-            master=self.genomeframe,
-            width=220,
-            text="Download",
-            corner_radius=6,
-            command=self.downloadfeatures,
-        )
-        self.download_button1.place(x=50, y=245)
-        self.cancel_button1 = ctk.CTkButton(
-            master=self.genomeframe,
-            width=220,
-            text="Cancel",
-            corner_radius=6,
-            command=self.cancelfeatures,
-            state=tk.DISABLED,
-        )
-        self.cancel_button1.place(x=50, y=290)
-
-        self.progress_bar1 = ttk.Progressbar(
-            master=self.genomeframe, length=220, mode="determinate"
-        )
-        self.progress_bar1.place(x=50, y=340)
-
-        self.size_label1 = ctk.CTkLabel(
-            master=self.genomeframe,
-            text="",
-            font=("Century Gothic", 10),
-            fg_color="transparent",
-        )
-        self.size_label1.place(x=50, y=370)
+        self.genome_data_frame_size_label.pack(padx=50, pady=(0, 20), fill=tk.X)
 
         # creating genome metadata frame
         metadataframe = ctk.CTkFrame(
-            data_collection_tab_view.tab("Genomes"),
+            self.genomes_frame,
             width=320,
             height=400,
             corner_radius=15,
             border_width=2,
         )
-        metadataframe.place(x=900, y=45)
+        metadataframe.pack(side=tk.LEFT, padx=20)
 
         metadata_label = ctk.CTkLabel(
             master=metadataframe,
             text="Latest metadata for Genomes",
-            font=("Century Gothic", 20),
+            font=(self.default_font(20)),
         )
         metadata_label.place(x=50, y=45)
 
@@ -423,7 +387,7 @@ class App(ctk.CTk):
         self.size_label2 = ctk.CTkLabel(
             master=metadataframe,
             text="",
-            font=("Century Gothic", 10),
+            font=self.default_font(10),
             fg_color="transparent",
         )
         self.size_label2.place(x=50, y=370)
@@ -442,11 +406,22 @@ class App(ctk.CTk):
             self.download_window, "RELEASE_NOTES/genome_metadata"
         )
 
-        # logic
+    def toggle_bulk_download(self, event=None):
+        if self.genome_data_frame_bulk_checkbox.get():
+            self.genome_data_frame_entry.grid_remove()
+            self.genome_data_frame_bulk_button.grid(row=0, column=1, sticky=tk.W)
+            self.genome_data_frame_path.configure(
+                text=self.genome_data_frame_path_saved
+            )
+        else:
+            self.genome_data_frame_entry.grid(row=0, column=1, sticky=tk.W)
+            self.genome_data_frame_bulk_button.grid_remove()
+            self.genome_data_frame_path_saved = self.genome_data_frame_path.cget("text")
+            self.genome_data_frame_path.configure(text="")
 
-        # creating AMR metadata frame
+    def create_amr_tab(self):
         frame4 = ctk.CTkFrame(
-            data_collection_tab_view.tab("AMR"),
+            self.data_collection_tab_view.tab("AMR"),
             width=1000,
             height=400,
             corner_radius=15,
@@ -455,13 +430,13 @@ class App(ctk.CTk):
         frame4.place(x=50, y=470)
 
         metadata_amr_label = ctk.CTkLabel(
-            master=frame4, text="Latest metadata for AMR", font=("Century Gothic", 20)
+            master=frame4, text="Latest metadata for AMR", font=self.default_font(20)
         )
         metadata_amr_label.place(x=50, y=45)
 
         # Create custom button
         self.update_date = ctk.CTkLabel(
-            master=frame4, text="", font=("Century Gothic", 12), fg_color="transparent"
+            master=frame4, text="", font=self.default_font(12), fg_color="transparent"
         )
         self.update_date.place(x=50, y=90)
         dirbtn3 = ctk.CTkButton(
@@ -500,7 +475,7 @@ class App(ctk.CTk):
         self.progress_bar3.place(x=50, y=190)
 
         self.size_label3 = ctk.CTkLabel(
-            master=frame4, text="", font=("Century Gothic", 10), fg_color="transparent"
+            master=frame4, text="", font=self.default_font(10), fg_color="transparent"
         )
         self.size_label3.place(x=50, y=200)
 
@@ -521,7 +496,7 @@ class App(ctk.CTk):
 
         # creating AMR metadata frame
         amr_frame = ctk.CTkFrame(
-            data_collection_tab_view.tab("AMR"),
+            self.data_collection_tab_view.tab("AMR"),
             width=500,
             height=400,
             corner_radius=15,
@@ -533,7 +508,7 @@ class App(ctk.CTk):
         list_amr_label = ctk.CTkLabel(
             master=amr_frame,
             text="List available AMR datasets",
-            font=("Century Gothic", 20),
+            font=self.default_font(20),
         )
         list_amr_label.place(x=50, y=20)
         self.download_button4 = ctk.CTkButton(
@@ -579,7 +554,7 @@ class App(ctk.CTk):
         self.amr_list = pd.DataFrame()
 
         frame6 = ctk.CTkFrame(
-            data_collection_tab_view.tab("AMR"),
+            self.data_collection_tab_view.tab("AMR"),
             width=800,
             height=400,
             corner_radius=15,
@@ -590,7 +565,7 @@ class App(ctk.CTk):
         full_amr_label = ctk.CTkLabel(
             master=frame6,
             text="Get amr data by species and antibiotic",
-            font=("Century Gothic", 20),
+            font=self.default_font(20),
         )
         full_amr_label.place(x=50, y=20)
         self.antibiotic_selection = ttk.Combobox(
@@ -689,7 +664,7 @@ class App(ctk.CTk):
         )
         self.controlpanel.place(x=50, y=20)
         l2 = ctk.CTkLabel(
-            master=self.controlpanel, text="Control panel", font=("Century Gothic", 20)
+            master=self.controlpanel, text="Control panel", font=self.default_font(20)
         )
         l2.place(x=50, y=45)
 
@@ -736,7 +711,7 @@ class App(ctk.CTk):
         l3 = ctk.CTkLabel(
             master=self.controlpanel,
             text="Enter kmer length",
-            font=("Century Gothic", 15),
+            font=self.default_font(15),
         )
         l3.place(x=50, y=350)
         self.kmer_length = ctk.CTkEntry(
@@ -744,7 +719,7 @@ class App(ctk.CTk):
         )
         self.kmer_length.place(x=50, y=400)
         l4 = ctk.CTkLabel(
-            master=self.controlpanel, text="Pick kmer tool", font=("Century Gothic", 15)
+            master=self.controlpanel, text="Pick kmer tool", font=self.default_font(15)
         )
         l4.place(x=300, y=350)
 
@@ -820,7 +795,7 @@ class App(ctk.CTk):
         l1 = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Create Dataset",
-            font=("Century Gothic", 20),
+            font=self.default_font(20),
         )
         l1.place(x=50, y=45)
 
@@ -828,7 +803,7 @@ class App(ctk.CTk):
         dataset_type_label = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Select Dataset Type",
-            font=("Century Gothic", 15),
+            font=self.default_font(15),
         )
         dataset_type_label.place(x=50, y=100)
         self.dataset_type_var1 = tk.StringVar(value="contigs")  # Set a default value
@@ -906,7 +881,7 @@ class App(ctk.CTk):
         self.kmer_label = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Enter Kmer Length (max 128)",
-            font=("Century Gothic", 15),
+            font=self.default_font(15),
         )
         self.kmer_label.place(x=50, y=600)
         self.kmer_length_var = tk.StringVar(value="31")
@@ -926,7 +901,7 @@ class App(ctk.CTk):
         compression_label = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Enter Compression Level (0-9)",
-            font=("Century Gothic", 15),
+            font=self.default_font(15),
         )
         compression_label.place(x=300, y=600)
         self.compression_var = tk.StringVar(value="4")
@@ -1010,7 +985,7 @@ class App(ctk.CTk):
         l1 = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Split Dataset",
-            font=("Century Gothic", 20),
+            font=self.default_font(20),
         )
         l1.place(x=50, y=45)
 
@@ -1057,7 +1032,7 @@ class App(ctk.CTk):
         l1 = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Train size(%)",
-            font=("Century Gothic", 16),
+            font=self.default_font(16),
         )
         l1.place(x=50, y=350)
 
@@ -1075,7 +1050,7 @@ class App(ctk.CTk):
         trainlabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Use train ids and tests",
-            font=("Century Gothic", 16),
+            font=self.default_font(16),
         )
         trainlabel.place(x=250, y=350)
         self.trainvar = tk.StringVar(value="no")  # Set a default value
@@ -1093,7 +1068,7 @@ class App(ctk.CTk):
 
         self.foldvar = tk.StringVar(value="2")
         foldlabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Folds", font=("Century Gothic", 16)
+            master=create_dataset_frame, text="Folds", font=self.default_font(16)
         )
         foldlabel.place(x=50, y=400)
         foldentry = ctk.CTkEntry(
@@ -1106,7 +1081,7 @@ class App(ctk.CTk):
         foldentry.place(x=100, y=400)
 
         randomseedlabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Random seed", font=("Century Gothic", 16)
+            master=create_dataset_frame, text="Random seed", font=self.default_font(16)
         )
         randomseedlabel.place(x=200, y=400)
         self.randomseedentry = ctk.CTkEntry(
@@ -1163,7 +1138,7 @@ class App(ctk.CTk):
         self.uniqueidlabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Unique split id",
-            font=("Century Gothic", 16),
+            font=self.default_font(16),
         )
         self.uniqueidlabel.place(x=50, y=450)
         self.uniqueidentry = ctk.CTkEntry(
@@ -1206,7 +1181,7 @@ class App(ctk.CTk):
         self.scrollbar2.grid(row=0, column=1, sticky=tk.NSEW)
         self.cmd_output2["yscrollcommand"] = self.scrollbar2.set
         self.cmd_output2.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
-        
+
         create_dataset_frame = ctk.CTkFrame(
             kover_tab_view.tab("kover learn"),
             width=700,
@@ -1217,7 +1192,7 @@ class App(ctk.CTk):
         create_dataset_frame.place(x=50, y=20)
 
         l1 = ctk.CTkLabel(
-            master=create_dataset_frame, text="Kover learn", font=("Century Gothic", 20)
+            master=create_dataset_frame, text="Kover learn", font=self.default_font(20)
         )
         l1.place(x=50, y=45)
 
@@ -1225,7 +1200,7 @@ class App(ctk.CTk):
         dataset_type_label = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Select kover learn Type",
-            font=("Century Gothic", 15),
+            font=self.default_font(15),
         )
         dataset_type_label.place(x=50, y=100)
         self.learn_type_var = tk.StringVar(value="SCM")  # Set a default value
@@ -1282,7 +1257,7 @@ class App(ctk.CTk):
         self.hyperparameterlabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Hyper-parameter:",
-            font=("Century Gothic", 12),
+            font=self.default_font(12),
         )
         self.hyperparameterlabel.place(x=50, y=300)
         self.hyperparameterentry = ctk.CTkEntry(
@@ -1293,7 +1268,7 @@ class App(ctk.CTk):
         self.hyperparameterentry.place(x=180, y=300)
 
         self.modellabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Model type:", font=("Century Gothic", 12)
+            master=create_dataset_frame, text="Model type:", font=self.default_font(12)
         )
         self.modellabel.place(x=50, y=350)
         self.model_type_var = tk.StringVar(value="conjunction")  # Set a default value
@@ -1310,7 +1285,7 @@ class App(ctk.CTk):
         splitidentifierlabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Split identifier",
-            font=("Century Gothic", 12),
+            font=self.default_font(12),
         )
         splitidentifierlabel.place(x=280, y=350)
         self.splitidentifierentry = ctk.CTkEntry(
@@ -1324,7 +1299,7 @@ class App(ctk.CTk):
         self.maxrulelabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Maximum rules :",
-            font=("Century Gothic", 12),
+            font=self.default_font(12),
         )
         self.maxrulelabel.place(x=50, y=400)
         self.maxrules_var = tk.StringVar(value=1000)
@@ -1342,7 +1317,7 @@ class App(ctk.CTk):
         self.maxequivrulelabel = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Maximum equivalent rules :",
-            font=("Century Gothic", 12),
+            font=self.default_font(12),
         )
         self.maxequivrulelabel.place(x=280, y=400)
         self.maxequivrules_var = tk.StringVar(value=1000)
@@ -1358,7 +1333,7 @@ class App(ctk.CTk):
         self.maxequivrules_spinbox.place(x=460, y=400)
 
         hptypelabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Hp choice :", font=("Century Gothic", 12)
+            master=create_dataset_frame, text="Hp choice :", font=self.default_font(12)
         )
         hptypelabel.place(x=50, y=450)
         self.hp_type_var = tk.StringVar(value="none")  # Set a default value
@@ -1375,7 +1350,7 @@ class App(ctk.CTk):
         self.maxboundsize = ctk.CTkLabel(
             master=create_dataset_frame,
             text="Max bound genome size :",
-            font=("Century Gothic", 12),
+            font=self.default_font(12),
         )
 
         self.maxboundsize_var = tk.StringVar()
@@ -1391,7 +1366,7 @@ class App(ctk.CTk):
         self.hp_type_menu.bind("<<ComboboxSelected>>", self.toggle_max_bound_widgets)
 
         randomseedlabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Random seed", font=("Century Gothic", 12)
+            master=create_dataset_frame, text="Random seed", font=self.default_font(12)
         )
         randomseedlabel.place(x=50, y=500)
         self.randomseedentry2 = ctk.CTkEntry(
@@ -1449,28 +1424,25 @@ class App(ctk.CTk):
         )
 
     def set_page(self, page: Page):
-        self.data_collection_frame.grid_forget()
-        self.preprocessing_frame.grid_forget()
-        self.kover_frame.grid_forget()
-        self.analysis_frame.grid_forget()
+        page_frame = {
+            Page.DATA_COLLECTION_PAGE: (
+                self.data_collection_frame,
+                self.data_collection_frame_button,
+            ),
+            Page.PREPROCESSING_PAGE: (
+                self.preprocessing_frame,
+                self.preprocessing_frame_button,
+            ),
+            Page.KOVER_LEARN_PAGE: (self.kover_frame, self.kover_frame_button),
+            Page.ANALYSIS_PAGE: (self.analysis_frame, self.analysis_frame_button),
+        }
 
-        self.data_collection_frame_button.configure(fg_color="transparent")
-        self.preprocessing_frame_button.configure(fg_color="transparent")
-        self.kover_frame_button.configure(fg_color="transparent")
-        self.analysis_frame_button.configure(fg_color="transparent")
+        for frame, button in page_frame.values():
+            frame.grid_forget()
+            button.configure(fg_color="transparent")
 
-        if page == Page.DATA_COLLECTION_PAGE:
-            self.data_collection_frame.grid(row=0, column=1, sticky=tk.NSEW)
-            self.data_collection_frame_button.configure(fg_color=("gray75", "gray25"))
-        elif page == Page.PREPROCESSING_PAGE:
-            self.preprocessing_frame.grid(row=0, column=1, sticky=tk.NSEW)
-            self.preprocessing_frame_button.configure(fg_color=("gray75", "gray25"))
-        elif page == Page.KOVER_LEARN_PAGE:
-            self.kover_frame.grid(row=0, column=1, sticky=tk.NSEW)
-            self.kover_frame_button.configure(fg_color=("gray75", "gray25"))
-        elif page == Page.ANALYSIS_PAGE:
-            self.analysis_frame.grid(row=0, column=1, sticky=tk.NSEW)
-            self.analysis_frame_button.configure(fg_color=("gray75", "gray25"))
+        page_frame[page][0].grid(row=0, column=1, sticky=tk.NSEW, padx=20, pady=(0, 20))
+        page_frame[page][1].configure(fg_color=("gray75", "gray25"))
 
     def run_preprocessing(self):
         self.cmd_output["state"] = tk.NORMAL
@@ -1957,75 +1929,74 @@ class App(ctk.CTk):
         output_dir = filedialog.askdirectory()
         self.output_dir.set(output_dir)
 
-    def select_tsv_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("TSV files", "*.tsv")])
+    def select_genome_data_directory(self):
+        self.genome_data_frame_path.configure(
+            text=filedialog.askopenfilename(filetypes=[("TSV file", "*.tsv")])
+        )
 
-        if file_path:
-            self.file_name = os.path.basename(file_path)
-            self.selected_file_path = file_path
-            self.download_button["state"] = tk.NORMAL
+    
+    def download_genome_data(self):
+        def create_contigs_folder(self):
+            contigs_folder = "contigs"
+            file_name_parts = self.file_name.split("_")
+            datafolder = "data"
+            if len(file_name_parts) > 1:
+                tsv_folder_path = os.path.join(
+                    self.selected_directory, datafolder, file_name_parts[0]
+                )
+                file_name_parts[1] = file_name_parts[1].split(".")[0]
+                tsv_folder_path = os.path.join(
+                    tsv_folder_path, file_name_parts[1], contigs_folder
+                )
+            else:
+                tsv_folder_path = os.path.join(
+                    self.selected_directory,
+                    self.data_folder,
+                    *tsv_file_name_parts,
+                    contigs_folder,
+                )
 
-    def create_contigs_folder(self):
-        contigs_folder = "contigs"
-        file_name_parts = self.file_name.split("_")
-        datafolder = "data"
-        if len(file_name_parts) > 1:
-            tsv_folder_path = os.path.join(
-                self.selected_directory, datafolder, file_name_parts[0]
-            )
-            file_name_parts[1] = file_name_parts[1].split(".")[0]
-            tsv_folder_path = os.path.join(
-                tsv_folder_path, file_name_parts[1], contigs_folder
-            )
-        else:
-            tsv_folder_path = os.path.join(
-                self.selected_directory,
-                self.data_folder,
-                *tsv_file_name_parts,
-                contigs_folder,
-            )
+            os.makedirs(tsv_folder_path, exist_ok=True)
 
-        os.makedirs(tsv_folder_path, exist_ok=True)
+            contigs_folder = tsv_folder_path
+            return contigs_folder
 
-        contigs_folder = tsv_folder_path
-        return contigs_folder
+        def create_features_folder(self):
+            features_folder = "features"
+            file_name_parts = self.file_name.split("_")
+            datafolder = "data"
+            if len(file_name_parts) > 1:
+                tsv_folder_path = os.path.join(
+                    self.selected_directory, datafolder, file_name_parts[0]
+                )
+                file_name_parts[1] = file_name_parts[1].split(".")[0]
+                tsv_folder_path = os.path.join(
+                    tsv_folder_path, file_name_parts[1], features_folder
+                )
+            else:
+                tsv_folder_path = os.path.join(
+                    self.selected_directory,
+                    datafolder,
+                    *tsv_file_name_parts,
+                    features_folder,
+                )
 
-    def create_features_folder(self):
-        features_folder = "features"
-        file_name_parts = self.file_name.split("_")
-        datafolder = "data"
-        if len(file_name_parts) > 1:
-            tsv_folder_path = os.path.join(
-                self.selected_directory, datafolder, file_name_parts[0]
-            )
-            file_name_parts[1] = file_name_parts[1].split(".")[0]
-            tsv_folder_path = os.path.join(
-                tsv_folder_path, file_name_parts[1], features_folder
-            )
-        else:
-            tsv_folder_path = os.path.join(
-                self.selected_directory,
-                datafolder,
-                *tsv_file_name_parts,
-                features_folder,
-            )
+            os.makedirs(tsv_folder_path, exist_ok=True)
 
-        os.makedirs(tsv_folder_path, exist_ok=True)
+            contigs_folder = tsv_folder_path
+            return contigs_folder
 
-        contigs_folder = tsv_folder_path
-        return contigs_folder
+        def get_genome_ids_from_file(self):
+            genome_ids = []
+            with open(self.selected_file_path, "r") as tsv_file:
+                for line in tsv_file:
+                    columns = line.strip().split("\t")
+                    if len(columns) > 1:
+                        genome_id = columns[1].replace(" ", "")  # Remove spaces
+                        genome_ids.append(genome_id)
+            return genome_ids
 
-    def get_genome_ids_from_file(self):
-        genome_ids = []
-        with open(self.selected_file_path, "r") as tsv_file:
-            for line in tsv_file:
-                columns = line.strip().split("\t")
-                if len(columns) > 1:
-                    genome_id = columns[1].replace(" ", "")  # Remove spaces
-                    genome_ids.append(genome_id)
-        return genome_ids
-
-    def download_contigs(self):
+        
         if hasattr(self, "selected_file_path") and self.selected_file_path:
             genome_ids = self.get_genome_ids_from_file()
         else:
@@ -2078,83 +2049,83 @@ class App(ctk.CTk):
         self.download_thread = threading.Thread(target=download_genomes)
         self.download_thread.start()
 
-    def cancelcontigs(self):
-        if self.download_thread and self.download_thread.is_alive():
-            if messagebox.askyesno(
-                "Confirmation", "Are you sure you want to cancel the download?"
-            ):
-                self.cancel_download = True
-                self.cancel_button.configure(state=tk.DISABLED)
-                self.download_button.configure(text="Download", state=tk.NORMAL)
-                self.progress_bar["value"] = 0
-                self.size_label.configure(text="")
+        def cancelcontigs(self):
+            if self.download_thread and self.download_thread.is_alive():
+                if messagebox.askyesno(
+                    "Confirmation", "Are you sure you want to cancel the download?"
+                ):
+                    self.cancel_download = True
+                    self.cancel_button.configure(state=tk.DISABLED)
+                    self.download_button.configure(text="Download", state=tk.NORMAL)
+                    self.progress_bar["value"] = 0
+                    self.size_label.configure(text="")
 
-    def downloadfeatures(self):
-        if hasattr(self, "selected_file_path") and self.selected_file_path:
-            genome_ids = self.get_genome_ids_from_file()
+        def downloadfeatures(self):
+            if hasattr(self, "selected_file_path") and self.selected_file_path:
+                genome_ids = self.get_genome_ids_from_file()
 
-        else:
-            genome_ids = []
+            else:
+                genome_ids = []
 
-        if self.entry2.get():
-            genome_ids.append("Genome id")
-            genome_ids.append(self.entry2.get())
+            if self.entry2.get():
+                genome_ids.append("Genome id")
+                genome_ids.append(self.entry2.get())
 
-        if not genome_ids:
-            messagebox.showerror("Error", "No genome IDs found.")
-            return
+            if not genome_ids:
+                messagebox.showerror("Error", "No genome IDs found.")
+                return
 
-        if not self.selected_directory:
-            messagebox.showerror("Error", "Please select a directory for the download.")
-            return
+            if not self.selected_directory:
+                messagebox.showerror("Error", "Please select a directory for the download.")
+                return
 
-        self.download_button1.configure(text="Downloading..", state=tk.DISABLED)
-        self.cancel_button1.configure(state=tk.NORMAL)
-        self.progress_bar1["value"] = 0
-        self.size_label1.configure(text="")
-        self.downloading = True
-        features_folder = self.create_features_folder()
+            self.download_button1.configure(text="Downloading..", state=tk.DISABLED)
+            self.cancel_button1.configure(state=tk.NORMAL)
+            self.progress_bar1["value"] = 0
+            self.size_label1.configure(text="")
+            self.downloading = True
+            features_folder = self.create_features_folder()
 
-        def download_features():
-            total_genomes = len(genome_ids[1:])  # Start from the second index
-            for index, genome_id in enumerate(genome_ids[1:]):
-                if self.cancel_download:
-                    break
+            def download_features():
+                total_genomes = len(genome_ids[1:])  # Start from the second index
+                for index, genome_id in enumerate(genome_ids[1:]):
+                    if self.cancel_download:
+                        break
 
-                self.remote_path = (
-                    "genomes/" + genome_id + "/" + genome_id + ".PATRIC.features.tab"
-                )
-                self.download_ftp(features_folder)
-                progress_percentage = (index + 1) / total_genomes * 100
-                self.progress_bar1["value"] = progress_percentage
-                self.size_label1.configure(
-                    text=f"Downloaded {index + 1}/{total_genomes} genomes"
-                )
+                    self.remote_path = (
+                        "genomes/" + genome_id + "/" + genome_id + ".PATRIC.features.tab"
+                    )
+                    self.download_ftp(features_folder)
+                    progress_percentage = (index + 1) / total_genomes * 100
+                    self.progress_bar1["value"] = progress_percentage
+                    self.size_label1.configure(
+                        text=f"Downloaded {index + 1}/{total_genomes} genomes"
+                    )
 
-            self.download_button1.configure(text="Download", state=tk.NORMAL)
-            self.cancel_button1.configure(state=tk.DISABLED)
-            self.progress_bar1[
-                "value"
-            ] = 100  # Set the progress bar to 100 when downloads are completed
-            self.cancel_download = False
-            self.downloading = False
-
-        self.cancel_download = False
-
-        # Create a separate thread for downloading
-        self.download_thread = threading.Thread(target=download_features)
-        self.download_thread.start()
-
-    def cancelfeatures(self):
-        if self.download_thread and self.download_thread.is_alive():
-            if messagebox.askyesno(
-                "Confirmation", "Are you sure you want to cancel the download?"
-            ):
-                self.cancel_download = True
-                self.cancel_button1.configure(state=tk.DISABLED)
                 self.download_button1.configure(text="Download", state=tk.NORMAL)
-                self.progress_bar1["value"] = 0
-                self.size_label1.configure(text="")
+                self.cancel_button1.configure(state=tk.DISABLED)
+                self.progress_bar1[
+                    "value"
+                ] = 100  # Set the progress bar to 100 when downloads are completed
+                self.cancel_download = False
+                self.downloading = False
+
+            self.cancel_download = False
+
+            # Create a separate thread for downloading
+            self.download_thread = threading.Thread(target=download_features)
+            self.download_thread.start()
+
+        def cancelfeatures(self):
+            if self.download_thread and self.download_thread.is_alive():
+                if messagebox.askyesno(
+                    "Confirmation", "Are you sure you want to cancel the download?"
+                ):
+                    self.cancel_download = True
+                    self.cancel_button1.configure(state=tk.DISABLED)
+                    self.download_button1.configure(text="Download", state=tk.NORMAL)
+                    self.progress_bar1["value"] = 0
+                    self.size_label1.configure(text="")
 
     @threaded
     def load_amr_data(self):
@@ -2585,3 +2556,11 @@ class App(ctk.CTk):
         else:
             self.maxboundsize_spinbox.place_forget()
             self.maxboundsize.place_forget()
+
+    def to_remove(self):
+        self.bind_all("<ButtonPress>", lambda event: print(event.widget))
+        self.dataset_folder = tk.StringVar()
+        self.output_dir = tk.StringVar()
+        self.desctsv_file_path = tk.StringVar()
+        self.metatsv_file_path = tk.StringVar()
+        self.selected_kover = tk.StringVar()

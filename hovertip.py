@@ -16,3 +16,13 @@ class Hovertip(OnHoverTooltipBase):
             borderwidth=1,
         )
         label.pack()
+
+    def enable(self):  # Hack
+        self._id1 = self.anchor_widget.bind("<Enter>", self._show_event)
+        self._id2 = self.anchor_widget.bind("<Leave>", self._hide_event)
+        self._id3 = self.anchor_widget.bind("<Button>", self._hide_event)
+
+    def disable(self):  # Hack
+        self.anchor_widget.unbind("<Enter>", self._id1)
+        self.anchor_widget.unbind("<Leave>", self._id2)
+        self.anchor_widget.unbind("<Button>", self._id3)
