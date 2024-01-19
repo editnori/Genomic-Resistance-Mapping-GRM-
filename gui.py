@@ -8,6 +8,7 @@ import csv
 import random
 from enum import Enum
 import traceback
+import re
 
 import customtkinter as ctk
 from PIL import Image
@@ -418,6 +419,70 @@ class App(ctk.CTk):
             self.genome_data_frame_bulk_button.grid_remove()
             self.genome_data_frame_path_saved = self.genome_data_frame_path.cget("text")
             self.genome_data_frame_path.configure(text="")
+
+    def select_genome_data_directory(self):
+        self.genome_data_frame_path.configure(
+            text=filedialog.askopenfilename(filetypes=[("TSV file", "*.tsv")])
+        )
+
+    @threaded
+    def download_genome_data(self):
+        if (
+            not self.genome_data_frame_contig_checkbox.get()
+            and not self.genome_data_frame_feature_checkbox.get()
+        ):
+            messagebox.showerror("Error", "Please select a download type.")
+            return
+
+        if self.genome_data_frame_bulk_checkbox.get():
+            if not self.genome_data_frame_path.cget("text"):
+                messagebox.showerror("Error", "Please select a TSV file.")
+                return
+
+            genome_data_ids = pd.read_table(
+                self.genome_data_frame_path.cget("text"),
+                usecols=["genome_id"],
+                converters={"genome_id": str},
+            )
+
+            genome_data_ids = genome_data_ids[
+                genome_data_ids["genome_id"].str.contains(r"^\d+\.\d+$")
+            ].values
+        else:
+            if not self.genome_data_frame_entry.get():
+                messagebox.showerror("Error", "Please enter a genome ID.")
+                return
+
+            if re.match(r"^\d+\.\d+$", self.genome_data_frame_entry.get()) is None:
+                messagebox.showerror(
+                    "Error", "Please enter a valid genome ID. (e.g. 123.456)"
+                )
+                return
+
+        directory = filedialog.askdirectory()
+
+        if not directory:
+            return
+
+        self.genome_data_frame_contig_checkbox.configure(state=tk.DISABLED)
+        self.genome_data_frame_feature_checkbox.configure(state=tk.DISABLED)
+        self.genome_data_frame_bulk_checkbox.configure(state=tk.DISABLED)
+        self.genome_data_frame_entry.configure(state=tk.DISABLED)
+        self.genome_data_frame_download_button.configure(
+            text="Cancel", command=self.cancel_download
+        )
+        self.genome_data_frame_size_label.configure(text="Starting...")
+
+        # Start downloading
+
+        self.genome_data_frame_contig_checkbox.configure(state=tk.NORMAL)
+        self.genome_data_frame_feature_checkbox.configure(state=tk.NORMAL)
+        self.genome_data_frame_bulk_checkbox.configure(state=tk.NORMAL)
+        self.genome_data_frame_entry.configure(state=tk.NORMAL)
+        self.genome_data_frame_download_button.configure(
+            text="Download", command=self.download_genome_data
+        )
+        self.genome_data_frame_size_label.configure(text="done.")
 
     def create_amr_tab(self):
         frame4 = ctk.CTkFrame(
@@ -1928,204 +1993,6 @@ class App(ctk.CTk):
     def browse_output_dir(self):
         output_dir = filedialog.askdirectory()
         self.output_dir.set(output_dir)
-
-    def select_genome_data_directory(self):
-        self.genome_data_frame_path.configure(
-            text=filedialog.askopenfilename(filetypes=[("TSV file", "*.tsv")])
-        )
-
-    
-    def download_genome_data(self):
-        def create_contigs_folder(self):
-            contigs_folder = "contigs"
-            file_name_parts = self.file_name.split("_")
-            datafolder = "data"
-            if len(file_name_parts) > 1:
-                tsv_folder_path = os.path.join(
-                    self.selected_directory, datafolder, file_name_parts[0]
-                )
-                file_name_parts[1] = file_name_parts[1].split(".")[0]
-                tsv_folder_path = os.path.join(
-                    tsv_folder_path, file_name_parts[1], contigs_folder
-                )
-            else:
-                tsv_folder_path = os.path.join(
-                    self.selected_directory,
-                    self.data_folder,
-                    *tsv_file_name_parts,
-                    contigs_folder,
-                )
-
-            os.makedirs(tsv_folder_path, exist_ok=True)
-
-            contigs_folder = tsv_folder_path
-            return contigs_folder
-
-        def create_features_folder(self):
-            features_folder = "features"
-            file_name_parts = self.file_name.split("_")
-            datafolder = "data"
-            if len(file_name_parts) > 1:
-                tsv_folder_path = os.path.join(
-                    self.selected_directory, datafolder, file_name_parts[0]
-                )
-                file_name_parts[1] = file_name_parts[1].split(".")[0]
-                tsv_folder_path = os.path.join(
-                    tsv_folder_path, file_name_parts[1], features_folder
-                )
-            else:
-                tsv_folder_path = os.path.join(
-                    self.selected_directory,
-                    datafolder,
-                    *tsv_file_name_parts,
-                    features_folder,
-                )
-
-            os.makedirs(tsv_folder_path, exist_ok=True)
-
-            contigs_folder = tsv_folder_path
-            return contigs_folder
-
-        def get_genome_ids_from_file(self):
-            genome_ids = []
-            with open(self.selected_file_path, "r") as tsv_file:
-                for line in tsv_file:
-                    columns = line.strip().split("\t")
-                    if len(columns) > 1:
-                        genome_id = columns[1].replace(" ", "")  # Remove spaces
-                        genome_ids.append(genome_id)
-            return genome_ids
-
-        
-        if hasattr(self, "selected_file_path") and self.selected_file_path:
-            genome_ids = self.get_genome_ids_from_file()
-        else:
-            genome_ids = []
-
-        if self.entry1.get():
-            genome_ids.append("Genome id")
-            genome_ids.append(self.entry1.get())
-
-        if not genome_ids:
-            messagebox.showerror("Error", "No genome IDs found.")
-            return
-
-        if not self.selected_directory:
-            messagebox.showerror("Error", "Please select a directory for the download.")
-            return
-
-        self.download_button.configure(text="Downloading..", state=tk.DISABLED)
-        self.cancel_button.configure(state=tk.NORMAL)
-        self.progress_bar["value"] = 0
-        self.size_label.configure(text="")
-        self.downloading = True
-        contigs_folder = self.create_contigs_folder()
-
-        def download_genomes():
-            total_genomes = len(genome_ids[1:])  # Start from the second index
-            for index, genome_id in enumerate(genome_ids[1:]):
-                if self.cancel_download:
-                    break
-
-                self.remote_path = f"genomes/{genome_id}/{genome_id}.fna"
-                self.download_ftp(contigs_folder)
-                progress_percentage = (index + 1) / total_genomes * 100
-                self.progress_bar["value"] = progress_percentage
-                self.size_label.configure(
-                    text=f"Downloaded {index + 1}/{total_genomes} genomes"
-                )
-
-            self.download_button.configure(text="Download", state=tk.NORMAL)
-            self.cancel_button.configure(state=tk.DISABLED)
-            self.progress_bar[
-                "value"
-            ] = 100  # Set the progress bar to 100 when downloads are completed
-            self.cancel_download = False
-            self.downloading = False
-
-        self.cancel_download = False
-
-        # Create a separate thread for downloading
-        self.download_thread = threading.Thread(target=download_genomes)
-        self.download_thread.start()
-
-        def cancelcontigs(self):
-            if self.download_thread and self.download_thread.is_alive():
-                if messagebox.askyesno(
-                    "Confirmation", "Are you sure you want to cancel the download?"
-                ):
-                    self.cancel_download = True
-                    self.cancel_button.configure(state=tk.DISABLED)
-                    self.download_button.configure(text="Download", state=tk.NORMAL)
-                    self.progress_bar["value"] = 0
-                    self.size_label.configure(text="")
-
-        def downloadfeatures(self):
-            if hasattr(self, "selected_file_path") and self.selected_file_path:
-                genome_ids = self.get_genome_ids_from_file()
-
-            else:
-                genome_ids = []
-
-            if self.entry2.get():
-                genome_ids.append("Genome id")
-                genome_ids.append(self.entry2.get())
-
-            if not genome_ids:
-                messagebox.showerror("Error", "No genome IDs found.")
-                return
-
-            if not self.selected_directory:
-                messagebox.showerror("Error", "Please select a directory for the download.")
-                return
-
-            self.download_button1.configure(text="Downloading..", state=tk.DISABLED)
-            self.cancel_button1.configure(state=tk.NORMAL)
-            self.progress_bar1["value"] = 0
-            self.size_label1.configure(text="")
-            self.downloading = True
-            features_folder = self.create_features_folder()
-
-            def download_features():
-                total_genomes = len(genome_ids[1:])  # Start from the second index
-                for index, genome_id in enumerate(genome_ids[1:]):
-                    if self.cancel_download:
-                        break
-
-                    self.remote_path = (
-                        "genomes/" + genome_id + "/" + genome_id + ".PATRIC.features.tab"
-                    )
-                    self.download_ftp(features_folder)
-                    progress_percentage = (index + 1) / total_genomes * 100
-                    self.progress_bar1["value"] = progress_percentage
-                    self.size_label1.configure(
-                        text=f"Downloaded {index + 1}/{total_genomes} genomes"
-                    )
-
-                self.download_button1.configure(text="Download", state=tk.NORMAL)
-                self.cancel_button1.configure(state=tk.DISABLED)
-                self.progress_bar1[
-                    "value"
-                ] = 100  # Set the progress bar to 100 when downloads are completed
-                self.cancel_download = False
-                self.downloading = False
-
-            self.cancel_download = False
-
-            # Create a separate thread for downloading
-            self.download_thread = threading.Thread(target=download_features)
-            self.download_thread.start()
-
-        def cancelfeatures(self):
-            if self.download_thread and self.download_thread.is_alive():
-                if messagebox.askyesno(
-                    "Confirmation", "Are you sure you want to cancel the download?"
-                ):
-                    self.cancel_download = True
-                    self.cancel_button1.configure(state=tk.DISABLED)
-                    self.download_button1.configure(text="Download", state=tk.NORMAL)
-                    self.progress_bar1["value"] = 0
-                    self.size_label1.configure(text="")
 
     @threaded
     def load_amr_data(self):
