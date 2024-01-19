@@ -34,11 +34,13 @@ class Page(Enum):
 
 
 class Path(str):
-    RAY_SURVEYOR = "raysurveyor/"
-    DATA = "data/"
-    IMAGES = "ui/test_images/"
     FOREST_DARK = "ui/forest-dark.tcl"
     RAY = "bin/ray/Ray"
+    RAY_SURVEYOR = "raysurveyor/"
+    IMAGES = "ui/test_images/"
+    DATA = "data/"
+    CONTIGS = DATA + "contigs/"
+    FEATURES = DATA + "features/"
 
 
 class App(ctk.CTk):
@@ -441,8 +443,8 @@ class App(ctk.CTk):
 
             genome_data_ids = pd.read_table(
                 self.genome_data_frame_path.cget("text"),
-                usecols=["genome_id"],
-                converters={"genome_id": str},
+                usecols=["genome_id", "genome_name"],
+                converters={"genome_id": str, "genome_name": str},
             )
 
             genome_data_ids = genome_data_ids[
@@ -459,6 +461,8 @@ class App(ctk.CTk):
                 )
                 return
 
+            genome_data_ids = [self.genome_data_frame_entry.get()]
+
         directory = filedialog.askdirectory()
 
         if not directory:
@@ -469,11 +473,20 @@ class App(ctk.CTk):
         self.genome_data_frame_bulk_checkbox.configure(state=tk.DISABLED)
         self.genome_data_frame_entry.configure(state=tk.DISABLED)
         self.genome_data_frame_download_button.configure(
-            text="Cancel", command=self.cancel_download
+            text="Cancel", command=self.cancel_genome_data_download
         )
         self.genome_data_frame_size_label.configure(text="Starting...")
 
-        # Start downloading
+        for genome_data_id, genome_name in genome_data_ids:
+            if self.genome_data_frame_contig_checkbox.get():
+                os.makedirs(
+                    os.path.join(directory, Path.CONTIGS, genome_name), exist_ok=True
+                )
+            if self.genome_data_frame_feature_checkbox.get():
+                os.makedirs(
+                    os.path.join(directory, Path.FEATURES, genome_name),
+                    exist_ok=True,
+                )
 
         self.genome_data_frame_contig_checkbox.configure(state=tk.NORMAL)
         self.genome_data_frame_feature_checkbox.configure(state=tk.NORMAL)
@@ -483,6 +496,12 @@ class App(ctk.CTk):
             text="Download", command=self.download_genome_data
         )
         self.genome_data_frame_size_label.configure(text="done.")
+
+    def cancel_genome_data_download(self):
+        if messagebox.askyesno(
+            "Confirmation", "Are you sure you want to cancel the download?"
+        ):
+            pass
 
     def create_amr_tab(self):
         frame4 = ctk.CTkFrame(
@@ -583,7 +602,7 @@ class App(ctk.CTk):
             command=self.load_amr_data,
         )
         self.download_button4.place(x=50, y=60)
-        self.species_filter = ttk.Combobox(master=amr_frame, state="readonly")
+        self.species_filter = ttk.Combobox(master=amr_frame, state=tk.DISABLED)
         self.species_filter.bind("<<ComboboxSelected>>", self.update_table)
         self.species_filter.bind(
             "<Control-BackSpace>", lambda e: self.species_filter.set("")
@@ -594,6 +613,21 @@ class App(ctk.CTk):
         )
 
         self.species_filter.place(x=280, y=60)
+
+        self.amr_list_filter_checkbox = ctk.CTkCheckBox(
+            master=amr_frame,
+            text="Phenotype count ≥ 25",
+            command=self.on_amr_list_filter_check,
+            state=tk.DISABLED,
+        )
+
+        self.amr_list_filter_checkbox.place(x=50, y=100)
+
+        Hovertip(
+            self.amr_list_filter_checkbox,
+            "Only show species with ≥ 25\nphenotypes (resistant and susceptible)",
+        )
+
         self.total_label = tk.Label(master=amr_frame, text="Total: not loaded")
         self.total_label.place(x=280, y=100)
         columns = ["Species", "Antibiotic"]
@@ -634,14 +668,16 @@ class App(ctk.CTk):
         )
         full_amr_label.place(x=50, y=20)
         self.antibiotic_selection = ttk.Combobox(
-            master=frame6, state="readonly", width=18
+            master=frame6, state=tk.DISABLED, width=18
         )
         self.antibiotic_selection.bind(
             "<<ComboboxSelected>>", self.on_antibiotic_select
         )
         self.antibiotic_selection.place(x=50, y=50)
 
-        self.species_selection = ttk.Combobox(master=frame6, state="readonly", width=18)
+        self.species_selection = ttk.Combobox(
+            master=frame6, state=tk.DISABLED, width=18
+        )
 
         self.species_selection.bind("<<ComboboxSelected>>", self.update_amr_full)
         self.species_selection.place(x=220, y=50)
@@ -650,6 +686,7 @@ class App(ctk.CTk):
             master=frame6,
             text="Drop Intermediate",
             command=self.update_amr_full,
+            state=tk.DISABLED,
         )
         self.drop_intermediate_checkbox.place(x=50, y=90)
 
@@ -657,6 +694,7 @@ class App(ctk.CTk):
             master=frame6,
             text="Numeric Phenotypes",
             command=self.update_amr_full,
+            state=tk.DISABLED,
         )
 
         self.numeric_phenotypes_checkbox.place(x=220, y=90)
@@ -667,7 +705,10 @@ class App(ctk.CTk):
 
         # Create a button to select the AMR metadata file
         self.save_table_button = ctk.CTkButton(
-            master=frame6, text="Export to .tsv", command=self.save_to_tsv
+            master=frame6,
+            text="Export to .tsv",
+            command=self.save_to_tsv,
+            state=tk.DISABLED,
         )
         self.save_table_button.place(x=400, y=50)
         self.totaldata = tk.Label(master=frame6, text="Total phenotypes:")
@@ -1997,6 +2038,13 @@ class App(ctk.CTk):
     @threaded
     def load_amr_data(self):
         self.download_button4.configure(text="Loading..", state=tk.DISABLED)
+        self.amr_list_filter_checkbox.configure(state=tk.DISABLED)
+        self.species_filter.configure(state=tk.DISABLED)
+        self.species_selection.configure(state=tk.DISABLED)
+        self.antibiotic_selection.configure(state=tk.DISABLED)
+        self.drop_intermediate_checkbox.configure(state=tk.DISABLED)
+        self.numeric_phenotypes_checkbox.configure(state=tk.DISABLED)
+        self.save_table_button.configure(state=tk.DISABLED)
         amr_metadata_file = filedialog.askopenfilename(
             filetypes=[("AMR Text Files", "*.txt")]
         )
@@ -2036,23 +2084,33 @@ class App(ctk.CTk):
                 & (self.amr_full["measurement_unit"] != "")
             ]
 
+            self.amr_full = self.amr_full[self.amr_full["measurement_unit"] != "mm"]
+
             self.amr_full["measurement"] += self.amr_full["measurement_unit"]
 
-            self.amr_list = self.amr_full[
+            self.amr_list_unfiltered = self.amr_full[
                 ["genome_name", "antibiotic"]
             ].drop_duplicates()
 
-            species_list = self.amr_list["genome_name"].unique()
+            self.amr_list_filtered = (
+                self.amr_full.groupby(["genome_name", "antibiotic"])
+                .filter(
+                    lambda x: (x["resistant_phenotype"] == "Resistant").sum() >= 25
+                    and (x["resistant_phenotype"] == "Susceptible").sum() >= 25
+                )[["genome_name", "antibiotic"]]
+                .drop_duplicates()
+            )
+
+            species_list = self.amr_list_unfiltered["genome_name"].unique()
             species_list.sort()
             species_list = ["All"] + species_list.tolist()
 
-            antibiotic_list = self.amr_list["antibiotic"].unique()
+            antibiotic_list = self.amr_list_unfiltered["antibiotic"].unique()
             antibiotic_list.sort()
             antibiotic_list = ["All"] + antibiotic_list.tolist()
 
             self.species_filter["values"] = species_list
             self.species_filter.current(0)
-            self.species_filter.configure(state=tk.DISABLED)
 
             self.species_selection["values"] = species_list
             self.species_selection.current(0)
@@ -2060,10 +2118,23 @@ class App(ctk.CTk):
             self.antibiotic_selection["values"] = antibiotic_list
             self.antibiotic_selection.current(0)
 
+            if self.amr_list_filter_checkbox.get():
+                self.amr_list = self.amr_list_filtered
+            else:
+                self.amr_list = self.amr_list_unfiltered
+
             self.update_table()
             self.update_amr_full()
 
+        if hasattr(self, "amr_full"):
+            self.amr_list_filter_checkbox.configure(state=tk.NORMAL)
             self.species_filter.configure(state=tk.NORMAL)
+            self.species_selection.configure(state="readonly")
+            self.antibiotic_selection.configure(state="readonly")
+            self.drop_intermediate_checkbox.configure(state=tk.NORMAL)
+            self.numeric_phenotypes_checkbox.configure(state=tk.NORMAL)
+            self.save_table_button.configure(state=tk.NORMAL)
+
         self.download_button4.configure(text="load amr list", state=tk.NORMAL)
 
     def update_table(self, event=None):
@@ -2089,6 +2160,27 @@ class App(ctk.CTk):
             self.total_label.config(
                 text=f"Total: {len(self.amr_list_table.filtered_data)}"
             )
+
+    def on_amr_list_filter_check(self, event=None):
+        self.amr_list_filter_checkbox.configure(state=tk.DISABLED)
+        self.species_filter.configure(state=tk.DISABLED)
+
+        if self.amr_list_filter_checkbox.get():
+            self.amr_list = self.amr_list_filtered
+        else:
+            self.amr_list = self.amr_list_unfiltered
+
+        species_list = self.amr_list["genome_name"].unique()
+        species_list.sort()
+        species_list = ["All"] + species_list.tolist()
+
+        self.species_filter["values"] = species_list
+        self.species_filter.current(0)
+
+        self.update_table()
+
+        self.amr_list_filter_checkbox.configure(state=tk.NORMAL)
+        self.species_filter.configure(state=tk.NORMAL)
 
     def on_antibiotic_select(self, event=None):
         antibiotic = self.antibiotic_selection.get()
@@ -2254,10 +2346,19 @@ class App(ctk.CTk):
 
             tsv_writer.writerows(table.filtered_data.values)
 
-    def save_table_to_tsv(self, table: Table, file_path: str):
+    def save_phenotype_metadata_to_tsv(self, table: Table, file_path: str):
         with open(file_path, "w", newline="") as tsv_file:
             tsv_writer = csv.writer(tsv_file, delimiter="\t")
-            tsv_writer.writerows(table.filtered_data.iloc[:, [1, 2]].values)
+            tsv_writer.writerows(
+                table.filtered_data.iloc[:, [0, 2]].drop_duplicates().values
+            )
+
+    def save_id_name_to_tsv(self, table: Table, file_path: str):
+        with open(file_path, "w", newline="") as tsv_file:
+            tsv_writer = csv.writer(tsv_file, delimiter="\t")
+            columns = table.filtered_data.columns[:2].tolist()
+            tsv_writer.writerow(columns)
+            tsv_writer.writerows(table.filtered_data.iloc[:, [0, 1]].values)
 
     @threaded
     def save_to_tsv(self):
@@ -2280,23 +2381,28 @@ class App(ctk.CTk):
         species = species_text
         antibiotics = antibiotic_text
 
-        tsv_folder_path = os.path.join(
-            selected_directory, self.data_folder, species_text
-        )
+        tsv_folder_path = os.path.join(selected_directory, Path.DATA, species_text)
         tsv_folder_path = os.path.join(tsv_folder_path, antibiotic_text)
 
         os.makedirs(tsv_folder_path, exist_ok=True)
 
         base_name, extension = os.path.splitext(file_name)
+
         phenometafile = f"{base_name}_phenotype_metadata{extension}"
         file_path = os.path.join(tsv_folder_path, phenometafile)
-        self.save_table_to_tsv(self.results_table, file_path)
+        self.save_phenotype_metadata_to_tsv(self.results_table, file_path)
+
         descfilename = f"{base_name}_description{extension}"
         file_path = os.path.join(tsv_folder_path, descfilename)
         self.save_description_to_tsv(species, antibiotics, file_path)
+
         allfilename = f"{base_name}_full{extension}"
         file_path = os.path.join(tsv_folder_path, allfilename)
         self.save_all_table_to_tsv(self.results_table, file_path)
+
+        id_name_filename = f"{base_name}_id_name{extension}"
+        file_path = os.path.join(tsv_folder_path, id_name_filename)
+        self.save_id_name_to_tsv(self.results_table, file_path)
 
         self.save_table_button.configure(state=tk.NORMAL, text="Export to .tsv")
 
