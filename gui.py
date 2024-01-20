@@ -1,3 +1,5 @@
+from ftplib import FTP
+import time
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, font
 
@@ -258,6 +260,7 @@ class App(ctk.CTk):
         self.genome_data_frame_contig_checkbox = ctk.CTkCheckBox(
             master=self.genome_data_frame_checkbox_frame,
             text="Contigs",
+            command=self.genome_data_validate_ui,
         )
 
         self.genome_data_frame_contig_checkbox.pack(side=tk.LEFT)
@@ -265,6 +268,7 @@ class App(ctk.CTk):
         self.genome_data_frame_feature_checkbox = ctk.CTkCheckBox(
             master=self.genome_data_frame_checkbox_frame,
             text="Features",
+            command=self.genome_data_validate_ui,
         )
 
         self.genome_data_frame_feature_checkbox.pack(side=tk.LEFT)
@@ -288,6 +292,13 @@ class App(ctk.CTk):
         )
 
         self.genome_data_frame_entry.grid(row=0, column=1, sticky=tk.W)
+
+        self.genome_data_frame_entry.bind("<KeyRelease>", self.genome_data_validate_ui)
+
+        Hovertip(
+            self.genome_data_frame_entry,
+            "Genome ID format:\nnumber.number\n\ne.g. 123.456",
+        )
 
         self.genome_data_frame_bulk_button = ctk.CTkButton(
             master=self.genome_data_frame_load_frame,
@@ -317,23 +328,17 @@ class App(ctk.CTk):
             command=self.download_genome_data,
         )
 
-        self.genome_data_frame_download_button.pack(padx=50, pady=5, fill=tk.X)
+        self.genome_data_frame_download_button.pack(padx=50, pady=(5, 30), fill=tk.X)
 
-        self.genome_data_frame_progress_bar = ttk.Progressbar(
-            master=self.genome_data_frame, mode="determinate"
+        self.cancel_genome_data_download_boolean = tk.BooleanVar()
+        self.cancel_genome_data_download_boolean.set(False)
+
+        self.genome_data_frame_download_button_hover = Hovertip(
+            self.genome_data_frame_download_button,
+            "",
         )
 
-        self.genome_data_frame_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
-
-        self.genome_data_frame_size_label = ctk.CTkLabel(
-            master=self.genome_data_frame,
-            font=self.default_font(10),
-            fg_color="transparent",
-            text="",
-            anchor="w",
-        )
-
-        self.genome_data_frame_size_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+        self.genome_data_validate_ui()
 
         # creating genome metadata frame
         metadataframe = ctk.CTkFrame(
@@ -422,25 +427,18 @@ class App(ctk.CTk):
             self.genome_data_frame_path_saved = self.genome_data_frame_path.cget("text")
             self.genome_data_frame_path.configure(text="")
 
+        self.genome_data_validate_ui()
+
     def select_genome_data_directory(self):
         self.genome_data_frame_path.configure(
             text=filedialog.askopenfilename(filetypes=[("TSV file", "*.tsv")])
         )
 
+        self.genome_data_validate_ui()
+
     @threaded
     def download_genome_data(self):
-        if (
-            not self.genome_data_frame_contig_checkbox.get()
-            and not self.genome_data_frame_feature_checkbox.get()
-        ):
-            messagebox.showerror("Error", "Please select a download type.")
-            return
-
         if self.genome_data_frame_bulk_checkbox.get():
-            if not self.genome_data_frame_path.cget("text"):
-                messagebox.showerror("Error", "Please select a TSV file.")
-                return
-
             genome_data_ids = pd.read_table(
                 self.genome_data_frame_path.cget("text"),
                 usecols=["genome_id", "genome_name"],
@@ -451,17 +449,9 @@ class App(ctk.CTk):
                 genome_data_ids["genome_id"].str.contains(r"^\d+\.\d+$")
             ].values
         else:
-            if not self.genome_data_frame_entry.get():
-                messagebox.showerror("Error", "Please enter a genome ID.")
-                return
-
-            if re.match(r"^\d+\.\d+$", self.genome_data_frame_entry.get()) is None:
-                messagebox.showerror(
-                    "Error", "Please enter a valid genome ID. (e.g. 123.456)"
-                )
-                return
-
-            genome_data_ids = [self.genome_data_frame_entry.get()]
+            genome_data_ids = [
+                (self.genome_data_frame_entry.get(), self.genome_data_frame_entry.get())
+            ]
 
         directory = filedialog.askdirectory()
 
@@ -475,19 +465,165 @@ class App(ctk.CTk):
         self.genome_data_frame_download_button.configure(
             text="Cancel", command=self.cancel_genome_data_download
         )
-        self.genome_data_frame_size_label.configure(text="Starting...")
+        self.cancel_genome_data_download_boolean = False
+
+        number_downloaded = 0
+
+        total_progress_bar = ttk.Progressbar(
+            master=self.genome_data_frame, mode="determinate"
+        )
+
+        total_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
+
+        total_progress_bar["value"] = 0
+
+        total_progress_label = ctk.CTkLabel(
+            master=self.genome_data_frame,
+            font=self.default_font(10),
+            fg_color="transparent",
+            text="",
+            anchor="w",
+        )
+
+        total_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+
+        total_genomes = len(genome_data_ids) * (
+            self.genome_data_frame_contig_checkbox.get()
+            + self.genome_data_frame_feature_checkbox.get()
+        )
 
         for genome_data_id, genome_name in genome_data_ids:
-            if self.genome_data_frame_contig_checkbox.get():
-                os.makedirs(
-                    os.path.join(directory, Path.CONTIGS, genome_name), exist_ok=True
-                )
-            if self.genome_data_frame_feature_checkbox.get():
-                os.makedirs(
-                    os.path.join(directory, Path.FEATURES, genome_name),
-                    exist_ok=True,
-                )
+            contig_name = f"{genome_data_id}.fna"
+            feature_name = f"{genome_data_id}.PATRIC.features.tab"
 
+            local_contig_directory = os.path.join(directory, Path.CONTIGS, genome_name)
+            local_feature_directory = os.path.join(
+                directory, Path.FEATURES, genome_name
+            )
+
+            local_contig_path = os.path.join(local_contig_directory, contig_name)
+            local_feature_path = os.path.join(local_feature_directory, feature_name)
+
+            remote_contig = f"genomes/{genome_data_id}/{genome_data_id}.fna"
+            remote_feature = (
+                f"genomes/{genome_data_id}/{genome_data_id}.PATRIC.features.tab"
+            )
+
+            if self.genome_data_frame_contig_checkbox.get():
+                os.makedirs(local_contig_directory, exist_ok=True)
+
+                number_downloaded += 1
+                total_progress_label.configure(
+                    text=f"Downloading: {contig_name} ({number_downloaded}/{total_genomes})"
+                )
+                total_progress_bar["value"] = number_downloaded / total_genomes * 100
+
+                with open(local_contig_path, "wb") as local_file:
+                    ftp = FTP("ftp.bvbrc.org")
+                    ftp.login()
+                    ftp.voidcmd("TYPE I")
+
+                    contig_size = ftp.size(remote_contig)
+
+                    contig_progress_bar = ttk.Progressbar(
+                        master=self.genome_data_frame,
+                        mode="determinate",
+                        maximum=contig_size,
+                    )
+
+                    contig_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
+
+                    contig_progress_bar["value"] = 0
+
+                    contig_progress_label = ctk.CTkLabel(
+                        master=self.genome_data_frame,
+                        font=self.default_font(10),
+                        fg_color="transparent",
+                        text="",
+                        anchor="w",
+                    )
+
+                    contig_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+
+                    with ftp.transfercmd(f"RETR {remote_contig}") as conn:
+                        bytes_received = 0
+                        last_update_time = time.time_ns() / 1_000_000
+                        while not self.cancel_genome_data_download_boolean and (
+                            data := conn.recv(1024)
+                        ):
+                            local_file.write(data)
+                            bytes_received += len(data)
+                            current_time_ms = time.time_ns() / 1_000_000
+                            if (current_time_ms - last_update_time) > 100:
+                                contig_progress_bar["value"] = bytes_received
+                                contig_progress_label.configure(
+                                    text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {contig_size / 1_048_576:.2f} MB"
+                                )
+                                last_update_time = current_time_ms
+
+                    contig_progress_bar.destroy()
+                    contig_progress_label.destroy()
+
+                if self.cancel_genome_data_download_boolean:
+                    os.remove(local_contig_path)
+                    break
+            if self.genome_data_frame_feature_checkbox.get():
+                os.makedirs(local_feature_directory, exist_ok=True)
+
+                number_downloaded += 1
+                total_progress_label.configure(
+                    text=f"Downloading: {feature_name} ({number_downloaded}/{total_genomes})"
+                )
+                total_progress_bar["value"] = number_downloaded / total_genomes * 100
+
+                with open(local_feature_path, "wb") as local_file:
+                    ftp = FTP("ftp.bvbrc.org")
+                    ftp.login()
+                    ftp.voidcmd("TYPE I")
+
+                    feature_size = ftp.size(remote_feature)
+
+                    feature_progress_bar = ttk.Progressbar(
+                        master=self.genome_data_frame,
+                        mode="determinate",
+                        maximum=feature_size,
+                    )
+
+                    feature_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
+
+                    feature_progress_bar["value"] = 0
+
+                    feature_progress_label = ctk.CTkLabel(
+                        master=self.genome_data_frame,
+                        font=self.default_font(10),
+                        fg_color="transparent",
+                        text="",
+                        anchor="w",
+                    )
+
+                    feature_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+
+                    with ftp.transfercmd(f"RETR {remote_feature}") as conn:
+                        bytes_received = 0
+                        last_update_time = time.time_ns() / 1_000_000
+                        while not self.cancel_genome_data_download_boolean and (
+                            data := conn.recv(1024)
+                        ):
+                            local_file.write(data)
+                            bytes_received += len(data)
+                            if (current_time_ms - last_update_time) > 100:
+                                feature_progress_bar["value"] = bytes_received
+                                feature_progress_label.configure(
+                                    text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {contig_size / 1_048_576:.2f} MB"
+                                )
+                                last_update_time = current_time_ms
+
+                    feature_progress_bar.destroy()
+                    feature_progress_label.destroy()
+
+                if self.cancel_genome_data_download_boolean:
+                    os.remove(local_feature_path)
+                    break
         self.genome_data_frame_contig_checkbox.configure(state=tk.NORMAL)
         self.genome_data_frame_feature_checkbox.configure(state=tk.NORMAL)
         self.genome_data_frame_bulk_checkbox.configure(state=tk.NORMAL)
@@ -495,13 +631,65 @@ class App(ctk.CTk):
         self.genome_data_frame_download_button.configure(
             text="Download", command=self.download_genome_data
         )
-        self.genome_data_frame_size_label.configure(text="done.")
+
+        total_progress_bar.destroy()
+        total_progress_label.destroy()
 
     def cancel_genome_data_download(self):
         if messagebox.askyesno(
             "Confirmation", "Are you sure you want to cancel the download?"
         ):
-            pass
+            self.cancel_genome_data_download_boolean = True
+
+    def genome_data_validate_ui(self, event=None):
+        self.genome_data_frame_download_button_hover.text = ""
+
+        failed = False
+
+        if not (
+            self.genome_data_frame_contig_checkbox.get()
+            or self.genome_data_frame_feature_checkbox.get()
+        ):
+            self.genome_data_frame_download_button_hover.text += (
+                "• select at least one data type to download.\n"
+            )
+            failed = True
+        if self.genome_data_frame_bulk_checkbox.get():
+            if not self.genome_data_frame_path.cget("text"):
+                self.genome_data_frame_download_button_hover.text += (
+                    "• select genome ids tsv file.\n"
+                )
+                failed = True
+        else:
+            if not self.genome_data_frame_entry.get():
+                self.genome_data_frame_entry.configure(border_color="#565B5E")
+                self.genome_data_frame_download_button_hover.text += (
+                    "• input genome id.\n"
+                )
+                failed = True
+            else:
+                if (
+                    re.match(r"^\d+\.\d+$", self.genome_data_frame_entry.get())
+                    is not None
+                ):
+                    self.genome_data_frame_entry.configure(border_color="green")
+                else:
+                    self.genome_data_frame_entry.configure(border_color="red")
+                    self.genome_data_frame_download_button_hover.text += (
+                        "• input a valid genome id.\n"
+                    )
+                    failed = True
+
+        self.genome_data_frame_download_button_hover.text = (
+            self.genome_data_frame_download_button_hover.text.strip("\n")
+        )
+
+        if failed:
+            self.genome_data_frame_download_button_hover.enable()
+            self.genome_data_frame_download_button.configure(state=tk.DISABLED)
+        else:
+            self.genome_data_frame_download_button_hover.disable()
+            self.genome_data_frame_download_button.configure(state=tk.NORMAL)
 
     def create_amr_tab(self):
         frame4 = ctk.CTkFrame(
@@ -2362,8 +2550,10 @@ class App(ctk.CTk):
 
     @threaded
     def save_to_tsv(self):
-        species_text = self.species_selection.get().replace(" ", "-")
-        antibiotic_text = self.antibiotic_selection.get()
+        species_text = self.species_selection.get().replace(" ", "-").replace("/", "-")
+        antibiotic_text = (
+            self.antibiotic_selection.get().replace(" ", "-").replace("/", "-")
+        )
 
         if species_text == "" or antibiotic_text == "":
             messagebox.showerror("Error", "Please load amr data first.")
