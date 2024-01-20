@@ -38,6 +38,7 @@ class Page(Enum):
 class Path(str):
     FOREST_DARK = "ui/forest-dark.tcl"
     RAY = "bin/ray/Ray"
+    REMOTE_METADATA = "RELEASE_NOTES/genome_metadata"
     RAY_SURVEYOR = "raysurveyor/"
     IMAGES = "ui/test_images/"
     DATA = "data/"
@@ -330,9 +331,6 @@ class App(ctk.CTk):
 
         self.genome_data_frame_download_button.pack(padx=50, pady=(5, 30), fill=tk.X)
 
-        self.cancel_genome_data_download_boolean = tk.BooleanVar()
-        self.cancel_genome_data_download_boolean.set(False)
-
         self.genome_data_frame_download_button_hover = Hovertip(
             self.genome_data_frame_download_button,
             "",
@@ -340,78 +338,33 @@ class App(ctk.CTk):
 
         self.genome_data_validate_ui()
 
-        # creating genome metadata frame
-        metadataframe = ctk.CTkFrame(
+        self.genome_metadata_frame = ctk.CTkFrame(
             self.genomes_frame,
-            width=320,
-            height=400,
             corner_radius=15,
             border_width=2,
         )
-        metadataframe.pack(side=tk.LEFT, padx=20)
 
-        metadata_label = ctk.CTkLabel(
-            master=metadataframe,
+        self.genome_metadata_frame.pack(side=tk.LEFT, padx=20)
+
+        self.genome_metadata_frame_label = ctk.CTkLabel(
+            master=self.genome_metadata_frame,
             text="Latest metadata for Genomes",
-            font=(self.default_font(20)),
+            font=self.default_font(20),
         )
-        metadata_label.place(x=50, y=45)
 
-        # Create custom button
-        dirbtn2 = ctk.CTkButton(
-            master=metadataframe,
-            width=220,
-            text="Select directory",
-            corner_radius=6,
+        self.genome_metadata_frame_label.pack(padx=40, pady=(45, 50), fill=tk.X)
+
+        self.genome_metadata_frame_download_button = ctk.CTkButton(
+            master=self.genome_metadata_frame,
+            text="Download",
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self,
-        )
-        dirbtn2.place(x=50, y=165)
-
-        self.download_button2 = ctk.CTkButton(
-            master=metadataframe,
-            width=220,
-            text="Download",
-            corner_radius=6,
-            command=self,
-        )
-        self.download_button2.place(x=50, y=240)
-        self.cancel_button2 = ctk.CTkButton(
-            master=metadataframe,
-            width=220,
-            text="Cancel",
-            corner_radius=6,
-            command=self,
-        )
-        self.cancel_button2.place(x=50, y=290)
-
-        self.progress_bar2 = ttk.Progressbar(
-            master=metadataframe, length=220, mode="determinate"
-        )
-        self.progress_bar2.place(x=50, y=340)
-
-        self.size_label2 = ctk.CTkLabel(
-            master=metadataframe,
-            text="",
-            font=self.default_font(10),
-            fg_color="transparent",
-        )
-        self.size_label2.place(x=50, y=370)
-
-        self.download_window = DownloadWindow(
-            metadataframe,
-            download_button=self.download_button2,
-            cancel_button=self.cancel_button2,
-            select_path_button=dirbtn2,
-            progress_bar=self.progress_bar2,
-            size_label=self.size_label2,
-            path_label=self.size_label2,
+            command=self.download_genome_metadata,
         )
 
-        self.download_app = FTPDownloadApp(
-            self.download_window, "RELEASE_NOTES/genome_metadata"
+        self.genome_metadata_frame_download_button.pack(
+            padx=50, pady=(5, 30), fill=tk.X
         )
 
     def toggle_bulk_download(self, event=None):
@@ -469,8 +422,13 @@ class App(ctk.CTk):
 
         number_downloaded = 0
 
+        total_genomes = len(genome_data_ids) * (
+            self.genome_data_frame_contig_checkbox.get()
+            + self.genome_data_frame_feature_checkbox.get()
+        )
+
         total_progress_bar = ttk.Progressbar(
-            master=self.genome_data_frame, mode="determinate"
+            master=self.genome_data_frame, mode="determinate", maximum=total_genomes
         )
 
         total_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
@@ -486,11 +444,6 @@ class App(ctk.CTk):
         )
 
         total_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
-
-        total_genomes = len(genome_data_ids) * (
-            self.genome_data_frame_contig_checkbox.get()
-            + self.genome_data_frame_feature_checkbox.get()
-        )
 
         for genome_data_id, genome_name in genome_data_ids:
             contig_name = f"{genome_data_id}.fna"
@@ -516,7 +469,7 @@ class App(ctk.CTk):
                 total_progress_label.configure(
                     text=f"Downloading: {contig_name} ({number_downloaded}/{total_genomes})"
                 )
-                total_progress_bar["value"] = number_downloaded / total_genomes * 100
+                total_progress_bar["value"] = number_downloaded
 
                 with open(local_contig_path, "wb") as local_file:
                     ftp = FTP("ftp.bvbrc.org")
@@ -530,6 +483,8 @@ class App(ctk.CTk):
                         mode="determinate",
                         maximum=contig_size,
                     )
+
+                    contig_size_mb = contig_size / 1_048_576
 
                     contig_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
 
@@ -557,7 +512,7 @@ class App(ctk.CTk):
                             if (current_time_ms - last_update_time) > 100:
                                 contig_progress_bar["value"] = bytes_received
                                 contig_progress_label.configure(
-                                    text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {contig_size / 1_048_576:.2f} MB"
+                                    text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {contig_size_mb:.2f} MB"
                                 )
                                 last_update_time = current_time_ms
 
@@ -574,7 +529,7 @@ class App(ctk.CTk):
                 total_progress_label.configure(
                     text=f"Downloading: {feature_name} ({number_downloaded}/{total_genomes})"
                 )
-                total_progress_bar["value"] = number_downloaded / total_genomes * 100
+                total_progress_bar["value"] = number_downloaded
 
                 with open(local_feature_path, "wb") as local_file:
                     ftp = FTP("ftp.bvbrc.org")
@@ -588,6 +543,8 @@ class App(ctk.CTk):
                         mode="determinate",
                         maximum=feature_size,
                     )
+
+                    feature_size_mb = feature_size / 1_048_576
 
                     feature_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
 
@@ -614,7 +571,7 @@ class App(ctk.CTk):
                             if (current_time_ms - last_update_time) > 100:
                                 feature_progress_bar["value"] = bytes_received
                                 feature_progress_label.configure(
-                                    text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {contig_size / 1_048_576:.2f} MB"
+                                    text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {feature_size_mb:.2f} MB"
                                 )
                                 last_update_time = current_time_ms
 
@@ -640,6 +597,82 @@ class App(ctk.CTk):
             "Confirmation", "Are you sure you want to cancel the download?"
         ):
             self.cancel_genome_data_download_boolean = True
+
+    @threaded
+    def download_genome_metadata(self):
+        directory = filedialog.askdirectory()
+
+        if not directory:
+            return
+
+        self.cancel_genome_metadata_download_boolean = False
+
+        self.genome_metadata_frame_download_button.configure(
+            text="Cancel", command=self.cancel_genome_metadata_download
+        )
+
+        path = os.path.join(directory, "genome_metadata")
+
+        with open(path, "wb") as local_file:
+            ftp = FTP("ftp.bvbrc.org")
+            ftp.login()
+            ftp.voidcmd("TYPE I")
+
+            metadata_size = ftp.size(Path.REMOTE_METADATA)
+
+            progress_bar = ttk.Progressbar(
+                master=self.genome_metadata_frame,
+                mode="determinate",
+                maximum=metadata_size,
+            )
+
+            metadata_size_mb = metadata_size / 1_048_576
+
+            progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
+
+            progress_bar["value"] = 0
+
+            progress_label = ctk.CTkLabel(
+                master=self.genome_metadata_frame,
+                font=self.default_font(10),
+                fg_color="transparent",
+                text="",
+                anchor="w",
+            )
+
+            progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+
+            with ftp.transfercmd(f"RETR {Path.REMOTE_METADATA}") as conn:
+                bytes_received = 0
+                last_update_time = time.time_ns() / 1_000_000
+                while not self.cancel_genome_metadata_download_boolean and (
+                    data := conn.recv(1024)
+                ):
+                    local_file.write(data)
+                    bytes_received += len(data)
+                    current_time_ms = time.time_ns() / 1_000_000
+                    if (current_time_ms - last_update_time) > 100:
+                        progress_bar["value"] = bytes_received
+                        progress_label.configure(
+                            text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {metadata_size_mb:.2} MB"
+                        )
+                        last_update_time = current_time_ms
+
+            progress_bar.destroy()
+            progress_label.destroy()
+
+        if self.cancel_genome_metadata_download_boolean:
+            os.remove(path)
+
+        self.genome_metadata_frame_download_button.configure(
+            text="Download", command=self.download_genome_metadata
+        )
+
+    def cancel_genome_metadata_download(self):
+        if messagebox.askyesno(
+            "Confirmation", "Are you sure you want to cancel the download?"
+        ):
+            self.cancel_genome_metadata_download_boolean = True
 
     def genome_data_validate_ui(self, event=None):
         self.genome_data_frame_download_button_hover.text = ""
@@ -2721,7 +2754,7 @@ class App(ctk.CTk):
             self.maxboundsize.place_forget()
 
     def to_remove(self):
-        self.bind_all("<ButtonPress>", lambda event: print(event.widget))
+        self.bind_all("<ButtonPress>", lambda event: print("debug:", event.widget))
         self.dataset_folder = tk.StringVar()
         self.output_dir = tk.StringVar()
         self.desctsv_file_path = tk.StringVar()
