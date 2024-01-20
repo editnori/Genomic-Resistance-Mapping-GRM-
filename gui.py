@@ -470,58 +470,75 @@ class App(ctk.CTk):
                     text=f"Downloading: {contig_name} ({number_downloaded}/{total_genomes})"
                 )
                 total_progress_bar["value"] = number_downloaded
+                try:
+                    with open(local_contig_path, "wb") as local_file:
+                        ftp = FTP("ftp.bvbrc.org")
+                        ftp.login()
+                        ftp.voidcmd("TYPE I")
 
-                with open(local_contig_path, "wb") as local_file:
-                    ftp = FTP("ftp.bvbrc.org")
-                    ftp.login()
-                    ftp.voidcmd("TYPE I")
+                        contig_size = ftp.size(remote_contig)
 
-                    contig_size = ftp.size(remote_contig)
+                        contig_progress_bar = ttk.Progressbar(
+                            master=self.genome_data_frame,
+                            mode="determinate",
+                            maximum=contig_size,
+                        )
 
-                    contig_progress_bar = ttk.Progressbar(
-                        master=self.genome_data_frame,
-                        mode="determinate",
-                        maximum=contig_size,
+                        contig_size_mb = contig_size / 1_048_576
+
+                        contig_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
+
+                        contig_progress_bar["value"] = 0
+
+                        contig_progress_label = ctk.CTkLabel(
+                            master=self.genome_data_frame,
+                            font=self.default_font(10),
+                            fg_color="transparent",
+                            text="",
+                            anchor="w",
+                        )
+
+                        contig_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+
+                        with ftp.transfercmd(f"RETR {remote_contig}") as conn:
+                            bytes_received = 0
+                            last_update_time = time.time_ns() / 1_000_000
+                            while not self.cancel_genome_data_download_boolean and (
+                                data := conn.recv(1024)
+                            ):
+                                local_file.write(data)
+                                bytes_received += len(data)
+                                current_time_ms = time.time_ns() / 1_000_000
+                                if (current_time_ms - last_update_time) > 100:
+                                    contig_progress_bar["value"] = bytes_received
+                                    contig_progress_label.configure(
+                                        text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {contig_size_mb:6.2f} MB"
+                                    )
+                                    last_update_time = current_time_ms
+
+                        contig_progress_bar.destroy()
+                        contig_progress_label.destroy()
+                except Exception as e:
+                    messagebox.showerror(
+                        "Error", f"An error occurred while downloading contigs\n\n{e}"
                     )
-
-                    contig_size_mb = contig_size / 1_048_576
-
-                    contig_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
-
-                    contig_progress_bar["value"] = 0
-
-                    contig_progress_label = ctk.CTkLabel(
-                        master=self.genome_data_frame,
-                        font=self.default_font(10),
-                        fg_color="transparent",
-                        text="",
-                        anchor="w",
-                    )
-
-                    contig_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
-
-                    with ftp.transfercmd(f"RETR {remote_contig}") as conn:
-                        bytes_received = 0
-                        last_update_time = time.time_ns() / 1_000_000
-                        while not self.cancel_genome_data_download_boolean and (
-                            data := conn.recv(1024)
-                        ):
-                            local_file.write(data)
-                            bytes_received += len(data)
-                            current_time_ms = time.time_ns() / 1_000_000
-                            if (current_time_ms - last_update_time) > 100:
-                                contig_progress_bar["value"] = bytes_received
-                                contig_progress_label.configure(
-                                    text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {contig_size_mb:6.2f} MB"
-                                )
-                                last_update_time = current_time_ms
-
-                    contig_progress_bar.destroy()
-                    contig_progress_label.destroy()
+                    try:
+                        os.remove(local_contig_path)
+                        if len(os.listdir(local_contig_directory)) == 0:
+                            os.rmdir(local_contig_directory)
+                    except Exception:
+                        pass
+                    break
 
                 if self.cancel_genome_data_download_boolean:
-                    os.remove(local_contig_path)
+                    try:
+                        os.remove(local_contig_path)
+                        if len(os.listdir(local_contig_directory)) == 0:
+                            os.rmdir(local_contig_directory)
+                    except Exception:
+                        pass
                     break
+
             if self.genome_data_frame_feature_checkbox.get():
                 os.makedirs(local_feature_directory, exist_ok=True)
 
@@ -530,56 +547,71 @@ class App(ctk.CTk):
                     text=f"Downloading: {feature_name} ({number_downloaded}/{total_genomes})"
                 )
                 total_progress_bar["value"] = number_downloaded
+                try:
+                    with open(local_feature_path, "wb") as local_file:
+                        ftp = FTP("ftp.bvbrc.org")
+                        ftp.login()
+                        ftp.voidcmd("TYPE I")
 
-                with open(local_feature_path, "wb") as local_file:
-                    ftp = FTP("ftp.bvbrc.org")
-                    ftp.login()
-                    ftp.voidcmd("TYPE I")
+                        feature_size = ftp.size(remote_feature)
 
-                    feature_size = ftp.size(remote_feature)
+                        feature_progress_bar = ttk.Progressbar(
+                            master=self.genome_data_frame,
+                            mode="determinate",
+                            maximum=feature_size,
+                        )
 
-                    feature_progress_bar = ttk.Progressbar(
-                        master=self.genome_data_frame,
-                        mode="determinate",
-                        maximum=feature_size,
+                        feature_size_mb = feature_size / 1_048_576
+
+                        feature_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
+
+                        feature_progress_bar["value"] = 0
+
+                        feature_progress_label = ctk.CTkLabel(
+                            master=self.genome_data_frame,
+                            font=self.default_font(10),
+                            fg_color="transparent",
+                            text="",
+                            anchor="w",
+                        )
+
+                        feature_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+
+                        with ftp.transfercmd(f"RETR {remote_feature}") as conn:
+                            bytes_received = 0
+                            last_update_time = time.time_ns() / 1_000_000
+                            while not self.cancel_genome_data_download_boolean and (
+                                data := conn.recv(1024)
+                            ):
+                                local_file.write(data)
+                                bytes_received += len(data)
+                                if (current_time_ms - last_update_time) > 100:
+                                    feature_progress_bar["value"] = bytes_received
+                                    feature_progress_label.configure(
+                                        text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {feature_size_mb:6.2f} MB"
+                                    )
+                                    last_update_time = current_time_ms
+
+                        feature_progress_bar.destroy()
+                        feature_progress_label.destroy()
+                except Exception as e:
+                    messagebox.showerror(
+                        "Error", f"An error occurred while downloading features\n\n{e}"
                     )
-
-                    feature_size_mb = feature_size / 1_048_576
-
-                    feature_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
-
-                    feature_progress_bar["value"] = 0
-
-                    feature_progress_label = ctk.CTkLabel(
-                        master=self.genome_data_frame,
-                        font=self.default_font(10),
-                        fg_color="transparent",
-                        text="",
-                        anchor="w",
-                    )
-
-                    feature_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
-
-                    with ftp.transfercmd(f"RETR {remote_feature}") as conn:
-                        bytes_received = 0
-                        last_update_time = time.time_ns() / 1_000_000
-                        while not self.cancel_genome_data_download_boolean and (
-                            data := conn.recv(1024)
-                        ):
-                            local_file.write(data)
-                            bytes_received += len(data)
-                            if (current_time_ms - last_update_time) > 100:
-                                feature_progress_bar["value"] = bytes_received
-                                feature_progress_label.configure(
-                                    text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {feature_size_mb:6.2f} MB"
-                                )
-                                last_update_time = current_time_ms
-
-                    feature_progress_bar.destroy()
-                    feature_progress_label.destroy()
+                    try:
+                        os.remove(local_feature_path)
+                        if len(os.listdir(local_feature_directory)) == 0:
+                            os.rmdir(local_feature_directory)
+                    except Exception:
+                        pass
 
                 if self.cancel_genome_data_download_boolean:
-                    os.remove(local_feature_path)
+                    try:
+                        os.remove(local_feature_path)
+                        if len(os.listdir(local_feature_directory)) == 0:
+                            os.rmdir(local_feature_directory)
+                    except Exception:
+                        pass
                     break
         self.genome_data_frame_contig_checkbox.configure(state=tk.NORMAL)
         self.genome_data_frame_feature_checkbox.configure(state=tk.NORMAL)
@@ -612,57 +644,68 @@ class App(ctk.CTk):
         )
 
         path = os.path.join(directory, "genome_metadata")
+        try:
+            with open(path, "wb") as local_file:
+                ftp = FTP("ftp.bvbrc.org")
+                ftp.login()
+                ftp.voidcmd("TYPE I")
 
-        with open(path, "wb") as local_file:
-            ftp = FTP("ftp.bvbrc.org")
-            ftp.login()
-            ftp.voidcmd("TYPE I")
+                metadata_size = ftp.size(Path.REMOTE_METADATA)
 
-            metadata_size = ftp.size(Path.REMOTE_METADATA)
+                progress_bar = ttk.Progressbar(
+                    master=self.genome_metadata_frame,
+                    mode="determinate",
+                    maximum=metadata_size,
+                )
 
-            progress_bar = ttk.Progressbar(
-                master=self.genome_metadata_frame,
-                mode="determinate",
-                maximum=metadata_size,
+                metadata_size_mb = metadata_size / 1_048_576
+
+                progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
+
+                progress_bar["value"] = 0
+
+                progress_label = ctk.CTkLabel(
+                    master=self.genome_metadata_frame,
+                    font=self.default_font(10),
+                    fg_color="transparent",
+                    text="",
+                    anchor="w",
+                )
+
+                progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+
+                with ftp.transfercmd(f"RETR {Path.REMOTE_METADATA}") as conn:
+                    bytes_received = 0
+                    last_update_time = time.time_ns() / 1_000_000
+                    while not self.cancel_genome_metadata_download_boolean and (
+                        data := conn.recv(1024)
+                    ):
+                        local_file.write(data)
+                        bytes_received += len(data)
+                        current_time_ms = time.time_ns() / 1_000_000
+                        if (current_time_ms - last_update_time) > 100:
+                            progress_bar["value"] = bytes_received
+                            progress_label.configure(
+                                text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {metadata_size_mb:6.2f} MB"
+                            )
+                            last_update_time = current_time_ms
+
+                progress_bar.destroy()
+                progress_label.destroy()
+        except Exception as e:
+            messagebox.showerror(
+                "Error", f"An error occurred while downloading the metadata\n\n{e}"
             )
-
-            metadata_size_mb = metadata_size / 1_048_576
-
-            progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
-
-            progress_bar["value"] = 0
-
-            progress_label = ctk.CTkLabel(
-                master=self.genome_metadata_frame,
-                font=self.default_font(10),
-                fg_color="transparent",
-                text="",
-                anchor="w",
-            )
-
-            progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
-
-            with ftp.transfercmd(f"RETR {Path.REMOTE_METADATA}") as conn:
-                bytes_received = 0
-                last_update_time = time.time_ns() / 1_000_000
-                while not self.cancel_genome_metadata_download_boolean and (
-                    data := conn.recv(1024)
-                ):
-                    local_file.write(data)
-                    bytes_received += len(data)
-                    current_time_ms = time.time_ns() / 1_000_000
-                    if (current_time_ms - last_update_time) > 100:
-                        progress_bar["value"] = bytes_received
-                        progress_label.configure(
-                            text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {metadata_size_mb:6.2f} MB"
-                        )
-                        last_update_time = current_time_ms
-
-            progress_bar.destroy()
-            progress_label.destroy()
+            try:
+                os.remove(path)
+            except Exception:
+                pass
 
         if self.cancel_genome_metadata_download_boolean:
-            os.remove(path)
+            try:
+                os.remove(path)
+            except Exception:
+                pass
 
         self.genome_metadata_frame_download_button.configure(
             text="Download", command=self.download_genome_metadata
