@@ -512,7 +512,7 @@ class App(ctk.CTk):
                             if (current_time_ms - last_update_time) > 100:
                                 contig_progress_bar["value"] = bytes_received
                                 contig_progress_label.configure(
-                                    text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {contig_size_mb:.2f} MB"
+                                    text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {contig_size_mb:6.2f} MB"
                                 )
                                 last_update_time = current_time_ms
 
@@ -571,7 +571,7 @@ class App(ctk.CTk):
                             if (current_time_ms - last_update_time) > 100:
                                 feature_progress_bar["value"] = bytes_received
                                 feature_progress_label.configure(
-                                    text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {feature_size_mb:.2f} MB"
+                                    text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {feature_size_mb:6.2f} MB"
                                 )
                                 last_update_time = current_time_ms
 
@@ -654,7 +654,7 @@ class App(ctk.CTk):
                     if (current_time_ms - last_update_time) > 100:
                         progress_bar["value"] = bytes_received
                         progress_label.configure(
-                            text=f"Downloaded: {bytes_received / 1_048_576:.2f} MB / {metadata_size_mb:.2} MB"
+                            text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {metadata_size_mb:6.2f} MB"
                         )
                         last_update_time = current_time_ms
 
