@@ -18,7 +18,7 @@ class Label(CTkLabel):
         fg_color: Optional[Union[str, Tuple[str, str]]] = None,
         text_color: Optional[Union[str, Tuple[str, str]]] = None,
         text_color_disabled: Optional[Union[str, Tuple[str, str]]] = None,
-        text: str = "CTkLabel",
+        text: str = "",
         font: Optional[Union[tuple, CTkFont]] = None,
         image: Union[CTkImage, None] = None,
         compound: str = "center",
@@ -50,7 +50,7 @@ class Label(CTkLabel):
 
         self.hovertip.disable()
 
-        self.configure_text(text)
+        self.configure(text=text)
 
     def configure_text(self, text: str) -> str:
         if text and hasattr(self, "width") and len(text) > self.width:

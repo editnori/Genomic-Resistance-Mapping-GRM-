@@ -1,10 +1,12 @@
 from ftplib import FTP
+import signal
 import time
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, font
 
 import threading
 import os
+import pathlib as pl
 from subprocess import CalledProcessError, Popen, PIPE, run
 import csv
 import random
@@ -36,14 +38,18 @@ class Page(Enum):
 
 
 class Path(str):
+    REMOTE_METADATA = "RELEASE_NOTES/genome_metadata"
     FOREST_DARK = "ui/forest-dark.tcl"
     RAY = "bin/ray/Ray"
-    REMOTE_METADATA = "RELEASE_NOTES/genome_metadata"
-    RAY_SURVEYOR = "raysurveyor/"
     IMAGES = "ui/test_images/"
     DATA = "data/"
     CONTIGS = DATA + "contigs/"
     FEATURES = DATA + "features/"
+
+
+class Tag(str):
+    ERROR = "error"
+    SUCCESS = "success"
 
 
 class App(ctk.CTk):
@@ -71,13 +77,16 @@ class App(ctk.CTk):
         self.set_page(Page.DATA_COLLECTION_PAGE)
 
     def setup_window(self):
+        self.call("encoding", "system", "utf-8")
+
         self.title("Genome analysis tool")
 
         self.screen_width = self.winfo_screenwidth()
         self.screen_height = self.winfo_screenheight()
 
-        self.geometry(f"{self.screen_width}x{self.screen_height - 100}")
-        self.geometry("+0+0")
+        self.geometry("1200x800")
+
+        self.after(0, lambda: self.state("zoomed"))
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -1014,132 +1023,400 @@ class App(ctk.CTk):
         self.results_table.place(x=50, y=150)
 
     def create_preprocessing_page(self):
-        self.preprocessing_frame = ctk.CTkFrame(
-            self, corner_radius=0, fg_color="transparent"
+        self.preprocessing_frame = ctk.CTkFrame(self, fg_color="transparent")
+
+        self.preprocessing_frame_tab_view = ctk.CTkTabview(self.preprocessing_frame)
+
+        self.preprocessing_frame_tab_view.pack(fill=tk.BOTH, expand=True)
+        self.preprocessing_frame_tab_view.add("preprocessing")
+
+        self.preprocessing_frame_tab_view.tab("preprocessing").grid_columnconfigure(
+            tuple(range(10)), weight=1, uniform="col"
+        )
+        self.preprocessing_frame_tab_view.tab("preprocessing").grid_rowconfigure(
+            tuple(range(10)), weight=1, uniform="row"
         )
 
-        preprocessing_tab_view = ctk.CTkTabview(
-            self.preprocessing_frame,
-            width=self.screen_width - 230,
-            height=self.screen_height - 150,
-        )
-        preprocessing_tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
-        preprocessing_tab_view.add("preprocessing")
-        self.controlpanel = ctk.CTkFrame(
-            preprocessing_tab_view.tab("preprocessing"),
-            width=550,
-            height=500,
+        self.preprocessing_frame_control_panel = ctk.CTkFrame(
+            self.preprocessing_frame_tab_view.tab("preprocessing"),
             corner_radius=15,
             border_width=2,
         )
-        self.controlpanel.place(x=50, y=20)
-        l2 = ctk.CTkLabel(
-            master=self.controlpanel, text="Control panel", font=self.default_font(20)
+        self.preprocessing_frame_control_panel.grid(
+            row=2, column=2, sticky=tk.NSEW, padx=40, pady=40, rowspan=3, columnspan=2
         )
-        l2.place(x=50, y=45)
 
-        self.datasetbtn = ctk.CTkButton(
-            master=self.controlpanel,
-            width=220,
+        self.preprocessing_frame_control_panel_label = ctk.CTkLabel(
+            master=self.preprocessing_frame_control_panel,
+            text="Control panel",
+            font=self.default_font(20),
+        )
+        self.preprocessing_frame_control_panel_label.pack(pady=30)
+
+        self.preprocessing_frame_control_panel_frame = ctk.CTkFrame(
+            master=self.preprocessing_frame_control_panel,
+            corner_radius=15,
+            border_width=2,
+        )
+
+        self.preprocessing_frame_control_panel_frame.pack(
+            padx=20, pady=(0, 20), fill=tk.BOTH, expand=True
+        )
+
+        self.preprocessing_frame_dataset_path = Label(
+            master=self.preprocessing_frame_control_panel_frame,
+            fg_color="transparent",
+            width=27,
+            anchor="w",
+        )
+
+        self.preprocessing_frame_control_panel_dataset_button = ctk.CTkButton(
+            master=self.preprocessing_frame_control_panel_frame,
             text="Pick dataset",
-            corner_radius=6,
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.browse_dataset,
+            command=lambda: self.preprocessing_frame_dataset_path.configure(
+                text=filedialog.askdirectory()
+            )
+            or self.preprocessing_validate_ui(),
         )
-        self.datasetbtn.place(x=50, y=150)
 
-        self.entry1 = ctk.CTkEntry(
-            master=self.controlpanel,
-            width=380,
-            placeholder_text="Dataset path",
-            textvariable=self.dataset_folder,
+        self.preprocessing_frame_control_panel_dataset_button.pack(
+            anchor=tk.W, padx=20, pady=(30, 5)
         )
-        self.entry1.place(x=50, y=200)
+        self.preprocessing_frame_dataset_path.pack(anchor=tk.W, padx=20, pady=5)
 
-        self.outputbtn = ctk.CTkButton(
-            master=self.controlpanel,
-            width=220,
-            text="Pick output directory",
-            corner_radius=6,
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            command=self.browse_output_dir,
+        self.preprocessing_frame_control_panel_kmer_size_entry = ctk.CTkEntry(
+            master=self.preprocessing_frame_control_panel_frame,
+            placeholder_text="K-mer size",
         )
-        self.outputbtn.place(x=50, y=250)
+        self.preprocessing_frame_control_panel_kmer_size_entry.pack(
+            anchor=tk.W, padx=20, pady=5
+        )
 
-        self.entry2 = ctk.CTkEntry(
-            master=self.controlpanel,
-            width=380,
-            placeholder_text="Output directory path",
-            textvariable=self.output_dir,
+        self.preprocessing_frame_control_panel_kmer_size_entry.bind(
+            "<KeyRelease>", self.preprocessing_validate_ui
         )
-        self.entry2.place(x=50, y=300)
 
-        l3 = ctk.CTkLabel(
-            master=self.controlpanel,
-            text="Enter kmer length",
-            font=self.default_font(15),
+        Hovertip(
+            self.preprocessing_frame_control_panel_kmer_size_entry,
+            "K-mer size format:\nodd_number\n\ne.g. 21",
         )
-        l3.place(x=50, y=350)
-        self.kmer_length = ctk.CTkEntry(
-            master=self.controlpanel, width=100, placeholder_text="kmer length"
-        )
-        self.kmer_length.place(x=50, y=400)
-        l4 = ctk.CTkLabel(
-            master=self.controlpanel, text="Pick kmer tool", font=self.default_font(15)
-        )
-        l4.place(x=300, y=350)
 
-        self.kmer_tool = tk.StringVar(value="Ray Surveyor")
+        self.kmer_tools = ["Ray Surveyor", "DSK"]
 
-        self.kmertool_filter = ttk.Combobox(
-            master=self.controlpanel,
-            textvariable=self.kmer_tool,
-            values=["Ray Surveyor", "DSK"],
+        self.preprocessing_frame_control_panel_kmer_tool_selector = ttk.Combobox(
+            master=self.preprocessing_frame_control_panel_frame,
+            values=self.kmer_tools,
             state="readonly",
         )
 
-        self.kmertool_filter.place(x=300, y=400)
+        self.preprocessing_frame_control_panel_kmer_tool_selector.current(0)
 
-        self.runbtn = ctk.CTkButton(
-            master=self.controlpanel,
-            width=150,
-            text="Run " + self.kmer_tool.get(),
-            corner_radius=6,
+        self.preprocessing_frame_control_panel_kmer_tool_selector.pack(
+            anchor=tk.W, padx=20, pady=5
+        )
+
+        self.preprocessing_frame_control_panel_run_button = ctk.CTkButton(
+            master=self.preprocessing_frame_control_panel_frame,
+            text=f"Run {self.preprocessing_frame_control_panel_kmer_tool_selector.get()}",
             command=self.run_preprocessing,
         )
-        self.runbtn.place(x=150, y=450)
+        self.preprocessing_frame_control_panel_run_button.pack(
+            anchor=tk.W, padx=20, pady=5
+        )
 
-        self.kmer_tool.trace_add("write", self.update_button_text)
+        self.preprocessing_frame_control_panel_kmer_tool_selector.bind(
+            "<<ComboboxSelected>>",
+            lambda e: self.preprocessing_frame_control_panel_run_button.configure(
+                text=e.widget.selection_clear() or f"Run {e.widget.get()}"
+            ),
+        )
 
-        outputscreen = ctk.CTkFrame(
-            preprocessing_tab_view.tab("preprocessing"),
-            width=650,
-            height=650,
+        self.preprocessing_frame_run_button_hover = Hovertip(
+            self.preprocessing_frame_control_panel_run_button,
+            "",
+        )
+
+        self.preprocessing_validate_ui()
+
+        self.preprocessing_frame_cmd_output_frame = ctk.CTkFrame(
+            self.preprocessing_frame_tab_view.tab("preprocessing"),
             corner_radius=15,
             border_width=2,
         )
 
-        outputscreen.place(x=800, y=20)
-        outputscreen.grid_propagate(False)
-        outputscreen.grid_rowconfigure(0, weight=1)
-        outputscreen.grid_columnconfigure(0, weight=1)
-
-        self.cmd_output = tk.Text(
-            master=outputscreen,
-            height=650,
-            width=650,
-            state="disabled",
-            font=self.custom_font,
+        self.preprocessing_frame_cmd_output_frame.grid(
+            row=0, column=6, rowspan=10, columnspan=5, sticky=tk.NSEW, padx=40, pady=40
         )
 
-        self.scrollbar = tk.Scrollbar(outputscreen, command=self.cmd_output.yview)
-        self.scrollbar.grid(row=0, column=1, sticky=tk.NSEW)
-        self.cmd_output["yscrollcommand"] = self.scrollbar.set
-        self.cmd_output.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
+        self.preprocessing_frame_cmd_output_label = ctk.CTkLabel(
+            self.preprocessing_frame_cmd_output_frame,
+            text="Debug",
+            font=self.default_font(20),
+        )
+
+        self.preprocessing_frame_cmd_output_label.pack(pady=30)
+
+        self.preprocessing_frame_cmd_output = ctk.CTkTextbox(
+            self.preprocessing_frame_cmd_output_frame,
+            font=self.default_font(14),
+            corner_radius=15,
+            border_width=2,
+            state=tk.DISABLED,
+        )
+
+        self.preprocessing_frame_cmd_output.pack(
+            padx=20, pady=(0, 20), fill=tk.BOTH, expand=True
+        )
+
+        self.preprocessing_frame_cmd_output.tag_config(Tag.ERROR, foreground="red")
+        self.preprocessing_frame_cmd_output.tag_config(Tag.SUCCESS, foreground="green")
+
+    @threaded
+    def run_preprocessing(self):
+        output_directory = filedialog.askdirectory(title="Select output directory")
+
+        if not output_directory:
+            return
+
+        self.preprocessing_frame_control_panel_dataset_button.configure(
+            state=tk.DISABLED
+        )
+        self.preprocessing_frame_control_panel_kmer_size_entry.configure(
+            state=tk.DISABLED
+        )
+        self.preprocessing_frame_control_panel_kmer_tool_selector.configure(
+            state=tk.DISABLED
+        )
+        self.preprocessing_frame_control_panel_run_button.configure(
+            text="Cancel", command=self.cancel_preprocessing
+        )
+
+        self.preprocessing_frame_cmd_output.configure(state=tk.NORMAL)
+        self.preprocessing_frame_cmd_output.delete("1.0", tk.END)
+        self.preprocessing_frame_cmd_output.configure(state=tk.DISABLED)
+
+        if (
+            self.preprocessing_frame_control_panel_kmer_tool_selector.get()
+            == self.kmer_tools[0]
+        ):
+            self.run_ray_surveyor(output_directory)
+        elif (
+            self.preprocessing_frame_control_panel_kmer_tool_selector.get()
+            == self.kmer_tools[1]
+        ):
+            self.run_dsk(output_directory)
+
+        self.preprocessing_frame_control_panel_dataset_button.configure(state=tk.NORMAL)
+        self.preprocessing_frame_control_panel_kmer_size_entry.configure(
+            state=tk.NORMAL
+        )
+        self.preprocessing_frame_control_panel_kmer_tool_selector.configure(
+            state="readonly"
+        )
+        self.preprocessing_frame_control_panel_run_button.configure(
+            text=f"Run {self.preprocessing_frame_control_panel_kmer_tool_selector.get()}",
+            command=self.run_preprocessing,
+        )
+
+    def cancel_preprocessing(self):
+        if messagebox.askyesno(
+            "Confirmation", "Are you sure you want to cancel the preprocessing?"
+        ):
+            try:
+                os.kill(self.preprocessing_process.pid, signal.CTRL_C_EVENT)
+            except Exception:
+                pass
+
+    def run_ray_surveyor(self, output_directory: str):
+        try:
+            dataset_folder = self.preprocessing_frame_dataset_path.cget("text")
+
+            input_files = [
+                f"{dataset_folder}/{file}"
+                for file in os.listdir(dataset_folder)
+                if file.endswith(".fna")
+            ]
+
+            if not input_files:
+                self.update_cmd_output(
+                    "No .fna files found in the selected dataset folder.",
+                    self.preprocessing_frame_cmd_output,
+                )
+                return
+
+            kmer_size = self.preprocessing_frame_control_panel_kmer_size_entry.get()
+
+            config_path = self.generate_survey_conf(
+                input_files, kmer_size, output_directory
+            )
+
+            ray_surveyor_command = f'wsl mpiexec -n 2 "{self.to_linux_path(os.path.abspath(Path.RAY))}" {self.to_linux_path(config_path)}'
+
+            self.update_cmd_output(
+                "Running Ray Surveyor...\n", self.preprocessing_frame_cmd_output
+            )
+
+            self.preprocessing_process = Popen(
+                ray_surveyor_command,
+                shell=True,
+                universal_newlines=True,
+                stdout=PIPE,
+                stderr=PIPE,
+            )
+            self.display_process_output(
+                self.preprocessing_process, self.preprocessing_frame_cmd_output
+            )
+
+            self.on_preprocessing_process_finish(config_path, output_directory)
+        except CalledProcessError as e:
+            self.update_cmd_output(
+                "Ray Surveyor encountered an error.",
+                self.preprocessing_frame_cmd_output,
+                Tag.ERROR,
+            )
+            self.update_cmd_output(
+                e.stdout, self.preprocessing_frame_cmd_output, Tag.ERROR
+            )
+            self.update_cmd_output(
+                e.stderr, self.preprocessing_frame_cmd_output, Tag.ERROR
+            )
+
+    def on_preprocessing_process_finish(self, config_path: str, output_directory: str):
+        if not hasattr(self, "preprocessing_process"):
+            return
+
+        try:
+            self.preprocessing_process.wait()
+            self.update_cmd_output(
+                f"\nRay Surveyor completed successfully.\n\nOutput stored in: {output_directory}",
+                self.preprocessing_frame_cmd_output,
+                Tag.SUCCESS,
+            )
+            os.remove(config_path)
+        except Exception:
+            self.update_cmd_output(
+                "An error occurred while running Ray Surveyor.\n",
+                self.preprocessing_frame_cmd_output,
+                Tag.ERROR,
+            )
+
+    def run_dsk(self, output_directory: str):
+        kmer_size = self.kmer_size.get()
+        # dsk_dir = self.dsk_dir.get() # ERROR
+        dataset_folder = self.dataset_folder.get()
+        dataset_folder = dataset_folder.replace("\\", "/")
+        dataset_folder = dataset_folder.replace("C:", "/mnt/c")
+        output_dir = self.output_dir.get()
+
+        # if not dsk_dir or not dataset_folder or not output_dir:
+        # self.update_cmd_output("Please fill in all required fields for DSK.")
+        # return
+
+        list_reads_file = os.path.join(output_dir, "list_reads")
+        list_reads_file = list_reads_file.replace("\\", "/")
+        dsk_output_dir = os.path.join(output_dir, "dsk_output")
+        dsk_output_dir = dsk_output_dir.replace("\\", "/")
+        dsk_output_dir = dsk_output_dir.replace("C:", "/mnt/c")
+
+        print(dsk_output_dir)
+
+        try:
+            # # Run the 'ls' command to list files in the dataset folder and save to list_reads
+            # ls_command1 = f"cd { output_dir}"
+
+            # run(ls_command1, shell=True, check=True,)
+            ls_command = f" wsl ls -1 {dataset_folder}/* > list_reads_file"
+            run(
+                ls_command,
+                shell=True,
+                check=True,
+            )
+
+            # Run the 'dsk' command
+            dsk_command = f"wsl bin/dsk/dsk -file list_reads_file -out-dir {dsk_output_dir} -kmer-size {kmer_size}"
+            self.update_cmd_output(
+                "Running DSK...", self.preprocessing_frame_cmd_output
+            )
+
+            process = Popen(
+                dsk_command,
+                shell=True,
+                stdout=PIPE,
+                stderr=PIPE,
+                universal_newlines=True,
+            )
+            self.display_process_output(process, self.preprocessing_frame_cmd_output)
+
+            self.update_cmd_output(
+                "DSK completed successfully. Output stored in:", dsk_output_dir
+            )
+        except CalledProcessError as e:
+            self.update_cmd_output(
+                "DSK encountered an error.",
+                self.preprocessing_frame_cmd_output,
+                "error",
+            )
+            self.update_cmd_output(
+                e.stdout, self.preprocessing_frame_cmd_output, "error"
+            )
+            self.update_cmd_output(
+                e.stderr, self.preprocessing_frame_cmd_output, "error"
+            )
+
+    def to_linux_path(self, path: str) -> str:
+        return path.replace("\\", "/").replace("C:", "/mnt/c")
+
+    def preprocessing_validate_ui(self, event=None):
+        self.preprocessing_frame_run_button_hover.text = ""
+
+        failed = False
+
+        if not self.preprocessing_frame_dataset_path.cget("text"):
+            self.preprocessing_frame_run_button_hover.text += (
+                "• select dataset directory.\n"
+            )
+            failed = True
+        if not self.preprocessing_frame_control_panel_kmer_size_entry.get():
+            self.preprocessing_frame_control_panel_kmer_size_entry.configure(
+                border_color="#565B5E"
+            )
+            self.preprocessing_frame_run_button_hover.text += "• input K-mer size.\n"
+            failed = True
+        else:
+            if (
+                re.match(
+                    r"^\d*[13579]$",
+                    self.preprocessing_frame_control_panel_kmer_size_entry.get(),
+                )
+                is not None
+            ):
+                self.preprocessing_frame_control_panel_kmer_size_entry.configure(
+                    border_color="green"
+                )
+            else:
+                self.preprocessing_frame_control_panel_kmer_size_entry.configure(
+                    border_color="red"
+                )
+                self.preprocessing_frame_run_button_hover.text += (
+                    "• input a valid K-mer size.\n"
+                )
+                failed = True
+
+        self.preprocessing_frame_run_button_hover.text = (
+            self.preprocessing_frame_run_button_hover.text.strip("\n")
+        )
+
+        if failed:
+            self.preprocessing_frame_run_button_hover.enable()
+            self.preprocessing_frame_control_panel_run_button.configure(
+                state=tk.DISABLED
+            )
+        else:
+            self.preprocessing_frame_run_button_hover.disable()
+            self.preprocessing_frame_control_panel_run_button.configure(state=tk.NORMAL)
 
     def create_kover_learn_page(self):
         self.kover_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -1195,7 +1472,7 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.browse_dataset,
+            # command=self.browse_dataset,
         )
         self.pickdataset1_btn.place(x=50, y=200)
 
@@ -1254,18 +1531,18 @@ class App(ctk.CTk):
             font=self.default_font(15),
         )
         self.kmer_label.place(x=50, y=600)
-        self.kmer_length_var = tk.StringVar(value="31")
-        self.kmer_length_spinbox = tk.Spinbox(
+        self.kmer_size_var = tk.StringVar(value="31")
+        self.kmer_size_spinbox = tk.Spinbox(
             master=create_dataset_frame,
             from_=0,
             to=128,
             width=5,
-            textvariable=self.kmer_length_var,
+            textvariable=self.kmer_size_var,
             wrap=True,
             fg="black",
             buttonbackground="white",
         )
-        self.kmer_length_spinbox.place(x=50, y=630)
+        self.kmer_size_spinbox.place(x=50, y=630)
 
         # Compression level input (0 to 9)
         compression_label = ctk.CTkLabel(
@@ -1477,7 +1754,7 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.browse_dataset,
+            # command=self.browse_dataset,
         )
 
         self.trainids_entry = ctk.CTkEntry(
@@ -1495,7 +1772,7 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.browse_dataset,
+            # command=self.browse_dataset,
         )
 
         self.testids_entry = ctk.CTkEntry(
@@ -1814,145 +2091,6 @@ class App(ctk.CTk):
         page_frame[page][0].grid(row=0, column=1, sticky=tk.NSEW, padx=20, pady=(0, 20))
         page_frame[page][1].configure(fg_color=("gray75", "gray25"))
 
-    def run_preprocessing(self):
-        self.cmd_output["state"] = tk.NORMAL
-        self.cmd_output.delete("1.0", tk.END)
-        if self.kmer_tool.get() == "Ray Surveyor":
-            self.run_ray_surveyor()
-        elif self.kmer_tool.get() == "DSK":
-            self.run_dsk()
-
-    def run_ray_surveyor(self):
-        dataset_folder = self.dataset_folder.get()
-        output_dir = self.output_dir.get()
-        output_dir = output_dir.replace("\\", "/")
-        output_dir = output_dir.replace("C:", "/mnt/c")
-        kmer_length = self.kmer_length.get()
-
-        if (
-            not dataset_folder
-            or not self.ray_surveyor_dir
-            or not output_dir
-            or not kmer_length
-        ):
-            self.update_cmd_output(
-                "Please fill in all required fields.\n", self.cmd_output
-            )
-            return
-
-        input_files = [
-            f"{dataset_folder}/{file}" for file in os.listdir(dataset_folder)
-        ]
-
-        if not input_files:
-            self.update_cmd_output(
-                "No .fna files found in the selected dataset folder.", self.cmd_output
-            )
-            return
-
-        os.makedirs(output_dir, exist_ok=True)
-        self.generate_survey_conf(
-            self.ray_surveyor_dir, input_files, kmer_length, output_dir
-        )
-
-        def run_ray_surveyor_command():
-            ray_surveyor_command1 = f"cd {self.ray_surveyor_dir}"
-            ray_surveyor_command2 = (
-                f'wsl mpiexec -n 2 "{self.ray_executable}" survey1.conf'
-            )
-
-            try:
-                self.update_cmd_output("Running Ray Surveyor...", self.cmd_output)
-
-                process = Popen(
-                    ray_surveyor_command1,
-                    shell=True,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    universal_newlines=True,
-                )
-                self.display_process_output(process, self.cmd_output)
-
-                process = Popen(
-                    ray_surveyor_command2,
-                    shell=True,
-                    cwd=self.ray_surveyor_dir,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    universal_newlines=True,
-                )
-                self.display_process_output(process, self.cmd_output)
-
-                self.update_cmd_output(
-                    "Ray Surveyor completed successfully.\n check the output at:"
-                    + output_dir,
-                    self.cmd_output,
-                )
-            except CalledProcessError as e:
-                self.update_cmd_output(
-                    "Ray Surveyor encountered an error.", self.cmd_output, "error"
-                )
-                self.update_cmd_output(e.stdout, self.cmd_output, "error")
-                self.update_cmd_output(e.stderr, self.cmd_output, "error")
-
-        cmd_thread = threading.Thread(target=run_ray_surveyor_command)
-        cmd_thread.start()
-
-    def run_dsk(self):
-        kmer_length = self.kmer_length.get()
-        # dsk_dir = self.dsk_dir.get() # ERROR
-        dataset_folder = self.dataset_folder.get()
-        dataset_folder = dataset_folder.replace("\\", "/")
-        dataset_folder = dataset_folder.replace("C:", "/mnt/c")
-        output_dir = self.output_dir.get()
-
-        # if not dsk_dir or not dataset_folder or not output_dir:
-        # self.update_cmd_output("Please fill in all required fields for DSK.")
-        # return
-
-        list_reads_file = os.path.join(output_dir, "list_reads")
-        list_reads_file = list_reads_file.replace("\\", "/")
-        dsk_output_dir = os.path.join(output_dir, "dsk_output")
-        dsk_output_dir = dsk_output_dir.replace("\\", "/")
-        dsk_output_dir = dsk_output_dir.replace("C:", "/mnt/c")
-
-        print(dsk_output_dir)
-
-        try:
-            # # Run the 'ls' command to list files in the dataset folder and save to list_reads
-            # ls_command1 = f"cd { output_dir}"
-
-            # run(ls_command1, shell=True, check=True,)
-            ls_command = f" wsl ls -1 {dataset_folder}/* > list_reads_file"
-            run(
-                ls_command,
-                shell=True,
-                check=True,
-            )
-
-            # Run the 'dsk' command
-            dsk_command = f"wsl bin/dsk/dsk -file list_reads_file -out-dir {dsk_output_dir} -kmer-size {kmer_length}"
-            self.update_cmd_output("Running DSK...", self.cmd_output)
-
-            process = Popen(
-                dsk_command,
-                shell=True,
-                stdout=PIPE,
-                stderr=PIPE,
-                universal_newlines=True,
-            )
-            self.display_process_output(process, self.cmd_output)
-
-            self.update_cmd_output(
-                "DSK completed successfully. Output stored in:", dsk_output_dir
-            )
-        except CalledProcessError as e:
-            self.update_cmd_output(
-                "DSK encountered an error.", self.cmd_output, "error"
-            )
-            self.update_cmd_output(e.stdout, self.cmd_output, "error")
-            self.update_cmd_output(e.stderr, self.cmd_output, "error")
-
     def koverlearn_error(self):
         if not self.pickdataset_entry.get():
             self.display_error_message("Please select kover dataset.")
@@ -2121,7 +2259,7 @@ class App(ctk.CTk):
         # Check if necessary fields are filled correctly
         self.dataset_path = self.pickdataset1_entry.get()
         self.output_path = self.pickoutput_entry.get()
-        self.kmer_length_str = self.kmer_length_var.get()
+        self.kmer_size_str = self.kmer_size_var.get()
         self.compression_str = self.compression_var.get()
         self.phenotype_desc_path = self.phenotype_desc_entry.get()
         self.phenotype_metadata_path = self.phenotype_metadata_entry.get()
@@ -2138,8 +2276,8 @@ class App(ctk.CTk):
                 )
 
             # Check if kmer length is an integer and within the allowed range
-            kmer_length = int(self.kmer_length_str)
-            if not 0 <= kmer_length <= 128:
+            kmer_size = int(self.kmer_size_str)
+            if not 0 <= kmer_size <= 128:
                 messagebox.showerror(
                     "Error", "Kmer length should be between 0 and 128."
                 )
@@ -2211,7 +2349,7 @@ class App(ctk.CTk):
                         self.phenotype_desc_path,
                         self.phenotype_metadata_path,
                         output,
-                        self.kmer_length_var.get(),
+                        self.kmer_size_var.get(),
                         self.compression,
                     )
                 elif self.dataset_type_var1.get() == "kmer matrix":
@@ -2290,10 +2428,6 @@ class App(ctk.CTk):
 
     def update_button_text(self, *args):
         self.runbtn["text"] = "Run " + self.kmer_tool.get()
-
-    def browse_dataset(self):
-        dataset_folder = filedialog.askdirectory()
-        self.dataset_folder.set(dataset_folder)
 
     def browse_output_dir(self):
         output_dir = filedialog.askdirectory()
@@ -2679,23 +2813,31 @@ class App(ctk.CTk):
         # self.download_app.selected_directory = self.selected_directory
 
     def generate_survey_conf(
-        self, ray_surveyor_dir, input_files, kmer_length, output_dir
-    ):
-        survey_conf_path = os.path.join(ray_surveyor_dir, "survey1.conf")
+        self,
+        input_files: list[str],
+        kmer_size: int | str,
+        output_dir: str,
+    ) -> str:
+        os.makedirs(output_dir, exist_ok=True)
+
+        survey_conf_path = os.path.join(output_dir, "survey.conf")
+
         with open(survey_conf_path, "w") as survey_conf_file:
-            survey_conf_file.write(f"-k {kmer_length}\n")
+            survey_conf_file.write(f"-k {kmer_size}\n")
             survey_conf_file.write("-run-surveyor\n")
-            survey_conf_file.write(f"-output {output_dir}\n")
+            survey_conf_file.write(
+                f"-output {self.to_linux_path(output_dir)}/survey.res\n"
+            )
             survey_conf_file.write("-write-kmer-matrix\n")
-            survey_conf_file.write("\n")
 
             for input_file in input_files:
-                file_name = os.path.splitext(os.path.basename(input_file))[0]
-                input_file = input_file.replace("\\", "/")
-                input_file = input_file.replace("C:", "/mnt/c")
+                file_name = pl.Path(input_file).stem
+                input_file = self.to_linux_path(input_file)
                 survey_conf_file.write(
                     f"-read-sample-assembly {file_name} {input_file}\n"
                 )
+
+        return survey_conf_path
 
     def display_process_output(self, process: Popen, output_target=None):
         for line in process.stdout:
@@ -2703,17 +2845,13 @@ class App(ctk.CTk):
         for line in process.stderr:
             self.update_cmd_output(line, output_target, "error")
 
-    def update_cmd_output(self, message: str, output_target: tk.Text, tag: str = None):
-        output_target["state"] = tk.NORMAL
-
-        if tag:
-            output_target.insert(tk.END, f"{tag}: {message}")
-        else:
-            output_target.insert(tk.END, message)
-
-        output_target.see(tk.END)
-        output_target["state"] = tk.DISABLED
-        output_target.update_idletasks()
+    def update_cmd_output(self, message: str, output_target: tk.Text, *tags: str):
+        self.preprocessing_frame_cmd_output.configure(state=tk.NORMAL)
+        self.preprocessing_frame_cmd_output.insert(tk.END, message, tags)
+        if self.preprocessing_frame_cmd_output.yview()[1] > 0.95:
+            self.preprocessing_frame_cmd_output.see(tk.END)
+        self.preprocessing_frame_cmd_output.configure(state=tk.DISABLED)
+        self.preprocessing_frame_cmd_output.update_idletasks()
 
     def pickkover(self):
         file_path = filedialog.askopenfilename(

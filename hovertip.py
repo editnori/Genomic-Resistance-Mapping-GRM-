@@ -26,3 +26,4 @@ class Hovertip(OnHoverTooltipBase):
         self.anchor_widget.unbind("<Enter>", self._id1)
         self.anchor_widget.unbind("<Leave>", self._id2)
         self.anchor_widget.unbind("<Button>", self._id3)
+        self.hidetip()
