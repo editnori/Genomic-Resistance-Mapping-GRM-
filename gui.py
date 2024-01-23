@@ -62,6 +62,8 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        os.makedirs(Path.DATA, exist_ok=True)
+
         self.setup_window()
 
         self.setup_style()
@@ -1082,9 +1084,12 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=lambda: (self.preprocessing_frame_dataset_path.configure(
-                text=filedialog.askdirectory()
-            ), self.preprocessing_validate_ui()),
+            command=lambda: (
+                self.preprocessing_frame_dataset_path.configure(
+                    text=filedialog.askdirectory()
+                ),
+                self.preprocessing_validate_ui(),
+            ),
         )
 
         self.preprocessing_frame_control_panel_dataset_button.pack(
@@ -1380,7 +1385,7 @@ class App(ctk.CTk):
         self.preprocessing_frame_run_button_hover.text = ""
 
         failed = False
-        
+
         if not self.preprocessing_frame_dataset_path.cget("text"):
             self.preprocessing_frame_run_button_hover.text += (
                 "• select dataset directory.\n"
