@@ -912,7 +912,7 @@ class App(ctk.CTk):
             "Only show species with ≥ 25\nphenotypes (resistant and susceptible)",
         )
 
-        self.total_label = tk.Label(master=amr_frame, text="Total: not loaded")
+        self.total_label = ctk.CTkLabel(master=amr_frame, text="Total: not loaded")
         self.total_label.place(x=280, y=100)
         columns = ["Species", "Antibiotic"]
         self.amr_list_table = Table(
@@ -995,13 +995,13 @@ class App(ctk.CTk):
             state=tk.DISABLED,
         )
         self.save_table_button.place(x=400, y=50)
-        self.totaldata = tk.Label(master=frame6, text="Total phenotypes:")
+        self.totaldata = ctk.CTkLabel(master=frame6, text="Total phenotypes:")
         self.totaldata.place(x=400, y=90)
-        self.totalresistance_label = tk.Label(
+        self.totalresistance_label = ctk.CTkLabel(
             master=frame6, text="Total resistance phenotypes available:"
         )
         self.totalresistance_label.place(x=50, y=120)
-        self.totalsusceptible_label = tk.Label(
+        self.totalsusceptible_label = ctk.CTkLabel(
             master=frame6, text="Total susceptible phenotypes available:"
         )
         self.totalsusceptible_label.place(x=400, y=120)
