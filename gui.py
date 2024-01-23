@@ -13,22 +13,18 @@ import random
 from enum import Enum
 import traceback
 import re
-from typing import IO, Optional
 
 import customtkinter as ctk
 from PIL import Image
 import pandas as pd
 
+import util
+from util import threaded
 from kover import KoverDatasetCreator
 from hovertip import Hovertip
 from table import Table
 from label import Label
-from ftp_downloader import (
-    FTPDownloadApp,
-    DownloadWindow,
-    get_last_metadata_update_date,
-    threaded,
-)
+from ftp_downloader import FTPDownloadApp, DownloadWindow, get_last_metadata_update_date
 
 
 class Page(Enum):
@@ -52,10 +48,6 @@ class Path(str):
 class Tag(str):
     ERROR = "error"
     SUCCESS = "success"
-
-
-CRLF = b"\r\n"
-LF = b"\n"
 
 
 class App(ctk.CTk):
@@ -431,7 +423,7 @@ class App(ctk.CTk):
                 (self.genome_data_frame_entry.get(), self.genome_data_frame_entry.get())
             ]
 
-        directory = filedialog.askdirectory()
+        directory = util.select_directory()
 
         if not directory:
             return
@@ -563,6 +555,7 @@ class App(ctk.CTk):
                             os.rmdir(local_contig_directory)
                     except Exception:
                         pass
+                    break
 
             if self.genome_data_frame_feature_checkbox.get():
                 os.makedirs(local_feature_directory, exist_ok=True)
@@ -637,6 +630,7 @@ class App(ctk.CTk):
                             os.rmdir(local_feature_directory)
                     except Exception:
                         pass
+                    break
 
         self.genome_data_frame_contig_checkbox.configure(state=tk.NORMAL)
         self.genome_data_frame_feature_checkbox.configure(state=tk.NORMAL)
@@ -657,7 +651,7 @@ class App(ctk.CTk):
 
     @threaded
     def download_genome_metadata(self):
-        directory = filedialog.askdirectory()
+        directory = util.select_directory()
 
         if not directory:
             return
@@ -1094,7 +1088,7 @@ class App(ctk.CTk):
             border_color="#FFCC70",
             command=lambda: (
                 self.preprocessing_frame_dataset_path.configure(
-                    text=filedialog.askdirectory()
+                    text=util.select_directory()
                 ),
                 self.preprocessing_validate_ui(),
             ),
@@ -1194,7 +1188,7 @@ class App(ctk.CTk):
 
     @threaded
     def run_preprocessing(self):
-        output_directory = filedialog.askdirectory(title="Select output directory")
+        output_directory = util.select_directory(title="Select output directory")
 
         if not output_directory:
             return
@@ -1275,11 +1269,10 @@ class App(ctk.CTk):
                 "Running Ray Surveyor...\n", self.preprocessing_frame_cmd_output
             )
 
-            ray_surveyor_command = f'mpiexec -n 4 "{self.to_linux_path(Path.RAY)}" "{self.to_linux_path(config_path)}"'
+            ray_surveyor_command = f'mpiexec -n 4 "{util.to_linux_path(Path.RAY)}" "{util.to_linux_path(config_path)}"'
 
-            self.preprocessing_process = self.run_bash_command(
+            self.preprocessing_process = util.run_bash_command(
                 ray_surveyor_command,
-                self.preprocessing_frame_cmd_output,
                 output_directory,
             )
 
@@ -1313,12 +1306,11 @@ class App(ctk.CTk):
                 "Running DSK...\n", self.preprocessing_frame_cmd_output
             )
 
-            ls_command = f'ls -1 {self.to_linux_path(dataset_folder)}/*.fna > "{self.to_linux_path(config_path)}"'
-            dsk_command = f'"{self.to_linux_path(Path.DSK)}" -file "{self.to_linux_path(config_path)}" -out-dir "{self.to_linux_path(output_directory)}" -kmer-size {kmer_size}'
+            ls_command = f'ls -1 {util.to_linux_path(dataset_folder)}/*.fna > "{util.to_linux_path(config_path)}"'
+            dsk_command = f'"{util.to_linux_path(Path.DSK)}" -file "{util.to_linux_path(config_path)}" -out-dir "{util.to_linux_path(output_directory)}" -kmer-size {kmer_size}'
 
-            self.preprocessing_process = self.run_bash_command(
+            self.preprocessing_process = util.run_bash_command(
                 f"{ls_command}\n{dsk_command}",
-                self.preprocessing_frame_cmd_output,
                 output_directory,
             )
             self.display_process_output(
@@ -1338,31 +1330,6 @@ class App(ctk.CTk):
             self.update_cmd_output(
                 e.stderr, self.preprocessing_frame_cmd_output, Tag.ERROR
             )
-
-    def run_bash_command(
-        self, command: str, output_target: ctk.CTkTextbox, temp_directory: str
-    ) -> Optional[Popen]:
-        try:
-            temp_file = os.path.join(temp_directory, "tmp.sh")
-            with open(temp_file, "wb") as bash_file:
-                bash_file.write(
-                    f'#!/bin/bash\n{command}\nrm "$0"'.encode("UTF-8").replace(CRLF, LF)
-                )  # scary rm command
-        except Exception as e:
-            self.update_cmd_output(
-                f"An error occurred while creating the bash script.\n\n{e}",
-                output_target,
-                Tag.ERROR,
-            )
-            return None
-
-        return Popen(
-            f'wsl -e "{self.to_linux_path(temp_file)}"',
-            shell=True,
-            universal_newlines=True,
-            stdout=PIPE,
-            stderr=PIPE,
-        )
 
     def on_preprocessing_process_finish(self, config_path: str, output_directory: str):
         if not hasattr(self, "preprocessing_process"):
@@ -1385,13 +1352,6 @@ class App(ctk.CTk):
                 self.preprocessing_frame_cmd_output,
                 Tag.ERROR,
             )
-
-    def to_linux_path(self, path: str) -> str:
-        path = os.path.abspath(path)
-        path = path.replace(path[0], path[0].lower(), 1)
-        path = re.sub(r"(\w)(:\\)", r"/mnt/\1/", path)
-        path = path.replace("\\", "/")
-        return path
 
     def preprocessing_validate_ui(self, event=None):
         self.preprocessing_frame_run_button_hover.text = ""
@@ -1516,7 +1476,7 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.browse_output_dir,
+            # command=self.browse_output_dir,
         )
         self.pickoutput_btn.place(x=50, y=300)
 
@@ -1688,7 +1648,7 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.browse_output_dir,
+            # command=self.browse_output_dir,
         )
         output_btn.place(x=50, y=250)
 
@@ -1913,7 +1873,7 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.browse_output_dir,
+            # command=self.browse_output_dir,
         )
         self.pickoutput_btn.place(x=50, y=250)
 
@@ -2450,13 +2410,6 @@ class App(ctk.CTk):
             self.uniqueidlabel.place(x=50, y=450)
             self.uniqueidentry.place(x=180, y=450)
 
-    def update_button_text(self, *args):
-        self.runbtn["text"] = "Run " + self.kmer_tool.get()
-
-    def browse_output_dir(self):
-        output_dir = filedialog.askdirectory()
-        self.output_dir.set(output_dir)
-
     @threaded
     def load_amr_data(self):
         self.download_button4.configure(text="Loading..", state=tk.DISABLED)
@@ -2795,7 +2748,7 @@ class App(ctk.CTk):
 
         self.save_table_button.configure(state=tk.DISABLED, text="Saving...")
 
-        selected_directory = filedialog.askdirectory()
+        selected_directory = util.select_directory()
 
         if not selected_directory:
             self.save_table_button.configure(state=tk.NORMAL, text="Export to .tsv")
@@ -2830,12 +2783,6 @@ class App(ctk.CTk):
 
         self.save_table_button.configure(state=tk.NORMAL, text="Export to .tsv")
 
-    def select_directory(self):
-        # Use the filedialog to select a directory and set it in the FTPDownloadApp
-        self.selected_directory = filedialog.askdirectory()
-        return self.selected_directory
-        # self.download_app.selected_directory = self.selected_directory
-
     def generate_survey_conf(
         self,
         input_files: list[str],
@@ -2848,21 +2795,21 @@ class App(ctk.CTk):
             survey_conf_file.write(f"-k {kmer_size}\n")
             survey_conf_file.write("-run-surveyor\n")
             survey_conf_file.write(
-                f'-output {self.to_linux_path(output_dir)}/survey.res\n'
+                f"-output {util.to_linux_path(output_dir)}/survey.res\n"
             )
             survey_conf_file.write("-write-kmer-matrix\n")
 
             for input_file in input_files:
                 file_name = pl.Path(input_file).stem
-                input_file = self.to_linux_path(input_file)
+                input_file = util.to_linux_path(input_file)
                 survey_conf_file.write(
-                    f'-read-sample-assembly {file_name} {input_file}\n'
+                    f"-read-sample-assembly {file_name} {input_file}\n"
                 )
 
         return survey_conf_path
 
     def display_process_output(self, process: Popen, output_target=None):
-        stderr_thread = self.read_output(process.stderr, output_target, Tag.ERROR)
+        stderr_thread = util.read_output(process.stderr, Tag.ERROR)
 
         for line in process.stdout:
             self.update_cmd_output(line, output_target)
@@ -2870,15 +2817,6 @@ class App(ctk.CTk):
         errors = "\n".join(stderr_thread.result())
 
         self.update_cmd_output(errors, output_target, Tag.ERROR)
-
-    @threaded
-    def read_output(self, io: IO, output_target=None, *tags: str) -> list[str]:
-        lines = []
-
-        for line in io:
-            lines.append(line)
-
-        return lines
 
     def update_cmd_output(
         self, message: str, output_target: ctk.CTkTextbox, *tags: str

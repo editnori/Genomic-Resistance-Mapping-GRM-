@@ -1,10 +1,9 @@
 from datetime import datetime
 import time
 import tkinter as tk
-from tkinter import messagebox, filedialog
+from tkinter import messagebox
 from ftplib import FTP
 from threading import Thread
-from concurrent.futures import Future
 import os
 from tkinter.ttk import Progressbar
 import traceback
@@ -12,24 +11,7 @@ from typing import Optional
 
 from customtkinter import CTkButton, CTkLabel, CTkFrame
 
-
-def threaded(fn):
-    """@threaded decorator from https://stackoverflow.com/a/19846691"""
-
-    def call_with_future(fn, future, args, kwargs):
-        try:
-            result = fn(*args, **kwargs)
-            future.set_result(result)
-        except Exception as exc:
-            traceback.print_exc()  # LOGGER
-            future.set_exception(exc)
-
-    def wrapper(*args, **kwargs):
-        future = Future()
-        Thread(target=call_with_future, args=(fn, future, args, kwargs)).start()
-        return future
-
-    return wrapper
+from util import threaded, select_directory
 
 
 @threaded
@@ -148,7 +130,7 @@ class FTPDownloadApp:
         self.download_window.set_buttons_commands(
             download_command=self.download,
             cancel_command=self.cancel,
-            select_path_command=self.select_directory,
+            select_path_command=select_directory,
         )
 
     @threaded
@@ -194,6 +176,3 @@ class FTPDownloadApp:
             "Confirmation", "Are you sure you want to cancel the download?"
         ):
             self.download_window.set_downloading(False)
-
-    def select_directory(self):
-        self.download_window.set_path(filedialog.askdirectory())
