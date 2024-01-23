@@ -45,8 +45,8 @@ class Path(str):
     DSK = "bin/dsk/dsk"
     IMAGES = "ui/test_images/"
     DATA = "data/"
-    CONTIGS = DATA + "contigs/"
-    FEATURES = DATA + "features/"
+    CONTIGS = "contigs/"
+    FEATURES = "features/"
 
 
 class Tag(str):
@@ -464,9 +464,11 @@ class App(ctk.CTk):
             contig_name = f"{genome_data_id}.fna"
             feature_name = f"{genome_data_id}.PATRIC.features.tab"
 
-            local_contig_directory = os.path.join(directory, Path.CONTIGS, genome_name)
+            local_contig_directory = os.path.join(
+                directory, Path.CONTIGS, genome_name.replace(" ", "-")
+            )
             local_feature_directory = os.path.join(
-                directory, Path.FEATURES, genome_name
+                directory, Path.FEATURES, genome_name.replace(" ", "-")
             )
 
             local_contig_path = os.path.join(local_contig_directory, contig_name)
@@ -543,7 +545,6 @@ class App(ctk.CTk):
                             os.rmdir(local_contig_directory)
                     except Exception:
                         pass
-                    break
 
                 if self.cancel_genome_data_download_boolean:
                     try:
@@ -552,7 +553,6 @@ class App(ctk.CTk):
                             os.rmdir(local_contig_directory)
                     except Exception:
                         pass
-                    break
 
             if self.genome_data_frame_feature_checkbox.get():
                 os.makedirs(local_feature_directory, exist_ok=True)
@@ -627,7 +627,7 @@ class App(ctk.CTk):
                             os.rmdir(local_feature_directory)
                     except Exception:
                         pass
-                    break
+
         self.genome_data_frame_contig_checkbox.configure(state=tk.NORMAL)
         self.genome_data_frame_feature_checkbox.configure(state=tk.NORMAL)
         self.genome_data_frame_bulk_checkbox.configure(state=tk.NORMAL)
@@ -1263,7 +1263,7 @@ class App(ctk.CTk):
                 "Running Ray Surveyor...\n", self.preprocessing_frame_cmd_output
             )
 
-            ray_surveyor_command = f'mpiexec -n 2 "{self.to_linux_path(os.path.abspath(Path.RAY))}" "{self.to_linux_path(config_path)}"'
+            ray_surveyor_command = f'mpiexec -n 4 "{self.to_linux_path(os.path.abspath(Path.RAY))}" "{self.to_linux_path(config_path)}"'
 
             self.preprocessing_process = self.run_bash_command(
                 ray_surveyor_command,
@@ -2789,7 +2789,7 @@ class App(ctk.CTk):
         species = species_text
         antibiotics = antibiotic_text
 
-        tsv_folder_path = os.path.join(selected_directory, Path.DATA, species_text)
+        tsv_folder_path = os.path.join(selected_directory, species_text)
         tsv_folder_path = os.path.join(tsv_folder_path, antibiotic_text)
 
         os.makedirs(tsv_folder_path, exist_ok=True)
