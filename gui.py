@@ -146,6 +146,14 @@ class App(ctk.CTk):
             size=(25, 25),
         )
 
+        kover_image = Image.open(path + "kover.png")
+
+        self.images["kover"] = ctk.CTkImage(
+            light_image=kover_image,
+            dark_image=kover_image,
+            size=(25, 25),
+        )
+
     def create_navigation_frame(self):
         button_height = 80
         button_text_color = ("gray10", "gray90")
@@ -205,7 +213,7 @@ class App(ctk.CTk):
             border_spacing=10,
             text_color=button_text_color,
             hover_color=button_hover_color,
-            image=self.images["add_user"],
+            image=self.images["kover"],
             anchor="w",
             command=lambda: self.set_page(Page.KOVER_LEARN_PAGE),
         )
@@ -1267,7 +1275,7 @@ class App(ctk.CTk):
                 "Running Ray Surveyor...\n", self.preprocessing_frame_cmd_output
             )
 
-            ray_surveyor_command = f'mpiexec -n 4 "{self.to_linux_path(os.path.abspath(Path.RAY))}" "{self.to_linux_path(config_path)}"'
+            ray_surveyor_command = f'mpiexec -n 4 "{self.to_linux_path(Path.RAY)}" "{self.to_linux_path(config_path)}"'
 
             self.preprocessing_process = self.run_bash_command(
                 ray_surveyor_command,
@@ -1306,7 +1314,7 @@ class App(ctk.CTk):
             )
 
             ls_command = f'ls -1 {self.to_linux_path(dataset_folder)}/*.fna > "{self.to_linux_path(config_path)}"'
-            dsk_command = f'{self.to_linux_path(os.path.abspath(Path.DSK))} -file "{self.to_linux_path(config_path)}" -out-dir "{self.to_linux_path(output_directory)}" -kmer-size {kmer_size}'
+            dsk_command = f'"{self.to_linux_path(Path.DSK)}" -file "{self.to_linux_path(config_path)}" -out-dir "{self.to_linux_path(output_directory)}" -kmer-size {kmer_size}'
 
             self.preprocessing_process = self.run_bash_command(
                 f"{ls_command}\n{dsk_command}",
@@ -1349,7 +1357,7 @@ class App(ctk.CTk):
             return None
 
         return Popen(
-            f'wsl -e "{self.to_linux_path(os.path.abspath(temp_file))}"',
+            f'wsl -e "{self.to_linux_path(temp_file)}"',
             shell=True,
             universal_newlines=True,
             stdout=PIPE,
@@ -1379,7 +1387,11 @@ class App(ctk.CTk):
             )
 
     def to_linux_path(self, path: str) -> str:
-        return path.replace("\\", "/").replace("C:", "/mnt/c")
+        path = os.path.abspath(path)
+        path = path.replace(path[0], path[0].lower(), 1)
+        path = re.sub(r"(\w)(:\\)", r"/mnt/\1/", path)
+        path = path.replace("\\", "/")
+        return path
 
     def preprocessing_validate_ui(self, event=None):
         self.preprocessing_frame_run_button_hover.text = ""
@@ -2836,7 +2848,7 @@ class App(ctk.CTk):
             survey_conf_file.write(f"-k {kmer_size}\n")
             survey_conf_file.write("-run-surveyor\n")
             survey_conf_file.write(
-                f"-output {self.to_linux_path(output_dir)}/survey.res\n"
+                f'-output {self.to_linux_path(output_dir)}/survey.res\n'
             )
             survey_conf_file.write("-write-kmer-matrix\n")
 
@@ -2844,7 +2856,7 @@ class App(ctk.CTk):
                 file_name = pl.Path(input_file).stem
                 input_file = self.to_linux_path(input_file)
                 survey_conf_file.write(
-                    f"-read-sample-assembly {file_name} {input_file}\n"
+                    f'-read-sample-assembly {file_name} {input_file}\n'
                 )
 
         return survey_conf_path
