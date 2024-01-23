@@ -7,12 +7,13 @@ from tkinter import ttk, messagebox, filedialog, font
 import threading
 import os
 import pathlib as pl
-from subprocess import CalledProcessError, Popen, PIPE, run
+from subprocess import CalledProcessError, Popen, PIPE
 import csv
 import random
 from enum import Enum
 import traceback
 import re
+from typing import IO, Optional
 
 import customtkinter as ctk
 from PIL import Image
@@ -41,6 +42,7 @@ class Path(str):
     REMOTE_METADATA = "RELEASE_NOTES/genome_metadata"
     FOREST_DARK = "ui/forest-dark.tcl"
     RAY = "bin/ray/Ray"
+    DSK = "bin/dsk/dsk"
     IMAGES = "ui/test_images/"
     DATA = "data/"
     CONTIGS = DATA + "contigs/"
@@ -50,6 +52,10 @@ class Path(str):
 class Tag(str):
     ERROR = "error"
     SUCCESS = "success"
+
+
+CRLF = b"\r\n"
+LF = b"\n"
 
 
 class App(ctk.CTk):
@@ -1253,19 +1259,18 @@ class App(ctk.CTk):
                 input_files, kmer_size, output_directory
             )
 
-            ray_surveyor_command = f'wsl mpiexec -n 2 "{self.to_linux_path(os.path.abspath(Path.RAY))}" {self.to_linux_path(config_path)}'
-
             self.update_cmd_output(
                 "Running Ray Surveyor...\n", self.preprocessing_frame_cmd_output
             )
 
-            self.preprocessing_process = Popen(
+            ray_surveyor_command = f'mpiexec -n 2 "{self.to_linux_path(os.path.abspath(Path.RAY))}" "{self.to_linux_path(config_path)}"'
+
+            self.preprocessing_process = self.run_bash_command(
                 ray_surveyor_command,
-                shell=True,
-                universal_newlines=True,
-                stdout=PIPE,
-                stderr=PIPE,
+                self.preprocessing_frame_cmd_output,
+                output_directory,
             )
+
             self.display_process_output(
                 self.preprocessing_process, self.preprocessing_frame_cmd_output
             )
@@ -1284,86 +1289,89 @@ class App(ctk.CTk):
                 e.stderr, self.preprocessing_frame_cmd_output, Tag.ERROR
             )
 
+    def run_dsk(self, output_directory: str):
+        try:
+            dataset_folder = self.preprocessing_frame_dataset_path.cget("text")
+
+            kmer_size = self.preprocessing_frame_control_panel_kmer_size_entry.get()
+
+            config_path = f"{output_directory}/dsk_output"
+
+            self.update_cmd_output(
+                "Running DSK...\n", self.preprocessing_frame_cmd_output
+            )
+
+            ls_command = f'ls -1 {self.to_linux_path(dataset_folder)}/*.fna > "{self.to_linux_path(config_path)}"'
+            dsk_command = f'{self.to_linux_path(os.path.abspath(Path.DSK))} -file "{self.to_linux_path(config_path)}" -out-dir "{self.to_linux_path(output_directory)}" -kmer-size {kmer_size}'
+
+            self.preprocessing_process = self.run_bash_command(
+                f"{ls_command}\n{dsk_command}",
+                self.preprocessing_frame_cmd_output,
+                output_directory,
+            )
+            self.display_process_output(
+                self.preprocessing_process, self.preprocessing_frame_cmd_output
+            )
+
+            self.on_preprocessing_process_finish(config_path, output_directory)
+        except CalledProcessError as e:
+            self.update_cmd_output(
+                "DSK encountered an error.",
+                self.preprocessing_frame_cmd_output,
+                Tag.ERROR,
+            )
+            self.update_cmd_output(
+                e.stdout, self.preprocessing_frame_cmd_output, Tag.ERROR
+            )
+            self.update_cmd_output(
+                e.stderr, self.preprocessing_frame_cmd_output, Tag.ERROR
+            )
+
+    def run_bash_command(
+        self, command: str, output_target: ctk.CTkTextbox, temp_directory: str
+    ) -> Optional[Popen]:
+        try:
+            temp_file = os.path.join(temp_directory, "tmp.sh")
+            with open(temp_file, "wb") as bash_file:
+                bash_file.write(
+                    f'#!/bin/bash\n{command}\nrm "$0"'.encode("UTF-8").replace(CRLF, LF)
+                )  # scary rm command
+        except Exception as e:
+            self.update_cmd_output(
+                f"An error occurred while creating the bash script.\n\n{e}",
+                output_target,
+                Tag.ERROR,
+            )
+            return None
+
+        return Popen(
+            f'wsl -e "{self.to_linux_path(os.path.abspath(temp_file))}"',
+            shell=True,
+            universal_newlines=True,
+            stdout=PIPE,
+            stderr=PIPE,
+        )
+
     def on_preprocessing_process_finish(self, config_path: str, output_directory: str):
         if not hasattr(self, "preprocessing_process"):
             return
 
         try:
             self.preprocessing_process.wait()
+            running_tool = (
+                self.preprocessing_frame_control_panel_kmer_tool_selector.get()
+            )
             self.update_cmd_output(
-                f"\nRay Surveyor completed successfully.\n\nOutput stored in: {output_directory}",
+                f"\n{running_tool} completed successfully.\n\nOutput stored in: {output_directory}",
                 self.preprocessing_frame_cmd_output,
                 Tag.SUCCESS,
             )
             os.remove(config_path)
         except Exception:
             self.update_cmd_output(
-                "An error occurred while running Ray Surveyor.\n",
+                f"An error occurred while running {running_tool}.\n",
                 self.preprocessing_frame_cmd_output,
                 Tag.ERROR,
-            )
-
-    def run_dsk(self, output_directory: str):
-        kmer_size = self.kmer_size.get()
-        # dsk_dir = self.dsk_dir.get() # ERROR
-        dataset_folder = self.dataset_folder.get()
-        dataset_folder = dataset_folder.replace("\\", "/")
-        dataset_folder = dataset_folder.replace("C:", "/mnt/c")
-        output_dir = self.output_dir.get()
-
-        # if not dsk_dir or not dataset_folder or not output_dir:
-        # self.update_cmd_output("Please fill in all required fields for DSK.")
-        # return
-
-        list_reads_file = os.path.join(output_dir, "list_reads")
-        list_reads_file = list_reads_file.replace("\\", "/")
-        dsk_output_dir = os.path.join(output_dir, "dsk_output")
-        dsk_output_dir = dsk_output_dir.replace("\\", "/")
-        dsk_output_dir = dsk_output_dir.replace("C:", "/mnt/c")
-
-        print(dsk_output_dir)
-
-        try:
-            # # Run the 'ls' command to list files in the dataset folder and save to list_reads
-            # ls_command1 = f"cd { output_dir}"
-
-            # run(ls_command1, shell=True, check=True,)
-            ls_command = f" wsl ls -1 {dataset_folder}/* > list_reads_file"
-            run(
-                ls_command,
-                shell=True,
-                check=True,
-            )
-
-            # Run the 'dsk' command
-            dsk_command = f"wsl bin/dsk/dsk -file list_reads_file -out-dir {dsk_output_dir} -kmer-size {kmer_size}"
-            self.update_cmd_output(
-                "Running DSK...", self.preprocessing_frame_cmd_output
-            )
-
-            process = Popen(
-                dsk_command,
-                shell=True,
-                stdout=PIPE,
-                stderr=PIPE,
-                universal_newlines=True,
-            )
-            self.display_process_output(process, self.preprocessing_frame_cmd_output)
-
-            self.update_cmd_output(
-                "DSK completed successfully. Output stored in:", dsk_output_dir
-            )
-        except CalledProcessError as e:
-            self.update_cmd_output(
-                "DSK encountered an error.",
-                self.preprocessing_frame_cmd_output,
-                "error",
-            )
-            self.update_cmd_output(
-                e.stdout, self.preprocessing_frame_cmd_output, "error"
-            )
-            self.update_cmd_output(
-                e.stderr, self.preprocessing_frame_cmd_output, "error"
             )
 
     def to_linux_path(self, path: str) -> str:
@@ -2818,8 +2826,6 @@ class App(ctk.CTk):
         kmer_size: int | str,
         output_dir: str,
     ) -> str:
-        os.makedirs(output_dir, exist_ok=True)
-
         survey_conf_path = os.path.join(output_dir, "survey.conf")
 
         with open(survey_conf_path, "w") as survey_conf_file:
@@ -2840,15 +2846,31 @@ class App(ctk.CTk):
         return survey_conf_path
 
     def display_process_output(self, process: Popen, output_target=None):
+        stderr_thread = self.read_output(process.stderr, output_target, Tag.ERROR)
+
         for line in process.stdout:
             self.update_cmd_output(line, output_target)
-        for line in process.stderr:
-            self.update_cmd_output(line, output_target, "error")
 
-    def update_cmd_output(self, message: str, output_target: tk.Text, *tags: str):
+        errors = "\n".join(stderr_thread.result())
+
+        self.update_cmd_output(errors, output_target, Tag.ERROR)
+
+    @threaded
+    def read_output(self, io: IO, output_target=None, *tags: str) -> list[str]:
+        lines = []
+
+        for line in io:
+            lines.append(line)
+
+        return lines
+
+    def update_cmd_output(
+        self, message: str, output_target: ctk.CTkTextbox, *tags: str
+    ):
         self.preprocessing_frame_cmd_output.configure(state=tk.NORMAL)
+        is_at_end = self.preprocessing_frame_cmd_output.yview()[1] > 0.95
         self.preprocessing_frame_cmd_output.insert(tk.END, message, tags)
-        if self.preprocessing_frame_cmd_output.yview()[1] > 0.95:
+        if is_at_end:
             self.preprocessing_frame_cmd_output.see(tk.END)
         self.preprocessing_frame_cmd_output.configure(state=tk.DISABLED)
         self.preprocessing_frame_cmd_output.update_idletasks()

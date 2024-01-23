@@ -1,0 +1,1 @@
+Fix bug where deleting files after selecting them in filedialog causes exceptions
