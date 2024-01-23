@@ -1,1 +1,2 @@
 Fix bug where deleting files after selecting them in filedialog causes exceptions
+Fix dealing genome_data that does not exist 
