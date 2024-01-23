@@ -53,8 +53,9 @@ class Label(CTkLabel):
         self.configure(text=text)
 
     def configure_text(self, text: str) -> str:
+        self.hovertip.text = text
+
         if text and hasattr(self, "width") and len(text) > self.width:
-            self.hovertip.text = text
             self.hovertip.enable()
             text = text[: self.width - 3] + "..."
         else:

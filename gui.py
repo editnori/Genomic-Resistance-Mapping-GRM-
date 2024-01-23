@@ -1082,10 +1082,9 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=lambda: self.preprocessing_frame_dataset_path.configure(
+            command=lambda: (self.preprocessing_frame_dataset_path.configure(
                 text=filedialog.askdirectory()
-            )
-            or self.preprocessing_validate_ui(),
+            ), self.preprocessing_validate_ui()),
         )
 
         self.preprocessing_frame_control_panel_dataset_button.pack(
@@ -1136,7 +1135,7 @@ class App(ctk.CTk):
         self.preprocessing_frame_control_panel_kmer_tool_selector.bind(
             "<<ComboboxSelected>>",
             lambda e: self.preprocessing_frame_control_panel_run_button.configure(
-                text=e.widget.selection_clear() or f"Run {e.widget.get()}"
+                text=(e.widget.selection_clear(), f"Run {e.widget.get()}")[1]
             ),
         )
 
@@ -1159,7 +1158,7 @@ class App(ctk.CTk):
 
         self.preprocessing_frame_cmd_output_label = ctk.CTkLabel(
             self.preprocessing_frame_cmd_output_frame,
-            text="Debug",
+            text="Console output",
             font=self.default_font(20),
         )
 
@@ -1381,7 +1380,7 @@ class App(ctk.CTk):
         self.preprocessing_frame_run_button_hover.text = ""
 
         failed = False
-
+        
         if not self.preprocessing_frame_dataset_path.cget("text"):
             self.preprocessing_frame_run_button_hover.text += (
                 "• select dataset directory.\n"
