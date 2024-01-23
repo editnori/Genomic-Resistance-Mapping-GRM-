@@ -2,7 +2,7 @@ from ftplib import FTP
 import signal
 import time
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog, font
+from tkinter import ttk, messagebox, font
 
 import threading
 import os
@@ -15,6 +15,7 @@ import traceback
 import re
 
 import customtkinter as ctk
+from customtkinter import filedialog
 from PIL import Image
 import pandas as pd
 

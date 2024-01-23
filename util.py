@@ -1,12 +1,13 @@
 from subprocess import PIPE, Popen
-from tkinter import filedialog, messagebox
+from tkinter import messagebox
 from threading import Thread
 from traceback import print_exc
 import os
 import re
-
 from concurrent.futures import Future
 from typing import IO, Optional
+
+from customtkinter import filedialog
 
 
 CRLF = b"\r\n"
