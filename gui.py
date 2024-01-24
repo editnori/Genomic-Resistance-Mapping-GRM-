@@ -51,6 +51,159 @@ class Tag(str):
     SUCCESS = "success"
 
 
+class ControlFrame(ctk.CTkFrame):
+    def __init__(self, master, **kwargs):
+        self.kover_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.kover_frame_tab_view = ctk.CTkTabview(self.kover_frame)
+
+        self.kover_frame_tab_view.pack(fill=tk.BOTH, expand=True)
+        self.kover_frame_tab_view.add("Create dataset")
+        self.kover_frame_tab_view.add("split dataset")
+        self.kover_frame_tab_view.add("kover learn")
+
+        self.kover_frame_tab_view.tab("Create dataset").grid_columnconfigure(
+            tuple(range(10)), weight=1, uniform="col"
+        )
+        self.kover_frame_tab_view.tab("Create dataset").grid_rowconfigure(
+            tuple(range(10)), weight=1, uniform="row"
+        )
+
+        self.kover_frame_control_panel = ctk.CTkFrame(
+            self.kover_frame_tab_view.tab("Create dataset"),
+            corner_radius=15,
+            border_width=2,
+        )
+        self.kover_frame_control_panel.grid(
+            row=2, column=2, sticky=tk.NSEW, padx=40, pady=40, rowspan=3, columnspan=2
+        )
+
+        self.kover_frame_control_panel_label = ctk.CTkLabel(
+            master=self.kover_frame_control_panel,
+            text="Control panel",
+            font=self.default_font(20),
+        )
+        self.kover_frame_control_panel_label.pack(pady=30)
+
+        self.kover_frame_control_panel_frame = ctk.CTkFrame(
+            master=self.kover_frame_control_panel,
+            corner_radius=15,
+            border_width=2,
+        )
+
+        self.kover_frame_control_panel_frame.pack(
+            padx=20, pady=(0, 20), fill=tk.BOTH, expand=True
+        )
+
+        self.kover_frame_dataset_path = Label(
+            master=self.kover_frame_control_panel_frame,
+            fg_color="transparent",
+            width=27,
+            anchor="w",
+        )
+
+        self.kover_frame_control_panel_dataset_button = ctk.CTkButton(
+            master=self.kover_frame_control_panel_frame,
+            text="Pick dataset",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            command=lambda: (
+                self.kover_frame_dataset_path.configure(text=util.select_directory()),
+                self.preprocessing_validate_ui(),
+            ),
+        )
+
+        self.kover_frame_control_panel_dataset_button.pack(
+            anchor=tk.W, padx=20, pady=(30, 5)
+        )
+        self.kover_frame_dataset_path.pack(anchor=tk.W, padx=20, pady=5)
+
+        self.kover_frame_control_panel_kmer_size_entry = ctk.CTkEntry(
+            master=self.kover_frame_control_panel_frame,
+            placeholder_text="K-mer size",
+        )
+        self.kover_frame_control_panel_kmer_size_entry.pack(
+            anchor=tk.W, padx=20, pady=5
+        )
+
+        self.kover_frame_control_panel_kmer_size_entry.bind(
+            "<KeyRelease>", self.preprocessing_validate_ui
+        )
+
+        Hovertip(
+            self.kover_frame_control_panel_kmer_size_entry,
+            "K-mer size format:\nodd_number\n\ne.g. 21",
+        )
+
+        self.kmer_tools = ["Ray Surveyor", "DSK"]
+
+        self.kover_frame_control_panel_kmer_tool_selector = ttk.Combobox(
+            master=self.kover_frame_control_panel_frame,
+            values=self.kmer_tools,
+            state="readonly",
+        )
+
+        self.kover_frame_control_panel_kmer_tool_selector.current(0)
+
+        self.kover_frame_control_panel_kmer_tool_selector.pack(
+            anchor=tk.W, padx=20, pady=5
+        )
+
+        self.kover_frame_control_panel_run_button = ctk.CTkButton(
+            master=self.kover_frame_control_panel_frame,
+            text=f"Run {self.kover_frame_control_panel_kmer_tool_selector.get()}",
+            command=self.run_preprocessing,
+        )
+        self.kover_frame_control_panel_run_button.pack(anchor=tk.W, padx=20, pady=5)
+
+        self.kover_frame_control_panel_kmer_tool_selector.bind(
+            "<<ComboboxSelected>>",
+            lambda e: self.kover_frame_control_panel_run_button.configure(
+                text=(e.widget.selection_clear(), f"Run {e.widget.get()}")[1]
+            ),
+        )
+
+        self.kover_frame_run_button_hover = Hovertip(
+            self.kover_frame_control_panel_run_button,
+            "",
+        )
+
+        self.preprocessing_validate_ui()
+
+        self.kover_frame_cmd_output_frame = ctk.CTkFrame(
+            self.kover_frame_tab_view.tab("preprocessing"),
+            corner_radius=15,
+            border_width=2,
+        )
+
+        self.kover_frame_cmd_output_frame.grid(
+            row=0, column=6, rowspan=10, columnspan=5, sticky=tk.NSEW, padx=40, pady=40
+        )
+
+        self.kover_frame_cmd_output_label = ctk.CTkLabel(
+            self.kover_frame_cmd_output_frame,
+            text="Console output",
+            font=self.default_font(20),
+        )
+
+        self.kover_frame_cmd_output_label.pack(pady=30)
+
+        self.kover_frame_cmd_output = ctk.CTkTextbox(
+            self.kover_frame_cmd_output_frame,
+            font=self.default_font(14),
+            corner_radius=15,
+            border_width=2,
+            state=tk.DISABLED,
+        )
+
+        self.kover_frame_cmd_output.pack(
+            padx=20, pady=(0, 20), fill=tk.BOTH, expand=True
+        )
+
+        self.kover_frame_cmd_output.tag_config(Tag.ERROR, foreground="red")
+        self.kover_frame_cmd_output.tag_config(Tag.SUCCESS, foreground="green")
+
+
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -1404,6 +1557,8 @@ class App(ctk.CTk):
             self.preprocessing_frame_control_panel_run_button.configure(state=tk.NORMAL)
 
     def create_kover_learn_page(self):
+        # OLD CODE
+        return
         self.kover_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         kover_tab_view = ctk.CTkTabview(
             self.kover_frame,
