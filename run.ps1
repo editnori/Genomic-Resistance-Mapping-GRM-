@@ -1,7 +1,7 @@
 $Pattern = "`".+`", line \d+"
 
 $error_style = "`e[38;2;244;41;45m`e[4m"
-$normal_style = "`e[38;2;40;177;249m"
+$normal_style = "`e[38;2;127;177;249m"
 
 function global:ColorMatch
 {
@@ -32,4 +32,4 @@ function global:ColorMatch
    }
 }
 
-invoke-expression -Command ".`"C:\\Users\\moham\\Desktop\\genome-analysis-tool\\.venv\\Scripts\\python.exe`" `"C:\\Users\\moham\\Desktop\\genome-analysis-tool\\main.py`" 2>&1$stdOut | ColorMatch"
+invoke-expression -Command ".`"C:\\Users\\moham\\Desktop\\genome-analysis-tool\\.venv\\Scripts\\python.exe`" -u `"C:\\Users\\moham\\Desktop\\genome-analysis-tool\\main.py`"  2>&1 |  ColorMatch"

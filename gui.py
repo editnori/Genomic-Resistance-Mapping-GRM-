@@ -53,155 +53,72 @@ class Tag(str):
 
 class ControlFrame(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
-        self.kover_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.kover_frame_tab_view = ctk.CTkTabview(self.kover_frame)
+        if "fg_color" not in kwargs:
+            kwargs["fg_color"] = "transparent"
 
-        self.kover_frame_tab_view.pack(fill=tk.BOTH, expand=True)
-        self.kover_frame_tab_view.add("Create dataset")
-        self.kover_frame_tab_view.add("split dataset")
-        self.kover_frame_tab_view.add("kover learn")
+        if "font" in kwargs:
+            self.font = kwargs.pop("font")
+        else:
+            self.font = lambda size: ("Century Gothic", size)
 
-        self.kover_frame_tab_view.tab("Create dataset").grid_columnconfigure(
-            tuple(range(10)), weight=1, uniform="col"
-        )
-        self.kover_frame_tab_view.tab("Create dataset").grid_rowconfigure(
-            tuple(range(10)), weight=1, uniform="row"
-        )
+        master.grid_columnconfigure(tuple(range(10)), weight=1, uniform="col")
+        master.grid_rowconfigure(tuple(range(10)), weight=1, uniform="row")
 
-        self.kover_frame_control_panel = ctk.CTkFrame(
-            self.kover_frame_tab_view.tab("Create dataset"),
+        super().__init__(master, **kwargs)
+
+        self.control_panel = ctk.CTkFrame(
+            master,
             corner_radius=15,
             border_width=2,
         )
-        self.kover_frame_control_panel.grid(
-            row=2, column=2, sticky=tk.NSEW, padx=40, pady=40, rowspan=3, columnspan=2
+        self.control_panel.grid(
+            row=2, column=2, sticky=tk.NSEW, rowspan=3, columnspan=2, padx=40, pady=40
         )
 
-        self.kover_frame_control_panel_label = ctk.CTkLabel(
-            master=self.kover_frame_control_panel,
+        self.control_panel_label = ctk.CTkLabel(
+            master=self.control_panel,
             text="Control panel",
-            font=self.default_font(20),
+            font=self.font(20),
         )
-        self.kover_frame_control_panel_label.pack(pady=30)
+        self.control_panel_label.pack(pady=30)
 
-        self.kover_frame_control_panel_frame = ctk.CTkFrame(
-            master=self.kover_frame_control_panel,
+        self.control_panel_frame = ctk.CTkFrame(
+            master=self.control_panel,
+            corner_radius=15,
+            border_width=2,
+        )
+        self.control_panel_frame.pack(padx=20, pady=(0, 20), fill=tk.BOTH, expand=True)
+
+        self.cmd_output_frame = ctk.CTkFrame(
+            master,
             corner_radius=15,
             border_width=2,
         )
 
-        self.kover_frame_control_panel_frame.pack(
-            padx=20, pady=(0, 20), fill=tk.BOTH, expand=True
-        )
-
-        self.kover_frame_dataset_path = Label(
-            master=self.kover_frame_control_panel_frame,
-            fg_color="transparent",
-            width=27,
-            anchor="w",
-        )
-
-        self.kover_frame_control_panel_dataset_button = ctk.CTkButton(
-            master=self.kover_frame_control_panel_frame,
-            text="Pick dataset",
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            command=lambda: (
-                self.kover_frame_dataset_path.configure(text=util.select_directory()),
-                self.preprocessing_validate_ui(),
-            ),
-        )
-
-        self.kover_frame_control_panel_dataset_button.pack(
-            anchor=tk.W, padx=20, pady=(30, 5)
-        )
-        self.kover_frame_dataset_path.pack(anchor=tk.W, padx=20, pady=5)
-
-        self.kover_frame_control_panel_kmer_size_entry = ctk.CTkEntry(
-            master=self.kover_frame_control_panel_frame,
-            placeholder_text="K-mer size",
-        )
-        self.kover_frame_control_panel_kmer_size_entry.pack(
-            anchor=tk.W, padx=20, pady=5
-        )
-
-        self.kover_frame_control_panel_kmer_size_entry.bind(
-            "<KeyRelease>", self.preprocessing_validate_ui
-        )
-
-        Hovertip(
-            self.kover_frame_control_panel_kmer_size_entry,
-            "K-mer size format:\nodd_number\n\ne.g. 21",
-        )
-
-        self.kmer_tools = ["Ray Surveyor", "DSK"]
-
-        self.kover_frame_control_panel_kmer_tool_selector = ttk.Combobox(
-            master=self.kover_frame_control_panel_frame,
-            values=self.kmer_tools,
-            state="readonly",
-        )
-
-        self.kover_frame_control_panel_kmer_tool_selector.current(0)
-
-        self.kover_frame_control_panel_kmer_tool_selector.pack(
-            anchor=tk.W, padx=20, pady=5
-        )
-
-        self.kover_frame_control_panel_run_button = ctk.CTkButton(
-            master=self.kover_frame_control_panel_frame,
-            text=f"Run {self.kover_frame_control_panel_kmer_tool_selector.get()}",
-            command=self.run_preprocessing,
-        )
-        self.kover_frame_control_panel_run_button.pack(anchor=tk.W, padx=20, pady=5)
-
-        self.kover_frame_control_panel_kmer_tool_selector.bind(
-            "<<ComboboxSelected>>",
-            lambda e: self.kover_frame_control_panel_run_button.configure(
-                text=(e.widget.selection_clear(), f"Run {e.widget.get()}")[1]
-            ),
-        )
-
-        self.kover_frame_run_button_hover = Hovertip(
-            self.kover_frame_control_panel_run_button,
-            "",
-        )
-
-        self.preprocessing_validate_ui()
-
-        self.kover_frame_cmd_output_frame = ctk.CTkFrame(
-            self.kover_frame_tab_view.tab("preprocessing"),
-            corner_radius=15,
-            border_width=2,
-        )
-
-        self.kover_frame_cmd_output_frame.grid(
+        self.cmd_output_frame.grid(
             row=0, column=6, rowspan=10, columnspan=5, sticky=tk.NSEW, padx=40, pady=40
         )
 
-        self.kover_frame_cmd_output_label = ctk.CTkLabel(
-            self.kover_frame_cmd_output_frame,
+        self.cmd_output_label = ctk.CTkLabel(
+            self.cmd_output_frame,
             text="Console output",
-            font=self.default_font(20),
+            font=self.font(20),
         )
 
-        self.kover_frame_cmd_output_label.pack(pady=30)
+        self.cmd_output_label.pack(pady=30)
 
-        self.kover_frame_cmd_output = ctk.CTkTextbox(
-            self.kover_frame_cmd_output_frame,
-            font=self.default_font(14),
+        self.cmd_output = ctk.CTkTextbox(
+            self.cmd_output_frame,
+            font=self.font(14),
             corner_radius=15,
             border_width=2,
             state=tk.DISABLED,
         )
 
-        self.kover_frame_cmd_output.pack(
-            padx=20, pady=(0, 20), fill=tk.BOTH, expand=True
-        )
+        self.cmd_output.pack(padx=20, pady=(0, 20), fill=tk.BOTH, expand=True)
 
-        self.kover_frame_cmd_output.tag_config(Tag.ERROR, foreground="red")
-        self.kover_frame_cmd_output.tag_config(Tag.SUCCESS, foreground="green")
+        self.cmd_output.tag_config(Tag.ERROR, foreground="red")
+        self.cmd_output.tag_config(Tag.SUCCESS, foreground="green")
 
 
 class App(ctk.CTk):
@@ -1192,50 +1109,21 @@ class App(ctk.CTk):
         self.preprocessing_frame_tab_view = ctk.CTkTabview(self.preprocessing_frame)
 
         self.preprocessing_frame_tab_view.pack(fill=tk.BOTH, expand=True)
+
         self.preprocessing_frame_tab_view.add("preprocessing")
-
-        self.preprocessing_frame_tab_view.tab("preprocessing").grid_columnconfigure(
-            tuple(range(10)), weight=1, uniform="col"
-        )
-        self.preprocessing_frame_tab_view.tab("preprocessing").grid_rowconfigure(
-            tuple(range(10)), weight=1, uniform="row"
-        )
-
-        self.preprocessing_frame_control_panel = ctk.CTkFrame(
-            self.preprocessing_frame_tab_view.tab("preprocessing"),
-            corner_radius=15,
-            border_width=2,
-        )
-        self.preprocessing_frame_control_panel.grid(
-            row=2, column=2, sticky=tk.NSEW, padx=40, pady=40, rowspan=3, columnspan=2
-        )
-
-        self.preprocessing_frame_control_panel_label = ctk.CTkLabel(
-            master=self.preprocessing_frame_control_panel,
-            text="Control panel",
-            font=self.default_font(20),
-        )
-        self.preprocessing_frame_control_panel_label.pack(pady=30)
-
-        self.preprocessing_frame_control_panel_frame = ctk.CTkFrame(
-            master=self.preprocessing_frame_control_panel,
-            corner_radius=15,
-            border_width=2,
-        )
-
-        self.preprocessing_frame_control_panel_frame.pack(
-            padx=20, pady=(0, 20), fill=tk.BOTH, expand=True
+        self.preprocessing_frame_control = ControlFrame(
+            self.preprocessing_frame_tab_view.tab("preprocessing")
         )
 
         self.preprocessing_frame_dataset_path = Label(
-            master=self.preprocessing_frame_control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel_frame,
             fg_color="transparent",
             width=27,
             anchor="w",
         )
 
         self.preprocessing_frame_control_panel_dataset_button = ctk.CTkButton(
-            master=self.preprocessing_frame_control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel_frame,
             text="Pick dataset",
             fg_color="transparent",
             border_width=1,
@@ -1251,10 +1139,11 @@ class App(ctk.CTk):
         self.preprocessing_frame_control_panel_dataset_button.pack(
             anchor=tk.W, padx=20, pady=(30, 5)
         )
+
         self.preprocessing_frame_dataset_path.pack(anchor=tk.W, padx=20, pady=5)
 
         self.preprocessing_frame_control_panel_kmer_size_entry = ctk.CTkEntry(
-            master=self.preprocessing_frame_control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel_frame,
             placeholder_text="K-mer size",
         )
         self.preprocessing_frame_control_panel_kmer_size_entry.pack(
@@ -1273,7 +1162,7 @@ class App(ctk.CTk):
         self.kmer_tools = ["Ray Surveyor", "DSK"]
 
         self.preprocessing_frame_control_panel_kmer_tool_selector = ttk.Combobox(
-            master=self.preprocessing_frame_control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel_frame,
             values=self.kmer_tools,
             state="readonly",
         )
@@ -1285,7 +1174,7 @@ class App(ctk.CTk):
         )
 
         self.preprocessing_frame_control_panel_run_button = ctk.CTkButton(
-            master=self.preprocessing_frame_control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel_frame,
             text=f"Run {self.preprocessing_frame_control_panel_kmer_tool_selector.get()}",
             command=self.run_preprocessing,
         )
@@ -1307,39 +1196,6 @@ class App(ctk.CTk):
 
         self.preprocessing_validate_ui()
 
-        self.preprocessing_frame_cmd_output_frame = ctk.CTkFrame(
-            self.preprocessing_frame_tab_view.tab("preprocessing"),
-            corner_radius=15,
-            border_width=2,
-        )
-
-        self.preprocessing_frame_cmd_output_frame.grid(
-            row=0, column=6, rowspan=10, columnspan=5, sticky=tk.NSEW, padx=40, pady=40
-        )
-
-        self.preprocessing_frame_cmd_output_label = ctk.CTkLabel(
-            self.preprocessing_frame_cmd_output_frame,
-            text="Console output",
-            font=self.default_font(20),
-        )
-
-        self.preprocessing_frame_cmd_output_label.pack(pady=30)
-
-        self.preprocessing_frame_cmd_output = ctk.CTkTextbox(
-            self.preprocessing_frame_cmd_output_frame,
-            font=self.default_font(14),
-            corner_radius=15,
-            border_width=2,
-            state=tk.DISABLED,
-        )
-
-        self.preprocessing_frame_cmd_output.pack(
-            padx=20, pady=(0, 20), fill=tk.BOTH, expand=True
-        )
-
-        self.preprocessing_frame_cmd_output.tag_config(Tag.ERROR, foreground="red")
-        self.preprocessing_frame_cmd_output.tag_config(Tag.SUCCESS, foreground="green")
-
     @threaded
     def run_preprocessing(self):
         output_directory = util.select_directory(title="Select output directory")
@@ -1360,9 +1216,9 @@ class App(ctk.CTk):
             text="Cancel", command=self.cancel_preprocessing
         )
 
-        self.preprocessing_frame_cmd_output.configure(state=tk.NORMAL)
-        self.preprocessing_frame_cmd_output.delete("1.0", tk.END)
-        self.preprocessing_frame_cmd_output.configure(state=tk.DISABLED)
+        self.preprocessing_frame_control.cmd_output.configure(state=tk.NORMAL)
+        self.preprocessing_frame_control.cmd_output.delete("1.0", tk.END)
+        self.preprocessing_frame_control.cmd_output.configure(state=tk.DISABLED)
 
         if (
             self.preprocessing_frame_control_panel_kmer_tool_selector.get()
@@ -1409,7 +1265,7 @@ class App(ctk.CTk):
             if not input_files:
                 self.update_cmd_output(
                     "No .fna files found in the selected dataset folder.",
-                    self.preprocessing_frame_cmd_output,
+                    self.preprocessing_frame_control.cmd_output,
                 )
                 return
 
@@ -1420,7 +1276,7 @@ class App(ctk.CTk):
             )
 
             self.update_cmd_output(
-                "Running Ray Surveyor...\n", self.preprocessing_frame_cmd_output
+                "Running Ray Surveyor...\n", self.preprocessing_frame_control.cmd_output
             )
 
             ray_surveyor_command = f'mpiexec -n 4 "{util.to_linux_path(Path.RAY)}" "{util.to_linux_path(config_path)}"'
@@ -1431,21 +1287,21 @@ class App(ctk.CTk):
             )
 
             self.display_process_output(
-                self.preprocessing_process, self.preprocessing_frame_cmd_output
+                self.preprocessing_process, self.preprocessing_frame_control.cmd_output
             )
 
             self.on_preprocessing_process_finish(config_path, output_directory)
         except CalledProcessError as e:
             self.update_cmd_output(
                 "Ray Surveyor encountered an error.",
-                self.preprocessing_frame_cmd_output,
+                self.preprocessing_frame_control.cmd_output,
                 Tag.ERROR,
             )
             self.update_cmd_output(
-                e.stdout, self.preprocessing_frame_cmd_output, Tag.ERROR
+                e.stdout, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
             self.update_cmd_output(
-                e.stderr, self.preprocessing_frame_cmd_output, Tag.ERROR
+                e.stderr, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
 
     def run_dsk(self, output_directory: str):
@@ -1457,7 +1313,7 @@ class App(ctk.CTk):
             config_path = f"{output_directory}/dsk_output"
 
             self.update_cmd_output(
-                "Running DSK...\n", self.preprocessing_frame_cmd_output
+                "Running DSK...\n", self.preprocessing_frame_control.cmd_output
             )
 
             ls_command = f'ls -1 {util.to_linux_path(dataset_folder)}/*.fna > "{util.to_linux_path(config_path)}"'
@@ -1468,21 +1324,21 @@ class App(ctk.CTk):
                 output_directory,
             )
             self.display_process_output(
-                self.preprocessing_process, self.preprocessing_frame_cmd_output
+                self.preprocessing_process, self.preprocessing_frame_control.cmd_output
             )
 
             self.on_preprocessing_process_finish(config_path, output_directory)
         except CalledProcessError as e:
             self.update_cmd_output(
                 "DSK encountered an error.",
-                self.preprocessing_frame_cmd_output,
+                self.preprocessing_frame_control.cmd_output,
                 Tag.ERROR,
             )
             self.update_cmd_output(
-                e.stdout, self.preprocessing_frame_cmd_output, Tag.ERROR
+                e.stdout, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
             self.update_cmd_output(
-                e.stderr, self.preprocessing_frame_cmd_output, Tag.ERROR
+                e.stderr, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
 
     def on_preprocessing_process_finish(self, config_path: str, output_directory: str):
@@ -1496,14 +1352,14 @@ class App(ctk.CTk):
             )
             self.update_cmd_output(
                 f"\n{running_tool} completed successfully.\n\nOutput stored in: {output_directory}",
-                self.preprocessing_frame_cmd_output,
+                self.preprocessing_frame_control.cmd_output,
                 Tag.SUCCESS,
             )
             os.remove(config_path)
         except Exception:
             self.update_cmd_output(
                 f"An error occurred while running {running_tool}.\n",
-                self.preprocessing_frame_cmd_output,
+                self.preprocessing_frame_control.cmd_output,
                 Tag.ERROR,
             )
 
@@ -1557,210 +1413,228 @@ class App(ctk.CTk):
             self.preprocessing_frame_control_panel_run_button.configure(state=tk.NORMAL)
 
     def create_kover_learn_page(self):
-        # OLD CODE
-        return
-        self.kover_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        kover_tab_view = ctk.CTkTabview(
-            self.kover_frame,
-            width=self.screen_width - 230,
-            height=self.screen_height - 150,
-        )
-        kover_tab_view.grid(row=0, column=0, padx=(20, 0), pady=(20, 0))
-        kover_tab_view.add("Create dataset")
-        kover_tab_view.add("split dataset")
-        kover_tab_view.add("kover learn")
+        self.kover_frame = ctk.CTkFrame(self, fg_color="transparent")
 
-        create_dataset_frame = ctk.CTkFrame(
-            kover_tab_view.tab("Create dataset"),
-            width=700,
-            height=self.screen_height - 230,
-            corner_radius=15,
-            border_width=2,
-        )
-        create_dataset_frame.place(x=50, y=20)
+        self.kover_frame_tab_view = ctk.CTkTabview(self.kover_frame)
 
-        l1 = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Create Dataset",
-            font=self.default_font(20),
-        )
-        l1.place(x=50, y=45)
+        self.kover_frame_tab_view.pack(fill=tk.BOTH, expand=True)
 
-        # Selection option for dataset type
-        dataset_type_label = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Select Dataset Type",
-            font=self.default_font(15),
+        self.kover_frame_tab_view.add("Create dataset")
+        self.data_set_creation_frame = ControlFrame(
+            self.kover_frame_tab_view.tab("Create dataset")
         )
-        dataset_type_label.place(x=50, y=100)
-        self.dataset_type_var1 = tk.StringVar(value="contigs")  # Set a default value
-        dataset_type_options = ["reads", "contigs", "kmer matrix"]
-        dataset_type_menu = ttk.Combobox(
-            master=create_dataset_frame,
-            textvariable=self.dataset_type_var1,
-            values=dataset_type_options,
+
+        self.data_set_creation_frame.control_panel.grid(
+            row=2,
+            column=1,
+            sticky=tk.NSEW,
+            rowspan=3,
+            columnspan=2,
+            padx=40,
+            pady=40,
+        )
+
+        self.data_set_creation_frame.cmd_output_frame.grid(
+            row=0, column=3, rowspan=10, columnspan=7, sticky=tk.NSEW, padx=40, pady=40
+        )
+
+        self.data_set_creation_frame.control_panel_frame.grid_rowconfigure(
+            tuple(range(6)), pad=20
+        )
+        self.data_set_creation_frame.control_panel_frame.grid_columnconfigure(
+            0, weight=1, uniform="column"
+        )
+        self.data_set_creation_frame.control_panel_frame.grid_columnconfigure(
+            1, weight=2, uniform="column"
+        )
+
+        self.data_set_type = ["reads", "contigs", "kmer matrix"]
+
+        self.data_set_creation_control_panel_data_set_type_selector = ttk.Combobox(
+            master=self.data_set_creation_frame.control_panel_frame,
+            values=self.data_set_type,
             state="readonly",
         )
-        dataset_type_menu.place(x=50, y=150)
-        dataset_type_menu.bind("<<ComboboxSelected>>", self.on_dataset_type_selected)
-        # Buttons to pick dataset, output directory, phenotype description, phenotype metadata
-        self.pickdataset1_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
-            text="Pick Dataset",
-            corner_radius=6,
+
+        self.data_set_creation_control_panel_data_set_type_selector.current(1)
+
+        self.data_set_creation_control_panel_data_set_type_selector.grid(
+            row=0, column=0, sticky=tk.W, padx=20, pady=20
+        )
+
+        self.data_set_creation_control_panel_data_set_type_selector.bind(
+            "<<ComboboxSelected>>", lambda e: e.widget.selection_clear()
+        )
+
+        self.data_set_creation_frame_dataset_path = ctk.CTkEntry(
+            master=self.data_set_creation_frame.control_panel_frame,
+            fg_color="transparent",
+            state=tk.DISABLED,
+        )
+
+        self.data_set_creation_control_panel_dataset_button = ctk.CTkButton(
+            master=self.data_set_creation_frame.control_panel_frame,
+            text="Pick dataset",
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            # command=self.browse_dataset,
+            font=self.default_font(12),
+            command=lambda: self.update_entry(
+                self.data_set_creation_frame_dataset_path,
+                util.select_file(
+                    filetypes=[("TSV Files", "*.tsv")],
+                    title="Select Dataset File",
+                ),
+            ),
         )
-        self.pickdataset1_btn.place(x=50, y=200)
 
-        self.pickdataset1_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=380,
-            placeholder_text="Dataset path",
-            textvariable=self.dataset_folder,
+        self.data_set_creation_control_panel_dataset_button.grid(
+            row=1, column=0, sticky=tk.EW, padx=(20, 50)
         )
-        self.pickdataset1_entry.place(x=50, y=250)
 
-        self.pickoutput_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
-            text="Pick Output Directory",
-            corner_radius=6,
+        self.data_set_creation_frame_dataset_path.grid(
+            row=1, column=1, sticky=tk.EW, padx=20
+        )
+
+        self.data_set_creation_frame_description_path = ctk.CTkEntry(
+            master=self.data_set_creation_frame.control_panel_frame,
             fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            # command=self.browse_output_dir,
+            state=tk.DISABLED,
         )
-        self.pickoutput_btn.place(x=50, y=300)
 
-        self.pickoutput_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=380,
-            placeholder_text="Output directory path",
-            textvariable=self.output_dir,
-        )
-        self.pickoutput_entry.place(x=50, y=350)
-
-        self.phenotype_desc_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
+        self.data_set_creation_control_panel_description_button = ctk.CTkButton(
+            master=self.data_set_creation_frame.control_panel_frame,
             text="Pick Phenotype Description",
-            corner_radius=6,
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.pick_desctsv_file,
+            font=self.default_font(12),
+            command=lambda: self.update_entry(
+                self.data_set_creation_frame_description_path,
+                util.select_file(
+                    filetypes=[("TSV Files", "*.tsv")],
+                    title="Select Phenotype Description File",
+                ),
+            ),
         )
-        self.phenotype_desc_btn.place(x=50, y=400)
 
-        self.phenotype_desc_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=380,
-            placeholder_text="Phenotype description path",
-            textvariable=self.desctsv_file_path,
+        self.data_set_creation_control_panel_description_button.grid(
+            row=2, column=0, sticky=tk.EW, padx=(20, 50), pady=0
         )
-        self.phenotype_desc_entry.place(x=50, y=450)
 
-        # Kmer entry with max kmer length 128
-        self.kmer_label = ctk.CTkLabel(
-            master=create_dataset_frame,
+        self.data_set_creation_frame_description_path.grid(
+            row=2, column=1, sticky=tk.EW, padx=20, pady=0
+        )
+
+        self.data_set_creation_frame_metadata_path = ctk.CTkEntry(
+            master=self.data_set_creation_frame.control_panel_frame,
+            fg_color="transparent",
+            state=tk.DISABLED,
+        )
+
+        self.data_set_creation_control_panel_metadata_button = ctk.CTkButton(
+            master=self.data_set_creation_frame.control_panel_frame,
+            text="Pick Phenotype Metadata",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
+            command=lambda: self.update_entry(
+                self.data_set_creation_frame_metadata_path,
+                util.select_file(
+                    filetypes=[("TSV Files", "*.tsv")],
+                    title="Select Phenotype Metadata File",
+                ),
+            ),
+        )
+
+        self.data_set_creation_control_panel_metadata_button.grid(
+            row=3, column=0, sticky=tk.EW, padx=(20, 50), pady=0
+        )
+
+        self.data_set_creation_frame_metadata_path.grid(
+            row=3, column=1, sticky=tk.EW, padx=20, pady=0
+        )
+
+        self.data_set_creation_frame_kmer_size_label = ctk.CTkLabel(
+            master=self.data_set_creation_frame.control_panel_frame,
             text="Enter Kmer Length (max 128)",
             font=self.default_font(15),
         )
-        self.kmer_label.place(x=50, y=600)
-        self.kmer_size_var = tk.StringVar(value="31")
-        self.kmer_size_spinbox = tk.Spinbox(
-            master=create_dataset_frame,
+        self.data_set_creation_frame_kmer_size_label.grid(
+            row=4, column=0, sticky=tk.W, padx=20
+        )
+
+        self.data_set_creation_frame_kmer_size_spinbox = tk.Spinbox(
+            master=self.data_set_creation_frame.control_panel_frame,
             from_=0,
             to=128,
-            width=5,
-            textvariable=self.kmer_size_var,
             wrap=True,
-            fg="black",
-            buttonbackground="white",
+            buttonbackground="#2b2b2b",
+            font=self.default_font(10),
+            validate="key",
+            validatecommand=(self.register(self.validate_spinbox), "%P", "%W"),
         )
-        self.kmer_size_spinbox.place(x=50, y=630)
+        self.data_set_creation_frame_kmer_size_spinbox.grid(
+            row=5, column=0, sticky=tk.W, padx=20, pady=0
+        )
 
-        # Compression level input (0 to 9)
-        compression_label = ctk.CTkLabel(
-            master=create_dataset_frame,
+        self.data_set_creation_frame_kmer_size_spinbox.insert(1, "31")
+        self.data_set_creation_frame_kmer_size_spinbox.delete(0, 1)
+
+        self.data_set_creation_frame_compression_label = ctk.CTkLabel(
+            master=self.data_set_creation_frame.control_panel_frame,
             text="Enter Compression Level (0-9)",
             font=self.default_font(15),
         )
-        compression_label.place(x=300, y=600)
-        self.compression_var = tk.StringVar(value="4")
+        self.data_set_creation_frame_compression_label.grid(
+            row=4, column=1, sticky=tk.W, padx=20
+        )
 
-        self.compression_spinbox = tk.Spinbox(
-            master=create_dataset_frame,
+        self.data_set_creation_frame_compression_spinbox = tk.Spinbox(
+            master=self.data_set_creation_frame.control_panel_frame,
             from_=0,
             to=9,
-            width=5,
-            textvariable=self.compression_var,
             wrap=True,
-            fg="black",
-            buttonbackground="white",
+            buttonbackground="#2b2b2b",
+            font=self.default_font(10),
+            validate="key",
+            validatecommand=(self.register(self.validate_spinbox), "%P", "%W"),
         )
-        self.compression_spinbox.place(x=300, y=630)
+        self.data_set_creation_frame_compression_spinbox.grid(
+            row=5, column=1, sticky=tk.W, padx=20
+        )
+        self.data_set_creation_frame_compression_spinbox.insert(1, "4")
+        self.data_set_creation_frame_compression_spinbox.delete(0, 1)
 
-        # Create button to initiate the dataset creation
-        self.create_dataset_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=150,
+        self.data_set_creation_frame_create_dataset_button = ctk.CTkButton(
+            master=self.data_set_creation_frame.control_panel_frame,
             text="Create Dataset",
-            corner_radius=6,
             command=self.create_dataset_thread,
-        )
-        self.create_dataset_btn.place(x=500, y=630)
-
-        phenotype_metadata_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
-            text="Pick Phenotype Metadata",
-            corner_radius=6,
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            command=self.pick_metatsv_file,
-        )
-        phenotype_metadata_btn.place(x=50, y=500)
-
-        self.phenotype_metadata_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=380,
-            placeholder_text="Phenotype metadata path",
-            textvariable=self.metatsv_file_path,
-        )
-        self.phenotype_metadata_entry.place(x=50, y=550)
-
-        outputscreen = ctk.CTkFrame(
-            kover_tab_view.tab("Create dataset"),
-            width=650,
-            height=650,
-            corner_radius=15,
-            border_width=2,
+            state=tk.DISABLED,
         )
 
-        outputscreen.place(x=800, y=20)
-        outputscreen.grid_propagate(False)
-        outputscreen.grid_rowconfigure(0, weight=1)
-        outputscreen.grid_columnconfigure(0, weight=1)
-
-        self.cmd_output1 = tk.Text(
-            master=outputscreen,
-            height=650,
-            width=650,
-            state="disabled",
-            font=self.custom_font,
+        self.data_set_creation_frame_create_dataset_button.grid(
+            row=6, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
-        self.scrollbar1 = tk.Scrollbar(outputscreen, command=self.cmd_output1.yview)
-        self.scrollbar1.grid(row=0, column=1, sticky=tk.NSEW)
-        self.cmd_output1["yscrollcommand"] = self.scrollbar1.set
-        self.cmd_output1.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
+        self.data_set_creation_frame_create_dataset_button_hover = Hovertip(
+            self.data_set_creation_frame_create_dataset_button,
+            "",
+        )
 
+        self.dataset_creation_validate_ui()
+
+        self.kover_frame_tab_view.add("split dataset")
+        self.data_set_split_frame = ControlFrame(
+            self.kover_frame_tab_view.tab("split dataset")
+        )
+
+        self.kover_frame_tab_view.add("kover learn")
+        self.kover_learn_frame = ControlFrame(
+            self.kover_frame_tab_view.tab("kover learn")
+        )
+        return  # OLD CODE
         create_dataset_frame = ctk.CTkFrame(
             kover_tab_view.tab("split dataset"),
             width=700,
@@ -2204,6 +2078,58 @@ class App(ctk.CTk):
         self.scrollbar3.grid(row=0, column=1, sticky=tk.NSEW)
         self.cmd_output3["yscrollcommand"] = self.scrollbar3.set
         self.cmd_output3.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
+
+    def update_entry(self, entry: ctk.CTkEntry, value: str):
+        entry.configure(state=tk.NORMAL)
+        entry.delete(0, tk.END)
+        if value:
+            entry.insert(0, value)
+        entry.configure(state=tk.DISABLED)
+
+        self.dataset_creation_validate_ui()
+
+    def dataset_creation_validate_ui(self):
+        failed = False
+        self.data_set_creation_frame_create_dataset_button_hover.text = ""
+
+        if not self.data_set_creation_frame_dataset_path.get():
+            self.data_set_creation_frame_create_dataset_button_hover.text += (
+                "• select dataset directory.\n"
+            )
+            failed = True
+        if not self.data_set_creation_frame_description_path.get():
+            self.data_set_creation_frame_create_dataset_button_hover.text += (
+                "• select phenotype description file.\n"
+            )
+            failed = True
+        if not self.data_set_creation_frame_metadata_path.get():
+            self.data_set_creation_frame_create_dataset_button_hover.text += (
+                "• select phenotype metadata file.\n"
+            )
+            failed = True
+
+        self.data_set_creation_frame_create_dataset_button_hover.text = (
+            self.data_set_creation_frame_create_dataset_button_hover.text.strip("\n")
+        )
+
+        if failed:
+            self.data_set_creation_frame_create_dataset_button_hover.enable()
+            self.data_set_creation_frame_create_dataset_button.configure(
+                state=tk.DISABLED
+            )
+        else:
+            self.data_set_creation_frame_create_dataset_button_hover.disable()
+            self.data_set_creation_frame_create_dataset_button.configure(
+                state=tk.NORMAL
+            )
+
+    def validate_spinbox(self, new_value, widget_name):
+        widget = self.nametowidget(widget_name)
+        if not new_value.isdigit() or not (
+            widget.cget("from") <= int(new_value) <= widget.cget("to")
+        ):
+            return False
+        return True
 
     def create_analysis_page(self):
         self.analysis_frame = ctk.CTkFrame(
@@ -2977,13 +2903,13 @@ class App(ctk.CTk):
     def update_cmd_output(
         self, message: str, output_target: ctk.CTkTextbox, *tags: str
     ):
-        self.preprocessing_frame_cmd_output.configure(state=tk.NORMAL)
-        is_at_end = self.preprocessing_frame_cmd_output.yview()[1] > 0.95
-        self.preprocessing_frame_cmd_output.insert(tk.END, message, tags)
+        self.preprocessing_frame_control.cmd_output.configure(state=tk.NORMAL)
+        is_at_end = self.preprocessing_frame_control.cmd_output.yview()[1] > 0.95
+        self.preprocessing_frame_control.cmd_output.insert(tk.END, message, tags)
         if is_at_end:
-            self.preprocessing_frame_cmd_output.see(tk.END)
-        self.preprocessing_frame_cmd_output.configure(state=tk.DISABLED)
-        self.preprocessing_frame_cmd_output.update_idletasks()
+            self.preprocessing_frame_control.cmd_output.see(tk.END)
+        self.preprocessing_frame_control.cmd_output.configure(state=tk.DISABLED)
+        self.preprocessing_frame_control.cmd_output.update_idletasks()
 
     def pickkover(self):
         file_path = filedialog.askopenfilename(

@@ -5,7 +5,7 @@ from traceback import print_exc
 import os
 import re
 from concurrent.futures import Future
-from typing import IO, Optional
+from typing import IO, Iterable, Optional
 
 from customtkinter import filedialog
 
@@ -38,6 +38,35 @@ def select_directory(title: Optional[str] = None) -> Optional[str]:
         return None
 
     return selected_directory
+
+
+def select_file(
+    filetypes: Optional[Iterable[str]] = (("All Files", "*.*"),),
+    title: Optional[str] = "Open",
+) -> Optional[str]:
+    selected_file: str = filedialog.askopenfilename(filetypes=filetypes, title=title)
+
+    if not selected_file:
+        return None
+
+    if not os.path.isfile(selected_file):
+        messagebox.showerror(
+            "Error", "File path is invalid.\n\nPlease select a valid file path."
+        )
+        return None
+
+    if (
+        selected_file.find(" ") != -1
+        or selected_file.find("(") != -1
+        or selected_file.find(")") != -1
+    ):
+        messagebox.showerror(
+            "Error",
+            "File path is invalid.\n\nPlease select a file path without spaces or parentheses.",
+        )
+        return None
+
+    return selected_file
 
 
 def threaded(fn) -> Future:
