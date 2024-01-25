@@ -2506,7 +2506,7 @@ class App(ctk.CTk):
             filetypes=[("AMR Text Files", "*.txt")]
         )
         if amr_metadata_file:
-            self.total_label.config(text="Total: ...")
+            self.total_label.configure(text="Total: ...")
 
             self.amr_full = pd.read_table(
                 amr_metadata_file,
@@ -2614,7 +2614,7 @@ class App(ctk.CTk):
 
             self.amr_list_table.reset_view()
 
-            self.total_label.config(
+            self.total_label.configure(
                 text=f"Total: {len(self.amr_list_table.filtered_data)}"
             )
 
