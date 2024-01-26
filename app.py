@@ -4,7 +4,6 @@ import time
 import tkinter as tk
 from tkinter import ttk, messagebox, font
 
-import threading
 import os
 import pathlib as pl
 from subprocess import CalledProcessError, Popen, PIPE
@@ -21,7 +20,7 @@ import pandas as pd
 
 import util
 from util import threaded
-from kover import KoverDatasetCreator
+import kover
 from hovertip import Hovertip
 from table import Table
 from label import Label
@@ -494,10 +493,17 @@ class App(ctk.CTk):
                 (self.genome_data_frame_entry.get(), self.genome_data_frame_entry.get())
             ]
 
+        genome_names = [
+            genome_name.replace(" ", "-") for _, genome_name in genome_data_ids
+        ]
+
         directory = util.select_directory()
 
         if not directory:
             return
+
+        contigs_directory = os.path.join(directory, Path.CONTIGS)
+        features_directory = os.path.join(directory, Path.FEATURES)
 
         self.genome_data_frame_contig_checkbox.configure(state=tk.DISABLED)
         self.genome_data_frame_feature_checkbox.configure(state=tk.DISABLED)
@@ -534,15 +540,12 @@ class App(ctk.CTk):
         total_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
 
         for genome_data_id, genome_name in genome_data_ids:
+            genome_name = genome_name.replace(" ", "-")
             contig_name = f"{genome_data_id}.fna"
             feature_name = f"{genome_data_id}.PATRIC.features.tab"
 
-            local_contig_directory = os.path.join(
-                directory, Path.CONTIGS, genome_name.replace(" ", "-")
-            )
-            local_feature_directory = os.path.join(
-                directory, Path.FEATURES, genome_name.replace(" ", "-")
-            )
+            local_contig_directory = os.path.join(contigs_directory, genome_name)
+            local_feature_directory = os.path.join(features_directory, genome_name)
 
             local_contig_path = os.path.join(local_contig_directory, contig_name)
             local_feature_path = os.path.join(local_feature_directory, feature_name)
@@ -702,6 +705,11 @@ class App(ctk.CTk):
                     except Exception:
                         pass
                     break
+
+        [
+            kover.create_contigs_path_tsv(contigs_directory, genome_name)
+            for genome_name in genome_names
+        ]
 
         self.genome_data_frame_contig_checkbox.configure(state=tk.NORMAL)
         self.genome_data_frame_feature_checkbox.configure(state=tk.NORMAL)
@@ -1610,7 +1618,7 @@ class App(ctk.CTk):
         self.data_set_creation_frame_create_dataset_button = ctk.CTkButton(
             master=self.data_set_creation_frame.control_panel_frame,
             text="Create Dataset",
-            command=self.create_dataset_thread,
+            command=self.create_dataset,
             state=tk.DISABLED,
         )
 
@@ -1813,7 +1821,7 @@ class App(ctk.CTk):
             master=create_dataset_frame,
             width=150,
             text="Split dataset",
-            command=self.split_dataset_thread,
+            command=self.split_dataset,
         )
         self.split_btn.place(x=200, y=630)
 
@@ -2176,6 +2184,7 @@ class App(ctk.CTk):
 
         return True
 
+    @threaded
     def koverlearn(self):
         if self.koverlearn_error():
             self.koverlearn_btn.configure(text="learning", state=tk.DISABLED)
@@ -2280,6 +2289,7 @@ class App(ctk.CTk):
         # Use messagebox.showerror to display an error message
         messagebox.showerror("Error", message)
 
+    @threaded
     def split_dataset(self):
         if self.split_error_check():
             # Get values from GUI variables and save them in respective variables
@@ -2321,139 +2331,51 @@ class App(ctk.CTk):
                 self.display_process_output(process, self.cmd_output2)
                 self.split_btn.configure(text="split dataset", state=tk.NORMAL)
 
-    def errorcheck_create_dataset(self):
-        # Check if necessary fields are filled correctly
-        self.dataset_path = self.pickdataset1_entry.get()
-        self.output_path = self.pickoutput_entry.get()
-        self.kmer_size_str = self.kmer_size_var.get()
-        self.compression_str = self.compression_var.get()
-        self.phenotype_desc_path = self.phenotype_desc_entry.get()
-        self.phenotype_metadata_path = self.phenotype_metadata_entry.get()
-
-        try:
-            # Check if dataset path is provided
-            if not self.dataset_path:
-                messagebox.showerror("Error", "Please provide a dataset path.")
-
-            # Check if output path is provided
-            if not self.output_path:
-                messagebox.showerror(
-                    "Error", "Please provide an output directory path."
-                )
-
-            # Check if kmer length is an integer and within the allowed range
-            kmer_size = int(self.kmer_size_str)
-            if not 0 <= kmer_size <= 128:
-                messagebox.showerror(
-                    "Error", "Kmer length should be between 0 and 128."
-                )
-
-            # Check if compression is an integer and within the allowed range
-            self.compression = int(self.compression_str)
-            if not 0 <= self.compression <= 9:
-                messagebox.showerror(
-                    "Error", "Compression level should be between 0 and 9."
-                )
-
-            # Check if phenotype description path is provided
-            if not self.phenotype_desc_path:
-                messagebox.showerror(
-                    "Error", "Please provide a phenotype description file."
-                )
-
-            # Check if phenotype metadata path is provided
-            if not self.phenotype_metadata_path:
-                messagebox.showerror(
-                    "Error", "Please provide a phenotype metadata file."
-                )
-
-            # If all checks pass, return True
-            return True
-
-        except ValueError as e:
-            # Display an error message
-            # print(f"Error: {e}")
-            # Return False if any check fails
-            return False
-
-    def create_dataset_thread(self):
-        thread = threading.Thread(target=self.create_dataset)
-        thread.start()
-
-    def split_dataset_thread(self):
-        thread = threading.Thread(target=self.split_dataset)
-        thread.start()
-
-    def kover_learn_thread(self):
-        self.cmd_output3["state"] = tk.NORMAL
-        self.cmd_output3.delete("1.0", tk.END)
-        thread = threading.Thread(target=self.koverlearn)
-        thread.start()
-
+    @threaded
     def create_dataset(self):
-        if self.errorcheck_create_dataset():
+        try:
             self.create_dataset_btn.configure(text="creating", state=tk.DISABLED)
             output = os.path.join(self.output_path, "DATASET.kover")
-            output = output.replace("\\", "/")
-            output = output.replace("C:", "/mnt/c")
-            self.phenotype_desc_path = self.phenotype_desc_path.replace("\\", "/")
-            self.phenotype_desc_path = self.phenotype_desc_path.replace("C:", "/mnt/c")
-            self.phenotype_metadata_path = self.phenotype_metadata_path.replace(
-                "\\", "/"
-            )
-            self.phenotype_metadata_path = self.phenotype_metadata_path.replace(
-                "C:", "/mnt/c"
-            )
-            try:
-                if self.dataset_type_var1.get() == "contigs":
-                    dataset = KoverDatasetCreator.contigs_parser(
-                        self, self.dataset_path, "out.tsv"
-                    )
-                    command = KoverDatasetCreator.create_from_contigs(
-                        self,
-                        "out.tsv",
-                        self.phenotype_desc_path,
-                        self.phenotype_metadata_path,
-                        output,
-                        self.kmer_size_var.get(),
-                        self.compression,
-                    )
-                elif self.dataset_type_var1.get() == "kmer matrix":
-                    dataset = self.selected_kmer_matrix.get()
-                    dataset = dataset.replace("\\", "/")
-                    dataset = dataset.replace("C:", "/mnt/c")
-                    command = KoverDatasetCreator.create_from_tsv(
-                        self,
-                        dataset,
-                        self.phenotype_desc_path,
-                        self.phenotype_metadata_path,
-                        output,
-                    )
-                else:
-                    # Handle other dataset types if needed
-                    pass
+            if self.dataset_type_var1.get() == "contigs":
+                command = create_kover_from_contigs(
+                    self.phenotype_desc_path,
+                    self.phenotype_metadata_path,
+                    output,
+                    self.kmer_size_var.get(),
+                    self.compression,
+                )
+            elif self.dataset_type_var1.get() == "kmer matrix":
+                dataset = self.selected_kmer_matrix.get()
+                dataset = dataset.replace("\\", "/")
+                dataset = dataset.replace("C:", "/mnt/c")
+                command = KoverDatasetCreator.create_from_tsv(
+                    self,
+                    dataset,
+                    self.phenotype_desc_path,
+                    self.phenotype_metadata_path,
+                    output,
+                )
+            else:
+                # Handle other dataset types if needed
+                pass
 
-                process = Popen(
-                    command,
-                    shell=True,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    universal_newlines=True,
-                )
-                self.display_process_output(process, self.cmd_output1)
-                # self.display_process_output("Done!", self.cmd_output1)
-                self.create_dataset_btn.configure(
-                    text="create Dataset", state=tk.NORMAL
-                )
-            except Exception:
-                # Handle any exceptions that occur during the dataset creation process
-                traceback.print_exc()
+            process = Popen(
+                command,
+                shell=True,
+                stdout=PIPE,
+                stderr=PIPE,
+                universal_newlines=True,
+            )
+            self.display_process_output(process, self.cmd_output1)
+            # self.display_process_output("Done!", self.cmd_output1)
+            self.create_dataset_btn.configure(text="create Dataset", state=tk.NORMAL)
+        except Exception:
+            # Handle any exceptions that occur during the dataset creation process
+            traceback.print_exc()
 
-            finally:
-                # Enable the button after the dataset creation process is complete
-                self.create_dataset_btn.configure(
-                    text="create Dataset", state=tk.NORMAL
-                )
+        finally:
+            # Enable the button after the dataset creation process is complete
+            self.create_dataset_btn.configure(text="create Dataset", state=tk.NORMAL)
 
     def generate_random_seed(self, randomseedentry):
         # Generate a random seed and place it in randomseedentry

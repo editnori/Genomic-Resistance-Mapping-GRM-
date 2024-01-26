@@ -1,29 +1,62 @@
 import subprocess
 import os
 import csv
+import pathlib as pl
+from util import to_linux_path
+
+
+def create_contigs_path_tsv(contigs_path: str, genome_name: str):
+    genome_contigs_path = os.path.join(contigs_path, genome_name)
+
+    output_file = genome_contigs_path + "_paths.tsv"
+
+    with open(output_file, "w", newline="", encoding="utf-8") as tsv_file:
+        writer = csv.writer(tsv_file, delimiter="\t", lineterminator="\n")
+
+        for file_path in pl.Path(genome_contigs_path).glob("*.fna"):
+            writer.writerow([file_path.stem, to_linux_path(file_path)])
+
+
+def create_from_contigs(
+    genomic_data,
+    phenotype_description,
+    phenotype_metadata,
+    output=None,
+    kmer_size=31,
+    singleton_kmers=False,
+    n_cpu=None,
+    compression=None,
+    temp_dir=None,
+    x=True,
+    v=False,
+):
+    command = [
+        "wsl",
+        "/home/mhdeeb/kover/bin/kover",
+        "dataset",
+        "create",
+        "from-contigs",
+        "--genomic-data",
+        genomic_data,
+        "--phenotype-description",
+        phenotype_description,
+        "--phenotype-metadata",
+        phenotype_metadata,
+        "--output",
+        output,
+        "--kmer-size",
+        str(kmer_size),
+    ]
+
+    if x:
+        command.append("-x")
+    if v:
+        command.append("-v")
+
+    return command
 
 
 class KoverDatasetCreator:
-    def contigs_parser(self, dataset_path, output_tsv):
-        # Implement method logic for parsing contigs and creating a TSV file
-        with open(output_tsv, "w", newline="", encoding="utf-8") as tsv_file:
-            writer = csv.writer(tsv_file, delimiter="\t")
-
-            for root, dirs, files in os.walk(dataset_path):
-                for filename in files:
-                    if filename.endswith(".fna"):
-                        genome_id = os.path.splitext(filename)[0]
-                        fasta_path = os.path.abspath(os.path.join(root, filename))
-
-                        # Replace backslashes with forward slashes
-                        fasta_path = fasta_path.replace("\\", "/")
-
-                        # Convert Windows path to WSL-compatible path
-                        if fasta_path.startswith("C:"):
-                            fasta_path = "/mnt/c" + fasta_path[2:]
-
-                        writer.writerow([genome_id, fasta_path])
-
     def create_from_reads(
         self,
         genomic_data,
@@ -72,45 +105,6 @@ class KoverDatasetCreator:
             command.append("-v")
 
         subprocess.run(command)
-
-    def create_from_contigs(
-        self,
-        genomic_data,
-        phenotype_description,
-        phenotype_metadata,
-        output=None,
-        kmer_size=31,
-        singleton_kmers=False,
-        n_cpu=None,
-        compression=None,
-        temp_dir=None,
-        x=True,
-        v=False,
-    ):
-        command = [
-            "wsl",
-            "/home/mhdeeb/kover/bin/kover",
-            "dataset",
-            "create",
-            "from-contigs",
-            "--genomic-data",
-            genomic_data,
-            "--phenotype-description",
-            phenotype_description,
-            "--phenotype-metadata",
-            phenotype_metadata,
-            "--output",
-            output,
-            "--kmer-size",
-            str(kmer_size),
-        ]
-
-        if x:
-            command.append("-x")
-        if v:
-            command.append("-v")
-
-        return command
 
     def create_from_tsv(
         self,
