@@ -108,11 +108,11 @@ class DownloadWindow:
         cancel_command=None,
         select_path_command=None,
     ):
-        if self._download_button:
+        if self._download_button and download_command:
             self._download_button.configure(command=download_command)
-        if self._cancel_button:
+        if self._cancel_button and cancel_command:
             self._cancel_button.configure(command=cancel_command)
-        if self._select_path_button:
+        if self._select_path_button and select_path_command:
             self._select_path_button.configure(command=select_path_command)
 
 
@@ -130,7 +130,9 @@ class FTPDownloadApp:
         self.download_window.set_buttons_commands(
             download_command=self.download,
             cancel_command=self.cancel,
-            select_path_command=select_directory,
+            select_path_command=lambda: self.download_window.set_path(
+                select_directory()
+            ),
         )
 
     @threaded

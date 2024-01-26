@@ -14,7 +14,7 @@ CRLF = b"\r\n"
 LF = b"\n"
 
 
-def select_directory(title: Optional[str] = None) -> Optional[str]:
+def select_directory(title: Optional[str] = "Select Folder") -> Optional[str]:
     selected_directory: str = filedialog.askdirectory(title=title)
 
     if not selected_directory:
@@ -106,9 +106,10 @@ def to_linux_path(path: str) -> str:
     return path
 
 
-def run_bash_command(command: str, temp_directory: str) -> Optional[Popen]:
+def run_bash_command(command: str) -> Optional[Popen]:
+    temp_file = "tmp.sh"
+
     try:
-        temp_file = os.path.join(temp_directory, "tmp.sh")
         with open(temp_file, "wb") as bash_file:
             bash_file.write(
                 f'#!/bin/bash\n{command}\nrm "$0"'.encode("UTF-8").replace(CRLF, LF)

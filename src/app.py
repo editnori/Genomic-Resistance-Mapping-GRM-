@@ -14,7 +14,6 @@ import traceback
 import re
 
 import customtkinter as ctk
-from customtkinter import filedialog
 from PIL import Image
 import pandas as pd
 
@@ -472,7 +471,7 @@ class App(ctk.CTk):
 
     def select_genome_data_directory(self):
         self.genome_data_frame_path.configure(
-            text=filedialog.askopenfilename(filetypes=[("TSV file", "*.tsv")])
+            text=util.select_file(filetypes=[("TSV file", "*.tsv")])
         )
 
         self.genome_data_validate_ui()
@@ -894,7 +893,6 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=util.select_directory,
         )
         dirbtn3.place(x=50, y=120)
 
@@ -1290,10 +1288,7 @@ class App(ctk.CTk):
 
             ray_surveyor_command = f'mpiexec -n 4 "{util.to_linux_path(Path.RAY)}" "{util.to_linux_path(config_path)}"'
 
-            self.preprocessing_process = util.run_bash_command(
-                ray_surveyor_command,
-                output_directory,
-            )
+            self.preprocessing_process = util.run_bash_command( ray_surveyor_command)
 
             self.display_process_output(
                 self.preprocessing_process, self.preprocessing_frame_control.cmd_output
@@ -1328,10 +1323,7 @@ class App(ctk.CTk):
             ls_command = f'ls -1 {util.to_linux_path(dataset_folder)}/*.fna > "{util.to_linux_path(config_path)}"'
             dsk_command = f'"{util.to_linux_path(Path.DSK)}" -file "{util.to_linux_path(config_path)}" -out-dir "{util.to_linux_path(output_directory)}" -kmer-size {kmer_size}'
 
-            self.preprocessing_process = util.run_bash_command(
-                f"{ls_command}\n{dsk_command}",
-                output_directory,
-            )
+            self.preprocessing_process = util.run_bash_command(f"{ls_command}\n{dsk_command}")
             self.display_process_output(
                 self.preprocessing_process, self.preprocessing_frame_control.cmd_output
             )
@@ -2355,15 +2347,8 @@ class App(ctk.CTk):
                 # Handle other dataset types if needed
                 return
 
-            process = Popen(
-                command,
-                shell=True,
-                stdout=PIPE,
-                stderr=PIPE,
-                universal_newlines=True,
-            )
-            util.run_bash_command(command, )
-            
+            process = util.run_bash_command(command)
+
             self.display_process_output(process, self.dataset_creation_frame.cmd_output)
         except Exception as e:
             messagebox.showerror("Error", e)
@@ -2386,14 +2371,14 @@ class App(ctk.CTk):
 
     def pick_metatsv_file(self):
         # Open a file dialog for selecting TSV files
-        tsv_file_path = filedialog.askopenfilename(
+        tsv_file_path = util.select_file(
             filetypes=[("TSV Files", "*.tsv")], title="Select a TSV File"
         )
         self.metatsv_file_path.set(tsv_file_path)
 
     def pick_desctsv_file(self):
         # Open a file dialog for selecting TSV files
-        tsv_file_path = filedialog.askopenfilename(
+        tsv_file_path = util.select_file(
             filetypes=[("TSV Files", "*.tsv")], title="Select a TSV File"
         )
         self.desctsv_file_path.set(tsv_file_path)
@@ -2425,9 +2410,7 @@ class App(ctk.CTk):
         self.drop_intermediate_checkbox.configure(state=tk.DISABLED)
         self.numeric_phenotypes_checkbox.configure(state=tk.DISABLED)
         self.save_table_button.configure(state=tk.DISABLED)
-        amr_metadata_file = filedialog.askopenfilename(
-            filetypes=[("AMR Text Files", "*.txt")]
-        )
+        amr_metadata_file = util.select_file(filetypes=[("AMR Text Files", "*.txt")])
         if amr_metadata_file:
             self.total_label.configure(text="Total: ...")
 
@@ -2835,7 +2818,7 @@ class App(ctk.CTk):
         self.preprocessing_frame_control.cmd_output.update_idletasks()
 
     def pickkover(self):
-        file_path = filedialog.askopenfilename(
+        file_path = util.select_file(
             title="Select a .kover file", filetypes=[("Kover Files", "*.kover")]
         )
         if file_path:
@@ -2843,7 +2826,7 @@ class App(ctk.CTk):
             self.selected_kover.set(file_path)
 
     def pickkmer_matrix(self):
-        file_path = filedialog.askopenfilename(
+        file_path = util.select_file(
             title="Select a kmer matrix file", filetypes=[("Kover Files", "*.tsv")]
         )
         if file_path:
