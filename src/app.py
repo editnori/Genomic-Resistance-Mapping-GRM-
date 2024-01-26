@@ -35,12 +35,13 @@ class Page(Enum):
 
 
 class Path(str):
+    ROOT = pl.Path(__file__).parent.parent
     REMOTE_METADATA = "RELEASE_NOTES/genome_metadata"
-    FOREST_DARK = "ui/forest-dark.tcl"
-    RAY = "bin/ray/Ray"
-    DSK = "bin/dsk/dsk"
-    IMAGES = "ui/test_images/"
-    DATA = "data/"
+    FOREST_DARK = os.path.join(ROOT, "ui/forest-dark.tcl")
+    RAY = os.path.join(ROOT, "bin/ray/Ray")
+    DSK = os.path.join(ROOT, "bin/dsk/dsk")
+    IMAGES = os.path.join(ROOT, "ui/test_images/")
+    DATA = os.path.join(ROOT, "data/")
     CONTIGS = "contigs/"
     FEATURES = "features/"
 

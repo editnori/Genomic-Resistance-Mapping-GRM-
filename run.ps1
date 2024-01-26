@@ -32,4 +32,4 @@ function global:ColorMatch
    }
 }
 
-invoke-expression -Command ".`"C:\\Users\\moham\\Desktop\\genome-analysis-tool\\.venv\\Scripts\\python.exe`" -u `"C:\\Users\\moham\\Desktop\\genome-analysis-tool\\main.py`"  2>&1 |  ColorMatch"
+invoke-expression -Command ".`"C:\\Users\\moham\\Desktop\\genome-analysis-tool\\.venv\\Scripts\\python.exe`" -u `"C:\\Users\\moham\\Desktop\\genome-analysis-tool\\src\\main.py`"  2>&1 |  ColorMatch"
