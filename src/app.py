@@ -894,7 +894,7 @@ class App(ctk.CTk):
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self,
+            command=util.select_directory,
         )
         dirbtn3.place(x=50, y=120)
 
@@ -1429,11 +1429,11 @@ class App(ctk.CTk):
         self.kover_frame_tab_view.pack(fill=tk.BOTH, expand=True)
 
         self.kover_frame_tab_view.add("Create dataset")
-        self.data_set_creation_frame = ControlFrame(
+        self.dataset_creation_frame = ControlFrame(
             self.kover_frame_tab_view.tab("Create dataset")
         )
 
-        self.data_set_creation_frame.control_panel.grid(
+        self.dataset_creation_frame.control_panel.grid(
             row=2,
             column=1,
             sticky=tk.NSEW,
@@ -1443,53 +1443,53 @@ class App(ctk.CTk):
             pady=40,
         )
 
-        self.data_set_creation_frame.cmd_output_frame.grid(
+        self.dataset_creation_frame.cmd_output_frame.grid(
             row=0, column=3, rowspan=10, columnspan=7, sticky=tk.NSEW, padx=40, pady=40
         )
 
-        self.data_set_creation_frame.control_panel_frame.grid_rowconfigure(
+        self.dataset_creation_frame.control_panel_frame.grid_rowconfigure(
             tuple(range(6)), pad=20
         )
-        self.data_set_creation_frame.control_panel_frame.grid_columnconfigure(
+        self.dataset_creation_frame.control_panel_frame.grid_columnconfigure(
             0, weight=1, uniform="column"
         )
-        self.data_set_creation_frame.control_panel_frame.grid_columnconfigure(
+        self.dataset_creation_frame.control_panel_frame.grid_columnconfigure(
             1, weight=2, uniform="column"
         )
 
-        self.data_set_type = ["reads", "contigs", "kmer matrix"]
+        self.dataset_type = ["contigs", "kmer matrix"]
 
-        self.data_set_creation_control_panel_data_set_type_selector = ttk.Combobox(
-            master=self.data_set_creation_frame.control_panel_frame,
-            values=self.data_set_type,
+        self.dataset_creation_control_panel_dataset_type_selector = ttk.Combobox(
+            master=self.dataset_creation_frame.control_panel_frame,
+            values=self.dataset_type,
             state="readonly",
         )
 
-        self.data_set_creation_control_panel_data_set_type_selector.current(1)
+        self.dataset_creation_control_panel_dataset_type_selector.current(0)
 
-        self.data_set_creation_control_panel_data_set_type_selector.grid(
+        self.dataset_creation_control_panel_dataset_type_selector.grid(
             row=0, column=0, sticky=tk.W, padx=20, pady=20
         )
 
-        self.data_set_creation_control_panel_data_set_type_selector.bind(
+        self.dataset_creation_control_panel_dataset_type_selector.bind(
             "<<ComboboxSelected>>", lambda e: e.widget.selection_clear()
         )
 
-        self.data_set_creation_frame_dataset_path = ctk.CTkEntry(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_frame_dataset_path = ctk.CTkEntry(
+            master=self.dataset_creation_frame.control_panel_frame,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
-        self.data_set_creation_control_panel_dataset_button = ctk.CTkButton(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_control_panel_dataset_button = ctk.CTkButton(
+            master=self.dataset_creation_frame.control_panel_frame,
             text="Pick dataset",
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
             font=self.default_font(12),
             command=lambda: self.update_entry(
-                self.data_set_creation_frame_dataset_path,
+                self.dataset_creation_frame_dataset_path,
                 util.select_file(
                     filetypes=[("TSV Files", "*.tsv")],
                     title="Select Dataset File",
@@ -1497,29 +1497,29 @@ class App(ctk.CTk):
             ),
         )
 
-        self.data_set_creation_control_panel_dataset_button.grid(
+        self.dataset_creation_control_panel_dataset_button.grid(
             row=1, column=0, sticky=tk.EW, padx=(20, 50)
         )
 
-        self.data_set_creation_frame_dataset_path.grid(
+        self.dataset_creation_frame_dataset_path.grid(
             row=1, column=1, sticky=tk.EW, padx=20
         )
 
-        self.data_set_creation_frame_description_path = ctk.CTkEntry(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_frame_description_path = ctk.CTkEntry(
+            master=self.dataset_creation_frame.control_panel_frame,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
-        self.data_set_creation_control_panel_description_button = ctk.CTkButton(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_control_panel_description_button = ctk.CTkButton(
+            master=self.dataset_creation_frame.control_panel_frame,
             text="Pick Phenotype Description",
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
             font=self.default_font(12),
             command=lambda: self.update_entry(
-                self.data_set_creation_frame_description_path,
+                self.dataset_creation_frame_description_path,
                 util.select_file(
                     filetypes=[("TSV Files", "*.tsv")],
                     title="Select Phenotype Description File",
@@ -1527,29 +1527,29 @@ class App(ctk.CTk):
             ),
         )
 
-        self.data_set_creation_control_panel_description_button.grid(
+        self.dataset_creation_control_panel_description_button.grid(
             row=2, column=0, sticky=tk.EW, padx=(20, 50), pady=0
         )
 
-        self.data_set_creation_frame_description_path.grid(
+        self.dataset_creation_frame_description_path.grid(
             row=2, column=1, sticky=tk.EW, padx=20, pady=0
         )
 
-        self.data_set_creation_frame_metadata_path = ctk.CTkEntry(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_frame_metadata_path = ctk.CTkEntry(
+            master=self.dataset_creation_frame.control_panel_frame,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
-        self.data_set_creation_control_panel_metadata_button = ctk.CTkButton(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_control_panel_metadata_button = ctk.CTkButton(
+            master=self.dataset_creation_frame.control_panel_frame,
             text="Pick Phenotype Metadata",
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
             font=self.default_font(12),
             command=lambda: self.update_entry(
-                self.data_set_creation_frame_metadata_path,
+                self.dataset_creation_frame_metadata_path,
                 util.select_file(
                     filetypes=[("TSV Files", "*.tsv")],
                     title="Select Phenotype Metadata File",
@@ -1557,25 +1557,25 @@ class App(ctk.CTk):
             ),
         )
 
-        self.data_set_creation_control_panel_metadata_button.grid(
+        self.dataset_creation_control_panel_metadata_button.grid(
             row=3, column=0, sticky=tk.EW, padx=(20, 50), pady=0
         )
 
-        self.data_set_creation_frame_metadata_path.grid(
+        self.dataset_creation_frame_metadata_path.grid(
             row=3, column=1, sticky=tk.EW, padx=20, pady=0
         )
 
-        self.data_set_creation_frame_kmer_size_label = ctk.CTkLabel(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_frame_kmer_size_label = ctk.CTkLabel(
+            master=self.dataset_creation_frame.control_panel_frame,
             text="Enter Kmer Length (max 128)",
             font=self.default_font(15),
         )
-        self.data_set_creation_frame_kmer_size_label.grid(
+        self.dataset_creation_frame_kmer_size_label.grid(
             row=4, column=0, sticky=tk.W, padx=20
         )
 
-        self.data_set_creation_frame_kmer_size_spinbox = tk.Spinbox(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_frame_kmer_size_spinbox = tk.Spinbox(
+            master=self.dataset_creation_frame.control_panel_frame,
             from_=0,
             to=128,
             wrap=True,
@@ -1584,24 +1584,24 @@ class App(ctk.CTk):
             validate="key",
             validatecommand=(self.register(self.validate_spinbox), "%P", "%W"),
         )
-        self.data_set_creation_frame_kmer_size_spinbox.grid(
+        self.dataset_creation_frame_kmer_size_spinbox.grid(
             row=5, column=0, sticky=tk.W, padx=20, pady=0
         )
 
-        self.data_set_creation_frame_kmer_size_spinbox.insert(1, "31")
-        self.data_set_creation_frame_kmer_size_spinbox.delete(0, 1)
+        self.dataset_creation_frame_kmer_size_spinbox.insert(1, "31")
+        self.dataset_creation_frame_kmer_size_spinbox.delete(0, 1)
 
-        self.data_set_creation_frame_compression_label = ctk.CTkLabel(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_frame_compression_label = ctk.CTkLabel(
+            master=self.dataset_creation_frame.control_panel_frame,
             text="Enter Compression Level (0-9)",
             font=self.default_font(15),
         )
-        self.data_set_creation_frame_compression_label.grid(
+        self.dataset_creation_frame_compression_label.grid(
             row=4, column=1, sticky=tk.W, padx=20
         )
 
-        self.data_set_creation_frame_compression_spinbox = tk.Spinbox(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_frame_compression_spinbox = tk.Spinbox(
+            master=self.dataset_creation_frame.control_panel_frame,
             from_=0,
             to=9,
             wrap=True,
@@ -1610,32 +1610,32 @@ class App(ctk.CTk):
             validate="key",
             validatecommand=(self.register(self.validate_spinbox), "%P", "%W"),
         )
-        self.data_set_creation_frame_compression_spinbox.grid(
+        self.dataset_creation_frame_compression_spinbox.grid(
             row=5, column=1, sticky=tk.W, padx=20
         )
-        self.data_set_creation_frame_compression_spinbox.insert(1, "4")
-        self.data_set_creation_frame_compression_spinbox.delete(0, 1)
+        self.dataset_creation_frame_compression_spinbox.insert(1, "4")
+        self.dataset_creation_frame_compression_spinbox.delete(0, 1)
 
-        self.data_set_creation_frame_create_dataset_button = ctk.CTkButton(
-            master=self.data_set_creation_frame.control_panel_frame,
+        self.dataset_creation_frame_create_dataset_button = ctk.CTkButton(
+            master=self.dataset_creation_frame.control_panel_frame,
             text="Create Dataset",
             command=self.create_dataset,
             state=tk.DISABLED,
         )
 
-        self.data_set_creation_frame_create_dataset_button.grid(
+        self.dataset_creation_frame_create_dataset_button.grid(
             row=6, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
-        self.data_set_creation_frame_create_dataset_button_hover = Hovertip(
-            self.data_set_creation_frame_create_dataset_button,
+        self.dataset_creation_frame_create_dataset_button_hover = Hovertip(
+            self.dataset_creation_frame_create_dataset_button,
             "",
         )
 
         self.dataset_creation_validate_ui()
 
         self.kover_frame_tab_view.add("split dataset")
-        self.data_set_split_frame = ControlFrame(
+        self.dataset_split_frame = ControlFrame(
             self.kover_frame_tab_view.tab("split dataset")
         )
 
@@ -2099,38 +2099,36 @@ class App(ctk.CTk):
 
     def dataset_creation_validate_ui(self):
         failed = False
-        self.data_set_creation_frame_create_dataset_button_hover.text = ""
+        self.dataset_creation_frame_create_dataset_button_hover.text = ""
 
-        if not self.data_set_creation_frame_dataset_path.get():
-            self.data_set_creation_frame_create_dataset_button_hover.text += (
+        if not self.dataset_creation_frame_dataset_path.get():
+            self.dataset_creation_frame_create_dataset_button_hover.text += (
                 "• select dataset directory.\n"
             )
             failed = True
-        if not self.data_set_creation_frame_description_path.get():
-            self.data_set_creation_frame_create_dataset_button_hover.text += (
+        if not self.dataset_creation_frame_description_path.get():
+            self.dataset_creation_frame_create_dataset_button_hover.text += (
                 "• select phenotype description file.\n"
             )
             failed = True
-        if not self.data_set_creation_frame_metadata_path.get():
-            self.data_set_creation_frame_create_dataset_button_hover.text += (
+        if not self.dataset_creation_frame_metadata_path.get():
+            self.dataset_creation_frame_create_dataset_button_hover.text += (
                 "• select phenotype metadata file.\n"
             )
             failed = True
 
-        self.data_set_creation_frame_create_dataset_button_hover.text = (
-            self.data_set_creation_frame_create_dataset_button_hover.text.strip("\n")
+        self.dataset_creation_frame_create_dataset_button_hover.text = (
+            self.dataset_creation_frame_create_dataset_button_hover.text.strip("\n")
         )
 
         if failed:
-            self.data_set_creation_frame_create_dataset_button_hover.enable()
-            self.data_set_creation_frame_create_dataset_button.configure(
+            self.dataset_creation_frame_create_dataset_button_hover.enable()
+            self.dataset_creation_frame_create_dataset_button.configure(
                 state=tk.DISABLED
             )
         else:
-            self.data_set_creation_frame_create_dataset_button_hover.disable()
-            self.data_set_creation_frame_create_dataset_button.configure(
-                state=tk.NORMAL
-            )
+            self.dataset_creation_frame_create_dataset_button_hover.disable()
+            self.dataset_creation_frame_create_dataset_button.configure(state=tk.NORMAL)
 
     def validate_spinbox(self, new_value, widget_name):
         widget = self.nametowidget(widget_name)
@@ -2337,7 +2335,7 @@ class App(ctk.CTk):
         try:
             self.create_dataset_btn.configure(text="creating", state=tk.DISABLED)
             output = os.path.join(self.output_path, "DATASET.kover")
-            if self.dataset_type_var1.get() == "contigs":
+            if self.dataset_type_var1.get() == self.dataset_type[0]:
                 command = create_kover_from_contigs(
                     self.phenotype_desc_path,
                     self.phenotype_metadata_path,
@@ -2345,10 +2343,7 @@ class App(ctk.CTk):
                     self.kmer_size_var.get(),
                     self.compression,
                 )
-            elif self.dataset_type_var1.get() == "kmer matrix":
-                dataset = self.selected_kmer_matrix.get()
-                dataset = dataset.replace("\\", "/")
-                dataset = dataset.replace("C:", "/mnt/c")
+            elif self.dataset_type_var1.get() == self.dataset_type[1]:
                 command = KoverDatasetCreator.create_from_tsv(
                     self,
                     dataset,
@@ -2358,7 +2353,7 @@ class App(ctk.CTk):
                 )
             else:
                 # Handle other dataset types if needed
-                pass
+                return
 
             process = Popen(
                 command,
@@ -2367,16 +2362,21 @@ class App(ctk.CTk):
                 stderr=PIPE,
                 universal_newlines=True,
             )
-            self.display_process_output(process, self.cmd_output1)
-            # self.display_process_output("Done!", self.cmd_output1)
-            self.create_dataset_btn.configure(text="create Dataset", state=tk.NORMAL)
-        except Exception:
-            # Handle any exceptions that occur during the dataset creation process
+            util.run_bash_command(command, )
+            
+            self.display_process_output(process, self.dataset_creation_frame.cmd_output)
+        except Exception as e:
+            messagebox.showerror("Error", e)
             traceback.print_exc()
-
         finally:
-            # Enable the button after the dataset creation process is complete
-            self.create_dataset_btn.configure(text="create Dataset", state=tk.NORMAL)
+            self.dataset_creation_frame_create_dataset_button.configure(
+                text="Create Dataset", command=self.create_dataset
+            )
+            self.update_cmd_output(
+                "\nDataset creation completed successfully.",
+                self.dataset_creation_frame.cmd_output,
+                Tag.SUCCESS,
+            )
 
     def generate_random_seed(self, randomseedentry):
         # Generate a random seed and place it in randomseedentry
