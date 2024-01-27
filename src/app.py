@@ -1,5 +1,4 @@
 from ftplib import FTP
-import signal
 import time
 import tkinter as tk
 from tkinter import ttk, messagebox, font
@@ -39,6 +38,7 @@ class Path(str):
     FOREST_DARK = os.path.join(ROOT, "ui/forest-dark.tcl")
     RAY = os.path.join(ROOT, "bin/ray/Ray")
     DSK = os.path.join(ROOT, "bin/dsk/dsk")
+    KOVER = os.path.join(ROOT, "bin/kover/kover")
     IMAGES = os.path.join(ROOT, "ui/test_images/")
     DATA = os.path.join(ROOT, "data/")
     CONTIGS = "contigs/"
@@ -48,6 +48,7 @@ class Path(str):
 class Tag(str):
     ERROR = "error"
     SUCCESS = "success"
+    NORMAL = None
 
 
 class ControlFrame(ctk.CTkFrame):
@@ -156,10 +157,18 @@ class App(ctk.CTk):
 
         self.geometry("1200x800")
 
+        self.protocol("WM_DELETE_WINDOW", self.end_app)
+
         self.after(0, lambda: self.state("zoomed"))
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
+
+    def end_app(self):
+        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            self.quit()
+            self.destroy()
+            exit(0)
 
     def setup_style(self):
         self.style = ttk.Style(self)
@@ -1224,9 +1233,7 @@ class App(ctk.CTk):
             text="Loading...", state=tk.DISABLED
         )
 
-        self.preprocessing_frame_control.cmd_output.configure(state=tk.NORMAL)
-        self.preprocessing_frame_control.cmd_output.delete("1.0", tk.END)
-        self.preprocessing_frame_control.cmd_output.configure(state=tk.DISABLED)
+        self.clear_cmd_output(self.preprocessing_frame_control.cmd_output)
 
         if (
             self.preprocessing_frame_control_panel_kmer_tool_selector.get()
@@ -1494,7 +1501,8 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_control_panel_dataset_type_selector.bind(
-            "<<ComboboxSelected>>", lambda e: e.widget.selection_clear()
+            "<<ComboboxSelected>>",
+            lambda e: (e.widget.selection_clear(), self.dataset_creation_validate_ui()),
         )
 
         self.dataset_creation_frame_dataset_path = ctk.CTkEntry(
@@ -1602,6 +1610,7 @@ class App(ctk.CTk):
             to=128,
             wrap=True,
             buttonbackground="#2b2b2b",
+            disabledbackground="#595959",
             font=self.default_font(10),
             validate="key",
             validatecommand=(self.register(self.validate_spinbox), "%P", "%W"),
@@ -1638,6 +1647,44 @@ class App(ctk.CTk):
         self.dataset_creation_frame_compression_spinbox.insert(1, "4")
         self.dataset_creation_frame_compression_spinbox.delete(0, 1)
 
+        self.dataset_creation_control_panel_singleton_kmer_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_creation_frame.control_panel_frame,
+            text="Singleton Kmers",
+        )
+
+        self.dataset_creation_control_panel_singleton_kmer_checkbox.grid(
+            row=6, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_creation_control_panel_cpu_label = ctk.CTkLabel(
+            master=self.dataset_creation_frame.control_panel_frame,
+            text="Enter number of CPUs (1-64)",
+            font=self.default_font(15),
+        )
+
+        self.dataset_creation_control_panel_cpu_label.grid(
+            row=6, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_creation_control_panel_cpu_spinbox = tk.Spinbox(
+            master=self.dataset_creation_frame.control_panel_frame,
+            from_=1,
+            to=64,
+            wrap=True,
+            buttonbackground="#2b2b2b",
+            disabledbackground="#595959",
+            font=self.default_font(10),
+            validate="key",
+            validatecommand=(self.register(self.validate_spinbox), "%P", "%W"),
+        )
+
+        self.dataset_creation_control_panel_cpu_spinbox.grid(
+            row=7, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_creation_control_panel_cpu_spinbox.insert(1, "4")
+        self.dataset_creation_control_panel_cpu_spinbox.delete(0, 1)
+
         self.dataset_creation_frame_create_dataset_button = ctk.CTkButton(
             master=self.dataset_creation_frame.control_panel_frame,
             text="Create Dataset",
@@ -1646,7 +1693,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame_create_dataset_button.grid(
-            row=6, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+            row=8, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
         self.dataset_creation_frame_create_dataset_button_hover = Hovertip(
@@ -2123,6 +2170,22 @@ class App(ctk.CTk):
         failed = False
         self.dataset_creation_frame_create_dataset_button_hover.text = ""
 
+        if (
+            self.dataset_creation_control_panel_dataset_type_selector.get()
+            == self.dataset_type[1]
+        ):
+            self.dataset_creation_control_panel_singleton_kmer_checkbox.configure(
+                state=tk.DISABLED
+            )
+            self.dataset_creation_frame_kmer_size_spinbox.configure(state=tk.DISABLED)
+            self.dataset_creation_control_panel_cpu_spinbox.configure(state=tk.DISABLED)
+        else:
+            self.dataset_creation_control_panel_singleton_kmer_checkbox.configure(
+                state=tk.NORMAL
+            )
+            self.dataset_creation_frame_kmer_size_spinbox.configure(state=tk.NORMAL)
+            self.dataset_creation_control_panel_cpu_spinbox.configure(state=tk.NORMAL)
+
         if not self.dataset_creation_frame_dataset_path.get():
             self.dataset_creation_frame_create_dataset_button_hover.text += (
                 "• select dataset directory.\n"
@@ -2362,24 +2425,32 @@ class App(ctk.CTk):
 
             output_path = os.path.join(output_path, "DATASET.kover")
 
-            if self.dataset_type_var1.get() == self.dataset_type[0]:
-                command = create_kover_from_contigs(
-                    self.phenotype_desc_path,
-                    self.phenotype_metadata_path,
-                    output,
-                    self.kmer_size_var.get(),
-                    self.compression,
-                )
-            elif self.dataset_type_var1.get() == self.dataset_type[1]:
-                command = KoverDatasetCreator.create_from_tsv(
-                    self,
-                    dataset,
-                    self.phenotype_desc_path,
-                    self.phenotype_metadata_path,
-                    output,
-                )
+            selected_source = (
+                self.dataset_creation_control_panel_dataset_type_selector.get()
+            )
+
+            if selected_source == self.dataset_type[0]:
+                source = kover.Source.CONTIGS
+            elif selected_source == self.dataset_type[1]:
+                source = kover.Source.K_MER_MATREX
             else:
                 return
+
+            command = kover.create_command(
+                util.to_linux_path(Path.KOVER),
+                source,
+                util.to_linux_path(self.dataset_creation_frame_dataset_path.get()),
+                util.to_linux_path(output_path),
+                util.to_linux_path(self.dataset_creation_frame_description_path.get()),
+                util.to_linux_path(self.dataset_creation_frame_metadata_path.get()),
+                self.dataset_creation_frame_kmer_size_spinbox.get(),
+                self.dataset_creation_control_panel_singleton_kmer_checkbox.get(),
+                self.dataset_creation_control_panel_cpu_spinbox.get(),
+                self.dataset_creation_frame_compression_spinbox.get(),
+                None,
+                True,
+                False,
+            )
 
             process = util.run_bash_command(command)
 
@@ -2390,18 +2461,29 @@ class App(ctk.CTk):
                 ),
             )
 
+            self.clear_cmd_output(self.dataset_creation_frame.cmd_output)
+
             self.display_process_output(process, self.dataset_creation_frame.cmd_output)
+
+            if process.returncode == 0:
+                self.update_cmd_output(
+                    "\nDataset creation completed successfully.",
+                    self.dataset_creation_frame.cmd_output,
+                    Tag.SUCCESS,
+                )
+            else:
+                self.update_cmd_output(
+                    "\nDataset creation failed.",
+                    self.dataset_creation_frame.cmd_output,
+                    Tag.ERROR,
+                )
+
         except Exception as e:
             messagebox.showerror("Error", e)
             traceback.print_exc()
         finally:
             self.dataset_creation_frame_create_dataset_button.configure(
                 text="Create Dataset", command=self.create_dataset
-            )
-            self.update_cmd_output(
-                "\nDataset creation completed successfully.",
-                self.dataset_creation_frame.cmd_output,
-                Tag.SUCCESS,
             )
 
     def generate_random_seed(self, randomseedentry):
@@ -2838,25 +2920,37 @@ class App(ctk.CTk):
         return survey_conf_path
 
     def display_process_output(self, process: Popen, output_target=None):
-        stderr_thread = util.read_output(process.stderr, Tag.ERROR)
+        messages = util.Queue()
 
-        for line in process.stdout:
-            self.update_cmd_output(line, output_target)
+        util.enqueue_output(process.stdout, messages, Tag.NORMAL)
+        util.enqueue_output(process.stderr, messages, Tag.ERROR)
 
-        errors = "\n".join(stderr_thread.result())
-
-        self.update_cmd_output(errors, output_target, Tag.ERROR)
+        while process.poll() is None:
+            try:
+                tag, message = messages.get(timeout=1)
+                if output_target:
+                    self.update_cmd_output(message, output_target, tag)
+                else:
+                    print(f"{tag}: {message}", end="")
+            except util.Empty:
+                pass
 
     def update_cmd_output(
         self, message: str, output_target: ctk.CTkTextbox, *tags: str
     ):
-        self.preprocessing_frame_control.cmd_output.configure(state=tk.NORMAL)
-        is_at_end = self.preprocessing_frame_control.cmd_output.yview()[1] > 0.95
-        self.preprocessing_frame_control.cmd_output.insert(tk.END, message, tags)
+        output_target.configure(state=tk.NORMAL)
+        is_at_end = output_target.yview()[1] > 0.95
+        output_target.insert(tk.END, message, tags)
         if is_at_end:
-            self.preprocessing_frame_control.cmd_output.see(tk.END)
-        self.preprocessing_frame_control.cmd_output.configure(state=tk.DISABLED)
-        self.preprocessing_frame_control.cmd_output.update_idletasks()
+            output_target.see(tk.END)
+        output_target.configure(state=tk.DISABLED)
+        output_target.update_idletasks()
+
+    def clear_cmd_output(self, output_target: ctk.CTkTextbox):
+        output_target.configure(state=tk.NORMAL)
+        output_target.delete("1.0", tk.END)
+        output_target.configure(state=tk.DISABLED)
+        output_target.update_idletasks()
 
     def pickkover(self):
         file_path = util.select_file(

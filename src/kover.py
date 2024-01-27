@@ -2,7 +2,14 @@ import subprocess
 import os
 import csv
 import pathlib as pl
+from typing import Optional
 from util import to_linux_path
+
+
+class Source(str):
+    READS = "reads"
+    CONTIGS = "contigs"
+    K_MER_MATREX = "tsv"
 
 
 def create_contigs_path_tsv(contigs_path: str, genome_name: str):
@@ -17,123 +24,42 @@ def create_contigs_path_tsv(contigs_path: str, genome_name: str):
             writer.writerow([file_path.stem, to_linux_path(file_path)])
 
 
-def create_from_contigs(
-    genomic_data,
-    phenotype_description,
-    phenotype_metadata,
-    output=None,
-    kmer_size=31,
-    singleton_kmers=False,
-    n_cpu=None,
+def create_command(
+    kover_path: str,
+    source: Source,
+    genomic_data: str,
+    output: str,
+    phenotype_description: Optional[int] = None,
+    phenotype_metadata: Optional[int] = None,
+    kmer_size: Optional[int | str] = None,
+    singleton_kmers: Optional[bool] = None,
+    n_cpu: Optional[int] = None,
     compression=None,
-    temp_dir=None,
-    x=True,
-    v=False,
+    temp_dir: Optional[str] = None,
+    x: Optional[bool] = None,
+    v: Optional[bool] = None,
 ):
-    command = [
-        "/home/mhdeeb/kover/bin/kover",
-        "dataset",
-        "create",
-        "from-contigs",
-        "--genomic-data",
-        genomic_data,
-        "--phenotype-description",
-        phenotype_description,
-        "--phenotype-metadata",
-        phenotype_metadata,
-        "--output",
-        output,
-        "--kmer-size",
-        str(kmer_size),
-    ]
-
-    if x:
-        command.append("-x")
-    if v:
-        command.append("-v")
-
-    return command
-
-
-def create_from_reads(
-    genomic_data,
-    phenotype_description=None,
-    phenotype_metadata=None,
-    output=None,
-    kmer_size=None,
-    kmer_min_abundance=None,
-    singleton_kmers=False,
-    n_cpu=None,
-    compression=None,
-    temp_dir=None,
-    x=True,
-    v=False,
-):
-    command = [
-        "wsl",
-        "kover",
-        "dataset",
-        "create",
-        "from-reads",
-        "--genomic-data",
-        genomic_data,
-        "--phenotype-description",
-        phenotype_description,
-        "--phenotype-metadata",
-        phenotype_metadata,
-        "--output",
-        output,
-        "--kmer-size",
-        int(kmer_size) if kmer_size else 15,
-        "--kmer-min-abundance",
-        str(kmer_min_abundance) if kmer_min_abundance else "",
+    command = (
+        kover_path,
+        f"dataset create from-{source}",
+        f"--genomic-data {genomic_data}" if genomic_data else "",
+        f"--phenotype-description {phenotype_description}"
+        if phenotype_description
+        else "",
+        f"--phenotype-metadata {phenotype_metadata}" if phenotype_metadata else "",
+        f"--output {output}",
+        f"--kmer-size {kmer_size}"
+        if source != Source.K_MER_MATREX and kmer_size
+        else "",
         "--singleton-kmers" if singleton_kmers else "",
-        "--n-cpu",
-        str(n_cpu) if n_cpu else "",
-        "--compression",
-        compression if compression else "",
-        "--temp-dir",
-        temp_dir if temp_dir else "",
-    ]
+        f"--n-cpu {n_cpu}" if source != Source.K_MER_MATREX and n_cpu else "",
+        f"--compression {compression}" if compression else "",
+        f"--temp-dir {temp_dir}" if source != Source.K_MER_MATREX and temp_dir else "",
+        "-x" if x else "",
+        "-v" if v else "",
+    )
 
-    if x:
-        command.append("-x")
-    if v:
-        command.append("-v")
-
-
-def create_from_tsv(
-    self,
-    genomic_data,
-    phenotype_description=None,
-    phenotype_metadata=None,
-    output=None,
-    compression=None,
-    x=True,
-    v=False,
-):
-    command = [
-        "wsl",
-        "/home/mhdeeb/kover/bin/kover",
-        "dataset",
-        "create",
-        "from-tsv",
-        "--genomic-data",
-        genomic_data,
-        "--phenotype-description",
-        phenotype_description,
-        "--phenotype-metadata",
-        phenotype_metadata,
-        "--output",
-        output,
-    ]
-
-    if x:
-        command.append("-x")
-    if v:
-        command.append("-v")
-
-    return command
+    return " ".join(command)
 
 
 class KoverDatasetCreator:

@@ -6,6 +6,7 @@ import os
 import re
 from concurrent.futures import Future
 from typing import IO, Iterable, Optional
+from queue import Queue, Empty
 
 from customtkinter import filedialog
 
@@ -88,16 +89,6 @@ def threaded(fn) -> Future:
     return wrapper
 
 
-@threaded
-def read_output(io: IO, *tags: str) -> list[str]:
-    lines = []
-
-    for line in io:
-        lines.append(line)
-
-    return lines
-
-
 def to_linux_path(path: str) -> str:
     path = os.path.abspath(path)
     path = path.replace(path[0], path[0].lower(), 1)
@@ -140,3 +131,11 @@ def run_bash_command(command: str) -> Optional[Popen]:
     ).start()
 
     return process
+
+
+@threaded
+def enqueue_output(out: IO, queue: Queue, tag: Optional[str] = None):
+    """Credit: https://stackoverflow.com/a/4896288"""
+    for line in iter(out.readline, b""):
+        queue.put((tag, line))
+    out.close()
