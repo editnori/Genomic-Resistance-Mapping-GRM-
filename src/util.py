@@ -139,3 +139,7 @@ def enqueue_output(out: IO, queue: Queue, tag: Optional[str] = None):
     for line in iter(out.readline, b""):
         queue.put((tag, line))
     out.close()
+
+
+def sanitize_filename(filename: str) -> str:
+    return filename.replace("/", "-").replace(" ", "-").replace(".", "-")

@@ -503,7 +503,7 @@ class App(ctk.CTk):
             ]
 
         genome_names = [
-            genome_name.replace(" ", "-") for _, genome_name in genome_data_ids
+            util.sanitize_filename(genome_name) for _, genome_name in genome_data_ids
         ]
 
         directory = util.select_directory()
@@ -549,7 +549,7 @@ class App(ctk.CTk):
         total_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
 
         for genome_data_id, genome_name in genome_data_ids:
-            genome_name = genome_name.replace(" ", "-")
+            genome_name = util.sanitize_filename(genome_name)
             contig_name = f"{genome_data_id}.fna"
             feature_name = f"{genome_data_id}.PATRIC.features.tab"
 
@@ -2463,6 +2463,11 @@ class App(ctk.CTk):
 
             self.clear_cmd_output(self.dataset_creation_frame.cmd_output)
 
+            self.update_cmd_output(
+                "Processing dataset creation request...\n",
+                self.dataset_creation_frame.cmd_output,
+            )
+
             self.display_process_output(process, self.dataset_creation_frame.cmd_output)
 
             if process.returncode == 0:
@@ -2848,10 +2853,8 @@ class App(ctk.CTk):
 
     @threaded
     def save_to_tsv(self):
-        species = self.species_selection.get().replace(" ", "-").replace("/", "-")
-        antibiotics = (
-            self.antibiotic_selection.get().replace(" ", "-").replace("/", "-")
-        )
+        species = util.sanitize_filename(self.species_selection.get())
+        antibiotics = util.sanitize_filename(self.antibiotic_selection.get())
 
         if species == "" or antibiotics == "":
             messagebox.showerror("Error", "Please load amr data first.")
@@ -2867,9 +2870,7 @@ class App(ctk.CTk):
 
         file_name = f"{species}_{antibiotics}.tsv"
 
-        tsv_folder_path = os.path.join(
-            selected_directory, species, antibiotics
-        )
+        tsv_folder_path = os.path.join(selected_directory, species, antibiotics)
 
         os.makedirs(tsv_folder_path, exist_ok=True)
 
