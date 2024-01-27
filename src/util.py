@@ -106,6 +106,13 @@ def to_linux_path(path: str) -> str:
     return path
 
 
+def try_pass_except(func, *args, **kwargs):
+    try:
+        func(*args, **kwargs)
+    except:
+        pass
+
+
 def run_bash_command(command: str) -> Optional[Popen]:
     temp_file = "tmp.sh"
 
@@ -121,10 +128,15 @@ def run_bash_command(command: str) -> Optional[Popen]:
 
         return None
 
-    return Popen(
+    process = Popen(
         f'wsl -e "{to_linux_path(temp_file)}"',
-        shell=True,
         universal_newlines=True,
         stdout=PIPE,
         stderr=PIPE,
     )
+
+    Thread(
+        target=lambda: (process.wait(), try_pass_except(os.remove, "tmp.sh"))
+    ).start()
+
+    return process

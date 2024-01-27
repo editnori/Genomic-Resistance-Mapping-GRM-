@@ -31,7 +31,6 @@ def create_from_contigs(
     v=False,
 ):
     command = [
-        "wsl",
         "/home/mhdeeb/kover/bin/kover",
         "dataset",
         "create",
@@ -56,89 +55,88 @@ def create_from_contigs(
     return command
 
 
+def create_from_reads(
+    genomic_data,
+    phenotype_description=None,
+    phenotype_metadata=None,
+    output=None,
+    kmer_size=None,
+    kmer_min_abundance=None,
+    singleton_kmers=False,
+    n_cpu=None,
+    compression=None,
+    temp_dir=None,
+    x=True,
+    v=False,
+):
+    command = [
+        "wsl",
+        "kover",
+        "dataset",
+        "create",
+        "from-reads",
+        "--genomic-data",
+        genomic_data,
+        "--phenotype-description",
+        phenotype_description,
+        "--phenotype-metadata",
+        phenotype_metadata,
+        "--output",
+        output,
+        "--kmer-size",
+        int(kmer_size) if kmer_size else 15,
+        "--kmer-min-abundance",
+        str(kmer_min_abundance) if kmer_min_abundance else "",
+        "--singleton-kmers" if singleton_kmers else "",
+        "--n-cpu",
+        str(n_cpu) if n_cpu else "",
+        "--compression",
+        compression if compression else "",
+        "--temp-dir",
+        temp_dir if temp_dir else "",
+    ]
+
+    if x:
+        command.append("-x")
+    if v:
+        command.append("-v")
+
+
+def create_from_tsv(
+    self,
+    genomic_data,
+    phenotype_description=None,
+    phenotype_metadata=None,
+    output=None,
+    compression=None,
+    x=True,
+    v=False,
+):
+    command = [
+        "wsl",
+        "/home/mhdeeb/kover/bin/kover",
+        "dataset",
+        "create",
+        "from-tsv",
+        "--genomic-data",
+        genomic_data,
+        "--phenotype-description",
+        phenotype_description,
+        "--phenotype-metadata",
+        phenotype_metadata,
+        "--output",
+        output,
+    ]
+
+    if x:
+        command.append("-x")
+    if v:
+        command.append("-v")
+
+    return command
+
+
 class KoverDatasetCreator:
-    def create_from_reads(
-        self,
-        genomic_data,
-        phenotype_description=None,
-        phenotype_metadata=None,
-        output=None,
-        kmer_size=None,
-        kmer_min_abundance=None,
-        singleton_kmers=False,
-        n_cpu=None,
-        compression=None,
-        temp_dir=None,
-        x=True,
-        v=False,
-    ):
-        command = [
-            "wsl",
-            "kover",
-            "dataset",
-            "create",
-            "from-reads",
-            "--genomic-data",
-            genomic_data,
-            "--phenotype-description",
-            phenotype_description,
-            "--phenotype-metadata",
-            phenotype_metadata,
-            "--output",
-            output,
-            "--kmer-size",
-            int(kmer_size) if kmer_size else 15,
-            "--kmer-min-abundance",
-            str(kmer_min_abundance) if kmer_min_abundance else "",
-            "--singleton-kmers" if singleton_kmers else "",
-            "--n-cpu",
-            str(n_cpu) if n_cpu else "",
-            "--compression",
-            compression if compression else "",
-            "--temp-dir",
-            temp_dir if temp_dir else "",
-        ]
-
-        if x:
-            command.append("-x")
-        if v:
-            command.append("-v")
-
-        subprocess.run(command)
-
-    def create_from_tsv(
-        self,
-        genomic_data,
-        phenotype_description=None,
-        phenotype_metadata=None,
-        output=None,
-        compression=None,
-        x=True,
-        v=False,
-    ):
-        command = [
-            "wsl",
-            "/home/mhdeeb/kover/bin/kover",
-            "dataset",
-            "create",
-            "from-tsv",
-            "--genomic-data",
-            genomic_data,
-            "--phenotype-description",
-            phenotype_description,
-            "--phenotype-metadata",
-            phenotype_metadata,
-            "--output",
-            output,
-        ]
-
-        if x:
-            command.append("-x")
-        if v:
-            command.append("-v")
-
-        return command
-
     def split_dataset(
         self,
         dataset,

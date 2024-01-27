@@ -1219,8 +1219,9 @@ class App(ctk.CTk):
         self.preprocessing_frame_control_panel_kmer_tool_selector.configure(
             state=tk.DISABLED
         )
+
         self.preprocessing_frame_control_panel_run_button.configure(
-            text="Cancel", command=self.cancel_preprocessing
+            text="Loading...", state=tk.DISABLED
         )
 
         self.preprocessing_frame_control.cmd_output.configure(state=tk.NORMAL)
@@ -1250,51 +1251,70 @@ class App(ctk.CTk):
             command=self.run_preprocessing,
         )
 
-    def cancel_preprocessing(self):
+    def cancel_process(self, process: Popen, output: ctk.CTkTextbox):
         if messagebox.askyesno(
-            "Confirmation", "Are you sure you want to cancel the preprocessing?"
+            "Confirmation", "Are you sure you want to cancel this process?"
         ):
             try:
-                os.kill(self.preprocessing_process.pid, signal.CTRL_C_EVENT)
+                process.kill()
             except Exception:
                 pass
 
     def run_ray_surveyor(self, output_directory: str):
-        try:
-            dataset_folder = self.preprocessing_frame_dataset_path.cget("text")
+        dataset_folder = self.preprocessing_frame_dataset_path.cget("text")
 
-            input_files = [
-                f"{dataset_folder}/{file}"
-                for file in os.listdir(dataset_folder)
-                if file.endswith(".fna")
-            ]
+        input_files = [
+            f"{dataset_folder}/{file}"
+            for file in os.listdir(dataset_folder)
+            if file.endswith(".fna")
+        ]
 
-            if not input_files:
-                self.update_cmd_output(
-                    "No .fna files found in the selected dataset folder.",
-                    self.preprocessing_frame_control.cmd_output,
-                )
-                return
-
-            kmer_size = self.preprocessing_frame_control_panel_kmer_size_entry.get()
-
-            config_path = self.generate_survey_conf(
-                input_files, kmer_size, output_directory
+        if not input_files:
+            self.update_cmd_output(
+                "No .fna files found in the selected dataset folder.",
+                self.preprocessing_frame_control.cmd_output,
             )
+            return
 
+        kmer_size = self.preprocessing_frame_control_panel_kmer_size_entry.get()
+
+        config_path = self.generate_survey_conf(
+            input_files, kmer_size, output_directory
+        )
+
+        try:
             self.update_cmd_output(
                 "Running Ray Surveyor...\n", self.preprocessing_frame_control.cmd_output
             )
 
             ray_surveyor_command = f'mpiexec -n 4 "{util.to_linux_path(Path.RAY)}" "{util.to_linux_path(config_path)}"'
 
-            self.preprocessing_process = util.run_bash_command( ray_surveyor_command)
+            preprocessing_process = util.run_bash_command(ray_surveyor_command)
 
-            self.display_process_output(
-                self.preprocessing_process, self.preprocessing_frame_control.cmd_output
+            self.preprocessing_frame_control_panel_run_button.configure(
+                text="Cancel",
+                state=tk.NORMAL,
+                command=lambda: self.cancel_process(
+                    preprocessing_process, self.preprocessing_frame_control.cmd_output
+                ),
             )
 
-            self.on_preprocessing_process_finish(config_path, output_directory)
+            self.display_process_output(
+                preprocessing_process, self.preprocessing_frame_control.cmd_output
+            )
+
+            if preprocessing_process.poll() == 0:
+                self.update_cmd_output(
+                    f"\nRay Surveyor completed successfully.\n\nOutput stored in: {output_directory}",
+                    self.preprocessing_frame_control.cmd_output,
+                    Tag.SUCCESS,
+                )
+            else:
+                self.update_cmd_output(
+                    "\n\nProcess cancelled.",
+                    self.preprocessing_frame_control.cmd_output,
+                    Tag.ERROR,
+                )
         except CalledProcessError as e:
             self.update_cmd_output(
                 "Ray Surveyor encountered an error.",
@@ -1307,15 +1327,20 @@ class App(ctk.CTk):
             self.update_cmd_output(
                 e.stderr, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
+        finally:
+            try:
+                os.remove(config_path)
+            except Exception:
+                pass
 
     def run_dsk(self, output_directory: str):
+        dataset_folder = self.preprocessing_frame_dataset_path.cget("text")
+
+        kmer_size = self.preprocessing_frame_control_panel_kmer_size_entry.get()
+
+        config_path = f"{output_directory}/dsk_output"
+
         try:
-            dataset_folder = self.preprocessing_frame_dataset_path.cget("text")
-
-            kmer_size = self.preprocessing_frame_control_panel_kmer_size_entry.get()
-
-            config_path = f"{output_directory}/dsk_output"
-
             self.update_cmd_output(
                 "Running DSK...\n", self.preprocessing_frame_control.cmd_output
             )
@@ -1323,12 +1348,34 @@ class App(ctk.CTk):
             ls_command = f'ls -1 {util.to_linux_path(dataset_folder)}/*.fna > "{util.to_linux_path(config_path)}"'
             dsk_command = f'"{util.to_linux_path(Path.DSK)}" -file "{util.to_linux_path(config_path)}" -out-dir "{util.to_linux_path(output_directory)}" -kmer-size {kmer_size}'
 
-            self.preprocessing_process = util.run_bash_command(f"{ls_command}\n{dsk_command}")
-            self.display_process_output(
-                self.preprocessing_process, self.preprocessing_frame_control.cmd_output
+            preprocessing_process = util.run_bash_command(
+                f"{ls_command}\n{dsk_command}"
             )
 
-            self.on_preprocessing_process_finish(config_path, output_directory)
+            self.preprocessing_frame_control_panel_run_button.configure(
+                text="Cancel",
+                state=tk.NORMAL,
+                command=lambda: self.cancel_process(
+                    preprocessing_process, self.preprocessing_frame_control.cmd_output
+                ),
+            )
+
+            self.display_process_output(
+                preprocessing_process, self.preprocessing_frame_control.cmd_output
+            )
+
+            if preprocessing_process.poll() == 0:
+                self.update_cmd_output(
+                    f"\nDSK completed successfully.\n\nOutput stored in: {output_directory}",
+                    self.preprocessing_frame_control.cmd_output,
+                    Tag.SUCCESS,
+                )
+            else:
+                self.update_cmd_output(
+                    "\n\nProcess cancelled.",
+                    self.preprocessing_frame_control.cmd_output,
+                    Tag.ERROR,
+                )
         except CalledProcessError as e:
             self.update_cmd_output(
                 "DSK encountered an error.",
@@ -1341,28 +1388,11 @@ class App(ctk.CTk):
             self.update_cmd_output(
                 e.stderr, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
-
-    def on_preprocessing_process_finish(self, config_path: str, output_directory: str):
-        if not hasattr(self, "preprocessing_process"):
-            return
-
-        try:
-            self.preprocessing_process.wait()
-            running_tool = (
-                self.preprocessing_frame_control_panel_kmer_tool_selector.get()
-            )
-            self.update_cmd_output(
-                f"\n{running_tool} completed successfully.\n\nOutput stored in: {output_directory}",
-                self.preprocessing_frame_control.cmd_output,
-                Tag.SUCCESS,
-            )
-            os.remove(config_path)
-        except Exception:
-            self.update_cmd_output(
-                f"An error occurred while running {running_tool}.\n",
-                self.preprocessing_frame_control.cmd_output,
-                Tag.ERROR,
-            )
+        finally:
+            try:
+                os.remove(config_path)
+            except Exception:
+                pass
 
     def preprocessing_validate_ui(self, event=None):
         self.preprocessing_frame_run_button_hover.text = ""
@@ -2325,8 +2355,13 @@ class App(ctk.CTk):
     @threaded
     def create_dataset(self):
         try:
-            self.create_dataset_btn.configure(text="creating", state=tk.DISABLED)
-            output = os.path.join(self.output_path, "DATASET.kover")
+            output_path = util.select_directory(title="Select Output Directory")
+
+            if not output_path:
+                return
+
+            output_path = os.path.join(output_path, "DATASET.kover")
+
             if self.dataset_type_var1.get() == self.dataset_type[0]:
                 command = create_kover_from_contigs(
                     self.phenotype_desc_path,
@@ -2344,10 +2379,16 @@ class App(ctk.CTk):
                     output,
                 )
             else:
-                # Handle other dataset types if needed
                 return
 
             process = util.run_bash_command(command)
+
+            self.dataset_creation_frame_create_dataset_button.configure(
+                text="Cancel",
+                command=lambda: self.cancel_process(
+                    process, self.dataset_creation_frame.cmd_output
+                ),
+            )
 
             self.display_process_output(process, self.dataset_creation_frame.cmd_output)
         except Exception as e:
