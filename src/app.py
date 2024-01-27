@@ -2848,12 +2848,12 @@ class App(ctk.CTk):
 
     @threaded
     def save_to_tsv(self):
-        species_text = self.species_selection.get().replace(" ", "-").replace("/", "-")
-        antibiotic_text = (
+        species = self.species_selection.get().replace(" ", "-").replace("/", "-")
+        antibiotics = (
             self.antibiotic_selection.get().replace(" ", "-").replace("/", "-")
         )
 
-        if species_text == "" or antibiotic_text == "":
+        if species == "" or antibiotics == "":
             messagebox.showerror("Error", "Please load amr data first.")
             return
 
@@ -2865,12 +2865,11 @@ class App(ctk.CTk):
             self.save_table_button.configure(state=tk.NORMAL, text="Export to .tsv")
             return
 
-        file_name = f"{species_text}_{antibiotic_text}.tsv"
-        species = species_text
-        antibiotics = antibiotic_text
+        file_name = f"{species}_{antibiotics}.tsv"
 
-        tsv_folder_path = os.path.join(selected_directory, species_text)
-        tsv_folder_path = os.path.join(tsv_folder_path, antibiotic_text)
+        tsv_folder_path = os.path.join(
+            selected_directory, species, antibiotics
+        )
 
         os.makedirs(tsv_folder_path, exist_ok=True)
 
