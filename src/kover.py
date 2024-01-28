@@ -1,4 +1,3 @@
-import subprocess
 import os
 import csv
 import pathlib as pl
@@ -29,25 +28,27 @@ def create_command(
     source: Source,
     genomic_data: str,
     output: str,
-    phenotype_description: Optional[int] = None,
-    phenotype_metadata: Optional[int] = None,
+    phenotype_description: Optional[str] = None,
+    phenotype_metadata: Optional[str] = None,
     kmer_size: Optional[int | str] = None,
-    singleton_kmers: Optional[bool] = None,
-    n_cpu: Optional[int] = None,
+    singleton_kmers: Optional[bool] = False,
+    n_cpu: Optional[int | str] = None,
     compression=None,
     temp_dir: Optional[str] = None,
-    x: Optional[bool] = None,
-    v: Optional[bool] = None,
+    x: Optional[bool] = False,
+    v: Optional[bool] = False,
 ):
     command = (
-        kover_path,
+        to_linux_path(kover_path),
         f"dataset create from-{source}",
-        f"--genomic-data {genomic_data}" if genomic_data else "",
-        f"--phenotype-description {phenotype_description}"
+        f"--genomic-data {to_linux_path(genomic_data)}",
+        f"--phenotype-description {to_linux_path(phenotype_description)}"
         if phenotype_description
         else "",
-        f"--phenotype-metadata {phenotype_metadata}" if phenotype_metadata else "",
-        f"--output {output}",
+        f"--phenotype-metadata {to_linux_path(phenotype_metadata)}"
+        if phenotype_metadata
+        else "",
+        f"--output {to_linux_path(output)}",
         f"--kmer-size {kmer_size}"
         if source != Source.K_MER_MATREX and kmer_size
         else "",
@@ -59,226 +60,154 @@ def create_command(
         "-v" if v else "",
     )
 
-    return " ".join(command)
+    return " ".join(filter(lambda x: x != "", command))
 
 
-class KoverDatasetCreator:
-    def split_dataset(
-        self,
-        dataset,
-        id,
-        train_size=None,
-        folds=2,
-        random_seed=None,
-        output=None,
-        v=False,
-        x=True,
-    ):
-        command = [
-            "wsl",
-            "/home/mhdeeb/kover/bin/kover",
-            "dataset",
-            "split",
-            "--dataset",
-            dataset,
-            "--id",
-            id,
-            "--train-size",
-            str(train_size) if train_size else "0.5",
-            "--folds",
-            folds,
-            "--random-seed",
-            str(random_seed) if random_seed else "",
-        ]
+def split_dataset(
+    kover_path: str,
+    dataset: str,
+    id: str,
+    train_size: Optional[str] = None,
+    train_ids: Optional[str] = None,
+    folds: Optional[int | str] = None,
+    random_seed: Optional[int | str] = None,
+    x: Optional[bool] = False,
+    v: Optional[bool] = False,
+):
+    command = (
+        to_linux_path(kover_path),
+        "dataset split",
+        f"--dataset {to_linux_path(dataset)}",
+        f"--id {id}",
+        f"--train-size {train_size}" if train_size else "",
+        f"--train-ids {train_ids}" if train_ids else "",
+        f"--folds {folds}" if folds else "",
+        f"--random-seed {random_seed}" if random_seed else "",
+        "-x" if x else "",
+        "-v" if v else "",
+    )
 
-        if x:
-            command.append("-x")
-        if v:
-            command.append("-v")
+    return " ".join(filter(lambda x: x != "", command))
 
-        return command
 
-    def dataset_info(
-        self,
-        dataset,
-        all=False,
-        genome_type=False,
-        genome_source=False,
-        genome_ids=False,
-        genome_count=False,
-        kmers=False,
-        kmer_len=False,
-        kmer_count=False,
-        phenotype_description=False,
-        phenotype_metadata=False,
-        phenotype_tags=False,
-        splits=False,
-        uuid=False,
-        compression=False,
-        classification_type=False,
-    ):
-        command = [
-            "wsl",
-            "kover",
-            "dataset",
-            "info",
-            "--dataset",
-            dataset,
-        ]
+def info_dataset(
+    kover_path: str,
+    dataset: str,
+    a: Optional[bool] = False,
+    genome_type: Optional[bool] = False,
+    genome_source: Optional[bool] = False,
+    genome_ids: Optional[bool] = False,
+    genome_count: Optional[bool] = False,
+    kmers: Optional[bool] = False,
+    kmer_len: Optional[bool] = False,
+    kmer_count: Optional[bool] = False,
+    phenotype_description: Optional[bool] = False,
+    phenotype_metadata: Optional[bool] = False,
+    phenotype_tags: Optional[bool] = False,
+    splits: Optional[bool] = False,
+    uuid: Optional[bool] = False,
+    compression: Optional[bool] = False,
+    classification_type: Optional[bool] = False,
+):
+    command = (
+        to_linux_path(kover_path),
+        "dataset info",
+        f"--dataset {to_linux_path(dataset)}",
+        "--all" if a else "",
+        "--genome-type" if genome_type else "",
+        "--genome-source" if genome_source else "",
+        "--genome-ids" if genome_ids else "",
+        "--genome-count" if genome_count else "",
+        "--kmers" if kmers else "",
+        "--kmer-len" if kmer_len else "",
+        "--kmer-count" if kmer_count else "",
+        "--phenotype-description" if phenotype_description else "",
+        "--phenotype-metadata" if phenotype_metadata else "",
+        "--phenotype-tags" if phenotype_tags else "",
+        "--splits" if splits else "",
+        "--uuid" if uuid else "",
+        "--compression" if compression else "",
+        "--classification-type" if classification_type else "",
+    )
 
-        if all:
-            command.append("--all")
-        if genome_type:
-            command.append("--genome-type")
-        if genome_source:
-            command.append("--genome-source")
-        if genome_ids:
-            command.append("--genome-ids")
-        if genome_count:
-            command.append("--genome-count")
-        if kmers:
-            command.append("--kmers")
-        if kmer_len:
-            command.append("--kmer-len")
-        if kmer_count:
-            command.append("--kmer-count")
-        if phenotype_description:
-            command.append("--phenotype-description")
-        if phenotype_metadata:
-            command.append("--phenotype-metadata")
-        if phenotype_tags:
-            command.append("--phenotype-tags")
-        if splits:
-            command.append("--splits")
-        if uuid:
-            command.append("--uuid")
-        if compression:
-            command.append("--compression")
-        if classification_type:
-            command.append("--classification-type")
+    return " ".join(filter(lambda x: x != "", command))
 
-        subprocess.run(command)
 
-    def kover_learn_scm(
-        self,
-        dataset,
-        splitid,
-        model_type,
-        hyperparameter,
-        max_rules,
-        maxequivrules,
-        hpchoice,
-        bound_max=None,
-        random_seed=None,
-        output=None,
-        x=True,
-    ):
-        command = [
-            "wsl",
-            "/home/mhdeeb/kover/bin/kover",
-            "learn",
-            "scm",
-            "--dataset",
-            dataset,
-            "--split",
-            splitid,
-            "--model-type",
-            str(model_type),
-        ]
+def scm_command(
+    kover_path: str,
+    dataset: str,
+    split: str,
+    model_type: Optional[str] = None,
+    p: Optional[str] = None,
+    kmer_blacklist: Optional[str] = None,
+    max_rules: Optional[str | int] = None,
+    max_equiv_rules: Optional[str | int] = None,
+    hp_choice: Optional[str] = None,
+    bound_max_genome_size: Optional[str | int] = None,
+    random_seed: Optional[str | int] = None,
+    n_cpu: Optional[str | int] = None,
+    output_dir: Optional[str] = None,
+    x: Optional[bool] = False,
+    v: Optional[bool] = False,
+):
+    command = (
+        to_linux_path(kover_path),
+        "learn scm",
+        f"--dataset {dataset}",
+        f"--split {split}",
+        # [--model-type {conjunction,disjunction} [{conjunction,disjunction} ...]] if model_type else "",
+        # [--p P [P ...]] if p else "",
+        f"--kmer-blacklist {kmer_blacklist}" if kmer_blacklist else "",
+        f"--max-rules {max_rules}" if max_rules else "",
+        f"--max-equiv-rules {max_equiv_rules}" if max_equiv_rules else "",
+        # f"--hp-choice {bound,cv,none}" if hp_choice else "",
+        f"--bound-max-genome-size {bound_max_genome_size}"
+        if bound_max_genome_size
+        else "",
+        f"--random-seed {random_seed}" if random_seed else "",
+        f"--n-cpu {n_cpu}" if n_cpu else "",
+        f"--output-dir {output_dir}" if output_dir else "",
+        "-x" if x else "",
+        "-v" if v else "",
+    )
 
-        # Extend the command list with --p options for each value
-        command.extend(
-            ["--p"] + [str(value).replace(",", "") for value in hyperparameter]
-        )
+    return " ".join(filter(lambda x: x != "", command))
 
-        command.extend(
-            [
-                "--max-rules",
-                max_rules,
-                "--max-equiv-rules",
-                maxequivrules,
-                "--hp-choice",
-                hpchoice,
-            ]
-        )
 
-        # Include --bound-max-genome-size only if hpchoice is "bound"
-        if hpchoice == "bound" and bound_max is not None:
-            command.extend(["--bound-max-genome-size", str(bound_max)])
+def tree_command(
+    kover_path: str,
+    dataset: Optional[str] = None,
+    split: Optional[str] = None,
+    criterion: Optional[str] = None,
+    max_depth: Optional[str] = None,
+    min_samples_split: Optional[str] = None,
+    class_importance: Optional[str] = None,
+    kmer_blacklist: Optional[str] = None,
+    hp_choice: Optional[str] = None,
+    bound_max_genome_size: Optional[str | int] = None,
+    n_cpu: Optional[str | int] = None,
+    output_dir: Optional[str] = None,
+    x: Optional[bool] = False,
+    v: Optional[bool] = False,
+):
+    command = (
+        to_linux_path(kover_path),
+        "learn tree",
+        f"--dataset {dataset}",
+        f"--split {split}",
+        # f"--criterion {gini,crossentropy} [{gini,crossentropy} ...]" if criterion else "",
+        # f"--max-depth MAX_DEPTH [MAX_DEPTH ...]" if max_depth else "",
+        # f"--min-samples-split MIN_SAMPLES_SPLIT [MIN_SAMPLES_SPLIT ...]" if min_samples_split else "",
+        # f"--class-importance CLASS_IMPORTANCE [CLASS_IMPORTANCE ...]" if class_importance else "",
+        f"--kmer-blacklist {kmer_blacklist}" if kmer_blacklist else "",
+        # "--hp-choice {bound,cv}" if hp_choice else "",
+        f"--bound-max-genome-size {bound_max_genome_size}"
+        if bound_max_genome_size
+        else "",
+        f"--n-cpu {n_cpu}" if n_cpu else "",
+        f"--output-dir {output_dir}" if output_dir else "",
+        "-x" if x else "",
+        "-v" if v else "",
+    )
 
-        command.extend(
-            [
-                "--random-seed",
-                str(random_seed) if random_seed else "",
-                "--output-dir",
-                output,
-            ]
-        )
-
-        if x:
-            command.append("-x")
-
-        command_string = " ".join(map(str, command))
-
-        return command_string
-
-    def kover_learn_cart(
-        self,
-        dataset,
-        splitid,
-        model_type,
-        hyperparameter,
-        max_rules,
-        maxequivrules,
-        hpchoice,
-        bound_max=None,
-        output=None,
-        x=True,
-    ):
-        command = [
-            "wsl",
-            "/home/mhdeeb/kover/bin/kover",
-            "learn",
-            "tree",
-            "--dataset",
-            dataset,
-            "--split",
-            splitid,
-            "--criterion",
-            str(model_type),
-            "--max-depth",
-            max_rules,
-            "--min-samples-split",
-            maxequivrules,
-        ]
-
-        # Extend the command list with --p options for each value
-        command.extend(
-            ["--class-importance"]
-            + [str(value).replace(",", "") for value in hyperparameter]
-        )
-
-        command.extend(
-            [
-                "--hp-choice",
-                hpchoice,
-            ]
-        )
-
-        # Include --bound-max-genome-size only if hpchoice is "bound"
-        if hpchoice == "bound" and bound_max is not None:
-            command.extend(["--bound-max-genome-size", str(bound_max)])
-
-        command.extend(
-            [
-                "--output-dir",
-                output,
-            ]
-        )
-
-        if x:
-            command.append("-x")
-
-        command_string = " ".join(map(str, command))
-
-        return command_string
+    return " ".join(filter(lambda x: x != "", command))
