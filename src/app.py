@@ -2437,12 +2437,12 @@ class App(ctk.CTk):
                 return
 
             command = kover.create_command(
-                util.to_linux_path(Path.KOVER),
+                Path.KOVER,
                 source,
-                util.to_linux_path(self.dataset_creation_frame_dataset_path.get()),
-                util.to_linux_path(output_path),
-                util.to_linux_path(self.dataset_creation_frame_description_path.get()),
-                util.to_linux_path(self.dataset_creation_frame_metadata_path.get()),
+                self.dataset_creation_frame_dataset_path.get(),
+                output_path,
+                self.dataset_creation_frame_description_path.get(),
+                self.dataset_creation_frame_metadata_path.get(),
                 self.dataset_creation_frame_kmer_size_spinbox.get(),
                 self.dataset_creation_control_panel_singleton_kmer_checkbox.get(),
                 self.dataset_creation_control_panel_cpu_spinbox.get(),
@@ -2553,7 +2553,7 @@ class App(ctk.CTk):
                     "measurement_unit",
                 ],
                 converters={
-                    "genome_id": float,
+                    "genome_id": str,
                     "genome_name": lambda x: " ".join(x.lower().split()[:2])
                     .replace("[", "")
                     .replace("]", ""),
