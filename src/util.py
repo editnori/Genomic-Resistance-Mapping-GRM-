@@ -6,7 +6,7 @@ import os
 import re
 from concurrent.futures import Future
 from typing import IO, Iterable, Optional
-from queue import Queue, Empty
+from queue import Queue
 
 from customtkinter import filedialog
 

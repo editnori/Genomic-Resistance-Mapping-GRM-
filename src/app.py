@@ -164,6 +164,12 @@ class App(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
+        self.spinbox_validation = (
+            self.register(self.validate_spinbox),
+            "%P",
+            "%W",
+        )
+
     def end_app(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.quit()
@@ -1126,9 +1132,9 @@ class App(ctk.CTk):
 
         self.preprocessing_frame_tab_view.pack(fill=tk.BOTH, expand=True)
 
-        self.preprocessing_frame_tab_view.add("preprocessing")
+        self.preprocessing_frame_tab_view.add("Preprocessing")
         self.preprocessing_frame_control = ControlFrame(
-            self.preprocessing_frame_tab_view.tab("preprocessing")
+            self.preprocessing_frame_tab_view.tab("Preprocessing")
         )
 
         self.preprocessing_frame_dataset_path = Label(
@@ -1160,7 +1166,8 @@ class App(ctk.CTk):
 
         self.preprocessing_frame_control_panel_kmer_size_entry = ctk.CTkEntry(
             master=self.preprocessing_frame_control.control_panel_frame,
-            placeholder_text="K-mer size",
+            placeholder_text="K-mer size (Default: 31)",
+            width=150,
         )
         self.preprocessing_frame_control_panel_kmer_size_entry.pack(
             anchor=tk.W, padx=20, pady=5
@@ -1285,6 +1292,9 @@ class App(ctk.CTk):
 
         kmer_size = self.preprocessing_frame_control_panel_kmer_size_entry.get()
 
+        if not kmer_size:
+            kmer_size = 31
+
         config_path = self.generate_survey_conf(
             input_files, kmer_size, output_directory
         )
@@ -1344,6 +1354,9 @@ class App(ctk.CTk):
         dataset_folder = self.preprocessing_frame_dataset_path.cget("text")
 
         kmer_size = self.preprocessing_frame_control_panel_kmer_size_entry.get()
+
+        if not kmer_size:
+            kmer_size = 31
 
         config_path = f"{output_directory}/dsk_output"
 
@@ -1415,8 +1428,6 @@ class App(ctk.CTk):
             self.preprocessing_frame_control_panel_kmer_size_entry.configure(
                 border_color="#565B5E"
             )
-            self.preprocessing_frame_run_button_hover.text += "• input K-mer size.\n"
-            failed = True
         else:
             if (
                 re.match(
@@ -1477,7 +1488,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame.control_panel_frame.grid_rowconfigure(
-            tuple(range(6)), pad=20
+            tuple(range(9)), pad=20
         )
         self.dataset_creation_frame.control_panel_frame.grid_columnconfigure(
             0, weight=1, uniform="column"
@@ -1524,6 +1535,7 @@ class App(ctk.CTk):
                     filetypes=[("TSV Files", "*.tsv")],
                     title="Select Dataset File",
                 ),
+                self.dataset_creation_validate_ui,
             ),
         )
 
@@ -1554,6 +1566,7 @@ class App(ctk.CTk):
                     filetypes=[("TSV Files", "*.tsv")],
                     title="Select Phenotype Description File",
                 ),
+                self.dataset_creation_validate_ui,
             ),
         )
 
@@ -1584,6 +1597,7 @@ class App(ctk.CTk):
                     filetypes=[("TSV Files", "*.tsv")],
                     title="Select Phenotype Metadata File",
                 ),
+                self.dataset_creation_validate_ui,
             ),
         )
 
@@ -1597,7 +1611,7 @@ class App(ctk.CTk):
 
         self.dataset_creation_frame_kmer_size_label = ctk.CTkLabel(
             master=self.dataset_creation_frame.control_panel_frame,
-            text="Enter Kmer Length (max 128)",
+            text="Enter K-mer size (max 128)",
             font=self.default_font(15),
         )
         self.dataset_creation_frame_kmer_size_label.grid(
@@ -1606,21 +1620,21 @@ class App(ctk.CTk):
 
         self.dataset_creation_frame_kmer_size_spinbox = tk.Spinbox(
             master=self.dataset_creation_frame.control_panel_frame,
-            from_=0,
+            from_=1,
             to=128,
+            increment=2,
             wrap=True,
             buttonbackground="#2b2b2b",
             disabledbackground="#595959",
             font=self.default_font(10),
             validate="key",
-            validatecommand=(self.register(self.validate_spinbox), "%P", "%W"),
+            validatecommand=self.spinbox_validation,
         )
         self.dataset_creation_frame_kmer_size_spinbox.grid(
             row=5, column=0, sticky=tk.W, padx=20, pady=0
         )
 
-        self.dataset_creation_frame_kmer_size_spinbox.insert(1, "31")
-        self.dataset_creation_frame_kmer_size_spinbox.delete(0, 1)
+        self.set_insertable_value(31, self.dataset_creation_frame_kmer_size_spinbox)
 
         self.dataset_creation_frame_compression_label = ctk.CTkLabel(
             master=self.dataset_creation_frame.control_panel_frame,
@@ -1639,17 +1653,16 @@ class App(ctk.CTk):
             buttonbackground="#2b2b2b",
             font=self.default_font(10),
             validate="key",
-            validatecommand=(self.register(self.validate_spinbox), "%P", "%W"),
+            validatecommand=self.spinbox_validation,
         )
         self.dataset_creation_frame_compression_spinbox.grid(
             row=5, column=1, sticky=tk.W, padx=20
         )
-        self.dataset_creation_frame_compression_spinbox.insert(1, "4")
-        self.dataset_creation_frame_compression_spinbox.delete(0, 1)
+        self.set_insertable_value(4, self.dataset_creation_frame_compression_spinbox)
 
         self.dataset_creation_control_panel_singleton_kmer_checkbox = ctk.CTkCheckBox(
             master=self.dataset_creation_frame.control_panel_frame,
-            text="Singleton Kmers",
+            text="Singleton K-mers",
         )
 
         self.dataset_creation_control_panel_singleton_kmer_checkbox.grid(
@@ -1675,15 +1688,14 @@ class App(ctk.CTk):
             disabledbackground="#595959",
             font=self.default_font(10),
             validate="key",
-            validatecommand=(self.register(self.validate_spinbox), "%P", "%W"),
+            validatecommand=self.spinbox_validation,
         )
 
         self.dataset_creation_control_panel_cpu_spinbox.grid(
             row=7, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
-        self.dataset_creation_control_panel_cpu_spinbox.insert(1, "4")
-        self.dataset_creation_control_panel_cpu_spinbox.delete(0, 1)
+        self.set_insertable_value(4, self.dataset_creation_control_panel_cpu_spinbox)
 
         self.dataset_creation_frame_create_dataset_button = ctk.CTkButton(
             master=self.dataset_creation_frame.control_panel_frame,
@@ -1703,224 +1715,288 @@ class App(ctk.CTk):
 
         self.dataset_creation_validate_ui()
 
-        self.kover_frame_tab_view.add("split dataset")
+        self.kover_frame_tab_view.add("Split dataset")
         self.dataset_split_frame = ControlFrame(
-            self.kover_frame_tab_view.tab("split dataset")
+            self.kover_frame_tab_view.tab("Split dataset")
         )
 
-        self.kover_frame_tab_view.add("kover learn")
+        self.dataset_split_frame.control_panel.grid(
+            row=2,
+            column=1,
+            sticky=tk.NSEW,
+            rowspan=3,
+            columnspan=2,
+            padx=40,
+            pady=40,
+        )
+
+        self.dataset_split_frame.cmd_output_frame.grid(
+            row=0, column=3, rowspan=10, columnspan=7, sticky=tk.NSEW, padx=40, pady=40
+        )
+
+        self.dataset_split_frame.control_panel_frame.grid_rowconfigure(
+            tuple(range(6)), pad=20
+        )
+        self.dataset_split_frame.control_panel_frame.grid_columnconfigure(
+            0, weight=1, uniform="column"
+        )
+        self.dataset_split_frame.control_panel_frame.grid_columnconfigure(
+            1, weight=2, uniform="column"
+        )
+
+        self.dataset_split_frame_dataset_path = ctk.CTkEntry(
+            master=self.dataset_split_frame.control_panel_frame,
+            fg_color="transparent",
+            state=tk.DISABLED,
+        )
+
+        self.dataset_split_control_panel_dataset_button = ctk.CTkButton(
+            master=self.dataset_split_frame.control_panel_frame,
+            text="Pick dataset",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
+            command=lambda: self.update_entry(
+                self.dataset_split_frame_dataset_path,
+                util.select_file(
+                    filetypes=[("TSV Files", "*.tsv")],
+                    title="Select Dataset File",
+                ),
+                self.dataset_split_validate_ui,
+            ),
+        )
+
+        self.dataset_split_control_panel_dataset_button.grid(
+            row=1, column=0, sticky=tk.EW, padx=(20, 50)
+        )
+
+        self.dataset_split_frame_dataset_path.grid(
+            row=1, column=1, sticky=tk.EW, padx=20
+        )
+
+        self.dataset_split_frame_train_ids_path = ctk.CTkEntry(
+            master=self.dataset_split_frame.control_panel_frame,
+            fg_color="transparent",
+            state=tk.DISABLED,
+        )
+
+        self.dataset_split_control_panel_train_ids_button = ctk.CTkButton(
+            master=self.dataset_split_frame.control_panel_frame,
+            text="Pick Train IDs",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
+            command=lambda: self.update_entry(
+                self.dataset_split_frame_train_ids_path,
+                util.select_file(
+                    filetypes=[("TSV Files", "*.tsv")],
+                    title="Select Train IDs File",
+                ),
+                self.dataset_split_validate_ui,
+            ),
+        )
+
+        self.dataset_split_control_panel_train_ids_button.grid(
+            row=2, column=0, sticky=tk.EW, padx=(20, 50), pady=0
+        )
+
+        self.dataset_split_frame_train_ids_path.grid(
+            row=2, column=1, sticky=tk.EW, padx=20, pady=0
+        )
+
+        self.dataset_split_frame_test_ids_path = ctk.CTkEntry(
+            master=self.dataset_split_frame.control_panel_frame,
+            fg_color="transparent",
+            state=tk.DISABLED,
+        )
+
+        self.dataset_split_control_panel_test_ids_button = ctk.CTkButton(
+            master=self.dataset_split_frame.control_panel_frame,
+            text="Pick Test IDs",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
+            command=lambda: self.update_entry(
+                self.dataset_split_frame_test_ids_path,
+                util.select_file(
+                    filetypes=[("TSV Files", "*.tsv")],
+                    title="Select Test IDs File",
+                ),
+                self.dataset_split_validate_ui,
+            ),
+        )
+
+        self.dataset_split_control_panel_test_ids_button.grid(
+            row=3, column=0, sticky=tk.EW, padx=(20, 50), pady=0
+        )
+
+        self.dataset_split_frame_test_ids_path.grid(
+            row=3, column=1, sticky=tk.EW, padx=20, pady=0
+        )
+
+        self.dataset_split_frame_kmer_size_label = ctk.CTkLabel(
+            master=self.dataset_split_frame.control_panel_frame,
+            text="Enter train size (0-1)",
+            font=self.default_font(15),
+        )
+        self.dataset_split_frame_kmer_size_label.grid(
+            row=4, column=0, sticky=tk.W, padx=20
+        )
+
+        self.dataset_split_frame_train_size_spinbox = tk.Spinbox(
+            master=self.dataset_split_frame.control_panel_frame,
+            from_=0,
+            to=1,
+            increment=0.01,
+            wrap=True,
+            buttonbackground="#2b2b2b",
+            disabledbackground="#595959",
+            font=self.default_font(10),
+            validate="key",
+            validatecommand=self.spinbox_validation,
+        )
+        self.dataset_split_frame_train_size_spinbox.grid(
+            row=5, column=0, sticky=tk.W, padx=20, pady=0
+        )
+
+        self.set_insertable_value(0.5, self.dataset_split_frame_train_size_spinbox)
+
+        self.dataset_split_control_panel_cpu_label = ctk.CTkLabel(
+            master=self.dataset_split_frame.control_panel_frame,
+            text="Enter number of CPUs (1-64)",
+            font=self.default_font(15),
+        )
+
+        self.dataset_split_control_panel_cpu_label.grid(
+            row=4, column=1, sticky=tk.W, padx=20
+        )
+
+        self.dataset_split_control_panel_cpu_spinbox = tk.Spinbox(
+            master=self.dataset_split_frame.control_panel_frame,
+            from_=1,
+            to=64,
+            wrap=True,
+            buttonbackground="#2b2b2b",
+            disabledbackground="#595959",
+            font=self.default_font(10),
+            validate="key",
+            validatecommand=self.spinbox_validation,
+        )
+
+        self.dataset_split_control_panel_cpu_spinbox.grid(
+            row=5, column=1, sticky=tk.W, padx=20
+        )
+
+        self.set_insertable_value(4, self.dataset_split_control_panel_cpu_spinbox)
+
+        self.dataset_split_frame_fold_label = ctk.CTkLabel(
+            master=self.dataset_split_frame.control_panel_frame,
+            text="Enter number of folds (2-100)",
+            font=self.default_font(15),
+        )
+        self.dataset_split_frame_fold_label.grid(
+            row=6, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_split_frame_fold_spinbox = tk.Spinbox(
+            master=self.dataset_split_frame.control_panel_frame,
+            from_=2,
+            to=100,
+            wrap=True,
+            buttonbackground="#2b2b2b",
+            disabledbackground="#595959",
+            font=self.default_font(10),
+            validate="key",
+            validatecommand=self.spinbox_validation,
+        )
+        self.dataset_split_frame_fold_spinbox.grid(
+            row=7, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.set_insertable_value(2, self.dataset_split_frame_fold_spinbox)
+
+        self.dataset_split_frame_fold_spinbox.configure(state=tk.DISABLED)
+
+        self.dataset_split_control_panel_fold_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_split_frame.control_panel_frame,
+            text="Folds",
+            command=lambda: self.dataset_split_frame_fold_spinbox.configure(
+                state=tk.NORMAL
+                if self.dataset_split_control_panel_fold_checkbox.get()
+                else tk.DISABLED
+            ),
+        )
+
+        self.dataset_split_control_panel_fold_checkbox.grid(
+            row=6, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_split_control_panel_id_entry = ctk.CTkEntry(
+            master=self.dataset_split_frame.control_panel_frame,
+            placeholder_text="Enter ID",
+        )
+
+        self.dataset_split_control_panel_id_entry.grid(
+            row=7, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_split_control_panel_id_entry.bind(
+            "<KeyRelease>", self.dataset_split_validate_ui
+        )
+
+        self.dataset_split_control_panel_seed_entry = ctk.CTkEntry(
+            master=self.dataset_split_frame.control_panel_frame,
+            validate="key",
+            validatecommand=(
+                self.register(lambda new_value: True if new_value.isdigit() else False),
+                "%P",
+            ),
+        )
+
+        self.dataset_split_control_panel_seed_entry.grid(
+            row=8, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.set_insertable_value(0, self.dataset_split_control_panel_seed_entry)
+
+        self.dataset_split_control_panel_seed_button = ctk.CTkButton(
+            master=self.dataset_split_frame.control_panel_frame,
+            text="Generate random seed",
+            font=self.default_font(12),
+            command=lambda: self.generate_random_seed(
+                self.dataset_split_control_panel_seed_entry
+            ),
+        )
+
+        self.dataset_split_control_panel_seed_button.grid(
+            row=8, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_split_frame_create_dataset_button = ctk.CTkButton(
+            master=self.dataset_split_frame.control_panel_frame,
+            text="Split Dataset",
+            command=self.create_dataset,
+            state=tk.DISABLED,
+        )
+
+        self.dataset_split_frame_create_dataset_button.grid(
+            row=9, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_split_frame_create_dataset_button_hover = Hovertip(
+            self.dataset_split_frame_create_dataset_button,
+            "",
+        )
+
+        self.dataset_split_validate_ui()
+
+        self.kover_frame_tab_view.add("Kover learn")
         self.kover_learn_frame = ControlFrame(
-            self.kover_frame_tab_view.tab("kover learn")
+            self.kover_frame_tab_view.tab("Kover learn")
         )
         return  # OLD CODE
-        create_dataset_frame = ctk.CTkFrame(
-            kover_tab_view.tab("split dataset"),
-            width=700,
-            height=self.screen_height - 230,
-            corner_radius=15,
-            border_width=2,
-        )
-        create_dataset_frame.place(x=50, y=20)
-        l1 = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Split Dataset",
-            font=self.default_font(20),
-        )
-        l1.place(x=50, y=45)
-
-        dataset_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
-            text="Pick kover Dataset",
-            corner_radius=6,
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            command=self.pickkover,
-        )
-        dataset_btn.place(x=50, y=150)
-
-        dataset_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=380,
-            placeholder_text="Dataset path",
-            textvariable=self.selected_kover,
-        )
-        dataset_entry.place(x=50, y=200)
-
-        output_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
-            text="Pick Output Directory",
-            corner_radius=6,
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            # command=self.browse_output_dir,
-        )
-        output_btn.place(x=50, y=250)
-
-        output_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=380,
-            placeholder_text="Output directory path",
-            textvariable=self.output_dir,
-        )
-        output_entry.place(x=50, y=300)
-
-        l1 = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Train size(%)",
-            font=self.default_font(16),
-        )
-        l1.place(x=50, y=350)
-
-        self.trainsize_spinbox = tk.Spinbox(
-            master=create_dataset_frame,
-            from_=1,
-            to=100,
-            width=5,
-            textvariable=self.compression_var,
-            wrap=True,
-        )
-
-        self.trainsize_spinbox.place(x=170, y=355)
-
-        trainlabel = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Use train ids and tests",
-            font=self.default_font(16),
-        )
-        trainlabel.place(x=250, y=350)
-        self.trainvar = tk.StringVar(value="no")  # Set a default value
-        train_options = ["yes", "no"]
-        train_options_menu = ttk.Combobox(
-            master=create_dataset_frame,
-            textvariable=self.trainvar,
-            values=train_options,
-            width=10,
-            state="readonly",
-        )
-        train_options_menu.place(x=420, y=350)
-
-        train_options_menu.bind("<<ComboboxSelected>>", self.toggle_train_test_widgets)
-
-        self.foldvar = tk.StringVar(value="2")
-        foldlabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Folds", font=self.default_font(16)
-        )
-        foldlabel.place(x=50, y=400)
-        foldentry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=80,
-            placeholder_text="Enter number of folds",
-            textvariable=self.foldvar,
-        )
-
-        foldentry.place(x=100, y=400)
-
-        randomseedlabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Random seed", font=self.default_font(16)
-        )
-        randomseedlabel.place(x=200, y=400)
-        self.randomseedentry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=100,
-            placeholder_text="random seed",
-        )
-
-        self.randomseedentry.place(x=330, y=400)
-        randomseed_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=150,
-            text="Generate random seed",
-            command=lambda: self.generate_random_seed(self.randomseedentry),
-        )
-        randomseed_btn.place(x=450, y=400)
-
-        self.trainids_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
-            text="Pick Train ids file",
-            corner_radius=6,
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            # command=self.browse_dataset,
-        )
-
-        self.trainids_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=200,
-            placeholder_text="train ids file path",
-            textvariable=self.dataset_folder,
-        )
-
-        self.testids_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
-            text="Pick Test ids file",
-            corner_radius=6,
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            # command=self.browse_dataset,
-        )
-
-        self.testids_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=200,
-            placeholder_text="train ids file path",
-            textvariable=self.dataset_folder,
-        )
-
-        self.uniqueidlabel = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Unique split id",
-            font=self.default_font(16),
-        )
-        self.uniqueidlabel.place(x=50, y=450)
-        self.uniqueidentry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=100,
-            placeholder_text="Eg. split1",
-        )
-
-        self.uniqueidentry.place(x=180, y=450)
-        self.split_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=150,
-            text="Split dataset",
-            command=self.split_dataset,
-        )
-        self.split_btn.place(x=200, y=630)
-
-        outputscreen = ctk.CTkFrame(
-            kover_tab_view.tab("split dataset"),
-            width=650,
-            height=650,
-            corner_radius=15,
-            border_width=2,
-        )
-
-        outputscreen.place(x=800, y=20)
-        outputscreen.grid_propagate(False)
-        outputscreen.grid_rowconfigure(0, weight=1)
-        outputscreen.grid_columnconfigure(0, weight=1)
-
-        self.cmd_output2 = tk.Text(
-            master=outputscreen,
-            height=650,
-            width=650,
-            state="disabled",
-            font=self.custom_font,
-        )
-
-        self.scrollbar2 = tk.Scrollbar(outputscreen, command=self.cmd_output2.yview)
-        self.scrollbar2.grid(row=0, column=1, sticky=tk.NSEW)
-        self.cmd_output2["yscrollcommand"] = self.scrollbar2.set
-        self.cmd_output2.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
-
         create_dataset_frame = ctk.CTkFrame(
             kover_tab_view.tab("kover learn"),
             width=700,
@@ -2157,14 +2233,51 @@ class App(ctk.CTk):
         self.cmd_output3["yscrollcommand"] = self.scrollbar3.set
         self.cmd_output3.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
-    def update_entry(self, entry: ctk.CTkEntry, value: str):
+    def dataset_split_validate_ui(self, event=None):
+        self.dataset_split_frame_create_dataset_button_hover.text = ""
+
+        failed = False
+
+        if not self.dataset_split_frame_dataset_path.get():
+            self.dataset_split_frame_create_dataset_button_hover.text += (
+                "• select dataset directory.\n"
+            )
+            failed = True
+        if not self.dataset_split_frame_train_ids_path.get():
+            self.dataset_split_frame_create_dataset_button_hover.text += (
+                "• select train IDs file.\n"
+            )
+            failed = True
+        if not self.dataset_split_frame_test_ids_path.get():
+            self.dataset_split_frame_create_dataset_button_hover.text += (
+                "• select test IDs file.\n"
+            )
+            failed = True
+        if not self.dataset_split_control_panel_id_entry.get():
+            self.dataset_split_frame_create_dataset_button_hover.text += "• enter ID.\n"
+            failed = True
+
+        self.dataset_split_frame_create_dataset_button_hover.text = (
+            self.dataset_split_frame_create_dataset_button_hover.text.strip("\n")
+        )
+
+        if failed:
+            self.dataset_split_frame_create_dataset_button_hover.enable()
+            self.dataset_split_frame_create_dataset_button.configure(state=tk.DISABLED)
+        else:
+            self.dataset_split_frame_create_dataset_button_hover.disable()
+            self.dataset_split_frame_create_dataset_button.configure(state=tk.NORMAL)
+
+    def update_entry(
+        self, entry: ctk.CTkEntry, value: str, validate_function: callable = None
+    ):
         entry.configure(state=tk.NORMAL)
         entry.delete(0, tk.END)
         if value:
             entry.insert(0, value)
         entry.configure(state=tk.DISABLED)
 
-        self.dataset_creation_validate_ui()
+        validate_function()
 
     def dataset_creation_validate_ui(self):
         failed = False
@@ -2215,13 +2328,54 @@ class App(ctk.CTk):
             self.dataset_creation_frame_create_dataset_button_hover.disable()
             self.dataset_creation_frame_create_dataset_button.configure(state=tk.NORMAL)
 
-    def validate_spinbox(self, new_value, widget_name):
-        widget = self.nametowidget(widget_name)
-        if not new_value.isdigit() or not (
-            widget.cget("from") <= int(new_value) <= widget.cget("to")
-        ):
-            return False
+    def validate_spinbox(
+        self,
+        new_value: float,
+        widget_name: str,
+    ):
         return True
+        # try:
+        #     if hasattr(self, "dataset_split_frame_train_size_spinbox"):
+        #         print(self.dataset_split_frame_train_size_spinbox.cget("validate"))
+        #     widget = self.nametowidget(widget_name)
+
+        #     new_value = util.Decimal(str(new_value))
+
+        #     if not hasattr(widget, "old_value"):
+        #         widget.old_value = util.Decimal(0)
+
+        #     if (
+        #         widget.cget("from") <= new_value <= widget.cget("to")
+        #     ) and util.is_divisible(
+        #         new_value - widget.old_value, widget.cget("increment")
+        #     ):
+        #         print(new_value, widget.old_value, "true")
+        #         widget.old_value = new_value
+        #         return True
+        #     print(
+        #         new_value,
+        #         widget.old_value,
+        #         "false",
+        #         widget.cget("from") <= new_value <= widget.cget("to"),
+        #         util.Decimal(new_value) - widget.old_value,
+        #         widget.cget("increment"),
+        #     )
+        #     return False
+        # except Exception:
+        #     # print(new_value, widget.old_value, "Exception")
+        #     traceback.print_exc()
+        #     return False
+
+    def set_insertable_value(
+        self,
+        new_value: float,
+        spinbox: tk.Spinbox | ctk.CTkEntry,
+    ):
+        validation = spinbox.cget("validate")
+        spinbox.configure(validate="none")
+        spinbox.delete(0, tk.END)
+        spinbox.insert(0, new_value)
+        spinbox.configure(validate=validation)
 
     def create_analysis_page(self):
         self.analysis_frame = ctk.CTkFrame(
@@ -2491,11 +2645,10 @@ class App(ctk.CTk):
                 text="Create Dataset", command=self.create_dataset
             )
 
-    def generate_random_seed(self, randomseedentry):
-        # Generate a random seed and place it in randomseedentry
-        random_seed = random.randint(1, 10000)
-        randomseedentry.delete(0, tk.END)  # Clear any existing value
-        randomseedentry.insert(0, str(random_seed))  # Place the generated random seed
+    def generate_random_seed(self, seed_entry: ctk.CTkEntry):
+        self.set_insertable_value(
+            random.randint(1, 10000), self.dataset_split_control_panel_seed_entry
+        )
 
     def pick_metatsv_file(self):
         # Open a file dialog for selecting TSV files
