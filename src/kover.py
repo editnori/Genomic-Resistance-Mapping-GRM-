@@ -1,7 +1,8 @@
+from dataclasses import dataclass
 import os
 import csv
 import pathlib as pl
-from typing import Optional
+from typing import Annotated, Collection, Optional
 from util import to_linux_path
 
 
@@ -9,6 +10,31 @@ class Source(str):
     READS = "reads"
     CONTIGS = "contigs"
     K_MER_MATREX = "tsv"
+
+
+class ModelType(str):
+    CONJUNCTION = "conjunction"
+    DISJUNCTION = "disjunction"
+    BOTH = "conjunction disjunction"
+
+
+class HpChoice(str):
+    BOUND = "bound"
+    CV = "cv"
+    NONE = "none"
+
+
+class Criterion(str):
+    GINI = "gini"
+    CROSS_ENTROPY = "crossentropy"
+
+
+@dataclass
+class MinLen:
+    value: int
+
+
+DEFAULT = None
 
 
 def create_contigs_path_tsv(contigs_path: str, genome_name: str):
@@ -28,15 +54,16 @@ def create_command(
     source: Source,
     genomic_data: str,
     output: str,
-    phenotype_description: Optional[str] = None,
-    phenotype_metadata: Optional[str] = None,
-    kmer_size: Optional[int | str] = None,
-    singleton_kmers: Optional[bool] = False,
-    n_cpu: Optional[int | str] = None,
-    compression=None,
-    temp_dir: Optional[str] = None,
-    x: Optional[bool] = False,
-    v: Optional[bool] = False,
+    phenotype_description: Optional[str] = DEFAULT,
+    phenotype_metadata: Optional[str] = DEFAULT,
+    kmer_size: Optional[int | str] = 31,
+    kmer_min_abundance: Optional[int | str] = 1,
+    singleton_kmers: bool = DEFAULT,
+    n_cpu: Optional[int | str] = 0,
+    compression: Optional[int | str] = 4,
+    temp_dir: Optional[str] = DEFAULT,
+    x: bool = False,
+    v: bool = False,
 ):
     command = (
         to_linux_path(kover_path),
@@ -51,6 +78,9 @@ def create_command(
         f"--output {to_linux_path(output)}",
         f"--kmer-size {kmer_size}"
         if source != Source.K_MER_MATREX and kmer_size
+        else "",
+        f"--kmer-min-abundance {kmer_min_abundance}"
+        if source == Source.READS and kmer_min_abundance
         else "",
         "--singleton-kmers" if singleton_kmers else "",
         f"--n-cpu {n_cpu}" if source != Source.K_MER_MATREX and n_cpu else "",
@@ -67,12 +97,12 @@ def split_dataset(
     kover_path: str,
     dataset: str,
     id: str,
-    train_size: Optional[str] = None,
-    train_ids: Optional[str] = None,
-    folds: Optional[int | str] = None,
-    random_seed: Optional[int | str] = None,
-    x: Optional[bool] = False,
-    v: Optional[bool] = False,
+    train_size: Optional[str | float] = 0.5,
+    train_ids: Optional[str] = DEFAULT,
+    folds: int | str = 0,
+    random_seed: Optional[int | str] = DEFAULT,
+    x: bool = False,
+    v: bool = False,
 ):
     command = (
         to_linux_path(kover_path),
@@ -81,7 +111,7 @@ def split_dataset(
         f"--id {id}",
         f"--train-size {train_size}" if train_size else "",
         f"--train-ids {train_ids}" if train_ids else "",
-        f"--folds {folds}" if folds else "",
+        f"--folds {folds}",
         f"--random-seed {random_seed}" if random_seed else "",
         "-x" if x else "",
         "-v" if v else "",
@@ -93,21 +123,21 @@ def split_dataset(
 def info_dataset(
     kover_path: str,
     dataset: str,
-    a: Optional[bool] = False,
-    genome_type: Optional[bool] = False,
-    genome_source: Optional[bool] = False,
-    genome_ids: Optional[bool] = False,
-    genome_count: Optional[bool] = False,
-    kmers: Optional[bool] = False,
-    kmer_len: Optional[bool] = False,
-    kmer_count: Optional[bool] = False,
-    phenotype_description: Optional[bool] = False,
-    phenotype_metadata: Optional[bool] = False,
-    phenotype_tags: Optional[bool] = False,
-    splits: Optional[bool] = False,
-    uuid: Optional[bool] = False,
-    compression: Optional[bool] = False,
-    classification_type: Optional[bool] = False,
+    a: bool = False,
+    genome_type: bool = False,
+    genome_source: bool = False,
+    genome_ids: bool = False,
+    genome_count: bool = False,
+    kmers: bool = False,
+    kmer_len: bool = False,
+    kmer_count: bool = False,
+    phenotype_description: bool = False,
+    phenotype_metadata: bool = False,
+    phenotype_tags: bool = False,
+    splits: bool = False,
+    uuid: bool = False,
+    compression: bool = False,
+    classification_type: bool = False,
 ):
     command = (
         to_linux_path(kover_path),
@@ -137,32 +167,43 @@ def scm_command(
     kover_path: str,
     dataset: str,
     split: str,
-    model_type: Optional[str] = None,
-    p: Optional[str] = None,
-    kmer_blacklist: Optional[str] = None,
-    max_rules: Optional[str | int] = None,
-    max_equiv_rules: Optional[str | int] = None,
-    hp_choice: Optional[str] = None,
-    bound_max_genome_size: Optional[str | int] = None,
-    random_seed: Optional[str | int] = None,
-    n_cpu: Optional[str | int] = None,
-    output_dir: Optional[str] = None,
-    x: Optional[bool] = False,
-    v: Optional[bool] = False,
+    model_type: ModelType,
+    p: Annotated[Collection[float | str], MinLen(1)] = (
+        0.1,
+        0.178,
+        0.316,
+        0.562,
+        1.0,
+        1.778,
+        3.162,
+        5.623,
+        10.0,
+        999999.0,
+    ),
+    kmer_blacklist: Optional[str] = DEFAULT,
+    max_rules: Optional[str | int] = DEFAULT,
+    max_equiv_rules: Optional[str | int] = DEFAULT,
+    hp_choice: Optional[HpChoice] = HpChoice.CV,
+    bound_max_genome_size: Optional[str | int] = DEFAULT,
+    random_seed: Optional[str | int] = DEFAULT,
+    n_cpu: Optional[str | int] = DEFAULT,
+    output_dir: Optional[str] = DEFAULT,
+    x: bool = False,
+    v: bool = False,
 ):
     command = (
         to_linux_path(kover_path),
         "learn scm",
         f"--dataset {dataset}",
         f"--split {split}",
-        # [--model-type {conjunction,disjunction} [{conjunction,disjunction} ...]] if model_type else "",
-        # [--p P [P ...]] if p else "",
+        f"--model-type {model_type}",
+        f"--p {' '.join([str(n) for n in p])}",
         f"--kmer-blacklist {kmer_blacklist}" if kmer_blacklist else "",
         f"--max-rules {max_rules}" if max_rules else "",
         f"--max-equiv-rules {max_equiv_rules}" if max_equiv_rules else "",
-        # f"--hp-choice {bound,cv,none}" if hp_choice else "",
+        f"--hp-choice {hp_choice}",
         f"--bound-max-genome-size {bound_max_genome_size}"
-        if bound_max_genome_size
+        if hp_choice == HpChoice.BOUND and bound_max_genome_size
         else "",
         f"--random-seed {random_seed}" if random_seed else "",
         f"--n-cpu {n_cpu}" if n_cpu else "",
@@ -176,35 +217,35 @@ def scm_command(
 
 def tree_command(
     kover_path: str,
-    dataset: Optional[str] = None,
-    split: Optional[str] = None,
-    criterion: Optional[str] = None,
-    max_depth: Optional[str] = None,
-    min_samples_split: Optional[str] = None,
-    class_importance: Optional[str] = None,
-    kmer_blacklist: Optional[str] = None,
-    hp_choice: Optional[str] = None,
-    bound_max_genome_size: Optional[str | int] = None,
-    n_cpu: Optional[str | int] = None,
-    output_dir: Optional[str] = None,
-    x: Optional[bool] = False,
-    v: Optional[bool] = False,
+    dataset: str,
+    split: str,
+    criterion: Criterion = Criterion.GINI,
+    max_depth: str | int = 20,
+    min_samples_split: str | int = 2,
+    class_importance: Collection[str | int] = (0.25, 0.5, 0.75, 1.0),
+    kmer_blacklist: Optional[str] = DEFAULT,
+    hp_choice: HpChoice = HpChoice.CV,
+    bound_max_genome_size: Optional[str | int] = DEFAULT,
+    n_cpu: Optional[str | int] = DEFAULT,
+    output_dir: Optional[str] = DEFAULT,
+    x: bool = False,
+    v: bool = False,
 ):
     command = (
         to_linux_path(kover_path),
         "learn tree",
         f"--dataset {dataset}",
         f"--split {split}",
-        # f"--criterion {gini,crossentropy} [{gini,crossentropy} ...]" if criterion else "",
-        # f"--max-depth MAX_DEPTH [MAX_DEPTH ...]" if max_depth else "",
-        # f"--min-samples-split MIN_SAMPLES_SPLIT [MIN_SAMPLES_SPLIT ...]" if min_samples_split else "",
-        # f"--class-importance CLASS_IMPORTANCE [CLASS_IMPORTANCE ...]" if class_importance else "",
+        f"--criterion {criterion}",
+        f"--max-depth {max_depth}",
+        f"--min-samples-split {min_samples_split}",
+        f"--class-importance {class_importance}",
         f"--kmer-blacklist {kmer_blacklist}" if kmer_blacklist else "",
-        # "--hp-choice {bound,cv}" if hp_choice else "",
+        f"--hp-choice {hp_choice}",
         f"--bound-max-genome-size {bound_max_genome_size}"
         if bound_max_genome_size
         else "",
-        f"--n-cpu {n_cpu}" if n_cpu else "",
+        f"--n-cpu {n_cpu}",
         f"--output-dir {output_dir}" if output_dir else "",
         "-x" if x else "",
         "-v" if v else "",
