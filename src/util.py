@@ -1,5 +1,6 @@
 from subprocess import PIPE, Popen
-from tkinter import messagebox
+from tkinter import messagebox, END, Spinbox
+from customtkinter import CTkEntry
 from threading import Thread
 from traceback import print_exc
 import os
@@ -13,6 +14,18 @@ from customtkinter import filedialog
 
 CRLF = b"\r\n"
 LF = b"\n"
+
+
+class Tag(str):
+    ERROR = "error"
+    SUCCESS = "success"
+    NORMAL = None
+
+
+class Key(int):
+    ENTER = 13
+    SPACE = 32
+    ESCAPE = 27
 
 
 def select_directory(title: Optional[str] = "Select Folder") -> Optional[str]:
@@ -143,3 +156,14 @@ def enqueue_output(out: IO, queue: Queue, tag: Optional[str] = None):
 
 def sanitize_filename(filename: str) -> str:
     return filename.replace("/", "-").replace(" ", "-").replace(".", "-")
+
+
+def force_insertable_value(
+    new_value: float,
+    spinbox: Spinbox | CTkEntry,
+):
+    validation = spinbox.cget("validate")
+    spinbox.configure(validate="none")
+    spinbox.delete(0, END)
+    spinbox.insert(0, new_value)
+    spinbox.configure(validate=validation)
