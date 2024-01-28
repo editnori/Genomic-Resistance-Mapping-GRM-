@@ -986,7 +986,7 @@ class App(ctk.CTk):
 
         self.amr_list_filter_checkbox = ctk.CTkCheckBox(
             master=amr_frame,
-            text="Phenotype count ≥ 25",
+            text="Phenotype count ≥ 50",
             command=self.on_amr_list_filter_check,
             state=tk.DISABLED,
         )
@@ -995,7 +995,7 @@ class App(ctk.CTk):
 
         Hovertip(
             self.amr_list_filter_checkbox,
-            "Only show species with ≥ 25\nphenotypes (resistant and susceptible)",
+            "Only show species with ≥ 50\nphenotypes (resistant and susceptible)",
         )
 
         self.total_label = ctk.CTkLabel(master=amr_frame, text="Total: not loaded")
@@ -2586,8 +2586,8 @@ class App(ctk.CTk):
             self.amr_list_filtered = (
                 self.amr_full.groupby(["genome_name", "antibiotic"])
                 .filter(
-                    lambda x: (x["resistant_phenotype"] == "Resistant").sum() >= 25
-                    and (x["resistant_phenotype"] == "Susceptible").sum() >= 25
+                    lambda x: (x["resistant_phenotype"] == "Resistant").sum() >= 50
+                    and (x["resistant_phenotype"] == "Susceptible").sum() >= 50
                 )[["genome_name", "antibiotic"]]
                 .drop_duplicates()
             )
