@@ -2765,6 +2765,7 @@ class App(ctk.CTk):
             util.update_cmd_output(
                 "Processing dataset creation request...\n\n",
                 self.dataset_creation_frame.cmd_output,
+                Tag.SYSTEM,
             )
 
             util.display_process_output(process, self.dataset_creation_frame.cmd_output)
