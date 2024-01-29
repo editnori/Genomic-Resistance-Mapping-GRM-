@@ -93,7 +93,7 @@ def create_command(
     return " ".join(filter(lambda x: x != "", command))
 
 
-def split_dataset(
+def split_command(
     kover_path: str,
     dataset: str,
     id: str,
@@ -111,8 +111,8 @@ def split_dataset(
         f"--dataset {to_linux_path(dataset)}",
         f"--id {id}",
         f"--train-size {train_size}" if train_size else "",
-        f"--train-ids {train_ids}" if train_ids else "",
-        f"--test-ids {test_ids}" if test_ids else "",
+        f"--train-ids {to_linux_path(train_ids)}" if train_ids else "",
+        f"--test-ids {to_linux_path(test_ids)}" if test_ids else "",
         f"--folds {folds}",
         f"--random-seed {random_seed}" if random_seed else "",
         "-x" if x else "",
@@ -122,7 +122,7 @@ def split_dataset(
     return " ".join(filter(lambda x: x != "", command))
 
 
-def info_dataset(
+def info_command(
     kover_path: str,
     dataset: str,
     a: bool = False,
@@ -200,7 +200,7 @@ def scm_command(
         f"--split {split}",
         f"--model-type {model_type}",
         f"--p {' '.join([str(n) for n in p])}",
-        f"--kmer-blacklist {kmer_blacklist}" if kmer_blacklist else "",
+        f"--kmer-blacklist {to_linux_path(kmer_blacklist)}" if kmer_blacklist else "",
         f"--max-rules {max_rules}" if max_rules else "",
         f"--max-equiv-rules {max_equiv_rules}" if max_equiv_rules else "",
         f"--hp-choice {hp_choice}",
@@ -209,7 +209,7 @@ def scm_command(
         else "",
         f"--random-seed {random_seed}" if random_seed else "",
         f"--n-cpu {n_cpu}" if n_cpu else "",
-        f"--output-dir {output_dir}" if output_dir else "",
+        f"--output-dir {to_linux_path(output_dir)}" if output_dir else "",
         "-x" if x else "",
         "-v" if v else "",
     )
@@ -236,19 +236,19 @@ def tree_command(
     command = (
         to_linux_path(kover_path),
         "learn tree",
-        f"--dataset {dataset}",
+        f"--dataset {to_linux_path(dataset)}",
         f"--split {split}",
         f"--criterion {criterion}",
         f"--max-depth {max_depth}",
         f"--min-samples-split {min_samples_split}",
         f"--class-importance {class_importance}",
-        f"--kmer-blacklist {kmer_blacklist}" if kmer_blacklist else "",
+        f"--kmer-blacklist {to_linux_path(kmer_blacklist)}" if kmer_blacklist else "",
         f"--hp-choice {hp_choice}",
         f"--bound-max-genome-size {bound_max_genome_size}"
         if bound_max_genome_size
         else "",
         f"--n-cpu {n_cpu}",
-        f"--output-dir {output_dir}" if output_dir else "",
+        f"--output-dir {to_linux_path(output_dir)}" if output_dir else "",
         "-x" if x else "",
         "-v" if v else "",
     )

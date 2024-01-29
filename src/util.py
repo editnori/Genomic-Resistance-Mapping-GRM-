@@ -149,7 +149,7 @@ def run_bash_command(command: str) -> Optional[Popen]:
 @threaded
 def enqueue_output(out: IO, queue: Queue, tag: Optional[str] = None):
     """Credit: https://stackoverflow.com/a/4896288"""
-    for line in iter(out.readline, b""):
+    for line in out:
         queue.put((tag, line))
     out.close()
 
@@ -185,12 +185,17 @@ def display_process_output(process: Popen, output_target: CTkTextbox = None):
     enqueue_output(process.stdout, messages, Tag.NORMAL)
     enqueue_output(process.stderr, messages, Tag.ERROR)
 
-    while process.poll() is None:
+    has_messages = True
+
+    while (process.poll() is None) or has_messages:
         try:
-            tag, message = messages.get(timeout=1)
+            has_messages = True
+
+            tag, message = messages.get(timeout=0.1)
+
             if output_target:
                 update_cmd_output(message, output_target, tag)
             else:
                 print(f"{tag}: {message}", end="")
         except Empty:
-            pass
+            has_messages = False

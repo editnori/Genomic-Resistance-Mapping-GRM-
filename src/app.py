@@ -1701,7 +1701,7 @@ class App(ctk.CTk):
             command=lambda: self.update_entry(
                 self.dataset_split_frame_dataset_path,
                 util.select_file(
-                    filetypes=[("TSV Files", "*.tsv")],
+                    filetypes=[("Kover Files", "*.kover")],
                     title="Select Dataset File",
                 ),
                 self.dataset_split_validate_ui,
@@ -1732,7 +1732,7 @@ class App(ctk.CTk):
             command=lambda: self.update_entry(
                 self.dataset_split_frame_train_ids_path,
                 util.select_file(
-                    filetypes=[("TSV Files", "*.tsv")],
+                    filetypes=[("All Files", "*.*")],
                     title="Select Train IDs File",
                 ),
                 self.dataset_split_validate_ui,
@@ -1763,7 +1763,7 @@ class App(ctk.CTk):
             command=lambda: self.update_entry(
                 self.dataset_split_frame_test_ids_path,
                 util.select_file(
-                    filetypes=[("TSV Files", "*.tsv")],
+                    filetypes=[("All Files", "*.*")],
                     title="Select Test IDs File",
                 ),
                 self.dataset_split_validate_ui,
@@ -1873,7 +1873,7 @@ class App(ctk.CTk):
 
         self.dataset_split_control_panel_IDs_checkbox = ctk.CTkCheckBox(
             master=self.dataset_split_control_panel_checkboxes,
-            text="IDs paths",
+            text="Select IDs",
             command=self.dataset_split_validate_ui,
         )
 
@@ -1896,13 +1896,26 @@ class App(ctk.CTk):
             master=self.dataset_split_frame.control_panel_frame,
             validate="key",
             validatecommand=(
-                self.register(lambda new_value: True if new_value.isdigit() else False),
+                self.register(
+                    lambda new_value: True
+                    if not new_value or new_value.isdigit()
+                    else False
+                ),
                 "%P",
             ),
         )
 
         self.dataset_split_control_panel_seed_entry.grid(
             row=8, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_split_control_panel_seed_entry.bind(
+            "<FocusOut>",
+            lambda _: util.force_insertable_value(
+                0, self.dataset_split_control_panel_seed_entry
+            )
+            if not self.dataset_split_control_panel_seed_entry.get()
+            else None,
         )
 
         util.force_insertable_value(0, self.dataset_split_control_panel_seed_entry)
@@ -1920,19 +1933,18 @@ class App(ctk.CTk):
             row=8, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
-        self.dataset_split_frame_create_dataset_button = ctk.CTkButton(
+        self.dataset_split_frame_split_dataset_button = ctk.CTkButton(
             master=self.dataset_split_frame.control_panel_frame,
             text="Split Dataset",
-            command=self.create_dataset,
-            state=tk.DISABLED,
+            command=self.split_dataset,
         )
 
-        self.dataset_split_frame_create_dataset_button.grid(
+        self.dataset_split_frame_split_dataset_button.grid(
             row=9, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
-        self.dataset_split_frame_create_dataset_button_hover = Hovertip(
-            self.dataset_split_frame_create_dataset_button,
+        self.dataset_split_frame_split_dataset_button_hover = Hovertip(
+            self.dataset_split_frame_split_dataset_button,
             "",
         )
 
@@ -2180,13 +2192,14 @@ class App(ctk.CTk):
         self.cmd_output3.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
 
     def dataset_split_validate_ui(self, event=None):
-        self.dataset_split_frame_create_dataset_button_hover.text = ""
+        self.dataset_split_frame_split_dataset_button_hover.text = ""
 
         failed = False
 
         if self.dataset_split_control_panel_IDs_checkbox.get():
             self.dataset_split_control_panel_train_ids_button.configure(state=tk.NORMAL)
             self.dataset_split_control_panel_test_ids_button.configure(state=tk.NORMAL)
+            self.dataset_split_frame_train_size_spinbox.configure(state=tk.DISABLED)
         else:
             self.dataset_split_control_panel_train_ids_button.configure(
                 state=tk.DISABLED
@@ -2194,6 +2207,7 @@ class App(ctk.CTk):
             self.dataset_split_control_panel_test_ids_button.configure(
                 state=tk.DISABLED
             )
+            self.dataset_split_frame_train_size_spinbox.configure(state=tk.NORMAL)
 
         if self.dataset_split_control_panel_fold_checkbox.get():
             self.dataset_split_frame_fold_spinbox.configure(state=tk.NORMAL)
@@ -2201,7 +2215,7 @@ class App(ctk.CTk):
             self.dataset_split_frame_fold_spinbox.configure(state=tk.DISABLED)
 
         if not self.dataset_split_frame_dataset_path.get():
-            self.dataset_split_frame_create_dataset_button_hover.text += (
+            self.dataset_split_frame_split_dataset_button_hover.text += (
                 "• select dataset directory.\n"
             )
             failed = True
@@ -2209,22 +2223,22 @@ class App(ctk.CTk):
             self.dataset_split_frame_train_ids_path.get()
             and self.dataset_split_frame_test_ids_path.get()
         ):
-            self.dataset_split_frame_create_dataset_button_hover.text += "• select either both train IDs and test IDs files or disable IDs path.\n"
+            self.dataset_split_frame_split_dataset_button_hover.text += "• select either both train IDs and test IDs files or disable IDs path.\n"
             failed = True
         if not self.dataset_split_control_panel_id_entry.get():
-            self.dataset_split_frame_create_dataset_button_hover.text += "• enter ID.\n"
+            self.dataset_split_frame_split_dataset_button_hover.text += "• enter ID.\n"
             failed = True
 
-        self.dataset_split_frame_create_dataset_button_hover.text = (
-            self.dataset_split_frame_create_dataset_button_hover.text.strip("\n")
+        self.dataset_split_frame_split_dataset_button_hover.text = (
+            self.dataset_split_frame_split_dataset_button_hover.text.strip("\n")
         )
 
         if failed:
-            self.dataset_split_frame_create_dataset_button_hover.enable()
-            self.dataset_split_frame_create_dataset_button.configure(state=tk.DISABLED)
+            self.dataset_split_frame_split_dataset_button_hover.enable()
+            self.dataset_split_frame_split_dataset_button.configure(state=tk.DISABLED)
         else:
-            self.dataset_split_frame_create_dataset_button_hover.disable()
-            self.dataset_split_frame_create_dataset_button.configure(state=tk.NORMAL)
+            self.dataset_split_frame_split_dataset_button_hover.disable()
+            self.dataset_split_frame_split_dataset_button.configure(state=tk.NORMAL)
 
     def update_entry(
         self, entry: ctk.CTkEntry, value: str, validate_function: callable = None
@@ -2397,86 +2411,80 @@ class App(ctk.CTk):
                 # Enable the button after the dataset creation process is complete
                 self.koverlearn_btn.configure(text="learn", state=tk.NORMAL)
 
-    def split_error_check(self):
-        # Check if dataset entry is filled
-        if not self.selected_kover.get():
-            self.display_error_message("Please select kover dataset.")
-            return False
-
-        # Check if output entry is filled
-        if not self.output_dir.get():
-            self.display_error_message("Please select an output directory path.")
-            return False
-
-        # Check if trainids and testids are required and filled
-        if self.trainvar.get() == "yes":
-            if not self.trainids_entry.get():
-                self.display_error_message("Please select a train IDs file.")
-                return False
-
-        if self.trainvar.get() == "yes":
-            if not self.testids_entry.get():
-                self.display_error_message("Please select a test IDs file.")
-                return False
-
-        # Check if random seed entry is filled
-        if not self.randomseedentry.get():
-            self.display_error_message("Please enter a random seed.")
-            return False
-        if not self.uniqueidentry.get():
-            self.display_error_message("Please enter a unique splitid.")
-            return False
-
-        # Additional checks as needed...
-
-        # If all checks passed, return True
-        return True
-
     def display_error_message(self, message):
         # Use messagebox.showerror to display an error message
         messagebox.showerror("Error", message)
 
     @threaded
     def split_dataset(self):
-        if self.split_error_check():
-            # Get values from GUI variables and save them in respective variables
-            self.split_btn.configure(text="splitting", state=tk.DISABLED)
-            koverdataset_path = self.selected_kover.get()
-            koverdataset_path = koverdataset_path.replace("\\", "/")
-            koverdataset_path = koverdataset_path.replace("C:", "/mnt/c")
-            output_path = self.output_dir.get()
-            output_path = output_path.replace("\\", "/")
-            output_path = output_path.replace("C:", "/mnt/c")
-            train_size = float(self.trainsize_spinbox.get()) / 100.0
-            use_train_ids = self.trainvar.get()
-            folds = self.foldvar.get()
-            random_seed = (
-                int(self.randomseedentry.get()) if self.randomseedentry.get() else None
-            )
-            train_ids_path = (
-                self.trainids_entry.get() if use_train_ids == "yes" else None
-            )
-            test_ids_path = self.testids_entry.get() if use_train_ids == "yes" else None
-            unique_split_id = self.uniqueidentry.get()
-            splitoutput = os.path.join(output_path, "split_DATASET.kover")
-            if use_train_ids == "no":
-                command = KoverDatasetCreator.split_dataset(
-                    self,
-                    koverdataset_path,
-                    unique_split_id,
-                    train_size,
-                    folds,
-                    random_seed,
+        try:
+            train_path = None
+            test_path = None
+            train_size = None
+            ID = self.dataset_split_control_panel_id_entry.get()
+            folds = 0
+            if self.dataset_split_control_panel_fold_checkbox.get():
+                folds = self.dataset_split_frame_fold_spinbox.get()
+
+            if self.dataset_split_control_panel_IDs_checkbox.get():
+                train_path = self.dataset_split_frame_train_ids_path.get()
+                test_path = self.dataset_split_frame_test_ids_path.get()
+            else:
+                train_size = (
+                    float(self.dataset_split_frame_train_size_spinbox.get()) / 100
                 )
-                process = Popen(
-                    command,
-                    shell=True,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    universal_newlines=True,
+
+            command = kover.split_command(
+                Path.KOVER,
+                self.dataset_split_frame_dataset_path.get(),
+                ID,
+                train_size,
+                train_path,
+                test_path,
+                folds,
+                self.dataset_split_control_panel_seed_entry.get(),
+                True,
+                False,
+            )
+
+            process = util.run_bash_command(command)
+
+            self.dataset_split_frame_split_dataset_button.configure(
+                text="Cancel",
+                command=lambda: self.cancel_process(
+                    process, self.dataset_split_frame.cmd_output
+                ),
+            )
+
+            self.clear_cmd_output(self.dataset_split_frame.cmd_output)
+
+            util.update_cmd_output(
+                "Processing dataset split request...\n\n",
+                self.dataset_split_frame.cmd_output,
+            )
+
+            util.display_process_output(process, self.dataset_split_frame.cmd_output)
+
+            if process.returncode == 0:
+                util.update_cmd_output(
+                    "\nDataset split completed successfully.",
+                    self.dataset_split_frame.cmd_output,
+                    Tag.SUCCESS,
                 )
-                util.display_process_output(process, self.cmd_output2)
-                self.split_btn.configure(text="split dataset", state=tk.NORMAL)
+            else:
+                util.update_cmd_output(
+                    "\nDataset split failed.",
+                    self.dataset_split_frame.cmd_output,
+                    Tag.ERROR,
+                )
+
+        except Exception as e:
+            messagebox.showerror("Error", e)
+            traceback.print_exc()
+        finally:
+            self.dataset_split_frame_split_dataset_button.configure(
+                text="Split Dataset", command=self.split_dataset
+            )
 
     @threaded
     def create_dataset(self):
@@ -2528,7 +2536,7 @@ class App(ctk.CTk):
             self.clear_cmd_output(self.dataset_creation_frame.cmd_output)
 
             util.update_cmd_output(
-                "Processing dataset creation request...\n",
+                "Processing dataset creation request...\n\n",
                 self.dataset_creation_frame.cmd_output,
             )
 
