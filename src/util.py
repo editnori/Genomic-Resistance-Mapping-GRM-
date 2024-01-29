@@ -1,13 +1,13 @@
 from subprocess import PIPE, Popen
-from tkinter import messagebox, END, Spinbox
-from customtkinter import CTkEntry
+from tkinter import messagebox, NORMAL, DISABLED, END, Spinbox
+from customtkinter import CTkEntry, CTkTextbox
 from threading import Thread
 from traceback import print_exc
 import os
 import re
 from concurrent.futures import Future
 from typing import IO, Iterable, Optional
-from queue import Queue
+from queue import Queue, Empty
 
 from customtkinter import filedialog
 
@@ -167,3 +167,30 @@ def force_insertable_value(
     spinbox.delete(0, END)
     spinbox.insert(0, new_value)
     spinbox.configure(validate=validation)
+
+
+def update_cmd_output(message: str, output_target: CTkTextbox, *tags: str):
+    output_target.configure(state=NORMAL)
+    is_at_end = output_target.yview()[1] > 0.95
+    output_target.insert(END, message, tags)
+    if is_at_end:
+        output_target.see(END)
+    output_target.configure(state=DISABLED)
+    output_target.update_idletasks()
+
+
+def display_process_output(process: Popen, output_target: CTkTextbox = None):
+    messages = Queue()
+
+    enqueue_output(process.stdout, messages, Tag.NORMAL)
+    enqueue_output(process.stderr, messages, Tag.ERROR)
+
+    while process.poll() is None:
+        try:
+            tag, message = messages.get(timeout=1)
+            if output_target:
+                update_cmd_output(message, output_target, tag)
+            else:
+                print(f"{tag}: {message}", end="")
+        except Empty:
+            pass

@@ -1204,7 +1204,7 @@ class App(ctk.CTk):
         ]
 
         if not input_files:
-            self.update_cmd_output(
+            util.update_cmd_output(
                 "No .fna files found in the selected dataset folder.",
                 self.preprocessing_frame_control.cmd_output,
             )
@@ -1220,7 +1220,7 @@ class App(ctk.CTk):
         )
 
         try:
-            self.update_cmd_output(
+            util.update_cmd_output(
                 "Running Ray Surveyor...\n", self.preprocessing_frame_control.cmd_output
             )
 
@@ -1236,32 +1236,32 @@ class App(ctk.CTk):
                 ),
             )
 
-            self.display_process_output(
+            util.display_process_output(
                 preprocessing_process, self.preprocessing_frame_control.cmd_output
             )
 
             if preprocessing_process.poll() == 0:
-                self.update_cmd_output(
+                util.update_cmd_output(
                     f"\nRay Surveyor completed successfully.\n\nOutput stored in: {output_directory}",
                     self.preprocessing_frame_control.cmd_output,
                     Tag.SUCCESS,
                 )
             else:
-                self.update_cmd_output(
+                util.update_cmd_output(
                     "\n\nProcess cancelled.",
                     self.preprocessing_frame_control.cmd_output,
                     Tag.ERROR,
                 )
         except CalledProcessError as e:
-            self.update_cmd_output(
+            util.update_cmd_output(
                 "Ray Surveyor encountered an error.",
                 self.preprocessing_frame_control.cmd_output,
                 Tag.ERROR,
             )
-            self.update_cmd_output(
+            util.update_cmd_output(
                 e.stdout, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
-            self.update_cmd_output(
+            util.update_cmd_output(
                 e.stderr, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
         finally:
@@ -1281,7 +1281,7 @@ class App(ctk.CTk):
         config_path = f"{output_directory}/dsk_output"
 
         try:
-            self.update_cmd_output(
+            util.update_cmd_output(
                 "Running DSK...\n", self.preprocessing_frame_control.cmd_output
             )
 
@@ -1300,32 +1300,32 @@ class App(ctk.CTk):
                 ),
             )
 
-            self.display_process_output(
+            util.display_process_output(
                 preprocessing_process, self.preprocessing_frame_control.cmd_output
             )
 
             if preprocessing_process.poll() == 0:
-                self.update_cmd_output(
+                util.update_cmd_output(
                     f"\nDSK completed successfully.\n\nOutput stored in: {output_directory}",
                     self.preprocessing_frame_control.cmd_output,
                     Tag.SUCCESS,
                 )
             else:
-                self.update_cmd_output(
+                util.update_cmd_output(
                     "\n\nProcess cancelled.",
                     self.preprocessing_frame_control.cmd_output,
                     Tag.ERROR,
                 )
         except CalledProcessError as e:
-            self.update_cmd_output(
+            util.update_cmd_output(
                 "DSK encountered an error.",
                 self.preprocessing_frame_control.cmd_output,
                 Tag.ERROR,
             )
-            self.update_cmd_output(
+            util.update_cmd_output(
                 e.stdout, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
-            self.update_cmd_output(
+            util.update_cmd_output(
                 e.stderr, self.preprocessing_frame_control.cmd_output, Tag.ERROR
             )
         finally:
@@ -1408,7 +1408,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame.control_panel_frame.grid_rowconfigure(
-            tuple(range(9)), pad=20
+            tuple(range(10)), pad=20
         )
         self.dataset_creation_frame.control_panel_frame.grid_columnconfigure(
             0, weight=1, uniform="column"
@@ -1576,13 +1576,40 @@ class App(ctk.CTk):
         )
         self.dataset_creation_frame_compression_spinbox.set_default_value(4)
 
+        self.dataset_creation_control_panel_kmer_min_abundance_label = ctk.CTkLabel(
+            master=self.dataset_creation_frame.control_panel_frame,
+            text="Enter Minimum K-mer Abundance (1-100)",
+            font=self.default_font(15),
+        )
+
+        self.dataset_creation_control_panel_kmer_min_abundance_label.grid(
+            row=6, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_creation_control_panel_kmer_min_abundance_spinbox = Spinbox(
+            master=self.dataset_creation_frame.control_panel_frame,
+            from_=1,
+            to=100,
+            wrap=True,
+            buttonbackground="#2b2b2b",
+            font=self.default_font(10),
+        )
+
+        self.dataset_creation_control_panel_kmer_min_abundance_spinbox.grid(
+            row=7, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_creation_control_panel_kmer_min_abundance_spinbox.set_default_value(
+            1
+        )
+
         self.dataset_creation_control_panel_singleton_kmer_checkbox = ctk.CTkCheckBox(
             master=self.dataset_creation_frame.control_panel_frame,
             text="Singleton K-mers",
         )
 
         self.dataset_creation_control_panel_singleton_kmer_checkbox.grid(
-            row=6, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+            row=8, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
         self.dataset_creation_control_panel_cpu_label = ctk.CTkLabel(
@@ -1619,7 +1646,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame_create_dataset_button.grid(
-            row=8, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+            row=9, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
         self.dataset_creation_frame_create_dataset_button_hover = Hovertip(
@@ -2360,7 +2387,7 @@ class App(ctk.CTk):
                     stderr=PIPE,
                     universal_newlines=True,
                 )
-                self.display_process_output(process, self.cmd_output3)
+                util.display_process_output(process, self.cmd_output3)
 
             except Exception as e:
                 # Handle any exceptions that occur during the dataset creation process
@@ -2448,7 +2475,7 @@ class App(ctk.CTk):
                     stderr=PIPE,
                     universal_newlines=True,
                 )
-                self.display_process_output(process, self.cmd_output2)
+                util.display_process_output(process, self.cmd_output2)
                 self.split_btn.configure(text="split dataset", state=tk.NORMAL)
 
     @threaded
@@ -2480,6 +2507,7 @@ class App(ctk.CTk):
                 self.dataset_creation_frame_description_path.get(),
                 self.dataset_creation_frame_metadata_path.get(),
                 self.dataset_creation_frame_kmer_size_spinbox.get(),
+                self.dataset_creation_control_panel_kmer_min_abundance_spinbox.get(),
                 self.dataset_creation_control_panel_singleton_kmer_checkbox.get(),
                 self.dataset_creation_control_panel_cpu_spinbox.get(),
                 self.dataset_creation_frame_compression_spinbox.get(),
@@ -2499,21 +2527,21 @@ class App(ctk.CTk):
 
             self.clear_cmd_output(self.dataset_creation_frame.cmd_output)
 
-            self.update_cmd_output(
+            util.update_cmd_output(
                 "Processing dataset creation request...\n",
                 self.dataset_creation_frame.cmd_output,
             )
 
-            self.display_process_output(process, self.dataset_creation_frame.cmd_output)
+            util.display_process_output(process, self.dataset_creation_frame.cmd_output)
 
             if process.returncode == 0:
-                self.update_cmd_output(
+                util.update_cmd_output(
                     "\nDataset creation completed successfully.",
                     self.dataset_creation_frame.cmd_output,
                     Tag.SUCCESS,
                 )
             else:
-                self.update_cmd_output(
+                util.update_cmd_output(
                     "\nDataset creation failed.",
                     self.dataset_creation_frame.cmd_output,
                     Tag.ERROR,
@@ -2953,33 +2981,6 @@ class App(ctk.CTk):
                 )
 
         return survey_conf_path
-
-    def display_process_output(self, process: Popen, output_target=None):
-        messages = util.Queue()
-
-        util.enqueue_output(process.stdout, messages, Tag.NORMAL)
-        util.enqueue_output(process.stderr, messages, Tag.ERROR)
-
-        while process.poll() is None:
-            try:
-                tag, message = messages.get(timeout=1)
-                if output_target:
-                    self.update_cmd_output(message, output_target, tag)
-                else:
-                    print(f"{tag}: {message}", end="")
-            except util.Empty:
-                pass
-
-    def update_cmd_output(
-        self, message: str, output_target: ctk.CTkTextbox, *tags: str
-    ):
-        output_target.configure(state=tk.NORMAL)
-        is_at_end = output_target.yview()[1] > 0.95
-        output_target.insert(tk.END, message, tags)
-        if is_at_end:
-            output_target.see(tk.END)
-        output_target.configure(state=tk.DISABLED)
-        output_target.update_idletasks()
 
     def clear_cmd_output(self, output_target: ctk.CTkTextbox):
         output_target.configure(state=tk.NORMAL)
