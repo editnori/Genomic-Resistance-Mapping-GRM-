@@ -1950,6 +1950,160 @@ class App(ctk.CTk):
 
         self.dataset_split_validate_ui()
 
+        self.kover_frame_tab_view.add("View dataset")
+        self.dataset_view_frame = ControlFrame(
+            self.kover_frame_tab_view.tab("View dataset")
+        )
+
+        self.dataset_view_frame.control_panel.grid(
+            row=2,
+            column=0,
+            sticky=tk.NSEW,
+            rowspan=3,
+            columnspan=2,
+            padx=40,
+            pady=40,
+        )
+
+        self.dataset_view_frame.cmd_output_frame.grid(
+            row=0, column=4, rowspan=10, columnspan=6, sticky=tk.NSEW, padx=40, pady=40
+        )
+
+        self.dataset_view_frame_a_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame,
+            text="All",
+            text_color="red",
+        )
+        self.dataset_view_frame_a_checkbox.grid(
+            row=0, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        Hovertip(
+            self.dataset_view_frame_a_checkbox,
+            "Warning:\n\nincludes kmer count",
+            fg="red",
+        )
+        self.dataset_view_frame_genome_type_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="Genome Type"
+        )
+        self.dataset_view_frame_genome_type_checkbox.select()
+        self.dataset_view_frame_genome_type_checkbox.grid(
+            row=0, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_genome_source_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="Genome Source"
+        )
+        self.dataset_view_frame_genome_source_checkbox.select()
+        self.dataset_view_frame_genome_source_checkbox.grid(
+            row=0, column=2, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_genome_ids_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="Genome IDs"
+        )
+        self.dataset_view_frame_genome_ids_checkbox.select()
+        self.dataset_view_frame_genome_ids_checkbox.grid(
+            row=1, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_genome_count_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="Genome Count"
+        )
+        self.dataset_view_frame_genome_count_checkbox.select()
+        self.dataset_view_frame_genome_count_checkbox.grid(
+            row=1, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_kmers_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame,
+            text="Kmers",
+            text_color="red",
+        )
+        self.dataset_view_frame_kmers_checkbox.grid(
+            row=1, column=2, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        Hovertip(
+            self.dataset_view_frame_kmers_checkbox,
+            "Warning:\n\nprints all kmers which could be in millions",
+            fg="red",
+        )
+        self.dataset_view_frame_kmer_len_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="Kmer Length"
+        )
+        self.dataset_view_frame_kmer_len_checkbox.select()
+        self.dataset_view_frame_kmer_len_checkbox.grid(
+            row=2, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_kmer_count_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="Kmer Count"
+        )
+        self.dataset_view_frame_kmer_count_checkbox.select()
+        self.dataset_view_frame_kmer_count_checkbox.grid(
+            row=2, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_phenotype_description_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame,
+            text="Phenotype Description",
+        )
+        self.dataset_view_frame_phenotype_description_checkbox.select()
+        self.dataset_view_frame_phenotype_description_checkbox.grid(
+            row=2, column=2, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_phenotype_metadata_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame,
+            text="Phenotype Metadata",
+        )
+        self.dataset_view_frame_phenotype_metadata_checkbox.select()
+        self.dataset_view_frame_phenotype_metadata_checkbox.grid(
+            row=3, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_phenotype_tags_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="Phenotype Tags"
+        )
+        self.dataset_view_frame_phenotype_tags_checkbox.select()
+        self.dataset_view_frame_phenotype_tags_checkbox.grid(
+            row=3, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_splits_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="Splits"
+        )
+        self.dataset_view_frame_splits_checkbox.select()
+        self.dataset_view_frame_splits_checkbox.grid(
+            row=3, column=2, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_uuid_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="UUID"
+        )
+        self.dataset_view_frame_uuid_checkbox.select()
+        self.dataset_view_frame_uuid_checkbox.grid(
+            row=4, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_compression_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame, text="Compression"
+        )
+        self.dataset_view_frame_compression_checkbox.select()
+        self.dataset_view_frame_compression_checkbox.grid(
+            row=4, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.dataset_view_frame_classification_type_checkbox = ctk.CTkCheckBox(
+            master=self.dataset_view_frame.control_panel_frame,
+            text="Classification Type",
+        )
+        self.dataset_view_frame_classification_type_checkbox.select()
+        self.dataset_view_frame_classification_type_checkbox.grid(
+            row=4, column=2, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+
+        self.dataset_view_frame_view_dataset_button = ctk.CTkButton(
+            master=self.dataset_view_frame.control_panel_frame,
+            text="View Dataset",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
+            command=self.view_dataset,
+        )
+
+        self.dataset_view_frame_view_dataset_button.grid(
+            row=5, column=0, sticky=tk.W, padx=20, pady=(100, 0)
+        )
+
         self.kover_frame_tab_view.add("Kover learn")
         self.kover_learn_frame = ControlFrame(
             self.kover_frame_tab_view.tab("Kover learn")
@@ -2461,6 +2615,7 @@ class App(ctk.CTk):
             util.update_cmd_output(
                 "Processing dataset split request...\n\n",
                 self.dataset_split_frame.cmd_output,
+                Tag.SYSTEM,
             )
 
             util.display_process_output(process, self.dataset_split_frame.cmd_output)
@@ -2484,6 +2639,78 @@ class App(ctk.CTk):
         finally:
             self.dataset_split_frame_split_dataset_button.configure(
                 text="Split Dataset", command=self.split_dataset
+            )
+
+    @threaded
+    def view_dataset(self):
+        try:
+            dataset = util.select_file(
+                filetypes=[("Kover Files", "*.kover")], title="Select Dataset File"
+            )
+
+            if not dataset:
+                return
+
+            command = kover.info_command(
+                Path.KOVER,
+                dataset,
+                self.dataset_view_frame_a_checkbox.get(),
+                self.dataset_view_frame_genome_type_checkbox.get(),
+                self.dataset_view_frame_genome_source_checkbox.get(),
+                self.dataset_view_frame_genome_ids_checkbox.get(),
+                self.dataset_view_frame_genome_count_checkbox.get(),
+                self.dataset_view_frame_kmers_checkbox.get(),
+                self.dataset_view_frame_kmer_len_checkbox.get(),
+                self.dataset_view_frame_kmer_count_checkbox.get(),
+                self.dataset_view_frame_phenotype_description_checkbox.get(),
+                self.dataset_view_frame_phenotype_metadata_checkbox.get(),
+                self.dataset_view_frame_phenotype_tags_checkbox.get(),
+                self.dataset_view_frame_splits_checkbox.get(),
+                self.dataset_view_frame_uuid_checkbox.get(),
+                self.dataset_view_frame_compression_checkbox.get(),
+                self.dataset_view_frame_classification_type_checkbox.get(),
+            )
+
+            process = util.run_bash_command(command)
+
+            self.dataset_view_frame_view_dataset_button.configure(
+                text="Cancel",
+                command=lambda: self.cancel_process(
+                    process, self.dataset_view_frame.cmd_output
+                ),
+            )
+
+            self.clear_cmd_output(self.dataset_view_frame.cmd_output)
+
+            util.update_cmd_output(
+                "Processing dataset view request...\n\n",
+                self.dataset_view_frame.cmd_output,
+                Tag.SYSTEM,
+            )
+
+            util.display_process_output(
+                process, self.dataset_view_frame.cmd_output, 1, 100
+            )
+
+            if process.returncode == 0:
+                util.update_cmd_output(
+                    "\n\nDataset view completed successfully.",
+                    self.dataset_view_frame.cmd_output,
+                    Tag.SUCCESS,
+                )
+            else:
+                util.update_cmd_output(
+                    "\n\nDataset view failed.",
+                    self.dataset_view_frame.cmd_output,
+                    Tag.ERROR,
+                )
+
+        except Exception as e:
+            messagebox.showerror("Error", e)
+            traceback.print_exc()
+        finally:
+            self.dataset_view_frame_view_dataset_button.configure(
+                text="View Dataset", command=self.view_dataset
             )
 
     @threaded

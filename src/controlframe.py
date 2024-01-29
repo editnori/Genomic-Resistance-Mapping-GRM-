@@ -71,3 +71,4 @@ class ControlFrame(ctk.CTkFrame):
 
         self.cmd_output.tag_config(Tag.ERROR, foreground="red")
         self.cmd_output.tag_config(Tag.SUCCESS, foreground="green")
+        self.cmd_output.tag_config(Tag.SYSTEM, foreground="yellow")

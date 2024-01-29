@@ -3,17 +3,22 @@ from tkinter import Label, LEFT, SOLID
 
 
 class Hovertip(OnHoverTooltipBase):
-    def __init__(self, anchor_widget, text, hover_delay=1000):
+    def __init__(self, anchor_widget, text, hover_delay=1000, **kwargs):
         super().__init__(anchor_widget, hover_delay=hover_delay)
         self.text = text
+        self.kwargs = kwargs
 
     def showcontents(self):
+        if "justify" not in self.kwargs:
+            self.kwargs["justify"] = LEFT
+        if "relief" not in self.kwargs:
+            self.kwargs["relief"] = SOLID
+        if "borderwidth" not in self.kwargs:
+            self.kwargs["borderwidth"] = 1
         label = Label(
             self.tipwindow,
             text=self.text,
-            justify=LEFT,
-            relief=SOLID,
-            borderwidth=1,
+            **self.kwargs,
         )
         label.pack()
 

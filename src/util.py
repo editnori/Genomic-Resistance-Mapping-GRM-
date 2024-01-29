@@ -1,3 +1,4 @@
+from time import sleep
 from subprocess import PIPE, Popen
 from tkinter import messagebox, NORMAL, DISABLED, END, Spinbox
 from customtkinter import CTkEntry, CTkTextbox
@@ -19,6 +20,7 @@ LF = b"\n"
 class Tag(str):
     ERROR = "error"
     SUCCESS = "success"
+    SYSTEM = "system"
     NORMAL = None
 
 
@@ -179,23 +181,53 @@ def update_cmd_output(message: str, output_target: CTkTextbox, *tags: str):
     output_target.update_idletasks()
 
 
-def display_process_output(process: Popen, output_target: CTkTextbox = None):
+def display_process_output(
+    process: Popen,
+    output_target: CTkTextbox = None,
+    refresh_timeout: int = 0,
+    message_buffer: int = 0,
+):
     messages = Queue()
+    message_buffer = max(1, message_buffer)
 
     enqueue_output(process.stdout, messages, Tag.NORMAL)
     enqueue_output(process.stderr, messages, Tag.ERROR)
 
     has_messages = True
+    pack_string = ""
+    message_count = 0
+    not_closed = True
 
     while (process.poll() is None) or has_messages:
         try:
+            if not_closed and process.poll() is not None:
+                refresh_timeout = 0
+                message_buffer = messages.qsize()
+                not_closed = False
             has_messages = True
-
             tag, message = messages.get(timeout=0.1)
-
-            if output_target:
-                update_cmd_output(message, output_target, tag)
+            if message_count % message_buffer:
+                pack_string += message
             else:
-                print(f"{tag}: {message}", end="")
+                if message_buffer > 1:
+                    if output_target:
+                        update_cmd_output(pack_string, output_target, Tag.NORMAL)
+                    else:
+                        print(pack_string, end="")
+                else:
+                    if output_target:
+                        update_cmd_output(message, output_target, tag)
+                    else:
+                        print(f"{tag}: {message}", end="")
+                pack_string = ""
+            message_count += 1
         except Empty:
             has_messages = False
+
+        sleep(refresh_timeout / 1000)
+
+    if pack_string:
+        if output_target:
+            update_cmd_output(pack_string, output_target, Tag.NORMAL)
+        else:
+            print(pack_string, end="")
