@@ -185,7 +185,7 @@ class App(ctk.CTk):
             command=lambda: self.set_page(Page.DATA_COLLECTION_PAGE),
         )
 
-        self.data_collection_frame_button.grid(row=1, column=0, sticky="ew")
+        self.data_collection_frame_button.grid(row=1, column=0, sticky=tk.EW)
 
         self.preprocessing_frame_button = ctk.CTkButton(
             self.navigation_frame,
@@ -200,7 +200,7 @@ class App(ctk.CTk):
             command=lambda: self.set_page(Page.PREPROCESSING_PAGE),
         )
 
-        self.preprocessing_frame_button.grid(row=2, column=0, sticky="ew")
+        self.preprocessing_frame_button.grid(row=2, column=0, sticky=tk.EW)
 
         self.kover_frame_button = ctk.CTkButton(
             self.navigation_frame,
@@ -215,7 +215,7 @@ class App(ctk.CTk):
             command=lambda: self.set_page(Page.KOVER_LEARN_PAGE),
         )
 
-        self.kover_frame_button.grid(row=3, column=0, sticky="ew")
+        self.kover_frame_button.grid(row=3, column=0, sticky=tk.EW)
 
         self.analysis_frame_button = ctk.CTkButton(
             self.navigation_frame,
@@ -230,7 +230,7 @@ class App(ctk.CTk):
             command=lambda: self.set_page(Page.ANALYSIS_PAGE),
         )
 
-        self.analysis_frame_button.grid(row=4, column=0, sticky="ew")
+        self.analysis_frame_button.grid(row=4, column=0, sticky=tk.EW)
 
         self.appearance_mode_menu = ctk.CTkOptionMenu(
             self.navigation_frame,
@@ -1414,7 +1414,7 @@ class App(ctk.CTk):
             0, weight=1, uniform="column"
         )
         self.dataset_creation_frame.control_panel_frame.grid_columnconfigure(
-            1, weight=2, uniform="column"
+            1, weight=1, uniform="column"
         )
 
         self.dataset_type = ["contigs", "kmer matrix"]
@@ -1460,7 +1460,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_control_panel_dataset_button.grid(
-            row=1, column=0, sticky=tk.EW, padx=(20, 50)
+            row=1, column=0, sticky=tk.W, padx=(20, 50)
         )
 
         self.dataset_creation_frame_dataset_path.grid(
@@ -1491,7 +1491,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_control_panel_description_button.grid(
-            row=2, column=0, sticky=tk.EW, padx=(20, 50), pady=0
+            row=2, column=0, sticky=tk.W, padx=(20, 50), pady=0
         )
 
         self.dataset_creation_frame_description_path.grid(
@@ -1522,7 +1522,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_control_panel_metadata_button.grid(
-            row=3, column=0, sticky=tk.EW, padx=(20, 50), pady=0
+            row=3, column=0, sticky=tk.W, padx=(20, 50), pady=0
         )
 
         self.dataset_creation_frame_metadata_path.grid(
@@ -1682,7 +1682,7 @@ class App(ctk.CTk):
             0, weight=1, uniform="column"
         )
         self.dataset_split_frame.control_panel_frame.grid_columnconfigure(
-            1, weight=2, uniform="column"
+            1, weight=1, uniform="column"
         )
 
         self.dataset_split_frame_dataset_path = ctk.CTkEntry(
@@ -1709,11 +1709,11 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_control_panel_dataset_button.grid(
-            row=1, column=0, sticky=tk.EW, padx=(20, 50)
+            row=1, column=0, sticky=tk.W, padx=(20, 50), pady=(20, 0)
         )
 
         self.dataset_split_frame_dataset_path.grid(
-            row=1, column=1, sticky=tk.EW, padx=20
+            row=1, column=1, sticky=tk.EW, padx=20, pady=(20, 0)
         )
 
         self.dataset_split_frame_train_ids_path = ctk.CTkEntry(
@@ -1740,7 +1740,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_control_panel_train_ids_button.grid(
-            row=2, column=0, sticky=tk.EW, padx=(20, 50), pady=0
+            row=2, column=0, sticky=tk.W, padx=(20, 50), pady=0
         )
 
         self.dataset_split_frame_train_ids_path.grid(
@@ -1771,7 +1771,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_control_panel_test_ids_button.grid(
-            row=3, column=0, sticky=tk.EW, padx=(20, 50), pady=0
+            row=3, column=0, sticky=tk.W, padx=(20, 50), pady=0
         )
 
         self.dataset_split_frame_test_ids_path.grid(
@@ -1979,7 +1979,7 @@ class App(ctk.CTk):
         )
         Hovertip(
             self.dataset_view_frame_a_checkbox,
-            "Warning:\n\nincludes kmer count",
+            "Warning:\n\nincludes kmers",
             fg="red",
         )
         self.dataset_view_frame_genome_type_checkbox = ctk.CTkCheckBox(
