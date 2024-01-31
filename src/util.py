@@ -185,7 +185,7 @@ def display_process_output(
     process: Popen,
     output_target: CTkTextbox = None,
     refresh_timeout: int = 0,
-    message_buffer: int = 0,
+    message_buffer: int = 1,
 ):
     messages = Queue()
     message_buffer = max(1, message_buffer)
@@ -193,22 +193,14 @@ def display_process_output(
     enqueue_output(process.stdout, messages, Tag.NORMAL)
     enqueue_output(process.stderr, messages, Tag.ERROR)
 
-    has_messages = True
     pack_string = ""
     message_count = 0
-    not_closed = True
 
-    while (process.poll() is None) or has_messages:
+    while (result := process.poll()) is None:
         try:
-            if not_closed and process.poll() is not None:
-                refresh_timeout = 0
-                message_buffer = messages.qsize()
-                not_closed = False
-            has_messages = True
             tag, message = messages.get(timeout=0.1)
-            if message_count % message_buffer:
-                pack_string += message
-            else:
+            pack_string += message
+            if not message_count % message_buffer:
                 if message_buffer > 1:
                     if output_target:
                         update_cmd_output(pack_string, output_target, Tag.NORMAL)
@@ -216,18 +208,24 @@ def display_process_output(
                         print(pack_string, end="")
                 else:
                     if output_target:
-                        update_cmd_output(message, output_target, tag)
+                        update_cmd_output(pack_string, output_target, tag)
                     else:
-                        print(f"{tag}: {message}", end="")
+                        print(f"{tag}: {pack_string}", end="")
                 pack_string = ""
             message_count += 1
         except Empty:
-            has_messages = False
+            pass
 
         sleep(refresh_timeout / 1000)
 
+    while messages.qsize() > 0:
+        tag, message = messages.get()
+        pack_string += message
+
     if pack_string:
         if output_target:
-            update_cmd_output(pack_string, output_target, Tag.NORMAL)
+            update_cmd_output(
+                pack_string, output_target, Tag.ERROR if result else Tag.NORMAL
+            )
         else:
             print(pack_string, end="")

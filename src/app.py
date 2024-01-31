@@ -88,7 +88,13 @@ class App(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        self.bind_all("<Button-1>", lambda event: event.widget.focus_set())
+        def on_click(event=None):
+            try:
+                event.widget.focus_set()
+            except Exception:
+                pass
+
+        self.bind_all("<Button-1>", on_click)
 
     def end_app(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
@@ -894,7 +900,10 @@ class App(ctk.CTk):
         self.download_button4 = ctk.CTkButton(
             master=amr_frame,
             text="load amr list",
-            corner_radius=6,
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
             command=self.load_amr_data,
         )
         self.download_button4.place(x=50, y=60)
@@ -1003,6 +1012,10 @@ class App(ctk.CTk):
         self.save_table_button = ctk.CTkButton(
             master=frame6,
             text="Export to .tsv",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
             command=self.save_to_tsv,
             state=tk.DISABLED,
         )
@@ -1119,6 +1132,10 @@ class App(ctk.CTk):
         self.preprocessing_frame_control_panel_run_button = ctk.CTkButton(
             master=self.preprocessing_frame_control.control_panel_frame,
             text=f"Run {self.preprocessing_frame_control_panel_kmer_tool_selector.get()}",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
             command=self.run_preprocessing,
         )
         self.preprocessing_frame_control_panel_run_button.pack(
@@ -1411,10 +1428,7 @@ class App(ctk.CTk):
             tuple(range(10)), pad=20
         )
         self.dataset_creation_frame.control_panel_frame.grid_columnconfigure(
-            0, weight=1, uniform="column"
-        )
-        self.dataset_creation_frame.control_panel_frame.grid_columnconfigure(
-            1, weight=1, uniform="column"
+            tuple(range(2)), weight=1, uniform="column"
         )
 
         self.dataset_type = ["contigs", "kmer matrix"]
@@ -1529,18 +1543,47 @@ class App(ctk.CTk):
             row=3, column=1, sticky=tk.EW, padx=20, pady=0
         )
 
+        self.dataset_creation_frame_temp_path = ctk.CTkEntry(
+            master=self.dataset_creation_frame.control_panel_frame,
+            fg_color="transparent",
+            state=tk.DISABLED,
+        )
+
+        self.dataset_creation_control_panel_temp_button = ctk.CTkButton(
+            master=self.dataset_creation_frame.control_panel_frame,
+            text="Pick Temp Directory",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
+            command=lambda: self.update_entry(
+                self.dataset_creation_frame_temp_path,
+                util.select_directory(
+                    title="Select Temp Directory",
+                ),
+            ),
+        )
+
+        self.dataset_creation_control_panel_temp_button.grid(
+            row=4, column=0, sticky=tk.W, padx=(20, 50), pady=0
+        )
+
+        self.dataset_creation_frame_temp_path.grid(
+            row=4, column=1, sticky=tk.EW, padx=20, pady=0
+        )
+
         self.dataset_creation_frame_kmer_size_label = ctk.CTkLabel(
             master=self.dataset_creation_frame.control_panel_frame,
-            text="Enter K-mer size (max 128)",
+            text="K-mer size",
             font=self.default_font(15),
         )
         self.dataset_creation_frame_kmer_size_label.grid(
-            row=4, column=0, sticky=tk.W, padx=20
+            row=5, column=0, sticky=tk.W, padx=20
         )
 
         self.dataset_creation_frame_kmer_size_spinbox = Spinbox(
             master=self.dataset_creation_frame.control_panel_frame,
-            from_=1,
+            from_=3,
             to=128,
             increment=2,
             wrap=True,
@@ -1549,18 +1592,18 @@ class App(ctk.CTk):
             font=self.default_font(10),
         )
         self.dataset_creation_frame_kmer_size_spinbox.grid(
-            row=5, column=0, sticky=tk.W, padx=20, pady=0
+            row=6, column=0, sticky=tk.W, padx=20, pady=0
         )
 
         self.dataset_creation_frame_kmer_size_spinbox.set_default_value(31)
 
         self.dataset_creation_frame_compression_label = ctk.CTkLabel(
             master=self.dataset_creation_frame.control_panel_frame,
-            text="Enter Compression Level (0-9)",
+            text="Compression Level",
             font=self.default_font(15),
         )
         self.dataset_creation_frame_compression_label.grid(
-            row=4, column=1, sticky=tk.W, padx=20
+            row=5, column=1, sticky=tk.W, padx=20
         )
 
         self.dataset_creation_frame_compression_spinbox = Spinbox(
@@ -1572,19 +1615,19 @@ class App(ctk.CTk):
             font=self.default_font(10),
         )
         self.dataset_creation_frame_compression_spinbox.grid(
-            row=5, column=1, sticky=tk.W, padx=20
+            row=6, column=1, sticky=tk.W, padx=20
         )
         self.dataset_creation_frame_compression_spinbox.set_default_value(4)
 
         self.dataset_creation_control_panel_kmer_min_abundance_label = ctk.CTkLabel(
             master=self.dataset_creation_frame.control_panel_frame,
-            text="Enter Minimum K-mer Abundance (1-100)",
+            text="Minimum K-mer Abundance",
             font=self.default_font(15),
         )
 
-        self.dataset_creation_control_panel_kmer_min_abundance_label.grid(
-            row=6, column=0, sticky=tk.W, padx=20, pady=(20, 0)
-        )
+        # self.dataset_creation_control_panel_kmer_min_abundance_label.grid(
+        #     row=7, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        # )
 
         self.dataset_creation_control_panel_kmer_min_abundance_spinbox = Spinbox(
             master=self.dataset_creation_frame.control_panel_frame,
@@ -1595,9 +1638,9 @@ class App(ctk.CTk):
             font=self.default_font(10),
         )
 
-        self.dataset_creation_control_panel_kmer_min_abundance_spinbox.grid(
-            row=7, column=0, sticky=tk.W, padx=20, pady=(20, 0)
-        )
+        # self.dataset_creation_control_panel_kmer_min_abundance_spinbox.grid(
+        #     row=8, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        # )
 
         self.dataset_creation_control_panel_kmer_min_abundance_spinbox.set_default_value(
             1
@@ -1609,17 +1652,17 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_control_panel_singleton_kmer_checkbox.grid(
-            row=8, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+            row=9, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
         self.dataset_creation_control_panel_cpu_label = ctk.CTkLabel(
             master=self.dataset_creation_frame.control_panel_frame,
-            text="Enter number of CPUs (1-64)",
+            text="CPUs",
             font=self.default_font(15),
         )
 
         self.dataset_creation_control_panel_cpu_label.grid(
-            row=6, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+            row=7, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
         self.dataset_creation_control_panel_cpu_spinbox = Spinbox(
@@ -1633,7 +1676,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_control_panel_cpu_spinbox.grid(
-            row=7, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+            row=8, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
         self.dataset_creation_control_panel_cpu_spinbox.set_default_value(4)
@@ -1641,12 +1684,16 @@ class App(ctk.CTk):
         self.dataset_creation_frame_create_dataset_button = ctk.CTkButton(
             master=self.dataset_creation_frame.control_panel_frame,
             text="Create Dataset",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
             command=self.create_dataset,
             state=tk.DISABLED,
         )
 
         self.dataset_creation_frame_create_dataset_button.grid(
-            row=9, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+            row=10, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
         self.dataset_creation_frame_create_dataset_button_hover = Hovertip(
@@ -1679,10 +1726,7 @@ class App(ctk.CTk):
             tuple(range(6)), pad=20
         )
         self.dataset_split_frame.control_panel_frame.grid_columnconfigure(
-            0, weight=1, uniform="column"
-        )
-        self.dataset_split_frame.control_panel_frame.grid_columnconfigure(
-            1, weight=1, uniform="column"
+            tuple(range(2)), weight=1, uniform="column"
         )
 
         self.dataset_split_frame_dataset_path = ctk.CTkEntry(
@@ -1780,7 +1824,7 @@ class App(ctk.CTk):
 
         self.dataset_split_frame_kmer_size_label = ctk.CTkLabel(
             master=self.dataset_split_frame.control_panel_frame,
-            text="Enter train size (%)",
+            text="Train size (%)",
             font=self.default_font(15),
         )
         self.dataset_split_frame_kmer_size_label.grid(
@@ -1805,7 +1849,7 @@ class App(ctk.CTk):
 
         self.dataset_split_control_panel_cpu_label = ctk.CTkLabel(
             master=self.dataset_split_frame.control_panel_frame,
-            text="Enter number of CPUs (1-64)",
+            text="CPUs",
             font=self.default_font(15),
         )
 
@@ -1831,7 +1875,7 @@ class App(ctk.CTk):
 
         self.dataset_split_frame_fold_label = ctk.CTkLabel(
             master=self.dataset_split_frame.control_panel_frame,
-            text="Enter number of folds (2-100)",
+            text="Folds",
             font=self.default_font(15),
         )
         self.dataset_split_frame_fold_label.grid(
@@ -1922,7 +1966,7 @@ class App(ctk.CTk):
 
         self.dataset_split_control_panel_seed_button = ctk.CTkButton(
             master=self.dataset_split_frame.control_panel_frame,
-            text="Generate random seed",
+            text="Random seed",
             font=self.default_font(12),
             command=lambda: self.generate_random_seed(
                 self.dataset_split_control_panel_seed_entry
@@ -1936,6 +1980,10 @@ class App(ctk.CTk):
         self.dataset_split_frame_split_dataset_button = ctk.CTkButton(
             master=self.dataset_split_frame.control_panel_frame,
             text="Split Dataset",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
             command=self.split_dataset,
         )
 
@@ -2108,242 +2156,599 @@ class App(ctk.CTk):
         self.kover_learn_frame = ControlFrame(
             self.kover_frame_tab_view.tab("Kover learn")
         )
-        return  # OLD CODE
-        create_dataset_frame = ctk.CTkFrame(
-            kover_tab_view.tab("kover learn"),
-            width=700,
-            height=self.screen_height - 230,
-            corner_radius=15,
-            border_width=2,
-        )
-        create_dataset_frame.place(x=50, y=20)
 
-        l1 = ctk.CTkLabel(
-            master=create_dataset_frame, text="Kover learn", font=self.default_font(20)
+        self.kover_learn_frame.control_panel_frame.grid_rowconfigure(
+            tuple(range(13)), pad=20
         )
-        l1.place(x=50, y=45)
+        self.kover_learn_frame.control_panel_frame.grid_columnconfigure(
+            tuple(range(2)), weight=1, uniform="column", minsize=300
+        )
 
-        # Selection option for dataset type
-        dataset_type_label = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Select kover learn Type",
+        self.kover_models = ["SCM", "CART"]
+
+        self.kover_learn_frame_control_panel_kover_models_selector = ttk.Combobox(
+            master=self.kover_learn_frame.control_panel_frame,
+            values=self.kover_models,
+            state="readonly",
+        )
+
+        self.kover_learn_frame_control_panel_kover_models_selector.bind(
+            "<<ComboboxSelected>>", self.on_kover_model_selected
+        )
+
+        self.kover_learn_frame_control_panel_kover_models_selector.current(0)
+
+        self.kover_learn_frame_dataset_path = ctk.CTkEntry(
+            master=self.kover_learn_frame.control_panel_frame,
+            fg_color="transparent",
+            state=tk.DISABLED,
+        )
+
+        self.kover_learn_control_panel_dataset_button = ctk.CTkButton(
+            master=self.kover_learn_frame.control_panel_frame,
+            text="Pick dataset",
+            fg_color="transparent",
+            border_width=1,
+            border_color="#FFCC70",
+            font=self.default_font(12),
+            command=self.kover_select_dataset,
+        )
+
+        self.kover_learn_frame_control_panel_split_selector = ttk.Combobox(
+            master=self.kover_learn_frame.control_panel_frame,
+            state=tk.DISABLED,
+        )
+        self.kover_learn_frame_control_panel_split_selector.set("Split ID")
+
+        self.kover_learn_frame_control_panel_split_selector.bind(
+            "<<ComboboxSelected>>", lambda e: e.widget.selection_clear()
+        )
+
+        self.kover_model_types = (
+            kover.ModelType.CONJUNCTION,
+            kover.ModelType.DISJUNCTION,
+            kover.ModelType.BOTH,
+        )
+        self.kover_criteria = (
+            kover.Criterion.GINI,
+            kover.Criterion.CROSS_ENTROPY,
+        )
+        self.kover_learn_frame_control_panel_model_criterion_selector = ttk.Combobox(
+            master=self.kover_learn_frame.control_panel_frame,
+            state="readonly",
+        )
+
+        self.kover_learn_frame_control_panel_model_criterion_selector.bind(
+            "<<ComboboxSelected>>", lambda e: e.widget.selection_clear()
+        )
+
+        self.kover_learn_control_panel_max_rules_max_depth_label = ctk.CTkLabel(
+            master=self.kover_learn_frame.control_panel_frame,
             font=self.default_font(15),
         )
-        dataset_type_label.place(x=50, y=100)
-        self.learn_type_var = tk.StringVar(value="SCM")  # Set a default value
-        learn_type_options = ["SCM", "CART"]
-        learn_type_menu = ttk.Combobox(
-            master=create_dataset_frame,
-            textvariable=self.learn_type_var,
-            values=learn_type_options,
-            state="readonly",
+
+        self.kover_learn_control_panel_max_rules_max_depth_spinbox = Spinbox(
+            master=self.kover_learn_frame.control_panel_frame,
+            to=100,
+            wrap=True,
+            buttonbackground="#2b2b2b",
+            disabledbackground="#595959",
+            font=self.default_font(10),
         )
-        learn_type_menu.place(x=50, y=150)
-        learn_type_menu.bind("<<ComboboxSelected>>", self.on_learn_type_selected)
-        # Buttons to pick dataset, output directory, phenotype description, phenotype metadata
-        self.pickdataset_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
-            text="Pick Dataset",
-            corner_radius=6,
+        self.kover_learn_control_panel_max_equiv_rules_min_samples_split_label = (
+            ctk.CTkLabel(
+                master=self.kover_learn_frame.control_panel_frame,
+                font=self.default_font(15),
+            )
+        )
+
+        self.kover_learn_control_panel_max_equiv_rules_min_samples_split_spinbox = (
+            Spinbox(
+                master=self.kover_learn_frame.control_panel_frame,
+                wrap=True,
+                buttonbackground="#2b2b2b",
+                disabledbackground="#595959",
+                font=self.default_font(10),
+            )
+        )
+
+        self.kover_learn_control_panel_p_class_importance_entry = ctk.CTkEntry(
+            master=self.kover_learn_frame.control_panel_frame,
+        )
+
+        self.kover_learn_control_panel_p_class_importance_entry.bind(
+            "<KeyRelease>", self.kover_learn_validate_ui
+        )
+
+        self.kover_learn_frame_kmer_blacklist_path = ctk.CTkEntry(
+            master=self.kover_learn_frame.control_panel_frame,
+            fg_color="transparent",
+            state=tk.DISABLED,
+        )
+
+        self.kover_learn_control_panel_kmer_blacklist_button = ctk.CTkButton(
+            master=self.kover_learn_frame.control_panel_frame,
+            text="Pick Kmer Blacklist",
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            command=self.pickkover,
+            font=self.default_font(12),
+            command=lambda: self.update_entry(
+                self.kover_learn_frame_kmer_blacklist_path,
+                util.select_file(
+                    filetypes=[("Fasta Files", "*.fa")],
+                    title="Select Kmer Blacklist File",
+                ),
+            ),
         )
-        self.pickdataset_btn.place(x=50, y=200)
 
-        self.pickdataset_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=380,
-            placeholder_text="Dataset path",
-            textvariable=self.selected_kover,
+        self.hp_choices = [kover.HpChoice.BOUND, kover.HpChoice.CV, kover.HpChoice.NONE]
+        self.kover_learn_frame_control_panel_hp_selector = ttk.Combobox(
+            master=self.kover_learn_frame.control_panel_frame,
+            values=self.hp_choices,
+            state="readonly",
         )
-        self.pickdataset_entry.place(x=280, y=200)
+        self.kover_learn_frame_control_panel_hp_selector.current(1)
 
-        self.pickoutput_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=220,
-            text="Pick Output Directory",
-            corner_radius=6,
+        def on_hp_selected(event=None):
+            event.widget.selection_clear()
+            if event.widget.get() == kover.HpChoice.BOUND:
+                self.kover_learn_control_panel_bound_max_genome_size_spinbox.configure(
+                    state=tk.NORMAL
+                )
+            else:
+                self.kover_learn_control_panel_bound_max_genome_size_spinbox.configure(
+                    state=tk.DISABLED
+                )
+
+        self.kover_learn_frame_control_panel_hp_selector.bind(
+            "<<ComboboxSelected>>", on_hp_selected
+        )
+
+        self.kover_learn_control_panel_bound_max_genome_size_label = ctk.CTkLabel(
+            master=self.kover_learn_frame.control_panel_frame,
+            text="Max genome size (0 for Default)",
+            font=self.default_font(15),
+            anchor=tk.W,
+        )
+
+        self.kover_learn_control_panel_bound_max_genome_size_spinbox = Spinbox(
+            master=self.kover_learn_frame.control_panel_frame,
+            from_=0,
+            to=100,
+            wrap=True,
+            buttonbackground="#2b2b2b",
+            disabledbackground="#595959",
+            font=self.default_font(10),
+            state=tk.DISABLED,
+        )
+
+        self.kover_learn_control_panel_bound_max_genome_size_spinbox.set_default_value(
+            0
+        )
+
+        self.kover_learn_control_panel_seed_entry = ctk.CTkEntry(
+            master=self.kover_learn_frame.control_panel_frame,
+            validate="key",
+            validatecommand=(
+                self.register(
+                    lambda new_value: True
+                    if not new_value or new_value.isdigit()
+                    else False
+                ),
+                "%P",
+            ),
+        )
+
+        self.kover_learn_control_panel_seed_button = ctk.CTkButton(
+            master=self.kover_learn_frame.control_panel_frame,
+            text="Random seed",
+            font=self.default_font(12),
+            command=lambda: self.generate_random_seed(
+                self.kover_learn_control_panel_seed_entry
+            ),
+        )
+
+        self.kover_learn_control_panel_cpu_label = ctk.CTkLabel(
+            master=self.kover_learn_frame.control_panel_frame,
+            text="CPUs",
+            font=self.default_font(15),
+        )
+
+        self.kover_learn_control_panel_cpu_spinbox = Spinbox(
+            master=self.kover_learn_frame.control_panel_frame,
+            from_=1,
+            to=64,
+            wrap=True,
+            buttonbackground="#2b2b2b",
+            disabledbackground="#595959",
+            font=self.default_font(10),
+        )
+
+        self.kover_learn_control_panel_cpu_spinbox.set_default_value(4)
+
+        self.kover_learn_frame_Initiate_button = ctk.CTkButton(
+            master=self.kover_learn_frame.control_panel_frame,
+            text="Learn",
             fg_color="transparent",
             border_width=1,
             border_color="#FFCC70",
-            # command=self.browse_output_dir,
-        )
-        self.pickoutput_btn.place(x=50, y=250)
-
-        self.pickoutput_entry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=380,
-            placeholder_text="Output directory path",
-            textvariable=self.output_dir,
-        )
-        self.pickoutput_entry.place(x=280, y=250)
-
-        self.hyperparameterlabel = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Hyper-parameter:",
             font=self.default_font(12),
-        )
-        self.hyperparameterlabel.place(x=50, y=300)
-        self.hyperparameterentry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=300,
-            placeholder_text="Enter hyperparamters eg: 0.1 0.178 0.316",
-        )
-        self.hyperparameterentry.place(x=180, y=300)
-
-        self.modellabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Model type:", font=self.default_font(12)
-        )
-        self.modellabel.place(x=50, y=350)
-        self.model_type_var = tk.StringVar(value="conjunction")  # Set a default value
-        self.model_type_options = ["conjunction", "disjunction"]
-        self.model_type_menu = ttk.Combobox(
-            master=create_dataset_frame,
-            textvariable=self.model_type_var,
-            values=self.model_type_options,
-            width=10,
-            state="readonly",
-        )
-        self.model_type_menu.place(x=130, y=350)
-
-        splitidentifierlabel = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Split identifier",
-            font=self.default_font(12),
-        )
-        splitidentifierlabel.place(x=280, y=350)
-        self.splitidentifierentry = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=200,
-            placeholder_text="Enter split identifier in the dataset",
+            command=self.Initiate_kover_learn,
         )
 
-        self.splitidentifierentry.place(x=370, y=350)
-
-        self.maxrulelabel = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Maximum rules :",
-            font=self.default_font(12),
-        )
-        self.maxrulelabel.place(x=50, y=400)
-        self.maxrules_var = tk.StringVar(value=1000)
-        self.maxrules_spinbox = Spinbox(
-            master=create_dataset_frame,
-            from_=1,
-            to=10000,
-            width=5,
-            textvariable=self.maxrules_var,
-            wrap=True,
+        self.kover_learn_frame_Initiate_button_hover = Hovertip(
+            self.kover_learn_frame_Initiate_button,
+            "",
         )
 
-        self.maxrules_spinbox.place(x=150, y=400)
-
-        self.maxequivrulelabel = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Maximum equivalent rules :",
-            font=self.default_font(12),
+        self.kover_learn_frame.control_panel.grid(
+            row=2,
+            column=1,
+            sticky=tk.NSEW,
+            rowspan=3,
+            columnspan=2,
+            padx=40,
+            pady=40,
         )
-        self.maxequivrulelabel.place(x=280, y=400)
-        self.maxequivrules_var = tk.StringVar(value=1000)
-        self.maxequivrules_spinbox = Spinbox(
-            master=create_dataset_frame,
-            from_=1,
-            to=10000,
-            width=5,
-            textvariable=self.maxequivrules_var,
-            wrap=True,
+        self.kover_learn_frame.cmd_output_frame.grid(
+            row=0, column=3, rowspan=10, columnspan=8, sticky=tk.NSEW, padx=40, pady=40
         )
 
-        self.maxequivrules_spinbox.place(x=460, y=400)
-
-        hptypelabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Hp choice :", font=self.default_font(12)
+        self.kover_learn_frame_control_panel_kover_models_selector.grid(
+            row=0, column=0, sticky=tk.W, padx=(20, 50), pady=(20, 0)
         )
-        hptypelabel.place(x=50, y=450)
-        self.hp_type_var = tk.StringVar(value="none")  # Set a default value
-        self.hp_type_options = ["bound", "cv", "none"]
-        self.hp_type_menu = ttk.Combobox(
-            master=create_dataset_frame,
-            textvariable=self.hp_type_var,
-            values=self.hp_type_options,
-            width=10,
-            state="readonly",
+        self.kover_learn_control_panel_p_class_importance_entry.grid(
+            row=0, column=1, sticky=tk.EW, padx=20, pady=(20, 0)
         )
-        self.hp_type_menu.place(x=130, y=450)
-
-        self.maxboundsize = ctk.CTkLabel(
-            master=create_dataset_frame,
-            text="Max bound genome size :",
-            font=self.default_font(12),
+        self.kover_learn_control_panel_dataset_button.grid(
+            row=1, column=0, sticky=tk.W, padx=(20, 50), pady=(20, 0)
         )
-
-        self.maxboundsize_var = tk.StringVar()
-        self.maxboundsize_spinbox = Spinbox(
-            master=create_dataset_frame,
-            from_=1,
-            to=10000,
-            width=5,
-            textvariable=self.maxboundsize_var,
-            wrap=True,
+        self.kover_learn_frame_dataset_path.grid(
+            row=1, column=1, sticky=tk.EW, padx=20, pady=(20, 0)
         )
-
-        self.hp_type_menu.bind("<<ComboboxSelected>>", self.toggle_max_bound_widgets)
-
-        randomseedlabel = ctk.CTkLabel(
-            master=create_dataset_frame, text="Random seed", font=self.default_font(12)
+        self.kover_learn_control_panel_kmer_blacklist_button.grid(
+            row=2, column=0, sticky=tk.W, padx=(20, 50), pady=(20, 0)
         )
-        randomseedlabel.place(x=50, y=500)
-        self.randomseedentry2 = ctk.CTkEntry(
-            master=create_dataset_frame,
-            width=100,
-            placeholder_text="random seed",
+        self.kover_learn_frame_kmer_blacklist_path.grid(
+            row=2, column=1, sticky=tk.EW, padx=20, pady=(20, 0)
         )
-
-        self.randomseedentry2.place(x=180, y=500)
-        randomseed_btn2 = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=150,
-            text="Generate random seed",
-            command=lambda: self.generate_random_seed(self.randomseedentry2),
+        self.kover_learn_frame_control_panel_hp_selector.grid(
+            row=3, column=0, sticky=tk.W, padx=(20, 50), pady=(20, 0)
         )
-        randomseed_btn2.place(x=300, y=500)
-
-        self.koverlearn_btn = ctk.CTkButton(
-            master=create_dataset_frame,
-            width=150,
-            text="kover learn",
-            command=self.kover_learn_thread,
+        self.kover_learn_frame_control_panel_model_criterion_selector.grid(
+            row=3, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
-        self.koverlearn_btn.place(x=200, y=630)
-
-        outputscreen = ctk.CTkFrame(
-            kover_tab_view.tab("kover learn"),
-            width=650,
-            height=650,
-            corner_radius=15,
-            border_width=2,
+        self.kover_learn_control_panel_bound_max_genome_size_label.grid(
+            row=4, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.kover_learn_control_panel_max_rules_max_depth_label.grid(
+            row=4, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.kover_learn_control_panel_bound_max_genome_size_spinbox.grid(
+            row=5, column=0, sticky=tk.W, padx=20
+        )
+        self.kover_learn_control_panel_max_rules_max_depth_spinbox.grid(
+            row=5, column=1, sticky=tk.W, padx=20
+        )
+        self.kover_learn_control_panel_cpu_label.grid(
+            row=6, column=0, sticky=tk.W, padx=20
+        )
+        self.kover_learn_control_panel_max_equiv_rules_min_samples_split_label.grid(
+            row=6, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.kover_learn_control_panel_cpu_spinbox.grid(
+            row=7, column=0, sticky=tk.W, padx=20
+        )
+        self.kover_learn_control_panel_max_equiv_rules_min_samples_split_spinbox.grid(
+            row=7, column=1, sticky=tk.W, padx=20
+        )
+        self.kover_learn_control_panel_seed_button.grid(
+            row=8, column=0, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.kover_learn_control_panel_seed_entry.grid(
+            row=8, column=1, sticky=tk.W, padx=20, pady=(20, 0)
+        )
+        self.kover_learn_frame_control_panel_split_selector.grid(
+            row=9, column=0, sticky=tk.W, padx=(20, 50), pady=(20, 0)
+        )
+        self.kover_learn_frame_Initiate_button.grid(
+            row=9, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
-        outputscreen.place(x=800, y=20)
-        outputscreen.grid_propagate(False)
-        outputscreen.grid_rowconfigure(0, weight=1)
-        outputscreen.grid_columnconfigure(0, weight=1)
+        self.on_kover_model_selected()
+        self.kover_learn_validate_ui()
 
-        self.cmd_output3 = tk.Text(
-            master=outputscreen,
-            height=650,
-            width=650,
-            state="disabled",
-            font=self.custom_font,
+    def kover_learn_validate_ui(self, event=None):
+        self.kover_learn_frame_Initiate_button_hover.text = ""
+        failed = False
+
+        if not self.kover_learn_control_panel_p_class_importance_entry.get():
+            self.kover_learn_control_panel_p_class_importance_entry.configure(
+                border_color="#565B5E"
+            )
+        elif (
+            re.match(
+                r"^(\d+.\d+ )*(\d+.\d+){1}$",
+                self.kover_learn_control_panel_p_class_importance_entry.get(),
+            )
+            is not None
+        ):
+            self.kover_learn_control_panel_p_class_importance_entry.configure(
+                border_color="green"
+            )
+        else:
+            failed = True
+            self.kover_learn_control_panel_p_class_importance_entry.configure(
+                border_color="red"
+            )
+            self.kover_learn_frame_Initiate_button_hover.text += (
+                "• Invalid Hyper Parameter.\n"
+            )
+
+        if not self.kover_learn_frame_dataset_path.get():
+            failed = True
+            self.kover_learn_frame_Initiate_button_hover.text += "• Invalid Split ID.\n"
+
+        self.kover_learn_frame_Initiate_button_hover.text = (
+            self.kover_learn_frame_Initiate_button_hover.text.strip("\n")
         )
 
-        self.scrollbar3 = tk.Scrollbar(outputscreen, command=self.cmd_output3.yview)
-        self.scrollbar3.grid(row=0, column=1, sticky=tk.NSEW)
-        self.cmd_output3["yscrollcommand"] = self.scrollbar3.set
-        self.cmd_output3.grid(row=0, column=0, sticky=tk.NSEW, padx=2, pady=2)
+        if not failed:
+            self.kover_learn_frame_Initiate_button_hover.disable()
+            self.kover_learn_frame_Initiate_button.configure(state=tk.NORMAL)
+        else:
+            self.kover_learn_frame_Initiate_button_hover.enable()
+            self.kover_learn_frame_Initiate_button.configure(state=tk.DISABLED)
+
+    @threaded
+    def Initiate_kover_learn(self):
+        try:
+            output_directory = util.select_directory(title="Select Output Directory")
+
+            if not output_directory:
+                return
+
+            selected_dataset = self.kover_learn_frame_dataset_path.get()
+            blacklist = self.kover_learn_frame_kmer_blacklist_path.get()
+            split = self.kover_learn_frame_control_panel_split_selector.get()
+            max_genome_size = (
+                self.kover_learn_control_panel_bound_max_genome_size_spinbox.get()
+            )
+            cpu = self.kover_learn_control_panel_cpu_spinbox.get()
+            seed = self.kover_learn_control_panel_seed_entry.get()
+            hp_choice = self.kover_learn_frame_control_panel_hp_selector.get()
+            p_class_importance = (
+                self.kover_learn_control_panel_p_class_importance_entry.get()
+            )
+
+            learn_type = (
+                self.kover_learn_frame_control_panel_kover_models_selector.get()
+            )
+            if learn_type == self.kover_models[0]:
+                model_type = (
+                    self.kover_learn_frame_control_panel_model_criterion_selector.get()
+                )
+                max_rules = (
+                    self.kover_learn_control_panel_max_rules_max_depth_spinbox.get()
+                )
+                max_equiv_rules = (
+                    self.kover_learn_control_panel_max_equiv_rules_min_samples_split_spinbox.get()
+                )
+                seed = self.kover_learn_control_panel_seed_entry.get()
+
+                command = kover.scm_command(
+                    Path.KOVER,
+                    selected_dataset,
+                    split,
+                    model_type,
+                    p_class_importance,
+                    max_rules,
+                    max_equiv_rules,
+                    blacklist,
+                    hp_choice,
+                    max_genome_size,
+                    seed,
+                    cpu,
+                    output_directory,
+                    True,
+                    False,
+                )
+
+            elif learn_type == self.kover_models[1]:
+                criterion = (
+                    self.kover_learn_frame_control_panel_model_criterion_selector.get()
+                )
+                max_depth = (
+                    self.kover_learn_control_panel_max_rules_max_depth_spinbox.get()
+                )
+                min_samples_split = (
+                    self.kover_learn_control_panel_max_equiv_rules_min_samples_split_spinbox.get()
+                )
+                cpu = self.kover_learn_control_panel_cpu_spinbox.get()
+
+                command = kover.tree_command(
+                    Path.KOVER,
+                    selected_dataset,
+                    split,
+                    criterion,
+                    max_depth,
+                    min_samples_split,
+                    p_class_importance,
+                    blacklist,
+                    hp_choice,
+                    max_genome_size,
+                    cpu,
+                    output_directory,
+                    True,
+                    False,
+                )
+
+            process = util.run_bash_command(command)
+
+            self.kover_learn_frame_Initiate_button.configure(
+                text="Cancel",
+                command=lambda: self.cancel_process(
+                    process, self.kover_learn_frame.cmd_output
+                ),
+            )
+
+            self.clear_cmd_output(self.kover_learn_frame.cmd_output)
+
+            util.update_cmd_output(
+                "Initializing Kover learn...\n\n",
+                self.kover_learn_frame.cmd_output,
+                Tag.SYSTEM,
+            )
+
+            util.display_process_output(process, self.kover_learn_frame.cmd_output)
+
+            if process.returncode == 0:
+                util.update_cmd_output(
+                    "\nKover learn completed successfully.",
+                    self.kover_learn_frame.cmd_output,
+                    Tag.SUCCESS,
+                )
+            else:
+                util.update_cmd_output(
+                    "\nKover learn failed.",
+                    self.kover_learn_frame.cmd_output,
+                    Tag.ERROR,
+                )
+
+        except Exception as e:
+            messagebox.showerror("Error", e)
+            traceback.print_exc()
+        finally:
+            self.kover_learn_frame_Initiate_button.configure(
+                text="Learn", command=self.Initiate_kover_learn
+            )
+
+    def on_kover_model_selected(self, event=None):
+        self.kover_learn_frame_control_panel_kover_models_selector.selection_clear()
+
+        selected = self.kover_learn_frame_control_panel_kover_models_selector.get()
+
+        self.kover_learn_control_panel_p_class_importance_entry.delete(0, tk.END)
+
+        if selected == self.kover_models[0]:
+            self.kover_learn_control_panel_seed_button.configure(state=tk.NORMAL)
+            self.kover_learn_control_panel_seed_entry.configure(state=tk.NORMAL)
+            self.kover_learn_frame_control_panel_hp_selector.configure(
+                values=self.hp_choices
+            )
+            self.kover_learn_frame_control_panel_model_criterion_selector.configure(
+                values=self.kover_model_types
+            )
+            self.kover_learn_frame_control_panel_model_criterion_selector.current(2)
+            self.kover_learn_control_panel_max_rules_max_depth_label.configure(
+                text="Max rules"
+            )
+            self.kover_learn_control_panel_max_rules_max_depth_spinbox.configure(
+                from_=0
+            )
+            self.kover_learn_control_panel_max_rules_max_depth_spinbox.set_default_value(
+                10
+            )
+            self.kover_learn_control_panel_max_equiv_rules_min_samples_split_label.configure(
+                text="Max equivalent rules (0 for Default)"
+            )
+            self.kover_learn_control_panel_max_equiv_rules_min_samples_split_spinbox.configure(
+                from_=0, to=10000
+            )
+            self.kover_learn_control_panel_max_equiv_rules_min_samples_split_spinbox.set_default_value(
+                5
+            )
+            self.kover_learn_control_panel_p_class_importance_entry.configure(
+                placeholder_text="Trade-off parameter (Ex: 0.1 0.178 0.316 0.562 1.0 ...)"
+            )
+
+        elif selected == self.kover_models[1]:
+            self.kover_learn_control_panel_seed_button.configure(state=tk.DISABLED)
+            self.kover_learn_control_panel_seed_entry.configure(state=tk.DISABLED)
+            self.kover_learn_frame_control_panel_hp_selector.configure(
+                values=self.hp_choices[:-1]
+            )
+            self.kover_learn_frame_control_panel_model_criterion_selector.configure(
+                values=self.kover_criteria
+            )
+            self.kover_learn_frame_control_panel_model_criterion_selector.current(0)
+            self.kover_learn_control_panel_max_rules_max_depth_label.configure(
+                text="Max depth (Default 10)"
+            )
+            self.kover_learn_control_panel_max_rules_max_depth_spinbox.configure(
+                from_=1
+            )
+            self.kover_learn_control_panel_max_rules_max_depth_spinbox.set_default_value(
+                10
+            )
+            self.kover_learn_control_panel_max_equiv_rules_min_samples_split_label.configure(
+                text="Min samples split (Default 2)"
+            )
+            self.kover_learn_control_panel_max_equiv_rules_min_samples_split_spinbox.configure(
+                from_=2, to=100
+            )
+            self.kover_learn_control_panel_max_equiv_rules_min_samples_split_spinbox.set_default_value(
+                2
+            )
+            self.kover_learn_control_panel_p_class_importance_entry.configure(
+                placeholder_text="Class importance (Ex: 0.25 0.5 0.75 1.0)"
+            )
+            if (
+                self.kover_learn_frame_control_panel_hp_selector.get()
+                == kover.HpChoice.NONE
+            ):
+                self.kover_learn_frame_control_panel_hp_selector.current(1)
+                self.kover_learn_control_panel_bound_max_genome_size_spinbox.configure(
+                    state=tk.DISABLED
+                )
+
+    @threaded
+    def kover_select_dataset(self):
+        dataset_path = util.select_file(
+            filetypes=[("Kover Files", "*.kover")], title="Select Dataset File"
+        )
+
+        if not dataset_path:
+            return
+
+        self.clear_cmd_output(self.kover_learn_frame.cmd_output)
+
+        self.kover_learn_frame_control_panel_split_selector.configure(state=tk.DISABLED)
+        self.kover_learn_frame_control_panel_split_selector.set("Split ID")
+        self.kover_learn_control_panel_dataset_button.configure(state=tk.DISABLED)
+
+        util.update_cmd_output(
+            "Fetching splits from dataset...\n\n",
+            self.kover_learn_frame.cmd_output,
+            Tag.SYSTEM,
+        )
+
+        command = kover.info_command(Path.KOVER, dataset_path, splits=True)
+        process = util.run_bash_command(command)
+        output = [s.split()[0] for s in process.stdout.read().splitlines()][1:]
+        split_count = len(output)
+        if split_count == 0:
+            util.update_cmd_output(
+                "No splits in datatset.\n\n",
+                self.kover_learn_frame.cmd_output,
+                Tag.ERROR,
+            )
+        else:
+            self.kover_learn_frame_control_panel_split_selector.configure(
+                values=output, state="readonly"
+            )
+            self.kover_learn_frame_control_panel_split_selector.current(0)
+            util.update_cmd_output(
+                f"Fetched {split_count} split{'s' if split_count > 1 else ''}!\n\n",
+                self.kover_learn_frame.cmd_output,
+                Tag.SUCCESS,
+            )
+            self.update_entry(self.kover_learn_frame_dataset_path, dataset_path)
+
+        self.kover_learn_validate_ui()
+
+        self.kover_learn_control_panel_dataset_button.configure(state=tk.NORMAL)
 
     def dataset_split_validate_ui(self, event=None):
         self.dataset_split_frame_split_dataset_button_hover.text = ""
@@ -2394,16 +2799,15 @@ class App(ctk.CTk):
             self.dataset_split_frame_split_dataset_button_hover.disable()
             self.dataset_split_frame_split_dataset_button.configure(state=tk.NORMAL)
 
-    def update_entry(
-        self, entry: ctk.CTkEntry, value: str, validate_function: callable = None
-    ):
+    def update_entry(self, entry: ctk.CTkEntry, value: str, after: callable = None):
         entry.configure(state=tk.NORMAL)
         entry.delete(0, tk.END)
         if value:
             entry.insert(0, value)
         entry.configure(state=tk.DISABLED)
 
-        validate_function()
+        if after:
+            after()
 
     def dataset_creation_validate_ui(self):
         failed = False
@@ -2746,7 +3150,7 @@ class App(ctk.CTk):
                 self.dataset_creation_control_panel_singleton_kmer_checkbox.get(),
                 self.dataset_creation_control_panel_cpu_spinbox.get(),
                 self.dataset_creation_frame_compression_spinbox.get(),
-                None,
+                self.dataset_creation_frame_temp_path.get(),
                 True,
                 False,
             )
@@ -2792,9 +3196,7 @@ class App(ctk.CTk):
             )
 
     def generate_random_seed(self, seed_entry: ctk.CTkEntry):
-        util.force_insertable_value(
-            random.randint(1, 10000), self.dataset_split_control_panel_seed_entry
-        )
+        util.force_insertable_value(random.randint(1, 10000), seed_entry)
 
     def pick_metatsv_file(self):
         # Open a file dialog for selecting TSV files

@@ -65,6 +65,9 @@ def create_command(
     x: bool = False,
     v: bool = False,
 ):
+    if temp_dir == "":
+        temp_dir = None
+
     command = (
         to_linux_path(kover_path),
         f"dataset create from-{source}",
@@ -85,7 +88,9 @@ def create_command(
         "--singleton-kmers" if singleton_kmers else "",
         f"--n-cpu {n_cpu}" if source != Source.K_MER_MATREX and n_cpu else "",
         f"--compression {compression}" if compression else "",
-        f"--temp-dir {temp_dir}" if source != Source.K_MER_MATREX and temp_dir else "",
+        f"--temp-dir {to_linux_path(temp_dir)}"
+        if source != Source.K_MER_MATREX and temp_dir
+        else "",
         "-x" if x else "",
         "-v" if v else "",
     )
@@ -165,38 +170,48 @@ def info_command(
     return " ".join(filter(lambda x: x != "", command))
 
 
+DEFAULT_P = (
+    0.1,
+    0.178,
+    0.316,
+    0.562,
+    1.0,
+    1.778,
+    3.162,
+    5.623,
+    10.0,
+    999999.0,
+)
+
+
 def scm_command(
     kover_path: str,
     dataset: str,
     split: str,
     model_type: ModelType,
-    p: Annotated[Collection[float | str], MinLen(1)] = (
-        0.1,
-        0.178,
-        0.316,
-        0.562,
-        1.0,
-        1.778,
-        3.162,
-        5.623,
-        10.0,
-        999999.0,
-    ),
-    kmer_blacklist: Optional[str] = DEFAULT,
+    p: Annotated[Collection[float | str], MinLen(1)] = DEFAULT_P,
     max_rules: Optional[str | int] = DEFAULT,
     max_equiv_rules: Optional[str | int] = DEFAULT,
-    hp_choice: Optional[HpChoice] = HpChoice.CV,
-    bound_max_genome_size: Optional[str | int] = DEFAULT,
+    kmer_blacklist: Optional[str] = DEFAULT,
+    hp_choice: HpChoice = HpChoice.CV,
+    bound_max_genome_size: str | int = DEFAULT,
     random_seed: Optional[str | int] = DEFAULT,
-    n_cpu: Optional[str | int] = DEFAULT,
+    n_cpu: str | int = DEFAULT,
     output_dir: Optional[str] = DEFAULT,
     x: bool = False,
     v: bool = False,
 ):
+    if not p:
+        p = DEFAULT_P
+    if max_rules == 0:
+        max_rules = None
+    if max_equiv_rules == 0:
+        max_equiv_rules = None
+
     command = (
         to_linux_path(kover_path),
         "learn scm",
-        f"--dataset {dataset}",
+        f"--dataset {to_linux_path(dataset)}",
         f"--split {split}",
         f"--model-type {model_type}",
         f"--p {' '.join([str(n) for n in p])}",
@@ -217,14 +232,17 @@ def scm_command(
     return " ".join(filter(lambda x: x != "", command))
 
 
+DEFAULT_CLASS_IMPORTANCE = (0.25, 0.5, 0.75, 1.0)
+
+
 def tree_command(
     kover_path: str,
     dataset: str,
     split: str,
     criterion: Criterion = Criterion.GINI,
-    max_depth: str | int = 20,
+    max_depth: str | int = 10,
     min_samples_split: str | int = 2,
-    class_importance: Collection[str | int] = (0.25, 0.5, 0.75, 1.0),
+    class_importance: Collection[str | int] = DEFAULT_CLASS_IMPORTANCE,
     kmer_blacklist: Optional[str] = DEFAULT,
     hp_choice: HpChoice = HpChoice.CV,
     bound_max_genome_size: Optional[str | int] = DEFAULT,
@@ -233,6 +251,9 @@ def tree_command(
     x: bool = False,
     v: bool = False,
 ):
+    if not class_importance:
+        class_importance = DEFAULT_CLASS_IMPORTANCE
+
     command = (
         to_linux_path(kover_path),
         "learn tree",
@@ -241,7 +262,7 @@ def tree_command(
         f"--criterion {criterion}",
         f"--max-depth {max_depth}",
         f"--min-samples-split {min_samples_split}",
-        f"--class-importance {class_importance}",
+        f"--class-importance {' '.join([str(n) for n in class_importance])}",
         f"--kmer-blacklist {to_linux_path(kmer_blacklist)}" if kmer_blacklist else "",
         f"--hp-choice {hp_choice}",
         f"--bound-max-genome-size {bound_max_genome_size}"
