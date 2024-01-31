@@ -18,10 +18,12 @@ class ControlFrame(ctk.CTkFrame):
 
         super().__init__(master, **kwargs)
 
-        self.control_panel = ctk.CTkFrame(
+        self.control_panel = ctk.CTkScrollableFrame(
             master,
             corner_radius=15,
             border_width=2,
+            width=600,
+            height=600,
         )
         self.control_panel.grid(
             row=2, column=2, sticky=tk.NSEW, rowspan=3, columnspan=2, padx=40, pady=40
