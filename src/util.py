@@ -109,6 +109,8 @@ def to_linux_path(path: str) -> str:
     path = path.replace(path[0], path[0].lower(), 1)
     path = re.sub(r"(\w)(:\\)", r"/mnt/\1/", path)
     path = path.replace("\\", "/")
+    if " " in path:
+        path = f'"{path}"'
     return path
 
 
@@ -135,10 +137,10 @@ def run_bash_command(command: str) -> Optional[Popen]:
         return None
 
     process = Popen(
-        f'wsl -e "{to_linux_path(temp_file)}"',
-        universal_newlines=True,
+        f"wsl -e {to_linux_path(temp_file)}",
         stdout=PIPE,
         stderr=PIPE,
+        text=True,
     )
 
     Thread(
@@ -151,13 +153,13 @@ def run_bash_command(command: str) -> Optional[Popen]:
 @threaded
 def enqueue_output(out: IO, queue: Queue, tag: Optional[str] = None):
     """Credit: https://stackoverflow.com/a/4896288"""
-    for line in out:
-        queue.put((tag, line))
+    for token in out:
+        queue.put((tag, token))
     out.close()
 
 
 def sanitize_filename(filename: str) -> str:
-    return filename.replace("/", "-").replace(" ", "-").replace(".", "-")
+    return filename.replace("/", "-").replace(" ", "-").strip(".")
 
 
 def force_insertable_value(
