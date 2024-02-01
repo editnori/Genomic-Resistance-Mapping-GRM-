@@ -245,6 +245,8 @@ class App(ctk.CTk):
         )
 
         self.appearance_mode_menu.grid(row=6, column=0, pady=15, sticky="s")
+        
+        ctk.set_appearance_mode("Dark")
 
     def create_data_collection_page(self):
         self.data_collection_frame = ctk.CTkFrame(self, fg_color="transparent")
