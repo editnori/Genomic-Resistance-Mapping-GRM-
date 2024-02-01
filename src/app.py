@@ -1004,6 +1004,15 @@ class App(ctk.CTk):
 
         self.numeric_phenotypes_checkbox.place(x=220, y=90)
 
+        self.filter_contradictions_checkbox = ctk.CTkCheckBox(
+            master=frame6,
+            text="Filter Contradictions",
+            command=self.update_amr_full,
+            state=tk.DISABLED,
+        )
+
+        self.filter_contradictions_checkbox.place(x=390, y=90)
+
         Hovertip(
             self.numeric_phenotypes_checkbox, "0: Resistant\n1: Susceptible\n2: Other"
         )
@@ -1020,16 +1029,16 @@ class App(ctk.CTk):
             state=tk.DISABLED,
         )
         self.save_table_button.place(x=400, y=50)
-        self.totaldata = ctk.CTkLabel(master=frame6, text="Total phenotypes:")
-        self.totaldata.place(x=400, y=90)
+        self.totaldata = ctk.CTkLabel(master=frame6, text="Total:")
+        self.totaldata.place(x=50, y=120)
         self.totalresistance_label = ctk.CTkLabel(
-            master=frame6, text="Total resistance phenotypes available:"
+            master=frame6, text="Total Resistant:"
         )
-        self.totalresistance_label.place(x=50, y=120)
+        self.totalresistance_label.place(x=220, y=120)
         self.totalsusceptible_label = ctk.CTkLabel(
-            master=frame6, text="Total susceptible phenotypes available:"
+            master=frame6, text="Total Susceptible:"
         )
-        self.totalsusceptible_label.place(x=400, y=120)
+        self.totalsusceptible_label.place(x=390, y=120)
 
         # Create a table to display the results
         columns = [
@@ -3238,6 +3247,7 @@ class App(ctk.CTk):
         self.antibiotic_selection.configure(state=tk.DISABLED)
         self.drop_intermediate_checkbox.configure(state=tk.DISABLED)
         self.numeric_phenotypes_checkbox.configure(state=tk.DISABLED)
+        self.filter_contradictions_checkbox.configure(state=tk.DISABLED)
         self.save_table_button.configure(state=tk.DISABLED)
         amr_metadata_file = util.select_file(filetypes=[("AMR Text Files", "*.txt")])
         if amr_metadata_file:
@@ -3325,6 +3335,7 @@ class App(ctk.CTk):
             self.antibiotic_selection.configure(state="readonly")
             self.drop_intermediate_checkbox.configure(state=tk.NORMAL)
             self.numeric_phenotypes_checkbox.configure(state=tk.NORMAL)
+            self.filter_contradictions_checkbox.configure(state=tk.NORMAL)
             self.save_table_button.configure(state=tk.NORMAL)
 
         self.download_button4.configure(text="load amr list", state=tk.NORMAL)
@@ -3437,13 +3448,9 @@ class App(ctk.CTk):
         self.species_selection.selection_clear()
 
         if len(self.amr_full) > 0:
-            self.totalresistance_label.configure(
-                text="Total resistance phenotypes available: ..."
-            )
-            self.totalsusceptible_label.configure(
-                text="Total susceptible phenotypes available: ..."
-            )
-            self.totaldata.configure(text="Total Phenotypes: ...")
+            self.totalresistance_label.configure(text="Total Resistant: ...")
+            self.totalsusceptible_label.configure(text="Total Susceptible: ...")
+            self.totaldata.configure(text="Total: ...")
             self.save_table_button.configure(state=tk.DISABLED)
             self.species_selection.configure(state=tk.DISABLED)
             self.antibiotic_selection.configure(state=tk.DISABLED)
@@ -3483,6 +3490,18 @@ class App(ctk.CTk):
                         )
                     ]
 
+                if self.filter_contradictions_checkbox.get():
+                    self.results_table.filtered_data = (
+                        self.results_table.filtered_data.groupby("genome_id")
+                        .filter(
+                            lambda x: not (
+                                len(x) > 1
+                                and len(x["resistant_phenotype"].unique()) > 1
+                            )
+                        )
+                        .reset_index(drop=True)
+                    )
+
                 total_resistant = len(
                     self.results_table.filtered_data[
                         self.results_table.filtered_data["resistant_phenotype"]
@@ -3505,15 +3524,15 @@ class App(ctk.CTk):
                 total = len(self.results_table.filtered_data)
 
                 self.totalresistance_label.configure(
-                    text=f"Total resistance phenotypes available: {total_resistant}"
+                    text=f"Total Resistant: {total_resistant}"
                 )
                 self.totalsusceptible_label.configure(
-                    text=f"Total susceptible phenotypes available: {total_susceptible}"
+                    text=f"Total Susceptible: {total_susceptible}"
                 )
 
                 self.results_table.reset_view()
 
-                self.totaldata.configure(text=f"Total Phenotypes: {total}")
+                self.totaldata.configure(text=f"Total: {total}")
             except Exception:
                 traceback.print_exc()
                 messagebox.showerror("Error", "Error while reading the metadata file")
