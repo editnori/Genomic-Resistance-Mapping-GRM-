@@ -9,7 +9,7 @@ class CTkCanvas(tkinter.Canvas):
 
     Call .init_font_character_mapping() at program start to load the correct character
     dictionary according to the operating system. Characters (circle sizes) are optimised
-    to look best for rendering CustomTkinter shapes on the different operating systems.
+    to look best for rendering ctk shapes on the different operating systems.
 
     - .create_aa_circle() creates antialiased circle and returns int identifier.
     - .coords() is modified to support the aa-circle shapes correctly like you would expect.

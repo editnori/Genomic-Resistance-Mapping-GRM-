@@ -1,7 +1,7 @@
 from time import sleep
 from subprocess import PIPE, Popen
 from tkinter import messagebox, NORMAL, DISABLED, END, Spinbox
-from customtkinter import CTkEntry, CTkTextbox
+from ctk import CTkEntry, CTkTextbox, filedialog
 from threading import Thread
 from traceback import print_exc
 import os
@@ -9,8 +9,6 @@ import re
 from concurrent.futures import Future
 from typing import IO, Iterable, Optional
 from queue import Queue, Empty
-
-from customtkinter import filedialog
 
 
 CRLF = b"\r\n"

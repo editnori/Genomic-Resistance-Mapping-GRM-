@@ -12,7 +12,7 @@ from enum import Enum
 import traceback
 import re
 
-import customtkinter as ctk
+import ctk
 from PIL import Image
 import pandas as pd
 

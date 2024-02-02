@@ -1,6 +1,6 @@
 from typing import Any, Optional, Tuple, Union
 
-from customtkinter import CTkLabel, CTkImage, CTkFont
+from ctk import CTkLabel, CTkImage, CTkFont
 from hovertip import Hovertip
 
 

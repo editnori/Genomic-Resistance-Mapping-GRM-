@@ -1,4 +1,4 @@
-import customtkinter as ctk
+import ctk
 import tkinter as tk
 from util import Tag
 

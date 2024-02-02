@@ -9,7 +9,7 @@ from tkinter.ttk import Progressbar
 import traceback
 from typing import Optional
 
-from customtkinter import CTkButton, CTkLabel, CTkFrame
+from ctk import CTkButton, CTkLabel, CTkFrame
 
 from util import threaded, select_directory
 

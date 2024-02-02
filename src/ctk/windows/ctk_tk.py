@@ -10,7 +10,7 @@ from .widgets.theme import ThemeManager
 from .widgets.scaling import CTkScalingBaseClass
 from .widgets.appearance_mode import CTkAppearanceModeBaseClass
 
-from customtkinter.windows.widgets.utility.utility_functions import pop_from_dict_by_set, check_kwargs_empty
+from ctk.windows.widgets.utility.utility_functions import pop_from_dict_by_set, check_kwargs_empty
 
 CTK_PARENT_CLASS = tkinter.Tk
 
@@ -69,7 +69,7 @@ class CTk(CTK_PARENT_CLASS, CTkAppearanceModeBaseClass, CTkScalingBaseClass):
         # save focus before calling withdraw
         self.focused_widget_before_widthdraw = None
 
-        # set CustomTkinter titlebar icon (Windows only)
+        # set ctk titlebar icon (Windows only)
         if sys.platform.startswith("win"):
             self.after(200, self._windows_set_titlebar_icon)
 

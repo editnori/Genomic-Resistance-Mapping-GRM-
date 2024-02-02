@@ -164,9 +164,9 @@ class CTkBaseClass(tkinter.Frame, CTkAppearanceModeBaseClass, CTkScalingBaseClas
 
         else:
             raise ValueError(f"Wrong font type {type(font)}\n" +
-                             f"For consistency, Customtkinter requires the font argument to be a tuple of len 2 to 6 or an instance of CTkFont.\n" +
+                             f"For consistency, ctk requires the font argument to be a tuple of len 2 to 6 or an instance of CTkFont.\n" +
                              f"\nUsage example:\n" +
-                             f"font=customtkinter.CTkFont(family='<name>', size=<size in px>)\n" +
+                             f"font=ctk.CTkFont(family='<name>', size=<size in px>)\n" +
                              f"font=('<name>', <size in px>)\n")
 
     def _check_image_type(self, image: any):

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 class DrawEngine:
     """
-    This is the core of the CustomTkinter library where all the drawing on the tkinter.Canvas happens.
+    This is the core of the ctk library where all the drawing on the tkinter.Canvas happens.
     A year of experimenting and trying out different drawing methods have led to the current state of this
     class, and I don't think there's much I can do to make the rendering look better than this with the
     limited capabilities the tkinter.Canvas offers.

@@ -18,7 +18,7 @@ FontManager.load_font(os.path.join(customtkinter_directory, "assets", "fonts", "
 if FontManager.load_font(os.path.join(customtkinter_directory, "assets", "fonts", "CustomTkinter_shapes_font.otf")) is False:
     # change draw method if font loading failed
     if DrawEngine.preferred_drawing_method == "font_shapes":
-        sys.stderr.write("customtkinter.windows.widgets.font warning: " +
+        sys.stderr.write("ctk.windows.widgets.font warning: " +
                          "Preferred drawing method 'font_shapes' can not be used because the font file could not be loaded.\n" +
                          "Using 'circle_shapes' instead. The rendering quality will be bad!\n")
         DrawEngine.preferred_drawing_method = "circle_shapes"

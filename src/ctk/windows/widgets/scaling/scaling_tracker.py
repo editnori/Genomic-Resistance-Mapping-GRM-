@@ -110,7 +110,7 @@ class ScalingTracker:
 
     @classmethod
     def activate_high_dpi_awareness(cls):
-        """ make process DPI aware, customtkinter elements will get scaled automatically,
+        """ make process DPI aware, ctk elements will get scaled automatically,
             only gets activated when CTk object is created """
 
         if not cls.deactivate_automatic_dpi_awareness:
