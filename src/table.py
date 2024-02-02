@@ -24,7 +24,7 @@ class Table(ttk.Treeview):
 
         post_class_id = f"post-class-{int(id(self))}"
 
-        bindtags = list(self.bindtags())
+        bindtags = list(self.bindtags()[:-1])
         bindtags.insert(2, post_class_id)
         self.bindtags(bindtags)
 

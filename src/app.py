@@ -19,6 +19,7 @@ import pandas as pd
 import util
 from util import threaded, Tag
 from spinbox import Spinbox
+from combobox import Combobox
 from controlframe import ControlFrame
 import kover
 from hovertip import Hovertip
@@ -45,7 +46,6 @@ class Path(str):
     DATA = os.path.join(ROOT, "data/")
     CONTIGS = "contigs/"
     FEATURES = "features/"
-
 
 class App(ctk.CTk):
     def __init__(self):
@@ -909,7 +909,7 @@ class App(ctk.CTk):
             command=self.load_amr_data,
         )
         self.download_button4.place(x=50, y=60)
-        self.species_filter = ttk.Combobox(master=amr_frame, state=tk.DISABLED)
+        self.species_filter = Combobox(master=amr_frame, state=tk.DISABLED)
         self.species_filter.bind("<<ComboboxSelected>>", self.update_table)
         self.species_filter.bind(
             "<Control-BackSpace>", lambda e: self.species_filter.set("")
@@ -974,7 +974,7 @@ class App(ctk.CTk):
             font=self.default_font(20),
         )
         full_amr_label.place(x=50, y=20)
-        self.antibiotic_selection = ttk.Combobox(
+        self.antibiotic_selection = Combobox(
             master=frame6, state=tk.DISABLED, width=18
         )
         self.antibiotic_selection.bind(
@@ -982,7 +982,7 @@ class App(ctk.CTk):
         )
         self.antibiotic_selection.place(x=50, y=50)
 
-        self.species_selection = ttk.Combobox(
+        self.species_selection = Combobox(
             master=frame6, state=tk.DISABLED, width=18
         )
 
@@ -1128,7 +1128,7 @@ class App(ctk.CTk):
 
         self.kmer_tools = ["Ray Surveyor", "DSK"]
 
-        self.preprocessing_frame_control_panel_kmer_tool_selector = ttk.Combobox(
+        self.preprocessing_frame_control_panel_kmer_tool_selector = Combobox(
             master=self.preprocessing_frame_control.control_panel_frame,
             values=self.kmer_tools,
             state="readonly",
@@ -1444,7 +1444,7 @@ class App(ctk.CTk):
 
         self.dataset_type = ["contigs", "kmer matrix"]
 
-        self.dataset_creation_control_panel_dataset_type_selector = ttk.Combobox(
+        self.dataset_creation_control_panel_dataset_type_selector = Combobox(
             master=self.dataset_creation_frame.control_panel_frame,
             values=self.dataset_type,
             state="readonly",
@@ -2177,7 +2177,7 @@ class App(ctk.CTk):
 
         self.kover_models = ["SCM", "CART"]
 
-        self.kover_learn_frame_control_panel_kover_models_selector = ttk.Combobox(
+        self.kover_learn_frame_control_panel_kover_models_selector = Combobox(
             master=self.kover_learn_frame.control_panel_frame,
             values=self.kover_models,
             state="readonly",
@@ -2205,7 +2205,7 @@ class App(ctk.CTk):
             command=self.kover_select_dataset,
         )
 
-        self.kover_learn_frame_control_panel_split_selector = ttk.Combobox(
+        self.kover_learn_frame_control_panel_split_selector = Combobox(
             master=self.kover_learn_frame.control_panel_frame,
             state=tk.DISABLED,
         )
@@ -2224,7 +2224,7 @@ class App(ctk.CTk):
             kover.Criterion.GINI,
             kover.Criterion.CROSS_ENTROPY,
         )
-        self.kover_learn_frame_control_panel_model_criterion_selector = ttk.Combobox(
+        self.kover_learn_frame_control_panel_model_criterion_selector = Combobox(
             master=self.kover_learn_frame.control_panel_frame,
             state="readonly",
         )
@@ -2293,7 +2293,7 @@ class App(ctk.CTk):
             ),
         )
 
-        self.kover_learn_frame_control_panel_hp_selector = ttk.Combobox(
+        self.kover_learn_frame_control_panel_hp_selector = Combobox(
             master=self.kover_learn_frame.control_panel_frame,
             state="readonly",
         )
