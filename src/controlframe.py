@@ -63,7 +63,7 @@ class ControlFrame(ctk.CTkFrame):
 
         self.cmd_output = ctk.CTkTextbox(
             self.cmd_output_frame,
-            font=self.font(14),
+            font=("Consolas", 14),
             corner_radius=15,
             border_width=2,
             state=tk.DISABLED,

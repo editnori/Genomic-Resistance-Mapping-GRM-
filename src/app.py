@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox, font
 
 import os
 import pathlib as pl
-from subprocess import CalledProcessError, Popen, PIPE
+from subprocess import CalledProcessError, Popen
 import csv
 import random
 from enum import Enum
@@ -245,7 +245,7 @@ class App(ctk.CTk):
         )
 
         self.appearance_mode_menu.grid(row=6, column=0, pady=15, sticky="s")
-        
+
         ctk.set_appearance_mode("Dark")
 
     def create_data_collection_page(self):
@@ -2293,13 +2293,10 @@ class App(ctk.CTk):
             ),
         )
 
-        self.hp_choices = [kover.HpChoice.BOUND, kover.HpChoice.CV, kover.HpChoice.NONE]
         self.kover_learn_frame_control_panel_hp_selector = ttk.Combobox(
             master=self.kover_learn_frame.control_panel_frame,
-            values=self.hp_choices,
             state="readonly",
         )
-        self.kover_learn_frame_control_panel_hp_selector.current(1)
 
         def on_hp_selected(event=None):
             event.widget.selection_clear()
@@ -2406,22 +2403,22 @@ class App(ctk.CTk):
             row=0, column=3, rowspan=10, columnspan=8, sticky=tk.NSEW, padx=40, pady=40
         )
 
-        self.kover_learn_frame_control_panel_kover_models_selector.grid(
+        self.kover_learn_control_panel_dataset_button.grid(
             row=0, column=0, sticky=tk.W, padx=(20, 50), pady=(20, 0)
         )
-        self.kover_learn_control_panel_p_class_importance_entry.grid(
+        self.kover_learn_frame_dataset_path.grid(
             row=0, column=1, sticky=tk.EW, padx=20, pady=(20, 0)
         )
-        self.kover_learn_control_panel_dataset_button.grid(
+        self.kover_learn_control_panel_kmer_blacklist_button.grid(
             row=1, column=0, sticky=tk.W, padx=(20, 50), pady=(20, 0)
         )
-        self.kover_learn_frame_dataset_path.grid(
+        self.kover_learn_frame_kmer_blacklist_path.grid(
             row=1, column=1, sticky=tk.EW, padx=20, pady=(20, 0)
         )
-        self.kover_learn_control_panel_kmer_blacklist_button.grid(
+        self.kover_learn_frame_control_panel_kover_models_selector.grid(
             row=2, column=0, sticky=tk.W, padx=(20, 50), pady=(20, 0)
         )
-        self.kover_learn_frame_kmer_blacklist_path.grid(
+        self.kover_learn_control_panel_p_class_importance_entry.grid(
             row=2, column=1, sticky=tk.EW, padx=20, pady=(20, 0)
         )
         self.kover_learn_frame_control_panel_hp_selector.grid(
@@ -2642,11 +2639,11 @@ class App(ctk.CTk):
 
         self.kover_learn_control_panel_p_class_importance_entry.delete(0, tk.END)
 
-        if selected == self.kover_models[0]:
+        if selected == "SCM":
             self.kover_learn_control_panel_seed_button.configure(state=tk.NORMAL)
             self.kover_learn_control_panel_seed_entry.configure(state=tk.NORMAL)
             self.kover_learn_frame_control_panel_hp_selector.configure(
-                values=self.hp_choices
+                values=[kover.HpChoice.BOUND, kover.HpChoice.CV, kover.HpChoice.NONE]
             )
             self.kover_learn_frame_control_panel_model_criterion_selector.configure(
                 values=self.kover_model_types
@@ -2727,6 +2724,9 @@ class App(ctk.CTk):
 
         self.kover_learn_frame_control_panel_split_selector.configure(state=tk.DISABLED)
         self.kover_learn_frame_control_panel_split_selector.set("Split ID")
+        self.kover_learn_frame_control_panel_split_selector.unbind(
+            "<<ComboboxSelected>>"
+        )
         self.kover_learn_control_panel_dataset_button.configure(state=tk.DISABLED)
 
         util.update_cmd_output(
@@ -2737,7 +2737,10 @@ class App(ctk.CTk):
 
         command = kover.info_command(Path.KOVER, dataset_path, splits=True)
         process = util.run_bash_command(command)
-        output = [s.split()[0] for s in process.stdout.read().splitlines()][1:]
+        output = {
+            s.split()[0]: int(re.search(r"(Folds: )(\d+)", s).group(2))
+            for s in process.stdout.read().splitlines()[1:]
+        }
         split_count = len(output)
         if split_count == 0:
             util.update_cmd_output(
@@ -2747,15 +2750,37 @@ class App(ctk.CTk):
             )
         else:
             self.kover_learn_frame_control_panel_split_selector.configure(
-                values=output, state="readonly"
+                values=tuple(output.keys()), state="readonly"
             )
             self.kover_learn_frame_control_panel_split_selector.current(0)
             util.update_cmd_output(
-                f"Fetched {split_count} split{'s' if split_count > 1 else ''}!\n\n",
+                f"Fetched {split_count} split{'s' if split_count > 1 else ''}!\n\n{'ID':<10}Folds\n\n",
+                self.kover_learn_frame.cmd_output,
+                Tag.SUCCESS,
+            )
+            util.update_cmd_output(
+                "\n".join([f"{key:<10}{value}" for key, value in output.items()]),
                 self.kover_learn_frame.cmd_output,
                 Tag.SUCCESS,
             )
             self.update_entry(self.kover_learn_frame_dataset_path, dataset_path)
+
+            def on_split_selected(event=None):
+                event.widget.selection_clear()
+                if output[event.widget.get()] == 0:
+                    self.kover_learn_frame_control_panel_hp_selector.configure(
+                        values=self.hp_choices[:-1]
+                    )
+                    self.kover_learn_frame_control_panel_hp_selector.current(0)
+                else:
+                    self.kover_learn_frame_control_panel_hp_selector.configure(
+                        values=self.hp_choices
+                    )
+                    self.kover_learn_frame_control_panel_hp_selector.current(1)
+
+            self.kover_learn_frame_control_panel_split_selector.bind(
+                "<<ComboboxSelected>>", on_split_selected
+            )
 
         self.kover_learn_validate_ui()
 
@@ -2894,29 +2919,6 @@ class App(ctk.CTk):
 
         page_frame[page][0].grid(row=0, column=1, sticky=tk.NSEW, padx=20, pady=(0, 20))
         page_frame[page][1].configure(fg_color=("gray75", "gray25"))
-
-    def koverlearn_error(self):
-        if not self.pickdataset_entry.get():
-            self.display_error_message("Please select kover dataset.")
-            return False
-        if not self.pickoutput_entry.get():
-            self.display_error_message("Please select output directory path.")
-            return False
-        if not self.hyperparameterentry.get():
-            self.display_error_message("Please enter hyperparameters")
-            return False
-        if not self.splitidentifierentry.get():
-            self.display_error_message("Please enter split identifier")
-            return False
-        if not self.randomseedentry2.get():
-            self.display_error_message("Please enter random seed")
-            return False
-
-        return True
-
-    def display_error_message(self, message):
-        # Use messagebox.showerror to display an error message
-        messagebox.showerror("Error", message)
 
     @threaded
     def split_dataset(self):
