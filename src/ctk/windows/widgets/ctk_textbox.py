@@ -1,5 +1,5 @@
 import tkinter
-from typing import Union, Tuple, Optional, Callable, Any
+from typing import Literal, Union, Tuple, Optional, Callable, Any
 
 from .core_rendering import CTkCanvas
 from .ctk_scrollbar import CTkScrollbar
@@ -45,7 +45,7 @@ class CTkTextbox(CTkBaseClass):
                  text_color: Optional[Union[str, str]] = None,
                  scrollbar_button_color: Optional[Union[str, Tuple[str, str]]] = None,
                  scrollbar_button_hover_color:  Optional[Union[str, Tuple[str, str]]] = None,
-
+                 wrap: Literal['none', 'char', 'word'] ="none",
                  font: Optional[Union[tuple, CTkFont]] = None,
                  activate_scrollbars: bool = True,
                  **kwargs):
@@ -85,7 +85,7 @@ class CTkTextbox(CTkBaseClass):
                                      font=self._apply_font_scaling(self._font),
                                      highlightthickness=0,
                                      relief="flat",
-                                     wrap="none",
+                                     wrap=wrap,
                                      insertbackground=self._apply_appearance_mode(self._text_color),
                                      **pop_from_dict_by_set(kwargs, self._valid_tk_text_attributes))
 

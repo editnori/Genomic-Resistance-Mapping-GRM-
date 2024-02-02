@@ -150,7 +150,7 @@ class CTkScrollableFrame(tkinter.Frame, CTkAppearanceModeBaseClass, CTkScalingBa
         elif self._orientation == "both":
             self._parent_frame.grid_columnconfigure(0, weight=1)
             self._parent_frame.grid_rowconfigure(1, weight=1)
-            self._parent_canvas.grid(row=1, column=0, sticky="nsew", padx=(border_spacing, 0), pady=border_spacing)
+            self._parent_canvas.grid(row=1, column=0, sticky="nsew", padx=border_spacing, pady=border_spacing)
             self._scrollbar_y.grid(row=1, column=1, sticky="nsew", padx=3 + self._parent_frame.cget("border_width"), pady=border_spacing)
             self._scrollbar_x.grid(row=2, column=0, sticky="nsew", padx=border_spacing, pady=3 + self._parent_frame.cget("border_width"))
 

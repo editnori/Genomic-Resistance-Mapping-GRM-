@@ -82,6 +82,8 @@ class App(ctk.CTk):
         self.geometry("1200x800")
 
         self.protocol("WM_DELETE_WINDOW", self.end_app)
+        
+        self.minsize(1280, 720)
 
         self.after(0, lambda: self.state("zoomed"))
 
