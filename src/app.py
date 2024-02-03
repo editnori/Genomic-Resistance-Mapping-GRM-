@@ -47,6 +47,7 @@ class Path(str):
     CONTIGS = "contigs/"
     FEATURES = "features/"
 
+
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -82,7 +83,7 @@ class App(ctk.CTk):
         self.geometry("1200x800")
 
         self.protocol("WM_DELETE_WINDOW", self.end_app)
-        
+
         self.minsize(1280, 720)
 
         self.after(0, lambda: self.state("zoomed"))
@@ -976,17 +977,13 @@ class App(ctk.CTk):
             font=self.default_font(20),
         )
         full_amr_label.place(x=50, y=20)
-        self.antibiotic_selection = Combobox(
-            master=frame6, state=tk.DISABLED, width=18
-        )
+        self.antibiotic_selection = Combobox(master=frame6, state=tk.DISABLED, width=18)
         self.antibiotic_selection.bind(
             "<<ComboboxSelected>>", self.on_antibiotic_select
         )
         self.antibiotic_selection.place(x=50, y=50)
 
-        self.species_selection = Combobox(
-            master=frame6, state=tk.DISABLED, width=18
-        )
+        self.species_selection = Combobox(master=frame6, state=tk.DISABLED, width=18)
 
         self.species_selection.bind("<<ComboboxSelected>>", self.update_amr_full)
         self.species_selection.place(x=220, y=50)
@@ -1954,9 +1951,9 @@ class App(ctk.CTk):
             validate="key",
             validatecommand=(
                 self.register(
-                    lambda new_value: True
-                    if not new_value or new_value.isdigit()
-                    else False
+                    lambda new_value: (
+                        True if not new_value or new_value.isdigit() else False
+                    )
                 ),
                 "%P",
             ),
@@ -1968,11 +1965,13 @@ class App(ctk.CTk):
 
         self.dataset_split_control_panel_seed_entry.bind(
             "<FocusOut>",
-            lambda _: util.force_insertable_value(
-                0, self.dataset_split_control_panel_seed_entry
-            )
-            if not self.dataset_split_control_panel_seed_entry.get()
-            else None,
+            lambda _: (
+                util.force_insertable_value(
+                    0, self.dataset_split_control_panel_seed_entry
+                )
+                if not self.dataset_split_control_panel_seed_entry.get()
+                else None
+            ),
         )
 
         util.force_insertable_value(0, self.dataset_split_control_panel_seed_entry)
@@ -2170,9 +2169,7 @@ class App(ctk.CTk):
             self.kover_frame_tab_view.tab("Kover learn")
         )
 
-        self.kover_learn_frame.control_panel.grid_rowconfigure(
-            tuple(range(13)), pad=20
-        )
+        self.kover_learn_frame.control_panel.grid_rowconfigure(tuple(range(13)), pad=20)
         self.kover_learn_frame.control_panel.grid_columnconfigure(
             tuple(range(2)), weight=1, uniform="column", minsize=300
         )
@@ -2181,20 +2178,20 @@ class App(ctk.CTk):
 
         self.kover_learn_frame_control_panel_kover_models_selector = Combobox(
             master=self.kover_learn_frame.control_panel,
+            state=tk.DISABLED,
             values=self.kover_models,
-            state="readonly",
         )
+
+        self.kover_learn_frame_control_panel_kover_models_selector.current(0)
 
         self.kover_learn_frame_control_panel_kover_models_selector.bind(
             "<<ComboboxSelected>>", self.on_kover_model_selected
         )
 
-        self.kover_learn_frame_control_panel_kover_models_selector.current(0)
-
         self.kover_learn_frame_dataset_path = ctk.CTkEntry(
             master=self.kover_learn_frame.control_panel,
             fg_color="transparent",
-            state=tk.DISABLED,
+            state="readonly",
         )
 
         self.kover_learn_control_panel_dataset_button = ctk.CTkButton(
@@ -2228,7 +2225,6 @@ class App(ctk.CTk):
         )
         self.kover_learn_frame_control_panel_model_criterion_selector = Combobox(
             master=self.kover_learn_frame.control_panel,
-            state="readonly",
         )
 
         self.kover_learn_frame_control_panel_model_criterion_selector.bind(
@@ -2238,6 +2234,7 @@ class App(ctk.CTk):
         self.kover_learn_control_panel_max_rules_max_depth_label = ctk.CTkLabel(
             master=self.kover_learn_frame.control_panel,
             font=self.default_font(15),
+            text="",
         )
 
         self.kover_learn_control_panel_max_rules_max_depth_spinbox = Spinbox(
@@ -2252,6 +2249,7 @@ class App(ctk.CTk):
             ctk.CTkLabel(
                 master=self.kover_learn_frame.control_panel,
                 font=self.default_font(15),
+                text="",
             )
         )
 
@@ -2276,7 +2274,7 @@ class App(ctk.CTk):
         self.kover_learn_frame_kmer_blacklist_path = ctk.CTkEntry(
             master=self.kover_learn_frame.control_panel,
             fg_color="transparent",
-            state=tk.DISABLED,
+            state="readonly",
         )
 
         self.kover_learn_control_panel_kmer_blacklist_button = ctk.CTkButton(
@@ -2298,7 +2296,10 @@ class App(ctk.CTk):
         self.kover_learn_frame_control_panel_hp_selector = Combobox(
             master=self.kover_learn_frame.control_panel,
             state="readonly",
+            values=kover.HpChoice.BOUND,
         )
+
+        self.kover_learn_frame_control_panel_hp_selector.current(0)
 
         def on_hp_selected(event=None):
             event.widget.selection_clear()
@@ -2330,7 +2331,6 @@ class App(ctk.CTk):
             buttonbackground="#2b2b2b",
             disabledbackground="#595959",
             font=self.default_font(10),
-            state=tk.DISABLED,
         )
 
         self.kover_learn_control_panel_bound_max_genome_size_spinbox.set_default_value(
@@ -2342,9 +2342,9 @@ class App(ctk.CTk):
             validate="key",
             validatecommand=(
                 self.register(
-                    lambda new_value: True
-                    if not new_value or new_value.isdigit()
-                    else False
+                    lambda new_value: (
+                        True if not new_value or new_value.isdigit() else False
+                    )
                 ),
                 "%P",
             ),
@@ -2466,7 +2466,6 @@ class App(ctk.CTk):
             row=9, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
 
-        self.on_kover_model_selected()
         self.kover_learn_validate_ui()
 
     def kover_learn_validate_ui(self, event=None):
@@ -2535,7 +2534,7 @@ class App(ctk.CTk):
             learn_type = (
                 self.kover_learn_frame_control_panel_kover_models_selector.get()
             )
-            if learn_type == self.kover_models[0]:
+            if learn_type == "SCM":
                 model_type = (
                     self.kover_learn_frame_control_panel_model_criterion_selector.get()
                 )
@@ -2565,7 +2564,7 @@ class App(ctk.CTk):
                     False,
                 )
 
-            elif learn_type == self.kover_models[1]:
+            elif learn_type == "CART":
                 criterion = (
                     self.kover_learn_frame_control_panel_model_criterion_selector.get()
                 )
@@ -2641,12 +2640,16 @@ class App(ctk.CTk):
 
         self.kover_learn_control_panel_p_class_importance_entry.delete(0, tk.END)
 
+        values = [kover.HpChoice.BOUND, kover.HpChoice.CV, kover.HpChoice.NONE]
+        if (
+            self.fold_count[self.kover_learn_frame_control_panel_split_selector.get()]
+            == 0
+        ):
+            values.remove(kover.HpChoice.CV)
         if selected == "SCM":
             self.kover_learn_control_panel_seed_button.configure(state=tk.NORMAL)
             self.kover_learn_control_panel_seed_entry.configure(state=tk.NORMAL)
-            self.kover_learn_frame_control_panel_hp_selector.configure(
-                values=[kover.HpChoice.BOUND, kover.HpChoice.CV, kover.HpChoice.NONE]
-            )
+            self.kover_learn_frame_control_panel_hp_selector.configure(values=values)
             self.kover_learn_frame_control_panel_model_criterion_selector.configure(
                 values=self.kover_model_types
             )
@@ -2674,11 +2677,10 @@ class App(ctk.CTk):
             )
 
         elif selected == "CART":
+            values.remove(kover.HpChoice.NONE)
             self.kover_learn_control_panel_seed_button.configure(state=tk.DISABLED)
             self.kover_learn_control_panel_seed_entry.configure(state=tk.DISABLED)
-            self.kover_learn_frame_control_panel_hp_selector.configure(
-                values=self.hp_choices[:-1]
-            )
+            self.kover_learn_frame_control_panel_hp_selector.configure(values=values)
             self.kover_learn_frame_control_panel_model_criterion_selector.configure(
                 values=self.kover_criteria
             )
@@ -2739,11 +2741,11 @@ class App(ctk.CTk):
 
         command = kover.info_command(Path.KOVER, dataset_path, splits=True)
         process = util.run_bash_command(command)
-        output = {
+        self.fold_count = {
             s.split()[0]: int(re.search(r"(Folds: )(\d+)", s).group(2))
             for s in process.stdout.read().splitlines()[1:]
         }
-        split_count = len(output)
+        split_count = len(self.fold_count)
         if split_count == 0:
             util.update_cmd_output(
                 "No splits in datatset.\n\n",
@@ -2752,7 +2754,7 @@ class App(ctk.CTk):
             )
         else:
             self.kover_learn_frame_control_panel_split_selector.configure(
-                values=tuple(output.keys()), state="readonly"
+                values=tuple(self.fold_count.keys()), state="readonly"
             )
             self.kover_learn_frame_control_panel_split_selector.current(0)
             util.update_cmd_output(
@@ -2761,7 +2763,9 @@ class App(ctk.CTk):
                 Tag.SUCCESS,
             )
             util.update_cmd_output(
-                "\n".join([f"{key:<10}{value}" for key, value in output.items()]),
+                "\n".join(
+                    [f"{key:<10}{value}" for key, value in self.fold_count.items()]
+                ),
                 self.kover_learn_frame.cmd_output,
                 Tag.SUCCESS,
             )
@@ -2769,14 +2773,25 @@ class App(ctk.CTk):
 
             def on_split_selected(event=None):
                 event.widget.selection_clear()
-                if output[event.widget.get()] == 0:
+                values = [
+                    kover.HpChoice.BOUND,
+                    kover.HpChoice.CV,
+                    kover.HpChoice.NONE,
+                ]
+                if (
+                    self.kover_learn_frame_control_panel_kover_models_selector.get()
+                    == "CART"
+                ):
+                    values.remove(kover.HpChoice.NONE)
+                if self.fold_count[event.widget.get()] == 0:
+                    values.remove(kover.HpChoice.CV)
                     self.kover_learn_frame_control_panel_hp_selector.configure(
-                        values=self.hp_choices[:-1]
+                        values=values
                     )
                     self.kover_learn_frame_control_panel_hp_selector.current(0)
                 else:
                     self.kover_learn_frame_control_panel_hp_selector.configure(
-                        values=self.hp_choices
+                        values=values
                     )
                     self.kover_learn_frame_control_panel_hp_selector.current(0)
 
@@ -2784,9 +2799,12 @@ class App(ctk.CTk):
                 "<<ComboboxSelected>>", on_split_selected
             )
 
-        self.kover_learn_validate_ui()
-
         self.kover_learn_control_panel_dataset_button.configure(state=tk.NORMAL)
+        self.kover_learn_frame_control_panel_kover_models_selector.configure(
+            state="readonly"
+        )
+        self.kover_learn_validate_ui()
+        self.on_kover_model_selected()
 
     def dataset_split_validate_ui(self, event=None):
         self.dataset_split_frame_split_dataset_button_hover.text = ""
