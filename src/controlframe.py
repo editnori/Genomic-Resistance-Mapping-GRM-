@@ -18,30 +18,18 @@ class ControlFrame(ctk.CTkFrame):
 
         super().__init__(master, **kwargs)
 
-        self.control_panel = ctk.CTkFrame(
-            master,
-            corner_radius=15,
-            border_width=2,
-        )
-        self.control_panel.grid(
-            row=2, column=2, sticky=tk.NSEW, rowspan=3, columnspan=2, padx=40, pady=40
-        )
-
-        self.control_panel_label = ctk.CTkLabel(
-            master=self.control_panel,
-            text="Control panel",
-            font=self.font(20),
-        )
-        self.control_panel_label.pack(pady=30)
-
-        self.control_panel_frame = ctk.CTkScrollableFrame(
-            master=self.control_panel,
+        self.control_panel = ctk.CTkScrollableFrame(
+            master=master,
             corner_radius=15,
             border_width=2,
             width=400,
             height=500,
+            label_text="Control panel",
+            label_font=self.font(18),
         )
-        self.control_panel_frame.pack(padx=20, pady=(0, 20), fill=tk.BOTH, expand=True)
+        self.control_panel.grid(
+            row=2, column=2, sticky=tk.NSEW, rowspan=3, columnspan=2, padx=40, pady=40
+        )
 
         self.cmd_output_frame = ctk.CTkFrame(
             master,

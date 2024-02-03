@@ -40,11 +40,12 @@ class Spinbox(tk.Spinbox):
         )
         
         def on_scroll(event):
+            if event.widget.focus_get() != event.widget:
+                return
             if event.delta > 0:
                 self.invoke("buttonup")
             else:
                 self.invoke("buttondown")
-            master.focus_set()
         
         self.bind(
             "<MouseWheel>", on_scroll

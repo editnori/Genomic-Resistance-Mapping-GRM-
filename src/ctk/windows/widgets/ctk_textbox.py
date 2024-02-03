@@ -171,7 +171,6 @@ class CTkTextbox(CTkBaseClass):
                 self._create_grid_for_text_and_scrollbars(re_grid_y_scrollbar=True)
         else:
             self._hide_x_scrollbar = False
-            self._hide_x_scrollbar = False
             self._create_grid_for_text_and_scrollbars(re_grid_y_scrollbar=True)
 
         if self._textbox.winfo_exists() and continue_loop is True:

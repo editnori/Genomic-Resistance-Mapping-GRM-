@@ -1084,14 +1084,14 @@ class App(ctk.CTk):
         )
 
         self.preprocessing_frame_dataset_path = Label(
-            master=self.preprocessing_frame_control.control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel,
             fg_color="transparent",
             width=27,
             anchor="w",
         )
 
         self.preprocessing_frame_control_panel_dataset_button = ctk.CTkButton(
-            master=self.preprocessing_frame_control.control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel,
             text="Pick dataset",
             fg_color="transparent",
             border_width=1,
@@ -1111,7 +1111,7 @@ class App(ctk.CTk):
         self.preprocessing_frame_dataset_path.pack(anchor=tk.W, padx=20, pady=5)
 
         self.preprocessing_frame_control_panel_kmer_size_entry = ctk.CTkEntry(
-            master=self.preprocessing_frame_control.control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel,
             placeholder_text="K-mer size (Default: 31)",
             width=150,
         )
@@ -1131,7 +1131,7 @@ class App(ctk.CTk):
         self.kmer_tools = ["Ray Surveyor", "DSK"]
 
         self.preprocessing_frame_control_panel_kmer_tool_selector = Combobox(
-            master=self.preprocessing_frame_control.control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel,
             values=self.kmer_tools,
             state="readonly",
         )
@@ -1143,7 +1143,7 @@ class App(ctk.CTk):
         )
 
         self.preprocessing_frame_control_panel_run_button = ctk.CTkButton(
-            master=self.preprocessing_frame_control.control_panel_frame,
+            master=self.preprocessing_frame_control.control_panel,
             text=f"Run {self.preprocessing_frame_control_panel_kmer_tool_selector.get()}",
             fg_color="transparent",
             border_width=1,
@@ -1437,17 +1437,17 @@ class App(ctk.CTk):
             row=0, column=3, rowspan=10, columnspan=7, sticky=tk.NSEW, padx=40, pady=40
         )
 
-        self.dataset_creation_frame.control_panel_frame.grid_rowconfigure(
+        self.dataset_creation_frame.control_panel.grid_rowconfigure(
             tuple(range(10)), pad=20
         )
-        self.dataset_creation_frame.control_panel_frame.grid_columnconfigure(
+        self.dataset_creation_frame.control_panel.grid_columnconfigure(
             tuple(range(2)), weight=1, uniform="column"
         )
 
         self.dataset_type = ["contigs", "kmer matrix"]
 
         self.dataset_creation_control_panel_dataset_type_selector = Combobox(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             values=self.dataset_type,
             state="readonly",
         )
@@ -1464,13 +1464,13 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame_dataset_path = ctk.CTkEntry(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
         self.dataset_creation_control_panel_dataset_button = ctk.CTkButton(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="Pick dataset",
             fg_color="transparent",
             border_width=1,
@@ -1495,13 +1495,13 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame_description_path = ctk.CTkEntry(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
         self.dataset_creation_control_panel_description_button = ctk.CTkButton(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="Pick Phenotype Description",
             fg_color="transparent",
             border_width=1,
@@ -1526,13 +1526,13 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame_metadata_path = ctk.CTkEntry(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
         self.dataset_creation_control_panel_metadata_button = ctk.CTkButton(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="Pick Phenotype Metadata",
             fg_color="transparent",
             border_width=1,
@@ -1557,13 +1557,13 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame_temp_path = ctk.CTkEntry(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
         self.dataset_creation_control_panel_temp_button = ctk.CTkButton(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="Pick Temp Directory",
             fg_color="transparent",
             border_width=1,
@@ -1586,7 +1586,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame_kmer_size_label = ctk.CTkLabel(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="K-mer size",
             font=self.default_font(15),
         )
@@ -1595,7 +1595,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame_kmer_size_spinbox = Spinbox(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             from_=3,
             to=128,
             increment=2,
@@ -1611,7 +1611,7 @@ class App(ctk.CTk):
         self.dataset_creation_frame_kmer_size_spinbox.set_default_value(31)
 
         self.dataset_creation_frame_compression_label = ctk.CTkLabel(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="Compression Level",
             font=self.default_font(15),
         )
@@ -1620,7 +1620,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_frame_compression_spinbox = Spinbox(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             from_=0,
             to=9,
             wrap=True,
@@ -1633,7 +1633,7 @@ class App(ctk.CTk):
         self.dataset_creation_frame_compression_spinbox.set_default_value(4)
 
         self.dataset_creation_control_panel_kmer_min_abundance_label = ctk.CTkLabel(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="Minimum K-mer Abundance",
             font=self.default_font(15),
         )
@@ -1643,7 +1643,7 @@ class App(ctk.CTk):
         # )
 
         self.dataset_creation_control_panel_kmer_min_abundance_spinbox = Spinbox(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             from_=1,
             to=100,
             wrap=True,
@@ -1660,7 +1660,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_control_panel_singleton_kmer_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="Singleton K-mers",
         )
 
@@ -1669,7 +1669,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_control_panel_cpu_label = ctk.CTkLabel(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="CPUs",
             font=self.default_font(15),
         )
@@ -1679,7 +1679,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_creation_control_panel_cpu_spinbox = Spinbox(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             from_=1,
             to=64,
             wrap=True,
@@ -1695,7 +1695,7 @@ class App(ctk.CTk):
         self.dataset_creation_control_panel_cpu_spinbox.set_default_value(4)
 
         self.dataset_creation_frame_create_dataset_button = ctk.CTkButton(
-            master=self.dataset_creation_frame.control_panel_frame,
+            master=self.dataset_creation_frame.control_panel,
             text="Create Dataset",
             fg_color="transparent",
             border_width=1,
@@ -1735,21 +1735,21 @@ class App(ctk.CTk):
             row=0, column=3, rowspan=10, columnspan=7, sticky=tk.NSEW, padx=40, pady=40
         )
 
-        self.dataset_split_frame.control_panel_frame.grid_rowconfigure(
+        self.dataset_split_frame.control_panel.grid_rowconfigure(
             tuple(range(6)), pad=20
         )
-        self.dataset_split_frame.control_panel_frame.grid_columnconfigure(
+        self.dataset_split_frame.control_panel.grid_columnconfigure(
             tuple(range(2)), weight=1, uniform="column"
         )
 
         self.dataset_split_frame_dataset_path = ctk.CTkEntry(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
         self.dataset_split_control_panel_dataset_button = ctk.CTkButton(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             text="Pick dataset",
             fg_color="transparent",
             border_width=1,
@@ -1774,13 +1774,13 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_frame_train_ids_path = ctk.CTkEntry(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
         self.dataset_split_control_panel_train_ids_button = ctk.CTkButton(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             text="Pick Train IDs",
             fg_color="transparent",
             border_width=1,
@@ -1805,13 +1805,13 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_frame_test_ids_path = ctk.CTkEntry(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
         self.dataset_split_control_panel_test_ids_button = ctk.CTkButton(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             text="Pick Test IDs",
             fg_color="transparent",
             border_width=1,
@@ -1836,7 +1836,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_frame_kmer_size_label = ctk.CTkLabel(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             text="Train size (%)",
             font=self.default_font(15),
         )
@@ -1845,7 +1845,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_frame_train_size_spinbox = Spinbox(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             from_=0,
             to=100,
             increment=1,
@@ -1861,7 +1861,7 @@ class App(ctk.CTk):
         self.dataset_split_frame_train_size_spinbox.set_default_value(50)
 
         self.dataset_split_control_panel_cpu_label = ctk.CTkLabel(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             text="CPUs",
             font=self.default_font(15),
         )
@@ -1871,7 +1871,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_control_panel_cpu_spinbox = Spinbox(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             from_=1,
             to=64,
             wrap=True,
@@ -1887,7 +1887,7 @@ class App(ctk.CTk):
         self.dataset_split_control_panel_cpu_spinbox.set_default_value(4)
 
         self.dataset_split_frame_fold_label = ctk.CTkLabel(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             text="Folds",
             font=self.default_font(15),
         )
@@ -1896,7 +1896,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_frame_fold_spinbox = Spinbox(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             from_=2,
             to=100,
             wrap=True,
@@ -1912,7 +1912,7 @@ class App(ctk.CTk):
         self.dataset_split_frame_fold_spinbox.configure(state=tk.DISABLED)
 
         self.dataset_split_control_panel_checkboxes = ctk.CTkFrame(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             fg_color="transparent",
         )
 
@@ -1937,7 +1937,7 @@ class App(ctk.CTk):
         self.dataset_split_control_panel_IDs_checkbox.grid(row=0, column=0)
 
         self.dataset_split_control_panel_id_entry = ctk.CTkEntry(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             placeholder_text="Enter ID",
         )
 
@@ -1950,7 +1950,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_control_panel_seed_entry = ctk.CTkEntry(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             validate="key",
             validatecommand=(
                 self.register(
@@ -1978,7 +1978,7 @@ class App(ctk.CTk):
         util.force_insertable_value(0, self.dataset_split_control_panel_seed_entry)
 
         self.dataset_split_control_panel_seed_button = ctk.CTkButton(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             text="Random seed",
             font=self.default_font(12),
             command=lambda: self.generate_random_seed(
@@ -1991,7 +1991,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_split_frame_split_dataset_button = ctk.CTkButton(
-            master=self.dataset_split_frame.control_panel_frame,
+            master=self.dataset_split_frame.control_panel,
             text="Split Dataset",
             fg_color="transparent",
             border_width=1,
@@ -2031,7 +2031,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_view_frame_a_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame,
+            master=self.dataset_view_frame.control_panel,
             text="All",
             text_color="red",
         )
@@ -2044,35 +2044,35 @@ class App(ctk.CTk):
             fg="red",
         )
         self.dataset_view_frame_genome_type_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="Genome Type"
+            master=self.dataset_view_frame.control_panel, text="Genome Type"
         )
         self.dataset_view_frame_genome_type_checkbox.select()
         self.dataset_view_frame_genome_type_checkbox.grid(
             row=0, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_genome_source_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="Genome Source"
+            master=self.dataset_view_frame.control_panel, text="Genome Source"
         )
         self.dataset_view_frame_genome_source_checkbox.select()
         self.dataset_view_frame_genome_source_checkbox.grid(
             row=0, column=2, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_genome_ids_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="Genome IDs"
+            master=self.dataset_view_frame.control_panel, text="Genome IDs"
         )
         self.dataset_view_frame_genome_ids_checkbox.select()
         self.dataset_view_frame_genome_ids_checkbox.grid(
             row=1, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_genome_count_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="Genome Count"
+            master=self.dataset_view_frame.control_panel, text="Genome Count"
         )
         self.dataset_view_frame_genome_count_checkbox.select()
         self.dataset_view_frame_genome_count_checkbox.grid(
             row=1, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_kmers_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame,
+            master=self.dataset_view_frame.control_panel,
             text="Kmers",
             text_color="red",
         )
@@ -2085,21 +2085,21 @@ class App(ctk.CTk):
             fg="red",
         )
         self.dataset_view_frame_kmer_len_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="Kmer Length"
+            master=self.dataset_view_frame.control_panel, text="Kmer Length"
         )
         self.dataset_view_frame_kmer_len_checkbox.select()
         self.dataset_view_frame_kmer_len_checkbox.grid(
             row=2, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_kmer_count_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="Kmer Count"
+            master=self.dataset_view_frame.control_panel, text="Kmer Count"
         )
         self.dataset_view_frame_kmer_count_checkbox.select()
         self.dataset_view_frame_kmer_count_checkbox.grid(
             row=2, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_phenotype_description_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame,
+            master=self.dataset_view_frame.control_panel,
             text="Phenotype Description",
         )
         self.dataset_view_frame_phenotype_description_checkbox.select()
@@ -2107,7 +2107,7 @@ class App(ctk.CTk):
             row=2, column=2, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_phenotype_metadata_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame,
+            master=self.dataset_view_frame.control_panel,
             text="Phenotype Metadata",
         )
         self.dataset_view_frame_phenotype_metadata_checkbox.select()
@@ -2115,35 +2115,35 @@ class App(ctk.CTk):
             row=3, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_phenotype_tags_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="Phenotype Tags"
+            master=self.dataset_view_frame.control_panel, text="Phenotype Tags"
         )
         self.dataset_view_frame_phenotype_tags_checkbox.select()
         self.dataset_view_frame_phenotype_tags_checkbox.grid(
             row=3, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_splits_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="Splits"
+            master=self.dataset_view_frame.control_panel, text="Splits"
         )
         self.dataset_view_frame_splits_checkbox.select()
         self.dataset_view_frame_splits_checkbox.grid(
             row=3, column=2, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_uuid_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="UUID"
+            master=self.dataset_view_frame.control_panel, text="UUID"
         )
         self.dataset_view_frame_uuid_checkbox.select()
         self.dataset_view_frame_uuid_checkbox.grid(
             row=4, column=0, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_compression_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame, text="Compression"
+            master=self.dataset_view_frame.control_panel, text="Compression"
         )
         self.dataset_view_frame_compression_checkbox.select()
         self.dataset_view_frame_compression_checkbox.grid(
             row=4, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
         self.dataset_view_frame_classification_type_checkbox = ctk.CTkCheckBox(
-            master=self.dataset_view_frame.control_panel_frame,
+            master=self.dataset_view_frame.control_panel,
             text="Classification Type",
         )
         self.dataset_view_frame_classification_type_checkbox.select()
@@ -2152,7 +2152,7 @@ class App(ctk.CTk):
         )
 
         self.dataset_view_frame_view_dataset_button = ctk.CTkButton(
-            master=self.dataset_view_frame.control_panel_frame,
+            master=self.dataset_view_frame.control_panel,
             text="View Dataset",
             fg_color="transparent",
             border_width=1,
@@ -2170,17 +2170,17 @@ class App(ctk.CTk):
             self.kover_frame_tab_view.tab("Kover learn")
         )
 
-        self.kover_learn_frame.control_panel_frame.grid_rowconfigure(
+        self.kover_learn_frame.control_panel.grid_rowconfigure(
             tuple(range(13)), pad=20
         )
-        self.kover_learn_frame.control_panel_frame.grid_columnconfigure(
+        self.kover_learn_frame.control_panel.grid_columnconfigure(
             tuple(range(2)), weight=1, uniform="column", minsize=300
         )
 
         self.kover_models = ["SCM", "CART"]
 
         self.kover_learn_frame_control_panel_kover_models_selector = Combobox(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             values=self.kover_models,
             state="readonly",
         )
@@ -2192,13 +2192,13 @@ class App(ctk.CTk):
         self.kover_learn_frame_control_panel_kover_models_selector.current(0)
 
         self.kover_learn_frame_dataset_path = ctk.CTkEntry(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
         self.kover_learn_control_panel_dataset_button = ctk.CTkButton(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             text="Pick dataset",
             fg_color="transparent",
             border_width=1,
@@ -2208,7 +2208,7 @@ class App(ctk.CTk):
         )
 
         self.kover_learn_frame_control_panel_split_selector = Combobox(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             state=tk.DISABLED,
         )
         self.kover_learn_frame_control_panel_split_selector.set("Split ID")
@@ -2227,7 +2227,7 @@ class App(ctk.CTk):
             kover.Criterion.CROSS_ENTROPY,
         )
         self.kover_learn_frame_control_panel_model_criterion_selector = Combobox(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             state="readonly",
         )
 
@@ -2236,12 +2236,12 @@ class App(ctk.CTk):
         )
 
         self.kover_learn_control_panel_max_rules_max_depth_label = ctk.CTkLabel(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             font=self.default_font(15),
         )
 
         self.kover_learn_control_panel_max_rules_max_depth_spinbox = Spinbox(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             to=100,
             wrap=True,
             buttonbackground="#2b2b2b",
@@ -2250,14 +2250,14 @@ class App(ctk.CTk):
         )
         self.kover_learn_control_panel_max_equiv_rules_min_samples_split_label = (
             ctk.CTkLabel(
-                master=self.kover_learn_frame.control_panel_frame,
+                master=self.kover_learn_frame.control_panel,
                 font=self.default_font(15),
             )
         )
 
         self.kover_learn_control_panel_max_equiv_rules_min_samples_split_spinbox = (
             Spinbox(
-                master=self.kover_learn_frame.control_panel_frame,
+                master=self.kover_learn_frame.control_panel,
                 wrap=True,
                 buttonbackground="#2b2b2b",
                 disabledbackground="#595959",
@@ -2266,7 +2266,7 @@ class App(ctk.CTk):
         )
 
         self.kover_learn_control_panel_p_class_importance_entry = ctk.CTkEntry(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
         )
 
         self.kover_learn_control_panel_p_class_importance_entry.bind(
@@ -2274,13 +2274,13 @@ class App(ctk.CTk):
         )
 
         self.kover_learn_frame_kmer_blacklist_path = ctk.CTkEntry(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             fg_color="transparent",
             state=tk.DISABLED,
         )
 
         self.kover_learn_control_panel_kmer_blacklist_button = ctk.CTkButton(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             text="Pick Kmer Blacklist",
             fg_color="transparent",
             border_width=1,
@@ -2296,7 +2296,7 @@ class App(ctk.CTk):
         )
 
         self.kover_learn_frame_control_panel_hp_selector = Combobox(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             state="readonly",
         )
 
@@ -2316,14 +2316,14 @@ class App(ctk.CTk):
         )
 
         self.kover_learn_control_panel_bound_max_genome_size_label = ctk.CTkLabel(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             text="Max genome size (0 for Default)",
             font=self.default_font(15),
             anchor=tk.W,
         )
 
         self.kover_learn_control_panel_bound_max_genome_size_spinbox = Spinbox(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             from_=0,
             to=100,
             wrap=True,
@@ -2338,7 +2338,7 @@ class App(ctk.CTk):
         )
 
         self.kover_learn_control_panel_seed_entry = ctk.CTkEntry(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             validate="key",
             validatecommand=(
                 self.register(
@@ -2351,7 +2351,7 @@ class App(ctk.CTk):
         )
 
         self.kover_learn_control_panel_seed_button = ctk.CTkButton(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             text="Random seed",
             font=self.default_font(12),
             command=lambda: self.generate_random_seed(
@@ -2360,13 +2360,13 @@ class App(ctk.CTk):
         )
 
         self.kover_learn_control_panel_cpu_label = ctk.CTkLabel(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             text="CPUs",
             font=self.default_font(15),
         )
 
         self.kover_learn_control_panel_cpu_spinbox = Spinbox(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             from_=1,
             to=64,
             wrap=True,
@@ -2378,7 +2378,7 @@ class App(ctk.CTk):
         self.kover_learn_control_panel_cpu_spinbox.set_default_value(4)
 
         self.kover_learn_frame_Initiate_button = ctk.CTkButton(
-            master=self.kover_learn_frame.control_panel_frame,
+            master=self.kover_learn_frame.control_panel,
             text="Learn",
             fg_color="transparent",
             border_width=1,
