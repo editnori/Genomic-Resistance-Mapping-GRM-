@@ -30,15 +30,15 @@ class Spinbox(tk.Spinbox):
         )
         self.bind(
             "<KeyRelease>",
-            lambda e: master.focus_set()
-            if e.keycode in [Key.ENTER, Key.ESCAPE]
-            else None,
+            lambda e: (
+                master.focus_set() if e.keycode in [Key.ENTER, Key.ESCAPE] else None
+            ),
         )
         self.bind(
             "<KeyPress>",
             lambda e: master.focus_set() if e.keycode == Key.SPACE else None,
         )
-        
+
         def on_scroll(event):
             if event.widget.focus_get() != event.widget:
                 return
@@ -46,11 +46,9 @@ class Spinbox(tk.Spinbox):
                 self.invoke("buttonup")
             else:
                 self.invoke("buttondown")
-        
-        self.bind(
-            "<MouseWheel>", on_scroll
-        )
-        
+
+        self.bind("<MouseWheel>", on_scroll)
+
         self.bindtags(self.bindtags()[:-1])
 
     def set_default_value(self, default_value: float, set_value: bool = True):

@@ -72,25 +72,35 @@ def create_command(
         to_linux_path(kover_path),
         f"dataset create from-{source}",
         f"--genomic-data {to_linux_path(genomic_data)}",
-        f"--phenotype-description {to_linux_path(phenotype_description)}"
-        if phenotype_description
-        else "",
-        f"--phenotype-metadata {to_linux_path(phenotype_metadata)}"
-        if phenotype_metadata
-        else "",
+        (
+            f"--phenotype-description {to_linux_path(phenotype_description)}"
+            if phenotype_description
+            else ""
+        ),
+        (
+            f"--phenotype-metadata {to_linux_path(phenotype_metadata)}"
+            if phenotype_metadata
+            else ""
+        ),
         f"--output {to_linux_path(output)}",
-        f"--kmer-size {kmer_size}"
-        if source != Source.K_MER_MATREX and kmer_size
-        else "",
-        f"--kmer-min-abundance {kmer_min_abundance}"
-        if source == Source.READS and kmer_min_abundance
-        else "",
+        (
+            f"--kmer-size {kmer_size}"
+            if source != Source.K_MER_MATREX and kmer_size
+            else ""
+        ),
+        (
+            f"--kmer-min-abundance {kmer_min_abundance}"
+            if source == Source.READS and kmer_min_abundance
+            else ""
+        ),
         "--singleton-kmers" if singleton_kmers else "",
         f"--n-cpu {n_cpu}" if source != Source.K_MER_MATREX and n_cpu else "",
         f"--compression {compression}" if compression else "",
-        f"--temp-dir {to_linux_path(temp_dir)}"
-        if source != Source.K_MER_MATREX and temp_dir
-        else "",
+        (
+            f"--temp-dir {to_linux_path(temp_dir)}"
+            if source != Source.K_MER_MATREX and temp_dir
+            else ""
+        ),
         "-x" if x else "",
         "-v" if v else "",
     )
@@ -193,7 +203,7 @@ def scm_command(
     max_rules: Optional[str | int] = DEFAULT,
     max_equiv_rules: Optional[str | int] = DEFAULT,
     kmer_blacklist: Optional[str] = DEFAULT,
-    hp_choice: HpChoice = HpChoice.CV,
+    hp_choice: HpChoice = HpChoice.BOUND,
     bound_max_genome_size: str | int = DEFAULT,
     random_seed: Optional[str | int] = DEFAULT,
     n_cpu: str | int = DEFAULT,
@@ -219,9 +229,11 @@ def scm_command(
         f"--max-rules {max_rules}" if max_rules else "",
         f"--max-equiv-rules {max_equiv_rules}" if max_equiv_rules else "",
         f"--hp-choice {hp_choice}",
-        f"--bound-max-genome-size {bound_max_genome_size}"
-        if hp_choice == HpChoice.BOUND and bound_max_genome_size
-        else "",
+        (
+            f"--bound-max-genome-size {bound_max_genome_size}"
+            if hp_choice == HpChoice.BOUND and bound_max_genome_size
+            else ""
+        ),
         f"--random-seed {random_seed}" if random_seed else "",
         f"--n-cpu {n_cpu}" if n_cpu else "",
         f"--output-dir {to_linux_path(output_dir)}" if output_dir else "",
@@ -244,7 +256,7 @@ def tree_command(
     min_samples_split: str | int = 2,
     class_importance: Collection[str | int] = DEFAULT_CLASS_IMPORTANCE,
     kmer_blacklist: Optional[str] = DEFAULT,
-    hp_choice: HpChoice = HpChoice.CV,
+    hp_choice: HpChoice = HpChoice.BOUND,
     bound_max_genome_size: Optional[str | int] = DEFAULT,
     n_cpu: Optional[str | int] = DEFAULT,
     output_dir: Optional[str] = DEFAULT,
@@ -265,9 +277,11 @@ def tree_command(
         f"--class-importance {' '.join([str(n) for n in class_importance])}",
         f"--kmer-blacklist {to_linux_path(kmer_blacklist)}" if kmer_blacklist else "",
         f"--hp-choice {hp_choice}",
-        f"--bound-max-genome-size {bound_max_genome_size}"
-        if bound_max_genome_size
-        else "",
+        (
+            f"--bound-max-genome-size {bound_max_genome_size}"
+            if bound_max_genome_size
+            else ""
+        ),
         f"--n-cpu {n_cpu}",
         f"--output-dir {to_linux_path(output_dir)}" if output_dir else "",
         "-x" if x else "",

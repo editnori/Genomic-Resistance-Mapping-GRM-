@@ -2673,7 +2673,7 @@ class App(ctk.CTk):
                 placeholder_text="Trade-off parameter (Ex: 0.1 0.178 0.316 0.562 1.0 ...)"
             )
 
-        elif selected == self.kover_models[1]:
+        elif selected == "CART":
             self.kover_learn_control_panel_seed_button.configure(state=tk.DISABLED)
             self.kover_learn_control_panel_seed_entry.configure(state=tk.DISABLED)
             self.kover_learn_frame_control_panel_hp_selector.configure(
@@ -2778,7 +2778,7 @@ class App(ctk.CTk):
                     self.kover_learn_frame_control_panel_hp_selector.configure(
                         values=self.hp_choices
                     )
-                    self.kover_learn_frame_control_panel_hp_selector.current(1)
+                    self.kover_learn_frame_control_panel_hp_selector.current(0)
 
             self.kover_learn_frame_control_panel_split_selector.bind(
                 "<<ComboboxSelected>>", on_split_selected
