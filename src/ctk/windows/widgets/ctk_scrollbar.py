@@ -339,7 +339,6 @@ class CTkScrollbar(CTkBaseClass):
             self._command("moveto", self._start_value)
 
     def _mouse_scroll_event(self, event=None):
-        print(f"scrolled: delta:{event.delta}")
         if self._command is not None:
             if sys.platform.startswith("win"):
                 self._command("scroll", -int(event.delta / 40), "units")
