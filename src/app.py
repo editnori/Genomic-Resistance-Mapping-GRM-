@@ -2227,7 +2227,7 @@ class App(ctk.CTk):
             kover.Criterion.CROSS_ENTROPY,
         )
         self.kover_learn_frame_control_panel_model_criterion_selector = Combobox(
-            master=self.kover_learn_frame.control_panel,
+            master=self.kover_learn_frame.control_panel, state="readonly"
         )
 
         self.kover_learn_frame_control_panel_model_criterion_selector.bind(
