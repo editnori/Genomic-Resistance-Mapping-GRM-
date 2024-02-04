@@ -245,6 +245,8 @@ class CTkScrollableFrame(
                         pady=(canvas_y_padding[0], canvas_x_padding[0]),
                     )
 
+            self._current_view_full = new_view_full
+
             self._parent_canvas.grid(
                 row=1,
                 column=0,
@@ -252,8 +254,6 @@ class CTkScrollableFrame(
                 padx=canvas_x_padding,
                 pady=canvas_y_padding,
             )
-
-            self._current_view_full = new_view_full
 
         if is_label:
             self._label.grid(

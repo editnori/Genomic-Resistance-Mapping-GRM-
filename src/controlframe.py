@@ -22,8 +22,8 @@ class ControlFrame(ctk.CTkFrame):
             master=master,
             corner_radius=15,
             border_width=2,
-            width=400,
-            height=500,
+            width=450,
+            height=600,
             label_text="Control panel",
             label_font=self.font(18),
         )

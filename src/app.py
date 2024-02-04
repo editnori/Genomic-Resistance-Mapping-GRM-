@@ -812,14 +812,28 @@ class App(ctk.CTk):
             self.genome_data_frame_download_button.configure(state=tk.NORMAL)
 
     def create_amr_tab(self):
-        frame4 = ctk.CTkFrame(
+        self.data_collection_tab_view.tab("AMR").grid_rowconfigure(
+            tuple(range(10)), weight=1, uniform="row"
+        )
+        self.data_collection_tab_view.tab("AMR").grid_columnconfigure(
+            tuple(range(10)), weight=1, uniform="col"
+        )
+        self.data_collection_main_frame = ctk.CTkScrollableFrame(
             self.data_collection_tab_view.tab("AMR"),
+            width=1000,
+            height=600,
+        )
+
+        self.data_collection_main_frame.pack(fill=tk.BOTH, expand=True)
+
+        frame4 = ctk.CTkFrame(
+            self.data_collection_main_frame,
             width=1000,
             height=400,
             corner_radius=15,
             border_width=2,
         )
-        frame4.place(x=50, y=470)
+        frame4.grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=50)
 
         metadata_amr_label = ctk.CTkLabel(
             master=frame4, text="Latest metadata for AMR", font=self.default_font(20)
@@ -887,14 +901,14 @@ class App(ctk.CTk):
 
         # creating AMR metadata frame
         amr_frame = ctk.CTkFrame(
-            self.data_collection_tab_view.tab("AMR"),
+            self.data_collection_main_frame,
             width=500,
             height=400,
             corner_radius=15,
             border_width=2,
         )
 
-        amr_frame.place(x=50, y=45)
+        amr_frame.grid(row=0, column=0, padx=50, pady=50)
 
         list_amr_label = ctk.CTkLabel(
             master=amr_frame,
@@ -963,13 +977,13 @@ class App(ctk.CTk):
         self.amr_list = pd.DataFrame()
 
         frame6 = ctk.CTkFrame(
-            self.data_collection_tab_view.tab("AMR"),
+            self.data_collection_main_frame,
             width=800,
             height=400,
             corner_radius=15,
             border_width=2,
         )
-        frame6.place(x=580, y=45)
+        frame6.grid(row=0, column=1, pady=50)
         # Create input fields for antibiotic and species
         full_amr_label = ctk.CTkLabel(
             master=frame6,
@@ -1079,6 +1093,8 @@ class App(ctk.CTk):
         self.preprocessing_frame_control = ControlFrame(
             self.preprocessing_frame_tab_view.tab("Preprocessing")
         )
+
+        self.preprocessing_frame_control.control_panel.configure(width=200, height=200)
 
         self.preprocessing_frame_dataset_path = Label(
             master=self.preprocessing_frame_control.control_panel,
@@ -2015,18 +2031,19 @@ class App(ctk.CTk):
             self.kover_frame_tab_view.tab("View dataset")
         )
 
+        self.dataset_view_frame.control_panel.configure(height=220)
+
         self.dataset_view_frame.control_panel.grid(
             row=2,
-            column=0,
+            column=1,
             sticky=tk.NSEW,
             rowspan=3,
             columnspan=2,
             padx=40,
             pady=40,
         )
-
         self.dataset_view_frame.cmd_output_frame.grid(
-            row=0, column=4, rowspan=10, columnspan=6, sticky=tk.NSEW, padx=40, pady=40
+            row=0, column=3, rowspan=10, columnspan=8, sticky=tk.NSEW, padx=40, pady=40
         )
 
         self.dataset_view_frame_a_checkbox = ctk.CTkCheckBox(
