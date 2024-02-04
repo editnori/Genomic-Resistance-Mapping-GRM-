@@ -369,6 +369,30 @@ class App(ctk.CTk):
             "",
         )
 
+        self.total_progress_bar = ttk.Progressbar(
+            master=self.genome_data_frame, mode="determinate"
+        )
+
+        self.total_progress_label = ctk.CTkLabel(
+            master=self.genome_data_frame,
+            font=self.default_font(10),
+            fg_color="transparent",
+            text="",
+            anchor="w",
+        )
+
+        self.file_progress_bar = ttk.Progressbar(
+            master=self.genome_data_frame, mode="determinate"
+        )
+
+        self.file_progress_label = ctk.CTkLabel(
+            master=self.genome_data_frame,
+            font=self.default_font(10),
+            fg_color="transparent",
+            text="",
+            anchor="w",
+        )
+
         self.genome_data_validate_ui()
 
         self.genome_metadata_frame = ctk.CTkFrame(
@@ -411,7 +435,7 @@ class App(ctk.CTk):
             self.genome_data_frame_entry.grid(row=0, column=1, sticky=tk.W)
             self.genome_data_frame_bulk_button.grid_remove()
             self.genome_data_frame_path_saved = self.genome_data_frame_path.cget("text")
-            self.genome_data_frame_path.configure(text="")
+            self.genome_data_frame_path.config(text="")
 
         self.genome_data_validate_ui()
 
@@ -466,24 +490,13 @@ class App(ctk.CTk):
             self.genome_data_frame_contig_checkbox.get()
             + self.genome_data_frame_feature_checkbox.get()
         )
+        self.total_progress_bar.pack(padx=50, fill=tk.X)
+        self.total_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+        self.file_progress_bar.pack(padx=50, fill=tk.X)
+        self.file_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
 
-        total_progress_bar = ttk.Progressbar(
-            master=self.genome_data_frame, mode="determinate", maximum=total_genomes
-        )
-
-        total_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
-
-        total_progress_bar["value"] = 0
-
-        total_progress_label = ctk.CTkLabel(
-            master=self.genome_data_frame,
-            font=self.default_font(10),
-            fg_color="transparent",
-            text="",
-            anchor="w",
-        )
-
-        total_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+        self.total_progress_bar.configure(maximum=total_genomes)
+        self.total_progress_bar["value"] = 0
 
         for genome_data_id, genome_name in genome_data_ids:
             genome_name = util.sanitize_filename(genome_name)
@@ -505,10 +518,10 @@ class App(ctk.CTk):
                 os.makedirs(local_contig_directory, exist_ok=True)
 
                 number_downloaded += 1
-                total_progress_label.configure(
+                self.total_progress_label.configure(
                     text=f"Downloading: {contig_name} ({number_downloaded}/{total_genomes})"
                 )
-                total_progress_bar["value"] = number_downloaded
+                self.total_progress_bar["value"] = number_downloaded
                 try:
                     with open(local_contig_path, "wb") as local_file:
                         ftp = FTP("ftp.bvbrc.org")
@@ -517,27 +530,11 @@ class App(ctk.CTk):
 
                         contig_size = ftp.size(remote_contig)
 
-                        contig_progress_bar = ttk.Progressbar(
-                            master=self.genome_data_frame,
-                            mode="determinate",
-                            maximum=contig_size,
-                        )
+                        self.file_progress_bar.configure(maximum=contig_size)
 
                         contig_size_mb = contig_size / 1_048_576
 
-                        contig_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
-
-                        contig_progress_bar["value"] = 0
-
-                        contig_progress_label = ctk.CTkLabel(
-                            master=self.genome_data_frame,
-                            font=self.default_font(10),
-                            fg_color="transparent",
-                            text="",
-                            anchor="w",
-                        )
-
-                        contig_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+                        self.file_progress_bar["value"] = 0
 
                         with ftp.transfercmd(f"RETR {remote_contig}") as conn:
                             bytes_received = 0
@@ -549,14 +546,14 @@ class App(ctk.CTk):
                                 bytes_received += len(data)
                                 current_time_ms = time.time_ns() / 1_000_000
                                 if (current_time_ms - last_update_time) > 100:
-                                    contig_progress_bar["value"] = bytes_received
-                                    contig_progress_label.configure(
+                                    self.file_progress_bar["value"] = bytes_received
+                                    self.file_progress_label.configure(
                                         text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {contig_size_mb:6.2f} MB"
                                     )
                                     last_update_time = current_time_ms
 
-                        contig_progress_bar.destroy()
-                        contig_progress_label.destroy()
+                        self.file_progress_bar["value"] = 0
+                        self.file_progress_label.configure(text="")
                 except Exception as e:
                     messagebox.showerror(
                         "Error", f"An error occurred while downloading contigs\n\n{e}"
@@ -581,10 +578,10 @@ class App(ctk.CTk):
                 os.makedirs(local_feature_directory, exist_ok=True)
 
                 number_downloaded += 1
-                total_progress_label.configure(
+                self.total_progress_label.configure(
                     text=f"Downloading: {feature_name} ({number_downloaded}/{total_genomes})"
                 )
-                total_progress_bar["value"] = number_downloaded
+                self.total_progress_bar["value"] = number_downloaded
                 try:
                     with open(local_feature_path, "wb") as local_file:
                         ftp = FTP("ftp.bvbrc.org")
@@ -593,27 +590,11 @@ class App(ctk.CTk):
 
                         feature_size = ftp.size(remote_feature)
 
-                        feature_progress_bar = ttk.Progressbar(
-                            master=self.genome_data_frame,
-                            mode="determinate",
-                            maximum=feature_size,
-                        )
+                        self.file_progress_bar.configure(maximum=feature_size)
 
                         feature_size_mb = feature_size / 1_048_576
 
-                        feature_progress_bar.pack(padx=50, pady=(5, 0), fill=tk.X)
-
-                        feature_progress_bar["value"] = 0
-
-                        feature_progress_label = ctk.CTkLabel(
-                            master=self.genome_data_frame,
-                            font=self.default_font(10),
-                            fg_color="transparent",
-                            text="",
-                            anchor="w",
-                        )
-
-                        feature_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
+                        self.file_progress_bar["value"] = 0
 
                         with ftp.transfercmd(f"RETR {remote_feature}") as conn:
                             bytes_received = 0
@@ -624,14 +605,14 @@ class App(ctk.CTk):
                                 local_file.write(data)
                                 bytes_received += len(data)
                                 if (current_time_ms - last_update_time) > 100:
-                                    feature_progress_bar["value"] = bytes_received
-                                    feature_progress_label.configure(
+                                    self.file_progress_bar["value"] = bytes_received
+                                    self.file_progress_label.configure(
                                         text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {feature_size_mb:6.2f} MB"
                                     )
                                     last_update_time = current_time_ms
 
-                        feature_progress_bar.destroy()
-                        feature_progress_label.destroy()
+                        self.file_progress_bar["value"] = 0
+                        self.file_progress_label.configure(text="")
                 except Exception as e:
                     messagebox.showerror(
                         "Error", f"An error occurred while downloading features\n\n{e}"
@@ -665,8 +646,13 @@ class App(ctk.CTk):
             text="Download", command=self.download_genome_data
         )
 
-        total_progress_bar.destroy()
-        total_progress_label.destroy()
+        self.total_progress_bar["value"] = 0
+        self.total_progress_label.configure(text="")
+
+        self.total_progress_bar.pack_forget()
+        self.total_progress_label.pack_forget()
+        self.file_progress_bar.pack_forget()
+        self.file_progress_label.pack_forget()
 
     def cancel_genome_data_download(self):
         if messagebox.askyesno(
@@ -2963,7 +2949,7 @@ class App(ctk.CTk):
             train_path = None
             test_path = None
             train_size = None
-            ID = self.dataset_split_control_panel_id_entry.get()
+            split_id = self.dataset_split_control_panel_id_entry.get()
             folds = 0
             if self.dataset_split_control_panel_fold_checkbox.get():
                 folds = self.dataset_split_frame_fold_spinbox.get()
@@ -2979,7 +2965,7 @@ class App(ctk.CTk):
             command = kover.split_command(
                 Path.KOVER,
                 self.dataset_split_frame_dataset_path.get(),
-                ID,
+                split_id,
                 train_size,
                 train_path,
                 test_path,
