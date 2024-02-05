@@ -1,5 +1,5 @@
 __pycache__/
 .venv/
 .idea/
-.tmp/
+.temp/
 data/

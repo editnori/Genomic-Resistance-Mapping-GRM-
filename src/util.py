@@ -119,8 +119,15 @@ def try_pass_except(func, *args, **kwargs):
         pass
 
 
-def run_bash_command(command: str) -> Optional[Popen]:
-    temp_file = "tmp.sh"
+def run_bash_command(command: str, temp_path: Optional[str] = None) -> Optional[Popen]:
+    file_name = "tmp.sh"
+
+    os.makedirs(temp_path, exist_ok=True)
+
+    if not temp_path:
+        temp_file = file_name
+    else:
+        temp_file = os.path.join(temp_path, file_name)
 
     try:
         with open(temp_file, "wb") as bash_file:
@@ -141,11 +148,15 @@ def run_bash_command(command: str) -> Optional[Popen]:
         text=True,
     )
 
-    Thread(
-        target=lambda: (process.wait(), try_pass_except(os.remove, "tmp.sh"))
-    ).start()
+    run_after(process, try_pass_except, os.remove, temp_file)
 
     return process
+
+
+@threaded
+def run_after(process: Popen, func, *args, **kwargs):
+    process.wait()
+    func(*args, **kwargs)
 
 
 @threaded

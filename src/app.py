@@ -43,6 +43,7 @@ class Path(str):
     DSK = os.path.join(ROOT, "bin/dsk/dsk")
     KOVER = os.path.join(ROOT, "bin/kover/kover")
     IMAGES = os.path.join(ROOT, "ui/test_images/")
+    TEMP = os.path.join(ROOT, ".temp/")
     DATA = os.path.join(ROOT, "data/")
     CONTIGS = "contigs/"
     FEATURES = "features/"
@@ -1255,21 +1256,21 @@ class App(ctk.CTk):
 
             ray_surveyor_command = f'mpiexec -n 4 "{util.to_linux_path(Path.RAY)}" "{util.to_linux_path(config_path)}"'
 
-            preprocessing_process = util.run_bash_command(ray_surveyor_command)
+            process = util.run_bash_command(ray_surveyor_command, Path.TEMP)
 
             self.preprocessing_frame_control_panel_run_button.configure(
                 text="Cancel",
                 state=tk.NORMAL,
                 command=lambda: self.cancel_process(
-                    preprocessing_process, self.preprocessing_frame_control.cmd_output
+                    process, self.preprocessing_frame_control.cmd_output
                 ),
             )
 
             util.display_process_output(
-                preprocessing_process, self.preprocessing_frame_control.cmd_output
+                process, self.preprocessing_frame_control.cmd_output
             )
 
-            if preprocessing_process.poll() == 0:
+            if process.poll() == 0:
                 util.update_cmd_output(
                     f"\nRay Surveyor completed successfully.\n\nOutput stored in: {output_directory}",
                     self.preprocessing_frame_control.cmd_output,
@@ -1317,23 +1318,23 @@ class App(ctk.CTk):
             ls_command = f'ls -1 {util.to_linux_path(dataset_folder)}/*.fna > "{util.to_linux_path(config_path)}"'
             dsk_command = f'"{util.to_linux_path(Path.DSK)}" -file "{util.to_linux_path(config_path)}" -out-dir "{util.to_linux_path(output_directory)}" -kmer-size {kmer_size}'
 
-            preprocessing_process = util.run_bash_command(
-                f"{ls_command}\n{dsk_command}"
+            process = util.run_bash_command(
+                f"{ls_command}\n{dsk_command}", Path.TEMP
             )
 
             self.preprocessing_frame_control_panel_run_button.configure(
                 text="Cancel",
                 state=tk.NORMAL,
                 command=lambda: self.cancel_process(
-                    preprocessing_process, self.preprocessing_frame_control.cmd_output
+                    process, self.preprocessing_frame_control.cmd_output
                 ),
             )
 
             util.display_process_output(
-                preprocessing_process, self.preprocessing_frame_control.cmd_output
+                process, self.preprocessing_frame_control.cmd_output
             )
 
-            if preprocessing_process.poll() == 0:
+            if process.poll() == 0:
                 util.update_cmd_output(
                     f"\nDSK completed successfully.\n\nOutput stored in: {output_directory}",
                     self.preprocessing_frame_control.cmd_output,
@@ -2596,7 +2597,7 @@ class App(ctk.CTk):
                     False,
                 )
 
-            process = util.run_bash_command(command)
+            process = util.run_bash_command(command, Path.TEMP)
 
             self.kover_learn_frame_Initiate_button.configure(
                 text="Cancel",
@@ -2743,7 +2744,7 @@ class App(ctk.CTk):
         )
 
         command = kover.info_command(Path.KOVER, dataset_path, splits=True)
-        process = util.run_bash_command(command)
+        process = util.run_bash_command(command, Path.TEMP)
         self.fold_count = {
             s.split()[0]: int(re.search(r"(Folds: )(\d+)", s).group(2))
             for s in process.stdout.read().splitlines()[1:]
@@ -2975,7 +2976,7 @@ class App(ctk.CTk):
                 False,
             )
 
-            process = util.run_bash_command(command)
+            process = util.run_bash_command(command, Path.TEMP)
 
             self.dataset_split_frame_split_dataset_button.configure(
                 text="Cancel",
@@ -3045,7 +3046,7 @@ class App(ctk.CTk):
                 self.dataset_view_frame_classification_type_checkbox.get(),
             )
 
-            process = util.run_bash_command(command)
+            process = util.run_bash_command(command, Path.TEMP)
 
             self.dataset_view_frame_view_dataset_button.configure(
                 text="Cancel",
@@ -3125,7 +3126,7 @@ class App(ctk.CTk):
                 False,
             )
 
-            process = util.run_bash_command(command)
+            process = util.run_bash_command(command, Path.TEMP)
 
             self.dataset_creation_frame_create_dataset_button.configure(
                 text="Cancel",

@@ -213,10 +213,12 @@ def scm_command(
 ):
     if not p:
         p = DEFAULT_P
-    if max_rules == 0:
+    if max_rules == "0":
         max_rules = None
-    if max_equiv_rules == 0:
+    if max_equiv_rules == "0":
         max_equiv_rules = None
+    if bound_max_genome_size == "0":
+        bound_max_genome_size = None
 
     command = (
         to_linux_path(kover_path),
@@ -265,6 +267,8 @@ def tree_command(
 ):
     if not class_importance:
         class_importance = DEFAULT_CLASS_IMPORTANCE
+    if bound_max_genome_size == "0":
+        bound_max_genome_size = None
 
     command = (
         to_linux_path(kover_path),
@@ -279,7 +283,7 @@ def tree_command(
         f"--hp-choice {hp_choice}",
         (
             f"--bound-max-genome-size {bound_max_genome_size}"
-            if bound_max_genome_size
+            if hp_choice == HpChoice.BOUND and bound_max_genome_size
             else ""
         ),
         f"--n-cpu {n_cpu}",
