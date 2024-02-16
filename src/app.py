@@ -27,6 +27,17 @@ from table import Table
 from label import Label
 from ftp_downloader import FTPDownloadApp, DownloadWindow, get_last_metadata_update_date
 
+from tkwebview2.tkwebview2 import WebView2, have_runtime, install_runtime
+
+from pythonnet import load
+
+load("coreclr")
+
+import clr
+
+clr.AddReference("System.Windows.Forms")
+clr.AddReference("System.Threading")
+
 
 class Page(Enum):
     DATA_COLLECTION_PAGE = 0
@@ -74,6 +85,9 @@ class App(ctk.CTk):
         self.set_page(Page.DATA_COLLECTION_PAGE)
 
     def setup_window(self):
+        if not have_runtime():
+            install_runtime()
+
         self.call("encoding", "system", "utf-8")
 
         self.title("Genome analysis tool")
@@ -1318,9 +1332,7 @@ class App(ctk.CTk):
             ls_command = f'ls -1 {util.to_linux_path(dataset_folder)}/*.fna > "{util.to_linux_path(config_path)}"'
             dsk_command = f'"{util.to_linux_path(Path.DSK)}" -file "{util.to_linux_path(config_path)}" -out-dir "{util.to_linux_path(output_directory)}" -kmer-size {kmer_size}'
 
-            process = util.run_bash_command(
-                f"{ls_command}\n{dsk_command}", Path.TEMP
-            )
+            process = util.run_bash_command(f"{ls_command}\n{dsk_command}", Path.TEMP)
 
             self.preprocessing_frame_control_panel_run_button.configure(
                 text="Cancel",
@@ -2922,6 +2934,10 @@ class App(ctk.CTk):
         self.analysis_frame = ctk.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
+
+        test = WebView2(self.analysis_frame, 500, 500)
+        test.pack(fill="both", expand=True, padx=100, pady=100)
+        test.load_url("http://127.0.0.1:5500/index.html")
 
     def set_page(self, page: Page):
         page_frame = {

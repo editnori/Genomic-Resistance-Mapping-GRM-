@@ -1,5 +1,14 @@
 from app import App
+from System.Threading import Thread, ApartmentState, ThreadStart
 
-if __name__ == "__main__":
+
+def main():
     app = App()
     app.mainloop()
+
+
+t = Thread(ThreadStart(main))
+t.ApartmentState = ApartmentState.STA
+t.Start()
+t.Join()
+main()
