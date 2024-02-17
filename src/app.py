@@ -33,11 +33,11 @@ from pythonnet import load
 
 load("coreclr")
 
-import clr
+from clr import AddReference
 
-clr.AddReference("System.Windows.Forms")
-clr.AddReference("System.Threading")
+AddReference("System.Threading")
 
+from System.Threading import Thread, ApartmentState, ThreadStart
 
 class Page(Enum):
     DATA_COLLECTION_PAGE = 0
@@ -116,9 +116,7 @@ class App(ctk.CTk):
 
     def end_app(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
-            self.quit()
             self.destroy()
-            exit(0)
 
     def setup_style(self):
         self.style = ttk.Style(self)
@@ -2935,9 +2933,9 @@ class App(ctk.CTk):
             self, corner_radius=0, fg_color="transparent"
         )
 
-        test = WebView2(self.analysis_frame, 500, 500)
-        test.pack(fill="both", expand=True, padx=100, pady=100)
-        test.load_url("http://127.0.0.1:5500/index.html")
+        self.webview = WebView2(self.analysis_frame, 500, 500)
+        self.webview.pack(fill="both", expand=True, padx=100, pady=100)
+        self.webview.load_url("http://127.0.0.1:5500/data/kover-amr-platform-gh-pages/index.html")
 
     def set_page(self, page: Page):
         page_frame = {
