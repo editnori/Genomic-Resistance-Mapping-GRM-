@@ -29,14 +29,6 @@ from ftp_downloader import FTPDownloadApp, DownloadWindow, get_last_metadata_upd
 
 from tkwebview2.tkwebview2 import WebView2, have_runtime, install_runtime
 
-from pythonnet import load
-
-load("coreclr")
-
-from clr import AddReference
-
-AddReference("System.Threading")
-
 from System.Threading import Thread, ApartmentState, ThreadStart
 
 class Page(Enum):
