@@ -115,7 +115,7 @@ def to_linux_path(path: str) -> str:
 def try_pass_except(func, *args, **kwargs):
     try:
         func(*args, **kwargs)
-    except:
+    except Exception:
         pass
 
 
