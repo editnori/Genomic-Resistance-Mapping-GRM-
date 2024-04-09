@@ -1910,7 +1910,7 @@ class App(ctk.CTk):
         self.dataset_split_frame_fold_spinbox.grid(
             row=7, column=1, sticky=tk.W, padx=20, pady=(20, 0)
         )
-        self.dataset_split_frame_fold_spinbox.set_default_value(2)
+        self.dataset_split_frame_fold_spinbox.set_default_value(5)
 
         self.dataset_split_frame_fold_spinbox.configure(state=tk.DISABLED)
 
@@ -1931,6 +1931,8 @@ class App(ctk.CTk):
 
         self.dataset_split_control_panel_fold_checkbox.grid(row=0, column=1)
 
+        self.dataset_split_control_panel_fold_checkbox.select()
+
         self.dataset_split_control_panel_IDs_checkbox = ctk.CTkCheckBox(
             master=self.dataset_split_control_panel_checkboxes,
             text="Select IDs",
@@ -1941,7 +1943,7 @@ class App(ctk.CTk):
 
         self.dataset_split_control_panel_id_entry = ctk.CTkEntry(
             master=self.dataset_split_frame.control_panel,
-            placeholder_text="Enter ID",
+            placeholder_text="Enter Split ID",
         )
 
         self.dataset_split_control_panel_id_entry.grid(
@@ -2850,7 +2852,7 @@ class App(ctk.CTk):
             self.dataset_split_frame_split_dataset_button_hover.text += "• select either both train IDs and test IDs files or disable IDs path.\n"
             failed = True
         if not self.dataset_split_control_panel_id_entry.get():
-            self.dataset_split_frame_split_dataset_button_hover.text += "• enter ID.\n"
+            self.dataset_split_frame_split_dataset_button_hover.text += "• enter Split ID.\n"
             failed = True
 
         self.dataset_split_frame_split_dataset_button_hover.text = (
