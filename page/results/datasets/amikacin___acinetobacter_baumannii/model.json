@@ -1,0 +1,41 @@
+{
+  "rules": [
+    "Presence(AAAATAGTTGTGTAACCATAGTTTTTACCTA)",
+    "Presence(AACACCTCGTTATCCGCCACCGTCTCCAGGC)",
+    "Presence(AACTTTTCAAAATCAAACTTTCCTTCTTTAT)"
+  ],
+  "rule_annotations": [
+    {
+      "product": "APH(3') family aminoglycoside O-phosphotransferase",
+      "end": 20751,
+      "accession": "CP015366",
+      "start": 20721,
+      "strand": 1,
+      "gene": "",
+      "identity": 1.0
+    },
+    {
+      "product": "IS5/IS1182 family transposase",
+      "end": 1354,
+      "accession": "CP020596",
+      "start": 1324,
+      "strand": -1,
+      "gene": "",
+      "identity": 1.0
+    },
+    {
+      "product": "phage head morphogenesis protein",
+      "end": 1265443,
+      "accession": "CP018254",
+      "start": 1265413,
+      "strand": -1,
+      "gene": "",
+      "identity": 1.0
+    }
+  ],
+  "type": "disjunction",
+  "n_rules": 3,
+  "rule_importances": [
+    0.8248587570621468, 0.5988700564971752, 0.0903954802259887
+  ]
+}

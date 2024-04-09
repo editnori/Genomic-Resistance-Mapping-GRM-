@@ -1,0 +1,24 @@
+[
+  {
+    "antibiotic": "Amikacin",
+    "species": "Acinetobacter baumannii",
+    "ds_full_name": "amikacin___acinetobacter_baumannii",
+    "baseline_model_risk": 0.2098,
+    "ds_n_examples": 256.0,
+    "ds_n_kmers": 14599054.0,
+    "ds_n_test_examples": 51.0,
+    "ds_n_train_examples": 205.0,
+    "f1_score": 0.8917,
+    "fn": 5.6,
+    "fp": 2.8,
+    "n_rules": 4.2,
+    "precision": 0.9282,
+    "recall": 0.8628,
+    "risk": 0.1647,
+    "running_time": 864.1,
+    "sensitivity": 0.8628,
+    "specificity": 0.7536,
+    "tn": 7.9,
+    "tp": 34.7
+  }
+]

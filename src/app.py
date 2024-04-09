@@ -11,6 +11,7 @@ import random
 from enum import Enum
 import traceback
 import re
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import ctk
 from PIL import Image
@@ -59,6 +60,8 @@ class App(ctk.CTk):
 
         os.makedirs(Path.DATA, exist_ok=True)
 
+        self.init_server()
+
         self.setup_window()
 
         self.setup_style()
@@ -76,6 +79,16 @@ class App(ctk.CTk):
         self.create_analysis_page()
 
         self.set_page(Page.DATA_COLLECTION_PAGE)
+
+    @threaded
+    def init_server(self):
+        class QuietHandler(SimpleHTTPRequestHandler):
+            def log_message(self, format, *args):
+                # Do not log messages
+                pass
+
+        self.server = ThreadingHTTPServer(("", 5503), QuietHandler)
+        self.server.serve_forever()
 
     def setup_window(self):
         if not have_runtime():
@@ -2852,7 +2865,9 @@ class App(ctk.CTk):
             self.dataset_split_frame_split_dataset_button_hover.text += "• select either both train IDs and test IDs files or disable IDs path.\n"
             failed = True
         if not self.dataset_split_control_panel_id_entry.get():
-            self.dataset_split_frame_split_dataset_button_hover.text += "• enter Split ID.\n"
+            self.dataset_split_frame_split_dataset_button_hover.text += (
+                "• enter Split ID.\n"
+            )
             failed = True
 
         self.dataset_split_frame_split_dataset_button_hover.text = (
@@ -2932,9 +2947,7 @@ class App(ctk.CTk):
 
         self.webview = WebView2(self.analysis_frame, 500, 500)
         self.webview.pack(fill="both", expand=True, padx=100, pady=100)
-        self.webview.load_url(
-            "http://127.0.0.1:5501/data/kover-amr-platform-gh-pages/parametric_curves.html"
-        )
+        self.webview.load_url("http://127.0.0.1:5503/page")
 
     def set_page(self, page: Page):
         page_frame = {

@@ -1,0 +1,37 @@
+/* Sticky footer styles
+-------------------------------------------------- */
+
+html {
+    height: 100%;
+    box-sizing: border-box;
+    background: #242424;
+}
+
+*,
+*:before,
+*:after {
+    box-sizing: inherit;
+}
+
+body {
+    height: 500px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    min-height: 100%;
+    border-radius: 1%;
+    background: #242424;
+}
+
+h2 {
+    color: #e8e8e8;
+}
+
+#dataset_info {
+    color: #e8e8e8;
+}
+
+.container {
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+}

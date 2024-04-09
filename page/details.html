@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, shrink-to-fit=no"
+        />
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+
+        <title>Kover AMR Platform - Detailed Results</title>
+
+        <link
+            rel="icon"
+            type="image/png"
+            href="data:image/png;base64,iVBORw0KGgo="
+        />
+
+        <!-- Bootstrap Core CSS -->
+        <link href="css/bootstrap.min.css" rel="stylesheet" />
+
+        <!-- Bootstrap-table Core CSS -->
+        <link rel="stylesheet" href="css/bootstrap-table.min.css" />
+
+        <!-- Custom CSS -->
+        <link href="css/custom.css" rel="stylesheet" />
+    </head>
+
+    <body>
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-12">
+                    <h2>Detailed Results</h2>
+                    <div>
+                        <a href="index.html"><-- Back to results summary</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" style="margin-top: 1%">
+                <div id="dataset_info" class="col-sm-12">
+                    <div>
+                        <strong>Species: </strong
+                        ><span
+                            id="species_name_1"
+                            style="
+                                font-style: italic;
+                                text-transform: capitalize;
+                            "
+                        ></span>
+                        <span
+                            id="species_name_2"
+                            style="
+                                font-style: italic;
+                                text-transform: lowercase;
+                            "
+                        ></span>
+                    </div>
+                    <div>
+                        <strong>Antibiotic: </strong
+                        ><span
+                            id="antibiotic_name"
+                            style="text-transform: capitalize"
+                        ></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" style="margin-top: 1%">
+                <div class="col-sm-12">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a
+                                    href="#"
+                                    data-toggle="collapse"
+                                    data-target="#collapse-overview-body"
+                                    >Overview</a
+                                >&nbsp;
+                            </h4>
+                        </div>
+                        <div
+                            id="collapse-overview-body"
+                            class="panel-collapse collapse in"
+                        >
+                            <div id="overview_body" class="panel-body">
+                                <table id="table_overview">
+                                    <thead>
+                                        <tr>
+                                            <th
+                                                data-field="ds_n_genomes"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Genomes
+                                            </th>
+                                            <th
+                                                data-field="ds_n_res"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Resistant
+                                            </th>
+                                            <th
+                                                data-field="ds_n_sus"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Susceptible
+                                            </th>
+                                            <th
+                                                data-field="mean_risk"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Error rate*
+                                            </th>
+                                            <th
+                                                data-field="mean_sensitivity"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Sensitivity*
+                                            </th>
+                                            <th
+                                                data-field="mean_specificity"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Specificity*
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                                * Mean over all experiment repeats
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" style="margin-top: 1%">
+                <div class="col-sm-12">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a
+                                    href="#0"
+                                    data-toggle="collapse"
+                                    data-target="#collapse-model-body"
+                                    >Model</a
+                                >&nbsp;
+                                <a
+                                    href="#"
+                                    id="model_fasta"
+                                    class="label label-danger"
+                                    >fasta</a
+                                >
+                                <small
+                                    >(click rules for detailed
+                                    annotations)</small
+                                >
+                            </h4>
+                        </div>
+                        <div
+                            id="collapse-model-body"
+                            class="panel-collapse collapse in"
+                        >
+                            <div id="model_body" class="panel-body">
+                                <div class="container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a
+                                    href="#0"
+                                    data-toggle="collapse"
+                                    data-target="#collapse-repeats-body"
+                                    >Repeats</a
+                                >
+                            </h4>
+                        </div>
+                        <div
+                            id="collapse-repeats-body"
+                            class="panel-collapse collapse in"
+                        >
+                            <div class="panel-body">
+                                <table
+                                    id="table_repeats"
+                                    class="table-responsive"
+                                    data-toggle="table"
+                                    data-striped="true"
+                                    data-sort-name="repeat_id"
+                                >
+                                    <thead>
+                                        <tr>
+                                            <th colspan="1" class="text-center">
+                                                Repeat
+                                            </th>
+                                            <th colspan="2" class="text-center">
+                                                Data
+                                            </th>
+                                            <th colspan="5" class="text-center">
+                                                Metrics
+                                            </th>
+                                        </tr>
+                                        <tr>
+                                            <th
+                                                data-field="repeat_id"
+                                                data-halign="center"
+                                                data-align="center"
+                                                data-formatter="formatInt"
+                                            >
+                                                #
+                                            </th>
+                                            <th
+                                                data-field="ds_n_train_examples"
+                                                data-halign="center"
+                                                data-align="center"
+                                                data-formatter="formatInt"
+                                            >
+                                                Train&nbsp;
+                                                <span
+                                                    class="glyphicon glyphicon-question-sign"
+                                                    data-toggle="tooltip"
+                                                    tabindex="0"
+                                                    title="Number of genomes used to learn the model"
+                                                >
+                                                </span>
+                                            </th>
+                                            <th
+                                                data-field="ds_n_test_examples"
+                                                data-halign="center"
+                                                data-align="center"
+                                                data-formatter="formatInt"
+                                            >
+                                                Test&nbsp;
+                                                <span
+                                                    class="glyphicon glyphicon-question-sign"
+                                                    data-toggle="tooltip"
+                                                    tabindex="0"
+                                                    title="Number of genomes used to evaluate the model"
+                                                >
+                                                </span>
+                                            </th>
+                                            <th
+                                                data-field="risk"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Error Rate
+                                            </th>
+                                            <th
+                                                data-field="sensitivity"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Sensitivity
+                                            </th>
+                                            <th
+                                                data-field="specificity"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Specificity
+                                            </th>
+                                            <th
+                                                data-field="f1_score"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                F1 Score
+                                            </th>
+                                            <th
+                                                data-field="n_rules"
+                                                data-halign="center"
+                                                data-align="center"
+                                                data-formatter="formatInt"
+                                            >
+                                                Rules&nbsp;
+                                                <span
+                                                    class="glyphicon glyphicon-question-sign"
+                                                    data-toggle="tooltip"
+                                                    tabindex="0"
+                                                    title="Number of k-mer rules (presence/absence) in the model"
+                                                >
+                                                </span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- jQuery Version 1.11.1 -->
+        <script src="js/jquery.js"></script>
+
+        <!-- Bootstrap Core JavaScript -->
+        <script src="js/bootstrap.min.js"></script>
+
+        <!-- Bootstrap-table Core JavaScript -->
+        <script src="js/bootstrap-table.min.js"></script>
+        <script src="js/bootstrap-table-filter-control.js"></script>
+        <script src="js/bootstrap-table-multiple-sort.js"></script>
+
+        <script>
+            function getUrlParameter(sParam) {
+                var sPageURL = decodeURIComponent(
+                        window.location.search.substring(1)
+                    ),
+                    sURLVariables = sPageURL.split("&"),
+                    sParameterName,
+                    i;
+
+                for (i = 0; i < sURLVariables.length; i++) {
+                    sParameterName = sURLVariables[i].split("=");
+
+                    if (sParameterName[0] === sParam) {
+                        return sParameterName[1] === undefined
+                            ? true
+                            : sParameterName[1];
+                    }
+                }
+            }
+
+            function initialize_tooltips() {
+                // Initialize all tooltips
+                $(function () {
+                    $('[data-toggle="tooltip"]').tooltip();
+                });
+            }
+
+            function formatInt(val) {
+                val = val.toString();
+                var rgx = /(\d+)(\d{3})/;
+                while (rgx.test(val)) {
+                    val = val.replace(rgx, "$1" + " " + "$2");
+                }
+                return val;
+            }
+
+            function get_dataset_info() {
+                /* TODO: need to support multiple species */
+                ds_info = {};
+                ds_info["name"] = getUrlParameter("ds");
+                ds_info["antibiotic"] = ds_info["name"].split("___")[0];
+                species = ds_info["name"].split("___")[1];
+                ds_info["species"] =
+                    species.split("_")[0] + " " + species.split("_")[1];
+                return ds_info;
+            }
+
+            function display_model(model_data) {
+                // Generate the HMTL for each rule
+                all_rules_html = [];
+                $.each(model_data.rules, function (idx, rule) {
+                    // Load the rule's annotations
+                    rule_importance = model_data.rule_importances[idx]
+                        .toString()
+                        .slice(0, 5);
+                    rule_annotation = model_data.rule_annotations[idx];
+
+                    // Parse the k-mer annotation
+                    if (
+                        "accession" in rule_annotation &&
+                        rule_annotation.accession != ""
+                    ) {
+                        genbank_url =
+                            "https://www.ncbi.nlm.nih.gov/nucleotide/" +
+                            rule_annotation.accession +
+                            "?from=" +
+                            rule_annotation.start +
+                            "&to=" +
+                            rule_annotation.end;
+                        genbank_url_target = "_blank";
+                        gene =
+                            rule_annotation.gene == ""
+                                ? "-"
+                                : rule_annotation.gene;
+                        product =
+                            rule_annotation.product == ""
+                                ? "-"
+                                : rule_annotation.product;
+                        rule_annotation_html =
+                            "Gene: " +
+                            gene +
+                            "<br /><br />Product: " +
+                            product +
+                            "<br /><br />Hit accession: " +
+                            rule_annotation.accession;
+                    } else {
+                        genbank_url = "#0";
+                        genbank_url_target = "";
+                        rule_annotation_html = "No annotation found";
+                    }
+                    rule_annotation_html +=
+                        "<br /><br />(Rule importance: " +
+                        rule_importance +
+                        ")";
+
+                    // Display the rule and its annotation
+                    rule_placeholder_html = `
+                <div class="row">
+                    <div class="col-sm-12 text-center">
+                        <h3>
+                            <span class="label label-success" style="font-weight:normal; font-family: monospace; color:black; background-color:lightgreen" data-toggle="tooltip" data-html="true" tabindex="0" title="{ANNOTATION}">
+                                <a href="{GENBANK_URL}" style="text-decoration: none; color: black" target="{GENBANK_URL_TARGET}">{RULE}</a>
+                            </span>
+                        </h3>
+                    </div>
+                </div>`;
+                    rule_placeholder_html = rule_placeholder_html.replace(
+                        "{GENBANK_URL}",
+                        genbank_url
+                    );
+                    rule_placeholder_html = rule_placeholder_html.replace(
+                        "{GENBANK_URL_TARGET}",
+                        genbank_url_target
+                    );
+                    rule_placeholder_html = rule_placeholder_html.replace(
+                        "{ANNOTATION}",
+                        rule_annotation_html
+                    );
+                    rule_placeholder_html = rule_placeholder_html.replace(
+                        "{ANNOTATION}",
+                        rule_annotation_html
+                    );
+                    rule_placeholder_html = rule_placeholder_html.replace(
+                        "{RULE}",
+                        rule
+                    );
+                    all_rules_html.push(rule_placeholder_html);
+                });
+
+                // Generate the HTML for the rule separator
+                if (model_data["type"] == "conjunction") {
+                    separator_text = "AND";
+                } else {
+                    separator_text = "OR";
+                }
+                separator_html =
+                    '<div class="row"><div class="col-sm-12 text-center"><h3><span class="label label-default" style="font-weight:normal; font-family: monospace; color:black; background-color:lightgray">' +
+                    separator_text +
+                    "</span></h3></div></div>";
+
+                // Draw the model
+                $("#model_body").html(
+                    $("#model_body").html() +
+                        all_rules_html.join(separator_html)
+                );
+
+                initialize_tooltips();
+            }
+
+            $(document).ready(function () {
+                // Show dataset informations
+                ds_info = get_dataset_info();
+                $("#species_name_1").text(ds_info["species"].split(" ")[0]);
+                $("#species_name_2").text(ds_info["species"].split(" ")[1]);
+                $("#antibiotic_name").html(
+                    ds_info["antibiotic"] +
+                        "&nbsp;<a target='_blank' href='http://www.drugbank.ca/unearth/q\?query\=" +
+                        ds_info["antibiotic"] +
+                        "\&searcher\=drugs\&approved\=1\&vet_approved\=1\&nutraceutical\=1\&illicit\=1\&withdrawn\=1\&investigational\=1\&experimental\=1'>" +
+                        "<span class='glyphicon glyphicon-question-sign'></span></a>"
+                );
+
+                // Get the model information and display it on the page
+                $.getJSON(
+                    "./results/datasets/" + ds_info["name"] + "/model.json",
+                    display_model
+                );
+
+                // Set the URL to download the fasta version of the model
+                $("#model_fasta").prop(
+                    "href",
+                    "./results/datasets/" +
+                        ds_info["name"] +
+                        "/" +
+                        ds_info["name"] +
+                        ".fasta"
+                );
+
+                // Activates all the tooltips
+                initialize_tooltips();
+            });
+
+            $(document).load(function () {});
+        </script>
+
+        <script>
+            // Load the overview table
+            $("#table_overview").bootstrapTable({
+                url:
+                    "./results/datasets/" +
+                    getUrlParameter("ds") +
+                    "/overview.json",
+            });
+
+            // Load the repeats table
+            $("#table_repeats").bootstrapTable({
+                url:
+                    "./results/datasets/" +
+                    getUrlParameter("ds") +
+                    "/repeats.json",
+            });
+        </script>
+    </body>
+</html>

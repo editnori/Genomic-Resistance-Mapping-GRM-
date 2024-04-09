@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, shrink-to-fit=no"
+        />
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+
+        <title>Kover AMR Platform - PATRIC Database</title>
+
+        <link
+            rel="icon"
+            type="image/png"
+            href="data:image/png;base64,iVBORw0KGgo="
+        />
+
+        <!-- Bootstrap Core CSS -->
+        <link href="css/bootstrap.min.css" rel="stylesheet" />
+
+        <!-- Bootstrap-table Core CSS -->
+        <link rel="stylesheet" href="css/bootstrap-table.min.css" />
+
+        <!-- Custom CSS -->
+        <link href="css/custom.css" rel="stylesheet" />
+    </head>
+
+    <body>
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                Visualization
+                                <small>(Click datasets for details)</small>
+                            </h4>
+                        </div>
+                        <div>
+                            <div class="panel-body">
+                                <div class="container">
+                                    <div class="row">
+                                        <div class="col-sm-12 text-center">
+                                            <div id="plots"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                Metrics
+                                <small>(View details to see the models)</small>
+                            </h4>
+                        </div>
+                        <div>
+                            <div class="panel-body">
+                                <table
+                                    id="table"
+                                    data-toggle="table"
+                                    data-filter-control="true"
+                                    data-filter-show-clear="true"
+                                    data-striped="true"
+                                    data-sort-name="species"
+                                    data-url="results/summary.json"
+                                    data-show-multi-sort="true"
+                                    data-sort-priority='[{"sortName": "species","sortOrder":"asc"},{"sortName":"antibiotic","sortOrder":"asc"}]'
+                                    data-show-columns="false"
+                                    data-pagination="true"
+                                    data-page-size="10"
+                                >
+                                    <thead>
+                                        <tr>
+                                            <th
+                                                colspan="3"
+                                                class="text-center th-dataset"
+                                            >
+                                                Data
+                                            </th>
+                                            <th
+                                                colspan="3"
+                                                class="text-center th-metrics"
+                                            >
+                                                Metrics (Average - 10
+                                                repetitions)
+                                            </th>
+                                            <th
+                                                colspan="1"
+                                                class="text-center th-details"
+                                            >
+                                                Details
+                                            </th>
+                                        </tr>
+                                        <tr>
+                                            <th
+                                                data-field="species"
+                                                data-filter-control="select"
+                                                data-sortable="true"
+                                                data-halign="center"
+                                            >
+                                                Species
+                                            </th>
+                                            <th
+                                                data-field="antibiotic"
+                                                data-filter-control="select"
+                                                data-sortable="true"
+                                                data-halign="center"
+                                            >
+                                                Antibiotic
+                                            </th>
+                                            <th
+                                                data-field="ds_n_examples"
+                                                data-sortable="true"
+                                                data-halign="center"
+                                                data-align="center"
+                                                data-formatter="formatInt"
+                                            >
+                                                Genomes
+                                            </th>
+                                            <th
+                                                data-field="risk"
+                                                data-sortable="true"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Error Rate
+                                            </th>
+                                            <th
+                                                data-field="sensitivity"
+                                                data-sortable="true"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Sensitivity
+                                            </th>
+                                            <th
+                                                data-field="specificity"
+                                                data-sortable="true"
+                                                data-halign="center"
+                                                data-align="center"
+                                            >
+                                                Specificity
+                                            </th>
+                                            <th
+                                                data-field="ds_full_name"
+                                                data-formatter="create_model_view_buttons"
+                                                data-halign="center"
+                                                data-align="center"
+                                            ></th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- jQuery Version 1.11.1 -->
+        <script src="js/jquery.js"></script>
+
+        <!-- Bootstrap Core JavaScript -->
+        <script src="js/bootstrap.min.js"></script>
+
+        <!-- Bootstrap-table Core JavaScript -->
+        <script src="js/bootstrap-table.min.js"></script>
+        <script src="js/bootstrap-table-filter-control.js"></script>
+        <script src="js/bootstrap-table-multiple-sort.js"></script>
+        <script src="js/plotly-latest.min.js"></script>
+
+        <script>
+            var cmap = [
+                "#FFFF00",
+                "#1CE6FF",
+                "#FF34FF",
+                "#FF4A46",
+                "#008941",
+                "#006FA6",
+                "#A30059",
+                "#FFDBE5",
+                "#7A4900",
+                "#0000A6",
+                "#63FFAC",
+                "#B79762",
+                "#004D43",
+                "#8FB0FF",
+                "#997D87",
+                "#5A0007",
+                "#809693",
+                "#FEFFE6",
+                "#1B4400",
+                "#4FC601",
+                "#3B5DFF",
+                "#4A3B53",
+                "#FF2F80",
+                "#61615A",
+                "#BA0900",
+                "#6B7900",
+                "#00C2A0",
+                "#FFAA92",
+                "#FF90C9",
+                "#B903AA",
+                "#D16100",
+                "#DDEFFF",
+                "#000035",
+                "#7B4F4B",
+                "#A1C299",
+                "#300018",
+                "#0AA6D8",
+                "#013349",
+                "#00846F",
+                "#372101",
+                "#FFB500",
+                "#C2FFED",
+                "#A079BF",
+                "#CC0744",
+                "#C0B9B2",
+                "#C2FF99",
+                "#001E09",
+                "#00489C",
+                "#6F0062",
+                "#0CBD66",
+                "#EEC3FF",
+                "#456D75",
+                "#B77B68",
+                "#7A87A1",
+                "#788D66",
+                "#885578",
+                "#FAD09F",
+                "#FF8A9A",
+                "#D157A0",
+                "#BEC459",
+                "#456648",
+                "#0086ED",
+                "#886F4C",
+                "#34362D",
+                "#B4A8BD",
+                "#00A6AA",
+                "#452C2C",
+                "#636375",
+                "#A3C8C9",
+                "#FF913F",
+                "#938A81",
+                "#575329",
+                "#00FECF",
+                "#B05B6F",
+                "#8CD0FF",
+                "#3B9700",
+                "#04F757",
+                "#C8A1A1",
+                "#1E6E00",
+                "#7900D7",
+                "#A77500",
+                "#6367A9",
+                "#A05837",
+                "#6B002C",
+                "#772600",
+                "#D790FF",
+                "#9B9700",
+                "#549E79",
+                "#FFF69F",
+                "#201625",
+                "#72418F",
+                "#BC23FF",
+                "#99ADC0",
+                "#3A2465",
+                "#922329",
+                "#5B4534",
+                "#FDE8DC",
+                "#404E55",
+                "#0089A3",
+                "#CB7E98",
+                "#A4E804",
+                "#324E72",
+                "#6A3A4C",
+                "#83AB58",
+                "#001C1E",
+                "#D1F7CE",
+                "#004B28",
+                "#C8D0F6",
+                "#A3A489",
+                "#806C66",
+                "#222800",
+                "#BF5650",
+                "#E83000",
+                "#66796D",
+                "#DA007C",
+                "#FF1A59",
+                "#8ADBB4",
+                "#1E0200",
+                "#5B4E51",
+                "#C895C5",
+                "#320033",
+                "#FF6832",
+                "#66E1D3",
+                "#CFCDAC",
+                "#D0AC94",
+                "#7ED379",
+                "#012C58",
+                "#7A7BFF",
+                "#D68E01",
+                "#353339",
+                "#78AFA1",
+                "#FEB2C6",
+                "#75797C",
+                "#837393",
+                "#943A4D",
+                "#B5F4FF",
+                "#D2DCD5",
+                "#9556BD",
+                "#6A714A",
+                "#001325",
+                "#02525F",
+                "#0AA3F7",
+                "#E98176",
+                "#DBD5DD",
+                "#5EBCD1",
+                "#3D4F44",
+                "#7E6405",
+                "#02684E",
+                "#962B75",
+                "#8D8546",
+                "#9695C5",
+                "#E773CE",
+                "#D86A78",
+                "#3E89BE",
+                "#CA834E",
+                "#518A87",
+                "#5B113C",
+                "#55813B",
+                "#E704C4",
+                "#00005F",
+                "#A97399",
+                "#4B8160",
+                "#59738A",
+                "#FF5DA7",
+                "#F7C9BF",
+                "#643127",
+                "#513A01",
+                "#6B94AA",
+                "#51A058",
+                "#A45B02",
+                "#1D1702",
+                "#E20027",
+                "#E7AB63",
+                "#4C6001",
+                "#9C6966",
+                "#64547B",
+                "#97979E",
+                "#006A66",
+                "#391406",
+                "#F4D749",
+                "#0045D2",
+                "#006C31",
+                "#DDB6D0",
+                "#7C6571",
+                "#9FB2A4",
+                "#00D891",
+                "#15A08A",
+                "#BC65E9",
+                "#FFFFFE",
+                "#C6DC99",
+                "#203B3C",
+                "#671190",
+                "#6B3A64",
+                "#F5E1FF",
+                "#FFA0F2",
+                "#CCAA35",
+                "#374527",
+                "#8BB400",
+                "#797868",
+                "#C6005A",
+                "#3B000A",
+                "#C86240",
+                "#29607C",
+                "#402334",
+                "#7D5A44",
+                "#CCB87C",
+                "#B88183",
+                "#AA5199",
+                "#B5D6C3",
+                "#A38469",
+                "#9F94F0",
+                "#A74571",
+                "#B894A6",
+                "#71BB8C",
+                "#00B433",
+                "#789EC9",
+                "#6D80BA",
+                "#953F00",
+                "#5EFF03",
+                "#E4FFFC",
+                "#1BE177",
+                "#BCB1E5",
+                "#76912F",
+                "#003109",
+                "#0060CD",
+                "#D20096",
+                "#895563",
+                "#29201D",
+                "#5B3213",
+                "#A76F42",
+                "#89412E",
+                "#1A3A2A",
+                "#494B5A",
+                "#A88C85",
+                "#F4ABAA",
+                "#A3F3AB",
+                "#00C6C8",
+                "#EA8B66",
+                "#958A9F",
+                "#BDC9D2",
+                "#9FA064",
+                "#BE4700",
+                "#658188",
+                "#83A485",
+                "#453C23",
+                "#47675D",
+                "#3A3F00",
+                "#061203",
+                "#DFFB71",
+                "#868E7E",
+                "#98D058",
+                "#6C8F7D",
+                "#D7BFC2",
+                "#3C3E6E",
+                "#D83D66",
+                "#2F5D9B",
+                "#6C5E46",
+                "#D25B88",
+                "#5B656C",
+                "#00B57F",
+                "#545C46",
+                "#866097",
+                "#365D25",
+                "#252F99",
+                "#00CCFF",
+                "#674E60",
+                "#FC009C",
+                "#92896B",
+            ];
+
+            function create_model_view_buttons(ds_name) {
+                return (
+                    "<a href='details.html?ds=" +
+                    ds_name +
+                    "' class='btn btn-primary btn-xs'> View </a>"
+                );
+            }
+
+            function formatInt(val) {
+                val = val.toString();
+                var rgx = /(\d+)(\d{3})/;
+                while (rgx.test(val)) {
+                    val = val.replace(rgx, "$1" + " " + "$2");
+                }
+                return val;
+            }
+
+            function make_plots(summary) {
+                data = [];
+
+                // Data extraction
+                ds_full_name_by_species = {};
+                antibiotics_by_species = {};
+                n_examples_by_species = {};
+                n_kmers_by_species = {};
+                sensitivities_by_species = {};
+                specificities_by_species = {};
+                color_by_species = {};
+                max_n_kmers = -1;
+                max_n_examples = -1;
+                $.each(summary, function (idx, ds) {
+                    ds_full_name_by_species[ds.species] = [];
+                    antibiotics_by_species[ds.species] = [];
+                    n_examples_by_species[ds.species] = [];
+                    n_kmers_by_species[ds.species] = [];
+                    sensitivities_by_species[ds.species] = [];
+                    specificities_by_species[ds.species] = [];
+                    color_by_species[ds.species] = -1;
+                });
+                $.each(summary, function (idx, ds) {
+                    if (ds.ds_n_examples > max_n_examples) {
+                        max_n_examples = ds.ds_n_examples;
+                    }
+                    if (ds.ds_n_kmers > max_n_kmers) {
+                        max_n_kmers = ds.ds_n_kmers;
+                    }
+                    ds_full_name_by_species[ds.species].push(ds.ds_full_name);
+                    antibiotics_by_species[ds.species].push(ds.antibiotic);
+                    n_examples_by_species[ds.species].push(ds.ds_n_examples);
+                    n_kmers_by_species[ds.species].push(ds.ds_n_kmers);
+                    sensitivities_by_species[ds.species].push(ds.sensitivity);
+                    specificities_by_species[ds.species].push(ds.specificity);
+                });
+
+                // Species colors
+                i = 0;
+                $.each(color_by_species, function (species, bob) {
+                    color_by_species[species] = cmap[i];
+                    i += 1;
+                });
+
+                // Dataset size plot
+                data = data.concat(
+                    $.map(specificities_by_species, function (bob, species) {
+                        return {
+                            x: n_examples_by_species[species],
+                            y: n_kmers_by_species[species],
+                            mode: "markers",
+                            type: "scatter",
+                            name: species,
+                            legendgroup: species,
+                            text: antibiotics_by_species[species],
+                            textposition: "top center",
+                            marker: {
+                                size: 12,
+                                color: color_by_species[species],
+                            },
+                            xaxis: "x1",
+                            yaxis: "y1",
+                        };
+                    })
+                );
+
+                // Sensitivity vs specificity plot
+                data = data.concat(
+                    $.map(specificities_by_species, function (bob, species) {
+                        return {
+                            x: sensitivities_by_species[species],
+                            y: specificities_by_species[species],
+                            mode: "markers",
+                            type: "scatter",
+                            name: species,
+                            legendgroup: species,
+                            text: antibiotics_by_species[species],
+                            textposition: "top center",
+                            marker: {
+                                size: 12,
+                                color: color_by_species[species],
+                            },
+                            xaxis: "x2",
+                            yaxis: "y2",
+                            showlegend: false,
+                        };
+                    })
+                );
+
+                var layout = {
+                    xaxis1: {
+                        title: "Genomes",
+                        range: [0.0, max_n_examples * 1.05],
+                        domain: [0, 0.45],
+                        anchor: "y1",
+                    },
+                    yaxis1: {
+                        title: "k-mers",
+                        range: [0.0, max_n_kmers * 1.05],
+                        anchor: "x1",
+                    },
+                    xaxis2: {
+                        title: "Sensitivity",
+                        domain: [0.55, 1],
+                        range: [0.0, 1.05],
+                        tickmode: "array",
+                        tickvals: [0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                        anchor: "y2",
+                    },
+                    yaxis2: {
+                        title: "Specificity",
+                        range: [0.0, 1.05],
+                        tickmode: "array",
+                        tickvals: [0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                        anchor: "x2",
+                    },
+                    hovermode: "closest",
+                    heigth: 500,
+                    width: 1000,
+                };
+                Plotly.newPlot("plots", data, layout);
+
+                // Bind to click events
+                $("#plots").on("plotly_click", function (e, data) {
+                    pointNumber = data.points[0].pointNumber;
+                    species = data.points[0].data.legendgroup;
+                    window.location.href =
+                        "./details.html?ds=" +
+                        ds_full_name_by_species[species][pointNumber];
+                });
+
+                // Bind to hover events
+                $("#plots").on("plotly_hover", function (e, data) {
+                    n_species = Object.keys(ds_full_name_by_species).length;
+                    pointNumber = data.points[0].pointNumber;
+                    curveNumber = data.points[0].curveNumber;
+                    Plotly.Fx.hover(
+                        "plots",
+                        [
+                            {
+                                curveNumber: curveNumber % n_species,
+                                pointNumber: pointNumber,
+                            },
+                            {
+                                curveNumber:
+                                    n_species + (curveNumber % n_species),
+                                pointNumber: pointNumber,
+                            },
+                        ],
+                        ["xy", "x2y2"]
+                    );
+                });
+            }
+
+            $(document).ready(function () {
+                // Plot results summary
+                $.getJSON("./results/summary.json", make_plots);
+            });
+        </script>
+    </body>
+</html>
