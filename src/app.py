@@ -27,9 +27,10 @@ from table import Table
 from label import Label
 from ftp_downloader import FTPDownloadApp, DownloadWindow, get_last_metadata_update_date
 
-from tkwebview2.tkwebview2 import WebView2, have_runtime, install_runtime
+from tkwebview2 import WebView2, have_runtime, install_runtime
 
 from System.Threading import Thread, ApartmentState, ThreadStart
+
 
 class Page(Enum):
     DATA_COLLECTION_PAGE = 0
@@ -2805,12 +2806,14 @@ class App(ctk.CTk):
                 "<<ComboboxSelected>>", on_split_selected
             )
 
+            self.kover_learn_validate_ui()
+            self.on_kover_model_selected()
+
+            self.kover_learn_frame_control_panel_kover_models_selector.configure(
+                state="readonly"
+            )
+
         self.kover_learn_control_panel_dataset_button.configure(state=tk.NORMAL)
-        self.kover_learn_frame_control_panel_kover_models_selector.configure(
-            state="readonly"
-        )
-        self.kover_learn_validate_ui()
-        self.on_kover_model_selected()
 
     def dataset_split_validate_ui(self, event=None):
         self.dataset_split_frame_split_dataset_button_hover.text = ""
@@ -2927,7 +2930,9 @@ class App(ctk.CTk):
 
         self.webview = WebView2(self.analysis_frame, 500, 500)
         self.webview.pack(fill="both", expand=True, padx=100, pady=100)
-        self.webview.load_url("http://127.0.0.1:5500/data/kover-amr-platform-gh-pages/index.html")
+        self.webview.load_url(
+            "http://127.0.0.1:5501/data/kover-amr-platform-gh-pages/parametric_curves.html"
+        )
 
     def set_page(self, page: Page):
         page_frame = {

@@ -4,5 +4,6 @@
         // "**/.venv": true,
         "**/__pycache__": true,
         "**/.idea": true
-    }
+    },
+    "liveServer.settings.port": 5501
 }
