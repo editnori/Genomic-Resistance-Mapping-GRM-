@@ -2944,9 +2944,11 @@ class App(ctk.CTk):
         self.analysis_frame = ctk.CTkFrame(
             self, corner_radius=0, fg_color="transparent"
         )
+        scale = 94
 
-        self.webview = WebView2(self.analysis_frame, 500, 500)
-        self.webview.pack(fill="both", expand=True, padx=100, pady=100)
+        self.webview = WebView2(self.analysis_frame, 16 * scale, 9 * scale)
+
+        self.webview.pack(fill="both", expand=True)
         self.webview.load_url("http://127.0.0.1:5503/page")
 
     def set_page(self, page: Page):
