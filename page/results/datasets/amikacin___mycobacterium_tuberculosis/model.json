@@ -1,0 +1,1 @@
+{"rules": ["Presence(ACTTTCATGACGCGACGGGCGGTGTGTACAA)"], "rule_annotations": [{"product": "chromosomal replication initiation protein DnaA", "end": 1505371, "accession": "CP017597", "start": 1505341, "strand": -1, "gene": "", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

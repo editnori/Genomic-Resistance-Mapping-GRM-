@@ -1,0 +1,1 @@
+{"rules": ["Presence(AAACAATAGTTTCAATAGGATAATATTCTTC)"], "rule_annotations": [{"product": "bifunctional aminoglycoside N-acetyltransferase AAC(6')-Ie/aminoglycoside O-phosphotransferase APH(2'')-Ia", "end": 2206423, "accession": "CP015447", "start": 2206393, "strand": 1, "gene": "", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

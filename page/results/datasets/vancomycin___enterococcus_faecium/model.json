@@ -1,0 +1,1 @@
+{"rules": ["Presence(AAAAAACAAAGCTGACCCGCGCCCAGCGAAA)"], "rule_annotations": [{"product": "putative conjugal transfer protein", "end": 19875, "accession": "HE963029", "start": 19845, "strand": 1, "gene": "", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

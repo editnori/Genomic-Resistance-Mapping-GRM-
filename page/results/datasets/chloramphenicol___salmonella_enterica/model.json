@@ -1,0 +1,1 @@
+{"rules": ["Presence(ACACCGTGAAGACAATACCGACCGCGACAAC)"], "rule_annotations": [{"product": "chloramphenicol/florfenicol efflux MFS transporter FloR", "end": 94339, "accession": "CP023167", "start": 94309, "strand": -1, "gene": "", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

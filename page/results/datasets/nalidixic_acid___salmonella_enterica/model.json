@@ -1,0 +1,1 @@
+{"rules": ["Absence(AACGATGGTGTCATACACTGCGGAATCGCCG)"], "rule_annotations": [{"product": "DNA gyrase subunit A", "end": 3413680, "accession": "CP011289", "start": 3413650, "strand": 1, "gene": "", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

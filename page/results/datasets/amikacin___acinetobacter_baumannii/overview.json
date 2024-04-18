@@ -1,12 +1,1 @@
-[
-  {
-    "mean_sensitivity": 0.86280000000000001,
-    "mean_risk": 0.16470000000000001,
-    "ds_n_res": 195,
-    "mean_specificity": 0.75360000000000005,
-    "running_time": 928.0,
-    "ds_n_genomes": 256,
-    "ds_n_sus": 61,
-    "ds_n_kmers": 14599054
-  }
-]
+[{"mean_sensitivity": 0.86280000000000001, "mean_risk": 0.16470000000000001, "ds_n_res": 195, "mean_specificity": 0.75360000000000005, "running_time": 928.0, "ds_n_genomes": 256, "ds_n_sus": 61, "ds_n_kmers": 14599054}]

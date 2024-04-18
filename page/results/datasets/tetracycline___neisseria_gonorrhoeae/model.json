@@ -1,0 +1,1 @@
+{"rules": ["Presence(AAACTTGCGCCGTGCGGATAATGGGTGTTGA)"], "rule_annotations": [{"product": "TnaB", "end": 2124635, "accession": "LT906472", "start": 2124605, "strand": 1, "gene": "mtr", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

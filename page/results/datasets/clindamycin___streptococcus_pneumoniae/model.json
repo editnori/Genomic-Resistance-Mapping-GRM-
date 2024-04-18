@@ -1,0 +1,1 @@
+{"rules": ["Presence(AAAAAGTACTCAACCAAATAATAAAACAATT)"], "rule_annotations": [{"product": "erythromycin resistance protein", "end": 627510, "accession": "AP018044", "start": 627480, "strand": -1, "gene": "ermB", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

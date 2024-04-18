@@ -240,3 +240,7 @@ def display_process_output(
             )
         else:
             print(pack_string, end="")
+
+
+def quote_space(string: str) -> str:
+    return f'"{string}"' if " " in string else string

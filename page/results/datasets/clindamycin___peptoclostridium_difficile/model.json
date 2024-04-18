@@ -1,0 +1,1 @@
+{"rules": ["Presence(AAAAAGTACTCAACCAAATAATAAAACAATT)"], "rule_annotations": [{"product": "rRNA adenine N-6-methyltransferase", "end": 32929, "accession": "LK933416", "start": 32899, "strand": 1, "gene": "ermB", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

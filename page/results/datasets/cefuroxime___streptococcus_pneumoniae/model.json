@@ -1,0 +1,1 @@
+{"rules": ["Presence(AAATTTGGGGTTCCAACTCGCTTTGGCTTGA)"], "rule_annotations": [{"product": "penicillin-binding protein 2X", "end": 297641, "accession": "AP018391", "start": 297611, "strand": 1, "gene": "pbp2x", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

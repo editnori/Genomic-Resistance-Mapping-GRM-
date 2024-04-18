@@ -1,0 +1,1 @@
+{"rules": ["Presence(AAAAAACTAGGTGTTGGTGAAGATATACCAA)"], "rule_annotations": [{"product": "PBP2a family beta-lactam-resistant peptidoglycan transpeptidase MecA", "end": 39657, "accession": "CP019590", "start": 39627, "strand": -1, "gene": "", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

@@ -1,0 +1,1 @@
+{"rules": ["Presence(AAAAAGAAGATCACTTGGCCTCACGCGCAGA)"], "rule_annotations": [{"product": "ANT(3'')-Ia family aminoglycoside nucleotidyltransferase AadA2", "end": 144484, "accession": "CP020493", "start": 144454, "strand": -1, "gene": "", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

@@ -1,0 +1,1 @@
+{"rules": ["Presence(ATATCTCCATGAGGATGGTACTTACCTAAAA)"], "rule_annotations": [{"product": "DNA gyrase subunit A", "end": 95, "accession": "FM999260", "start": 65, "strand": -1, "gene": "gyrA", "identity": 1.0}], "type": "conjunction", "n_rules": 1, "rule_importances": [1.0]}

@@ -3,7 +3,7 @@ import os
 import csv
 import pathlib as pl
 from typing import Annotated, Collection, Optional
-from util import to_linux_path
+from util import to_linux_path, quote_space
 
 
 class Source(str):
@@ -124,7 +124,7 @@ def split_command(
         to_linux_path(kover_path),
         "dataset split",
         f"--dataset {to_linux_path(dataset)}",
-        f"--id {id}",
+        f"--id {quote_space(id)}",
         f"--train-size {train_size}" if train_size else "",
         f"--train-ids {to_linux_path(train_ids)}" if train_ids else "",
         f"--test-ids {to_linux_path(test_ids)}" if test_ids else "",
