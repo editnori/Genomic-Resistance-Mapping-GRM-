@@ -6,6 +6,7 @@ from tkinter import ttk, messagebox, font
 import os
 import pathlib as pl
 from subprocess import CalledProcessError, Popen
+from concurrent.futures import ThreadPoolExecutor, wait
 import csv
 import random
 from enum import Enum
@@ -209,7 +210,7 @@ class App(ctk.CTk):
             text_color=button_text_color,
             hover_color=button_hover_color,
             image=self.images["home"],
-            anchor="w",
+            anchor=tk.W,
             command=lambda: self.set_page(Page.DATA_COLLECTION_PAGE),
         )
 
@@ -224,7 +225,7 @@ class App(ctk.CTk):
             text_color=button_text_color,
             hover_color=button_hover_color,
             image=self.images["chat"],
-            anchor="w",
+            anchor=tk.W,
             command=lambda: self.set_page(Page.PREPROCESSING_PAGE),
         )
 
@@ -239,7 +240,7 @@ class App(ctk.CTk):
             text_color=button_text_color,
             hover_color=button_hover_color,
             image=self.images["kover"],
-            anchor="w",
+            anchor=tk.W,
             command=lambda: self.set_page(Page.KOVER_LEARN_PAGE),
         )
 
@@ -254,7 +255,7 @@ class App(ctk.CTk):
             text_color=button_text_color,
             hover_color=button_hover_color,
             image=self.images["add_user"],
-            anchor="w",
+            anchor=tk.W,
             command=lambda: self.set_page(Page.ANALYSIS_PAGE),
         )
 
@@ -286,15 +287,33 @@ class App(ctk.CTk):
     def create_genomes_tab(self):
         self.genomes_frame = ctk.CTkFrame(self.data_collection_tab_view.tab("Genomes"))
 
-        self.genomes_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        self.genomes_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
 
-        self.genome_data_frame = ctk.CTkFrame(
+        self.genome_frame_controls = ctk.CTkFrame(
             self.genomes_frame,
             corner_radius=15,
             border_width=2,
         )
 
-        self.genome_data_frame.pack(side=tk.LEFT, padx=20)
+        self.genome_frame_controls.pack(
+            side=tk.LEFT, padx=20, fill=tk.BOTH, expand=True
+        )
+
+        self.genome_frame_controls_center = ctk.CTkFrame(
+            self.genome_frame_controls,
+            corner_radius=15,
+            border_width=2,
+        )
+
+        self.genome_frame_controls_center.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+        self.genome_data_frame = ctk.CTkFrame(
+            self.genome_frame_controls_center,
+            corner_radius=15,
+            border_width=2,
+        )
+
+        self.genome_data_frame.pack(padx=20, pady=20, fill=tk.X)
 
         self.genome_data_frame_label = ctk.CTkLabel(
             master=self.genome_data_frame,
@@ -367,7 +386,7 @@ class App(ctk.CTk):
             text=self.genome_data_frame_path_saved,
             fg_color="transparent",
             width=37,
-            anchor="w",
+            anchor=tk.W,
         )
 
         self.genome_data_frame_path.pack(padx=50, pady=5, fill=tk.X)
@@ -388,39 +407,15 @@ class App(ctk.CTk):
             "",
         )
 
-        self.total_progress_bar = ttk.Progressbar(
-            master=self.genome_data_frame, mode="determinate"
-        )
-
-        self.total_progress_label = ctk.CTkLabel(
-            master=self.genome_data_frame,
-            font=self.default_font(10),
-            fg_color="transparent",
-            text="",
-            anchor="w",
-        )
-
-        self.file_progress_bar = ttk.Progressbar(
-            master=self.genome_data_frame, mode="determinate"
-        )
-
-        self.file_progress_label = ctk.CTkLabel(
-            master=self.genome_data_frame,
-            font=self.default_font(10),
-            fg_color="transparent",
-            text="",
-            anchor="w",
-        )
-
         self.genome_data_validate_ui()
 
         self.genome_metadata_frame = ctk.CTkFrame(
-            self.genomes_frame,
+            self.genome_frame_controls_center,
             corner_radius=15,
             border_width=2,
         )
 
-        self.genome_metadata_frame.pack(side=tk.LEFT, padx=20)
+        self.genome_metadata_frame.pack(padx=20, pady=20, fill=tk.X)
 
         self.genome_metadata_frame_label = ctk.CTkLabel(
             master=self.genome_metadata_frame,
@@ -442,6 +437,23 @@ class App(ctk.CTk):
         self.genome_metadata_frame_download_button.pack(
             padx=50, pady=(5, 30), fill=tk.X
         )
+
+        self.genome_frame_logs = ctk.CTkScrollableFrame(
+            self.genomes_frame,
+            corner_radius=15,
+            border_width=2,
+            label_text="Queue",
+        )
+
+        self.genome_frame_logs.pack(side=tk.RIGHT, padx=20, fill=tk.BOTH, expand=True)
+
+        self.genome_frame_logs_total_label = ctk.CTkLabel(
+            master=self.genome_frame_logs,
+            text="Total: 0\\0",
+            anchor=tk.W,
+        )
+
+        self.genome_frame_logs_total_label.pack(padx=20, pady=20, fill=tk.X)
 
     def toggle_bulk_download(self, event=None):
         if self.genome_data_frame_bulk_checkbox.get():
@@ -503,154 +515,218 @@ class App(ctk.CTk):
         )
         self.cancel_genome_data_download_boolean = False
 
-        number_downloaded = 0
-
         total_genomes = len(genome_data_ids) * (
             self.genome_data_frame_contig_checkbox.get()
             + self.genome_data_frame_feature_checkbox.get()
         )
-        self.total_progress_bar.pack(padx=50, fill=tk.X)
-        self.total_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
-        self.file_progress_bar.pack(padx=50, fill=tk.X)
-        self.file_progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
 
-        self.total_progress_bar.configure(maximum=total_genomes)
-        self.total_progress_bar["value"] = 0
+        self.genome_frame_logs_total_label.configure(text=f"Total: 0/{total_genomes}")
 
-        for genome_data_id, genome_name in genome_data_ids:
-            genome_name = util.sanitize_filename(genome_name)
+        downloaded_genomes = tk.IntVar(value=0)
+
+        def download_genome_contig(genome_data_id, genome_name, n):
+            if self.cancel_genome_data_download_boolean:
+                return
+            
             contig_name = f"{genome_data_id}.fna"
-            feature_name = f"{genome_data_id}.PATRIC.features.tab"
-
             local_contig_directory = os.path.join(contigs_directory, genome_name)
-            local_feature_directory = os.path.join(features_directory, genome_name)
-
             local_contig_path = os.path.join(local_contig_directory, contig_name)
-            local_feature_path = os.path.join(local_feature_directory, feature_name)
-
             remote_contig = f"genomes/{genome_data_id}/{genome_data_id}.fna"
+
+            os.makedirs(local_contig_directory, exist_ok=True)
+
+            frame = ctk.CTkFrame(
+                master=self.genome_frame_logs,
+            )
+
+            ctk.CTkLabel(
+                master=frame,
+                text=contig_name,
+                width=200,
+                anchor=tk.W,
+            ).pack(side=tk.LEFT, padx=10)
+
+            progress_bar = ctk.CTkProgressBar(
+                master=frame,
+            )
+
+            progress_label = ctk.CTkLabel(master=frame, text="0 MB / 0 MB")
+
+            frame.pack(padx=20, pady=10, fill=tk.X, expand=True)
+
+            progress_bar.pack(side=tk.LEFT, pady=5)
+
+            progress_bar.set(0)
+
+            progress_label.pack(side=tk.LEFT, padx=10)
+
+            try:
+                with open(local_contig_path, "wb") as local_file:
+                    ftp = FTP("ftp.bvbrc.org")
+                    ftp.login()
+                    ftp.voidcmd("TYPE I")
+
+                    contig_size = ftp.size(remote_contig)
+
+                    contig_size_mb = contig_size / 1_048_576
+
+                    with ftp.transfercmd(f"RETR {remote_contig}") as conn:
+                        bytes_received = 0
+                        last_update_time = time.time_ns() / 1_000_000
+                        while not self.cancel_genome_data_download_boolean and (
+                            data := conn.recv(1024)
+                        ):
+                            local_file.write(data)
+                            bytes_received += len(data)
+                            current_time_ms = time.time_ns() / 1_000_000
+                            if (current_time_ms - last_update_time) > 100:
+                                progress_bar.set(bytes_received / contig_size)
+                                progress_label.configure(
+                                    text=f"{bytes_received / 1_048_576:6.2f} MB / {contig_size_mb:6.2f} MB"
+                                )
+                                last_update_time = current_time_ms
+
+                    util.try_pass_except(ftp.quit)
+
+            except Exception as e:
+                messagebox.showerror(
+                    "Error", f"An error occurred while downloading contigs\n\n{e}"
+                )
+                try:
+                    os.remove(local_contig_path)
+                    if len(os.listdir(local_contig_directory)) == 0:
+                        os.rmdir(local_contig_directory)
+                except Exception:
+                    pass
+
+            if self.cancel_genome_data_download_boolean:
+                try:
+                    os.remove(local_contig_path)
+                    if len(os.listdir(local_contig_directory)) == 0:
+                        os.rmdir(local_contig_directory)
+                except Exception:
+                    pass
+
+            frame.destroy()
+            n.set(n.get() + 1)
+            self.genome_frame_logs_total_label.configure(
+                text=f"Total: {n.get()}/{total_genomes}"
+            )
+
+        def download_genome_feature(genome_data_id, genome_name, n):
+            if self.cancel_genome_data_download_boolean:
+                return
+            
+            local_feature_directory = os.path.join(features_directory, genome_name)
+            feature_name = f"{genome_data_id}.PATRIC.features.tab"
+            local_feature_path = os.path.join(local_feature_directory, feature_name)
             remote_feature = (
                 f"genomes/{genome_data_id}/{genome_data_id}.PATRIC.features.tab"
             )
 
-            if self.genome_data_frame_contig_checkbox.get():
-                os.makedirs(local_contig_directory, exist_ok=True)
+            os.makedirs(local_feature_directory, exist_ok=True)
 
-                number_downloaded += 1
-                self.total_progress_label.configure(
-                    text=f"Downloading: {contig_name} ({number_downloaded}/{total_genomes})"
+            frame = ctk.CTkFrame(
+                master=self.genome_frame_logs,
+            )
+
+            ctk.CTkLabel(
+                master=frame,
+                text=feature_name,
+                width=200,
+                anchor=tk.W,
+            ).pack(side=tk.LEFT, padx=10)
+
+            progress_bar = ctk.CTkProgressBar(
+                master=frame,
+            )
+
+            progress_label = ctk.CTkLabel(master=frame, text="0 MB / 0 MB", anchor=tk.E)
+
+            frame.pack(padx=20, pady=10, fill=tk.X)
+
+            progress_bar.pack(side=tk.LEFT, pady=5)
+
+            progress_bar.set(0)
+
+            progress_label.pack(side=tk.LEFT, padx=10)
+
+            try:
+                with open(local_feature_path, "wb") as local_file:
+                    ftp = FTP("ftp.bvbrc.org")
+                    ftp.login()
+                    ftp.voidcmd("TYPE I")
+
+                    feature_size = ftp.size(remote_feature)
+
+                    feature_size_mb = feature_size / 1_048_576
+
+                    with ftp.transfercmd(f"RETR {remote_feature}") as conn:
+                        bytes_received = 0
+                        last_update_time = time.time_ns() / 1_000_000
+                        while not self.cancel_genome_data_download_boolean and (
+                            data := conn.recv(1024)
+                        ):
+                            local_file.write(data)
+                            bytes_received += len(data)
+                            current_time_ms = time.time_ns() / 1_000_000
+                            if (current_time_ms - last_update_time) > 100:
+                                progress_bar.set(bytes_received / feature_size)
+                                progress_label.configure(
+                                    text=f"{bytes_received / 1_048_576:6.2f} MB / {feature_size_mb:6.2f} MB"
+                                )
+                                last_update_time = current_time_ms
+
+                    util.try_pass_except(ftp.quit)
+
+            except Exception as e:
+                messagebox.showerror(
+                    "Error", f"An error occurred while downloading features\n\n{e}"
                 )
-                self.total_progress_bar["value"] = number_downloaded
                 try:
-                    with open(local_contig_path, "wb") as local_file:
-                        ftp = FTP("ftp.bvbrc.org")
-                        ftp.login()
-                        ftp.voidcmd("TYPE I")
+                    os.remove(local_feature_path)
+                    if len(os.listdir(local_feature_directory)) == 0:
+                        os.rmdir(local_feature_directory)
+                except Exception:
+                    pass
 
-                        contig_size = ftp.size(remote_contig)
-
-                        self.file_progress_bar.configure(maximum=contig_size)
-
-                        contig_size_mb = contig_size / 1_048_576
-
-                        self.file_progress_bar["value"] = 0
-
-                        with ftp.transfercmd(f"RETR {remote_contig}") as conn:
-                            bytes_received = 0
-                            last_update_time = time.time_ns() / 1_000_000
-                            while not self.cancel_genome_data_download_boolean and (
-                                data := conn.recv(1024)
-                            ):
-                                local_file.write(data)
-                                bytes_received += len(data)
-                                current_time_ms = time.time_ns() / 1_000_000
-                                if (current_time_ms - last_update_time) > 100:
-                                    self.file_progress_bar["value"] = bytes_received
-                                    self.file_progress_label.configure(
-                                        text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {contig_size_mb:6.2f} MB"
-                                    )
-                                    last_update_time = current_time_ms
-
-                        self.file_progress_bar["value"] = 0
-                        self.file_progress_label.configure(text="")
-                except Exception as e:
-                    messagebox.showerror(
-                        "Error", f"An error occurred while downloading contigs\n\n{e}"
-                    )
-                    try:
-                        os.remove(local_contig_path)
-                        if len(os.listdir(local_contig_directory)) == 0:
-                            os.rmdir(local_contig_directory)
-                    except Exception:
-                        pass
-
-                if self.cancel_genome_data_download_boolean:
-                    try:
-                        os.remove(local_contig_path)
-                        if len(os.listdir(local_contig_directory)) == 0:
-                            os.rmdir(local_contig_directory)
-                    except Exception:
-                        pass
-                    break
-
-            if self.genome_data_frame_feature_checkbox.get():
-                os.makedirs(local_feature_directory, exist_ok=True)
-
-                number_downloaded += 1
-                self.total_progress_label.configure(
-                    text=f"Downloading: {feature_name} ({number_downloaded}/{total_genomes})"
-                )
-                self.total_progress_bar["value"] = number_downloaded
+            if self.cancel_genome_data_download_boolean:
                 try:
-                    with open(local_feature_path, "wb") as local_file:
-                        ftp = FTP("ftp.bvbrc.org")
-                        ftp.login()
-                        ftp.voidcmd("TYPE I")
+                    os.remove(local_feature_path)
+                    if len(os.listdir(local_feature_directory)) == 0:
+                        os.rmdir(local_feature_directory)
+                except Exception:
+                    pass
 
-                        feature_size = ftp.size(remote_feature)
+            frame.destroy()
+            n.set(n.get() + 1)
+            self.genome_frame_logs_total_label.configure(
+                text=f"Total: {n.get()}/{total_genomes}"
+            )
 
-                        self.file_progress_bar.configure(maximum=feature_size)
-
-                        feature_size_mb = feature_size / 1_048_576
-
-                        self.file_progress_bar["value"] = 0
-
-                        with ftp.transfercmd(f"RETR {remote_feature}") as conn:
-                            bytes_received = 0
-                            last_update_time = time.time_ns() / 1_000_000
-                            while not self.cancel_genome_data_download_boolean and (
-                                data := conn.recv(1024)
-                            ):
-                                local_file.write(data)
-                                bytes_received += len(data)
-                                if (current_time_ms - last_update_time) > 100:
-                                    self.file_progress_bar["value"] = bytes_received
-                                    self.file_progress_label.configure(
-                                        text=f"Downloaded: {bytes_received / 1_048_576:6.2f} MB / {feature_size_mb:6.2f} MB"
-                                    )
-                                    last_update_time = current_time_ms
-
-                        self.file_progress_bar["value"] = 0
-                        self.file_progress_label.configure(text="")
-                except Exception as e:
-                    messagebox.showerror(
-                        "Error", f"An error occurred while downloading features\n\n{e}"
+        with ThreadPoolExecutor(10) as executor:
+            threads = []
+            for genome_data_id, genome_name in genome_data_ids:
+                genome_name = util.sanitize_filename(genome_name)
+                if self.genome_data_frame_contig_checkbox.get():
+                    threads.append(
+                        executor.submit(
+                            download_genome_contig,
+                            genome_data_id,
+                            genome_name,
+                            downloaded_genomes,
+                        )
                     )
-                    try:
-                        os.remove(local_feature_path)
-                        if len(os.listdir(local_feature_directory)) == 0:
-                            os.rmdir(local_feature_directory)
-                    except Exception:
-                        pass
-
-                if self.cancel_genome_data_download_boolean:
-                    try:
-                        os.remove(local_feature_path)
-                        if len(os.listdir(local_feature_directory)) == 0:
-                            os.rmdir(local_feature_directory)
-                    except Exception:
-                        pass
-                    break
+                if self.genome_data_frame_feature_checkbox.get():
+                    threads.append(
+                        executor.submit(
+                            download_genome_feature,
+                            genome_data_id,
+                            genome_name,
+                            downloaded_genomes,
+                        )
+                    )
+            wait(threads)
 
         [
             kover.create_contigs_path_tsv(contigs_directory, genome_name)
@@ -665,13 +741,7 @@ class App(ctk.CTk):
             text="Download", command=self.download_genome_data
         )
 
-        self.total_progress_bar["value"] = 0
-        self.total_progress_label.configure(text="")
-
-        self.total_progress_bar.pack_forget()
-        self.total_progress_label.pack_forget()
-        self.file_progress_bar.pack_forget()
-        self.file_progress_label.pack_forget()
+        self.genome_frame_logs_total_label.configure(text="Total: 0/0")
 
     def cancel_genome_data_download(self):
         if messagebox.askyesno(
@@ -718,7 +788,7 @@ class App(ctk.CTk):
                     font=self.default_font(10),
                     fg_color="transparent",
                     text="",
-                    anchor="w",
+                    anchor=tk.W,
                 )
 
                 progress_label.pack(padx=50, pady=(0, 20), fill=tk.X)
@@ -1105,7 +1175,7 @@ class App(ctk.CTk):
             master=self.preprocessing_frame_control.control_panel,
             fg_color="transparent",
             width=27,
-            anchor="w",
+            anchor=tk.W,
         )
 
         self.preprocessing_frame_control_panel_dataset_button = ctk.CTkButton(
@@ -3501,13 +3571,13 @@ class App(ctk.CTk):
                 self.antibiotic_selection.configure(state="readonly")
 
     def save_description_to_tsv(self, species: str, antibiotics: str, file_path: str):
-        with open(file_path, "w", newline="") as tsv_file:
+        with open(file_path, tk.W, newline="") as tsv_file:
             tsv_writer = csv.writer(tsv_file)
             tsv_writer.writerow([f"Species: {species}"])
             tsv_writer.writerow([f"Antibiotics: {antibiotics}"])
 
     def save_all_table_to_tsv(self, table: Table, file_path: str):
-        with open(file_path, "w", newline="") as tsv_file:
+        with open(file_path, tk.W, newline="") as tsv_file:
             columns = table.filtered_data.columns.tolist()
 
             tsv_writer = csv.writer(tsv_file, delimiter="\t")
@@ -3517,14 +3587,14 @@ class App(ctk.CTk):
             tsv_writer.writerows(table.filtered_data.values)
 
     def save_phenotype_metadata_to_tsv(self, table: Table, file_path: str):
-        with open(file_path, "w", newline="") as tsv_file:
+        with open(file_path, tk.W, newline="") as tsv_file:
             tsv_writer = csv.writer(tsv_file, delimiter="\t")
             tsv_writer.writerows(
                 table.filtered_data.iloc[:, [0, 2]].drop_duplicates().values
             )
 
     def save_id_name_to_tsv(self, table: Table, file_path: str):
-        with open(file_path, "w", newline="") as tsv_file:
+        with open(file_path, tk.W, newline="") as tsv_file:
             tsv_writer = csv.writer(tsv_file, delimiter="\t")
             columns = table.filtered_data.columns[:2].tolist()
             tsv_writer.writerow(columns)
@@ -3581,7 +3651,7 @@ class App(ctk.CTk):
     ) -> str:
         survey_conf_path = os.path.join(output_dir, "survey.conf")
 
-        with open(survey_conf_path, "w") as survey_conf_file:
+        with open(survey_conf_path, tk.W) as survey_conf_file:
             survey_conf_file.write(f"-k {kmer_size}\n")
             survey_conf_file.write("-run-surveyor\n")
             survey_conf_file.write(
