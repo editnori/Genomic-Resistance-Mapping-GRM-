@@ -97,7 +97,7 @@ class App(ctk.CTk):
 
         self.call("encoding", "system", "utf-8")
 
-        self.title("Genome analysis tool")
+        self.title("Genomic Resistance Mapping")
 
         self.screen_width = self.winfo_screenwidth()
         self.screen_height = self.winfo_screenheight()
@@ -192,7 +192,7 @@ class App(ctk.CTk):
 
         self.navigation_frame_label = ctk.CTkLabel(
             self.navigation_frame,
-            text="Patric",
+            text="GRM",
             image=self.images["logo"],
             padx=10,
             compound="left",
