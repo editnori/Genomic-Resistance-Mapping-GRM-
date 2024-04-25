@@ -39,6 +39,7 @@ class Page(Enum):
     PREPROCESSING_PAGE = 1
     KOVER_LEARN_PAGE = 2
     ANALYSIS_PAGE = 3
+    SETTINGS_PAGE = 4
 
 
 class Path(str):
@@ -78,6 +79,8 @@ class App(ctk.CTk):
         self.create_kover_learn_page()
 
         self.create_analysis_page()
+
+        self.create_settings_page()
 
         self.set_page(Page.DATA_COLLECTION_PAGE)
 
@@ -261,13 +264,20 @@ class App(ctk.CTk):
 
         self.analysis_frame_button.grid(row=4, column=0, sticky=tk.EW)
 
-        self.appearance_mode_menu = ctk.CTkOptionMenu(
+        self.settings_frame_button = ctk.CTkButton(
             self.navigation_frame,
-            values=["Dark", "Light", "System"],
-            command=ctk.set_appearance_mode,
+            corner_radius=0,
+            height=button_height,
+            text="Settings",
+            border_spacing=10,
+            text_color=button_text_color,
+            hover_color=button_hover_color,
+            image=self.images["add_user"],
+            anchor=tk.W,
+            command=lambda: self.set_page(Page.SETTINGS_PAGE),
         )
 
-        self.appearance_mode_menu.grid(row=6, column=0, pady=15, sticky="s")
+        self.settings_frame_button.grid(row=6, column=0, sticky=tk.EW)
 
         ctk.set_appearance_mode("Dark")
 
@@ -449,7 +459,7 @@ class App(ctk.CTk):
 
         self.genome_frame_logs_total_label = ctk.CTkLabel(
             master=self.genome_frame_logs,
-            text="Total: 0\\0",
+            text="",
             anchor=tk.W,
         )
 
@@ -527,7 +537,7 @@ class App(ctk.CTk):
         def download_genome_contig(genome_data_id, genome_name, n):
             if self.cancel_genome_data_download_boolean:
                 return
-            
+
             contig_name = f"{genome_data_id}.fna"
             local_contig_directory = os.path.join(contigs_directory, genome_name)
             local_contig_path = os.path.join(local_contig_directory, contig_name)
@@ -616,7 +626,7 @@ class App(ctk.CTk):
         def download_genome_feature(genome_data_id, genome_name, n):
             if self.cancel_genome_data_download_boolean:
                 return
-            
+
             local_feature_directory = os.path.join(features_directory, genome_name)
             feature_name = f"{genome_data_id}.PATRIC.features.tab"
             local_feature_path = os.path.join(local_feature_directory, feature_name)
@@ -741,7 +751,7 @@ class App(ctk.CTk):
             text="Download", command=self.download_genome_data
         )
 
-        self.genome_frame_logs_total_label.configure(text="Total: 0/0")
+        self.genome_frame_logs_total_label.configure(text="")
 
     def cancel_genome_data_download(self):
         if messagebox.askyesno(
@@ -3021,6 +3031,48 @@ class App(ctk.CTk):
         self.webview.pack(fill="both", expand=True, pady=(20, 0))
         self.webview.load_url("http://127.0.0.1:5503/page")
 
+    def create_settings_page(self):
+        self.settings_frame = ctk.CTkFrame(self, fg_color="transparent")
+
+        self.settings_frame_tab_view = ctk.CTkTabview(self.settings_frame)
+
+        self.settings_frame_tab_view.pack(fill=tk.BOTH, expand=True)
+
+        self.settings_frame_tab_view.add("General")
+
+        self.settings_frame_tab_view.add("Appearance")
+
+        self.settings_frame_tab_view.add("About")
+
+        self.settings_frame_general = ctk.CTkScrollableFrame(
+            self.settings_frame_tab_view.tab("General"),
+            border_width=2,
+        )
+
+        self.settings_frame_general.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+        self.settings_frame_appearance = ctk.CTkScrollableFrame(
+            self.settings_frame_tab_view.tab("Appearance"),
+            border_width=2,
+        )
+
+        self.settings_frame_appearance.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+        self.appearance_mode_menu = ctk.CTkOptionMenu(
+            self.settings_frame_appearance,
+            values=["Dark", "Light", "System"],
+            command=ctk.set_appearance_mode,
+        )
+
+        self.appearance_mode_menu.pack()
+
+        self.settings_frame_about = ctk.CTkScrollableFrame(
+            self.settings_frame_tab_view.tab("About"),
+            border_width=2,
+        )
+
+        self.settings_frame_about.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
     def set_page(self, page: Page):
         page_frame = {
             Page.DATA_COLLECTION_PAGE: (
@@ -3033,6 +3085,7 @@ class App(ctk.CTk):
             ),
             Page.KOVER_LEARN_PAGE: (self.kover_frame, self.kover_frame_button),
             Page.ANALYSIS_PAGE: (self.analysis_frame, self.analysis_frame_button),
+            Page.SETTINGS_PAGE: (self.settings_frame, self.settings_frame_button),
         }
 
         for frame, button in page_frame.values():

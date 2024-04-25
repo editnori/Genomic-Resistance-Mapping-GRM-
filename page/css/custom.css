@@ -1,18 +1,3 @@
-/* Sticky footer styles
--------------------------------------------------- */
-
-html {
-    height: 100%;
-    box-sizing: border-box;
-    background: #242424;
-}
-
-*,
-*:before,
-*:after {
-    box-sizing: inherit;
-}
-
 body {
     padding-top: 50px;
     padding-bottom: 50px;
@@ -29,7 +14,8 @@ h2 {
     color: #e8e8e8;
 }
 
-.container {
-    overflow-x: hidden;
-    overflow-y: auto;
+#plots {
+    width: 95%;
+    height: 100%;
+    overflow-x: auto;
 }
