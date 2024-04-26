@@ -106,7 +106,7 @@ The View Dataset functionality enables users to access a wide range of informati
 
 ![The View Dataset interface in the Kover Learn Module, showcasing various options for accessing detailed information about the dataset.](image/Readme/1714135404754.png)
 
-![1714135413357](https://file+.vscode-resource.vscode-cdn.net/c%3A/Users/Administrator/Videos/genome-analysis-tool-main/image/Readme/1714135413357.png)
+![1714135413357](image/Readme/1714135413357.png)!
 
 ![1714135401552](image/Readme/1714135401552.png)!
 
