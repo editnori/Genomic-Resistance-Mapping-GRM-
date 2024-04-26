@@ -57,8 +57,8 @@ The control panel allows adjustments of various parameters:
 
 ## Creating a Dataset in Kover Learn Module
 
-    ![1714135415488](image/Readme/1714135415488.png)
-	The Kover Learn Module processes genomic data to create datasets, which can be sourced from either contigs or reads. This section outlines the key parameters involved in these processes.
+![1714135415488](image/Readme/1714135415488.png)
+The Kover Learn Module processes genomic data to create datasets, which can be sourced from either contigs or reads. This section outlines the key parameters involved in these processes.
 
 ### From Contigs
 
@@ -107,9 +107,8 @@ The View Dataset functionality enables users to access a wide range of informati
 ![The View Dataset interface in the Kover Learn Module, showcasing various options for accessing detailed information about the dataset.](image/Readme/1714135404754.png)
 
 ![1714135413357](https://file+.vscode-resource.vscode-cdn.net/c%3A/Users/Administrator/Videos/genome-analysis-tool-main/image/Readme/1714135413357.png)
-*Figure: The View Dataset interface in the Kover Learn Module.*
 
-T![1714135401552](image/Readme/1714135401552.png)!
+![1714135401552](image/Readme/1714135401552.png)!
 
 ## Discussion
 
