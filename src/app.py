@@ -1,4 +1,5 @@
 from ftplib import FTP
+import json
 import time
 import tkinter as tk
 from tkinter import ttk, messagebox, font
@@ -27,6 +28,7 @@ import kover
 from hovertip import Hovertip
 from table import Table
 from label import Label
+from gui import PathSelector
 from ftp_downloader import FTPDownloadApp, DownloadWindow, get_last_metadata_update_date
 
 from tkwebview2 import WebView2, have_runtime, install_runtime
@@ -45,15 +47,21 @@ class Page(Enum):
 class Path(str):
     ROOT = pl.Path(__file__).parent.parent
     REMOTE_METADATA = "RELEASE_NOTES/genome_metadata"
+    REMOTE_AMR = "RELEASE_NOTES/PATRIC_genomes_AMR.txt"
     FOREST_DARK = os.path.join(ROOT, "ui/forest-dark.tcl")
     RAY = os.path.join(ROOT, "bin/ray/Ray")
     DSK = os.path.join(ROOT, "bin/dsk/dsk")
     KOVER = os.path.join(ROOT, "bin/kover/kover")
-    IMAGES = os.path.join(ROOT, "ui/test_images/")
-    TEMP = os.path.join(ROOT, ".temp/")
-    DATA = os.path.join(ROOT, "data/")
-    CONTIGS = "contigs/"
-    FEATURES = "features/"
+    IMAGES = os.path.join(ROOT, "ui/test_images")
+    TEMP = os.path.join(ROOT, ".temp")
+    DATA = os.path.join(ROOT, "data")
+    CONTIGS = "contigs"
+    FEATURES = "features"
+
+
+DEFAULT_SETTINGS = {
+    "general": {"amr_database": Path.DATA, "amr_date": "0000-00-00 00:00:00"}
+}
 
 
 class App(ctk.CTk):
@@ -70,6 +78,10 @@ class App(ctk.CTk):
 
         self.load_images(Path.IMAGES)
 
+        self.load_settings()
+
+        self.update_settings()
+
         self.create_navigation_frame()
 
         self.create_data_collection_page()
@@ -83,6 +95,8 @@ class App(ctk.CTk):
         self.create_settings_page()
 
         self.set_page(Page.DATA_COLLECTION_PAGE)
+
+        self.check_for_updates(False)
 
     @threaded
     def init_server(self):
@@ -142,26 +156,26 @@ class App(ctk.CTk):
         self.images = {}
 
         self.images["logo"] = ctk.CTkImage(
-            Image.open(path + "CustomTkinter_logo_single.png"),
+            Image.open(os.path.join(path, "CustomTkinter_logo_single.png")),
             size=(25, 25),
         )
 
         self.images["large_test"] = ctk.CTkImage(
-            Image.open(path + "large_test_image.png"),
+            Image.open(os.path.join(path, "large_test_image.png")),
             size=(500, 150),
         )
 
         self.images["icon"] = ctk.CTkImage(
-            Image.open(path + "image_icon_light.png"), size=(25, 25)
+            Image.open(os.path.join(path, "image_icon_light.png")), size=(25, 25)
         )
 
         self.images["home"] = ctk.CTkImage(
-            light_image=Image.open(path + "database-dark.png"),
-            dark_image=Image.open(path + "database-light1.png"),
+            light_image=Image.open(os.path.join(path, "database-dark.png")),
+            dark_image=Image.open(os.path.join(path, "database-light1.png")),
             size=(25, 25),
         )
 
-        prepocessing_image = Image.open(path + "preprocessing.png")
+        prepocessing_image = Image.open(os.path.join(path, "preprocessing.png"))
 
         self.images["chat"] = ctk.CTkImage(
             light_image=prepocessing_image,
@@ -170,18 +184,30 @@ class App(ctk.CTk):
         )
 
         self.images["add_user"] = ctk.CTkImage(
-            light_image=Image.open(path + "add_user_dark.png"),
-            dark_image=Image.open(path + "add_user_light.png"),
+            light_image=Image.open(os.path.join(path, "add_user_dark.png")),
+            dark_image=Image.open(os.path.join(path, "add_user_light.png")),
             size=(25, 25),
         )
 
-        kover_image = Image.open(path + "kover.png")
+        kover_image = Image.open(os.path.join(path, "kover.png"))
 
         self.images["kover"] = ctk.CTkImage(
             light_image=kover_image,
             dark_image=kover_image,
             size=(25, 25),
         )
+
+    def load_settings(self):
+        self.settings = DEFAULT_SETTINGS
+        try:
+            with open(os.path.join(Path.DATA, "settings.json"), "r") as file:
+                self.settings = json.load(file)
+        except Exception:
+            pass
+
+    def update_settings(self):
+        with open(os.path.join(Path.DATA, "settings.json"), "w") as file:
+            json.dump(self.settings, file)
 
     def create_navigation_frame(self):
         button_height = 80
@@ -911,80 +937,6 @@ class App(ctk.CTk):
 
         self.data_collection_main_frame.pack(fill=tk.BOTH, expand=True)
 
-        frame4 = ctk.CTkFrame(
-            self.data_collection_main_frame,
-            width=1000,
-            height=400,
-            corner_radius=15,
-            border_width=2,
-        )
-        frame4.grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=50)
-
-        metadata_amr_label = ctk.CTkLabel(
-            master=frame4, text="Latest metadata for AMR", font=self.default_font(20)
-        )
-        metadata_amr_label.place(x=50, y=45)
-
-        # Create custom button
-        self.update_date = ctk.CTkLabel(
-            master=frame4, text="", font=self.default_font(12), fg_color="transparent"
-        )
-        self.update_date.place(x=50, y=90)
-        dirbtn3 = ctk.CTkButton(
-            master=frame4,
-            width=150,
-            text="Select directory",
-            corner_radius=6,
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-        )
-        dirbtn3.place(x=50, y=120)
-
-        self.viewupdate_date = ctk.CTkButton(
-            master=frame4,
-            width=150,
-            text="View last update date",
-            corner_radius=6,
-            command=lambda: get_last_metadata_update_date(self.update_date),
-        )
-        self.viewupdate_date.place(x=250, y=120)
-
-        self.download_button3 = ctk.CTkButton(
-            master=frame4, width=150, text="Download", corner_radius=6, command=self
-        )
-        self.download_button3.place(x=450, y=120)
-        self.cancel_button3 = ctk.CTkButton(
-            master=frame4, width=150, text="Cancel", corner_radius=6, command=self
-        )
-        self.cancel_button3.place(x=650, y=120)
-
-        self.progress_bar3 = ttk.Progressbar(
-            master=frame4, length=800, mode="determinate"
-        )
-        self.progress_bar3.place(x=50, y=190)
-
-        self.size_label3 = ctk.CTkLabel(
-            master=frame4, text="", font=self.default_font(10), fg_color="transparent"
-        )
-        self.size_label3.place(x=50, y=200)
-
-        self.download_window2 = DownloadWindow(
-            frame4,
-            self.download_button3,
-            self.cancel_button3,
-            dirbtn3,
-            self.size_label3,
-            self.progress_bar3,
-            self.size_label3,
-        )
-
-        self.download_app = FTPDownloadApp(
-            self.download_window2, "RELEASE_NOTES/PATRIC_genomes_AMR.txt"
-        )
-        # logic
-
-        # creating AMR metadata frame
         amr_frame = ctk.CTkFrame(
             self.data_collection_main_frame,
             width=500,
@@ -1001,16 +953,6 @@ class App(ctk.CTk):
             font=self.default_font(20),
         )
         list_amr_label.place(x=50, y=20)
-        self.download_button4 = ctk.CTkButton(
-            master=amr_frame,
-            text="load amr list",
-            fg_color="transparent",
-            border_width=1,
-            border_color="#FFCC70",
-            font=self.default_font(12),
-            command=self.load_amr_data,
-        )
-        self.download_button4.place(x=50, y=60)
         self.species_filter = Combobox(master=amr_frame, state=tk.DISABLED)
         self.species_filter.bind("<<ComboboxSelected>>", self.update_table)
         self.species_filter.bind(
@@ -3046,10 +2988,41 @@ class App(ctk.CTk):
 
         self.settings_frame_general = ctk.CTkScrollableFrame(
             self.settings_frame_tab_view.tab("General"),
-            border_width=2,
         )
 
-        self.settings_frame_general.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        self.settings_frame_general.pack(expand=True, fill=tk.BOTH)
+
+        self.settings_frame_general_amr_path_selector = PathSelector(
+            self.settings_frame_general,
+            "AMR Database Path",
+            is_dir=True,
+        )
+
+        self.settings_frame_general_amr_path_selector.set(
+            self.settings["general"]["amr_database"]
+        )
+
+        def on_amr_path_selected():
+            self.settings["general"][
+                "amr_database"
+            ] = self.settings_frame_general_amr_path_selector.get()
+            self.update_settings()
+
+        self.settings_frame_general_amr_path_selector.on_update(on_amr_path_selected)
+
+        self.settings_frame_general_amr_path_selector.pack(padx=20, pady=20)
+
+        self.settings_frame_general_amr_check_update = ctk.CTkButton(
+            master=self.settings_frame_general,
+            text="Check for AMR updates",
+            fg_color="#3c404b",
+            hover_color="#63666f",
+            text_color="#ffffff",
+            width=150,
+            command=self.check_for_updates,
+        )
+
+        self.settings_frame_general_amr_check_update.pack(padx=20, pady=20, anchor=tk.W)
 
         self.settings_frame_appearance = ctk.CTkScrollableFrame(
             self.settings_frame_tab_view.tab("Appearance"),
@@ -3072,6 +3045,121 @@ class App(ctk.CTk):
         )
 
         self.settings_frame_about.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+    def center(self, win):
+        win.update_idletasks()
+        width = win.winfo_width()
+        frm_width = win.winfo_rootx() - win.winfo_x()
+        win_width = width + 2 * frm_width
+        height = win.winfo_height()
+        titlebar_height = win.winfo_rooty() - win.winfo_y()
+        win_height = height + titlebar_height + frm_width
+        x = win.winfo_screenwidth() // 2 - win_width // 2
+        y = win.winfo_screenheight() // 2 - win_height // 2
+        win.geometry("{}x{}+{}+{}".format(width, height, x, y))
+
+    def download_amr_data(self):
+        update_window = ctk.CTkToplevel(self)
+
+        self.center(update_window)
+
+        update_window.title("Update AMR Database")
+
+        update_window.grab_set()
+
+        update_window.resizable(False, False)
+
+        update_window.geometry("400x200")
+
+        frame = ctk.CTkFrame(
+            master=update_window,
+            fg_color="transparent",
+        )
+        
+        ctk.CTkLabel(
+            master=frame,
+            text="Downloading AMR Database...",
+            font=self.default_font(24),
+        ).pack(pady=(0, 50), fill=tk.X, expand=True)
+
+        progress_bar = ctk.CTkProgressBar(
+            master=frame,
+        )
+
+        progress_label = ctk.CTkLabel(master=frame, text="0 MB / 0 MB")
+
+        frame.pack(padx=20, pady=10, fill=tk.X, expand=True)
+
+        progress_bar.pack(side=tk.LEFT, pady=5)
+
+        progress_bar.set(0)
+
+        progress_label.pack(side=tk.LEFT, padx=10)
+
+        def close_child(window):
+            window.grab_release()
+            window.destroy()
+
+        update_window.protocol("WM_DELETE_WINDOW", lambda: close_child(update_window))
+
+        try:
+            with open(
+                os.path.join(Path.DATA, "PATRIC_genomes_AMR.txt"), "wb"
+            ) as local_file:
+                ftp = FTP("ftp.bvbrc.org")
+                ftp.login()
+                ftp.voidcmd("TYPE I")
+
+                contig_size = ftp.size(Path.REMOTE_AMR)
+
+                contig_size_mb = contig_size / 1_048_576
+
+                with ftp.transfercmd(f"RETR {Path.REMOTE_AMR}") as conn:
+                    bytes_received = 0
+                    last_update_time = time.time_ns() / 1_000_000
+                    while data := conn.recv(1024):
+                        local_file.write(data)
+                        bytes_received += len(data)
+                        current_time_ms = time.time_ns() / 1_000_000
+                        if (current_time_ms - last_update_time) > 100:
+                            progress_bar.set(bytes_received / contig_size)
+                            progress_label.configure(
+                                text=f"{bytes_received / 1_048_576:6.2f} MB / {contig_size_mb:6.2f} MB"
+                            )
+                            last_update_time = current_time_ms
+
+                util.try_pass_except(ftp.quit)
+
+            self.settings["general"]["amr_date"] = get_last_metadata_update_date()
+            self.update_settings()
+        except Exception:
+            self.settings["general"]["amr_date"] = DEFAULT_SETTINGS["general"][
+                "amr_date"
+            ]
+            self.update_settings()
+            if messagebox.askretrycancel(
+                "Error",
+                "AMR database downloading was stopped\n\nThe App won't work unless the data is fully downloaded\n\nWould you like to retry?",
+            ):
+                close_child(update_window)
+                self.download_amr_data()
+                return
+
+        close_child(update_window)
+
+    @threaded
+    def check_for_updates(self, show_no=True):
+        self.settings_frame_general_amr_check_update.configure(state=tk.DISABLED)
+        if self.settings["general"]["amr_date"] != get_last_metadata_update_date():
+            if messagebox.askyesno(
+                "Update Available",
+                "An update is available. Would you like to update now?",
+            ):
+                self.download_amr_data()
+        elif show_no:
+            messagebox.showinfo("No Updates", "No updates available.")
+        self.load_amr_data().result()
+        self.settings_frame_general_amr_check_update.configure(state=tk.NORMAL)
 
     def set_page(self, page: Page):
         page_frame = {
@@ -3322,7 +3410,6 @@ class App(ctk.CTk):
 
     @threaded
     def load_amr_data(self):
-        self.download_button4.configure(text="Loading..", state=tk.DISABLED)
         self.amr_list_filter_checkbox.configure(state=tk.DISABLED)
         self.species_filter.configure(state=tk.DISABLED)
         self.species_selection.configure(state=tk.DISABLED)
@@ -3331,7 +3418,9 @@ class App(ctk.CTk):
         self.numeric_phenotypes_checkbox.configure(state=tk.DISABLED)
         self.filter_contradictions_checkbox.configure(state=tk.DISABLED)
         self.save_table_button.configure(state=tk.DISABLED)
-        amr_metadata_file = util.select_file(filetypes=[("AMR Text Files", "*.txt")])
+        amr_metadata_file = os.path.join(
+            self.settings["general"]["amr_database"], "PATRIC_genomes_AMR.txt"
+        )
         if amr_metadata_file:
             self.total_label.configure(text="Total: ...")
 
@@ -3419,8 +3508,6 @@ class App(ctk.CTk):
             self.numeric_phenotypes_checkbox.configure(state=tk.NORMAL)
             self.filter_contradictions_checkbox.configure(state=tk.NORMAL)
             self.save_table_button.configure(state=tk.NORMAL)
-
-        self.download_button4.configure(text="load amr list", state=tk.NORMAL)
 
     def update_table(self, event=None):
         selected_species = self.species_filter.get()

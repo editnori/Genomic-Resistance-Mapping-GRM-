@@ -14,19 +14,17 @@ from ctk import CTkButton, CTkLabel, CTkFrame
 from util import threaded, select_directory
 
 
-@threaded
-def get_last_metadata_update_date(label: CTkLabel):
-    label.configure(text="Last Update Time: Loading...")
+def get_last_metadata_update_date() -> str:
     try:
         ftps = FTP("ftp.bvbrc.org")
         ftps.login()
         mod_time = ftps.sendcmd(
             "MDTM " + "/RELEASE_NOTES/PATRIC_genomes_AMR.txt"
         ).split()[1]
-        last_update_time = datetime.strptime(mod_time, "%Y%m%d%H%M%S")
-        label.configure(text=f"Last Update Time: {last_update_time}")
+        return str(datetime.strptime(mod_time, "%Y%m%d%H%M%S"))
     except Exception:
         print(traceback.format_exc())  # LOGGER
+        return "Unknown"
 
 
 class DownloadWindow:

@@ -28,17 +28,17 @@ class Key(int):
     ESCAPE = 27
 
 
-def select_directory(title: Optional[str] = "Select Folder") -> Optional[str]:
+def select_directory(title: str = "Select Folder", default: Optional[str] = None) -> Optional[str]:
     selected_directory: str = filedialog.askdirectory(title=title)
 
     if not selected_directory:
-        return None
+        return default
 
     if not os.path.isdir(selected_directory):
         messagebox.showerror(
             "Error", "Directory is invalid.\n\nPlease select a valid directory."
         )
-        return None
+        return default
 
     if (
         selected_directory.find(" ") != -1
@@ -49,25 +49,26 @@ def select_directory(title: Optional[str] = "Select Folder") -> Optional[str]:
             "Error",
             "Directory path is invalid.\n\nPlease select a directory path without spaces or parentheses.",
         )
-        return None
+        return default
 
     return selected_directory
 
 
 def select_file(
-    filetypes: Optional[Iterable[str]] = (("All Files", "*.*"),),
-    title: Optional[str] = "Open",
+    filetypes: Iterable[str] = (("All Files", "*.*"),),
+    title: str = "Open",
+    default: Optional[str] = None,
 ) -> Optional[str]:
     selected_file: str = filedialog.askopenfilename(filetypes=filetypes, title=title)
 
     if not selected_file:
-        return None
+        return default
 
     if not os.path.isfile(selected_file):
         messagebox.showerror(
             "Error", "File path is invalid.\n\nPlease select a valid file path."
         )
-        return None
+        return default
 
     if (
         selected_file.find(" ") != -1
@@ -78,7 +79,7 @@ def select_file(
             "Error",
             "File path is invalid.\n\nPlease select a file path without spaces or parentheses.",
         )
-        return None
+        return default
 
     return selected_file
 
@@ -173,13 +174,13 @@ def sanitize_filename(filename: str) -> str:
 
 def force_insertable_value(
     new_value: float,
-    spinbox: Spinbox | CTkEntry,
+    widget: Spinbox | CTkEntry,
 ):
-    validation = spinbox.cget("validate")
-    spinbox.configure(validate="none")
-    spinbox.delete(0, END)
-    spinbox.insert(0, new_value)
-    spinbox.configure(validate=validation)
+    validation = widget.cget("validate")
+    widget.configure(validate="none")
+    widget.delete(0, END)
+    widget.insert(0, new_value)
+    widget.configure(validate=validation)
 
 
 def update_cmd_output(message: str, output_target: CTkTextbox, *tags: str):
