@@ -3117,7 +3117,10 @@ class App(ctk.CTk):
 
         try:
             with open(
-                os.path.join(self.settings["general"]["amr_database"], "PATRIC_genomes_AMR.txt"), "wb"
+                os.path.join(
+                    self.settings["general"]["amr_database"], "PATRIC_genomes_AMR.txt"
+                ),
+                "wb",
             ) as local_file:
                 ftp = FTP("ftp.bvbrc.org")
                 ftp.login()
@@ -3162,6 +3165,9 @@ class App(ctk.CTk):
 
     @threaded
     def check_for_updates(self, show_no=True):
+        if self.settings_frame_general_amr_check_update.cget("state") == tk.DISABLED:
+            return
+
         self.settings_frame_general_amr_check_update.configure(state=tk.DISABLED)
         if self.settings["general"]["amr_date"] != get_last_metadata_update_date():
             if messagebox.askyesno(
