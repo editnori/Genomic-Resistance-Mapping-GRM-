@@ -14,6 +14,7 @@ from enum import Enum
 import traceback
 import re
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from datetime import datetime
 
 import ctk
 from PIL import Image
@@ -29,7 +30,6 @@ from hovertip import Hovertip
 from table import Table
 from label import Label
 from gui import PathSelector
-from ftp_downloader import FTPDownloadApp, DownloadWindow, get_last_metadata_update_date
 
 from tkwebview2 import WebView2, have_runtime, install_runtime
 
@@ -62,6 +62,19 @@ class Path(str):
 DEFAULT_SETTINGS = {
     "general": {"amr_database": Path.DATA, "amr_date": "0000-00-00 00:00:00"}
 }
+
+
+def get_last_metadata_update_date() -> str:
+    try:
+        ftps = FTP("ftp.bvbrc.org")
+        ftps.login()
+        mod_time = ftps.sendcmd(
+            "MDTM " + "/RELEASE_NOTES/PATRIC_genomes_AMR.txt"
+        ).split()[1]
+        return str(datetime.strptime(mod_time, "%Y%m%d%H%M%S"))
+    except Exception:
+        print(traceback.format_exc())  # LOGGER
+        return "Unknown"
 
 
 class App(ctk.CTk):
