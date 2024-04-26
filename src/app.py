@@ -3088,7 +3088,7 @@ class App(ctk.CTk):
             master=update_window,
             fg_color="transparent",
         )
-        
+
         ctk.CTkLabel(
             master=frame,
             text="Downloading AMR Database...",
@@ -3117,7 +3117,7 @@ class App(ctk.CTk):
 
         try:
             with open(
-                os.path.join(Path.DATA, "PATRIC_genomes_AMR.txt"), "wb"
+                os.path.join(self.settings["general"]["amr_database"], "PATRIC_genomes_AMR.txt"), "wb"
             ) as local_file:
                 ftp = FTP("ftp.bvbrc.org")
                 ftp.login()
@@ -3436,29 +3436,36 @@ class App(ctk.CTk):
         )
         if amr_metadata_file:
             self.total_label.configure(text="Total: ...")
-
-            self.amr_full = pd.read_table(
-                amr_metadata_file,
-                usecols=[
-                    "genome_id",
-                    "genome_name",
-                    "antibiotic",
-                    "resistant_phenotype",
-                    "measurement",
-                    "measurement_unit",
-                ],
-                converters={
-                    "genome_id": str,
-                    "genome_name": lambda x: " ".join(x.lower().split()[:2])
-                    .replace("[", "")
-                    .replace("]", ""),
-                    "antibiotic": str,
-                    "resistant_phenotype": str,
-                    "measurement": str,
-                    "measurement_unit": str,
-                },
-            )
-
+            try:
+                self.amr_full = pd.read_table(
+                    amr_metadata_file,
+                    usecols=[
+                        "genome_id",
+                        "genome_name",
+                        "antibiotic",
+                        "resistant_phenotype",
+                        "measurement",
+                        "measurement_unit",
+                    ],
+                    converters={
+                        "genome_id": str,
+                        "genome_name": lambda x: " ".join(x.lower().split()[:2])
+                        .replace("[", "")
+                        .replace("]", ""),
+                        "antibiotic": str,
+                        "resistant_phenotype": str,
+                        "measurement": str,
+                        "measurement_unit": str,
+                    },
+                )
+            except Exception:
+                traceback.print_exc()
+                self.settings["general"]["amr_date"] = DEFAULT_SETTINGS["general"][
+                    "amr_date"
+                ]
+                self.update_settings()
+                self.check_for_updates(show_no=False)
+                return
             self.amr_full.drop_duplicates(inplace=True)
 
             self.amr_full = self.amr_full[
