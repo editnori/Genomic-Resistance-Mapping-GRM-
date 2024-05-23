@@ -108,7 +108,7 @@ The View Dataset functionality enables users to access a wide range of informati
 
 ![1714135413357](image/Readme/1714135413357.png)!
 
-![1714135401552](image/Readme/1714135401552.png)!
+
 
 ## Discussion
 
