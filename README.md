@@ -75,7 +75,7 @@ All commands accept `--data <directory>`. `grm learn --only meropenem` selects a
 
 ## Evaluation
 
-The counter encodes canonical k-mers, sorts them, and writes bucketed ksets. The matrix combines k-mers with identical genome-presence patterns. The pipeline counts at k=31 and builds the matrix with a minimum support of two genomes. It reuses count, structure, and matrix stages that already agree with each other, including stages built by hand at another `--k` or `--min-support`. Models operate on those binary patterns; feature cards connect them to observed genomes and reference annotations.
+The counter encodes canonical k-mers, sorts them, and writes bucketed ksets. The matrix combines k-mers with identical genome-presence patterns. The pipeline counts at k=31 and builds the matrix with a minimum support of two genomes. It reuses count, structure, and matrix stages that agree with each other and with that k and minimum support; it counts and builds again stages built by hand at another `--k` or `--min-support`. Models operate on those binary patterns; feature cards connect them to observed genomes and reference annotations.
 
 The five fitted learners are a Set Covering Machine, CART, random forest, gradient-boosted trees, and lasso logistic regression. The catalog-containment baseline uses GRM's k-mer matching and drug rules with the AMRFinderPlus reference catalog. It does not run the AMRFinderPlus program.
 
@@ -89,7 +89,7 @@ MIC regression is a separate endpoint. Reference-gene and simulated molecular-pa
 
 ## Reusing results
 
-The pipeline checks genome selection, order, k, catalog provenance, and per-genome kset digests before reusing count, structure, and matrix stages. Direct `grm learn` refuses stale selections or incompatible stages and names the command to rerun.
+The pipeline checks genome selection, order, k, matrix minimum support, catalog provenance, and per-genome kset digests before reusing count, structure, and matrix stages. Direct `grm learn` refuses stale selections or incompatible stages and names the command to rerun.
 
 A learned report is reused only when its evaluation revision and input fingerprint match and no feature locus records a failed BV-BRC annotation download. A locus whose reference genome's annotation could not be downloaded has no gene or product and records the error in `annotation_error`; the next run recomputes that report. The fingerprint covers the matrix provenance, dataset class minimum, excluded inferred-label count, evaluation configuration, antibiotic/MIC breakpoint, lineage threshold, catalog version, and each evaluated genome's reported call, MIC, lineage, and gene calls in matrix order.
 

@@ -73,7 +73,7 @@ enum Command {
         species: Vec<String>,
         /// Keep k-mers present in at least this many genomes (and absent
         /// from at least this many).
-        #[arg(long, default_value_t = 2)]
+        #[arg(long, default_value_t = PIPELINE_MIN_SUPPORT)]
         min_support: u32,
     },
     /// Cross-validate every learner on each species x drug dataset, fit the
@@ -243,12 +243,24 @@ const KOVER_RESULTS: &str = "legacy/page/results/summary.json";
 /// k for `grm pipeline`, and the `grm count` default.
 const PIPELINE_K: usize = 31;
 
+/// min_support for `grm pipeline`, and the `grm matrix` default.
+const PIPELINE_MIN_SUPPORT: u32 = 2;
+
 /// Count, structure, and matrix, each rerun only when `stale_stages` finds
 /// its output out of date.
 fn count_to_matrix(layout: &Layout, slug: &str) -> Result<()> {
     let catalog = load_catalog(layout, PIPELINE_K);
+    let stale_stages = || {
+        grm::species::stale_stages(
+            layout,
+            slug,
+            catalog.as_ref(),
+            PIPELINE_K,
+            PIPELINE_MIN_SUPPORT,
+        )
+    };
     // Count reruns whenever any stage is stale (see `stale_stages`).
-    if !grm::species::stale_stages(layout, slug, catalog.as_ref()).count {
+    if !stale_stages().count {
         eprintln!(
             "{slug}: counts match genomes.txt and the catalog, and structure and matrix match the counts; skipping to learn"
         );
@@ -270,14 +282,14 @@ fn count_to_matrix(layout: &Layout, slug: &str) -> Result<()> {
     }
     // Structure and matrix each record the counts they were built from, so
     // comparing them with the new counts alone decides each rebuild.
-    let stale = grm::species::stale_stages(layout, slug, catalog.as_ref());
+    let stale = stale_stages();
     if stale.structure {
         structure(layout, slug)?;
     } else {
         eprintln!("{slug}: structure matches the counted genomes, k, and ksets; reusing it");
     }
     if stale.matrix {
-        matrix(layout, slug, 2)
+        matrix(layout, slug, PIPELINE_MIN_SUPPORT)
     } else {
         eprintln!("{slug}: matrix matches the counted genomes, k, and ksets; reusing it");
         Ok(())
@@ -933,6 +945,30 @@ mod tests {
         assert_eq!(still_marked(&layout), (false, false));
         let m = FeatureMatrix::load(&layout.matrix_dir(SLUG)).unwrap();
         assert_eq!(m.summary.k, PIPELINE_K);
+        assert_eq!(learn_refusal(&layout), None);
+    }
+
+    #[test]
+    fn stages_built_by_hand_at_another_k_or_min_support_are_rebuilt() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        // `grm count --k 21`, `grm structure`, and `grm matrix`: stages that
+        // agree with each other, at another k than the pipeline's.
+        count(&layout, SLUG, 21).unwrap();
+        structure(&layout, SLUG).unwrap();
+        matrix(&layout, SLUG, 2).unwrap();
+        mark_stages(&layout);
+        count_to_matrix(&layout, SLUG).unwrap();
+        let counted = grm::species::load_counted(&layout, SLUG).unwrap();
+        assert_eq!(counted.k, PIPELINE_K);
+        assert_eq!(still_marked(&layout), (false, false));
+        // `grm matrix --min-support 1` keeps k-mers the pipeline's matrix drops.
+        matrix(&layout, SLUG, 1).unwrap();
+        mark_stages(&layout);
+        count_to_matrix(&layout, SLUG).unwrap();
+        assert_eq!(still_marked(&layout), (true, false));
+        let m = FeatureMatrix::load(&layout.matrix_dir(SLUG)).unwrap();
+        assert_eq!((m.summary.k, m.summary.min_support), (PIPELINE_K, 2));
         assert_eq!(learn_refusal(&layout), None);
     }
 

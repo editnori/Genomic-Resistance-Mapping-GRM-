@@ -314,10 +314,17 @@ pub struct Stale {
     pub matrix: bool,
 }
 
-/// Compares counted.json with genomes.txt and `catalog`, and structure.json
-/// and matrix.json each with counted.json. A catalog that cannot be read
-/// (None) is no reason to recount: counting without one records no calls.
-pub fn stale_stages(layout: &Layout, slug: &str, catalog: Option<&Catalog>) -> Stale {
+/// Compares counted.json with genomes.txt, `catalog`, and the pipeline's `k`,
+/// structure.json and matrix.json each with counted.json, and matrix.json
+/// with the pipeline's `min_support`. A catalog that cannot be read (None) is
+/// no reason to recount: counting without one records no calls.
+pub fn stale_stages(
+    layout: &Layout,
+    slug: &str,
+    catalog: Option<&Catalog>,
+    k: usize,
+    min_support: u32,
+) -> Stale {
     fn read(path: PathBuf) -> Option<BuiltFrom> {
         serde_json::from_slice(&std::fs::read(path).ok()?).ok()
     }
@@ -328,6 +335,8 @@ pub fn stale_stages(layout: &Layout, slug: &str, catalog: Option<&Catalog>) -> S
         read(layout.species_dir(slug).join("structure.json")).as_ref(),
         read(layout.matrix_dir(slug).join("matrix.json")).as_ref(),
         catalog.map(Catalog::calls_version).as_deref(),
+        k,
+        min_support,
     )
 }
 
@@ -340,6 +349,9 @@ struct BuiltFrom {
     genomes: Vec<String>,
     #[serde(default)]
     kset_digests: Vec<String>,
+    /// matrix.json only.
+    #[serde(default)]
+    min_support: Option<u32>,
 }
 
 /// Structure and matrix are each stale when the file is missing or
@@ -348,11 +360,14 @@ struct BuiltFrom {
 /// FASTA file (`with_fasta`, None when genomes.txt cannot be read), less
 /// those whose count failed, in file order. They are also stale when a
 /// genome's gene calls carry another catalog version than `calls_version`,
-/// the loaded catalog's (None when none loaded). Count also reruns when
-/// structure or matrix is stale, because their rebuild reads the ksets, which
-/// `--drop-ksets` deletes and a recount writes again (reusing those still on
-/// disk). That covers counts recorded before kset digests, which no
-/// structure or matrix matches.
+/// the loaded catalog's (None when none loaded), or when counted at another k
+/// than the pipeline's; the matrix is also stale when built with another
+/// min_support. Stages built by hand with `grm count --k` or `grm matrix
+/// --min-support` agree with each other, and these rules rebuild them. Count
+/// also reruns when structure or matrix is stale, because their rebuild reads
+/// the ksets, which `--drop-ksets` deletes and a recount writes again (reusing
+/// those still on disk). That covers counts recorded before kset digests,
+/// which no structure or matrix matches.
 fn selection_matches(counted: &CountSummary, with_fasta: &[String]) -> bool {
     let failed: HashSet<&str> = counted.failed.iter().map(|(id, _)| id.as_str()).collect();
     with_fasta
@@ -379,6 +394,8 @@ fn stale(
     structure: Option<&BuiltFrom>,
     matrix: Option<&BuiltFrom>,
     calls_version: Option<&str>,
+    k: usize,
+    min_support: u32,
 ) -> Stale {
     let Some(counted) = counted else {
         return Stale {
@@ -391,11 +408,12 @@ fn stale(
     let outdated = |file: Option<&BuiltFrom>| {
         file.is_none_or(|f| not_built_from(counted, f.k, &f.genomes, &f.kset_digests).is_some())
     };
-    let (structure, matrix) = (outdated(structure), outdated(matrix));
+    let other_min_support = matrix.is_some_and(|m| m.min_support != Some(min_support));
+    let (structure, matrix) = (outdated(structure), outdated(matrix) || other_min_support);
     let other_catalog =
         calls_version.is_some_and(|v| counted.called_with_other_catalog(v).is_some());
     Stale {
-        count: other_genomes || other_catalog || structure || matrix,
+        count: other_genomes || counted.k != k || other_catalog || structure || matrix,
         structure,
         matrix,
     }
@@ -622,12 +640,13 @@ mod tests {
     }
 
     /// What a structure or matrix built at `k` for `genomes` records, with
-    /// the kset digests `counted` gives them.
+    /// the kset digests `counted` gives them and the pipeline's min_support.
     fn built(k: usize, genomes: &[String]) -> BuiltFrom {
         BuiltFrom {
             k,
             genomes: genomes.to_vec(),
             kset_digests: genomes.iter().map(|g| format!("kset of {g}")).collect(),
+            min_support: Some(2),
         }
     }
 
@@ -648,6 +667,8 @@ mod tests {
                 structure.as_ref(),
                 matrix.as_ref(),
                 Some("v2"),
+                31,
+                2,
             );
             (s.count, s.structure, s.matrix)
         };
@@ -660,6 +681,8 @@ mod tests {
                 Some(&structure),
                 Some(&matrix),
                 calls,
+                31,
+                2,
             );
             (s.count, s.structure, s.matrix)
         };
@@ -679,6 +702,23 @@ mod tests {
         // The genomes were counted at another k than both were built at.
         let at_21 = counted(21, &["a", "b", "c"], "v2");
         assert_eq!(plan(Some(&at_21), current(), current()), (true, true, true));
+        // Stages built by hand at k = 21 agree with each other but not with
+        // the pipeline's k, so the genomes are counted again; structure and
+        // matrix are then compared with those counts.
+        let by_hand = || Some(built(21, &abc));
+        assert_eq!(
+            plan(Some(&at_21), by_hand(), by_hand()),
+            (true, false, false)
+        );
+        // A matrix built by hand with another min_support keeps other k-mers.
+        let min_support_1 = BuiltFrom {
+            min_support: Some(1),
+            ..built(31, &abc)
+        };
+        assert_eq!(
+            plan(Some(&at_31), current(), Some(min_support_1)),
+            (true, false, true)
+        );
         // The same genomes in another order are not the same matrix columns.
         let reordered = plan(Some(&at_31), current(), Some(built(31, &cba)));
         assert_eq!(reordered, (true, false, true));
@@ -734,6 +774,8 @@ mod tests {
                 Some(&structure),
                 Some(&matrix),
                 Some("v2"),
+                31,
+                2,
             );
             (s.count, s.structure, s.matrix)
         };
