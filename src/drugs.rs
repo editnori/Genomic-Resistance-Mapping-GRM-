@@ -394,8 +394,8 @@ fn edit_distance(a: &str, b: &str) -> usize {
     for (i, row) in d.iter_mut().enumerate() {
         row[0] = i;
     }
-    for j in 0..=b.len() {
-        d[0][j] = j;
+    for (j, cell) in d[0].iter_mut().enumerate() {
+        *cell = j;
     }
     for i in 1..=a.len() {
         for j in 1..=b.len() {
@@ -471,10 +471,10 @@ fn resolve_component(text: &str, vocab: &Vocabulary) -> Option<(Vec<String>, Str
             .filter(|(d, _)| *d <= 2)
             .collect();
         scored.sort();
-        if let Some(&(d, best)) = scored.first() {
-            if scored.get(1).is_none_or(|(d2, _)| *d2 > d) {
-                return one(best, &format!("grm:edit-distance-{d}"));
-            }
+        if let Some(&(d, best)) = scored.first()
+            && scored.get(1).is_none_or(|(d2, _)| *d2 > d)
+        {
+            return one(best, &format!("grm:edit-distance-{d}"));
         }
     }
     None

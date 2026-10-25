@@ -679,7 +679,7 @@ pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf>
             lineage_threshold: structure.map(|s| s.2),
         });
     }
-    species_rows.sort_by(|a, b| b.genomes_labeled.cmp(&a.genomes_labeled));
+    species_rows.sort_by_key(|a| std::cmp::Reverse(a.genomes_labeled));
 
     let drug_names: Value = serde_json::from_slice(
         &std::fs::read(layout.curated().join("drug_names.json")).unwrap_or_default(),

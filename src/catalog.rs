@@ -445,13 +445,13 @@ mod tests {
             ),
             (true, vec!["blaKPC".into()])
         );
-        assert!(!explain(&drug_rule("meropenem").unwrap(), &[tem.clone()]).0);
+        assert!(!explain(&drug_rule("meropenem").unwrap(), std::slice::from_ref(&tem)).0);
         assert!(explain(&drug_rule("ampicillin").unwrap(), &[tem]).0);
         // Co-trimoxazole needs both a dfr and a sul gene.
         assert!(
             !explain(
                 &drug_rule("sulfamethoxazole/trimethoprim").unwrap(),
-                &[sul.clone()]
+                std::slice::from_ref(&sul)
             )
             .0
         );
@@ -462,7 +462,7 @@ mod tests {
             )
             .0
         );
-        assert!(explain(&drug_rule("amikacin").unwrap(), &[aac.clone()]).0);
+        assert!(explain(&drug_rule("amikacin").unwrap(), std::slice::from_ref(&aac)).0);
         assert!(!explain(&drug_rule("gentamicin").unwrap(), &[aac]).0);
         assert!(drug_rule("isoniazid").is_none());
     }

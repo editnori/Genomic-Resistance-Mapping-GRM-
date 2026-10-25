@@ -122,7 +122,7 @@ pub fn build(
                     .map(|(local, kmer)| (local_to_global[local as usize], kmer)),
             );
         }
-        if end % 128 == 0 || end == BUCKETS {
+        if end.is_multiple_of(128) || end == BUCKETS {
             eprintln!(
                 "  merged {end} / {BUCKETS} buckets: {distinct} distinct k-mers, {} kept, {} patterns",
                 pairs.len(),
@@ -261,8 +261,10 @@ fn read_u64s(path: &Path) -> Result<Vec<u64>> {
     BufReader::new(File::open(path).with_context(|| format!("open {}", path.display()))?)
         .read_to_end(&mut bytes)?;
     Ok(bytes
-        .chunks_exact(8)
-        .map(|c| u64::from_le_bytes(c.try_into().unwrap()))
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .map(|c| u64::from_le_bytes(*c))
         .collect())
 }
 
@@ -296,8 +298,10 @@ impl FeatureMatrix {
             "patterns.bin size does not match matrix.json"
         );
         let support: Vec<u32> = std::fs::read(dir.join("support.bin"))?
-            .chunks_exact(4)
-            .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|c| u32::from_le_bytes(*c))
             .collect();
         ensure!(
             support.len() == summary.n_patterns,

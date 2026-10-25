@@ -432,6 +432,8 @@ fn probe_results(
     (panels, unsupported)
 }
 
+// Keep the public analysis API and its positional call contract unchanged.
+#[allow(clippy::too_many_arguments)]
 pub fn analyze_dataset(
     layout: &Layout,
     client: &Client,
@@ -1829,7 +1831,8 @@ mod tests {
         }
 
         let base = changed(|_| {});
-        let changes: &[(&str, fn(&mut EvalConfig))] = &[
+        type ConfigChange<'a> = (&'a str, fn(&mut EvalConfig));
+        let changes: &[ConfigChange<'_>] = &[
             ("folds", |c| c.folds += 1),
             ("inner_folds", |c| c.inner_folds += 1),
             ("scm_max_rules", |c| c.scm_max_rules += 1),

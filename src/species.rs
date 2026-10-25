@@ -99,31 +99,30 @@ fn count_one(
 ) -> Result<Counted> {
     let version = catalog.map_or(String::new(), Catalog::calls_version);
     // A kset counted under another `--k` is not a cache hit.
-    if KsetReader::open(kset_path).is_ok_and(|r| r.k == space.k) {
-        if let Ok(bytes) = std::fs::read(sidecar) {
-            if let Ok(c) = serde_json::from_slice::<Counted>(&bytes) {
-                if c.catalog_version == version && c.kset_digest.is_some() {
-                    return Ok(c);
-                }
-                // Catalog changed, or the sidecar predates kset digests:
-                // redo both from the stored kset, with its k-mer count. A
-                // sidecar from before digests can describe a kset of another
-                // k, since those counts wrote the kset without removing it.
-                let values = KsetReader::open(kset_path)?.read_all()?;
-                let genes = catalog.map_or(vec![], |cat| {
-                    catalog::family_calls(cat, &cat.detect(&values, catalog::CALL_CONTAINMENT))
-                });
-                let c = Counted {
-                    n_kmers: values.len() as u64,
-                    catalog_version: version,
-                    kset_digest: Some(kset::digest(&values)),
-                    genes,
-                    ..c
-                };
-                std::fs::write(sidecar, serde_json::to_vec(&c)?)?;
-                return Ok(c);
-            }
+    if KsetReader::open(kset_path).is_ok_and(|r| r.k == space.k)
+        && let Ok(bytes) = std::fs::read(sidecar)
+        && let Ok(c) = serde_json::from_slice::<Counted>(&bytes)
+    {
+        if c.catalog_version == version && c.kset_digest.is_some() {
+            return Ok(c);
         }
+        // Catalog changed, or the sidecar predates kset digests:
+        // redo both from the stored kset, with its k-mer count. A
+        // sidecar from before digests can describe a kset of another
+        // k, since those counts wrote the kset without removing it.
+        let values = KsetReader::open(kset_path)?.read_all()?;
+        let genes = catalog.map_or(vec![], |cat| {
+            catalog::family_calls(cat, &cat.detect(&values, catalog::CALL_CONTAINMENT))
+        });
+        let c = Counted {
+            n_kmers: values.len() as u64,
+            catalog_version: version,
+            kset_digest: Some(kset::digest(&values)),
+            genes,
+            ..c
+        };
+        std::fs::write(sidecar, serde_json::to_vec(&c)?)?;
+        return Ok(c);
     }
     let stats = kset::count_into(fasta, space, 1, values, scratch)?;
     // The sidecar describes the kset beside it. Removing it first means a run
@@ -188,7 +187,7 @@ pub fn count(
                     buffers,
                 );
                 let d = done.fetch_add(1, Ordering::Relaxed) + 1;
-                if d % 200 == 0 || d == present.len() {
+                if d.is_multiple_of(200) || d == present.len() {
                     eprintln!("  {slug}: counted {d} / {}", present.len());
                 }
                 (id.clone(), r)

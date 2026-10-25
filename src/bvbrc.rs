@@ -325,7 +325,7 @@ impl Client {
                                 .push(((*id).clone(), format!("{e:#}")));
                         }
                         let d = done.fetch_add(1, Ordering::Relaxed) + 1;
-                        if d % 100 == 0 || d == todo.len() {
+                        if d.is_multiple_of(100) || d == todo.len() {
                             eprintln!("  fasta: {d} / {}", todo.len());
                         }
                     }

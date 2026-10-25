@@ -9,6 +9,7 @@
 //!   the nearest gene when the k-mers sit between genes (promoters);
 //! - given flanking sequence, which is what a PCR primer design would start
 //!   from.
+//!
 //! Reference assemblies are chosen greedily to cover the most features with
 //! the fewest genomes, so few annotation downloads are needed.
 
@@ -81,10 +82,10 @@ fn feature_kmers(matrix: &FeatureMatrix, ds: &Dataset, f: u32) -> (usize, Vec<u6
 
 fn load_features(layout: &Layout, client: &Client, genome_id: &str) -> Result<Vec<Feature>> {
     let path = layout.features_dir().join(format!("{genome_id}.json"));
-    if let Ok(bytes) = std::fs::read(&path) {
-        if let Ok(f) = serde_json::from_slice(&bytes) {
-            return Ok(f);
-        }
+    if let Ok(bytes) = std::fs::read(&path)
+        && let Ok(f) = serde_json::from_slice(&bytes)
+    {
+        return Ok(f);
     }
     let features = client.fetch_features(genome_id)?;
     std::fs::create_dir_all(layout.features_dir())?;

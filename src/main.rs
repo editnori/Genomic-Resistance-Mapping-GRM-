@@ -492,7 +492,7 @@ fn run_curate(
             }
         })
         .collect();
-    names.sort_by(|a, b| b.records.cmp(&a.records));
+    names.sort_by_key(|a| std::cmp::Reverse(a.records));
     std::fs::write(
         dir.join("drug_names.json"),
         serde_json::to_vec_pretty(&serde_json::json!({
@@ -545,7 +545,7 @@ fn run_curate(
             selected_genomes: ids.len(),
         });
     }
-    selections.sort_by(|a, b| b.labeled_genomes.cmp(&a.labeled_genomes));
+    selections.sort_by_key(|a| std::cmp::Reverse(a.labeled_genomes));
     std::fs::write(
         dir.join("species.json"),
         serde_json::to_vec_pretty(&selections)?,

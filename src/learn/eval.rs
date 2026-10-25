@@ -4,6 +4,7 @@
 //! - `random`: stratified k-fold, the scheme most published numbers use;
 //! - `lineage`: whole lineage clusters held out together, so a test genome
 //!   never has a near-identical relative in its training fold.
+//!
 //! Their difference measures sensitivity to this split scheme; it does not
 //! identify a causal resistance mechanism.
 //!
@@ -1498,7 +1499,7 @@ mod tests {
         report.predicted[0] = (1.5 - 1e-12) as _;
         let encoded = serde_json::to_string(&report).unwrap();
         let decoded: MicResult = serde_json::from_str(&encoded).unwrap();
-        assert_eq!(f64::from(decoded.predicted[0]), 1.5 - 1e-12);
+        assert_eq!(decoded.predicted[0], 1.5 - 1e-12);
         assert_eq!(decoded.predicted[..120], report.predicted[..120]);
         assert!(decoded.predicted[120..].iter().all(|v| v.is_nan()));
     }

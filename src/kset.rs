@@ -73,7 +73,7 @@ pub fn radix_sort(values: &mut Vec<u64>, scratch: &mut Vec<u64>) {
     scratch.clear();
     scratch.resize(n, 0);
     for (d, h) in hist.iter().enumerate() {
-        if h.iter().any(|&c| c == n) {
+        if h.contains(&n) {
             continue;
         }
         let mut offsets = [0usize; 256];
@@ -243,12 +243,16 @@ impl KsetReader {
         file.read_exact(&mut table)?;
         let (off_bytes, count_bytes) = table.split_at((BUCKETS + 1) * 8);
         let offsets: Vec<u64> = off_bytes
-            .chunks_exact(8)
-            .map(|c| u64::from_le_bytes(c.try_into().unwrap()))
+            .as_chunks::<8>()
+            .0
+            .iter()
+            .map(|c| u64::from_le_bytes(*c))
             .collect();
         let counts: Vec<u32> = count_bytes
-            .chunks_exact(4)
-            .map(|c| u32::from_le_bytes(c.try_into().unwrap()))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|c| u32::from_le_bytes(*c))
             .collect();
         ensure!(
             offsets[0] == 0

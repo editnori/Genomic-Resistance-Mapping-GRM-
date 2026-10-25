@@ -398,8 +398,8 @@ mod tests {
             },
         );
         let scores = tree.predict(&x, 3);
-        for i in 0..8 {
-            assert_eq!(scores[i] >= 0.5, y.contains(i), "sample {i}");
+        for (i, &score) in scores[..8].iter().enumerate() {
+            assert_eq!(score >= 0.5, y.contains(i), "sample {i}");
         }
         // XOR has no single informative split, so a depth-1 tree cannot fit
         // it; truncation must reproduce the depth-limited prediction.

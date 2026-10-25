@@ -442,8 +442,8 @@ mod tests {
             &GbtParams::default(),
         );
         let p = model.predict_proba(&x);
-        for i in 0..n {
-            assert_eq!(p[i] >= 0.5, y.contains(i), "sample {i} p={}", p[i]);
+        for (i, &p) in p[..n].iter().enumerate() {
+            assert_eq!(p >= 0.5, y.contains(i), "sample {i} p={}", p);
         }
     }
 
@@ -452,7 +452,7 @@ mod tests {
         // Carriers of f0 have MIC 8 (log2 3); others report "<= 0.25".
         let n = 100;
         let carriers: Vec<usize> = (0..n).filter(|i| i % 4 == 0).collect();
-        let x = matrix(&[carriers.clone()], n);
+        let x = matrix(std::slice::from_ref(&carriers), n);
         let mut value = vec![-2.0; n];
         let mut censor = vec![Censor::AtMost; n];
         for &i in &carriers {
