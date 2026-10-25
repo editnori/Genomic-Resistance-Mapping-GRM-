@@ -143,6 +143,8 @@ pub struct Feature {
 
 pub struct Client {
     agent: ureq::Agent,
+    /// Wait after the first failed attempt, doubled after each later one.
+    backoff: Duration,
 }
 
 impl Default for Client {
@@ -158,12 +160,29 @@ impl Client {
             .timeout_read(Duration::from_secs(600))
             .user_agent("grm/0.2 (genomic-resistance-mapping)")
             .build();
-        Client { agent }
+        Client {
+            agent,
+            backoff: Duration::from_secs(2),
+        }
+    }
+
+    /// A client whose every request fails at once, without the network.
+    #[cfg(test)]
+    pub(crate) fn offline() -> Self {
+        let agent = ureq::AgentBuilder::new()
+            .resolver(|_: &str| -> std::io::Result<Vec<std::net::SocketAddr>> {
+                Err(std::io::Error::other("offline test client"))
+            })
+            .build();
+        Client {
+            agent,
+            backoff: Duration::ZERO,
+        }
     }
 
     /// Runs `op` up to five times with exponential backoff.
     fn retry<T>(&self, what: &str, mut op: impl FnMut() -> Result<T>) -> Result<T> {
-        let mut delay = Duration::from_secs(2);
+        let mut delay = self.backoff;
         let mut last = None;
         for attempt in 1..=5 {
             match op() {

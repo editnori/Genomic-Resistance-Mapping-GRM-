@@ -48,6 +48,10 @@ pub struct Locus {
     pub nearest: Option<(String, i64)>,
     /// Contig sequence around the span (forward strand), span in uppercase.
     pub context: String,
+    /// Why the genome has no PATRIC annotation here: its download failed, so
+    /// gene, product, patric_id, gene_strand, codons, and nearest are None.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub annotation_error: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -227,7 +231,19 @@ pub fn annotate(
                 contig_seqs.push(seq.to_vec());
             },
         )?;
-        let annotation = load_features(layout, client, &genome_id).unwrap_or_default();
+        // A failed download leaves this genome's loci without gene or product.
+        // Each records why, `grm learn` recomputes the report (see
+        // `analysis::stale_reason`), and nothing is cached, so that run
+        // downloads the annotation again.
+        let (annotation, annotation_error) = match load_features(layout, client, &genome_id) {
+            Ok(features) => (features, None),
+            Err(e) => {
+                eprintln!(
+                    "    {genome_id}: no PATRIC annotation, so its loci have no gene or product: {e:#}"
+                );
+                (Vec::new(), Some(format!("{e:#}")))
+            }
+        };
         for (f, mut hs) in hits {
             // Densest contig, then the span of hits on it.
             let mut per_contig: HashMap<usize, usize> = HashMap::new();
@@ -326,6 +342,7 @@ pub fn annotate(
                     codons,
                     nearest,
                     context,
+                    annotation_error: annotation_error.clone(),
                 });
             }
         }
@@ -333,4 +350,64 @@ pub fn annotate(
     let mut out: Vec<FeatureNote> = notes.into_values().collect();
     out.sort_by_key(|n| n.feature);
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::kset;
+
+    #[test]
+    fn a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let space = KmerSpace::new(15);
+        // g0 carries an accessory block, the only feature, that g1 lacks.
+        let core = "ACGTTGCAAGGCTTACCGATAGCTAGGCTTAACGGTACCATGCAGTTCAGGA";
+        let accessory = "TTTGGGCCCAAATGTGTCACAGGATCCATGCAAGCTTGGACTGACCTAGG";
+        std::fs::create_dir_all(layout.fasta_dir()).unwrap();
+        let ksets: Vec<_> = [("g0", format!("{core}NN{accessory}")), ("g1", core.into())]
+            .into_iter()
+            .map(|(id, seq)| {
+                let fasta = bvbrc::fasta_path(&layout.fasta_dir(), id);
+                std::fs::write(&fasta, format!(">c\n{seq}\n")).unwrap();
+                let (values, _) = kset::count_file(&fasta, &space, 1).unwrap();
+                let path = dir.path().join(format!("{id}.kset"));
+                kset::write(&path, id, &space, &values).unwrap();
+                path
+            })
+            .collect();
+        let matrix = crate::matrix::build(&ksets, 1, 8).unwrap();
+        let ds = Dataset::project(&matrix, vec![0, 1], &[true, false], 1);
+        let locus = || {
+            let notes = annotate(
+                &layout,
+                &Client::offline(),
+                &matrix,
+                &ds,
+                &BTreeSet::from([0]),
+                None,
+                &HashMap::new(),
+            )
+            .unwrap();
+            serde_json::to_value(&notes[0].locus).unwrap()
+        };
+        // No features are cached for g0, and BV-BRC cannot be reached.
+        let missing = locus();
+        assert_eq!(missing["genome_id"], "g0");
+        assert_eq!(missing["gene"], serde_json::Value::Null);
+        let error = missing["annotation_error"].as_str().unwrap_or_default();
+        assert!(error.contains("giving up after 5 attempts"), "{missing}");
+        assert!(!layout.features_dir().join("g0.json").exists());
+        // Once the annotation is cached, the locus has its gene and no error.
+        std::fs::create_dir_all(layout.features_dir()).unwrap();
+        std::fs::write(
+            layout.features_dir().join("g0.json"),
+            r#"[{"accession": "c", "start": 1, "end": 200, "strand": "+", "gene": "blaX"}]"#,
+        )
+        .unwrap();
+        let annotated = locus();
+        assert_eq!(annotated["gene"], "blaX");
+        assert!(annotated.get("annotation_error").is_none(), "{annotated}");
+    }
 }

@@ -856,14 +856,23 @@ pub fn row_bits(x: &BitMatrix, f: usize) -> Bits {
 }
 
 /// Why a saved report has to be recomputed, or None when this evaluation
-/// revision wrote it from the inputs `fingerprint` identifies.
+/// revision wrote it from the inputs `fingerprint` identifies and every
+/// feature locus has its reference annotation.
 fn stale_reason(report: &serde_json::Value, fingerprint: &str) -> Option<&'static str> {
     if report["evaluation"]["revision"].as_u64() != Some(EVALUATION_REVISION as u64) {
         return Some("evaluation audit revision changed");
     }
+    // The fingerprint leaves annotation out, so a locus that records a failed
+    // annotation download is what recomputes the report.
+    let unannotated = report["features"].as_array().is_some_and(|features| {
+        features
+            .iter()
+            .any(|f| f["locus"]["annotation_error"].is_string())
+    });
     match report["input_fingerprint"].as_str() {
         None => Some("report has no input fingerprint"),
         Some(saved) if saved != fingerprint => Some("inputs changed since the report was written"),
+        Some(_) if unannotated => Some("a feature's reference annotation failed to download"),
         Some(_) => None,
     }
 }
@@ -1117,6 +1126,29 @@ mod tests {
                 "{old}"
             );
         }
+    }
+
+    #[test]
+    fn a_report_with_a_locus_missing_its_annotation_is_recomputed() {
+        let key = "0123456789abcdef";
+        let saved = |locus: serde_json::Value| {
+            serde_json::json!({
+                "evaluation": {"revision": EVALUATION_REVISION},
+                "input_fingerprint": key,
+                "features": [{"feature": 0, "locus": null}, {"feature": 1, "locus": locus}],
+            })
+        };
+        let annotated = serde_json::json!({"genome_id": "g0", "gene": "blaX"});
+        assert_eq!(stale_reason(&saved(annotated), key), None);
+        let missing = serde_json::json!({
+            "genome_id": "g0",
+            "gene": null,
+            "annotation_error": "genome_feature: giving up after 5 attempts",
+        });
+        assert_eq!(
+            stale_reason(&saved(missing), key),
+            Some("a feature's reference annotation failed to download")
+        );
     }
 
     /// `phenotype` with the call replaced by a label inferred from MIC.

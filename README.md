@@ -89,7 +89,7 @@ MIC regression is a separate endpoint. Reference-gene and simulated molecular-pa
 
 The pipeline checks genome selection, order, k, catalog provenance, and per-genome kset digests before reusing count, structure, and matrix stages. Direct `grm learn` refuses stale selections or incompatible stages and names the command to rerun.
 
-A learned report is reused only when its evaluation revision and input fingerprint match. The fingerprint covers the matrix provenance, dataset class minimum, excluded inferred-label count, evaluation configuration, antibiotic/MIC breakpoint, lineage threshold, catalog version, and each evaluated genome's reported call, MIC, lineage, and gene calls in matrix order.
+A learned report is reused only when its evaluation revision and input fingerprint match and no feature locus records a failed BV-BRC annotation download. A locus whose reference genome's annotation could not be downloaded has no gene or product and records the error in `annotation_error`; the next run recomputes that report. The fingerprint covers the matrix provenance, dataset class minimum, excluded inferred-label count, evaluation configuration, antibiotic/MIC breakpoint, lineage threshold, catalog version, and each evaluated genome's reported call, MIC, lineage, and gene calls in matrix order.
 
 The fingerprint uses recorded matrix digests, so deleting ksets with `--drop-ksets` does not invalidate a result. Editing a kset outside `grm count` is not detected. Genome metadata, contig counts, and drug class are not fingerprinted; use `grm learn --force` after changing only those fields. A schema change alone does not trigger recomputation.
 
