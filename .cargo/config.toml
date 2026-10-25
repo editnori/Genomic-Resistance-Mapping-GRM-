@@ -1,0 +1,4 @@
+# Bitset AND + popcount is the inner loop of every learner. Without a native
+# target, `count_ones` lowers to a software fallback several times slower.
+[build]
+rustflags = ["-C", "target-cpu=native"]

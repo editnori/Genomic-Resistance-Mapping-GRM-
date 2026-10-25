@@ -1,5 +1,11 @@
+target/
+/data/
+node_modules/
+/web/dist/
+/web/dist-*/
+/web/public/data/
 __pycache__/
 .venv/
 .idea/
 .temp/
-data/
+*.tsbuildinfo
