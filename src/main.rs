@@ -56,6 +56,11 @@ enum Command {
             value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
         )]
         k: usize,
+        /// Count without catalog gene calls when the AMRFinderPlus catalog
+        /// does not load, instead of stopping. Reports then have no catalog
+        /// baseline, and the gene panels detect nothing.
+        #[arg(long)]
+        allow_missing_catalog: bool,
     },
     /// Lineage clusters, dendrogram, and 2D map from MinHash sketches.
     Structure {
@@ -95,6 +100,10 @@ enum Command {
         /// disk use at one species' ksets (re-creatable with `grm count`).
         #[arg(long)]
         drop_ksets: bool,
+        /// Count without catalog gene calls when the AMRFinderPlus catalog
+        /// does not load, instead of stopping (see `grm count`).
+        #[arg(long)]
+        allow_missing_catalog: bool,
     },
     /// Build the dashboard data under <data>/report.
     Report {
@@ -142,7 +151,10 @@ enum Fetch {
 }
 
 fn main() -> Result<()> {
-    let cli = Cli::parse();
+    run(Cli::parse())
+}
+
+fn run(cli: Cli) -> Result<()> {
     let layout = Layout::new(&cli.data);
     match cli.command {
         Command::Fetch { what } => fetch(&layout, what),
@@ -151,7 +163,14 @@ fn main() -> Result<()> {
             min_class,
             sigdrug_vocabulary,
         } => run_curate(&layout, cap, min_class, sigdrug_vocabulary),
-        Command::Count { species, k } => species.iter().try_for_each(|s| count(&layout, s, k)),
+        Command::Count {
+            species,
+            k,
+            allow_missing_catalog,
+        } => {
+            require_catalog(&layout, k, allow_missing_catalog)?;
+            species.iter().try_for_each(|s| count(&layout, s, k))
+        }
         Command::Structure { species } => species.iter().try_for_each(|s| structure(&layout, s)),
         Command::Matrix {
             species,
@@ -170,7 +189,9 @@ fn main() -> Result<()> {
             species,
             workers,
             drop_ksets,
+            allow_missing_catalog,
         } => {
+            require_catalog(&layout, PIPELINE_K, allow_missing_catalog)?;
             let slugs = if species.is_empty() {
                 curated_species(&layout)?
             } else {
@@ -276,6 +297,17 @@ fn load_catalog(layout: &Layout, k: usize) -> Option<Catalog> {
             None
         }
     }
+}
+
+/// Stops `grm count` and `grm pipeline` when the catalog does not load,
+/// unless `allow_missing_catalog`: counting without it records no gene calls.
+fn require_catalog(layout: &Layout, k: usize, allow_missing_catalog: bool) -> Result<()> {
+    if !allow_missing_catalog {
+        Catalog::load(&layout.catalog_dir(), &grm::dna::KmerSpace::new(k)).context(
+            "the AMRFinderPlus catalog does not load, and counting without it records no gene calls, which leaves reports without the catalog baseline and gene panel detections; pass --allow-missing-catalog to count anyway",
+        )?;
+    }
+    Ok(())
 }
 
 fn count_with(layout: &Layout, slug: &str, k: usize, catalog: Option<&Catalog>) -> Result<()> {
@@ -1060,6 +1092,36 @@ mod tests {
         let counted = grm::species::load_counted(&layout, SLUG).unwrap();
         let genes: Vec<usize> = counted.genomes.iter().map(|g| g.genes.len()).collect();
         assert_eq!(genes, [1, 1, 0, 0]);
+    }
+
+    #[test]
+    fn counting_stops_when_the_catalog_does_not_load_unless_allowed() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        std::fs::remove_dir_all(layout.catalog_dir()).unwrap();
+        let data = dir.path().to_str().unwrap();
+        let run_grm = |args: &[&str]| {
+            let cli = Cli::try_parse_from(["grm", "--data", data].iter().chain(args)).unwrap();
+            run(cli).map_err(|e| format!("{e:#}"))
+        };
+        for args in [
+            &["count", "--species", SLUG][..],
+            &["pipeline", "--species", SLUG],
+        ] {
+            let err = run_grm(args).unwrap_err();
+            assert!(err.contains("pass --allow-missing-catalog"), "{err}");
+            assert!(err.contains("run `grm fetch catalog` first"), "{err}");
+        }
+        assert!(!layout.species_dir(SLUG).join("counted.json").exists());
+        run_grm(&["count", "--species", SLUG, "--allow-missing-catalog"]).unwrap();
+        let counted = grm::species::load_counted(&layout, SLUG).unwrap();
+        assert_eq!(counted.genomes.len(), 4);
+        assert!(
+            counted
+                .genomes
+                .iter()
+                .all(|g| g.genes.is_empty() && g.catalog_version.is_empty())
+        );
     }
 
     #[test]

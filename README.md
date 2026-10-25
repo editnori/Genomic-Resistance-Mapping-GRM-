@@ -29,6 +29,8 @@ Download metadata and the reference catalog, then curate datasets:
 ./target/release/grm curate --cap 2000 --min-class 25
 ```
 
+Counting needs the catalog for its gene calls. `grm count` and the pipeline stop when it does not load; `--allow-missing-catalog` counts without gene calls, which leaves reports without the catalog baseline and gene panel detections.
+
 Curation uses unconflicted reported resistant/susceptible calls to determine eligibility and select genomes. Each dataset records its class minimum. MIC-inferred labels remain distinguishable in the source data and are excluded from binary model evaluation.
 
 Drug names resolve through GRM's bundled vocabulary. To use an available SigDrug checkout, pass `--sigdrug-vocabulary /path/to/data/drug/compendium/facts/vocabulary` to `curate`, or set `GRM_SIGDRUG_VOCABULARY`. The report records the vocabulary source.
