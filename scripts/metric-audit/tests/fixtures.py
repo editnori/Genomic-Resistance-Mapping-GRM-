@@ -277,6 +277,7 @@ def write_json(path, value):
 
 def checker_root(tmp, report):
     """A data root holding one report where check-results.py looks for it."""
+    write_json(os.path.join(tmp, "curated", "datasets.json"), [{"id": ID, "species_slug": SLUG}])
     write_json(os.path.join(tmp, "species", SLUG, "results", ID + ".json"), report)
     return tmp
 
@@ -291,6 +292,7 @@ def audit_root(tmp, report, index=None, backup=None, log_lines=(), published=Tru
     root = os.path.join(tmp, "root")
     path = os.path.join(root, "data", "species", SLUG, "results", ID + ".json")
     write_json(path, report)
+    write_json(os.path.join(root, "data", "curated", "datasets.json"), [{"id": ID, "species_slug": SLUG}])
     write_json(os.path.join(root, "data", "species", SLUG, "counted.json"),
                {"genomes": [{"genome_id": s["id"], "genes": [{"group": "blaFIX", "family": "blaFIX"}] if s["groups"] else []}
                             for s in report["samples"]]})

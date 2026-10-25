@@ -31,7 +31,6 @@ revisions, which have no run to compare with.
 import argparse
 import base64
 import datetime
-import glob
 import hashlib
 import json
 import math
@@ -44,6 +43,9 @@ from collections import Counter, defaultdict
 from fractions import Fraction
 
 LANE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(LANE))
+from result_scope import select_results
+
 FOLDGEN = LANE + "/foldgen/target/release/foldgen"
 ROOT = os.path.dirname(os.path.dirname(LANE))
 REVISION = None
@@ -918,13 +920,16 @@ def main():
     log_done, log_recomputed = done_datasets()
     manifest = load_manifest(ROOT)
     counted_cache = {}
-    files = sorted(glob.glob(ROOT + "/data/species/%s/results/*.json" % args.pattern))
+    files, scope = select_results(ROOT + "/data", args.pattern, LOG)
     records = []
     for path in files:
         try:
-            records.append(audit_file(path, fg, counted_cache, log_done, log_recomputed, manifest))
+            rec = audit_file(str(path), fg, counted_cache, log_done, log_recomputed, manifest)
+            if rec["id"] != path.stem or rec["species"] != path.parent.parent.name:
+                rec["issues"].append({"where": "curation", "what": "report identity differs from its curated path"})
+            records.append(rec)
         except Exception as e:  # report and keep going
-            records.append({"file": path, "error": repr(e)})
+            records.append({"file": str(path), "error": repr(e)})
         counted_cache = {k: v for k, v in counted_cache.items() if k == records[-1].get("species")}
     by_rev = Counter(r.get("revision") for r in records)
     summary = {
@@ -939,7 +944,7 @@ def main():
         "files": len(records),
         "by_revision": {str(k): v for k, v in by_rev.items()},
         "by_schema": {str(k): v for k, v in Counter(r.get("schema") for r in records).items()},
-        "errors": [r for r in records if "error" in r],
+        "errors": [r for r in records if "error" in r] + scope["missing_curated_results"],
         "files_with_issues": [r["id"] for r in records if r.get("issues")],
         "issue_count": sum(len(r.get("issues", [])) for r in records),
         "manifest_schema": manifest["schema"],
@@ -950,9 +955,12 @@ def main():
         "log_done_forms": dict(Counter(d["form"] for d in log_done.values())),
         "log_recompute_reasons": dict(Counter(log_recomputed.values())),
         "species_finished": sorted(species_finished),
+        **scope,
     }
     json.dump({"summary": summary, "records": records}, open(args.out, "w"), indent=1, sort_keys=True)
     print(json.dumps(summary, indent=1, sort_keys=True))
+    if scope["missing_curated_results"]:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

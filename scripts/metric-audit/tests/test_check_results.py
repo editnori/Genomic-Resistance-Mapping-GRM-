@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fixtures as fx  # noqa: E402
+from curation_cases import CurationCases
 
 spec = importlib.util.spec_from_file_location("check_results", fx.CHECKER)
 checker = importlib.util.module_from_spec(spec)
@@ -388,6 +389,84 @@ class Rules(unittest.TestCase):
                 "c__z": ("full coverage", None, None),
                 "d__w": ("unrecognized", "something else", None),
             })
+
+
+
+class Curation(CurationCases, unittest.TestCase):
+    count_key = "reports"
+
+    def test_explicit_receipt_path_keeps_the_data_root_read_only(self):
+        out = Path(self.paths["root"], "external-receipt.json")
+        result = fx.run_checker(str(self.data), "--log", str(self.log), "--out", str(out))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(json.loads(out.read_text())["reports"]), 1)
+        self.assertFalse((self.data / "logs").exists())
+
+    def reused_report_with_skip(self):
+        rid = self.add_curated(name="class_minimum")
+        self.log.write_text("    " + rid + ": too few labeled genomes after download, skipped\n")
+        return rid
+
+    def test_skip_log_alone_accepts_reused_reports_without_done_lines(self):
+        rid = self.reused_report_with_skip()
+        result = fx.run_checker(str(self.data), "--skip-log", str(self.log))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        summary = json.loads(result.stdout)
+        self.assertEqual((summary["reports"], summary["log_checked"]), (1, 0))
+        self.assertEqual(summary["class_minimum_skipped"], [{
+            "file": str(self.result_path.with_name(rid + ".json")),
+            "reason": "too few labeled genomes after download, skipped",
+        }])
+        receipt = json.loads((self.data / "logs/result-validation-receipt.json").read_text())
+        self.assertIsNone(receipt["log"])
+        self.assertEqual(receipt["skip_log"], str(self.log))
+        self.assertFalse(receipt["reports"][0]["log_checked"])
+
+    def test_reused_reports_with_a_missing_result_fail_without_skip_evidence(self):
+        rid = self.reused_report_with_skip()
+        result = fx.run_checker(str(self.data))
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("missing results for curated dataset", result.stderr)
+        self.assertIn(rid + ".json", result.stderr)
+
+    def test_skip_log_skip_is_revoked_by_a_later_done_or_recompute_line(self):
+        rid = self.reused_report_with_skip()
+        skipped = self.log.read_text()
+        for later in [fx.done_line(None, None, rid), fx.recompute_line(dataset=rid)]:
+            with self.subTest(later=later):
+                self.log.write_text(skipped + later + "\n")
+                result = fx.run_checker(str(self.data), "--skip-log", str(self.log))
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertIn("missing results for curated dataset", result.stderr)
+                self.assertIn(rid + ".json", result.stderr)
+
+    def test_skip_log_does_not_disable_explicit_done_line_validation(self):
+        self.reused_report_with_skip()
+        result = fx.run_checker(str(self.data), "--skip-log", str(self.log), "--log", str(self.log))
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("revision-7 report without a done line", result.stderr)
+
+    def test_separate_skip_and_done_logs_record_and_validate_both_sources(self):
+        rid = self.add_curated(name="class_minimum")
+        skip_log = self.log.with_name("skip-only.log")
+        skip_log.write_text("    " + rid + ": too few labeled genomes after download, skipped\n")
+        result = fx.run_checker(str(self.data), "--log", str(self.log), "--skip-log", str(skip_log))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        summary = json.loads(result.stdout)
+        self.assertEqual((summary["reports"], summary["log_checked"]), (1, 1))
+        self.assertEqual(len(summary["class_minimum_skipped"]), 1)
+        receipt = json.loads((self.data / "logs/result-validation-receipt.json").read_text())
+        self.assertEqual(receipt["log"], str(self.log))
+        self.assertEqual(receipt["skip_log"], str(skip_log))
+
+    def run_scope(self):
+        result = fx.run_checker(str(self.data), "--log", str(self.log))
+        summary = json.loads(result.stdout) if result.returncode == 0 else {}
+        if result.returncode == 0:
+            receipt = json.loads((self.data / "logs/result-validation-receipt.json").read_text())
+            for key in ("not_in_current_curation", "not_run", "class_minimum_skipped", "missing_curated_results"):
+                self.assertEqual(receipt.get(key), summary.get(key))
+        return result, summary
 
 
 if __name__ == "__main__":

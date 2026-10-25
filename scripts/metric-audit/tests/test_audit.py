@@ -11,12 +11,15 @@ import argparse
 import copy
 import json
 import os
+import subprocess
+from pathlib import Path
 import sys
 import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fixtures as fx  # noqa: E402
+from curation_cases import CurationCases
 
 sys.path.insert(0, fx.LANE)
 import audit  # noqa: E402
@@ -552,6 +555,35 @@ class Rules(unittest.TestCase):
                                               "vme": None, "me": None, "auroc": None, "no_call": row["no_call"]})
         self.assertFalse(audit.lite_differs(audit.lite(row, 2), fx.lite(row)))
         self.assertTrue(audit.lite_differs(dict(audit.lite(row, 2), vme=0.0), audit.lite(row, 2)))
+
+
+
+class Curation(CurationCases, unittest.TestCase):
+    count_key = "files"
+
+    def run_scope(self, pattern="*"):
+        out = Path(self.paths["root"], "scope-audit.json")
+        result = subprocess.run(
+            [sys.executable, "-I", os.path.join(fx.LANE, "audit.py"), str(out), pattern,
+             "--revision", "7", "--root", self.paths["root"], "--backup", self.paths["backup"],
+             "--log", str(self.log), "--launch", LAUNCH, "--foldgen", fx.FOLDGEN],
+            capture_output=True, text=True)
+        payload = json.loads(out.read_text()) if out.exists() else {}
+        return result, {**payload.get("summary", {}), "records": payload.get("records", [])}
+
+    def test_explicit_species_pattern_requires_results_without_run_inputs(self):
+        rid = self.add_curated("unrun_species")
+        self.assert_missing(rid, pattern="unrun_*")
+
+    def test_species_pattern_limits_curation_and_file_checks_together(self):
+        self.add_curated("another_species")
+        other = self.data / "species/another_species"
+        other.mkdir()
+        (other / "genomes.txt").write_text("fixture-genome\n")
+        (other / "counted.json").write_text("{}")
+        _, summary = self.assert_passed(pattern=fx.SLUG)
+        self.assertEqual(summary["not_run"], [])
+        self.assertEqual(summary["missing_curated_results"], [])
 
 
 if __name__ == "__main__":

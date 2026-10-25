@@ -13,9 +13,10 @@ that call every isolate on every split that ran, or none. Schema-1 runs
 logged the highest random-split balanced accuracy of any row, the catalog
 included. A tie goes to the later row in both. With --log, each report's
 last done line in that pipeline log must name that learner, and every
-revision-7 report needs one.
+revision-7 report needs one. --skip-log supplies only class-minimum skip
+evidence and does not require done lines; it defaults to --log.
 
-usage: python3 -I check-results.py [DATA_ROOT] [--log PIPELINE_LOG] [--reshaped]
+usage: python3 -I check-results.py [DATA_ROOT] [--log PIPELINE_LOG] [--skip-log PIPELINE_LOG] [--reshaped]
 --reshaped accepts only schema 2, for revision-5 and revision-6 reports
 reshaped to schema 2 for checking.
 """
@@ -24,7 +25,11 @@ import datetime
 import json
 import math
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from result_scope import select_results
 
 LEARNERS = ["scm", "cart", "rf", "gbt", "lasso"]
 NO_WINNER = "no learner calls every isolate"
@@ -92,14 +97,20 @@ def any_row_best(report):
 def main():
     parser = argparse.ArgumentParser(description="Audit completed GRM dataset reports.")
     parser.add_argument("root", nargs="?", default=Path(__file__).resolve().parents[1] / "data", type=Path)
+    parser.add_argument("--out", type=Path, help="receipt output path (default ROOT/logs/result-validation-receipt.json)")
     parser.add_argument("--log", type=Path, help="pipeline log whose done lines must name each report's best learner")
+    parser.add_argument("--skip-log", type=Path, help="class-minimum skip evidence only; no done-line validation (defaults to --log)")
     parser.add_argument("--reshaped", action="store_true", help="accept only schema 2, for earlier revisions reshaped to it")
     args = parser.parse_args()
     root = args.root
     logged = done_lines(args.log) if args.log else None
+    skip_log = args.skip_log or args.log
+    files, scope = select_results(root, log=skip_log)
+    assert not scope["missing_curated_results"], ("missing results for curated dataset", scope["missing_curated_results"])
     checked = []
-    for path in sorted((root / "species").glob("*/results/*.json")):
+    for path in files:
         report = json.loads(path.read_text())
+        assert report["id"] == path.stem and report["species_slug"] == path.parent.parent.name, ("report identity differs from its curated path", path)
         audit = report["evaluation"]
         counts = report["counts"]
         samples = report["samples"]
@@ -198,12 +209,13 @@ def main():
                         "best_learner": None if best is None else best[0], "log_checked": logged is not None and report["id"] in logged,
                         "unavailable_splits": {s["scheme"]: s["unavailable_reason"] for s in report["splits"] if s.get("unavailable_reason")}})
 
-    receipt = {"checked_at": datetime.datetime.now(datetime.timezone.utc).isoformat(), "log": None if args.log is None else str(args.log), "reports": checked}
-    (root / "logs").mkdir(exist_ok=True)
-    (root / "logs/result-validation-receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
+    receipt = {"checked_at": datetime.datetime.now(datetime.timezone.utc).isoformat(), "log": None if args.log is None else str(args.log), "skip_log": None if skip_log is None else str(skip_log), "reports": checked, **scope}
+    out = args.out or root / "logs/result-validation-receipt.json"
+    out.parent.mkdir(exist_ok=True)
+    out.write_text(json.dumps(receipt, indent=2) + "\n")
     print(json.dumps({"reports": len(checked), "revisions": sorted({r["revision"] for r in checked}), "schemas": sorted({r["schema"] for r in checked}),
                       "rows_with_no_call": sum(r["rows_with_no_call"] for r in checked), "without_best_learner": sum(r["best_learner"] is None for r in checked),
-                      "log_checked": sum(r["log_checked"] for r in checked)}))
+                      "log_checked": sum(r["log_checked"] for r in checked), **scope}))
 
 
 if __name__ == "__main__":
