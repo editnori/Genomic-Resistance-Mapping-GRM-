@@ -511,6 +511,13 @@ fn top_counts<'a>(items: impl Iterator<Item = &'a str>, k: usize) -> Vec<(String
 pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf> {
     let out_dir = layout.root.join("report");
     std::fs::create_dir_all(out_dir.join("datasets"))?;
+    // `prune` removes every file this build did not publish, including one a
+    // concurrent build has just published, so builds take turns: each holds
+    // an exclusive lock on the report directory until it returns.
+    let lock =
+        std::fs::File::open(&out_dir).with_context(|| format!("open {}", out_dir.display()))?;
+    lock.lock()
+        .with_context(|| format!("lock {}", out_dir.display()))?;
     let datasets: Vec<DatasetSpec> = serde_json::from_slice(
         &std::fs::read(layout.curated().join("datasets.json")).context("run `grm curate` first")?,
     )?;
@@ -950,6 +957,35 @@ mod tests {
         let index: Value =
             serde_json::from_slice(&std::fs::read(out.join("index.json")).unwrap()).unwrap();
         assert_eq!(index["datasets"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_build_waits_until_the_running_build_finishes() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let report = serde_json::json!({"counts": {"samples": 7, "resistant": 3}});
+        write_reports(&layout, &[("meropenem", report)]);
+        let out = layout.root.join("report");
+        std::fs::create_dir_all(&out).unwrap();
+        // The lock a running build holds on the report directory.
+        let running = std::fs::File::open(&out).unwrap();
+        running.lock().unwrap();
+        let (done, finished) = std::sync::mpsc::channel();
+        let kover = dir.path().join("kover.json");
+        let waiting = std::thread::spawn({
+            let layout = layout.clone();
+            move || done.send(build(&layout, &kover).map(|_| ())).unwrap()
+        });
+        let wait = std::time::Duration::from_millis(500);
+        assert!(
+            finished.recv_timeout(wait).is_err(),
+            "built during another build"
+        );
+        assert!(!out.join("index.json").exists());
+        drop(running);
+        finished.recv().unwrap().unwrap();
+        waiting.join().unwrap();
+        assert!(out.join("index.json").exists());
     }
 
     #[test]

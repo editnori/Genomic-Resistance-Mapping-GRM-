@@ -108,7 +108,7 @@ ulimit -n 8192
 ./target/release/grm report
 ```
 
-If curation rules or raw records changed, rerun curation first and fetch the newly selected assemblies. A dataset that no longer meets its recorded class minimum loses its saved result during learning. `grm report` publishes saved results; it does not refresh their evaluations.
+If curation rules or raw records changed, rerun curation first and fetch the newly selected assemblies. A dataset that no longer meets its recorded class minimum loses its saved result during learning. `grm report` publishes saved results; it does not refresh their evaluations. Report builds take turns through a lock on `data/report`, so a `grm report` started during another build waits for it to finish.
 
 ## Research views
 
