@@ -4,6 +4,8 @@ GRM compares genomic predictors of antimicrobial susceptibility with reported la
 
 The current source implements **evaluation revision 7** and writes dataset/index **schema 2**. The dashboard also reads schema 1. Updating this checkout does not recompute saved results: a report's evaluation revision, cohort, and audit determine which claims its numbers support.
 
+Revision 7 has been run over the 13 species that revision 6 reported, recounting every genome. It produced 237 reports for the 239 curated datasets of those species. Staphylococcus aureus methicillin and Escherichia coli amoxicillin have no report: among each species' 2,000 selected genomes, methicillin has 24 resistant genomes and amoxicillin has 3 labeled genomes, under the class minimum of 25. Every revision-6 dataset has a revision-7 report, and three are new: Klebsiella pneumoniae doripenem, Mycobacterium tuberculosis levofloxacin, and Salmonella enterica sulfisoxazole. The result checker and metric audit under [Checks](#checks) pass on all 237 reports. This is internal validation on public BV-BRC data; no external, prospective, or clinical validation has been done.
+
 The original Python/Kover application and saved results are preserved in [legacy/](legacy/). Those results use different cohorts and evaluation procedures, so they are historical context.
 
 ## Setup
@@ -78,6 +80,8 @@ The five fitted learners are a Set Covering Machine, CART, random forest, gradie
 Random splits and lineage-grouped splits measure different forms of generalization. The lineage split keeps related isolates together and is unavailable when its outer or inner partitions cannot support two-class evaluation. Its report records the reason.
 
 Revision 7 adds training-only feature screening to the forest, derives seeds by fold, and separates subsampling and node-feature random streams. A null boosted-tree or lasso fit makes no call for that fold. Metrics use only called isolates and are null when none are called. The headline learner must call every isolate on every split that ran; a missing learner row in an available lineage split disqualifies it. Saved predictions retain the 64-bit precision used by the metrics.
+
+Curation admits a dataset when each class reaches its `min_class` across all curated genomes. `grm curate` then selects at most `--cap` genomes per species (2,000 by default), and learning applies the same minimum again among those genomes. A dataset below it there is skipped with the log line `<id>: too few labeled genomes after download, skipped`, so a species can publish fewer reports than it has curated datasets.
 
 MIC regression is a separate endpoint. Reference-gene and simulated molecular-panel results describe assembled genomes and agreement with lab calls in this cohort. They do not establish assay sensitivity, a causal resistance mechanism, or clinical treatment performance.
 
