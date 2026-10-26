@@ -522,8 +522,18 @@ async function present(page, tag, width, height) {
   await dialog.waitFor();
   check(tag + ' no deck chooser', !(await dialog.textContent()).includes('Choose a deck'), null);
   const slideSelect = dialog.getByRole('combobox', { name: /^Go to slide/ });
+  // Webfonts and ResizeObserver measurements can add a continuation just
+  // after Present opens. Read a stable outline before navigating it.
+  await settle(page);
   await slideSelect.click();
-  const slideCount = await dialog.getByRole('option').count();
+  let slideCount = 0, previousCount = -1, stableCounts = 0;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    slideCount = await dialog.getByRole('option').count();
+    if (slideCount === previousCount) stableCounts++;
+    else { previousCount = slideCount; stableCounts = 0; }
+    if (slideCount >= 7 && stableCounts >= 2) break;
+    await page.waitForTimeout(50);
+  }
   await page.keyboard.press('Escape');
   check(tag + ' expected slide count', slideCount === 7 || slideCount === 8 || slideCount === 9, slideCount);
   for (let slide = 0; slide < slideCount; slide++) {
