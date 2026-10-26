@@ -369,6 +369,9 @@ async function interactions(page, tag, width) {
 
   await page.goto(BASE + '/datasets?dataset=' + inspectId);
   await page.locator('#ds-model').waitFor();
+  // The map is a separate, larger request. Wait for it before comparing
+  // section positions and scroll-spy labels on slower public connections.
+  await page.locator('#ds-lineages [role="listbox"]').waitFor();
   const head = await page.evaluate(() => {
     const header = document.querySelector('dialog[open] header');
     return { status: header.querySelector('p')?.textContent, pills: [...header.querySelectorAll('nav[aria-label="Sections"] button')].map(b => b.textContent), current: header.querySelector('nav[aria-label="Sections"] [aria-current="true"]')?.textContent, title: document.getElementById('inspector-title')?.getBoundingClientRect().x, body: document.querySelector('#ds-learners h2')?.getBoundingClientRect().x, pillsX: header.querySelector('nav[aria-label="Sections"] button')?.getBoundingClientRect().x };
