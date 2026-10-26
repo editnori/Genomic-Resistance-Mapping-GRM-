@@ -5,7 +5,7 @@ import { catalogRuleWords, featureLabel, featureWhere, unexplained } from "../..
 import { notScored } from "../../data/derive/tests";
 import { PanelDesigner } from "./PanelDesigner";
 import { DataTable, type Column } from "../../ui/DataTable";
-import { StatusTd, PanelState, ScrollFrame, Section } from "../../ui/primitives";
+import { BarPill, PanelState, ScrollFrame, Section } from "../../ui/primitives";
 
 const groupColumns: Column<GroupRow>[] = [
   { id: "group", header: "Gene group", sortValue: (g) => g.group, firstDir: "asc", cell: (g) => g.group },
@@ -56,8 +56,8 @@ const PanelBlock = ({ r, panel }: { r: DatasetReport; panel: PanelResult }) => {
               <table className="mt-1 w-full border-collapse text-control">
                 <thead>
                   <tr className="border-b border-hair">
-                    {["Feature", "Where", "Missed isolates carrying it", "Susceptible carrying it"].map((h, i) => (
-                      <th key={h} scope="col" className={`px-2 py-2 text-tiny font-medium text-muted-text ${i >= 2 ? "text-right" : "text-left"}`}>
+                    {["Feature", "Where", "In missed", "In susceptible"].map((h, i) => (
+                      <th key={h} scope="col" className={`whitespace-nowrap px-2 py-2 text-tiny font-medium text-blue ${i >= 2 ? "text-right" : "text-left"}`}>
                         {h}
                       </th>
                     ))}
@@ -71,10 +71,10 @@ const PanelBlock = ({ r, panel }: { r: DatasetReport; panel: PanelResult }) => {
                         {f.alike > 0 ? <span className="block text-tiny font-normal text-muted-text">and {plural(f.alike, "more feature")} in the same gene</span> : null}
                       </td>
                       <td className="px-2 py-1.5 text-muted-text">{featureWhere(f.card, f.feature) ?? "Not placed"}</td>
-                      <td className="px-2 py-1.5 text-right tabular-nums">
+                      <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums">
                         {int(f.inMissed)} of {int(u.missed)} ({pct(f.inMissed / Math.max(u.missed, 1), 0)})
                       </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums">
+                      <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums">
                         {int(f.inSusceptible)} of {int(u.susceptible)} ({pct(f.inSusceptible / Math.max(u.susceptible, 1), 1)})
                       </td>
                     </tr>
@@ -97,7 +97,6 @@ export const MechanismSection = ({ r }: { r: DatasetReport }) => {
     <Section
       id="ds-mechanisms"
       title="Genes and panels"
-
       answer={
         cat === null
           ? `The catalog has no acquired-gene rule for ${r.antibiotic}.`
@@ -110,16 +109,20 @@ export const MechanismSection = ({ r }: { r: DatasetReport }) => {
           <table className="mt-3 w-full border-collapse text-control">
             <thead>
               <tr className="border-b border-hair">
-                {["Test", "Sensitivity", "Specificity", "VME ≤1.5%", "ME ≤3%"].map((h, i) => <th key={h} scope="col" className={`whitespace-nowrap px-2 py-2 font-medium text-muted-text ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>)}
+                {["Test", "Sensitivity", "Specificity", "VME ≤1.5%", "ME ≤3%"].map((h, i) => <th key={h} scope="col" className={`whitespace-nowrap px-2 py-2 text-tiny font-medium text-blue ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {tests.map((t) => <tr key={t.id} className="border-b border-hair">
-                <th scope="row" className="px-2 py-2 text-left font-medium">{t.name}</th>
+                <th scope="row" className="min-w-[10rem] px-2 py-2 text-left font-medium">{t.name}</th>
                 <td className="px-2 py-2 text-right tabular-nums">{pct(t.metrics.sensitivity)}</td>
                 <td className="px-2 py-2 text-right tabular-nums">{pct(t.metrics.specificity)}</td>
-                <StatusTd value={t.metrics.vme} bar={BARS.vme} />
-                <StatusTd value={t.metrics.me} bar={BARS.me} />
+                <td className="px-2 py-2 text-right">
+                  <BarPill value={t.metrics.vme} bar={BARS.vme} />
+                </td>
+                <td className="px-2 py-2 text-right">
+                  <BarPill value={t.metrics.me} bar={BARS.me} />
+                </td>
               </tr>)}
             </tbody>
           </table>
@@ -133,9 +136,6 @@ export const MechanismSection = ({ r }: { r: DatasetReport }) => {
           </div>
         ) : (
           <>
-            <p className="type-note mt-1">
-              A gene panel calls an isolate resistant when its assembled genome carries a target gene, detected by k-mer containment; a probe assay, when a probed region differs from the wild-type sequence. This is target presence in genomes, not an estimate of a PCR assay&apos;s analytical performance.
-            </p>
             {r.panels.map((p) => (
               <PanelBlock key={p.id} r={r} panel={p} />
             ))}

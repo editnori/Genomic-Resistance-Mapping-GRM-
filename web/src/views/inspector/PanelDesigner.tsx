@@ -6,9 +6,9 @@ import { useState } from "react";
 import type { DatasetReport } from "../../data/schema";
 import { decodeBits } from "../../data/bits";
 import { int, pct } from "../../data/format";
-import { agreement, markerCalls, BARS, type ReferenceBar } from "../../data/metrics";
+import { agreement, barWords, markerCalls, BARS, verdictOf, type ReferenceBar } from "../../data/metrics";
 import { featureIndex, featureLabel, featureWhere, isGenePanel, modelFeatureOrder, truthOf } from "../../data/derive/dataset";
-import { FOCUS_RING, GhostButton, Segmented, verdictWords } from "../../ui/primitives";
+import { FOCUS_RING, GhostButton, Segmented } from "../../ui/primitives";
 
 const SHORT_LIST = 10;
 
@@ -20,13 +20,23 @@ interface Marker {
   s: number;
 }
 
-const Stat = ({ label, value, bar }: { label: string; value: number; bar?: ReferenceBar }) => (
-  <div className="min-w-0">
-    <div className="text-control font-medium text-muted-text">{label}</div>
-    <div className="type-stat mt-1">{pct(value)}</div>
-    {bar === undefined ? null : <p className="text-note text-muted-text">{verdictWords(value, bar)}</p>}
-  </div>
-);
+/** One measure. A judged figure carries its own colour: deep green when it
+ *  meets its bar, coral when it misses, with the verdict beside it in the
+ *  same colour; an unjudged figure stays ink. */
+const Stat = ({ label, value, bar }: { label: string; value: number; bar?: ReferenceBar }) => {
+  const tone = bar === undefined ? "text-ink" : verdictOf(value, bar) === "meets" ? "text-live-text" : "text-coral-text";
+  return (
+    <div className="min-w-0">
+      <div className="text-control font-medium text-muted-text">{label}</div>
+      <div className={`type-stat mt-1 ${tone}`}>{pct(value)}</div>
+      {bar === undefined ? null : (
+        <p className={`text-note ${tone}`}>
+          {verdictOf(value, bar) === "meets" ? "Meets" : "Misses"} {barWords(bar)}
+        </p>
+      )}
+    </div>
+  );
+};
 
 const MarkerList = ({ title, markers, chosen, onToggle }: { title: string; markers: Marker[]; chosen: ReadonlySet<string>; onToggle(key: string): void }) => {
   const [all, setAll] = useState(false);
@@ -109,7 +119,7 @@ export const PanelDesigner = ({ r }: { r: DatasetReport }) => {
   });
   const a = agreement(truth, markerCalls(presence, n, rule));
   return (
-    <div className="mt-8">
+    <div id="ds-designer" className="mt-8 scroll-mt-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h3 className="text-body font-semibold text-ink">Marker designer</h3>
         <Segmented<"any" | "all">
@@ -124,16 +134,14 @@ export const PanelDesigner = ({ r }: { r: DatasetReport }) => {
           ? "Choose one or more markers to see what a test built from them would call."
           : `This ${markerWord(chosen.size)} rule calls ${int(a.tp)} of ${int(a.tp + a.fn)} resistant isolates resistant, and ${int(a.fp)} of ${int(a.fp + a.tn)} susceptible isolates.`}
       </p>
-      <div className="grid gap-x-10 gap-y-6 border-b border-hair pb-5 sm:grid-cols-2 lg:grid-cols-4" aria-live="polite">
+      <div className="grid grid-cols-1 gap-x-10 gap-y-6 border-b border-hair pb-5 sm:grid-cols-2 lg:grid-cols-4" aria-live="polite">
         <Stat label="Sensitivity" value={a.sensitivity} />
         <Stat label="Specificity" value={a.specificity} />
         <Stat label="VME" value={a.vme} bar={BARS.vme} />
         <Stat label="ME" value={a.me} bar={BARS.me} />
       </div>
-      <p className="type-note mt-3">
-        Marker calls here use every isolate, with no held-out split, so they describe agreement on these isolates and do not estimate how a test would perform on new ones.
-      </p>
-      <div className="mt-5 grid gap-x-10 gap-y-6 lg:grid-cols-2">
+      <p className="type-note mt-3">Calls use every isolate, with no held-out split.</p>
+      <div className="mt-5 grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-2">
         <MarkerList title="Model features" markers={featureMarkers} chosen={chosen} onToggle={toggle} />
         <MarkerList title="Catalog gene groups" markers={groupMarkers} chosen={chosen} onToggle={toggle} />
       </div>

@@ -1,13 +1,13 @@
 // One mark per dataset on one value axis: a beeswarm that keeps every
-// dataset visible, with labeled reference lines, region counts that sum to
-// the plotted datasets, and direct labels on up to three named extremes (two
-// below 640px). On a slide the swarm's offsets shrink to the height it is
-// given, so a dense strip never scrolls. GapSwarm and MicStrip adapt the
-// manifest rows; MarkListbox gives the keyboard path.
+// dataset visible, with reference lines, region counts on either side of the
+// stated bar that sum to the plotted datasets, and direct labels on up to
+// three named extremes (two below 640px). On a slide the swarm's offsets
+// shrink to the height it is given, so a dense strip never scrolls. GapSwarm
+// and MicStrip adapt the manifest rows; MarkListbox gives the keyboard path.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { CatalogRow } from "../data/schema";
-import { capitalize, median, pct, speciesShort } from "../data/format";
+import { capitalize, pct, speciesShort } from "../data/format";
 import { largestGaps } from "../data/derive/overview";
 import { REFERENCE_BARS } from "../data/metrics";
 import type { TipLine } from "../ui/HoverTip";
@@ -22,7 +22,8 @@ export interface StripDatum {
 export interface StripRef {
   key: string;
   value: number;
-  label: string;
+  /** Left out when the region counts beside the line already name it. */
+  label?: string;
   anchor: "start" | "end";
   /** A baseline such as "no change" is solid; a stated bar is dashed. */
   solid?: boolean;
@@ -31,6 +32,8 @@ export interface StripRef {
 export interface StripRegion {
   key: string;
   label: string;
+  /** A shorter label for when the full one has no room beside the bar. */
+  short?: string;
   /** The value the label sits against, with its side. */
   at: number;
   anchor: "start" | "end";
@@ -117,9 +120,21 @@ export const DotStrip = ({
   const marks: ListMark[] = data.map((d, i) => ({ key: d.id, x: xs[i]!, y: mid + raw[i]! * scale, tip: () => d.tip }));
   const ordered = [...marks].sort((a, b) => a.x - b.x || a.y - b.y);
 
+  // A region count sits beside the bar on its own side; when that side has
+  // no room it moves to the plot's far edge on the same side, so a count is
+  // never drawn across the line from the marks it counts.
+  // When one count needs its short form, every count takes it, so the pair
+  // reads alike.
+  const fits = (r: StripRegion, text: string) => (r.anchor === "end" ? x(r.at) - 4 - labelWidth(text) >= 0 : x(r.at) + 4 + labelWidth(text) <= width);
+  const short = regions.some((r) => !fits(r, r.label) && r.short !== undefined && fits(r, r.short));
+  const regionSpec = (r: StripRegion): LabelSpec => {
+    const text = short && r.short !== undefined ? r.short : r.label;
+    if (fits(r, text)) return { key: r.key, text, x: x(r.at), anchor: r.anchor };
+    return r.anchor === "end" ? { key: r.key, text, x: x(domain[0]), anchor: "start" } : { key: r.key, text, x: x(domain[1]), anchor: "end" };
+  };
   const specs: LabelSpec[] = [
-    ...regions.map((r) => ({ key: r.key, text: r.label, x: x(r.at), anchor: r.anchor })),
-    ...refs.map((r) => ({ key: r.key, text: r.label, x: x(r.value), anchor: r.anchor })),
+    ...regions.map(regionSpec),
+    ...refs.flatMap((r) => (r.label === undefined ? [] : [{ key: r.key, text: r.label, x: x(r.value), anchor: r.anchor }])),
   ];
   const placed = placeLabels(specs, width, LABEL_ROWS);
 
@@ -168,7 +183,6 @@ const datasetName = (r: CatalogRow): string => `${capitalize(r.antibiotic)}, ${s
 export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]; height?: number; onOpen?(id: string): void }) => {
   const paired = rows.filter((r) => r.best_random !== null && r.best_lineage !== null);
   const gaps = paired.map((r) => r.best_random! - r.best_lineage!);
-  const mid = median(gaps);
   const above = gaps.filter((g) => g > 0.05).length;
   const lo = Math.floor(Math.min(-0.02, ...gaps) * 100) / 100;
   const hi = Math.ceil(Math.max(0.1, ...gaps) * 100) / 100;
@@ -187,13 +201,12 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
       format={(v) => (v * 100).toFixed(0)}
       axisTitle="Points of balanced accuracy lost with lineages held out (random minus lineage)"
       refs={[
-        ...(mid === null ? [] : [{ key: "median", value: mid, label: `Median ${(mid * 100).toFixed(1)}`, anchor: "start" as const }]),
-        { key: "bar", value: 0.05, label: "5 points", anchor: "end" },
+        { key: "bar", value: 0.05, anchor: "end" },
         { key: "zero", value: 0, label: "No change", anchor: "end", solid: true },
       ]}
       regions={[
-        { key: "below", label: `${gaps.length - above} at or below 5`, at: lo, anchor: "start" },
-        { key: "above", label: `${above} above 5`, at: hi, anchor: "end" },
+        { key: "below", label: `${gaps.length - above} ≤5 points`, short: `${gaps.length - above} ≤5`, at: 0.05, anchor: "end" },
+        { key: "above", label: `${above} >5 points`, short: `${above} >5`, at: 0.05, anchor: "start" },
       ]}
       named={largestGaps(paired, 3).map(({ row }) => ({ id: row.id, lines: [datasetName(row), `${pct(row.best_random)} to ${pct(row.best_lineage)}`] }))}
       height={height}
@@ -207,7 +220,6 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
 export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]; height?: number; onOpen?(id: string): void }) => {
   const scored = rows.filter((r) => r.mic_essential_agreement !== null);
   const values = scored.map((r) => r.mic_essential_agreement!);
-  const mid = median(values);
   const atOrAbove = values.filter((v) => v >= REFERENCE_BARS.mic).length;
   const lo = Math.min(0.8, Math.floor(Math.min(...values) * 10) / 10);
   const lowest = [...scored].sort((a, b) => a.mic_essential_agreement! - b.mic_essential_agreement! || a.id.localeCompare(b.id))[0];
@@ -225,13 +237,10 @@ export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
       domain={[lo, 1]}
       format={(v) => `${Math.round(v * 100)}`}
       axisTitle="Essential agreement: exact MICs predicted within one doubling dilution (%)"
-      refs={[
-        { key: "bar", value: REFERENCE_BARS.mic, label: "90% bar", anchor: "start" },
-        ...(mid === null ? [] : [{ key: "median", value: mid, label: `Median ${pct(mid)}`, anchor: "end" as const }]),
-      ]}
+      refs={[{ key: "bar", value: REFERENCE_BARS.mic, anchor: "start" }]}
       regions={[
-        { key: "below", label: `${values.length - atOrAbove} below 90%`, at: lo, anchor: "start" },
-        { key: "above", label: `${atOrAbove} at or above`, at: 1, anchor: "end" },
+        { key: "below", label: `${values.length - atOrAbove} <90%`, at: REFERENCE_BARS.mic, anchor: "end" },
+        { key: "above", label: `${atOrAbove} ≥90%`, at: REFERENCE_BARS.mic, anchor: "start" },
       ]}
       named={lowest === undefined ? [] : [{ id: lowest.id, lines: [datasetName(lowest), pct(lowest.mic_essential_agreement)] }]}
       height={height}

@@ -33,11 +33,11 @@ export const RuleFigure = ({ manifest }: { manifest: Manifest }) => {
   const sShare = card.n_susceptible / Math.max(r.counts.susceptible, 1);
   const context = card.locus?.context ?? "";
   return (
-    <div className="grid h-full content-center gap-x-12 gap-y-4 lg:grid-cols-2">
+    <div className="grid h-full grid-cols-1 content-center gap-x-12 gap-y-4 lg:grid-cols-2">
       <div className="min-w-0">
         <p className="text-note text-muted-text">{capitalize(r.antibiotic)} · {speciesShort(r.species)} · rule 1 of {r.models.scm.rules.length}</p>
         <p className="mt-2 break-words text-headline font-semibold text-ink">{rule.presence ? "Presence" : "Absence"} of {featureLabel(card, rule.feature)}</p>
-        {card.catalog_families.length === 0 ? null : <p className="mt-2 text-note text-muted-text">Catalog family {card.catalog_families.join(", ")}</p>}
+        {card.catalog_families.length === 0 ? null : <p className="mt-2 text-note text-muted-text">Catalog {card.catalog_families.length === 1 ? "family" : "families"} {card.catalog_families.join(", ")}</p>}
         <p className="mt-2 text-note text-ink">{featurePlace(card) ?? "Not placed on a reference assembly."}</p>
         {context === "" ? null : <div className="mt-3"><GhostButton onClick={() => setSequenceOpen(true)}>Show sequence</GhostButton></div>}
       </div>

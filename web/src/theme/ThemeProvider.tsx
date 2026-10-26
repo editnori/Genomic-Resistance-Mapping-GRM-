@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Moon, Sun } from "lucide-react";
+import { FOCUS_RING } from "../ui/primitives";
 import { THEME_STORAGE_KEY } from "./storage";
 
 export type Theme = "light" | "dark";
@@ -46,21 +47,21 @@ export function useTheme(): ThemeContextValue {
   return ctx;
 }
 
+/** Round, outlined like Present. The icon names the theme the button turns
+ *  to; on a switch the outgoing icon turns away as the other turns in. */
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
   const dark = theme === "dark";
+  const icon = (shown: boolean) => `theme-icon absolute h-4 w-4 ${shown ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-50 opacity-0"}`;
   return (
     <button
       type="button"
       onClick={toggleTheme}
       aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
-      className="ui-control-target inline-flex h-8 w-8 items-center justify-center rounded-full border border-hair bg-paper-pure text-ink transition-[color,border-color,transform] duration-fast ease-out hover:border-blue hover:text-blue active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
+      className={`ui-control-target relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-hair bg-paper-pure text-ink transition-[color,border-color,transform] duration-fast ease-out hover:border-blue hover:text-blue active:scale-[0.98] ${FOCUS_RING}`}
     >
-      {dark ? (
-        <Sun aria-hidden="true" className="h-4 w-4" strokeWidth={1.75} />
-      ) : (
-        <Moon aria-hidden="true" className="h-4 w-4" strokeWidth={1.75} />
-      )}
+      <Sun aria-hidden="true" className={icon(dark)} strokeWidth={1.75} />
+      <Moon aria-hidden="true" className={icon(!dark)} strokeWidth={1.75} />
     </button>
   );
 }

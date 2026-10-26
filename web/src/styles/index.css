@@ -9,15 +9,13 @@
  *   --paper, --paper-pure, --sidebar-surface, --ink, --blue, --blue-body,
  *   --blue-deep, --coral, --live, --live-text, --coral-text, --muted-text
  * Full-value vars carry their own alpha:
- *   --fill-1..3, --hair, --surface-shadow, the status pair, the chart tokens.
+ *   --fill-1..3, --hair, --bezel, --surface-shadow, the chart and mark tokens.
  *
- * Blue is interaction only: links, focus, selected controls. The coral and
- * blue series mark resistant and susceptible calls only. Status green and
- * magenta judge a value against a stated bar. A dataset mark, which is none
- * of those, wears the neutral --chart-mark. The series pairs were validated
- * with the dataviz palette checks against paper-pure (light #fcfcfd, dark
- * #0d0d0f); the status pairs give 9.34:1 and 13.42:1 (meet) and 5.23:1 and
- * 6.29:1 (miss) text contrast.
+ * Chart series are identity colors, separate from the text-safe judgment
+ * tones, so readable text never depends on a decorative mark color. Both
+ * pairs were validated with the dataviz palette checks against paper-pure
+ * (light #fcfcfd, dark #0d0d0f): lightness band, chroma floor, CVD and
+ * normal-vision separation, and 3:1 contrast all pass.
  */
 
 .theme-light {
@@ -38,30 +36,38 @@
 
   --coral: 255 140 102;
   --live: 24 140 78;
+  /* The judgment tones part in lightness (deep green, lighter coral) so a
+     reader who cannot tell red from green still sees which is which. */
   --live-text: 8 82 40;
   --coral-text: 190 64 16;
   --muted-text: 94 94 98; /* solid muted copy; never fake it with opacity */
-  --status-meet-bg: #085228;
-  --status-meet-fg: #ffffff;
-  --status-miss-bg: #f1e4ed;
-  --status-miss-fg: #a3307a;
 
   --hair: rgb(24 24 27 / 0.08);
+  --bezel: #111113;
   --surface-shadow: 0 10px 30px rgb(24 24 27 / 0.07), 0 2px 8px rgb(24 24 27 / 0.04);
 
-  /* Chart tokens. series-s marks susceptible calls, series-r resistant
-     calls; chart-mark is one dataset or one learner score. */
+  /* Chart tokens. series-s marks susceptible isolates and the random split;
+     series-r marks resistant isolates; chart-mark is one dataset or one
+     learner score, in the same blue. chart-ref draws a reference line. */
   --series-s: #4b74e2;
   --series-r: #c95736;
   --series-neutral: #8e8e93;
-  --chart-mark: #5f5f67;
+  --chart-mark: #4b74e2;
+  --chart-ref: rgb(22 22 23 / 0.55);
   --chart-grid: rgb(22 22 23 / 0.08);
   --chart-axis: rgb(22 22 23 / 0.22);
-  --chart-ref: rgb(22 22 23 / 0.62);
-  --chart-tick: #5e5e62;
+  --chart-tick: #52689f;
   --chart-tip-bg: #ffffff;
   --chart-tip-border: rgb(22 22 23 / 0.14);
   --chart-tip-text: #161617;
+
+  /* The GRM mark: two strands in two blues, the call in coral, edges in the
+     paper it sits on. The neutral face is the top before the call lands. */
+  --mark-a: #4b74e2;
+  --mark-b: #3155b4;
+  --mark-top: #ff8c66;
+  --mark-neutral: #c9ccd6;
+  --mark-edge: rgb(var(--paper));
 }
 
 .theme-dark {
@@ -84,25 +90,28 @@
   --live-text: 130 236 168;
   --coral-text: 236 104 64;
   --muted-text: 184 184 188;
-  --status-meet-bg: #82eca8;
-  --status-meet-fg: #0d0d0f;
-  --status-miss-bg: #271a24;
-  --status-miss-fg: #e57bc0;
 
   --hair: rgb(242 242 240 / 0.14);
+  --bezel: #060607;
   --surface-shadow: 0 14px 36px rgb(0 0 0 / 0.28), 0 3px 10px rgb(0 0 0 / 0.2);
 
   --series-s: #5f84f2;
   --series-r: #e0693f;
   --series-neutral: #7a7a80;
-  --chart-mark: #a8a8b0;
+  --chart-mark: #5f84f2;
+  --chart-ref: rgb(242 242 240 / 0.55);
   --chart-grid: rgb(242 242 240 / 0.08);
   --chart-axis: rgb(242 242 240 / 0.24);
-  --chart-ref: rgb(242 242 240 / 0.62);
-  --chart-tick: #b8b8bc;
+  --chart-tick: #94a8e2;
   --chart-tip-bg: #1d1d20;
   --chart-tip-border: rgb(242 242 240 / 0.16);
   --chart-tip-text: #f2f2f0;
+
+  --mark-a: #6a8df5;
+  --mark-b: #3557c0;
+  --mark-top: #ff8c66;
+  --mark-neutral: #4a4c55;
+  --mark-edge: rgb(var(--paper));
 }
 
 /*
@@ -113,6 +122,9 @@
   --font-ui: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --track-ui: -0.011em;
   --track-title: -0.014em;
+  --gap-section: clamp(4rem, 6vw, 6rem);
+  --gap-panel: 2.5rem;
+  --gap-prose: 1.25rem;
 
   /* Motion: three clocks, one ease, two travel distances. */
   --dur-fast: 120ms;
@@ -121,8 +133,9 @@
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --motion-shift-micro: 4px;
   --motion-shift-surface: 8px;
-  /* The docked Datasets filter rail. */
-  --rail-width: 18rem;
+  --view-options-width: 16rem;
+  /* 3.5rem of strip plus the rail's own hairline. */
+  --view-options-collapsed-width: calc(3.5rem + 1px);
 }
 
 @layer base {
@@ -134,11 +147,11 @@
 
   body {
     margin: 0;
-    background: rgb(var(--paper));
+    background: var(--bezel);
     color: rgb(var(--ink));
     font-family: var(--font-ui);
     font-size: 15px;
-    line-height: 22px;
+    line-height: 1.5;
     letter-spacing: var(--track-ui);
     font-optical-sizing: auto;
     font-synthesis: none;
@@ -210,33 +223,140 @@
 @layer components {
   .type-body {
     font-size: 0.9375rem;
-    line-height: 1.375rem;
-    color: rgb(var(--ink));
-    max-width: 68ch;
+    line-height: 1.5;
+    color: rgb(var(--blue-body));
+    max-width: 60ch;
   }
 
   .type-headline {
     font-size: 1.125rem;
-    line-height: 1.5625rem;
+    line-height: 1.4;
     font-weight: 600;
-    letter-spacing: -0.011em;
+    letter-spacing: var(--track-title);
     color: rgb(var(--ink));
-    max-width: 68ch;
+    max-width: 60ch;
   }
 
   .type-note {
-    font-size: 0.8125rem;
-    line-height: 1.25rem;
+    font-size: 0.84375rem;
+    line-height: 1.5;
     color: rgb(var(--muted-text));
-    max-width: 68ch;
+    max-width: 60ch;
   }
 
   .type-stat {
     font-size: 1.875rem;
-    line-height: 2.125rem;
+    line-height: 1.12;
     font-weight: 600;
-    letter-spacing: -0.014em;
+    letter-spacing: -0.01em;
     color: rgb(var(--ink));
+  }
+
+  .theme-flip {
+    transition:
+      background-color var(--dur-med) var(--ease-out),
+      color var(--dur-med) var(--ease-out),
+      border-color var(--dur-med) var(--ease-out);
+  }
+
+  /* Filter rail grammar: a quiet uppercase group label for the question and
+     an ink field label for the choice. Every control in a field is one width
+     and one height, so the column has a single right edge. */
+  [data-view-options-panel] [data-modal-scroll-owner='true'] {
+    scrollbar-gutter: stable;
+  }
+
+  .filter-rail-body > * + * {
+    margin-top: 1.25rem;
+  }
+
+  .filter-group {
+    min-width: 0;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--hair);
+  }
+
+  .filter-rail-body > .filter-group:first-child {
+    padding-top: 1rem;
+    border-top: 0;
+  }
+
+  .filter-group-label {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    font-size: 0.71875rem;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgb(var(--muted-text));
+  }
+
+  .filter-group-body {
+    min-width: 0;
+    margin-top: 0.75rem;
+  }
+
+  .filter-group-body > * + * {
+    margin-top: 0.75rem;
+  }
+
+  .filter-field {
+    min-width: 0;
+  }
+
+  .filter-field-label {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.71875rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: rgb(var(--ink));
+  }
+
+  .filter-field[data-active='true'] .filter-field-label {
+    color: rgb(var(--blue));
+  }
+
+  .filter-field-hint {
+    min-width: 0;
+    margin: 0.375rem 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: rgb(var(--muted-text));
+  }
+
+  /* One control row: 28px at the full rail width. */
+  .filter-field-control {
+    display: flex;
+    min-width: 0;
+    width: 100%;
+    align-items: stretch;
+    margin-top: 0.375rem;
+  }
+
+  .filter-field-control > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .filter-field-control .relative.inline-block {
+    width: 100%;
+  }
+
+  .filter-field-control [role='combobox'] {
+    width: 100%;
+    height: 1.75rem;
+    min-height: 1.75rem;
+  }
+
+  .filter-pill-row {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 0.375rem;
   }
 
   /* Touch input gets the full 44px target without making the desktop bar
@@ -262,11 +382,11 @@
   }
 
   .slide-step-forward {
-    animation: slide-step-forward var(--dur-fast) var(--ease-out);
+    animation: slide-step-forward var(--dur-med) var(--ease-out);
   }
 
   .slide-step-back {
-    animation: slide-step-back var(--dur-fast) var(--ease-out);
+    animation: slide-step-back var(--dur-med) var(--ease-out);
   }
 
   /* DNA context: the k-mer span reads by case and by a tint, so the span is
@@ -279,12 +399,9 @@
   }
 }
 
-/* The docked Datasets filter rail from 1440px; the view reflows with
-   padding-left. Must match RAIL_QUERY in views/DatasetFilters.tsx. */
-@media (min-width: 1440px) {
-  [data-view-scroll]:has([data-filter-rail='docked']) {
-    padding-left: var(--rail-width);
-  }
+[data-view-options-mode='sheet'] {
+  box-sizing: border-box;
+  max-width: min(26rem, calc(100vw - 1rem));
 }
 
 /* One scrollbar recipe for every app-owned scroll surface. */
@@ -309,13 +426,18 @@
   background: var(--hair);
 }
 
-/* Explanatory prose caps at one measure. */
-.prose-measure {
-  max-width: 68ch;
+/* The rule under the top bar is dashed; every other hairline is solid. */
+header + main.border-t {
+  border-top-style: dashed;
 }
 
-/* Forced colors drop fills and tints; a status cell keeps its glyph and
-   text, and gets an outline so the cell still reads as judged. */
+/* Explanatory prose caps at one measure. */
+.prose-measure {
+  max-width: 60ch;
+}
+
+/* Forced colors drop fills; a judged cell keeps its words and gets an
+   outline so it still reads as judged. */
 @media (forced-colors: active) {
   [data-verdict] {
     outline: 1px solid CanvasText;
@@ -357,7 +479,325 @@
   }
 }
 
-/* Reduced motion: every transition and animation collapses to one frame. */
+/* ---- Motion -------------------------------------------------------------
+   Motion explains state and origin. A view steps 4px from the side the
+   reader travelled toward; a sheet or the rail's contents travel at most
+   8px; the slow clock is kept for the inspector, which opens from the row
+   that launched it, and for Present. */
+
+@keyframes view-step-forward {
+  from {
+    opacity: 0;
+    transform: translateX(var(--motion-shift-micro));
+  }
+}
+
+@keyframes view-step-back {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--motion-shift-micro)));
+  }
+}
+
+@keyframes view-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.view-step-forward {
+  animation: view-step-forward var(--dur-med) var(--ease-out);
+}
+
+.view-step-back {
+  animation: view-step-back var(--dur-med) var(--ease-out);
+}
+
+/* With the View Transitions API the old view fades out under the new one,
+   which steps in through its own class; the top bar swaps in place. */
+[data-view-scroll] {
+  view-transition-name: grm-view;
+}
+
+::view-transition-old(root),
+::view-transition-new(root),
+::view-transition-new(grm-view) {
+  animation: none;
+}
+
+::view-transition-group(grm-view) {
+  animation-duration: 0s;
+}
+
+::view-transition-old(grm-view) {
+  animation: view-out var(--dur-fast) var(--ease-out) both;
+}
+
+@keyframes inspector-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+/* The origin is the launching row's centre, set on the panel as it opens. */
+.inspector-in {
+  transform-origin: var(--launch-x, 50%) var(--launch-y, 0px);
+  animation: inspector-in var(--dur-slow) var(--ease-out);
+}
+
+@keyframes rail-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--motion-shift-surface)));
+  }
+}
+
+.rail-in {
+  animation: rail-in var(--dur-med) var(--ease-out);
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--motion-shift-surface));
+  }
+}
+
+.motion-sheet-in {
+  animation: sheet-in var(--dur-med) var(--ease-out);
+}
+
+/* Chart marks that change with a choice move and recolor on the clocks. */
+.chart-retarget {
+  transition:
+    cx var(--dur-slow) var(--ease-out),
+    cy var(--dur-slow) var(--ease-out),
+    x var(--dur-slow) var(--ease-out),
+    y var(--dur-slow) var(--ease-out),
+    width var(--dur-slow) var(--ease-out),
+    fill var(--dur-med) var(--ease-out),
+    opacity var(--dur-med) var(--ease-out);
+}
+
+/* The theme toggle turns one icon out and the other in. */
+.theme-icon {
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-med) var(--ease-out);
+}
+
+/* ---- The GRM mark ---------------------------------------------------------
+   An isometric cube read as a genome: each side face is a stack of k-mer
+   tiles whose two strands swap colour rung by rung, a double helix turning
+   in the faces, and the top face is the call. At rest it is static. It
+   assembles once on first load (tiles rise bottom first, the top lands
+   neutral, then turns coral: the call), loops that assembly while report
+   data loads, replays its last beats when the brand is hovered or focused,
+   and runs the full choreography on a slow clock on the Present title
+   slide. Reduced motion shows the resting mark. */
+
+.grm-mark {
+  overflow: visible;
+}
+
+.grm-mark-face {
+  stroke: var(--mark-edge);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+}
+
+.grm-mark-face[data-strand='a'] {
+  fill: var(--mark-a);
+  --swap: var(--mark-b);
+}
+
+.grm-mark-face[data-strand='b'] {
+  fill: var(--mark-b);
+  --swap: var(--mark-a);
+}
+
+.grm-mark-top {
+  fill: var(--mark-top);
+  stroke: var(--mark-edge);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+}
+
+/* First load: about a second, then rest. */
+.grm-mark[data-motion='assemble'] .grm-mark-rung {
+  animation: grm-rung-in var(--dur-slow) var(--ease-out) both;
+  animation-delay: calc(var(--i) * 140ms);
+}
+
+.grm-mark[data-motion='assemble'] .grm-mark-top {
+  animation:
+    grm-top-in var(--dur-slow) var(--ease-out) 480ms both,
+    grm-call 240ms var(--ease-out) 800ms both;
+}
+
+/* Loading: the same assembly, held, cleared, and built again. */
+.grm-mark[data-motion='loop'] .grm-mark-rung:nth-of-type(1) {
+  animation: grm-loop-rung-0 1800ms var(--ease-out) infinite;
+}
+
+.grm-mark[data-motion='loop'] .grm-mark-rung:nth-of-type(2) {
+  animation: grm-loop-rung-1 1800ms var(--ease-out) infinite;
+}
+
+.grm-mark[data-motion='loop'] .grm-mark-rung:nth-of-type(3) {
+  animation: grm-loop-rung-2 1800ms var(--ease-out) infinite;
+}
+
+.grm-mark[data-motion='loop'] .grm-mark-top {
+  animation: grm-loop-top 1800ms var(--ease-out) infinite;
+}
+
+/* Hover or focus on the brand: the strands turn once, bottom first, and the
+   call dips to neutral and lands again, with no jump at the start. */
+.grm-mark[data-motion='replay'] .grm-mark-face {
+  animation: grm-twist 420ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 60ms);
+}
+
+.grm-mark[data-motion='replay'] .grm-mark-top {
+  animation: grm-recall 560ms var(--ease-out);
+}
+
+/* Present title: the same story on the slow clock, with a full turn of the
+   helix before the call. */
+.grm-mark[data-motion='present'] .grm-mark-rung {
+  animation: grm-rung-in 480ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 220ms);
+}
+
+.grm-mark[data-motion='present'] .grm-mark-face {
+  animation: grm-twist 640ms var(--ease-out) both;
+  animation-delay: calc(920ms + var(--i) * 120ms);
+}
+
+.grm-mark[data-motion='present'] .grm-mark-top {
+  animation:
+    grm-top-in 480ms var(--ease-out) 1500ms both,
+    grm-call 320ms var(--ease-out) 1980ms both;
+}
+
+@keyframes grm-rung-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+@keyframes grm-top-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes grm-call {
+  from {
+    fill: var(--mark-neutral);
+  }
+}
+
+@keyframes grm-recall {
+  45% {
+    fill: var(--mark-neutral);
+  }
+}
+
+@keyframes grm-twist {
+  50% {
+    fill: var(--swap);
+  }
+}
+
+/* The loop's keyframes share one 1800ms cycle, so the whole mark clears
+   together: rungs at 0, 140, 280ms; top at 480ms; call at 800ms; hold to
+   1400ms; clear by 1600ms. */
+@keyframes grm-loop-rung-0 {
+  0% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  17.78%,
+  77.78% {
+    opacity: 1;
+    transform: none;
+  }
+  88.89%,
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes grm-loop-rung-1 {
+  0%,
+  7.78% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  25.56%,
+  77.78% {
+    opacity: 1;
+    transform: none;
+  }
+  88.89%,
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes grm-loop-rung-2 {
+  0%,
+  15.56% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  33.33%,
+  77.78% {
+    opacity: 1;
+    transform: none;
+  }
+  88.89%,
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes grm-loop-top {
+  0%,
+  26.67% {
+    opacity: 0;
+    transform: translateY(-3px);
+    fill: var(--mark-neutral);
+  }
+  44.44% {
+    opacity: 1;
+    transform: none;
+    fill: var(--mark-neutral);
+  }
+  57.78%,
+  77.78% {
+    opacity: 1;
+    transform: none;
+    fill: var(--mark-top);
+  }
+  88.89%,
+  100% {
+    opacity: 0;
+    transform: translateY(-2px);
+    fill: var(--mark-top);
+  }
+}
+
+/* Reduced motion: every transition and animation collapses to one frame.
+   Count-ups snap through their own matchMedia check. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -367,5 +807,10 @@
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .grm-mark *,
+  ::view-transition-old(grm-view) {
+    animation: none !important;
   }
 }

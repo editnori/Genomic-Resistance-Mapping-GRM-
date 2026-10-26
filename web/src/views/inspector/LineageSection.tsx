@@ -3,9 +3,8 @@ import type { DatasetReport } from "../../data/schema";
 import { distance, int, LEARNER_NAME, pct, plural, stLabel } from "../../data/format";
 import { loadErrorText, useSpecies } from "../../data/load";
 import { bestLearner, oofErrors } from "../../data/derive/dataset";
-import type { Navigator } from "../../app/router";
 import { ScatterMap, type MapPoint } from "../../charts/ScatterMap";
-import { Dot, LegendItem, PanelState, Section, TextLink } from "../../ui/primitives";
+import { Dot, LegendItem, PanelState, Section } from "../../ui/primitives";
 
 /** Share of resistant isolates held by the three lineages with the most. */
 const topThreeShare = (r: DatasetReport): { lineages: number; share: number } => {
@@ -18,7 +17,7 @@ const topThreeShare = (r: DatasetReport): { lineages: number; share: number } =>
   return { lineages: counts.size, share: r.counts.resistant === 0 ? 0 : top / r.counts.resistant };
 };
 
-export const LineageSection = ({ r, nav }: { r: DatasetReport; nav: Navigator }) => {
+export const LineageSection = ({ r }: { r: DatasetReport }) => {
   const species = useSpecies(r.species_slug);
   const [showErrors, setShowErrors] = useState(false);
   const best = bestLearner(r);
@@ -50,7 +49,6 @@ export const LineageSection = ({ r, nav }: { r: DatasetReport; nav: Navigator })
     <Section
       id="ds-lineages"
       title="Lineages"
-
       answer={`Resistant isolates fall in ${plural(spread.lineages, "lineage")} of ${int(r.counts.lineages)}; the three with the most hold ${pct(spread.share)} of them.`}
       right={
         best !== undefined ? (
@@ -73,8 +71,7 @@ export const LineageSection = ({ r, nav }: { r: DatasetReport; nav: Navigator })
         <>
           <ScatterMap points={points} label={`Map of ${int(species.data.genomes.length)} ${r.species} genomes by Mash distance, this dataset's isolates colored by phenotype.`} />
           <p className="type-note mt-2">
-            Principal coordinates of Mash distances between genomes. Two coordinates only approximate those distances, so points that plot together can still be far apart in Mash distance. Lineages are clusters at Mash distance {distance(species.data.lineage_threshold)}, computed from the distances directly.{" "}
-            <TextLink onClick={() => nav.go({ view: "species", species: r.species_slug })}>Open the {r.species} structure</TextLink>
+            Principal coordinates of Mash distances between genomes; two coordinates only approximate those distances. Lineages are clusters at Mash distance {distance(species.data.lineage_threshold)}, computed from the distances directly.
           </p>
         </>
       ) : null}

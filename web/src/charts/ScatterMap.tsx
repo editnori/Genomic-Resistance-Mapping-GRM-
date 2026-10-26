@@ -4,7 +4,8 @@
 // marked genomes carry their series color with a surface ring; flagged
 // genomes add an ink ring. The nearest genome within 14px is the hover.
 // The map is one tab stop, a listbox over the genomes in frame: arrow keys
-// walk them left to right and show the tooltip a hover shows.
+// walk them left to right and show the tooltip a hover shows. A new frame
+// eases in from the last one, so the marks travel to their new places.
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { TipLine } from "../ui/HoverTip";
@@ -26,6 +27,38 @@ export interface MapPoint {
 }
 
 const PAD = 14;
+
+type Bounds = readonly [number, number, number, number];
+
+/** The frame on screen: a new frame (All genomes or Main cluster) eases in
+ *  from the last one on the slow clock instead of jumping; reduced motion
+ *  snaps to it. */
+const useFrameTween = (goal: Bounds): Bounds => {
+  const [shown, setShown] = useState<Bounds>(goal);
+  const last = useRef<Bounds>(goal);
+  const key = goal.join(",");
+  useEffect(() => {
+    const from = last.current;
+    if (from.join(",") === key || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      last.current = goal;
+      setShown(goal);
+      return undefined;
+    }
+    const start = performance.now();
+    let frame = 0;
+    const step = (now: number) => {
+      const t = Math.min((now - start) / 320, 1);
+      const eased = 1 - (1 - t) ** 3;
+      const b: Bounds = [0, 1, 2, 3].map((i) => from[i]! + (goal[i]! - from[i]!) * eased) as unknown as Bounds;
+      last.current = b;
+      setShown(b);
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [key]);
+  return shown;
+};
 
 const medianOf = (v: readonly number[]): number => {
   const s = [...v].sort((a, b) => a - b);
@@ -84,8 +117,12 @@ export const ScatterMap = ({ points, height = 380, label }: { points: readonly M
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
   const core = coreBounds(xs, ys);
-  const [x0, x1, y0, y1] = frameKind === "core" && core !== null ? core : [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-  const inFrame = (p: MapPoint) => p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1;
+  const goal: Bounds = frameKind === "core" && core !== null ? core : [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  // The chosen frame decides what is in it; the eased frame decides what is
+  // drawn while it travels there.
+  const inFrame = (p: MapPoint) => p.x >= goal[0] && p.x <= goal[1] && p.y >= goal[2] && p.y <= goal[3];
+  const [x0, x1, y0, y1] = useFrameTween(goal);
+  const inView = (p: MapPoint) => p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1;
   const outside = points.filter((p) => !inFrame(p)).length;
   const shown = points.filter(inFrame);
   const flat = flatMapNote(shown.map((p) => p.x), shown.map((p) => p.y), xs, ys);
@@ -105,7 +142,7 @@ export const ScatterMap = ({ points, height = 380, label }: { points: readonly M
     ctx.clearRect(0, 0, width, height);
     ctx.globalAlpha = 0.45;
     points.forEach((p) => {
-      if (p.layer !== "context" || !inFrame(p)) return;
+      if (p.layer !== "context" || !inView(p)) return;
       ctx.fillStyle = tokens.neutral;
       ctx.beginPath();
       ctx.arc(px(p.x), py(p.y), 2, 0, Math.PI * 2);
@@ -113,7 +150,7 @@ export const ScatterMap = ({ points, height = 380, label }: { points: readonly M
     });
     ctx.globalAlpha = 1;
     points.forEach((p) => {
-      if (p.layer !== "mark" || !inFrame(p)) return;
+      if (p.layer !== "mark" || !inView(p)) return;
       ctx.beginPath();
       ctx.arc(px(p.x), py(p.y), 4, 0, Math.PI * 2);
       ctx.fillStyle = color(p.tone, tokens);
@@ -123,14 +160,14 @@ export const ScatterMap = ({ points, height = 380, label }: { points: readonly M
       ctx.stroke();
     });
     points.forEach((p) => {
-      if (p.flag !== true || !inFrame(p)) return;
+      if (p.flag !== true || !inView(p)) return;
       ctx.beginPath();
       ctx.arc(px(p.x), py(p.y), 7, 0, Math.PI * 2);
       ctx.strokeStyle = tokens.ink;
       ctx.lineWidth = 1.5;
       ctx.stroke();
     });
-  }, [points, width, height, tokens, frameKind]);
+  }, [points, width, height, tokens, x0, x1, y0, y1]);
 
   const onMove = (clientX: number, clientY: number) => {
     const r = canvas.current?.getBoundingClientRect();
@@ -206,7 +243,7 @@ export const ScatterMap = ({ points, height = 380, label }: { points: readonly M
           <canvas
             ref={canvas}
             aria-hidden="true"
-            className="block rounded-lg bg-surface-subtle"
+            className="block rounded-lg ring-1 ring-hair"
             onPointerMove={(e) => onMove(e.clientX, e.clientY)}
             onPointerLeave={() => setHover(null)}
           />

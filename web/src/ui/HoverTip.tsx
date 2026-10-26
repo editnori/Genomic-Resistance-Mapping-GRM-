@@ -35,6 +35,16 @@ const place = (anchor: Element): Placement => {
     : { left, top: rect.bottom + GAP, bottom: null, host };
 };
 
+/** Keyboard focus opens a tip; focus that a click or a dialog's opening
+ *  moves does not. */
+const keyboardFocus = (el: EventTarget): boolean => {
+  try {
+    return el instanceof Element && el.matches(":focus-visible");
+  } catch {
+    return true;
+  }
+};
+
 export const TipBody = ({ lines }: { lines: readonly TipLine[] }) => (
   <div className="space-y-1">
     {lines.map((l, i) => (
@@ -111,7 +121,9 @@ export const HoverTip = ({
       aria-describedby={at !== null ? id : undefined}
       onPointerEnter={() => show(SHOW_DELAY_MS)}
       onPointerLeave={hide}
-      onFocus={() => show(0)}
+      onFocus={(e) => {
+        if (keyboardFocus(e.target)) show(0);
+      }}
       onBlur={hide}
       className={`${block ? "block" : "inline-flex"} max-w-full rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue`}
     >

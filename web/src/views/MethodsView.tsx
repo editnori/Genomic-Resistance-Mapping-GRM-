@@ -1,5 +1,6 @@
-// Methods: the evaluation audit, where every number comes from, how the
-// learners are judged, and each limit beside the definition it qualifies.
+// Data & Methods: the evaluation audit, where every number comes from, how
+// the learners are judged, and each limit beside the definition it
+// qualifies. Funnel counts sit on bar tracks, so each share reads at a glance.
 
 import { useState, type ReactNode } from "react";
 import type { Corpus, DrugNameRow, Manifest } from "../data/schema";
@@ -9,10 +10,11 @@ import { manifestAudit, nullFitWords } from "../data/derive/evaluation";
 import { classMinimum, datasetRule } from "../data/derive/overview";
 import { notScored } from "../data/derive/tests";
 import { DataTable, type Column } from "../ui/DataTable";
-import { FOCUS_RING, PanelState, ScrollFrame, Section, Segmented, WIDE_SHELL } from "../ui/primitives";
+import { FOCUS_RING, PanelState, ScrollFrame, Section, Segmented, VIEW_SHELL } from "../ui/primitives";
+import { ReportStatus } from "../app/ReportStatus";
+import { ViewHeader } from "../ui/ViewHeader";
 import { HoverTip } from "../ui/HoverTip";
 import { YearColumns } from "../charts/YearColumns";
-import { CorpusFigure } from "./findings";
 
 /** The step that resolved one name component, in words. */
 export const sourceWords = (source: string): string => {
@@ -27,10 +29,12 @@ export const sourceWords = (source: string): string => {
 
 const KIND_WORD: Record<DrugNameRow["kind"], string> = { drug: "Drug", class: "Class label", excluded: "Not an antibiotic", unresolved: "Unresolved" };
 
+/** A count's length on a track of the whole: blue for what was kept, grey
+ *  for what was set aside. */
 const Bar = ({ value, max, tone = "kept" }: { value: number; max: number; tone?: "kept" | "dropped" }) => (
   <span className="relative block h-2.5 w-full min-w-[6rem] overflow-hidden rounded-sm bg-surface-subtle" aria-hidden="true">
     <span
-      className={`absolute inset-y-0 left-0 rounded-r-sm ${tone === "kept" ? "bg-[color:var(--chart-mark)]" : "bg-[color:var(--series-neutral)]"}`}
+      className={`absolute inset-y-0 left-0 rounded-r-sm ${tone === "kept" ? "bg-[color:var(--series-s)]" : "bg-[color:var(--series-neutral)]"}`}
       style={{ width: `${max === 0 ? 0 : Math.max(0.5, (value / max) * 100)}%` }}
     />
   </span>
@@ -49,14 +53,16 @@ const StageTable = ({ label, stages, whole }: { label: string; stages: Stage[]; 
       <tbody>
         {stages.map((s) => (
           <tr key={s.label} className="border-b border-hair">
-            <th scope="row" className={`px-2 py-1.5 text-left font-medium ${s.tone === "kept" ? "text-ink" : "text-muted-text"}`}>
+            <th scope="row" className={`px-2 py-1.5 text-left align-top font-medium ${s.tone === "kept" ? "text-ink" : "text-muted-text"}`}>
               {s.label}
               {s.note !== undefined ? <span className="block text-tiny font-normal text-muted-text">{s.note}</span> : null}
             </th>
-            <td className="w-24 px-2 py-1.5 text-right tabular-nums">{int(s.count)}</td>
-            <td className="w-16 px-2 py-1.5 text-right tabular-nums text-muted-text">{pct(whole === 0 ? 0 : s.count / whole)}</td>
-            <td className="w-[40%] px-2 py-1.5">
-              <Bar value={s.count} max={whole} tone={s.tone} />
+            <td className="w-24 px-2 py-1.5 text-right align-top tabular-nums">{int(s.count)}</td>
+            <td className="w-16 px-2 py-1.5 text-right align-top tabular-nums text-muted-text">{pct(whole === 0 ? 0 : s.count / whole)}</td>
+            <td className="hidden w-[34%] px-2 py-1.5 align-top sm:table-cell">
+              <span className="flex h-[1.2rem] items-center">
+                <Bar value={s.count} max={whole} tone={s.tone} />
+              </span>
             </td>
           </tr>
         ))}
@@ -74,11 +80,9 @@ const Funnel = ({ manifest }: { manifest: Manifest }) => {
     <Section
       id="m-funnel"
       title="Curation funnel"
-      answer={`${int(f.records)} BV-BRC lab records became ${int(f.pairs_reported)} genome and antibiotic pairs with a reported resistant or susceptible call on ${int(f.genomes_passing_qc)} genomes that passed QC, and ${plural(curated, "curated dataset")}, ${int(manifest.datasets.length)} analyzed so far.`}
+      answer={`${int(f.records)} BV-BRC lab records became ${int(f.pairs_reported)} genome and antibiotic pairs with a reported resistant or susceptible call on ${int(f.genomes_passing_qc)} genomes that passed QC, and ${plural(curated, "curated dataset")}, ${int(manifest.datasets.length)} with a report.`}
     >
-      <CorpusFigure manifest={manifest} />
-      <p className="type-note mt-3">Each count is its own unit: records, genome and antibiotic pairs, genomes, and datasets. The tables below count each step in the unit it removes.</p>
-      <div className="mt-8 grid gap-x-12 gap-y-8 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-12 gap-y-8 xl:grid-cols-2">
         <div>
           <h3 className="mb-2 text-control font-semibold text-ink">Records set aside before pairing</h3>
           <StageTable
@@ -147,6 +151,9 @@ const nameColumns: Column<DrugNameRow>[] = [
   {
     id: "steps",
     header: "Resolved by",
+    // Wide enough for one component per line; on a phone the table scrolls
+    // sideways instead of stacking each word.
+    className: "min-w-[18rem]",
     tip: [{ term: "Resolved by", text: "The step that resolved each component: SigDrug vocabulary, SigDrug folds, GRM vocabulary, GRM override, edit distance, or unresolved." }],
     cell: (r) =>
       r.components.length === 0 ? (
@@ -157,7 +164,7 @@ const nameColumns: Column<DrugNameRow>[] = [
             <span key={i} className="whitespace-normal">
               <span className="text-muted-text">{c.text}</span> → {c.canonical}{" "}
               <HoverTip focusable={false} lines={[{ term: sourceWords(c.source), source: c.source }]}>
-                <span className={`text-tiny font-medium ${c.source === "unresolved" ? "text-coral-text" : "text-blue"}`}>{sourceWords(c.source)}</span>
+                <span className={`text-tiny ${c.source === "unresolved" ? "font-semibold text-ink" : "text-muted-text"}`}>{sourceWords(c.source)}</span>
               </HoverTip>
             </span>
           ))}
@@ -209,7 +216,7 @@ const Names = ({ corpus, manifest }: { corpus: Corpus; manifest: Manifest }) => 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search names"
-            className={`h-7 w-full max-w-sm rounded-full border border-hair bg-paper-pure px-3 text-control text-ink placeholder:text-muted-text hover:border-blue/40 ${FOCUS_RING}`}
+            className={`ui-control-target h-8 w-full max-w-sm rounded-md border border-hair bg-paper-pure px-3 text-control text-ink placeholder:text-muted-text ${FOCUS_RING}`}
           />
         </label>
         {q !== "" || kind !== "all" ? <span className="text-control text-muted-text">{int(rows.length)} matching</span> : null}
@@ -242,7 +249,7 @@ const Breakpoints = ({ corpus }: { corpus: Corpus }) => {
     >
       <DataTable label="Breakpoints" rows={rows} columns={columns} rowKey={(r) => `${r.species}|${r.antibiotic}`} initialSort={{ id: "labels", dir: "desc" }} empty={null} />
       <p className="type-note mt-3">
-        The breakpoint is the dilution step whose calls agree best with the reported resistant and susceptible calls among isolates with both. It is fitted only with at least 50 such isolates, 10 of each call, and kept only when it agrees with at least 95% of them. Censored MICs that do not fall clearly on one side count against agreement and receive no label. These are empirical thresholds from the data, not CLSI or EUCAST breakpoints. The labels they give stay in the curated records, counted in the Labels from MIC column, and no model trains or is scored on them.
+        The breakpoint is the dilution step whose calls agree best with the reported calls among isolates with both, fitted with at least 50 such isolates (10 of each call) and kept at 95% agreement or more. Censored MICs that fall on neither side count against agreement and get no label. These are empirical thresholds from the data, not CLSI or EUCAST breakpoints; no model trains or is scored on the labels they give.
       </p>
     </Section>
   );
@@ -260,8 +267,10 @@ const BarList = ({ rows, label }: { rows: [string, number][]; label: string }) =
                 {k}
               </th>
               <td className="w-20 px-2 py-1 text-right tabular-nums">{int(v)}</td>
-              <td className="w-[45%] px-2 py-1">
-                <Bar value={v} max={max} />
+              <td className="hidden w-[45%] px-2 py-1 sm:table-cell">
+                <span className="flex h-[1.2rem] items-center">
+                  <Bar value={v} max={max} />
+                </span>
               </td>
             </tr>
           ))}
@@ -286,8 +295,8 @@ const Sources = ({ corpus }: { corpus: Corpus }) => {
           : `${top[0]} supplies ${pct(top[1] / Math.max(totalCountry, 1))} of labeled genomes with a recorded country${years.length > 0 ? `; collection years run from ${years[0]![0]} to ${years[years.length - 1]![0]}` : ""}.`
       }
     >
-      <p className="type-note mb-4">BV-BRC isolates over-represent outbreaks, some countries, and some years. Every score is agreement with lab calls for isolates like these and would change with a different population structure.</p>
-      <div className="grid gap-x-12 gap-y-8 lg:grid-cols-2">
+      <p className="type-note mb-4">BV-BRC isolates over-represent outbreaks, some countries, and some years.</p>
+      <div className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-2">
         <div>
           <h3 className="mb-2 text-control font-semibold text-ink">Isolation country, labeled genomes</h3>
           <BarList rows={countries} label="Countries" />
@@ -319,7 +328,7 @@ const Def = ({ term, children }: { term: string; children: ReactNode }) => (
 
 const Design = ({ manifest }: { manifest: Manifest }) => (
   <Section id="m-design" title="Learners and evaluation">
-    <dl className="grid gap-x-12 lg:grid-cols-2">
+    <dl className="grid grid-cols-1 gap-x-12 lg:grid-cols-2">
       <Def term="Labels">
         Every learner trains and is scored on genomes with a reported resistant or susceptible lab call, and the catalog and panel comparisons are scored on the same genomes. A genome with an MIC but no reported call gets a label from the inferred breakpoint during curation, and no model trains or is scored on that label. A dataset report counts the labels it left out in its Method and coverage fold; a report written before that count was added shows it as not recorded. Calls come from different methods and standards across years, and breakpoints changed over time.
       </Def>
@@ -327,7 +336,7 @@ const Design = ({ manifest }: { manifest: Manifest }) => (
         {manifest.k === null
           ? "Each genome is counted into k-mers with GRM's own counter. The published reports do not all record the same k, so each dataset's Method and coverage fold states its own."
           : `Each genome is counted into its ${manifest.k}-mers with GRM's own counter.`}{" "}
-        K-mers with the same presence pattern across a species&apos; genomes are one feature, kept when enough isolates carry it (each dataset&apos;s minimum is in its Method and coverage fold). Whether that filtering saw only training-fold isolates is stated by the evaluation audit above.
+        K-mers with the same presence pattern across a species&apos; genomes are one feature, kept when enough isolates carry it (each dataset&apos;s minimum is in its Method and coverage fold).
       </Def>
       <Def term="Set covering machine (SCM)">
         A short conjunction or disjunction of presence and absence rules, chosen greedily, the model Kover uses. It gives a yes or no call and is read as written.
@@ -348,16 +357,13 @@ const Design = ({ manifest }: { manifest: Manifest }) => (
       <Def term="Balanced accuracy">The mean of sensitivity and specificity, over pooled out-of-fold predictions at a 0.5 threshold.</Def>
       <Def term="Null fits">{nullFitWords(manifest.evaluation_revision)}</Def>
       <Def term="VME and ME">
-        Very major error is resistant called susceptible, over all resistant isolates; major error is susceptible called resistant, over all susceptible. Judged against FDA-style bars for susceptibility test devices, VME at most 1.5% and ME at most 3%. These are reference bars, not a regulatory claim.
-      </Def>
-      <Def term="Cannot-call rates">
-        Not reported in this version. A conformal cannot-call rate needs a calibration set held apart from training, and the pipeline does not fit one yet; earlier reports computed them on pooled out-of-fold scores, so the dashboard does not show those.
+        Very major error is resistant called susceptible, over all resistant isolates; major error is susceptible called resistant, over all susceptible. Both are judged against FDA-style bars for susceptibility test devices: VME at most 1.5% and ME at most 3%, and MIC essential agreement at least 90%.
       </Def>
       <Def term="MIC prediction">
         Censored gradient-boosted regression on log2 dilution steps, fitted on the MICs of genomes with a reported call; a genome whose label was inferred from its MIC is left out. Essential agreement is a prediction within one doubling dilution of an exact MIC. Categorical calls from the predicted MIC use each training fold&apos;s own empirical threshold and are scored against the reported resistant and susceptible labels.
       </Def>
       <Def term="Simulated PCR panels">
-        A gene panel calls resistant when the assembled genome carries any of its targets, which follow the manufacturers&apos; published target lists; a probe assay calls resistant when a probed region differs from the wild-type sequence. Detection is in silico: target presence in genomes, not a PCR assay&apos;s analytical performance.
+        A gene panel calls resistant when the assembled genome carries any of its targets, which follow the manufacturers&apos; published target lists; a probe assay calls resistant when a probed region differs from the wild-type sequence. Detection is in silico, from target presence in genomes.
       </Def>
       <Def term="Feature annotation">
         A feature's k-mers are placed on a reference assembly that carries them and mapped to its gene annotation: the gene and codon range, or the nearest gene when the k-mers sit between genes, with the flanking sequence.
@@ -369,16 +375,25 @@ const Design = ({ manifest }: { manifest: Manifest }) => (
 const EvaluationAudit = ({ manifest }: { manifest: Manifest }) => {
   const audit = manifestAudit(manifest);
   return (
-  <Section id="m-audit" title="Evaluation audit">
-      <p className="prose-measure text-note text-ink">
-        {audit.total === 0
+    <Section
+      id="m-audit"
+      title="Evaluation audit"
+      answer={
+        audit.total === 0
           ? "No dataset has a report yet."
           : audit.invalid > 0
-            ? `${int(audit.invalid)} of ${plural(audit.total, "dataset evaluation")} do not pass the evaluation audit, so their metrics are provisional: ${audit.reasons.join(" ")}`
-            : `Every dataset evaluation passes the internal evaluation audit. ${audit.scopes[0] ?? "That covers internal cross-validation against reported lab calls."}`}{" "}
-        {audit.invalid > 0 ? "Passing audits cover internal cross-validation on these public genomes, not external or clinical validation." : ""}
-      </p>
-  </Section>
+            ? `${int(audit.invalid)} of ${plural(audit.total, "dataset evaluation")} do not pass the evaluation audit, so their metrics are provisional.`
+            : "Every dataset evaluation passes the internal evaluation audit."
+      }
+    >
+      {audit.total === 0 ? null : (
+        <p className="prose-measure text-note text-ink">
+          {audit.invalid > 0
+            ? `${audit.reasons.join(" ")} Passing audits cover internal cross-validation on these public genomes, not external or clinical validation.`
+            : (audit.scopes[0] ?? "That covers internal cross-validation against reported lab calls.")}
+        </p>
+      )}
+    </Section>
   );
 };
 
@@ -390,9 +405,9 @@ export const MethodsView = ({ manifest }: { manifest: Manifest }) => {
     return { ...datasets[0]!, datasets };
   });
   return (
-    <div className={`${WIDE_SHELL} pb-16 pt-8`}>
-      <h1 className="text-display font-semibold text-ink">Methods</h1>
-      <div className="mt-8 space-y-10">
+    <div className={`${VIEW_SHELL} pb-16 pt-8`}>
+      <ViewHeader title="Data & Methods" status={<ReportStatus manifest={manifest} />} />
+      <div className="mt-8 space-y-10 border-t border-hair pt-6">
         <EvaluationAudit manifest={manifest} />
         <Funnel manifest={manifest} />
         {corpus.status === "loading" ? <PanelState kind="loading" title="Loading the corpus file" /> : null}

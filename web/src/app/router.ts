@@ -8,7 +8,7 @@ export const VIEWS = [
   { id: "overview", label: "Overview", path: "/" },
   { id: "datasets", label: "Datasets", path: "/datasets" },
   { id: "species", label: "Species", path: "/species" },
-  { id: "methods", label: "Methods", path: "/methods" },
+  { id: "methods", label: "Data & Methods", path: "/methods" },
 ] as const;
 
 /** Paths that moved, so old links keep working: the Molecular tests view is

@@ -14,7 +14,6 @@ export const MicSection = ({ r, research }: { r: DatasetReport; research: Resour
     <Section
       id="ds-mic"
       title="MIC prediction"
-
       answer={
         mic === null
           ? undefined
@@ -57,7 +56,7 @@ export const MicSection = ({ r, research }: { r: DatasetReport; research: Resour
               <p>No categorical calls: at least one training fold had too few isolates to fit a threshold, and the pipeline does not score a subset.</p>
             ) : null}
             <p className="type-note">
-              Censored gradient-boosted regression on log2 dilution steps, predicted out of fold on the random split. The 90% essential-agreement bar used for susceptibility test devices is a reference, not a regulatory claim.
+              Censored gradient-boosted regression on log2 dilution steps, predicted out of fold on the random split.
             </p>
           </div>
         </div>

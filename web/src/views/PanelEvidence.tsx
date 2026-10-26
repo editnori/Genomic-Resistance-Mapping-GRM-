@@ -1,7 +1,6 @@
 // Panel evidence, under the Overview panel figure: every simulated panel
 // pooled, every drug class, and every panel on every dataset, filtered by
-// species, drug class, and panel. Simulated from assembled genomes; not an
-// estimate of assay performance. Rows open the dataset inspector.
+// species, drug class, and panel. Rows open the dataset inspector.
 
 import { useState } from "react";
 import type { CatalogRow, Manifest } from "../data/schema";
@@ -102,7 +101,7 @@ const catalogShare = (rows: readonly CatalogRow[]): { caught: number; resistant:
     { caught: 0, resistant: 0 },
   );
 
-const TH = "whitespace-nowrap px-2 py-2 text-control font-medium text-muted-text";
+const TH = "whitespace-nowrap px-2 py-2 text-tiny font-medium text-blue";
 
 export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen?(id: string): void }) => {
   const [f, setF] = useState<Filters>(ARRIVAL);
@@ -165,7 +164,7 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
               <table className="w-full border-collapse text-control">
                 <thead>
                   <tr className="border-b border-hair">
-                    {["Panel", "Datasets", "Resistant", "Target found", "No call", "Learner calls resistant", "Susceptible with a target"].map((h, i) => (
+                    {["Panel", "Datasets", "Resistant", "Found", "No call", "Learner", "False positives"].map((h, i) => (
                       <th key={h} scope="col" className={`${TH} ${i === 0 ? "text-left" : "text-right"}`}>
                         {h}
                       </th>
@@ -192,7 +191,7 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
               </table>
             </ScrollFrame>
             <p className="type-note mt-2">
-              Pooled over datasets, weighting each by its resistant isolates; counts are rebuilt from each dataset&apos;s rates and size where a row carries no counts. A gene panel calls an isolate resistant when its genome carries a target gene; a probe assay, when a probed region differs from the wild-type sequence. The panel&apos;s shares cover only the isolates it calls, and the learner&apos;s every resistant isolate it scores.
+              Found is resistant isolates whose genome carries a target, over those the panel calls; Learner is resistant isolates the learner calls resistant, over all it scores; False positives is susceptible isolates with a target. Pooled over datasets, weighting each by its resistant isolates; counts are rebuilt from rates and size where a row carries none.
             </p>
           </div>
 
@@ -202,7 +201,7 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
               <table className="w-full border-collapse text-control">
                 <thead>
                   <tr className="border-b border-hair">
-                    {["Drug class", "Datasets", "Resistant", "No call", "Target found", "Susceptible with a target", "Catalog rule calls resistant"].map((h, i) => (
+                    {["Drug class", "Datasets", "Resistant", "No call", "Found", "False positives", "Catalog"].map((h, i) => (
                       <th key={h} scope="col" className={`${TH} ${i === 0 ? "text-left" : "text-right"}`}>
                         {h}
                       </th>
@@ -236,7 +235,7 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
               </table>
             </ScrollFrame>
             <p className="type-note mt-2">
-              Each dataset counts once, with its panel of highest balanced accuracy, so a broad panel whose extra targets also appear in many susceptible isolates does not win on resistant isolates alone. The catalog column is the catalog rule&apos;s sensitivity on the datasets of that class that have a rule.
+              Each dataset counts once, with its panel of highest balanced accuracy. Catalog is the catalog rule&apos;s sensitivity on the datasets of that class with a rule.
             </p>
           </div>
 
@@ -251,7 +250,6 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
               initialSort={{ id: "found", dir: "asc" }}
               empty={<p className="type-note">No panel result matches these filters.</p>}
             />
-            <p className="type-note mt-2">VME ≤1.5% and ME ≤3% are FDA-style bars for susceptibility test devices, a reference and not a regulatory claim.</p>
           </div>
         </>
       )}

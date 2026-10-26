@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 describe("species view MIC-inferred labels", () => {
-  it("says its profiles, map, cross-resistance, and call counts include them", async () => {
+  it("says its profiles, cross-resistance, and call counts include them", async () => {
     vi.stubGlobal("fetch", async (path: string) => new Response(JSON.stringify(fixtureFile(path)), { headers: { "Content-Type": "application/json" } }));
     const host = document.createElement("div");
     document.body.append(host);
@@ -40,10 +40,7 @@ describe("species view MIC-inferred labels", () => {
     const text = document.body.textContent ?? "";
 
     expect(text).toContain("Corpus facts");
-    expect(text).toContain(
-      "These profiles include labels inferred from MIC for genomes without a reported call, and so do cross-resistance and the call counts under Corpus facts; dataset reports leave those labels out.",
-    );
-    expect(text).toContain("Genomes with a call, resistant calls, and susceptible calls include labels inferred from MIC.");
+    expect(text).toContain("Profiles, cross-resistance, and the call counts below include labels inferred from MIC; dataset reports leave those out.");
   });
 });
 

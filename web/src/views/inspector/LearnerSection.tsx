@@ -6,7 +6,7 @@ import { bestLearner, countsNoCalls, learnerOf, NO_BEST_LEARNER, nullFolds, outs
 import { linear, useWidth } from "../../charts/kit";
 import { LearnerStripRow, StripAxis } from "../../charts/LearnerStrip";
 import { HoverTip } from "../../ui/HoverTip";
-import { StatusTd, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../../ui/primitives";
+import { BarPill, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../../ui/primitives";
 
 import type { Resource } from "../../data/load";
 import { SelectiveResearch } from "./SelectiveResearch";
@@ -68,8 +68,10 @@ const NullFoldCell = ({ l }: { l: LearnerResult }) => {
 export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: Resource<Research> }) => {
   const [scheme, setScheme] = useState<Scheme>("random");
   const frame = useRef<HTMLDivElement | null>(null);
-  // The strip takes what the number columns leave, within bounds.
-  const stripWidth = Math.max(STRIP_MIN, Math.min(560, useWidth(frame, 900) - 600));
+  // Wide, the strip takes what the number columns leave, within bounds; on
+  // a phone it fits beside the learner names and the numbers scroll.
+  const avail = useWidth(frame, 900);
+  const stripWidth = avail < 640 ? Math.max(120, avail - 210) : Math.max(STRIP_MIN, Math.min(560, avail - 640));
   const random = splitOf(r, "random");
   const lineage = splitOf(r, "lineage");
   const best = bestLearner(r);
@@ -122,8 +124,7 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
     <Section
       id="ds-learners"
       title="Learner comparison"
-
-      answer={best === undefined ? answer : undefined}
+      answer={answer}
       right={
         lineage !== undefined ? (
           <Segmented<Scheme>
@@ -150,17 +151,17 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
         <table className="w-full border-collapse text-control">
           <thead>
             <tr className="border-b border-hair text-left">
-              <th scope="col" className="px-2 py-2 text-tiny font-medium text-muted-text">
+              <th scope="col" className="px-2 py-2 text-tiny font-medium text-blue">
                 Learner
               </th>
-              <th scope="col" className="px-2 py-1 text-tiny font-medium text-muted-text">
+              <th scope="col" className="px-2 py-1 text-tiny font-medium text-blue">
                 <span className="sr-only">Balanced accuracy, </span>
                 <StripAxis x={x} width={stripWidth} />
               </th>
               {["Random", "Lineages held out", "VME", "ME", ...(extra === null ? [] : [extra]), "AUROC"].map((h) => (
-                <th key={h} scope="col" className="whitespace-nowrap px-2 py-2 text-right text-tiny font-medium text-muted-text">
+                <th key={h} scope="col" className="whitespace-nowrap px-2 py-2 text-right text-tiny font-medium text-blue">
                   {h}
-                  {h === "VME" ? <span className="block">≤1.5%</span> : h === "ME" ? <span className="block">≤3%</span> : null}
+                  {h === "VME" ? <span className="block font-normal text-muted-text">≤1.5%</span> : h === "ME" ? <span className="block font-normal text-muted-text">≤3%</span> : null}
                 </th>
               ))}
             </tr>
@@ -176,7 +177,7 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
                 <tr key={l} className="border-b border-hair">
                   <th scope="row" className="whitespace-nowrap px-2 py-1 text-left font-medium text-ink">
                     {LEARNER_NAME[l]}
-                    {isBest ? <span className="ml-2 text-tiny font-medium text-muted-text">Best</span> : null}
+                    {isBest ? <span className="ml-2 text-tiny font-medium text-blue">Best</span> : null}
                   </th>
                   <td className="px-2 py-0.5">
                     <div>
@@ -194,7 +195,14 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
                   </td>
                   <td className={`px-2 py-1 text-right tabular-nums ${a?.metrics === null ? "text-muted-text" : ""}`}>{baText(a)}</td>
                   <td className={`px-2 py-1 text-right tabular-nums ${b?.metrics === null ? "text-muted-text" : ""}`}>
-                    {l === "catalog" ? <span className="text-muted-text">Same, no training</span> : baText(b)}
+                    {l === "catalog" ? (
+                      <span className="text-muted-text">
+                        {baText(a)}
+                        <span className="sr-only">, the same score: the catalog does not train</span>
+                      </span>
+                    ) : (
+                      baText(b)
+                    )}
                   </td>
                   {m === undefined ? (
                     <>
@@ -208,8 +216,12 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
                     </>
                   ) : (
                     <>
-                      <StatusTd value={m.vme} bar={BARS.vme} />
-                      <StatusTd value={m.me} bar={BARS.me} />
+                      <td className="px-2 py-1 text-right">
+                        <BarPill value={m.vme} bar={BARS.vme} />
+                      </td>
+                      <td className="px-2 py-1 text-right">
+                        <BarPill value={m.me} bar={BARS.me} />
+                      </td>
                     </>
                   )}
                   {extra === null ? null : (
@@ -224,11 +236,10 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
       </ScrollFrame>
       </div>
       <p className="type-note mt-3">
-        Balanced accuracy (%) is the mean of sensitivity and specificity over pooled out-of-fold predictions; each faint mark is one of the {random?.folds ?? 5} folds.
+        Balanced accuracy over pooled out-of-fold predictions; faint dots are the {random?.folds ?? 5} single folds.
         {lineage !== undefined
-          ? ` The lineage split holds out whole lineages (${lineage.n_groups} here), so no test isolate has a near-identical relative in training.`
-          : ` There is no lineage-held-out result: ${splitAbsence(r, "lineage") ?? ""}`}{" "}
-        VME and ME are judged against reference bars (VME at most 1.5%, ME at most 3%): ✓ meets the bar and × misses it. The bars frame the errors; meeting them on these isolates is not test validation.
+          ? ` With lineages held out, each of the ${lineage.n_groups} lineages goes whole to one fold.`
+          : ` No lineage-held-out result: ${splitAbsence(r, "lineage") ?? ""}`}
         {anyUncalled
           ? " A fold where boosting kept no tree, or the lasso kept no weight, gets no call: every rate covers the isolates called, and Called gives their share."
           : ""}

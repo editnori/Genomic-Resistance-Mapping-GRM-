@@ -6,12 +6,21 @@ import type { Config } from "tailwindcss";
  *
  * Channel-triplet vars (`--paper: 247 247 248`) are wrapped in
  * `rgb(var(..) / <alpha-value>)` so opacity modifiers work (`bg-blue/10`).
- * Full-value vars (`hair`, the fill ramp, the status pair) carry their own
- * alpha and do not support the `/alpha` modifier.
+ * Full-value vars (`hair`, `bezel`, the fill ramp, the chart mark) carry
+ * their own alpha and do not support the `/alpha` modifier.
  */
 const channel = (name: string): string => `rgb(var(${name}) / <alpha-value>)`;
 
 const INTER = ['"Inter Variable"', '"Inter"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"];
+
+// The lawful ranks, shared by their own names and the stock names below.
+const DISPLAY: [string, { lineHeight: string; letterSpacing: string }] = ["2rem", { lineHeight: "1.12", letterSpacing: "-0.014em" }];
+const STAT: [string, { lineHeight: string; letterSpacing: string }] = ["1.875rem", { lineHeight: "1.12", letterSpacing: "-0.014em" }];
+const HEADLINE: [string, { lineHeight: string; letterSpacing: string }] = ["1.125rem", { lineHeight: "1.4", letterSpacing: "-0.014em" }];
+const BODY: [string, { lineHeight: string }] = ["0.9375rem", { lineHeight: "1.5" }];
+const NOTE: [string, { lineHeight: string }] = ["0.84375rem", { lineHeight: "1.5" }];
+const CONTROL: [string, { lineHeight: string }] = ["0.8125rem", { lineHeight: "1.45" }];
+const TINY: [string, { lineHeight: string }] = ["0.71875rem", { lineHeight: "1.35" }];
 
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
@@ -38,40 +47,37 @@ export default {
         "coral-text": channel("--coral-text"),
         "muted-text": channel("--muted-text"),
         hair: "var(--hair)",
-        // A verdict against a stated bar: solid green meets, quiet magenta
-        // misses. Never a phenotype and never an interaction color.
-        meet: { DEFAULT: "var(--status-meet-bg)", fg: "var(--status-meet-fg)" },
-        miss: { DEFAULT: "var(--status-miss-bg)", fg: "var(--status-miss-fg)" },
+        bezel: "var(--bezel)",
+        // One dataset or one learner score on a chart: the blue series.
         mark: "var(--chart-mark)",
       },
       fontFamily: { sans: INTER },
-      // Fixed product ranks, size/line height. Viewport width never changes
-      // the hierarchy.
-      //   display  32/36  page titles
-      //   stat     30/34  a Present result
-      //   headline 18/25  a figure's result sentence
-      //   body     15/22  figure titles and reading copy
-      //   note     13/20  captions
-      //   control  13/18  tables and controls
-      //   tiny     12/16  axes and secondary values
+      // Fixed product ranks. Viewport width never changes the hierarchy.
+      //   display  32px    view titles
+      //   stat     30px    primary figures
+      //   headline 18px    panel answers, one sentence
+      //   body     15px    reading copy
+      //   note     13.5px  supporting sentences
+      //   control  13px    controls and table cells
+      //   tiny     11.5px  short labels and state only
       // Stock size names resolve onto the nearest lawful rank.
       fontSize: {
-        display: ["2rem", { lineHeight: "2.25rem", letterSpacing: "-0.014em" }],
-        stat: ["1.875rem", { lineHeight: "2.125rem", letterSpacing: "-0.014em" }],
-        headline: ["1.125rem", { lineHeight: "1.5625rem", letterSpacing: "-0.011em" }],
-        body: ["0.9375rem", { lineHeight: "1.375rem" }],
-        note: ["0.8125rem", { lineHeight: "1.25rem" }],
-        control: ["0.8125rem", { lineHeight: "1.125rem" }],
-        tiny: ["0.75rem", { lineHeight: "1rem" }],
-        xs: ["0.75rem", { lineHeight: "1rem" }],
-        sm: ["0.8125rem", { lineHeight: "1.25rem" }],
-        base: ["0.9375rem", { lineHeight: "1.375rem" }],
-        lg: ["1.125rem", { lineHeight: "1.5625rem", letterSpacing: "-0.011em" }],
-        xl: ["1.125rem", { lineHeight: "1.5625rem", letterSpacing: "-0.011em" }],
-        "2xl": ["1.875rem", { lineHeight: "2.125rem", letterSpacing: "-0.014em" }],
-        "3xl": ["1.875rem", { lineHeight: "2.125rem", letterSpacing: "-0.014em" }],
-        "4xl": ["2rem", { lineHeight: "2.25rem", letterSpacing: "-0.014em" }],
-        "5xl": ["2rem", { lineHeight: "2.25rem", letterSpacing: "-0.014em" }],
+        display: DISPLAY,
+        stat: STAT,
+        headline: HEADLINE,
+        body: BODY,
+        note: NOTE,
+        control: CONTROL,
+        tiny: TINY,
+        xs: TINY,
+        sm: NOTE,
+        base: BODY,
+        lg: HEADLINE,
+        xl: HEADLINE,
+        "2xl": STAT,
+        "3xl": STAT,
+        "4xl": DISPLAY,
+        "5xl": DISPLAY,
       },
       // Weight ceiling 600: the heavy utilities keep their names and clamp.
       fontWeight: { bold: "600", extrabold: "600", black: "600" },

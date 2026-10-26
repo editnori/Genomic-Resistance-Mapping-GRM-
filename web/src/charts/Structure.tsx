@@ -105,15 +105,7 @@ export const StructureFigure = ({ report, drugOrder, selected }: { report: Speci
         ctx.fillRect(LABEL_W + (pos * plotW) / n, y + 1, plotW / n + 0.35, ROW_H - 2);
       });
     });
-    if (selected !== null) {
-      const row = drugOrder.indexOf(selected);
-      if (row >= 0) {
-        ctx.strokeStyle = tokens.ink;
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(LABEL_W - 0.75, top + row * ROW_H + 0.25, plotW + 1.5, ROW_H - 0.5);
-      }
-    }
-  }, [report, drugOrder, selected, width, height, tokens]);
+  }, [report, drugOrder, width, height, tokens]);
 
   const onMove = (clientX: number, clientY: number) => {
     const r = canvas.current?.getBoundingClientRect();
@@ -204,6 +196,15 @@ export const StructureFigure = ({ report, drugOrder, selected }: { report: Speci
           </div>
         ))}
       </div>
+      {/* The chosen drug's outline is HTML over the canvas, so a new choice
+          glides to its row on the slow clock instead of jumping. */}
+      {selectedRow >= 0 ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-0 top-0 rounded-[2px] border-[1.5px] border-ink transition-transform duration-slow ease-out"
+          style={{ left: LABEL_W - 1.5, width: plotW + 3, height: ROW_H, transform: `translateY(${top + selectedRow * ROW_H}px)` }}
+        />
+      ) : null}
       {hover?.tip === true && lines !== null ? (
         <>
           <div aria-hidden="true" className="pointer-events-none absolute w-px bg-ink/60" style={{ left: hover.x, top: 0, height }} />

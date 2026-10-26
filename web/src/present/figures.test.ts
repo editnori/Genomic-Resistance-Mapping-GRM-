@@ -75,7 +75,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("opens six slides directly and navigates without taking arrow keys from the slide selector", async () => {
+/** matchMedia that answers the reduced-motion query as given. */
+const motion = (reduced: boolean) =>
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: reduced && query.includes("prefers-reduced-motion"),
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+
+const open = async () => {
   vi.stubGlobal("fetch", async (path: string) => new Response(JSON.stringify(fixtureFile(path))));
   const host = document.createElement("div");
   document.body.append(host);
@@ -83,18 +92,41 @@ it("opens six slides directly and navigates without taking arrow keys from the s
   const onClose = vi.fn();
   await act(async () => root!.render(createElement(PresentMode, { manifest: base, onClose })));
   const dialog = document.querySelector<HTMLDialogElement>("dialog")!;
-  const selector = dialog.querySelector<HTMLSelectElement>("select")!;
-  expect(selector.options).toHaveLength(6);
-  expect([...selector.options].map((o) => o.textContent)).toEqual([...FINDINGS.map((f, i) => `${i + 1} / 6 · ${f(base, { page: false }).title}`), "6 / 6 · One interpretable rule"]);
-  expect(dialog.textContent).not.toContain("Choose a deck");
+  const status = () => dialog.querySelector('[role="status"]')?.textContent ?? "";
   const next = [...dialog.querySelectorAll("button")].find((b) => b.textContent === "Next")!;
-  for (let i = 1; i < 6; i++) {
-    expect(dialog.querySelector('[role="status"]')?.textContent).toContain(`Slide ${i} of 6`);
-    await act(async () => next.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+  const right = () => act(async () => next.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+  return { dialog, status, right, onClose };
+};
+
+it("opens the deck on its title slide, then the six finding slides, with a named outline and no deck chooser", async () => {
+  motion(true);
+  const { dialog, status, right, onClose } = await open();
+  const titles = ["Genomic Resistance Mapping", ...FINDINGS.map((f) => f(base, { page: false }).title), "One interpretable rule"];
+  expect(dialog.textContent).not.toContain("Choose a deck");
+  const selector = dialog.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+  expect(selector.getAttribute("aria-label")).toBe("Go to slide: 1 · Genomic Resistance Mapping");
+  await act(async () => selector.click());
+  expect([...document.querySelectorAll('[role="option"]')].map((o) => o.textContent)).toEqual(titles.map((t, i) => `${i + 1} · ${t}`));
+  await act(async () => selector.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  // With reduced motion every beat is already in, so each arrow moves a slide.
+  for (let i = 1; i < titles.length; i++) {
+    expect(status()).toContain(`Slide ${i} of ${titles.length}`);
+    await right();
   }
-  expect(dialog.querySelector('[role="status"]')?.textContent).toContain("Slide 6 of 6");
+  expect(status()).toContain(`Slide ${titles.length} of ${titles.length}: One interpretable rule`);
+  // The slide control keeps its own arrow keys.
   act(() => selector.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
-  expect(selector.value).toBe("5");
+  expect(status()).toContain(`Slide ${titles.length} of ${titles.length}`);
   act(() => dialog.dispatchEvent(new Event("cancel", { cancelable: true })));
   expect(onClose).toHaveBeenCalledOnce();
+});
+
+it("completes a slide's staged beats before the next arrow moves on", async () => {
+  motion(false);
+  const { status, right } = await open();
+  await right();
+  // The title slide was still revealing: the first arrow lands its beats.
+  expect(status()).toContain("Slide 1 of 7");
+  await right();
+  expect(status()).toContain("Slide 2 of 7");
 });

@@ -44,11 +44,12 @@ const mount = async (id: string, body: unknown, current: Manifest) => {
   });
 };
 
-/** The header line and, with the Method and coverage fold open, the fold. */
+/** The header's status row (the audit chip and the facts; the section pills
+ *  sit below it) and, with the Method and coverage fold open, the fold. */
 const readInspector = async () => {
   const fold = [...document.querySelectorAll("button")].find((b) => b.textContent === "Method and coverage");
   await act(async () => fold?.click());
-  return { header: document.querySelector("header")?.textContent ?? "", text: document.body.textContent ?? "" };
+  return { header: document.querySelector("header p")?.textContent ?? "", text: document.body.textContent ?? "" };
 };
 
 describe("dataset inspector audit", () => {

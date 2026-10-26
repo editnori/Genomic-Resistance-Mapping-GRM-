@@ -202,7 +202,7 @@ export const Dropdown = <T extends string>({
   const rowId = (row: number) => `${listId}-row-${row}`;
 
   return (
-    <div className={`relative max-w-full ${fullWidth ? "block w-full" : "inline-block"}`}>
+    <div className={`relative inline-block max-w-full ${fullWidth ? "w-full" : ""}`}>
       <button
         ref={buttonRef}
         type="button"
@@ -214,8 +214,8 @@ export const Dropdown = <T extends string>({
         aria-activedescendant={open ? rowId(active) : undefined}
         onClick={() => (open ? close() : openList())}
         onKeyDown={onKeyDown}
-        className={`ui-control-target inline-flex h-8 max-w-full items-center gap-x-1.5 rounded-md border px-3 text-control font-medium transition-[color,background-color,border-color,transform] duration-fast ease-out active:scale-[0.98] ${fullWidth ? "w-full" : ""} ${FOCUS_RING} ${
-          open ? "border-blue/60 bg-paper-pure text-ink" : "border-hair bg-paper-pure text-ink hover:bg-surface-subtle"
+        className={`ui-control-target inline-flex h-7 max-w-full items-center gap-x-1.5 rounded-full border px-3 text-control font-medium tracking-tight transition-[color,background-color,border-color,transform] duration-fast ease-out active:scale-[0.98] ${fullWidth ? "w-full" : ""} ${FOCUS_RING} ${
+          open ? "border-blue/60 bg-paper-pure text-blue" : "border-hair bg-paper-pure text-ink hover:border-blue/50 hover:text-blue"
         }`}
       >
         <span className="min-w-0 flex-1 truncate text-left">{closedLabel}</span>

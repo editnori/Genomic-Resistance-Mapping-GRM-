@@ -42,6 +42,9 @@ export const TICK_CLASS = "fill-[color:var(--chart-tick)] text-[12px]";
 /** Reference, region, and direct labels: ink at the 12px rank. */
 export const LABEL_CLASS = "fill-[rgb(var(--ink))] text-[12px]";
 
+/** A paper halo under label text that may cross marks. */
+export const HALO = { paintOrder: "stroke", stroke: "rgb(var(--paper))", strokeWidth: 3, strokeLinejoin: "round" } as const;
+
 /** About how wide a 12px Inter label draws; used to keep labels apart and
  *  inside the plot, never to shrink them. */
 export const labelWidth = (text: string): number => Math.ceil(text.length * 6.7) + 4;
@@ -64,7 +67,7 @@ export interface PlacedLabel extends LabelSpec {
 /** Greedy placement in rows above a plot, in priority order: each label
  *  takes the first row where it overlaps no earlier label and stays inside
  *  [0, width], trying its preferred side first. A label with no room in any
- *  row is left out (and listed in the caller's Data and method). */
+ *  row is left out (and listed in the caller's Method and coverage). */
 export const placeLabels = (specs: readonly LabelSpec[], width: number, rows: number): PlacedLabel[] => {
   const placed: (PlacedLabel & { left: number; right: number })[] = [];
   specs.forEach((s) => {
@@ -99,7 +102,7 @@ export const RefLineH = ({ y, x0, x1 }: { y: number; x0: number; x1: number }) =
 export const PlacedText = ({ labels, top }: { labels: readonly PlacedLabel[]; top: number }) => (
   <g aria-hidden="true">
     {labels.map((l) => (
-      <text key={l.key} x={l.tx} y={top + l.row * 16 + 12} textAnchor={l.anchor} className={LABEL_CLASS}>
+      <text key={l.key} x={l.tx} y={top + l.row * 16 + 12} textAnchor={l.anchor} className={LABEL_CLASS} {...HALO}>
         {l.text}
       </text>
     ))}
@@ -110,7 +113,7 @@ export const PlacedText = ({ labels, top }: { labels: readonly PlacedLabel[]; to
 export const DirectLabel = ({ x, y, lx, ly, lines, anchor }: { x: number; y: number; lx: number; ly: number; lines: readonly string[]; anchor: "start" | "end" }) => (
   <g aria-hidden="true">
     <line x1={x} y1={y} x2={lx + (anchor === "start" ? -2 : 2)} y2={ly - 4} stroke="var(--chart-axis)" />
-    <text x={lx} y={ly} textAnchor={anchor} className={LABEL_CLASS}>
+    <text x={lx} y={ly} textAnchor={anchor} className={LABEL_CLASS} {...HALO}>
       {lines.map((line, i) => (
         <tspan key={i} x={lx} dy={i === 0 ? 0 : 15} className={i === 0 ? "font-medium" : ""}>
           {line}

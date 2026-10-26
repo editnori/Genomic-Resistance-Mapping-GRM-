@@ -1,8 +1,9 @@
 // The five findings Overview and Present share: corpus, lineage cost, the
 // known-gene catalog, the lead PCR panel, and MIC prediction. Each is a title,
-// one result sentence with its count and denominator, a figure that shows
-// that number, and one caption; Overview adds Data and method. Every number
-// comes from data/derive at render time.
+// one result sentence with its count and denominator (the corpus counts are
+// their own result), a figure that shows that number, and one caption that
+// says what a mark is and how it was made; Overview adds Method and coverage.
+// Every number comes from data/derive at render time.
 
 import { useRef, type ReactNode } from "react";
 import type { CatalogRow, Manifest } from "../data/schema";
@@ -21,7 +22,10 @@ export type FindingId = "corpus" | "lineage" | "catalog" | "panels" | "mic";
 export interface Finding {
   id: FindingId;
   title: string;
-  result: string;
+  /** Only where the title alone leaves the reader guessing; page only. */
+  question?: string;
+  /** Left out when the figure is the result, as the corpus counts are. */
+  result?: string;
   figure: FigureContent;
   caption: string;
   /** Overview only. */
@@ -31,28 +35,28 @@ export interface Finding {
 export interface FindingOptions {
   /** Opens a dataset from a figure mark; Present leaves marks unopenable. */
   onOpen?(id: string): void;
-  /** Overview builds Data and method; Present does not. */
+  /** Overview builds Method and coverage; Present does not. */
   page: boolean;
 }
 
 // ---- corpus -------------------------------------------------------------------
 
-/** The four counts the corpus rests on. Each counts a different unit, so
- *  they sit side by side with their units, not as one funnel. */
-export const CorpusFigure = ({ manifest }: { manifest: Manifest }) => {
+/** The four counts the corpus rests on, each with its unit, side by side
+ *  rather than as one funnel because the units differ. */
+export const CorpusFigure = ({ manifest, large = false }: { manifest: Manifest; large?: boolean }) => {
   const f = manifest.funnel;
   const stages = [
     { value: manifest.amr_records, unit: "BV-BRC lab records" },
-    { value: f.pairs_reported, unit: "Genome and antibiotic pairs with a reported resistant or susceptible call" },
+    { value: f.pairs_reported, unit: "Genome–antibiotic pairs with a reported R or S call" },
     { value: f.genomes_passing_qc, unit: "Genomes that passed QC" },
     { value: manifest.datasets.length, unit: `Datasets across ${plural(speciesCount(manifest), "species", "species")}` },
   ];
   return (
-    <ol className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
+    <ol className={`grid grid-cols-2 gap-x-6 md:grid-cols-4 ${large ? "gap-y-8" : "gap-y-5"}`}>
       {stages.map((s) => (
         <li key={s.unit} className="min-w-0">
-          <div className="text-stat font-semibold text-ink">{int(s.value)}</div>
-          <div className="mt-1 text-note text-muted-text">{s.unit}</div>
+          <div className={`font-semibold tabular-nums text-ink ${large ? "text-stat sm:text-[2.75rem] sm:leading-[3rem] sm:tracking-tight" : "text-stat"}`}>{int(s.value)}</div>
+          <div className={`mt-1 text-muted-text ${large ? "text-note sm:text-body" : "text-note"}`}>{s.unit}</div>
         </li>
       ))}
     </ol>
@@ -64,7 +68,7 @@ const SpeciesCounts = ({ manifest }: { manifest: Manifest }) => {
   return (
     <table className="w-full max-w-xl border-collapse text-control">
       <thead>
-        <tr className="border-b border-hair text-muted-text">
+        <tr className="border-b border-hair text-tiny text-blue">
           <th scope="col" className="px-2 py-1.5 text-left font-medium">
             Species
           </th>
@@ -99,17 +103,14 @@ export const corpusFinding = (m: Manifest, opts: FindingOptions): Finding => {
   return {
     id: "corpus",
     title: "Corpus",
-    result:
-      rows.length === 0
-        ? `No dataset has a report yet; ${plural(curated, "dataset")} passed curation.`
-        : `${plural(rows.length, "dataset")} across ${plural(speciesCount(m), "species", "species")}, from ${int(m.amr_records)} BV-BRC lab records.`,
-    figure: <CorpusFigure manifest={m} />,
-    caption: `Each count is a different unit: lab records, pairs, genomes, and datasets. A dataset is one species and one antibiotic with ${datasetRule(classMinimum(rows))}.`,
+    result: rows.length === 0 ? `No dataset has a report yet; ${plural(curated, "dataset")} passed curation.` : undefined,
+    figure: <CorpusFigure manifest={m} large={!opts.page} />,
+    caption: `A dataset is one species and one antibiotic with ${datasetRule(classMinimum(rows))}.`,
     details: opts.page ? (
       <>
         <p className="prose-measure">
           {int(genomes)} genomes from {plural(structured, "species", "species")} are counted into k-mers and clustered into lineages.
-          {curated > rows.length ? ` ${int(rows.length)} of ${int(curated)} curated datasets ${rows.length === 1 ? "has" : "have"} finished analysis so far.` : ""} Methods has the full curation funnel.
+          {curated > rows.length ? ` ${int(rows.length)} of ${int(curated)} curated datasets ${rows.length === 1 ? "has" : "have"} a report.` : ""}
         </p>
         <SpeciesCounts manifest={m} />
       </>
@@ -131,6 +132,7 @@ export const lineageFinding = (m: Manifest, opts: FindingOptions): Finding => {
   return {
     id: "lineage",
     title: "Lineage cost",
+    question: "How much does a score depend on close relatives in training?",
     result:
       s.nLineage === 0 || s.medianGap === null
         ? "No dataset has a lineage-held-out result yet."
@@ -139,11 +141,11 @@ export const lineageFinding = (m: Manifest, opts: FindingOptions): Finding => {
     caption:
       s.nLineage === 0
         ? "The lineage split holds out whole lineages so no test genome has a near-identical relative in training."
-        : `Each mark is one dataset: random minus lineage-held-out balanced accuracy for ${BEST_LEARNER_WORDS}. Paired medians: ${pct(s.medianRandom)} random, ${pct(s.medianLineage)} lineage. The difference depends on this sample of public genomes.`,
+        : `Each dot is one dataset: balanced accuracy on random splits minus balanced accuracy with whole lineages held out, for ${BEST_LEARNER_WORDS}. Medians: ${pct(s.medianRandom)} random, ${pct(s.medianLineage)} lineage, ${((s.medianGap ?? 0) * 100).toFixed(1)} points lost.`,
     details: opts.page ? (
       <>
         <p className="prose-measure">
-          Balanced accuracy is the mean of sensitivity and specificity over pooled out-of-fold predictions. A population with a different lineage mix would give a different difference.
+          Balanced accuracy is the mean of sensitivity and specificity over pooled out-of-fold predictions.
           {unpaired.length > 0 ? ` ${plural(unpaired.length, "dataset")} ${unpaired.length === 1 ? "has" : "have"} no lineage-held-out result and ${unpaired.length === 1 ? "is" : "are"} left out of all three medians:` : ""}
           {noBestWords(s.nNoBest)}
         </p>
@@ -166,7 +168,7 @@ export const lineageFinding = (m: Manifest, opts: FindingOptions): Finding => {
 
 /** Per drug class, the median gap between the learner (lineages held out)
  *  and the catalog rule, one mark per class on a points axis with the
- *  cutoff marked. Overview's Data and method only. */
+ *  cutoff marked. Overview's Method and coverage only. */
 const ClassStrip = ({ rows }: { rows: readonly ClassRow[] }) => {
   const frame = useRef<HTMLDivElement | null>(null);
   const width = useWidth(frame);
@@ -226,7 +228,7 @@ export const catalogFinding = (m: Manifest, opts: FindingOptions): Finding => {
         <p className="prose-measure">
           Within 1 point or ahead: {int(c.within.get(0.01) ?? 0)}; within 5 points or ahead: {int(c.within.get(0.05) ?? 0)}.
           {rows.length > c.nWithRule ? ` ${plural(rows.length - c.nWithRule, "dataset")} test drugs with no acquired-gene rule and are not drawn.` : ""}
-          {noBestWords(rows.filter((r) => r.catalog !== null && r.best_learner === null).length, " with a catalog rule")} The rule tests only for acquired genes, so mutational resistance counts against it. Where the learners agree better, they use other k-mers that track the lab calls in this population; such k-mers can mark lineages as well as mechanisms.
+          {noBestWords(rows.filter((r) => r.catalog !== null && r.best_learner === null).length, " with a catalog rule")} The rule tests only for acquired genes, so mutational resistance counts against it.
         </p>
         <p className="prose-measure">
           Per drug class, the median dataset&apos;s catalog score is within {cut} points of the learner for {matching.length === 0 ? "no class" : listWords(matching)}.
@@ -280,7 +282,7 @@ export const PanelFigure = ({ rows, height, onOpen }: { rows: readonly PanelRowJ
     };
   });
   return (
-    <div ref={frame} className="min-w-0">
+    <div ref={frame} className="min-w-0 max-w-[64rem]">
       <MarkListbox
         label={`${rows[0]?.name ?? "Panel"} by dataset: target-found share against the learner's called-resistant share, ${rows.length} datasets. Arrow keys move between datasets${onOpen === undefined ? "" : "; Enter opens one"}.`}
         marks={marks}
@@ -346,7 +348,7 @@ export const panelsFinding = (m: Manifest, opts: FindingOptions): Finding => {
     title: `${lead.name} targets`,
     result: `Targets are found in ${pct(share(p.caught, p.calledResistant))} of ${int(p.calledResistant)} resistant isolates${same ? "" : " with a panel call"}; the learner calls ${pct(share(p.modelCaught, p.modelResistant))} of ${same ? "them" : int(p.modelResistant)} resistant.`,
     figure: (fit: Fit) => <PanelFigure rows={lead.rows} height={fit.height} onOpen={opts.onOpen} />,
-    caption: `Each row is one of ${int(p.datasets)} datasets. Targets are found by k-mer containment in genomes, not a laboratory assay. The comparison uses ${BEST_LEARNER_WORDS}.${p.noCallResistant > 0 ? ` ${plural(p.noCallResistant, "resistant isolate")} with no probe call ${p.noCallResistant === 1 ? "is" : "are"} left out of the panel share only.` : ""}${noBestWords(panelsWithoutBest(m), " with a simulated panel")}`,
+    caption: `Each row is one of ${int(p.datasets)} datasets. Panel targets are found in assembled genomes by k-mer containment, and the learner is ${BEST_LEARNER_WORDS}.${p.noCallResistant > 0 ? ` ${plural(p.noCallResistant, "resistant isolate")} with no probe call ${p.noCallResistant === 1 ? "is" : "are"} left out of the panel share only.` : ""}${noBestWords(panelsWithoutBest(m), " with a simulated panel")}`,
     details: opts.page ? <PanelEvidence manifest={m} onOpen={opts.onOpen} /> : undefined,
   };
 };
@@ -364,7 +366,7 @@ export const micFinding = (m: Manifest, opts: FindingOptions): Finding => {
         ? "No dataset had enough MIC values for MIC regression."
         : `${int(s.nAbove90)} of ${plural(s.n, "dataset")} predict ≥90% of exact MICs within one doubling dilution.`,
     figure: s.n === 0 ? null : (fit: Fit) => <MicStrip rows={rows} height={fit.height} onOpen={opts.onOpen} />,
-    caption: `Each mark is a dataset's essential agreement: exact MICs predicted within one doubling dilution, out of fold. The median is ${pct(s.median)}. The 90% device reference bar is not a validation claim.`,
+    caption: `Each dot is one dataset: the share of its exact MICs predicted within one doubling dilution, out of fold. Median ${pct(s.median)}; 90% is the essential-agreement bar for susceptibility test devices.`,
     details: opts.page ? (
       <p className="prose-measure">
         Censored gradient-boosted regression on log2 dilution steps, fitted on the MICs of genomes with a reported call and predicted out of fold.

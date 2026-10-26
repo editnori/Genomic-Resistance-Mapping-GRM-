@@ -15,15 +15,15 @@ const RuleBlock = ({ index, rule, card, r }: { index: number; rule: Rule; card: 
   return (
     <article className="border-t border-hair py-4">
       <h4 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body font-semibold text-ink">
-        <span className="text-tiny font-medium uppercase tracking-wide text-muted-text">Rule {index + 1}</span>
+        <span className="text-control font-medium tabular-nums text-muted-text">Rule {index + 1}</span>
         {ruleWords(rule, features)}
-        {card?.catalog_families.map((f) => (
-          <span key={f} className="text-note font-normal text-muted-text">
-            Catalog family {f}
+        {card !== undefined && card.catalog_families.length > 0 ? (
+          <span className="text-note font-normal text-muted-text">
+            Catalog {card.catalog_families.length === 1 ? "family" : "families"} {card.catalog_families.join(", ")}
           </span>
-        ))}
+        ) : null}
       </h4>
-      <div className="mt-2 grid gap-x-8 gap-y-1 text-note text-ink md:grid-cols-2">
+      <div className="mt-2 grid grid-cols-1 gap-x-8 gap-y-1 text-note text-ink md:grid-cols-2">
         <p>
           {place ?? "Not placed on a reference assembly."}
           {locus !== null && locus.gene !== null && locus.product !== null && locus.product !== locus.gene ? <span className="text-muted-text"> · {locus.product}</span> : null}
@@ -72,7 +72,6 @@ export const ModelSection = ({ r, row }: { r: DatasetReport; row?: CatalogRow })
     <Section
       id="ds-model"
       title="The interpretable model"
-
       answer={
         scm.rules.length === 0
           ? "The set covering machine found no rule that beats calling every isolate one way."
@@ -84,7 +83,7 @@ export const ModelSection = ({ r, row }: { r: DatasetReport; row?: CatalogRow })
           <RuleBlock key={`${rule.feature}-${i}`} index={i} rule={rule} card={features.get(rule.feature)} r={r} />
         ))}
         <p className="type-note border-t border-hair pt-3">
-          Rules were chosen greedily on all isolates for the final model, with the trade-off p = {scm.p} and the rule count picked by inner cross-validation (error {pct(scm.cv_error)}). A rule names its catalog family when its k-mers fall inside an AMRFinderPlus gene, and otherwise the gene on the reference assembly that carries them.
+          Rules were chosen greedily on all isolates for the final model, with the trade-off p = {scm.p} and the rule count picked by inner cross-validation (error {pct(scm.cv_error)}).
         </p>
       </div>
 
@@ -117,7 +116,7 @@ export const ModelSection = ({ r, row }: { r: DatasetReport; row?: CatalogRow })
         </div>
       </div>
       {row?.kover == null ? null : (
-        <p className="type-note mt-6">Legacy Kover: {pct(row.kover.balanced_accuracy)} balanced accuracy, {pct(row.kover.sensitivity)} sensitivity and {pct(row.kover.specificity)} specificity on {int(row.kover.n_examples)} examples, with {plural(row.kover.n_rules, "rule")}. This is the historical result recorded with the dataset.</p>
+        <p className="type-note mt-6">Legacy Kover: {pct(row.kover.balanced_accuracy)} balanced accuracy, {pct(row.kover.sensitivity)} sensitivity and {pct(row.kover.specificity)} specificity on {int(row.kover.n_examples)} examples, with {plural(row.kover.n_rules, "rule")}.</p>
       )}
     </Section>
   );

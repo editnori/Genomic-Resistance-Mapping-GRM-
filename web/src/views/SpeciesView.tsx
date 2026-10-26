@@ -1,16 +1,19 @@
 // Population structure for one species: lineages and the resistance profile
 // of every genome in dendrogram order, cross-resistance, and the data behind
-// them. The species and drug are chosen in place; the genome map lives in
-// the dataset inspector.
+// them. The title is the species; choosing a species and a drug is the
+// page's primary action, so the selectors take the row under the status
+// line. The genome map lives in the dataset inspector.
 
 import { useState, type ReactNode } from "react";
 import type { Manifest, SpeciesReport } from "../data/schema";
-import { capitalize, distance, int, pct, plural } from "../data/format";
+import { capitalize, distance, int, pct, plural, speciesShort } from "../data/format";
 import { loadErrorText, useCorpus, useSpecies } from "../data/load";
 import { BEST_LEARNER_WORDS, NO_BEST_LEARNER } from "../data/derive/dataset";
 import type { Navigator } from "../app/router";
+import { ReportStatus } from "../app/ReportStatus";
+import { ViewHeader } from "../ui/ViewHeader";
 import { Dropdown } from "../ui/Dropdown";
-import { FactRows, FIGURE_SHELL, FigureBlock, LegendItem, PanelState, Section, Segmented } from "../ui/primitives";
+import { FactRows, FigureBlock, LegendItem, PanelState, Section, Segmented, VIEW_SHELL } from "../ui/primitives";
 import { DataTable } from "../ui/DataTable";
 import { StructureFigure } from "../charts/Structure";
 import { CrossMatrix } from "../charts/CrossMatrix";
@@ -50,10 +53,11 @@ const concentration = (s: SpeciesReport, j: number) => {
   return { lineages: by.size, share: total === 0 ? 0 : top / total };
 };
 
+/** A selector with its ink label on the same line. */
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="min-w-0">
-    <div className="text-control font-medium text-muted-text">{label}</div>
-    <div className="mt-1">{children}</div>
+  <div className="flex min-w-0 items-center gap-2">
+    <span className="text-tiny font-semibold text-ink">{label}</span>
+    {children}
   </div>
 );
 
@@ -76,15 +80,15 @@ const SpeciesBody = ({ s, manifest, nav, drug }: { s: SpeciesReport; manifest: M
   const datasets = manifest.datasets.filter((d) => d.species_slug === s.slug);
 
   return (
-    <div className="mt-10 space-y-12 sm:space-y-16">
+    <div className="mt-8 space-y-10">
       <FigureBlock
         id="sp-structure"
         title="Lineages and resistance profiles"
-        result={`${int(s.genomes.length)} genomes fall into ${plural(lin.count, "lineage")} at Mash distance ${distance(s.lineage_threshold)}; the largest holds ${pct(lin.largestShare)} of genomes. ${
+        result={
           t.r === 0
             ? `No genome is resistant to ${drugName}.`
-            : `${int(t.r)} of ${int(t.tested)} genomes tested for ${drugName} are resistant, and the three lineages with the most hold ${pct(conc.share)} of them.`
-        }`}
+            : `${int(t.r)} of ${int(t.tested)} genomes tested for ${drugName} are resistant; three lineages hold ${pct(conc.share)} of them.`
+        }
         figure={
           <>
             <div className="mb-3 flex flex-wrap gap-x-5 gap-y-1">
@@ -96,7 +100,7 @@ const SpeciesBody = ({ s, manifest, nav, drug }: { s: SpeciesReport; manifest: M
             <StructureFigure report={s} drugOrder={order} selected={drug} />
           </>
         }
-        caption={`Each column is one genome in dendrogram order and each row one drug, most-tested first; the outlined row is ${drugName}. Average-linkage clustering of Mash distances; the band marks lineages in alternating shades. These profiles include labels inferred from MIC for genomes without a reported call, and so do cross-resistance and the call counts under Corpus facts; dataset reports leave those labels out.`}
+        caption={`Each column is one of ${int(s.genomes.length)} genomes, ordered by average-linkage clustering of Mash distances; each row is one drug, most-tested first, with ${drugName} outlined. The band marks the ${plural(lin.count, "lineage")} at Mash distance ${distance(s.lineage_threshold)}; the largest holds ${pct(lin.largestShare)} of genomes. Profiles, cross-resistance, and the call counts below include labels inferred from MIC; dataset reports leave those out.`}
       />
 
       <FigureBlock
@@ -141,19 +145,17 @@ const SpeciesBody = ({ s, manifest, nav, drug }: { s: SpeciesReport; manifest: M
             <CrossMatrix report={s} order={order} />
           )
         }
-        caption="Phi is the correlation between two drugs' resistant calls over genomes tested for both; pairs with fewer than 30 are blank. Co-resistance often means genes on one plasmid, or one lineage carrying both; it does not show one mechanism causes both."
+        caption="Phi is the correlation between two drugs' resistant calls over genomes tested for both; pairs with fewer than 30 such genomes are blank."
       />
 
       <Section id="sp-facts" title="Corpus facts">
-        <div className="grid gap-x-12 gap-y-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-12 gap-y-6 lg:grid-cols-2">
           <FactRows
             rows={[
               { label: "Genomes with a call", value: row === undefined ? "–" : int(row.genomes_labeled) },
-              { label: "Genomes analyzed", value: int(s.genomes.length) },
               { label: "Datasets", value: row === undefined ? "–" : `${int(row.datasets_reported)} reported of ${int(row.datasets_curated)} curated` },
               { label: "Resistant calls", value: corpusRow === undefined ? "–" : int(corpusRow.pairs_resistant) },
               { label: "Susceptible calls", value: corpusRow === undefined ? "–" : int(corpusRow.pairs_susceptible) },
-              { label: "Lineages", value: `${int(s.n_lineages)} at Mash distance ${distance(s.lineage_threshold)}` },
               { label: "Catalog gene groups seen", value: int(s.catalog_groups.length) },
             ]}
           />
@@ -176,10 +178,9 @@ const SpeciesBody = ({ s, manifest, nav, drug }: { s: SpeciesReport; manifest: M
               },
               { id: "lineage", header: "Lineage", align: "right", sortValue: (d) => d.best_lineage, cell: (d) => pct(d.best_lineage) },
             ]}
-            empty={<p className="type-note">No dataset for this species has finished analysis.</p>}
+            empty={<p className="type-note">No dataset for this species has a report.</p>}
           />
         </div>
-        <p className="type-note mt-3">Genomes with a call, resistant calls, and susceptible calls include labels inferred from MIC.</p>
       </Section>
     </div>
   );
@@ -194,9 +195,17 @@ export const SpeciesView = ({ manifest, nav }: { manifest: Manifest; nav: Naviga
   const drug = report === null ? 0 : drugChoice?.slug === report.slug ? drugChoice.drug : (drugOrder(report)[0] ?? 0);
 
   return (
-    <div className={`${FIGURE_SHELL} pb-16 pt-8`}>
-      <h1 className="text-display font-semibold text-ink">{report === null ? "Species" : <i>{report.species}</i>}</h1>
-      <div className="mt-4 flex flex-wrap items-end gap-x-4 gap-y-3">
+    <div className={`${VIEW_SHELL} pb-16 pt-8`}>
+      <ViewHeader
+        title={report === null ? "Species" : report.species}
+        purpose="How genomes cluster into lineages, and how resistance follows them."
+        status={
+          <ReportStatus manifest={manifest}>
+            {report === null ? undefined : <span>{`${speciesShort(report.species)}: ${int(report.genomes.length)} genomes, ${plural(report.drugs.length, "drug")}`}</span>}
+          </ReportStatus>
+        }
+      />
+      <div className="mt-6 flex min-h-10 flex-wrap items-center gap-x-6 gap-y-3">
         <Field label="Species">
           <Dropdown
             ariaLabel="Species"
@@ -205,9 +214,9 @@ export const SpeciesView = ({ manifest, nav }: { manifest: Manifest; nav: Naviga
           />
         </Field>
         {report !== null ? (
-          <Field label="Drug">
+          <Field label="Map drug">
             <Dropdown
-              ariaLabel="Drug"
+              ariaLabel="Map drug"
               options={drugOrder(report).map((j) => ({ id: String(j), label: capitalize(report.drugs[j] ?? "") }))}
               mode={{ kind: "one", value: String(drug), onSelect: (v) => setDrugChoice({ slug: report.slug, drug: Number(v) }) }}
             />

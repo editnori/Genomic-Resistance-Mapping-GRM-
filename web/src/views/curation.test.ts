@@ -60,7 +60,7 @@ describe("MIC-inferred labels", () => {
     const { methods } = views(manifest);
     expect(methods).toContain(`became ${int(f.pairs_reported)} genome and antibiotic pairs with a reported resistant or susceptible call`);
     const slide = renderToStaticMarkup(createElement(CorpusFigure, { manifest }));
-    expect(slide).toContain("Genome and antibiotic pairs with a reported resistant or susceptible call");
+    expect(slide).toContain("Genome–antibiotic pairs with a reported R or S call");
     expect(slide).toContain(`>${int(f.pairs_reported)}<`);
     expect(slide).not.toContain(`>${int(f.pairs_reported + f.pairs_labeled_from_mic)}<`);
   });
