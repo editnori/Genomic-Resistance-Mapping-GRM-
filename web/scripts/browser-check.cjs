@@ -527,15 +527,16 @@ async function present(page, tag, width, height) {
   await settle(page);
   await slideSelect.click();
   let slideCount = 0, previousCount = -1, stableCounts = 0;
-  for (let attempt = 0; attempt < 100; attempt++) {
+  const requiredSlideCount = width < 640 ? 8 : 7;
+  for (let attempt = 0; attempt < 200; attempt++) {
     slideCount = await dialog.getByRole('option').count();
     if (slideCount === previousCount) stableCounts++;
     else { previousCount = slideCount; stableCounts = 0; }
-    if (slideCount >= 7 && stableCounts >= 2) break;
+    if (slideCount === requiredSlideCount && stableCounts >= 2) break;
     await page.waitForTimeout(50);
   }
   await page.keyboard.press('Escape');
-  check(tag + ' expected slide count', slideCount === 7 || slideCount === 8 || slideCount === 9, slideCount);
+  check(tag + ' expected slide count', slideCount === requiredSlideCount, slideCount);
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
