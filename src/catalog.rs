@@ -56,29 +56,35 @@ pub struct Catalog {
 
 impl Catalog {
     pub fn load(dir: &Path, space: &KmerSpace) -> Result<Catalog> {
-        let version = std::fs::read_to_string(dir.join("version.txt"))
-            .unwrap_or_default()
+        let version_path = dir.join("version.txt");
+        let version = std::fs::read_to_string(&version_path)
+            .with_context(|| format!("run `grm fetch catalog` first ({})", version_path.display()))?
             .trim()
             .to_string();
-        let table = std::fs::read_to_string(dir.join("ReferenceGeneCatalog.txt"))
+        anyhow::ensure!(!version.is_empty(), "{} is blank", version_path.display());
+        let table_path = dir.join("ReferenceGeneCatalog.txt");
+        let table = std::fs::read_to_string(&table_path)
             .with_context(|| format!("run `grm fetch catalog` first ({})", dir.display()))?;
         let mut lines = table.lines();
         let header: Vec<&str> = lines.next().unwrap_or("").split('\t').collect();
-        let col = |name: &str| header.iter().position(|h| *h == name);
+        let col = |name: &str| {
+            header.iter().position(|h| *h == name).with_context(|| {
+                format!("{}: missing required column {name}", table_path.display())
+            })
+        };
         let (c_type, c_class, c_sub, c_ref, c_gb, c_family, c_product) = (
-            col("type"),
-            col("class"),
-            col("subclass"),
-            col("refseq_protein_accession"),
-            col("genbank_protein_accession"),
-            col("gene_family"),
-            col("product_name"),
+            col("type")?,
+            col("class")?,
+            col("subclass")?,
+            col("refseq_protein_accession")?,
+            col("genbank_protein_accession")?,
+            col("gene_family")?,
+            col("product_name")?,
         );
         let mut by_protein: HashMap<String, (String, String, String, String)> = HashMap::new();
         for line in lines {
             let f: Vec<&str> = line.split('\t').collect();
-            let get =
-                |c: Option<usize>| c.and_then(|i| f.get(i)).copied().unwrap_or("").to_string();
+            let get = |c: usize| f.get(c).copied().unwrap_or("").to_string();
             if get(c_type) != "AMR" {
                 continue;
             }
@@ -121,6 +127,11 @@ impl Catalog {
             index.extend(kmers.iter().map(|&k| (k, gi)));
             gene_kmers.push(kmers);
         })?;
+        anyhow::ensure!(
+            !genes.is_empty(),
+            "{}: no usable genes after joining ReferenceGeneCatalog.txt and AMR_CDS.fa",
+            dir.display()
+        );
         index.sort_unstable();
         Ok(Catalog {
             version,
@@ -360,6 +371,157 @@ pub fn explain(rule: &[Vec<&str>], hits: &[FamilyHit]) -> (bool, Vec<String>) {
 mod tests {
     use super::*;
 
+    fn catalog_fixture() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("ReferenceGeneCatalog.txt"),
+            "type\tclass\tsubclass\trefseq_protein_accession\tgenbank_protein_accession\tgene_family\tproduct_name\n\
+             AMR\tfixture class\tfixture subclass\tREF\tGB\tfixture_family\tfixture product\n",
+        ).unwrap();
+        std::fs::write(
+            dir.path().join("AMR_CDS.fa"),
+            format!(
+                ">REF|nucleotide|1|1|fixture_gene|fixture_family|fixture product\n{}\n",
+                "ACGT".repeat(16)
+            ),
+        )
+        .unwrap();
+        std::fs::write(dir.path().join("version.txt"), "fixture-v1\n").unwrap();
+        dir
+    }
+
+    #[test]
+    fn catalog_requires_each_column() {
+        let dir = catalog_fixture();
+        let path = dir.path().join("ReferenceGeneCatalog.txt");
+        let table = std::fs::read_to_string(&path).unwrap();
+        let rows: Vec<Vec<&str>> = table
+            .lines()
+            .map(|line| line.split('\t').collect())
+            .collect();
+        for (missing, name) in rows[0].iter().enumerate() {
+            let truncated = rows
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .enumerate()
+                        .filter_map(|(i, value)| (i != missing).then_some(*value))
+                        .collect::<Vec<_>>()
+                        .join("\t")
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            std::fs::write(&path, truncated).unwrap();
+            let err = Catalog::load(dir.path(), &KmerSpace::new(31))
+                .err()
+                .expect(name);
+            let message = format!("{err:#}");
+            assert!(message.contains("missing required column"), "{message}");
+            assert!(message.contains(name), "{message}");
+            assert!(message.contains(path.to_str().unwrap()), "{message}");
+        }
+    }
+
+    #[test]
+    fn catalog_requires_a_version_file() {
+        let dir = catalog_fixture();
+        let path = dir.path().join("version.txt");
+        std::fs::remove_file(&path).unwrap();
+        let err = Catalog::load(dir.path(), &KmerSpace::new(31))
+            .err()
+            .expect("missing version");
+        assert_eq!(
+            err.downcast_ref::<std::io::Error>().unwrap().kind(),
+            std::io::ErrorKind::NotFound
+        );
+        assert!(err.to_string().contains(path.to_str().unwrap()), "{err:#}");
+    }
+
+    #[test]
+    fn catalog_requires_a_nonblank_version() {
+        let dir = catalog_fixture();
+        let path = dir.path().join("version.txt");
+        for blank in ["", " \t\r\n"] {
+            std::fs::write(&path, blank).unwrap();
+            let err = Catalog::load(dir.path(), &KmerSpace::new(31))
+                .err()
+                .expect("blank version");
+            assert!(err.to_string().contains("blank"), "{err:#}");
+            assert!(err.to_string().contains(path.to_str().unwrap()), "{err:#}");
+        }
+    }
+
+    #[test]
+    fn catalog_requires_usable_genes_after_joining() {
+        let dir = catalog_fixture();
+        let table_path = dir.path().join("ReferenceGeneCatalog.txt");
+        let fasta_path = dir.path().join("AMR_CDS.fa");
+        let table = std::fs::read_to_string(&table_path).unwrap();
+        let fasta = std::fs::read_to_string(&fasta_path).unwrap();
+        for (case, table, fasta) in [
+            (
+                "header only",
+                table.lines().next().unwrap().to_string(),
+                fasta.clone(),
+            ),
+            (
+                "no AMR rows",
+                table.replace("\nAMR\t", "\nOTHER\t"),
+                fasta.clone(),
+            ),
+            ("empty FASTA", table.clone(), String::new()),
+            (
+                "unmatched accession",
+                table.clone(),
+                fasta.replace(">REF|", ">UNMATCHED|"),
+            ),
+            ("too short", table.clone(), ">REF\nACGT\n".into()),
+            (
+                "no canonical kmers",
+                table,
+                format!(">REF\n{}\n", "N".repeat(64)),
+            ),
+        ] {
+            std::fs::write(&table_path, table).unwrap();
+            std::fs::write(&fasta_path, fasta).unwrap();
+            let err = Catalog::load(dir.path(), &KmerSpace::new(31))
+                .err()
+                .expect(case);
+            assert!(
+                err.to_string().contains("no usable genes"),
+                "{case}: {err:#}"
+            );
+            assert!(
+                err.to_string().contains(dir.path().to_str().unwrap()),
+                "{case}: {err:#}"
+            );
+        }
+    }
+
+    #[test]
+    fn catalog_loads_both_accessions_and_trims_the_version() {
+        let dir = catalog_fixture();
+        let fasta_path = dir.path().join("AMR_CDS.fa");
+        let fasta = std::fs::read_to_string(&fasta_path).unwrap();
+        std::fs::write(dir.path().join("version.txt"), " \tfixture-v1\r\n").unwrap();
+        for accession in ["REF", "GB"] {
+            std::fs::write(
+                &fasta_path,
+                fasta.replace(">REF|", &format!(">{accession}|")),
+            )
+            .unwrap();
+            let catalog = Catalog::load(dir.path(), &KmerSpace::new(31)).unwrap();
+            assert_eq!(catalog.version, "fixture-v1");
+            assert_eq!(catalog.genes.len(), 1);
+            assert_eq!(catalog.genes[0].symbol, "fixture_gene");
+            assert_eq!(catalog.genes[0].family, "fixture_family");
+            assert_eq!(catalog.genes[0].product, "fixture product");
+            assert_eq!(catalog.genes[0].class, "fixture class");
+            assert_eq!(catalog.genes[0].subclass, "fixture subclass");
+            assert!(catalog.genes[0].n_kmers > 0);
+        }
+    }
+
     fn hit(family: &str, class: &str, subclass: &str) -> FamilyHit {
         FamilyHit {
             family: family.into(),
@@ -387,11 +549,12 @@ mod tests {
         .unwrap();
         std::fs::write(
             dir.path().join("ReferenceGeneCatalog.txt"),
-            "gene_family\tproduct_name\ttype\tclass\tsubclass\trefseq_protein_accession\n\
-             aacA\tacetyltransferase\tAMR\tAMINOGLYCOSIDE\tAMIKACIN\tWP_A\n\
-             aacA-cr\tacetyltransferase variant\tAMR\tAMINOGLYCOSIDE/QUINOLONE\tAMIKACIN/QUINOLONE\tWP_B\n",
+            "gene_family\tproduct_name\ttype\tclass\tsubclass\trefseq_protein_accession\tgenbank_protein_accession\n\
+             aacA\tacetyltransferase\tAMR\tAMINOGLYCOSIDE\tAMIKACIN\tWP_A\t\n\
+             aacA-cr\tacetyltransferase variant\tAMR\tAMINOGLYCOSIDE/QUINOLONE\tAMIKACIN/QUINOLONE\tWP_B\t\n",
         )
         .unwrap();
+        std::fs::write(dir.path().join("version.txt"), "test\n").unwrap();
         let cat = Catalog::load(dir.path(), &space).unwrap();
         let mut genome = Vec::new();
         space.for_each_canonical(a.as_bytes(), |x| genome.push(space.mix(x)));

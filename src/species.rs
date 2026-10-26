@@ -820,8 +820,16 @@ mod tests {
         );
         let catalog_dir = layout.catalog_dir();
         std::fs::create_dir_all(&catalog_dir).unwrap();
-        std::fs::write(catalog_dir.join("ReferenceGeneCatalog.txt"), "type\n").unwrap();
-        std::fs::write(catalog_dir.join("AMR_CDS.fa"), "").unwrap();
+        std::fs::write(
+            catalog_dir.join("ReferenceGeneCatalog.txt"),
+            "type\tclass\tsubclass\trefseq_protein_accession\tgenbank_protein_accession\tgene_family\tproduct_name\n\
+             AMR\tfixture\tfixture\tREF\t\tfixture\tfixture\n",
+        ).unwrap();
+        std::fs::write(
+            catalog_dir.join("AMR_CDS.fa"),
+            format!(">REF\n{}\n", "ACGT".repeat(16)),
+        )
+        .unwrap();
         std::fs::write(catalog_dir.join("version.txt"), "v1").unwrap();
         assert_eq!(catalog_for("v1|group-calls-v2"), Ok(Some("v1".into())));
         let err = catalog_for("v0|group-calls-v2").unwrap_err();

@@ -126,6 +126,8 @@ def main():
         assert len({sample["id"] for sample in samples}) == n, path
         assert not any(sample["from_mic"] for sample in samples), path
         assert (counts["samples"], counts["resistant"], counts["susceptible"], counts["labels_from_mic"]) == (n, nr, ns, 0), path
+        schemes = [split["scheme"] for split in report["splits"]]
+        assert len(schemes) == 2 and schemes.count("random") == 1 and schemes.count("lineage") == 1, ("split schemes", path, schemes)
         entries = 0
         no_call_rows = 0
         for split in report["splits"]:

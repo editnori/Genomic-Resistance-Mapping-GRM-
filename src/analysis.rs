@@ -1809,10 +1809,7 @@ mod tests {
         }
 
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("ReferenceGeneCatalog.txt"), "type\n").unwrap();
-        std::fs::write(dir.path().join("AMR_CDS.fa"), "").unwrap();
-        let mut catalog = Catalog::load(dir.path(), &KmerSpace::new(31)).unwrap();
-        catalog.version = "2026-01-01.1".into();
+        let mut catalog = write_catalog(&Layout::new(dir.path()), "2026-01-01.1");
         let with_catalog = key(&inputs(), &dataset("meropenem"), Some(&catalog));
         assert_ne!(with_catalog, base, "catalog loaded");
         catalog.version = "2026-02-01.1".into();
@@ -2219,13 +2216,21 @@ mod tests {
         );
     }
 
-    /// Writes a catalog without genes at `version` and loads it at the
+    /// Writes a catalog with one synthetic gene at `version` and loads it at the
     /// fixture's k.
     fn write_catalog(layout: &Layout, version: &str) -> Catalog {
         let dir = layout.catalog_dir();
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("ReferenceGeneCatalog.txt"), "type\n").unwrap();
-        std::fs::write(dir.join("AMR_CDS.fa"), "").unwrap();
+        std::fs::write(
+            dir.join("ReferenceGeneCatalog.txt"),
+            "type\tclass\tsubclass\trefseq_protein_accession\tgenbank_protein_accession\tgene_family\tproduct_name\n\
+             AMR\tfixture\tfixture\tREF\t\tfixture\tfixture\n",
+        ).unwrap();
+        std::fs::write(
+            dir.join("AMR_CDS.fa"),
+            format!(">REF\n{}\n", "ACGT".repeat(16)),
+        )
+        .unwrap();
         std::fs::write(dir.join("version.txt"), version).unwrap();
         Catalog::load(&dir, &KmerSpace::new(7)).unwrap()
     }

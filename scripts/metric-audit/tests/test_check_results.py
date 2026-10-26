@@ -207,6 +207,50 @@ class EmptyCallSets(Case):
         self.fails(rep, "a fold without calls needs null balanced accuracy")
 
 
+class SplitSets(Case):
+    def test_invalid_split_sets_fail_in_both_schemas(self):
+        cases = [
+            ("empty", []),
+            ("duplicate random", [0, 0]),
+            ("missing random", [1]),
+            ("duplicate lineage", [1, 1]),
+            ("missing lineage", [0]),
+            ("extra random", [0, 0, 1]),
+            ("extra lineage", [0, 1, 1]),
+            ("unknown scheme", [0, 1]),
+        ]
+        for revision in (6, 7):
+            for case, positions in cases:
+                with self.subTest(revision=revision, case=case):
+                    rep = fx.make_report(revision=revision)
+                    rep["splits"] = [rep["splits"][i] for i in positions]
+                    if case == "unknown scheme":
+                        rep["splits"][1]["scheme"] = "other"
+                    self.fails(rep, "split schemes")
+
+    def test_random_must_be_available_in_both_schemas(self):
+        for revision in (6, 7):
+            with self.subTest(revision=revision):
+                rep = fx.make_report(revision=revision)
+                rep["splits"][0] = {"scheme": "random", "folds": 5, "n_groups": 16,
+                                    "learners": [], "unavailable_reason": "fixture: unavailable"}
+                self.fails(rep, "unavailable split")
+
+    def test_lineage_unavailable_remains_valid_in_both_schemas(self):
+        for revision in (6, 7):
+            with self.subTest(revision=revision):
+                rep = fx.make_report(revision=revision, lineage_available=False)
+                entry = self.passes(rep)
+                self.assertEqual(entry["best_learner"], "gbt")
+
+    def test_split_order_does_not_matter_in_both_schemas(self):
+        for revision in (6, 7):
+            with self.subTest(revision=revision):
+                rep = fx.make_report(revision=revision)
+                rep["splits"].reverse()
+                self.passes(rep)
+
+
 class TestFold(Case):
     def test_a_missing_test_fold_fails(self):
         rep = fx.make_report()

@@ -240,6 +240,65 @@ class CalledOnlyMetrics(Case):
         self.assertIssue(self.run_audit(rep), "lineage/gbt/fold_ba")
 
 
+class SplitSets(Case):
+    def test_invalid_split_sets_record_issues_in_both_schemas(self):
+        cases = [
+            ("empty", []),
+            ("duplicate random", [0, 0]),
+            ("missing random", [1]),
+            ("duplicate lineage", [1, 1]),
+            ("missing lineage", [0]),
+            ("extra random", [0, 0, 1]),
+            ("extra lineage", [0, 1, 1]),
+            ("unknown scheme", [0, 1]),
+        ]
+        for revision in (6, 7):
+            for case, positions in cases:
+                with self.subTest(revision=revision, case=case):
+                    rep = fx.make_report(revision=revision)
+                    winner = "rf" if revision == 7 else "gbt"
+                    index = fx.manifest(rep, winner, schema=rep["schema"], evaluation_revision=revision)
+                    log = run_log(rep) if revision == 7 else [fx.old_done_line(winner, ba(rep, "random", winner))]
+                    rep["splits"] = [copy.deepcopy(rep["splits"][i]) for i in positions]
+                    if case == "unknown scheme":
+                        rep["splits"][1]["scheme"] = "other"
+                    rec = self.run_audit(rep, index, backup=None, log_lines=log[-1:], revision=revision)
+                    self.assertIssue(rec, "split schemes")
+
+    def test_random_must_be_available_in_both_schemas(self):
+        for revision in (6, 7):
+            with self.subTest(revision=revision):
+                rep = fx.make_report(revision=revision)
+                index = fx.manifest(rep, None, schema=rep["schema"], evaluation_revision=revision)
+                rep["splits"][0] = {"scheme": "random", "folds": 5, "n_groups": 16,
+                                    "learners": [], "unavailable_reason": "fixture: unavailable"}
+                rec = self.run_audit(rep, index, backup=None, log_lines=[], revision=revision)
+                self.assertIssue(rec, "split schemes")
+
+    def test_lineage_unavailable_remains_valid_in_both_schemas(self):
+        for revision in (6, 7):
+            with self.subTest(revision=revision):
+                rep = fx.make_report(revision=revision, lineage_available=False)
+                index = fx.manifest(rep, "gbt", schema=rep["schema"], evaluation_revision=revision)
+                line = fx.done_line if revision == 7 else fx.old_done_line
+                rec = self.run_audit(rep, index, backup=None,
+                                     log_lines=[line("gbt", ba(rep, "random", "gbt"))], revision=revision)
+                self.assertClean(rec)
+                self.assertEqual(rec["unavailable"], [{"scheme": "lineage", "reason": "fixture: lineage split unavailable"}])
+
+    def test_split_order_does_not_matter_in_both_schemas(self):
+        for revision in (6, 7):
+            with self.subTest(revision=revision):
+                rep = fx.make_report(revision=revision)
+                rep["splits"].reverse()
+                winner = "rf" if revision == 7 else "gbt"
+                index = fx.manifest(rep, winner, schema=rep["schema"], evaluation_revision=revision)
+                line = fx.done_line if revision == 7 else fx.old_done_line
+                rec = self.run_audit(rep, index, backup=None,
+                                     log_lines=[line(winner, ba(rep, "random", winner))], revision=revision)
+                self.assertClean(rec)
+
+
 class TestFold(Case):
     def test_two_entries_swapped(self):
         rep = fx.make_report()

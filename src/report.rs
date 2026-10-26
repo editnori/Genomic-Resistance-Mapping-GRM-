@@ -361,8 +361,11 @@ fn species_file(
     phenotypes: &[&Phenotype],
     genomes: &HashMap<&str, &GenomeRecord>,
 ) -> Result<Option<(usize, usize, f32)>> {
-    let Ok(structure_bytes) = std::fs::read(layout.species_dir(slug).join("structure.json")) else {
-        return Ok(None);
+    let path = layout.species_dir(slug).join("structure.json");
+    let structure_bytes = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e).with_context(|| format!("read {}", path.display())),
     };
     let structure: Structure = serde_json::from_slice(&structure_bytes)?;
     let counted = species::load_counted(layout, slug)?;
@@ -565,8 +568,10 @@ pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf>
         let mut reported = 0;
         for spec in specs {
             let src = layout.results_dir(&slug).join(format!("{}.json", spec.id));
-            let Ok(bytes) = std::fs::read(&src) else {
-                continue;
+            let bytes = match std::fs::read(&src) {
+                Ok(bytes) => bytes,
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(e).with_context(|| format!("read {}", src.display())),
             };
             let report: Value = serde_json::from_slice(&bytes)
                 .with_context(|| format!("parse {}", src.display()))?;
@@ -957,6 +962,82 @@ mod tests {
         let index: Value =
             serde_json::from_slice(&std::fs::read(out.join("index.json")).unwrap()).unwrap();
         assert_eq!(index["datasets"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn unreadable_result_preserves_the_published_file_and_manifest() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let report = serde_json::json!({"counts": {"samples": 7, "resistant": 3}});
+        write_reports(&layout, &[("meropenem", report)]);
+        let kover = dir.path().join("kover.json");
+        let out = build(&layout, &kover).unwrap();
+        let file = "escherichia_coli__meropenem.json";
+        let published = out.join("datasets").join(file);
+        let previous = std::fs::read(&published).unwrap();
+        let manifest = std::fs::read(out.join("index.json")).unwrap();
+        let index: Value = serde_json::from_slice(&manifest).unwrap();
+        assert_eq!(index["datasets"][0]["id"], "escherichia_coli__meropenem");
+
+        let source = layout.results_dir("escherichia_coli").join(file);
+        std::fs::remove_file(&source).unwrap();
+        // A directory fails even when the test runs as root.
+        std::fs::create_dir(&source).unwrap();
+        let kind = std::fs::read(&source).unwrap_err().kind();
+        assert_ne!(kind, std::io::ErrorKind::NotFound);
+        let err = build(&layout, &kover).unwrap_err();
+        assert_eq!(err.downcast_ref::<std::io::Error>().unwrap().kind(), kind);
+        assert!(
+            err.to_string().contains(source.to_str().unwrap()),
+            "{err:#}"
+        );
+        assert!(source.is_dir());
+        assert_eq!(std::fs::read(&published).unwrap(), previous);
+        assert_eq!(std::fs::read(out.join("index.json")).unwrap(), manifest);
+    }
+
+    #[test]
+    fn unreadable_structure_preserves_the_published_file_and_manifest() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let report = serde_json::json!({"counts": {"samples": 7, "resistant": 3}});
+        write_reports(&layout, &[("meropenem", report)]);
+        let species = layout.species_dir("escherichia_coli");
+        let source = species.join("structure.json");
+        std::fs::write(
+            &source,
+            serde_json::to_vec(&serde_json::json!({
+                "genomes": [], "coords": [], "nearest": [], "merges": [],
+                "leaf_order": [], "sketch_size": 1000,
+                "lineages": {"threshold": 0.01, "labels": [], "n_clusters": 0, "largest_share": 0.0}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            species.join("counted.json"),
+            br#"{"k":31,"genomes":[],"missing_fasta":[],"failed":[]}"#,
+        )
+        .unwrap();
+        let kover = dir.path().join("kover.json");
+        let out = build(&layout, &kover).unwrap();
+        let published = out.join("species/escherichia_coli.json");
+        let previous = std::fs::read(&published).unwrap();
+        let manifest = std::fs::read(out.join("index.json")).unwrap();
+
+        std::fs::remove_file(&source).unwrap();
+        std::fs::create_dir(&source).unwrap();
+        let kind = std::fs::read(&source).unwrap_err().kind();
+        assert_ne!(kind, std::io::ErrorKind::NotFound);
+        let err = build(&layout, &kover).unwrap_err();
+        assert_eq!(err.downcast_ref::<std::io::Error>().unwrap().kind(), kind);
+        assert!(
+            err.to_string().contains(source.to_str().unwrap()),
+            "{err:#}"
+        );
+        assert!(source.is_dir());
+        assert_eq!(std::fs::read(&published).unwrap(), previous);
+        assert_eq!(std::fs::read(out.join("index.json")).unwrap(), manifest);
     }
 
     #[test]

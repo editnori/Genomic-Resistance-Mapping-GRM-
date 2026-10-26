@@ -691,8 +691,8 @@ mod tests {
         .unwrap();
         std::fs::write(
             catalog.join("ReferenceGeneCatalog.txt"),
-            "allele\tgene_family\tproduct_name\ttype\tclass\tsubclass\trefseq_protein_accession\n\
-             blaX-1\tblaX\tbeta-lactamase\tAMR\tBETA-LACTAM\tCARBAPENEM\tWP_1.1\n",
+            "allele\tgene_family\tproduct_name\ttype\tclass\tsubclass\trefseq_protein_accession\tgenbank_protein_accession\n\
+             blaX-1\tblaX\tbeta-lactamase\tAMR\tBETA-LACTAM\tCARBAPENEM\tWP_1.1\t\n",
         )
         .unwrap();
         set_catalog_version(&layout, "v1");
@@ -1128,6 +1128,32 @@ mod tests {
         let counted = grm::species::load_counted(&layout, SLUG).unwrap();
         let genes: Vec<usize> = counted.genomes.iter().map(|g| g.genes.len()).collect();
         assert_eq!(genes, [1, 1, 0, 0]);
+    }
+
+    #[test]
+    fn required_catalog_rejects_incomplete_inputs_unless_allowed() {
+        for (file, contents) in [
+            ("ReferenceGeneCatalog.txt", Some("type\n")),
+            ("version.txt", None),
+            ("version.txt", Some(" \t\n")),
+            ("AMR_CDS.fa", Some("")),
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = fixture(dir.path());
+            require_catalog(&layout, PIPELINE_K, false).unwrap();
+            let path = layout.catalog_dir().join(file);
+            if let Some(contents) = contents {
+                std::fs::write(&path, contents).unwrap();
+            } else {
+                std::fs::remove_file(&path).unwrap();
+            }
+            let err = require_catalog(&layout, PIPELINE_K, false).unwrap_err();
+            assert!(
+                err.to_string().contains("pass --allow-missing-catalog"),
+                "{err:#}"
+            );
+            require_catalog(&layout, PIPELINE_K, true).unwrap();
+        }
     }
 
     #[test]

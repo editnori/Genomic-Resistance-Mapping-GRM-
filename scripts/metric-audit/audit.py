@@ -510,8 +510,10 @@ def audit_file(path, fg, counted_cache, log_done, log_recomputed, manifest):
     # A lineage never spans folds, by construction; check both classes per
     # fold wherever the split was evaluated.
     available = {sp["scheme"] for sp in rep["splits"] if not sp.get("unavailable_reason")}
-    check(len(rep["splits"]) == 2 and "random" in available, "split schemes", schemes=[sp["scheme"] for sp in rep["splits"]])
-    for scheme in available:
+    schemes = [sp["scheme"] for sp in rep["splits"]]
+    check(len(schemes) == 2 and schemes.count("random") == 1 and schemes.count("lineage") == 1 and "random" in available,
+          "split schemes", schemes=schemes)
+    for scheme in available & folds.keys():
         f = folds[scheme]
         for fold in range(k):
             r = sum(1 for i in range(n) if f[i] == fold and truth[i])
@@ -527,6 +529,8 @@ def audit_file(path, fg, counted_cache, log_done, log_recomputed, manifest):
     small_folds = []
     for split in rep["splits"]:
         scheme = split["scheme"]
+        if scheme not in folds:
+            continue
         f = folds[scheme]
         check(split["folds"] == k, "split.folds", scheme=scheme)
         check(split["n_groups"] == lineages, "split.n_groups", scheme=scheme, stored=split["n_groups"])
@@ -829,7 +833,7 @@ def audit_file(path, fg, counted_cache, log_done, log_recomputed, manifest):
             else:
                 check(logged["form"] == "any row" and schema < 2, "done line form does not match the schema", form=logged["form"])
                 # Iterator::max_by over every random-split row, catalog included.
-                b = any_row_best(rep) if schema < 2 else None
+                b = any_row_best(rep) if schema < 2 and "random" in available else None
                 want = (None, None) if b is None else (b[0], "%.3f" % b[1])
             check((logged["learner"], logged["ba"]) == want, "log best learner differs", stored=logged, computed=list(want))
     elif not RESHAPED:
