@@ -238,7 +238,7 @@ fn run(cli: Cli) -> Result<()> {
     }
 }
 
-const KOVER_RESULTS: &str = "legacy/page/results/summary.json";
+const KOVER_RESULTS: &str = "reference/kover-summary.json";
 
 /// k for `grm pipeline`, and the `grm count` default.
 const PIPELINE_K: usize = 31;

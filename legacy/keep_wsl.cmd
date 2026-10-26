@@ -1,1 +1,0 @@
-start wsl --exec dbus-launch true

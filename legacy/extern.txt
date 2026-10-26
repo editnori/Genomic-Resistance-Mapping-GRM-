@@ -1,5 +1,0 @@
-wsl
-libopenmpi-dev
-koven
-python2-dev
-gatb-core # 1.4.2

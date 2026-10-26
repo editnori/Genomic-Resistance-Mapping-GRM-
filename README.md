@@ -105,7 +105,7 @@ The revision-7 run covered the 13 species that revision 6 reported and recounted
 
 This is internal validation: cross-validation on public BV-BRC genomes scored against their reported calls. No external, prospective, or clinical validation has been done.
 
-The original Python/Kover application and its saved results are in [legacy/](legacy/). `grm report` reads the Kover results from `legacy/page/results/summary.json`, and the dashboard shows the one for the same species and antibiotic as historical context, because Kover used other cohorts and evaluation procedures.
+The original Python/Kover application and its saved results are in the [legacy archive](https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/tag/legacy-archive). `grm report` reads 73 historical Kover rows from `reference/kover-summary.json`, and the dashboard shows the one for the same species and antibiotic as historical context, because Kover used other cohorts and evaluation procedures.
 
 ## Reuse
 
