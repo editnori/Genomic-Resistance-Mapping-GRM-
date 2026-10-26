@@ -48,7 +48,6 @@ const rowColumns: Column<PanelRowJoined>[] = [
     id: "found",
     header: "Found",
     unit: "resistant",
-    tip: [{ term: "Targets found", text: "Resistant isolates with a panel call whose assembled genome carries a target, over all resistant isolates the panel calls. A probe assay's no-calls are not misses; see No call." }],
     align: "right",
     sortValue: (r) => share(r.caught, r.calledResistant),
     firstDir: "asc",
@@ -64,7 +63,6 @@ const rowColumns: Column<PanelRowJoined>[] = [
   {
     id: "spec",
     header: "Specificity",
-    tip: [{ term: "Panel specificity", text: "Susceptible isolates with a panel call and no target, over all susceptible isolates the panel calls." }],
     align: "right",
     sortValue: (r) => r.metrics.specificity,
     cell: (r) => pct(r.metrics.specificity),
@@ -72,7 +70,6 @@ const rowColumns: Column<PanelRowJoined>[] = [
   {
     id: "nocall",
     header: "No call",
-    tip: [{ term: "No call", text: "Isolates whose genome carries none of a probe assay's k-mers, so the assay gives no call. They are neither found nor missed, and no panel or learner share counts them as negative." }],
     align: "right",
     sortValue: (r) => r.noCallResistant + r.noCallSusceptible,
     className: "whitespace-nowrap",
@@ -83,7 +80,6 @@ const rowColumns: Column<PanelRowJoined>[] = [
   {
     id: "learner",
     header: "Learner",
-    tip: [{ term: "Best learner", text: `${capitalize(BEST_LEARNER_WORDS)}: the share of all resistant isolates it calls resistant.` }],
     align: "right",
     sortValue: (r) => r.best_model.sensitivity,
     cell: (r) => (
@@ -250,6 +246,11 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
               initialSort={{ id: "found", dir: "asc" }}
               empty={<p className="type-note">No panel result matches these filters.</p>}
             />
+            <p className="type-note mt-2">
+              Found is resistant isolates with a panel call whose assembled genome carries a target, over the resistant isolates the panel calls; Specificity is susceptible isolates with a
+              panel call and no target, over the susceptible isolates it calls. No call counts isolates whose genome carries none of a probe assay&apos;s k-mers: they are neither found nor
+              missed. Learner is the share of all resistant isolates {BEST_LEARNER_WORDS} calls resistant. VME and ME are read against the FDA-style bars in their headers.
+            </p>
           </div>
         </>
       )}

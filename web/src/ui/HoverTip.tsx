@@ -1,8 +1,13 @@
-// The one hover recipe: an 11.5px/600 term, a 14px explanation, and a 12px
-// source line on a paper sheet. Opens on hover or keyboard focus, closes on
-// leave, blur, or Escape. No native title attribute competes with it.
+// The one optional hint: an 11.5px/600 term, a 14px explanation, and a 12px
+// source line on a paper sheet, at most about 40 words. It never holds
+// anything the reader needs: definitions, verdicts and keys a reading
+// depends on are printed. A mouse or pen resting on the wrapped content
+// opens it, as does keyboard focus on a control inside; it adds no tab stop
+// of its own. It is measured into the viewport, takes no pointer events,
+// and closes on leave, blur, scroll, or Escape. No native title attribute
+// competes with it.
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 export interface TipLine {
@@ -16,23 +21,19 @@ const MARGIN = 8;
 const GAP = 6;
 const SHOW_DELAY_MS = 200;
 
-interface Placement {
-  left: number;
-  top: number | null;
-  bottom: number | null;
-  host: HTMLElement;
-}
-
-const place = (anchor: Element): Placement => {
-  const rect = anchor.getBoundingClientRect();
-  const vw = document.documentElement.clientWidth;
-  const vh = document.documentElement.clientHeight;
-  const width = Math.min(MAX_WIDTH, vw - MARGIN * 2);
-  const left = Math.max(MARGIN, Math.min(rect.left, vw - width - MARGIN));
-  const host = anchor.closest<HTMLElement>("dialog[open]") ?? document.body;
-  return rect.bottom + GAP + 120 > vh
-    ? { left, top: null, bottom: Math.max(MARGIN, vh - rect.top + GAP), host }
-    : { left, top: rect.bottom + GAP, bottom: null, host };
+/** Where the tip goes once its own size is known: under the anchor, else
+ *  over it, else wherever it fits, always inside the viewport. */
+export const placeTip = (
+  anchor: { left: number; top: number; bottom: number },
+  tip: { width: number; height: number },
+  view: { width: number; height: number },
+): { left: number; top: number } => {
+  const left = Math.max(MARGIN, Math.min(anchor.left, view.width - tip.width - MARGIN));
+  const below = anchor.bottom + GAP;
+  const above = anchor.top - GAP - tip.height;
+  const top =
+    below + tip.height <= view.height - MARGIN ? below : above >= MARGIN ? above : Math.max(MARGIN, Math.min(below, view.height - tip.height - MARGIN));
+  return { left, top };
 };
 
 /** Keyboard focus opens a tip; focus that a click or a dialog's opening
@@ -60,39 +61,57 @@ export const TipBody = ({ lines }: { lines: readonly TipLine[] }) => (
 export const TIP_SURFACE =
   "pointer-events-none rounded-xl border border-hair bg-paper-pure px-3 py-2 text-left font-normal normal-case tracking-normal text-ink shadow-[var(--surface-shadow)]";
 
+interface Opened {
+  anchor: { left: number; top: number; bottom: number };
+  host: HTMLElement;
+}
+
 export const HoverTip = ({
   lines,
   children,
-  focusable = true,
+  focusable = false,
   block = false,
 }: {
   lines: readonly TipLine[];
   children: ReactNode;
-  /** False when the child is already a tab stop; the wrapper then listens to
-   *  its focus instead of adding a second stop. */
+  /** Deprecated: a hint never needs a tab stop of its own. True still adds
+   *  one for callers that have not moved their content inline yet. */
   focusable?: boolean;
   block?: boolean;
 }) => {
   const id = useId();
   const ref = useRef<HTMLElement | null>(null);
+  const tipRef = useRef<HTMLDivElement | null>(null);
   const timer = useRef<number | null>(null);
-  const [at, setAt] = useState<Placement | null>(null);
+  const [opened, setOpened] = useState<Opened | null>(null);
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
 
   const hide = useCallback(() => {
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = null;
+    setOpened(null);
     setAt(null);
   }, []);
 
   const show = useCallback((delay: number) => {
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
-      if (ref.current !== null) setAt(place(ref.current));
+      const el = ref.current;
+      if (el === null) return;
+      const r = el.getBoundingClientRect();
+      setOpened({ anchor: { left: r.left, top: r.top, bottom: r.bottom }, host: el.closest<HTMLElement>("dialog[open]") ?? document.body });
     }, delay);
   }, []);
 
+  // Measured before paint, so the tip never shows outside the viewport.
+  useLayoutEffect(() => {
+    if (opened === null || tipRef.current === null) return;
+    const t = tipRef.current.getBoundingClientRect();
+    setAt(placeTip(opened.anchor, { width: t.width, height: t.height }, { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }));
+  }, [opened]);
+
   useEffect(() => {
-    if (at === null) return undefined;
+    if (opened === null) return undefined;
     // An open tip owns Escape: it closes the tip and nothing behind it, so
     // a dialog under the tip stays open.
     const onKey = (e: KeyboardEvent) => {
@@ -107,7 +126,7 @@ export const HoverTip = ({
       window.removeEventListener("keydown", onKey, true);
       window.removeEventListener("scroll", hide, true);
     };
-  }, [at, hide]);
+  }, [opened, hide]);
 
   useEffect(() => hide, [hide]);
 
@@ -118,8 +137,12 @@ export const HoverTip = ({
         ref.current = el;
       }}
       tabIndex={focusable ? 0 : undefined}
-      aria-describedby={at !== null ? id : undefined}
-      onPointerEnter={() => show(SHOW_DELAY_MS)}
+      aria-describedby={opened !== null ? id : undefined}
+      onPointerEnter={(e) => {
+        // A touch has no resting pointer; a tap means the control's own
+        // action, never a hint.
+        if (e.pointerType === "mouse" || e.pointerType === "pen") show(SHOW_DELAY_MS);
+      }}
       onPointerLeave={hide}
       onFocus={(e) => {
         if (keyboardFocus(e.target)) show(0);
@@ -128,17 +151,18 @@ export const HoverTip = ({
       className={`${block ? "block" : "inline-flex"} max-w-full rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue`}
     >
       {children}
-      {at !== null
+      {opened !== null
         ? createPortal(
             <div
+              ref={tipRef}
               id={id}
               role="tooltip"
               className={`motion-popover-in fixed z-[60] ${TIP_SURFACE}`}
-              style={{ left: at.left, top: at.top ?? undefined, bottom: at.bottom ?? undefined, maxWidth: MAX_WIDTH }}
+              style={{ left: at?.left ?? 0, top: at?.top ?? 0, maxWidth: `min(${MAX_WIDTH}px, calc(100vw - ${MARGIN * 2}px))`, visibility: at === null ? "hidden" : undefined }}
             >
               <TipBody lines={lines} />
             </div>,
-            at.host,
+            opened.host,
           )
         : null}
     </Tag>

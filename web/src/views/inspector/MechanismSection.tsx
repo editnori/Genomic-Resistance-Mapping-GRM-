@@ -16,7 +16,6 @@ const groupColumns: Column<GroupRow>[] = [
   {
     id: "rule",
     header: "Counts for the rule",
-    tip: [{ term: "Counts for the rule", text: "Whether the gene's class or subclass satisfies the catalog rule for this drug." }],
     sortValue: (g) => (g.counts_for_rule ? 1 : 0),
     cell: (g) => (g.counts_for_rule ? "Yes" : <span className="text-muted-text">No</span>),
   },
@@ -154,6 +153,9 @@ export const MechanismSection = ({ r }: { r: DatasetReport }) => {
         <div className="mt-8">
           <h3 className="mb-3 text-body font-semibold text-ink">Catalog gene groups</h3>
           <DataTable label="Catalog gene groups" rows={cat.groups} columns={groupColumns} rowKey={(g) => g.group} initialSort={{ id: "r", dir: "desc" }} empty={<p className="type-note">No catalog gene occurs in these isolates.</p>} />
+          {cat.groups.length === 0 ? null : (
+            <p className="type-note mt-2">Counts for the rule says whether the gene&apos;s class or subclass satisfies the known-gene rule for this drug; a carrier of any such gene is called resistant.</p>
+          )}
         </div>
       )}
     </Section>

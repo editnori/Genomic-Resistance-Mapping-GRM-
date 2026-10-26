@@ -64,6 +64,51 @@ describe("dataset inspector audit", () => {
   });
 });
 
+describe("dataset inspector in plain words", () => {
+  // The report cache keys on the dataset path, so each test opens a fixture
+  // report under an id no other test uses.
+  const copy = (k: number): CatalogRow => ({ ...manifest.datasets[k]!, id: `plain-words-${k}` });
+  const served = (k: number, extra: Record<string, unknown> = {}) => ({ ...(fixtureFile(`/data/datasets/${manifest.datasets[k]!.id}.json`) as Record<string, unknown>), id: `plain-words-${k}`, ...extra });
+  const passing = { revision: 7, valid: true, reasons: [], scope: "Internal cross-validation only." };
+
+  it("states a passing audit in the header as text, with no chip to hover and no provisional note", async () => {
+    const d = copy(0);
+    await mount(d.id, served(0, { evaluation: passing }), { ...manifest, evaluation_revision: 7, datasets: [{ ...d, evaluation: passing }] });
+    const header = document.querySelector("header p")!;
+    expect(header.textContent).toContain("Internal cross-validation only");
+    expect(header.querySelector('[tabindex="0"]')).toBeNull();
+    expect(document.querySelector('[role="note"]')).toBeNull();
+  });
+
+  it("lists the learner settings a report records in its Method and coverage fold", async () => {
+    const d = copy(1);
+    const eval_config = {
+      folds: 5,
+      inner_folds: 3,
+      scm_max_rules: 6,
+      cart_max_depth: 8,
+      forest: { n_trees: 200, subsample: 0.632, max_depth: 30, min_leaf: 1 },
+      gbt: { rounds: 400, learning_rate: 0.1, max_depth: 4, lambda: 1, min_child_weight: 1, colsample: 0.5, patience: 25 },
+      screened_features: 4000,
+      lasso_lambdas: 30,
+      seed: 42,
+    };
+    await mount(d.id, served(1, { eval_config }), { ...manifest, datasets: [d] });
+    const { text } = await readInspector();
+    expect(text).toContain("Cross-validation5 outer folds; 3 inner folds for tuning");
+    expect(text).toContain("Random forest200 trees, each on 63% of the isolates, depth up to 30, at least 1 per leaf");
+    expect(text).toContain("Gradient boostingUp to 400 rounds at learning rate 0.1, depth up to 4, each tree on 50% of the features, stopping after 25 rounds without gain");
+    expect(text).toContain("Lasso30 penalties tried on 4,000 screened features");
+  });
+
+  it("says when a report saved no learner settings", async () => {
+    const d = copy(2);
+    await mount(d.id, served(2), { ...manifest, datasets: [d] });
+    const { text } = await readInspector();
+    expect(text).toContain("Learner settingsNot saved with this report");
+  });
+});
+
 describe("dataset inspector method fold", () => {
   /** The inspector's text with the Method and coverage fold open, for the
    *  dataset's fixture report with counts.k set to `k`, or removed. */

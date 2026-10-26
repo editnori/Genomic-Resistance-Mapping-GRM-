@@ -281,6 +281,13 @@
     border-top: 0;
   }
 
+  /* Datasets prints its table key between the search row and the table.
+     Give the docked rail the same offset so its first question starts on
+     the table-header line; the sheet has no table key beside it. */
+  [data-view-options-mode='inline'] .filter-rail-body > .filter-group:first-child {
+    padding-top: 2.75rem;
+  }
+
   .filter-group-label {
     display: block;
     min-width: 0;
@@ -306,6 +313,37 @@
     min-width: 0;
   }
 
+  /* A checkbox group is a fieldset: no frame of its own, its legend set like
+     every other group label. */
+  fieldset.filter-group {
+    margin: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    min-inline-size: 0;
+  }
+
+  fieldset.filter-group > legend.filter-group-label {
+    float: left;
+    width: 100%;
+    padding: 0;
+  }
+
+  /* Padding, not margin: a margin after the floated legend collapses into
+     its clearance. */
+  fieldset.filter-group > legend.filter-group-label + .filter-group-body {
+    clear: both;
+    margin-top: 0;
+    padding-top: 0.75rem;
+  }
+
+  .filter-group[data-active='true'] > .filter-group-label {
+    color: rgb(var(--blue));
+  }
+
   .filter-field-label {
     display: block;
     min-width: 0;
@@ -318,6 +356,60 @@
 
   .filter-field[data-active='true'] .filter-field-label {
     color: rgb(var(--blue));
+  }
+
+  /* A group's only control sits right under the group label. */
+  .filter-field-control.filter-field-control-only {
+    margin-top: 0;
+  }
+
+  /* Checkbox rows: the dropdowns' 28px height, a 16px native box, the label,
+     then the count it would return, right-aligned in tabular figures. */
+  .filter-checks > * + * {
+    margin-top: 0.25rem;
+  }
+
+  .filter-check {
+    display: flex;
+    min-width: 0;
+    min-height: 1.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.45;
+    color: rgb(var(--ink));
+    cursor: pointer;
+  }
+
+  .filter-check-box {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    margin: 0;
+    accent-color: rgb(var(--blue));
+    cursor: pointer;
+  }
+
+  .filter-check-count {
+    flex-shrink: 0;
+    font-size: 0.71875rem;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--muted-text));
+  }
+
+  .filter-check:has(.filter-check-box:checked) {
+    color: rgb(var(--blue));
+  }
+
+  /* Dataset identity: species and drug class wrap to two lines at most; the
+     class comes last, so it is what the ellipsis cuts. */
+  .dataset-sub {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
   }
 
   .filter-field-hint {
@@ -352,18 +444,28 @@
     min-height: 1.75rem;
   }
 
-  .filter-pill-row {
-    display: flex;
-    min-width: 0;
-    flex-wrap: wrap;
-    gap: 0.375rem;
+  /* A small inline control (a +N count, a details link) keeps a 24px target
+     for a fine pointer; the touch rule below, later in this layer, wins. */
+  .ui-target-24 {
+    min-width: 1.5rem;
+    min-height: 1.5rem;
   }
 
   /* Touch input gets the full 44px target without making the desktop bar
-     heavier. */
+     heavier: controls, the rail's selects, and every row of an open
+     listbox. */
   @media (pointer: coarse) {
     .ui-control-target {
       min-width: 44px;
+      min-height: 44px;
+    }
+
+    .filter-field-control [role='combobox'] {
+      height: 44px;
+      min-height: 44px;
+    }
+
+    [role='listbox'] > [role='option'] {
       min-height: 44px;
     }
   }
@@ -412,6 +514,12 @@
   scrollbar-color: var(--hair) transparent;
 }
 
+/* A view keeps its scrollbar's room whether or not it scrolls, so a short
+   filtered table lays out at the same width as a long one. */
+[data-view-scroll] {
+  scrollbar-gutter: stable;
+}
+
 [data-view-scroll]::-webkit-scrollbar,
 [data-modal-scroll-owner]::-webkit-scrollbar,
 .scroll-thin::-webkit-scrollbar {
@@ -436,12 +544,140 @@ header + main.border-t {
   max-width: 60ch;
 }
 
-/* Forced colors drop fills; a judged cell keeps its words and gets an
-   outline so it still reads as judged. */
+/* ---- Wide content in a scroll frame ----------------------------------------
+   Where the content is wider than its frame, each side with more fades into
+   the surface, a sticky first column takes a shadow once cells pass under
+   it, and on touch or narrow screens, where the native scrollbar hides, a
+   thin bar under the frame shows the visible share and where it sits. */
+
+.scroll-frame {
+  --frame-fade: rgb(var(--paper));
+}
+
+dialog .scroll-frame {
+  --frame-fade: rgb(var(--paper-pure));
+}
+
+.scroll-frame::before,
+.scroll-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 1.5rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.scroll-frame::before {
+  left: 0;
+  background: linear-gradient(to right, var(--frame-fade), transparent);
+}
+
+.scroll-frame::after {
+  right: 0;
+  background: linear-gradient(to left, var(--frame-fade), transparent);
+}
+
+.scroll-frame[data-scroll-x='start']::after,
+.scroll-frame[data-scroll-x='middle']::after,
+.scroll-frame[data-scroll-x='middle']::before,
+.scroll-frame[data-scroll-x='end']::before {
+  opacity: 1;
+}
+
+/* A sticky first column already holds the left edge: it casts a shadow
+   instead of the fade. */
+.scroll-frame:has(.sticky-first)::before {
+  display: none;
+}
+
+.scroll-frame[data-scroll-x='middle'] .sticky-first,
+.scroll-frame[data-scroll-x='end'] .sticky-first {
+  box-shadow: 1px 0 0 var(--hair), 8px 0 10px -8px rgb(0 0 0 / 0.22);
+}
+
+/* The bar rides the bottom of the view while any of the frame is in it, so
+   a tall table shows its position where the reader is, not 25 rows down. */
+.scroll-cue {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding: 0.375rem 0;
+  background: var(--frame-fade);
+}
+
+.scroll-cue-track {
+  position: relative;
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--hair);
+}
+
+.scroll-cue-thumb {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: rgb(var(--muted-text));
+}
+
+.scroll-frame:has(> .scroll-cue)::before,
+.scroll-frame:has(> .scroll-cue)::after {
+  bottom: calc(3px + 0.75rem);
+}
+
+@media (pointer: fine) and (min-width: 1024px) {
+  .scroll-cue {
+    display: none;
+  }
+
+  .scroll-frame:has(> .scroll-cue)::before,
+  .scroll-frame:has(> .scroll-cue)::after {
+    bottom: 0;
+  }
+}
+
+/* A heading or section that takes focus after a move (Back, a section
+   link) shows the ring only when the keyboard moved it. */
+[data-focus-target]:focus {
+  outline: none;
+}
+
+[data-focus-target]:focus-visible {
+  outline: 2px solid rgb(var(--blue));
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Forced colors drop fills and tints: a judged value keeps its words and
+   its check mark, the scroll bar draws in system colors, and the fades,
+   which would only paint over text, go. */
 @media (forced-colors: active) {
-  [data-verdict] {
-    outline: 1px solid CanvasText;
-    outline-offset: -1px;
+  .scroll-frame::before,
+  .scroll-frame::after {
+    display: none;
+  }
+
+  .scroll-cue {
+    forced-color-adjust: none;
+    background: Canvas;
+  }
+
+  .scroll-cue-track {
+    background: GrayText;
+  }
+
+  .scroll-cue-thumb {
+    background: CanvasText;
+  }
+
+  [data-verdict='meets'] svg {
+    color: CanvasText;
   }
 }
 

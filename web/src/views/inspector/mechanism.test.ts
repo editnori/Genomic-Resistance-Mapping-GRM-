@@ -68,6 +68,15 @@ describe("probe assay wording", () => {
   });
 });
 
+describe("catalog gene groups", () => {
+  it("defines Counts for the rule in view, not in a hover on its header", () => {
+    expect(report.catalog!.groups.length).toBeGreaterThan(0);
+    const html = render(report);
+    expect(html).toContain("Counts for the rule says whether the gene");
+    expect(html).not.toContain('role="tooltip"');
+  });
+});
+
 describe("catalog baseline wording", () => {
   it("names GRM's catalog-containment rule and gives the AMRFinderPlus catalog only as its source", () => {
     const version = report.catalog!.version;

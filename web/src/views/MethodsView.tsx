@@ -1,33 +1,57 @@
-// Data & Methods: the evaluation audit, where every number comes from, how
-// the learners are judged, and each limit beside the definition it
-// qualifies. Funnel counts sit on bar tracks, so each share reads at a glance.
+// Data & Methods: how the analysis works and where it can fail, in four
+// linear sections. Which labels count and which genomes are in, with the
+// curation funnel Overview's counts link to; the models and how they are
+// evaluated; how to read each score; and the scope, limits, and audit of the
+// evidence. Every count comes from the manifest or the corpus file at render
+// time; learner settings and fitted details stay in each dataset's report.
 
-import { useState, type ReactNode } from "react";
-import type { Corpus, DrugNameRow, Manifest } from "../data/schema";
-import { capitalize, int, median, mgL, pct, plural, speciesShort } from "../data/format";
+import { useEffect, useState, type ReactNode } from "react";
+import type { Corpus, Manifest } from "../data/schema";
+import { capitalize, int, pct, plural, speciesShort } from "../data/format";
 import { loadErrorText, useCorpus } from "../data/load";
 import { manifestAudit, nullFitWords } from "../data/derive/evaluation";
-import { classMinimum, datasetRule } from "../data/derive/overview";
+import { classMinimum } from "../data/derive/overview";
 import { notScored } from "../data/derive/tests";
-import { DataTable, type Column } from "../ui/DataTable";
-import { FOCUS_RING, PanelState, ScrollFrame, Section, Segmented, VIEW_SHELL } from "../ui/primitives";
-import { ReportStatus } from "../app/ReportStatus";
+import { FOCUS_RING, PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitives";
 import { ViewHeader } from "../ui/ViewHeader";
-import { HoverTip } from "../ui/HoverTip";
 import { YearColumns } from "../charts/YearColumns";
+import { minimumSentence, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK } from "./findings";
 
-/** The step that resolved one name component, in words. */
-export const sourceWords = (source: string): string => {
-  if (source === "sigdrug:vocabulary") return "SigDrug vocabulary";
-  if (source.startsWith("sigdrug:")) return "SigDrug folds";
-  if (source === "grm:vocabulary") return "GRM vocabulary";
-  if (source === "grm:override") return "GRM override";
-  const edit = /^grm:edit-distance-(\d+)$/.exec(source);
-  if (edit !== null) return `Edit distance ${edit[1]}`;
-  return source === "unresolved" ? "Unresolved" : source;
-};
+/** The anchors other views link to. */
+export const METHODS_ANCHORS = { funnel: "m-funnel", audit: "m-audit", limits: "m-limits" } as const;
 
-const KIND_WORD: Record<DrugNameRow["kind"], string> = { drug: "Drug", class: "Class label", excluded: "Not an antibiotic", unresolved: "Unresolved" };
+const P = ({ children }: { children: ReactNode }) => <p className="prose-measure text-body text-ink">{children}</p>;
+
+const MethodsSection = ({ id, n, title, children }: { id: string; n: number; title: string; children: ReactNode }) => (
+  <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-6 border-t border-hair pt-7">
+    <SectionHeading id={id} n={n}>
+      {title}
+    </SectionHeading>
+    <div className="mt-4 space-y-4">{children}</div>
+  </section>
+);
+
+/** A part of a section, under its own heading; a link can land on it. */
+const Part = ({ id, title, children }: { id?: string; title: string; children: ReactNode }) => (
+  <div id={id} className="scroll-mt-6 space-y-3 pt-2">
+    <h3 tabIndex={id === undefined ? undefined : -1} className={`rounded-sm text-body font-semibold text-ink ${FOCUS_RING}`}>
+      {title}
+    </h3>
+    {children}
+  </div>
+);
+
+/** A term and its role, in a sentence or two. */
+const Def = ({ term, children }: { term: string; children: ReactNode }) => (
+  <div className="border-b border-hair py-3">
+    <dt className="text-control font-semibold text-ink">{term}</dt>
+    <dd className="prose-measure mt-1 text-note text-ink">{children}</dd>
+  </div>
+);
+
+const Defs = ({ children }: { children: ReactNode }) => <dl className="grid grid-cols-1 gap-x-12 border-t border-hair lg:grid-cols-2">{children}</dl>;
+
+// ---- 1 labels and inclusion -----------------------------------------------------------
 
 /** A count's length on a track of the whole: blue for what was kept, grey
  *  for what was set aside. */
@@ -71,53 +95,17 @@ const StageTable = ({ label, stages, whole }: { label: string; stages: Stage[]; 
   </ScrollFrame>
 );
 
+/** The curation funnel: pairs, genomes, and the records set aside before
+ *  pairing, each table with its sum in words. */
 const Funnel = ({ manifest }: { manifest: Manifest }) => {
   const f = manifest.funnel;
   const failed = Object.values(f.genomes_failed_qc).reduce((a, b) => a + b, 0);
-  const curated = manifest.species.reduce((a, s) => a + s.datasets_curated, 0);
   const genomesAdd = f.genomes_without_metadata + failed + f.genomes_passing_qc === f.genomes_with_records;
   return (
-    <Section
-      id="m-funnel"
-      title="Curation funnel"
-      answer={`${int(f.records)} BV-BRC lab records became ${int(f.pairs_reported)} genome and antibiotic pairs with a reported resistant or susceptible call on ${int(f.genomes_passing_qc)} genomes that passed QC, and ${plural(curated, "curated dataset")}, ${int(manifest.datasets.length)} with a report.`}
-    >
-      <div className="grid grid-cols-1 gap-x-12 gap-y-8 xl:grid-cols-2">
-        <div>
-          <h3 className="mb-2 text-control font-semibold text-ink">Records set aside before pairing</h3>
-          <StageTable
-            label="Records set aside"
-            whole={f.records}
-            stages={[
-              { label: "Name is a drug class, not a drug", count: f.records_class_label, tone: "dropped", note: "For example “beta-lactam”." },
-              { label: "Name is not an antibiotic", count: f.records_not_antibiotic, tone: "dropped" },
-              { label: "Name could not be resolved", count: f.records_unresolved_name, tone: "dropped" },
-              { label: "No call and no MIC", count: f.records_no_measure, tone: "dropped" },
-            ]}
-          />
-          <p className="type-note mt-2">Shares are of all {int(f.records)} records. Records on genomes that failed QC are also set aside; they are counted by genome below.</p>
-        </div>
-        <div>
-          <h3 className="mb-2 text-control font-semibold text-ink">Genomes</h3>
-          <StageTable
-            label="Genomes"
-            whole={f.genomes_with_records}
-            stages={[
-              { label: "Passed QC", count: f.genomes_passing_qc, tone: "kept" },
-              { label: "No genome metadata", count: f.genomes_without_metadata, tone: "dropped" },
-              ...Object.entries(f.genomes_failed_qc)
-                .sort((a, b) => b[1] - a[1])
-                .map(([reason, count]): Stage => ({ label: `Failed QC: ${reason}`, count, tone: "dropped" })),
-            ]}
-          />
-          <p className="type-note mt-2">
-            {genomesAdd
-              ? `${int(f.genomes_with_records)} genomes with records = ${int(f.genomes_passing_qc)} passing + ${int(f.genomes_without_metadata)} without metadata + ${int(failed)} failing QC.`
-              : `${int(f.genomes_with_records)} genomes had records.`}
-          </p>
-        </div>
-        <div className="xl:col-span-2">
-          <h3 className="mb-2 text-control font-semibold text-ink">Genome and antibiotic pairs</h3>
+    <Part id={METHODS_ANCHORS.funnel} title="Curation funnel">
+      <div className="grid grid-cols-1 gap-x-12 gap-y-6 xl:grid-cols-2">
+        <div id="m-pairs" className="xl:col-span-2">
+          <h4 className="mb-2 text-control font-semibold text-ink">Genome–antibiotic pairs</h4>
           <StageTable
             label="Pairs"
             whole={f.pairs}
@@ -135,125 +123,153 @@ const Funnel = ({ manifest }: { manifest: Manifest }) => {
             ]}
           />
           <p className="type-note mt-2">
-            {int(f.pairs)} pairs = {int(f.pairs_reported)} reported + {int(f.pairs_labeled_from_mic)} from MIC + {int(f.pairs_conflict)} conflicting + {int(f.pairs_intermediate_only)} intermediate + {int(f.pairs_unlabeled)} unlabeled. A dataset needs {datasetRule(classMinimum(manifest.datasets))}.
+            {int(f.pairs)} pairs = {int(f.pairs_reported)} reported + {int(f.pairs_labeled_from_mic)} from MIC + {int(f.pairs_conflict)} conflicting + {int(f.pairs_intermediate_only)} intermediate + {int(f.pairs_unlabeled)} unlabeled.
           </p>
         </div>
-      </div>
-    </Section>
-  );
-};
-
-const nameColumns: Column<DrugNameRow>[] = [
-  { id: "raw", header: "Name as submitted", sortValue: (r) => r.raw.toLowerCase(), firstDir: "asc", cell: (r) => <span className="whitespace-normal break-words">{r.raw}</span> },
-  { id: "canonical", header: "Canonical name", sortValue: (r) => r.canonical, firstDir: "asc", cell: (r) => r.canonical },
-  { id: "kind", header: "Kind", sortValue: (r) => r.kind, firstDir: "asc", cell: (r) => <span className={r.kind === "drug" ? "" : "text-muted-text"}>{KIND_WORD[r.kind]}</span> },
-  { id: "records", header: "Records", align: "right", sortValue: (r) => r.records, cell: (r) => int(r.records) },
-  {
-    id: "steps",
-    header: "Resolved by",
-    // Wide enough for one component per line; on a phone the table scrolls
-    // sideways instead of stacking each word.
-    className: "min-w-[18rem]",
-    tip: [{ term: "Resolved by", text: "The step that resolved each component: SigDrug vocabulary, SigDrug folds, GRM vocabulary, GRM override, edit distance, or unresolved." }],
-    cell: (r) =>
-      r.components.length === 0 ? (
-        <span className="text-muted-text">Whole-name match</span>
-      ) : (
-        <span className="flex flex-col gap-0.5">
-          {r.components.map((c, i) => (
-            <span key={i} className="whitespace-normal">
-              <span className="text-muted-text">{c.text}</span> → {c.canonical}{" "}
-              <HoverTip focusable={false} lines={[{ term: sourceWords(c.source), source: c.source }]}>
-                <span className={`text-tiny ${c.source === "unresolved" ? "font-semibold text-ink" : "text-muted-text"}`}>{sourceWords(c.source)}</span>
-              </HoverTip>
-            </span>
-          ))}
-        </span>
-      ),
-  },
-];
-
-type KindFilter = "all" | DrugNameRow["kind"];
-
-const Names = ({ corpus, manifest }: { corpus: Corpus; manifest: Manifest }) => {
-  const [kind, setKind] = useState<KindFilter>("all");
-  const [query, setQuery] = useState("");
-  const names = corpus.drug_names;
-  const q = query.trim().toLowerCase();
-  const rows = names.filter((r) => (kind === "all" || r.kind === kind) && (q === "" || `${r.raw} ${r.canonical}`.toLowerCase().includes(q)));
-  const total = names.reduce((a, r) => a + r.records, 0);
-  const drugRecords = names.filter((r) => r.kind === "drug").reduce((a, r) => a + r.records, 0);
-  const bySource = new Map<string, number>();
-  names.forEach((r) => r.components.forEach((c) => bySource.set(sourceWords(c.source), (bySource.get(sourceWords(c.source)) ?? 0) + 1)));
-  const count = (k: DrugNameRow["kind"]) => names.filter((r) => r.kind === k).length;
-  return (
-    <Section
-      id="m-names"
-      title="Antibiotic name resolution"
-      answer={`${int(count("drug"))} of ${plural(names.length, "distinct name")} resolve to a drug, covering ${pct(total === 0 ? 0 : drugRecords / total)} of their records; ${int(count("unresolved"))} ${count("unresolved") === 1 ? "stays" : "stay"} unresolved.`}
-    >
-      <p className="type-note -mt-1 mb-3">
-        Components resolved per step: {[...bySource.entries()].sort((a, b) => b[1] - a[1]).map(([s, n]) => `${s} ${int(n)}`).join(", ")}.
-        {manifest.name_vocabulary !== null ? ` Reference vocabulary: ${manifest.name_vocabulary}.` : ""} Combination names split at “/”, and inhibitor partners sort last.
-      </p>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <Segmented<KindFilter>
-          ariaLabel="Kind"
-          options={[
-            { id: "all", label: "All" },
-            { id: "drug", label: "Drugs" },
-            { id: "class", label: "Class labels" },
-            { id: "excluded", label: "Not antibiotics" },
-            { id: "unresolved", label: "Unresolved" },
-          ]}
-          value={kind}
-          onSelect={setKind}
-        />
-        <label className="min-w-[14rem] flex-1">
-          <span className="sr-only">Search names</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search names"
-            className={`ui-control-target h-8 w-full max-w-sm rounded-md border border-hair bg-paper-pure px-3 text-control text-ink placeholder:text-muted-text ${FOCUS_RING}`}
+        <div id="m-genomes">
+          <h4 className="mb-2 text-control font-semibold text-ink">Genomes and QC outcomes</h4>
+          <StageTable
+            label="Genomes"
+            whole={f.genomes_with_records}
+            stages={[
+              { label: "Passed QC", count: f.genomes_passing_qc, tone: "kept" },
+              { label: "No genome metadata", count: f.genomes_without_metadata, tone: "dropped" },
+              ...Object.entries(f.genomes_failed_qc)
+                .sort((a, b) => b[1] - a[1])
+                .map(([reason, count]): Stage => ({ label: `Failed QC: ${reason}`, count, tone: "dropped" })),
+            ]}
           />
-        </label>
-        {q !== "" || kind !== "all" ? <span className="text-control text-muted-text">{int(rows.length)} matching</span> : null}
+          <p className="type-note mt-2">
+            {genomesAdd
+              ? `${int(f.genomes_with_records)} genomes with records = ${int(f.genomes_passing_qc)} passing + ${int(f.genomes_without_metadata)} without metadata + ${int(failed)} failing QC.`
+              : `${int(f.genomes_with_records)} genomes had records.`}
+          </p>
+        </div>
+        <div id="m-records">
+          <h4 className="mb-2 text-control font-semibold text-ink">Records set aside before pairing</h4>
+          <StageTable
+            label="Records set aside"
+            whole={f.records}
+            stages={[
+              { label: "Name is a drug class, not a drug", count: f.records_class_label, tone: "dropped", note: "For example “beta-lactam”." },
+              { label: "Name is not an antibiotic", count: f.records_not_antibiotic, tone: "dropped" },
+              { label: "Name could not be resolved", count: f.records_unresolved_name, tone: "dropped" },
+              { label: "No call and no MIC", count: f.records_no_measure, tone: "dropped" },
+            ]}
+          />
+          <p className="type-note mt-2">Shares are of all {int(f.records)} BV-BRC records. Records on genomes that failed QC are also set aside; they are counted by genome.</p>
+        </div>
       </div>
-      <DataTable label="Antibiotic names" rows={rows} columns={nameColumns} rowKey={(r) => r.raw} initialSort={{ id: "records", dir: "desc" }} showAllMatches={q !== ""} empty={<p className="type-note">No name matches.</p>} />
-    </Section>
+    </Part>
   );
 };
 
-const Breakpoints = ({ corpus }: { corpus: Corpus }) => {
-  const rows = corpus.breakpoints;
-  type B = (typeof rows)[number];
-  const columns: Column<B>[] = [
-    { id: "antibiotic", header: "Antibiotic", sortValue: (r) => r.antibiotic, firstDir: "asc", cell: (r) => capitalize(r.antibiotic) },
-    { id: "species", header: "Species", sortValue: (r) => r.species, firstDir: "asc", cell: (r) => <i>{speciesShort(r.species)}</i> },
-    { id: "bp", header: "Resistant above", align: "right", sortValue: (r) => r.r_above_log2, cell: (r) => `${mgL(r.r_above_log2)} mg/L` },
-    { id: "agreement", header: "Agreement", align: "right", sortValue: (r) => r.agreement, cell: (r) => pct(r.agreement) },
-    { id: "n", header: "Isolates compared", align: "right", sortValue: (r) => r.n, cell: (r) => int(r.n) },
-    { id: "labels", header: "Labels from MIC", align: "right", sortValue: (r) => r.labels_from_mic, cell: (r) => int(r.labels_from_mic) },
-  ];
+const Labels = ({ manifest }: { manifest: Manifest }) => {
+  const { cap, capped } = selectionCap(manifest);
   return (
-    <Section
-      id="m-breakpoints"
-      title="Inferred MIC breakpoints"
-      answer={
-        rows.length === 0
-          ? "No breakpoint could be inferred."
-          : `${plural(rows.length, "breakpoint")} were inferred from isolates with both a reported call and an MIC; the median agrees with ${pct(median(rows.map((r) => r.agreement)))} of the calls it was fitted on.`
-      }
-    >
-      <DataTable label="Breakpoints" rows={rows} columns={columns} rowKey={(r) => `${r.species}|${r.antibiotic}`} initialSort={{ id: "labels", dir: "desc" }} empty={null} />
-      <p className="type-note mt-3">
-        The breakpoint is the dilution step whose calls agree best with the reported calls among isolates with both, fitted with at least 50 such isolates (10 of each call) and kept at 95% agreement or more. Censored MICs that fall on neither side count against agreement and get no label. These are empirical thresholds from the data, not CLSI or EUCAST breakpoints; no model trains or is scored on the labels they give.
-      </p>
-    </Section>
+    <MethodsSection id="m-labels" n={1} title="Labels and inclusion">
+      <P>
+        Every learner trains and is scored on genomes with an unconflicted reported resistant (R) or susceptible (S) lab call for the drug, and the known-gene rules, panels, and MIC
+        regression are scored on the same genomes. A genome and antibiotic pair with both an R and an S call is a conflict and gets no label; a pair with only intermediate calls is never
+        an R or S label.
+      </P>
+      <P>
+        A pair with an MIC but no reported call gets a label from an inferred breakpoint during curation, and no model trains or is scored on that label. A dataset report counts the labels
+        it left out in its Method and coverage fold; a report written before that count was added shows it as not recorded. The species view&apos;s resistance profiles and cross-resistance
+        use the consolidated labels, including those inferred from an MIC.
+      </P>
+      <P>
+        Each inferred breakpoint is the dilution step whose calls agree best with the reported calls among isolates with both, fitted with at least 50 such isolates (10 of each call) and
+        kept at 95% agreement or more; censored MICs that fall on neither side get no label. These are empirical thresholds from the data, not CLSI or EUCAST breakpoints.
+      </P>
+      <P>
+        Antibiotic names are resolved to one drug vocabulary. Records naming a drug class such as “beta-lactam”, a substance that is not an antibiotic, or a name that cannot be resolved
+        are set aside, as are records with neither a call nor an MIC.
+      </P>
+      <P>
+        A dataset is one species and one antibiotic. {minimumSentence(classMinimum(manifest.datasets))}{" "}
+        {capped
+          ? `Selection is capped at ${int(cap)} genomes per species when more are eligible, and QC and FASTA availability reduce some cohorts further.`
+          : "QC and FASTA availability decide which labeled genomes are selected."}
+      </P>
+      <Funnel manifest={manifest} />
+    </MethodsSection>
   );
 };
+
+// ---- 2 models and evaluation -----------------------------------------------------------
+
+const Models = ({ manifest }: { manifest: Manifest }) => (
+  <MethodsSection id="m-models" n={2} title="Models and evaluation">
+    <Defs>
+      <Def term="K-mer features">
+        {manifest.k === null
+          ? "Each genome is counted into k-mers with GRM's own counter. The published reports do not all record the same k, so each dataset's Method and coverage fold states its own."
+          : `Each genome is counted into its ${manifest.k}-mers with GRM's own counter.`}{" "}
+        K-mers with the same presence pattern across a species&apos; genomes are one feature, kept when enough isolates carry it.
+      </Def>
+      <Def term="Set covering machine (SCM)">A short set of presence and absence rules, chosen greedily as Kover does; it calls resistant when its rules hold and is read as written.</Def>
+      <Def term="Decision tree (CART)">A class-balanced tree of presence and absence splits.</Def>
+      <Def term="Random forest">Many randomized trees whose votes score each isolate between 0 and 1.</Def>
+      <Def term="Gradient-boosted trees">Trees added one at a time, each correcting the ones before; they score each isolate between 0 and 1.</Def>
+      <Def term="L1 logistic regression (lasso)">A sparse linear model on screened features.</Def>
+      <Def term="Known-gene rules">
+        GRM finds acquired genes of the AMRFinderPlus catalog ({manifest.amrfinder_version === "" ? "version not recorded" : manifest.amrfinder_version}) in each genome with its own k-mer
+        matching and applies its own fixed rule per drug: resistant when the genome carries a gene of a class or subclass that acts on the drug. The rule does not train. It does not run
+        the AMRFinderPlus program or test the point mutations AMRFinderPlus also describes, so mutational resistance counts against it.
+      </Def>
+      <Def term="Simulated PCR panels">
+        A gene panel calls resistant when the assembled genome carries any of its targets, which follow the manufacturers&apos; published target lists; a probe assay calls resistant when a
+        probed region differs from the wild-type sequence. Detection is in silico, from assembled genomes.
+      </Def>
+      <Def term="MIC regression">
+        Censored gradient-boosted regression on log2 dilution steps, fitted on the MICs of genomes with a reported call; a genome whose label was inferred from its MIC is left out. It
+        needs at least 100 isolates with an MIC, 50 of them exact.
+      </Def>
+      <Def term="Random split">Stratified 5-fold cross-validation, the scheme most published numbers use.</Def>
+      <Def term="Lineage-held-out split">
+        Whole lineages, clusters of genomes within a fixed Mash distance, go to one fold, so no test isolate has a near-identical relative in training. It runs when a dataset has at least
+        10 lineages and the folds can each hold resistant and susceptible isolates; otherwise the report says why. The drop from the random split estimates how much a score depends on
+        close relatives, for this sampled population. It does not remove every shortcut: a predictive k-mer can still mark a plasmid or a lineage that travels with the cause, and
+        lineages absent from BV-BRC are not tested.
+      </Def>
+    </Defs>
+    <p className="type-note">Each dataset&apos;s report gives its learner settings, the fitted rules and trees, and how its lineages were split.</p>
+  </MethodsSection>
+);
+
+// ---- 3 how to read scores ----------------------------------------------------------------
+
+const Scores = ({ manifest }: { manifest: Manifest }) => (
+  <MethodsSection id="m-scores" n={3} title="How to read scores">
+    <Defs>
+      <Def term="Balanced accuracy">The mean of sensitivity and specificity, over pooled out-of-fold predictions. A score of 0.5 or more calls resistant.</Def>
+      <Def term="Best learner">
+        The learner with the highest random-split balanced accuracy among those that call every isolate on every split that ran. The known-gene rule is a baseline, never a candidate.
+        Overview&apos;s figures use the best learner.
+      </Def>
+      <Def term="VME and ME">
+        Very major error (VME) is resistant isolates called susceptible, over the resistant isolates called; major error (ME) is susceptible isolates called resistant, over the
+        susceptible isolates called. They are read against FDA-style bars for susceptibility test devices, VME at most 1.5% and ME at most 3%, as a reference, not a regulatory claim.
+      </Def>
+      <Def term="Learner no-calls">{nullFitWords(manifest.evaluation_revision)}</Def>
+      <Def term="Probe no-calls">
+        A probe assay gives no call for an isolate whose genome carries none of its probe k-mers. That isolate is neither found nor missed: the panel&apos;s sensitivity and specificity
+        cover the isolates with a probe call, and the learner&apos;s shares still count it.
+      </Def>
+      <Def term="MIC essential agreement">
+        A prediction within one doubling dilution of an exact MIC, a single measured value rather than a bound such as “≤0.25”; 90% is the bar used for susceptibility test devices.
+        Calls from the predicted MIC use each training fold&apos;s own empirical threshold and are scored against the reported resistant and susceptible labels.
+      </Def>
+      <Def term="What each Overview figure counts">
+        The lineage figure draws datasets with both splits; the known-gene figure, datasets with a rule and a lineage-held-out result; the PCR panel, datasets with that panel and a best
+        learner; the MIC figure, datasets with an MIC model. Datasets with no best learner are left out of every median, and each figure states what it leaves out.
+      </Def>
+    </Defs>
+  </MethodsSection>
+);
+
+// ---- 4 scope, limitations and audit -------------------------------------------------------
 
 const BarList = ({ rows, label }: { rows: [string, number][]; label: string }) => {
   const max = Math.max(0, ...rows.map((r) => r[1]));
@@ -280,157 +296,148 @@ const BarList = ({ rows, label }: { rows: [string, number][]; label: string }) =
   );
 };
 
+/** Where the labeled isolates come from: country, year, laboratory method,
+ *  and testing standard, the sampling every score inherits. */
 const Sources = ({ corpus }: { corpus: Corpus }) => {
   const countries = corpus.countries.slice(0, 12);
   const totalCountry = corpus.countries.reduce((a, c) => a + c[1], 0);
   const years = [...corpus.years].sort((a, b) => a[0].localeCompare(b[0]));
   const top = corpus.countries[0];
   return (
-    <Section
-      id="m-sources"
-      title="Where the isolates come from"
-      answer={
-        top === undefined
+    <>
+      <p className="prose-measure text-note text-ink">
+        BV-BRC isolates over-represent outbreaks, some countries, and some years.{" "}
+        {top === undefined
           ? "No isolation country is recorded for the labeled genomes."
-          : `${top[0]} supplies ${pct(top[1] / Math.max(totalCountry, 1))} of labeled genomes with a recorded country${years.length > 0 ? `; collection years run from ${years[0]![0]} to ${years[years.length - 1]![0]}` : ""}.`
-      }
-    >
-      <p className="type-note mb-4">BV-BRC isolates over-represent outbreaks, some countries, and some years.</p>
-      <div className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-2">
+          : `${top[0]} supplies ${pct(top[1] / Math.max(totalCountry, 1))} of labeled genomes with a recorded country${years.length > 0 ? `; collection years run from ${years[0]![0]} to ${years[years.length - 1]![0]}` : ""}.`}
+      </p>
+      <div className="grid grid-cols-1 gap-x-12 gap-y-6 lg:grid-cols-2">
         <div>
-          <h3 className="mb-2 text-control font-semibold text-ink">Isolation country, labeled genomes</h3>
+          <h4 className="mb-2 text-control font-semibold text-ink">Isolation country, labeled genomes</h4>
           <BarList rows={countries} label="Countries" />
           {corpus.countries.length > countries.length ? <p className="type-note mt-2">Top {countries.length} of {int(corpus.countries.length)} countries.</p> : null}
         </div>
         <div>
-          <h3 className="mb-2 text-control font-semibold text-ink">Collection year, labeled genomes</h3>
+          <h4 className="mb-2 text-control font-semibold text-ink">Collection year, labeled genomes</h4>
           <YearColumns years={years} />
         </div>
         <div>
-          <h3 className="mb-2 text-control font-semibold text-ink">Laboratory method, records</h3>
+          <h4 className="mb-2 text-control font-semibold text-ink">Laboratory method, records</h4>
           <BarList rows={corpus.methods} label="Methods" />
         </div>
         <div>
-          <h3 className="mb-2 text-control font-semibold text-ink">Testing standard, records</h3>
+          <h4 className="mb-2 text-control font-semibold text-ink">Testing standard, records</h4>
           <BarList rows={corpus.standards} label="Standards" />
         </div>
       </div>
-    </Section>
+    </>
   );
 };
 
-const Def = ({ term, children }: { term: string; children: ReactNode }) => (
-  <div className="border-b border-hair py-3">
-    <dt className="text-control font-semibold text-ink">{term}</dt>
-    <dd className="prose-measure mt-1 text-note text-ink">{children}</dd>
-  </div>
-);
+const NO_SCOPE = "Internal cross-validation against reported lab calls; not external or clinical validation.";
 
-const Design = ({ manifest }: { manifest: Manifest }) => (
-  <Section id="m-design" title="Learners and evaluation">
-    <dl className="grid grid-cols-1 gap-x-12 lg:grid-cols-2">
-      <Def term="Labels">
-        Every learner trains and is scored on genomes with a reported resistant or susceptible lab call, and the catalog and panel comparisons are scored on the same genomes. A genome with an MIC but no reported call gets a label from the inferred breakpoint during curation, and no model trains or is scored on that label. A dataset report counts the labels it left out in its Method and coverage fold; a report written before that count was added shows it as not recorded. Calls come from different methods and standards across years, and breakpoints changed over time.
-      </Def>
-      <Def term="Features">
-        {manifest.k === null
-          ? "Each genome is counted into k-mers with GRM's own counter. The published reports do not all record the same k, so each dataset's Method and coverage fold states its own."
-          : `Each genome is counted into its ${manifest.k}-mers with GRM's own counter.`}{" "}
-        K-mers with the same presence pattern across a species&apos; genomes are one feature, kept when enough isolates carry it (each dataset&apos;s minimum is in its Method and coverage fold).
-      </Def>
-      <Def term="Set covering machine (SCM)">
-        A short conjunction or disjunction of presence and absence rules, chosen greedily, the model Kover uses. It gives a yes or no call and is read as written.
-      </Def>
-      <Def term="Decision tree (CART)">A class-balanced Gini tree on presence and absence, its depth chosen by inner cross-validation.</Def>
-      <Def term="Random forest and gradient boosting">200 randomized trees, and boosted trees with early stopping on a held-out slice; both score each isolate between 0 and 1.</Def>
-      <Def term="L1 logistic regression (lasso)">A sparse linear model on screened features, its penalty chosen on a held-out slice.</Def>
-      <Def term="Learner cross-check">
-        On seven small test fixtures and on the 868-isolate <i>E. coli</i> ceftriaxone dataset from an earlier report, run with the same learner code as this report, each of the five learners matched a reference implementation of the same model (scikit-learn, XGBoost, or a reimplementation of its documented rules) exactly or within that reference&apos;s own run-to-run noise.
-      </Def>
-      <Def term="Known-gene catalog">
-        The catalog-containment rule finds genes of the AMRFinderPlus catalog ({manifest.amrfinder_version === "" ? "version not recorded" : manifest.amrfinder_version}) by k-mer containment and applies a fixed rule per drug: resistant when the genome carries a gene of the classes or subclasses that act on that drug. It does not train. It does not test the point mutations AMRFinderPlus also describes, so mutational resistance counts against it.
-      </Def>
-      <Def term="Random split">Stratified 5-fold cross-validation, the scheme most published numbers use.</Def>
-      <Def term="Lineage-held-out split">
-        Whole lineages (MinHash clusters at a fixed Mash distance) go to one fold, so no test isolate has a near-identical relative in training. The difference from the random split estimates how much of the score depends on near-identical relatives in training, for this sampled population. It runs when a dataset has at least 10 lineages and the lineages can be split into folds that each hold both resistant and susceptible isolates; otherwise the report states why it is unavailable. A predictive k-mer can mark a lineage or a plasmid that travels with the cause; holding out lineages limits this association without removing it.
-      </Def>
-      <Def term="Balanced accuracy">The mean of sensitivity and specificity, over pooled out-of-fold predictions at a 0.5 threshold.</Def>
-      <Def term="Null fits">{nullFitWords(manifest.evaluation_revision)}</Def>
-      <Def term="VME and ME">
-        Very major error is resistant called susceptible, over all resistant isolates; major error is susceptible called resistant, over all susceptible. Both are judged against FDA-style bars for susceptibility test devices: VME at most 1.5% and ME at most 3%, and MIC essential agreement at least 90%.
-      </Def>
-      <Def term="MIC prediction">
-        Censored gradient-boosted regression on log2 dilution steps, fitted on the MICs of genomes with a reported call; a genome whose label was inferred from its MIC is left out. Essential agreement is a prediction within one doubling dilution of an exact MIC. Categorical calls from the predicted MIC use each training fold&apos;s own empirical threshold and are scored against the reported resistant and susceptible labels.
-      </Def>
-      <Def term="Simulated PCR panels">
-        A gene panel calls resistant when the assembled genome carries any of its targets, which follow the manufacturers&apos; published target lists; a probe assay calls resistant when a probed region differs from the wild-type sequence. Detection is in silico, from target presence in genomes.
-      </Def>
-      <Def term="Feature annotation">
-        A feature's k-mers are placed on a reference assembly that carries them and mapped to its gene annotation: the gene and codon range, or the nearest gene when the k-mers sit between genes, with the flanking sequence.
-      </Def>
-    </dl>
-  </Section>
-);
-
-const EvaluationAudit = ({ manifest }: { manifest: Manifest }) => {
-  const audit = manifestAudit(manifest);
-  return (
-    <Section
-      id="m-audit"
-      title="Evaluation audit"
-      answer={
-        audit.total === 0
-          ? "No dataset has a report yet."
-          : audit.invalid > 0
-            ? `${int(audit.invalid)} of ${plural(audit.total, "dataset evaluation")} do not pass the evaluation audit, so their metrics are provisional.`
-            : "Every dataset evaluation passes the internal evaluation audit."
-      }
-    >
-      {audit.total === 0 ? null : (
-        <p className="prose-measure text-note text-ink">
-          {audit.invalid > 0
-            ? `${audit.reasons.join(" ")} Passing audits cover internal cross-validation on these public genomes, not external or clinical validation.`
-            : (audit.scopes[0] ?? "That covers internal cross-validation against reported lab calls.")}
-        </p>
-      )}
-    </Section>
-  );
-};
-
-export const MethodsView = ({ manifest }: { manifest: Manifest }) => {
+const Scope = ({ manifest }: { manifest: Manifest }) => {
   const corpus = useCorpus();
+  const audit = manifestAudit(manifest);
+  const { cap, capped } = selectionCap(manifest);
   const unsupportedRows = manifest.unsupported_panels ?? [];
   const unsupported = [...new Set(unsupportedRows.map((u) => u.panel))].map((panel) => {
     const datasets = unsupportedRows.filter((u) => u.panel === panel);
     return { ...datasets[0]!, datasets };
   });
   return (
-    <div className={`${VIEW_SHELL} pb-16 pt-8`}>
-      <ViewHeader title="Data & Methods" status={<ReportStatus manifest={manifest} />} />
-      <div className="mt-8 space-y-10 border-t border-hair pt-6">
-        <EvaluationAudit manifest={manifest} />
-        <Funnel manifest={manifest} />
+    <MethodsSection id={METHODS_ANCHORS.limits} n={4} title="Scope, limitations and audit">
+      <Part id={METHODS_ANCHORS.audit} title="Evaluation audit">
+        <P>
+          {audit.total === 0
+            ? "No dataset has a report yet."
+            : audit.invalid > 0
+              ? `${int(audit.invalid)} of ${plural(audit.total, "dataset evaluation")} do not pass the evaluation audit, so their metrics are provisional.`
+              : `Every dataset evaluation passes the internal evaluation audit${manifest.evaluation_revision === undefined ? "" : ` (revision ${manifest.evaluation_revision})`}.`}
+        </P>
+        {audit.total === 0 ? null : audit.invalid > 0 ? (
+          <ul className="prose-measure list-disc space-y-0.5 pl-5 text-note text-ink">
+            {audit.reasons.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="prose-measure text-note text-ink">{audit.scopes[0] ?? NO_SCOPE}</p>
+        )}
+      </Part>
+      <Part title="Why this is not clinical validation">
+        <P>
+          Every score is internal cross-validation: it measures agreement with the calls BV-BRC reports, on genomes from the same public collection. The genomes are a selection
+          {capped ? `, at most ${int(cap)} per species in this run,` : ""} labeled by many laboratories with different methods and testing standards across years, while breakpoints
+          changed over time. No external, prospective, or clinical evaluation was done, so no number here is the performance of a diagnostic test.
+        </P>
+      </Part>
+      <Part id="m-sources" title="Where the isolates come from">
         {corpus.status === "loading" ? <PanelState kind="loading" title="Loading the corpus file" /> : null}
         {corpus.status === "error" ? <PanelState kind="error" title="The corpus file could not be read" message={loadErrorText(corpus.error)} /> : null}
-        {corpus.status === "ready" ? (
-          <>
-            <Names corpus={corpus.data} manifest={manifest} />
-            <Breakpoints corpus={corpus.data} />
-            <Sources corpus={corpus.data} />
-          </>
-        ) : null}
-        <Design manifest={manifest} />
-        {unsupported.length > 0 ? (
-          <Section id="m-unsupported" title="Assays not scored" answer={`${plural(unsupported.length, "assay")} ${unsupported.length === 1 ? "has" : "have"} no result on the datasets listed, so no sensitivity or specificity is reported for ${unsupported.length === 1 ? "it" : "them"}.`}>
+        {corpus.status === "ready" ? <Sources corpus={corpus.data} /> : null}
+      </Part>
+      <Part title="Learner cross-check">
+        <p className="prose-measure text-note text-ink">
+          On seven small test fixtures and on the 868-isolate <i>E. coli</i> ceftriaxone dataset from an earlier report, run with the same learner code as this report, each of the five
+          learners matched a reference implementation of the same model (scikit-learn, XGBoost, or a reimplementation of its documented rules) exactly or within that reference&apos;s own
+          run-to-run noise.
+        </p>
+      </Part>
+      {unsupported.length > 0 ? (
+        <Part id="m-unsupported" title="Assays not scored">
+          <p className="prose-measure text-note text-ink">
+            {plural(unsupported.length, "assay")} {unsupported.length === 1 ? "has" : "have"} no result on the datasets listed, so no sensitivity or specificity is reported for{" "}
+            {unsupported.length === 1 ? "it" : "them"}.
+          </p>
+          <ul className="space-y-3">
             {unsupported.map((a) => (
-              <article key={a.panel} className="border-t border-hair py-4">
-                <h3 className="text-body font-semibold text-ink">{a.name}</h3>
+              <li key={a.panel} className="border-t border-hair pt-3">
+                <p className="text-control font-semibold text-ink">{a.name}</p>
                 <p className="text-note text-muted-text">{a.datasets.map((d) => `${capitalize(d.antibiotic)} in ${speciesShort(d.species)}`).join(", ")}</p>
-                <p className="mt-2 text-body text-ink">{notScored(a.reason)}</p>
-              </article>
+                <p className="prose-measure mt-1 text-note text-ink">{notScored(a.reason)}</p>
+              </li>
             ))}
-          </Section>
-        ) : null}
+          </ul>
+        </Part>
+      ) : null}
+    </MethodsSection>
+  );
+};
+
+export const MethodsView = ({ manifest }: { manifest: Manifest }) => {
+  // Read once per mount: a link from another view lands on one section.
+  const [hash] = useState(() => (typeof window === "undefined" ? "" : decodeURIComponent(window.location.hash.slice(1))));
+  useEffect(() => {
+    if (hash !== "") showSection(hash);
+  }, [hash]);
+  return (
+    <div className={`${VIEW_SHELL} pb-16 pt-8`}>
+      <ViewHeader
+        title="Data & Methods"
+        status={
+          <ReportLine
+            manifest={manifest}
+            scope={
+              <a
+                href={`#${METHODS_ANCHORS.limits}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  showSection(METHODS_ANCHORS.limits, true);
+                }}
+                className={STATUS_LINK}
+              >
+                Internal cross-validation only
+              </a>
+            }
+          />
+        }
+      />
+      <div className="mt-10 space-y-12">
+        <Labels manifest={manifest} />
+        <Models manifest={manifest} />
+        <Scores manifest={manifest} />
+        <Scope manifest={manifest} />
       </div>
     </div>
   );

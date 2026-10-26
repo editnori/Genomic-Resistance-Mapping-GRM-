@@ -3,11 +3,10 @@
 // disabled with no hover promise).
 
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { barWords, verdictOf, type ReferenceBar } from "../data/metrics";
 import { pct } from "../data/format";
 import { GrmMark } from "../app/Mark";
-import { HoverTip } from "./HoverTip";
 
 export const FOCUS_RING =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue";
@@ -20,124 +19,37 @@ export const VIEW_SHELL = "mx-auto w-full max-w-[1560px] px-4 sm:px-6";
 /** An outlined pill action: Present, the inspector's actions, slide steps. */
 export const PILL_ACTION = `ui-control-target inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-hair bg-paper-pure px-3.5 text-control font-medium leading-none text-ink transition-[color,border-color,background-color,transform] duration-fast ease-out active:scale-[0.98] enabled:hover:border-blue enabled:hover:text-blue disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING}`;
 
-// ---- Lozenge: a state or data label, sentence case, four tones -------------
-
-export type LozengeTone = "ink" | "blue" | "coral" | "live";
-
-const LOZENGE_OUTLINE: Record<LozengeTone, string> = {
-  ink: "border-hair text-muted-text",
-  blue: "border-blue/40 text-blue",
-  coral: "border-coral/60 text-coral-text",
-  live: "border-live/60 text-live-text",
-};
-
-const LOZENGE_SOLID: Record<LozengeTone, string> = {
-  ink: "border-transparent bg-ink text-paper-pure",
-  blue: "border-transparent bg-blue text-paper-pure",
-  coral: "border-transparent bg-coral-text text-paper-pure",
-  live: "border-transparent bg-live-text text-paper-pure",
-};
-
-/** Outline names a scope or a data label; solid is a status or verdict the
- *  reader should act on. */
-export const Lozenge = ({
-  children,
-  tone = "ink",
-  fill = "outline",
-}: {
-  children: ReactNode;
-  tone?: LozengeTone;
-  fill?: "outline" | "solid";
-}) => (
-  <span
-    className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-tiny font-medium ${
-      fill === "solid" ? LOZENGE_SOLID[tone] : LOZENGE_OUTLINE[tone]
-    }`}
-  >
-    {children}
-  </span>
-);
-
 // ---- Verdict against a reference bar ---------------------------------------
 
-const BAR_SOURCE: Record<string, string> = {
-  VME: "FDA-style bars for susceptibility test devices: VME at most 1.5%, ME at most 3%. A reference, not a regulatory claim.",
-  ME: "FDA-style bars for susceptibility test devices: VME at most 1.5%, ME at most 3%. A reference, not a regulatory claim.",
-  "MIC agreement": "Essential agreement of at least 90% is the bar used for susceptibility test devices; a reference, not a performance claim.",
-};
+/** The check that marks a value meeting its bar, wherever a key explains it. */
+export const MeetsMark = ({ className = "" }: { className?: string }) => (
+  <Check aria-hidden="true" size={12} strokeWidth={2.75} className={`shrink-0 self-center ${className}`} />
+);
 
-/** A rate judged against a stated bar. The verdict reads by shape before
- *  colour: meeting the bar is a filled pill, missing it an outlined one. */
-export const BarPill = ({ value, bar }: { value: number; bar: ReferenceBar }) => {
+/** A rate judged against a stated bar, as plain text at the column's one
+ *  width: no border, fill or hover. Meeting the bar adds a check mark before
+ *  the digits (shape first, the live green second); a miss stays plain ink,
+ *  so the many ordinary misses read quietly. A screen reader hears the
+ *  verdict in words. */
+export const BarValue = ({ value, bar }: { value: number; bar: ReferenceBar }) => {
   const verdict = verdictOf(value, bar);
-  const text = pct(value);
   return (
-    <HoverTip
-      focusable={false}
-      lines={[
-        { term: `${bar.name} ${text}`, text: `${verdict === "meets" ? "Meets" : "Misses"} the bar: ${barWords(bar)}.` },
-        { source: BAR_SOURCE[bar.name] ?? "A reference bar, not a regulatory claim." },
-      ]}
-    >
-      <span
-        data-verdict={verdict}
-        className={`inline-flex whitespace-nowrap rounded-md px-1.5 py-px text-control font-medium tabular-nums ${
-          verdict === "meets" ? "bg-live-text text-paper-pure" : "text-coral-text ring-1 ring-inset ring-coral-text"
-        }`}
-      >
-        {text}
-        <span className="sr-only">
-          , {verdict === "meets" ? "meets" : "misses"} {barWords(bar)}
-        </span>
+    <span data-verdict={verdict} className={`inline-flex items-baseline justify-end gap-1 whitespace-nowrap tabular-nums ${verdict === "meets" ? "font-medium text-live-text" : ""}`}>
+      {verdict === "meets" ? <MeetsMark /> : null}
+      {pct(value)}
+      <span className="sr-only">
+        , {verdict} {barWords(bar)}
       </span>
-    </HoverTip>
+    </span>
   );
 };
+
+/** The former pill's name, for callers not yet renamed: the same plain text. */
+export const BarPill = BarValue;
 
 /** The same verdict in words, for prose: "VME 4.9%, misses at most 1.5%". */
 export const verdictWords = (value: number, bar: ReferenceBar): string =>
   `${bar.name} ${pct(value)}, ${verdictOf(value, bar) === "meets" ? "meets" : "misses"} ${barWords(bar)}`;
-
-// ---- Count pill: label plus a predicting count -----------------------------
-
-export const CountPill = ({
-  label,
-  count,
-  selected,
-  onToggle,
-  disabled = false,
-}: {
-  label: string;
-  count?: number;
-  selected: boolean;
-  onToggle(): void;
-  disabled?: boolean;
-}) => (
-  <button
-    type="button"
-    aria-pressed={selected}
-    disabled={disabled}
-    onClick={onToggle}
-    className={`ui-control-target inline-flex h-7 items-center gap-x-2 rounded-full border pl-3 text-control font-medium tracking-tight transition-[color,background-color,border-color,transform] duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING} ${
-      count !== undefined ? "pr-1" : "pr-3"
-    } ${
-      selected
-        ? "border-blue bg-blue text-paper-pure hover:bg-blue/90"
-        : "border-hair bg-paper-pure text-ink enabled:hover:border-blue/50 enabled:hover:bg-blue/5 enabled:hover:text-blue"
-    }`}
-  >
-    <span className="whitespace-nowrap">{label}</span>
-    {count !== undefined ? (
-      <span
-        className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-tiny tabular-nums ${
-          selected ? "bg-paper-pure text-ink" : "bg-surface-strong text-muted-text"
-        }`}
-      >
-        {count}
-      </span>
-    ) : null}
-  </button>
-);
 
 // ---- Segmented: a mode switch, ink-filled current segment ------------------
 
@@ -450,12 +362,75 @@ export const FactRows = ({ rows }: { rows: { label: string; value: ReactNode }[]
   </dl>
 );
 
-/** A keyboard-reachable horizontal scroll owner for wide tables and plots. */
-export const ScrollFrame = ({ children, label }: { children: ReactNode; label: string }) => (
-  <div role="region" aria-label={label} tabIndex={0} className={`scroll-thin relative overflow-x-auto overscroll-x-contain ${FOCUS_RING}`}>
-    {children}
-  </div>
-);
+/** A keyboard-reachable horizontal scroll owner for wide tables and plots.
+ *  When its content is wider than the frame it shows where the view sits: a
+ *  fade on each side that has more, a shadow on a sticky first column once
+ *  cells pass under it, and, on touch and narrow screens where the native
+ *  scrollbar hides, a thin position bar that rides the bottom of the view
+ *  while the frame is in it. */
+export const ScrollFrame = ({ children, label }: { children: ReactNode; label: string }) => {
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const thumbRef = useRef<HTMLSpanElement | null>(null);
+  const readRef = useRef<() => void>(() => {});
+  const [over, setOver] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    const frame = frameRef.current;
+    if (el === null || frame === null) return undefined;
+    let pending = 0;
+    // Written to the DOM directly, so scrolling never re-renders the table.
+    const read = () => {
+      pending = 0;
+      const max = el.scrollWidth - el.clientWidth;
+      const overflowing = max > 1;
+      setOver(overflowing);
+      frame.dataset.scrollX = !overflowing ? "none" : el.scrollLeft <= 1 ? "start" : el.scrollLeft >= max - 1 ? "end" : "middle";
+      const thumb = thumbRef.current;
+      if (thumb !== null && overflowing) {
+        thumb.style.width = `${(el.clientWidth / el.scrollWidth) * 100}%`;
+        thumb.style.left = `${(el.scrollLeft / el.scrollWidth) * 100}%`;
+      }
+    };
+    readRef.current = read;
+    const schedule = () => {
+      if (pending === 0) pending = window.requestAnimationFrame(read);
+    };
+    read();
+    el.addEventListener("scroll", schedule, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
+    observer?.observe(el);
+    if (el.firstElementChild !== null) observer?.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", schedule);
+      observer?.disconnect();
+      window.cancelAnimationFrame(pending);
+    };
+  }, []);
+
+  // The bar mounts once the content overflows; place its thumb at once.
+  useLayoutEffect(() => {
+    if (over) readRef.current();
+  }, [over]);
+
+  return (
+    // min-w-0: as a grid or flex item the frame may still shrink below its
+    // table, as the scroll region alone could.
+    <div ref={frameRef} className="scroll-frame relative min-w-0">
+      <div ref={scrollRef} role="region" aria-label={label} tabIndex={0} className={`scroll-thin relative overflow-x-auto overscroll-x-contain ${FOCUS_RING}`}>
+        {children}
+      </div>
+      {over ? (
+        <div aria-hidden="true" className="scroll-cue">
+          <span className="scroll-cue-track">
+            <span ref={thumbRef} className="scroll-cue-thumb" />
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 /** Legend entry: the swatch mirrors the mark, the name and value are text. */
 export const LegendItem = ({ swatch, name, value }: { swatch: ReactNode; name: string; value?: string }) => (

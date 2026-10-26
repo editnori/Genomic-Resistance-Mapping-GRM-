@@ -55,6 +55,7 @@ const speciesSlug = manifest.species.find(s => s.slug === 'escherichia_coli' && 
 const speciesName = manifest.species.find(s => s.slug === speciesSlug).species;
 const allValid = manifest.datasets.every(d => d.evaluation?.valid === true && (manifest.evaluation_revision === undefined || d.evaluation.revision === manifest.evaluation_revision));
 const CHIP = allValid ? 'Internal cross-validation only' : 'Provisional metrics';
+const isLimitsHref = href => href === '/#limits' || href === '#limits' || href === '#m-limits';
 const SLIDE_TITLES = ['Genomic Resistance Mapping', 'Corpus', 'Lineage cost', 'Known-gene catalog', null, 'MIC prediction', 'One interpretable rule'];
 
 const settle = async page => {
@@ -125,21 +126,25 @@ async function referenceChecks(page, tag, finding) {
   } else check(tag + ' finding ' + finding + ' reference positions', wanted.length === geometry.refs.length && wanted.every((x, i) => close(geometry.refs[i].x, x)), { wanted, actual: geometry.refs });
 }
 
-/** Judged cells read by shape before colour: a filled pill meets its bar,
- *  an outlined one misses it, and the text keeps 4.5:1 on what it sits on. */
+/** Judged values are plain text with accessible state words, not pills. */
 async function judgedCheck(page, tag) {
   const values = await page.locator('[data-verdict]').evaluateAll(cells => {
     const rgb = s => (s.match(/[\d.]+/g) ?? []).map(Number);
     const lum = c => c.slice(0, 3).map(x => { const v = x / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
-    const painted = e => { for (let n = e; n; n = n.parentElement) { const c = rgb(getComputedStyle(n).backgroundColor); if (c.length >= 3 && (c[3] ?? 1) > 0) return c; } return [255, 255, 255]; };
-    return [...new Map(cells.map(e => {
-      const s = getComputedStyle(e), own = rgb(s.backgroundColor), a = lum(rgb(s.color)), b = lum(painted(e));
-      const filled = own.length >= 3 && (own[3] ?? 1) > 0;
-      return [e.getAttribute('data-verdict'), { filled, ring: s.boxShadow !== 'none', radius: parseFloat(s.borderTopLeftRadius), ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) }];
-    })).entries()];
+    const painted = e => {
+      const layers = [];
+      for (let n = e; n; n = n.parentElement) { const c = rgb(getComputedStyle(n).backgroundColor); if (c.length >= 3) layers.push(c); }
+      const paper = rgb(getComputedStyle(document.documentElement).getPropertyValue('--paper'));
+      let under = paper.length >= 3 ? paper.slice(0, 3) : [255, 255, 255];
+      for (const c of layers.reverse()) { const a = c[3] ?? 1; under = under.map((v, i) => c[i] * a + v * (1 - a)); }
+      return under;
+    };
+    return cells.map(e => {
+      const s = getComputedStyle(e), a = lum(rgb(s.color)), b = lum(painted(e));
+      return { text: e.textContent.trim(), verdict: e.getAttribute('data-verdict'), border: s.borderTopWidth, shadow: s.boxShadow, radius: parseFloat(s.borderTopLeftRadius), ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) };
+    });
   });
-  const meets = values.find(([k]) => k === 'meets')?.[1], misses = values.find(([k]) => k === 'misses')?.[1];
-  check(tag + ' judged pills: filled meets, outlined misses, 4.5:1', meets?.filled === true && misses?.filled === false && misses?.ring === true && values.every(([, v]) => v.ratio >= 4.5 && v.radius >= 4), values);
+  check(tag + ' judged values are plain text with 4.5:1 contrast', values.length > 0 && values.every(v => v.border === '0px' && v.shadow === 'none' && v.radius === 0 && v.ratio >= 4.5), values);
 }
 
 /** The pill grammar: nav, Present, the theme toggle, and ghost actions are
@@ -161,14 +166,7 @@ async function edgeCheck(page, tag, selector) {
 }
 
 async function reachCheck(page, tag) {
-  const over = await page.evaluate(() => {
-    const root = document.querySelector('dialog[open] [data-modal-scroll-owner]') ?? document.querySelector('[data-view-scroll]');
-    const limit = root.getBoundingClientRect().right;
-    return [...root.querySelectorAll('[role="region"], [role="listbox"], table, svg:not(.grm-mark), canvas')]
-      .filter(e => e.getClientRects().length > 0 && (e.matches('[role="region"]') || !e.closest('[role="region"]:not(:scope)')))
-      .map(e => ({ tag: e.tagName, label: (e.getAttribute('aria-label') ?? '').slice(0, 50), right: Math.round(e.getBoundingClientRect().right), limit: Math.round(limit) }))
-      .filter(e => e.right > e.limit);
-  });
+  const over = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1 ? [{ width: innerWidth, scroll: document.documentElement.scrollWidth }] : []);
   check(tag + ' nothing reaches past the page edge', over.length === 0, over);
 }
 
@@ -178,10 +176,10 @@ async function headerCheck(page, tag, title) {
   const h = await page.evaluate(() => {
     const h1 = document.querySelector('[data-view-scroll] h1');
     const header = h1?.closest('header');
-    return { text: h1?.textContent, size: h1 ? parseFloat(getComputedStyle(h1).fontSize) : null, srOnly: h1?.classList.contains('sr-only') ?? null, status: header?.textContent ?? '' };
+    return { text: h1?.textContent, size: h1 ? parseFloat(getComputedStyle(h1).fontSize) : null, srOnly: h1?.classList.contains('sr-only') ?? null, status: header?.textContent ?? '', scopeHref: header?.querySelector('a[data-audit-status], a[href$="#limits"], a[href="#m-limits"]')?.getAttribute('href') ?? null };
   });
   check(tag + ' visible title', h.text === title && h.size === 32 && h.srOnly === false, h);
-  check(tag + ' status line with the audit chip and report date', h.status.includes(CHIP) && h.status.includes('Report built') && h.status.includes('BV-BRC lab records'), h.status);
+  check(tag + ' plain status line with scope and report date', h.status.includes(CHIP) && h.status.includes('Report built') && !h.status.includes('BV-BRC lab records') && isLimitsHref(h.scopeHref), h);
 }
 
 const scrollTo = async (page, selector) => {
@@ -189,7 +187,7 @@ const scrollTo = async (page, selector) => {
   await settle(page);
 };
 const activeName = page => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent?.trim());
-const slideNumber = async dialog => Number(((await dialog.getByRole('combobox', { name: /^Go to slide/ }).getAttribute('aria-label')) ?? '').match(/Go to slide: (\d+)/)?.[1] ?? NaN);
+const slideNumber = async dialog => Number(((await dialog.getByRole('combobox', { name: /^Go to slide/ }).textContent()) ?? '').trim().match(/^(\d+)/)?.[1] ?? NaN);
 const goSlide = async (page, dialog, index) => {
   await dialog.getByRole('button', { name: 'Close', exact: true }).focus();
   await page.keyboard.press('Home');
@@ -246,11 +244,9 @@ async function interactions(page, tag, width) {
   await headerCheck(page, tag + ' datasets', 'Datasets');
   await pillCheck(page, tag + ' datasets');
   await edgeCheck(page, tag + ' datasets', '[data-view-scroll] h1');
-  // The audit chip carries its scope on hover and on keyboard focus.
-  await page.locator('[data-view-scroll] header').getByText(CHIP, { exact: true }).hover();
-  await page.getByRole('tooltip').waitFor();
-  check(tag + ' chip hover carries the reading', (await page.getByRole('tooltip').textContent()).includes('they do not validate a diagnostic test'), await page.getByRole('tooltip').textContent());
-  await shot(page, tag + '-chip-hover');
+  const scopeText = await page.locator('[data-view-scroll] header').textContent();
+  check(tag + ' plain scope sentence', scopeText.includes(CHIP) && !scopeText.includes('BV-BRC lab records'), scopeText);
+  await shot(page, tag + '-status-line');
   await page.mouse.move(0, 0);
   const inline = width >= 1440;
   if (inline) {
@@ -272,16 +268,24 @@ async function interactions(page, tag, width) {
   } else {
     await page.getByRole('button', { name: 'Filters', exact: true }).click();
   }
-  await page.getByRole('button', { name: /^Has MIC regression/ }).click();
+  await page.getByRole('checkbox', { name: /^Has MIC regression/ }).click();
   await shot(page, tag + '-filters');
   const band = await page.locator('[data-view-options-panel] footer').textContent();
   check(tag + ' rail band: the filter count and Clear once a filter is set', band === '1 filterClear', band);
-  if (!inline) { await page.keyboard.press('Escape'); check(tag + ' filter focus return', (await activeName(page)).startsWith('Filters'), await activeName(page)); }
+  if (!inline) {
+    await page.keyboard.press('Escape');
+    await page.locator('aside[data-view-options-mode="sheet"]').waitFor({ state: 'detached' });
+    await page.waitForFunction(() => document.activeElement?.hasAttribute('data-filter-toggle'));
+    check(tag + ' filter focus return', (await activeName(page)).startsWith('Filters'), await activeName(page));
+  }
   check(tag + ' MIC filter count in the search row', await page.getByText(expected.mic.length + ' of ' + expected.datasets + ' datasets', { exact: true }).count() >= 1, null);
   if (inline) await shot(page, tag + '-filters-docked-active');
   if (!inline) await page.getByRole('button', { name: /^Filters/ }).click();
   await page.locator('[data-view-options-panel] footer').getByRole('button', { name: 'Clear', exact: true }).click();
-  if (!inline) await page.keyboard.press('Escape');
+  if (!inline) {
+    await page.keyboard.press('Escape');
+    await page.locator('aside[data-view-options-mode="sheet"]').waitFor({ state: 'detached' });
+  }
   check(tag + ' filters cleared', await page.getByText(expected.datasets + ' datasets', { exact: true }).count() >= 1, null);
   await search.fill('zz-no-dataset-matches-zz');
   await page.getByRole('button', { name: 'Clear filters and search' }).waitFor();
@@ -295,26 +299,35 @@ async function interactions(page, tag, width) {
     return { rows: rows.length, vme: rows.filter(r => v(r, 5) === 'meets').length, me: rows.filter(r => v(r, 6) === 'meets').length, mic: rows.filter(r => v(r, 8) === 'meets').length, headers: [...region.querySelectorAll('thead th')].map(e => e.textContent), scope: [...region.querySelectorAll('thead th')].every(e => e.scope === 'col') };
   });
   check(tag + ' judged thresholds and counts', status.rows === expected.datasets && status.vme === expected.stats.vmeMeets && status.me === expected.stats.meMeets && status.mic === expected.stats.micAbove90 && status.scope, status);
-  check(tag + ' table headers', JSON.stringify(status.headers) === JSON.stringify(['Dataset', 'Random', 'Lineage', 'Gappoints', 'Isolates', 'VME≤1.5%', 'ME≤3%', 'Catalog', 'MIC≥90%', 'Rule']), status.headers);
+  check(tag + ' table headers', JSON.stringify(status.headers) === JSON.stringify(['Dataset', 'Random', 'Lineage', 'Gappoints', 'Isolates', 'VME≤1.5%', 'ME≤3%', 'Catalog', 'MIC≥90%', 'Ruleset covering machine']), status.headers);
   await judgedCheck(page, tag);
   // Off every header first: a hovered header is deep blue, as it should be.
   await page.mouse.move(2, 2);
   const heads = await page.getByRole('region', { name: 'Datasets', exact: true }).evaluate(region => {
     const blue = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim().split(/\s+/).join(', ');
-    return [...region.querySelectorAll('thead th')].map(th => { const label = th.querySelector('span.relative'); const glyph = th.querySelector('svg'); return { text: th.textContent, color: getComputedStyle(label).color, blue: 'rgb(' + blue + ')', glyph: glyph ? Number(getComputedStyle(glyph).opacity) : null, sortable: th.querySelector('button') !== null }; });
+    return [...region.querySelectorAll('thead th')].map(th => { const label = th.querySelector('[data-th-label]'); const glyph = th.querySelector('svg'); return { text: th.textContent, color: getComputedStyle(label).color, blue: 'rgb(' + blue + ')', glyph: glyph ? Number(getComputedStyle(glyph).opacity) : null, sortable: th.querySelector('button') !== null }; });
   });
   check(tag + ' blue header words', heads.every(h => h.color === h.blue), heads.map(h => [h.text, h.color, h.blue]));
   check(tag + ' sort glyph slot always occupied', heads.filter(h => h.sortable).every(h => h.glyph !== null && h.glyph >= 0.4), heads.map(h => [h.text, h.glyph]));
   const align = await page.getByRole('region', { name: 'Datasets', exact: true }).evaluate(region => {
     const th = [...region.querySelectorAll('thead th')];
     const row = region.querySelector('tbody tr');
-    return [1, 2, 4, 7].map(i => { const label = th[i].querySelector('button span span'); const cell = row.children[i]; const pad = parseFloat(getComputedStyle(cell).paddingRight); return { header: th[i].textContent, labelRight: label.getBoundingClientRect().right, valueRight: cell.getBoundingClientRect().right - pad }; });
+    return [1, 2, 4, 7].map(i => { const label = th[i].querySelector('[data-th-label]'); const cell = row.children[i]; const pad = parseFloat(getComputedStyle(cell).paddingRight); return { header: th[i].textContent, labelRight: label.getBoundingClientRect().right, valueRight: cell.getBoundingClientRect().right - pad }; });
   });
   check(tag + ' numeric headers line up with values', align.every(a => Math.abs(a.labelRight - a.valueRight) <= 1.5), align);
   const table = page.getByRole('region', { name: 'Datasets', exact: true });
-  // One row per dataset at one height, until a rule is expanded in place.
-  const heights = await table.evaluate(region => [...region.querySelectorAll('tbody tr')].slice(0, 25).map(r => Math.round(r.getBoundingClientRect().height)));
-  check(tag + ' compact rows', Math.max(...heights) - Math.min(...heights) <= 4 && Math.max(...heights) <= 64, heights);
+  // Species and class metadata may use a second line; a phone may also
+  // wrap a long antibiotic name. Keep both bounded without requiring the
+  // desktop and phone to have identical row heights.
+  const rowMeta = await table.evaluate(region => [...region.querySelectorAll('tbody tr')].slice(0, 25).map(r => {
+    const sub = r.querySelector('.dataset-sub');
+    const line = sub ? parseFloat(getComputedStyle(sub).lineHeight) : 0;
+    return { height: Math.round(r.getBoundingClientRect().height), subtitleLines: sub && line > 0 ? sub.getBoundingClientRect().height / line : 99 };
+  }));
+  const heights = rowMeta.map(r => r.height);
+  const shortest = Math.min(...heights), tallest = Math.max(...heights);
+  const maxHeight = width < 640 ? 100 : 80, maxSpread = width < 640 ? 40 : 20;
+  check(tag + ' compact rows', shortest >= 44 && tallest <= maxHeight && tallest - shortest <= maxSpread && rowMeta.every(r => r.subtitleLines <= 2.1), rowMeta);
   const more = table.locator('button[aria-label^="Show all"][aria-label$="rules"]').first();
   // Pin the row itself: once expanded, the first "+N" is the next row's.
   const ruleRow = await more.evaluateHandle(e => e.closest('tr'));
@@ -387,7 +400,7 @@ async function interactions(page, tag, width) {
   await page.keyboard.press('Escape');
 
   await page.goto(BASE + '/species/' + speciesSlug);
-  await page.getByRole('grid').waitFor();
+  await page.getByRole('grid', { name: /lineage block/ }).first().waitFor();
   await headerCheck(page, tag + ' species', speciesName);
   await edgeCheck(page, tag + ' species', '[data-view-scroll] h1');
   const purpose = await page.evaluate(() => document.querySelector('[data-view-scroll] header h1 + p')?.textContent);
@@ -400,7 +413,6 @@ async function interactions(page, tag, width) {
   check(tag + ' chosen drug outline moves to its row', was !== null && now !== null && was !== now, { was, now });
   await scrollTo(page, '#sp-cross');
   await shot(page, tag + '-cross-matrix');
-  await page.getByRole('button', { name: 'Table', exact: true }).click();
   await shot(page, tag + '-cross-table');
   check(tag + ' cross-resistance table', await page.getByRole('region', { name: 'Cross-resistance pairs' }).count() === 1, null);
   await page.goto(BASE + '/tests');
@@ -408,13 +420,13 @@ async function interactions(page, tag, width) {
   check(tag + ' legacy tests redirect', new URL(page.url()).pathname === '/' && new URL(page.url()).hash === '#panels', page.url());
   await shot(page, tag + '-panel-evidence');
   await page.goto(BASE + '/methods');
-  await page.getByRole('heading', { name: 'Antibiotic name resolution' }).waitFor();
+  await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
   await headerCheck(page, tag + ' methods', 'Data & Methods');
   await edgeCheck(page, tag + ' methods', '[data-view-scroll] h1');
   await pillCheck(page, tag + ' methods');
   const tracks = await page.evaluate(() => [...document.querySelectorAll('#m-funnel td span.relative')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)').length);
   check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
-  await scrollTo(page, '#m-design'); await shot(page, tag + '-definitions');
+  await scrollTo(page, '#m-funnel'); await shot(page, tag + '-definitions');
   check(tag + ' top bar stays in view after scrolling Methods', await page.evaluate(() => document.querySelector('header').getBoundingClientRect().top >= -1 && document.scrollingElement.scrollTop === 0), null);
   if (await page.locator('#m-unsupported').count() > 0) { await scrollTo(page, '#m-unsupported'); await shot(page, tag + '-unscored'); }
   await page.goto(BASE);
@@ -422,12 +434,12 @@ async function interactions(page, tag, width) {
   for (const button of await page.getByRole('button', { name: 'Method and coverage' }).all()) await button.click();
   await reachCheck(page, tag + ' overview with every Method and coverage open');
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => getComputedStyle(b).borderTopStyle); });
-  check(tag + ' one hairline between findings', rules.length === 5 && rules.every(r => r === 'solid'), rules);
+  check(tag + ' one hairline between findings', rules.length === 6 && rules.every(r => r === 'solid'), rules);
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
-  await headerCheck(page, tag + ' overview', 'Overview');
+  await headerCheck(page, tag + ' overview', 'What GRM found');
   await edgeCheck(page, tag + ' overview', '#corpus h2');
-  const counts = await page.evaluate(() => [...document.querySelectorAll('#corpus ol li')].map(li => ({ text: li.firstElementChild.textContent, scroll: li.firstElementChild.scrollWidth, client: li.firstElementChild.clientWidth })));
+  const counts = await page.evaluate(() => [...document.querySelectorAll('#corpus ul li')].map(li => ({ text: li.firstElementChild.textContent, scroll: li.firstElementChild.scrollWidth, client: li.firstElementChild.clientWidth })));
   check(tag + ' overview corpus counts fit their cells', counts.length === 4 && counts.every(c => c.scroll <= c.client + 1), counts);
   const marks = await page.evaluate(() => { const c = document.querySelector('#lineage svg circle[data-dataset]'); return c ? getComputedStyle(c).fill : null; });
   const blue = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--series-s'); document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
@@ -468,7 +480,7 @@ async function states(browser, width, height, theme) {
   check(tag + ' loading aria-busy', await page.locator('[aria-busy="true"]').count() === 1, null);
   check(tag + ' loading runs the mark loop in the panel and the top bar', await page.locator('svg.grm-mark[data-motion="loop"]').count() === 2, await page.locator('svg.grm-mark').evaluateAll(es => es.map(e => e.getAttribute('data-motion'))));
   await shot(page, tag + '-loading'); release();
-  await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
   await page.unroute('**/data/index.json');
   await page.route('**/data/index.json', route => route.fulfill({ status: 500, body: 'unavailable' }));
   await page.reload(); await page.getByRole('alert').waitFor(); await shot(page, tag + '-manifest-error');
@@ -483,11 +495,18 @@ async function states(browser, width, height, theme) {
   await page.unroute('**/data/index.json');
   const mixed = structuredClone(manifest); mixed.datasets[0].evaluation.revision = manifest.evaluation_revision - 1;
   await page.route('**/data/index.json', route => route.fulfill({ json: mixed }));
-  await page.goto(BASE + '/datasets'); await page.getByText('Provisional metrics', { exact: true }).first().waitFor();
-  await page.getByText('Provisional metrics', { exact: true }).first().hover();
-  await page.getByRole('tooltip').waitFor(); await shot(page, tag + '-mixed-audit');
-  check(tag + ' mixed audit chip and its count on hover', (await page.getByRole('tooltip').textContent()).includes('1 of ' + expected.datasets + ' dataset evaluations do not pass'), await page.getByRole('tooltip').textContent());
+  await page.goto(BASE + '/datasets');
+  const mixedStatus = page.getByText('Provisional metrics', { exact: true }).first();
+  await mixedStatus.waitFor();
+  await mixedStatus.hover();
+  check(tag + ' mixed audit status is plain text without a hover wall', await mixedStatus.textContent() === 'Provisional metrics' && await page.getByRole('tooltip').count() === 0, await mixedStatus.textContent());
   check(tag + ' mixed audit row marker', await page.getByRole('region', { name: 'Datasets', exact: true }).getByText('Provisional', { exact: true }).count() === 1, null);
+  await page.goto(BASE);
+  const mixedNote = page.getByRole('note').first();
+  await mixedNote.waitFor();
+  const mixedNoteText = await mixedNote.textContent();
+  check(tag + ' mixed audit count and reason are visible', mixedNoteText.includes('1 of ' + expected.datasets + ' dataset evaluations do not pass') && mixedNoteText.includes('current revision'), mixedNoteText);
+  await shot(page, tag + '-mixed-audit');
   await page.unroute('**/data/index.json');
   for (const [row, word] of stateRows) {
     await page.goto(BASE + '/datasets'); await page.getByRole('searchbox', { name: 'Search datasets' }).fill(row.antibiotic + ' ' + row.species);
@@ -502,9 +521,14 @@ async function present(page, tag, width, height) {
   const dialog = page.getByRole('dialog', { name: 'GRM findings presentation' });
   await dialog.waitFor();
   check(tag + ' no deck chooser', !(await dialog.textContent()).includes('Choose a deck'), null);
-  for (let slide = 0; slide < 7; slide++) {
+  const slideSelect = dialog.getByRole('combobox', { name: /^Go to slide/ });
+  await slideSelect.click();
+  const slideCount = await dialog.getByRole('option').count();
+  await page.keyboard.press('Escape');
+  check(tag + ' expected slide count', slideCount === 7 || slideCount === 8 || slideCount === 9, slideCount);
+  for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
-    if (slide === 6) await dialog.getByRole('button', { name: 'Show sequence' }).waitFor();
+    const title = await dialog.locator('main h2').first().textContent();
     await shot(page, tag + '-slide-' + (slide + 1));
     check(tag + ' slide ' + (slide + 1) + ' selected in the outline', await slideNumber(dialog) === slide + 1, await slideNumber(dialog));
     const m = await page.evaluate(measure);
@@ -520,27 +544,36 @@ async function present(page, tag, width, height) {
     check(tag + ' slide ' + (slide + 1) + ' footer controls keep their own space', foot.every((r, i) => i === 0 || foot[i - 1][1] <= r[0] + 0.5) && foot[foot.length - 1][1] <= width, foot);
     if (slide === 0) {
       const t = await page.evaluate(() => ({ mark: document.querySelector('dialog.presentation-dialog main svg.grm-mark')?.getAttribute('data-motion'), title: document.querySelector('dialog.presentation-dialog main h2')?.textContent, text: document.querySelector('dialog.presentation-dialog main')?.textContent }));
-      check(tag + ' title slide: mark choreography, wordmark, chip, date', t.mark === 'present' && t.title === 'Genomic Resistance Mapping' && t.text.includes('Report built') && t.text.includes(CHIP), t);
+      check(tag + ' title slide: mark choreography, wordmark, date, no extra corpus count', t.mark === 'present' && t.title === 'Genomic Resistance Mapping' && t.text.includes('Report built') && !t.text.includes('BV-BRC lab records'), t);
       continue;
     }
     check(tag + ' slide ' + (slide + 1) + ' figure above caption', m.contentBottom <= m.caption.y - 8 && (m.fit === null || m.fit.scrollHeight <= m.fit.height + 1), { contentBottom: m.contentBottom, caption: m.caption, fit: m.fit });
     check(tag + ' slide ' + (slide + 1) + ' labels inside', m.textOutside.length === 0, m.textOutside);
+    const finding = title.includes('Unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('MIC prediction') ? 4 : 0;
+    const count = [0, expected.paired.length, expected.catalog.length, expected.panels.length, expected.mic.length][finding] ?? 0;
+    if (finding > 0) check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title });
+    await referenceChecks(page, tag, finding);
     if (slide === 1) {
       const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);
     }
-    if (slide === 1 || slide === 6) check(tag + ' slide ' + (slide + 1) + ' static figure centered with its caption under it', m.fit === null && m.figureTop - m.mainTop > 40 && m.main.bottom - m.caption.bottom > 24 && m.caption.y - m.contentBottom <= 64, { figureTop: m.figureTop, mainTop: m.mainTop, contentBottom: m.contentBottom, captionTop: m.caption.y, captionBottom: m.caption.bottom, mainBottom: m.main.bottom });
-    const count = [0, 0, expected.paired.length, expected.catalog.length, expected.panels.length, expected.mic.length, 0][slide];
-    check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count });
-    await referenceChecks(page, tag, slide - 1);
     const beats = await dialog.locator('[data-beats] span').evaluateAll(es => es.map(e => getComputedStyle(e).backgroundColor));
-    check(tag + ' slide ' + (slide + 1) + ' beat ticks all landed', beats.length >= 2 && new Set(beats).size === 1, beats);
+    const frameLabel = await slideSelect.textContent();
+    const continuation = /\((\d+) of \d+\)/.exec(frameLabel ?? '');
+    if (continuation !== null && Number(continuation[1]) > 1) {
+      // A continuation stages only its figure; with one beat there are no
+      // ticks to land, rather than a row of unfinished ticks.
+      check(tag + ' slide ' + (slide + 1) + ' beat ticks all landed', beats.length === 0, beats);
+    } else {
+      check(tag + ' slide ' + (slide + 1) + ' beat ticks all landed', beats.length >= 2 && new Set(beats).size === 1, beats);
+    }
+    if (slide === 1) {
+      const before = await slideNumber(dialog);
+      await dialog.locator('[data-caption]').first().click();
+      check(tag + ' caption click does not advance', await slideNumber(dialog) === before, { before, after: await slideNumber(dialog) });
+    }
   }
-  await dialog.getByRole('button', { name: 'Show sequence' }).click();
-  await page.getByRole('dialog', { name: 'Rule sequence' }).waitFor(); await shot(page, tag + '-sequence');
-  await page.keyboard.press('Escape');
-  check(tag + ' sequence focus return', (await activeName(page)) === 'Show sequence', await activeName(page));
   const closeButton = dialog.getByRole('button', { name: 'Close', exact: true });
   await closeButton.focus(); await page.keyboard.press('Home');
   check(tag + ' Home reaches the title slide', await slideNumber(dialog) === 1, await slideNumber(dialog));
@@ -553,11 +586,11 @@ async function present(page, tag, width, height) {
   await page.keyboard.press('Tab');
   check(tag + ' chart allows Tab exit', !await chart.evaluate(e => e.contains(document.activeElement)), await activeName(page));
   await closeButton.focus(); await page.keyboard.press('End');
-  check(tag + ' End reaches the last slide', await slideNumber(dialog) === 7, await slideNumber(dialog));
+  check(tag + ' End reaches the last slide', await slideNumber(dialog) === slideCount, await slideNumber(dialog));
   await page.keyboard.press('ArrowLeft');
-  check(tag + ' ArrowLeft goes back', await slideNumber(dialog) === 6, null);
+  check(tag + ' ArrowLeft goes back', await slideNumber(dialog) === slideCount - 1, null);
   await page.keyboard.press('PageDown');
-  check(tag + ' PageDown goes forward', await slideNumber(dialog) === 7, null);
+  check(tag + ' PageDown goes forward', await slideNumber(dialog) === slideCount, null);
   await page.keyboard.press('Escape');
   check(tag + ' Present focus return', (await activeName(page)) === 'Present', await activeName(page));
 }
@@ -565,7 +598,7 @@ async function present(page, tag, width, height) {
 async function normalMotion(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
   const page = await context.newPage();
-  await page.goto(BASE); await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor();
+  await page.goto(BASE); await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
   check('normal motion media preference', await page.evaluate(() => !matchMedia('(prefers-reduced-motion: reduce)').matches), null);
   await page.getByRole('button', { name: 'Present', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'GRM findings presentation' }); await dialog.waitFor();
@@ -580,7 +613,7 @@ async function normalMotion(browser) {
   await context.close();
   const reduced = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   const page2 = await reduced.newPage();
-  await page2.goto(BASE); await page2.getByRole('heading', { name: 'Overview', exact: true }).waitFor();
+  await page2.goto(BASE); await page2.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
   await page2.getByRole('button', { name: 'Present', exact: true }).click();
   const d2 = page2.getByRole('dialog', { name: 'GRM findings presentation' }); await d2.waitFor();
   await d2.getByRole('button', { name: 'Close', exact: true }).focus(); await page2.keyboard.press('ArrowRight');
@@ -611,7 +644,7 @@ async function boundaries(browser) {
   const targets = await page.evaluate(() => [...document.querySelectorAll('button,input[type="search"]')].filter(e => !e.disabled && e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().top < innerHeight && e.getBoundingClientRect().bottom > 0).map(e => ({ name: e.getAttribute('aria-label') ?? e.textContent, width: e.getBoundingClientRect().width, height: e.getBoundingClientRect().height })).filter(e => e.width < 44 || e.height < 44));
   check('coarse pointer 44px targets', targets.length === 0, targets);
   await page.getByRole('button', { name: 'Random', exact: true }).focus(); await shot(page, 'forced-colors-focus');
-  check('forced colors: judged cells keep an outline', await page.locator('[data-verdict]').first().evaluate(e => getComputedStyle(e).outlineStyle === 'solid'), null);
+  check('forced colors: judged values keep plain readable text and no ring', await page.locator('[data-verdict]').first().evaluate(e => getComputedStyle(e).boxShadow === 'none' && e.textContent.trim().length > 0), null);
   await context.close();
 }
 
@@ -631,17 +664,17 @@ async function boundaries(browser) {
       const tag = width + '-' + theme;
       try {
         await page.goto(BASE);
-        await page.getByRole('heading', { name: 'Overview', exact: true }).waitFor();
+        await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
         await present(page, tag, width, height);
         if (width === 1280) { await interactions(page, tag, width); await context.close(); continue; }
-        for (const [route, title, key] of [['/', 'Overview', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/methods', 'Data & Methods', 'methods']]) {
+        for (const [route, title, key] of [['/', 'What GRM found', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/methods', 'Data & Methods', 'methods']]) {
           await page.goto(BASE + route);
           await page.getByRole('heading', { name: title, exact: true }).first().waitFor();
-          if (route.startsWith('/species')) await page.getByRole('grid').waitFor();
-          if (route === '/methods') await page.getByRole('heading', { name: 'Antibiotic name resolution' }).waitFor();
+          if (route.startsWith('/species')) await page.getByRole('grid', { name: /lineage block/ }).first().waitFor();
+          if (route === '/methods') await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
           await shot(page, tag + '-' + key);
           await reachCheck(page, tag + ' ' + key);
-          check(tag + ' ' + key + ' document does not scroll', await page.evaluate(() => document.scrollingElement.scrollHeight <= innerHeight + 1), await page.evaluate(() => [document.scrollingElement.scrollHeight, innerHeight]));
+          check(tag + ' ' + key + ' document has no horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth })));
           await tallShot(page, tag + '-' + key + '-full', width, height);
           check(tag + ' ' + key + ' page overflow', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth })));
           await headerCheck(page, tag + ' ' + key, title);

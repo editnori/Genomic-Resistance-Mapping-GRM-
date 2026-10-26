@@ -5,7 +5,6 @@ import { BARS } from "../../data/metrics";
 import { bestLearner, countsNoCalls, learnerOf, NO_BEST_LEARNER, nullFolds, outscoringPartial, splitAbsence, splitOf, uncalledOf } from "../../data/derive/dataset";
 import { linear, useWidth } from "../../charts/kit";
 import { LearnerStripRow, StripAxis } from "../../charts/LearnerStrip";
-import { HoverTip } from "../../ui/HoverTip";
 import { BarPill, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../../ui/primitives";
 
 import type { Resource } from "../../data/load";
@@ -23,47 +22,42 @@ const foldsOf = (l: LearnerResult | undefined): number[] => (l?.fold_balanced_ac
 
 const NULL_FIT: Partial<Record<Learner, string>> = { gbt: "boosting kept no tree", lasso: "the lasso kept no weight" };
 
-/** Share of isolates the row calls, with the null folds behind the rest. */
+/** Share of isolates the row calls, with the count under it; the note under
+ *  the table names the null folds behind the rest. */
 const CalledCell = ({ r, l }: { r: DatasetReport; l: LearnerResult }) => {
   const uncalled = uncalledOf(l);
   if (uncalled === null || uncalled === 0) return <span className="text-muted-text">All</span>;
   const total = r.counts.samples;
-  const x = l.no_call!;
   return (
-    <HoverTip
-      focusable={false}
-      lines={[
-        {
-          term: `${int(total - uncalled)} of ${int(total)} isolates called`,
-          text: `In ${int(nullFolds(l))} of ${int(l.fold_complexity.length)} folds ${NULL_FIT[l.learner] ?? "the fit was null"}, so the ${int(x.resistant)} resistant and ${int(x.susceptible)} susceptible isolates held out there get no call. ${
-            l.metrics === null ? "With no isolate called, there is no balanced accuracy, VME, ME, or AUROC." : "Balanced accuracy, VME, ME, and AUROC cover the isolates called."
-          }`,
-        },
-      ]}
-    >
-      <span className="tabular-nums">{pct((total - uncalled) / total)}</span>
-    </HoverTip>
+    <span className="block whitespace-nowrap">
+      <span className="block tabular-nums">{pct((total - uncalled) / total)}</span>
+      <span className="block text-tiny tabular-nums text-muted-text">
+        {int(total - uncalled)} of {int(total)}
+      </span>
+    </span>
   );
 };
 
-/** Null folds in a report written before no-calls, which scored them 0.5. */
+/** Null folds in a report written before no-calls, which scored them 0.5;
+ *  the note under the table says what that did to the rates. */
 const NullFoldCell = ({ l }: { l: LearnerResult }) => {
   const k = nullFolds(l);
-  if (k === 0) return <span className="text-muted-text">None</span>;
-  return (
-    <HoverTip
-      focusable={false}
-      lines={[
-        {
-          term: `${int(k)} of ${int(l.fold_complexity.length)} folds`,
-          text: `In these folds ${NULL_FIT[l.learner] ?? "the fit was null"}. This report scored their isolates 0.5, which the 0.5 cutoff calls resistant, so its rates count them as resistant calls.`,
-        },
-      ]}
-    >
-      <span className="tabular-nums">{`${int(k)} of ${int(l.fold_complexity.length)}`}</span>
-    </HoverTip>
-  );
+  return k === 0 ? <span className="text-muted-text">None</span> : <span className="tabular-nums">{`${int(k)} of ${int(l.fold_complexity.length)}`}</span>;
 };
+
+/** For each row with isolates left uncalled on this split, which folds were
+ *  null and how many isolates of each class they held. */
+const uncalledLines = (r: DatasetReport, rows: readonly (LearnerResult | undefined)[], scheme: Scheme): string[] =>
+  rows.flatMap((l) => {
+    const n = l === undefined ? null : uncalledOf(l);
+    if (l === undefined || n === null || n === 0 || l.no_call === undefined) return [];
+    const where = scheme === "random" ? "on random splits" : "with lineages held out";
+    const folds = nullFolds(l);
+    const why = folds > 0 ? `in ${int(folds)} of ${int(l.fold_complexity.length)} folds ${NULL_FIT[l.learner] ?? "the fit was null"}, so ` : "";
+    return [
+      `${LEARNER_NAME[l.learner]} ${where}: ${why}${int(l.no_call.resistant)} resistant and ${int(l.no_call.susceptible)} susceptible isolates get no call; ${int(r.counts.samples - n)} of ${int(r.counts.samples)} are called.`,
+    ];
+  });
 
 export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: Resource<Research> }) => {
   const [scheme, setScheme] = useState<Scheme>("random");
@@ -119,6 +113,8 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
           .join(" ")} The best learner has to call every isolate on every split it ran.`;
 
   const errorsOf = (l: Learner) => learnerOf(r, scheme, l);
+  // The rows the Called column reads, named in words under the table.
+  const uncalled = noCalls ? uncalledLines(r, learners.map(errorsOf), scheme) : [];
 
   return (
     <Section
@@ -248,6 +244,13 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
           ? " This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
           : ""}
       </p>
+      {uncalled.length === 0 ? null : (
+        <ul className="type-note mt-1.5 list-disc space-y-0.5 pl-5">
+          {uncalled.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
       {r.splits.some((split) => split.learners.some((l) => l.conformal.length > 0)) ? (
         <p className="type-note mt-4">This report's cannot-call rates came from pooled out-of-fold scores with no separate calibration set, so they are not shown as conformal results.</p>
       ) : null}

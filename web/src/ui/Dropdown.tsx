@@ -1,9 +1,10 @@
 // One custom select for one-of and many-of choices. Closed it reads as a
-// 28px control showing the current answer; open it is a paper listbox drawn
-// in a layer anchored to the control's screen rectangle, opening upward when
-// the room below cannot hold it, capped at twelve rows. Keyboard: arrows,
-// Home/End, Enter or Space to choose, Escape or Tab to close, letters to jump.
-// The rest option ("All species") is the first row and carries no count.
+// 28px control showing the current answer (44px for touch); open it is a
+// paper listbox drawn in a layer anchored to the control's screen
+// rectangle, opening upward when the room below cannot hold it, capped at
+// twelve rows, each a 44px target for touch. Keyboard: arrows, Home/End,
+// Enter or Space to choose, Escape or Tab to close, letters to jump. The
+// rest option ("All species") is the first row and carries no count.
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
@@ -23,8 +24,12 @@ type Mode<T extends string> =
   | { kind: "many"; value: ReadonlySet<T>; onChange(next: Set<T>): void };
 
 const ROW_PX = 32;
+/** A touch row is a full 44px target (index.css sets the row height). */
+const TOUCH_ROW_PX = 44;
 const MAX_ROWS = 12;
 const MARGIN = 8;
+
+const rowPx = (): number => (window.matchMedia("(pointer: coarse)").matches ? TOUCH_ROW_PX : ROW_PX);
 
 interface Layer {
   left: number;
@@ -38,7 +43,7 @@ interface Layer {
 const anchorLayer = (button: HTMLElement, rows: number): Layer => {
   const r = button.getBoundingClientRect();
   const vh = document.documentElement.clientHeight;
-  const want = Math.min(rows, MAX_ROWS) * ROW_PX + 12;
+  const want = Math.min(rows, MAX_ROWS) * rowPx() + 12;
   const below = vh - r.bottom - MARGIN;
   const above = r.top - MARGIN;
   const host = button.closest<HTMLElement>("dialog[open]") ?? document.body;

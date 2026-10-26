@@ -43,7 +43,7 @@ export const MicHeatmap = ({ confusion }: { confusion: readonly [number, number,
   return (
     <div ref={frame} className="min-w-0">
       <ScrollFrame label="Measured and predicted MIC">
-      <MarkListbox label="Measured against predicted MIC counts. Arrow keys move between cells." width={width} marks={confusion.map(([o, p, count]) => ({ key: `${o},${p}`, x: cx(p) + cell / 2, y: cy(o) + cell / 2, tip: () => [{ term: `${int(count)} isolates`, text: `Measured ${mgL(o)} mg/L, predicted ${mgL(p)} mg/L.` }] }))}>
+      <MarkListbox label="Measured against predicted MIC counts. Arrow keys move between cells; click or Enter to pin details." width={width} marks={confusion.map(([o, p, count]) => ({ key: `${o},${p}`, x: cx(p) + cell / 2, y: cy(o) + cell / 2, tip: () => [{ term: `${int(count)} isolates`, text: `Measured ${mgL(o)} mg/L, predicted ${mgL(p)} mg/L.` }] }))}>
       <svg width={width} height={height} aria-hidden="true">
         <defs>
           <clipPath id={clip}>

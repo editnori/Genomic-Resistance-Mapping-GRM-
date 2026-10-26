@@ -3,7 +3,8 @@
 // stated bar that sum to the plotted datasets, and direct labels on up to
 // three named extremes (two below 640px). On a slide the swarm's offsets
 // shrink to the height it is given, so a dense strip never scrolls. GapSwarm
-// and MicStrip adapt the manifest rows; MarkListbox gives the keyboard path.
+// and MicStrip adapt the manifest rows; MarkListbox gives the keyboard path
+// and the pinned details with Open dataset.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { CatalogRow } from "../data/schema";
@@ -156,7 +157,17 @@ export const DotStrip = ({
 
   return (
     <div ref={frame} className="min-w-0">
-      <MarkListbox label={label} marks={ordered} width={width} onOpen={onOpen === undefined ? undefined : (i) => onOpen(ordered[i]!.key)}>
+      <MarkListbox
+        label={label}
+        marks={ordered}
+        width={width}
+        onOpen={onOpen === undefined ? undefined : (i) => onOpen(ordered[i]!.key)}
+        after={
+          <p ref={axisRef} className="mt-1 text-center text-tiny text-muted-text">
+            {axisTitle}
+          </p>
+        }
+      >
         <svg aria-hidden="true" width={width} height={svgHeight} className="block overflow-visible">
           <PlacedText labels={placed} top={0} />
           {refs.map((r) => (
@@ -171,7 +182,6 @@ export const DotStrip = ({
           ))}
         </svg>
       </MarkListbox>
-      <p ref={axisRef} className="mt-1 text-center text-tiny text-muted-text">{axisTitle}</p>
     </div>
   );
 };
@@ -188,14 +198,11 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
   const hi = Math.ceil(Math.max(0.1, ...gaps) * 100) / 100;
   return (
     <DotStrip
-      label={`Balanced accuracy lost when lineages are held out, one mark per dataset, ${paired.length} datasets. Arrow keys move between datasets${onOpen === undefined ? "" : "; Enter opens one"}.`}
+      label={`Balanced accuracy lost when lineages are held out, one mark per dataset, ${paired.length} datasets. Arrow keys move between datasets; click or Enter to pin details.`}
       data={paired.map((r) => ({
         id: r.id,
         value: r.best_random! - r.best_lineage!,
-        tip: [
-          { term: datasetName(r), text: `${((r.best_random! - r.best_lineage!) * 100).toFixed(1)} points: ${pct(r.best_random)} random, ${pct(r.best_lineage)} lineages held out.` },
-          ...(onOpen === undefined ? [] : [{ source: "Enter or click opens the dataset." }]),
-        ],
+        tip: [{ term: datasetName(r), text: `${((r.best_random! - r.best_lineage!) * 100).toFixed(1)} points: ${pct(r.best_random)} random, ${pct(r.best_lineage)} lineages held out.` }],
       }))}
       domain={[lo, hi]}
       format={(v) => (v * 100).toFixed(0)}
@@ -225,14 +232,11 @@ export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
   const lowest = [...scored].sort((a, b) => a.mic_essential_agreement! - b.mic_essential_agreement! || a.id.localeCompare(b.id))[0];
   return (
     <DotStrip
-      label={`MIC essential agreement, one mark per dataset, ${scored.length} datasets. Arrow keys move between datasets${onOpen === undefined ? "" : "; Enter opens one"}.`}
+      label={`MIC essential agreement, one mark per dataset, ${scored.length} datasets. Arrow keys move between datasets; click or Enter to pin details.`}
       data={scored.map((r) => ({
         id: r.id,
         value: r.mic_essential_agreement!,
-        tip: [
-          { term: datasetName(r), text: `${pct(r.mic_essential_agreement)} of exact MICs predicted within one doubling dilution.` },
-          ...(onOpen === undefined ? [] : [{ source: "Enter or click opens the dataset." }]),
-        ],
+        tip: [{ term: datasetName(r), text: `${pct(r.mic_essential_agreement)} of exact MICs predicted within one doubling dilution.` }],
       }))}
       domain={[lo, 1]}
       format={(v) => `${Math.round(v * 100)}`}

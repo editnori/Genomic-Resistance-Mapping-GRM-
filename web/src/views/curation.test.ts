@@ -27,19 +27,19 @@ const views = (m: Manifest) => ({
 describe("class minimum wording", () => {
   it("states the minimum the reports record in Overview, Methods, and the corpus slide", () => {
     const { overview, methods, slide } = views(at(10));
-    const rule = "at least 10 resistant and 10 susceptible genomes that passed QC and have a reported lab call";
-    expect(overview).toContain(`A dataset is one species and one antibiotic with ${rule}.`);
-    expect(methods).toContain(`A dataset needs ${rule}.`);
-    expect(slide).toContain(`A dataset is one species and one antibiotic with ${rule}.`);
-    for (const text of [overview, methods, slide]) expect(text).not.toContain("at least 25");
+    const rule = "A report needs 10 resistant and 10 susceptible selected genomes with unconflicted reported R/S calls.";
+    expect(overview).toContain(rule);
+    expect(methods).toContain(`A dataset is one species and one antibiotic. ${rule}`);
+    expect(slide).toContain(rule);
+    for (const text of [overview, methods, slide]) expect(text).not.toContain("25 resistant");
   });
 
   it("reads rows without a minimum as the old learn gate of 25", () => {
     const { overview, methods, slide } = views(revision6);
-    const rule = "at least 25 resistant and 25 susceptible genomes that passed QC and have a reported lab call";
-    expect(overview).toContain(`A dataset is one species and one antibiotic with ${rule}.`);
-    expect(methods).toContain(`A dataset needs ${rule}.`);
-    expect(slide).toContain(`A dataset is one species and one antibiotic with ${rule}.`);
+    const rule = "A report needs 25 resistant and 25 susceptible selected genomes with unconflicted reported R/S calls.";
+    expect(overview).toContain(rule);
+    expect(methods).toContain(`A dataset is one species and one antibiotic. ${rule}`);
+    expect(slide).toContain(rule);
     for (const text of [overview, methods, slide]) expect(text).not.toMatch(/records? the minimum/);
   });
 
@@ -55,14 +55,16 @@ describe("class minimum wording", () => {
 describe("MIC-inferred labels", () => {
   const f = manifest.funnel;
 
-  it("leaves them out of the labeled pairs in Methods and on the corpus slide", () => {
+  it("leaves them out of the reported pairs in Overview, Methods, and on the corpus slide", () => {
     expect(f.pairs_labeled_from_mic).toBeGreaterThan(0);
-    const { methods } = views(manifest);
-    expect(methods).toContain(`became ${int(f.pairs_reported)} genome and antibiotic pairs with a reported resistant or susceptible call`);
+    const { overview, methods } = views(manifest);
+    expect(overview).toContain(`reported R/S genome–antibiotic pairs, from ${int(f.records)} BV-BRC records`);
+    expect(overview).toContain(`>${int(f.pairs_reported)}<`);
+    expect(methods).toContain(`${int(f.pairs)} pairs = ${int(f.pairs_reported)} reported + ${int(f.pairs_labeled_from_mic)} from MIC`);
     const slide = renderToStaticMarkup(createElement(CorpusFigure, { manifest }));
-    expect(slide).toContain("Genome–antibiotic pairs with a reported R or S call");
+    expect(slide).toContain("Reported R/S genome–antibiotic pairs");
     expect(slide).toContain(`>${int(f.pairs_reported)}<`);
-    expect(slide).not.toContain(`>${int(f.pairs_reported + f.pairs_labeled_from_mic)}<`);
+    for (const text of [overview, slide]) expect(text).not.toContain(`>${int(f.pairs_reported + f.pairs_labeled_from_mic)}<`);
   });
 
   it("explains in Methods that no model trains or is scored on them, and which reports count them", () => {

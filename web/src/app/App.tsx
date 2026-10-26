@@ -2,14 +2,14 @@
 // that owns its own scroll. The dataset inspector and Present are overlays
 // above whichever view is mounted.
 
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { loadErrorText, useManifest } from "../data/load";
 import type { Manifest } from "../data/schema";
 import { PanelState, VIEW_SHELL } from "../ui/primitives";
 import { recordLaunch } from "../ui/launch";
 import { TopBar } from "./TopBar";
-import { useRouter, VIEWS, type Navigator, type ViewId } from "./router";
+import { findFocusToken, isAppPath, lastNavKind, navigate, useLocationKey, useRouter, viewScrollOwner, VIEWS, type FocusToken, type Navigator, type ViewId } from "./router";
 import { OverviewView } from "../views/OverviewView";
 import { DatasetsView } from "../views/DatasetsView";
 import { SpeciesView } from "../views/SpeciesView";
@@ -58,11 +58,95 @@ const useViewStep = (view: ViewId): string => {
   return step;
 };
 
+/** Focus that lands on an element the reader cannot tab to (a heading, a
+ *  section) without scrolling it again. */
+const focusTarget = (el: HTMLElement): void => {
+  if (!el.matches("a[href], button, input, select, textarea, [tabindex]")) {
+    el.setAttribute("tabindex", "-1");
+    el.setAttribute("data-focus-target", "");
+  }
+  el.focus({ preventScroll: true });
+};
+
+const viewHeading = (): HTMLElement | null => viewScrollOwner()?.querySelector<HTMLElement>("h1") ?? null;
+
+/** A modal (the inspector, Present, the filter sheet) owns focus. */
+const modalOpen = (): boolean => document.querySelector("dialog[open]") !== null;
+
+const focusLost = (): boolean => {
+  const a = document.activeElement;
+  return a === null || a === document.body || a === document.documentElement || !a.isConnected;
+};
+
+/** Reveals a hash's section in the view's scroll owner and moves focus to
+ *  its heading. A section drawn later (data still loading) is awaited for a
+ *  few seconds; a reader who scrolls or types first keeps their place. */
+const revealHash = (hash: string): (() => void) => {
+  const id = decodeURIComponent(hash.replace(/^#/, ""));
+  let done = false;
+  const reveal = (): boolean => {
+    const el = document.getElementById(id);
+    if (el === null) return false;
+    el.scrollIntoView({ block: "start" });
+    const heading = el.matches("h1, h2, h3") ? el : el.querySelector<HTMLElement>("h1, h2, h3");
+    focusTarget(heading ?? el);
+    return true;
+  };
+  if (reveal()) return () => {};
+  const stop = () => {
+    done = true;
+    observer.disconnect();
+    window.clearTimeout(timer);
+    window.removeEventListener("wheel", stop, true);
+    window.removeEventListener("keydown", stop, true);
+    window.removeEventListener("pointerdown", stop, true);
+  };
+  const observer = new MutationObserver(() => {
+    if (!done && reveal()) stop();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  const timer = window.setTimeout(stop, 6000);
+  window.addEventListener("wheel", stop, true);
+  window.addEventListener("keydown", stop, true);
+  window.addEventListener("pointerdown", stop, true);
+  return stop;
+};
+
+/** Back to an entry: its scroll offset once the view is tall enough, then
+ *  the control that left it, else the view's title. */
+const restoreEntry = (scroll: number | undefined, focus: FocusToken | undefined): (() => void) => {
+  let frame = 0;
+  let tries = 0;
+  const step = () => {
+    const owner = viewScrollOwner();
+    if (owner !== null && scroll !== undefined && scroll > 0) {
+      owner.scrollTop = scroll;
+      // A view whose data is still arriving is too short for the offset yet.
+      if (Math.abs(owner.scrollTop - scroll) > 1 && tries < 120) {
+        tries += 1;
+        frame = window.requestAnimationFrame(step);
+        return;
+      }
+    }
+    if (modalOpen()) return;
+    const el = focus === undefined ? null : findFocusToken(focus);
+    if (el !== null) el.focus({ preventScroll: true });
+    else if (focusLost()) {
+      const h1 = viewHeading();
+      if (h1 !== null) focusTarget(h1);
+    }
+  };
+  step();
+  return () => window.cancelAnimationFrame(frame);
+};
+
 export const App = () => {
   const nav = useRouter();
+  const at = useLocationKey();
   const manifest = useManifest();
   const [presenting, setPresenting] = useState(false);
   const step = useViewStep(nav.route.view);
+  const ready = manifest.status === "ready";
 
   // The inspector opens from the row or mark that launched it.
   useEffect(() => {
@@ -79,6 +163,63 @@ export const App = () => {
       document.removeEventListener("keydown", onKey, true);
     };
   }, []);
+
+  // A plain click on an in-app link navigates in place, as the views' own
+  // controls do; a modified click, a download or another target is the
+  // browser's.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const link = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (link === null || (link.target !== "" && link.target !== "_self") || link.hasAttribute("download")) return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin || !isAppPath(url.pathname)) return;
+      e.preventDefault();
+      const href = `${url.pathname}${url.search}${url.hash}`;
+      if (url.pathname === window.location.pathname) navigate(href);
+      else switchView(() => navigate(href));
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+
+  // After each move: a hash reveals its section; Back restores the entry's
+  // scroll and the control that left it; a new view takes focus at its
+  // title; a closed inspector hands focus back to its dataset's row.
+  const was = useRef<{ view: ViewId; path: string; hash: string; dataset: string | null } | null>(null);
+  useEffect(() => {
+    if (!ready) return undefined;
+    const now = { view: nav.route.view, path: window.location.pathname, hash: window.location.hash, dataset: nav.route.dataset };
+    const before = was.current;
+    was.current = now;
+    const kind = lastNavKind();
+    const state: unknown = window.history.state;
+    const kept = state !== null && typeof state === "object" ? (state as { scroll?: number; focus?: FocusToken }) : {};
+
+    if (before === null) return now.hash !== "" ? revealHash(now.hash) : undefined;
+
+    if (before.dataset !== null && now.dataset === null && before.path === now.path) {
+      if (kind === "pop" && kept.focus !== undefined) return restoreEntry(undefined, kept.focus);
+      if (focusLost()) {
+        const row = findFocusToken({ row: before.dataset }, viewScrollOwner() ?? document);
+        const target = row ?? viewHeading();
+        if (target !== null) {
+          if (row !== null) row.scrollIntoView({ block: "nearest" });
+          focusTarget(target);
+        }
+      }
+      return undefined;
+    }
+    if (now.dataset !== null && before.dataset === null && before.path === now.path) return undefined;
+
+    if (kind === "pop") return restoreEntry(kept.scroll, kept.focus);
+    if (now.hash !== "" && (now.hash !== before.hash || now.path !== before.path || kind === "replace")) return revealHash(now.hash);
+    if (now.view !== before.view && !modalOpen()) {
+      const h1 = viewHeading();
+      if (h1 !== null) focusTarget(h1);
+    }
+    return undefined;
+  }, [at, ready, nav.route.view, nav.route.dataset]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-bezel p-1 md:p-2">

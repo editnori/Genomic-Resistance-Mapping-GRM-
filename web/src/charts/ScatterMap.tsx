@@ -2,14 +2,16 @@
 // carry thousands of genomes. Both axes share one scale, so distance on the
 // map approximates Mash distance. Context genomes are small neutral dots;
 // marked genomes carry their series color with a surface ring; flagged
-// genomes add an ink ring. The nearest genome within 14px is the hover.
-// The map is one tab stop, a listbox over the genomes in frame: arrow keys
-// walk them left to right and show the tooltip a hover shows. A new frame
-// eases in from the last one, so the marks travel to their new places.
+// genomes add an ink ring. The nearest genome within 14px is the hover,
+// which previews its first tip line. The map is one tab stop, a listbox over
+// the genomes in frame: arrow keys walk them left to right; click, tap,
+// Enter or Space pins one, keeping its ring and full details up until
+// Escape. A new frame eases in from the last one, so the marks travel to
+// their new places.
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { TipLine } from "../ui/HoverTip";
-import { ChartFrame, ChartTip, prepareCanvas, stepCursor, tipText, useCanvasTokens, useWidth, type CanvasTokens } from "./kit";
+import { ChartFrame, ChartTip, keyboardFocus, prepareCanvas, stepCursor, tipText, useCanvasTokens, useWidth, type CanvasTokens } from "./kit";
 import { FOCUS_RING, Segmented } from "../ui/primitives";
 import { int } from "../data/format";
 
@@ -109,9 +111,14 @@ export const ScatterMap = ({ points, height = 380, label }: { points: readonly M
   const optionId = useId();
   const width = useWidth(frame);
   const tokens = useCanvasTokens();
-  // The active genome, from the pointer or the keyboard. `tip` false keeps
-  // the keyboard's place while Escape or blur hides the tooltip.
-  const [hover, setHover] = useState<{ i: number; tip: boolean } | null>(null);
+  // The pointer's preview, the keyboard's place (a position in keyboard
+  // order), and the pinned genome; Escape hides the keyboard's preview
+  // until the cursor moves.
+  const [hover, setHover] = useState<number | null>(null);
+  const [cursorAt, setCursorAt] = useState(0);
+  const [pinned, setPinned] = useState<number | null>(null);
+  const [focused, setFocused] = useState(false);
+  const [tipOff, setTipOff] = useState(false);
   const [frameKind, setFrameKind] = useState<"all" | "core">("all");
 
   const xs = points.map((p) => p.x);
@@ -169,9 +176,10 @@ export const ScatterMap = ({ points, height = 380, label }: { points: readonly M
     });
   }, [points, width, height, tokens, x0, x1, y0, y1]);
 
-  const onMove = (clientX: number, clientY: number) => {
+  /** The genome in frame nearest a client point, within 14px; -1 for none. */
+  const nearestAt = (clientX: number, clientY: number): number => {
     const r = canvas.current?.getBoundingClientRect();
-    if (r === undefined) return;
+    if (r === undefined) return -1;
     const mx = clientX - r.left;
     const my = clientY - r.top;
     let best = -1;
@@ -185,29 +193,52 @@ export const ScatterMap = ({ points, height = 380, label }: { points: readonly M
         bestD = d;
       }
     });
-    setHover(best >= 0 ? { i: best, tip: true } : null);
+    return best;
   };
 
   // Keyboard order: genomes in the frame, left to right, then top to bottom.
   const order = points.flatMap((p, i) => (inFrame(p) ? [i] : [])).sort((a, b) => points[a]!.x - points[b]!.x || points[b]!.y - points[a]!.y);
-  const at = hover === null ? -1 : order.indexOf(hover.i);
-  const cursorIndex = order[Math.max(at, 0)];
+  const at = Math.max(0, Math.min(cursorAt, order.length - 1));
+  const cursorIndex = order[at];
   const cursor = cursorIndex === undefined ? undefined : points[cursorIndex];
+  const pin = pinned === null || !order.includes(pinned) ? undefined : points[pinned];
+
+  const toggle = (i: number) => {
+    if (i < 0) return;
+    const k = order.indexOf(i);
+    if (k >= 0) setCursorAt(k);
+    setPinned((p) => (p === i ? null : i));
+  };
 
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Escape" && hover?.tip === true) {
-      // Escape closes the tooltip and nothing behind it, as HoverTip does.
+    if (e.key === "Escape") {
+      // Escape clears the pin, then the preview; with neither it is not the
+      // map's, so a dialog behind it can close.
+      if (pin !== undefined) {
+        e.preventDefault();
+        setPinned(null);
+      } else if (hover !== null || (focused && !tipOff)) {
+        e.preventDefault();
+        setHover(null);
+        setTipOff(true);
+      }
+      return;
+    }
+    if ((e.key === "Enter" || e.key === " ") && cursorIndex !== undefined) {
       e.preventDefault();
-      setHover({ i: hover.i, tip: false });
+      toggle(cursorIndex);
       return;
     }
     const next = stepCursor(e.key, at, order.length);
     if (next === null) return;
     e.preventDefault();
-    setHover({ i: order[next]!, tip: true });
+    setHover(null);
+    setTipOff(false);
+    setCursorAt(next);
   };
 
-  const h = hover?.tip === true ? points[hover.i] : undefined;
+  const previewIndex = hover ?? (focused && !tipOff ? cursorIndex : undefined);
+  const h = previewIndex === undefined || previewIndex === pinned ? undefined : points[previewIndex];
   // The frame toggle sits above the chart frame, so the ring and tooltip
   // share the canvas's coordinates.
   return (
@@ -230,33 +261,45 @@ export const ScatterMap = ({ points, height = 380, label }: { points: readonly M
           role="listbox"
           tabIndex={0}
           aria-label={label}
-          aria-activedescendant={cursor !== undefined ? optionId : undefined}
+          aria-activedescendant={cursor !== undefined ? `${optionId}-${at}` : undefined}
           onKeyDown={onKey}
           onFocus={(e) => {
-            // Keyboard focus opens the tooltip where the cursor rests; a click
-            // leaves it to the pointer.
-            if (cursorIndex !== undefined && e.currentTarget.matches(":focus-visible")) setHover({ i: cursorIndex, tip: true });
+            // Keyboard focus previews the genome where the cursor rests; a
+            // click leaves it to the pointer.
+            setFocused(keyboardFocus(e.currentTarget));
+            setTipOff(false);
           }}
-          onBlur={() => setHover((v) => (v === null ? null : { i: v.i, tip: false }))}
+          onBlur={() => setFocused(false)}
           className={`rounded-lg ${FOCUS_RING}`}
         >
           <canvas
             ref={canvas}
             aria-hidden="true"
-            className="block rounded-lg ring-1 ring-hair"
-            onPointerMove={(e) => onMove(e.clientX, e.clientY)}
+            className="block cursor-pointer rounded-lg ring-1 ring-hair"
+            onPointerMove={(e) => {
+              if (e.pointerType === "touch") return;
+              const i = nearestAt(e.clientX, e.clientY);
+              setHover(i >= 0 ? i : null);
+            }}
             onPointerLeave={() => setHover(null)}
+            onClick={(e) => toggle(nearestAt(e.clientX, e.clientY))}
           />
           {cursor !== undefined ? (
-            <div id={optionId} role="option" aria-selected="true" aria-posinset={Math.max(at, 0) + 1} aria-setsize={order.length} className="sr-only">
-              {tipText(cursor.tip())}
+            <div id={`${optionId}-${at}`} role="option" aria-selected={cursorIndex === pinned} aria-posinset={at + 1} aria-setsize={order.length} className="sr-only">
+              {`${tipText(cursor.tip())}${cursorIndex === pinned ? " Pinned." : ""}`}
             </div>
           ) : null}
         </div>
         {h !== undefined ? (
           <>
-            <div aria-hidden="true" className="pointer-events-none absolute rounded-full border-2 border-ink" style={{ left: px(h.x) - 8, top: py(h.y) - 8, width: 16, height: 16 }} />
-            <ChartTip x={px(h.x)} y={py(h.y)} width={width} lines={h.tip()} />
+            <div aria-hidden="true" className="pointer-events-none absolute rounded-full border-2 border-ink/60" style={{ left: px(h.x) - 8, top: py(h.y) - 8, width: 16, height: 16 }} />
+            <ChartTip x={px(h.x)} y={py(h.y)} width={width} lines={h.tip().slice(0, 1)} />
+          </>
+        ) : null}
+        {pin !== undefined ? (
+          <>
+            <div aria-hidden="true" className="pointer-events-none absolute rounded-full border-2 border-ink" style={{ left: px(pin.x) - 9, top: py(pin.y) - 9, width: 18, height: 18 }} />
+            <ChartTip x={px(pin.x)} y={py(pin.y)} width={width} lines={pin.tip()} />
           </>
         ) : null}
       </ChartFrame>

@@ -1,19 +1,18 @@
 // The dataset inspector: one near-full-canvas overlay with a fixed header
 // and one vertical scroll owner. The header carries the title, one status
-// row (the audit chip and the dataset's facts), and the section pills, which
-// follow the scroll. The body opens on the learner comparison (how well
-// resistance is predicted here, and by which learner), then the model and
-// the rest of the evidence in order. Header and body share one column. The
-// panel grows from the row that launched it.
+// row (the audit in plain words and the dataset's facts), and the section
+// pills, which follow the scroll. The body opens on the learner comparison
+// (how well resistance is predicted here, and by which learner), then the
+// model and the rest of the evidence in order. Header and body share one
+// column. The panel grows from the row that launched it.
 
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import type { CatalogRow, DatasetReport, Manifest, Research } from "../../data/schema";
+import type { CatalogRow, DatasetReport, EvalConfig, EvaluationAudit, Manifest, Research } from "../../data/schema";
 import { capitalize, distance, int, mgL, pct, plural, speciesShort } from "../../data/format";
 import { loadErrorText, useDataset, useResearch, type Resource } from "../../data/load";
 import { splitAbsence, splitOf } from "../../data/derive/dataset";
 import { auditOf } from "../../data/derive/evaluation";
 import { minClassOf } from "../../data/derive/overview";
-import { AuditChip, DatasetNotice } from "../../ui/EvaluationNotice";
 import type { Navigator } from "../../app/router";
 import { ModalDialog } from "../../ui/ModalDialog";
 import { Disclosure, FactRows, FOCUS_RING, GhostButton, PanelState } from "../../ui/primitives";
@@ -58,6 +57,68 @@ const useCurrentSection = (scroller: RefObject<HTMLDivElement | null>, ready: bo
   }, [scroller, ready]);
   return current;
 };
+
+const READING = "The numbers describe agreement with lab calls on these sampled isolates; they do not validate a diagnostic test.";
+
+/** The dataset's audit in the header, in plain words: its scope when it
+ *  passes, a bold state when it does not; the body lists the reasons. */
+const AuditWords = ({ audit }: { audit: EvaluationAudit }) =>
+  audit.valid ? (
+    <span>Internal cross-validation only</span>
+  ) : (
+    <strong className="font-semibold text-coral-text">{audit.revision === 0 ? "Unaudited, provisional" : "Provisional metrics"}</strong>
+  );
+
+/** Why this dataset's metrics are provisional, as text above the evidence.
+ *  Nothing when the evaluation passes. */
+const ProvisionalNote = ({ audit }: { audit: EvaluationAudit }) =>
+  audit.valid ? null : (
+    <div role="note" className="border-y border-hair py-3">
+      <p className="prose-measure text-body text-ink">
+        <strong className="font-semibold">{audit.revision === 0 ? "Unaudited, provisional." : "Provisional metrics."}</strong>{" "}
+        {audit.revision === 0
+          ? "This report predates the evaluation audit, so its metrics are unaudited."
+          : `This dataset's evaluation (audit revision ${audit.revision}) does not pass the current evaluation audit.`}{" "}
+        {READING}
+      </p>
+      {audit.reasons.length === 0 ? null : (
+        <ul className="type-note mt-1.5 list-disc space-y-0.5 pl-5">
+          {audit.reasons.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
+const known = (...values: unknown[]): boolean => values.every((v) => typeof v === "number" && Number.isFinite(v));
+
+/** The learner settings a report records, one line each, skipping any the
+ *  report leaves out; the fitted rules, trees, and weights are in the
+ *  sections above. */
+export const settingRows = (c: EvalConfig): { label: string; value: string }[] => [
+  ...(known(c.folds, c.inner_folds) ? [{ label: "Cross-validation", value: `${int(c.folds)} outer folds; ${int(c.inner_folds)} inner folds for tuning` }] : []),
+  ...(known(c.scm_max_rules) ? [{ label: "Set covering machine", value: `Up to ${plural(c.scm_max_rules, "rule")}` }] : []),
+  ...(known(c.cart_max_depth) ? [{ label: "Decision tree", value: `Depth up to ${int(c.cart_max_depth)}, chosen by inner cross-validation` }] : []),
+  ...(known(c.forest?.n_trees, c.forest?.subsample, c.forest?.max_depth, c.forest?.min_leaf)
+    ? [
+        {
+          label: "Random forest",
+          value: `${plural(c.forest.n_trees, "tree")}, each on ${pct(c.forest.subsample, 0)} of the isolates, depth up to ${int(c.forest.max_depth)}, at least ${int(c.forest.min_leaf)} per leaf`,
+        },
+      ]
+    : []),
+  ...(known(c.gbt?.rounds, c.gbt?.learning_rate, c.gbt?.max_depth, c.gbt?.colsample, c.gbt?.patience)
+    ? [
+        {
+          label: "Gradient boosting",
+          value: `Up to ${plural(c.gbt.rounds, "round")} at learning rate ${c.gbt.learning_rate}, depth up to ${int(c.gbt.max_depth)}, each tree on ${pct(c.gbt.colsample, 0)} of the features, stopping after ${plural(c.gbt.patience, "round")} without gain`,
+        },
+      ]
+    : []),
+  ...(known(c.lasso_lambdas, c.screened_features) ? [{ label: "Lasso", value: `${plural(c.lasso_lambdas, "penalty", "penalties")} tried on ${plural(c.screened_features, "screened feature")}` }] : []),
+  ...(known(c.seed) ? [{ label: "Seed", value: String(c.seed) }] : []),
+];
 
 /** The header's MIC-label count: the labels left out when the report counts
  *  them, the samples labeled from MIC in a report from before the audit. */
@@ -111,6 +172,7 @@ const MethodFold = ({ r, current }: { r: DatasetReport; current?: number }) => {
           { label: "Lineages", value: `${int(c.lineages)} at Mash distance ${distance(r.lineage_threshold)}` },
           { label: "Random split", value: random === undefined ? `Not available: ${splitAbsence(r, "random")}` : `${random.folds} stratified folds` },
           { label: "Lineage split", value: lineage === undefined ? `Not available: ${splitAbsence(r, "lineage")}` : `${lineage.folds} folds over ${int(lineage.n_groups)} lineages` },
+          ...(r.eval_config === undefined ? [{ label: "Learner settings", value: "Not saved with this report" }] : settingRows(r.eval_config)),
           { label: "Run time", value: `${Math.round(r.seconds / 60)} minutes` },
         ]}
       />
@@ -128,7 +190,7 @@ const COLUMN = "mx-auto w-full max-w-[1200px] px-4 sm:px-8";
 
 const Body = ({ r, row, current, research }: { r: DatasetReport; row?: CatalogRow; current: number | undefined; research: Resource<Research> }) => (
   <div className={`${COLUMN} space-y-8 pb-16 pt-6`}>
-    <DatasetNotice audit={auditOf(r, current)} />
+    <ProvisionalNote audit={auditOf(r, current)} />
     <div className="space-y-10">
       <LearnerSection r={r} research={research} />
       <ModelSection r={r} row={row} />
@@ -175,7 +237,12 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
             </h2>
             {row !== undefined ? (
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-note text-muted-text">
-                {audit !== null ? <AuditChip audit={audit} /> : null}
+                {audit !== null ? (
+                  <>
+                    <AuditWords audit={audit} />
+                    <span aria-hidden="true">·</span>
+                  </>
+                ) : null}
                 <span>
                   {row.drug_class} · {int(row.n)} isolates, {int(row.n_resistant)} resistant · {plural(row.lineages, "lineage")}
                   {micLabelWords(row)}

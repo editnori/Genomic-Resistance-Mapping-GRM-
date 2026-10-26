@@ -95,7 +95,6 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
                   ? `The rule calls ${pct(1 - c.sensitivity)} of resistant isolates susceptible.`
                   : `Sensitivity ${pct(c.sensitivity)}, specificity ${pct(c.specificity)}.`,
           },
-          ...(onOpen === undefined ? [] : [{ source: "Enter or click opens the dataset." }]),
         ],
       };
     })
@@ -138,10 +137,11 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
     <div ref={frame} className={`flex min-w-0 ${wide ? "flex-row items-start gap-10" : "flex-col items-start"}`}>
       <div className="min-w-0">
         <MarkListbox
-          label={`Catalog rule against the best learner with lineages held out, one mark per dataset, ${int(compared.length)} datasets. Arrow keys move between datasets${onOpen === undefined ? "" : "; Enter opens one"}.`}
+          label={`Catalog rule against the best learner with lineages held out, one mark per dataset, ${int(compared.length)} datasets. Arrow keys move between datasets; click or Enter to pin details.`}
           marks={marks}
           width={width}
           onOpen={onOpen === undefined ? undefined : (i) => onOpen(marks[i]!.key)}
+          after={wide ? <div ref={footerRef}>{axisTitle}</div> : undefined}
         >
           <svg aria-hidden="true" width={width} height={side} className="block overflow-visible">
             <defs>
@@ -171,7 +171,6 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
             </text>
           </svg>
         </MarkListbox>
-        {wide ? <div ref={footerRef}>{axisTitle}</div> : null}
       </div>
       {wide ? (
         legend

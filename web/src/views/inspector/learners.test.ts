@@ -114,7 +114,36 @@ describe("best learner and learners without calls", () => {
     expect(rowCells(render(amikacin), LEARNER_NAME.gbt).slice(0, 2)).toEqual([pct(random), "No call"]);
     const neither = withRows((l) => (l.learner === "gbt" ? uncalled(l) : counted(l)), withLineage);
     const html = render(neither);
-    expect(rowCells(html, LEARNER_NAME.gbt)).toEqual(["No call", "No call", "No call", "No call", "0.0%", "–"]);
+    const cells = rowCells(html, LEARNER_NAME.gbt);
+    // The Called cell shows its share and count in view: none of the isolates.
+    expect(cells.slice(0, 4)).toEqual(["No call", "No call", "No call", "No call"]);
+    expect(cells[4]).toBe(`0.0%0 of ${int(total)}`);
+    expect(cells[5]).toBe("–");
     expect(html).toContain("A learner that calls no isolate on a split has no rate there and shows No call.");
+  });
+});
+
+describe("no-call details in view", () => {
+  it("names each row's null folds and uncalled isolates under the table, with no hover", () => {
+    const nulled = report.samples.filter((_, i) => i % 5 === 0);
+    const resistant = nulled.filter((s) => s.resistant).length;
+    const r = withRows((l, scheme) =>
+      l.learner === "catalog"
+        ? l
+        : scheme === "random" && l.learner === "lasso"
+          ? { ...l, scores: l.scores.map((v, i) => (i % 5 === 0 ? null : v)), fold_complexity: [0, ...l.fold_complexity.slice(1)], no_call: { resistant, susceptible: nulled.length - resistant } }
+          : { ...l, no_call: { resistant: 0, susceptible: 0 } },
+    );
+    const html = render(r);
+    expect(html).toContain(
+      `${LEARNER_NAME.lasso} on random splits: in 1 of 5 folds the lasso kept no weight, so ${int(resistant)} resistant and ${int(nulled.length - resistant)} susceptible isolates get no call; ${int(n - nulled.length)} of ${int(n)} are called.`,
+    );
+    expect(rowCells(html, LEARNER_NAME.lasso)[4]).toBe(`${pct((n - nulled.length) / n)}${int(n - nulled.length)} of ${int(n)}`);
+    expect(html).not.toContain('role="tooltip"');
+  });
+
+  it("states a pre-revision-7 report's null folds as text in the cell", () => {
+    const r = withRows((l, scheme) => (scheme === "random" && l.learner === "gbt" ? { ...l, fold_complexity: [0, 0, ...l.fold_complexity.slice(2)] } : l));
+    expect(rowCells(render(r), LEARNER_NAME.gbt)[4]).toBe("2 of 5");
   });
 });

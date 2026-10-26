@@ -83,7 +83,8 @@ export const ModelSection = ({ r, row }: { r: DatasetReport; row?: CatalogRow })
           <RuleBlock key={`${rule.feature}-${i}`} index={i} rule={rule} card={features.get(rule.feature)} r={r} />
         ))}
         <p className="type-note border-t border-hair pt-3">
-          Rules were chosen greedily on all isolates for the final model, with the trade-off p = {scm.p} and the rule count picked by inner cross-validation (error {pct(scm.cv_error)}).
+          Rules were chosen greedily on all isolates for the final model, with the trade-off p = {scm.p} and the rule count picked by inner cross-validation (error {pct(scm.cv_error)}). A rule
+          names k-mers that separate the lab calls in these isolates; they can travel with the cause on a plasmid or in a lineage rather than be the cause.
         </p>
       </div>
 
