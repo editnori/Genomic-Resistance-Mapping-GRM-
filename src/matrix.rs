@@ -223,7 +223,8 @@ pub fn build(
 }
 
 /// Opens one kset per genome, all with the same k and distinct names.
-fn open_ksets(kset_paths: &[PathBuf]) -> Result<(Vec<KsetReader>, usize)> {
+/// `instead` ends the open-file hint: what to do other than raise the limit.
+fn open_ksets(kset_paths: &[PathBuf], instead: &str) -> Result<(Vec<KsetReader>, usize)> {
     ensure!(!kset_paths.is_empty(), "no ksets to merge");
     let n = kset_paths.len();
     let readers: Vec<KsetReader> = kset_paths
@@ -232,7 +233,7 @@ fn open_ksets(kset_paths: &[PathBuf]) -> Result<(Vec<KsetReader>, usize)> {
             KsetReader::open(p).map_err(|e| {
                 with_open_file_hint(e, || {
                     format!(
-                        "merging {n} ksets keeps one open per genome; raise the open-file limit (ulimit -n) above {n}, or merge in column blocks (write_partial)"
+                        "merging {n} ksets keeps one open per genome; raise the open-file limit (ulimit -n) above {n}, or {instead}"
                     )
                 })
             })
@@ -257,7 +258,7 @@ fn build_with(
     threads_chunk: usize,
     force: Option<MergeKey>,
 ) -> Result<FeatureMatrix> {
-    let (readers, k) = open_ksets(kset_paths)?;
+    let (readers, k) = open_ksets(kset_paths, "merge in column blocks (write_partial)")?;
     let n = readers.len();
     let natural = merge_key(k, n)?;
     let key = match force {
@@ -600,12 +601,44 @@ fn parent_dir(path: &Path) -> &Path {
     }
 }
 
-/// Makes renames and removals in the directory of `path` durable.
-fn sync_parent(path: &Path) -> Result<()> {
-    let dir = parent_dir(path);
+/// Called with each file or directory just before it is synced. Production
+/// passes `no_fault`; tests fail a chosen call to inject a sync error at that
+/// point, or record the order of the syncs.
+type SyncHook<'a> = &'a dyn Fn(&Path) -> Result<()>;
+
+fn no_fault(_: &Path) -> Result<()> {
+    Ok(())
+}
+
+/// Makes a written file durable.
+fn sync_file(file: &File, path: &Path, hook: SyncHook) -> Result<()> {
+    hook(path)?;
+    file.sync_all()
+        .with_context(|| format!("sync {}", path.display()))
+}
+
+/// Makes renames, creations and removals in `dir` durable.
+fn sync_dir(dir: &Path, hook: SyncHook) -> Result<()> {
+    hook(dir)?;
     File::open(dir)
         .and_then(|d| d.sync_all())
         .with_context(|| format!("sync directory {}", dir.display()))
+}
+
+/// Makes renames and removals in the directory of `path` durable.
+fn sync_parent(path: &Path, hook: SyncHook) -> Result<()> {
+    sync_dir(parent_dir(path), hook)
+}
+
+/// `create_dir_all`, then syncs the parent of each directory it made, so
+/// that the new directories survive a crash with the files put in them.
+fn create_dir_durably(dir: &Path, hook: SyncHook) -> Result<()> {
+    let missing: Vec<&Path> = dir
+        .ancestors()
+        .take_while(|d| !d.as_os_str().is_empty() && !d.exists())
+        .collect();
+    std::fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
+    missing.iter().rev().try_for_each(|d| sync_parent(d, hook))
 }
 
 /// A temporary file that is removed when dropped unless kept, so that an
@@ -624,8 +657,9 @@ impl Drop for TempFile {
 }
 
 /// Writes `bytes` to `path` through `<path>.part`: synced, renamed, and
-/// the directory synced.
-fn write_durably(path: &Path, bytes: &[u8]) -> Result<()> {
+/// the directory synced. An error from that last sync leaves the file in
+/// place; the caller decides whether to remove it.
+fn write_durably(path: &Path, bytes: &[u8], hook: SyncHook) -> Result<()> {
     let part = with_suffix(path, ".part");
     let mut tmp = TempFile {
         path: part.clone(),
@@ -633,12 +667,11 @@ fn write_durably(path: &Path, bytes: &[u8]) -> Result<()> {
     };
     let mut file = File::create(&part).with_context(|| format!("create {}", part.display()))?;
     file.write_all(bytes)?;
-    file.sync_all()
-        .with_context(|| format!("sync {}", part.display()))?;
+    sync_file(&file, &part, hook)?;
     drop(file);
     std::fs::rename(&part, path).with_context(|| format!("rename to {}", path.display()))?;
     tmp.keep = true;
-    sync_parent(path)
+    sync_parent(path, hook)
 }
 
 /// Bytes an unprivileged process may still write to the filesystem that
@@ -693,10 +726,12 @@ fn ensure_free_with(
 
 /// What one partial write may use: the columns downstream stages are
 /// reviewed for, and the disk it must leave free, measured by `free`.
+/// `sync` sees every sync it makes.
 struct Limits<'a> {
     max_columns: usize,
     reserve: u64,
     free: &'a dyn Fn(&Path) -> Result<u64>,
+    sync: SyncHook<'a>,
 }
 
 fn put_varint(out: &mut Vec<u8>, mut v: u64) {
@@ -766,11 +801,14 @@ fn kset_digest(reader: &KsetReader) -> Result<u64> {
 /// then removed, so a failed rewrite leaves no stale block. Both new files
 /// are synced, with their directory, before this returns, so the caller
 /// may delete the block's ksets afterwards. Writing stops, and leaves no
-/// file behind, rather than leave less than `reserve_bytes` free.
+/// file behind, rather than leave less than `reserve_bytes` free. An error
+/// after the partial is renamed into place removes it and its receipt
+/// again; if that removal fails too, the error names the files to delete.
 ///
 /// `first_col` must be a multiple of 64 so blocks join on word boundaries.
 /// Only the block's ksets are open, and nothing is filtered yet: support is
-/// only known once every block is merged.
+/// only known once every block is merged. Only one writer may write a
+/// given `out` at a time: two would share, and truncate, `<out>.part`.
 pub fn write_partial(
     kset_paths: &[PathBuf],
     columns: &[Column],
@@ -783,6 +821,7 @@ pub fn write_partial(
         max_columns: REVIEWED_COLUMNS,
         reserve: reserve_bytes,
         free: &free_bytes,
+        sync: &no_fault,
     };
     write_partial_with(kset_paths, columns, first_col, out, threads_chunk, &limits)
 }
@@ -812,7 +851,7 @@ fn write_partial_with(
             c.name.len()
         );
     }
-    let (readers, k) = open_ksets(kset_paths)?;
+    let (readers, k) = open_ksets(kset_paths, "write narrower blocks")?;
     let width = readers.len();
     // Each column must be the expected genome, counted from the expected
     // contents; reading every value also checks each kset's data.
@@ -846,7 +885,7 @@ fn write_partial_with(
     for old in [receipt_at.as_path(), out] {
         remove_if_present(old).with_context(|| format!("remove {}", old.display()))?;
     }
-    sync_parent(out)?;
+    sync_parent(out, limits.sync)?;
 
     let dir = parent_dir(out);
     let table_len = (BUCKETS + 1) * 8 + BUCKETS * 4;
@@ -907,8 +946,7 @@ fn write_partial_with(
     offsets.iter().for_each(|o| table.extend(o.to_le_bytes()));
     counts.iter().for_each(|c| table.extend(c.to_le_bytes()));
     file.write_all(&table)?;
-    file.sync_all()
-        .with_context(|| format!("sync {}", part.display()))?;
+    sync_file(&file, &part, limits.sync)?;
     // File::create is write-only; hash the synced bytes through a read handle.
     let read = File::open(&part).with_context(|| format!("read {}", part.display()))?;
     let receipt = PartialReceipt {
@@ -922,13 +960,48 @@ fn write_partial_with(
     };
     drop(read);
     drop(file);
+    let receipt_json = serde_json::to_vec_pretty(&receipt)?;
     std::fs::rename(&part, out).with_context(|| format!("rename to {}", out.display()))?;
     tmp.keep = true;
-    sync_parent(out)?;
-    // Without its receipt the partial is refused, so a failure here leaves
-    // the block to be rewritten.
-    write_durably(&receipt_at, &serde_json::to_vec_pretty(&receipt)?)?;
+    // Without its receipt the partial is refused, but it would hold its
+    // disk until rewritten, so a failure from here on removes it again.
+    sync_parent(out, limits.sync)
+        .and_then(|()| write_durably(&receipt_at, &receipt_json, limits.sync))
+        .map_err(|err| retract_partial(out, &receipt_at, limits.sync, err))?;
     Ok(receipt)
+}
+
+/// After `err` struck a partial already renamed to `out`, removes its
+/// receipt (if that was written too) and the partial, and syncs their
+/// directory. When that cleanup fails as well, the error says so and names
+/// the files to delete; whatever is left is still refused without a
+/// matching receipt, or is a complete, matching pair.
+fn retract_partial(
+    out: &Path,
+    receipt: &Path,
+    hook: SyncHook,
+    err: anyhow::Error,
+) -> anyhow::Error {
+    let cleanup = [receipt, out]
+        .into_iter()
+        .try_for_each(|p| {
+            remove_if_present(p)
+                .map(drop)
+                .with_context(|| format!("remove {}", p.display()))
+        })
+        .and_then(|()| sync_parent(out, hook));
+    match cleanup {
+        Ok(()) => err.context(format!(
+            "writing {} failed after the partial was renamed into place; the partial and its receipt were removed, so rewrite this block",
+            out.display()
+        )),
+        Err(cleanup) => err.context(format!(
+            "writing {} failed after the partial was renamed into place, and removing it failed too ({cleanup:#}): delete {} and {} before resuming",
+            out.display(),
+            receipt.display(),
+            out.display()
+        )),
+    }
 }
 
 /// One bucket of a partial: its encoded bytes, k-mers, and full rows.
@@ -1202,15 +1275,19 @@ impl PartialReader {
 /// from all of their ksets.
 ///
 /// `columns` are the matrix's genomes, in order, with the kset digests the
-/// caller expects (counted.json). Each partial must have its receipt, match
-/// it byte for byte (SHA-256), and hold exactly the expected columns of its
-/// block; partials of other genomes or other kset contents are refused.
-/// Blocks must tile the columns from 0 without gaps or overlaps. One file
-/// is open per block, not per genome. As with `build`, the caller fills in
-/// the summary's `kset_digests`.
+/// caller expects (counted.json), and `k` is the k the matrix is built at
+/// (the config's). Each partial must have its receipt, match it byte for
+/// byte (SHA-256), be written at `k`, and hold exactly the expected columns
+/// of its block; partials of other genomes, other kset contents or another
+/// k are refused, naming the block to rewrite. The k check is needed on its
+/// own: a kset digest covers values only, so empty ksets share one digest
+/// at every k. Blocks must tile the columns from 0 without gaps or
+/// overlaps. One file is open per block, not per genome. As with `build`,
+/// the caller fills in the summary's `kset_digests`.
 pub fn build_from_partials(
     partial_paths: &[PathBuf],
     columns: &[Column],
+    k: usize,
     min_support: u32,
     threads_chunk: usize,
 ) -> Result<FeatureMatrix> {
@@ -1218,6 +1295,7 @@ pub fn build_from_partials(
     build_from_partials_with(
         partial_paths,
         columns,
+        k,
         min_support,
         threads_chunk,
         REVIEWED_COLUMNS,
@@ -1227,30 +1305,37 @@ pub fn build_from_partials(
 fn build_from_partials_with(
     partial_paths: &[PathBuf],
     columns: &[Column],
+    k: usize,
     min_support: u32,
     threads_chunk: usize,
     max_columns: usize,
 ) -> Result<FeatureMatrix> {
+    ensure!(
+        (MIN_K..=MAX_K).contains(&k),
+        "k = {k} is outside {MIN_K}..={MAX_K}"
+    );
     ensure!(!partial_paths.is_empty(), "no partial matrices to merge");
     ensure_unique_names(columns.iter().map(|c| c.name.as_str()))?;
     let blocks = partial_paths.len();
     let readers: Vec<PartialReader> = partial_paths
         .iter()
         .map(|p| {
-            PartialReader::open_with_receipt(p, max_columns).map_err(|e| {
+            let r = PartialReader::open_with_receipt(p, max_columns).map_err(|e| {
                 with_open_file_hint(e, || {
                     format!(
                         "merging {blocks} partials keeps one open per block; raise the open-file limit (ulimit -n) above {blocks}, or write wider blocks"
                     )
                 })
-            })
+            })?;
+            ensure!(
+                r.k == k,
+                "{} is stale: it was written at k = {}, but the matrix is built at k = {k}; rewrite this block",
+                p.display(),
+                r.k
+            );
+            Ok(r)
         })
         .collect::<Result<_>>()?;
-    let k = readers[0].k;
-    ensure!(
-        readers.iter().all(|r| r.k == k),
-        "partial matrices mix different k values"
-    );
     // Every partial starts on a 64-column boundary, so contiguous blocks
     // also leave only the last one off a word boundary.
     let mut n = 0;
@@ -1346,14 +1431,26 @@ fn merge_partial_bucket(
     Ok(merge.finish())
 }
 
-fn write_u64s(path: &Path, values: &[u64]) -> Result<()> {
-    let mut w =
-        BufWriter::new(File::create(path).with_context(|| format!("create {}", path.display()))?);
-    for v in values {
-        w.write_all(&v.to_le_bytes())?;
+/// The contents of one binary matrix file, written little endian.
+enum Body<'a> {
+    U64s(&'a [u64]),
+    U32s(&'a [u32]),
+}
+
+impl Body<'_> {
+    fn len(&self) -> u64 {
+        match self {
+            Body::U64s(v) => 8 * v.len() as u64,
+            Body::U32s(v) => 4 * v.len() as u64,
+        }
     }
-    w.flush()?;
-    Ok(())
+
+    fn write_to(&self, w: &mut impl Write) -> std::io::Result<()> {
+        match self {
+            Body::U64s(v) => v.iter().try_for_each(|x| w.write_all(&x.to_le_bytes())),
+            Body::U32s(v) => v.iter().try_for_each(|x| w.write_all(&x.to_le_bytes())),
+        }
+    }
 }
 
 fn read_u64s(path: &Path) -> Result<Vec<u64>> {
@@ -1368,26 +1465,22 @@ fn read_u64s(path: &Path) -> Result<Vec<u64>> {
         .collect())
 }
 
-/// The files of a saved matrix.
-const MATRIX_FILES: [&str; 5] = [
-    "matrix.json",
-    "patterns.bin",
-    "support.bin",
-    "kmer_offsets.bin",
-    "kmers.bin",
-];
-
 impl FeatureMatrix {
+    /// Writes the matrix files to `dir`. When this returns Ok, every file
+    /// and the directory entries are synced. Files are replaced one at a
+    /// time, not as one atomic generation: the summary is removed first and
+    /// written last, so an interrupted or failed save leaves no matrix.json
+    /// and `load` refuses the directory.
     pub fn save(&self, dir: &Path) -> Result<()> {
-        std::fs::create_dir_all(dir)?;
-        self.write_files(dir, &serde_json::to_vec_pretty(&self.summary)?)
+        create_dir_durably(dir, &no_fault)?;
+        self.write_files(dir, &serde_json::to_vec_pretty(&self.summary)?, &no_fault)
     }
 
-    /// `save`, refused before anything is written or removed when the files
-    /// would leave less than `reserve_bytes` free on `dir`'s filesystem.
-    /// Files of an earlier save in `dir`, which are replaced, count as free.
+    /// `save`, refused before anything is written or removed when the save
+    /// would at any point leave less than `reserve_bytes` free on `dir`'s
+    /// filesystem (see `save_peak`).
     pub fn save_with_reserve(&self, dir: &Path, reserve_bytes: u64) -> Result<()> {
-        self.save_checked(dir, reserve_bytes, &free_bytes)
+        self.save_checked(dir, reserve_bytes, &free_bytes, &no_fault)
     }
 
     fn save_checked(
@@ -1395,33 +1488,82 @@ impl FeatureMatrix {
         dir: &Path,
         reserve: u64,
         free: &dyn Fn(&Path) -> Result<u64>,
+        sync: SyncHook,
     ) -> Result<()> {
-        std::fs::create_dir_all(dir)?;
+        create_dir_durably(dir, sync)?;
         let summary = serde_json::to_vec_pretty(&self.summary)?;
-        let need = summary.len() as u64
-            + 8 * (self.patterns.data.len() + self.kmer_offsets.len() + self.kmers.len()) as u64
-            + 4 * self.support.len() as u64;
-        let replaced: u64 = MATRIX_FILES
-            .iter()
-            .filter_map(|f| std::fs::metadata(dir.join(f)).ok())
-            .map(|m| m.len())
-            .sum();
-        ensure_free_with(free, dir, need.saturating_sub(replaced), reserve)?;
-        self.write_files(dir, &summary)
+        let old = |name: &str| {
+            std::fs::metadata(dir.join(name))
+                .ok()
+                .filter(|m| m.is_file())
+                .map_or(0, |m| m.len())
+        };
+        let peak = self.save_peak(summary.len() as u64, old);
+        ensure_free_with(free, dir, peak, reserve)?;
+        self.write_files(dir, &summary, sync)
     }
 
-    fn write_files(&self, dir: &Path, summary_json: &[u8]) -> Result<()> {
+    /// The binary files of a save, in the order `write_files` writes them.
+    fn binaries(&self) -> [(&'static str, Body<'_>); 4] {
+        [
+            ("patterns.bin", Body::U64s(&self.patterns.data)),
+            ("support.bin", Body::U32s(&self.support)),
+            ("kmer_offsets.bin", Body::U64s(&self.kmer_offsets)),
+            ("kmers.bin", Body::U64s(&self.kmers)),
+        ]
+    }
+
+    /// The most bytes, beyond what the directory holds before, that a save
+    /// holds at any point, where `old(file)` is the length of each matrix
+    /// file already there (0 if none). `write_files` removes matrix.json,
+    /// truncates and rewrites each binary in turn, then writes the summary,
+    /// so a binary that grows is written before a later one shrinks: the
+    /// peak is the largest prefix, not the net change. File lengths, not
+    /// allocated blocks, are counted; block rounding and metadata come out
+    /// of the reserve.
+    fn save_peak(&self, summary_len: u64, old: impl Fn(&str) -> u64) -> u64 {
+        let mut held = -(old("matrix.json") as i128);
+        let mut peak = 0i128;
+        for (name, body) in self.binaries() {
+            held += body.len() as i128 - old(name) as i128;
+            peak = peak.max(held);
+        }
+        held += summary_len as i128;
+        peak.max(held) as u64
+    }
+
+    fn write_files(&self, dir: &Path, summary_json: &[u8], sync: SyncHook) -> Result<()> {
         // A summary left from an earlier save would mark half-written
-        // binaries as a complete matrix, so it goes before they are touched.
+        // binaries as a complete matrix, so it goes, durably, before they
+        // are touched.
         let summary = dir.join("matrix.json");
         remove_if_present(&summary).with_context(|| format!("remove {}", summary.display()))?;
-        write_u64s(&dir.join("patterns.bin"), &self.patterns.data)?;
-        let support: Vec<u8> = self.support.iter().flat_map(|s| s.to_le_bytes()).collect();
-        std::fs::write(dir.join("support.bin"), support)?;
-        write_u64s(&dir.join("kmer_offsets.bin"), &self.kmer_offsets)?;
-        write_u64s(&dir.join("kmers.bin"), &self.kmers)?;
-        // Summary last: its presence marks a complete matrix.
-        std::fs::write(&summary, summary_json)?;
+        sync_dir(dir, sync)?;
+        for (name, body) in self.binaries() {
+            let path = dir.join(name);
+            let mut w = BufWriter::new(
+                File::create(&path).with_context(|| format!("create {}", path.display()))?,
+            );
+            body.write_to(&mut w)
+                .and_then(|()| w.flush())
+                .with_context(|| format!("write {}", path.display()))?;
+            sync_file(w.get_ref(), &path, sync)?;
+        }
+        // Every binary and its directory entry are durable before the
+        // summary, last, marks the matrix complete.
+        sync_dir(dir, sync)?;
+        if let Err(err) = write_durably(&summary, summary_json, sync) {
+            // Only the final directory sync fails with the summary in
+            // place. A failed save leaves no summary; were its removal
+            // lost in a crash, the files it marks are all synced.
+            return Err(match remove_if_present(&summary) {
+                Ok(_) => err,
+                Err(e) => err.context(format!(
+                    "the save failed, and {} could not be removed ({e})",
+                    summary.display()
+                )),
+            });
+        }
         Ok(())
     }
 
@@ -1602,9 +1744,19 @@ mod tests {
     use crate::kset;
     use rand::{Rng, SeedableRng};
     use rand_chacha::ChaCha8Rng;
+    use std::cell::{Cell, RefCell};
     use std::collections::{BTreeMap, HashMap, HashSet};
     use std::sync::{Mutex, MutexGuard};
     use std::time::Instant;
+
+    /// The files of a saved matrix.
+    const MATRIX_FILES: [&str; 5] = [
+        "matrix.json",
+        "patterns.bin",
+        "support.bin",
+        "kmer_offsets.bin",
+        "kmers.bin",
+    ];
 
     fn kset_of(dir: &Path, name: &str, seq: &str, space: &KmerSpace) -> PathBuf {
         let fna = dir.join(format!("{name}.fna"));
@@ -2181,6 +2333,7 @@ mod tests {
             max_columns: ANY_COLUMNS,
             reserve: 0,
             free: &free_bytes,
+            sync: &no_fault,
         }
     }
 
@@ -2228,7 +2381,8 @@ mod tests {
         (parts, receipts)
     }
 
-    /// Merges `paths` through partials of `width` columns written to `dir`.
+    /// Merges `paths` through partials of `width` columns written to `dir`,
+    /// at the ksets' own k.
     fn via_partials(
         paths: &[PathBuf],
         width: usize,
@@ -2236,9 +2390,10 @@ mod tests {
         dir: &Path,
     ) -> (FeatureMatrix, Vec<PartialReceipt>) {
         let columns = columns_of(paths);
+        let k = KsetReader::open(&paths[0]).unwrap().k;
         let widths = vec![width; paths.len().div_ceil(width)];
         let (parts, receipts) = write_blocks(paths, &columns, &widths, dir, 64);
-        let m = build_from_partials_with(&parts, &columns, min, 64, ANY_COLUMNS).unwrap();
+        let m = build_from_partials_with(&parts, &columns, k, min, 64, ANY_COLUMNS).unwrap();
         (m, receipts)
     }
 
@@ -2361,7 +2516,7 @@ mod tests {
                 out
             })
             .collect();
-        let good = build_from_partials(&p, &columns, 1, 8).unwrap();
+        let good = build_from_partials(&p, &columns, 31, 1, 8).unwrap();
         assert_eq!(digest_of(&good), digest_of(&build(&paths, 1, 8).unwrap()));
         let order = |idx: &[usize]| -> Vec<PathBuf> { idx.iter().map(|&i| p[i].clone()).collect() };
         for idx in [
@@ -2371,7 +2526,7 @@ mod tests {
             &[1, 2, 3],
             &[0, 1, 3, 2],
         ] {
-            let err = build_from_partials(&order(idx), &columns, 1, 8)
+            let err = build_from_partials(&order(idx), &columns, 31, 1, 8)
                 .err()
                 .unwrap();
             assert!(
@@ -2380,21 +2535,21 @@ mod tests {
             );
         }
         // A missing last block, or more expected columns than blocks hold.
-        let err = build_from_partials(&order(&[0, 1, 2]), &columns, 1, 8)
+        let err = build_from_partials(&order(&[0, 1, 2]), &columns, 31, 1, 8)
             .err()
             .unwrap();
         assert!(
             format!("{err:#}").contains("hold 192 columns, but 200"),
             "{err:#}"
         );
-        let err = build_from_partials(&p, &columns[..199], 1, 8)
+        let err = build_from_partials(&p, &columns[..199], 31, 1, 8)
             .err()
             .unwrap();
         assert!(
             format!("{err:#}").contains("hold 200 columns, but 199"),
             "{err:#}"
         );
-        let err = build_from_partials(&[], &columns, 1, 8).err().unwrap();
+        let err = build_from_partials(&[], &columns, 31, 1, 8).err().unwrap();
         assert!(format!("{err:#}").contains("no partial matrices"));
         let x = dir.path().join("x.kpart");
         let err = write_partial(&paths[..10], &columns[..10], 50, &x, 8, 0)
@@ -2413,10 +2568,89 @@ mod tests {
         let k32 = write_cohort(&other, 32, &cohort(32, 8));
         let odd = dir.path().join("k32.kpart");
         write_partial(&k32, &columns_of(&k32), 192, &odd, 8, 0).unwrap();
+        // A block of another k is named, so a resume can rewrite it.
         let mut mixed = p[..3].to_vec();
-        mixed.push(odd);
-        let err = build_from_partials(&mixed, &columns, 1, 8).err().unwrap();
-        assert!(format!("{err:#}").contains("mix different k"), "{err:#}");
+        mixed.push(odd.clone());
+        let err = build_from_partials(&mixed, &columns, 31, 1, 8)
+            .err()
+            .unwrap();
+        assert!(
+            format!("{err:#}").contains(
+                "k32.kpart is stale: it was written at k = 32, but the matrix is built at k = 31"
+            ),
+            "{err:#}"
+        );
+        // Against k = 32, the k = 31 blocks are the stale ones, first one first.
+        let err = build_from_partials(&mixed, &columns, 32, 1, 8)
+            .err()
+            .unwrap();
+        assert!(
+            format!("{err:#}").contains("p0.kpart is stale: it was written at k = 31"),
+            "{err:#}"
+        );
+        for k in [0, 4, 33] {
+            let err = build_from_partials(&p, &columns, k, 1, 8).err().unwrap();
+            assert!(format!("{err:#}").contains("outside"), "k={k}: {err:#}");
+        }
+    }
+
+    #[test]
+    fn partials_are_bound_to_the_expected_k_even_when_every_kset_is_empty() {
+        // The review's case: empty ksets have the same digest at every k,
+        // so names and digests alone accept an old k = 31 block at k = 32.
+        let dir = tempfile::tempdir().unwrap();
+        let n = 70;
+        let mut columns_at = Vec::new();
+        let mut parts_at = Vec::new();
+        for k in [31, 32] {
+            let sub = dir.path().join(format!("k{k}"));
+            std::fs::create_dir(&sub).unwrap();
+            let paths = write_cohort(&sub, k, &vec![vec![]; n]);
+            let columns = columns_of(&paths);
+            // Two blocks, so no column of any block holds a k-mer.
+            let (parts, receipts) = write_blocks(&paths, &columns, &[64, 64], &sub, 8);
+            assert!(receipts.iter().all(|r| r.k == k && r.kmers == 0));
+            // Same-k empty input still merges to the matrix `build` makes.
+            for min in [0, 1] {
+                let m = build_from_partials(&parts, &columns, k, min, 8).unwrap();
+                assert_eq!(m.summary.k, k);
+                assert_eq!(
+                    digest_of(&m),
+                    digest_of(&build(&paths, min, 8).unwrap()),
+                    "k={k} min={min}"
+                );
+            }
+            columns_at.push(columns);
+            parts_at.push(parts);
+        }
+        assert_eq!(columns_at[0], columns_at[1], "empty digests agree across k");
+        let err = build_from_partials(&parts_at[0], &columns_at[1], 32, 1, 8)
+            .err()
+            .unwrap();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("k31/b0000.kpart is stale: it was written at k = 31, but the matrix is built at k = 32; rewrite this block"),
+            "{msg}"
+        );
+        // Old and new blocks mixed: the old one is named, whichever it is.
+        for (old, at) in [(0, "k31/b0000"), (1, "k31/b0001")] {
+            let mut mixed = parts_at[1].clone();
+            mixed[old] = parts_at[0][old].clone();
+            let err = build_from_partials(&mixed, &columns_at[1], 32, 1, 8)
+                .err()
+                .unwrap();
+            assert!(
+                format!("{err:#}").contains(&format!("{at}.kpart is stale")),
+                "{err:#}"
+            );
+        }
+        // Rewriting the named block from the current ksets resumes.
+        let mut mixed = parts_at[1].clone();
+        mixed[1] = parts_at[0][1].clone();
+        let k32 = write_cohort(&dir.path().join("k32"), 32, &vec![vec![]; n]);
+        write_partial(&k32[64..], &columns_at[1][64..], 64, &mixed[1], 8, 0).unwrap();
+        let m = build_from_partials(&mixed, &columns_at[1], 32, 1, 8).unwrap();
+        assert_eq!(m.summary.k, 32);
     }
 
     /// Opens a partial and decodes every bucket, without its receipt.
@@ -2515,7 +2749,7 @@ mod tests {
         for (what, data) in cases.iter().chain(&merge_only) {
             std::fs::write(&case, data).unwrap();
             write_receipt(&case, &receipt);
-            let merge = || build_from_partials(std::slice::from_ref(&case), &columns, 1, 8);
+            let merge = || build_from_partials(std::slice::from_ref(&case), &columns, 31, 1, 8);
             assert!(merge().is_err(), "{what}");
             let forged = PartialReceipt {
                 bytes: data.len() as u64,
@@ -2533,7 +2767,7 @@ mod tests {
         // The forged receipt alone is not what refuses them.
         std::fs::copy(&good, &case).unwrap();
         write_receipt(&case, &receipt);
-        build_from_partials(std::slice::from_ref(&case), &columns, 1, 8).unwrap();
+        build_from_partials(std::slice::from_ref(&case), &columns, 31, 1, 8).unwrap();
     }
 
     #[test]
@@ -2546,7 +2780,7 @@ mod tests {
         std::fs::create_dir(&parts).unwrap();
         let (p, receipts) = write_blocks(&paths, &columns, &[64, 64, 64], &parts, 64);
         let want = digest_of(&build(&paths, 1, 64).unwrap());
-        let merge = |p: &[PathBuf]| build_from_partials(p, &columns, 1, 64);
+        let merge = |p: &[PathBuf]| build_from_partials(p, &columns, 31, 1, 64);
         assert_eq!(digest_of(&merge(&p).unwrap()), want);
         let refused = |p: &[PathBuf], expect: &str| {
             let err = merge(p).err().unwrap();
@@ -2636,7 +2870,7 @@ mod tests {
         let (p, _) = write_blocks(&paths, &columns, &[64; 4], &parts, 64);
         let before = digest_of(&build(&paths, 1, 64).unwrap());
         assert_eq!(
-            digest_of(&build_from_partials(&p, &columns, 1, 64).unwrap()),
+            digest_of(&build_from_partials(&p, &columns, 31, 1, 64).unwrap()),
             before
         );
 
@@ -2647,7 +2881,9 @@ mod tests {
         kset::write(&paths[70], "g00070", &space, &changed[70]).unwrap();
         let new_columns = columns_of(&paths);
         assert_ne!(new_columns[70], columns[70]);
-        let err = build_from_partials(&p, &new_columns, 1, 64).err().unwrap();
+        let err = build_from_partials(&p, &new_columns, 31, 1, 64)
+            .err()
+            .unwrap();
         let msg = format!("{err:#}");
         assert!(msg.contains("b0001.kpart is stale: column 70"), "{msg}");
         // A block cannot be written from a kset other than the expected one.
@@ -2659,20 +2895,22 @@ mod tests {
             "{err:#}"
         );
         // That refusal left the old block in place, still stale.
-        assert!(build_from_partials(&p, &new_columns, 1, 64).is_err());
+        assert!(build_from_partials(&p, &new_columns, 31, 1, 64).is_err());
         // Rewriting the block makes the matrix `build` makes from the new ksets.
         write_partial(&paths[64..128], &new_columns[64..128], 64, &p[1], 64, 0).unwrap();
         let after = digest_of(&build(&paths, 1, 64).unwrap());
         assert_ne!(after, before);
         assert_eq!(
-            digest_of(&build_from_partials(&p, &new_columns, 1, 64).unwrap()),
+            digest_of(&build_from_partials(&p, &new_columns, 31, 1, 64).unwrap()),
             after
         );
 
         // Catalog change: another genome takes column 130.
         let mut recatalogued = new_columns.clone();
         recatalogued[130].name = "h00130".into();
-        let err = build_from_partials(&p, &recatalogued, 1, 64).err().unwrap();
+        let err = build_from_partials(&p, &recatalogued, 31, 1, 64)
+            .err()
+            .unwrap();
         assert!(
             format!("{err:#}").contains("column 130 holds g00130"),
             "{err:#}"
@@ -2687,7 +2925,7 @@ mod tests {
         // Two columns may not name one genome.
         let mut twice = new_columns.clone();
         twice[199].name = twice[0].name.clone();
-        let err = build_from_partials(&p, &twice, 1, 64).err().unwrap();
+        let err = build_from_partials(&p, &twice, 31, 1, 64).err().unwrap();
         assert!(format!("{err:#}").contains("in two columns"), "{err:#}");
 
         // A rewrite that fails after creating its file (here the disk fills
@@ -2702,6 +2940,7 @@ mod tests {
             max_columns: REVIEWED_COLUMNS,
             reserve: 1,
             free: &filling,
+            sync: &no_fault,
         };
         let err = write_partial_with(
             &paths[128..192],
@@ -2716,11 +2955,13 @@ mod tests {
         assert!(format!("{err:#}").contains("1-byte reserve"), "{err:#}");
         assert_eq!(calls.get(), 4);
         assert_nothing_at(&p[2]);
-        let err = build_from_partials(&p, &new_columns, 1, 64).err().unwrap();
+        let err = build_from_partials(&p, &new_columns, 31, 1, 64)
+            .err()
+            .unwrap();
         assert!(format!("{err:#}").contains("b0002.kpart"), "{err:#}");
         write_partial(&paths[128..192], &new_columns[128..192], 128, &p[2], 64, 0).unwrap();
         assert_eq!(
-            digest_of(&build_from_partials(&p, &new_columns, 1, 64).unwrap()),
+            digest_of(&build_from_partials(&p, &new_columns, 31, 1, 64).unwrap()),
             after
         );
     }
@@ -2762,21 +3003,346 @@ mod tests {
         let err = m.save_with_reserve(&mx, u64::MAX).err().unwrap();
         assert!(format!("{err:#}").contains("reserve"), "{err:#}");
         assert_eq!(digest_of(&FeatureMatrix::load(&mx).unwrap()), saved);
-        // The files a save replaces count as free; nothing else does.
+        // Re-saving the same matrix rewrites each file at its own size and
+        // needs nothing new; a first save needs every byte.
         let size: u64 = MATRIX_FILES
             .iter()
             .map(|f| std::fs::metadata(mx.join(f)).unwrap().len())
             .sum();
         let exact = |left: u64| move |_: &Path| -> Result<u64> { Ok(left) };
-        m.save_checked(&mx, 0, &exact(0)).unwrap();
+        m.save_checked(&mx, 0, &exact(0), &no_fault).unwrap();
         let fresh = dir.path().join("fresh");
-        assert!(m.save_checked(&fresh, 0, &exact(size - 1)).is_err());
-        assert!(!fresh.join("matrix.json").exists());
-        m.save_checked(&fresh, 0, &exact(size)).unwrap();
         assert!(
-            m.save_checked(&dir.path().join("f2"), 10, &exact(size + 9))
+            m.save_checked(&fresh, 0, &exact(size - 1), &no_fault)
                 .is_err()
         );
+        assert!(!fresh.join("matrix.json").exists());
+        m.save_checked(&fresh, 0, &exact(size), &no_fault).unwrap();
+        assert!(
+            m.save_checked(&dir.path().join("f2"), 10, &exact(size + 9), &no_fault)
+                .is_err()
+        );
+    }
+
+    /// The review's re-save shape over 64 genomes: the old matrix keeps
+    /// all its k-mers in one pattern, the new one has `p` patterns of one
+    /// k-mer each, and both sets of binaries total 28p + 8 bytes (old_n =
+    /// (28p - 20) / 8, p odd). The net change is a few summary bytes, but
+    /// patterns.bin, support.bin and kmer_offsets.bin grow before kmers.bin
+    /// shrinks.
+    fn resave_pair(p: usize) -> (FeatureMatrix, FeatureMatrix) {
+        let old_n = (28 * p - 20) / 8;
+        let summary = |kmers: usize, n_patterns: usize| MatrixSummary {
+            k: 31,
+            genomes: (0..64).map(|g| format!("g{g}")).collect(),
+            min_support: 0,
+            n_patterns,
+            kmers_distinct: kmers as u64,
+            kmers_kept: kmers as u64,
+            kmers_rare: 0,
+            kmers_core: 0,
+            kset_digests: vec![],
+        };
+        let old = FeatureMatrix {
+            summary: summary(old_n, 1),
+            patterns: BitMatrix {
+                rows: 1,
+                cols: 64,
+                words: 1,
+                data: vec![1],
+            },
+            support: vec![1],
+            kmer_offsets: vec![0, old_n as u64],
+            kmers: (0..old_n as u64).collect(),
+        };
+        let new = FeatureMatrix {
+            summary: summary(p, p),
+            patterns: BitMatrix {
+                rows: p,
+                cols: 64,
+                words: 1,
+                data: (1..=p as u64).collect(),
+            },
+            support: (1..=p as u64).map(|v| v.count_ones()).collect(),
+            kmer_offsets: (0..=p as u64).collect(),
+            kmers: (0..p as u64).collect(),
+        };
+        (old, new)
+    }
+
+    /// Lengths of the matrix files in `dir`, in `MATRIX_FILES` order.
+    fn file_sizes(dir: &Path) -> Vec<u64> {
+        MATRIX_FILES
+            .iter()
+            .map(|f| std::fs::metadata(dir.join(f)).unwrap().len())
+            .collect()
+    }
+
+    #[test]
+    fn a_resave_is_checked_against_its_peak_not_its_net_change() {
+        let reserve = 1 << 20;
+        let exact = |left: u64| move |_: &Path| -> Result<u64> { Ok(left) };
+        // The review's sizes (net 3 B, peak 19,607 B), then 128x larger.
+        for (p, review) in [(1025, Some((3, 19_607))), (131_073, None)] {
+            let what = format!("p={p}");
+            let dir = tempfile::tempdir().unwrap();
+            let mx = dir.path().join("mx");
+            let (old, new) = resave_pair(p);
+            old.save(&mx).unwrap();
+            let old_digest = digest_of(&old);
+            let old_sizes = file_sizes(&mx);
+            // What each step of the rewrite holds over the old save, worked
+            // out here from the file sizes: matrix.json goes first, each
+            // binary is truncated and rewritten in turn, the summary last.
+            let json = serde_json::to_vec_pretty(&new.summary).unwrap();
+            let new_sizes = [
+                json.len() as u64,
+                8 * new.patterns.data.len() as u64,
+                4 * new.support.len() as u64,
+                8 * new.kmer_offsets.len() as u64,
+                8 * new.kmers.len() as u64,
+            ];
+            let (mut held, mut peak) = (-(old_sizes[0] as i64), 0i64);
+            for i in 1..5 {
+                held += new_sizes[i] as i64 - old_sizes[i] as i64;
+                peak = peak.max(held);
+            }
+            held += new_sizes[0] as i64;
+            peak = peak.max(held);
+            let net = new_sizes.iter().sum::<u64>() as i64 - old_sizes.iter().sum::<u64>() as i64;
+            assert_eq!(held, net, "{what}");
+            assert_eq!(
+                old_sizes[1..].iter().sum::<u64>(),
+                new_sizes[1..].iter().sum::<u64>(),
+                "{what}"
+            );
+            if let Some(sizes) = review {
+                assert_eq!((net, peak), sizes, "{what}");
+            }
+            assert!(net >= 0 && peak > 1000 * net.max(1), "{what}");
+            let (net, peak) = (net as u64, peak as u64);
+            let old_len = |f: &str| old_sizes[MATRIX_FILES.iter().position(|&m| m == f).unwrap()];
+            assert_eq!(new.save_peak(json.len() as u64, old_len), peak, "{what}");
+
+            // The old check's net figure, and one byte short of the peak,
+            // are refused before the old matrix is touched.
+            for free in [net + reserve, peak + reserve - 1] {
+                let err = new
+                    .save_checked(&mx, reserve, &exact(free), &no_fault)
+                    .err()
+                    .unwrap();
+                assert!(format!("{err:#}").contains("reserve"), "{what}: {err:#}");
+                assert_eq!(file_sizes(&mx), old_sizes, "{what}");
+                let kept = FeatureMatrix::load(&mx).unwrap();
+                assert_eq!(digest_of(&kept), old_digest, "{what}");
+            }
+            new.save_checked(&mx, reserve, &exact(peak + reserve), &no_fault)
+                .unwrap();
+            let saved = FeatureMatrix::load(&mx).unwrap();
+            assert_eq!(digest_of(&saved), digest_of(&new), "{what}");
+            assert_eq!(file_sizes(&mx), new_sizes, "{what}");
+
+            // Back again, the binaries shrink before kmers.bin grows, and
+            // no step holds more than before.
+            assert_eq!(
+                old.save_peak(old_sizes[0], |f| file_sizes(&mx)
+                    [MATRIX_FILES.iter().position(|&m| m == f).unwrap()]),
+                0
+            );
+            old.save_checked(&mx, reserve, &exact(reserve), &no_fault)
+                .unwrap();
+            assert_eq!(digest_of(&FeatureMatrix::load(&mx).unwrap()), old_digest);
+
+            // A first save holds every byte at the end.
+            let total: u64 = new_sizes.iter().sum();
+            assert_eq!(new.save_peak(json.len() as u64, |_| 0), total, "{what}");
+            let fresh = dir.path().join("fresh");
+            assert!(
+                new.save_checked(&fresh, reserve, &exact(total + reserve - 1), &no_fault)
+                    .is_err()
+            );
+            assert!(!fresh.join("matrix.json").exists());
+            new.save_checked(&fresh, reserve, &exact(total + reserve), &no_fault)
+                .unwrap();
+            assert_eq!(
+                digest_of(&FeatureMatrix::load(&fresh).unwrap()),
+                digest_of(&new)
+            );
+        }
+    }
+
+    /// A sync hook that fails its `fail`-th call (from 0) and passes the
+    /// others.
+    fn fail_sync_at(fail: usize, calls: &Cell<usize>) -> impl Fn(&Path) -> Result<()> + '_ {
+        move |p: &Path| {
+            let i = calls.get();
+            calls.set(i + 1);
+            ensure!(i != fail, "injected sync failure at {}", p.display());
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn a_save_is_durable_before_it_returns_and_a_failed_one_leaves_no_summary() {
+        let dir = tempfile::tempdir().unwrap();
+        let (old, new) = resave_pair(1025);
+        let (old_digest, new_digest) = (digest_of(&old), digest_of(&new));
+        let root = dir.path().join("a");
+        let mx = root.join("b");
+        let calls = RefCell::new(Vec::<PathBuf>::new());
+        let record = |p: &Path| -> Result<()> {
+            calls.borrow_mut().push(p.to_path_buf());
+            Ok(())
+        };
+        let roomy = |_: &Path| -> Result<u64> { Ok(u64::MAX) };
+        old.save_checked(&mx, 0, &roomy, &record).unwrap();
+        // The new directories, the summary's removal, each binary, their
+        // entries, then the summary and its entry, in that order.
+        let mut want = vec![dir.path().to_path_buf(), root.clone(), mx.clone()];
+        want.extend(MATRIX_FILES[1..].iter().map(|f| mx.join(f)));
+        want.extend([mx.clone(), mx.join("matrix.json.part"), mx.clone()]);
+        assert_eq!(*calls.borrow(), want);
+        calls.borrow_mut().clear();
+        old.save_checked(&mx, 0, &roomy, &record).unwrap();
+        assert_eq!(*calls.borrow(), want[2..]);
+        assert_eq!(digest_of(&FeatureMatrix::load(&mx).unwrap()), old_digest);
+
+        // A sync failing at any step of a re-save fails it and leaves no
+        // summary, whichever binaries were already rewritten, so the
+        // directory is no matrix until a save succeeds.
+        for fail in 0..want.len() - 2 {
+            let n = Cell::new(0);
+            let err = new
+                .save_checked(&mx, 0, &roomy, &fail_sync_at(fail, &n))
+                .err()
+                .unwrap();
+            let msg = format!("{err:#}");
+            assert!(msg.contains("injected sync failure at"), "{fail}: {msg}");
+            assert!(!mx.join("matrix.json").exists(), "{fail}");
+            assert!(!mx.join("matrix.json.part").exists(), "{fail}");
+            let err = FeatureMatrix::load(&mx).err().unwrap();
+            assert!(
+                format!("{err:#}").contains("no matrix in"),
+                "{fail}: {err:#}"
+            );
+            new.save(&mx).unwrap();
+            assert_eq!(digest_of(&FeatureMatrix::load(&mx).unwrap()), new_digest);
+            old.save(&mx).unwrap();
+        }
+        // So does a failure to make a new directory durable.
+        let n = Cell::new(0);
+        let deep = dir.path().join("c").join("d");
+        assert!(
+            old.save_checked(&deep, 0, &roomy, &fail_sync_at(1, &n))
+                .is_err()
+        );
+        assert!(!deep.join("matrix.json").exists());
+    }
+
+    fn limits_syncing(sync: SyncHook<'_>) -> Limits<'_> {
+        Limits {
+            max_columns: REVIEWED_COLUMNS,
+            reserve: 0,
+            free: &free_bytes,
+            sync,
+        }
+    }
+
+    #[test]
+    fn a_partial_that_fails_after_its_rename_is_removed_again() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = write_cohort(dir.path(), 31, &cohort(31, 64));
+        let columns = columns_of(&paths);
+        let out = dir.path().join("p.kpart");
+        let want = digest_of(&build(&paths, 1, 8).unwrap());
+        let merge = || build_from_partials(std::slice::from_ref(&out), &columns, 31, 1, 8);
+        let calls = RefCell::new(Vec::<PathBuf>::new());
+        let record = |p: &Path| -> Result<()> {
+            calls.borrow_mut().push(p.to_path_buf());
+            Ok(())
+        };
+        let receipt =
+            write_partial_with(&paths, &columns, 0, &out, 8, &limits_syncing(&record)).unwrap();
+        // The retired files' removal, the partial, its rename, then the
+        // receipt and its rename.
+        let d = dir.path().to_path_buf();
+        let steps = vec![
+            d.clone(),
+            with_suffix(&out, ".part"),
+            d.clone(),
+            with_suffix(&receipt_path(&out), ".part"),
+            d.clone(),
+        ];
+        assert_eq!(*calls.borrow(), steps);
+        // A successful write keeps both files, and they merge.
+        assert_eq!(read_receipt(&out), receipt);
+        assert_eq!(digest_of(&merge().unwrap()), want);
+
+        // A sync failing at any step leaves nothing at `out`: before the
+        // rename (0, 1) through the rewrite's own cleanup; after it, at the
+        // rename's directory sync (2) or in the receipt's write (3, 4), by
+        // removing the renamed partial and any receipt again.
+        for fail in 0..steps.len() {
+            let n = Cell::new(0);
+            let hook = fail_sync_at(fail, &n);
+            let err = write_partial_with(&paths, &columns, 0, &out, 8, &limits_syncing(&hook))
+                .err()
+                .unwrap();
+            let msg = format!("{err:#}");
+            assert!(msg.contains("injected sync failure at"), "{fail}: {msg}");
+            assert_eq!(
+                msg.contains("the partial and its receipt were removed, so rewrite this block"),
+                fail >= 2,
+                "{fail}: {msg}"
+            );
+            assert_nothing_at(&out);
+            assert!(merge().is_err(), "{fail}");
+            write_partial(&paths, &columns, 0, &out, 8, 0).unwrap();
+            assert_eq!(digest_of(&merge().unwrap()), want, "{fail}");
+        }
+
+        // The review's real failure: the receipt cannot be created after
+        // the partial was renamed.
+        let blocker = with_suffix(&receipt_path(&out), ".part");
+        std::fs::create_dir(&blocker).unwrap();
+        let err = write_partial(&paths, &columns, 0, &out, 8, 0)
+            .err()
+            .unwrap();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("were removed") && msg.contains(&format!("create {}", blocker.display())),
+            "{msg}"
+        );
+        assert!(!out.exists() && !receipt_path(&out).exists());
+        assert!(!with_suffix(&out, ".part").exists());
+        std::fs::remove_dir(&blocker).unwrap();
+        assert_nothing_at(&out);
+
+        // When the cleanup cannot be made durable either, the error says so
+        // and names the files to delete.
+        let n = Cell::new(0);
+        let from_2 = |p: &Path| -> Result<()> {
+            let i = n.get();
+            n.set(i + 1);
+            ensure!(i < 2, "injected sync failure at {}", p.display());
+            Ok(())
+        };
+        let err = write_partial_with(&paths, &columns, 0, &out, 8, &limits_syncing(&from_2))
+            .err()
+            .unwrap();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("removing it failed too")
+                && msg.contains(&format!(
+                    "delete {} and {} before resuming",
+                    receipt_path(&out).display(),
+                    out.display()
+                )),
+            "{msg}"
+        );
+        assert_nothing_at(&out);
+        write_partial(&paths, &columns, 0, &out, 8, 0).unwrap();
+        assert_eq!(digest_of(&merge().unwrap()), want);
     }
 
     #[test]
@@ -2807,7 +3373,7 @@ mod tests {
                 "{first_col}+{width}: {err:#}"
             );
         }
-        let err = build_from_partials(&[out.to_path_buf()], &columns, 1, 8)
+        let err = build_from_partials(&[out.to_path_buf()], &columns, 31, 1, 8)
             .err()
             .unwrap();
         assert!(format!("{err:#}").contains(reviewed), "{err:#}");
@@ -2950,11 +3516,19 @@ mod tests {
         let sets = dense_cohort(k, n);
         let paths = write_cohort(dir.path(), k, &sets);
         let columns = columns_of(&paths);
-        let built = build(&paths, 1, 64).unwrap();
-        assert_merges(&built, &sets, 1, "dense");
-        let digest = digest_of(&built);
-        let wide = build_with(&paths, 1, 64, Some(MergeKey::Wide)).unwrap();
-        assert_eq!(digest_of(&wide), digest);
+        // min_support 0 keeps the core and singleton k-mers too.
+        let built: Vec<(u32, String)> = [0, 1]
+            .into_iter()
+            .map(|min| {
+                let m = build(&paths, min, 64).unwrap();
+                assert_merges(&m, &sets, min, &format!("dense min={min}"));
+                let digest = digest_of(&m);
+                let wide = build_with(&paths, min, 64, Some(MergeKey::Wide)).unwrap();
+                assert_eq!(digest_of(&wide), digest, "min={min}");
+                (min, digest)
+            })
+            .collect();
+        assert_ne!(built[0].1, built[1].1);
         for (i, widths) in [&[64, 192, 128, 37][..], &[64; 7], &[384, 64]]
             .into_iter()
             .enumerate()
@@ -2971,12 +3545,15 @@ mod tests {
                     Some(want) => assert_eq!(&receipts, want, "{widths:?} chunk={chunk}"),
                 }
                 for merge_chunk in [1, 7, BUCKETS] {
-                    let m = build_from_partials(&parts, &columns, 1, merge_chunk).unwrap();
-                    assert_eq!(
-                        digest_of(&m),
-                        digest,
-                        "{widths:?} chunk={chunk} merge_chunk={merge_chunk}"
-                    );
+                    for (min, digest) in &built {
+                        let m =
+                            build_from_partials(&parts, &columns, 31, *min, merge_chunk).unwrap();
+                        assert_eq!(
+                            &digest_of(&m),
+                            digest,
+                            "{widths:?} chunk={chunk} merge_chunk={merge_chunk} min={min}"
+                        );
+                    }
                 }
             }
         }
@@ -3163,7 +3740,7 @@ mod tests {
             parts.push(out);
         }
         let t = Instant::now();
-        let matrix = build_from_partials_with(&parts, &columns, 1, 64, ANY_COLUMNS).unwrap();
+        let matrix = build_from_partials_with(&parts, &columns, k, 1, 64, ANY_COLUMNS).unwrap();
         BlockRun {
             matrix,
             all_ksets,
@@ -3250,9 +3827,24 @@ mod tests {
         let err = build(&paths, 1, 8).err().unwrap();
         let msg = format!("{err:#}");
         assert!(
-            msg.contains("raise the open-file limit (ulimit -n) above 200"),
+            msg.contains("raise the open-file limit (ulimit -n) above 200, or merge in column blocks (write_partial)"),
             "{msg}"
         );
+        // A block that is itself too wide is told to narrow, not to use
+        // write_partial again.
+        let columns = columns_of(&paths);
+        let wide = dir.path().join("wide.kpart");
+        let err = write_partial(&paths, &columns, 0, &wide, 8, 0)
+            .err()
+            .unwrap();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains(
+                "raise the open-file limit (ulimit -n) above 200, or write narrower blocks"
+            ) && !msg.contains("(write_partial)"),
+            "{msg}"
+        );
+        assert_nothing_at(&wide);
         // 64-genome blocks stay under the limit.
         let parts = dir.path().join("parts");
         std::fs::create_dir(&parts).unwrap();
