@@ -1467,7 +1467,91 @@ pkill -KILL -P "$forged" || true
 pkill -KILL -P "$forged2" || true
 kill -KILL "$forged" "$forged2" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((453 - skipped))  # less the user and PID namespace cases where those are unavailable
+# A cloudflared that leaves a process in its group. With kid.mode in the
+# connector directory, the stub forks a descendant that closes every inherited
+# descriptor (connector.spawn included) and stays in its process group, writes
+# kid.pid and stub.pid, and exits. "keep" keeps its environment, so the run's
+# token; "ignore" keeps it and ignores SIGTERM; "untied" drops the token.
+C3=$T/conn3
+make_connector "$C3"
+cat >"$C3/cloudflared" <<'SH'
+#!/bin/sh
+case "$1" in --version) echo "cloudflared version test"; exit 0 ;; esac
+mode=$(cat kid.mode 2>/dev/null || true)
+[ -n "$mode" ] || exec sleep 300
+rm -f kid.mode
+python3 -I -c '
+import os, signal, sys
+env = dict(os.environ)
+if sys.argv[1] == "ignore":
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+if sys.argv[1] == "untied":
+    env.pop("GRM_DEPLOY_SPAWN", None)
+os.closerange(3, 65536)
+os.execvpe("sleep", ["sleep", "300"], env)
+' "$mode" </dev/null >/dev/null 2>&1 &
+echo "$!" >kid.pid.tmp && mv kid.pid.tmp kid.pid
+echo "$$" >stub.pid
+exit 0
+SH
+(cd "$C3" && sha256sum cloudflared >cloudflared.sha256)
+sup3_up() {  # start a supervisor on C3 in its own session (sup=its PID), its exit code to sup.rc
+    rm -f "$C3/supervisor.pid" "$C3/sup.rc" "$C3/stub.pid" "$C3/kid.pid"
+    setsid bash -c 'GRM_CONNECTOR_DIR=$1 bash "$2/connector.sh" run; echo "$?" >"$1/sup.rc"' _ "$C3" "$S" >"$T/sup3.log" 2>&1 </dev/null &
+    wait_for 10 test -s "$C3/supervisor.pid" || true
+    sup=$(sed -n 's/ .*//p' "$C3/supervisor.pid" 2>/dev/null || true)
+}
+stub_done() {  # wait for the stub to write its descendant's PID and exit (kid=that PID, stub_ok=1)
+    kid='' stub_ok=0
+    wait_for 15 test -s "$C3/stub.pid" || return 0
+    kid=$(cat "$C3/kid.pid")
+    if wait_for 5 gone "$(cat "$C3/stub.pid")"; then stub_ok=1; fi
+}
+conn3_run() { timeout -k 5 30 env GRM_CONNECTOR_DIR="$C3" bash "$S/connector.sh" run; }
+echo keep >"$C3/kid.mode"
+sup3_up
+stub_done
+check "a cloudflared that leaves a descendant in its group starts and exits" -- test "$stub_ok" = 1
+check "the supervisor then stops that descendant, which carries the run's token" -- eval 'test -n "$kid" && wait_for 15 gone "$kid"'
+expect 0 'a connector supervisor holds' "connector status reports the running supervisor" -- connector "$C3" status
+# Ended by a signal it does not handle (USR1, which still runs its EXIT trap)
+# while it waits for a descendant that ignores SIGTERM, the supervisor stops
+# that descendant on its way out, though cloudflared itself has exited.
+# The mode is set only once the supervisor has restarted a plain cloudflared,
+# so the descendant comes from the start that follows this TERM.
+rm -f "$C3/stub.pid" "$C3/kid.pid"
+wait_for 15 eval 'pgrep -P "$sup" -f "^sleep 300$" >/dev/null' || true
+echo ignore >"$C3/kid.mode"
+pkill -TERM -P "$sup" -f '^sleep 300$' || true
+stub_done
+check "the restarted cloudflared leaves a descendant that ignores SIGTERM and exits" -- test "$stub_ok" = 1
+sleep 1
+kill -USR1 "$sup" 2>/dev/null || true
+check "a supervisor ended by USR1 stops that descendant on its way out" -- \
+    eval 'test -n "$kid" && wait_for 30 gone "$kid" && wait_for 10 gone "$sup"'
+[ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
+# A descendant without the run's token, in the group of a cloudflared that has
+# exited, cannot be told apart from an unrelated group that took the number:
+# the supervisor signals nothing, records the failed stop and exits 3. Nothing
+# restarts it; status reports it, and run refuses until it is resolved by hand.
+echo untied >"$C3/kid.mode"
+sup3_up
+stub_done
+check "a cloudflared that leaves a descendant without the run's token starts and exits" -- test "$stub_ok" = 1
+check "the supervisor exits 3 when it cannot tie that descendant to its run" -- \
+    eval 'wait_for 15 test -s "$C3/sup.rc" && test "$(cat "$C3/sup.rc")" = 3'
+check "it did not signal that descendant" -- eval 'test -n "$kid" && proc_alive "$kid"'
+check "its log names the process and says the tunnel is down with nothing to restart it" -- \
+    eval 'grep -q "(pids $kid) that cannot be tied to this start" "$T/sup3.log" && grep -q "nothing restarts it, so the tunnel is down" "$T/sup3.log"'
+expect 3 'records a failed stop: .*cannot be tied to this start' "connector status reports the recorded failed stop (exit 3)" -- connector "$C3" status
+expect 3 'not starting: .*records a failed stop' "connector run refuses to start while connector.failed exists" -- conn3_run
+check "that refused run started no supervisor or cloudflared" -- eval 'conn_free "$C3" && test ! -e "$C3/supervisor.pid"'
+[ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
+wait_for 5 gone "$kid" || true
+rm -f "$C3/connector.failed"
+expect 1 'no connector supervisor holds' "after the manual recovery, status reports no supervisor and no failure" -- connector "$C3" status
+
+EXPECTED_ASSERTIONS=$((466 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

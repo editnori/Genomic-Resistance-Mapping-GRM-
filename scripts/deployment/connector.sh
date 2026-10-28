@@ -3,18 +3,22 @@
 # route (configured in Cloudflare, not here) points at http://127.0.0.1:8641.
 # This script never reads, prints or copies the tunnel token: it checks the
 # token file's ownership and mode, and cloudflared reads it via --token-file.
-# usage: connector.sh check|run|stop
+# usage: connector.sh check|run|stop|status
 #   check  verify the binary against its SHA-256 and the token file's
 #          permissions; changes nothing
 #   run    supervise cloudflared in the foreground, restarting it after 5 s and
 #          checking the binary again before every start; a second supervisor on
 #          the same directory exits 0. Writes supervisor.pid, connector.pid,
 #          connector.lock, connector.spawn and logs/ in the connector directory
+#          (and connector.failed when a stop fails; see below)
 #   stop   SIGTERM the supervisor recorded in supervisor.pid, only if that PID
 #          still has the recorded start time, works in this connector
 #          directory, and is the process whose descriptor holds the flock on
 #          its connector.lock; then stop any cloudflared a killed supervisor
 #          left (see connector.spawn below)
+#   status report the supervisor, the holders of connector.spawn and any
+#          failed stop in connector.failed; changes nothing. Exits 0 while a
+#          supervisor runs, 1 when none does, 3 while connector.failed exists
 #   GRM_CONNECTOR_DIR      root-only directory with cloudflared,
 #                          cloudflared.sha256 and logs/ (required, absolute)
 #   GRM_TUNNEL_TOKEN_FILE  owned by the caller, mode 0600 or 0400, absolute
@@ -41,7 +45,11 @@
 # (GRM_DEPLOY_SPAWN), which whatever it forks inherits. Once cloudflared has
 # exited, what it left in its process group is stopped only when each member
 # carries that token, holds connector.spawn or was seen in the group while
-# cloudflared lived (lib.sh stop_tree); a group number can be reused.
+# cloudflared lived (lib.sh stop_tree); a group number can be reused. When the
+# supervisor cannot stop cloudflared's processes, it records why in
+# connector.failed, says so and exits 3. Nothing restarts it, so the tunnel
+# stays down: status reports the record, and run refuses to start (exit 3)
+# until an operator has stopped what is left and removed connector.failed.
 #
 # Output is best effort (say): a closed output pipe makes a write fail, not
 # kill the supervisor (SIGPIPE is handled, so cloudflared still starts with
@@ -112,6 +120,7 @@ paths_ok() {
     for f in connector.lock connector.spawn supervisor.pid connector.pid; do
         plain_target "$C/$f" || return 1
     done
+    plain_target "$C/connector.failed" || return 1
     plain_dir "$C/logs" || return 1
     if [ -d "$C/logs" ]; then odd=$(find "$C/logs" -mindepth 1 -maxdepth 1 ! -type f -print -quit); fi
     [ -z "$odd" ]
@@ -142,6 +151,20 @@ reap_orphans() {
     say "stopped the connector processes left by a killed supervisor: ${held:-none}"
 }
 
+# A failed stop of cloudflared's processes: some may remain and the supervisor
+# is exiting, so the tunnel is down and nothing restarts it. Record it in
+# connector.failed, which status reports and run will not start past, and say
+# so on stderr (the supervisor's log).
+stop_failed() {
+    write_file "$C/connector.failed" "$(date -u +%FT%TZ) $1"$'\n' || say "FAIL: cannot write $C/connector.failed" >&2
+    say "FAIL: $1. The connector supervisor exits 3 and nothing restarts it, so the tunnel is down until an operator stops what is left by hand and removes $C/connector.failed (docs/deployment.md, Tunnel connector)" >&2
+}
+failed_record() {
+    local line
+    line=$(safe_line "$C/connector.failed" 4096) || line="(unreadable)"
+    printf '%s\n' "$C/connector.failed records a failed stop: $line"
+}
+
 # Called on TERM, INT and HUP: stop at the next check, and stop the child
 # forked last, found by $! (set by the fork itself) until child is assigned.
 on_signal() {
@@ -160,12 +183,17 @@ on_exit() {
     trap - EXIT
     trap ':' TERM INT HUP
     set +e
-    # With its process group, even if cloudflared itself has exited.
-    if [ -n "${child:-}" ] && [ -n "${child_start:-}" ]; then stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" group || rc=1; fi
+    # With its process group, even if cloudflared itself has exited. A failure
+    # already recorded (exit 3) is not recorded again.
+    if [ -n "${child:-}" ] && [ -n "${child_start:-}" ] &&
+        ! stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" group; then
+        [ "$rc" = 3 ] || stop_failed "cannot stop cloudflared pid $child: $STOP_ERR"
+        rc=3
+    fi
     close_fd MARK_FD
     if [ -n "$MARK_ID" ] && ! mark_stop "$MARK_ID" "$C/connector.spawn" '' '' "$SPAWN_TOKEN"; then
-        say "FAIL: connector processes may remain: $MARK_ERR" >&2
-        rc=1
+        [ "$rc" = 3 ] || stop_failed "connector processes may remain: $MARK_ERR"
+        rc=3
     fi
     rm -f -- "$C/supervisor.pid" "$C/connector.pid"
     exit "$rc"
@@ -175,7 +203,7 @@ run() {
     local me i
     need flock setsid pgrep python3 sha256sum
     check
-    paths_ok || die "connector.lock, connector.spawn, supervisor.pid, connector.pid, logs/ or an entry of logs/ is a link, directory, FIFO or other special file" 2
+    paths_ok || die "connector.lock, connector.spawn, supervisor.pid, connector.pid, connector.failed, logs/ or an entry of logs/ is a link, directory, FIFO or other special file" 2
     [ -d "$C/logs" ] || mkdir "$C/logs"
     cd "$C"
     umask 077
@@ -185,6 +213,9 @@ run() {
     open_fd LOCK_FD "$C/connector.lock" || die "$C/connector.lock cannot be opened as a regular file" 2
     flock -n "$LOCK_FD" || { say "a connector supervisor already holds $C/connector.lock"; exit 0; }
     checkpoint conn-locked
+    if [ -e "$C/connector.failed" ] || [ -L "$C/connector.failed" ]; then
+        die "not starting: $(failed_record); stop what is left of those processes by hand, then remove it" 3
+    fi
     reap_orphans || die "not starting while processes of a killed supervisor may remain" 1
     mark_lock "$C/connector.spawn" || die "cannot lock $C/connector.spawn" 1
     trap on_exit EXIT
@@ -212,14 +243,15 @@ run() {
         checkpoint conn-assigned
         while [ -n "$child_start" ] && alive "$child" "$child_start"; do
             if ((stopping)); then
-                stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" || die "cloudflared pid $child would not stop: $STOP_ERR" 1
+                stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" || { stop_failed "cannot stop cloudflared pid $child: $STOP_ERR"; exit 3; }
                 break
             fi
             wait "$child" 2>/dev/null || true
         done
         # cloudflared exited: nothing it forked into its group may outlive it.
         if [ -n "$child_start" ]; then
-            stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" group || die "processes of cloudflared pid $child would not stop: $STOP_ERR" 1
+            stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" group ||
+                { stop_failed "cannot stop what cloudflared pid $child left in its process group: $STOP_ERR"; exit 3; }
         fi
         child='' child_start=''
         for ((i = 0; i < 25 && !stopping; i++)); do sleep 0.2 {LOCK_FD}>&-; done
@@ -286,9 +318,37 @@ stop() {
     die "supervisor $pid did not stop within 45 s; inspect $C/logs"
 }
 
+# Read-only: whether a supervisor holds connector.lock, which processes hold
+# connector.spawn, and connector.failed.
+status() {
+    local rc=1 id
+    need flock pgrep python3
+    [ -d "$C" ] && [ ! -L "$C" ] || die "$C is not a directory" 2
+    if supervisor_absent; then
+        say "no connector supervisor holds $C/connector.lock"
+    else
+        say "a connector supervisor holds $C/connector.lock (supervisor.pid: $(safe_line "$C/supervisor.pid" 64 || echo unreadable))"
+        rc=0
+    fi
+    if id=$(file_id "$C/connector.spawn" 2>/dev/null); then
+        if lock_free "$C/connector.spawn"; then
+            say "no process holds connector.spawn"
+        else
+            id=$(mark_holders "$id")
+            say "connector.spawn is held by: ${id:-processes this user cannot see}"
+        fi
+    fi
+    if [ -e "$C/connector.failed" ] || [ -L "$C/connector.failed" ]; then
+        say "FAIL: $(failed_record); the supervisor exited and nothing restarts it: stop what is left of those processes by hand, remove connector.failed, then start the connector" >&2
+        rc=3
+    fi
+    return "$rc"
+}
+
 case ${1:-} in
     check) check ;;
     run) run ;;
     stop) stop ;;
-    *) die "usage: connector.sh check|run|stop" 2 ;;
+    status) status ;;
+    *) die "usage: connector.sh check|run|stop|status" 2 ;;
 esac
