@@ -70,6 +70,36 @@ impl Default for EvalConfig {
 
 pub const LEARNERS: [&str; 5] = ["scm", "cart", "rf", "gbt", "lasso"];
 
+/// Solver evidence for one two-class lasso fit. `selected_point` and both
+/// convergence records are present whenever the tuning path is non-empty;
+/// an empty path is an intentional null fit, not a solver failure.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LassoFitAudit {
+    pub path_points: usize,
+    pub path_unconverged: usize,
+    pub selected_point: Option<usize>,
+    pub selected_convergence: Option<lasso::Convergence>,
+    pub refit_convergence: Option<lasso::Convergence>,
+}
+
+impl LassoFitAudit {
+    fn empty() -> Self {
+        Self {
+            path_points: 0,
+            path_unconverged: 0,
+            selected_point: None,
+            selected_convergence: None,
+            refit_convergence: None,
+        }
+    }
+
+    pub fn has_unconverged(&self) -> bool {
+        self.path_unconverged > 0
+            || self.selected_convergence.is_some_and(|c| !c.converged)
+            || self.refit_convergence.is_some_and(|c| !c.converged)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LearnerResult {
     pub learner: String,
@@ -99,6 +129,10 @@ pub struct LearnerResult {
     /// null fits became no-calls.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub no_call: Option<NoCall>,
+    /// One solver-audit record per outer fold on revision-8 lasso rows.
+    /// Missing on other learners and when reading older reports.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lasso_fits: Option<Vec<LassoFitAudit>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -182,6 +216,10 @@ pub struct FinalModels {
     pub cart: tree::Tree,
     pub cart_depth: u32,
     pub lasso: Option<lasso::LassoModel>,
+    /// Solver evidence for the final lasso fit, including an empty-path null
+    /// fit. Missing only when deserializing a pre-revision-8 report.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lasso_fit: Option<LassoFitAudit>,
     pub rf_importance: Vec<WeightedFeature>,
     pub gbt_importance: Vec<WeightedFeature>,
 }
@@ -205,6 +243,7 @@ struct Scored {
     /// A score for every sample, or None for a null fit, which makes no call.
     scores: Option<Vec<f64>>,
     complexity: f64,
+    lasso_fit: Option<LassoFitAudit>,
 }
 
 fn fit_scm(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalConfig) -> Scored {
@@ -214,6 +253,7 @@ fn fit_scm(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalCon
     Scored {
         scores: Some((0..x.cols).map(|i| pred.contains(i) as u8 as f64).collect()),
         complexity: m.rules.len() as f64,
+        lasso_fit: None,
     }
 }
 
@@ -234,6 +274,7 @@ fn fit_cart(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalCo
     Scored {
         scores: Some(t.predict(x, depth)),
         complexity: leaves as f64,
+        lasso_fit: None,
     }
 }
 
@@ -262,6 +303,7 @@ fn fit_rf(
         Scored {
             scores: Some(forest.predict(&screened)),
             complexity: forest.trees.len() as f64,
+            lasso_fit: None,
         },
         importance,
     )
@@ -303,11 +345,39 @@ fn fit_gbt(
         Scored {
             scores: gbt_scores(&m, x),
             complexity: m.trees.len() as f64,
+            lasso_fit: None,
         },
         m,
     ))
 }
 
+#[derive(Clone, Copy, Debug)]
+struct LassoContext<'a> {
+    dataset: &'a str,
+    scheme: &'a str,
+    outer_fold: Option<usize>,
+}
+
+impl LassoContext<'_> {
+    fn location(self) -> String {
+        match self.outer_fold {
+            Some(fold) => format!(
+                "dataset {} split {} outer fold {fold}",
+                self.dataset, self.scheme
+            ),
+            None => format!(
+                "dataset {} split final outer fold final model",
+                self.dataset
+            ),
+        }
+    }
+}
+
+fn lasso_error(context: LassoContext<'_>, stage: &str, detail: String) -> anyhow::Error {
+    anyhow::anyhow!("lasso {stage} failure at {}: {detail}", context.location())
+}
+
+#[allow(clippy::too_many_arguments)]
 fn fit_lasso(
     x: &BitMatrix,
     y: &Bits,
@@ -315,30 +385,94 @@ fn fit_lasso(
     groups: Option<&[u32]>,
     cfg: &EvalConfig,
     seed: u64,
+    context: LassoContext<'_>,
 ) -> Result<(Scored, Option<lasso::LassoModel>)> {
     let (fit_m, val) = tuning_holdout(train, y, groups, 0.2, seed)?;
     let feats = screen(x, y, &fit_m, cfg.screened_features);
-    let path = lasso::fit_path(x, y, &fit_m, &feats, cfg.lasso_lambdas, 400);
+    let path = lasso::fit_path_with_status(x, y, &fit_m, &feats, cfg.lasso_lambdas, 400);
+    fit_lasso_from_path(x, y, &val, path, context, |lambdas| {
+        lasso::refit_path_with_status(x, y, train, &feats, lambdas)
+    })
+}
+
+/// Select and refit one already-solved path. Keeping this separate lets the
+/// negative tests inject capped statuses without changing solver limits.
+fn fit_lasso_from_path(
+    x: &BitMatrix,
+    y: &Bits,
+    val: &Bits,
+    path: Vec<lasso::LassoFit>,
+    context: LassoContext<'_>,
+    refit: impl FnOnce(&[f64]) -> Vec<lasso::LassoFit>,
+) -> Result<(Scored, Option<lasso::LassoModel>)> {
+    let path_unconverged = path.iter().filter(|f| !f.convergence.converged).count();
+    if path.is_empty() {
+        return Ok((
+            Scored {
+                scores: None,
+                complexity: 0.0,
+                lasso_fit: Some(LassoFitAudit::empty()),
+            },
+            None,
+        ));
+    }
     let best = path
         .iter()
         .enumerate()
-        .map(|(i, m)| (i, lasso::log_loss(&m.predict_proba(x), y, &val)))
+        .filter(|(_, f)| f.convergence.converged)
+        .map(|(i, f)| (i, lasso::log_loss(&f.model.predict_proba(x), y, val)))
         .min_by(|a, b| a.1.total_cmp(&b.1))
-        .map(|(i, _)| i);
-    // An empty path means no penalty admits a feature: no refit.
-    let model = best.and_then(|best| {
-        // Refit on the whole training fold down to the chosen lambda.
-        let lambdas: Vec<f64> = path[..=best].iter().map(|m| m.lambda).collect();
-        lasso::refit_path(x, y, train, &feats, &lambdas)
-            .into_iter()
-            .last()
-    });
+        .map(|(i, _)| i)
+        .ok_or_else(|| {
+            lasso_error(
+                context,
+                "path",
+                format!("no converged candidate among {} points", path.len()),
+            )
+        })?;
+    let selected = path[best].convergence;
+    if !selected.converged {
+        return Err(lasso_error(
+            context,
+            "path selection",
+            format!("selected point {best} is unconverged: {selected:?}"),
+        ));
+    }
+
+    // Refit on the whole training fold down to the chosen lambda. Only the
+    // last refit is scored or saved; its own convergence is mandatory.
+    let lambdas: Vec<f64> = path[..=best].iter().map(|f| f.model.lambda).collect();
+    let refit_path = refit(&lambdas);
+    let final_fit = refit_path.last().ok_or_else(|| {
+        lasso_error(
+            context,
+            "refit",
+            format!("selected point {best} returned an empty refit path"),
+        )
+    })?;
+    let final_convergence = final_fit.convergence;
+    if !final_convergence.converged {
+        return Err(lasso_error(
+            context,
+            "refit",
+            format!("selected point {best} is unconverged: {final_convergence:?}"),
+        ));
+    }
+    let model = final_fit.model.clone();
+    let audit = LassoFitAudit {
+        path_points: path.len(),
+        path_unconverged,
+        selected_point: Some(best),
+        selected_convergence: Some(selected),
+        refit_convergence: Some(final_convergence),
+    };
     Ok((
         Scored {
-            scores: lasso_scores(model.as_ref(), x),
-            complexity: model.as_ref().map_or(0, |m| m.coef.len()) as f64,
+            scores: lasso_scores(Some(&model), x),
+            complexity: model.coef.len() as f64,
+            lasso_fit: Some(audit),
         },
-        model,
+        Some(model),
     ))
 }
 
@@ -357,6 +491,8 @@ fn fit_fold(
     groups: Option<&[u32]>,
     cfg: &EvalConfig,
     fold: usize,
+    dataset: &str,
+    scheme: &str,
 ) -> Result<Scored> {
     let seed = fold_seed(cfg, fold);
     let inner = || training_folds(y, train, groups, cfg.inner_folds, seed);
@@ -365,7 +501,22 @@ fn fit_fold(
         "cart" => fit_cart(x, y, train, &inner(), cfg),
         "rf" => fit_rf(x, y, train, cfg, seed).0,
         "gbt" => fit_gbt(x, y, train, groups, cfg, seed)?.0,
-        "lasso" => fit_lasso(x, y, train, groups, cfg, seed)?.0,
+        "lasso" => {
+            fit_lasso(
+                x,
+                y,
+                train,
+                groups,
+                cfg,
+                seed,
+                LassoContext {
+                    dataset,
+                    scheme,
+                    outer_fold: Some(fold),
+                },
+            )?
+            .0
+        }
         _ => unreachable!(),
     })
 }
@@ -387,6 +538,20 @@ fn pool_folds(
         test_fold.len() == n && test_fold.iter().all(|&f| f < fits.len()),
         "a sample has no outer test fold"
     );
+    let lasso_fits = if learner == "lasso" {
+        let audit = fits
+            .iter()
+            .map(|f| f.lasso_fit.clone())
+            .collect::<Option<Vec<_>>>();
+        ensure!(audit.is_some(), "a lasso fold is missing solver status");
+        audit
+    } else {
+        ensure!(
+            fits.iter().all(|f| f.lasso_fit.is_none()),
+            "{learner} unexpectedly has lasso solver status"
+        );
+        None
+    };
     let mut scores = vec![f64::NAN; n];
     for (i, &f) in test_fold.iter().enumerate() {
         if let Some(s) = &fits[f].scores {
@@ -441,6 +606,7 @@ fn pool_folds(
         fold_complexity: fits.iter().map(|f| f.complexity).collect(),
         seconds,
         no_call: Some(no_call),
+        lasso_fits,
     })
 }
 
@@ -514,6 +680,7 @@ pub fn conformal(truth: &[bool], scores: &[f64], alphas: &[f64], seed: u64) -> V
 /// `min_support` is the per-fit candidate policy: a feature must be present
 /// in, and absent from, at least that many training samples.
 pub fn evaluate(
+    dataset: &str,
     x: &BitMatrix,
     y: &Bits,
     groups: &[u32],
@@ -603,7 +770,17 @@ pub fn evaluate(
             let (cx, _) = training_candidates(x, &train, min_support);
             for (li, learner) in LEARNERS.iter().enumerate() {
                 let t0 = Instant::now();
-                fits[li].push(fit_fold(learner, &cx, y, &train, tuning_groups, cfg, fi)?);
+                fits[li].push(fit_fold(
+                    learner,
+                    &cx,
+                    y,
+                    &train,
+                    tuning_groups,
+                    cfg,
+                    fi,
+                    dataset,
+                    scheme,
+                )?);
                 seconds[li] += t0.elapsed().as_secs_f64();
             }
         }
@@ -627,7 +804,7 @@ pub fn evaluate(
     }
 
     let mic_result = mic.and_then(|m| evaluate_mic(x, y, min_support, &m, cfg));
-    let finals = final_models(x, y, min_support, cfg)?;
+    let finals = final_models(dataset, x, y, min_support, cfg)?;
     Ok(EvalOutput {
         splits,
         mic: mic_result,
@@ -652,6 +829,7 @@ fn top_weighted(imp: std::collections::HashMap<u32, f64>, k: usize) -> Vec<Weigh
 }
 
 fn final_models(
+    dataset: &str,
     x: &BitMatrix,
     y: &Bits,
     min_support: u32,
@@ -681,7 +859,19 @@ fn final_models(
             seed: 0,
         },
     );
-    let (_, lasso_model) = fit_lasso(x, y, &all, None, cfg, cfg.seed + 11)?;
+    let (lasso_scored, lasso_model) = fit_lasso(
+        x,
+        y,
+        &all,
+        None,
+        cfg,
+        cfg.seed + 11,
+        LassoContext {
+            dataset,
+            scheme: "final",
+            outer_fold: None,
+        },
+    )?;
     let (_, rf_importance) = fit_rf(x, y, &all, cfg, cfg.seed + 17);
     let (_, gbt_model) = fit_gbt(x, y, &all, None, cfg, cfg.seed + 13)?;
     Ok(FinalModels {
@@ -696,6 +886,7 @@ fn final_models(
         cart,
         cart_depth: depth,
         lasso: lasso_model,
+        lasso_fit: lasso_scored.lasso_fit,
         rf_importance: top_weighted(rf_importance, 50),
         gbt_importance: top_weighted(gbt_model.importance(), 50),
     })
@@ -850,6 +1041,29 @@ mod tests {
         }
     }
 
+    fn test_context(scheme: &'static str, outer_fold: usize) -> LassoContext<'static> {
+        LassoContext {
+            dataset: "fixture__fixturemycin",
+            scheme,
+            outer_fold: Some(outer_fold),
+        }
+    }
+
+    fn canned_lasso(lambda: f64, intercept: f64, weight: f64, converged: bool) -> lasso::LassoFit {
+        lasso::LassoFit {
+            model: lasso::LassoModel {
+                intercept,
+                coef: vec![(0, weight)],
+                lambda,
+            },
+            convergence: lasso::Convergence {
+                irls_steps: if converged { 3 } else { 25 },
+                sweep_cap_hits: u32::from(!converged),
+                converged,
+            },
+        }
+    }
+
     #[test]
     fn evaluation_rejects_invalid_folds_and_emits_only_held_out_scores() {
         let n = 80;
@@ -859,18 +1073,37 @@ mod tests {
         let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
         let mut cfg = small_config();
         cfg.folds = 1;
-        assert!(evaluate(&x, &y, &groups, 3, None, &cfg).is_err());
+        assert!(evaluate("fixture__fixturemycin", &x, &y, &groups, 3, None, &cfg).is_err());
         cfg.folds = 2;
         let mut duplicated = x.clone();
         duplicated.push_row(y.words());
-        assert!(evaluate(&duplicated, &y, &groups, 3, None, &cfg).is_err());
-        let out = evaluate(&x, &y, &groups, 3, None, &cfg).unwrap();
+        assert!(
+            evaluate(
+                "fixture__fixturemycin",
+                &duplicated,
+                &y,
+                &groups,
+                3,
+                None,
+                &cfg
+            )
+            .is_err()
+        );
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, 3, None, &cfg).unwrap();
         assert_eq!(out.splits.len(), 2);
+        assert!(!out.finals.lasso_fit.as_ref().unwrap().has_unconverged());
         for split in out.splits {
             assert!(split.unavailable_reason.is_none());
             for learner in split.learners {
                 assert_eq!(learner.scores.len(), n);
                 assert!(learner.scores.iter().all(|s| s.is_finite()));
+                if learner.learner == "lasso" {
+                    let fits = learner.lasso_fits.as_ref().unwrap();
+                    assert_eq!(fits.len(), cfg.folds);
+                    assert!(fits.iter().all(|f| !f.has_unconverged()));
+                } else {
+                    assert!(learner.lasso_fits.is_none());
+                }
                 let m = learner.metrics.unwrap();
                 assert_eq!(m.n, n);
                 assert_eq!(m.tp + m.fp + m.tn + m.fn_, n);
@@ -889,7 +1122,16 @@ mod tests {
         // Every R sample belongs to one lineage, so a held-out lineage fold
         // necessarily loses R from either training or validation.
         let groups: Vec<u32> = (0..n).map(|i| if i < 40 { 0 } else { i as u32 }).collect();
-        let out = evaluate(&x, &y, &groups, 3, None, &small_config()).unwrap();
+        let out = evaluate(
+            "fixture__fixturemycin",
+            &x,
+            &y,
+            &groups,
+            3,
+            None,
+            &small_config(),
+        )
+        .unwrap();
         let random = &out.splits[0];
         assert_eq!(random.scheme, "random");
         assert!(random.unavailable_reason.is_none());
@@ -930,7 +1172,16 @@ mod tests {
             ),
         ];
         for (groups, expected) in cases {
-            let out = evaluate(&x, &y, &groups, 3, None, &small_config()).unwrap();
+            let out = evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                3,
+                None,
+                &small_config(),
+            )
+            .unwrap();
             assert!(out.splits[0].unavailable_reason.is_none());
             let lineage = &out.splits[1];
             assert!(lineage.learners.is_empty());
@@ -961,7 +1212,7 @@ mod tests {
         let (x, _) = training_candidates(&raw, &Bits::ones(n), 3);
         let groups: Vec<u32> = (0..n).map(|i| (i % 15) as u32).collect();
         let cfg = small_config();
-        let out = evaluate(&x, &y, &groups, 3, None, &cfg).unwrap();
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, 3, None, &cfg).unwrap();
         let truth: Vec<bool> = (0..n).map(|i| y.contains(i)).collect();
         let metrics_on = |idx: &[usize], scores: &[f64], ranked: bool| {
             binary_metrics(
@@ -1005,8 +1256,18 @@ mod tests {
                 {
                     // Rebuild the fold's fit from its training samples alone.
                     let (cx, _) = training_candidates(&x, &train, 3);
-                    let refit = fit_fold(&learner.learner, &cx, &y, &train, tuning_groups, &cfg, f)
-                        .unwrap();
+                    let refit = fit_fold(
+                        &learner.learner,
+                        &cx,
+                        &y,
+                        &train,
+                        tuning_groups,
+                        &cfg,
+                        f,
+                        "fixture__fixturemycin",
+                        &split.scheme,
+                    )
+                    .unwrap();
                     assert_eq!(learner.fold_complexity[f], refit.complexity);
                     let idx: Vec<usize> = test.iter_ones().collect();
                     match &refit.scores {
@@ -1043,12 +1304,14 @@ mod tests {
         let fitted = |s: [f64; 6]| Scored {
             scores: Some(s.to_vec()),
             complexity: 3.0,
+            lasso_fit: None,
         };
         let fits = [
             fitted([0.9, 0.2, 0.0, 0.0, 0.0, 0.0]),
             Scored {
                 scores: None,
                 complexity: 0.0,
+                lasso_fit: None,
             },
             fitted([0.0, 0.0, 0.0, 0.0, 0.5, 0.6]),
         ];
@@ -1085,7 +1348,16 @@ mod tests {
         let y = Bits::from_indices(n, (0..n).filter(|i| i % 4 == 0));
         let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
         let cfg = small_config();
-        let out = evaluate(&BitMatrix::with_cols(n), &y, &groups, 3, None, &cfg).unwrap();
+        let out = evaluate(
+            "fixture__fixturemycin",
+            &BitMatrix::with_cols(n),
+            &y,
+            &groups,
+            3,
+            None,
+            &cfg,
+        )
+        .unwrap();
         let none = NoCall {
             resistant: 0,
             susceptible: 0,
@@ -1145,6 +1417,7 @@ mod tests {
             .map(|_| Scored {
                 scores: None,
                 complexity: 0.0,
+                lasso_fit: None,
             })
             .collect();
         let l = pool_folds("gbt", &truth, &test_fold, &fits, 1.0).unwrap();
@@ -1199,7 +1472,18 @@ mod tests {
         };
         for learner in LEARNERS {
             let fit = |labels: &Bits| {
-                let s = fit_fold(learner, &x, labels, &train, None, &cfg, 1).unwrap();
+                let s = fit_fold(
+                    learner,
+                    &x,
+                    labels,
+                    &train,
+                    None,
+                    &cfg,
+                    1,
+                    "fixture__fixturemycin",
+                    "random",
+                )
+                .unwrap();
                 (s.scores, s.complexity)
             };
             assert_eq!(fit(&y), fit(&y2), "{learner}");
@@ -1293,7 +1577,7 @@ mod tests {
         let cfg = small_config();
         let screened = screen(&x, &y, &Bits::ones(n), cfg.screened_features);
         assert_eq!(screened[0], 3);
-        let finals = final_models(&x, &y, 3, &cfg).unwrap();
+        let finals = final_models("fixture__fixturemycin", &x, &y, 3, &cfg).unwrap();
         assert_eq!(finals.rf_importance[0].feature, 3);
         assert!(
             finals
@@ -1316,10 +1600,20 @@ mod tests {
         }
         let train = Bits::from_indices(n, 0..45);
         let forest = |cfg: &EvalConfig, fold| {
-            fit_fold("rf", &x, &y, &train, None, cfg, fold)
-                .unwrap()
-                .scores
-                .unwrap()
+            fit_fold(
+                "rf",
+                &x,
+                &y,
+                &train,
+                None,
+                cfg,
+                fold,
+                "fixture__fixturemycin",
+                "random",
+            )
+            .unwrap()
+            .scores
+            .unwrap()
         };
         let cfg = small_config();
         assert_eq!(forest(&cfg, 0), forest(&cfg, 0));
@@ -1360,10 +1654,20 @@ mod tests {
         let mut constant_on_fit = BitMatrix::with_cols(n);
         constant_on_fit.push_row(fit.words());
         for x in [BitMatrix::with_cols(n), constant_on_fit] {
-            let (scored, model) = fit_lasso(&x, &y, &all, None, &small_config(), 42).unwrap();
+            let (scored, model) = fit_lasso(
+                &x,
+                &y,
+                &all,
+                None,
+                &small_config(),
+                42,
+                test_context("random", 0),
+            )
+            .unwrap();
             assert!(model.is_none());
             assert!(scored.scores.is_none());
             assert_eq!(scored.complexity, 0.0);
+            assert_eq!(scored.lasso_fit, Some(LassoFitAudit::empty()));
         }
     }
 
@@ -1377,7 +1681,8 @@ mod tests {
         let mut x = BitMatrix::with_cols(n);
         x.push_row(fit.and(&y).or(&val.and_not(&y)).words());
         assert!(!lasso::fit_path(&x, &y, &fit, &[0], cfg.lasso_lambdas, 400).is_empty());
-        let (scored, model) = fit_lasso(&x, &y, &all, None, &cfg, 42).unwrap();
+        let (scored, model) =
+            fit_lasso(&x, &y, &all, None, &cfg, 42, test_context("random", 0)).unwrap();
         assert!(model.unwrap().coef.is_empty());
         assert!(scored.scores.is_none());
         assert_eq!(scored.complexity, 0.0);
@@ -1405,8 +1710,93 @@ mod tests {
                 ))
             })
             .unwrap();
-        let (_, model) = fit_lasso(&x, &y, &all, None, &cfg, 42).unwrap();
+        let (_, model) =
+            fit_lasso(&x, &y, &all, None, &cfg, 42, test_context("random", 0)).unwrap();
         assert_eq!(model.unwrap().lambda, selected.lambda);
+    }
+
+    #[test]
+    fn unconverged_lasso_candidates_cannot_win_validation_selection() {
+        let n = 6;
+        let y = Bits::from_indices(n, [0, 2, 4]);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        let bad = canned_lasso(0.5, -10.0, 20.0, false);
+        let good = canned_lasso(0.25, -1.0, 2.0, true);
+        let (scored, model) = fit_lasso_from_path(
+            &x,
+            &y,
+            &Bits::ones(n),
+            vec![bad, good.clone()],
+            test_context("random", 2),
+            move |lambdas| {
+                assert_eq!(lambdas, [0.5, 0.25]);
+                vec![good]
+            },
+        )
+        .unwrap();
+        assert_eq!(model.unwrap().lambda, 0.25);
+        let audit = scored.lasso_fit.unwrap();
+        assert_eq!((audit.path_points, audit.path_unconverged), (2, 1));
+        assert_eq!(audit.selected_point, Some(1));
+        assert!(audit.selected_convergence.unwrap().converged);
+        assert!(audit.refit_convergence.unwrap().converged);
+    }
+
+    #[test]
+    fn a_path_without_a_converged_candidate_fails_with_full_context() {
+        let n = 6;
+        let y = Bits::from_indices(n, [0, 2, 4]);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        let error = fit_lasso_from_path(
+            &x,
+            &y,
+            &Bits::ones(n),
+            vec![canned_lasso(0.5, -10.0, 20.0, false)],
+            test_context("random", 2),
+            |_| unreachable!("an unconverged path must not be refit"),
+        )
+        .err()
+        .unwrap()
+        .to_string();
+        for expected in [
+            "lasso path failure",
+            "no converged candidate",
+            "dataset fixture__fixturemycin",
+            "split random",
+            "outer fold 2",
+        ] {
+            assert!(error.contains(expected), "{error}");
+        }
+    }
+
+    #[test]
+    fn an_unconverged_final_lasso_refit_fails_with_full_context() {
+        let n = 6;
+        let y = Bits::from_indices(n, [0, 2, 4]);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        let error = fit_lasso_from_path(
+            &x,
+            &y,
+            &Bits::ones(n),
+            vec![canned_lasso(0.25, -1.0, 2.0, true)],
+            test_context("lineage", 3),
+            |_| vec![canned_lasso(0.25, -1.0, 2.0, false)],
+        )
+        .err()
+        .unwrap()
+        .to_string();
+        for expected in [
+            "lasso refit failure",
+            "selected point 0 is unconverged",
+            "dataset fixture__fixturemycin",
+            "split lineage",
+            "outer fold 3",
+        ] {
+            assert!(error.contains(expected), "{error}");
+        }
     }
 
     #[test]
@@ -1425,6 +1815,7 @@ mod tests {
             fold_complexity: vec![],
             seconds: 0.0,
             no_call: None,
+            lasso_fits: None,
         };
         let saved: serde_json::Value =
             serde_json::from_slice(&serde_json::to_vec(&result).unwrap()).unwrap();
@@ -1540,7 +1931,18 @@ mod tests {
             LEARNERS
                 .iter()
                 .map(|learner| {
-                    let s = fit_fold(learner, &cx, &y, &train, None, &cfg, 1).unwrap();
+                    let s = fit_fold(
+                        learner,
+                        &cx,
+                        &y,
+                        &train,
+                        None,
+                        &cfg,
+                        1,
+                        "fixture__fixturemycin",
+                        "random",
+                    )
+                    .unwrap();
                     let s = s.scores.expect("every learner fits this matrix");
                     assert!(s.iter().all(|v| v.is_finite()));
                     s[..40].to_vec()

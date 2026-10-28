@@ -5,7 +5,11 @@ Revisions 3 to 6 are schema 1: every learner scores every isolate. Revision
 whose fit was null, and the row's no_call counts those isolates by class;
 metrics cover the called isolates and are null when none is called; and
 each split that ran saves test_fold, the outer fold that held out each
-isolate.
+Revision 8 keeps schema 2 and adds mandatory lasso solver evidence: one
+`lasso_fits` record per outer fold and `models.lasso_fit` for the final fit.
+Each record contains path counts, the selected point, and selected/refit
+convergence statuses. Valid revision-8 reports have zero unconverged two-class
+lasso fits; missing or malformed evidence is not a substitute for it.
 
 The best learner follows the schema. In schema 2 it is the highest
 random-split balanced accuracy among scm, cart, rf, gbt, and lasso rows
@@ -94,6 +98,39 @@ def any_row_best(report):
     return best
 
 
+def nonnegative_int(value):
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def check_convergence(status, identity):
+    """Validate one serialized Convergence without accepting truthy lookalikes."""
+    required = ("irls_steps", "sweep_cap_hits", "converged")
+    assert isinstance(status, dict) and all(k in status for k in required), ("malformed lasso convergence status",) + identity
+    assert nonnegative_int(status["irls_steps"]) and nonnegative_int(status["sweep_cap_hits"]), ("malformed lasso convergence status",) + identity
+    assert isinstance(status["converged"], bool), ("malformed lasso convergence status",) + identity
+    return status["converged"]
+
+
+def check_lasso_fit(fit, identity):
+    """Check one revision-8 fit record and return whether it has a refit."""
+    required = ("path_points", "path_unconverged", "selected_point", "selected_convergence", "refit_convergence")
+    assert isinstance(fit, dict) and all(k in fit for k in required), ("malformed lasso fit status",) + identity
+    points, unconverged, selected = fit["path_points"], fit["path_unconverged"], fit["selected_point"]
+    assert nonnegative_int(points) and nonnegative_int(unconverged) and unconverged <= points, ("malformed lasso fit status",) + identity
+    assert selected is None or nonnegative_int(selected), ("malformed lasso fit status",) + identity
+    assert selected is None or selected < points, ("malformed lasso fit status",) + identity
+    selected_status, refit_status = fit["selected_convergence"], fit["refit_convergence"]
+    assert (selected is None) == (selected_status is None) and (selected is None) == (refit_status is None), ("malformed lasso fit status",) + identity
+    assert (points == 0) == (selected is None), ("malformed lasso fit status",) + identity
+    clean = unconverged == 0
+    if selected_status is not None:
+        clean = check_convergence(selected_status, identity + ("selected",)) and clean
+    if refit_status is not None:
+        clean = check_convergence(refit_status, identity + ("refit",)) and clean
+    assert clean, ("unconverged two-class lasso fit",) + identity
+    return selected is not None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Audit completed GRM dataset reports.")
     parser.add_argument("root", nargs="?", default=Path(__file__).resolve().parents[1] / "data", type=Path)
@@ -119,9 +156,15 @@ def main():
         truth = [sample["resistant"] for sample in samples]
         nr = sum(truth)
         ns = n - nr
-        assert audit["revision"] in (3, 4, 5, 6, 7) and audit["valid"] is True, ("revision", path)
+        assert audit["revision"] in (3, 4, 5, 6, 7, 8) and audit["valid"] is True, ("revision", path)
         assert schema == (2 if args.reshaped or audit["revision"] >= 7 else 1), ("schema does not match the revision", path, schema)
         assert "not external or clinical validation" in audit["scope"], path
+        if audit["revision"] >= 8:
+            identity = (str(path), "models")
+            final_fit = report["models"].get("lasso_fit")
+            assert final_fit is not None, ("revision-8 lasso fit status is required",) + identity
+            has_refit = check_lasso_fit(final_fit, identity + ("lasso_fit",))
+            assert (report["models"].get("lasso") is not None) == has_refit, ("lasso model does not match its solver status",) + identity
         assert nr > 0 and ns > 0, path
         assert len({sample["id"] for sample in samples}) == n, path
         assert not any(sample["from_mic"] for sample in samples), path
@@ -154,6 +197,12 @@ def main():
                 metrics = learner["metrics"]
                 no_call = learner.get("no_call")
                 identity = (str(path), split["scheme"], learner["learner"])
+                if audit["revision"] >= 8 and learner["learner"] == "lasso":
+                    fits = learner.get("lasso_fits")
+                    assert fits is not None, ("revision-8 lasso fit status is required",) + identity
+                    assert isinstance(fits, list) and len(fits) == split["folds"], ("malformed lasso fit status",) + identity
+                    for fold, fit in enumerate(fits):
+                        check_lasso_fit(fit, identity + (fold,))
                 assert len(scores) == n and all(v is None or (isinstance(v, (int, float)) and math.isfinite(v)) for v in scores), ("scores",) + identity
                 uncalled = {"resistant": sum(1 for t, v in zip(truth, scores) if v is None and t), "susceptible": sum(1 for t, v in zip(truth, scores) if v is None and not t)}
                 if learner["learner"] == "catalog" or schema == 1:

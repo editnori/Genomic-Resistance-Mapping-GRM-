@@ -12,7 +12,7 @@ use crate::dna::KmerSpace;
 use crate::fnv::Fnv;
 use crate::layout::{Layout, remove_if_present};
 use crate::learn::eval::{
-    self, EvalConfig, FinalModels, LearnerResult, MicInput, MicResult, SplitResult,
+    self, EvalConfig, FinalModels, LassoFitAudit, LearnerResult, MicInput, MicResult, SplitResult,
 };
 use crate::learn::gbt::GbtParams;
 use crate::learn::tree::ForestParams;
@@ -30,7 +30,7 @@ use std::time::Instant;
 /// balanced accuracy, and null metrics when it called no isolate. A schema-1
 /// reader stops at its version check instead of reading them as numbers.
 pub const REPORT_SCHEMA: u32 = 2;
-pub const EVALUATION_REVISION: u32 = 7;
+pub const EVALUATION_REVISION: u32 = 8;
 
 #[derive(Serialize)]
 pub struct EvaluationAudit {
@@ -42,11 +42,47 @@ pub struct EvaluationAudit {
     pub scope: String,
 }
 
-fn evaluation_audit() -> EvaluationAudit {
+fn evaluation_audit(
+    splits: &[SplitResult],
+    final_lasso: Option<&LassoFitAudit>,
+) -> EvaluationAudit {
+    let mut reasons = Vec::new();
+    for split in splits.iter().filter(|s| s.unavailable_reason.is_none()) {
+        let lasso = split.learners.iter().find(|l| l.learner == "lasso");
+        match lasso.and_then(|l| l.lasso_fits.as_deref()) {
+            None => reasons.push(format!(
+                "{} split has no per-fold lasso solver status",
+                split.scheme
+            )),
+            Some(fits) if fits.len() != split.folds => reasons.push(format!(
+                "{} split has {} lasso solver records for {} folds",
+                split.scheme,
+                fits.len(),
+                split.folds
+            )),
+            Some(fits) => {
+                for (fold, fit) in fits.iter().enumerate() {
+                    if fit.has_unconverged() {
+                        reasons.push(format!(
+                            "{} split outer fold {fold} has an unconverged two-class lasso fit",
+                            split.scheme
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    match final_lasso {
+        None => reasons.push("final model has no lasso solver status".into()),
+        Some(fit) if fit.has_unconverged() => {
+            reasons.push("final model has an unconverged two-class lasso fit".into())
+        }
+        Some(_) => {}
+    }
     EvaluationAudit {
         revision: EVALUATION_REVISION,
-        valid: true,
-        reasons: vec![],
+        valid: reasons.is_empty(),
+        reasons,
         scope: "Internal cross-validation on public BV-BRC genomes scored against reported R/S labels. Feature selection and tuning use only each outer fold's training samples; inner tuning shares that outer-training feature set. MIC thresholds are fitted within training folds. This is not external or clinical validation.".into(),
     }
 }
@@ -497,6 +533,7 @@ pub fn analyze_dataset(
     }
 
     let mut out = eval::evaluate(
+        &spec.id,
         &ds.x,
         &ds.y,
         &groups,
@@ -545,6 +582,7 @@ pub fn analyze_dataset(
                     fold_complexity: vec![],
                     seconds: 0.0,
                     no_call: None,
+                    lasso_fits: None,
                 });
             }
             let mut table: BTreeMap<String, GroupRow> = BTreeMap::new();
@@ -676,7 +714,7 @@ pub fn analyze_dataset(
     out.lineage_threshold = Some(input.structure.lineages.threshold as f64);
     Ok(Some(DatasetReport {
         schema: REPORT_SCHEMA,
-        evaluation: evaluation_audit(),
+        evaluation: evaluation_audit(&out.splits, out.finals.lasso_fit.as_ref()),
         input_fingerprint: fingerprint,
         eval_config: cfg.clone(),
         id: spec.id.clone(),
@@ -1090,7 +1128,13 @@ mod tests {
                 "input_fingerprint": fingerprint,
             })
         };
+        assert_eq!(EVALUATION_REVISION, 8);
         assert_eq!(stale_reason(&saved(EVALUATION_REVISION, key), key), None);
+        assert_eq!(
+            stale_reason(&saved(7, key), key),
+            Some("evaluation audit revision changed"),
+            "a same-fingerprint revision-7 lasso result must not enter revision 8"
+        );
         // Only the evaluation revision and the inputs recompute a report; a
         // schema bump alone keeps a current schema-1 report.
         assert_eq!(
@@ -1222,7 +1266,19 @@ mod tests {
 
     #[test]
     fn audit_limits_validity_to_internal_cross_validation() {
-        let report = serde_json::to_value(evaluation_audit()).unwrap();
+        let convergence = crate::learn::lasso::Convergence {
+            irls_steps: 3,
+            sweep_cap_hits: 0,
+            converged: true,
+        };
+        let clean = LassoFitAudit {
+            path_points: 1,
+            path_unconverged: 0,
+            selected_point: Some(0),
+            selected_convergence: Some(convergence),
+            refit_convergence: Some(convergence),
+        };
+        let report = serde_json::to_value(evaluation_audit(&[], Some(&clean))).unwrap();
         assert_eq!(report["revision"], EVALUATION_REVISION);
         assert_eq!(report["valid"], true);
         assert_eq!(report["reasons"], serde_json::json!([]));
@@ -1232,6 +1288,56 @@ mod tests {
                 .unwrap()
                 .contains("not external or clinical validation")
         );
+
+        for bad in [
+            LassoFitAudit {
+                path_unconverged: 1,
+                ..clean.clone()
+            },
+            LassoFitAudit {
+                selected_convergence: Some(crate::learn::lasso::Convergence {
+                    converged: false,
+                    ..convergence
+                }),
+                ..clean.clone()
+            },
+            LassoFitAudit {
+                refit_convergence: Some(crate::learn::lasso::Convergence {
+                    converged: false,
+                    ..convergence
+                }),
+                ..clean.clone()
+            },
+        ] {
+            let audit = evaluation_audit(&[], Some(&bad));
+            assert!(!audit.valid);
+            assert!(!audit.reasons.is_empty());
+        }
+        assert!(!evaluation_audit(&[], None).valid);
+
+        let split = SplitResult {
+            scheme: "random".into(),
+            folds: 1,
+            n_groups: 2,
+            test_fold: vec![],
+            learners: vec![LearnerResult {
+                learner: "lasso".into(),
+                metrics: None,
+                fold_balanced_accuracy: vec![],
+                roc: vec![],
+                scores: vec![],
+                conformal: vec![],
+                fold_complexity: vec![0.0],
+                seconds: 0.0,
+                no_call: None,
+                lasso_fits: Some(vec![LassoFitAudit {
+                    path_unconverged: 1,
+                    ..clean.clone()
+                }]),
+            }],
+            unavailable_reason: None,
+        };
+        assert!(!evaluation_audit(&[split], Some(&clean)).valid);
     }
 
     #[test]
@@ -1252,6 +1358,7 @@ mod tests {
                 resistant: uncalled,
                 susceptible: 0,
             }),
+            lasso_fits: None,
         };
         let split = |scheme: &str, learners| SplitResult {
             scheme: scheme.into(),
@@ -2085,9 +2192,10 @@ mod tests {
             .join("fixture__ciprofloxacin.json");
         std::fs::write(
             &stale,
-            serde_json::to_vec(
-                &serde_json::json!({"evaluation": {"revision": EVALUATION_REVISION}}),
-            )
+            serde_json::to_vec(&serde_json::json!({
+                "evaluation": {"revision": 7},
+                "input_fingerprint": key(&input, &dataset("ciprofloxacin"), None),
+            }))
             .unwrap(),
         )
         .unwrap();

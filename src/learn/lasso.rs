@@ -185,7 +185,19 @@ pub fn fit_path_with_status(
     n_lambdas: usize,
     max_nonzero: usize,
 ) -> Vec<LassoFit> {
+    if !has_both_classes(y, fit) {
+        return vec![];
+    }
     fit_path_limited(x, y, fit, features, n_lambdas, max_nonzero, LIMITS)
+}
+
+/// One-class logistic regression has no finite intercept optimum. Do not run a
+/// long divergent path whose final status could depend on floating-point
+/// overflow rather than convergence. The evaluator also requires both classes
+/// in every fitting and tuning partition.
+fn has_both_classes(y: &Bits, fit: &Bits) -> bool {
+    let pos = fit.and(y).count();
+    pos > 0 && pos < fit.count()
 }
 
 fn fit_path_limited(
@@ -237,7 +249,7 @@ pub fn refit_path_with_status(
     lambdas: &[f64],
 ) -> Vec<LassoFit> {
     assert!(lambdas.iter().all(|v| v.is_finite() && *v > 0.0));
-    if fit.count() == 0 {
+    if fit.count() == 0 || !has_both_classes(y, fit) {
         return vec![];
     }
     solve_path(
@@ -357,6 +369,7 @@ fn solve_path(
                 break;
             }
         }
+        let convergence = require_finite(convergence, b0, &beta);
         let coef: Vec<(u32, f64)> = beta
             .iter()
             .enumerate()
@@ -377,6 +390,15 @@ fn solve_path(
         }
     }
     path
+}
+
+fn require_finite(
+    mut convergence: Convergence,
+    intercept: f64,
+    coefficients: &[f64],
+) -> Convergence {
+    convergence.converged &= intercept.is_finite() && coefficients.iter().all(|b| b.is_finite());
+    convergence
 }
 
 fn soft(z: f64, t: f64) -> f64 {
@@ -495,12 +517,89 @@ mod tests {
         let fits = fit_path_with_status(&x, &y, &Bits::ones(n), &[0], 3, 10);
         assert!(fits.iter().all(|f| f.convergence.converged));
         assert_eq!(fits[2].convergence.sweep_cap_hits, 0);
-        // The stderr-reporting wrapper returns the same models.
-        let path = fit_path(&x, &y, &Bits::ones(n), &[0], 3, 10);
-        for (m, f) in path.iter().zip(&fits) {
-            assert_eq!(m.intercept.to_bits(), f.model.intercept.to_bits());
-            assert_eq!(m.coef, f.model.coef);
+        let direct = fit_path_limited(&x, &y, &Bits::ones(n), &[0], 3, 10, LIMITS);
+        assert_eq!(fits.len(), direct.len());
+        for (f, d) in fits.iter().zip(&direct) {
+            assert!(same(&f.model, &d.model));
+            assert_eq!(f.convergence, d.convergence);
         }
+        // The stderr-reporting wrapper returns the same complete path.
+        let path = fit_path(&x, &y, &Bits::ones(n), &[0], 3, 10);
+        assert_eq!(path.len(), fits.len());
+        for (m, f) in path.iter().zip(&fits) {
+            assert!(same(m, &f.model));
+        }
+    }
+
+    #[test]
+    fn public_wrapper_uses_the_raised_cap_on_a_saved_panel() {
+        let f = fixtures()
+            .iter()
+            .find(|f| f.name == "streptococcus_agalactiae__clindamycin_lineage_fold0")
+            .unwrap();
+        let feats: Vec<u32> = (0..f.x.rows as u32).collect();
+        // This default (not ignored) regression goes through the public
+        // wrapper: reverting LIMITS.sweeps to 300 leaves point 6 unconverged.
+        let actual = fit_path_with_status(&f.x, &f.y, &f.fit, &feats, f.n_lambdas, f.max_nonzero);
+        assert!(actual.iter().all(|f| f.convergence.converged));
+        let (old, new) = f.runs();
+        assert!(old.iter().any(|f| !f.convergence.converged));
+        assert_eq!(actual.len(), new.len());
+        for (a, n) in actual.iter().zip(new) {
+            assert!(same(&a.model, &n.model));
+            assert_eq!(a.convergence, n.convergence);
+        }
+    }
+
+    #[test]
+    fn one_class_long_paths_are_empty_by_design() {
+        let n = 80;
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0)).words());
+        let fit = Bits::ones(n);
+        let lambdas = vec![0.1; 4001];
+        for y in [Bits::zeros(n), Bits::ones(n)] {
+            assert!(fit_path_with_status(&x, &y, &fit, &[0], 4001, usize::MAX).is_empty());
+            assert!(refit_path_with_status(&x, &y, &fit, &[0], &lambdas).is_empty());
+        }
+    }
+
+    #[test]
+    fn non_finite_parameters_never_report_convergence() {
+        let converged = Convergence {
+            irls_steps: 1,
+            sweep_cap_hits: 0,
+            converged: true,
+        };
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert!(!require_finite(converged, bad, &[0.0]).converged);
+            assert!(!require_finite(converged, 0.0, &[0.0, bad]).converged);
+        }
+        assert!(require_finite(converged, 0.0, &[1.0]).converged);
+
+        // Exercise the solver itself with a NaN working weight. f64::max must
+        // not let the resulting NaN intercept and coefficient look settled.
+        let prob = Problem {
+            columns: vec![vec![0]],
+            features: vec![0],
+            sd: vec![1.0],
+            samples: vec![0, 1],
+            y: vec![1.0, 0.0],
+            class_weight: vec![f64::NAN, 1.0],
+        };
+        let fits = solve_path(
+            &prob,
+            &[0.1],
+            10,
+            Limits {
+                irls_steps: 1,
+                sweeps: 10,
+            },
+        );
+        assert!(!fits[0].model.intercept.is_finite());
+        assert!(fits[0].model.coef.iter().any(|(_, b)| !b.is_finite()));
+        assert_eq!(fits[0].convergence.sweep_cap_hits, 0);
+        assert!(!fits[0].convergence.converged);
     }
 
     /// The saved cross-check panels with each saved candidate path; see the
@@ -738,8 +837,9 @@ mod tests {
             let c = new[i].convergence;
             assert_eq!(new[i].model.lambda.to_bits(), saved.lambda.to_bits());
             if f.one_class() {
-                // One training class: the intercept diverges, so no limit
-                // converges, and the flag has to say so.
+                // Keep the raw seven-point trace for fixture accounting. The
+                // public entry points return an empty one-class path instead;
+                // these saved points must not claim convergence either.
                 assert!(!c.converged, "{} point {i}", f.name);
                 assert_eq!(c.irls_steps as usize, LIMITS.irls_steps);
             } else {
