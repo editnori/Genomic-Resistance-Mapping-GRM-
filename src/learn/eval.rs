@@ -377,7 +377,6 @@ fn lasso_error(context: LassoContext<'_>, stage: &str, detail: String) -> anyhow
     anyhow::anyhow!("lasso {stage} failure at {}: {detail}", context.location())
 }
 
-#[allow(clippy::too_many_arguments)]
 fn fit_lasso(
     x: &BitMatrix,
     y: &Bits,
@@ -490,10 +489,9 @@ fn fit_fold(
     train: &Bits,
     groups: Option<&[u32]>,
     cfg: &EvalConfig,
-    fold: usize,
-    dataset: &str,
-    scheme: &str,
+    context: LassoContext<'_>,
 ) -> Result<Scored> {
+    let fold = context.outer_fold.expect("an outer fit needs its fold");
     let seed = fold_seed(cfg, fold);
     let inner = || training_folds(y, train, groups, cfg.inner_folds, seed);
     Ok(match learner {
@@ -501,22 +499,7 @@ fn fit_fold(
         "cart" => fit_cart(x, y, train, &inner(), cfg),
         "rf" => fit_rf(x, y, train, cfg, seed).0,
         "gbt" => fit_gbt(x, y, train, groups, cfg, seed)?.0,
-        "lasso" => {
-            fit_lasso(
-                x,
-                y,
-                train,
-                groups,
-                cfg,
-                seed,
-                LassoContext {
-                    dataset,
-                    scheme,
-                    outer_fold: Some(fold),
-                },
-            )?
-            .0
-        }
+        "lasso" => fit_lasso(x, y, train, groups, cfg, seed, context)?.0,
         _ => unreachable!(),
     })
 }
@@ -777,9 +760,11 @@ pub fn evaluate(
                     &train,
                     tuning_groups,
                     cfg,
-                    fi,
-                    dataset,
-                    scheme,
+                    LassoContext {
+                        dataset,
+                        scheme,
+                        outer_fold: Some(fi),
+                    },
                 )?);
                 seconds[li] += t0.elapsed().as_secs_f64();
             }
@@ -1041,7 +1026,7 @@ mod tests {
         }
     }
 
-    fn test_context(scheme: &'static str, outer_fold: usize) -> LassoContext<'static> {
+    fn test_context<'a>(scheme: &'a str, outer_fold: usize) -> LassoContext<'a> {
         LassoContext {
             dataset: "fixture__fixturemycin",
             scheme,
@@ -1263,9 +1248,7 @@ mod tests {
                         &train,
                         tuning_groups,
                         &cfg,
-                        f,
-                        "fixture__fixturemycin",
-                        &split.scheme,
+                        test_context(&split.scheme, f),
                     )
                     .unwrap();
                     assert_eq!(learner.fold_complexity[f], refit.complexity);
@@ -1479,9 +1462,7 @@ mod tests {
                     &train,
                     None,
                     &cfg,
-                    1,
-                    "fixture__fixturemycin",
-                    "random",
+                    test_context("random", 1),
                 )
                 .unwrap();
                 (s.scores, s.complexity)
@@ -1607,9 +1588,7 @@ mod tests {
                 &train,
                 None,
                 cfg,
-                fold,
-                "fixture__fixturemycin",
-                "random",
+                test_context("random", fold),
             )
             .unwrap()
             .scores
@@ -1938,9 +1917,7 @@ mod tests {
                         &train,
                         None,
                         &cfg,
-                        1,
-                        "fixture__fixturemycin",
-                        "random",
+                        test_context("random", 1),
                     )
                     .unwrap();
                     let s = s.scores.expect("every learner fits this matrix");

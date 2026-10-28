@@ -5,6 +5,8 @@ Revisions 3 to 6 are schema 1: every learner scores every isolate. Revision
 whose fit was null, and the row's no_call counts those isolates by class;
 metrics cover the called isolates and are null when none is called; and
 each split that ran saves test_fold, the outer fold that held out each
+isolate.
+
 Revision 8 keeps schema 2 and adds mandatory lasso solver evidence: one
 `lasso_fits` record per outer fold and `models.lasso_fit` for the final fit.
 Each record contains path counts, the selected point, and selected/refit
