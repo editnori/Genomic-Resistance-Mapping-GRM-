@@ -1012,6 +1012,54 @@ check "an approval path made a directory during the stage fails it" -- test "$rc
 check "that stage leaves no candidate or listener" -- test -z "$(running rel3)$(listener "$SP")"
 rmdir "$D/go/rel3--p237"
 
+# Process groups, through lib.sh directly: a registered leader started under
+# setsid forks a descendant that closes the spawn marker, ignores SIGTERM and
+# stays in the leader's group. mark_stop must kill it whether the leader holds
+# the marker and exits on SIGTERM ("running") or has already exited
+# ("exited"), and must fail when a stop failed even if nothing holds the marker
+# by its final check ("failing").
+cat >"$T/group-stop.sh" <<'SH'
+set -u
+source "$1/lib.sh"
+dir=$2 mode=$3
+mark_create "$dir" grp || { echo "no marker"; exit 3; }
+if [ "$mode" = failing ]; then
+    sleep 300 &
+    close_fd MARK_FD
+    stop_tree() { kill -KILL "$1" 2>/dev/null; sleep 0.5; return 1; }
+    mark_stop "$MARK_ID" "$MARK_PATH"
+    echo "rc=$? err=$MARK_ERR"
+    exit 0
+fi
+( exec setsid bash -c '
+    (trap "" TERM; exec sleep 300 '"$MARK_FD"'>&-) &
+    echo "$!" >"$1.kid"
+    while [ ! -e "$1.go" ]; do sleep 0.05; done
+    [ "$2" = exited ] && exit 0
+    wait' _ "$dir/leader" "$mode" ) &
+leader=$!
+for _ in $(seq 100); do [ -s "$dir/leader.kid" ] && break; sleep 0.05; done
+kid=$(cat "$dir/leader.kid")
+lstart=$(proc_start "$leader")
+kstart=$(proc_start "$kid")
+for _ in $(seq 100); do ! holds "$kid" "$MARK_ID" && [ "$(proc_comm "$kid")" = sleep ] && break; sleep 0.05; done
+proc_stat "$kid" && [ "$PS_PGRP" = "$leader" ] || { echo "the descendant is not in the leader's group"; exit 3; }
+: >"$dir/leader.go"
+if [ "$mode" = exited ]; then wait "$leader"; fi
+close_fd MARK_FD
+mark_stop "$MARK_ID" "$MARK_PATH" "$leader" "$lstart"
+rc=$?
+if alive "$kid" "$kstart"; then k=alive; else k=gone; fi
+kill -KILL "$kid" 2>/dev/null
+echo "rc=$rc kid=$k err=$MARK_ERR"
+SH
+expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant in the group of a leader that exits on SIGTERM" -- \
+    timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-running" running
+expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant in the group of a registered leader that had exited" -- \
+    timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-exited" exited
+expect 0 '^rc=1 err=pid [0-9]+ would not stop$' "mark_stop fails after a failed stop even when no holder is left" -- \
+    timeout -k 5 60 bash "$T/group-stop.sh" "$S" "$T/groups-failing" failing
+
 # Concurrent builds under one label: one builds, the other refuses at once.
 G=$T/source
 mkdir -p "$G/web" "$T/bin"
@@ -1231,7 +1279,7 @@ pkill -KILL -P "$forged" || true
 pkill -KILL -P "$forged2" || true
 kill -KILL "$forged" "$forged2" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=428
+EXPECTED_ASSERTIONS=431
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

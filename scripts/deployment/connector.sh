@@ -143,7 +143,9 @@ on_exit() {
     local rc=$?
     trap - EXIT
     trap ':' TERM INT HUP
-    if [ -n "${child:-}" ] && [ -n "${child_start:-}" ]; then stop_tree "$child" "$child_start" || rc=1; fi
+    set +e
+    # With its process group, even if cloudflared itself has exited.
+    if [ -n "${child:-}" ] && [ -n "${child_start:-}" ]; then stop_tree "$child" "$child_start" group || rc=1; fi
     close_fd MARK_FD
     if [ -n "$MARK_ID" ] && ! mark_stop "$MARK_ID" "$C/connector.spawn"; then
         echo "FAIL: connector processes may remain: $MARK_ERR" >&2
@@ -198,6 +200,10 @@ run() {
             fi
             wait "$child" 2>/dev/null || true
         done
+        # cloudflared exited: nothing it forked into its group may outlive it.
+        if [ -n "$child_start" ]; then
+            stop_tree "$child" "$child_start" group || die "processes of cloudflared pid $child would not stop" 1
+        fi
         child='' child_start=''
         for ((i = 0; i < 25 && !stopping; i++)); do sleep 0.2 {LOCK_FD}>&-; done
     done
