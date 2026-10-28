@@ -16,8 +16,8 @@
 #          its connector.lock; then stop any cloudflared a killed supervisor
 #          left (see connector.spawn below)
 #   GRM_CONNECTOR_DIR      root-only directory with cloudflared,
-#                          cloudflared.sha256 and logs/ (required)
-#   GRM_TUNNEL_TOKEN_FILE  owned by the caller, mode 0600 or 0400
+#                          cloudflared.sha256 and logs/ (required, absolute)
+#   GRM_TUNNEL_TOKEN_FILE  owned by the caller, mode 0600 or 0400, absolute
 #                          (default GRM_CONNECTOR_DIR/tunnel.token)
 #   GRM_TUNNEL_PROTOCOL    http2 (default; QUIC failed from the Vast host) or quic
 # cloudflared.sha256 must hold exactly one line, "SHA256  cloudflared" (or
@@ -39,15 +39,19 @@
 set -euo pipefail
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/lib.sh"
+say() { printf '%s\n' "$*" 2>/dev/null || true; }
+die() {
+    say "FAIL: $1" >&2
+    exit "${2:-1}"
+}
 C=${GRM_CONNECTOR_DIR:?set GRM_CONNECTOR_DIR to the connector directory}
 C=${C%/}
 TOKEN=${GRM_TUNNEL_TOKEN_FILE:-$C/tunnel.token}
 PROTOCOL=${GRM_TUNNEL_PROTOCOL:-http2}
 LOCK_FD='' MARK_FD='' MARK_ID=''
-die() {
-    echo "FAIL: $1" >&2
-    exit "${2:-1}"
-}
+# run changes into the connector directory before cloudflared opens its files,
+# so a relative path would be checked in one directory and used in another.
+case $C in /?*) ;; *) die "GRM_CONNECTOR_DIR must be an absolute path: $C" 2 ;; esac
 need() {
     local tool
     for tool in "$@"; do
@@ -80,6 +84,7 @@ verify_binary() {
 check() {
     local version
     case $PROTOCOL in http2 | quic) ;; *) die "unsupported protocol $PROTOCOL" 2 ;; esac
+    case $TOKEN in /*) ;; *) die "GRM_TUNNEL_TOKEN_FILE must be an absolute path: $TOKEN" 2 ;; esac
     [ -d "$C" ] && [ ! -L "$C" ] || die "$C is not a directory" 2
     private "$C"
     verify_binary

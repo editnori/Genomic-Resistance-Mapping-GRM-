@@ -481,6 +481,12 @@ expect 2 'must not be group- or world-accessible' "connector refuses a readable 
 chmod 600 "$C/tunnel.token"
 expect 2 'missing, empty or a link' "connector refuses a missing token file" -- \
     env GRM_CONNECTOR_DIR="$C" GRM_TUNNEL_TOKEN_FILE="$C/none" bash "$S/connector.sh" check
+# run changes into the connector directory before cloudflared opens the token,
+# so relative paths, checked from $T here, would name other files there.
+expect 2 'GRM_TUNNEL_TOKEN_FILE must be an absolute path' "connector refuses a relative token path" -- \
+    env -C "$T" GRM_CONNECTOR_DIR="$C" GRM_TUNNEL_TOKEN_FILE=connector/tunnel.token bash "$S/connector.sh" check
+expect 2 'GRM_CONNECTOR_DIR must be an absolute path' "connector refuses a relative connector directory" -- \
+    env -C "$T" GRM_CONNECTOR_DIR=connector bash "$S/connector.sh" check
 good=$(cat "$C/cloudflared.sha256")
 sum=${good%% *}
 cp "$C/cloudflared" "$C/other"
@@ -562,7 +568,7 @@ rm "$C/cloudflared.sha256"
 mv "$T/cloudflared.sha256" "$C/cloudflared.sha256"
 
 expect 1 '' "no stub grm, cargo or npm ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=185
+EXPECTED_ASSERTIONS=187
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"
