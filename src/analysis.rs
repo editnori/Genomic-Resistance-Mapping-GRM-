@@ -12,8 +12,8 @@ use crate::dna::KmerSpace;
 use crate::fnv::Fnv;
 use crate::layout::{Layout, remove_if_present};
 use crate::learn::eval::{
-    self, EvalConfig, FinalModels, LassoFitAudit, LassoOnlyEvent, LearnerResult, MicInput,
-    MicResult, SplitResult,
+    self, EvalConfig, FinalModels, LassoFitAudit, LassoOnlyEvent, LassoProgress, LearnerResult,
+    MicInput, MicResult, SplitResult,
 };
 use crate::learn::gbt::GbtParams;
 use crate::learn::tree::ForestParams;
@@ -791,9 +791,10 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
 /// Runs only the lasso fits of each named dataset's evaluation
 /// (`eval::lasso_only`), on the inputs, cohort, projection, and lineages
 /// `analyze_dataset` would evaluate, after reporting each dataset's inputs and
-/// input fingerprint. With `fit` false it reports the inputs alone. It reads
-/// `layout` and writes nothing. The large-species lasso scan
-/// (`scripts/lasso-scan`) runs it.
+/// input fingerprint. With `fit` false it reports the inputs alone.
+/// `progress` sees each penalty point as it is solved. It reads `layout` and
+/// writes nothing. The large-species lasso scan (`scripts/lasso-scan`) runs
+/// it.
 pub fn lasso_scan(
     layout: &Layout,
     slug: &str,
@@ -801,6 +802,7 @@ pub fn lasso_scan(
     cfg: &EvalConfig,
     fit: bool,
     observe: &mut dyn FnMut(&str, &LassoOnlyEvent) -> Result<()>,
+    progress: &mut dyn FnMut(&str, &LassoProgress),
 ) -> Result<()> {
     let (input, catalog) = load_inputs(layout, slug)?;
     let digest = matrix_digest(&input.matrix);
@@ -835,6 +837,7 @@ pub fn lasso_scan(
                 e.min_support,
                 cfg,
                 &mut |event| observe(id, event),
+                &mut |point| progress(id, point),
             )?;
         }
     }
@@ -2587,11 +2590,23 @@ mod tests {
         let spec = dataset("meropenem");
         let ids = [spec.id.clone()];
         let mut events = Vec::new();
-        lasso_scan(&layout, "fixture", &ids, &cfg, true, &mut |id, e| {
-            assert_eq!(id, spec.id);
-            events.push(e.clone());
-            Ok(())
-        })
+        let mut points = 0;
+        lasso_scan(
+            &layout,
+            "fixture",
+            &ids,
+            &cfg,
+            true,
+            &mut |id, e| {
+                assert_eq!(id, spec.id);
+                events.push(e.clone());
+                Ok(())
+            },
+            &mut |id, _| {
+                assert_eq!(id, spec.id);
+                points += 1;
+            },
+        )
         .unwrap();
         // The scan reads the data root and writes nothing to it.
         assert_eq!(tree(dir.path()), before);
@@ -2637,6 +2652,11 @@ mod tests {
             })
             .collect();
         assert_eq!(fits.len(), 2 * cfg.folds + 1);
+        let traced: usize = fits
+            .iter()
+            .map(|f| f.trace.path.len() + f.trace.refit.len())
+            .sum();
+        assert_eq!(points, traced);
         for split in &out.splits {
             assert!(split.unavailable_reason.is_none());
             let lasso = split
@@ -2662,16 +2682,30 @@ mod tests {
         // Without fits it reports the inputs alone, and it refuses a dataset
         // the curation does not list before fitting anything.
         let mut inputs_only = Vec::new();
-        lasso_scan(&layout, "fixture", &ids, &cfg, false, &mut |_, e| {
-            inputs_only.push(e.clone());
-            Ok(())
-        })
+        lasso_scan(
+            &layout,
+            "fixture",
+            &ids,
+            &cfg,
+            false,
+            &mut |_, e| {
+                inputs_only.push(e.clone());
+                Ok(())
+            },
+            &mut |_, _| unreachable!("nothing is fitted"),
+        )
         .unwrap();
         assert!(matches!(&inputs_only[..], [LassoOnlyEvent::Inputs { .. }]));
         let missing = ["fixture__nothing".to_string()];
-        let error = lasso_scan(&layout, "fixture", &missing, &cfg, true, &mut |_, _| {
-            unreachable!("nothing to report")
-        })
+        let error = lasso_scan(
+            &layout,
+            "fixture",
+            &missing,
+            &cfg,
+            true,
+            &mut |_, _| unreachable!("nothing to report"),
+            &mut |_, _| unreachable!("nothing is fitted"),
+        )
         .unwrap_err();
         assert!(format!("{error:#}").contains("no curated dataset fixture__nothing"));
     }

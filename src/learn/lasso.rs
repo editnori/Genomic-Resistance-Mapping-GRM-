@@ -1,31 +1,59 @@
 //! L1-regularized logistic regression on screened presence features.
 //!
-//! IRLS outer loop, cyclic coordinate descent inner loop (glmnet-style), with
-//! warm starts down a lambda path. Each feature's penalty is scaled by its
-//! standard deviation on the fitting samples, which is the raw-scale form of
-//! fitting standardized features: rare and common features compete on equal
-//! terms. Class-balancing weights match the tree learners.
+//! IRLS outer loop with warm starts down a lambda path. Each IRLS step's
+//! weighted least-squares problem is solved exactly on its active set by
+//! feature-sign search (Lee et al. 2007), and the step is halved while it
+//! raises the objective. Each feature's penalty is scaled by its standard
+//! deviation on the fitting samples, which is the raw-scale form of fitting
+//! standardized features: rare and common features compete on equal terms.
+//! Class-balancing weights match the tree learners.
 //!
-//! Both loops are capped. A point that stops at a cap is not a converged fit,
-//! and its `Convergence` says so; see docs/lasso-stopping.md.
+//! A point converges when the largest violation of its optimality conditions,
+//! the KKT residual, is at most 1e-6. The IRLS and active-set loops have
+//! guards; a point that stops at one is not a converged fit, and its
+//! `Convergence` says so. See docs/lasso-stopping.md.
 
 use crate::bits::{self, BitMatrix, Bits};
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 
-/// Stopping rule for one penalty point.
+/// Guards for one penalty point. Neither is the stopping rule: a point stops
+/// when its KKT residual reaches `KKT_TOL`, and one that reaches a guard
+/// first is unconverged.
 #[derive(Clone, Copy, Debug)]
 struct Limits {
     irls_steps: usize,
-    sweeps: usize,
+    /// Active-set iterations in one IRLS step's least-squares solve.
+    inner_iterations: usize,
 }
 
-/// 25 IRLS steps; 100,000 coordinate-descent sweeps per step, glmnet's
-/// default `maxit`. A 300-sweep cap stopped ill-conditioned panels well short
-/// of the optimum (C. jejuni ciprofloxacin, excess objective up to 2.7e-4).
+/// On the saved fixture panels and MTB delamanid fold 0 a point takes at
+/// most 6 IRLS steps and a solve at most 44 iterations.
 const LIMITS: Limits = Limits {
-    irls_steps: 25,
-    sweeps: 100_000,
+    irls_steps: 100,
+    inner_iterations: 5_000,
 };
+
+/// A point converges when no optimality condition of the penalized objective
+/// is violated by more than this on the standardized scale. The saved
+/// fixture panels are accepted at the same tolerance.
+const KKT_TOL: f64 = 1e-6;
+
+/// One IRLS step's least-squares solve stops when no zero coefficient
+/// violates its condition by more than this, 1,000 times below `KKT_TOL`.
+const INNER_TOL: f64 = 1e-9;
+
+/// Lower bound on the IRLS weight p(1 - p).
+const WEIGHT_FLOOR: f64 = 1e-5;
+
+/// A column whose Cholesky pivot is below this share of its own weighted sum
+/// of squares counts as a linear combination of the active columns.
+const PIVOT_TOL: f64 = 1e-10;
+
+/// Halvings of an IRLS step that raises the objective before the point is
+/// given up.
+const HALVINGS: u32 = 30;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LassoModel {
@@ -38,12 +66,15 @@ pub struct LassoModel {
 /// How the solve at one penalty point stopped.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Convergence {
-    /// IRLS steps taken.
+    /// IRLS steps taken; 0 when the warm start already met the tolerance.
     pub irls_steps: u32,
-    /// IRLS steps whose coordinate descent stopped at the sweep cap unsettled.
+    /// IRLS steps whose active-set solve stopped short of its own optimality
+    /// test, at its iteration guard or where rounding left it no descent.
+    /// The name dates from the coordinate-descent solver's sweep cap.
     pub sweep_cap_hits: u32,
-    /// The IRLS change fell below tolerance and that step's coordinate
-    /// descent settled. False when either cap ended the solve.
+    /// The KKT residual met its tolerance on a two-class fit with finite
+    /// parameters. False when a guard or a failed step search ended the
+    /// solve.
     pub converged: bool,
 }
 
@@ -51,6 +82,21 @@ pub struct Convergence {
 pub struct LassoFit {
     pub model: LassoModel,
     pub convergence: Convergence,
+}
+
+/// One penalty point, reported as soon as it is solved.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PointProgress {
+    pub point: usize,
+    pub lambda: f64,
+    pub irls_steps: u32,
+    /// Non-zero coefficients.
+    pub active: usize,
+    /// KKT residual at the point's final parameters.
+    pub kkt: f64,
+    /// Wall-clock seconds spent on this point.
+    pub seconds: f64,
+    pub converged: bool,
 }
 
 impl LassoModel {
@@ -160,7 +206,7 @@ impl Problem {
 
 /// Fits the path at each lambda (descending), warm-starting each from the
 /// last. Stops early once more than `max_nonzero` coefficients are active.
-/// Points that stopped at a cap are reported on stderr; use
+/// Points that stopped unconverged are reported on stderr; use
 /// `fit_path_with_status` to act on them.
 pub fn fit_path(
     x: &BitMatrix,
@@ -172,11 +218,12 @@ pub fn fit_path(
 ) -> Vec<LassoModel> {
     report_unconverged(
         "fit_path",
-        fit_path_with_status(x, y, fit, features, n_lambdas, max_nonzero),
+        fit_path_with_status(x, y, fit, features, n_lambdas, max_nonzero, &mut |_| {}),
     )
 }
 
-/// `fit_path`, with how each point stopped.
+/// `fit_path`, with how each point stopped. `observe` sees each point as
+/// soon as it is solved.
 pub fn fit_path_with_status(
     x: &BitMatrix,
     y: &Bits,
@@ -184,11 +231,14 @@ pub fn fit_path_with_status(
     features: &[u32],
     n_lambdas: usize,
     max_nonzero: usize,
+    observe: &mut dyn FnMut(&PointProgress),
 ) -> Vec<LassoFit> {
     if !has_both_classes(y, fit) {
         return vec![];
     }
-    fit_path_limited(x, y, fit, features, n_lambdas, max_nonzero, LIMITS)
+    path_problem(x, y, fit, features, n_lambdas).map_or_else(Vec::new, |(prob, lambdas)| {
+        solve_path(&prob, &lambdas, max_nonzero, LIMITS, observe)
+    })
 }
 
 /// One-class logistic regression has no finite intercept optimum. Do not run a
@@ -200,6 +250,34 @@ fn has_both_classes(y: &Bits, fit: &Bits) -> bool {
     pos > 0 && pos < fit.count()
 }
 
+/// The problem on `fit` and its penalty grid: `n_lambdas` log-spaced points
+/// from the smallest penalty that keeps every coefficient at zero down to
+/// 1e-3 of it. None when there is nothing to fit.
+fn path_problem(
+    x: &BitMatrix,
+    y: &Bits,
+    fit: &Bits,
+    features: &[u32],
+    n_lambdas: usize,
+) -> Option<(Problem, Vec<f64>)> {
+    if n_lambdas == 0 || fit.count() == 0 {
+        return None;
+    }
+    let prob = Problem::new(x, y, fit, features);
+    let lmax = prob.lambda_max();
+    if lmax == 0.0 {
+        return None;
+    }
+    let ratio: f64 = 1e-3;
+    let lambdas: Vec<f64> = (0..n_lambdas)
+        .map(|k| lmax * ratio.powf(k as f64 / (n_lambdas - 1).max(1) as f64))
+        .collect();
+    Some((prob, lambdas))
+}
+
+/// `fit_path_with_status` under other limits, and without its one-class
+/// guard, so the fixture accounting keeps the raw one-class trace.
+#[cfg(test)]
 fn fit_path_limited(
     x: &BitMatrix,
     y: &Bits,
@@ -209,23 +287,13 @@ fn fit_path_limited(
     max_nonzero: usize,
     limits: Limits,
 ) -> Vec<LassoFit> {
-    if n_lambdas == 0 || fit.count() == 0 {
-        return vec![];
-    }
-    let prob = Problem::new(x, y, fit, features);
-    let lmax = prob.lambda_max();
-    if lmax == 0.0 {
-        return vec![];
-    }
-    let ratio: f64 = 1e-3;
-    let lambdas: Vec<f64> = (0..n_lambdas)
-        .map(|k| lmax * ratio.powf(k as f64 / (n_lambdas - 1).max(1) as f64))
-        .collect();
-    solve_path(&prob, &lambdas, max_nonzero, limits)
+    path_problem(x, y, fit, features, n_lambdas).map_or_else(Vec::new, |(prob, lambdas)| {
+        solve_path(&prob, &lambdas, max_nonzero, limits, &mut |_| {})
+    })
 }
 
 /// Refit the selected penalty path without recomputing its scale or spacing.
-/// Points that stopped at a cap are reported on stderr; use
+/// Points that stopped unconverged are reported on stderr; use
 /// `refit_path_with_status` to act on them.
 pub fn refit_path(
     x: &BitMatrix,
@@ -236,17 +304,19 @@ pub fn refit_path(
 ) -> Vec<LassoModel> {
     report_unconverged(
         "refit_path",
-        refit_path_with_status(x, y, fit, features, lambdas),
+        refit_path_with_status(x, y, fit, features, lambdas, &mut |_| {}),
     )
 }
 
-/// `refit_path`, with how each point stopped.
+/// `refit_path`, with how each point stopped. `observe` sees each point as
+/// soon as it is solved.
 pub fn refit_path_with_status(
     x: &BitMatrix,
     y: &Bits,
     fit: &Bits,
     features: &[u32],
     lambdas: &[f64],
+    observe: &mut dyn FnMut(&PointProgress),
 ) -> Vec<LassoFit> {
     assert!(lambdas.iter().all(|v| v.is_finite() && *v > 0.0));
     if fit.count() == 0 || !has_both_classes(y, fit) {
@@ -257,6 +327,7 @@ pub fn refit_path_with_status(
         lambdas,
         usize::MAX,
         LIMITS,
+        observe,
     )
 }
 
@@ -265,9 +336,13 @@ fn report_unconverged(caller: &str, path: Vec<LassoFit>) -> Vec<LassoModel> {
         let c = f.convergence;
         if !c.converged {
             eprintln!(
-                "lasso {caller}: point {i} (lambda {:e}) stopped at a cap unconverged: \
-                 {} IRLS steps (cap {}), {} sweep-cap hits (cap {} sweeps)",
-                f.model.lambda, c.irls_steps, LIMITS.irls_steps, c.sweep_cap_hits, LIMITS.sweeps
+                "lasso {caller}: point {i} (lambda {:e}) unconverged: {} IRLS steps (guard {}), \
+                 {} active-set solves stopped short (guard {} iterations)",
+                f.model.lambda,
+                c.irls_steps,
+                LIMITS.irls_steps,
+                c.sweep_cap_hits,
+                LIMITS.inner_iterations
             );
         }
     }
@@ -279,96 +354,47 @@ fn solve_path(
     lambdas: &[f64],
     max_nonzero: usize,
     limits: Limits,
+    observe: &mut dyn FnMut(&PointProgress),
 ) -> Vec<LassoFit> {
-    let n = prob.samples.len();
-    let nf = n as f64;
+    let rep = representatives(&prob.columns);
+    // One-class logistic regression has no finite optimum: its gradient
+    // vanishes only as the intercept diverges, so a small KKT residual
+    // certifies nothing there.
+    let two_class = prob.y.contains(&1.0) && prob.y.contains(&0.0);
 
     let mut beta = vec![0.0; prob.columns.len()];
     let mut b0 = 0.0;
-    let mut eta = vec![0.0; n];
+    let mut eta = vec![0.0; prob.samples.len()];
     let mut path = Vec::new();
 
-    for &lambda in lambdas {
+    for (point, &lambda) in lambdas.iter().enumerate() {
+        let started = Instant::now();
         let mut convergence = Convergence {
             irls_steps: 0,
             sweep_cap_hits: 0,
             converged: false,
         };
-        for _irls in 0..limits.irls_steps {
+        let mut kkt = kkt_residual(prob, &rep, lambda, &beta, &eta);
+        while (kkt.is_nan() || kkt > KKT_TOL)
+            && (convergence.irls_steps as usize) < limits.irls_steps
+        {
             convergence.irls_steps += 1;
-            let mut w = vec![0.0; n];
-            let mut r = vec![0.0; n];
-            for j in 0..n {
-                let p = super::gbt::sigmoid(eta[j]);
-                let wj = (p * (1.0 - p)).max(1e-5);
-                w[j] = wj * prob.class_weight[j];
-                r[j] = (prob.y[j] - p) / wj; // working residual z - eta
-            }
-            let mut max_change: f64 = 0.0;
-            // Active-set iteration: after a full sweep, sweep only non-zero
-            // coefficients until they settle, then confirm with a full sweep
-            // that nothing new enters.
-            let mut active_only = false;
-            let mut inner_settled = false;
-            for _cd in 0..limits.sweeps {
-                let mut sweep_change: f64 = 0.0;
-                for (k, col) in prob.columns.iter().enumerate() {
-                    if active_only && beta[k] == 0.0 {
-                        continue;
-                    }
-                    let (mut num, mut den) = (0.0, 0.0);
-                    for &j in col {
-                        let j = j as usize;
-                        num += w[j] * (r[j] + beta[k]);
-                        den += w[j];
-                    }
-                    if den == 0.0 {
-                        continue;
-                    }
-                    let thresh = lambda * prob.sd[k] * nf;
-                    let new = soft(num, thresh) / den;
-                    let delta = new - beta[k];
-                    if delta != 0.0 {
-                        for &j in col {
-                            r[j as usize] -= delta;
-                        }
-                        beta[k] = new;
-                        sweep_change = sweep_change.max(delta.abs() * den.sqrt());
-                    }
-                }
-                let wsum: f64 = w.iter().sum();
-                let d0 = w.iter().zip(&r).map(|(a, b)| a * b).sum::<f64>() / wsum;
-                b0 += d0;
-                r.iter_mut().for_each(|v| *v -= d0);
-                sweep_change = sweep_change.max(d0.abs());
-                max_change = max_change.max(sweep_change);
-                let settled = sweep_change < 1e-6;
-                if active_only {
-                    active_only = !settled;
-                } else if settled {
-                    inner_settled = true;
-                    break;
-                } else {
-                    active_only = true;
-                }
-            }
-            if !inner_settled {
+            let Some(mut wls) = Wls::new(prob, &rep, lambda, &eta) else {
+                convergence.sweep_cap_hits += 1;
+                break;
+            };
+            let (mut next_b0, mut next_beta) = (b0, beta.clone());
+            if !wls.solve(&mut next_b0, &mut next_beta, limits.inner_iterations) {
                 convergence.sweep_cap_hits += 1;
             }
-            // Recompute the linear predictor from the coefficients.
-            eta.iter_mut().for_each(|e| *e = b0);
-            for (k, col) in prob.columns.iter().enumerate() {
-                if beta[k] != 0.0 {
-                    for &j in col {
-                        eta[j as usize] += beta[k];
-                    }
-                }
-            }
-            if max_change < 1e-5 {
-                convergence.converged = inner_settled;
+            if !take_step(
+                prob, lambda, &mut b0, &mut beta, &mut eta, next_b0, &next_beta,
+            ) {
                 break;
             }
+            kkt = kkt_residual(prob, &rep, lambda, &beta, &eta);
         }
+        convergence.converged = two_class && kkt <= KKT_TOL;
         let convergence = require_finite(convergence, b0, &beta);
         let coef: Vec<(u32, f64)> = beta
             .iter()
@@ -376,7 +402,18 @@ fn solve_path(
             .filter(|(_, b)| **b != 0.0)
             .map(|(k, b)| (prob.features[k], *b))
             .collect();
+        // Exact copies share one coefficient (`representatives`), so this
+        // counts distinct columns.
         let active = coef.len();
+        observe(&PointProgress {
+            point,
+            lambda,
+            irls_steps: convergence.irls_steps,
+            active,
+            kkt,
+            seconds: started.elapsed().as_secs_f64(),
+            converged: convergence.converged,
+        });
         path.push(LassoFit {
             model: LassoModel {
                 intercept: b0,
@@ -401,13 +438,615 @@ fn require_finite(
     convergence
 }
 
-fn soft(z: f64, t: f64) -> f64 {
-    if z > t {
-        z - t
-    } else if z < -t {
-        z + t
-    } else {
-        0.0
+/// Each column's representative: the lowest-index column identical to it on
+/// the fitting samples. Only representatives enter the active set, so exact
+/// copies share one coefficient, kept on the first. Copies have the same
+/// penalty factor, so every same-sign split of that weight among them has
+/// the same loss and penalty, and the optimal objective does not change.
+fn representatives(columns: &[Vec<u32>]) -> Vec<usize> {
+    let mut first: FxHashMap<&[u32], usize> = FxHashMap::default();
+    columns
+        .iter()
+        .enumerate()
+        .map(|(k, c)| *first.entry(c.as_slice()).or_insert(k))
+        .collect()
+}
+
+/// The largest violation of the penalized objective's optimality conditions
+/// at `beta` with linear predictor `eta`, on the standardized scale: the
+/// intercept's gradient, and for each column with a carrier, with g its
+/// gradient over its standard deviation, |g + lambda sign(b)| when its
+/// coefficient b is non-zero and max(|g| - lambda, 0) when it is zero.
+/// NaN when any term is NaN.
+fn kkt_residual(prob: &Problem, rep: &[usize], lambda: f64, beta: &[f64], eta: &[f64]) -> f64 {
+    let n = eta.len() as f64;
+    let res: Vec<f64> = eta
+        .iter()
+        .zip(&prob.y)
+        .zip(&prob.class_weight)
+        .map(|((&e, &t), &cw)| cw * (super::gbt::sigmoid(e) - t) / n)
+        .collect();
+    let mut worst = res.iter().sum::<f64>().abs();
+    // f64::max would drop a NaN, here and below.
+    if worst.is_nan() {
+        return f64::NAN;
+    }
+    let mut grad = vec![0.0; beta.len()];
+    for (k, col) in prob.columns.iter().enumerate() {
+        if col.is_empty() {
+            continue;
+        }
+        // A copy's representative comes first, so its gradient is ready.
+        if rep[k] == k {
+            grad[k] = col.iter().map(|&j| res[j as usize]).sum();
+        }
+        let g = grad[rep[k]] / prob.sd[k];
+        let v = if beta[k] != 0.0 {
+            (g + lambda * beta[k].signum()).abs()
+        } else {
+            g.abs() - lambda
+        };
+        if v.is_nan() {
+            return f64::NAN;
+        }
+        worst = worst.max(v);
+    }
+    worst
+}
+
+/// Mean class-weighted log loss on the fitting samples plus lambda times the
+/// standard-deviation-weighted L1 norm.
+fn objective(prob: &Problem, lambda: f64, beta: &[f64], eta: &[f64]) -> f64 {
+    let loss: f64 = eta
+        .iter()
+        .zip(&prob.y)
+        .zip(&prob.class_weight)
+        .map(|((&e, &t), &cw)| {
+            let z = if t == 1.0 { -e } else { e };
+            cw * (z.max(0.0) + (-z.abs()).exp().ln_1p())
+        })
+        .sum();
+    let penalty: f64 = beta.iter().zip(&prob.sd).map(|(b, sd)| sd * b.abs()).sum();
+    loss / eta.len() as f64 + lambda * penalty
+}
+
+fn linear_predictor(prob: &Problem, b0: f64, beta: &[f64], eta: &mut [f64]) {
+    eta.fill(b0);
+    for (col, &b) in prob.columns.iter().zip(beta) {
+        if b != 0.0 {
+            for &j in col {
+                eta[j as usize] += b;
+            }
+        }
+    }
+}
+
+/// Moves (b0, beta) toward the IRLS solution (next_b0, next_beta), halving
+/// the step while it raises the penalized objective: near separation a full
+/// Newton step can overshoot. Keeps `eta` the linear predictor. False, with
+/// nothing moved, when the solution is the current point or no halving
+/// lowers the objective.
+fn take_step(
+    prob: &Problem,
+    lambda: f64,
+    b0: &mut f64,
+    beta: &mut Vec<f64>,
+    eta: &mut Vec<f64>,
+    next_b0: f64,
+    next_beta: &[f64],
+) -> bool {
+    if next_b0 == *b0 && next_beta == beta.as_slice() {
+        return false;
+    }
+    let current = objective(prob, lambda, beta, eta);
+    // Rounding in the sum over samples; near the optimum a step that lowers
+    // the KKT residual can change the objective by less than this.
+    let slack = 1e-12 * current.abs().max(1.0);
+    let (mut trial_b0, mut trial) = (next_b0, next_beta.to_vec());
+    let mut trial_eta = vec![0.0; eta.len()];
+    let mut t = 1.0;
+    for _ in 0..=HALVINGS {
+        linear_predictor(prob, trial_b0, &trial, &mut trial_eta);
+        if objective(prob, lambda, &trial, &trial_eta) <= current + slack {
+            *b0 = trial_b0;
+            *beta = trial;
+            *eta = trial_eta;
+            return true;
+        }
+        t *= 0.5;
+        trial_b0 = *b0 + t * (next_b0 - *b0);
+        for ((v, &a), &b) in trial.iter_mut().zip(beta.iter()).zip(next_beta) {
+            *v = a + t * (b - a);
+        }
+    }
+    false
+}
+
+fn dot(a: &[f64], b: &[f64]) -> f64 {
+    // Four running sums let the compiler vectorize the loop.
+    let mut acc = [0.0; 4];
+    let ((ca, ta), (cb, tb)) = (a.as_chunks::<4>(), b.as_chunks::<4>());
+    let tail: f64 = ta.iter().zip(tb).map(|(x, y)| x * y).sum();
+    for (x, y) in ca.iter().zip(cb) {
+        for ((s, u), v) in acc.iter_mut().zip(x).zip(y) {
+            *s += u * v;
+        }
+    }
+    acc[0] + acc[1] + acc[2] + acc[3] + tail
+}
+
+/// Where coefficient c reaches zero on c + t d, 0 < t <= 1.
+fn crossing(c: f64, d: f64) -> Option<f64> {
+    (c != 0.0 && c * (c + d) <= 0.0).then(|| -c / d)
+}
+
+/// The feature-sign line search on c + t d, with index 0 the unpenalized
+/// intercept and `pen[i - 1]` the penalty of coefficient i. It evaluates the
+/// least-squares objective's change at each point where a non-zero
+/// coefficient reaches zero (that coefficient set to exactly zero) and at the
+/// full step; the smooth part changes by t slope + t^2 curv / 2. Returns the
+/// step with the lowest change, and that change.
+fn line_search(c: &[f64], d: &[f64], slope: f64, curv: f64, pen: &[f64]) -> (f64, f64) {
+    let change = |t: f64| -> f64 {
+        let penalty: f64 = (1..c.len())
+            .map(|i| {
+                let v = if crossing(c[i], d[i]) == Some(t) {
+                    0.0
+                } else {
+                    c[i] + t * d[i]
+                };
+                pen[i - 1] * (v.abs() - c[i].abs())
+            })
+            .sum();
+        t * slope + 0.5 * t * t * curv + penalty
+    };
+    let mut best = (1.0, change(1.0));
+    for t in (1..c.len())
+        .filter_map(|i| crossing(c[i], d[i]))
+        .filter(|&t| t < 1.0)
+    {
+        let dq = change(t);
+        if dq < best.1 {
+            best = (t, dq);
+        }
+    }
+    best
+}
+
+/// One IRLS step's weighted least-squares problem,
+///
+///   min over (b0, beta) of 1/2 sum_j w_j (z_j - b0 - x_j beta)^2 + sum_k pen_k |beta_k|,
+///
+/// with pen_k = lambda sd_k and the intercept unpenalized, solved exactly by
+/// feature-sign search on a Cholesky-factored active set. The weights are
+/// w_j = c_j max(p_j (1 - p_j), 1e-5) / n for class weight c_j, so at the
+/// current point the gradient equals the penalized objective's and the solve's
+/// violations are on the KKT scale.
+struct Wls<'a> {
+    prob: &'a Problem,
+    rep: &'a [usize],
+    lambda: f64,
+    w: Vec<f64>,
+    sw: Vec<f64>,
+    z: Vec<f64>,
+    /// Active columns. Position i is index i + 1 of the Gram matrix and its
+    /// factor; index 0 is the intercept.
+    active: Vec<usize>,
+    /// The sign fixed for each active coefficient: its own when non-zero, its
+    /// gradient's while it enters at zero.
+    sign: Vec<f64>,
+    /// sqrt(w) times the intercept and each active column, dense.
+    rows: Vec<Vec<f64>>,
+    gram: Vec<Vec<f64>>,
+    /// Lower-triangular Cholesky factor of `gram`, row by row.
+    chol: Vec<Vec<f64>>,
+    /// X'Wz for the intercept and each active column.
+    xwz: Vec<f64>,
+}
+
+/// A column that cannot join the factor: L^-1 times its Gram products with
+/// the intercept and the active columns, and its pivot.
+struct Dependent {
+    l: Vec<f64>,
+    pivot: f64,
+}
+
+impl<'a> Wls<'a> {
+    /// The problem linearized at `eta`, with only the intercept factored.
+    /// None when the weights do not sum to a positive finite number.
+    fn new(prob: &'a Problem, rep: &'a [usize], lambda: f64, eta: &[f64]) -> Option<Self> {
+        let n = eta.len() as f64;
+        let (mut w, mut z) = (Vec::with_capacity(eta.len()), Vec::with_capacity(eta.len()));
+        for (j, &e) in eta.iter().enumerate() {
+            let p = super::gbt::sigmoid(e);
+            let v = (p * (1.0 - p)).max(WEIGHT_FLOOR);
+            w.push(prob.class_weight[j] * v / n);
+            z.push(e + (prob.y[j] - p) / v);
+        }
+        let sw: Vec<f64> = w.iter().map(|v: &f64| v.sqrt()).collect();
+        let total = dot(&sw, &sw);
+        if !(total > 0.0 && total.is_finite()) {
+            return None;
+        }
+        let xwz = vec![dot(&w, &z)];
+        Some(Wls {
+            prob,
+            rep,
+            lambda,
+            rows: vec![sw.clone()],
+            w,
+            sw,
+            z,
+            active: Vec::new(),
+            sign: Vec::new(),
+            gram: vec![vec![total]],
+            chol: vec![vec![total.sqrt()]],
+            xwz,
+        })
+    }
+
+    fn pen(&self, k: usize) -> f64 {
+        self.lambda * self.prob.sd[k]
+    }
+
+    /// Solves L y = b.
+    fn forward(&self, b: &[f64]) -> Vec<f64> {
+        let mut y = Vec::with_capacity(b.len());
+        for (i, row) in self.chol.iter().enumerate() {
+            let s = b[i] - dot(&row[..i], &y);
+            y.push(s / row[i]);
+        }
+        y
+    }
+
+    /// Solves L' x = y.
+    fn backward(&self, y: &[f64]) -> Vec<f64> {
+        let m = y.len();
+        let mut x = vec![0.0; m];
+        for i in (0..m).rev() {
+            let mut s = y[i];
+            for (row, xj) in self.chol[i + 1..].iter().zip(&x[i + 1..]) {
+                s -= row[i] * xj;
+            }
+            x[i] = s / self.chol[i][i];
+        }
+        x
+    }
+
+    fn gram_times(&self, v: &[f64]) -> Vec<f64> {
+        self.gram.iter().map(|g| dot(g, v)).collect()
+    }
+
+    /// The intercept, then each active coefficient.
+    fn coefficients(&self, b0: f64, beta: &[f64]) -> Vec<f64> {
+        std::iter::once(b0)
+            .chain(self.active.iter().map(|&k| beta[k]))
+            .collect()
+    }
+
+    /// Adds column k to the active set with `sign` fixed, extending the Gram
+    /// matrix and its factor by one row. Refuses, leaving everything as it
+    /// was, when the new pivot is at most `tol` times the column's weighted
+    /// sum of squares.
+    fn push(&mut self, k: usize, sign: f64, tol: f64) -> Result<(), Dependent> {
+        let col = &self.prob.columns[k];
+        let mut row = vec![0.0; self.sw.len()];
+        for &j in col {
+            row[j as usize] = self.sw[j as usize];
+        }
+        let mut cross: Vec<f64> = self.rows.iter().map(|r| dot(r, &row)).collect();
+        let diag = dot(&row, &row);
+        let mut l = self.forward(&cross);
+        let pivot = diag - dot(&l, &l);
+        if pivot.is_nan() || pivot <= tol * diag {
+            return Err(Dependent { l, pivot });
+        }
+        for (g, &c) in self.gram.iter_mut().zip(&cross) {
+            g.push(c);
+        }
+        cross.push(diag);
+        self.gram.push(cross);
+        l.push(pivot.sqrt());
+        self.chol.push(l);
+        self.rows.push(row);
+        self.xwz.push(
+            col.iter()
+                .map(|&j| self.w[j as usize] * self.z[j as usize])
+                .sum(),
+        );
+        self.active.push(k);
+        self.sign.push(sign);
+        Ok(())
+    }
+
+    /// Drops the active column at position `pos`. Removing its row from the
+    /// factor leaves one entry past the diagonal in each later row; Givens
+    /// rotations on adjacent columns clear them and keep L L' = G.
+    fn remove(&mut self, pos: usize) {
+        let q = pos + 1;
+        self.active.remove(pos);
+        self.sign.remove(pos);
+        self.rows.remove(q);
+        self.xwz.remove(q);
+        self.gram.remove(q);
+        for g in &mut self.gram {
+            g.remove(q);
+        }
+        self.chol.remove(q);
+        for i in q..self.chol.len() {
+            let (a, b) = (self.chol[i][i], self.chol[i][i + 1]);
+            let r = a.hypot(b);
+            let (c, s) = (a / r, b / r);
+            for row in &mut self.chol[i..] {
+                let (u, v) = (row[i], row[i + 1]);
+                row[i] = c * u + s * v;
+                row[i + 1] = c * v - s * u;
+            }
+            self.chol[i].pop();
+        }
+    }
+
+    fn position(&self, k: usize) -> usize {
+        self.active
+            .iter()
+            .position(|&j| j == k)
+            .expect("entering columns are active")
+    }
+
+    /// Back to the intercept alone.
+    fn reset(&mut self) {
+        self.active.clear();
+        self.sign.clear();
+        self.rows.truncate(1);
+        self.xwz.truncate(1);
+        self.gram.truncate(1);
+        self.gram[0].truncate(1);
+        self.chol.truncate(1);
+    }
+
+    /// The minimizer over the active set with every sign held fixed:
+    /// G c = X'Wz - pen sign, the intercept unpenalized.
+    fn sign_fixed(&self) -> Vec<f64> {
+        let mut rhs = self.xwz.clone();
+        for (i, (&k, &s)) in self.active.iter().zip(&self.sign).enumerate() {
+            rhs[i + 1] -= self.pen(k) * s;
+        }
+        self.backward(&self.forward(&rhs))
+    }
+
+    /// Feature-sign search from (b0, beta), in place. True when it stops at
+    /// its optimality test; false at the iteration guard or where rounding
+    /// leaves it no descent.
+    fn solve(&mut self, b0: &mut f64, beta: &mut [f64], limit: usize) -> bool {
+        // Warm start on the non-zero coefficients. One that these weights
+        // make numerically dependent on the others starts at zero instead;
+        // the IRLS step search compares the result with the current point,
+        // not with this start.
+        for (k, b) in beta.iter_mut().enumerate() {
+            if *b != 0.0 && self.push(k, b.signum(), PIVOT_TOL).is_err() {
+                *b = 0.0;
+            }
+        }
+        let mut blocked = vec![false; beta.len()];
+        let mut exact = true;
+        // Active columns still at zero, most violating first.
+        let mut entering: Vec<usize> = Vec::new();
+        for _ in 0..limit {
+            let c = self.coefficients(*b0, beta);
+            let d: Vec<f64> = self
+                .sign_fixed()
+                .iter()
+                .zip(&c)
+                .map(|(a, b)| a - b)
+                .collect();
+            let slope: f64 = self
+                .gram_times(&c)
+                .iter()
+                .zip(&self.xwz)
+                .zip(&d)
+                .map(|((g, b), di)| (g - b) * di)
+                .sum();
+            let curv = dot(&d, &self.gram_times(&d));
+            if !(slope.is_finite() && curv.is_finite()) {
+                return false;
+            }
+            let pen: Vec<f64> = self.active.iter().map(|&k| self.pen(k)).collect();
+            let (t, change) = line_search(&c, &d, slope, curv, &pen);
+            if change < 0.0 {
+                *b0 = c[0] + t * d[0];
+                for (i, &k) in self.active.iter().enumerate() {
+                    let (ci, di) = (c[i + 1], d[i + 1]);
+                    beta[k] = if crossing(ci, di) == Some(t) {
+                        0.0
+                    } else {
+                        ci + t * di
+                    };
+                }
+                let flipped = self
+                    .active
+                    .iter()
+                    .zip(&self.sign)
+                    .any(|(&k, &s)| beta[k] != 0.0 && beta[k].signum() != s);
+                for i in (0..self.active.len()).rev() {
+                    let k = self.active[i];
+                    if beta[k] == 0.0 {
+                        self.remove(i);
+                    } else {
+                        self.sign[i] = beta[k].signum();
+                    }
+                }
+                entering.clear();
+                if t < 1.0 || flipped {
+                    continue;
+                }
+                // The full step with every sign as fixed: each active
+                // coefficient is stationary.
+            } else if entering.len() > 1 {
+                // A batch whose step does not lower the objective. From a
+                // stationary point, one entering column's step always does,
+                // so keep only the most violating.
+                for &k in &entering[1..] {
+                    let i = self.position(k);
+                    self.remove(i);
+                }
+                entering.truncate(1);
+                continue;
+            } else if let Some(k) = entering.pop() {
+                // Even that step does not, so rounding has the last word on
+                // this column for the rest of this solve.
+                let i = self.position(k);
+                self.remove(i);
+                blocked[k] = true;
+                exact = false;
+                continue;
+            }
+            // Every active coefficient is stationary; check the zero ones.
+            let Some(violators) = self.violators(*b0, beta, &blocked) else {
+                return false;
+            };
+            let Some(&(k, top, g)) = violators.first() else {
+                return exact;
+            };
+            let room = self.active.len() / 10 + 1;
+            match self.push(k, g.signum(), PIVOT_TOL) {
+                Ok(()) => {
+                    entering.push(k);
+                    for &(k, _, g) in violators[1..]
+                        .iter()
+                        .take_while(|v| v.1 > top / 2.0)
+                        .take(room - 1)
+                    {
+                        if self.push(k, g.signum(), PIVOT_TOL).is_ok() {
+                            entering.push(k);
+                        }
+                    }
+                }
+                Err(dep) => {
+                    if !self.exchange(k, g, dep, b0, beta) {
+                        blocked[k] = true;
+                        exact = false;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    /// Zero, unblocked representative columns whose condition
+    /// |g_k| <= pen_k fails by more than `INNER_TOL` on the standardized
+    /// scale, as (column, violation, g_k), most violating first; g_k is the
+    /// least-squares objective's descent rate along column k. None when a
+    /// gradient is NaN.
+    fn violators(&self, b0: f64, beta: &[f64], blocked: &[bool]) -> Option<Vec<(usize, f64, f64)>> {
+        let mut fit = vec![b0; self.w.len()];
+        for &k in &self.active {
+            for &j in &self.prob.columns[k] {
+                fit[j as usize] += beta[k];
+            }
+        }
+        let q: Vec<f64> = self
+            .w
+            .iter()
+            .zip(&self.z)
+            .zip(&fit)
+            .map(|((w, z), f)| w * (z - f))
+            .collect();
+        let mut out = Vec::new();
+        for (k, col) in self.prob.columns.iter().enumerate() {
+            if self.rep[k] != k || col.is_empty() || beta[k] != 0.0 || blocked[k] {
+                continue;
+            }
+            let g: f64 = col.iter().map(|&j| q[j as usize]).sum();
+            let v = (g.abs() - self.pen(k)) / self.prob.sd[k];
+            if v.is_nan() {
+                return None;
+            }
+            if v > INNER_TOL {
+                out.push((k, v, g));
+            }
+        }
+        out.sort_by(|a, b| b.1.total_cmp(&a.1));
+        Some(out)
+    }
+
+    /// Column k violates its condition but is, to rounding, a linear
+    /// combination of the intercept and the active columns, so it cannot
+    /// join the factor. Moving beta_k by theta t and the others by
+    /// -theta t u, where G_A u is k's Gram column and theta the sign of g,
+    /// leaves the fit unchanged up to the pivot and, from a stationary point,
+    /// lowers the objective at the rate pen_k - |g| < 0. Follow that
+    /// direction to the first active coefficient that reaches zero, which
+    /// leaves so that k can join, or to the minimum when the pivot is
+    /// positive. False, with nothing changed, when rounding leaves no
+    /// descent.
+    fn exchange(
+        &mut self,
+        k: usize,
+        g: f64,
+        dep: Dependent,
+        b0: &mut f64,
+        beta: &mut [f64],
+    ) -> bool {
+        let theta = g.signum();
+        let v: Vec<f64> = self.backward(&dep.l).iter().map(|u| -theta * u).collect();
+        let c = self.coefficients(*b0, beta);
+        let grad: Vec<f64> = self
+            .gram_times(&c)
+            .iter()
+            .zip(&self.xwz)
+            .map(|(a, b)| a - b)
+            .collect();
+        let penalty_rate: f64 = self
+            .active
+            .iter()
+            .zip(&self.sign)
+            .zip(&v[1..])
+            .map(|((&j, &s), &vi)| self.pen(j) * s * vi)
+            .sum();
+        let rate = dot(&grad, &v) - theta * g + penalty_rate + self.pen(k);
+        if rate.is_nan() || rate >= 0.0 {
+            return false;
+        }
+        let curv = dep.pivot.max(0.0);
+        let mut t = if curv > 0.0 {
+            -rate / curv
+        } else {
+            f64::INFINITY
+        };
+        let mut leaving = None;
+        for (i, (&ci, &vi)) in c[1..].iter().zip(&v[1..]).enumerate() {
+            if ci * vi < 0.0 && -ci / vi < t {
+                t = -ci / vi;
+                leaving = Some(i);
+            }
+        }
+        if !t.is_finite() {
+            return false;
+        }
+        let saved: Vec<(usize, f64)> = self.active.iter().map(|&j| (j, beta[j])).collect();
+        *b0 = c[0] + t * v[0];
+        for (i, &j) in self.active.iter().enumerate() {
+            beta[j] = c[i + 1] + t * v[i + 1];
+        }
+        if let Some(i) = leaving {
+            beta[self.active[i]] = 0.0;
+            self.remove(i);
+        }
+        beta[k] = theta * t;
+        if self.push(k, theta, 0.0).is_ok() {
+            return true;
+        }
+        // Rounding leaves k dependent even so: undo.
+        beta[k] = 0.0;
+        *b0 = c[0];
+        self.reset();
+        for (j, b) in saved {
+            beta[j] = b;
+            if self.push(j, b.signum(), 0.0).is_err() {
+                beta[j] = 0.0;
+            }
+        }
+        false
     }
 }
 
@@ -497,7 +1136,7 @@ mod tests {
     }
 
     #[test]
-    fn a_cap_that_ends_the_solve_is_flagged() {
+    fn a_guard_that_ends_the_solve_is_flagged() {
         let n = 300;
         let marker = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
         let y = Bits::from_indices(
@@ -506,15 +1145,26 @@ mod tests {
         );
         let mut x = BitMatrix::with_cols(n);
         x.push_row(marker.words());
+        // One active-set iteration cannot finish a solve, and one IRLS step
+        // cannot reach the tolerance from the warm start.
         let tight = Limits {
             irls_steps: 1,
-            sweeps: 1,
+            inner_iterations: 1,
         };
         let capped = fit_path_limited(&x, &y, &Bits::ones(n), &[0], 3, 10, tight);
         let last = capped.last().unwrap().convergence;
         assert!(!last.converged);
         assert_eq!((last.irls_steps, last.sweep_cap_hits), (1, 1));
-        let fits = fit_path_with_status(&x, &y, &Bits::ones(n), &[0], 3, 10);
+        // The IRLS guard alone leaves the point unconverged too.
+        let irls_only = Limits {
+            irls_steps: 1,
+            ..LIMITS
+        };
+        let capped = fit_path_limited(&x, &y, &Bits::ones(n), &[0], 3, 10, irls_only);
+        let last = capped.last().unwrap().convergence;
+        assert!(!last.converged);
+        assert_eq!((last.irls_steps, last.sweep_cap_hits), (1, 0));
+        let fits = fit_path_with_status(&x, &y, &Bits::ones(n), &[0], 3, 10, &mut |_| {});
         assert!(fits.iter().all(|f| f.convergence.converged));
         assert_eq!(fits[2].convergence.sweep_cap_hits, 0);
         let direct = fit_path_limited(&x, &y, &Bits::ones(n), &[0], 3, 10, LIMITS);
@@ -530,7 +1180,7 @@ mod tests {
             assert!(same(m, &f.model));
         }
         let lambdas: Vec<f64> = fits.iter().map(|f| f.model.lambda).collect();
-        let refits = refit_path_with_status(&x, &y, &Bits::ones(n), &[0], &lambdas);
+        let refits = refit_path_with_status(&x, &y, &Bits::ones(n), &[0], &lambdas, &mut |_| {});
         let refit = refit_path(&x, &y, &Bits::ones(n), &[0], &lambdas);
         assert_eq!((refits.len(), refit.len()), (fits.len(), fits.len()));
         for ((m, r), f) in refit.iter().zip(&refits).zip(&fits) {
@@ -540,39 +1190,48 @@ mod tests {
     }
 
     #[test]
-    fn public_wrapper_uses_the_raised_cap_on_a_saved_panel() {
-        let f = fixtures()
-            .iter()
-            .find(|f| f.name == "streptococcus_agalactiae__clindamycin_lineage_fold0")
-            .unwrap();
+    fn public_wrapper_certifies_a_saved_panel_the_old_cap_left_unconverged() {
+        let f = fixture("streptococcus_agalactiae__clindamycin_lineage_fold0");
+        // The 300-sweep solver stopped at its cap in all 16 IRLS steps of
+        // point 6, so revision 7 left it unconverged.
+        let old = &f.points[6];
+        assert_eq!((old.old_irls_steps, old.old_sweep_cap_hits), (16, 16));
+        // This default test goes through the public wrapper: a guard that
+        // stopped the solve early would leave a point unconverged or above
+        // the tolerance.
         let feats: Vec<u32> = (0..f.x.rows as u32).collect();
-        // This default (not ignored) regression goes through the public
-        // wrapper: reverting LIMITS.sweeps to 300 leaves point 6 unconverged.
-        let actual = fit_path_with_status(&f.x, &f.y, &f.fit, &feats, f.n_lambdas, f.max_nonzero);
-        assert!(actual.iter().all(|f| f.convergence.converged));
-        let (old, new) = f.runs();
-        assert!(old.iter().any(|f| !f.convergence.converged));
-        assert_eq!(actual.len(), new.len());
-        for (a, n) in actual.iter().zip(new) {
-            assert!(same(&a.model, &n.model));
-            assert_eq!(a.convergence, n.convergence);
+        let actual = fit_path_with_status(
+            &f.x,
+            &f.y,
+            &f.fit,
+            &feats,
+            f.n_lambdas,
+            f.max_nonzero,
+            &mut |_| {},
+        );
+        assert_eq!(actual.len(), f.points.len());
+        for (i, (a, saved)) in actual.iter().zip(&f.points).enumerate() {
+            assert!(a.convergence.converged, "point {i} {:?}", a.convergence);
+            let (obj, kkt) = objective_and_kkt(&f.x, &f.y, &f.fit, &a.model);
+            assert!(kkt <= KKT_TOL, "point {i}: KKT {kkt:e}");
+            assert!(obj - saved.best_objective <= 1e-6, "point {i}");
+        }
+        for (a, r) in actual.iter().zip(f.run()) {
+            assert!(same(&a.model, &r.model));
+            assert_eq!(a.convergence, r.convergence);
         }
     }
 
     #[test]
-    fn public_refit_and_model_only_wrappers_use_the_raised_cap_on_a_saved_panel() {
-        let f = fixtures()
-            .iter()
-            .find(|f| f.name == "streptococcus_agalactiae__clindamycin_lineage_fold0")
-            .unwrap();
+    fn public_refit_and_model_only_wrappers_repeat_the_converged_path() {
+        let f = fixture("streptococcus_agalactiae__clindamycin_lineage_fold0");
         let feats: Vec<u32> = (0..f.x.rows as u32).collect();
-        let (old, new) = f.runs();
-        assert!(old.iter().any(|f| !f.convergence.converged));
-        // The evaluator scores and saves the refit, so its cap is pinned by a
-        // default test too: the same penalties on the same mask repeat the
-        // converged path, and a 300-sweep refit leaves point 6 unconverged.
+        let new = f.run();
+        // The evaluator scores and saves the refit, so a default test pins
+        // it too: the same penalties on the same mask repeat the converged
+        // path.
         let lambdas: Vec<f64> = new.iter().map(|n| n.model.lambda).collect();
-        let refit = refit_path_with_status(&f.x, &f.y, &f.fit, &feats, &lambdas);
+        let refit = refit_path_with_status(&f.x, &f.y, &f.fit, &feats, &lambdas, &mut |_| {});
         assert_eq!(refit.len(), new.len());
         for (r, n) in refit.iter().zip(new) {
             assert!(r.convergence.converged);
@@ -597,8 +1256,9 @@ mod tests {
         let fit = Bits::ones(n);
         let lambdas = vec![0.1; 4001];
         for y in [Bits::zeros(n), Bits::ones(n)] {
-            assert!(fit_path_with_status(&x, &y, &fit, &[0], 4001, usize::MAX).is_empty());
-            assert!(refit_path_with_status(&x, &y, &fit, &[0], &lambdas).is_empty());
+            let path = fit_path_with_status(&x, &y, &fit, &[0], 4001, usize::MAX, &mut |_| {});
+            assert!(path.is_empty());
+            assert!(refit_path_with_status(&x, &y, &fit, &[0], &lambdas, &mut |_| {}).is_empty());
         }
     }
 
@@ -615,41 +1275,483 @@ mod tests {
         }
         assert!(require_finite(converged, 0.0, &[1.0]).converged);
 
-        // Exercise the solver itself with a NaN working weight. f64::max must
-        // not let the resulting NaN intercept and coefficient look settled.
-        let prob = Problem {
+        // f64::max drops NaN, so the residual must not.
+        let prob = |class_weight| Problem {
             columns: vec![vec![0]],
             features: vec![0],
             sd: vec![1.0],
             samples: vec![0, 1],
             y: vec![1.0, 0.0],
-            class_weight: vec![f64::NAN, 1.0],
+            class_weight,
         };
-        let fits = solve_path(
-            &prob,
-            &[0.1],
-            10,
-            Limits {
-                irls_steps: 1,
-                sweeps: 10,
-            },
+        let finite = prob(vec![1.0, 1.0]);
+        let rep = representatives(&finite.columns);
+        assert!(kkt_residual(&finite, &rep, 0.3, &[0.0], &[0.0, f64::NAN]).is_nan());
+        assert!(kkt_residual(&finite, &rep, 0.3, &[0.0], &[0.0, 0.0]) <= KKT_TOL);
+
+        // A NaN or infinite working weight leaves no least-squares problem to
+        // solve: the point stops at once, unconverged, and its residual is
+        // never reported as small.
+        for bad in [f64::NAN, f64::INFINITY] {
+            let mut seen = Vec::new();
+            let fits = solve_path(&prob(vec![bad, 1.0]), &[0.1], 10, LIMITS, &mut |p| {
+                seen.push(*p)
+            });
+            let c = fits[0].convergence;
+            assert!(!c.converged);
+            assert_eq!((c.irls_steps, c.sweep_cap_hits), (1, 1));
+            assert!(
+                seen[0].kkt.is_nan() || seen[0].kkt > KKT_TOL,
+                "{:?}",
+                seen[0]
+            );
+        }
+    }
+
+    #[test]
+    fn the_kkt_residual_covers_the_intercept_and_every_condition() {
+        // Two samples, one resistant, class weights 1: at eta = 0 the
+        // gradient of the column carried by the resistant sample is
+        // (0.5 - 1) / 2 = -0.25, and the intercept's is 0.
+        let prob = Problem {
+            columns: vec![vec![0], vec![0]],
+            features: vec![0, 1],
+            sd: vec![1.0, 1.0],
+            samples: vec![0, 1],
+            y: vec![1.0, 0.0],
+            class_weight: vec![1.0, 1.0],
+        };
+        let rep = representatives(&prob.columns);
+        assert_eq!(rep, [0, 0]);
+        let kkt = |beta: &[f64], eta: &[f64]| kkt_residual(&prob, &rep, 0.1, beta, eta);
+        // A zero coefficient: |g| - lambda; its copy shares that gradient.
+        assert!((kkt(&[0.0, 0.0], &[0.0, 0.0]) - 0.15).abs() < 1e-15);
+        // A non-zero coefficient: |g + lambda sign(b)|, so its sign counts.
+        // The copy at zero then violates by |g| - lambda.
+        assert!((kkt(&[0.5, 0.0], &[0.0, 0.0]) - 0.15).abs() < 1e-15);
+        assert!((kkt(&[-0.5, 0.0], &[0.0, 0.0]) - 0.35).abs() < 1e-15);
+        // A NaN coefficient makes its own condition NaN; f64::max over the
+        // conditions would drop it.
+        assert!(kkt(&[f64::NAN, 0.0], &[0.0, 0.0]).is_nan());
+        // The intercept: with every coefficient's condition met under a large
+        // penalty, an intercept of 1 still leaves (2 sigmoid(1) - 1) / 2.
+        let off = kkt_residual(&prob, &rep, 10.0, &[0.0, 0.0], &[1.0, 1.0]);
+        let expected = (2.0 * crate::learn::gbt::sigmoid(1.0) - 1.0) / 2.0;
+        assert!((off - expected).abs() < 1e-15, "{off} {expected}");
+    }
+
+    #[test]
+    fn every_point_is_reported_as_it_is_solved() {
+        let f = fixture("planted_logistic");
+        let feats: Vec<u32> = (0..f.x.rows as u32).collect();
+        let mut seen = Vec::new();
+        let fits = fit_path_with_status(
+            &f.x,
+            &f.y,
+            &f.fit,
+            &feats,
+            f.n_lambdas,
+            f.max_nonzero,
+            &mut |p| seen.push(*p),
         );
-        assert!(!fits[0].model.intercept.is_finite());
-        assert!(fits[0].model.coef.iter().any(|(_, b)| !b.is_finite()));
-        assert_eq!(fits[0].convergence.sweep_cap_hits, 0);
-        assert!(!fits[0].convergence.converged);
+        assert_eq!(seen.len(), fits.len());
+        for (i, (p, fit)) in seen.iter().zip(&fits).enumerate() {
+            let c = fit.convergence;
+            assert_eq!(
+                (p.point, p.lambda.to_bits(), p.active),
+                (i, fit.model.lambda.to_bits(), fit.model.coef.len())
+            );
+            assert_eq!((p.irls_steps, p.converged), (c.irls_steps, c.converged));
+            // The solver's residual is its convergence test; it matches the
+            // one computed here independently.
+            let (_, kkt) = objective_and_kkt(&f.x, &f.y, &f.fit, &fit.model);
+            assert!((p.kkt - kkt).abs() <= 1e-12, "point {i}: {} {kkt}", p.kkt);
+        }
+    }
+
+    #[test]
+    fn the_line_search_stops_where_a_coefficient_reaches_zero() {
+        // One coefficient at 1 whose full step goes to -2, crossing zero at
+        // t = 1/3. The smooth part alone is lowest at t = 1 (-1); with the
+        // penalty, t = 1/3 gives -2/3 + 1/9 - 1 and t = 1 gives -1 + 1.
+        let (t, dq) = line_search(&[0.0, 1.0], &[0.0, -3.0], -2.0, 2.0, &[1.0]);
+        assert_eq!(t, 1.0 / 3.0);
+        assert!((dq - (-14.0 / 9.0)).abs() < 1e-15);
+        // With a small penalty the full step is lower.
+        let (t, dq) = line_search(&[0.0, 1.0], &[0.0, -3.0], -2.0, 2.0, &[0.1]);
+        assert_eq!(t, 1.0);
+        assert!((dq - (-1.0 + 0.1)).abs() < 1e-15);
+        // Of two crossings it takes the lower: coefficient 2 crosses at
+        // t = 0.5, coefficient 1 at t = 0.25, and the heavy penalty on
+        // coefficient 2 favors its crossing.
+        let (t, _) = line_search(&[0.0, 1.0, 1.0], &[0.0, -4.0, -2.0], -1.0, 1.0, &[0.0, 5.0]);
+        assert_eq!(t, 0.5);
+        // A coefficient entering at zero has no crossing.
+        let (t, dq) = line_search(&[0.3, 0.0], &[0.1, 2.0], -1.0, 1.0, &[0.2]);
+        assert_eq!(t, 1.0);
+        assert!((dq - (-1.0 + 0.5 + 0.4)).abs() < 1e-15);
+    }
+
+    #[test]
+    fn a_coefficient_warm_started_with_the_wrong_sign_crosses_zero() {
+        let (x, y) = union_panel();
+        let prob = Problem::new(&x, &y, &Bits::ones(x.cols), &[0, 3]);
+        let rep = representatives(&prob.columns);
+        let lambda = 0.02;
+        let eta = vec![0.0; x.cols];
+        let mut wls = Wls::new(&prob, &rep, lambda, &eta).unwrap();
+        // Column 0 is carried mostly by resistant samples; start it negative.
+        let (mut b0, mut beta) = (0.0, vec![-1.0, 0.0]);
+        assert!(wls.solve(&mut b0, &mut beta, 1000));
+        assert!(beta[0] > 0.0);
+        let found = wls_objective(&wls, b0, &beta);
+        let best = brute_force(&wls);
+        assert!(
+            found - best <= 1e-12 * best.abs().max(1.0),
+            "{found} {best}"
+        );
+    }
+
+    #[test]
+    fn a_column_dependent_on_the_active_set_is_exchanged_in() {
+        // Column 2 is the union of the disjoint columns 0 and 1, so
+        // x2 = x0 + x1 and it can never join a factor that holds both. Its
+        // penalty factor, sqrt(p (1 - p)) at twice the frequency, is below
+        // the sum of theirs, so while both carry positive weight it violates
+        // its condition.
+        let (x, y) = union_panel();
+        let prob = Problem::new(&x, &y, &Bits::ones(x.cols), &[0, 1, 2, 3]);
+        let rep = representatives(&prob.columns);
+        let lambda = 0.01;
+        let eta = vec![0.0; x.cols];
+        let mut wls = Wls::new(&prob, &rep, lambda, &eta).unwrap();
+        let (mut b0, mut beta) = (-0.5, vec![0.5, 0.5, 0.0, 0.0]);
+        assert!(wls.solve(&mut b0, &mut beta, 1000));
+        assert!(beta[2] > 0.0, "{beta:?}");
+        assert!(beta[0] == 0.0 || beta[1] == 0.0, "{beta:?}");
+        let found = wls_objective(&wls, b0, &beta);
+        let best = brute_force(&wls);
+        assert!(
+            found - best <= 1e-12 * best.abs().max(1.0),
+            "{found} {best}"
+        );
+
+        // The full path certifies every point on the same panel.
+        let feats = [0, 1, 2, 3];
+        let fits = fit_path_with_status(&x, &y, &Bits::ones(x.cols), &feats, 15, 400, &mut |_| {});
+        assert!(fits.iter().any(|f| f.model.coef.iter().any(|c| c.0 == 2)));
+        for (i, f) in fits.iter().enumerate() {
+            let c = f.convergence;
+            assert!(c.converged && c.sweep_cap_hits == 0, "point {i} {c:?}");
+            let (_, kkt) = objective_and_kkt(&x, &y, &Bits::ones(x.cols), &f.model);
+            assert!(kkt <= KKT_TOL, "point {i}: KKT {kkt:e}");
+        }
+    }
+
+    #[test]
+    fn exact_copies_share_one_coefficient_and_leave_the_objective_unchanged() {
+        // Each column maps to the first column identical to it. The pivot
+        // test would also keep a copy out of the factor, but only through
+        // rounding; this keeps the weight on the first copy by rule.
+        let columns = [vec![0, 1], vec![2], vec![0, 1], vec![], vec![2], vec![]];
+        assert_eq!(representatives(&columns), [0, 1, 0, 3, 1, 3]);
+
+        let n = 200;
+        let fit = Bits::from_indices(n, 0..160);
+        let mut rng = Lcg(11);
+        let base: Vec<Bits> = (0..6).map(|_| random_bits(&mut rng, n, 30)).collect();
+        let y = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| (base[0].contains(i) || base[1].contains(i)) != (i % 9 == 0)),
+        );
+        // Columns 6 to 11 copy columns 0 to 5 on the fitting samples. The
+        // copy of column 0 also covers held-out samples 160 to 179.
+        let mut lone = BitMatrix::with_cols(n);
+        let mut full = BitMatrix::with_cols(n);
+        for b in &base {
+            lone.push_row(b.words());
+            full.push_row(b.words());
+        }
+        full.push_row(base[0].or(&Bits::from_indices(n, 160..180)).words());
+        for b in &base[1..] {
+            full.push_row(b.words());
+        }
+        let feats: Vec<u32> = (0..12).collect();
+        let a = fit_path_with_status(&lone, &y, &fit, &feats[..6], 20, 400, &mut |_| {});
+        let b = fit_path_with_status(&full, &y, &fit, &feats, 20, 400, &mut |_| {});
+        assert_eq!(a.len(), b.len());
+        for (i, (a, b)) in a.iter().zip(&b).enumerate() {
+            assert_eq!(a.model.lambda.to_bits(), b.model.lambda.to_bits());
+            assert!(b.convergence.converged, "point {i}");
+            // Only the first of each pair carries weight, the same weight as
+            // without the copies.
+            assert_eq!(a.model.coef.len(), b.model.coef.len(), "point {i}");
+            for (p, q) in a.model.coef.iter().zip(&b.model.coef) {
+                assert!(p.0 == q.0 && (p.1 - q.1).abs() <= 1e-12, "point {i}");
+            }
+            let (oa, _) = objective_and_kkt(&lone, &y, &fit, &a.model);
+            let (ob, kkt) = objective_and_kkt(&full, &y, &fit, &b.model);
+            assert!((oa - ob).abs() <= 1e-12 && kkt <= KKT_TOL, "point {i}");
+        }
+        // max_nonzero counts distinct columns: a path capped at c stops right
+        // after its first point with more than c weights, and no copy counts.
+        let counts: Vec<usize> = b.iter().map(|f| f.model.coef.len()).collect();
+        for cap in 0..=*counts.iter().max().unwrap() {
+            let capped = fit_path_with_status(&full, &y, &fit, &feats, 20, cap, &mut |_| {});
+            let stop = counts
+                .iter()
+                .position(|&c| c > cap)
+                .map_or(counts.len(), |i| i + 1);
+            assert_eq!(capped.len(), stop, "cap {cap}: {counts:?}");
+        }
+    }
+
+    #[test]
+    fn only_an_exactly_dependent_column_is_refused_by_the_factor() {
+        // Column 2 is the union of columns 0 and 1. Column 4 is that union
+        // plus one more sample, so it is independent of them, but barely.
+        let (mut x, y) = union_panel();
+        x.push_row(Bits::from_indices(x.cols, (0..20).chain(25..26)).words());
+        let prob = Problem::new(&x, &y, &Bits::ones(x.cols), &[0, 1, 2, 3, 4]);
+        let rep = representatives(&prob.columns);
+        // A large linear predictor on the extra sample puts its IRLS weight
+        // at the floor, the smallest weight any sample can have.
+        let mut eta = vec![0.0; x.cols];
+        eta[25] = 30.0;
+        let mut wls = Wls::new(&prob, &rep, 0.01, &eta).unwrap();
+        assert!(wls.push(0, 1.0, PIVOT_TOL).is_ok() && wls.push(1, 1.0, PIVOT_TOL).is_ok());
+        let Err(dependent) = wls.push(2, 1.0, PIVOT_TOL) else {
+            panic!("the union of two active columns joined the factor");
+        };
+        let diag: f64 = prob.columns[2].iter().map(|&j| wls.w[j as usize]).sum();
+        assert!(dependent.pivot.abs() <= 1e-14 * diag, "{}", dependent.pivot);
+        assert!(wls.push(4, 1.0, PIVOT_TOL).is_ok());
+        assert_eq!(wls.active, [0, 1, 4]);
+    }
+
+    #[test]
+    fn near_twin_columns_are_certified_in_few_irls_steps() {
+        // Twelve base columns, each with three twins that differ from it in
+        // one sample, as 2,820 of the 4,000 screened MTB delamanid columns
+        // have a twin within one sample. Coordinate descent crawls between
+        // such columns.
+        let n = 240;
+        let mut rng = Lcg(7);
+        let base: Vec<Bits> = (0..12).map(|_| random_bits(&mut rng, n, 35)).collect();
+        let mut x = BitMatrix::with_cols(n);
+        for (b, col) in base.iter().enumerate() {
+            x.push_row(col.words());
+            for t in 0..3 {
+                let mut twin = col.clone();
+                let j = (b * 17 + t * 53 + 5) % n;
+                if twin.contains(j) {
+                    twin.remove(j);
+                } else {
+                    twin.insert(j);
+                }
+                x.push_row(twin.words());
+            }
+        }
+        let noise = random_bits(&mut rng, n, 12);
+        let y = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| {
+                let votes = (0..3).filter(|&b| base[b].contains(i)).count();
+                (votes >= 2) != noise.contains(i)
+            }),
+        );
+        let feats: Vec<u32> = (0..x.rows as u32).collect();
+        let fits = fit_path_with_status(&x, &y, &Bits::ones(n), &feats, 20, 400, &mut |_| {});
+        assert_eq!(fits.len(), 20);
+        for (i, f) in fits.iter().enumerate() {
+            let c = f.convergence;
+            assert!(c.converged && c.sweep_cap_hits == 0, "point {i} {c:?}");
+            assert!(c.irls_steps <= 10, "point {i} {c:?}");
+            let (_, kkt) = objective_and_kkt(&x, &y, &Bits::ones(n), &f.model);
+            assert!(kkt <= KKT_TOL, "point {i}: KKT {kkt:e}");
+        }
+        // Twins carry weight side by side at the small-penalty end, so the
+        // active set holds nearly dependent columns.
+        let last = &fits.last().unwrap().model;
+        assert!(
+            (0..12).any(|b| last.coef.iter().filter(|c| c.0 / 4 == b).count() >= 2),
+            "{:?}",
+            last.coef
+        );
+    }
+
+    #[test]
+    fn an_irls_step_that_raises_the_objective_is_halved() {
+        // A marker on 18 of 20 resistant samples and 2 of 20 susceptible.
+        let n = 40;
+        let y = Bits::from_indices(n, 0..20);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(Bits::from_indices(n, (2..20).chain(20..22)).words());
+        let prob = Problem::new(&x, &y, &Bits::ones(n), &[0]);
+        let lambda = 0.01;
+        let start = objective(&prob, lambda, &[0.0], &[0.0; 40]);
+        // A step to beta = 50, far past the optimum near 4.
+        let (mut b0, mut beta, mut eta) = (0.0, vec![0.0], vec![0.0; n]);
+        assert!(take_step(
+            &prob,
+            lambda,
+            &mut b0,
+            &mut beta,
+            &mut eta,
+            0.0,
+            &[50.0]
+        ));
+        assert!(beta[0] > 0.0 && beta[0] < 50.0, "{beta:?}");
+        assert!(objective(&prob, lambda, &beta, &eta) < start);
+        let mut expected = vec![0.0; n];
+        linear_predictor(&prob, b0, &beta, &mut expected);
+        assert_eq!(eta, expected);
+        // No halving rescues a step the wrong way, and the solution being
+        // the current point is no step; neither moves anything.
+        let (mut b0, mut beta, mut eta) = (0.0, vec![0.0], vec![0.0; n]);
+        assert!(!take_step(
+            &prob,
+            lambda,
+            &mut b0,
+            &mut beta,
+            &mut eta,
+            0.0,
+            &[-50.0]
+        ));
+        assert!(!take_step(
+            &prob,
+            lambda,
+            &mut b0,
+            &mut beta,
+            &mut eta,
+            0.0,
+            &[0.0]
+        ));
+        assert_eq!((b0, beta, eta), (0.0, vec![0.0], vec![0.0; n]));
+    }
+
+    /// 60 samples. Columns 0 and 1 are disjoint (samples 0..10 and 10..20),
+    /// column 2 is their union, column 3 is noise. 16 of the 20 samples in
+    /// the union are resistant, and 8 of the other 40.
+    fn union_panel() -> (BitMatrix, Bits) {
+        let n = 60;
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(Bits::from_indices(n, 0..10).words());
+        x.push_row(Bits::from_indices(n, 10..20).words());
+        x.push_row(Bits::from_indices(n, 0..20).words());
+        x.push_row(Bits::from_indices(n, (0..n).filter(|i| i % 4 == 1)).words());
+        let y = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| (i < 20 && i % 5 != 0) || (i >= 20 && i % 5 == 0)),
+        );
+        (x, y)
+    }
+
+    /// The least-squares objective of `wls` at (b0, beta).
+    fn wls_objective(wls: &Wls, b0: f64, beta: &[f64]) -> f64 {
+        let mut fit = vec![0.0; wls.w.len()];
+        linear_predictor(wls.prob, b0, beta, &mut fit);
+        let loss: f64 = (0..fit.len())
+            .map(|j| 0.5 * wls.w[j] * (wls.z[j] - fit[j]).powi(2))
+            .sum();
+        loss + (0..beta.len())
+            .map(|k| wls.pen(k) * beta[k].abs())
+            .sum::<f64>()
+    }
+
+    /// The minimum of a small least-squares problem over every sign pattern
+    /// of its coefficients. Each pattern's sign-fixed normal equations are
+    /// solved by Gaussian elimination and kept only when the solution has the
+    /// pattern's signs; a singular pattern is skipped, since some optimum
+    /// has linearly independent non-zero columns.
+    fn brute_force(wls: &Wls) -> f64 {
+        let p = wls.prob.columns.len();
+        let n = wls.w.len();
+        let mut best = f64::INFINITY;
+        for code in 0..3usize.pow(p as u32) {
+            let signs: Vec<f64> = (0..p)
+                .map(|k| [0.0, 1.0, -1.0][code / 3usize.pow(k as u32) % 3])
+                .collect();
+            let on: Vec<usize> = (0..p).filter(|&k| signs[k] != 0.0).collect();
+            let column = |i: usize, j: usize| -> f64 {
+                if i == 0 {
+                    1.0
+                } else {
+                    wls.prob.columns[on[i - 1]].contains(&(j as u32)) as u8 as f64
+                }
+            };
+            let m = on.len() + 1;
+            let mut a = vec![vec![0.0; m + 1]; m];
+            for (r, row) in a.iter_mut().enumerate() {
+                for (c, v) in row[..m].iter_mut().enumerate() {
+                    *v = (0..n).map(|j| wls.w[j] * column(r, j) * column(c, j)).sum();
+                }
+                row[m] = (0..n)
+                    .map(|j| wls.w[j] * column(r, j) * wls.z[j])
+                    .sum::<f64>()
+                    - if r == 0 {
+                        0.0
+                    } else {
+                        wls.pen(on[r - 1]) * signs[on[r - 1]]
+                    };
+            }
+            let Some(sol) = gauss(a) else { continue };
+            let mut beta = vec![0.0; p];
+            for (i, &k) in on.iter().enumerate() {
+                beta[k] = sol[i + 1];
+            }
+            if on.iter().all(|&k| beta[k] * signs[k] >= 0.0) {
+                best = best.min(wls_objective(wls, sol[0], &beta));
+            }
+        }
+        best
+    }
+
+    fn gauss(mut a: Vec<Vec<f64>>) -> Option<Vec<f64>> {
+        let m = a.len();
+        for c in 0..m {
+            let r = (c..m).max_by(|&i, &j| a[i][c].abs().total_cmp(&a[j][c].abs()))?;
+            if a[r][c].abs() < 1e-9 {
+                return None;
+            }
+            a.swap(c, r);
+            let pivot = a[c].clone();
+            for (i, row) in a.iter_mut().enumerate() {
+                if i != c {
+                    let f = row[c] / pivot[c];
+                    for (v, p) in row[c..].iter_mut().zip(&pivot[c..]) {
+                        *v -= f * p;
+                    }
+                }
+            }
+        }
+        Some((0..m).map(|i| a[i][m] / a[i][i]).collect())
+    }
+
+    /// Deterministic pseudo-random draws for synthetic panels.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn below(&mut self, percent: u64) -> bool {
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (self.0 >> 33) % 100 < percent
+        }
+    }
+
+    fn random_bits(rng: &mut Lcg, n: usize, percent: u64) -> Bits {
+        Bits::from_indices(n, (0..n).filter(|_| rng.below(percent)))
     }
 
     /// The saved cross-check panels with each saved candidate path; see the
     /// header of the fixture file and docs/lasso-stopping.md.
     const FIXTURES: &str = include_str!("../../tests/data/lasso-stopping-fixtures.txt");
 
-    /// Limits before the fix.
-    const OLD: Limits = Limits {
-        irls_steps: 25,
-        sweeps: 300,
-    };
-
+    /// One saved point: the best objective any solver reached there, and the
+    /// revision-7 solver's (300 coordinate-descent sweeps per IRLS step)
+    /// trace and model.
     struct SavedPoint {
         lambda: f64,
         best_objective: f64,
@@ -667,34 +1769,27 @@ mod tests {
         n_lambdas: usize,
         max_nonzero: usize,
         points: Vec<SavedPoint>,
-        /// Paths under the old and the current limits, solved on first use.
-        runs: std::sync::OnceLock<(Vec<LassoFit>, Vec<LassoFit>)>,
+        /// The path under the shipped limits, solved on first use.
+        run: std::sync::OnceLock<Vec<LassoFit>>,
     }
 
     impl Fixture {
-        fn runs(&self) -> (&[LassoFit], &[LassoFit]) {
-            let (old, new) = self.runs.get_or_init(|| {
+        /// The path under the shipped limits. It skips the public one-class
+        /// guard, so `one_class_train` keeps its raw trace for the
+        /// accounting.
+        fn run(&self) -> &[LassoFit] {
+            self.run.get_or_init(|| {
                 let feats: Vec<u32> = (0..self.x.rows as u32).collect();
-                let run = |l| {
-                    fit_path_limited(
-                        &self.x,
-                        &self.y,
-                        &self.fit,
-                        &feats,
-                        self.n_lambdas,
-                        self.max_nonzero,
-                        l,
-                    )
-                };
-                (run(OLD), run(LIMITS))
-            });
-            (old, new)
-        }
-
-        /// The two C. jejuni panels take about 2.3 million sweeps under the
-        /// current limits: seconds optimized, many minutes unoptimized.
-        fn heavy(&self) -> bool {
-            self.name.starts_with("campylobacter_jejuni")
+                fit_path_limited(
+                    &self.x,
+                    &self.y,
+                    &self.fit,
+                    &feats,
+                    self.n_lambdas,
+                    self.max_nonzero,
+                    LIMITS,
+                )
+            })
         }
 
         fn one_class(&self) -> bool {
@@ -733,7 +1828,7 @@ mod tests {
                             n_lambdas: t[4].parse().unwrap(),
                             max_nonzero: t[5].parse().unwrap(),
                             points: vec![],
-                            runs: std::sync::OnceLock::new(),
+                            run: std::sync::OnceLock::new(),
                         });
                     }
                     "y" => out.last_mut().unwrap().y = hex_bits(n, t[1]),
@@ -772,14 +1867,18 @@ mod tests {
         })
     }
 
+    fn fixture(name: &str) -> &'static Fixture {
+        fixtures().iter().find(|f| f.name == name).unwrap()
+    }
+
     /// Penalized objective and the largest stationarity violation on the
     /// standardized scale, over the intercept and the coefficients the solver
-    /// may fit, computed independently of `Problem`.
-    fn objective_and_kkt(f: &Fixture, m: &LassoModel) -> (f64, f64) {
-        let samples: Vec<usize> = f.fit.iter_ones().collect();
+    /// may fit, computed on `fit` independently of `Problem`.
+    fn objective_and_kkt(x: &BitMatrix, y: &Bits, fit: &Bits, m: &LassoModel) -> (f64, f64) {
+        let samples: Vec<usize> = fit.iter_ones().collect();
         let nt = samples.len() as f64;
-        let pos = samples.iter().filter(|&&i| f.y.contains(i)).count() as f64;
-        let mut beta = vec![0.0; f.x.rows];
+        let pos = samples.iter().filter(|&&i| y.contains(i)).count() as f64;
+        let mut beta = vec![0.0; x.rows];
         for &(k, w) in &m.coef {
             beta[k as usize] = w;
         }
@@ -787,11 +1886,13 @@ mod tests {
         let mut loss = 0.0;
         for (s, &i) in samples.iter().enumerate() {
             let eta = m.intercept
-                + (0..f.x.rows)
-                    .filter(|&k| f.x.get(k, i))
-                    .map(|k| beta[k])
+                + beta
+                    .iter()
+                    .enumerate()
+                    .filter(|&(k, b)| *b != 0.0 && x.get(k, i))
+                    .map(|(_, b)| b)
                     .sum::<f64>();
-            let yi = f.y.contains(i);
+            let yi = y.contains(i);
             let cw = if yi {
                 nt / (2.0 * pos.max(1.0))
             } else {
@@ -805,7 +1906,7 @@ mod tests {
         let mut kkt = res.iter().sum::<f64>().abs();
         for (k, &b) in beta.iter().enumerate() {
             let carriers: Vec<usize> = (0..samples.len())
-                .filter(|&s| f.x.get(k, samples[s]))
+                .filter(|&s| x.get(k, samples[s]))
                 .collect();
             let p = carriers.len() as f64 / nt;
             let sd = (p * (1.0 - p)).sqrt().max(1e-6);
@@ -834,163 +1935,255 @@ mod tests {
                 .all(|(p, q)| p.0 == q.0 && p.1.to_bits() == q.1.to_bits())
     }
 
+    /// Fitted probabilities on the fitting samples.
+    fn fitted(x: &BitMatrix, fit: &Bits, m: &LassoModel) -> Vec<f64> {
+        let p = m.predict_proba(x);
+        fit.iter_ones().map(|i| p[i]).collect()
+    }
+
     #[derive(Debug, Default, PartialEq)]
     struct Tally {
         points: usize,
-        /// Old limits: points with a sweep-cap hit in any IRLS step.
+        /// Saved 300-sweep trace: points with a sweep-cap hit in any IRLS
+        /// step.
         old_sweep_capped: usize,
-        /// Old limits: points that ran out of IRLS steps.
+        /// Saved 300-sweep trace: points that ran out of IRLS steps.
         old_irls_capped: usize,
-        /// Old limits: points flagged unconverged.
-        old_flagged: usize,
-        /// Current limits: points that still hit the sweep cap in an
-        /// intermediate IRLS step.
-        new_sweep_capped: usize,
-        /// Current limits: points flagged unconverged.
-        new_flagged: usize,
-        /// Points bit-identical to the saved candidate path.
-        unchanged: usize,
+        /// Points with an active-set solve that stopped short.
+        short_solves: usize,
+        /// Points flagged unconverged.
+        flagged: usize,
+        /// Points the 300-sweep solver converged at without a cap, where the
+        /// two solutions agree.
+        agree_with_saved: usize,
     }
 
-    /// Checks every saved point of `f` and counts how each stopped.
+    /// Checks every point of `f` and counts how each stopped.
     fn check(f: &Fixture, t: &mut Tally) {
-        let (old, new) = f.runs();
-        assert_eq!(old.len(), f.points.len(), "{}", f.name);
+        let new = f.run();
         assert_eq!(new.len(), f.points.len(), "{}", f.name);
-        let mut prefix_clean = true;
         for (i, saved) in f.points.iter().enumerate() {
-            // The old limits reproduce the saved candidate path and its trace.
-            let o = old[i].convergence;
-            assert!(same(&old[i].model, &saved.old), "{} point {i}", f.name);
-            assert_eq!(o.irls_steps, saved.old_irls_steps, "{} point {i}", f.name);
-            assert_eq!(o.sweep_cap_hits, saved.old_sweep_cap_hits, "{} {i}", f.name);
-            // Every cap stop is flagged; a flag needs a cap stop.
-            if !saved.old_converged {
-                assert!(!o.converged, "{} point {i}", f.name);
-            }
-            if !o.converged {
-                assert!(o.sweep_cap_hits > 0 || o.irls_steps as usize == OLD.irls_steps);
-            }
-
             let c = new[i].convergence;
             assert_eq!(new[i].model.lambda.to_bits(), saved.lambda.to_bits());
             if f.one_class() {
-                // Keep the raw seven-point trace for fixture accounting. The
-                // public entry points return an empty one-class path instead;
-                // these saved points must not claim convergence either.
+                // The public entry points return an empty one-class path;
+                // the raw trace must not claim convergence either.
                 assert!(!c.converged, "{} point {i}", f.name);
-                assert_eq!(c.irls_steps as usize, LIMITS.irls_steps);
             } else {
                 assert!(c.converged, "{} point {i} {c:?}", f.name);
-                let (obj, kkt) = objective_and_kkt(f, &new[i].model);
-                assert!(kkt <= 1e-6, "{} point {i}: KKT {kkt:e}", f.name);
+                let (obj, kkt) = objective_and_kkt(&f.x, &f.y, &f.fit, &new[i].model);
+                assert!(kkt <= KKT_TOL, "{} point {i}: KKT {kkt:e}", f.name);
                 assert!(obj - saved.best_objective <= 1e-6, "{} point {i}", f.name);
             }
-
-            // Warm starts carry each point into the next, so a point is
-            // unchanged only if no earlier point on its path stopped at a cap.
-            prefix_clean &= o.converged && o.sweep_cap_hits == 0;
-            if prefix_clean {
-                assert!(same(&new[i].model, &saved.old), "{} point {i}", f.name);
-                assert_eq!(c, o, "{} point {i}", f.name);
-                t.unchanged += 1;
+            // Where the old solver settled without a cap, both solved the
+            // same problem, to a coefficient change of 1e-6 and a KKT
+            // residual of 1e-6. Neither is exact, so they agree within
+            // tolerance, not to the bit: at most 5.4e-10 apart in objective
+            // and 7.5e-5 in a fitted probability (planted_logistic point 6).
+            if saved.old_converged && saved.old_sweep_cap_hits == 0 {
+                let (obj, _) = objective_and_kkt(&f.x, &f.y, &f.fit, &new[i].model);
+                let (old, _) = objective_and_kkt(&f.x, &f.y, &f.fit, &saved.old);
+                assert!((obj - old).abs() <= 1e-9, "{} point {i}", f.name);
+                let gap = fitted(&f.x, &f.fit, &new[i].model)
+                    .iter()
+                    .zip(fitted(&f.x, &f.fit, &saved.old))
+                    .map(|(a, b)| (a - b).abs())
+                    .fold(0.0, f64::max);
+                assert!(gap <= 1e-4, "{} point {i}: {gap:e}", f.name);
+                t.agree_with_saved += 1;
             }
             t.points += 1;
-            t.old_sweep_capped += (o.sweep_cap_hits > 0) as usize;
+            t.old_sweep_capped += (saved.old_sweep_cap_hits > 0) as usize;
             t.old_irls_capped += !saved.old_converged as usize;
-            t.old_flagged += !o.converged as usize;
-            t.new_sweep_capped += (c.sweep_cap_hits > 0) as usize;
-            t.new_flagged += !c.converged as usize;
+            t.short_solves += (c.sweep_cap_hits > 0) as usize;
+            t.flagged += !c.converged as usize;
         }
     }
 
     #[test]
-    fn saved_panels_converge_flag_their_caps_and_keep_clean_paths() {
-        let mut t = Tally::default();
-        for f in fixtures().iter().filter(|f| !f.heavy()) {
-            check(f, &mut t);
-        }
-        // The 7 flagged points under the current limits are one_class_train.
-        let expected = Tally {
-            points: 77,
-            old_sweep_capped: 34,
-            old_irls_capped: 9,
-            // 9 points ran out of IRLS steps; at 7 more the last inner solve
-            // stopped at 300 sweeps.
-            old_flagged: 16,
-            new_sweep_capped: 0,
-            new_flagged: 7,
-            unchanged: 34,
-        };
-        assert_eq!(t, expected);
-    }
-
-    #[test]
-    #[ignore = "C. jejuni panels: run with --release -- --include-ignored"]
-    fn all_91_saved_points() {
+    fn saved_panels_converge_and_agree_with_the_old_solver_where_it_settled() {
         let mut t = Tally::default();
         for f in fixtures() {
             check(f, &mut t);
         }
+        // The 7 flagged points are one_class_train.
         let expected = Tally {
             points: 91,
             old_sweep_capped: 46,
             old_irls_capped: 15,
-            // 15 points ran out of IRLS steps; at 11 more the IRLS change met
-            // its tolerance while the last inner solve stopped at 300 sweeps.
-            old_flagged: 26,
-            // Four C. jejuni points still reach 100,000 sweeps in an early
-            // IRLS step, but a later step settles.
-            new_sweep_capped: 4,
-            new_flagged: 7,
-            unchanged: 36,
+            short_solves: 0,
+            flagged: 7,
+            agree_with_saved: 38,
         };
         assert_eq!(t, expected);
     }
 
     #[test]
-    #[ignore = "C. jejuni panels: run with --release -- --include-ignored"]
     fn campylobacter_failures_reach_the_reference_optimum() {
-        let all = fixtures();
         let random = "campylobacter_jejuni__ciprofloxacin_random_fold0";
         let lineage = "campylobacter_jejuni__ciprofloxacin_lineage_fold0";
-        // (panel, point, IRLS steps, sweep-cap hits) under the new limits.
-        for (name, i, irls_steps, sweep_cap_hits) in
-            [(random, 5, 7, 6), (random, 6, 9, 6), (lineage, 6, 18, 3)]
-        {
-            let f = all.iter().find(|f| f.name == name).unwrap();
-            let (old, new) = f.runs();
+        // (panel, point, IRLS steps) under the shipped limits; coordinate
+        // descent with 100,000 sweeps per step took 7, 9 and 18.
+        for (name, i, irls_steps) in [(random, 5, 6), (random, 6, 6), (lineage, 6, 5)] {
+            let f = fixture(name);
             let saved = &f.points[i];
+            // The 300-sweep solver ran out of IRLS steps there, each at its
+            // sweep cap, far from the optimum.
             assert_eq!(
-                old[i].convergence,
-                Convergence {
-                    irls_steps: 25,
-                    sweep_cap_hits: 25,
-                    converged: false
-                },
+                (
+                    saved.old_irls_steps,
+                    saved.old_sweep_cap_hits,
+                    saved.old_converged
+                ),
+                (25, 25, false),
                 "{name} point {i}"
             );
-            let (obj, kkt) = objective_and_kkt(f, &old[i].model);
+            let (obj, kkt) = objective_and_kkt(&f.x, &f.y, &f.fit, &saved.old);
             assert!(
                 kkt > 1e-4 && obj - saved.best_objective > 1e-4,
                 "{name} {i}"
             );
 
+            let new = f.run();
             let c = new[i].convergence;
             assert!(c.converged, "{name} {i} {c:?}");
-            assert_eq!(c.irls_steps, irls_steps, "{name} {i}");
-            assert_eq!(c.sweep_cap_hits, sweep_cap_hits, "{name} {i}");
-            let (obj, kkt) = objective_and_kkt(f, &new[i].model);
-            assert!(kkt <= 1e-6, "{name} point {i}: KKT {kkt:e}");
+            assert_eq!(
+                (c.irls_steps, c.sweep_cap_hits),
+                (irls_steps, 0),
+                "{name} {i}"
+            );
+            let (obj, kkt) = objective_and_kkt(&f.x, &f.y, &f.fit, &new[i].model);
+            assert!(kkt <= KKT_TOL, "{name} point {i}: KKT {kkt:e}");
             assert!(obj - saved.best_objective <= 1e-6, "{name} point {i}");
 
             // Refit semantics: the same penalties on the same mask give the
             // same model and status.
             let feats: Vec<u32> = (0..f.x.rows as u32).collect();
             let lambdas: Vec<f64> = new[..=i].iter().map(|m| m.model.lambda).collect();
-            let refit = refit_path_with_status(&f.x, &f.y, &f.fit, &feats, &lambdas);
+            let refit = refit_path_with_status(&f.x, &f.y, &f.fit, &feats, &lambdas, &mut |_| {});
             assert!(same(&refit[i].model, &new[i].model));
             assert_eq!(refit[i].convergence, c);
         }
+    }
+
+    /// Random fold 0 of M. tuberculosis delamanid, the fit that stopped the
+    /// revision-8 scan, from the slowdown diagnosis
+    /// (data/research/grm-lasso-r8-slowdown-20261028, gitignored, so local
+    /// only): the 4,000 screened columns on all 1,248 samples with the fold's
+    /// fitting, tuning-holdout and training masks (runs/x-random0), the
+    /// prototype's optimum at each of the 30 tuning-path points, certified to
+    /// a KKT residual of 1e-9 (runs/proto-asnewton/path-full-v3.json), and
+    /// the revision-7 report.
+    #[test]
+    #[ignore = "MTB delamanid fold 0 from the local diagnosis folder: run with --release -- --include-ignored"]
+    fn mtb_delamanid_fold0_reaches_the_certified_optima() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("data/research/grm-lasso-r8-slowdown-20261028");
+        let read = |path: &str| -> serde_json::Value {
+            let text = std::fs::read_to_string(dir.join(path)).unwrap();
+            // Python wrote the prototype's undefined duality gaps as NaN.
+            serde_json::from_str(&text.replace("NaN", "null")).unwrap()
+        };
+        let d = read("runs/x-random0/x-random0.json");
+        let n = d["n"].as_u64().unwrap() as usize;
+        let ids = |v: &serde_json::Value| -> Vec<usize> {
+            v.as_array()
+                .unwrap()
+                .iter()
+                .map(|i| i.as_u64().unwrap() as usize)
+                .collect()
+        };
+        let mask = |key: &str| Bits::from_indices(n, ids(&d[key]));
+        let (y, fit, val, train) = (mask("y"), mask("fit"), mask("val"), mask("train"));
+        let mut x = BitMatrix::with_cols(n);
+        for col in d["columns"].as_array().unwrap() {
+            x.push_row(Bits::from_indices(n, ids(col)).words());
+        }
+        let feats: Vec<u32> = (0..x.rows as u32).collect();
+        let certified = read("runs/proto-asnewton/path-full-v3.json");
+        let certified = certified["points"].as_array().unwrap();
+
+        let started = Instant::now();
+        let path = fit_path_with_status(&x, &y, &fit, &feats, 30, 400, &mut |p| {
+            eprintln!("path {p:?}")
+        });
+        let path_seconds = started.elapsed().as_secs_f64();
+        assert_eq!((path.len(), certified.len()), (30, 30));
+        let (mut most_above, mut worst_kkt) = (f64::NEG_INFINITY, 0.0_f64);
+        for (i, (f, cert)) in path.iter().zip(certified).enumerate() {
+            // The same problem: the diagnosis's penalty grid, to the bit.
+            let lambda = cert["lambda"].as_f64().unwrap();
+            assert_eq!(f.model.lambda.to_bits(), lambda.to_bits(), "point {i}");
+            let c = f.convergence;
+            assert!(c.converged && c.sweep_cap_hits == 0, "point {i} {c:?}");
+            let (obj, kkt) = objective_and_kkt(&x, &y, &fit, &f.model);
+            let above = obj - cert["obj"].as_f64().unwrap();
+            eprintln!("point {i}: objective - certified {above:e}, KKT {kkt:e}");
+            assert!(kkt <= KKT_TOL, "point {i}: KKT {kkt:e}");
+            // At most 1e-6 above the certified optimum, and below it by no
+            // more than that optimum's own residual allows.
+            assert!((-1e-9..=1e-6).contains(&above), "point {i}: {above:e}");
+            most_above = most_above.max(above);
+            worst_kkt = worst_kkt.max(kkt);
+        }
+
+        // Selection and refit as eval::fit_lasso_from_path does them: the
+        // converged point with the lowest class-balanced log loss on the
+        // tuning holdout, then the training fold refit down to its penalty.
+        let loss = |f: &LassoFit| log_loss(&f.model.predict_proba(&x), &y, &val);
+        let best = (0..path.len())
+            .min_by(|&a, &b| loss(&path[a]).total_cmp(&loss(&path[b])))
+            .unwrap();
+        assert_eq!(best, 3);
+        let lambdas: Vec<f64> = path[..=best].iter().map(|f| f.model.lambda).collect();
+        let started = Instant::now();
+        let refit = refit_path_with_status(&x, &y, &train, &feats, &lambdas, &mut |p| {
+            eprintln!("refit {p:?}")
+        });
+        let refit_seconds = started.elapsed().as_secs_f64();
+        assert!(refit.iter().all(|f| f.convergence.converged));
+        let model = &refit.last().unwrap().model;
+        assert_eq!(model.coef.len(), 53);
+
+        // Calls on the fold's test samples against revision 7's refit.
+        let report = read("inputs/revision7-report/mycobacterium_tuberculosis__delamanid.json");
+        let r7: Vec<f64> = report["splits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["scheme"] == "random")
+            .unwrap()["learners"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|l| l["learner"] == "lasso")
+            .unwrap()["scores"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s.as_f64().unwrap())
+            .collect();
+        let scores = model.predict_proba(&x);
+        let test = Bits::ones(n).and_not(&train);
+        let changed = test
+            .iter_ones()
+            .filter(|&i| (scores[i] >= 0.5) != (r7[i] >= 0.5))
+            .count();
+        let largest = test
+            .iter_ones()
+            .map(|i| (scores[i] - r7[i]).abs())
+            .fold(0.0, f64::max);
+        eprintln!(
+            "MTB delamanid random fold 0: path {path_seconds:.2} s, refit {refit_seconds:.2} s; \
+             largest objective above the certified optimum {most_above:e}, largest KKT \
+             {worst_kkt:e}; selected point {best}, {} refit weights; {} test samples, {changed} \
+             calls changed against revision 7, largest score change {largest:e}; test log \
+             loss {:.5} against revision 7's {:.5}",
+            model.coef.len(),
+            test.count(),
+            log_loss(&scores, &y, &test),
+            log_loss(&r7, &y, &test)
+        );
+        assert_eq!(changed, 0);
     }
 }

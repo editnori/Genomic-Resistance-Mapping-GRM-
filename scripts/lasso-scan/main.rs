@@ -11,11 +11,17 @@
 //! its lasso fits. `--inputs-only` stops after the inputs lines. It reads
 //! DATA_ROOT and writes nothing else. A lasso error is written as a fit line
 //! and then ends the run with exit status 1.
+//!
+//! On stderr it writes one progress line per penalty point as it is solved,
+//! for the tuning path and the refit of every fit, so a fit stopped part-way
+//! shows how far it got:
+//!
+//!   DATASET random fold 0 path point 3: 4 IRLS steps, 74 active, KKT 7.4e-16, 0.43 s
 
 use anyhow::{Result, bail};
 use grm::analysis::lasso_scan;
 use grm::layout::Layout;
-use grm::learn::eval::EvalConfig;
+use grm::learn::eval::{EvalConfig, LassoProgress};
 use std::io::Write;
 
 const USAGE: &str = "usage: lasso-scan [--inputs-only] DATA_ROOT SPECIES DATASET...";
@@ -46,5 +52,22 @@ fn main() -> Result<()> {
             out.flush()?;
             Ok(())
         },
+        &mut |dataset, p| eprintln!("{dataset} {}", progress_line(p)),
+    )
+}
+
+fn progress_line(p: &LassoProgress) -> String {
+    let fold = p.outer_fold.map_or(String::new(), |f| format!(" fold {f}"));
+    let q = &p.point;
+    format!(
+        "{}{fold} {} point {}: {} IRLS steps, {} active, KKT {:.1e}, {:.2} s{}",
+        p.scheme,
+        p.stage,
+        q.point,
+        q.irls_steps,
+        q.active,
+        q.kkt,
+        q.seconds,
+        if q.converged { "" } else { ", unconverged" }
     )
 }

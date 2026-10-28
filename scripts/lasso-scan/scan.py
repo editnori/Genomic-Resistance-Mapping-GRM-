@@ -16,7 +16,9 @@ once, killing the binary, on any of:
 - inputs that are not the revision-7 report's (its input fingerprint).
 
 It never retries. It writes only OUT: plan.json, events.jsonl, one stderr log
-per dataset, summary.json, and stop.json when stopped.
+per dataset, summary.json, and stop.json when stopped. The stderr log holds the
+binary's progress line for each penalty point as it is solved, so a stopped
+fit shows how far it got.
 
 usage: python3 -I -B scan.py --input-root ROOT --out OUT [--binary BIN]
            [--list LIST] [--host-factor H] [--commit SHA] [--plan | --inputs-only]
@@ -84,8 +86,9 @@ REGISTERED = Rule()
 # Disk the scan writes, bounded from above. A fit line holds at most 30
 # tuning and 30 refit statuses (about 4 KiB) and a refit with at most one
 # weight per screened feature: 4,000 weights of at most 41 bytes each, about
-# 160 KiB. The binary and the driver write no temporary files (the driver
-# runs with -B).
+# 160 KiB. The stderr log holds one progress line of under 140 bytes per
+# penalty point: 11 fits of at most 60 points, under 100 KiB. The binary and
+# the driver write no temporary files (the driver runs with -B).
 FIT_LINE_BYTES = 256 * 2**10
 START_LINE_BYTES = 2**10
 INPUTS_LINE_BYTES = 4 * 2**10
@@ -566,6 +569,10 @@ def parse(argv):
     args = parser.parse_args(argv)
     if not args.plan and args.binary is None:
         parser.error("--binary is required unless --plan")
+    # Path("./lasso-scan") prints as "lasso-scan", which subprocess would look
+    # up on PATH instead of in the working directory.
+    if args.binary is not None:
+        args.binary = args.binary.resolve()
     return args
 
 

@@ -194,6 +194,18 @@ class Scans(Harness):
         self.assertEqual(plan["binary"]["sha256"], scan.sha256(self.fake))
         self.assertEqual(plan["rule"]["fit_floor_seconds"], 0.5)
 
+    def test_a_binary_named_relative_to_the_working_directory_runs(self):
+        # The launch procedure stages the binary beside scan.py and passes
+        # --binary ./lasso-scan; Path drops the "./".
+        self.setup_scan([entry("alpha__one")])
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(self.tmp)
+        args = scan.parse(["--input-root", str(self.root), "--out", str(self.out), "--binary",
+                           "./" + self.fake.name, "--list", str(self.list)])
+        self.assertEqual(args.binary, self.fake.resolve())
+        self.assertEqual(scan.run(args, TEST_RULE), 0)
+        self.assertEqual(self.summary()["decision"], "go")
+
     def test_a_lasso_error_stops_at_once_and_runs_nothing_after(self):
         error = "lasso refit failure at dataset alpha__one split lineage outer fold 1"
         self.setup_scan([entry("alpha__one"), entry("beta__two", rank=2)], {"alpha__one": {"steps": {"6": {"error": error}}}})
@@ -424,6 +436,13 @@ class RealBinary(Harness):
         fits = [e for e in events if e["event"] == "fit"]
         self.assertTrue(all(f["error"] is None and f["audit"]["path_unconverged"] == 0 for f in fits))
         self.assertEqual([f["scheme"] for f in fits], ["random"] * 5 + ["lineage"] * 5 + ["final"])
+        # One progress line per solved point, tuning path and refit, in the
+        # dataset's stderr log beside the loader's lines.
+        progress = [line for line in (self.out / "fixture__meropenem.stderr.log").read_text().splitlines()
+                    if " path point " in line or " refit point " in line]
+        self.assertEqual(len(progress), sum(len(f["trace"]["path"]) + len(f["trace"]["refit"]) for f in fits))
+        self.assertTrue(progress[0].startswith("fixture__meropenem random fold 0 path point 0: "), progress[0])
+        self.assertTrue(all(" IRLS steps, " in line and " KKT " in line for line in progress))
         written = sum(p.stat().st_size for p in self.out.iterdir())
         print(f"\nreal binary: {elapsed:.2f} s, {written} bytes written", file=sys.stderr)
 

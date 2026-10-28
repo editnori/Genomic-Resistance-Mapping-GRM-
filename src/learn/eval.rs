@@ -154,6 +154,19 @@ pub enum LassoOnlyEvent {
     Fit(LassoOnlyFit),
 }
 
+/// One penalty point of a `lasso_only` fit, reported as soon as the solver
+/// finishes it, so a fit that is stopped part-way shows how far it got.
+#[derive(Clone, Copy, Debug)]
+pub struct LassoProgress<'a> {
+    /// "random", "lineage", or "final".
+    pub scheme: &'a str,
+    /// None for the final model.
+    pub outer_fold: Option<usize>,
+    /// "path" for the tuning path, "refit" for the refit.
+    pub stage: &'a str,
+    pub point: lasso::PointProgress,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LearnerResult {
     pub learner: String,
@@ -449,11 +462,13 @@ fn fit_lasso(
         seed,
         context,
         &mut LassoTrace::default(),
+        &mut |_, _| {},
     )
 }
 
 /// `fit_lasso`, recording in `trace` how each point stopped as it is solved,
-/// so a fit that fails still shows its points.
+/// so a fit that fails still shows its points. `progress` sees each point of
+/// the tuning path ("path") and the refit ("refit") as it is solved.
 #[allow(clippy::too_many_arguments)]
 fn fit_lasso_traced(
     x: &BitMatrix,
@@ -464,13 +479,19 @@ fn fit_lasso_traced(
     seed: u64,
     context: LassoContext<'_>,
     trace: &mut LassoTrace,
+    progress: &mut dyn FnMut(&str, &lasso::PointProgress),
 ) -> Result<(Scored, Option<lasso::LassoModel>)> {
     let (fit_m, val) = tuning_holdout(train, y, groups, 0.2, seed)?;
     let feats = screen(x, y, &fit_m, cfg.screened_features);
-    let path = lasso::fit_path_with_status(x, y, &fit_m, &feats, cfg.lasso_lambdas, 400);
+    let path =
+        lasso::fit_path_with_status(x, y, &fit_m, &feats, cfg.lasso_lambdas, 400, &mut |p| {
+            progress("path", p)
+        });
     trace.path = path.iter().map(|f| f.convergence).collect();
     fit_lasso_from_path(x, y, &val, path, context, |lambdas| {
-        let refit = lasso::refit_path_with_status(x, y, train, &feats, lambdas);
+        let refit = lasso::refit_path_with_status(x, y, train, &feats, lambdas, &mut |p| {
+            progress("refit", p)
+        });
         trace.refit = refit.iter().map(|f| f.convergence).collect();
         refit
     })
@@ -914,7 +935,9 @@ fn check_split_plan(
 /// folds, then the final model. `observe` sees each fit start and finish, so
 /// a caller can time the shipped fits one at a time, as the large-species
 /// scan (`scripts/lasso-scan`) does. A lasso error goes to `observe` and is
-/// then returned, as `evaluate` would return it.
+/// then returned, as `evaluate` would return it. `progress` sees each penalty
+/// point as it is solved.
+#[allow(clippy::too_many_arguments)]
 pub fn lasso_only(
     dataset: &str,
     x: &BitMatrix,
@@ -923,6 +946,7 @@ pub fn lasso_only(
     min_support: u32,
     cfg: &EvalConfig,
     observe: &mut dyn FnMut(&LassoOnlyEvent) -> Result<()>,
+    progress: &mut dyn FnMut(&LassoProgress),
 ) -> Result<()> {
     check_inputs(x, y, groups, min_support, cfg)?;
     let n_groups = count_groups(groups);
@@ -948,13 +972,37 @@ pub fn lasso_only(
             };
             observed_lasso(scheme, Some(fi), observe, |trace| {
                 let seed = fold_seed(cfg, fi);
-                fit_lasso_traced(&cx, y, &train, tuning_groups, cfg, seed, context, trace)
+                fit_lasso_traced(
+                    &cx,
+                    y,
+                    &train,
+                    tuning_groups,
+                    cfg,
+                    seed,
+                    context,
+                    trace,
+                    &mut |stage, point| {
+                        progress(&LassoProgress {
+                            scheme,
+                            outer_fold: Some(fi),
+                            stage,
+                            point: *point,
+                        })
+                    },
+                )
             })?;
         }
     }
     final_plan(x, y, min_support, cfg)?;
     observed_lasso("final", None, observe, |trace| {
-        final_lasso(dataset, x, y, cfg, trace)
+        final_lasso(dataset, x, y, cfg, trace, &mut |stage, point| {
+            progress(&LassoProgress {
+                scheme: "final",
+                outer_fold: None,
+                stage,
+                point: *point,
+            })
+        })
     })
 }
 
@@ -1027,7 +1075,14 @@ fn final_models(
             seed: 0,
         },
     );
-    let (lasso_scored, lasso_model) = final_lasso(dataset, x, y, cfg, &mut LassoTrace::default())?;
+    let (lasso_scored, lasso_model) = final_lasso(
+        dataset,
+        x,
+        y,
+        cfg,
+        &mut LassoTrace::default(),
+        &mut |_, _| {},
+    )?;
     let (_, rf_importance) = fit_rf(x, y, &all, cfg, cfg.seed + 17);
     let (_, gbt_model) = fit_gbt(x, y, &all, None, cfg, cfg.seed + 13)?;
     Ok(FinalModels {
@@ -1069,6 +1124,7 @@ fn final_lasso(
     y: &Bits,
     cfg: &EvalConfig,
     trace: &mut LassoTrace,
+    progress: &mut dyn FnMut(&str, &lasso::PointProgress),
 ) -> Result<(Scored, Option<lasso::LassoModel>)> {
     fit_lasso_traced(
         x,
@@ -1083,6 +1139,7 @@ fn final_lasso(
             outer_fold: None,
         },
         trace,
+        progress,
     )
 }
 
@@ -2052,14 +2109,33 @@ mod tests {
         let dataset = "fixture__fixturemycin";
         let out = evaluate(dataset, &x, &y, &groups, 3, None, &cfg).unwrap();
         let mut events = Vec::new();
-        lasso_only(dataset, &x, &y, &groups, 3, &cfg, &mut |e| {
-            events.push(e.clone());
-            Ok(())
-        })
+        let mut points = Vec::new();
+        lasso_only(
+            dataset,
+            &x,
+            &y,
+            &groups,
+            3,
+            &cfg,
+            &mut |e| {
+                events.push(e.clone());
+                Ok(())
+            },
+            &mut |p| {
+                points.push((
+                    p.scheme.to_string(),
+                    p.outer_fold,
+                    p.stage.to_string(),
+                    p.point,
+                ))
+            },
+        )
         .unwrap();
 
-        // Each fit is announced, then reported, in evaluation order.
+        // Each fit is announced, then reported, in evaluation order, and its
+        // penalty points were reported one by one as they were solved.
         let mut fits = Vec::new();
+        let mut points = points.into_iter();
         for pair in events.chunks(2) {
             let (LassoOnlyEvent::Start { scheme, outer_fold }, LassoOnlyEvent::Fit(fit)) =
                 (&pair[0], &pair[1])
@@ -2068,8 +2144,20 @@ mod tests {
             };
             assert_eq!((scheme, outer_fold), (&fit.scheme, &fit.outer_fold));
             assert!(fit.error.is_none() && fit.seconds >= 0.0);
+            for (stage, trace) in [("path", &fit.trace.path), ("refit", &fit.trace.refit)] {
+                for (i, c) in trace.iter().enumerate() {
+                    let (s, f, st, p) = points.next().unwrap();
+                    assert_eq!(
+                        (&s, f, st.as_str(), p.point),
+                        (scheme, *outer_fold, stage, i)
+                    );
+                    assert_eq!((p.irls_steps, p.converged), (c.irls_steps, c.converged));
+                    assert!(p.kkt <= 1e-6 && p.seconds >= 0.0, "{p:?}");
+                }
+            }
             fits.push(fit);
         }
+        assert!(points.next().is_none());
         let order: Vec<(&str, Option<usize>)> = fits
             .iter()
             .map(|f| (f.scheme.as_str(), f.outer_fold))

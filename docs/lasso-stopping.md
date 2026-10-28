@@ -1,20 +1,72 @@
 # Lasso stopping fix and revision-8 migration prerequisites
 
-Status: the solver change is approved, the code/test/checker prerequisites are implemented and independently reviewed, and the review's findings are closed. The large-species scan harness is prepared and its stop rule is registered below. **The large-species scan and the full 275-report revision-8 evaluation have not run.** No scan, biological evaluation, report rebuild, deployment, or publication is authorized by this document.
+Status: the solver change is approved, the code/test/checker prerequisites are implemented and independently reviewed, and the review's findings are closed. The large-species scan harness is prepared and its stop rule is registered below. The first registered scan stopped on its first fit, and the coordinate-descent solver it ran has since been replaced by an exact active-set solver (below), which still needs its independent review. **The rerun of the large-species scan and the full 275-report revision-8 evaluation have not run.** No scan, biological evaluation, report rebuild, deployment, or publication is authorized by this document.
 
 The blocking review that set these prerequisites wrote its verdict to `data/research/grm-lasso-stopping-fix-20261027-r8kq3v/MIGRATION-REVIEW.md`. That file was lost in the 2026-10-28 deletion and is not on Vast either, so its findings survive only in the review's thread and in this summary: it approved the solver change and required evaluator enforcement, a revision bump, schema/checker migration, edge guards, and stronger tests before any revision-8 run. The guards were then reviewed independently; that review, its mutation logs and the revision-7 timing tables it measured are in [`data/research/grm-lasso-r8-review-20261028/`](../data/research/grm-lasso-r8-review-20261028/README.md).
 
 ## Approved solver change
 
-`src/learn/lasso.rs` formerly stopped coordinate descent after 300 sweeps without preserving a usable status. On ill-conditioned panels this stopped short of the optimum. The approved change retains 25 IRLS steps and raises the coordinate-descent limit to 100,000 sweeps per IRLS step (glmnet's default `maxit`). The objective, unpenalized intercept, standardization, class weights, penalty grid, tolerances (1e-6 sweep and 1e-5 IRLS), 1e-5 weight floor, warm starts, `max_nonzero`, and refit semantics are unchanged.
+`src/learn/lasso.rs` formerly stopped coordinate descent after 300 sweeps without preserving a usable status. On ill-conditioned panels this stopped short of the optimum. Revision 8 first kept 25 IRLS steps and raised the coordinate-descent limit to 100,000 sweeps per IRLS step (glmnet's default `maxit`), with a 1e-6 coefficient-change test in every step.
 
-`Convergence { irls_steps, sweep_cap_hits, converged }` records how each penalty point stopped. A point converges only when:
+### Why coordinate descent was replaced
 
-- the IRLS change is below 1e-5;
-- that step's coordinate descent settled rather than reaching the sweep cap; and
-- the intercept and every coefficient are finite.
+The registered scan ran that solver and stopped on its first fit on 2026-10-28: `mycobacterium_tuberculosis__delamanid random fold 0 passed its 842 s budget` at 845 s. The diagnosis is in [`data/research/grm-lasso-r8-slowdown-20261028/`](../data/research/grm-lasso-r8-slowdown-20261028/README.md).
 
-`fit_path_with_status` and `refit_path_with_status` return `LassoFit { model, convergence }`. The compatibility wrappers `fit_path` and `refit_path` retain their model-only signatures and report unconverged points on stderr; the evaluator no longer relies on those warnings.
+On fold 0's 798 fitting samples, 2,820 of the 4,000 screened k-mer columns have a twin that differs in at most one sample. Moving weight between such twins barely changes the objective, so coordinate descent kept making small coefficient moves for tens of thousands of sweeps after the objective had stopped improving. At path point 9 it took 330,134 sweeps and 76.5 s. Points 20 to 26 used all 100,000 sweeps in every IRLS step and were flagged unconverged although they were within 2e-8 of the certified optimum with KKT residuals of about 1e-7, so the scan would have stopped even without a time budget. Revision 8 did at least 108 times revision 7's coordinate-descent work on that fold.
+
+### The current solver
+
+IRLS is unchanged: the objective (class-weighted mean log loss plus lambda times the standard-deviation-weighted L1 norm), the unpenalized intercept, standardization, class weights, the penalty grid, the 1e-5 floor on the IRLS weight p(1 - p), warm starts down the path, the evaluator's selection and refit semantics. What changed is how each IRLS step's weighted least-squares problem is solved and how a point is judged converged.
+
+Each IRLS step is solved exactly by feature-sign search (Lee et al. 2007), as the diagnosis prototyped in numpy (`scripts/asnewton.py` there):
+
+1. The non-zero coefficients form the active set. With each one's sign fixed, the least-squares objective is a quadratic, and its minimizer is one Cholesky solve on the active columns' weighted Gram matrix, intercept included.
+2. A line search from the current point toward that minimizer evaluates the true least-squares objective at every point where a non-zero coefficient reaches zero, and at the full step, and moves to the lowest. A coefficient that reaches zero leaves the active set.
+3. Once every active coefficient is stationary, the zero coefficients whose condition |g_k| <= lambda sd_k fails by more than 1e-9 (on the standardized scale) enter at zero with the sign of their gradient, worst first, in batches of at most one more than a tenth of the active set's size. If such a batch's step does not lower the objective, only its worst column is kept: from a stationary point, one entering column's step always does.
+4. A column that is, to rounding, a linear combination of the intercept and the active columns cannot join the factor (its Cholesky pivot is below 1e-10 of its weighted sum of squares). k-mer columns can be exactly dependent, for example one column the union of two disjoint others. The solver then moves that column's coefficient and the active ones along the direction that leaves the fit unchanged, which lowers the objective at the rate pen_k - |g_k|, until an active coefficient reaches zero and leaves; the new column then joins in its place.
+5. The solve ends when no zero coefficient violates its condition by more than 1e-9.
+
+The Gram matrix and its Cholesky factor change by one row as a column enters (one forward solve) or leaves (Givens rotations on the rows after it), so a solve costs one factorization of the warm-started active set per IRLS step plus quadratic-cost updates, not a refactorization per change. The weighted Gram products are dense dot products over the fitting samples.
+
+After the solve, the IRLS step is halved, up to 30 times, while it raises the penalized objective; near separation a full Newton step can overshoot. A step that no halving makes lower, or a solve that returns the current point, ends the point unconverged.
+
+### Convergence test
+
+A point converges when its KKT residual is at most 1e-6, on a two-class fit, with a finite intercept and coefficients. The KKT residual is the largest violation of the penalized objective's optimality conditions on the standardized scale: the intercept's gradient, and for each column with a carrier, with g its gradient over its standard deviation, |g + lambda sign(b)| when its coefficient b is non-zero and max(|g| - lambda, 0) when it is zero. This is the residual the fixture tests have always computed independently, at the same 1e-6 acceptance. It is checked before each IRLS step, so a warm start that already meets it takes 0 steps (point 0, at the largest penalty, always does). A NaN anywhere in it counts as a failure, since `f64::max` would drop it.
+
+The two-class condition matters only for internal calls: one-class logistic regression has no finite optimum and its gradient vanishes only as the intercept diverges, so a small residual certifies nothing. The public entry points return an empty one-class path before solving (below).
+
+Two guards bound a point: 100 IRLS steps, and 5,000 active-set iterations per least-squares solve. Neither is the stopping rule. A point that reaches the IRLS guard is unconverged. An IRLS step whose solve reaches its iteration guard, or where rounding leaves a column no descent, is counted in `sweep_cap_hits`; the point still converges only if its KKT residual later meets the tolerance. On the saved fixture panels and on MTB delamanid fold 0 neither guard is reached and no solve stops short.
+
+`Convergence { irls_steps, sweep_cap_hits, converged }` keeps its fields and serialized names, so the report schema and the checker are unchanged. `sweep_cap_hits` now counts IRLS steps whose active-set solve stopped short; the name dates from the coordinate-descent sweep cap. `fit_path_with_status` and `refit_path_with_status` return `LassoFit { model, convergence }` and take an observer that sees each point as soon as it is solved (`PointProgress`: point, lambda, IRLS steps, active coefficients, KKT residual, seconds, converged). The compatibility wrappers `fit_path` and `refit_path` retain their model-only signatures and report unconverged points on stderr; the evaluator no longer relies on those warnings.
+
+### Exact duplicate columns
+
+Columns identical on the fitting samples are collapsed: only the lowest-index column of each group can enter the active set, so the group shares one coefficient. Copies have the same standard deviation and so the same penalty factor, so every same-sign split of that weight among them has the same loss and penalty, and the optimal objective does not change. Coordinate descent split it arbitrarily, depending on its history. The KKT test still covers every copy. The Cholesky pivot test would also refuse a copy of an active column, but only through rounding; the collapse makes the lowest index a rule and skips the copies in each gradient pass (410 of fold 0's 4,000 columns).
+
+The copies can differ on samples outside the fitting mask, so which copy carries the weight can change held-out scores: on MTB delamanid fold 0 the 410 redundant copies are identical on the 798 fitting samples and differ only on the 199 tuning-holdout samples. Keeping the weight on the lowest index makes that choice deterministic. `training_candidates` already removes patterns duplicated on the outer-training samples, so the refit and the final model have no exact copies; only the tuning path does.
+
+### max_nonzero
+
+The path still stops after the first point with more than `max_nonzero` (400) non-zero coefficients, and the count is still the saved model's weight count. Because exact copies share one coefficient, that count is now of distinct columns. Coordinate descent counted whichever copies its history had given weight; counting every copy of an active column instead would stop the path on columns the model does not use. On the diagnosis's final MTB delamanid fit, the prototype's distinct count stopped the path after 19 points where revision 7 stopped after 16, and both selected point 3.
+
+### Costs
+
+On MTB delamanid random fold 0, the fit that stopped the scan, the 30-point tuning path took 13.4 s and 11.5 s in two release-build runs on the diagnosis machine (i5-10400, 12 threads, with other lanes holding the load average at 13 to 21), and the refit 0.7 s and 1.0 s. Each point took 0 to 4 IRLS steps and each least-squares solve at most 44 active-set iterations. On the same machine revision 7's capped coordinate descent took 51 to 153 s for this path depending on load, the numpy prototype 35 to 67 s, and revision 8's coordinate descent was stopped at its 2-hour limit after 7,166 s at point 27.
+
+Every point is within 8.4e-9 above the diagnosis's certified optimum (point 28, KKT 8.6e-7). Revision 8's coordinate descent was within 1.7e-8 at the points it finished, and revision 7 was up to 1.9e-4 above. The selection, refit and calls match revision 7: point 3, 53 refit weights, and none of the 251 test calls changed (largest score change 1.7e-5, test log loss 0.68618 for both).
+
+| Point | Revision 7 above optimum | Revision 8 above optimum | Active-set solver above optimum | Active-set KKT |
+|---:|---:|---:|---:|---:|
+| 3 | 3.5e-10 | 2.0e-12 | -2.2e-16 | 1.1e-9 |
+| 9 | 1.3e-5 | 1.4e-11 | 3.2e-13 | 1.7e-7 |
+| 20 | 1.9e-4 | 7.0e-9, unconverged | 7.0e-11 | 1.1e-7 |
+| 26 | not reached | 8.1e-9, unconverged | 4.3e-10 | 3.7e-7 |
+| 28 | not reached | not reached | 8.4e-9 | 8.6e-7 |
+
+Revision 7's and revision 8's columns are from the diagnosis's per-point table; revision 7's path stopped after point 20 and revision 8's run was killed during point 27.
+
+Each IRLS step costs a pass over the screened columns' carriers for the KKT residual (2.36 million on fold 0), the warm-started active set's Gram matrix and factor (about n m²/2 and m³/6 multiply-adds for n fitting samples and m active columns: 53 million and 8 million at fold 0's largest set, 366 columns), and per active-set change one Gram row (n m), a forward solve (m²/2) and a gradient pass for the next check. Cost grows with the active set and the number of IRLS steps. Near twins cost no more than distinct columns, because each solve is exact whatever their correlation. Only fold 0 has been measured; the scan measures the rest.
 
 ### One-class and non-finite edges
 
@@ -24,7 +76,7 @@ The evaluator never hands the lasso one-class input: its two-class outer-fold, i
 
 A deliberate empty path on a valid two-class fit remains different: it means no penalty admits a feature and is the existing null-fit/no-call case. A non-empty path with no converged candidate is a solver failure, not a null fit.
 
-The finite-parameter guard closes the separate NaN issue: `f64::max` can ignore NaN, so loop deltas alone are not sufficient evidence of convergence. NaN, positive infinity, and negative infinity in the intercept or any coefficient force `converged = false`.
+The finite-parameter guard closes the separate NaN issue: `f64::max` can ignore NaN, so a maximum over violations is not evidence of convergence by itself. The KKT residual is NaN whenever any of its terms is, which fails the tolerance, and NaN, positive infinity, and negative infinity in the intercept or any coefficient force `converged = false`. Weights that do not sum to a positive finite number stop the point at once, unconverged.
 
 ## Evaluator enforcement in revision 8
 
@@ -46,6 +98,8 @@ An invalid report is written for review but is not a finished dataset. `grm lear
 ## Report schema and independent checker
 
 `REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **8**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 output must contain the new evidence.
+
+`EVALUATION_REVISION` stays 8 with the active-set solver. The revision exists to keep reports from different evaluation code apart: a saved report is stale when its revision differs, because `input_fingerprint` hashes inputs and settings, not code. No revision-8 report was ever produced, on Vast or locally: the only revision-8 run, the large-species scan, writes scan records, not reports, and it stopped on its first fit. So no saved report carries revision 8 from coordinate descent that a new run could wrongly reuse, and every revision-7 report is still stale against revision 8. The report schema, the solver-status record and the checker's rules are also unchanged. Bumping to 9 would only renumber a revision that was never released.
 
 Each revision-8 lasso `LearnerResult` has `lasso_fits`, one record per outer fold. `FinalModels` has `models.lasso_fit` for the final fit. Each record has:
 
@@ -92,23 +146,30 @@ A current-revision report whose `evaluation.valid` is not `true` is stale with r
 
 ## Test coverage and required revision-8 gate
 
-The saved cross-check panels are in `tests/data/lasso-stopping-fixtures.txt`. They preserve the 16 fixtures and candidate paths from the earlier cross-check, the best known objective at each point, and the 300-sweep trace. Bit-exact fixture checks remain pinned to the Linux platform because `powf` and `exp` can differ by one ULP on other platforms.
+The saved cross-check panels are in `tests/data/lasso-stopping-fixtures.txt`. They preserve the 16 fixtures and candidate paths from the earlier cross-check, the best known objective at each point, and the 300-sweep trace. The tests no longer rerun the 300-sweep solver, which is gone; its saved trace and models stay as the record of what revision 7 did. Bit-exact checks (a refit or wrapper repeating a path) remain pinned to the Linux platform because `powf` and `exp` can differ by one ULP on other platforms.
 
-The lasso suite now has eleven tests: the original seven plus public-wrapper, refit-and-model-only-wrapper, long-one-class, and finite-parameter regressions. In particular:
+The lasso suite has nineteen default tests and one ignored release test. All 91 saved points now run by default: the C. jejuni panels that once took 2.3 million sweeps take seconds unoptimized. In particular:
 
-- `public_wrapper_uses_the_raised_cap_on_a_saved_panel` is a default, non-ignored test through `fit_path_with_status` on `streptococcus_agalactiae__clindamycin_lineage_fold0`. Its old 300-sweep path has unconverged points; reverting the inner cap to 300 fails this default test.
-- `public_refit_and_model_only_wrappers_use_the_raised_cap_on_a_saved_panel` is its default counterpart for the refit, which the evaluator scores and saves. Reverting the refit cap to 300, or pointing `fit_path` at the old limits, fails it (mutations L7 and L8).
-- `a_cap_that_ends_the_solve_is_flagged` checks wrapper equivalence on a synthetic panel: path length, penalties/models with `same()`, and statuses for both `fit_path` and `refit_path`.
+- `saved_panels_converge_and_agree_with_the_old_solver_where_it_settled` requires every two-class saved point to converge with an independently recomputed KKT residual at most 1e-6 and an objective within 1e-6 of the best known, no solve to stop short, and the raw one-class points to stay unconverged. At the 38 points where the 300-sweep solver settled without a cap, the two solutions must agree within 1e-9 in objective and 1e-4 in any fitted probability.
+- `campylobacter_failures_reach_the_reference_optimum` pins the three former C. jejuni failures: the saved 300-sweep models have KKT and excess objective above 1e-4, and the current solver converges there in 6, 6 and 5 IRLS steps with no short solve.
+- `public_wrapper_certifies_a_saved_panel_the_old_cap_left_unconverged` goes through `fit_path_with_status` on `streptococcus_agalactiae__clindamycin_lineage_fold0`, whose saved point 6 hit the sweep cap in all 16 IRLS steps, and requires every point certified.
+- `public_refit_and_model_only_wrappers_repeat_the_converged_path` refits that panel's penalties through `refit_path_with_status` and requires the same models and statuses back, bit for bit, as well as from the model-only `fit_path` and `refit_path`.
+- `a_guard_that_ends_the_solve_is_flagged` shows that both guards, the active-set iteration guard and the IRLS guard, leave a point unconverged and are counted, and checks wrapper equivalence on a synthetic panel.
+- `near_twin_columns_are_certified_in_few_irls_steps` fits twelve columns with three one-sample twins each, at most 10 IRLS steps per point.
+- `exact_copies_share_one_coefficient_and_leave_the_objective_unchanged` compares a panel with copies to one without them, checks the collapse map, and checks that a path capped at any `max_nonzero` stops right after its first point with more distinct non-zero columns.
+- `a_column_dependent_on_the_active_set_is_exchanged_in` uses a column that is the union of two disjoint active ones, so the Gram matrix with all three is singular. `only_an_exactly_dependent_column_is_refused_by_the_factor` checks that the pivot test refuses that column and accepts one that differs from it in a single floor-weight sample.
+- `a_coefficient_warm_started_with_the_wrong_sign_crosses_zero` starts a coefficient at the wrong sign. It and the dependent-column test compare the active-set solve with a brute-force minimum over every sign pattern.
+- `the_line_search_stops_where_a_coefficient_reaches_zero` and `an_irls_step_that_raises_the_objective_is_halved` test the line search and the step halving directly.
+- `the_kkt_residual_covers_the_intercept_and_every_condition` checks each term of the convergence test on hand-computed values, and `every_point_is_reported_as_it_is_solved` checks the observer, including that the solver's own KKT residual matches the independent one to 1e-12.
 - `one_class_long_paths_are_empty_by_design` exercises both public wrappers with 4,001 penalties for all-resistant and all-susceptible fitting masks.
-- `non_finite_parameters_never_report_convergence` covers NaN and both infinities and exercises the solver with a NaN working weight.
+- `non_finite_parameters_never_report_convergence` covers NaN and both infinities, a NaN in the KKT residual, and NaN or infinite working weights in the solver.
+- The ignored `mtb_delamanid_fold0_reaches_the_certified_optima` runs the fit that stopped the scan, from the diagnosis folder (gitignored, so it runs only where that folder exists). It requires all 30 tuning-path points converged with no short solve, each within 1e-6 above the diagnosis's certified optimum (KKT 1e-9) and no more than 1e-9 below it, selection of point 3, a converged refit with 53 weights, and no call changed against revision 7 on the fold's 251 test samples.
 - Evaluator tests prove that a lower-loss unconverged candidate cannot be selected, a path with no converged candidate cannot be refit, and an unconverged refit returns an error with dataset/scheme/fold/stage context. An unconverged or empty final-model refit names the final model instead of a fold.
 - Analysis tests prove that each of these makes `valid` false: an unconverged path point, selected point or refit; a missing final record; a split with no per-fold records or no lasso row; and a split with too few or too many records. An unavailable split needs none.
 - Further analysis tests prove that revision-7 results cannot be reused at revision 8, and that an invalid current report is neither logged as done nor reused.
-- `lasso_only_repeats_the_evaluator_lasso_fits` and `the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does` pin the scan harness to the evaluator (see the scan section).
+- `lasso_only_repeats_the_evaluator_lasso_fits` and `the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does` pin the scan harness to the evaluator (see the scan section), and check that every solved point is reported once, in order, with its fit's status.
 
-The refit test refits the saved panel's converged penalties through `refit_path_with_status` and requires the converged path back, point for point. It also requires the model-only `fit_path` and `refit_path`, which nothing in production calls, to return the same models. Before it, only the ignored C. jejuni release test caught a refit-cap revert.
-
-The required release command, including both intentionally ignored C. jejuni tests, is:
+The required release command, including the ignored MTB delamanid test, is:
 
 ```bash
 cargo test --locked --offline --release --lib learn::lasso -- --include-ignored
@@ -149,13 +210,13 @@ Across all 91 saved points under the old limits:
 
 Thus **46** means the sweep cap was reached in at least one IRLS step; eight of those also exhausted IRLS steps. **38** is the sweep-cap-only count. Calling 46 “inner-only” or “sweep-cap only” is incorrect. The 26 flagged points comprise 15 that exhausted IRLS steps and 11 whose last inner solve hit the sweep cap.
 
-Under the new limits, all 84 two-class saved points converge, with independently recomputed KKT residual at most 1e-6 and objective within 1e-6 of the best known. Four C. jejuni points still hit the 100,000-sweep cap in an intermediate IRLS step and settle later. The seven raw one-class fixture points remain unconverged in the internal trace used for accounting; public one-class calls now return empty paths instead of running that trace.
+These counts come from the saved trace. The 26 flagged points needed the 300-sweep solver's status rule to count, and the revision-8 tests that verified them ran that solver; the current tests check the 46 and the 15 from the saved trace alone.
 
-At the three prior C. jejuni failures, the old limits stop at 25 IRLS steps with 25 sweep-cap hits, KKT above 1e-4, and excess objective above 1e-4. The new limits converge in 7, 9, and 18 IRLS steps, which the ignored release test now pins. Refitting at the same penalties on the same mask returns the identical model and status.
+Under the coordinate-descent solver with 100,000 sweeps, all 84 two-class saved points converged, but four C. jejuni points hit the sweep cap in an intermediate IRLS step, and the three prior C. jejuni failures took 7, 9 and 18 IRLS steps. Under the active-set solver all 84 converge with independently recomputed KKT residual at most 1e-6 and objective within 1e-6 of the best known, no solve stops short, and the three prior failures take 6, 6 and 5 IRLS steps. The seven raw one-class fixture points remain unconverged in the internal trace used for accounting; public one-class calls return empty paths instead of running that trace. Refitting at the same penalties on the same mask returns the identical model and status.
 
 ## What revision 8 can change
 
-The small deployment exercise (four datasets, 99–508 samples) reproduced every old-solver score/model on replay and found zero unconverged points among 2,107 after the fix. Thirty-four of 44 models changed numerically without a selected-penalty or call change, and lasso time increased from 15.0 s to 28.8 s (1.92×). This is evidence for the revision bump, not a prediction of full-run results or runtime. Its evidence directory, `grm-lasso-stopping-fix-20261027-r8kq3v`, is not available locally, so these figures cannot be rechecked here; the blocking review checked them on 2026-10-28.
+The small deployment exercise (four datasets, 99–508 samples) reproduced every old-solver score/model on replay and found zero unconverged points among 2,107 after the fix. Thirty-four of 44 models changed numerically without a selected-penalty or call change, and lasso time increased from 15.0 s to 28.8 s (1.92×). This is evidence for the revision bump, not a prediction of full-run results or runtime. Its evidence directory, `grm-lasso-stopping-fix-20261027-r8kq3v`, is not available locally, so these figures cannot be rechecked here; the blocking review checked them on 2026-10-28. These figures are from coordinate descent. The active-set solver reaches the same optima within the KKT tolerance, so its models differ from those only within that tolerance, but it was not rerun on those four datasets.
 
 A full revision-8 field-level diff must treat the following as liable to change:
 
@@ -169,15 +230,15 @@ SCM, CART, forest, boosting, MIC, catalog, and probe outputs should remain ident
 
 ## Large-species lasso scan
 
-The new limits permit 25 × 100,000 sweeps per point, or 75 million sweeps for a 30-point path: 333× the old theoretical worst case. The observed 1.92× runtime covers only four small datasets, and intermediate cap hits persist on the motivating C. jejuni panels. No large-species runtime bound has been measured. The scan measures one, under the rule registered here, before any 275-report run. **Running it needs separate user approval.**
+The scan measures large-species lasso cost under the rule registered here before any 275-report run. Its first run, with coordinate descent, stopped on its first fit (see "Why coordinate descent was replaced"). The active-set solver's only large measurement so far is that same fit, MTB delamanid random fold 0 (see "Costs"); the other ten fits of that dataset and the other 17 datasets have not been run with it. The rerun uses the same list, rule and budgets. **Running it needs separate user approval.**
 
 ### The harness
 
 `scripts/lasso-scan/` runs the shipped revision-8 code, not a copy. The earlier `lasso_deploy.rs` harness, which replayed a copied revision-7 `fit_lasso`, is not used.
 
 - `main.rs`, built as the Cargo example `lasso-scan`, calls `grm::analysis::lasso_scan`. That function loads a species with `load_inputs` and builds each dataset's cohort, projection and lineages with `eval_inputs`, the same function `analyze_dataset` uses. It reports the dataset's input fingerprint, then runs `eval::lasso_only`.
-- `eval::lasso_only` runs only the lasso fits of `evaluate`, in its order: each available split's outer folds, then the final model. It records each penalty point's `Convergence`, for the tuning path and the refit.
-- `scan.py` is the driver. It checks the list against each dataset's revision-7 report, runs the binary on one dataset at a time, and enforces the rule below. It writes only its output directory: `plan.json`, `events.jsonl`, one stderr log per dataset, `summary.json`, and `stop.json`.
+- `eval::lasso_only` runs only the lasso fits of `evaluate`, in its order: each available split's outer folds, then the final model. It records each penalty point's `Convergence`, for the tuning path and the refit, and reports each point as soon as it is solved. The binary writes that report to stderr as one line per point, such as `mycobacterium_tuberculosis__delamanid random fold 0 path point 3: 3 IRLS steps, 74 active, KKT 1.1e-9, 0.33 s`, so a fit that is stopped shows how far it got.
+- `scan.py` is the driver. It checks the list against each dataset's revision-7 report, runs the binary on one dataset at a time, and enforces the rule below. It writes only its output directory: `plan.json`, `events.jsonl`, one stderr log per dataset (holding the progress lines), `summary.json`, and `stop.json`. It resolves `--binary` to an absolute path first: `Path("./lasso-scan")` prints as `lasso-scan`, which `subprocess` would look up on `PATH`.
 - `scan-list.json` is the registered scan list, and `make_scan_list.py` regenerates it from the 275 revision-7 candidate reports.
 - `test_scan.py` drives every stop condition with a scripted fake binary, and `smoke.sh` runs the real binary on a synthetic data root.
 
@@ -225,7 +286,7 @@ That gives 18 datasets. They cover cost ranks 1–4, 9, 11, 13 and 14 of all 275
 | Whole scan (wall-clock from launch, loading included) | the sum of the dataset budgets | 20,026 s (5.56 h) |
 | Disk | free space on the output filesystem, minus what the scan still has to write, stays at or above 30 GiB | estimate below |
 
-At the measured 1.92× the scan should take about 2.1 h of lasso work, plus loading.
+The 1.92× in "What revision 8 can change" was coordinate descent on four small datasets and does not predict the rerun. On MTB delamanid fold 0, the active-set path took less time on the laptop than revision 7's path did there (see "Costs").
 
 The scan stops at once on any of the following. It kills the binary, keeps every log and partial output, and runs no further dataset:
 
@@ -245,7 +306,7 @@ Without stopping, it records each penalty point's `irls_steps` and `sweep_cap_hi
 - the worst r is at most 5;
 - the median r is at most 3;
 - the projected 275-report run is at most 16 h, which fits one overnight Vast session;
-- at most 5% of the solved penalty points, tuning and refit together, hit the sweep cap in some IRLS step. Above that, a review comes first. The saved fixtures' rate is 4 of 84.
+- at most 5% of the solved penalty points, tuning and refit together, hit the sweep cap in some IRLS step. Above that, a review comes first. With the active-set solver this counts points with an IRLS step whose solve stopped short (`sweep_cap_hits` above 0, the same field `scan.py` reads); the threshold is unchanged. The saved fixtures' rate is 0 of 84 with the active-set solver and was 4 of 84 with coordinate descent.
 
 The projection is (25,088 s + (median r − 1) × 1.1 × 14,989 s) ÷ 3,600, where 25,088 s and 14,989 s are the 275 revision-7 reports' total report and lasso seconds. It gives 11.2 h at 1.92×, 16.1 h at 3× and 25.3 h at 5×.
 
@@ -255,7 +316,7 @@ The projection is (25,088 s + (median r − 1) × 1.1 × 14,989 s) ÷ 3,600, whe
 
 The scan copies no input and writes no temporary file. It reads about 4.4 GiB in place under the input root: the five species' matrices, counts and structures, the curated phenotypes and the BV-BRC genome list.
 
-Each fit line it writes holds at most 30 tuning and 30 refit statuses and one weight per screened feature, so it stays under 256 KiB. Add a 1 MiB stderr allowance per dataset and 4 MiB of fixed files, and the 18 datasets need at most **75,249,664 bytes (71.8 MiB)**. For scale, the synthetic smoke run wrote 51,444 bytes for one dataset. Staging the release binary (7,725,344 bytes as built for `znver2` from this lane's source, needing glibc 2.34 or later), `scan.py` and the list adds 7,759,021 bytes (7.4 MiB). The scan therefore needs at most **83,008,685 bytes (79.2 MiB)** of new disk in all; the inputs-only check writes a few kilobytes more. Building on Vast instead would add a release target directory of about 443 MB, which is why the binary is built elsewhere.
+Each fit line it writes holds at most 30 tuning and 30 refit statuses and one weight per screened feature, so it stays under 256 KiB. The stderr log holds one progress line of under 140 bytes per solved point, under 100 KiB for a dataset's 11 fits. Add a 1 MiB stderr allowance per dataset and 4 MiB of fixed files, and the 18 datasets need at most **75,249,664 bytes (71.8 MiB)**. For scale, the synthetic smoke run wrote 106,674 bytes for one dataset, about half of it the 607 progress lines. Staging the release binary (7,725,344 bytes as built for `znver2` from this lane's source, needing glibc 2.34 or later), `scan.py` and the list adds 7,759,021 bytes (7.4 MiB). The scan therefore needs at most **83,008,685 bytes (79.2 MiB)** of new disk in all; the inputs-only check writes a few kilobytes more. Building on Vast instead would add a release target directory of about 443 MB, which is why the binary is built elsewhere.
 
 `scan.py` prints its estimate before launch. It refuses to start if free space minus the estimate would fall below 30 GiB, and it checks again before each dataset. On 2026-10-28 Vast had 32.35 GiB free against that floor, and other lanes there were capped at 1.6 GiB of new disk combined; the scan's need is well inside that cap.
 
@@ -289,7 +350,7 @@ nohup nice -n 10 python3 -I -B scan.py --input-root "$ROOT" --out "$SCAN/scan" -
 
 ### Still gated
 
-1. Before the scan: rerun the release lasso tests and the r8kq3v `xcheck.sh` on the frozen commit, with a separate Python interpreter rather than the hard-stopped GWAS lane's. Then run and review the scan under this rule.
+1. Before the scan: an independent review of the active-set solver (its math, termination and duplicate handling, `EVALUATION_REVISION` staying 8, and this document). Then rerun the release lasso tests, including the MTB delamanid fold-0 test, and the r8kq3v `xcheck.sh` on the frozen commit, with a separate Python interpreter rather than the hard-stopped GWAS lane's. Then run and review the scan under this rule.
 2. Decide how to respond if a lasso error or an invalid report stops `grm learn` for a species, since no downstream consumer handles fewer than 275 reports.
 3. Only after the scan passes, run the full 275-report evaluation with revision-8 source into a **new data root**, leaving revision-7 candidate, backup, and published roots untouched.
 4. Require every report to pass the revision-8 checker with zero unconverged two-class lasso fits, and run `metric-audit --revision 8`. Then do the field-level migration diff and the completion-log audit.
