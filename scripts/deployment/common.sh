@@ -670,10 +670,12 @@ recorded_service() {
     RS_LABEL=$PID_LABEL RS_PUB=$PID_PUB
 }
 
+# Health requests go straight to 127.0.0.1: -q skips ~/.curlrc and --noproxy
+# '*' every proxy variable, either of which would send them elsewhere.
 wait_ready() {
     local _
     for _ in $(seq 1 40); do
-        curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$1/data/index.json" && return 0
+        curl -q --noproxy '*' -sf -o /dev/null --max-time 2 "http://127.0.0.1:$1/data/index.json" && return 0
         sleep 0.25
     done
     return 1

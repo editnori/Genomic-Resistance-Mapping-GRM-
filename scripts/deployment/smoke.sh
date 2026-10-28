@@ -20,7 +20,8 @@ check() {
     local url=$1 file=$2 got want
     # status.sh runs this on trees it has not verified; never open a link or FIFO.
     want=$(safe_sha256 "$file") || { echo "FAIL $file is not a regular file"; exit 1; }
-    curl -sS --fail --max-time 20 "http://127.0.0.1:$port$url" -o "$tmp/body" || {
+    # Never through a proxy: -q skips ~/.curlrc, --noproxy '*' the proxy variables.
+    curl -q --noproxy '*' -sS --fail --max-time 20 "http://127.0.0.1:$port$url" -o "$tmp/body" || {
         echo "FAIL $url unreachable"
         exit 1
     }

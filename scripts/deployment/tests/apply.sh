@@ -56,9 +56,11 @@ on_exit() {
 trap on_exit EXIT
 command -v cc >/dev/null || { echo "apply tests need cc to build the stub grm" >&2; exit 2; }
 D=$T/root
-read -r LP SP < <(python3 -I -c '
+# LP is the live port, SP the stage port, and XP a port where nothing listens
+# (the proxy that health checks must not use).
+read -r LP SP XP < <(python3 -I -c '
 import socket
-s = [socket.socket() for _ in range(2)]
+s = [socket.socket() for _ in range(3)]
 for x in s: x.bind(("127.0.0.1", 0))
 print(*[x.getsockname()[1] for x in s])')
 export GRM_DEPLOY_ROOT=$D GRM_PORT=$LP GRM_SKIP_BROWSER=1
@@ -778,6 +780,25 @@ expect 0 'restore health pass: rel2 with p275' "argument-free restore after a cr
     bash "$S/restore.sh" --apply
 expect 0 'live health pass: rel1 with p237' "rollback to 237 after the restore" -- bash "$S/rollback.sh" --apply
 
+# Health requests ignore proxy settings: every proxy variable and a ~/.curlrc
+# name a loopback port where nothing listens, which would fail every check,
+# the rollback restart's included.
+mkdir "$T/curlhome"
+printf 'proxy = "http://127.0.0.1:%s"\n' "$XP" >"$T/curlhome/.curlrc"
+proxied() {
+    env HOME="$T/curlhome" http_proxy="http://127.0.0.1:$XP" HTTP_PROXY="http://127.0.0.1:$XP" \
+        all_proxy="http://127.0.0.1:$XP" ALL_PROXY="http://127.0.0.1:$XP" no_proxy= NO_PROXY= "$@"
+}
+check "a plain curl with those settings fails (the control)" -- \
+    eval '! proxied curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$LP/data/index.json"'
+expect 1 'serving again' "with proxy settings, a failed candidate's rollback restart is checked directly" -- \
+    proxied env GRM_STUB_BAD=/rel2/ bash "$S/activate.sh" rel2 p275 --apply
+expect 0 'live health pass: rel2 with p275' "with proxy settings, activation is checked directly" -- \
+    proxied bash "$S/activate.sh" rel2 p275 --apply
+expect 0 'smoke-pass .*datasets=275' "with proxy settings, status is checked directly" -- proxied bash "$S/status.sh"
+expect 0 'live health pass: rel1 with p237' "with proxy settings, rollback is checked directly" -- \
+    proxied bash "$S/rollback.sh" --apply
+
 # A damaged current release does not block a rollback to an intact previous
 # pair, but the damaged pair must be exactly what state/active records, is
 # never a rollback target and is never restarted.
@@ -1279,7 +1300,7 @@ pkill -KILL -P "$forged" || true
 pkill -KILL -P "$forged2" || true
 kill -KILL "$forged" "$forged2" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=431
+EXPECTED_ASSERTIONS=436
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
