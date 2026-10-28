@@ -498,6 +498,17 @@ set -e
 check "with its output pipe closed after the candidate started, the failed activation exits 1" -- \
     test "$(cat "$T/pipe.rc" 2>/dev/null)" = 1
 check "with its output pipe closed, recovery stopped the candidate and rel1 serves again, recorded" -- rel1_back
+# The same closed pipe after a switch that succeeds: the closing report fails to
+# write, and say ignores that, so the activation still exits 0.
+set +e
+GRM_STUB_SLOW=/rel2/ bash -c 'bash "$1/activate.sh" rel2 p275 --apply 2>&1; echo "$?" >"$2"' _ "$S" "$T/pipe-ok.rc" |
+    sed -n '/started rel2/q'
+set -e
+check "with its output pipe closed after the candidate started, a successful activation exits 0" -- \
+    test "$(cat "$T/pipe-ok.rc" 2>/dev/null)" = 0
+check "that activation switched to rel2 and recorded it" -- \
+    eval 'test "$(live)" = "rel2 p275" -a "$(field active label)" = rel2 && journal_gone "$LP" && pid_is "$(listener "$LP")"'
+expect 0 'live health pass: rel1 with p237' "rollback returns to rel1 after the switch with a closed pipe" -- bash "$S/rollback.sh" --apply
 
 mark
 GRM_STUB_FAIL=/rel2/ bash "$S/activate.sh" rel2 p275 --apply >"$T/act.out" 2>&1 &
@@ -803,15 +814,21 @@ expect 0 'live health pass: rel1 with p237' "rollback to 237 after the restore" 
 
 # Health requests ignore proxy settings: every proxy variable and a ~/.curlrc
 # name a loopback port where nothing listens, which would fail every check,
-# the rollback restart's included.
+# the rollback restart's included. The ~/.curlrc also sends connections for
+# the live port to that port (connect-to), which --noproxy does not undo; only
+# -q, which skips ~/.curlrc, does.
 mkdir "$T/curlhome"
-printf 'proxy = "http://127.0.0.1:%s"\n' "$XP" >"$T/curlhome/.curlrc"
+printf 'proxy = "http://127.0.0.1:%s"\nconnect-to = "127.0.0.1:%s:127.0.0.1:%s"\n' "$XP" "$LP" "$XP" >"$T/curlhome/.curlrc"
 proxied() {
     env HOME="$T/curlhome" http_proxy="http://127.0.0.1:$XP" HTTP_PROXY="http://127.0.0.1:$XP" \
         all_proxy="http://127.0.0.1:$XP" ALL_PROXY="http://127.0.0.1:$XP" no_proxy= NO_PROXY= "$@"
 }
 check "a plain curl with those settings fails (the control)" -- \
     eval '! proxied curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$LP/data/index.json"'
+check "a curl with --noproxy but without -q fails too: ~/.curlrc redirects it (the control for -q)" -- \
+    eval '! proxied curl --noproxy "*" -sf -o /dev/null --max-time 2 "http://127.0.0.1:$LP/data/index.json"'
+check "curl -q --noproxy '*' with those settings reaches the live port" -- \
+    eval 'proxied curl -q --noproxy "*" -sf -o /dev/null --max-time 2 "http://127.0.0.1:$LP/data/index.json"'
 expect 1 'serving again' "with proxy settings, a failed candidate's rollback restart is checked directly" -- \
     proxied env GRM_STUB_BAD=/rel2/ bash "$S/activate.sh" rel2 p275 --apply
 expect 0 'live health pass: rel2 with p275' "with proxy settings, activation is checked directly" -- \
@@ -1175,6 +1192,19 @@ else
     echo "skip stage with a reused candidate PID and resolve with a reused group number (no unprivileged user and PID namespaces)"
     skipped=$((skipped + 4))
 fi
+
+# A candidate that passes every check and then exits before the stop fails
+# the stage: it is killed while stage waits after its health check.
+paused healthy env GRM_EXPECT_DATASETS=237 bash "$S/stage.sh" rel3 p237 "$SP" --apply
+cand=$(running rel3)
+check "the paused stage's candidate passed its checks and runs" -- test -n "$cand"
+[ -z "$cand" ] || kill -KILL "$cand" 2>/dev/null || true
+wait_for 10 eval 'test -z "$(running rel3)"' || true
+resume
+check "a candidate that exits after passing its checks fails the stage (exit 1)" -- test "$rc" = 1
+receipts=$(sed -n 's/.*failed; receipts in //p' "$T/bg.out")
+check "that stage wrote no approval, and its receipts say the candidate exited" -- \
+    eval 'test ! -e "$D/go/rel3--p237" -a -n "$receipts" && grep -q "exited before the checks finished" "$receipts/stop.log"'
 
 # Process groups, through lib.sh directly: a registered leader started under
 # setsid with the start's token (as start_service starts grm) forks a
@@ -1558,7 +1588,7 @@ wait_for 5 gone "$kid" || true
 rm -f "$C3/connector.failed"
 expect 1 'no connector supervisor holds' "after the manual recovery, status reports no supervisor and no failure" -- connector "$C3" status
 
-EXPECTED_ASSERTIONS=$((468 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((476 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

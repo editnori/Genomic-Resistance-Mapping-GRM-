@@ -113,6 +113,13 @@ expect 1 'cannot create a temporary directory' "a failed mktemp stops a suite in
     env TMPDIR="$T/missing" bash -c '. "$1"; make_test_root' _ "$S/tests/tmproot.sh"
 expect 1 'contains the repository' "a temporary root that contains the repository is refused" -- \
     env GRM_FAKE_TMP="$REPO" bash -c 'mktemp() { printf "%s\n" "$GRM_FAKE_TMP"; }; . "$1"; make_test_root' _ "$S/tests/tmproot.sh"
+mkdir "$T/not-empty"
+: >"$T/not-empty/file"
+expect 1 'not empty' "a temporary root that is not empty is refused" -- \
+    env GRM_FAKE_TMP="$T/not-empty" bash -c 'mktemp() { printf "%s\n" "$GRM_FAKE_TMP"; }; . "$1"; make_test_root' _ "$S/tests/tmproot.sh"
+# / is not empty either, so ls is stubbed: only the depth check may refuse it.
+expect 1 'too close to /' "a temporary root at / is refused even when it looks empty" -- \
+    bash -c 'mktemp() { printf "/\n"; }; ls() { :; }; . "$1"; make_test_root' _ "$S/tests/tmproot.sh"
 expect 123 'syntax error' "the documented per-file check catches it" -- \
     sh -c 'printf "%s\n" "$1" "$2" | xargs -n1 bash -n' _ "$T/good.sh" "$T/bad.sh"
 
@@ -594,7 +601,7 @@ rm "$C/cloudflared.sha256"
 mv "$T/cloudflared.sha256" "$C/cloudflared.sha256"
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=193
+EXPECTED_ASSERTIONS=195
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"
