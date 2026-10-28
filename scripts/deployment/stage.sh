@@ -82,7 +82,10 @@ if ! start_service "$label" "$pub" "$sport"; then
     started=0
     die "cannot write serve-$sport.starting; nothing started" 2
 fi
+# The candidate is its PID with its start time: once it has exited, its PID may
+# belong to another process, which must get no signal.
 pid=$START_PID
+pstart=$SPAWN_CHILD_START
 rc=0
 wait_ready "$sport" || rc=1
 owns_port "$sport" "$pid" || { echo "listener is not pid $pid" >"$out/listener.log"; rc=1; }
@@ -92,11 +95,15 @@ if [ "$browser" = run ]; then
     node "$D/src-$label/web/scripts/browser-check.cjs" "$GRM_PLAYWRIGHT_CORE" "$out/browser" \
         "http://127.0.0.1:$sport" "$P/report" >"$out/browser.log" 2>&1 && browser=pass || { browser=fail; rc=1; }
 fi
-# A candidate that ignores SIGTERM would also stall activation, so it fails here.
-if ! stop_pid "$pid"; then
+# A candidate that exits during the checks, or ignores SIGTERM (it would also
+# stall activation), fails here.
+if ! alive "$pid" "$pstart"; then
+    echo "pid $pid exited before the checks finished" >"$out/stop.log"
+    rc=1
+elif ! stop_pid "$pid" "$pstart"; then
     echo "pid $pid ignored SIGTERM" >"$out/stop.log"
     rc=1
-    kill_pid "$pid" || die "staging pid $pid on port $sport would not stop; stop it by hand" 1
+    kill_pid "$pid" "$pstart" || die "staging pid $pid on port $sport would not stop; stop it by hand" 1
 fi
 stop_spawn || die "a staging process of $label on port $sport would not stop; stop it by hand" 1
 end_journal "$sport" || die "cannot remove serve-$sport.starting"

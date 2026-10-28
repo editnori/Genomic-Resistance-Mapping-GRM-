@@ -1044,6 +1044,53 @@ check "an approval path made a directory during the stage fails it" -- test "$rc
 check "that stage leaves no candidate or listener" -- test -z "$(running rel3)$(listener "$SP")"
 rmdir "$D/go/rel3--p237"
 
+# A reused PID: in a new user and PID namespace, where this test may choose the
+# next PID, stage's candidate exits at once (GRM_STUB_FAIL), stage reaps it and
+# stops itself at "healthy", and a new process takes the candidate's PID.
+# Resumed, stage must fail without signalling that process.
+cat >"$T/pid-reuse.sh" <<'SH'
+S=$1 SP=$2
+env GRM_EXPECT_DATASETS=237 GRM_STUB_FAIL=/rel3/ GRM_TEST_SIGNAL_AT=healthy GRM_TEST_SIGNAL=STOP \
+    bash "$S/stage.sh" rel3 p237 "$SP" --apply >"$GRM_TEST_ROOT/reuse.out" 2>&1 &
+stage=$!
+state() { sed 's/.*) //' "/proc/$1/stat" 2>/dev/null | cut -d' ' -f1; }
+for _ in $(seq 300); do [ "$(state "$stage")" = T ] && break; sleep 0.1; done
+cand=$(sed -n 's/.* child=\([0-9]*\) .*/\1/p' "$GRM_DEPLOY_ROOT/serve-$SP.starting" 2>/dev/null)
+for _ in $(seq 100); do [ -n "$cand" ] && [ ! -e "/proc/$cand" ] && break; sleep 0.1; done
+if [ "$(state "$stage")" != T ] || [ -z "$cand" ] || [ -e "/proc/$cand" ]; then
+    echo "reuse=unset stage=$(state "$stage") cand=$cand"
+    kill -KILL "$stage"
+    exit 1
+fi
+echo "$((cand - 1))" >/proc/sys/kernel/ns_last_pid
+sleep 300 &
+imp=$!
+if [ "$imp" != "$cand" ]; then
+    echo "reuse=missed cand=$cand got=$imp"
+    kill -KILL "$stage" "$imp"
+    exit 1
+fi
+kill -CONT "$stage"
+wait "$stage"
+rc=$?
+case $(state "$imp") in '' | Z) imp_state=gone ;; *) imp_state=alive ;; esac
+kill -KILL "$imp" 2>/dev/null
+echo "reuse=ok stage_rc=$rc impostor=$imp_state"
+SH
+pidns=(unshare --user --map-root-user --pid --fork --mount-proc)
+skipped=0
+if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
+    expect 0 '^reuse=ok stage_rc=1 impostor=alive$' "stage fails, and signals no process that took its exited candidate's PID" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/pid-reuse.sh" "$S" "$SP"
+    check "that stage left no journal, listener or approval" -- \
+        test ! -e "$D/serve-$SP.starting" -a -z "$(listener "$SP")" -a ! -e "$D/go/rel3--p237"
+    check "its receipts say the candidate exited before the checks finished" -- \
+        grep -rq 'exited before the checks finished' "$D/stage"
+else
+    echo "skip stage with a reused candidate PID (no unprivileged user and PID namespaces)"
+    skipped=$((skipped + 3))
+fi
+
 # Process groups, through lib.sh directly: a registered leader started under
 # setsid forks a descendant that closes the spawn marker, ignores SIGTERM and
 # stays in the leader's group. mark_stop must kill it whether the leader holds
@@ -1324,7 +1371,7 @@ pkill -KILL -P "$forged" || true
 pkill -KILL -P "$forged2" || true
 kill -KILL "$forged" "$forged2" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=442
+EXPECTED_ASSERTIONS=$((445 - skipped))  # less the reused-PID case without user and PID namespaces
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
