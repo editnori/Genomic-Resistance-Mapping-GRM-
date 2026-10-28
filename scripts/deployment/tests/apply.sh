@@ -293,6 +293,7 @@ make_release() {
     cp "$T/grm-stub" "$R/grm"
     echo '<!doctype html><title>GRM</title>' >"$R/dist/index.html"
     echo "console.log('$1')" >"$R/dist/assets/index-test.js"
+    echo "// browser check of $1" >"$R/browser-check.cjs"
     printf '%s\n' "$2" >"$R/COMMIT"
     (cd "$R" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum >"$T/manifest" && mv "$T/manifest" MANIFEST.sha256)
     chmod -R a-w "$R"
@@ -1044,6 +1045,30 @@ check "an approval path made a directory during the stage fails it" -- test "$rc
 check "that stage leaves no candidate or listener" -- test -z "$(running rel3)$(listener "$SP")"
 rmdir "$D/go/rel3--p237"
 
+# The browser check that stage runs is the release's own copy, which its
+# manifest binds to its commit; a different script in src-LABEL never runs.
+# node is a stub that records the script it was given.
+mkdir -p "$T/nodebin" "$T/playwright" "$D/src-rel3/web/scripts"
+cat >"$T/nodebin/node" <<'SH'
+#!/bin/sh
+printf '%s\n' "$1" >>"$GRM_TEST_ROOT/node.runs"
+exit "${GRM_STUB_NODE_RC:-0}"
+SH
+chmod +x "$T/nodebin/node"
+echo 'process.exit(0)' >"$D/src-rel3/web/scripts/browser-check.cjs"
+browser3() {  # browser3 [NAME=VALUE...]: stage rel3 with the browser check
+    env -u GRM_SKIP_BROWSER PATH="$T/nodebin:$PATH" GRM_PLAYWRIGHT_CORE="$T/playwright" GRM_EXPECT_DATASETS=237 "$@" \
+        bash "$S/stage.sh" rel3 p237 "$SP" --apply
+}
+expect 0 'stage pass: approved rel3 with p237 \(browser=pass\)' "stage runs the browser check and approves browser=pass" -- browser3
+check "the check that ran is the release's manifest-bound copy, not src-rel3's" -- \
+    test "$(cat "$T/node.runs")" = "$D/release/rel3/browser-check.cjs"
+check "the approval records browser=pass" -- grep -q '^stage=0 browser=pass ' "$D/go/rel3--p237"
+rm "$D/go/rel3--p237"
+expect 1 'stage rel3 with p237 failed' "a failing browser check fails the stage" -- browser3 GRM_STUB_NODE_RC=1
+check "the failed browser check wrote no approval and left no candidate" -- \
+    test ! -e "$D/go/rel3--p237" -a -z "$(running rel3)$(listener "$SP")"
+
 # A reused PID: in a new user and PID namespace, where this test may choose the
 # next PID, stage's candidate exits at once (GRM_STUB_FAIL), stage reaps it and
 # stops itself at "healthy", and a new process takes the candidate's PID.
@@ -1141,8 +1166,9 @@ expect 0 '^rc=1 err=pid [0-9]+ would not stop$' "mark_stop fails after a failed 
 
 # Concurrent builds under one label: one builds, the other refuses at once.
 G=$T/source
-mkdir -p "$G/web" "$T/bin"
+mkdir -p "$G/web/scripts" "$T/bin"
 echo '{}' >"$G/web/package.json"
+echo '// browser check of the source commit' >"$G/web/scripts/browser-check.cjs"
 git -C "$G" init -q
 git -C "$G" add -A
 git -C "$G" -c user.name=test -c user.email=test@example.invalid commit -qm source
@@ -1176,6 +1202,8 @@ check "the refused build reports the reserved label" -- grep -q 'already exists'
 check "only one build ran cargo" -- test "$(wc -l <"$T/cargo-runs")" = 1
 check "the built release verifies" -- bash -c 'source "$1/common.sh"; verify_release relB' _ "$S"
 check "the release records the built commit" -- test "$(cat "$D/release/relB/COMMIT")" = "$(git -C "$G" rev-parse HEAD)"
+check "the release carries the commit's browser check, listed in its manifest" -- \
+    eval 'cmp -s "$G/web/scripts/browser-check.cjs" "$D/release/relB/browser-check.cjs" && grep -q " \./browser-check\.cjs$" "$D/release/relB/MANIFEST.sha256"'
 
 # Connector supervisors: the lock stays with the supervisor, and stop signals only
 # the supervisor of its own directory.
@@ -1371,7 +1399,7 @@ pkill -KILL -P "$forged" || true
 pkill -KILL -P "$forged2" || true
 kill -KILL "$forged" "$forged2" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((445 - skipped))  # less the reused-PID case without user and PID namespaces
+EXPECTED_ASSERTIONS=$((451 - skipped))  # less the reused-PID case without user and PID namespaces
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

@@ -17,6 +17,7 @@
 # Layout under the root:
 #   published/NAME/{report/,SOURCE.sha256}       immutable report publications
 #   release/LABEL/{grm,dist/,COMMIT,MANIFEST.sha256}   immutable builds
+#                   [browser-check.cjs]          the commit's browser check (stage.sh)
 #   src-LABEL/, src-LABEL.commit                 extracted source of a build
 #   stage/LABEL--NAME--TIME/                     candidate check receipts
 #   go/LABEL--NAME                               approval of one build and one report copy

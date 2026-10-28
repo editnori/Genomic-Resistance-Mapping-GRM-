@@ -5,8 +5,9 @@
 #   GRM_EXPECT_*         what the report must hold (see common.sh); the approval
 #                        records it for activation, rollback and restore
 #   GRM_PLAYWRIGHT_CORE  playwright-core module directory for the browser check
-#                        (web/scripts/browser-check.cjs from src-LABEL); its
-#                        Chromium needs LD_LIBRARY_PATH and node on PATH
+#                        (the release's browser-check.cjs, which its manifest
+#                        binds to its commit); its Chromium needs
+#                        LD_LIBRARY_PATH and node on PATH
 #   GRM_SKIP_BROWSER=1   approve on the HTTP checks alone; the approval says so
 # Receipts go to stage/LABEL--PUBLICATION--TIME.XXXXXX; approval to go/LABEL--PUBLICATION.
 # The candidate is stopped on every exit, interruption included; if it cannot
@@ -26,6 +27,7 @@ sport=$3
 [ "$sport" != "$PORT" ] || die "$sport is the live port; stage on a spare one" 2
 need curl python3 sha256sum fuser flock setsid pgrep
 verify_release "$label"
+release_files=$VT_LISTED
 verify_publication "$pub" "$EXPECT_SCHEMA" "$EXPECT_REVISION" "$EXPECT_DATASETS"
 APPROVED[$label--$pub]="$EXPECT_SCHEMA $EXPECT_REVISION $EXPECT_DATASETS"
 R=$D/release/$label
@@ -35,7 +37,11 @@ browser=skipped
 if [ "${GRM_SKIP_BROWSER:-0}" != 1 ]; then
     : "${GRM_PLAYWRIGHT_CORE:?set GRM_PLAYWRIGHT_CORE, or GRM_SKIP_BROWSER=1 to approve without the browser check}"
     need node
-    [ -f "$D/src-$label/web/scripts/browser-check.cjs" ] || die "no browser check in $D/src-$label" 2
+    # Only the release's own copy runs: verify_release checked it against the
+    # manifest the approval binds, so it is the check built from that commit,
+    # not whatever src-LABEL holds now.
+    grep -qxF browser-check.cjs <<<"$release_files" ||
+        die "release $label has no browser-check.cjs in its manifest (build-release.sh copies it from the commit); rebuild it, or set GRM_SKIP_BROWSER=1" 2
     browser=run
 fi
 approval=$D/go/$label--$pub
@@ -92,7 +98,7 @@ owns_port "$sport" "$pid" || { echo "listener is not pid $pid" >"$out/listener.l
 health "$label" "$pub" "$sport" >"$out/smoke.log" 2>&1 || rc=1
 checkpoint healthy
 if [ "$browser" = run ]; then
-    node "$D/src-$label/web/scripts/browser-check.cjs" "$GRM_PLAYWRIGHT_CORE" "$out/browser" \
+    node "$R/browser-check.cjs" "$GRM_PLAYWRIGHT_CORE" "$out/browser" \
         "http://127.0.0.1:$sport" "$P/report" >"$out/browser.log" 2>&1 && browser=pass || { browser=fail; rc=1; }
 fi
 # A candidate that exits during the checks, or ignores SIGTERM (it would also

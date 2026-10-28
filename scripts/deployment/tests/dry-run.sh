@@ -193,6 +193,15 @@ echo extra >"$D/release/rel-extra/extra"
 ln -s rel1 "$D/release/rel-alias"
 cp -a "$D/published/pub1" "$D/published/pub-unapproved"
 echo "stage=0 schema1=0 browser=1042/1042 commit=$c2" >"$D/GO-rel2"
+# A release that carries its commit's browser check, a stale check in src-rel2
+# that stage must not run, and a node stub that would record any run.
+broken_release rel-browser
+echo '// browser check' >"$D/release/rel-browser/browser-check.cjs"
+manifest "$D/release/rel-browser" >"$D/release/rel-browser/MANIFEST.sha256"
+mkdir -p "$D/src-rel2/web/scripts" "$T/nodebin" "$T/playwright"
+echo '// stale browser check' >"$D/src-rel2/web/scripts/browser-check.cjs"
+printf '#!/bin/sh\necho node >>"$GRM_TEST_MARKER"\nexit 0\n' >"$T/nodebin/node"
+chmod +x "$T/nodebin/node"
 
 before=$(snapshot)
 expect 0 'dry-run: would start rel1 with pub1' "restore dry run of an approved pair" -- \
@@ -227,6 +236,10 @@ expect 0 'dry-run: would serve rel2' "stage dry run" -- \
     env GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel2 pub1 "$STAGE_PORT"
 expect 1 'link or special file' "stage refuses a linked grm" -- \
     env GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel-link pub1 "$STAGE_PORT"
+browser_stage() { env PATH="$T/nodebin:$PATH" GRM_PLAYWRIGHT_CORE="$T/playwright" bash "$S/stage.sh" "$1" pub1 "$STAGE_PORT"; }
+expect 2 'rel2 has no browser-check.cjs in its manifest' \
+    "stage refuses a browser check its release does not carry, even with one in src-LABEL" -- browser_stage rel2
+expect 0 'browser=run' "stage dry run accepts the browser check its release carries" -- browser_stage rel-browser
 expect 2 'unknown option' "scripts reject unknown options" -- bash "$S/restore.sh" rel1 pub1 --force
 expect 2 'absolute' "a relative deployment root is refused" -- \
     env GRM_DEPLOY_ROOT=relative bash "$S/restore.sh" rel1 pub1
@@ -567,8 +580,8 @@ expect 2 'cloudflared.sha256 is missing' "connector check refuses a FIFO manifes
 rm "$C/cloudflared.sha256"
 mv "$T/cloudflared.sha256" "$C/cloudflared.sha256"
 
-expect 1 '' "no stub grm, cargo or npm ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=187
+expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
+EXPECTED_ASSERTIONS=189
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"
