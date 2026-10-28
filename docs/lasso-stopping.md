@@ -131,7 +131,7 @@ scripts/lasso-scan/smoke.sh
 
 The metric-audit suites call `scripts/metric-audit/foldgen/target/release/foldgen`, so build it first. `smoke.sh` builds the scan binary, writes a 150-genome synthetic data root, and drives the real binary under the registered rule. No real or candidate data root is used by these tests.
 
-The shared checkout was deleted at 04:41 UTC on 2026-10-28 while this work was in progress. Its edits were recovered into commits `a728d11` and `c87c4b5` and finished in `bf01371`. The pre-change files and hashes are under `data/research/grm-lasso-revision8-migration-20261028`. The finishing lane's gate logs, mutation checks and validation summary are under `data/research/grm-lasso-revision8-finish-20261028`, and the independent review's are under `data/research/grm-lasso-r8-review-20261028`.
+The shared checkout was deleted at 04:41 UTC on 2026-10-28 while this work was in progress. Its edits were recovered into commits `5302848` and `fee9f9f` and finished in `fb7ba09`. The pre-change files and hashes are under `data/research/grm-lasso-revision8-migration-20261028`. The finishing lane's gate logs, mutation checks and validation summary are under `data/research/grm-lasso-revision8-finish-20261028`, and the independent review's are under `data/research/grm-lasso-r8-review-20261028`.
 
 ### Fixture accounting: 46 is not 38
 
@@ -263,7 +263,7 @@ Each fit line it writes holds at most 30 tuning and 30 refit statuses and one we
 
 The revision-7 candidate root, `/root/grm-extra-species-analysis-20261027/data`, holds no matrices for the five scan species. They are in `/root/grm-revision7-preflight/data`. The candidate copied that root's counts, structures and reports for the 13 original species hash-equal, and its reports carry the same input fingerprints (M. tuberculosis delamanid: `275e461dec002050` in both). The scan reads that root.
 
-Its `catalog` is a symlink to `/root/grm/data/catalog`. If that catalog has changed since revision 7, loading fails or the fingerprints differ. The inputs-only check below catches either before any fit. It also catches a matrix the current code cannot load, since the matrix commits `266e922` and `33ccd2a` came after revision 7.
+Its `catalog` is a symlink to `/root/grm/data/catalog`. If that catalog has changed since revision 7, loading fails or the fingerprints differ. The inputs-only check below catches either before any fit. It also catches a matrix the current code cannot load, since the matrix commits `7cc39ed` and `0df8eb9` came after revision 7.
 
 ### Launch procedure
 
