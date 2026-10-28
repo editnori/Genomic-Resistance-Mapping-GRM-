@@ -183,10 +183,11 @@ on_exit() {
     trap - EXIT
     trap ':' TERM INT HUP
     set +e
-    # With its process group, even if cloudflared itself has exited. A failure
+    # With its process group, even if cloudflared itself has exited (start 0
+    # when it exited before its start time was read; see run). A failure
     # already recorded (exit 3) is not recorded again.
-    if [ -n "${child:-}" ] && [ -n "${child_start:-}" ] &&
-        ! stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" group; then
+    if [ -n "${child:-}" ] &&
+        ! stop_tree "$child" "${child_start:-0}" "$SPAWN_TOKEN" "$MARK_ID" group; then
         [ "$rc" = 3 ] || stop_failed "cannot stop cloudflared pid $child: $STOP_ERR"
         rc=3
     fi
@@ -249,10 +250,11 @@ run() {
             wait "$child" 2>/dev/null || true
         done
         # cloudflared exited: nothing it forked into its group may outlive it.
-        if [ -n "$child_start" ]; then
-            stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" group ||
-                { stop_failed "cannot stop what cloudflared pid $child left in its process group: $STOP_ERR"; exit 3; }
-        fi
+        # When it exited before its start time could be read, that time is
+        # unknown: 0 matches no live process, so only the members tied to this
+        # run by its token or connector.spawn are signalled.
+        stop_tree "$child" "${child_start:-0}" "$SPAWN_TOKEN" "$MARK_ID" group ||
+            { stop_failed "cannot stop what cloudflared pid $child left in its process group: $STOP_ERR"; exit 3; }
         child='' child_start=''
         for ((i = 0; i < 25 && !stopping; i++)); do sleep 0.2 {LOCK_FD}>&-; done
     done

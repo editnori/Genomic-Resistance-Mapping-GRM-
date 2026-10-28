@@ -1587,8 +1587,27 @@ check "that refused run started no supervisor or cloudflared" -- eval 'conn_free
 wait_for 5 gone "$kid" || true
 rm -f "$C3/connector.failed"
 expect 1 'no connector supervisor holds' "after the manual recovery, status reports no supervisor and no failure" -- connector "$C3" status
+# A cloudflared that exits before the supervisor has read its start time: the
+# supervisor stops itself right after the fork (conn-forked) until the stub has
+# exited. What the stub left in its group carries the run's token and must
+# still be stopped. The supervisor stops itself again at its next fork, so TERM
+# and CONT end it there.
+rm -f "$C3/supervisor.pid" "$C3/stub.pid" "$C3/kid.pid"
+echo keep >"$C3/kid.mode"
+paused conn-forked env GRM_CONNECTOR_DIR="$C3" bash "$S/connector.sh" run
+stub_done
+check "with its supervisor paused right after the fork, cloudflared leaves a descendant and exits" -- test "$stub_ok" = 1
+kill -CONT "$bg" 2>/dev/null || true
+check "the supervisor still stops that descendant, though it never read cloudflared's start time" -- \
+    eval 'test -n "$kid" && wait_for 15 gone "$kid"'
+wait_for 15 stopped "$bg" || true
+kill -TERM "$bg" 2>/dev/null || true
+kill -CONT "$bg" 2>/dev/null || true
+check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_for 15 gone "$bg" && wait_for 10 conn_free "$C3"'
+[ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
+wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((476 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((479 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
