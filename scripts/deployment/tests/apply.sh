@@ -1071,7 +1071,9 @@ browser3() {  # browser3 [NAME=VALUE...]: stage rel3 with the browser check
 expect 0 'stage pass: approved rel3 with p237 \(browser=pass\)' "stage runs the browser check and approves browser=pass" -- browser3
 check "the check that ran is the release's manifest-bound copy, not src-rel3's" -- \
     test "$(cat "$T/node.runs")" = "$D/release/rel3/browser-check.cjs"
-check "the approval records browser=pass" -- grep -q '^stage=0 browser=pass ' "$D/go/rel3--p237"
+check "the approval records browser=pass with the SHA-256 of the check that ran" -- \
+    grep -q "^stage=0 browser=pass browser_check=$(sha256sum <"$D/release/rel3/browser-check.cjs" | cut -d' ' -f1) " "$D/go/rel3--p237"
+expect 0 'dry-run: would record' "activation accepts that browser=pass approval" -- bash "$S/activate.sh" rel3 p237
 rm "$D/go/rel3--p237"
 expect 1 'stage rel3 with p237 failed' "a failing browser check fails the stage" -- browser3 GRM_STUB_NODE_RC=1
 check "the failed browser check wrote no approval and left no candidate" -- \
@@ -1556,7 +1558,7 @@ wait_for 5 gone "$kid" || true
 rm -f "$C3/connector.failed"
 expect 1 'no connector supervisor holds' "after the manual recovery, status reports no supervisor and no failure" -- connector "$C3" status
 
-EXPECTED_ASSERTIONS=$((467 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((468 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

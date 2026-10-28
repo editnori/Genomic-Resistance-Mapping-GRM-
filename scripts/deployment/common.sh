@@ -210,13 +210,17 @@ parse_fields() {
 
 # stage.sh approves one build of a release with one copy of a publication in
 # go/LABEL--NAME, a single line of unique fields:
-#   stage=0 browser=pass|skipped commit=SHA publication=NAME
-#   release_manifest=SHA256 report_manifest=SHA256 schema=N revision=N
-#   datasets=N [receipts=PATH]
-# approve-legacy.sh writes browser=legacy with legacy_sha256=SHA256 instead of
-# receipts. Every field is compared exactly, and the report's expected schema,
-# revision and dataset count are kept in APPROVED[LABEL--NAME]. A hand-written
-# GO-LABEL alone approves nothing.
+#   stage=0 browser=pass|skipped [browser_check=SHA256] commit=SHA
+#   publication=NAME release_manifest=SHA256 report_manifest=SHA256 schema=N
+#   revision=N datasets=N [receipts=PATH]
+# browser=pass needs browser_check, the SHA-256 of the release's
+# browser-check.cjs that ran. A stage.sh from before the browser check was
+# bound to the release ran src-LABEL's copy and wrote no browser_check, so its
+# browser=pass approves nothing; re-stage that pair. approve-legacy.sh writes
+# browser=legacy with legacy_sha256=SHA256 instead of receipts. Every field is
+# compared exactly, and the report's expected schema, revision and dataset
+# count are kept in APPROVED[LABEL--NAME]. A hand-written GO-LABEL alone
+# approves nothing.
 check_go() {
     local label=$1 pub=$2 file=$D/go/$1--$2 key
     if [ ! -e "$file" ] && [ ! -L "$file" ]; then
@@ -225,7 +229,7 @@ check_go() {
     fi
     parse_fields "$file" line || die "$file is not a one-line approval of unique key=value fields: it $PF_ERR"
     for key in "${!FIELDS[@]}"; do
-        case " $APPROVAL_KEYS receipts legacy_sha256 " in
+        case " $APPROVAL_KEYS receipts legacy_sha256 browser_check " in
             *" $key "*) ;;
             *) die "$file has unknown field $key" ;;
         esac
@@ -235,10 +239,17 @@ check_go() {
     done
     [ "${FIELDS[stage]}" = 0 ] || die "$file does not approve: stage=${FIELDS[stage]}"
     case ${FIELDS[browser]} in
-        pass | skipped) ;;
+        pass)
+            [ -n "${FIELDS[browser_check]:-}" ] ||
+                die "$file approves browser=pass without browser_check: a stage.sh from before the browser check was bound to the release wrote it, and ran src-$label's copy; re-stage $label with $pub (docs/deployment.md, Approvals and state)"
+            [ "${FIELDS[browser_check]}" = "$(safe_sha256 "$D/release/$label/browser-check.cjs" 2>/dev/null)" ] ||
+                die "$file's browser_check does not match release $label's browser-check.cjs"
+            ;;
+        skipped) ;;
         legacy) [[ ${FIELDS[legacy_sha256]:-} =~ ^[0-9a-f]{64}$ ]] || die "$file is a legacy migration without legacy_sha256" ;;
         *) die "$file has browser=${FIELDS[browser]}" ;;
     esac
+    [ -z "${FIELDS[browser_check]:-}" ] || [ "${FIELDS[browser]}" = pass ] || die "$file has browser_check without browser=pass"
     [ "${FIELDS[commit]}" = "$(release_commit "$label")" ] || die "$file does not approve commit $(release_commit "$label")"
     [ "${FIELDS[publication]}" = "$pub" ] || die "$file approves another publication"
     [ "${FIELDS[release_manifest]}" = "$(release_digest "$label")" ] || die "$file approves another build of $label"

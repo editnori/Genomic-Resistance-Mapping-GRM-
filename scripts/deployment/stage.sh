@@ -119,8 +119,13 @@ printf '%s\n' "$rc" >"$out/exit"
 if ((rc)); then
     die "stage $label with $pub failed; receipts in $out"
 fi
-write_file "$approval" "$(printf 'stage=0 browser=%s commit=%s publication=%s release_manifest=%s report_manifest=%s schema=%s revision=%s datasets=%s receipts=%s' \
-    "$browser" "$commit" "$pub" "$(release_digest "$label")" "$(report_digest "$pub")" \
+# browser=pass records which check passed: the release's own browser-check.cjs.
+bcheck=''
+if [ "$browser" = pass ]; then
+    bcheck=" browser_check=$(safe_sha256 "$R/browser-check.cjs")" || die "cannot hash $R/browser-check.cjs; receipts in $out"
+fi
+write_file "$approval" "$(printf 'stage=0 browser=%s%s commit=%s publication=%s release_manifest=%s report_manifest=%s schema=%s revision=%s datasets=%s receipts=%s' \
+    "$browser" "$bcheck" "$commit" "$pub" "$(release_digest "$label")" "$(report_digest "$pub")" \
     "$EXPECT_SCHEMA" "$EXPECT_REVISION" "$EXPECT_DATASETS" "$run")"$'\n' ||
     die "cannot write $approval; receipts in $out"
 check_go "$label" "$pub"

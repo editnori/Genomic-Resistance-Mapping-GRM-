@@ -270,6 +270,19 @@ tamper "approval without release_manifest is refused" 'lacks release_manifest' -
 tamper "approval without datasets is refused" 'lacks datasets' -e 's/ datasets=2//'
 tamper "a failed stage is not an approval" 'does not approve: stage=1' -e 's/stage=0/stage=1/'
 tamper "a failed browser check is not an approval" 'browser=fail' -e 's/browser=skipped/browser=fail/'
+# browser=pass binds the SHA-256 of the release's own browser check; a stage
+# from before that check was bound wrote browser=pass without it.
+tamper "a browser=pass approval without browser_check (an older stage) is refused" 'browser=pass without browser_check.*re-stage rel1 with pub2' \
+    -e 's/browser=skipped/browser=pass/'
+tamper "a browser=pass approval whose browser_check the release does not carry is refused" "browser_check does not match release rel1's" \
+    -e "s/browser=skipped/browser=pass browser_check=$(printf a%.0s {1..64})/"
+tamper "browser_check without browser=pass is refused" 'browser_check without browser=pass' \
+    -e "s/browser=skipped/browser=skipped browser_check=$(printf a%.0s {1..64})/"
+approval rel-browser pub1 |
+    sed "s/browser=skipped/browser=pass browser_check=$(digest "$D/release/rel-browser/browser-check.cjs")/" >"$D/go/rel-browser--pub1"
+expect 0 'dry-run: would start rel-browser with pub1' "a browser=pass approval binding the release's browser check is accepted" -- \
+    bash "$S/restore.sh" rel-browser pub1
+rm "$D/go/rel-browser--pub1"
 tamper "a repeated field is refused" 'unique key=value' publication=pub2
 tamper "an unknown field is refused" 'unknown field note' note=x
 tamper "a two-line approval is refused" 'one-line approval' -e 's/ receipts=/\nreceipts=/'
@@ -581,7 +594,7 @@ rm "$C/cloudflared.sha256"
 mv "$T/cloudflared.sha256" "$C/cloudflared.sha256"
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=189
+EXPECTED_ASSERTIONS=193
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"
