@@ -32,7 +32,7 @@ The finite-parameter guard closes the separate NaN issue: `f64::max` can ignore 
 2. A deliberately empty two-class path remains a null fit. A non-empty path with no converged candidate returns an error.
 3. The selected point is defensively checked again for convergence.
 4. The refit at the selected penalty is checked before any score or model is returned. An empty or unconverged selected refit is an error.
-5. Path-selection and refit errors name the dataset, split scheme, zero-based outer fold, and stage. Final-model errors identify the final model rather than pretending it is an outer fold.
+5. Path-selection and refit errors name the dataset, split scheme, zero-based outer fold, and stage. Final-model errors say `final model on all samples (no outer fold)` rather than pretending to be an outer fold.
 6. Solver failure is never converted into a no-call, and an unconverged selected/final model is never scored or saved.
 
 Converged candidates retain the existing minimum-validation-log-loss selection and refit behavior. Non-lasso learners are unchanged.
@@ -73,7 +73,7 @@ For a deliberate empty path, `path_points` and `path_unconverged` are zero and `
 - rejects missing fields, wrong types, invalid counts/indices, inconsistent selected/refit presence, and a final model inconsistent with an empty-path record; and
 - requires zero unconverged two-class lasso path points and true selected/final convergence before accepting `valid: true`.
 
-The checker tests include a valid revision-8 report, future-revision rejection, and negative missing/malformed/unconverged cases. Revision-7 reports do not need to be retrofitted with these fields.
+The checker tests include a valid revision-8 report, a valid empty-path final fit with a null model, future-revision rejection, and negative missing/malformed/unconverged cases, including a saved model whose record has no refit. Revision-7 reports do not need to be retrofitted with these fields.
 
 ### Stale and reuse behavior
 
@@ -85,10 +85,10 @@ The saved cross-check panels are in `tests/data/lasso-stopping-fixtures.txt`. Th
 
 The lasso suite now has ten tests: the original seven plus public-wrapper, long-one-class, and finite-parameter regressions. In particular:
 
-- `public_wrapper_uses_the_raised_cap_on_a_saved_panel` is a default, non-ignored test through `fit_path_with_status` on `streptococcus_agalactiae__clindamycin_lineage_fold0`. Its old 300-sweep path has unconverged points; reverting the inner cap to 300 fails this default test. Wrapper equivalence checks path length, penalties/models with `same()`, and statuses.
+- `public_wrapper_uses_the_raised_cap_on_a_saved_panel` is a default, non-ignored test through `fit_path_with_status` on `streptococcus_agalactiae__clindamycin_lineage_fold0`. Its old 300-sweep path has unconverged points; reverting the inner cap to 300 fails this default test. Wrapper equivalence checks path length, penalties/models with `same()`, and statuses for both `fit_path` and `refit_path`.
 - `one_class_long_paths_are_empty_by_design` exercises both public wrappers with 4,001 penalties for all-resistant and all-susceptible fitting masks.
 - `non_finite_parameters_never_report_convergence` covers NaN and both infinities and exercises the solver with a NaN working weight.
-- Evaluator tests prove that a lower-loss unconverged candidate cannot be selected, a path with no converged candidate cannot be refit, and an unconverged final refit returns an error with dataset/scheme/fold/stage context.
+- Evaluator tests prove that a lower-loss unconverged candidate cannot be selected, a path with no converged candidate cannot be refit, and an unconverged refit returns an error with dataset/scheme/fold/stage context. An unconverged or empty final-model refit names the final model instead of a fold.
 - Analysis tests prove that unconverged or missing status cannot produce `valid: true` and that revision-7 results cannot be reused at revision 8.
 
 The required release command, including both intentionally ignored C. jejuni tests, is:
@@ -101,15 +101,18 @@ The complete prerequisite gate is:
 
 ```bash
 cargo fmt --check
-cargo check --locked --offline --all-targets
+cargo clippy --locked --offline --all-targets -- -D warnings
 cargo test --locked --offline
 cargo test --locked --offline --release --lib learn::lasso -- --include-ignored
+(cd scripts/metric-audit/foldgen && cargo build --locked --offline --release)
 python3 -I scripts/metric-audit/tests/test_check_results.py
 python3 -I scripts/metric-audit/tests/test_audit.py
 python3 -I scripts/metric-audit/tests/test_scripts.py
 ```
 
-This lane's commands and logs are under `data/research/grm-lasso-revision8-migration-20261028`. Rust validation uses an isolated target directory and, because another lane is actively changing matrix tests in the shared checkout, a clean source snapshot overlaid only with the approved migration files. No real or candidate data root is used by these tests.
+The Python suites call `scripts/metric-audit/foldgen/target/release/foldgen`, so build it first. No real or candidate data root is used by these tests.
+
+The shared checkout was deleted at 04:41 UTC on 2026-10-28 while this work was in progress. Its edits were recovered into commits `a728d11` and `c87c4b5` and finished in the following commit. The pre-change files and hashes are under `data/research/grm-lasso-revision8-migration-20261028`. The completed gate's logs, mutation checks and validation summary are under `data/research/grm-lasso-revision8-finish-20261028`.
 
 ### Fixture accounting: 46 is not 38
 
@@ -129,7 +132,7 @@ Thus **46** means the sweep cap was reached in at least one IRLS step; eight of 
 
 Under the new limits, all 84 two-class saved points converge, with independently recomputed KKT residual at most 1e-6 and objective within 1e-6 of the best known. Four C. jejuni points still hit the 100,000-sweep cap in an intermediate IRLS step and settle later. The seven raw one-class fixture points remain unconverged in the internal trace used for accounting; public one-class calls now return empty paths instead of running that trace.
 
-At the three prior C. jejuni failures, the old limits stop at 25 IRLS steps with 25 sweep-cap hits, KKT above 1e-4, and excess objective above 1e-4. The new limits converge in 7, 9, and 18 IRLS steps. Refitting at the same penalties on the same mask returns the identical model and status.
+At the three prior C. jejuni failures, the old limits stop at 25 IRLS steps with 25 sweep-cap hits, KKT above 1e-4, and excess objective above 1e-4. The new limits converge in 7, 9, and 18 IRLS steps, which the ignored release test now pins. Refitting at the same penalties on the same mask returns the identical model and status.
 
 ## What revision 8 can change
 
@@ -150,6 +153,8 @@ SCM, CART, forest, boosting, MIC, catalog, and probe outputs should remain ident
 The new limits permit 25 × 100,000 sweeps per point, or 75 million sweeps for a 30-point path: 333× the old theoretical worst case. The observed 1.92× runtime covers only four small datasets, and intermediate cap hits persist on the motivating C. jejuni panels. There is no tested large-species runtime upper bound.
 
 Before the full revision-8 run, a separate authorized lane must use the existing `lasso_deploy` harness for a lasso-only scan over the largest datasets, explicitly including **M. tuberculosis, E. coli, and K. pneumoniae**, and record sweeps, seconds, and status for every fit.
+
+That harness is not in the repository. It is `scripts/lasso_deploy.rs` in the `grm-lasso-stopping-fix-20261027-r8kq3v` evidence workspace on Vast, which reads the candidate data root there. When these prerequisites were finished, the local copy of that evidence had not been restored and no local data root held the large-species inputs the scan needs. The harness replays the revision-7 `fit_lasso` against old and fixed solver modules. For the scan it has to be rebuilt against revision-8 source so that each fit goes through `fit_path_with_status` and `refit_path_with_status` and stops on the same conditions as the evaluator.
 
 The scan must pre-register its stop rule in its evidence before launch: a per-fit wall-clock budget, a total wall-clock budget, and immediate stop on an unconverged selected/refit two-class fit. Reaching a budget or solver-failure condition stops the scan, preserves the partial logs, and blocks the full run pending review. No numeric time budget is approved by this prerequisite lane; it must be chosen from the operational constraints rather than extrapolated uncritically from the 1.92× small-panel figure.
 

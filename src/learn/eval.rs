@@ -366,7 +366,7 @@ impl LassoContext<'_> {
                 self.dataset, self.scheme
             ),
             None => format!(
-                "dataset {} split final outer fold final model",
+                "dataset {} final model on all samples (no outer fold)",
                 self.dataset
             ),
         }
@@ -1775,6 +1775,44 @@ mod tests {
             "outer fold 3",
         ] {
             assert!(error.contains(expected), "{error}");
+        }
+    }
+
+    #[test]
+    fn final_model_lasso_failures_name_the_final_fit() {
+        let n = 6;
+        let y = Bits::from_indices(n, [0, 2, 4]);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        let finals = LassoContext {
+            dataset: "fixture__fixturemycin",
+            scheme: "final",
+            outer_fold: None,
+        };
+        let refits: [Vec<lasso::LassoFit>; 2] =
+            [vec![canned_lasso(0.25, -1.0, 2.0, false)], vec![]];
+        for (refit, detail) in refits.into_iter().zip([
+            "selected point 0 is unconverged",
+            "selected point 0 returned an empty refit path",
+        ]) {
+            let error = fit_lasso_from_path(
+                &x,
+                &y,
+                &Bits::ones(n),
+                vec![canned_lasso(0.25, -1.0, 2.0, true)],
+                finals,
+                |_| refit,
+            )
+            .err()
+            .unwrap()
+            .to_string();
+            assert!(error.contains("lasso refit failure"), "{error}");
+            assert!(error.contains(detail), "{error}");
+            assert!(
+                error.contains("dataset fixture__fixturemycin final model on all samples"),
+                "{error}"
+            );
+            assert!(!error.contains("split"), "{error}");
         }
     }
 

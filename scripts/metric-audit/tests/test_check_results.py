@@ -75,6 +75,12 @@ def revision8_report():
     return rep
 
 
+def empty_lasso_fit():
+    """The record for a deliberate empty path: no penalty admits a feature."""
+    return {"path_points": 0, "path_unconverged": 0, "selected_point": None,
+            "selected_convergence": None, "refit_convergence": None}
+
+
 class ValidReports(Case):
     def test_revision7_report_with_null_folds_passes_and_names_rf(self):
         rep = fx.make_report()
@@ -390,6 +396,17 @@ class LassoSolverStatus(Case):
         rep = revision8_report()
         rep["models"]["lasso_fit"]["refit_convergence"] = None
         self.fails(rep, "malformed lasso fit status")
+
+    def test_empty_final_path_with_a_null_model_passes(self):
+        rep = revision8_report()
+        rep["models"]["lasso"] = None
+        rep["models"]["lasso_fit"] = empty_lasso_fit()
+        self.passes(rep, [rf_line(rep)])
+
+    def test_saved_lasso_model_without_a_refit_record_fails(self):
+        rep = revision8_report()
+        rep["models"]["lasso_fit"] = empty_lasso_fit()
+        self.fails(rep, "lasso model does not match its solver status")
 
 
 class LearnerRows(Case):

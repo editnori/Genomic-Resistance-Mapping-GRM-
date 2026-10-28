@@ -523,11 +523,19 @@ mod tests {
             assert!(same(&f.model, &d.model));
             assert_eq!(f.convergence, d.convergence);
         }
-        // The stderr-reporting wrapper returns the same complete path.
+        // The stderr-reporting wrappers return the same complete paths.
         let path = fit_path(&x, &y, &Bits::ones(n), &[0], 3, 10);
         assert_eq!(path.len(), fits.len());
         for (m, f) in path.iter().zip(&fits) {
             assert!(same(m, &f.model));
+        }
+        let lambdas: Vec<f64> = fits.iter().map(|f| f.model.lambda).collect();
+        let refits = refit_path_with_status(&x, &y, &Bits::ones(n), &[0], &lambdas);
+        let refit = refit_path(&x, &y, &Bits::ones(n), &[0], &lambdas);
+        assert_eq!((refits.len(), refit.len()), (fits.len(), fits.len()));
+        for ((m, r), f) in refit.iter().zip(&refits).zip(&fits) {
+            assert!(same(m, &r.model) && same(m, &f.model));
+            assert_eq!(r.convergence, f.convergence);
         }
     }
 
@@ -914,11 +922,12 @@ mod tests {
     #[ignore = "C. jejuni panels: run with --release -- --include-ignored"]
     fn campylobacter_failures_reach_the_reference_optimum() {
         let all = fixtures();
-        for (name, i, sweep_cap_hits) in [
-            ("campylobacter_jejuni__ciprofloxacin_random_fold0", 5, 6),
-            ("campylobacter_jejuni__ciprofloxacin_random_fold0", 6, 6),
-            ("campylobacter_jejuni__ciprofloxacin_lineage_fold0", 6, 3),
-        ] {
+        let random = "campylobacter_jejuni__ciprofloxacin_random_fold0";
+        let lineage = "campylobacter_jejuni__ciprofloxacin_lineage_fold0";
+        // (panel, point, IRLS steps, sweep-cap hits) under the new limits.
+        for (name, i, irls_steps, sweep_cap_hits) in
+            [(random, 5, 7, 6), (random, 6, 9, 6), (lineage, 6, 18, 3)]
+        {
             let f = all.iter().find(|f| f.name == name).unwrap();
             let (old, new) = f.runs();
             let saved = &f.points[i];
@@ -939,7 +948,7 @@ mod tests {
 
             let c = new[i].convergence;
             assert!(c.converged, "{name} {i} {c:?}");
-            assert!(c.irls_steps < 25);
+            assert_eq!(c.irls_steps, irls_steps, "{name} {i}");
             assert_eq!(c.sweep_cap_hits, sweep_cap_hits, "{name} {i}");
             let (obj, kkt) = objective_and_kkt(f, &new[i].model);
             assert!(kkt <= 1e-6, "{name} point {i}: KKT {kkt:e}");
