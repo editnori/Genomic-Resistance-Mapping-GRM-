@@ -478,6 +478,17 @@ check "rel1 with p237 serves after the interruption" -- test "$(live)" = "rel1 p
 check "the interrupted candidate was stopped" -- test -z "$(running rel2)"
 check "the interrupted activation reports the old pair serving again" -- grep -q 'serving again' "$T/act.out"
 
+# A closed output pipe cannot cut recovery short: the reader of activation's
+# output exits once the candidate has started, the candidate then fails its
+# health check, and every later write fails instead of killing the script.
+set +e
+GRM_STUB_SLOW=/rel2/ GRM_STUB_BAD=/rel2/ bash -c 'bash "$1/activate.sh" rel2 p275 --apply 2>&1; echo "$?" >"$2"' _ "$S" "$T/pipe.rc" |
+    sed -n '/started rel2/q'
+set -e
+check "with its output pipe closed after the candidate started, the failed activation exits 1" -- \
+    test "$(cat "$T/pipe.rc" 2>/dev/null)" = 1
+check "with its output pipe closed, recovery stopped the candidate and rel1 serves again, recorded" -- rel1_back
+
 mark
 GRM_STUB_FAIL=/rel2/ bash "$S/activate.sh" rel2 p275 --apply >"$T/act.out" 2>&1 &
 apid=$!
@@ -1227,6 +1238,19 @@ check "the next run stopped the orphaned cloudflared first and started its own" 
 check "the next run reported the orphan it stopped" -- grep -q 'stopped the connector processes left by a killed supervisor' "$T/sup2.log"
 expect 0 'connector stopped' "connector stop stops that supervisor" -- connector "$C2" stop
 check "it left no cloudflared or lock" -- wait_for 10 conn_free "$C2"
+# The same with the next run's output pipe closed at once: its report of the
+# orphan fails to write instead of killing it before it stops the orphan.
+sup_up
+old=$child
+kill -KILL "$sup"
+rm -f "$C2/supervisor.pid"
+setsid bash -c 'GRM_CONNECTOR_DIR=$1 bash "$2/connector.sh" run 2>&1 | true' _ "$C2" "$S" </dev/null &
+wait_for 10 test -s "$C2/supervisor.pid" || true
+sup=$(sed -n 's/ .*//p' "$C2/supervisor.pid" 2>/dev/null || true)
+check "with its output pipe closed, the next run stopped the orphaned cloudflared" -- wait_for 10 gone "$old"
+check "with its output pipe closed, the next run started its own cloudflared" -- eval 'test -n "$sup" && wait_for 10 has_child "$sup"'
+expect 0 'connector stopped' "connector stop stops the supervisor whose output pipe is closed" -- connector "$C2" stop
+check "that supervisor left no cloudflared or lock" -- wait_for 10 conn_free "$C2"
 
 # A holder of connector.spawn this user cannot see: run starts nothing.
 hidden_lock "$C2/connector.spawn"
@@ -1300,7 +1324,7 @@ pkill -KILL -P "$forged" || true
 pkill -KILL -P "$forged2" || true
 kill -KILL "$forged" "$forged2" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=436
+EXPECTED_ASSERTIONS=442
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

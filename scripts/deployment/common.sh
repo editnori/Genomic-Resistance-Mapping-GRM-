@@ -34,6 +34,11 @@
 # child_checkpoint). They do nothing unless set.
 
 set -euo pipefail
+# A closed output pipe (the operator's pipe or terminal went away) must not
+# kill a script mid-switch or cut its cleanup short: with SIGPIPE handled, a
+# write there fails instead, and say ignores that. Handled, not ignored, so a
+# started server gets the default disposition.
+trap ':' PIPE
 
 D=${GRM_DEPLOY_ROOT:?set GRM_DEPLOY_ROOT to the absolute deployment root}
 D=${D%/}
@@ -76,12 +81,13 @@ parse_args() {
     done
 }
 
-# The log copy is best effort: a full disk must not stop a rollback, and a
-# deploy.log that is a link, FIFO or directory is never opened (append_line).
+# Both copies are best effort: a closed output pipe or a full disk must not
+# stop a rollback, and a deploy.log that is a link, FIFO or directory is never
+# opened (append_line).
 say() {
     local line
     line="$(date -u +%FT%TZ) $*"
-    printf '%s\n' "$line"
+    printf '%s\n' "$line" 2>/dev/null || true
     if ((APPLY)) && [ -d "$D" ]; then append_line "$D/deploy.log" "$line"; fi
 }
 die() {
