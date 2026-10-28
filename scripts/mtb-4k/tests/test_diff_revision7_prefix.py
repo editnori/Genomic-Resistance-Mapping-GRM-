@@ -1,0 +1,100 @@
+"""diff_revision7_prefix.py on synthetic revision-8 reports and revision-7 counterparts.
+
+usage: FOLDGEN=<foldgen binary> python3 -I scripts/mtb-4k/tests/test_diff_revision7_prefix.py
+"""
+import contextlib
+import copy
+import io
+import json
+import shutil
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
+sys.path.insert(0, str(HERE))
+import diff_revision7_prefix as diff  # noqa: E402
+import fixtures as fx  # noqa: E402
+
+SLUG = "mycobacterium_tuberculosis"
+
+
+def as_revision7(report):
+    """What the same evaluation wrote at revision 7: no lasso solver evidence, another lasso fit."""
+    r = copy.deepcopy(report)
+    r["evaluation"]["revision"] = 7
+    r["models"].pop("lasso_fit")
+    r["models"]["lasso"] = {"intercept": -0.5, "coef": [[3, 0.25]], "lambda": 0.02}
+    for split in r["splits"]:
+        for row in split["learners"]:
+            if row["learner"] == "lasso":
+                row.pop("lasso_fits", None)
+                row["seconds"] = 99.0
+                row["scores"] = [None if v is None else min(1.0, v + 0.01) for v in row["scores"]]
+    for split in r["splits"]:
+        for row in split["learners"]:
+            row["seconds"] = row["seconds"] + 1.0
+    r["seconds"] = 999.0
+    r["features"] = [{"feature": 1}]
+    return r
+
+
+class Diff(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        rules = fx.make_rules({"prefix": ("amikacin", "isoniazid")})
+        cls.r8 = fx.build_cohort(Path(cls.tmp.name) / "r8", "prefix", rules) / "data"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def revision7(self, label, edit=None):
+        root = Path(self.tmp.name) / label / "data"
+        (root / "species" / SLUG / "results").mkdir(parents=True)
+        for path in sorted((self.r8 / "species" / SLUG / "results").glob("*.json")):
+            r7 = as_revision7(json.loads(path.read_text()))
+            if edit and path.stem.endswith("amikacin"):
+                edit(r7)
+            (root / "species" / SLUG / "results" / path.name).write_text(json.dumps(r7))
+        return root
+
+    def run_diff(self, r7):
+        out = r7.parent / "diff.json"
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = diff.main(["--revision8", str(self.r8), "--revision7", str(r7), "--out", str(out)])
+        return code, json.loads(out.read_text()) if out.exists() else None
+
+    def test_only_the_lasso_may_differ(self):
+        code, out = self.run_diff(self.revision7("same"))
+        self.assertEqual(code, 0, out)
+        self.assertEqual((out["datasets"], out["identical"]), (2, 2))
+        self.assertTrue(all(r["lasso_rows_allowed_to_differ"] == 2 for r in out["rows"]))
+
+    def test_a_non_lasso_change_or_another_fingerprint_is_a_difference(self):
+        for label, edit, where in [
+            ("cart score", lambda r: r["splits"][0]["learners"][1]["scores"].__setitem__(0, 0.5), "splits.random.learners.cart"),
+            ("fingerprint", lambda r: r.update(input_fingerprint="0" * 16), "input_fingerprint"),
+            ("catalog", lambda r: r["catalog"].update(version="other"), "catalog"),
+            ("a sample label", lambda r: r["samples"][0].update(resistant=not r["samples"][0]["resistant"]), "samples"),
+            ("a test fold", lambda r: r["splits"][1]["test_fold"].__setitem__(0, (r["splits"][1]["test_fold"][0] + 1) % 5), "splits.lineage.test_fold"),
+            ("final rf importance", lambda r: r["models"].update(rf_importance=[{"feature": 1, "weight": 1.0}]), "models.rf_importance")]:
+            with self.subTest(label):
+                code, out = self.run_diff(self.revision7("d-" + label.replace(" ", "-"), edit))
+                self.assertEqual(code, 1, label)
+                row = next(r for r in out["rows"] if r["id"].endswith("amikacin"))
+                self.assertTrue(any(d.startswith(where) for d in row["differences"]), row["differences"])
+
+    def test_wrong_revisions_or_dataset_sets_stop(self):
+        r7 = self.revision7("wrong-revision", lambda r: r["evaluation"].update(revision=8))
+        self.assertEqual(self.run_diff(r7)[0], 2)
+        r7 = self.revision7("missing-dataset")
+        next((r7 / "species" / SLUG / "results").glob("*isoniazid.json")).unlink()
+        self.assertEqual(self.run_diff(r7)[0], 2)
+
+
+if __name__ == "__main__":
+    unittest.main()

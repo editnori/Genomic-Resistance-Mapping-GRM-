@@ -1,15 +1,24 @@
 # MTB matched 2k / added-2k / 4k execution plan — NOT AUTHORIZED
 
-Revision 2.1 (2026-10-28, plan-and-validators lane). Revision 2 replaced the
+Revision 3 (2026-10-28, plan-and-validators lane). Revision 2 replaced the
 wiring lane's plan (`plans/4k-execution-plan.md`, SHA-256 `8bb780c1…6fb8`).
 The re-review of the fix (`176e3cc`, rebuilt trailer-free as `79158f9`, tree
 `150500fe…`) returned `WIRING_REVIEW=CHANGES_REQUIRED` with plan and script
-findings N1–N8 and no open Rust finding. This revision closes N1–N8: the
+findings N1–N8 and no open Rust finding. Revision 2.1 closed N1–N8: the
 annotation copy (N1), the pilot's kill and invalidation checks (N2, N8), the
 matrix validator (N3), stale commit IDs (N5), the comparator's interlocks
-(N6), and the frozen-input and lane checks (N7). The code is the merge M0 of
-`79158f9` with the shared branch (section 7) plus the commit that adds this
-revision; neither has been reviewed.
+(N6), and the frozen-input and lane checks (N7).
+
+Revision 3 adopts one canonical validator set, merged from the Kimi package
+(K, approved at the pre-execution gate) and this directory's own (W) as the
+reconciliation (`RECONCILE.md`, `MERGE_REQUIRED_WITH_FIXES`) laid out: K's
+strict report contract as `report_contract.py`, K's checks around the
+repo's own revision-8 checker as `run_revision8_checks.py`, W's four-cohort
+design in the merged `compare_cohorts.py`, and three new scripts:
+`write_run_manifest.py`, `fingerprint.py` and `diff_revision7_prefix.py`
+(sections 7 and 8). The code is the merge M0 of `79158f9` with the shared
+branch at `3483065`, then the N1–N8 commit, then the validator commit; none
+has been reviewed, and M0 is **not** the lasso-final merge (section 7).
 
 **No command below has been run. No biological matrix, structure, training,
 report or 8k work exists. No 8k stage is planned or permitted.**
@@ -23,12 +32,16 @@ report or 8k work exists. No 8k stage is planned or permitted.**
 2. **Pilot.** The parent authorizes the small frozen biological pilot
    (section 4), and every pilot acceptance check passes before the prefix
    stage.
-3. **Validators reviewed.** `validate_matrix.py`, `screen_duplicates.py`,
-   `compare_cohorts.py`, `prepare_execution_roots.py` and
-   `pilot_interrupt.py` in this directory are independently reviewed. Their
-   tests: `python3 -I scripts/mtb-4k/tests/test_<name>.py` (the validator's
-   and the pilot helper's tests build real matrices and need
-   `GRM=<built grm binary>`).
+3. **Validators reviewed.** Every script in this directory is
+   independently reviewed: `prepare_execution_roots.py`, `pilot_interrupt.py`,
+   `validate_matrix.py`, `screen_duplicates.py`, `report_contract.py`,
+   `fingerprint.py`, `write_run_manifest.py`, `run_revision8_checks.py`,
+   `diff_revision7_prefix.py` and `compare_cohorts.py`. Their tests:
+   `GRM=<built grm> FOLDGEN=<built foldgen> python3 -I
+   scripts/mtb-4k/tests/test_<name>.py` (the K review harnesses
+   `test_k_review.py` and `test_k_review_r3.py` also take `--receipt OUT`;
+   `test_k_review.py`'s frozen-evidence test runs only where that evidence
+   is, on Vast).
 4. **Resources, immediately before every stage.** At least 45 GiB free disk
    and 64 GiB reclaim-aware available RAM. The process-group guard keeps its
    31 GiB disk and 48 GiB RAM stop floors, above the 30/40 GiB global
@@ -91,6 +104,27 @@ python3 -I "$P/prepare_execution_roots.py" "$RUN"
 (cd "$WS" && CARGO_TARGET_DIR="$RUN/target" CARGO_BUILD_JOBS=16 RAYON_NUM_THREADS=16 cargo build --release --locked --offline)
 export GRM="$RUN/target/release/grm"
 sha256sum "$GRM" | tee "$RUN/logs/grm-binary.sha256"
+# The committed foldgen, which rebuilds every saved test_fold (section 7).
+(cd "$WS/scripts/metric-audit/foldgen" && CARGO_TARGET_DIR="$RUN/target-foldgen" cargo build --release --locked --offline)
+export FOLDGEN="$RUN/target-foldgen/release/foldgen"
+sha256sum "$FOLDGEN" | tee "$RUN/logs/foldgen-binary.sha256"
+export SOURCE=$(git -C "$WS" rev-parse HEAD)   # the one --expected-source-commit for every check
+```
+
+Before any matrix stage, two read-only checks against the revision-7 2k
+candidate must pass with these builds. Both were run by the
+plan-and-validators lane on 2026-10-28 (its receipt), and are repeated here
+because the execution build is new:
+
+```bash
+# fingerprint.py reproduces every revision-7 report's input_fingerprint from the frozen root
+# (a view of links: the preflight root's matrix, counted.json and structure.json with the
+# candidate's curated and catalog; see that lane's tools/vast_fingerprint_oracle.py).
+python3 -I "$P/fingerprint.py" "$RUN/rev7-view/data" --check --out "$RUN/audit/rev7-fingerprints.json" || exit 1
+# The metric audit rebuilds every saved revision-7 test_fold with this foldgen.
+python3 -I "$WS/scripts/metric-audit/audit.py" "$RUN/audit/rev7-fold-rebuild.json" $SLUG --revision 7 \
+  --root /root/grm-extra-species-analysis-20261027 --reshaped --foldgen "$FOLDGEN"
+python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rev7-fold-rebuild.json"
 ```
 
 `prepare_execution_roots.py` derives every list from the frozen bytes and
@@ -357,16 +391,26 @@ Training, reports and the comparison run only when **all** of these hold:
    checker an independent review records as approved; expect it after
    `43c187b`. Do not build or adopt a parallel revision-8 checker here.
 2. **The training binary comes from a reviewed merge** of that commit with
-   the wiring commits and this one. Re-run `cargo test` and the wiring
-   adversarial checks on the merge.
-3. **Every report passes the reviewed checker:** `scripts/check-results.py`
-   on that commit validates the revision-8 lasso solver status (per-fold
-   `lasso_fits` and `models.lasso_fit`). It must exit 0 with zero unconverged
-   two-class lasso fits, per cohort. `scripts/metric-audit/audit.py
-   --revision 8` must also exit 0, per cohort, with its own backup, log and
-   launch timestamp, and `foldgen` built in the execution target. Save each
-   checker's output; `compare_cohorts.py` refuses to run unless each cohort's
-   receipt covers exactly that cohort's reports at revision 8 (N6).
+   the wiring commits, the N1–N8 commit and the validator commit, in that
+   order, trailer-free. Re-run `cargo test` and the wiring adversarial checks
+   on the merge, then check the validators' pins: `report_contract.PINS`
+   holds the SHA-256 of `check-results.py`, `metric-audit/audit.py`,
+   `summarize.py` and `result_scope.py` as reviewed at `855bdba`. If
+   lasso-final moves any of them, or adds or renames a solver-status field,
+   the contract stops until the pins and its exact-key checks are reviewed
+   again; that stop is intended.
+3. **Every cohort passes `run_revision8_checks.py`.** It is not a parallel
+   checker. Before the checker runs, the run manifest and every report must
+   pass `report_contract.py`, which includes each report's input fingerprint
+   recomputed from the root. Then it runs the in-tree
+   `scripts/check-results.py` (zero unconverged two-class lasso fits, valid
+   per-fold `lasso_fits` and `models.lasso_fit`), `scripts/metric-audit/audit.py
+   --revision 8` with this cohort's backup, log and launch timestamp and the
+   `foldgen` built above, which rebuilds every saved test_fold, and
+   `summarize.py`. Only when all three pass and K's postflight holds does it
+   write the receipt that `compare_cohorts.py` requires and parses (F5): a
+   placeholder, a failed run, another run manifest, other pins or an output
+   changed afterwards is a stop.
 4. **An invalid report is a stop.** On revision 8, `grm learn` stops a species
    when a report's `evaluation.valid` is not true. Record the dataset and its
    reasons, and stop that cohort's training for parent review. Any solver
@@ -375,36 +419,77 @@ Training, reports and the comparison run only when **all** of these hold:
 
 ```bash
 for cohort in prefix added full matched2k; do
-  D=$RUN/cohorts/$cohort/data
+  C=$RUN/cohorts/$cohort; D=$C/data
   python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
+  mkdir "$RUN/backups/$cohort"                       # pre-launch results: none in a new root
+  LAUNCH=$(date -u +%Y-%m-%dT%H:%M:%SZ); echo "$LAUNCH" > "$RUN/logs/$cohort-learn.launch"
   python3 "$GUARD" --log $RUN/logs/$cohort-learn.log --resources $RUN/logs/$cohort-learn-resources.json -- \
-    /usr/bin/time -v "$GRM" --data "$D" learn --species $SLUG
+    /usr/bin/time -v "$GRM" --data "$D" learn --species $SLUG || exit 1
+  python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
+  "$GRM" --data "$D" report || exit 1                # dashboard data in this root only
   python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
   python3 -I "$P/prepare_execution_roots.py" --verify-frozen "$RUN" || exit 1
+  python3 -I "$P/write_run_manifest.py" "$C" --cohort $cohort --source-commit "$SOURCE" --binary "$GRM" \
+    --log $RUN/logs/$cohort-learn.log || exit 1
+  python3 -I "$P/run_revision8_checks.py" $RUN/audit/$cohort-audit.json --root "$C" --run-manifest "$C/validation-manifest.json" \
+    --expected-source-commit "$SOURCE" --binary "$GRM" --backup "$RUN/backups/$cohort" --log $RUN/logs/$cohort-learn.log \
+    --launch "$LAUNCH" --foldgen "$FOLDGEN" --checker-out $RUN/audit/$cohort-check-results.json \
+    --summary-out $RUN/audit/$cohort-summary.json --receipt $RUN/audit/$cohort-revision8-receipt.json || exit 1
 done
+# The prefix against the revision-7 2k candidate, field by field (only the lasso may differ).
+python3 -I "$P/diff_revision7_prefix.py" --revision8 $RUN/cohorts/prefix/data \
+  --revision7 /root/grm-extra-species-analysis-20261027/data --out $RUN/audit/prefix-vs-revision7.json || exit 1
 ```
 
-Expected report counts are 22 prefix, 14 added and 22 full, and whatever
-the class gate gives matched2k. MTB's unsupported probe assays must not
+`write_run_manifest.py` binds each cohort's inputs, reports and
+class-gate receipts by SHA-256, recomputing every input fingerprint and
+every dataset's class counts from the root first. Expected report counts
+are 22 prefix, 14 added and 22 full, and whatever the class gate gives
+matched2k (14 if the frozen evidence holds: amoxicillin and the other seven
+sparse drugs fail it there too). MTB's unsupported probe assays must not
 trigger a stock recount. Build dashboard data only in the new roots, each
 after `--check-lane`. Do not publish, deploy, replace candidate reports or
 touch the live site.
+
+`diff_revision7_prefix.py` is the field-level check that
+`docs/lasso-stopping.md` asks for: the prefix matrix is byte-identical to
+the frozen 2k matrix, so every report's input fingerprint, samples, catalog,
+panels, MIC, splits and non-lasso learner rows must equal the revision-7
+candidate's; only the lasso rows and models may differ.
 
 ## 8. Matched analysis (after section 7)
 
 ```bash
 python3 -I "$P/compare_cohorts.py" \
-  --cohort prefix=$RUN/cohorts/prefix/data --cohort added=$RUN/cohorts/added/data \
-  --cohort full=$RUN/cohorts/full/data --cohort matched2k=$RUN/cohorts/matched2k/data \
-  --checker-receipt prefix=$RUN/audit/prefix-check-results.json --checker-receipt added=$RUN/audit/added-check-results.json \
-  --checker-receipt full=$RUN/audit/full-check-results.json --checker-receipt matched2k=$RUN/audit/matched2k-check-results.json \
-  --duplicates $RUN/audit/duplicate-screen.json --out $RUN/audit/compare-cohorts.json
+  --cohort prefix=$RUN/cohorts/prefix --cohort added=$RUN/cohorts/added \
+  --cohort full=$RUN/cohorts/full --cohort matched2k=$RUN/cohorts/matched2k \
+  --checker-receipt prefix=$RUN/audit/prefix-revision8-receipt.json --checker-receipt added=$RUN/audit/added-revision8-receipt.json \
+  --checker-receipt full=$RUN/audit/full-revision8-receipt.json --checker-receipt matched2k=$RUN/audit/matched2k-revision8-receipt.json \
+  --duplicates $RUN/audit/duplicate-screen.json --expected-source-commit "$SOURCE" --out $RUN/audit/compare-cohorts.json
 ```
 
-Exit 0 means complete. Exit 2 means an input or integrity stop, with no
-output, including a checker receipt that does not cover its cohort. Exit 3
-means output was written but a drug was excluded or a primary split was
-unavailable; stop for review before any before/after statement.
+Exit 0 means complete. Exit 1 means output was written but the comparison is
+invalid (source, binary, foldgen or EvalConfig differing across cohorts, a
+coverage or label mismatch, cohorts not disjoint). Exit 2 means an input or
+integrity stop with no output: a manifest, hash or fingerprint binding, a
+receipt that does not prove its cohort passed (F5), the matched2k list not
+being `matched_selection` of the full cohort (F6), a class-gate receipt or
+report count that the full cohort's labels on that cohort's genomes do not
+reproduce (F3), an unexpected not-interpretable set, or an unaccepted exact
+duplicate. Exit 3 means output was written and valid, but a drug was
+excluded or a primary split was unavailable; stop for review before any
+before/after statement.
+
+**Decision D1, pending the user's override.** grm's random folds are a
+seeded stratified shuffle over each cohort's own samples, so the same genome
+lands in different random folds in the prefix and full cohorts (28–62% of
+common genomes in the reconciliation's synthetic run; about 80% expected at
+2k/4k). Package K treated any such mismatch as blocking, which would stop
+every real comparison. The canonical comparator counts the mismatch per
+row, keeps those genomes out of `matched_fold`, and marks that row's matched
+random control invalid, but the comparison stays valid. Fold integrity is
+not weakened: `run_revision8_checks.py` rebuilds every saved fold of every
+cohort with the real `foldgen` and stops on any difference.
 
 Prespecified rules:
 

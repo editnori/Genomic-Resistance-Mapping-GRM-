@@ -65,6 +65,9 @@ EXPECTED = {
     "full": ("80faef89571ecd2fd658204abd39fd4b55e5a86bfe8e4f379274162868f44eaf", 4000),
     "prefix": ("57af1c86c35fb0a4c62d3c0784a09804a919ba75941159d0c7b3cf56870aa2e3", 2000),
     "added": ("a980d9e014fb90972a46b3fc01e65a9654deb58935d3ddf0f54018c19e7def85", 2000),
+    # matched_selection of the frozen full list, measured read-only on Vast on 2026-10-28 and
+    # frozen in report_contract.RULES, so a changed seed or selection is a stop here too.
+    "matched2k": ("212a21a5d2574e0d62d379fccddb0839c4f44f5a7cd36e43a558dc2c0926c3d1", 2000),
 }
 ALLOWED_FASTA_PARENTS = {
     Path("/root/grm/data/fasta"),
@@ -255,7 +258,7 @@ def main() -> int:
     for name in ("matched2k", "pilot256", "pilot256-stock"):
         cohort_bytes[name] = "".join(f"{g}\n" for g in cohort_ids[name]).encode()
     assert cohort_bytes["pilot256"] == b"".join(lines[:PILOT])
-    assert len(cohort_ids["matched2k"]) == 2000
+    assert (sha256_bytes(cohort_bytes["matched2k"]), len(cohort_ids["matched2k"])) == EXPECTED["matched2k"], "matched2k differs from its frozen list"
 
     with (EVIDENCE / "results/fasta-manifest.tsv").open(newline="") as handle:
         rows = list(csv.DictReader(handle, delimiter="\t"))
@@ -313,7 +316,8 @@ def main() -> int:
         "cohorts": {name: len(ids) for name, ids in cohort_ids.items()},
         "genome_sha256": {name: sha256_bytes(data) for name, data in cohort_bytes.items()},
         "matched2k": {"seed": MATCHED_SEED, "from_prefix": sum(g in prefix for g in cohort_ids["matched2k"]),
-                      "from_added": sum(g not in prefix for g in cohort_ids["matched2k"])},
+                      "from_added": sum(g not in prefix for g in cohort_ids["matched2k"]),
+                      "sha256": sha256_bytes(cohort_bytes["matched2k"]), "frozen_sha256": EXPECTED["matched2k"][0]},
         "fasta_links": sum(len(ids) for ids in cohort_ids.values()),
         "fasta_bytes_copied": 0,
         "fasta_sha256_checked": len(sources),

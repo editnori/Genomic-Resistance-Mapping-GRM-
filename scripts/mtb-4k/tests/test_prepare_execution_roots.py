@@ -75,9 +75,11 @@ class Prepare(unittest.TestCase):
         h = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()  # noqa: E731
         prep.EVIDENCE, prep.CANDIDATE = ev, c
         prep.ALLOWED_FASTA_PARENTS = set(stores)
+        matched = "".join(f"{g}\n" for g in prep.matched_selection(ids)).encode()
         prep.EXPECTED = {"full": (h(ev / "results/genomes-4000.txt"), 4000),
                          "prefix": (h(ev / "proofs/frozen-candidate-2000.txt"), 2000),
-                         "added": (h(ev / "results/added-2000.txt"), 2000)}
+                         "added": (h(ev / "results/added-2000.txt"), 2000),
+                         "matched2k": (hashlib.sha256(matched).hexdigest(), 2000)}
         return ids, stores, ev, c
 
     def main(self, *argv):
@@ -208,6 +210,20 @@ class Prepare(unittest.TestCase):
     def cohort_ids(self, name):
         ids = (prep.EVIDENCE / "results/genomes-4000.txt").read_text().splitlines()
         return {"prefix": ids[:2000], "added": ids[2000:], "full": ids, "matched2k": prep.matched_selection(ids)}[name]
+
+    def test_a_matched2k_selection_that_differs_from_its_frozen_list_stops(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            self.redirect(base)
+            prep.EXPECTED = {**prep.EXPECTED, "matched2k": ("0" * 64, 2000)}
+            with self.assertRaises(AssertionError):
+                self.main(base / "run")
+            self.assertFalse(os.path.lexists(base / "run"))
+
+    def test_the_frozen_matched2k_hash_is_the_contracts(self):
+        sys.path.insert(0, str(HERE))
+        import report_contract as vc  # noqa: E402
+        self.assertEqual(self.saved[3]["matched2k"][0], vc.RULES["matched2k"].genomes_sha256)
 
     def test_check_lane_refuses_links_where_grm_writes(self):
         with tempfile.TemporaryDirectory() as tmp:
