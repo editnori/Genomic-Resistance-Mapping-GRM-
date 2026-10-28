@@ -9,7 +9,8 @@
 set -euo pipefail
 S=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 REPO=$(cd -- "$S/../.." && pwd)
-T=$(cd -- "$(mktemp -d)" && pwd -P)
+. "$S/tests/tmproot.sh"
+T=$(make_test_root) || exit 2
 # Every assertion below must run: a command that fails under set -e or
 # pipefail (a SIGPIPE in a pipeline, say) would otherwise end the suite early
 # without a FAIL line, so the EXIT trap reports it, and the total is checked.
@@ -108,6 +109,10 @@ done
 printf 'echo ok\n' >"$T/good.sh"
 printf 'if then\n' >"$T/bad.sh"
 expect 0 '' "a multi-file bash -n misses a broken second file" -- bash -n "$T/good.sh" "$T/bad.sh"
+expect 1 'cannot create a temporary directory' "a failed mktemp stops a suite instead of using the current directory" -- \
+    env TMPDIR="$T/missing" bash -c '. "$1"; make_test_root' _ "$S/tests/tmproot.sh"
+expect 1 'contains the repository' "a temporary root that contains the repository is refused" -- \
+    env GRM_FAKE_TMP="$REPO" bash -c 'mktemp() { printf "%s\n" "$GRM_FAKE_TMP"; }; . "$1"; make_test_root' _ "$S/tests/tmproot.sh"
 expect 123 'syntax error' "the documented per-file check catches it" -- \
     sh -c 'printf "%s\n" "$1" "$2" | xargs -n1 bash -n' _ "$T/good.sh" "$T/bad.sh"
 
@@ -557,7 +562,7 @@ rm "$C/cloudflared.sha256"
 mv "$T/cloudflared.sha256" "$C/cloudflared.sha256"
 
 expect 1 '' "no stub grm, cargo or npm ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=182
+EXPECTED_ASSERTIONS=185
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"

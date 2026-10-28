@@ -22,7 +22,8 @@ os.execvp("bash", ["bash"] + sys.argv[1:])
 ' "${BASH_SOURCE[0]}" "$@"
 fi
 S=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-T=$(cd -- "$(mktemp -d)" && pwd -P)
+. "$S/tests/tmproot.sh"
+T=$(make_test_root) || exit 2
 export GRM_TEST_ROOT=$T
 # Kill everything started under this test: each process inherits GRM_TEST_ROOT.
 # A non-dumpable process hides its environment, so those are listed in EXTRA_PIDS.
