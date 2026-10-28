@@ -255,7 +255,7 @@ The projection is (25,088 s + (median r − 1) × 1.1 × 14,989 s) ÷ 3,600, whe
 
 The scan copies no input and writes no temporary file. It reads about 4.4 GiB in place under the input root: the five species' matrices, counts and structures, the curated phenotypes and the BV-BRC genome list.
 
-Each fit line it writes holds at most 30 tuning and 30 refit statuses and one weight per screened feature, so it stays under 256 KiB. Add a 1 MiB stderr allowance per dataset and 4 MiB of fixed files, and the 18 datasets need at most **75,249,664 bytes (71.8 MiB)**. For scale, the synthetic smoke run wrote 51,444 bytes for one dataset. Staging the release binary (7,652,728 bytes as built from this lane's source, needing glibc 2.34 or later), `scan.py` and the list adds 7,686,405 bytes (7.3 MiB). The scan therefore needs at most **82,936,069 bytes (79.1 MiB)** of new disk in all; the inputs-only check writes a few kilobytes more.
+Each fit line it writes holds at most 30 tuning and 30 refit statuses and one weight per screened feature, so it stays under 256 KiB. Add a 1 MiB stderr allowance per dataset and 4 MiB of fixed files, and the 18 datasets need at most **75,249,664 bytes (71.8 MiB)**. For scale, the synthetic smoke run wrote 51,444 bytes for one dataset. Staging the release binary (7,725,344 bytes as built for `znver2` from this lane's source, needing glibc 2.34 or later), `scan.py` and the list adds 7,759,021 bytes (7.4 MiB). The scan therefore needs at most **83,008,685 bytes (79.2 MiB)** of new disk in all; the inputs-only check writes a few kilobytes more. Building on Vast instead would add a release target directory of about 443 MB, which is why the binary is built elsewhere.
 
 `scan.py` prints its estimate before launch. It refuses to start if free space minus the estimate would fall below 30 GiB, and it checks again before each dataset. On 2026-10-28 Vast had 32.35 GiB free against that floor, and other lanes there were capped at 1.6 GiB of new disk combined; the scan's need is well inside that cap.
 
@@ -267,11 +267,16 @@ Its `catalog` is a symlink to `/root/grm/data/catalog`. If that catalog has chan
 
 ### Launch procedure
 
-The launch needs separate user approval. Build the binary from a clean export of the frozen commit, on Ubuntu 24.04 with glibc 2.39, as on Vast; nothing is compiled on Vast. Then stage it in a new directory on Vast, check the plan and inputs without fitting, and launch detached:
+The launch needs separate user approval. Build the binary from a clean export of the frozen commit, on Ubuntu 24.04 with glibc 2.39 as on Vast, so nothing is compiled on Vast.
+
+`.cargo/config.toml` builds for the build machine's CPU (`target-cpu=native`), and revision 7 was built on Vast for its AMD EPYC 7K62, which LLVM calls `znver2`. So set `RUSTFLAGS` to build for that CPU instead. Rust does not contract or reorder floating-point operations for a target CPU, so the fits are the same; the timing is comparable with revision 7's.
+
+Then stage the binary in a new directory on Vast, check the plan and inputs without fitting, and launch detached:
 
 ```bash
 # Build machine, clean export of the frozen commit
-cargo build --locked --offline --release --example lasso-scan   # target/release/examples/lasso-scan
+RUSTFLAGS="-C target-cpu=znver2" cargo build --locked --offline --release --example lasso-scan
+# -> target/release/examples/lasso-scan
 
 # Vast: stage lasso-scan, scripts/lasso-scan/scan.py and scripts/lasso-scan/scan-list.json in $SCAN
 SCAN=/root/grm-lasso-scan-r8-<date>; ROOT=/root/grm-revision7-preflight/data; COMMIT=<frozen sha>

@@ -2488,7 +2488,7 @@ mod tests {
         let mut support = Vec::new();
         for rule in rules {
             let row = Bits::from_indices(n, (0..n).filter(|&i| rule(i)));
-            support.push(row.count() as u32);
+            support.push(row.count());
             patterns.push_row(row.words());
         }
         SpeciesInputs {
