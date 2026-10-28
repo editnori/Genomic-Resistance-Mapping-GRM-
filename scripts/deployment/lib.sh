@@ -322,7 +322,8 @@ lock_free() {
 # to the start: it was seen in the group while the leader lived (by PID and
 # start time), it carries the start's token as GRM_DEPLOY_SPAWN in its
 # environment (inherited across fork and exec), or it holds the start's
-# marker. A member that is none of these is never signalled, and the stop
+# marker. A tie, once found, holds for that PID and start time for the rest of
+# the stop. A member that is none of these is never signalled, and the stop
 # fails, so the caller keeps its journal; that includes another user's or a
 # non-dumpable process, whose environment cannot be read.
 
@@ -345,26 +346,26 @@ group_members() {
 # START leads or led, may still have a live member. A live process with that
 # PID and another start time shows that the group ended and the number was
 # reused, so it counts as gone. Whether the members belong to the start is
-# group_untied's question.
+# group_ties's question.
 group_left() {
     if proc_stat "$1" && [ "$PS_START" != "$2" ]; then return 1; fi
     [ -n "$(group_members "$1")" ]
 }
-# group_untied GROUP TOKEN ID SEEN: the live members of GROUP not tied to a
-# start: not among SEEN's PID:START words, not carrying TOKEN (when given) as
-# GRM_DEPLOY_SPAWN, and not holding the marker with device:inode ID (when
-# given).
-group_untied() {
-    local m p out=''
+# group_ties GROUP TOKEN ID SEEN: sort the live members of GROUP. Print the
+# PID:START words of those tied to a start (among SEEN's PID:START words,
+# carrying TOKEN as GRM_DEPLOY_SPAWN when TOKEN is given, or holding the marker
+# with device:inode ID when ID is given), then "|", then the PIDs of the rest.
+group_ties() {
+    local m p tied='' untied=''
     for m in $(group_members "$1"); do
         p=${m%%:*}
-        case " $4 " in *" $m "*) continue ;; esac
-        if [ -n "$2" ] && [ "$(env_value "$p" GRM_DEPLOY_SPAWN)" = "$2" ]; then continue; fi
-        if [ -n "$3" ] && holds "$p" "$3"; then continue; fi
+        case " $4 " in *" $m "*) tied+=" $m"; continue ;; esac
+        if [ -n "$2" ] && [ "$(env_value "$p" GRM_DEPLOY_SPAWN)" = "$2" ]; then tied+=" $m"; continue; fi
+        if [ -n "$3" ] && holds "$p" "$3"; then tied+=" $m"; continue; fi
         alive "$p" "${m#*:}" || continue
-        out+=" $p"
+        untied+=" $p"
     done
-    printf '%s\n' "${out# }"
+    printf '%s|%s\n' "${tied# }" "${untied# }"
 }
 # stop_tree PID START TOKEN ID [group]: stop the process that started at START,
 # and its process group when it leads one (a process started through setsid),
@@ -392,7 +393,7 @@ stop_tree() {
     # A group already without its leader, with a member that is not the
     # start's, is left alone at once: waiting would not tie it.
     if [ -n "$group" ] && ! alive "$pid" "$start"; then
-        untied=$(group_untied "$group" "$token" "$id" '')
+        sort_members
         if [ -n "$untied" ]; then untied_err; return 1; fi
     fi
     for sig in TERM KILL; do
@@ -404,7 +405,7 @@ stop_tree() {
             sleep 0.25
         done
     done
-    if [ -n "$group" ] && ! alive "$pid" "$start"; then untied=$(group_untied "$group" "$token" "$id" "$seen"); fi
+    if [ -n "$group" ] && ! alive "$pid" "$start"; then sort_members; fi
     if [ -n "$untied" ]; then untied_err; else STOP_ERR="pid $pid${group:+ or its process group} would not stop"; fi
     return 1
 }
@@ -419,10 +420,22 @@ tree_send() {
     if alive "$pid" "$start"; then kill -s "$1" "$pid" 2>/dev/null || true; fi
     [ -n "$group" ] && group_left "$group" "$start" || return 0
     if ! alive "$pid" "$start"; then
-        untied=$(group_untied "$group" "$token" "$id" "$seen")
+        sort_members
         [ -z "$untied" ] || return 0
     fi
     kill -s "$1" -- "-$group" 2>/dev/null || true
+}
+# sort_members: set untied to the group's members not tied to the start, and
+# add those that are to seen. A tie holds for that process (its PID and start
+# time) for the rest of the stop, so one that execs without the token after it
+# was tied, as a descendant starting up may, stays tied.
+sort_members() {
+    local out m
+    out=$(group_ties "$group" "$token" "$id" "$seen")
+    for m in ${out%%|*}; do
+        case " $seen " in *" $m "*) ;; *) seen+=" $m" ;; esac
+    done
+    untied=${out#*|}
 }
 # note_members: while the process lives, add its group's members to seen. They
 # count only when it still lives after they were listed.

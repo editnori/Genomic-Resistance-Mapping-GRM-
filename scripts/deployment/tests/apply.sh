@@ -1214,8 +1214,10 @@ check "that stage wrote no approval, and its receipts say the candidate exited" 
 # while the leader lived ("running"), and when the leader has already exited
 # and the descendant carries the token ("exited"). With the leader gone and
 # neither token nor marker, nothing ties the group to the start, so mark_stop
-# signals no member and fails ("untied"). It must also fail when a stop failed
-# even if nothing holds the marker by its final check ("failing").
+# signals no member and fails ("untied"). A tie holds for that process: one
+# that carries the token when the stop begins and then execs without it, a
+# second later, is still killed ("sticky"). mark_stop must also fail when a
+# stop failed even if nothing holds the marker by its final check ("failing").
 cat >"$T/group-stop.sh" <<'SH'
 set -u
 source "$1/lib.sh"
@@ -1230,23 +1232,38 @@ if [ "$mode" = failing ]; then
     echo "rc=$? err=$MARK_ERR"
     exit 0
 fi
+# The sticky descendant: python, until leader.go2 exists; then sleep, without the token.
+cat >"$dir/drop-token.py" <<'PY'
+import os, sys, time
+while not os.path.exists(sys.argv[1]):
+    time.sleep(0.05)
+env = {k: v for k, v in os.environ.items() if k != "GRM_DEPLOY_SPAWN"}
+os.execvpe("sleep", ["sleep", "300"], env)
+PY
 ( exec env GRM_DEPLOY_SPAWN="$tok" setsid bash -c '
     case $2 in running | untied) unset GRM_DEPLOY_SPAWN ;; esac
-    (trap "" TERM; exec sleep 300 '"$MARK_FD"'>&-) &
+    if [ "$2" = sticky ]; then
+        (trap "" TERM; exec python3 -I "$3" "$1.go2" '"$MARK_FD"'>&-) &
+    else
+        (trap "" TERM; exec sleep 300 '"$MARK_FD"'>&-) &
+    fi
     echo "$!" >"$1.kid"
     while [ ! -e "$1.go" ]; do sleep 0.05; done
     [ "$2" = running ] || exit 0
-    wait' _ "$dir/leader" "$mode" ) &
+    wait' _ "$dir/leader" "$mode" "$dir/drop-token.py" ) &
 leader=$!
 for _ in $(seq 100); do [ -s "$dir/leader.kid" ] && break; sleep 0.05; done
 kid=$(cat "$dir/leader.kid")
 lstart=$(proc_start "$leader")
 kstart=$(proc_start "$kid")
-for _ in $(seq 100); do ! holds "$kid" "$MARK_ID" && [ "$(proc_comm "$kid")" = sleep ] && break; sleep 0.05; done
+want=sleep
+if [ "$mode" = sticky ]; then want=python3; fi
+for _ in $(seq 100); do ! holds "$kid" "$MARK_ID" && [ "$(proc_comm "$kid")" = "$want" ] && break; sleep 0.05; done
 proc_stat "$kid" && [ "$PS_PGRP" = "$leader" ] || { echo "the descendant is not in the leader's group"; exit 3; }
 : >"$dir/leader.go"
 if [ "$mode" != running ]; then wait "$leader"; fi
 close_fd MARK_FD
+if [ "$mode" = sticky ]; then (sleep 1; : >"$dir/leader.go2") & fi
 mark_stop "$MARK_ID" "$MARK_PATH" "$leader" "$lstart" "$tok"
 rc=$?
 if alive "$kid" "$kstart"; then k=alive; else k=gone; fi
@@ -1260,6 +1277,8 @@ expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant carr
 expect 0 '^rc=1 kid=alive err=process group [0-9]+ has members \(pids [0-9]+\) that cannot be tied to this start' \
     "mark_stop signals no member of an exited leader's group that has neither the token nor the marker, and fails" -- \
     timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-untied" untied
+expect 0 '^rc=0 kid=gone err=$' "mark_stop still kills a TERM-ignoring descendant that carried the token and then exec'd without it" -- \
+    timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-sticky" sticky
 expect 0 '^rc=1 err=pid [0-9]+ would not stop$' "mark_stop fails after a failed stop even when no holder is left" -- \
     timeout -k 5 60 bash "$T/group-stop.sh" "$S" "$T/groups-failing" failing
 
@@ -1506,9 +1525,11 @@ kill -KILL "$forged" "$forged2" 2>/dev/null || true
 
 # A cloudflared that leaves a process in its group. With kid.mode in the
 # connector directory, the stub forks a descendant that closes every inherited
-# descriptor (connector.spawn included) and stays in its process group, writes
-# kid.pid and stub.pid, and exits. "keep" keeps its environment, so the run's
-# token; "ignore" keeps it and ignores SIGTERM; "untied" drops the token.
+# descriptor (connector.spawn included) and stays in its process group, waits
+# until that descendant runs sleep (so its environment and signal handling are
+# final), writes kid.pid and stub.pid, and exits. "keep" keeps the run's token;
+# "ignore" keeps it and ignores SIGTERM; "untied" runs the stub again without
+# the token first, so the descendant never carries it.
 C3=$T/conn3
 make_connector "$C3"
 cat >"$C3/cloudflared" <<'SH'
@@ -1516,18 +1537,18 @@ cat >"$C3/cloudflared" <<'SH'
 case "$1" in --version) echo "cloudflared version test"; exit 0 ;; esac
 mode=$(cat kid.mode 2>/dev/null || true)
 [ -n "$mode" ] || exec sleep 300
+if [ "$mode" = untied ] && [ -n "${GRM_DEPLOY_SPAWN:-}" ]; then exec env -u GRM_DEPLOY_SPAWN "$0" "$@"; fi
 rm -f kid.mode
 python3 -I -c '
 import os, signal, sys
-env = dict(os.environ)
 if sys.argv[1] == "ignore":
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
-if sys.argv[1] == "untied":
-    env.pop("GRM_DEPLOY_SPAWN", None)
 os.closerange(3, 65536)
-os.execvpe("sleep", ["sleep", "300"], env)
+os.execvp("sleep", ["sleep", "300"])
 ' "$mode" </dev/null >/dev/null 2>&1 &
-echo "$!" >kid.pid.tmp && mv kid.pid.tmp kid.pid
+kid=$!
+for _ in $(seq 100); do [ "$(cat "/proc/$kid/comm" 2>/dev/null)" = sleep ] && break; sleep 0.05; done
+echo "$kid" >kid.pid.tmp && mv kid.pid.tmp kid.pid
 echo "$$" >stub.pid
 exit 0
 SH
@@ -1607,7 +1628,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((479 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((480 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
