@@ -10,11 +10,14 @@ software built for them:
    and open at once. A prototype out-of-core merge over column-block
    partials needs only one block of ksets at a time.
 
-Status, 2026-10-27: software and synthetic tests only. No biological input
+Status, 2026-10-28: software and synthetic tests only. No biological input
 was merged, no 4k or 8k MTB matrix was built, and nothing in the pipeline
-(`species.rs`, `main.rs`) calls the out-of-core path yet. There is no frozen
-cap-4000 cohort; the MTB follow-up waits for a newly frozen one and for
-fresh independent review of both the matrix change and the disk strategy.
+(`species.rs`, `main.rs`) calls the out-of-core path yet. The final
+integrity review's remaining findings are fixed: the re-save space check
+(M1), the expected-k binding (L1), orphan-partial cleanup (L2), and a
+durable matrix save. Those fixes still need a fresh independent review.
+The cap-4000 cohort is now frozen, but the MTB follow-up also waits for a
+reviewed disk-sparse wiring change.
 
 The wide key removes the packed **algorithmic** ceiling, not the downstream
 safety gate. Every public build/merge entry point, and `FeatureMatrix::load`,
@@ -73,6 +76,8 @@ Guards, all hard errors and never truncation:
   `build_from_partials_with`; production code has no uncapped public option.
 - Mixed k and duplicate genome names are rejected before the merge. Partial
   columns carry names and per-kset FNV digests, and may not duplicate a name.
+  `build_from_partials` also takes the k the matrix is built at, and names
+  any block written at another k.
 - A zero gap after a kset's first value in a bucket is a repeated k-mer and
   is rejected. The shared grouping code also rejects a repeated
   (k-mer, genome) entry. Full partial rows are derived from their actual
@@ -83,8 +88,10 @@ Guards, all hard errors and never truncation:
 - n must fit the u32 genome index and support counters (n <= 2^32 - 1).
 - Pattern ids stay below 2^32 - 1, globally and per bucket.
 - When opening inputs runs out of file descriptors (EMFILE/ENFILE), the
-  error names the `ulimit -n` needed and points to the column-block merge.
-  The partial hint counts open blocks, not the original number of genomes.
+  error names the `ulimit -n` needed and what to do instead. `build` points
+  to the column-block merge, `write_partial` to narrower blocks, and
+  `build_from_partials` to wider blocks. The merge hint counts open blocks,
+  not the original number of genomes.
 
 When the wide key is used, `build` prints one stderr line saying so;
 supported cohorts print nothing new.
@@ -153,22 +160,32 @@ does not apply either.
   files, `sync_all`ed, renamed, and followed by a parent-directory sync.
   Success therefore means both are durable before a caller deletes ksets.
   Temporary suffixes append to the whole file name, so `x.a` and `x.b`
-  cannot collide.
+  cannot collide. Only one writer may write a given block at a time: two
+  writers to the same `out` share, and truncate, `<out>.part`.
 - A rewrite retires the old receipt and partial before writing the new one.
-  An error after creation removes the temporary file; a missing receipt, a
-  leftover `.part`, or a partial without its matching receipt is not a
-  resumable block. A failed rewrite consequently leaves no stale block that
-  a later merge can accept.
-- `build_from_partials(partials, columns, min_support, threads_chunk)`
-  requires the expected genome/kset-digest list. It opens one fd per block,
-  verifies every receipt's SHA and byte count against its file, checks the
-  receipt against the header, and then checks every column against the
-  expected name and digest. Thus a catalog change, re-assembly/recount, file
-  replacement, edited receipt, or interrupted rewrite is refused rather than
-  silently reused. Blocks must share k and tile columns 0..n in order,
-  without gaps, overlaps, or duplicates. For each bucket it k-way merges the
-  blocks by k-mer, joins their rows at word offsets, and uses the same
-  pattern collector and global assembly as `build`.
+  An error before the partial's rename removes the temporary file; a missing
+  receipt, a leftover `.part`, or a partial without its matching receipt is
+  not a resumable block. If the directory sync after the rename fails, or
+  the receipt's write does, the renamed partial and any receipt are removed
+  again and the directory synced, so the failure holds no disk. If that
+  cleanup fails too, the error says so and names both files to delete. A
+  failed rewrite consequently leaves no stale block that a later merge can
+  accept.
+- `build_from_partials(partials, columns, k, min_support, threads_chunk)`
+  requires the expected genome/kset-digest list and the k the matrix is
+  built at (the config's). It opens one fd per block, verifies every
+  receipt's SHA and byte count against its file, checks the receipt against
+  the header, refuses a block written at another k, and then checks every
+  column against the expected name and digest. Thus a catalog change,
+  re-assembly/recount, k change, file replacement, edited receipt, or
+  interrupted rewrite is refused rather than silently reused, and the error
+  names the block to rewrite. The k check is needed on its own: a kset
+  digest covers values only, so every empty kset has the same digest at
+  every k, and a block whose columns are all empty would otherwise match at
+  the wrong k. Blocks must tile columns 0..n in order, without gaps,
+  overlaps, or duplicates. For each bucket it k-way merges the blocks by
+  k-mer, joins their rows at word offsets, and uses the same pattern
+  collector and global assembly as `build`.
 - The partial reader validates magic/version, reserved zero bytes, k, bucket
   width, block alignment and cap, bounded name and width allocations,
   per-bucket counts and offsets, strictly ascending in-bucket k-mers, clear
@@ -176,22 +193,28 @@ does not apply either.
   merge. The supported-cohort result is byte-identical to `build`, including
   genome order. As with `build`, the pipeline caller must fill the matrix
   summary's `kset_digests` from its counted manifest.
+- The binding protects against accidental change, not deliberate forgery.
+  Kset digests are 64-bit FNV, and the receipt is plain JSON that anyone
+  who can write the partial can also rewrite. `KsetReader::open` does not
+  check a kset's reserved header bytes; this predates the partials and does
+  not weaken them, because the digest covers every value read.
 
 The disk-sparse sequence a caller would run, which the small equivalence
 test and benchmark simulate, is:
 
     derive expected names and kset digests from the counted manifest
-    for each block of W genomes, in column order:
+    for each block of W genomes, in column order, one writer per block:
         ensure_free_space(block dir, estimated new bytes, reserve)
         count the block's genomes to ksets
         write_partial(block ksets, expected columns, first_col, reserve)
         only after success, delete the block's ksets
-    build_from_partials(all partials, all expected columns)
+    build_from_partials(all partials, all expected columns, config k)
     save_with_reserve(matrix dir, reserve)
+    only after the save succeeds, delete the partials
 
-Resume must reconstruct the same expected list and rewrite every missing or
-stale block. Receipts make that decision explicit; they do not replace the
-caller's counted-manifest bookkeeping.
+Resume must reconstruct the same expected list and k, and rewrite every
+missing or stale block. Receipts make that decision explicit; they do not
+replace the caller's counted-manifest bookkeeping.
 
 ### Resource model
 
@@ -209,14 +232,39 @@ caller's counted-manifest bookkeeping.
 
 `ensure_free_space(dir, need, reserve)` provides the caller's pre-count
 check on 64-bit Linux (`statvfs` available bytes). `write_partial` checks
-its header/table and each encoded chunk against the reserve while writing;
-`FeatureMatrix::save_with_reserve` checks the complete matrix save, with
-files from the save it replaces counted as reusable space. The merge itself
-only reads partials; its new output is the subsequent matrix save. These
-checks are best-effort preflights, not space reservations: another writer,
-metadata allocation, or delayed allocation can still cause ENOSPC. Write
-errors propagate and partial temporaries are cleaned up, but a real full
-filesystem and power-loss recovery have not been fault-injected.
+its header/table and each encoded chunk against the reserve while writing.
+`FeatureMatrix::save_with_reserve` checks the whole save before it writes
+or removes anything, against the most the save holds at any point, not its
+net change. The merge itself only reads partials; its new output is the
+subsequent matrix save.
+
+The peak matters because a save replaces files one at a time. It removes
+`matrix.json`, then truncates and rewrites `patterns.bin`, `support.bin`,
+`kmer_offsets.bin` and `kmers.bin` in that order, and writes the summary
+last. A re-save whose early files grow while a later one shrinks needs
+more than its net change partway through: in the review's case, a 3-byte
+net change needed 19,607 bytes. At MTB scale, a `patterns.bin` that grows
+ahead of a shrinking `kmers.bin` could need gigabytes. The check therefore
+uses the largest running total of that order over the files already there,
+which for a first save is every byte. File lengths are counted, not
+allocated blocks, so block rounding and metadata come out of the reserve.
+
+These checks are best-effort preflights, not space reservations: another
+writer, metadata allocation, or delayed allocation can still cause ENOSPC.
+Write errors propagate and partial temporaries are cleaned up, but a real
+full filesystem and power-loss recovery have not been fault-injected.
+
+`FeatureMatrix::save` and `save_with_reserve` are durable when they return
+Ok. Each binary is synced, then the directory, and the summary goes
+through a synced temporary, a rename and another directory sync. A newly
+created matrix directory has its parent synced too. The output bytes are
+unchanged. The save is per file, not a transactional swap of one complete
+generation for another: once it starts writing, the old matrix is gone.
+`matrix.json` is removed, durably, before any binary is touched, and is
+written last. An interrupted or failed save therefore leaves no
+`matrix.json`, and `load` refuses the directory until a save succeeds. The
+disk-sparse sequence must keep its partials until the save returns Ok, so
+that a failed save can be redone from them.
 
 For the stated 4,000-genome budget (about 24 MB per kset, from the 96 GB
 estimate), and assuming D_block of 4.4M to 8.8M distinct 31-mers per block
@@ -280,7 +328,15 @@ Out-of-core integrity and scaling:
 - `partials_must_tile_the_columns_in_order_with_one_k`: swapped, missing,
   duplicated, leading-gap and reordered-tail partials are each rejected;
   so are incomplete column lists, an empty list, a block start off a
-  64-column boundary, wrong expected-column counts, and mixed k.
+  64-column boundary, wrong expected-column counts, and an expected k
+  outside 5..=32. A k = 32 block among k = 31 blocks is named as stale
+  against k = 31, and the first k = 31 block is named against k = 32.
+- `partials_are_bound_to_the_expected_k_even_when_every_kset_is_empty`:
+  the review's L1 case. Two all-empty k = 31 blocks have the same names and
+  digests as the k = 32 ones, yet are refused against k = 32 with the block
+  named. Either old block mixed among new ones is named, and rewriting it
+  from the current ksets resumes. Same-k all-empty blocks still merge to
+  `build`'s matrix at `min_support` 0 and 1, for k = 31 and 32.
 - `partial_files_reject_corruption`: bad magic/version, reserved bytes, k,
   bucket width, first column and cap, zero/huge width, k-mer and full-row
   totals, overlong names, bucket counts one more/fewer, trailing padding,
@@ -300,19 +356,47 @@ Out-of-core integrity and scaling:
   keeps g1's bit clear and agrees with the oracle and stock build.
 - `dense_buckets_and_uneven_blocks_match_build_under_any_schedule`: crowded
   buckets with real non-full rows, uneven and short final blocks, write and
-  merge chunk sizes 1, 7, and 1024, all compared with packed/wide `build`.
+  merge chunk sizes 1, 7, and 1024, at `min_support` 0 and 1 (whose
+  matrices differ), all compared with packed/wide `build`.
 - `free_space_is_measured_and_kept_for_partials_and_saves`: statvfs against
-  `df`, reserve refusal before output, exact replacement-size accounting,
-  and no summary after a refused save. The stale-partial test injects a
-  mid-write free-space failure and checks temporary/receipt cleanup and
-  refusal on resume.
+  `df`, reserve refusal before output, a same-size re-save that needs no
+  new space, exact first-save accounting, and no summary after a refused
+  save. The stale-partial test injects a mid-write free-space failure and
+  checks temporary/receipt cleanup and refusal on resume.
+- `a_resave_is_checked_against_its_peak_not_its_net_change`: the review's
+  M1 shape, where `patterns.bin`, `support.bin` and `kmer_offsets.bin` grow
+  before `kmers.bin` shrinks. It runs at the review's sizes (net 3 B, peak
+  19,607 B) and 128x larger (net 5 B, peak 2,620,563 B). With free space
+  at net + reserve (what the old check required) or at peak + reserve - 1,
+  the save is refused, and the old matrix stays loadable and unchanged. At
+  peak + reserve it is accepted and saves the new bytes. The reverse
+  re-save needs nothing new. A first save still needs every byte and is
+  refused one byte short.
+- `a_save_is_durable_before_it_returns_and_a_failed_one_leaves_no_summary`:
+  records the save's syncs in order: new directories, the summary's
+  removal, each binary, the directory, then the summary's temporary and
+  its rename. A sync failure injected at each of a re-save's eight steps,
+  or while creating a new directory, fails the save and leaves no
+  `matrix.json` or `matrix.json.part`, so `load` refuses the directory
+  until a save succeeds.
+- `a_partial_that_fails_after_its_rename_is_removed_again`: the review's
+  L2 case. A sync failure is injected at each of a partial write's five
+  sync points, before the rename (cleanup of the retired files, the
+  partial) and after it (the rename's directory sync, the receipt, the
+  receipt's rename). Each leaves nothing at the block's paths, and a
+  rewrite then merges to `build`'s matrix. The review's real failure (the
+  receipt's temporary cannot be created) also removes the renamed partial.
+  A cleanup whose directory sync fails too names both files to delete. A
+  successful write keeps its partial and receipt, and they merge.
 - `the_disk_sparse_sequence_makes_the_matrix_build_makes`: the same block
   helper used by `bench_block_case` deletes each synthetic block's ksets,
   leaves only partials/receipts, and matches stock `build`.
 - `partials_merge_under_an_open_file_limit_that_stops_build`: reruns the
   test binary under `ulimit -Sn 96`. There, `build` on 200 genomes fails
-  with the `ulimit -n` hint, while 64-genome partials complete. The child's
-  matrix digest equals `build`'s digest from the parent, which has no limit.
+  with the `ulimit -n` hint and points to `write_partial`, a 200-genome
+  `write_partial` fails with a hint to write narrower blocks and leaves no
+  file, and 64-genome partials complete. The child's matrix digest equals
+  `build`'s digest from the parent, which has no limit.
 
 Tests that hold thousands of ksets open take turns behind a mutex and check
 `/proc/self/limits` first. They need a soft open-file limit of at least
@@ -445,10 +529,13 @@ biological run. After that, at minimum:
 - **Pipeline integration (not built).** Nothing calls the partial path.
   The count -> partial -> delete loop belongs in `species.rs` / `main.rs`
   and needs its own change and review. It must persist and reconstruct the
-  expected names and kset digests, use the free-space/reserve APIs with a
-  defensible estimate, delete ksets only after durable partial+receipt
-  success, and rewrite missing/stale blocks on resume. The current tests
-  exercise library calls, not pipeline wiring or manifest bookkeeping.
+  expected names and kset digests and pass the config's k, use the
+  free-space/reserve APIs with a defensible estimate, delete ksets only
+  after durable partial+receipt success, and rewrite missing/stale blocks
+  on resume. It must also run one writer per block, delete any files a
+  failed cleanup names before resuming, and keep partials until the matrix
+  save returns Ok. The current tests exercise library calls, not pipeline
+  wiring or manifest bookkeeping.
 - **Other stages read ksets.** The count cache treats an existing kset as a
   cache hit. `structure` takes MinHash sketches from ksets. Probe panels
   (`analysis.rs` -> `probes::build_probes`) read ksets and fall back when
@@ -481,7 +568,10 @@ biological run. After that, at minimum:
   guarantees. An 8,193-input stock build additionally needs more than 8,192
   available fds plus headroom, deliberate limit changes, and downstream
   review; it does not work under the pipeline defaults.
-- **Failure evidence.** Tests inject free-space exhaustion and corrupt or
-  stale files, but do not fill a real filesystem, kill a process mid-write,
-  or verify power-loss recovery on the deployment filesystem. fsync and
+- **Failure evidence.** Tests inject free-space exhaustion, corrupt or
+  stale files, a blocked receipt, and a failure at every sync point of a
+  partial write and a matrix save. Those sync failures come from a test
+  hook called just before each sync, not from a real fsync error. The tests
+  do not fill a real filesystem, kill a process mid-write, or verify
+  power-loss recovery on the deployment filesystem. fsync and
   directory-sync behavior therefore remains a deployment validation item.
