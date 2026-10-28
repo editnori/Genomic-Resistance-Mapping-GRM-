@@ -63,6 +63,15 @@
 
   /* The GRM mark: two strands in two blues, the call in coral, edges in the
      paper it sits on. The neutral face is the top before the call lands. */
+  /* Drug-class families (src/ui/drugClass.tsx): three identity hues that
+     pass the all-pairs palette checks on paper and paper-pure, and a
+     neutral for every other class. The class name always sits beside the
+     mark, the relief the two sub-3:1 light marks require. */
+  --class-beta-lactam: #2a78d6;
+  --class-aminoglycoside: #eda100;
+  --class-quinolone: #e87ba4;
+  --class-other: #8e8e93;
+
   --mark-a: #4b74e2;
   --mark-b: #3155b4;
   --mark-top: #ff8c66;
@@ -106,6 +115,11 @@
   --chart-tip-bg: #1d1d20;
   --chart-tip-border: rgb(242 242 240 / 0.16);
   --chart-tip-text: #f2f2f0;
+
+  --class-beta-lactam: #3987e5;
+  --class-aminoglycoside: #c98500;
+  --class-quinolone: #d55181;
+  --class-other: #7a7a80;
 
   --mark-a: #6a8df5;
   --mark-b: #3557c0;
@@ -281,11 +295,11 @@
     border-top: 0;
   }
 
-  /* Datasets prints its table key between the search row and the table.
-     Give the docked rail the same offset so its first question starts on
-     the table-header line; the sheet has no table key beside it. */
+  /* Datasets prints its two-line table key between the search row and the
+     table. Give the docked rail the same offset so its first question
+     starts on the table-header line; the sheet has no table key beside it. */
   [data-view-options-mode='inline'] .filter-rail-body > .filter-group:first-child {
-    padding-top: 2.75rem;
+    padding-top: 4.125rem;
   }
 
   .filter-group-label {
@@ -678,6 +692,36 @@ dialog .scroll-frame {
 
   [data-verdict='meets'] svg {
     color: CanvasText;
+  }
+
+  /* A drug-class mark keeps its shape in the system ink. */
+  .class-glyph {
+    forced-color-adjust: none;
+  }
+
+  .class-glyph circle:not([fill='none']),
+  .class-glyph rect,
+  .class-glyph path {
+    fill: CanvasText;
+  }
+
+  .class-glyph circle[fill='none'] {
+    stroke: CanvasText;
+  }
+
+  /* Keep semantic primer fills visible; labels and position remain redundant. */
+  [data-primer-figure] [data-hidden],
+  [data-primer-figure] [data-hidden-swatch],
+  [data-primer-figure] [data-error] {
+    forced-color-adjust: none;
+  }
+
+  /* A selected control keeps a visible edge where its fill drops out. */
+  [aria-pressed='true'],
+  nav [aria-current='page'],
+  nav [aria-current='true'] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 }
 

@@ -5,9 +5,27 @@
 //! standard deviation on the fitting samples, which is the raw-scale form of
 //! fitting standardized features: rare and common features compete on equal
 //! terms. Class-balancing weights match the tree learners.
+//!
+//! Both loops are capped. A point that stops at a cap is not a converged fit,
+//! and its `Convergence` says so; see docs/lasso-stopping.md.
 
 use crate::bits::{self, BitMatrix, Bits};
 use serde::{Deserialize, Serialize};
+
+/// Stopping rule for one penalty point.
+#[derive(Clone, Copy, Debug)]
+struct Limits {
+    irls_steps: usize,
+    sweeps: usize,
+}
+
+/// 25 IRLS steps; 100,000 coordinate-descent sweeps per step, glmnet's
+/// default `maxit`. A 300-sweep cap stopped ill-conditioned panels well short
+/// of the optimum (C. jejuni ciprofloxacin, excess objective up to 2.7e-4).
+const LIMITS: Limits = Limits {
+    irls_steps: 25,
+    sweeps: 100_000,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LassoModel {
@@ -15,6 +33,24 @@ pub struct LassoModel {
     /// Non-zero coefficients as (feature, weight).
     pub coef: Vec<(u32, f64)>,
     pub lambda: f64,
+}
+
+/// How the solve at one penalty point stopped.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Convergence {
+    /// IRLS steps taken.
+    pub irls_steps: u32,
+    /// IRLS steps whose coordinate descent stopped at the sweep cap unsettled.
+    pub sweep_cap_hits: u32,
+    /// The IRLS change fell below tolerance and that step's coordinate
+    /// descent settled. False when either cap ended the solve.
+    pub converged: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct LassoFit {
+    pub model: LassoModel,
+    pub convergence: Convergence,
 }
 
 impl LassoModel {
@@ -124,6 +160,8 @@ impl Problem {
 
 /// Fits the path at each lambda (descending), warm-starting each from the
 /// last. Stops early once more than `max_nonzero` coefficients are active.
+/// Points that stopped at a cap are reported on stderr; use
+/// `fit_path_with_status` to act on them.
 pub fn fit_path(
     x: &BitMatrix,
     y: &Bits,
@@ -132,6 +170,33 @@ pub fn fit_path(
     n_lambdas: usize,
     max_nonzero: usize,
 ) -> Vec<LassoModel> {
+    report_unconverged(
+        "fit_path",
+        fit_path_with_status(x, y, fit, features, n_lambdas, max_nonzero),
+    )
+}
+
+/// `fit_path`, with how each point stopped.
+pub fn fit_path_with_status(
+    x: &BitMatrix,
+    y: &Bits,
+    fit: &Bits,
+    features: &[u32],
+    n_lambdas: usize,
+    max_nonzero: usize,
+) -> Vec<LassoFit> {
+    fit_path_limited(x, y, fit, features, n_lambdas, max_nonzero, LIMITS)
+}
+
+fn fit_path_limited(
+    x: &BitMatrix,
+    y: &Bits,
+    fit: &Bits,
+    features: &[u32],
+    n_lambdas: usize,
+    max_nonzero: usize,
+    limits: Limits,
+) -> Vec<LassoFit> {
     if n_lambdas == 0 || fit.count() == 0 {
         return vec![];
     }
@@ -144,10 +209,12 @@ pub fn fit_path(
     let lambdas: Vec<f64> = (0..n_lambdas)
         .map(|k| lmax * ratio.powf(k as f64 / (n_lambdas - 1).max(1) as f64))
         .collect();
-    solve_path(&prob, &lambdas, max_nonzero)
+    solve_path(&prob, &lambdas, max_nonzero, limits)
 }
 
 /// Refit the selected penalty path without recomputing its scale or spacing.
+/// Points that stopped at a cap are reported on stderr; use
+/// `refit_path_with_status` to act on them.
 pub fn refit_path(
     x: &BitMatrix,
     y: &Bits,
@@ -155,14 +222,52 @@ pub fn refit_path(
     features: &[u32],
     lambdas: &[f64],
 ) -> Vec<LassoModel> {
+    report_unconverged(
+        "refit_path",
+        refit_path_with_status(x, y, fit, features, lambdas),
+    )
+}
+
+/// `refit_path`, with how each point stopped.
+pub fn refit_path_with_status(
+    x: &BitMatrix,
+    y: &Bits,
+    fit: &Bits,
+    features: &[u32],
+    lambdas: &[f64],
+) -> Vec<LassoFit> {
     assert!(lambdas.iter().all(|v| v.is_finite() && *v > 0.0));
     if fit.count() == 0 {
         return vec![];
     }
-    solve_path(&Problem::new(x, y, fit, features), lambdas, usize::MAX)
+    solve_path(
+        &Problem::new(x, y, fit, features),
+        lambdas,
+        usize::MAX,
+        LIMITS,
+    )
 }
 
-fn solve_path(prob: &Problem, lambdas: &[f64], max_nonzero: usize) -> Vec<LassoModel> {
+fn report_unconverged(caller: &str, path: Vec<LassoFit>) -> Vec<LassoModel> {
+    for (i, f) in path.iter().enumerate() {
+        let c = f.convergence;
+        if !c.converged {
+            eprintln!(
+                "lasso {caller}: point {i} (lambda {:e}) stopped at a cap unconverged: \
+                 {} IRLS steps (cap {}), {} sweep-cap hits (cap {} sweeps)",
+                f.model.lambda, c.irls_steps, LIMITS.irls_steps, c.sweep_cap_hits, LIMITS.sweeps
+            );
+        }
+    }
+    path.into_iter().map(|f| f.model).collect()
+}
+
+fn solve_path(
+    prob: &Problem,
+    lambdas: &[f64],
+    max_nonzero: usize,
+    limits: Limits,
+) -> Vec<LassoFit> {
     let n = prob.samples.len();
     let nf = n as f64;
 
@@ -172,7 +277,13 @@ fn solve_path(prob: &Problem, lambdas: &[f64], max_nonzero: usize) -> Vec<LassoM
     let mut path = Vec::new();
 
     for &lambda in lambdas {
-        for _irls in 0..25 {
+        let mut convergence = Convergence {
+            irls_steps: 0,
+            sweep_cap_hits: 0,
+            converged: false,
+        };
+        for _irls in 0..limits.irls_steps {
+            convergence.irls_steps += 1;
             let mut w = vec![0.0; n];
             let mut r = vec![0.0; n];
             for j in 0..n {
@@ -186,7 +297,8 @@ fn solve_path(prob: &Problem, lambdas: &[f64], max_nonzero: usize) -> Vec<LassoM
             // coefficients until they settle, then confirm with a full sweep
             // that nothing new enters.
             let mut active_only = false;
-            for _cd in 0..300 {
+            let mut inner_settled = false;
+            for _cd in 0..limits.sweeps {
                 let mut sweep_change: f64 = 0.0;
                 for (k, col) in prob.columns.iter().enumerate() {
                     if active_only && beta[k] == 0.0 {
@@ -222,10 +334,14 @@ fn solve_path(prob: &Problem, lambdas: &[f64], max_nonzero: usize) -> Vec<LassoM
                 if active_only {
                     active_only = !settled;
                 } else if settled {
+                    inner_settled = true;
                     break;
                 } else {
                     active_only = true;
                 }
+            }
+            if !inner_settled {
+                convergence.sweep_cap_hits += 1;
             }
             // Recompute the linear predictor from the coefficients.
             eta.iter_mut().for_each(|e| *e = b0);
@@ -237,6 +353,7 @@ fn solve_path(prob: &Problem, lambdas: &[f64], max_nonzero: usize) -> Vec<LassoM
                 }
             }
             if max_change < 1e-5 {
+                convergence.converged = inner_settled;
                 break;
             }
         }
@@ -247,10 +364,13 @@ fn solve_path(prob: &Problem, lambdas: &[f64], max_nonzero: usize) -> Vec<LassoM
             .map(|(k, b)| (prob.features[k], *b))
             .collect();
         let active = coef.len();
-        path.push(LassoModel {
-            intercept: b0,
-            coef,
-            lambda,
+        path.push(LassoFit {
+            model: LassoModel {
+                intercept: b0,
+                coef,
+                lambda,
+            },
+            convergence,
         });
         if active > max_nonzero {
             break;
@@ -351,6 +471,387 @@ mod tests {
         assert!(path.iter().any(|m| !m.coef.is_empty()));
         for m in &path {
             assert!(m.coef.iter().all(|&(f, _)| f == 0), "{:?}", m.coef);
+        }
+    }
+
+    #[test]
+    fn a_cap_that_ends_the_solve_is_flagged() {
+        let n = 300;
+        let marker = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let y = Bits::from_indices(
+            n,
+            (0..n).filter(|i| (i % 3 == 0 && i % 10 != 0) || i % 20 == 1),
+        );
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(marker.words());
+        let tight = Limits {
+            irls_steps: 1,
+            sweeps: 1,
+        };
+        let capped = fit_path_limited(&x, &y, &Bits::ones(n), &[0], 3, 10, tight);
+        let last = capped.last().unwrap().convergence;
+        assert!(!last.converged);
+        assert_eq!((last.irls_steps, last.sweep_cap_hits), (1, 1));
+        let fits = fit_path_with_status(&x, &y, &Bits::ones(n), &[0], 3, 10);
+        assert!(fits.iter().all(|f| f.convergence.converged));
+        assert_eq!(fits[2].convergence.sweep_cap_hits, 0);
+        // The stderr-reporting wrapper returns the same models.
+        let path = fit_path(&x, &y, &Bits::ones(n), &[0], 3, 10);
+        for (m, f) in path.iter().zip(&fits) {
+            assert_eq!(m.intercept.to_bits(), f.model.intercept.to_bits());
+            assert_eq!(m.coef, f.model.coef);
+        }
+    }
+
+    /// The saved cross-check panels with each saved candidate path; see the
+    /// header of the fixture file and docs/lasso-stopping.md.
+    const FIXTURES: &str = include_str!("../../tests/data/lasso-stopping-fixtures.txt");
+
+    /// Limits before the fix.
+    const OLD: Limits = Limits {
+        irls_steps: 25,
+        sweeps: 300,
+    };
+
+    struct SavedPoint {
+        lambda: f64,
+        best_objective: f64,
+        old_irls_steps: u32,
+        old_converged: bool,
+        old_sweep_cap_hits: u32,
+        old: LassoModel,
+    }
+
+    struct Fixture {
+        name: String,
+        x: BitMatrix,
+        y: Bits,
+        fit: Bits,
+        n_lambdas: usize,
+        max_nonzero: usize,
+        points: Vec<SavedPoint>,
+        /// Paths under the old and the current limits, solved on first use.
+        runs: std::sync::OnceLock<(Vec<LassoFit>, Vec<LassoFit>)>,
+    }
+
+    impl Fixture {
+        fn runs(&self) -> (&[LassoFit], &[LassoFit]) {
+            let (old, new) = self.runs.get_or_init(|| {
+                let feats: Vec<u32> = (0..self.x.rows as u32).collect();
+                let run = |l| {
+                    fit_path_limited(
+                        &self.x,
+                        &self.y,
+                        &self.fit,
+                        &feats,
+                        self.n_lambdas,
+                        self.max_nonzero,
+                        l,
+                    )
+                };
+                (run(OLD), run(LIMITS))
+            });
+            (old, new)
+        }
+
+        /// The two C. jejuni panels take about 2.3 million sweeps under the
+        /// current limits: seconds optimized, many minutes unoptimized.
+        fn heavy(&self) -> bool {
+            self.name.starts_with("campylobacter_jejuni")
+        }
+
+        fn one_class(&self) -> bool {
+            let pos = self.fit.and(&self.y).count();
+            pos == 0 || pos == self.fit.count()
+        }
+    }
+
+    fn hex_bits(n: usize, s: &str) -> Bits {
+        Bits::from_indices(
+            n,
+            s.bytes().enumerate().flat_map(|(i, c)| {
+                let v = (c as char).to_digit(16).unwrap();
+                (0..4)
+                    .filter(move |b| (v >> b) & 1 == 1)
+                    .map(move |b| 4 * i + b)
+            }),
+        )
+    }
+
+    fn fixtures() -> &'static [Fixture] {
+        static PARSED: std::sync::OnceLock<Vec<Fixture>> = std::sync::OnceLock::new();
+        PARSED.get_or_init(|| {
+            let mut out: Vec<Fixture> = Vec::new();
+            let mut n = 0;
+            for line in FIXTURES.lines().filter(|l| !l.starts_with('#')) {
+                let t: Vec<&str> = line.split(' ').collect();
+                match t[0] {
+                    "fixture" => {
+                        n = t[2].parse().unwrap();
+                        out.push(Fixture {
+                            name: t[1].to_string(),
+                            x: BitMatrix::with_cols(n),
+                            y: Bits::zeros(n),
+                            fit: Bits::zeros(n),
+                            n_lambdas: t[4].parse().unwrap(),
+                            max_nonzero: t[5].parse().unwrap(),
+                            points: vec![],
+                            runs: std::sync::OnceLock::new(),
+                        });
+                    }
+                    "y" => out.last_mut().unwrap().y = hex_bits(n, t[1]),
+                    "fit" => out.last_mut().unwrap().fit = hex_bits(n, t[1]),
+                    "r" => out
+                        .last_mut()
+                        .unwrap()
+                        .x
+                        .push_row(hex_bits(n, t[1]).words()),
+                    "point" => {
+                        let lambda = t[2].parse().unwrap();
+                        out.last_mut().unwrap().points.push(SavedPoint {
+                            lambda,
+                            best_objective: t[3].parse().unwrap(),
+                            old_irls_steps: t[4].parse().unwrap(),
+                            old_converged: t[5] == "1",
+                            old_sweep_cap_hits: t[6].parse().unwrap(),
+                            old: LassoModel {
+                                intercept: t[7].parse().unwrap(),
+                                coef: t[8..]
+                                    .iter()
+                                    .map(|c| {
+                                        let (f, w) = c.split_once(':').unwrap();
+                                        (f.parse().unwrap(), w.parse().unwrap())
+                                    })
+                                    .collect(),
+                                lambda,
+                            },
+                        });
+                    }
+                    other => panic!("unknown fixture line {other}"),
+                }
+            }
+            assert_eq!(out.len(), 16);
+            out
+        })
+    }
+
+    /// Penalized objective and the largest stationarity violation on the
+    /// standardized scale, over the intercept and the coefficients the solver
+    /// may fit, computed independently of `Problem`.
+    fn objective_and_kkt(f: &Fixture, m: &LassoModel) -> (f64, f64) {
+        let samples: Vec<usize> = f.fit.iter_ones().collect();
+        let nt = samples.len() as f64;
+        let pos = samples.iter().filter(|&&i| f.y.contains(i)).count() as f64;
+        let mut beta = vec![0.0; f.x.rows];
+        for &(k, w) in &m.coef {
+            beta[k as usize] = w;
+        }
+        let mut res = vec![0.0; samples.len()];
+        let mut loss = 0.0;
+        for (s, &i) in samples.iter().enumerate() {
+            let eta = m.intercept
+                + (0..f.x.rows)
+                    .filter(|&k| f.x.get(k, i))
+                    .map(|k| beta[k])
+                    .sum::<f64>();
+            let yi = f.y.contains(i);
+            let cw = if yi {
+                nt / (2.0 * pos.max(1.0))
+            } else {
+                nt / (2.0 * (nt - pos).max(1.0))
+            };
+            let z = if yi { -eta } else { eta };
+            loss += cw * (z.max(0.0) + (-z.abs()).exp().ln_1p());
+            res[s] = cw * (crate::learn::gbt::sigmoid(eta) - yi as u8 as f64) / nt;
+        }
+        let mut penalty = 0.0;
+        let mut kkt = res.iter().sum::<f64>().abs();
+        for (k, &b) in beta.iter().enumerate() {
+            let carriers: Vec<usize> = (0..samples.len())
+                .filter(|&s| f.x.get(k, samples[s]))
+                .collect();
+            let p = carriers.len() as f64 / nt;
+            let sd = (p * (1.0 - p)).sqrt().max(1e-6);
+            penalty += sd * b.abs();
+            if carriers.is_empty() || carriers.len() == samples.len() {
+                continue;
+            }
+            let g = carriers.iter().map(|&s| res[s]).sum::<f64>() / sd;
+            let v = if b != 0.0 {
+                (g + m.lambda * b.signum()).abs()
+            } else {
+                (g.abs() - m.lambda).max(0.0)
+            };
+            kkt = kkt.max(v);
+        }
+        (loss / nt + m.lambda * penalty, kkt)
+    }
+
+    fn same(a: &LassoModel, b: &LassoModel) -> bool {
+        a.lambda.to_bits() == b.lambda.to_bits()
+            && a.intercept.to_bits() == b.intercept.to_bits()
+            && a.coef.len() == b.coef.len()
+            && a.coef
+                .iter()
+                .zip(&b.coef)
+                .all(|(p, q)| p.0 == q.0 && p.1.to_bits() == q.1.to_bits())
+    }
+
+    #[derive(Debug, Default, PartialEq)]
+    struct Tally {
+        points: usize,
+        /// Old limits: points with a sweep-cap hit in any IRLS step.
+        old_sweep_capped: usize,
+        /// Old limits: points that ran out of IRLS steps.
+        old_irls_capped: usize,
+        /// Old limits: points flagged unconverged.
+        old_flagged: usize,
+        /// Current limits: points that still hit the sweep cap in an
+        /// intermediate IRLS step.
+        new_sweep_capped: usize,
+        /// Current limits: points flagged unconverged.
+        new_flagged: usize,
+        /// Points bit-identical to the saved candidate path.
+        unchanged: usize,
+    }
+
+    /// Checks every saved point of `f` and counts how each stopped.
+    fn check(f: &Fixture, t: &mut Tally) {
+        let (old, new) = f.runs();
+        assert_eq!(old.len(), f.points.len(), "{}", f.name);
+        assert_eq!(new.len(), f.points.len(), "{}", f.name);
+        let mut prefix_clean = true;
+        for (i, saved) in f.points.iter().enumerate() {
+            // The old limits reproduce the saved candidate path and its trace.
+            let o = old[i].convergence;
+            assert!(same(&old[i].model, &saved.old), "{} point {i}", f.name);
+            assert_eq!(o.irls_steps, saved.old_irls_steps, "{} point {i}", f.name);
+            assert_eq!(o.sweep_cap_hits, saved.old_sweep_cap_hits, "{} {i}", f.name);
+            // Every cap stop is flagged; a flag needs a cap stop.
+            if !saved.old_converged {
+                assert!(!o.converged, "{} point {i}", f.name);
+            }
+            if !o.converged {
+                assert!(o.sweep_cap_hits > 0 || o.irls_steps as usize == OLD.irls_steps);
+            }
+
+            let c = new[i].convergence;
+            assert_eq!(new[i].model.lambda.to_bits(), saved.lambda.to_bits());
+            if f.one_class() {
+                // One training class: the intercept diverges, so no limit
+                // converges, and the flag has to say so.
+                assert!(!c.converged, "{} point {i}", f.name);
+                assert_eq!(c.irls_steps as usize, LIMITS.irls_steps);
+            } else {
+                assert!(c.converged, "{} point {i} {c:?}", f.name);
+                let (obj, kkt) = objective_and_kkt(f, &new[i].model);
+                assert!(kkt <= 1e-6, "{} point {i}: KKT {kkt:e}", f.name);
+                assert!(obj - saved.best_objective <= 1e-6, "{} point {i}", f.name);
+            }
+
+            // Warm starts carry each point into the next, so a point is
+            // unchanged only if no earlier point on its path stopped at a cap.
+            prefix_clean &= o.converged && o.sweep_cap_hits == 0;
+            if prefix_clean {
+                assert!(same(&new[i].model, &saved.old), "{} point {i}", f.name);
+                assert_eq!(c, o, "{} point {i}", f.name);
+                t.unchanged += 1;
+            }
+            t.points += 1;
+            t.old_sweep_capped += (o.sweep_cap_hits > 0) as usize;
+            t.old_irls_capped += !saved.old_converged as usize;
+            t.old_flagged += !o.converged as usize;
+            t.new_sweep_capped += (c.sweep_cap_hits > 0) as usize;
+            t.new_flagged += !c.converged as usize;
+        }
+    }
+
+    #[test]
+    fn saved_panels_converge_flag_their_caps_and_keep_clean_paths() {
+        let mut t = Tally::default();
+        for f in fixtures().iter().filter(|f| !f.heavy()) {
+            check(f, &mut t);
+        }
+        // The 7 flagged points under the current limits are one_class_train.
+        let expected = Tally {
+            points: 77,
+            old_sweep_capped: 34,
+            old_irls_capped: 9,
+            // 9 points ran out of IRLS steps; at 7 more the last inner solve
+            // stopped at 300 sweeps.
+            old_flagged: 16,
+            new_sweep_capped: 0,
+            new_flagged: 7,
+            unchanged: 34,
+        };
+        assert_eq!(t, expected);
+    }
+
+    #[test]
+    #[ignore = "C. jejuni panels: run with --release -- --include-ignored"]
+    fn all_91_saved_points() {
+        let mut t = Tally::default();
+        for f in fixtures() {
+            check(f, &mut t);
+        }
+        let expected = Tally {
+            points: 91,
+            old_sweep_capped: 46,
+            old_irls_capped: 15,
+            // 15 points ran out of IRLS steps; at 11 more the IRLS change met
+            // its tolerance while the last inner solve stopped at 300 sweeps.
+            old_flagged: 26,
+            // Four C. jejuni points still reach 100,000 sweeps in an early
+            // IRLS step, but a later step settles.
+            new_sweep_capped: 4,
+            new_flagged: 7,
+            unchanged: 36,
+        };
+        assert_eq!(t, expected);
+    }
+
+    #[test]
+    #[ignore = "C. jejuni panels: run with --release -- --include-ignored"]
+    fn campylobacter_failures_reach_the_reference_optimum() {
+        let all = fixtures();
+        for (name, i, sweep_cap_hits) in [
+            ("campylobacter_jejuni__ciprofloxacin_random_fold0", 5, 6),
+            ("campylobacter_jejuni__ciprofloxacin_random_fold0", 6, 6),
+            ("campylobacter_jejuni__ciprofloxacin_lineage_fold0", 6, 3),
+        ] {
+            let f = all.iter().find(|f| f.name == name).unwrap();
+            let (old, new) = f.runs();
+            let saved = &f.points[i];
+            assert_eq!(
+                old[i].convergence,
+                Convergence {
+                    irls_steps: 25,
+                    sweep_cap_hits: 25,
+                    converged: false
+                },
+                "{name} point {i}"
+            );
+            let (obj, kkt) = objective_and_kkt(f, &old[i].model);
+            assert!(
+                kkt > 1e-4 && obj - saved.best_objective > 1e-4,
+                "{name} {i}"
+            );
+
+            let c = new[i].convergence;
+            assert!(c.converged, "{name} {i} {c:?}");
+            assert!(c.irls_steps < 25);
+            assert_eq!(c.sweep_cap_hits, sweep_cap_hits, "{name} {i}");
+            let (obj, kkt) = objective_and_kkt(f, &new[i].model);
+            assert!(kkt <= 1e-6, "{name} point {i}: KKT {kkt:e}");
+            assert!(obj - saved.best_objective <= 1e-6, "{name} point {i}");
+
+            // Refit semantics: the same penalties on the same mask give the
+            // same model and status.
+            let feats: Vec<u32> = (0..f.x.rows as u32).collect();
+            let lambdas: Vec<f64> = new[..=i].iter().map(|m| m.model.lambda).collect();
+            let refit = refit_path_with_status(&f.x, &f.y, &f.fit, &feats, &lambdas);
+            assert!(same(&refit[i].model, &new[i].model));
+            assert_eq!(refit[i].convergence, c);
         }
     }
 }

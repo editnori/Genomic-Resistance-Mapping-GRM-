@@ -1,8 +1,9 @@
 // The product's one navigation row: the mark and wordmark (a link to
-// Overview), one rounded pill group with one neutral active pill, then
-// Present and the theme toggle. When the pills cannot fit (measured, not
-// guessed), the compact view selector takes their place; type never shrinks
-// to keep them. The brand shares the views' 24px left edge.
+// Overview), one outlined group of squared view buttons with one neutral
+// current view, then Present and the theme toggle. When the views cannot
+// fit (measured, not guessed), the compact view selector takes their place;
+// type never shrinks to keep them. The brand shares the views' 24px left
+// edge.
 
 import { useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import { Play } from "lucide-react";
@@ -77,11 +78,11 @@ export const TopBar = ({
         </span>
       </a>
 
-      {/* Invisible measuring copy at the active weight, so selecting a pill
+      {/* Invisible measuring copy at the active weight, so selecting a view
           never flips the fit. */}
-      <div ref={measureRef} aria-hidden="true" className="pointer-events-none invisible absolute left-0 top-0 flex items-center gap-0.5 whitespace-nowrap rounded-full border border-hair p-1">
+      <div ref={measureRef} aria-hidden="true" className="pointer-events-none invisible absolute left-0 top-0 flex items-center gap-0.5 whitespace-nowrap rounded-lg border border-hair p-1">
         {VIEWS.map((v) => (
-          <span key={v.id} className="rounded-full px-3 py-1.5 text-control font-semibold leading-none">
+          <span key={v.id} className="rounded-md px-3 py-1.5 text-control font-semibold leading-none">
             {v.label}
           </span>
         ))}
@@ -89,7 +90,7 @@ export const TopBar = ({
 
       {fits ? (
         <nav aria-label="Views" className="justify-self-center">
-          <div className="flex items-center gap-0.5 rounded-full border border-hair bg-paper-pure p-1">
+          <div className="flex items-center gap-0.5 rounded-lg border border-hair bg-paper-pure p-1">
             {VIEWS.map((v) => {
               const current = v.id === active;
               return (
@@ -98,7 +99,7 @@ export const TopBar = ({
                   type="button"
                   onClick={() => onNavigate(v.id)}
                   aria-current={current ? "page" : undefined}
-                  className={`rounded-full px-3 py-1.5 text-control leading-none transition-[background-color,color,transform] duration-fast ease-out active:scale-[0.98] ${FOCUS_RING} ${
+                  className={`ui-target-24 rounded-md px-3 py-1.5 text-control leading-none transition-[background-color,color,transform] duration-fast ease-out active:scale-[0.98] ${FOCUS_RING} ${
                     current ? "bg-surface-control font-semibold text-ink" : "text-muted-text hover:bg-surface-subtle hover:text-ink"
                   }`}
                 >
@@ -120,7 +121,7 @@ export const TopBar = ({
           onClick={onPresent}
           disabled={presentDisabled}
           aria-label="Present"
-          className={`ui-control-target inline-flex h-8 items-center gap-1.5 rounded-full border border-hair bg-paper-pure px-2.5 text-control font-medium leading-none text-ink transition-[color,border-color,transform] duration-fast ease-out active:scale-[0.98] enabled:hover:border-blue enabled:hover:text-blue disabled:cursor-not-allowed disabled:opacity-45 min-[1280px]:px-4 ${FOCUS_RING}`}
+          className={`ui-control-target inline-flex h-8 items-center gap-1.5 rounded-md border border-hair bg-paper-pure px-2.5 text-control font-medium leading-none text-ink transition-[color,border-color,transform] duration-fast ease-out active:scale-[0.98] enabled:hover:border-blue enabled:hover:text-blue disabled:cursor-not-allowed disabled:opacity-45 min-[1280px]:px-4 ${FOCUS_RING}`}
         >
           <Play aria-hidden="true" className="h-4 w-4" strokeWidth={1.75} />
           <span className="hidden min-[1280px]:inline">Present</span>

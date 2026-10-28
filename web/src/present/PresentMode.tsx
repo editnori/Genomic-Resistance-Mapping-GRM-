@@ -1,5 +1,6 @@
 // Present: one deck on a full canvas. A title slide where the mark runs its
-// full choreography, the five Overview findings, then the rule showcase.
+// full choreography, the five primer steps (one real report read from zero),
+// the five Overview findings, then the rule showcase.
 // Each slide stages its beats (the answer, the figure, the caption) and the
 // footer's ticks show them land; advancing mid-reveal completes the slide
 // first. Only the deck's own controls move it: Previous and Next, the arrow
@@ -8,7 +9,11 @@
 // continues onto further slides that repeat its title, answer, and caption,
 // so nothing scrolls and no label shrinks. An off-screen copy of each such
 // slide measures how many pages it needs. The header, slide, and footer
-// share one column.
+// share one column. A fixed figure sits one set gap under the answer at
+// every width rather than centred in what is left, so a short slide has no
+// band of empty space above its figure. No title or outline label is cut
+// off: on a phone they wrap, and the footer puts the outline on its own row
+// above Previous and Next.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import type { Manifest } from "../data/schema";
@@ -17,12 +22,16 @@ import { manifestAudit } from "../data/derive/evaluation";
 import { GrmMark } from "../app/Mark";
 import { ModalDialog } from "../ui/ModalDialog";
 import { Dropdown } from "../ui/Dropdown";
-import { PILL_ACTION, type Fit, type SlidePart } from "../ui/primitives";
+import { ACTION_BUTTON, type Fit, type SlidePart } from "../ui/primitives";
 import { FINDINGS, type PagedFit } from "../views/findings";
 import { Reveal, useSlideTimeline, type SlideTimeline } from "./motion";
 import { RuleFigure, ruleDataset, ruleLineageScore } from "./figures";
+import { primerSteps } from "../views/primer";
 
 const COLUMN = "mx-auto w-full max-w-[72rem] px-4 sm:px-8";
+/** A fixed figure's box, live and measuring alike: top-aligned, one gap
+ *  under the answer. */
+const FIXED_BOX = "flex min-h-0 flex-1 flex-col justify-start pb-4 pt-6";
 const KEY_OWNERS = 'input, select, textarea, [role="combobox"], [role="listbox"], [role="option"], [contenteditable]:not([contenteditable="false"])';
 
 const owns = (target: EventTarget | null, selector: string): boolean => target instanceof Element && target.closest(selector) !== null;
@@ -134,7 +143,7 @@ const FixedMeasure = ({ figure, caption, onPages }: { figure: ReactNode; caption
     return () => observer.disconnect();
   }, [onPages]);
   return (
-    <div ref={box} className="flex min-h-0 flex-1 flex-col justify-center py-4">
+    <div ref={box} data-fixed-box="" className={FIXED_BOX}>
       <div ref={content} className="min-w-0">
         <div className="min-w-0">{figure}</div>
         <p className="prose-measure mt-6 text-note text-muted-text">{caption}</p>
@@ -179,7 +188,7 @@ const SlideBody = ({ slide, paging, stage, measure }: { slide: FigureSlide; pagi
       ) : measure !== undefined ? (
         <FixedMeasure figure={slide.fixed?.(paging)} caption={slide.caption} onPages={measure} />
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col justify-center py-4">
+        <div data-fixed-box="" className={FIXED_BOX}>
           {stage(
             "figure",
             <div data-figure className="min-w-0">
@@ -249,6 +258,9 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
     const lineage = pick === null ? null : ruleLineageScore(pick.row);
     return [
       { kind: "title", id: "title", title: "Genomic Resistance Mapping" },
+      ...primerSteps(manifest).map(
+        (s): Slide => ({ kind: "figure", id: s.id, title: s.title, result: s.lead, caption: s.caption, fixed: () => s.figure, continues: false }),
+      ),
       ...FINDINGS.map((build): Slide => {
         const f = build(manifest, { page: false });
         const figure = f.figure;
@@ -356,9 +368,11 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
         <header className={`${COLUMN} flex shrink-0 items-center justify-between gap-4 py-3`}>
           <span className="flex min-w-0 items-center gap-2.5">
             <GrmMark size={20} />
-            <span className="truncate text-tiny font-semibold uppercase tracking-widest text-blue">What GRM found · Genomic Resistance Mapping</span>
+            <span data-deck-title="" className="min-w-0 break-words text-tiny font-semibold uppercase leading-snug tracking-widest text-blue">
+              What GRM found · Genomic Resistance Mapping
+            </span>
           </span>
-          <button type="button" onClick={onClose} className={PILL_ACTION}>
+          <button type="button" onClick={onClose} className={ACTION_BUTTON}>
             Close
           </button>
         </header>
@@ -373,21 +387,24 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
           </div>
         </main>
         <footer className="shrink-0 border-t border-hair">
-          <div className={`${COLUMN} flex items-center justify-between gap-3 py-3`}>
-            <button type="button" onClick={() => jump(index - 1)} disabled={index === 0} className={PILL_ACTION}>
+          {/* One row from sm up; on a phone the outline takes the first row
+              and Previous and Next the second, under the thumb. */}
+          <div className={`${COLUMN} grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3`}>
+            <button type="button" onClick={() => jump(index - 1)} disabled={index === 0} className={`${ACTION_BUTTON} col-start-1 row-start-2 justify-self-start sm:row-start-1`}>
               Previous
             </button>
-            <span className="flex min-w-0 items-center gap-3">
+            <span className="col-span-3 col-start-1 row-start-1 flex min-w-0 items-center justify-center gap-3 sm:col-span-1 sm:col-start-2">
               <span role="status" aria-live="polite" className="sr-only">
                 Slide {index + 1} of {frames.length}: {frameTitle(frame)}
               </span>
-              {/* The control gives way first: its title truncates, the
-                  ticks keep their width. */}
+              {/* The control gives way first: its title wraps, the ticks
+                  keep their width. */}
               <span className="min-w-0">
                 <Dropdown
                   ariaLabel="Go to slide"
                   options={frames.map((f, i) => ({ id: String(i), label: `${i + 1} · ${frameTitle(f)}` }))}
                   mode={{ kind: "one", value: String(index), onSelect: (v) => jump(Number(v)) }}
+                  wrap
                 />
               </span>
               {beat.steps > 1 ? (
@@ -398,7 +415,7 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
                 </span>
               ) : null}
             </span>
-            <button type="button" onClick={advance} className={PILL_ACTION}>
+            <button type="button" onClick={advance} className={`${ACTION_BUTTON} col-start-3 row-start-2 justify-self-end sm:row-start-1`}>
               {last ? "Finish" : "Next"}
             </button>
           </div>

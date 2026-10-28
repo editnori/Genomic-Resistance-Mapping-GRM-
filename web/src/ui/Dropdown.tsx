@@ -6,7 +6,7 @@
 // Enter or Space to choose, Escape or Tab to close, letters to jump. The
 // rest option ("All species") is the first row and carries no count.
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 import { FOCUS_RING } from "./primitives";
@@ -15,6 +15,9 @@ export interface DropdownOption<T extends string> {
   id: T;
   label: string;
   count?: number;
+  /** A decorative mark before the label, such as a drug-class shape; the
+   *  label still says everything. */
+  icon?: ReactNode;
   /** A value the current rows cannot serve: listed, but not choosable. */
   disabled?: boolean;
 }
@@ -60,6 +63,7 @@ export const Dropdown = <T extends string>({
   rest,
   mode,
   fullWidth = false,
+  wrap = false,
 }: {
   ariaLabel: string;
   options: readonly DropdownOption<T>[];
@@ -68,6 +72,9 @@ export const Dropdown = <T extends string>({
   mode: Mode<T>;
   /** Fill the field, as in the filter rail. */
   fullWidth?: boolean;
+  /** Wrap a long answer onto further lines instead of cutting it off, as
+   *  in Present's outline. */
+  wrap?: boolean;
 }) => {
   const listId = useId();
   const [open, setOpen] = useState(false);
@@ -219,11 +226,13 @@ export const Dropdown = <T extends string>({
         aria-activedescendant={open ? rowId(active) : undefined}
         onClick={() => (open ? close() : openList())}
         onKeyDown={onKeyDown}
-        className={`ui-control-target inline-flex h-7 max-w-full items-center gap-x-1.5 rounded-full border px-3 text-control font-medium tracking-tight transition-[color,background-color,border-color,transform] duration-fast ease-out active:scale-[0.98] ${fullWidth ? "w-full" : ""} ${FOCUS_RING} ${
+        className={`ui-control-target inline-flex ${wrap ? "min-h-7 py-1" : "h-7"} max-w-full items-center gap-x-1.5 rounded-md border px-3 text-control font-medium tracking-tight transition-[color,background-color,border-color,transform] duration-fast ease-out active:scale-[0.98] ${fullWidth ? "w-full" : ""} ${FOCUS_RING} ${
           open ? "border-blue/60 bg-paper-pure text-blue" : "border-hair bg-paper-pure text-ink hover:border-blue/50 hover:text-blue"
         }`}
       >
-        <span className="min-w-0 flex-1 truncate text-left">{closedLabel}</span>
+        <span data-dropdown-label="" className={`min-w-0 flex-1 text-left ${wrap ? "whitespace-normal break-words leading-snug" : "truncate"}`}>
+          {closedLabel}
+        </span>
         <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" className={`shrink-0 transition-transform duration-fast ease-out ${open ? "rotate-180" : ""}`} />
       </button>
       {open && layer !== null
@@ -281,6 +290,11 @@ export const Dropdown = <T extends string>({
                       o.disabled === true ? "cursor-not-allowed text-muted-text" : `cursor-pointer text-ink ${active === row ? "bg-blue/[0.08]" : ""}`
                     }`}
                   >
+                    {o.icon !== undefined ? (
+                      <span aria-hidden="true" className="inline-flex shrink-0">
+                        {o.icon}
+                      </span>
+                    ) : null}
                     <span className="min-w-0 flex-1 break-words">{o.label}</span>
                     {o.count !== undefined ? <span className="text-tiny tabular-nums text-muted-text">{o.count}</span> : null}
                     <span className="inline-flex w-3.5 shrink-0 justify-end" aria-hidden="true">

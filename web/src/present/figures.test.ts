@@ -9,9 +9,12 @@ import type { CatalogRow, Manifest } from "../data/schema";
 import { FINDINGS, catalogFinding, lineageFinding, micFinding, panelsFinding } from "../views/findings";
 import { PresentMode } from "./PresentMode";
 import { ruleDataset } from "./figures";
+import { primerSteps } from "../views/primer";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const base = parseManifest(fixtureFile("/data/index.json"));
+/** Title, the primer's steps, the findings, the rule: one slide each. */
+const DECK = 1 + primerSteps(base).length + FINDINGS.length + 1;
 const row = (id: string, overrides: Partial<CatalogRow>): CatalogRow => ({ ...base.datasets[0]!, id, antibiotic: id, ...overrides });
 const figure = (finding: ReturnType<typeof catalogFinding>) => {
   const node = typeof finding.figure === "function" ? finding.figure({}) : finding.figure;
@@ -98,10 +101,11 @@ const open = async (manifest: Manifest = base) => {
   return { dialog, status, right, onClose };
 };
 
-it("opens the deck on its title slide, then the six finding slides, with a named outline and no deck chooser", async () => {
+it("opens the deck on its title slide, then the primer, then the six finding slides, with a named outline and no deck chooser", async () => {
   motion(true);
   const { dialog, status, right, onClose } = await open();
-  const titles = ["Genomic Resistance Mapping", ...FINDINGS.map((f) => f(base, { page: false }).title), "One interpretable rule"];
+  const titles = ["Genomic Resistance Mapping", ...primerSteps(base).map((s) => s.title), ...FINDINGS.map((f) => f(base, { page: false }).title), "One interpretable rule"];
+  expect(titles).toHaveLength(DECK);
   expect(dialog.textContent).not.toContain("Choose a deck");
   const selector = dialog.querySelector<HTMLButtonElement>('[role="combobox"]')!;
   expect(selector.getAttribute("aria-label")).toBe("Go to slide: 1 · Genomic Resistance Mapping");
@@ -126,20 +130,20 @@ it("completes a slide's staged beats before the next arrow moves on", async () =
   const { status, right } = await open();
   await right();
   // The title slide was still revealing: the first arrow lands its beats.
-  expect(status()).toContain("Slide 1 of 7");
+  expect(status()).toContain(`Slide 1 of ${DECK}`);
   await right();
-  expect(status()).toContain("Slide 2 of 7");
+  expect(status()).toContain(`Slide 2 of ${DECK}`);
 });
 
 it("moves only from its own controls: a click on a slide or its caption does nothing", async () => {
   motion(true);
   const { dialog, status, right } = await open();
   await right();
-  expect(status()).toContain("Slide 2 of 7");
+  expect(status()).toContain(`Slide 2 of ${DECK}`);
   const main = dialog.querySelector("main")!;
   await act(async () => main.querySelector("[data-caption]")!.dispatchEvent(new MouseEvent("click", { bubbles: true })));
   await act(async () => main.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-  expect(status()).toContain("Slide 2 of 7");
+  expect(status()).toContain(`Slide 2 of ${DECK}`);
 });
 
 it("states the report's scope on the title slide as plain words, with no chip to hover", async () => {
@@ -160,7 +164,7 @@ it("shows the rule's sequence inline, never in a second dialog", async () => {
   motion(true);
   const { dialog, status } = await open();
   await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
-  expect(status()).toContain("Slide 7 of 7: One interpretable rule");
+  expect(status()).toContain(`Slide ${DECK} of ${DECK}: One interpretable rule`);
   expect(document.querySelectorAll("dialog")).toHaveLength(1);
   expect([...dialog.querySelectorAll("button")].map((b) => b.textContent)).not.toContain("Show sequence");
   const pick = ruleDataset(base)!;
@@ -177,7 +181,7 @@ const layout = ({ height, tall = false }: { height: number; tall?: boolean }) =>
   define("clientHeight", () => height);
   define("clientWidth", () => 600);
   define("offsetHeight", function () {
-    return tall && this.parentElement?.classList.contains("justify-center") === true ? height * 3 : 40;
+    return tall && this.parentElement?.hasAttribute("data-fixed-box") === true ? height * 3 : 40;
   });
   return () => ["clientHeight", "clientWidth", "offsetHeight"].forEach((key) => delete (HTMLElement.prototype as unknown as Record<string, unknown>)[key]);
 };
@@ -205,12 +209,14 @@ describe("continuation slides", () => {
     // into pages of at most 9 rows: two pages of 8 and 7.
     const caption = panelsFinding(m, { page: false }).caption;
     const seen: string[] = [];
-    for (const [n, first, last] of [
-      [5, 1, 8],
-      [6, 9, 15],
+    const panelAt = 1 + primerSteps(m).length + 3;
+    for (const [page, first, last] of [
+      [1, 1, 8],
+      [2, 9, 15],
     ] as const) {
+      const n = panelAt + page;
       while (!status().startsWith(`Slide ${n} `)) await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
-      expect(status()).toBe(`Slide ${n} of 8: PCR panel (${n - 4} of 2)`);
+      expect(status()).toBe(`Slide ${n} of ${DECK + 1}: PCR panel (${page} of 2)`);
       const section = dialog.querySelector("main section")!;
       const ids = [...section.querySelectorAll("[data-dataset]")].map((g) => g.getAttribute("data-dataset")!);
       expect(ids).toHaveLength(last - first + 1);
@@ -223,9 +229,9 @@ describe("continuation slides", () => {
     await act(async () => selector.click());
     // The outline's options, not the open chart's keyboard option.
     const labels = [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent ?? "").filter((t) => /^\d+ · /.test(t));
-    expect(labels).toContain("5 · PCR panel (1 of 2)");
-    expect(labels).toContain("6 · PCR panel (2 of 2)");
-    expect(labels).toHaveLength(8);
+    expect(labels).toContain(`${panelAt + 1} · PCR panel (1 of 2)`);
+    expect(labels).toContain(`${panelAt + 2} · PCR panel (2 of 2)`);
+    expect(labels).toHaveLength(DECK + 1);
   });
 
   it("moves the rule's sequence onto its own slide only when the two do not fit together", async () => {
@@ -237,14 +243,14 @@ describe("continuation slides", () => {
     const { dialog, status } = await open();
     await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
     if (context === "") {
-      expect(status()).toContain("Slide 7 of 7: One interpretable rule");
+      expect(status()).toContain(`Slide ${DECK} of ${DECK}: One interpretable rule`);
       return;
     }
-    expect(status()).toBe("Slide 8 of 8: One interpretable rule (2 of 2)");
+    expect(status()).toBe(`Slide ${DECK + 1} of ${DECK + 1}: One interpretable rule (2 of 2)`);
     expect(dialog.querySelector("main section .seq")).not.toBeNull();
     expect(dialog.querySelector("main section")?.textContent).not.toContain("Resistant isolates carrying it");
     await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
-    expect(status()).toBe("Slide 7 of 8: One interpretable rule (1 of 2)");
+    expect(status()).toBe(`Slide ${DECK} of ${DECK + 1}: One interpretable rule (1 of 2)`);
     expect(dialog.querySelector("main section .seq")).toBeNull();
     expect(dialog.querySelector("main section")?.textContent).toContain("Resistant isolates carrying it");
     expect(dialog.querySelector("main section")?.textContent).toContain("The rule's sequence follows on the next slide.");

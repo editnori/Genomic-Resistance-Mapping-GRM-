@@ -76,13 +76,13 @@ export const FiltersButton = ({ rail, activeCount }: { rail: RailState; activeCo
       aria-haspopup="true"
       data-filter-toggle=""
       aria-label={activeCount > 0 ? `Filters, ${activeCount} set` : "Filters"}
-      className={`ui-control-target inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-hair bg-paper-pure px-4 text-control font-medium text-ink transition-[color,background-color,border-color,transform] duration-fast ease-out hover:border-blue/35 hover:bg-surface-subtle active:scale-[0.98] ${FOCUS_RING}`}
+      className={`ui-control-target inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-hair bg-paper-pure px-4 text-control font-medium text-ink transition-[color,background-color,border-color,transform] duration-fast ease-out hover:border-blue/35 hover:bg-surface-subtle active:scale-[0.98] ${FOCUS_RING}`}
     >
       <SlidersHorizontal size={14} strokeWidth={1.75} aria-hidden="true" />
       Filters
       {activeCount > 0 ? (
-        <span aria-hidden="true" className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue px-1 text-tiny tabular-nums text-paper-pure">
-          {activeCount}
+        <span aria-hidden="true" data-filter-count="" className="tabular-nums text-blue">
+          · {activeCount}
         </span>
       ) : null}
     </button>
@@ -220,7 +220,7 @@ export const FilterRail = ({
           {rail.open ? (
             <h2 className={`${TITLE} rail-in flex-1`}>Filters</h2>
           ) : activeCount === 0 ? null : (
-            <span aria-hidden="true" className="pointer-events-none absolute left-4 top-0 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue px-1 text-tiny tabular-nums text-paper-pure">
+            <span aria-hidden="true" data-filter-count="" className="pointer-events-none absolute left-4 top-0 inline-flex h-4 min-w-4 items-center justify-center rounded-sm bg-blue px-1 text-tiny tabular-nums text-paper-pure">
               {activeCount}
             </span>
           )}

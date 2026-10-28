@@ -54,6 +54,10 @@ tail -f data/logs/pipeline.log
 
 The launcher writes its PID to `data/logs/pipeline.pid` and, on exit, its exit code to `data/logs/pipeline.exit`. A launcher killed by SIGKILL writes no exit file and leaves its PID file behind, so check that PID and the log as well.
 
+## Deploy
+
+genomicresistance.com is one `grm serve` on a Vast container behind a Cloudflare Tunnel. [docs/deployment.md](docs/deployment.md) covers local preview from the verified backup, publishing a report copy, building and staging a release, activation, rollback, restoring after a container restart, and the tunnel connector. The publish, build, stage, activate, rollback, restore and legacy-approval scripts in `scripts/deployment/` change nothing under the deployment root without `--apply`; `connector.sh run` and `stop` act at once, and `status.sh` and `smoke.sh` write only a temporary directory. Before serving a pair, the scripts verify the build and report trees against their SHA-256 manifests and require a stage approval bound to both manifests (`status.sh` does not verify manifests). Approvals and state files are strict one-record ASCII files, written atomically and read back. Every server start is journaled, and every process it starts holds a locked spawn marker from the fork on, so an interrupted or killed start is found and stopped, and its journal is kept while the lock shows a survivor the scripts cannot see. A rollback identifies a damaged current server by its recorded start (PID, start time, token and marker), not by its executable. Records, locks and logs are opened only when they are regular files, so a link or FIFO is refused without blocking. The tunnel token is read only by cloudflared, through `--token-file`.
+
 ## Stages
 
 Every command takes `--data <directory>` (default `data`), and the output paths are relative to it:
@@ -141,8 +145,12 @@ cargo fmt --check
 npm --prefix web test
 npm --prefix web run typecheck
 npm --prefix web run build
-bash -n scripts/run-pipeline.sh
+printf '%s\n' scripts/run-pipeline.sh scripts/deployment/*.sh scripts/deployment/tests/*.sh | xargs -n1 bash -n
+bash scripts/deployment/tests/dry-run.sh
+bash scripts/deployment/tests/apply.sh
 ```
+
+`bash -n` parses only its first file, so `xargs -n1` runs it once per script. The deployment tests run in temporary directories; `apply.sh` needs `cc`, starts stub servers on free loopback ports, injects signals at each step of a start and in the forked child before it execs, and takes about 15 to 20 minutes on a loaded host. Both suites fail if any assertion is skipped. `data/work/deployment-mutation-20261027/grm-mutate-v3.py` checks that the suites catch each of 33 deployment defects: the 32 found by three reviews and a receipt collision found while fixing them ([docs/deployment.md](docs/deployment.md#checks)).
 
 `scripts/check-results.py` and `scripts/metric-audit/` check saved reports apart from the Rust code that wrote them. The checker recomputes each learner's confusion counts and balanced accuracy from the saved scores; the metric audit also rebuilds the folds with the `foldgen` helper, recalculates the metrics, and checks the run against its backup and log. Build `foldgen` and run their tests:
 

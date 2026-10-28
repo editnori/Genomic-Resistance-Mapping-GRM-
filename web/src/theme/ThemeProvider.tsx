@@ -47,8 +47,8 @@ export function useTheme(): ThemeContextValue {
   return ctx;
 }
 
-/** Round, outlined like Present. The icon names the theme the button turns
- *  to; on a switch the outgoing icon turns away as the other turns in. */
+/** Squared and outlined like Present. The icon names the theme the button
+ *  turns to; on a switch the outgoing icon turns away as the other turns in. */
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
   const dark = theme === "dark";
@@ -58,7 +58,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
-      className={`ui-control-target relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-hair bg-paper-pure text-ink transition-[color,border-color,transform] duration-fast ease-out hover:border-blue hover:text-blue active:scale-[0.98] ${FOCUS_RING}`}
+      className={`ui-control-target relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-hair bg-paper-pure text-ink transition-[color,border-color,transform] duration-fast ease-out hover:border-blue hover:text-blue active:scale-[0.98] ${FOCUS_RING}`}
     >
       <Sun aria-hidden="true" className={icon(dark)} strokeWidth={1.75} />
       <Moon aria-hidden="true" className={icon(!dark)} strokeWidth={1.75} />

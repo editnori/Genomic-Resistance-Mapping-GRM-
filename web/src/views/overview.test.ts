@@ -149,10 +149,18 @@ const click = (el: Element) => el.dispatchEvent(new MouseEvent("click", { bubble
 const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
 
 describe("What GRM found", () => {
-  it("reads as a report: a plain title, a plain status line, and six numbered sections", async () => {
+  it("reads as a report: a plain title, a plain status line, the primer, and six numbered sections", async () => {
     const host = await mount(passing, fakeNav().nav);
     expect(host.querySelector("h1")?.textContent).toBe("What GRM found");
-    expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual(["1 Data", "2 Unseen lineages", "3 Known-gene rules", "4 PCR panel", "5 MIC prediction", "6 Limits"]);
+    expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual([
+      "How to read this report",
+      "1 Data",
+      "2 Unseen lineages",
+      "3 Known-gene rules",
+      "4 PCR panel",
+      "5 MIC prediction",
+      "6 Limits",
+    ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
     expect(scope?.textContent).toBe("Internal cross-validation only");
     // No chip, no hover wall, no Method and coverage fold.

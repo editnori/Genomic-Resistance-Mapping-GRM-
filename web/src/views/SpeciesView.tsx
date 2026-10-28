@@ -17,6 +17,7 @@ import { ReportStatus } from "../app/ReportStatus";
 import { ViewHeader } from "../ui/ViewHeader";
 import { Dropdown } from "../ui/Dropdown";
 import { FigureBlock, PanelState, Section, Segmented, VIEW_SHELL } from "../ui/primitives";
+import { ClassName } from "../ui/drugClass";
 import { DataTable } from "../ui/DataTable";
 import { MIN_GENOME_PX, StructureExplorer, structureModel, type StructurePick, type StructureView } from "../charts/Structure";
 import { CrossPanel } from "../charts/CrossMatrix";
@@ -205,7 +206,7 @@ const SpeciesBody = ({
           initialSort={{ id: "n", dir: "desc" }}
           columns={[
             { id: "antibiotic", header: "Antibiotic", sortValue: (d) => d.antibiotic, firstDir: "asc", cell: (d) => capitalize(d.antibiotic) },
-            { id: "class", header: "Drug class", sortValue: (d) => d.drug_class, firstDir: "asc", cell: (d) => d.drug_class },
+            { id: "class", header: "Drug class", sortValue: (d) => d.drug_class, firstDir: "asc", cell: (d) => <ClassName drugClass={d.drug_class} /> },
             { id: "n", header: "Isolates", align: "right", sortValue: (d) => d.n, cell: (d) => int(d.n) },
             { id: "resistant", header: "Resistant", align: "right", sortValue: (d) => d.n_resistant, cell: (d) => int(d.n_resistant) },
             {

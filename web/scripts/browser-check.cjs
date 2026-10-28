@@ -4,8 +4,13 @@
 // node browser-check-final.cjs <playwright-core> <output-dir> <base-url> <fixture-dir>
 // Expectations come from the fixture's own index.json, not from the UI code.
 // Assertions that encoded r13's removals are rewritten to the DESIGN.md
-// contract: visible titles, the pill nav, judged cells as pills, the sort
-// glyph slot, the status line, blue headers, the 1560px rail.
+// contract: visible titles, the view nav, judged cells as plain text, the
+// sort glyph slot, the status line, blue headers, the 1560px rail. Controls
+// are checked for names, current state and hit size, not for a pill shape,
+// which the user rejected; the primer and drug-class marks have their own
+// checks. So do Present's whole deck title and outline label, its footer rows
+// and fixed-figure gap, the primer's split tracks, and every species'
+// population map (compact below seven blocks).
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(process.argv[2]);
@@ -96,7 +101,7 @@ const measure = () => {
   return { viewport: [innerWidth, innerHeight], main: rect(main), section: rect(section), fit: rect(fit), contentBottom, caption: rect(caption), figureTop: figureBox?.top ?? null, mainTop: main?.getBoundingClientRect().top ?? null, textOutside, marks: section?.querySelectorAll('[data-dataset]').length ?? 0, titleX: section?.querySelector('h2')?.getBoundingClientRect().x ?? null, brandX: document.querySelector('dialog.presentation-dialog header svg')?.getBoundingClientRect().x ?? null };
 };
 
-async function referenceChecks(page, tag, finding) {
+async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = false) {
   if (![1, 2, 3, 4].includes(finding)) return;
   const geometry = await page.locator('dialog.presentation-dialog main svg:not(.grm-mark)').first().evaluate(svg => ({ width: svg.getBoundingClientRect().width, height: svg.getBoundingClientRect().height, refs: [...svg.querySelectorAll('line[aria-hidden="true"]')].map(l => ({ x: Number(l.getAttribute('x1')), y: Number(l.getAttribute('y1')) })), ids: [...svg.querySelectorAll('[data-dataset]')].map(e => e.getAttribute('data-dataset')), text: svg.textContent }));
   const close = (actual, want) => Math.abs(actual - want) <= 1.5;
@@ -117,7 +122,12 @@ async function referenceChecks(page, tag, finding) {
     const model = counts.reduce((a, c) => a + c.model.tp, 0) / counts.reduce((a, c) => a + c.model.tp + c.model.fn, 0);
     const start = Math.min(220, Math.round(geometry.width * 0.5)) + 10;
     wanted = [panel, model].map(v => start + v * (geometry.width - 20 - start));
-    check(tag + ' lead panel datasets', JSON.stringify([...geometry.ids].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), geometry.ids);
+    // Pooled reference lines span every row on every page; a page draws
+    // only lead-panel datasets, and the pages together are checked in present().
+    const lead = new Set(expected.panels.map(p => p.dataset));
+    if (panelPaged) check(tag + ' lead panel datasets on this page', geometry.ids.length > 0 && geometry.ids.every(id => lead.has(id) && !panelSeen.includes(id)), geometry.ids);
+    else check(tag + ' lead panel datasets', JSON.stringify([...geometry.ids].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), geometry.ids);
+    panelSeen.push(...geometry.ids);
   }
   if (finding === 2) {
     const lo = Math.max(0, Math.floor(Math.min(0.5, ...expected.catalog.flatMap(d => [d.catalog.balanced_accuracy, d.best_lineage])) * 10) / 10);
@@ -147,14 +157,14 @@ async function judgedCheck(page, tag) {
   check(tag + ' judged values are plain text with 4.5:1 contrast', values.length > 0 && values.every(v => v.border === '0px' && v.shadow === 'none' && v.radius === 0 && v.ratio >= 4.5), values);
 }
 
-/** The pill grammar: nav, Present, the theme toggle, and ghost actions are
- *  full pills (radius at least half the height). */
-async function pillCheck(page, tag) {
-  const square = await page.evaluate(() => [...document.querySelectorAll('header button, header a[href="/"] ~ * button, [data-view-scroll] button.ui-control-target')]
+/** Top-bar and page controls: each has a name and at least a 24px target,
+ *  and none is drawn as a pill (radius at half its height or more). */
+async function controlCheck(page, tag) {
+  const controls = await page.evaluate(() => [...document.querySelectorAll('header button, header [role="combobox"], [data-view-scroll] button.ui-control-target, [data-view-scroll] [role="combobox"]')]
     .filter(e => e.getClientRects().length > 0 && !e.closest('table') && !e.matches('[data-row-open]') && !e.closest('[data-view-options-panel] > div:first-child'))
-    .map(e => ({ name: (e.getAttribute('aria-label') ?? e.textContent ?? '').trim().slice(0, 30), r: parseFloat(getComputedStyle(e).borderTopLeftRadius), h: e.getBoundingClientRect().height }))
-    .filter(e => e.r + 0.5 < Math.min(e.h / 2, 9999)));
-  check(tag + ' pill grammar for top-bar and page controls', square.length === 0, square);
+    .map(e => ({ name: (e.getAttribute('aria-label') ?? e.textContent ?? '').trim().slice(0, 30), r: parseFloat(getComputedStyle(e).borderTopLeftRadius), h: e.getBoundingClientRect().height, w: e.getBoundingClientRect().width })));
+  check(tag + ' controls are named with 24px targets', controls.length > 0 && controls.every(c => c.name.length > 0 && c.h >= 24 - 0.5 && c.w >= 24 - 0.5), controls.filter(c => !(c.name.length > 0 && c.h >= 23.5 && c.w >= 23.5)));
+  check(tag + ' no control is a pill', controls.every(c => c.r < c.h / 2 - 1), controls.filter(c => c.r >= c.h / 2 - 1));
 }
 
 /** The brand mark and the view's title start on one left edge (the 24px
@@ -163,6 +173,94 @@ async function edgeCheck(page, tag, selector) {
   const edges = await page.evaluate(sel => ({ brand: document.querySelector('header a[href="/"] svg')?.getBoundingClientRect().x, first: document.querySelector(sel)?.getBoundingClientRect().x, width: innerWidth }), selector);
   const applies = edges.width <= 1560 + 16 + 48;
   check(tag + ' left edge ' + selector, !applies || (edges.brand !== undefined && edges.first !== undefined && Math.abs(edges.brand - edges.first) <= 1), edges);
+}
+
+/** The Overview primer: five steps above the numbered findings,
+ *  a real report as its example, and a skip link that lands focus on the
+ *  first finding's heading. */
+async function primerCheck(page, tag) {
+  const p = await page.evaluate(() => {
+    const primer = document.getElementById('primer');
+    const corpus = document.getElementById('corpus');
+    const example = primer ? [...primer.querySelectorAll('a')].find(a => !a.getAttribute('href')?.startsWith('#')) : null;
+    return {
+      steps: primer ? [...primer.querySelectorAll('h3')].map(h => h.textContent) : [],
+      before: primer && corpus ? Boolean(primer.compareDocumentPosition(corpus) & Node.DOCUMENT_POSITION_FOLLOWING) : false,
+      figures: primer ? [...primer.querySelectorAll('[data-primer-figure]')].map(f => ({ id: f.getAttribute('data-primer-figure'), right: f.getBoundingClientRect().right, view: document.querySelector('[data-view-scroll]').getBoundingClientRect().right })) : [],
+      example: example?.getAttribute('href') ?? null,
+    };
+  });
+  check(tag + ' primer: five steps above the findings', p.before && JSON.stringify(p.steps) === JSON.stringify(['A dataset', 'A genome feature', 'Two tests', 'Reading one result', 'What the numbers support']), p);
+  check(tag + ' primer figures stay inside the view', p.figures.length >= 3 && p.figures.every(f => f.right <= f.view + 1), p.figures);
+  check(tag + ' primer example opens a real report', p.example !== null && manifest.datasets.some(d => p.example.includes('dataset=' + d.id)), p.example);
+  await splitTracks(page, tag + ' primer', '#primer');
+  await page.getByRole('link', { name: /Skip to the findings/ }).click();
+  await page.waitForFunction(() => document.activeElement?.id === 'corpus-title');
+  check(tag + ' primer skip link moves focus to the first finding', await page.evaluate(() => document.activeElement?.id) === 'corpus-title', await activeName(page));
+}
+
+/** The "Two tests" drawing: in each split its name and score share a line,
+ *  its five lineage groups sit on one line, and the two splits' groups start
+ *  at the same x, so the rows read group for group. */
+async function splitTracks(page, tag, scope) {
+  const t = await page.evaluate(sel => {
+    const root = document.querySelector(sel);
+    return [...(root?.querySelectorAll('[data-primer-figure="splits"] [data-split-row]') ?? [])].map(row => {
+      const head = row.firstElementChild;
+      const [label, score] = [...head.children].map(e => e.getBoundingClientRect());
+      return { groups: [...row.querySelectorAll('[data-lineage-group]')].map(g => ({ left: Math.round(g.getBoundingClientRect().left * 10) / 10, top: Math.round(g.getBoundingClientRect().top * 10) / 10 })), labelTop: label?.top, scoreTop: score?.top, scoreBottom: score?.bottom, labelBottom: label?.bottom, figureRight: row.closest('figure').getBoundingClientRect().right, scoreRight: score?.right };
+    });
+  }, scope);
+  const oneLine = t.length === 2 && t.every(r => r.groups.length === 5 && r.groups.every(g => Math.abs(g.top - r.groups[0].top) <= 0.5));
+  const aligned = oneLine && t[0].groups.every((g, i) => Math.abs(g.left - t[1].groups[i].left) <= 0.5);
+  const heads = t.every(r => r.scoreTop !== undefined && r.scoreTop < r.labelBottom && r.labelTop < r.scoreBottom && r.scoreRight <= r.figureRight + 0.5);
+  check(tag + ' two-tests squares on even tracks', oneLine && aligned && heads, t);
+}
+
+/** Every analyzed species' population map: from COMPACT_BLOCKS (7) blocks
+ *  up the columns spread; below it the map is compact, columns of 24 to
+ *  72px, with a visible note and one table row per block. */
+async function smallMaps(page, tag) {
+  const compact = [];
+  for (const s of manifest.species.filter(x => x.genomes_analyzed > 0)) {
+    await page.goto(BASE + '/species/' + s.slug);
+    await page.getByRole('grid', { name: /lineage block/ }).first().waitFor();
+    await settle(page);
+    const m = await page.evaluate(() => {
+      const map = document.querySelector('#sp-structure [data-block-layout]');
+      const grid = map?.querySelector('[role="grid"]');
+      const blocks = Number(((grid?.getAttribute('aria-label') ?? '').replace(/,/g, '').match(/^(\d+) lineage blocks? of/) ?? [])[1] ?? NaN);
+      const box = map?.querySelector('[data-compact-blocks]');
+      const plot = grid?.parentElement, scroller = plot?.parentElement;
+      const note = box?.querySelector('p');
+      const wrap = box?.querySelector('table')?.parentElement;
+      return {
+        layout: map?.getAttribute('data-block-layout') ?? null, blocks,
+        compact: box ? Number(box.getAttribute('data-compact-blocks')) : null,
+        rows: box ? box.querySelectorAll('tbody tr').length : 0,
+        note: note?.textContent ?? null, noteShown: note ? note.getBoundingClientRect().height > 0 : false,
+        plotW: plot?.getBoundingClientRect().width ?? null, viewW: scroller?.clientWidth ?? null,
+        tableFits: wrap ? wrap.scrollWidth <= wrap.clientWidth + 1 : null,
+        scrollNote: [...map.querySelectorAll('p')].some(p => /scroll sideways for the rest/.test(p.textContent) && p.getBoundingClientRect().height > 0),
+        doc: document.documentElement.scrollWidth - innerWidth,
+      };
+    });
+    // Compact columns are 24 to 72px: they fit the view when it holds 24px
+    // per block, and otherwise scroll with the visible sideways note, as a
+    // spread map does.
+    const small = m.blocks >= 1 && m.blocks < 7;
+    const width = m.plotW >= 24 * m.blocks - 0.5 && m.plotW <= 72 * m.blocks + 0.5 && (m.viewW >= 24 * m.blocks ? m.plotW <= m.viewW + 1 : m.scrollNote);
+    const ok = m.blocks >= 1 && m.doc <= 1 && (small
+      ? m.layout === 'compact' && m.compact === m.blocks && m.rows === m.blocks && m.noteShown && m.note.includes(`make only ${m.blocks} block`) && width && m.tableFits === true
+      : m.layout === 'spread' && m.compact === null);
+    check(tag + ' species ' + s.slug + ' ' + (small ? 'compact' : 'spread') + ' population map', ok, { slug: s.slug, ...m });
+    if (small) {
+      compact.push(s.slug + ':' + m.blocks);
+      await page.locator('#sp-structure').evaluate(e => e.scrollIntoView({ block: 'start' }));
+      await shot(page, tag + '-small-map-' + s.slug);
+    }
+  }
+  check(tag + ' small maps listed', true, compact);
 }
 
 async function reachCheck(page, tag) {
@@ -205,26 +303,26 @@ async function chrome(page, tag, width) {
     const mark = brand?.querySelector('svg.grm-mark');
     const word = brand?.querySelector('span');
     const nav = document.querySelector('nav[aria-label="Views"]');
-    const pills = nav ? [...nav.querySelectorAll('button')] : [];
-    const current = pills.filter(b => b.getAttribute('aria-current') === 'page');
+    const views = nav ? [...nav.querySelectorAll('button')] : [];
+    const current = views.filter(b => b.getAttribute('aria-current') === 'page');
     const rule = getComputedStyle(document.querySelector('header + main')).borderTopStyle;
     return {
       bezel, paper, pad, radius: parseFloat(getComputedStyle(canvas).borderTopLeftRadius),
       mark: mark ? mark.querySelectorAll('polygon').length : 0, motion: mark?.getAttribute('data-motion'),
       word: word?.textContent, upper: word ? getComputedStyle(word).textTransform : null,
-      pills: pills.map(b => b.textContent), current: current.map(b => getComputedStyle(b).backgroundColor), group: nav ? parseFloat(getComputedStyle(nav.firstElementChild).borderTopLeftRadius) : null,
+      views: views.map(b => b.textContent), current: current.map(b => getComputedStyle(b).backgroundColor), group: nav ? getComputedStyle(nav.firstElementChild).borderTopStyle : null,
       compact: document.querySelector('nav[aria-label="View"] [role="combobox"]') !== null,
       present: (() => { const b = document.querySelector('header button[aria-label="Present"]'); return b ? { r: parseFloat(getComputedStyle(b).borderTopLeftRadius), h: b.getBoundingClientRect().height, border: getComputedStyle(b).borderTopStyle } : null; })(),
-      toggle: (() => { const b = document.querySelector('header button[aria-label^="Switch to"]'); return b ? { r: parseFloat(getComputedStyle(b).borderTopLeftRadius), w: b.getBoundingClientRect().width, icons: [...b.querySelectorAll('svg')].map(s => getComputedStyle(s).opacity) } : null; })(),
+      toggle: (() => { const b = document.querySelector('header button[aria-label^="Switch to"]'); return b ? { r: parseFloat(getComputedStyle(b).borderTopLeftRadius), w: b.getBoundingClientRect().width, h: b.getBoundingClientRect().height, border: getComputedStyle(b).borderTopStyle, icons: [...b.querySelectorAll('svg')].map(s => getComputedStyle(s).opacity) } : null; })(),
       rule,
     };
   });
   check(tag + ' bezel frame and rounded canvas', c.bezel !== c.paper && c.pad >= 4 && c.pad <= 8 && c.radius >= 14, c);
   check(tag + ' brand mark and wordmark', c.mark === 7 && (width >= 640 ? c.word === 'Genomic Resistance MappingGRM' || c.word?.startsWith('Genomic Resistance Mapping') : true) && c.upper === 'uppercase', { mark: c.mark, word: c.word, upper: c.upper });
-  if (c.pills.length > 0) {
-    check(tag + ' pill nav: four views, one neutral active pill', JSON.stringify(c.pills) === JSON.stringify(['Overview', 'Datasets', 'Species', 'Data & Methods']) && c.current.length === 1 && c.current[0] !== 'rgba(0, 0, 0, 0)' && c.group >= 16, c);
+  if (c.views.length > 0) {
+    check(tag + ' view nav: four views in one outlined group, one current view with a fill', JSON.stringify(c.views) === JSON.stringify(['Overview', 'Datasets', 'Species', 'Data & Methods']) && c.current.length === 1 && c.current[0] !== 'rgba(0, 0, 0, 0)' && c.group === 'solid', c);
   } else check(tag + ' compact view selector below the fit', c.compact && width < 1280, { compact: c.compact, width });
-  check(tag + ' Present is an outlined pill, theme toggle round', c.present !== null && c.present.border === 'solid' && c.present.r >= c.present.h / 2 - 0.5 && c.toggle !== null && c.toggle.r >= c.toggle.w / 2 - 0.5 && c.toggle.icons.filter(o => o === '1').length === 1, { present: c.present, toggle: c.toggle });
+  check(tag + ' Present and the theme toggle are outlined, squared, 32px controls with one visible icon', c.present !== null && c.present.border === 'solid' && c.present.h >= 31.5 && c.present.r < c.present.h / 2 - 1 && c.toggle !== null && c.toggle.border === 'solid' && c.toggle.h >= 31.5 && c.toggle.r < c.toggle.w / 2 - 1 && c.toggle.icons.filter(o => o === '1').length === 1, { present: c.present, toggle: c.toggle });
   check(tag + ' dashed rule under the top bar', c.rule === 'dashed', c.rule);
 }
 
@@ -240,9 +338,9 @@ async function interactions(page, tag, width) {
   const theme = tag.includes('dark') ? 'Switch to light theme' : 'Switch to dark theme';
   const wanted = width >= 1280 ? [brandName, 'Overview', 'Datasets', 'Species', 'Data & Methods', 'Present', theme] : [brandName, 'View: Datasets', 'Present', theme];
   check(tag + ' top bar keyboard order', JSON.stringify(focus.slice(0, wanted.length)) === JSON.stringify(wanted), focus);
-  if (width >= 1280) check(tag + ' current pill marked', await page.locator('nav[aria-label="Views"] [aria-current="page"]').textContent() === 'Datasets', null);
+  if (width >= 1280) check(tag + ' current view marked', await page.locator('nav[aria-label="Views"] [aria-current="page"]').textContent() === 'Datasets', null);
   await headerCheck(page, tag + ' datasets', 'Datasets');
-  await pillCheck(page, tag + ' datasets');
+  await controlCheck(page, tag + ' datasets');
   await edgeCheck(page, tag + ' datasets', '[data-view-scroll] h1');
   const scopeText = await page.locator('[data-view-scroll] header').textContent();
   check(tag + ' plain scope sentence', scopeText.includes(CHIP) && !scopeText.includes('BV-BRC lab records'), scopeText);
@@ -301,6 +399,19 @@ async function interactions(page, tag, width) {
   check(tag + ' judged thresholds and counts', status.rows === expected.datasets && status.vme === expected.stats.vmeMeets && status.me === expected.stats.meMeets && status.mic === expected.stats.micAbove90 && status.scope, status);
   check(tag + ' table headers', JSON.stringify(status.headers) === JSON.stringify(['Dataset', 'Random', 'Lineage', 'Gappoints', 'Isolates', 'VME≤1.5%', 'ME≤3%', 'Catalog', 'MIC≥90%', 'Ruleset covering machine']), status.headers);
   await judgedCheck(page, tag);
+  const classes = await page.getByRole('region', { name: 'Datasets', exact: true }).evaluate(region => {
+    const rows = [...region.querySelectorAll('tbody tr')];
+    return {
+      rows: rows.length,
+      marks: rows.map(r => { const sub = r.querySelector('.dataset-sub'); const g = sub?.querySelector('svg.class-glyph'); const shape = g?.querySelector('circle, rect, path'); const name = (sub?.textContent ?? '').split('· ').pop(); return { name, family: g?.getAttribute('data-class-family') ?? null, shape: g?.getAttribute('data-shape') ?? null, hidden: g?.getAttribute('aria-hidden'), fill: shape ? getComputedStyle(shape).fill : null, stroke: shape ? getComputedStyle(shape).stroke : null }; }),
+      key: document.querySelectorAll('[data-class-key]').length,
+    };
+  });
+  const byFamily = new Map();
+  for (const m of classes.marks) { const paint = m.shape === 'ring' ? m.stroke : m.fill; if (!byFamily.has(m.family)) byFamily.set(m.family, new Set()); byFamily.get(m.family).add(m.shape + ' ' + paint); }
+  const paints = [...byFamily.values()].map(v => [...v]);
+  check(tag + ' every row names its drug class beside a decorative family mark', classes.rows === expected.datasets && classes.marks.every(m => m.family !== null && m.hidden === 'true' && m.name && manifest.datasets.some(d => d.drug_class === m.name)), classes.marks.filter(m => m.family === null || m.hidden !== 'true'));
+  check(tag + ' one shape and one paint per family, distinct across families, with one key', classes.key === 1 && paints.every(p => p.length === 1) && new Set(paints.map(p => p[0])).size === paints.length, { key: classes.key, paints: Object.fromEntries([...byFamily.entries()].map(([k, v]) => [k, [...v]])) });
   // Off every header first: a hovered header is deep blue, as it should be.
   await page.mouse.move(2, 2);
   const heads = await page.getByRole('region', { name: 'Datasets', exact: true }).evaluate(region => {
@@ -374,11 +485,12 @@ async function interactions(page, tag, width) {
   await page.locator('#ds-lineages [role="listbox"]').waitFor();
   const head = await page.evaluate(() => {
     const header = document.querySelector('dialog[open] header');
-    return { status: header.querySelector('p')?.textContent, pills: [...header.querySelectorAll('nav[aria-label="Sections"] button')].map(b => b.textContent), current: header.querySelector('nav[aria-label="Sections"] [aria-current="true"]')?.textContent, title: document.getElementById('inspector-title')?.getBoundingClientRect().x, body: document.querySelector('#ds-learners h2')?.getBoundingClientRect().x, pillsX: header.querySelector('nav[aria-label="Sections"] button')?.getBoundingClientRect().x };
+    return { status: header.querySelector('p')?.textContent, links: [...header.querySelectorAll('nav[aria-label="Sections"] button')].map(b => b.textContent), current: header.querySelector('nav[aria-label="Sections"] [aria-current="true"]')?.textContent, title: document.getElementById('inspector-title')?.getBoundingClientRect().x, body: document.querySelector('#ds-learners h2')?.getBoundingClientRect().x, linksX: header.querySelector('nav[aria-label="Sections"] button')?.getBoundingClientRect().x, classMark: header.querySelector('p svg.class-glyph')?.getAttribute('data-class-family') ?? null };
   });
   check(tag + ' inspector header: chip and facts in one status row', head.status?.includes(CHIP.replace('Provisional metrics', 'Provisional')) || head.status?.includes('Internal cross-validation only') || head.status?.includes('Provisional'), head.status);
-  check(tag + ' inspector section pills', JSON.stringify(head.pills) === JSON.stringify(['Learners', 'Interpretable model', 'Genes and panels', 'Marker designer', 'MIC', 'Lineages']) && head.current === 'Learners', head);
-  check(tag + ' inspector header and body share a column', Math.abs(head.title - head.body) <= 1 && Math.abs(head.pillsX - head.body) <= 1, head);
+  check(tag + ' inspector section links', JSON.stringify(head.links) === JSON.stringify(['Learners', 'Interpretable model', 'Genes and panels', 'Marker designer', 'MIC', 'Lineages']) && head.current === 'Learners', head);
+  check(tag + ' inspector header and body share a column', Math.abs(head.title - head.body) <= 1 && Math.abs(head.linksX - head.body) <= 1, head);
+  check(tag + ' inspector names the drug class with its family mark', head.classMark !== null, head.classMark);
   const seg = await page.getByRole('group', { name: 'Errors measured under' }).evaluate(g => [...g.querySelectorAll('button')].map(b => ({ text: b.textContent, pressed: b.getAttribute('aria-pressed'), fill: getComputedStyle(b).backgroundColor, ink: 'rgb(' + getComputedStyle(document.documentElement).getPropertyValue('--ink').trim().split(/\s+/).join(', ') + ')' })));
   check(tag + ' ink segmented errors switch', seg.length === 2 && seg[0].text === 'Errors, random split' && seg[1].text === 'Errors, lineages held out' && seg[0].pressed === 'true' && seg[0].fill === seg[0].ink, seg);
   if (width >= 1280) {
@@ -389,7 +501,7 @@ async function interactions(page, tag, width) {
     await scrollTo(page, '#' + id); await page.waitForTimeout(80);
     const current = await page.locator('dialog[open] nav[aria-label="Sections"] [aria-current="true"]').textContent();
     const want = { 'ds-model': 'Interpretable model', 'ds-mechanisms': 'Genes and panels', 'ds-designer': 'Marker designer', 'ds-mic': 'MIC', 'ds-lineages': 'Lineages' }[id];
-    check(tag + ' section pill follows ' + id, current === want, current);
+    check(tag + ' section link follows ' + id, current === want, current);
     await shot(page, tag + '-' + id);
   }
   await page.getByRole('button', { name: 'Method and coverage', exact: true }).click();
@@ -426,7 +538,7 @@ async function interactions(page, tag, width) {
   await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
   await headerCheck(page, tag + ' methods', 'Data & Methods');
   await edgeCheck(page, tag + ' methods', '[data-view-scroll] h1');
-  await pillCheck(page, tag + ' methods');
+  await controlCheck(page, tag + ' methods');
   const tracks = await page.evaluate(() => [...document.querySelectorAll('#m-funnel td span.relative')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)').length);
   check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
   await scrollTo(page, '#m-funnel'); await shot(page, tag + '-definitions');
@@ -436,8 +548,11 @@ async function interactions(page, tag, width) {
   await page.locator('#corpus').waitFor();
   for (const button of await page.getByRole('button', { name: 'Method and coverage' }).all()) await button.click();
   await reachCheck(page, tag + ' overview with every Method and coverage open');
-  const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => getComputedStyle(b).borderTopStyle); });
-  check(tag + ' one hairline between findings', rules.length === 6 && rules.every(r => r === 'solid'), rules);
+  // The primer is a section of its own above the six numbered ones, under
+  // the same hairline.
+  const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
+  const numbered = rules.filter(r => r.id !== 'primer');
+  check(tag + ' one hairline between findings', numbered.length === 6 && rules.length === 7 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
   await headerCheck(page, tag + ' overview', 'What GRM found');
@@ -530,44 +645,80 @@ async function present(page, tag, width, height) {
   await settle(page);
   await slideSelect.click();
   let slideCount = 0, previousCount = -1, stableCounts = 0;
-  const requiredSlideCount = width < 640 ? 8 : 7;
+  // Title, five primer steps, five findings, the rule: twelve slides, plus
+  // the extra pages of any figure too dense for the viewport (the outline
+  // labels each page "(k of n)"). Which figures continue depends on the
+  // viewport and on the report's row counts, so the count is checked
+  // against the labels the deck shows.
+  const BASE_SLIDES = 12;
   for (let attempt = 0; attempt < 200; attempt++) {
     slideCount = await dialog.getByRole('option').count();
     if (slideCount === previousCount) stableCounts++;
     else { previousCount = slideCount; stableCounts = 0; }
-    if (slideCount === requiredSlideCount && stableCounts >= 2) break;
+    if (slideCount >= BASE_SLIDES && stableCounts >= 20) break;
     await page.waitForTimeout(50);
   }
   await page.keyboard.press('Escape');
-  check(tag + ' expected slide count', slideCount === requiredSlideCount, slideCount);
+  const labels = [];
+  const panelSeen = [];
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
+    labels.push(await slideSelect.textContent());
     await shot(page, tag + '-slide-' + (slide + 1));
     check(tag + ' slide ' + (slide + 1) + ' selected in the outline', await slideNumber(dialog) === slide + 1, await slideNumber(dialog));
     const m = await page.evaluate(measure);
     check(tag + ' slide ' + (slide + 1) + ' true viewport', m.viewport[0] === width && m.viewport[1] === height, m.viewport);
     check(tag + ' slide ' + (slide + 1) + ' fits', m.main.scrollHeight <= m.main.height + 1 && m.main.scrollWidth <= m.main.width + 1 && m.section.scrollHeight <= m.section.height + 1, m);
     check(tag + ' slide ' + (slide + 1) + ' brand and title share an edge', m.titleX !== null && m.brandX !== null && Math.abs(m.titleX - m.brandX) <= 1, { titleX: m.titleX, brandX: m.brandX });
+    // From 640px the footer is one row (Previous, outline, ticks, Next); on a
+    // phone the outline and ticks take the first row and Previous and Next
+    // the second. Either way no two controls overlap, all stay on screen, and
+    // the outline shows its whole label.
     const foot = await page.evaluate(() => {
       const f = document.querySelector('dialog.presentation-dialog footer');
       const buttons = [...f.querySelectorAll('button')];
-      const box = e => { if (!e) return null; const r = e.getBoundingClientRect(); return [Math.round(r.left * 10) / 10, Math.round(r.right * 10) / 10]; };
-      return [box(buttons.find(b => b.textContent === 'Previous')), box(f.querySelector('[role="combobox"]')), box(f.querySelector('[data-beats]')), box(buttons.find(b => b.textContent === 'Next' || b.textContent === 'Finish'))].filter(Boolean);
+      const box = (name, e) => { if (!e) return null; const r = e.getBoundingClientRect(); const k = v => Math.round(v * 10) / 10; return { name, left: k(r.left), right: k(r.right), top: k(r.top), bottom: k(r.bottom), height: k(r.height) }; };
+      const label = f.querySelector('[role="combobox"] [data-dropdown-label]');
+      return {
+        boxes: [box('previous', buttons.find(b => b.textContent === 'Previous')), box('outline', f.querySelector('[role="combobox"]')), box('ticks', f.querySelector('[data-beats]')), box('next', buttons.find(b => b.textContent === 'Next' || b.textContent === 'Finish'))].filter(Boolean),
+        label: label ? { text: label.textContent, scroll: label.scrollWidth, client: label.clientWidth, overflow: getComputedStyle(label).textOverflow, white: getComputedStyle(label).whiteSpace } : null,
+      };
     });
-    check(tag + ' slide ' + (slide + 1) + ' footer controls keep their own space', foot.every((r, i) => i === 0 || foot[i - 1][1] <= r[0] + 0.5) && foot[foot.length - 1][1] <= width, foot);
+    const fb = foot.boxes, byName = n => fb.find(b => b.name === n);
+    const apart = fb.every((a, i) => fb.every((b, j) => i === j || a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5));
+    const rows = width < 640 ? byName('outline').bottom <= Math.min(byName('previous').top, byName('next').top) + 0.5 && Math.abs(byName('previous').top - byName('next').top) <= 1 : fb.every((r, i) => i === 0 || fb[i - 1].right <= r.left + 0.5);
+    check(tag + ' slide ' + (slide + 1) + ' footer controls keep their own space', apart && rows && byName('previous').right <= byName('next').left && fb.every(b => b.left >= -0.5 && b.right <= width + 0.5 && b.bottom <= height + 0.5), foot.boxes);
+    check(tag + ' slide ' + (slide + 1) + ' outline label is whole', foot.label !== null && foot.label.scroll <= foot.label.client + 1 && foot.label.overflow !== 'ellipsis' && foot.label.white !== 'nowrap' && byName('outline').height >= 27.5, foot.label);
+    const deck = await page.evaluate(() => { const t = document.querySelector('dialog.presentation-dialog header [data-deck-title]'); const h = t?.closest('header'); return t ? { text: t.textContent.trim(), scroll: t.scrollWidth, client: t.clientWidth, overflow: getComputedStyle(t).textOverflow, right: t.getBoundingClientRect().right, close: h.querySelector('button').getBoundingClientRect().left } : null; });
+    check(tag + ' slide ' + (slide + 1) + ' deck title is whole', deck !== null && deck.text === 'What GRM found · Genomic Resistance Mapping' && deck.scroll <= deck.client + 1 && deck.overflow !== 'ellipsis' && deck.right <= deck.close, deck);
+    // A fixed figure sits one 24px gap under its answer, not centred in the
+    // room the slide leaves.
+    const gap = await page.evaluate(() => { const s = document.querySelector('dialog.presentation-dialog main section'); const box = s?.querySelector('[data-fixed-box]'); if (!box) return null; const answer = s.querySelector('h2 + div p, h2 + p'); const fig = box.querySelector('[data-figure]'); return { answerBottom: answer.getBoundingClientRect().bottom, figureTop: fig.getBoundingClientRect().top, gap: fig.getBoundingClientRect().top - answer.getBoundingClientRect().bottom }; });
+    if (gap !== null) check(tag + ' slide ' + (slide + 1) + ' fixed figure one gap under its answer', Math.abs(gap.gap - 24) <= 2, gap);
+    if (slide === 3) await splitTracks(page, tag + ' slide 4', 'dialog.presentation-dialog main section');
     if (slide === 0) {
       const t = await page.evaluate(() => ({ mark: document.querySelector('dialog.presentation-dialog main svg.grm-mark')?.getAttribute('data-motion'), title: document.querySelector('dialog.presentation-dialog main h2')?.textContent, text: document.querySelector('dialog.presentation-dialog main')?.textContent }));
       check(tag + ' title slide: mark choreography, wordmark, date, no extra corpus count', t.mark === 'present' && t.title === 'Genomic Resistance Mapping' && t.text.includes('Report built') && !t.text.includes('BV-BRC lab records'), t);
       continue;
     }
+    if (slide >= 1 && slide <= 5) {
+      const primer = await page.evaluate(() => { const s = document.querySelector('dialog.presentation-dialog main section'); return { figure: s?.querySelector('[data-primer-figure]')?.getAttribute('data-primer-figure') ?? null, interactive: s ? s.querySelectorAll('a, button, input, [tabindex="0"]').length : -1 }; });
+      const want = ['dataset', 'feature', 'splits', 'errors', 'scope'][slide - 1];
+      check(tag + ' slide ' + (slide + 1) + ' primer step with its figure and no controls of its own', primer.figure === want && primer.interactive === 0, { ...primer, title });
+    }
     check(tag + ' slide ' + (slide + 1) + ' figure above caption', m.contentBottom <= m.caption.y - 8 && (m.fit === null || m.fit.scrollHeight <= m.fit.height + 1), { contentBottom: m.contentBottom, caption: m.caption, fit: m.fit });
     check(tag + ' slide ' + (slide + 1) + ' labels inside', m.textOutside.length === 0, m.textOutside);
     const finding = title.includes('Unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('MIC prediction') ? 4 : 0;
-    const count = [0, expected.paired.length, expected.catalog.length, expected.panels.length, expected.mic.length][finding] ?? 0;
-    if (finding > 0) check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title });
-    await referenceChecks(page, tag, finding);
-    if (slide === 1) {
+    // A paged panel figure draws its share of the rows on each page; the
+    // pages together must draw every lead-panel dataset once.
+    const paged = /\((\d+) of (\d+)\)/.exec(labels[slide] ?? '');
+    const panelPer = paged === null ? expected.panels.length : Math.ceil(expected.panels.length / Number(paged[2]));
+    const panelShown = paged === null ? expected.panels.length : Math.min(panelPer, expected.panels.length - (Number(paged[1]) - 1) * panelPer);
+    const count = [0, expected.paired.length, expected.catalog.length, panelShown, expected.mic.length][finding] ?? 0;
+    if (finding > 0) check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title, page: paged?.[0] ?? null });
+    await referenceChecks(page, tag, finding, panelSeen, paged !== null);
+    if (title === 'Data') {
       const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);
@@ -588,12 +739,27 @@ async function present(page, tag, width, height) {
       check(tag + ' caption click does not advance', await slideNumber(dialog) === before, { before, after: await slideNumber(dialog) });
     }
   }
+  // Each paged figure is one run of adjacent slides labelled 1 to n.
+  const pages = labels.map(l => /\((\d+) of (\d+)\)$/.exec(l ?? '')).filter(Boolean);
+  const runs = [];
+  labels.forEach((l, i) => {
+    const p = /\((\d+) of (\d+)\)$/.exec(l ?? '');
+    if (p === null) return;
+    if (p[1] === '1' || runs.length === 0 || runs[runs.length - 1].end !== i - 1) runs.push({ end: i, pages: [] });
+    runs[runs.length - 1].end = i;
+    runs[runs.length - 1].pages.push([Number(p[1]), Number(p[2])]);
+  });
+  const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
+  check(tag + ' expected slide count: twelve slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
   const closeButton = dialog.getByRole('button', { name: 'Close', exact: true });
   await closeButton.focus(); await page.keyboard.press('Home');
   check(tag + ' Home reaches the title slide', await slideNumber(dialog) === 1, await slideNumber(dialog));
-  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+  // Past the title and the five primer steps and the Data slide, to the
+  // first chart.
+  for (let i = 0; i < 7; i++) await page.keyboard.press('ArrowRight');
   const chart = dialog.getByRole('listbox'); await chart.focus(); await page.keyboard.press('ArrowRight');
-  check(tag + ' chart owns arrow keys', await slideNumber(dialog) === 3 && await chart.getByRole('option').getAttribute('aria-posinset') === '2', await slideNumber(dialog));
+  check(tag + ' chart owns arrow keys', await slideNumber(dialog) === 8 && await chart.getByRole('option').getAttribute('aria-posinset') === '2', await slideNumber(dialog));
   await shot(page, tag + '-chart-focus');
   await page.keyboard.press('Escape');
   check(tag + ' chart Escape keeps Present open', await dialog.count() === 1 && await dialog.getByRole('tooltip').count() === 0, null);
@@ -659,6 +825,20 @@ async function boundaries(browser) {
   check('coarse pointer 44px targets', targets.length === 0, targets);
   await page.getByRole('button', { name: 'Random', exact: true }).focus(); await shot(page, 'forced-colors-focus');
   check('forced colors: judged values keep plain readable text and no ring', await page.locator('[data-verdict]').first().evaluate(e => getComputedStyle(e).boxShadow === 'none' && e.textContent.trim().length > 0), null);
+  const forcedMarks = await page.evaluate(() => [...document.querySelectorAll('.dataset-sub svg.class-glyph')].map(g => { const s = g.querySelector('circle, rect, path'); return { shape: g.getAttribute('data-shape'), paint: g.getAttribute('data-shape') === 'ring' ? getComputedStyle(s).stroke : getComputedStyle(s).fill }; }));
+  check('forced colors: class marks share one system ink and keep distinct shapes', forcedMarks.length > 0 && new Set(forcedMarks.map(m => m.paint)).size === 1 && new Set(forcedMarks.map(m => m.shape)).size >= Math.min(2, new Set(manifest.datasets.map(d => d.drug_class)).size), forcedMarks.slice(0, 6));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Present', exact: true }).click();
+  const deck = page.getByRole('dialog', { name: 'GRM findings presentation' });
+  await deck.waitFor();
+  await deck.getByRole('combobox', { name: /^Go to slide/ }).waitFor();
+  await settle(page);
+  for (const [slide, selector, name] of [[3, '[data-hidden], [data-hidden-swatch]', 'splits'], [4, '[data-error]', 'errors']]) {
+    await goSlide(page, deck, slide);
+    const marks = await page.evaluate((selector) => [...document.querySelectorAll('dialog.presentation-dialog main ' + selector)].map(e => ({ adjust: getComputedStyle(e).forcedColorAdjust, fill: getComputedStyle(e).backgroundColor })), selector);
+    check('forced colors: ' + name + ' semantic fills stay visible', marks.length > 0 && marks.every(m => m.adjust === 'none' && m.fill !== 'rgba(0, 0, 0, 0)' && m.fill !== 'transparent'), marks);
+    await shot(page, 'forced-colors-primer-' + name);
+  }
   await context.close();
 }
 
@@ -687,6 +867,7 @@ async function boundaries(browser) {
           if (route.startsWith('/species')) await page.getByRole('grid', { name: /lineage block/ }).first().waitFor();
           if (route === '/methods') await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
           await shot(page, tag + '-' + key);
+          if (key === 'overview') await primerCheck(page, tag);
           await reachCheck(page, tag + ' ' + key);
           check(tag + ' ' + key + ' document has no horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth })));
           await tallShot(page, tag + '-' + key + '-full', width, height);
@@ -694,6 +875,7 @@ async function boundaries(browser) {
           await headerCheck(page, tag + ' ' + key, title);
           check(tag + ' ' + key + ' 1560px content rail', await page.evaluate(() => { const shell = document.querySelector('[data-view-scroll] > div'); return getComputedStyle(shell).maxWidth === '1560px'; }), null);
         }
+        if (theme === 'light') await smallMaps(page, tag);
         await page.goto(BASE + '/datasets?dataset=' + inspectId);
         await page.locator('#ds-learners').waitFor();
         await shot(page, tag + '-inspector');

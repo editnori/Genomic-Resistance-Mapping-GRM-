@@ -294,9 +294,16 @@ impl KsetReader {
         let bits = 2 * self.k as u32;
         let mut prev = bucket_floor(bucket, bits);
         let mut pos = 0;
-        for _ in 0..self.counts[bucket] {
+        for i in 0..self.counts[bucket] {
+            let gap = get_varint(bytes, &mut pos)?;
+            // Values are distinct: only the first may equal the floor.
+            ensure!(
+                i == 0 || gap > 0,
+                "kset {} bucket {bucket} repeats a k-mer",
+                self.name
+            );
             prev = prev
-                .checked_add(get_varint(bytes, &mut pos)?)
+                .checked_add(gap)
                 .with_context(|| format!("kset {} bucket {bucket} overflows", self.name))?;
             out.push(prev);
         }
@@ -526,5 +533,25 @@ mod tests {
         let shifted = patched(&random, 33, &(first_end - 1).to_le_bytes());
         let reader = reopen(dir.path(), &shifted).unwrap();
         assert!(reader.read_bucket(1, &mut bytes, &mut out).is_err());
+    }
+
+    #[test]
+    fn read_bucket_rejects_a_repeated_kmer() {
+        // A gap of 0 is the bucket floor itself for the first value, and a
+        // repeat after it: a merge would count the genome twice.
+        let dir = tempfile::tempdir().unwrap();
+        let (mut bytes, mut out) = (Vec::new(), Vec::new());
+        for first in [0u64, 7] {
+            let valid = kset_bytes(dir.path(), 31, &[first, first + 5]);
+            let reader = reopen(dir.path(), &valid).unwrap();
+            reader.read_bucket(0, &mut bytes, &mut out).unwrap();
+            assert_eq!(out, [first, first + 5]);
+            let repeated = patched(&valid, valid.len() - 1, &[0]);
+            let reader = reopen(dir.path(), &repeated).unwrap();
+            let err = reader.read_bucket(0, &mut bytes, &mut out).err().unwrap();
+            assert!(format!("{err:#}").contains("repeats a k-mer"), "{err:#}");
+            assert!(reader.read_all().is_err());
+            out.clear();
+        }
     }
 }

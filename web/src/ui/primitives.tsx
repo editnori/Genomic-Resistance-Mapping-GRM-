@@ -16,8 +16,9 @@ export const FOCUS_RING =
  *  start on one left edge. */
 export const VIEW_SHELL = "mx-auto w-full max-w-[1560px] px-4 sm:px-6";
 
-/** An outlined pill action: Present, the inspector's actions, slide steps. */
-export const PILL_ACTION = `ui-control-target inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-hair bg-paper-pure px-3.5 text-control font-medium leading-none text-ink transition-[color,border-color,background-color,transform] duration-fast ease-out active:scale-[0.98] enabled:hover:border-blue enabled:hover:text-blue disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING}`;
+/** An outlined action with squared corners: the deck's Close, Previous
+ *  and Next. */
+export const ACTION_BUTTON = `ui-control-target inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-hair bg-paper-pure px-3.5 text-control font-medium leading-none text-ink transition-[color,border-color,background-color,transform] duration-fast ease-out active:scale-[0.98] enabled:hover:border-blue enabled:hover:text-blue disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING}`;
 
 // ---- Verdict against a reference bar ---------------------------------------
 
@@ -51,7 +52,7 @@ export const BarPill = BarValue;
 export const verdictWords = (value: number, bar: ReferenceBar): string =>
   `${bar.name} ${pct(value)}, ${verdictOf(value, bar) === "meets" ? "meets" : "misses"} ${barWords(bar)}`;
 
-// ---- Segmented: a mode switch, ink-filled current segment ------------------
+// ---- Segmented: a mode switch, ink-filled current segment, squared ---------
 
 export interface SegmentOption<T extends string> {
   id: T;
@@ -76,7 +77,7 @@ export const Segmented = <T extends string>({
   <div
     role="group"
     aria-label={ariaLabel}
-    className={`inline-flex min-h-7 max-w-full flex-wrap items-center gap-0.5 rounded-[14px] border border-hair bg-paper-pure p-0.5 ${fill ? "w-full" : "w-max"}`}
+    className={`inline-flex min-h-7 max-w-full flex-wrap items-center gap-0.5 rounded-md border border-hair bg-paper-pure p-0.5 ${fill ? "w-full" : "w-max"}`}
   >
     {options.map((o) => {
       const selected = o.id === value;
@@ -87,7 +88,7 @@ export const Segmented = <T extends string>({
           aria-pressed={selected}
           disabled={o.disabled === true}
           onClick={() => onSelect(o.id)}
-          className={`ui-control-target inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded-full px-3 text-control font-medium tracking-tight transition-[color,background-color,transform] duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING} ${
+          className={`ui-control-target inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded px-3 text-control font-medium tracking-tight transition-[color,background-color,transform] duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING} ${
             fill ? "flex-1 basis-0" : ""
           } ${selected ? "bg-ink text-paper-pure" : "text-ink enabled:hover:bg-surface-subtle"}`}
         >
@@ -118,7 +119,7 @@ export const GhostButton = ({
     onClick={onClick}
     disabled={disabled}
     aria-label={ariaLabel}
-    className={`ui-control-target inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full border border-hair px-3 text-control font-medium tracking-tight transition-[color,background-color,border-color,transform] duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING} ${
+    className={`ui-control-target inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-md border border-hair px-3 text-control font-medium tracking-tight transition-[color,background-color,border-color,transform] duration-fast ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${FOCUS_RING} ${
       tone === "blue"
         ? "text-blue enabled:hover:border-blue/60 enabled:hover:bg-blue/5"
         : "text-ink enabled:hover:border-blue/50 enabled:hover:bg-surface-subtle enabled:hover:text-blue"
