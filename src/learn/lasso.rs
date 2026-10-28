@@ -29,7 +29,8 @@ struct Limits {
 }
 
 /// On the saved fixture panels and MTB delamanid fold 0 a point takes at
-/// most 6 IRLS steps and a solve at most 44 iterations.
+/// most 7 IRLS steps (C. jejuni lineage fold 0, point 4) and a solve at most
+/// 44 iterations.
 const LIMITS: Limits = Limits {
     irls_steps: 100,
     inner_iterations: 5_000,
@@ -2120,9 +2121,10 @@ mod tests {
             let above = obj - cert["obj"].as_f64().unwrap();
             eprintln!("point {i}: objective - certified {above:e}, KKT {kkt:e}");
             assert!(kkt <= KKT_TOL, "point {i}: KKT {kkt:e}");
-            // At most 1e-6 above the certified optimum, and below it by no
-            // more than that optimum's own residual allows.
-            assert!((-1e-9..=1e-6).contains(&above), "point {i}: {above:e}");
+            // At most 1e-7 above the certified optimum, and below it by no
+            // more than that optimum's own residual allows. The shipped worst
+            // is 8.4e-9; an INNER_TOL of 1e-6 lands at 6.1e-7 and fails here.
+            assert!((-1e-9..=1e-7).contains(&above), "point {i}: {above:e}");
             most_above = most_above.max(above);
             worst_kkt = worst_kkt.max(kkt);
         }
@@ -2185,5 +2187,47 @@ mod tests {
             log_loss(&r7, &y, &test)
         );
         assert_eq!(changed, 0);
+    }
+
+    /// Under unequal IRLS weights an exactly dependent column's computed
+    /// pivot can round to a small positive number, so `PIVOT_TOL`, not exact
+    /// arithmetic, keeps it out of the factor. Checked for a disjoint union
+    /// and for the complement of an active column.
+    #[test]
+    fn push_refuses_exactly_dependent_columns_under_unequal_weights() {
+        fn uniform(state: &mut u64, lo: f64, hi: f64) -> f64 {
+            *state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            lo + (hi - lo) * ((*state >> 11) as f64 / (1u64 << 53) as f64)
+        }
+        let n = 60;
+        let (x, y) = union_panel();
+        let prob = Problem::new(&x, &y, &Bits::ones(n), &[0, 1, 2, 3]);
+        let rep = representatives(&prob.columns);
+        let mut comp = BitMatrix::with_cols(n);
+        comp.push_row(Bits::from_indices(n, 0..23).words());
+        comp.push_row(Bits::from_indices(n, 23..n).words());
+        let cprob = Problem::new(&comp, &y, &Bits::ones(n), &[0, 1]);
+        let crep = representatives(&cprob.columns);
+        let mut state = 0x2545_f491_4f6c_dd1d_u64;
+        for draw in 0..2_000 {
+            let spread = uniform(&mut state, 0.0, 12.0);
+            let eta: Vec<f64> = (0..n)
+                .map(|_| uniform(&mut state, -spread, spread))
+                .collect();
+            let mut wls = Wls::new(&prob, &rep, 0.01, &eta).unwrap();
+            assert!(wls.push(0, 1.0, PIVOT_TOL).is_ok() && wls.push(1, 1.0, PIVOT_TOL).is_ok());
+            assert!(
+                wls.push(2, 1.0, PIVOT_TOL).is_err(),
+                "union joined the factor, draw {draw}"
+            );
+            let mut wls = Wls::new(&cprob, &crep, 0.01, &eta).unwrap();
+            assert!(wls.push(0, 1.0, PIVOT_TOL).is_ok());
+            assert!(
+                wls.push(1, 1.0, PIVOT_TOL).is_err(),
+                "complement joined the factor, draw {draw}"
+            );
+        }
     }
 }
