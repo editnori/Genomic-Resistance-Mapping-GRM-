@@ -1,6 +1,6 @@
 # GRM work program and completion ledger
 
-Snapshot: 2026-10-28 12:13 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
+Snapshot: 2026-10-28 12:21 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
 
 ## Status vocabulary
 
@@ -47,7 +47,7 @@ All lanes run on Opus (`layth888`) from branch `recovery/working-tree-20261028`.
 | Lane | Scope and current boundary |
 |---|---|
 | [Adversarially review deployment fixes](t3-thread://v1/thread:delegated-task:command%3Amcp%3A6ffabfff-67c4-4e2d-82c6-6e930bce93bc%3Adelegate-task%3A65df467b-afe4-4adf-9888-07774a75ad9d) | Fresh adversarial review of `b7efb43` (safe temp root) and `3f7a440`..`24bc367` (process-group stop, no-proxy health checks, absolute connector paths, PIPE trap, stage PID identity, manifest-bound browser check, `forged3` race), including the 33-case mutation harness and a pre-live checklist. Live use remains blocked. |
-| Large-species lasso scan | **Ready, awaiting user approval.** Harness `scripts/lasso-scan/` (commits `855bdba`, `43c187b`) calls the shipped revision-8 code via `eval::lasso_only` (tested equal to `evaluate`); 18 cost-ranked datasets read in place from `/root/grm-revision7-preflight/data` (same fingerprints as the candidate); binary built locally for Vast's `znver2` CPU; at most 79.2 MiB new disk with a 30 GiB floor; expected 2.2–2.6 h, hard cap 5.56 h; exit 0 go, 1 no-go, 2 stopped by the rule, 3 refused to start. Risk: the preflight `catalog` is a symlink to `/root/grm/data/catalog`; if it changed after revision 7 the inputs-only check stops before any fit. |
+| Large-species lasso scan | **Running on Vast since 12:17 UTC (user-approved).** Binary built from `43c187bb03dc` for `znver2` (sha256 `53bb6cb7…`), staged in `/root/grm-lasso-scan-r8-20261028/`; the inputs-only check passed for all 18 datasets ("all inputs match revision 7"); plan: at most 71.8 MiB written, 4.04 GiB read in place, 20 GiB headroom above the 30 GiB floor; hard cap 5.56 h, expected 2.2–2.6 h. Exit code lands in `driver.rc` (0 go, 1 no-go, 2 stopped by the rule, 3 refused). A first inputs-only attempt (`inputs/`) stopped at 0.006 s because `Path("./lasso-scan")` drops `./` and the driver looked the binary up on `PATH`; the run uses an absolute `--binary`, and the harness should resolve relative paths. |
 | [Main orchestration](t3-thread://v1/024208eb-d65b-4fdb-9051-ec163a358d9a) | Opus took over from Kimi on 2026-10-28. Reconciles lane results, maintains this ledger, reviews and pushes lane commits, and keeps hard-stopped work stopped. |
 
 ## Completed audit and recovery lanes
@@ -468,3 +468,4 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
 | `2a9f85f` | `b0db955` |
 | `fb1e4a3` | `af8e63c` |
 | `9d30a86` | `904e3cc` |
+- 2026-10-28 12:21 UTC: launched the large-species lasso scan on Vast with user approval (commit `43c187bb03dc`, 18 datasets, inputs verified against revision 7).
