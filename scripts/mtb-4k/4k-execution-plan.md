@@ -1,10 +1,15 @@
 # MTB matched 2k / added-2k / 4k execution plan — NOT AUTHORIZED
 
-Revision 2 (2026-10-28, fix lane). It replaces the wiring lane's plan
-(`plans/4k-execution-plan.md`, SHA-256 `8bb780c1…6fb8`) after the independent
-review `WIRING_REVIEW=CHANGES_REQUIRED`. The code it runs is commit
-`dd1f6d3` plus the fix commit that adds this directory; that pair has not
-been re-reviewed.
+Revision 2.1 (2026-10-28, plan-and-validators lane). Revision 2 replaced the
+wiring lane's plan (`plans/4k-execution-plan.md`, SHA-256 `8bb780c1…6fb8`).
+The re-review of the fix (`176e3cc`, rebuilt trailer-free as `79158f9`, tree
+`150500fe…`) returned `WIRING_REVIEW=CHANGES_REQUIRED` with plan and script
+findings N1–N8 and no open Rust finding. This revision closes N1–N8: the
+annotation copy (N1), the pilot's kill and invalidation checks (N2, N8), the
+matrix validator (N3), stale commit IDs (N5), the comparator's interlocks
+(N6), and the frozen-input and lane checks (N7). The code is the merge M0 of
+`79158f9` with the shared branch (section 7) plus the commit that adds this
+revision; neither has been reviewed.
 
 **No command below has been run. No biological matrix, structure, training,
 report or 8k work exists. No 8k stage is planned or permitted.**
@@ -13,20 +18,23 @@ report or 8k work exists. No 8k stage is planned or permitted.**
 
 `RUN_4K=YES` only when all of these hold; otherwise `RUN_4K=NO`.
 
-1. **Wiring re-review.** A fresh independent reviewer inspects the fix commit
-   on top of `dd1f6d3` and records `WIRING_REVIEW=APPROVED`.
+1. **Wiring re-review.** A fresh independent reviewer inspects this commit
+   and records `WIRING_REVIEW=APPROVED`.
 2. **Pilot.** The parent authorizes the small frozen biological pilot
    (section 4), and every pilot acceptance check passes before the prefix
    stage.
 3. **Validators reviewed.** `validate_matrix.py`, `screen_duplicates.py`,
-   `compare_cohorts.py` and `prepare_execution_roots.py` in this directory
-   are independently reviewed. Their tests: `python3 -I
-   scripts/mtb-4k/tests/test_<name>.py` (the validator's test builds real
-   matrices and needs `GRM=<built grm binary>`).
+   `compare_cohorts.py`, `prepare_execution_roots.py` and
+   `pilot_interrupt.py` in this directory are independently reviewed. Their
+   tests: `python3 -I scripts/mtb-4k/tests/test_<name>.py` (the validator's
+   and the pilot helper's tests build real matrices and need
+   `GRM=<built grm binary>`).
 4. **Resources, immediately before every stage.** At least 45 GiB free disk
    and 64 GiB reclaim-aware available RAM. The process-group guard keeps its
    31 GiB disk and 48 GiB RAM stop floors, above the 30/40 GiB global
-   reserves. Re-measure; never reuse an earlier reading.
+   reserves. Re-measure; never reuse an earlier reading. Root preparation
+   checks the same 45 GiB itself: it sums the annotation bytes it will copy
+   and refuses unless 45 GiB stay free afterwards (section 3).
 5. **Matrix review before structure; revision-8 gate before training.**
    Structure needs a matrix-only review. Training and report generation need
    the revision-8 gate in section 7 and a separate parent go-ahead.
@@ -39,15 +47,15 @@ The 4,096-column cap is unchanged.
 - Full 4k: `results/genomes-4000.txt`, 4,000 IDs, SHA-256 `80faef89571ecd2fd658204abd39fd4b55e5a86bfe8e4f379274162868f44eaf`.
 - Prefix 2k: rows 1–2000, the exact byte prefix, SHA-256 `57af1c86c35fb0a4c62d3c0784a09804a919ba75941159d0c7b3cf56870aa2e3`.
 - Added 2k: rows 2001–4000, SHA-256 `a980d9e014fb90972a46b3fc01e65a9654deb58935d3ddf0f54018c19e7def85`.
-- FASTA: `results/fasta-manifest.tsv` (4,000 hashes, reproduced twice). FASTA are linked, never copied or modified.
+- FASTA: `results/fasta-manifest.tsv` (4,000 hashes, reproduced twice). FASTA are linked, never copied or modified; root preparation hashes each against the manifest, and `--verify-frozen` hashes them again after every stage.
 - Frozen 2k reference matrix: `/root/grm-revision7-preflight/data/species/mycobacterium_tuberculosis/matrix` (2,000 columns, k=31, min_support=2, 315,444 patterns, 6,041,188 kept k-mers).
-- Inputs linked read-only: the candidate root `/root/grm-extra-species-analysis-20261027/data` (`catalog`, `curated`, and the BV-BRC record files). Its annotation cache is copied, not linked (section 3).
+- Inputs linked read-only: the candidate root `/root/grm-extra-species-analysis-20261027/data` (`catalog`, `curated`, and the BV-BRC record files). Each training cohort gets lane-local copies of the cached annotations of its own genomes only (section 3).
 
 Cohorts, each in its own data root, all built by `prepare_execution_roots.py`:
 
 | Cohort | Genomes | Role |
 |---|---|---|
-| `pilot256`, `pilot256-stock` | rows 1–256 | the small biological pilot and its stock comparator (section 4) |
+| `pilot256`, `pilot256-stock` | rows 1–256 | the small biological pilot and its stock comparator (section 4); never trained, so no annotations |
 | `prefix` | rows 1–2000 | the frozen 2k candidate; byte-compared with the frozen matrix |
 | `added` | rows 2001–4000 | an independent cohort, not a suffix of the matrix files |
 | `full` | all 4,000 | the 4k cohort |
@@ -86,19 +94,56 @@ sha256sum "$GRM" | tee "$RUN/logs/grm-binary.sha256"
 ```
 
 `prepare_execution_roots.py` derives every list from the frozen bytes and
-checks the prefix/added hashes. It creates only new directories and
-manifest-verified FASTA links. In each root, `catalog` and `curated` link to
-the candidate's read-only directories, and `bvbrc` is a **real lane-local
-directory**: the two record files link to the candidate, and `features/` is a
-copy of the candidate's annotation cache, checked file by file against
-`frozen-inputs.json`. `grm learn` fetches missing annotations from BV-BRC
-into that lane-local directory only. It refuses a `bvbrc` or `features` link
-and stops rather than write through it (`annotate::FeatureCacheOutsideRoot`).
-So training never writes into the frozen candidate root. After each stage:
+checks the prefix/added hashes. It hashes every FASTA against the cohort's
+FASTA manifest, then creates only new directories and FASTA links. In each
+root, `catalog` and `curated` link to the candidate's read-only directories,
+and `bvbrc` is a **real lane-local directory**: the two record files link to
+the candidate, and `features/` holds copies of the candidate's cached
+annotations for that cohort's own genomes only, each checked against
+`frozen-inputs.json`. `grm learn` reads an annotation only for a genome in
+the cohort it trains (`annotate::load_features`), so no other file is ever
+read. The two pilot roots never train and get an empty `features/`.
+
+**Disk (N1).** Revision 2 copied the whole cache, 1,868 files and
+1,477,799,489 bytes, into all six roots: 8,866,796,934 bytes, which failed
+the 45 GiB gate before the pilot. Of the 1,868 files only 191 belong to
+cohort genomes. The copies are now those files only. Measured read-only on
+Vast at 15:58 UTC on 2026-10-28 with the script's own selection:
+
+| Cohort | Files | Bytes |
+|---|---|---|
+| prefix | 170 | 128,989,934 |
+| added | 21 | 15,904,550 |
+| full | 191 | 144,894,484 |
+| matched2k | 101 | 76,661,462 |
+| pilot256, pilot256-stock | 0 | 0 |
+| **total** | 483 | **366,450,430** (0.34 GiB) |
+
+The script refuses before it creates anything unless 45 GiB stay free after
+the copy, and `preparation.json` records the bytes copied and the free space
+before and after. The 45 GiB gate is still measured, not assumed: Vast had
+45,345,652,736 bytes (42.2 GiB) free at that reading, below the gate before
+any copy, so the pilot cannot start until space is freed.
+
+`grm learn` fetches missing annotations from BV-BRC into the cohort's
+lane-local directory only. It refuses a `bvbrc` or `features` link and stops
+rather than write through it (`annotate::FeatureCacheOutsideRoot`), and it
+writes reports only through real directories below the root and never
+through a link (`confine`). So training never writes into the frozen
+candidate root. Before any stage that writes a cohort root, and after it:
 
 ```bash
-python3 -I "$P/prepare_execution_roots.py" --verify-frozen "$RUN"   # any change is a stop
+python3 -I "$P/prepare_execution_roots.py" --check-lane "$RUN/cohorts/<cohort>/data"   # any problem is a stop
+python3 -I "$P/prepare_execution_roots.py" --verify-frozen "$RUN"                      # any change is a stop
 ```
+
+`--check-lane` refuses a link anywhere but where preparation made one
+(catalog, curated, the two record files and each FASTA) and any entry that is
+not a real directory or regular file; it covers `grm report`, whose writes
+GRM does not confine itself. `--verify-frozen` re-hashes the candidate's
+catalog, curated, records and whole annotation cache, every FASTA in the
+linked store, each cohort's `genomes.txt`, and checks that every FASTA link
+still points where preparation put it.
 
 Newly fetched annotations are not frozen. After training, record their
 SHA-256 (`find $RUN/cohorts/*/data/bvbrc/features -newer $RUN/preparation.json -type f -exec sha256sum {} +`)
@@ -111,15 +156,30 @@ on rows 1–256 of the frozen order (SHA-256 recorded in `preparation.json`).
 Width 128 gives two blocks, so a fold, a resume and the partial merge are all
 exercised on real MTB data.
 
+The kill is no longer a timed poll and a `pkill -f` pattern (N8): the pattern
+also matched the guard's and `/usr/bin/time`'s command lines and killed the
+guard, and nothing checked that the run was interrupted. `pilot_interrupt.py`
+finds the one process whose command line starts with exactly
+`$GRM --data $SP matrix`, waits until `run.json` records block 0 folded
+(`folded_columns` = 128: its partial verified and its owned ksets deleted),
+stops the process, checks that state, kills it and waits until it is gone.
+It exits non-zero, and the pilot stops, when the run ends first, when the
+point is not reached in time, or when the stopped state is not an
+interrupted run.
+
 ```bash
 G="python3 $GUARD"
 SP=$RUN/cohorts/pilot256/data; ST=$RUN/cohorts/pilot256-stock/data
-# a) sparse, with a kill once block 0's partial is verified and before its ksets go
+for d in "$SP" "$ST"; do python3 -I "$P/prepare_execution_roots.py" --check-lane "$d" || exit 1; done
+# a) sparse, interrupted once block 0 is folded and block 1 is under way
 $G --log $RUN/logs/pilot-sparse-1.log --resources $RUN/logs/pilot-sparse-1.json -- \
   /usr/bin/time -v "$GRM" --data "$SP" matrix --species $SLUG --min-support 2 --disk-sparse --block-width 128 &
-until ls $SP/species/$SLUG/matrix-partials/*/block-00000.partial.receipt.json >/dev/null 2>&1; do sleep 1; done
-pkill -KILL -f -- "--data $SP matrix"; wait
-ls $SP/species/$SLUG/ksets | wc -l          # record: block 0's ksets are still there
+python3 -I "$P/pilot_interrupt.py" --data "$SP" --grm "$GRM" --folded 128 --receipt $RUN/audit/pilot-interrupt.json || exit 1
+wait   # the guard records the killed run and exits
+ls $SP/species/$SLUG/ksets | wc -l          # record: block 0's owned ksets are gone, block 1's in progress
+# a2) the invalidation copies, taken now, of the interrupted root and before the resume
+mkdir $RUN/pilot-copies
+for c in width forge link; do cp -a "$RUN/cohorts/pilot256" "$RUN/pilot-copies/$c"; done
 # b) resume to completion
 $G --log $RUN/logs/pilot-sparse-2.log --resources $RUN/logs/pilot-sparse-2.json -- \
   /usr/bin/time -v "$GRM" --data "$SP" matrix --species $SLUG --min-support 2 --disk-sparse --block-width 128
@@ -134,18 +194,31 @@ python3 -I "$P/validate_matrix.py" --matrix $SP/species/$SLUG/matrix --counted $
 python3 -I "$P/prepare_execution_roots.py" --verify-frozen "$RUN"
 ```
 
-Then run the invalidation checks on copies made with `cp -a` of the
-interrupted pilot root, never on the live root:
+Then run the invalidation checks on the three copies from step a2, never on
+the live root. Each copy is the interrupted state: block 0 folded (its owned
+ksets deleted), block 1 not finished.
 
-1. A width change mid-run (`--block-width 64` on a copy stopped after block 0)
-   is refused while the width-128 run's partials exist.
-2. A partial edited together with its receipt fails `verify_partial`, with
-   "does not hold that genome's kset".
-3. A `matrix` link or a `ksets/<id>.kset.part` link is refused before any
-   work.
+1. A width change (`--block-width 64` on the `width` copy) is refused while
+   the width-128 run's partials exist ("unfinished disk-sparse run").
+2. On the `forge` copy, block 0's partial is edited together with its
+   receipt (one column loses a k-mer, the receipt's SHA-256 and byte count
+   are recomputed). The resume must fail `verify_partial` with "does not
+   hold that genome's kset", and leave the copy's partials in place. Revision
+   2 forged the partial inside the kill window it chose, while block 0 was
+   still active and its ksets present; there GRM correctly rebuilds an
+   unverified partial from the ksets and finishes byte-equal to stock (N2).
+   That is the expected outcome for an active block, so this check forges a
+   folded one.
+3. On the `link` copy, a `matrix` directory link and, separately, a
+   `ksets/<id>.kset.part` link are each refused before any work, and their
+   targets keep their bytes.
 
 Acceptance, all required:
 
+- `pilot_interrupt.py` exits 0: one process matched, the stopped state had
+  `folded_columns` = 128, no saved matrix, block 0's partial and receipt,
+  and the process was gone after the kill. The guard's resources record for
+  step a exists and shows the killed run.
 - Sparse and stock matrix files and `structure.json` are byte-identical.
 - The resume completes. No owned kset is deleted before its block's verified
   partial, no `matrix-partials`, owned ksets or `pending` are left, and the
@@ -177,6 +250,7 @@ with measured figures.
 ```bash
 for cohort in prefix added full matched2k; do
   D=$RUN/cohorts/$cohort/data
+  python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
   python3 "$GUARD" --log $RUN/logs/$cohort-matrix.log --resources $RUN/logs/$cohort-matrix-resources.json -- \
     /usr/bin/time -v "$GRM" --data "$D" matrix --species $SLUG --min-support 2 --disk-sparse --block-width 128
   python3 -I "$P/validate_matrix.py" --matrix $D/species/$SLUG/matrix --counted $D/species/$SLUG/counted.json \
@@ -187,6 +261,13 @@ done
 for f in matrix.json patterns.bin support.bin kmer_offsets.bin kmers.bin; do
   cmp $RUN/cohorts/prefix/data/species/$SLUG/matrix/$f /root/grm-revision7-preflight/data/species/$SLUG/matrix/$f || exit 1
 done
+# Containment (N3): each 2k cohort against the full cohort's matrix, after all four exist.
+F=$RUN/cohorts/full/data/species/$SLUG/matrix
+for cohort in prefix added matched2k; do
+  D=$RUN/cohorts/$cohort/data
+  python3 -I "$P/validate_matrix.py" --matrix $D/species/$SLUG/matrix --counted $D/species/$SLUG/counted.json \
+    --genomes $D/species/$SLUG/genomes.txt --superset "$F" --out $RUN/audit/$cohort-in-full.json || exit 1
+done
 ```
 
 Run the cohorts one at a time, prefix first. Any failure stops the later
@@ -196,11 +277,36 @@ ones. Re-check the resource gate before each.
 checks structure: non-empty patterns in first-appearance order, every k-mer
 inside the 2k-bit space and in exactly one pattern, distinct rows, the
 support filter, and that distinct equals kept plus rare plus core. It checks
-every column against its genome's bottom sketch. It also recounts 16 seeded
+every column against its genome's bottom sketch. It recounts 16 seeded
 genomes plus any `--recount-ids` from FASTA, independently of GRM; each must
 reproduce `counted.json`'s k-mer count, FNV kset digest and sketch, and then
-its whole column. For the added, full and matched2k cohorts, this recount is
-the independent content check; the prefix also has the byte comparison.
+its whole column.
+
+Revision 2 called that recount "the independent content check" for added,
+full and matched2k, but it never looked at the k-mers a matrix leaves out
+(N3): a dropped kept pattern, a dropped kept k-mer, a kept k-mer moved to the
+rare count and a matrix built at min_support 3 but labelled 2 all passed,
+even with every genome recounted. Three checks now cover omissions:
+
+- **Exact region.** Below the smallest sketch threshold every genome's
+  membership is known from its sketch, so support is exact there and the kept
+  set must be exactly the k-mers with support in [2, n − 2].
+- **Recount bounds.** A recounted k-mer the matrix leaves out must be rare or
+  core. One that at least two known genomes hold and at least two lack
+  (recounted genomes, plus sketches where they reach) is neither, so it is a
+  missing kept k-mer. With every genome recounted, this is exact, and the
+  rare, core and distinct counts must equal the recount's.
+- **Containment (`--superset`).** A k-mer kept in a sub-cohort is kept in the
+  full cohort, and a k-mer kept in the full cohort whose support over a
+  sub-cohort's genomes is in [2, n − 2] is kept there. So prefix, added and
+  matched2k must each equal the full matrix's rows restricted to their
+  columns and filtered at min_support 2, k-mer for k-mer and bit for bit,
+  with the same kset digests. The prefix is byte-identical to the frozen stock
+  matrix, so the full matrix is checked against stock-built content on every
+  k-mer the prefix keeps; added and matched2k are checked against the full
+  matrix on every k-mer either keeps. A k-mer kept in the full matrix and in
+  none of the three sub-cohorts is checked only by the exact region and the
+  recount bounds.
 
 After each cohort, check the receipt: no `pending`, no `matrix-partials`, no
 owned ksets, exact order and digests, and the resource minima.
@@ -235,16 +341,23 @@ Training, reports and the comparison run only when **all** of these hold:
 
 1. **The reviewed revision-8 lasso guards and checker are in the binary.**
    They are being finished on the shared repo's
-   `recovery/working-tree-20261028` branch. At this writing its head is
-   `2a9f85f`. The last code commits there are `6a46127` (lasso scan build) on
-   top of `5d8cd05` (closes the revision-8 review findings) on top of
-   `bf01371` (the migration guards). All three descend from `33ccd2a`, so
-   **neither `dd1f6d3` nor this fix commit contains them**. Pick up the first
-   commit on that branch that the lasso lane records as final and whose
-   checker an independent review records as approved; expect it at or after
-   `6a46127`. Do not build or adopt a parallel revision-8 checker here.
+   `recovery/working-tree-20261028` branch. When the branch was rewritten at
+   12:13 UTC on 2026-10-28 to remove attribution trailers, every commit ID
+   changed; the old-to-new map is at the end of
+   `docs/work-program-20261027.md`. At `3483065` (fetched 15:32 UTC) the last
+   code commits are `43c187b` (lasso scan build; was `6a46127`) on top of
+   `855bdba` (closes the revision-8 review findings; was `5d8cd05`) on top
+   of `fb7ba09` (the migration guards; was `bf01371`). The wiring commits
+   are now `fd559c9` (was `dd1f6d3`) and `79158f9` (was `176e3cc`).
+   `79158f9` alone does not contain the lasso commits; the merge M0 does.
+   **None of these is lasso-final.** The large-species lasso scan from
+   `43c187b` stopped with a no-go on MTB delamanid (fold 0 past its budget),
+   and a diagnosis lane is open. Pick up the first commit on that branch that
+   the lasso lane records as final, that passes its scan rule, and whose
+   checker an independent review records as approved; expect it after
+   `43c187b`. Do not build or adopt a parallel revision-8 checker here.
 2. **The training binary comes from a reviewed merge** of that commit with
-   `dd1f6d3` and this fix commit. Re-run `cargo test` and the wiring
+   the wiring commits and this one. Re-run `cargo test` and the wiring
    adversarial checks on the merge.
 3. **Every report passes the reviewed checker:** `scripts/check-results.py`
    on that commit validates the revision-8 lasso solver status (per-fold
@@ -252,8 +365,8 @@ Training, reports and the comparison run only when **all** of these hold:
    two-class lasso fits, per cohort. `scripts/metric-audit/audit.py
    --revision 8` must also exit 0, per cohort, with its own backup, log and
    launch timestamp, and `foldgen` built in the execution target. Save each
-   checker's output; `compare_cohorts.py` refuses to run without one per
-   cohort.
+   checker's output; `compare_cohorts.py` refuses to run unless each cohort's
+   receipt covers exactly that cohort's reports at revision 8 (N6).
 4. **An invalid report is a stop.** On revision 8, `grm learn` stops a species
    when a report's `evaluation.valid` is not true. Record the dataset and its
    reasons, and stop that cohort's training for parent review. Any solver
@@ -262,16 +375,20 @@ Training, reports and the comparison run only when **all** of these hold:
 
 ```bash
 for cohort in prefix added full matched2k; do
+  D=$RUN/cohorts/$cohort/data
+  python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
   python3 "$GUARD" --log $RUN/logs/$cohort-learn.log --resources $RUN/logs/$cohort-learn-resources.json -- \
-    /usr/bin/time -v "$GRM" --data "$RUN/cohorts/$cohort/data" learn --species $SLUG
+    /usr/bin/time -v "$GRM" --data "$D" learn --species $SLUG
+  python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
   python3 -I "$P/prepare_execution_roots.py" --verify-frozen "$RUN" || exit 1
 done
 ```
 
 Expected report counts are 22 prefix, 14 added and 22 full, and whatever
 the class gate gives matched2k. MTB's unsupported probe assays must not
-trigger a stock recount. Build dashboard data only in the new roots. Do not
-publish, deploy, replace candidate reports or touch the live site.
+trigger a stock recount. Build dashboard data only in the new roots, each
+after `--check-lane`. Do not publish, deploy, replace candidate reports or
+touch the live site.
 
 ## 8. Matched analysis (after section 7)
 
@@ -285,8 +402,9 @@ python3 -I "$P/compare_cohorts.py" \
 ```
 
 Exit 0 means complete. Exit 2 means an input or integrity stop, with no
-output. Exit 3 means output was written but a drug was excluded; stop for
-review before any before/after statement.
+output, including a checker receipt that does not cover its cohort. Exit 3
+means output was written but a drug was excluded or a primary split was
+unavailable; stop for review before any before/after statement.
 
 Prespecified rules:
 
@@ -294,7 +412,9 @@ Prespecified rules:
   keeps near-duplicate isolates on one side of a fold). The random split is
   secondary. Lineage clusters are recomputed per cohort, so folds and groups
   differ between cohorts. Paired results align by genome ID, never by row or
-  fold.
+  fold. A drug whose lineage split is unavailable in a cohort has no primary
+  result there: it is listed under `primary_split_unavailable`, left out of
+  the size-matched decomposition, and the run exits 3 (N6).
 - **Primary measure:** per drug, the median of the five learners' balanced
   accuracy at 0.5 on the lineage split, only when all five have metrics.
   Per-learner rows with Clopper–Pearson 95% intervals, VME/ME, no-calls and
@@ -345,3 +465,5 @@ steps run and pass.
   Durability was tested through fsync and rename order, not power cuts.
 - Real 4k kset, partial and RAM sizes; the pilot measures them.
 - Revision-8 training, checking and reporting at 4k. These wait for section 7.
+- The data root and its ancestors are trusted, and bind mounts are not
+  detected (N7). `grm fetch` is not confined; the plan does not run it.

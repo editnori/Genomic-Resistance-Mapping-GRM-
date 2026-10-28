@@ -11,8 +11,10 @@ usage: python3 -I compare_cohorts.py
 ROOT is a cohort's data root: reports are read from
 species/<slug>/results/*.json and the cohort from species/<slug>/genomes.txt.
 Each --checker-receipt is the output of the reviewed revision-8 checker for
-that cohort (see the execution plan); this script records its SHA-256 and
-refuses to run without one, but does not replace it.
+that cohort (see the execution plan; check-results.py writes it only when
+every report passes). This script reads it and refuses to run unless it
+covers exactly that cohort's reports, all at revision 8, with no missing or
+out-of-scope result; it records its SHA-256 but does not replace it.
 
 What it does, all from the saved reports:
 
@@ -49,12 +51,17 @@ What it does, all from the saved reports:
    Each row has per-learner metrics with Clopper-Pearson 95% intervals for
    sensitivity and specificity, and the median of the five learners'
    balanced accuracy (only when all five have metrics).
+   A drug whose primary (lineage) split is unavailable in a cohort has no
+   primary result there: it is listed under `primary_split_unavailable`
+   with the cohort and grm's reason, is left out of the size-matched
+   decomposition, and stops the run for review (exit 3).
 5. Duplicates: the screen_duplicates.py output must report no exact
    cross-cohort duplicate, unless --accept-reviewed-duplicates gives that
    file's SHA-256 (a recorded parent decision).
 
 Exit status: 0 complete; 2 input or integrity error (no output); 3 output
-written but a drug was excluded or a report invalid (stop for review).
+written but a drug was excluded, a report invalid, or a primary split
+unavailable (stop for review).
 """
 
 import argparse
@@ -317,6 +324,32 @@ def load_cohort(root: Path, slug: str):
             "reports": reports, "invalid": invalid, "parsed": parsed}
 
 
+CHECKER_SCOPE = ("not_in_current_curation", "not_run", "missing_curated_results")
+
+
+def load_checker_receipt(path: Path, cohort):
+    """The revision-8 checker's receipt for one cohort, required to cover
+    exactly that cohort's reports, every one at revision 8 and schema 2."""
+    try:
+        rec = json.loads(path.read_text())
+    except ValueError as err:
+        raise Stop(f"{path}: checker receipt is not JSON: {err}")
+    if not isinstance(rec, dict) or "checked_at" not in rec or not isinstance(rec.get("reports"), list):
+        raise Stop(f"{path}: not a check-results.py receipt")
+    for key in CHECKER_SCOPE:
+        if rec.get(key) != []:
+            raise Stop(f"{path}: checker field {key} is {rec.get(key)!r}, not empty")
+    rows = rec["reports"]
+    if any(not isinstance(r, dict) or r.get("revision") != 8 or r.get("schema") != 2 for r in rows):
+        raise Stop(f"{path}: the checker passed a report that is not revision 8, schema 2")
+    checked = sorted(r.get("id") for r in rows)
+    have = sorted(rep["id"] for rep in cohort["parsed"].values())
+    if checked != have:
+        raise Stop(f"{path}: the checker receipt covers {len(checked)} reports, not this cohort's {len(have)} "
+                   f"(only checked: {sorted(set(checked) - set(have))}, only here: {sorted(set(have) - set(checked))})")
+    return rec
+
+
 # -------------------------------------------------------------- comparisons
 
 def median_ba(rows):
@@ -442,8 +475,9 @@ def run(args):
     for spec in args.checker_receipt:
         name, _, path = spec.partition("=")
         p = Path(path)
-        if name not in COHORTS or not p.is_file():
+        if name not in COHORTS or name in receipts or not p.is_file():
             raise Stop(f"--checker-receipt {spec}: missing")
+        load_checker_receipt(p, cohorts[name])
         receipts[name] = {"path": str(p), "sha256": sha256(p)}
     if sorted(receipts) != sorted(COHORTS):
         raise Stop("the reviewed revision-8 checker must have passed on every cohort (--checker-receipt per cohort)")
@@ -478,6 +512,14 @@ def run(args):
             elif drug not in c["reports"]:
                 excluded.setdefault(drug, []).append({"cohort": name, "reasons": ["no report although eligible"]})
 
+    primary_unavailable = {}
+    for name, c in cohorts.items():
+        for drug, rep in sorted(c["reports"].items()):
+            split = rep["splits"].get(SCHEMES[0], {})
+            if "rows" not in split:
+                primary_unavailable.setdefault(drug, []).append(
+                    {"cohort": name, "reason": split.get("unavailable", "primary split missing")})
+
     both = lambda x, y: eligible[x] & eligible[y]
     comparisons = {
         "full_vs_prefix": compare(cohorts, "prefix", "full", "paired", both("prefix", "full"), not_interpretable, excluded),
@@ -488,7 +530,7 @@ def run(args):
     # Size-matched decomposition of the primary split's median BA change:
     # total (full - prefix) = composition (matched2k - prefix) + size (full - matched2k).
     decomposition = []
-    for drug in sorted(both("prefix", "full") & eligible["matched2k"] - set(excluded)):
+    for drug in sorted(both("prefix", "full") & eligible["matched2k"] - set(excluded) - set(primary_unavailable)):
         meds = {}
         for name in ("prefix", "matched2k", "full"):
             split = cohorts[name]["reports"][drug]["splits"].get(SCHEMES[0], {})
@@ -509,6 +551,7 @@ def run(args):
         "not_interpretable_for_before_after": not_interpretable,
         "not_eligible": not_eligible,
         "excluded": excluded,
+        "primary_split_unavailable": primary_unavailable,
         "comparisons": comparisons,
         "size_matched_decomposition": decomposition,
         "scope": "Descriptive internal cross-validation comparison of matched cohorts; no external, prospective, clinical or causal validation. McNemar p-values are descriptive, Holm-adjusted within learner and split across interpretable drugs.",
@@ -534,6 +577,10 @@ def main():
         f.write("\n")
     if out["excluded"]:
         print(f"compare_cohorts: {len(out['excluded'])} drugs excluded; stop for review before any before/after claim", file=sys.stderr)
+        return 3
+    if out["primary_split_unavailable"]:
+        print(f"compare_cohorts: the primary (lineage) split is unavailable for {sorted(out['primary_split_unavailable'])}; "
+              "stop for review before any before/after claim", file=sys.stderr)
         return 3
     return 0
 

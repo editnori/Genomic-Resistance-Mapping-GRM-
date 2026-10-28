@@ -614,6 +614,98 @@ fn sparse_refuses_links_where_it_writes_before_any_work() {
 }
 
 #[test]
+fn a_stock_count_refuses_linked_lane_files_before_any_work() {
+    use std::os::unix::fs::symlink;
+    let dir = tempfile::tempdir().unwrap();
+    // A shared store of ksets and sidecars from an earlier count.
+    let store = fixture(&dir.path().join("store"), 6, false);
+    count(&store, SLUG, 7, None).unwrap();
+    let before = tree(&store.kset_dir(SLUG));
+    type Plant = fn(&Layout, &Layout);
+    let cases: [(&str, Plant); 4] = [
+        // The re-review's layout: a real ksets/ whose ksets and sidecars
+        // all link into the store.
+        ("linked-ksets-and-sidecars", |l, s| {
+            std::fs::create_dir_all(l.kset_dir(SLUG)).unwrap();
+            for g in 0..6 {
+                for ext in ["kset", "json"] {
+                    let name = format!("g{g:04}.{ext}");
+                    symlink(s.kset_dir(SLUG).join(&name), l.kset_dir(SLUG).join(&name)).unwrap();
+                }
+            }
+        }),
+        ("sidecar-temporary", |l, s| {
+            std::fs::create_dir_all(l.kset_dir(SLUG)).unwrap();
+            symlink(
+                s.kset_dir(SLUG).join("g0003.json"),
+                l.kset_dir(SLUG).join("g0003.json.part"),
+            )
+            .unwrap();
+        }),
+        ("kset-temporary", |l, s| {
+            std::fs::create_dir_all(l.kset_dir(SLUG)).unwrap();
+            symlink(
+                s.kset_dir(SLUG).join("g0003.kset"),
+                l.kset_dir(SLUG).join("g0003.kset.part"),
+            )
+            .unwrap();
+        }),
+        ("counted-json", |l, s| {
+            symlink(
+                s.species_dir(SLUG).join("counted.json"),
+                l.species_dir(SLUG).join("counted.json"),
+            )
+            .unwrap();
+        }),
+    ];
+    for (name, plant) in cases {
+        let layout = fixture(&dir.path().join(name), 6, false);
+        plant(&layout, &store);
+        let err = count(&layout, SLUG, 7, None).unwrap_err();
+        assert!(format!("{err:#}").contains("symlink"), "{name}: {err:#}");
+        // Nothing was counted, written or followed.
+        assert_eq!(tree(&store.kset_dir(SLUG)), before, "{name}");
+        assert!(
+            std::fs::symlink_metadata(layout.species_dir(SLUG).join("counted.json"))
+                .is_ok_and(|m| m.file_type().is_symlink())
+                || !layout.species_dir(SLUG).join("counted.json").exists(),
+            "{name}"
+        );
+        if name != "linked-ksets-and-sidecars" {
+            assert!(!layout.kset_dir(SLUG).join("g0000.kset").exists(), "{name}");
+        }
+    }
+    // A wholly linked ksets/ directory is still read in stock mode.
+    let linked = fixture(&dir.path().join("linked-ksets-dir"), 6, false);
+    symlink(store.kset_dir(SLUG), linked.kset_dir(SLUG)).unwrap();
+    assert_eq!(count(&linked, SLUG, 7, None).unwrap().genomes.len(), 6);
+    assert_eq!(tree(&store.kset_dir(SLUG)), before);
+}
+
+#[test]
+fn a_stock_count_that_counts_no_genome_fails() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = fixture(&dir.path().join("unreadable"), 3, false);
+    // Every FASTA is a directory, so every genome fails to count.
+    for g in 0..3 {
+        let path = fasta_path(&layout.fasta_dir(), &format!("g{g:04}"));
+        std::fs::remove_file(&path).unwrap();
+        std::fs::create_dir(&path).unwrap();
+    }
+    let err = count(&layout, SLUG, 7, None).unwrap_err();
+    assert!(format!("{err:#}").contains("no genome counted"), "{err:#}");
+    // counted.json still records the failures.
+    let counted = load_counted(&layout, SLUG).unwrap();
+    assert_eq!((counted.genomes.len(), counted.failed.len()), (0, 3));
+    // One genome that counts is enough for the count to succeed.
+    let path = fasta_path(&layout.fasta_dir(), "g0001");
+    std::fs::remove_dir(&path).unwrap();
+    std::fs::write(&path, format!(">contig\n{}\n", sequence(1))).unwrap();
+    let summary = count(&layout, SLUG, 7, None).unwrap();
+    assert_eq!((summary.genomes.len(), summary.failed.len()), (1, 2));
+}
+
+#[test]
 fn sparse_refuses_links_in_its_run_directory_on_resume() {
     use std::os::unix::fs::symlink;
     let dir = tempfile::tempdir().unwrap();

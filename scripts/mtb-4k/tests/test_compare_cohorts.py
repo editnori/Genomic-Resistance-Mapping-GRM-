@@ -85,6 +85,13 @@ def report(drug, genomes, cohort, *, valid=True, break_metrics=False):
     }
 
 
+def checker_receipt(reports):
+    """What check-results.py --out writes when every report passes."""
+    return {"checked_at": "2026-10-28T00:00:00+00:00", "log": None, "skip_log": None,
+            "reports": [{"id": r["id"], "revision": 8, "schema": 2} for r in reports],
+            "not_in_current_curation": [], "not_run": [], "class_minimum_skipped": [], "missing_curated_results": []}
+
+
 def write_root(base, cohort, genomes, reports):
     sp = Path(base) / cohort / "species" / SLUG
     (sp / "results").mkdir(parents=True)
@@ -106,19 +113,26 @@ class Compare(unittest.TestCase):
         cc.MIN_CLASS, cc.EXPECTED_ADDED_ELIGIBLE, cc.EXPECTED_SPARSE_ADDED = self.saved
         self.tmp.cleanup()
 
-    def args(self, gamma_matched_valid=False, break_metrics=False, cross_exact=0, accept=None):
+    def args(self, gamma_matched_valid=False, break_metrics=False, cross_exact=0, accept=None, mutate=None, receipt=None):
         b = self.tmp.name
-        roots = {
-            "prefix": write_root(b, "prefix", PREFIX, [report(d, PREFIX, "prefix") for d in ("alpha", "beta", "gamma")]),
-            "added": write_root(b, "added", ADDED, [report(d, ADDED, "added", break_metrics=break_metrics) for d in ("alpha", "gamma")]),
-            "full": write_root(b, "full", GENOMES, [report(d, GENOMES, "full") for d in ("alpha", "beta", "gamma")]),
-            "matched2k": write_root(b, "matched2k", MATCHED, [report("alpha", MATCHED, "matched2k"), report("beta", MATCHED, "matched2k"),
-                                                              report("gamma", MATCHED, "matched2k", valid=gamma_matched_valid)]),
+        reps = {
+            "prefix": [report(d, PREFIX, "prefix") for d in ("alpha", "beta", "gamma")],
+            "added": [report(d, ADDED, "added", break_metrics=break_metrics) for d in ("alpha", "gamma")],
+            "full": [report(d, GENOMES, "full") for d in ("alpha", "beta", "gamma")],
+            "matched2k": [report("alpha", MATCHED, "matched2k"), report("beta", MATCHED, "matched2k"),
+                          report("gamma", MATCHED, "matched2k", valid=gamma_matched_valid)],
         }
+        if mutate:
+            mutate(reps)
+        genomes = {"prefix": PREFIX, "added": ADDED, "full": GENOMES, "matched2k": MATCHED}
+        roots = {name: write_root(b, name, genomes[name], reps[name]) for name in reps}
         receipts = []
         for name in roots:
             p = Path(b) / f"{name}-checker.json"
-            p.write_text("{}")
+            rec = checker_receipt(reps[name])
+            if receipt:
+                rec = receipt(name, rec)
+            p.write_text(rec if isinstance(rec, str) else json.dumps(rec))
             receipts.append(f"{name}={p}")
         screen = Path(b) / "screen.json"
         screen.write_text(json.dumps({"cross_cohort_exact": cross_exact, "cross_cohort_near": 0}))
@@ -191,6 +205,43 @@ class Compare(unittest.TestCase):
     def test_missing_checker_receipt_stops(self):
         args = [a for a in self.args(gamma_matched_valid=True) if not a.startswith("--checker-receipt=matched2k")]
         self.assertEqual(self.parse(args), 2)
+
+    def test_a_checker_receipt_that_does_not_prove_the_cohort_passed_stops(self):
+        # Re-review N6: a placeholder, a failed run's record, an older
+        # revision, a report left out, or a missing curated result.
+        cases = {
+            "placeholder": lambda name, rec: "{}",
+            "failed checker": lambda name, rec: {"exit": 1, "unconverged": 7},
+            "not json": lambda name, rec: "checker failed\n",
+            "revision 7": lambda name, rec: {**rec, "reports": [{**r, "revision": 7} for r in rec["reports"]]},
+            "a report left out": lambda name, rec: {**rec, "reports": rec["reports"][1:]},
+            "missing curated result": lambda name, rec: {**rec, "missing_curated_results": [{"file": "x"}]},
+        }
+        for label, edit in cases.items():
+            with self.subTest(label):
+                self.tmp.cleanup()
+                self.tmp = tempfile.TemporaryDirectory()
+                receipt = (lambda edit: lambda name, rec: edit(name, rec) if name == "added" else rec)(edit)
+                self.assertEqual(self.parse(self.args(gamma_matched_valid=True, receipt=receipt)), 2, label)
+                self.assertFalse((Path(self.tmp.name) / "out.json").exists())
+
+    def test_an_unavailable_primary_split_is_listed_and_stops_for_review(self):
+        # Re-review N6: the full cohort's alpha report has no lineage split.
+        def lineage_unavailable(reps):
+            for r in reps["full"]:
+                if r["antibiotic"] == "alpha":
+                    for s in r["splits"]:
+                        if s["scheme"] == "lineage":
+                            s.clear()
+                            s.update({"scheme": "lineage", "folds": 5, "n_groups": 2, "learners": [],
+                                      "unavailable_reason": "too few lineage groups"})
+        self.assertEqual(self.parse(self.args(gamma_matched_valid=True, mutate=lineage_unavailable)), 3)
+        out = json.loads((Path(self.tmp.name) / "out.json").read_text())
+        self.assertEqual(out["primary_split_unavailable"], {"alpha": [{"cohort": "full", "reason": "too few lineage groups"}]})
+        self.assertNotIn("alpha", [r["drug"] for r in out["size_matched_decomposition"]])
+        alpha = next(r for r in out["comparisons"]["full_vs_prefix"]["rows"] if r["drug"] == "alpha")
+        self.assertIsNone(alpha["lineage"]["paired"])
+        self.assertIsNotNone(alpha["random"]["paired"])
 
 
 if __name__ == "__main__":

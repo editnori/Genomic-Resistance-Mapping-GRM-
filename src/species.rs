@@ -327,6 +327,32 @@ pub fn count(
     let space = KmerSpace::new(k);
     let (present, missing) = selection(layout, slug)?;
     let kdir = layout.kset_dir(slug);
+    // A link where a file this count writes belongs stops it before any
+    // work, as in disk-sparse mode (see `confine`): otherwise every genome
+    // with a linked sidecar would fail on its own and the count would end
+    // with nothing counted. Anything else in the way is left to the write
+    // that meets it, which fails that genome alone. The ksets, and the ksets
+    // directory, may still be links; they are only read on a cache hit.
+    let refuse_link = |path: &Path| -> Result<()> {
+        anyhow::ensure!(
+            !std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()),
+            "refusing to write through symlink {}: a file GRM writes must be a regular file",
+            path.display()
+        );
+        Ok(())
+    };
+    for name in ["counted.json", "counted.json.part"] {
+        refuse_link(&layout.species_dir(slug).join(name))?;
+    }
+    for id in &present {
+        for name in [
+            format!("{id}.json"),
+            format!("{id}.json.part"),
+            format!("{id}.kset.part"),
+        ] {
+            refuse_link(&kdir.join(name))?;
+        }
+    }
     std::fs::create_dir_all(&kdir)?;
     let fasta_dir = layout.fasta_dir();
     let done = AtomicUsize::new(0);
@@ -373,6 +399,16 @@ pub fn count(
         &serde_json::to_vec(&summary)?,
         false,
     )?;
+    // counted.json keeps the failures; a count that counted nothing is still
+    // an error, not an empty success.
+    if summary.genomes.is_empty()
+        && let Some((id, why)) = summary.failed.first()
+    {
+        anyhow::bail!(
+            "{slug}: no genome counted; all {} selected genomes with FASTA failed, first {id}: {why}",
+            summary.failed.len()
+        );
+    }
     Ok(summary)
 }
 
