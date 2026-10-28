@@ -369,6 +369,20 @@ class CollectInvalidTests(unittest.TestCase):
    self.assertEqual(list(c.invalid),[did]); self.assertEqual(c.reports,{})
    path=root/"data/species"/vc.SPECIES/"results"/(did+".json"); path.write_text(path.read_text().replace('"seconds":10.0','"seconds":12.0',1))
    with self.assertRaises(vc.BindingError): vc.validate_manifest(root/"validation-manifest.json",rules,collect_invalid=True)
+ def test_i1_a_bound_report_corrupted_into_invalid_json_is_a_binding_stop(self):
+  # I1: the report's SHA-256 is checked before it is parsed. A bound report cut short is a
+  # binding failure even when collecting, where it used to be recorded as an invalid report.
+  with tempfile.TemporaryDirectory() as tmp:
+   rules=fx.make_rules({"prefix":("amikacin",)}); did=vc.DRUG_IDS["amikacin"]
+   root=fx.build_cohort(Path(tmp)/"prefix","prefix",rules)
+   path=root/"data/species"/vc.SPECIES/"results"/(did+".json"); path.write_bytes(path.read_bytes()[:-40])
+   with self.assertRaises(vc.BindingError) as stop: vc.validate_manifest(root/"validation-manifest.json",rules,collect_invalid=True)
+   self.assertIn("report SHA-256 differs",str(stop.exception))
+   # Bound again to the corrupted bytes, it is a contract failure (malformed JSON), not a binding one.
+   manifest=json.loads((root/"validation-manifest.json").read_text()); manifest["reports"][did]["sha256"]=fx.sha(path); fx.write_json(root/"validation-manifest.json",manifest)
+   c=vc.validate_manifest(root/"validation-manifest.json",rules,collect_invalid=True)
+   self.assertIn("malformed JSON",c.invalid[did])
+   NEGATIVE.append({"control":"I1 bound report corrupted into invalid JSON","result":"binding stop"})
 
 class MatchedAndPinTests(unittest.TestCase):
  def test_the_frozen_matched2k_list_and_rules_account_for_all_22(self):

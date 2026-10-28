@@ -18,12 +18,22 @@ threshold; and each report with its input_fingerprint. Before writing anything i
 - checks the finished manifest with report_contract.validate_manifest against the frozen cohort
   rules, and writes it (validation-manifest.json, never over an existing one) only if it passes.
 
-Exit 0 when written; 2 otherwise.
+Exit 0 when written; 2 otherwise, including when the validators cannot load (a moved pin).
 """
-import argparse,copy,json,sys
+import argparse,copy,importlib,json,sys
 from pathlib import Path
-import report_contract as vc
-import fingerprint as fpmod
+# M1: python3 -I (3.11+ implies -P) leaves this script's directory off sys.path. Put back that one
+# directory, first, and nothing else (not the working directory, PYTHONPATH or user site), and
+# require each sibling module to load from it.
+LANE=Path(__file__).resolve().parent
+if sys.path[:1]!=[str(LANE)]: sys.path.insert(0,str(LANE))
+def _sibling(name):
+ module=importlib.import_module(name)
+ if Path(module.__file__).resolve().parent!=LANE: raise ImportError(f"{name} loaded from {module.__file__}, not from {LANE}")
+ return module
+try: vc=_sibling("report_contract"); fpmod=_sibling("fingerprint")
+except (ImportError,ValueError,OSError) as _exc:  # ValueError, OSError: report_contract's pin check
+ print(f"write_run_manifest: STOP: cannot load the validators: {_exc}",file=sys.stderr); sys.exit(2)
 
 def build(root,cohort,source_commit,binary,log=None):
  data=root/"data"; slug=vc.SPECIES; base=f"data/species/{slug}"

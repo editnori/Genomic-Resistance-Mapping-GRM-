@@ -76,6 +76,7 @@ def wrapper_args(root):
     return [str(root/"audit.json"),"--root",str(root),"--run-manifest",str(root/"validation-manifest.json"),
             "--expected-source-commit",fx.SOURCE,"--binary",str(root/"synthetic-binary"),"--backup",str(root/"backup"),
             "--log",str(root/"pipeline.log"),"--launch","2000-01-01T00:00:00Z","--foldgen",fx.foldgen_path(),
+            "--expected-foldgen-sha256",fx.foldgen_sha256(),  # path-adapted (I4)
             "--checker-out",str(root/"checker.json"),"--summary-out",str(root/"summary.json"),"--receipt",str(root/"receipt.json")]
 
 class NumericalTests(unittest.TestCase):

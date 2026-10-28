@@ -237,6 +237,7 @@ class SolverStatusTests(unittest.TestCase):
    args=[str(root/"audit.json"),"--root",str(root),"--run-manifest",str(root/"validation-manifest.json"),
     "--expected-source-commit",fx.SOURCE,"--binary",str(root/"synthetic-binary"),"--backup",str(root/"backup"),
     "--log",str(root/"pipeline.log"),"--launch","2000-01-01T00:00:00Z","--foldgen",str(root/"synthetic-foldgen"),
+    "--expected-foldgen-sha256",fx.sha(root/"synthetic-foldgen"),  # path-adapted (I4)
     "--checker-out",str(root/"checker.json"),"--summary-out",str(root/"summary.json"),"--receipt",str(root/"receipt.json")]
    code=wrapper.main(args,rules=rules,foldgen_factory=fx.FakeFoldGen); valid=None
    if (root/"audit.json").exists():valid=json.loads((root/"audit.json").read_text())["summary"]["revision8_wrapper"]["valid"]

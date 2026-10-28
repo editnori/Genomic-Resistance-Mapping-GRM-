@@ -2,7 +2,8 @@
 """Recompute a GRM report's input_fingerprint from its data root (stdlib only).
 
 usage: python3 -I fingerprint.py DATA_ROOT [--slug mycobacterium_tuberculosis]
-           [--check] [--out OUT.json]
+           [--check] [--expect-reports N] [--out OUT.json]
+           [--make-view --matrix-from MATRIX_DATA_ROOT --inputs-from INPUTS_DATA_ROOT]
 
 `grm learn` stamps every report with `input_fingerprint`
 (src/analysis.rs `input_fingerprint`, unchanged since evaluation revision 7):
@@ -28,11 +29,22 @@ It reads only the root's files: species/<slug>/matrix/, counted.json,
 structure.json, curated/datasets.json, curated/phenotypes.jsonl and
 catalog/version.txt. With --check, every saved report under
 species/<slug>/results must carry the fingerprint recomputed here, from its
-own eval_config; any difference exits 1.
+own eval_config; any difference exits 1. With --expect-reports N, a results
+directory holding other than N reports exits 1 too (an empty one would
+otherwise pass --check).
+
+--make-view first builds DATA_ROOT as a view of links only (plan section 3,
+L5): species/<slug>/matrix, counted.json and structure.json link to
+MATRIX_DATA_ROOT's (the frozen revision-7 preflight root, which holds the
+matrix), and curated, catalog and species/<slug>/results to
+INPUTS_DATA_ROOT's (the revision-7 candidate, whose reports were learned
+from that matrix). It refuses an existing DATA_ROOT or a missing source, and
+creates nothing but the view's directories and links.
 """
 
 import argparse
 import json
+import os
 import struct
 import sys
 from pathlib import Path
@@ -205,6 +217,24 @@ class Inputs:
         return h.hex()
 
 
+def make_view(view: Path, matrix_from: Path, inputs_from: Path, slug: str):
+    """Build the link-only view described in the module docstring; return {link: target}."""
+    if view.exists() or view.is_symlink():
+        raise ValueError(f"{view} exists; the view is built once, into a new path")
+    sp = f"species/{slug}"
+    links = {f"{sp}/matrix": matrix_from / sp / "matrix", f"{sp}/counted.json": matrix_from / sp / "counted.json",
+             f"{sp}/structure.json": matrix_from / sp / "structure.json", f"{sp}/results": inputs_from / sp / "results",
+             "curated": inputs_from / "curated", "catalog": inputs_from / "catalog"}
+    links = {rel: Path(os.path.abspath(target)) for rel, target in links.items()}
+    missing = [str(t) for t in links.values() if not t.exists()]
+    if missing:
+        raise ValueError(f"view sources missing: {missing}")
+    (view / sp).mkdir(parents=True)
+    for rel, target in links.items():
+        os.symlink(target, view / rel)
+    return {rel: str(target) for rel, target in links.items()}
+
+
 def check_reports(data_root: Path, slug: str):
     inputs = Inputs(data_root, slug)
     rows = []
@@ -222,13 +252,22 @@ def main():
     ap.add_argument("data_root", type=Path)
     ap.add_argument("--slug", default="mycobacterium_tuberculosis")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--expect-reports", type=int)
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--make-view", action="store_true")
+    ap.add_argument("--matrix-from", type=Path)
+    ap.add_argument("--inputs-from", type=Path)
     args = ap.parse_args()
+    if args.make_view != (args.matrix_from is not None) or args.make_view != (args.inputs_from is not None):
+        ap.error("--make-view needs --matrix-from and --inputs-from, and they need --make-view")
     try:
+        view = make_view(args.data_root, args.matrix_from, args.inputs_from, args.slug) if args.make_view else None
         result = check_reports(args.data_root, args.slug)
     except (OSError, KeyError, ValueError) as err:
         print(f"fingerprint: STOP: {err}", file=sys.stderr)
         return 2
+    if view is not None:
+        result["view"] = view
     text = json.dumps(result, indent=1) + "\n"
     if args.out:
         with args.out.open("x") as f:
@@ -236,6 +275,9 @@ def main():
     print(json.dumps({k: v for k, v in result.items() if k != "reports"}, indent=1))
     if args.check and result["matched"] != len(result["reports"]):
         print(f"fingerprint: {len(result['reports']) - result['matched']} reports differ", file=sys.stderr)
+        return 1
+    if args.expect_reports is not None and len(result["reports"]) != args.expect_reports:
+        print(f"fingerprint: {len(result['reports'])} reports, not the expected {args.expect_reports}", file=sys.stderr)
         return 1
     return 0
 

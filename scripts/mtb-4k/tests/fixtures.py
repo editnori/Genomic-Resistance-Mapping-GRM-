@@ -36,6 +36,10 @@ def foldgen_path():
   raise SystemExit("set FOLDGEN to the foldgen binary built from scripts/metric-audit/foldgen (cargo build --release --locked)")
  return path
 
+def foldgen_sha256():
+ """The --expected-foldgen-sha256 every runner and comparator call in these tests passes (I4)."""
+ return hashlib.sha256(Path(foldgen_path()).read_bytes()).hexdigest()
+
 class FoldGen:
  """Client for the committed foldgen, with metric-audit/audit.py's protocol."""
  def __init__(self,path=None):
@@ -311,13 +315,36 @@ def build_cohort(root,name,rules,lineage_available=True,fg=None):
  refresh_root(root,name)
  return root
 
-def write_receipt(root,name=None,source=SOURCE,edit=None):
- """A receipt in run_revision8_checks.py's form, bound to the root's current run manifest, for
- comparator tests that do not run the checks; the runner's own receipts are tested end to end."""
+def passing_outputs(root,manifest,source=SOURCE):
+ """The checker, audit and summary outputs of a passing run_revision8_checks.py run on this root,
+ in the fields its postflight and verify_outputs read, for comparator tests that do not run the
+ checks (the runner's own outputs are tested end to end). Since L2 the comparator re-reads them."""
+ root=Path(root); n=len(manifest["reports"]); base=f"{root}/data/species/{vc.SPECIES}/results"
+ skips=[{"file":f"{base}/{row['id']}.json"} for row in manifest["class_gate_unavailable"]]
+ records=[{"id":did,"file":f"{base}/{did}.json","sha256":entry["sha256"],"issues":[],"revision":8,"schema":2,"valid":True,
+  "written_after_launch":True,"identical_to_backup":False,"log_done":3.0,"published_revision":8,"published_identical":True,
+  "manifest_compared":True,"counted_hits_match_samples":True,"samples_missing_from_counted":0,"counts":{"labels_from_mic":0}}
+  for did,entry in sorted(manifest["reports"].items())]
+ summary={"revision":8,"files":n,"by_revision":{"8":n},"by_schema":{"2":n},"errors":[],"files_with_issues":[],"not_in_current_curation":[],
+  "not_run":[],"missing_curated_results":[],"issue_count":0,"manifest_schema":2,"manifest_evaluation_revision":8,"manifest_compared":n,
+  "log_done":n,"species_finished":[vc.SPECIES],"class_minimum_skipped":skips,
+  "revision8_wrapper":{"schema":"grm-revision8-audit-wrapper-v2","valid":True,"errors":[],"checker_pins":dict(vc.PINS),
+   "run_source_commit":source,"run_manifest_sha256":sha(root/"validation-manifest.json"),"binary_sha256":manifest["binary_sha256"],
+   "foldgen_sha256":foldgen_sha256(),"biological_execution":False}}
+ checker={"reports":[{"id":did,"revision":8} for did in sorted(manifest["reports"])],"class_minimum_skipped":skips,
+  "missing_curated_results":[],"not_in_current_curation":[]}
+ return {"checker":checker,"audit":{"summary":summary,"records":records},"summary":{"coverage":{"8":{"files":n,"issues":0}}}}
+
+def write_receipt(root,name=None,source=SOURCE,edit=None,outputs_edit=None):
+ """A receipt in run_revision8_checks.py's form, bound to the root's current run manifest and to
+ passing_outputs(); outputs_edit(outputs) may change those outputs before they are hashed, as a
+ forged receipt over a failed run would bind them (L2)."""
  root=Path(root); manifest_path=root/"validation-manifest.json"; manifest=json.loads(manifest_path.read_text())
+ bodies=passing_outputs(root,manifest,source)
+ if outputs_edit: outputs_edit(bodies)
  outputs={}
  for key in ("checker","audit","summary"):
-  p=root/f"synthetic-{key}.json"; p.write_text(json.dumps({"synthetic":key})+"\n"); outputs[key]={"path":str(p),"sha256":sha(p)}
+  p=root/f"synthetic-{key}.json"; p.write_text(json.dumps(bodies[key])+"\n"); outputs[key]={"path":str(p),"sha256":sha(p)}
  receipt={"schema":"grm-mtb-4k-revision8-check-receipt-v1","cohort":name or manifest["cohort"],"valid":True,"errors":[],"evaluation_revision":8,
   "reports":len(manifest["reports"]),"class_gate_skips":len(manifest["class_gate_unavailable"]),"run_manifest":str(manifest_path),
   "run_manifest_sha256":sha(manifest_path),"source_commit":source,"binary_sha256":manifest["binary_sha256"],"foldgen":foldgen_path(),

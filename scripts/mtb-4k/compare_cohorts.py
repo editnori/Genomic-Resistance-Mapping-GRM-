@@ -5,26 +5,32 @@ usage: python3 -I compare_cohorts.py
            --cohort prefix=ROOT --cohort added=ROOT --cohort full=ROOT --cohort matched2k=ROOT
            --checker-receipt prefix=PATH ... (one per cohort, from run_revision8_checks.py)
            --duplicates SCREEN.json [--accept-reviewed-duplicates SHA256]
-           --expected-source-commit SHA --out OUT.json
+           --expected-source-commit SHA --expected-foldgen-sha256 SHA256 --out OUT.json
 
 ROOT is a cohort's execution root (RUN/cohorts/<name>): validation-manifest.json from
 write_run_manifest.py, beside data/. The canonical merge of packages K and W (RECONCILE.md): K's
 strict loader and accounting (report_contract.py), W's four-cohort design.
 
-1. Loading. Every manifest, input hash, report hash and fingerprint is checked by
-   report_contract.validate_manifest; any of those failing, a receipt that does not prove its
-   cohort passed (F5), a duplicate screen with an exact cross-cohort duplicate not accepted by
-   its SHA-256, or cohorts that are not the frozen prefix, added, full and
-   matched_selection(full) lists (F6) stop the run with no output (exit 2). A report that
-   fails the contract after its hashes bind is recorded as invalid, not a stop (below).
+1. Loading. Every manifest, input hash, report hash and fingerprint, and every report, is
+   checked strictly by report_contract.validate_manifest; any of those failing, a receipt that
+   does not prove its cohort passed (F5), a duplicate screen with an exact cross-cohort duplicate
+   not accepted by its SHA-256, or cohorts that are not the frozen prefix, added, full and
+   matched_selection(full) lists (F6) stop the run with no output (exit 2). A receipt proves its
+   cohort passed only when the checker, audit and summary outputs it names still hash as it
+   says and, read again, record that pass for this run manifest, source, binary and foldgen
+   (L2, run_revision8_checks.verify_outputs), and its foldgen is the build the plan recorded
+   (--expected-foldgen-sha256; I4).
 2. Class gates and labels. The full cohort's report labels on each other cohort's genomes must
    give that cohort's report counts and its class-gate receipts exactly (F3): the added
    cohort's eight receipts and matched2k's. From them, the drugs not interpretable for
    before/after claims (fewer than 25 of a class among the added genomes) must be the frozen
    eight, and the added cohort's eligible drugs the frozen 14.
-3. Invalid in one cohort (W's rule). A drug whose report is invalid, or missing although
-   eligible, in a cohort is dropped from every comparison involving that cohort and from the
-   size-matched decomposition, listed under `excluded`, never imputed; exit 3.
+3. Any invalid report is a stop (L3). W's rule excluded a drug invalid in one cohort and exited
+   3, but nothing upstream can produce that state: revision-8 `grm learn` stops a species at its
+   first invalid report, and run_revision8_checks.py, around the reviewed in-tree checker, gives
+   a cohort with any invalid report no receipt. A per-drug exclusion would need a per-drug
+   checker, which the plan forbids. So an invalid or missing eligible report stops here too
+   (exit 2, no output), and the parent decides.
    A drug whose primary (lineage) split is unavailable in a cohort has no primary result
    there: listed under `primary_split_unavailable`, left out of the decomposition; exit 3.
 4. Comparisons, on the primary split (lineage) and the secondary (random), each row with
@@ -52,14 +58,23 @@ strict loader and accounting (report_contract.py), W's four-cohort design.
    paired comparison; prefix and added not disjoint; full not the exact prefix + added.
 
 Exit status: 0 complete; 1 output written but the comparison is invalid; 2 input or integrity
-stop, no output; 3 output written and valid, but a drug is excluded or a primary split is
-unavailable (stop for review before any before/after claim).
+stop, no output, including when the validators cannot load (a moved pin); 3 output written and
+valid, but a primary split is unavailable (stop for review before any before/after claim).
 """
-import argparse, json, math, statistics, sys
+import argparse, importlib, json, math, statistics, sys
 from collections import defaultdict
 from pathlib import Path
-import report_contract as vc
-import prepare_execution_roots as prep
+# M1: python3 -I (3.11+ implies -P) leaves this script's directory off sys.path. Put back that one
+# directory, first, and nothing else, and require each sibling module to load from it.
+LANE=Path(__file__).resolve().parent
+if sys.path[:1]!=[str(LANE)]: sys.path.insert(0,str(LANE))
+def _sibling(name):
+ module=importlib.import_module(name)
+ if Path(module.__file__).resolve().parent!=LANE: raise ImportError(f"{name} loaded from {module.__file__}, not from {LANE}")
+ return module
+try: vc=_sibling("report_contract"); prep=_sibling("prepare_execution_roots"); runner=_sibling("run_revision8_checks")
+except (ImportError,ValueError,OSError) as _exc:  # ValueError, OSError: report_contract's pin check
+ print(f"compare_cohorts: STOP: cannot load the validators: {_exc}",file=sys.stderr); sys.exit(2)
 
 COHORTS=("prefix","added","full","matched2k")
 PRIMARY="lineage"
@@ -173,18 +188,20 @@ def pair_learner(prefix,full,scheme,name,prefix_genomes,stable_groups):
  base["matched_fold"]["interpretation"]="same genome and held-out fold only; lineage pairs also require an unchanged group relation"
  # D1 (F2): a random-fold mismatch is expected (each cohort shuffles its own samples). It is
  # counted above and invalidates this row's matched random control, not the comparison.
- control_valid=not (scheme=="random" and fold_mismatch)
+ # I9: a matched control with no eligible pair holds nothing to compare, for either split.
+ control_valid=not (scheme=="random" and fold_mismatch) and bool(eligible)
  base["matched_fold"]["control_valid"]=control_valid
- if not control_valid: base["matched_fold"]["control_invalid_reason"]=f"random folds differ for {len(fold_mismatch)} of {len(common)} common genomes"
+ if scheme=="random" and fold_mismatch: base["matched_fold"]["control_invalid_reason"]=f"random folds differ for {len(fold_mismatch)} of {len(common)} common genomes"
+ elif not eligible:
+  base["matched_fold"]["control_invalid_reason"]="no common genome is held out in the same fold"+(" with an unchanged lineage group" if scheme=="lineage" else "")
  issues=[]
  if prefix_only or full_only_prefix or label_mismatch: issues.append("genome coverage/label mismatch")
  return base,issues
 
-def paired_rows(base_cohort,full,base_name,eligible,flagged,excluded):
+def paired_rows(base_cohort,full,base_name,eligible,flagged):
  rows=[]; issues=[]; stable=stable_lineage_genomes(base_cohort,full)
  for drug in sorted(eligible):
   did=vc.DRUG_IDS[drug]
-  if {base_name,"full"}&{e["cohort"] for e in excluded.get(drug,[])}: continue
   b,f=base_cohort.reports[did],full.reports[did]
   for scheme in vc.SCHEMES:
    row={"drug":drug,"dataset_id":did,"scheme":scheme,"primary":scheme==PRIMARY,"before_after_interpretable":drug not in flagged,
@@ -204,16 +221,15 @@ def paired_rows(base_cohort,full,base_name,eligible,flagged,excluded):
     next(r for r in rows if r["drug"]==drug and r["scheme"]==scheme)["comparisons"][li]["genome_aligned_all_folds"]["mcnemar_p_holm"]=p
  return rows,issues
 
-def compare_paired(base_cohort,full,base_name,eligible,flagged,excluded):
- rows,issues=paired_rows(base_cohort,full,base_name,eligible,flagged,excluded)
+def compare_paired(base_cohort,full,base_name,eligible,flagged):
+ rows,issues=paired_rows(base_cohort,full,base_name,eligible,flagged)
  return {"analysis_type":f"full_vs_{base_name}_internal_cv","paired_by":"genome ID and held-out-fold metadata, never row position",
   "multiplicity":"exact McNemar on genome-aligned fixed vs broken; Holm within learner x split across interpretable drugs; descriptive",
   "external_validation":False,"rows":rows},issues
 
-def compare_side_by_side(a,b,a_name,b_name,eligible,flagged,excluded):
+def compare_side_by_side(a,b,a_name,b_name,eligible,flagged):
  rows=[]
  for drug in sorted(eligible):
-  if {a_name,b_name}&{e["cohort"] for e in excluded.get(drug,[])}: continue
   did=vc.DRUG_IDS[drug]; ra,rb=a.reports[did],b.reports[did]
   for scheme in vc.SCHEMES:
    ma,mb=median_ba(ra,scheme),median_ba(rb,scheme)
@@ -226,17 +242,16 @@ def compare_side_by_side(a,b,a_name,b_name,eligible,flagged,excluded):
  return {"analysis_type":f"{b_name}_vs_{a_name}_side_by_side","paired_isolates":False,"frozen_model_external_validation":False,
   "note":"Independent cohort CV estimates; no isolate pairing and no external/prospective/clinical claim","rows":rows}
 
-def compare_prefix_added(prefix,added,eligible,excluded):
+def compare_prefix_added(prefix,added,eligible):
  """Disjoint-cohort CV side by side (K), with K's disjointness check."""
  issues=[]
  overlap=sorted(set(prefix.genomes)&set(added.genomes))
  if overlap: issues.append({"analysis":"added_vs_prefix","issue":"cohorts are not disjoint","overlap":overlap[:20]})
- return compare_side_by_side(prefix,added,"prefix","added",eligible,None,excluded),issues
+ return compare_side_by_side(prefix,added,"prefix","added",eligible,None),issues
 
-def compare_full_added(added,full,eligible,excluded):
+def compare_full_added(added,full,eligible):
  rows=[]; issues=[]; added_set=set(added.genomes)
  for drug in sorted(eligible):
-  if {"added","full"}&{e["cohort"] for e in excluded.get(drug,[])}: continue
   did=vc.DRUG_IDS[drug]; a,f=added.reports[did],full.reports[did]
   for scheme in vc.SCHEMES:
    rows.append({"drug":drug,"dataset_id":did,"scheme":scheme,"primary":scheme==PRIMARY,"added_only_cv":report_summary(a,scheme),
@@ -245,9 +260,10 @@ def compare_full_added(added,full,eligible,excluded):
   "paired_isolates":False,"frozen_model_external_validation":False,
   "note":"Full rows are subsets of full-cohort held-out CV scores, not a frozen prefix/added model externally applied to added isolates. Fold denominators are subset denominators; folds with no added isolates are not_in_subset, not zero-score folds","rows":rows},issues
 
-def load_receipt(path,cohort,expected_source):
+def load_receipt(path,cohort,expected_source,expected_foldgen):
  """F5: the run_revision8_checks.py receipt for this cohort, bound to its run manifest, source,
- binary, pins and outputs. A placeholder or a failed check is a stop."""
+ binary, foldgen (I4), pins and outputs. A placeholder or a failed check is a stop, and so is a
+ receipt whose outputs, read again, do not record the pass it claims (L2)."""
  path=Path(path); rec,sha=vc.read_json(path); where=str(path)
  vc.expect_keys(rec,{"schema","cohort","valid","errors","evaluation_revision","reports","class_gate_skips","run_manifest","run_manifest_sha256",
   "source_commit","binary_sha256","foldgen","foldgen_sha256","pins","validator_sha256","outputs","biological_execution"},where)
@@ -259,12 +275,17 @@ def load_receipt(path,cohort,expected_source):
  if rec["run_manifest_sha256"]!=cohort.manifest_sha256: vc.fail(where,"receipt was written for another run manifest")
  if rec["source_commit"]!=expected_source or rec["binary_sha256"]!=cohort.manifest["binary_sha256"]: vc.fail(where,"receipt source or binary differs")
  vc.digest(rec["foldgen_sha256"],where+".foldgen_sha256")
+ if rec["foldgen_sha256"]!=expected_foldgen: vc.fail(where,f"receipt foldgen {rec['foldgen_sha256']} is not the recorded build {expected_foldgen} (I4)")
  if rec["pins"]!=vc.PINS: vc.fail(where,"receipt ran other checker blobs than the reviewed pins")
  if not isinstance(rec["outputs"],dict) or set(rec["outputs"])!={"checker","audit","summary"}: vc.fail(where,"receipt outputs incomplete")
  for key,entry in rec["outputs"].items():
   vc.expect_keys(entry,{"path","sha256"},f"{where}.outputs.{key}")
   if vc.file_sha256(entry["path"])!=entry["sha256"]: vc.fail(where,f"{key} output changed after the checks: {entry['path']}")
  if rec["biological_execution"] is not False: vc.fail(where,"receipt claims biological execution")
+ # L2: the receipt's `valid` is a claim; the outputs it binds must record the pass themselves.
+ errors=runner.verify_outputs({key:Path(entry["path"]) for key,entry in rec["outputs"].items()},cohort,expected_source,
+                              cohort.manifest["binary_sha256"],expected_foldgen)
+ if errors: vc.fail(where,"the outputs it binds do not record a pass: "+"; ".join(errors[:10]))
  return {"path":str(path),"sha256":sha,"foldgen_sha256":rec["foldgen_sha256"],"validator_sha256":rec["validator_sha256"]}
 
 def label_counts(full_report,genomes):
@@ -280,7 +301,7 @@ def cross_check_labels(cohorts):
   receipts={row["antibiotic"]:(row["resistant"],row["susceptible"]) for row in c.manifest["class_gate_unavailable"]}
   for drug in vc.ALL_DRUGS:
    fr=full.reports.get(vc.DRUG_IDS[drug])
-   if fr is None: continue  # invalid in full: excluded there, nothing to cross-check
+   if fr is None: continue  # not eligible in full (never, under the frozen rule): nothing to cross-check
    derived=label_counts(fr,genomes)
    if name=="added": added_counts[drug]=derived
    report=c.reports.get(vc.DRUG_IDS[drug])
@@ -290,12 +311,13 @@ def cross_check_labels(cohorts):
     if got!=derived or {g for g in report.samples}!={g for g in fr.samples if g in genomes}: problems.append(f"{name} {drug}: report labels {got} differ from the full cohort's labels on its genomes {derived}")
  return problems,added_counts
 
-def compare(paths,receipts,duplicates,expected_source,rules=None,accept_duplicates=None):
+def compare(paths,receipts,duplicates,expected_source,rules=None,accept_duplicates=None,*,expected_foldgen):
  rules=rules or vc.RULES
  if set(paths)!=set(COHORTS) or set(receipts)!=set(COHORTS): raise vc.ValidationError(f"need one root and one checker receipt for each of {list(COHORTS)}")
- vc.digest(expected_source,"expected source commit",vc.COMMIT)
- cohorts={name:vc.validate_manifest(Path(paths[name])/"validation-manifest.json",rules,collect_invalid=True) for name in COHORTS}
- receipt_rows={name:load_receipt(receipts[name],cohorts[name],expected_source) for name in COHORTS}
+ vc.digest(expected_source,"expected source commit",vc.COMMIT); vc.digest(expected_foldgen,"expected foldgen SHA-256")
+ # L3: strict. Any invalid report stops here (validate_manifest raises), with no output.
+ cohorts={name:vc.validate_manifest(Path(paths[name])/"validation-manifest.json",rules) for name in COHORTS}
+ receipt_rows={name:load_receipt(receipts[name],cohorts[name],expected_source,expected_foldgen) for name in COHORTS}
  screen_path=Path(duplicates); screen,screen_sha=vc.read_json(screen_path)
  if not isinstance(screen,dict) or not isinstance(screen.get("cross_cohort_exact"),int): vc.fail(str(screen_path),"not a screen_duplicates.py output")
  if screen["cross_cohort_exact"] and accept_duplicates!=screen_sha: vc.fail(str(screen_path),f"the duplicate screen reports {screen['cross_cohort_exact']} exact cross-cohort duplicates; stop for a parent decision")
@@ -308,9 +330,6 @@ def compare(paths,receipts,duplicates,expected_source,rules=None,accept_duplicat
  if set(flagged)!=EXPECTED_SPARSE_ADDED: vc.fail("not interpretable",f"derived {sorted(flagged)}, expected the frozen {sorted(EXPECTED_SPARSE_ADDED)}")
  eligible={name:{vc.ID_TO_DRUG[i] for i in set(c.manifest["reports"])} for name,c in cohorts.items()}
  if eligible["added"]!=EXPECTED_ADDED_ELIGIBLE: vc.fail("added eligibility",f"{sorted(eligible['added'])} is not the frozen 14")
- excluded={}
- for name,c in cohorts.items():
-  for did,reason in sorted(c.invalid.items()): excluded.setdefault(vc.ID_TO_DRUG[did],[]).append({"cohort":name,"reasons":[reason]})
  primary_unavailable={}
  for name,c in cohorts.items():
   for did,report in sorted(c.reports.items()):
@@ -324,16 +343,16 @@ def compare(paths,receipts,duplicates,expected_source,rules=None,accept_duplicat
  if any(cf!=configs[0] for cf in configs[1:]): issues.append({"issue":"EvalConfig/seeds differ across cohorts"})
  if f.genomes[:len(p.genomes)]!=p.genomes or f.genomes[len(p.genomes):]!=a.genomes: issues.append({"issue":"full cohort is not exact ordered prefix+added"})
  both=lambda x,y: eligible[x]&eligible[y]  # noqa: E731
- full_prefix,i1=compare_paired(p,f,"prefix",both("prefix","full"),flagged,excluded)
- full_matched,i2=compare_paired(m,f,"matched2k",both("matched2k","full"),flagged,excluded)
- full_added,i3=compare_full_added(a,f,both("added","full"),excluded)
- added_prefix,i4=compare_prefix_added(p,a,both("prefix","added"),excluded)
+ full_prefix,i1=compare_paired(p,f,"prefix",both("prefix","full"),flagged)
+ full_matched,i2=compare_paired(m,f,"matched2k",both("matched2k","full"),flagged)
+ full_added,i3=compare_full_added(a,f,both("added","full"))
+ added_prefix,i4=compare_prefix_added(p,a,both("prefix","added"))
  issues+=i1+i2+i3+i4
  analyses={"full_vs_prefix":full_prefix,"full_vs_matched2k":full_matched,"added_vs_prefix":added_prefix,
-  "matched2k_vs_prefix":compare_side_by_side(p,m,"prefix","matched2k",both("prefix","matched2k"),flagged,excluded),
+  "matched2k_vs_prefix":compare_side_by_side(p,m,"prefix","matched2k",both("prefix","matched2k"),flagged),
   "full_cohort_cv_added_subset":full_added}
  decomposition=[]
- for drug in sorted(both("prefix","full")&eligible["matched2k"]-set(excluded)-set(primary_unavailable)):
+ for drug in sorted(both("prefix","full")&eligible["matched2k"]-set(primary_unavailable)):
   did=vc.DRUG_IDS[drug]; meds={name:median_ba(cohorts[name].reports[did],PRIMARY) for name in ("prefix","matched2k","full")}
   decomposition.append({"drug":drug,"before_after_interpretable":drug not in flagged,"median_balanced_accuracy":meds,
    "total":None if None in (meds["full"],meds["prefix"]) else meds["full"]-meds["prefix"],
@@ -352,7 +371,7 @@ def compare(paths,receipts,duplicates,expected_source,rules=None,accept_duplicat
     pr=row["comparisons"][0]["pairing"]; random_mismatch[f"{key}/{row['drug']}"]={"fold_mismatch":pr["fold_mismatch_count"],"common":pr["common_samples"]}
  if any(v["fold_mismatch"] for v in random_mismatch.values()):
   warnings.append({"issue":"random folds differ between cohorts, as expected for per-cohort stratified shuffles; matched random controls are marked invalid row by row (decision D1), and fold integrity is enforced per cohort by the foldgen rebuild"})
- out={"schema":"grm-mtb-4k-comparison-v2","run_source_commit":expected_source,"validator_sha256":vc.validator_sha256(),"checker_pins":vc.PINS,
+ out={"schema":"grm-mtb-4k-comparison-v3","run_source_commit":expected_source,"foldgen_sha256":expected_foldgen,"validator_sha256":vc.validator_sha256(),"checker_pins":vc.PINS,
   "validation":{"valid":not issues,"blocking_issues":issues,"warnings":warnings},
   "scope":"Internal cross-validation only; no external, prospective, clinical, or causal validation. McNemar p-values are descriptive, Holm-adjusted within learner and split across interpretable drugs.",
   "validator_execution":{"biological_execution":False,"saved_scores_and_metadata_only":True},
@@ -362,7 +381,7 @@ def compare(paths,receipts,duplicates,expected_source,rules=None,accept_duplicat
    "cross_cohort_near":screen.get("cross_cohort_near"),"accepted_by_sha256":bool(screen["cross_cohort_exact"])},
   "primary_split":PRIMARY,"threshold":0.5,"not_interpretable_for_before_after":flagged,"added_class_counts_from_full":{d:list(v) for d,v in sorted(added_counts.items())},
   "eligible":{name:sorted(v) for name,v in eligible.items()},"not_eligible":{name:sorted(set(vc.ALL_DRUGS)-v) for name,v in eligible.items()},
-  "excluded":excluded,"primary_split_unavailable":primary_unavailable,"random_fold_accounting":random_mismatch,
+  "primary_split_unavailable":primary_unavailable,"random_fold_accounting":random_mismatch,
   "lineage_comparison":lineage,"analyses":analyses,"size_matched_decomposition":decomposition}
  return out
 
@@ -381,21 +400,22 @@ def main(argv=None):
  parser.add_argument("--duplicates",required=True)
  parser.add_argument("--accept-reviewed-duplicates")
  parser.add_argument("--expected-source-commit",required=True)
+ parser.add_argument("--expected-foldgen-sha256",required=True)
  parser.add_argument("--out",required=True,type=Path)
  args=parser.parse_args(argv)
  try:
   result=compare(parse_pairs(args.cohort,"cohort"),parse_pairs(args.checker_receipt,"checker-receipt"),args.duplicates,
-                 args.expected_source_commit,accept_duplicates=args.accept_reviewed_duplicates)
+                 args.expected_source_commit,accept_duplicates=args.accept_reviewed_duplicates,expected_foldgen=args.expected_foldgen_sha256)
  except (vc.ValidationError,OSError,KeyError,TypeError,ValueError,ArithmeticError) as exc:
   print(f"compare_cohorts: STOP: {exc}",file=sys.stderr); return 2
  with args.out.open("x") as f:
   f.write(json.dumps(result,indent=1,sort_keys=True,allow_nan=False)+"\n")
  print(json.dumps({"out":str(args.out),"valid":result["validation"]["valid"],"blocking_issues":len(result["validation"]["blocking_issues"]),
-                   "warnings":len(result["validation"]["warnings"]),"excluded":sorted(result["excluded"]),
+                   "warnings":len(result["validation"]["warnings"]),
                    "primary_split_unavailable":sorted(result["primary_split_unavailable"]),
                    "reports":{n:c["eligible_reports"] for n,c in result["cohorts"].items()}},sort_keys=True))
  if not result["validation"]["valid"]: return 1
- if result["excluded"] or result["primary_split_unavailable"]:
+ if result["primary_split_unavailable"]:
   print("compare_cohorts: stop for review before any before/after claim",file=sys.stderr); return 3
  return 0
 if __name__=="__main__": sys.exit(main())

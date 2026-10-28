@@ -7,8 +7,10 @@ The byte-exact oracle is not here: it is the 22 saved revision-7 MTB reports on 
 which fingerprint.py must reproduce from the frozen 2k root (the lane receipt records that run).
 """
 import json
+import os
 import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -123,6 +125,81 @@ class Inputs(unittest.TestCase):
                                 "conflict": False, "mic": None, "label_from_mic": False}) + "\n")
         self.edit_json(root / "data/curated/datasets.json", lambda ds: next(d for d in ds if d["id"] == DID).update(drug_class="other", n_resistant=999))
         self.assertEqual(self.key(root), base)
+
+
+class RevisionSevenView(unittest.TestCase):
+    """L5: the plan's revision-7 pre-check builds its view with --make-view, then --check
+    --expect-reports. The fixture splits one cohort root as the frozen roots are split: the matrix,
+    counted.json and structure.json in one (the preflight root), curated, catalog and the reports in
+    the other (the candidate)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        base = Path(cls.tmp.name)
+        rules = fx.make_rules({"prefix": ("amikacin", "isoniazid")})
+        whole = fx.build_cohort(base / "whole", "prefix", rules) / "data"
+        sp = f"species/{fx.vc.SPECIES}"
+        cls.pre, cls.cand = base / "pre" / "data", base / "cand" / "data"
+        shutil.copytree(whole / sp / "matrix", cls.pre / sp / "matrix")
+        for name in ("counted.json", "structure.json"):
+            shutil.copyfile(whole / sp / name, cls.pre / sp / name)
+        shutil.copytree(whole / sp / "results", cls.cand / sp / "results")
+        for name in ("curated", "catalog"):
+            shutil.copytree(whole / name, cls.cand / name)
+        (base / "empty" / "data" / sp / "results").mkdir(parents=True)
+        for name in ("curated", "catalog"):
+            shutil.copytree(whole / name, base / "empty" / "data" / name)
+        cls.empty = base / "empty" / "data"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def run_cli(self, *args):
+        return subprocess.run([sys.executable, "-I", "-B", str(HERE.parent / "fingerprint.py"), *map(str, args)],
+                              cwd=self.tmp.name, capture_output=True, text=True)
+
+    def view(self, label):
+        return Path(self.tmp.name) / label / "rev7-view" / "data"
+
+    def test_the_view_holds_links_only_and_every_report_matches(self):
+        view, out = self.view("good"), Path(self.tmp.name) / "good.json"
+        p = self.run_cli(view, "--make-view", "--matrix-from", self.pre, "--inputs-from", self.cand, "--check", "--expect-reports", 2, "--out", out)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        got = json.loads(out.read_text())
+        self.assertEqual((len(got["reports"]), got["matched"]), (2, 2))
+        self.assertEqual(len(got["view"]), 6)
+        links = sorted(str(q.relative_to(view)) for q in view.rglob("*") if q.is_symlink())
+        dirs = sorted(str(q.relative_to(view)) for q in view.rglob("*") if q.is_dir() and not q.is_symlink())
+        self.assertEqual(links, sorted(got["view"]))
+        self.assertEqual(dirs, ["species", f"species/{fx.vc.SPECIES}"])
+        for rel, target in got["view"].items():
+            self.assertEqual(os.readlink(view / rel), target)
+        # Built once: an existing view is refused, and nothing in it changes.
+        p = self.run_cli(view, "--make-view", "--matrix-from", self.pre, "--inputs-from", self.cand, "--check")
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("exists", p.stderr)
+
+    def test_a_count_other_than_expected_or_an_empty_results_dir_fails(self):
+        p = self.run_cli(self.view("count"), "--make-view", "--matrix-from", self.pre, "--inputs-from", self.cand, "--check", "--expect-reports", 22)
+        self.assertEqual(p.returncode, 1)
+        self.assertIn("not the expected 22", p.stderr)
+        p = self.run_cli(self.view("empty"), "--make-view", "--matrix-from", self.pre, "--inputs-from", self.empty, "--check")
+        self.assertEqual(p.returncode, 0)  # --check alone passes an empty results directory ...
+        p = self.run_cli(self.view("empty"), "--check", "--expect-reports", 22)
+        self.assertEqual(p.returncode, 1)  # ... --expect-reports does not
+
+    def test_a_missing_source_or_a_partial_flag_set_stops_before_anything_is_made(self):
+        view = self.view("missing")
+        p = self.run_cli(view, "--make-view", "--matrix-from", self.cand, "--inputs-from", self.cand, "--check")
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("view sources missing", p.stderr)
+        self.assertFalse(os.path.lexists(view))
+        p = self.run_cli(view, "--make-view", "--matrix-from", self.pre, "--check")
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("--make-view needs", p.stderr)
+        self.assertFalse(os.path.lexists(view))
 
 
 if __name__ == "__main__":

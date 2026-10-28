@@ -13,8 +13,10 @@ cohort, matched2k, whose genome list is frozen and whose drug set follows the cl
 every class-gate receipt must equal the counts recomputed from the root's own phenotypes; every
 report's input_fingerprint must equal fingerprint.py's recomputation from the root's files, as
 well as the run manifest; and validate_manifest(collect_invalid=True) records a report that fails
-the contract instead of stopping, so the comparator can exclude it (W's rule). Binding failures
-(hashes, fingerprint, identity) always stop.
+the contract instead of stopping. That mode is for diagnosis only: compare_cohorts.py and
+run_revision8_checks.py load strictly, so any invalid report stops them (L3). Binding failures
+(hashes, fingerprint, identity) always stop, and a report's SHA-256 is checked before it is
+parsed, so a bound report corrupted into invalid JSON is a binding failure too (I1).
 """
 from __future__ import annotations
 import hashlib, importlib.util, json, math, re, statistics, sys
@@ -147,11 +149,13 @@ def check_finite_tree(value,where="json"):
   for i,item in enumerate(value): check_finite_tree(item,f"{where}[{i}]")
  elif isinstance(value,dict):
   for key,item in value.items(): check_finite_tree(item,f"{where}.{key}")
-def read_json(path):
- raw=Path(path).read_bytes(); sha=hashlib.sha256(raw).hexdigest()
+def parse_json(raw,where):
  try: value=json.loads(raw,object_pairs_hook=no_duplicate_objects,parse_constant=reject_constant)
- except (json.JSONDecodeError,UnicodeDecodeError) as exc: fail(str(path),f"malformed JSON: {exc}")
- check_finite_tree(value,str(path)); return value,sha
+ except (json.JSONDecodeError,UnicodeDecodeError) as exc: fail(where,f"malformed JSON: {exc}")
+ check_finite_tree(value,where); return value
+def read_json(path):
+ raw=Path(path).read_bytes()
+ return parse_json(raw,str(path)),hashlib.sha256(raw).hexdigest()
 def safe_relative(root,value,where):
  value=text(value,where); p=PurePosixPath(value)
  if p.is_absolute() or ".." in p.parts or "." in p.parts or not p.parts: fail(where,f"unsafe relative path {value!r}")
@@ -390,8 +394,10 @@ def validate_learner(row,scheme,folds,samples,k,catalog_present,lambda_count,whe
  return LearnerData(name,scheme,dict(zip(ids,scores)),dict(zip(ids,folds)),receipt)
 
 def validate_report(path,expected_id,expected,cohort):
- report,sha=read_json(path)
+ raw=Path(path).read_bytes(); sha=hashlib.sha256(raw).hexdigest()
+ # I1: bind before parsing, so a bound report corrupted into invalid JSON is a binding stop.
  if sha!=expected["sha256"]: bind_fail(str(path),f"report SHA-256 differs from run manifest: {sha} != {expected['sha256']}")
+ report=parse_json(raw,str(path))
  if not isinstance(report,dict) or not isinstance(report.get("evaluation"),dict): fail(str(path),"missing evaluation object")
  if not isinstance(report["evaluation"].get("revision"),int) or isinstance(report["evaluation"].get("revision"),bool) or report["evaluation"].get("revision")!=REVISION: fail(str(path),f"matched controls require evaluation revision 8, got {report['evaluation'].get('revision')!r}")
  expect_keys(report,TOP_KEYS,str(path))

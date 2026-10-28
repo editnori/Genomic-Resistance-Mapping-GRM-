@@ -7,6 +7,11 @@ Ported from K's tests/test_validators.py WrapperTests. Path-adapted: the in-tree
 run instead of vendored copies, every run also writes --receipt, and --foldgen is the committed
 foldgen, which these fixtures' folds come from (K used an in-process double that emitted its index
 folds). The double stays for one injected-failure test. Every K assertion is kept.
+
+Follow-up tests (plan-validators review): I4, the runner refuses a foldgen that is not the
+recorded build (--expected-foldgen-sha256, required); L2, verify_outputs, which the runner runs
+before it writes a receipt and compare_cohorts.py runs again on the outputs a receipt names,
+accepts a real passing run's outputs and rejects each edit that makes them record a failure.
 """
 import contextlib,io,json,sys,tempfile,unittest
 from pathlib import Path
@@ -28,7 +33,7 @@ class WrapperTests(unittest.TestCase):
  def args(self): return [str(self.root/"audit.json"),"--root",str(self.root),"--run-manifest",str(self.root/"validation-manifest.json"),
   "--expected-source-commit",fx.SOURCE,"--binary",str(self.root/"synthetic-binary"),"--backup",str(self.root/"backup"),
   "--log",str(self.root/"pipeline.log"),"--launch","2000-01-01T00:00:00Z","--foldgen",fx.foldgen_path(),
-  "--checker-out",str(self.root/"checker.json"),"--summary-out",str(self.root/"summary.json"),"--receipt",str(self.root/"receipt.json")]
+  "--expected-foldgen-sha256",fx.foldgen_sha256(),"--checker-out",str(self.root/"checker.json"),"--summary-out",str(self.root/"summary.json"),"--receipt",str(self.root/"receipt.json")]
  def run_wrapper(self,args=None,factory=None): return quiet(lambda:wrapper.main(args or self.args(),rules=self.rules,foldgen_factory=factory))
  def reject_report_mutation(self,label,mutate):
   root=fx.build_cohort(Path(self.tmp.name)/(label.replace(" ","-").replace("/","-")),"prefix",self.rules)
@@ -93,6 +98,44 @@ class WrapperTests(unittest.TestCase):
   self.assertFalse((self.root/"receipt.json").exists())
   NEGATIVE.append({"control":"stale pre-launch report timestamp","result":"audit postflight rejected"})
 
+class FollowupTests(unittest.TestCase):
+ setUp=WrapperTests.setUp; tearDown=WrapperTests.tearDown; args=WrapperTests.args; run_wrapper=WrapperTests.run_wrapper
+ def test_i4_a_foldgen_that_is_not_the_recorded_build_stops_before_the_checker(self):
+  args=self.args(); args[args.index("--expected-foldgen-sha256")+1]="0"*64
+  self.assertEqual(self.run_wrapper(args),2); self.assertFalse((self.root/"checker.json").exists()); self.assertFalse((self.root/"receipt.json").exists())
+  args=self.args(); args[args.index("--expected-foldgen-sha256")+1]="not-a-digest"
+  self.assertEqual(self.run_wrapper(args),2); self.assertFalse((self.root/"checker.json").exists())
+  args=self.args(); i=args.index("--expected-foldgen-sha256"); del args[i:i+2]
+  with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as stop: wrapper.main(args,rules=self.rules)
+  self.assertEqual(stop.exception.code,2)
+  NEGATIVE.append({"control":"I4 foldgen is not the recorded build","result":"stopped before checker"})
+ def test_l2_verify_outputs_accepts_a_real_pass_and_rejects_each_failure(self):
+  self.assertEqual(self.run_wrapper(),0)
+  cohort=vc.validate_manifest(self.root/"validation-manifest.json",self.rules)
+  real={"checker":self.root/"checker.json","audit":self.root/"audit.json","summary":self.root/"summary.json"}
+  binary=vc.file_sha256(self.root/"synthetic-binary"); fg=fx.foldgen_sha256()
+  self.assertEqual(wrapper.verify_outputs(real,cohort,fx.SOURCE,binary,fg),[])
+  self.assertTrue(wrapper.verify_outputs(real,cohort,"2"*40,binary,fg)); self.assertTrue(wrapper.verify_outputs(real,cohort,fx.SOURCE,"0"*64,fg))
+  self.assertTrue(wrapper.verify_outputs(real,cohort,fx.SOURCE,binary,"0"*64))
+  def audit_edit(fn):
+   def apply(path):
+    value=json.loads(path.read_text()); fn(value); path.write_text(json.dumps(value))
+   return apply
+  cases=[
+   ("audit",audit_edit(lambda a:a["summary"]["revision8_wrapper"].update(valid=False)),"valid"),
+   ("audit",audit_edit(lambda a:a["summary"].update(issue_count=1)),"issues"),
+   ("audit",audit_edit(lambda a:a["records"][0].update(sha256="0"*64)),"SHA-256 differs"),
+   ("audit",audit_edit(lambda a:a["records"][0].update(id="other")),"ids differ"),
+   ("checker",audit_edit(lambda c:c["reports"][0].update(id="other")),"checker report ids"),
+   ("summary",audit_edit(lambda s:s["coverage"]["8"].update(issues=1)),"summarizer"),
+  ]
+  for key,fn,match in cases:
+   with self.subTest(match):
+    copy=self.root/f"edited-{key}.json"; copy.write_bytes(real[key].read_bytes()); fn(copy)
+    errors=wrapper.verify_outputs({**real,key:copy},cohort,fx.SOURCE,binary,fg)
+    self.assertTrue(any(match in e for e in errors),errors)
+    NEGATIVE.append({"control":f"L2 verify_outputs: {match}","result":"rejected"})
+
 class RealFoldgenTests(unittest.TestCase):
  """Experiment E2: with folds from the real foldgen the wrapper passes, a swap of two same-class
  random folds fails the rebuild, and K's index folds (the double) fail it everywhere."""
@@ -103,12 +146,14 @@ class RealFoldgenTests(unittest.TestCase):
     root=fx.build_cohort(Path(tmp)/name,name,rules)
     args=[str(root/"audit.json"),"--root",str(root),"--run-manifest",str(root/"validation-manifest.json"),"--expected-source-commit",fx.SOURCE,
           "--binary",str(root/"synthetic-binary"),"--backup",str(root/"backup"),"--log",str(root/"pipeline.log"),"--launch","2000-01-01T00:00:00Z",
-          "--foldgen",fx.foldgen_path(),"--checker-out",str(root/"checker.json"),"--summary-out",str(root/"summary.json"),"--receipt",str(root/"receipt.json")]
+          "--foldgen",fx.foldgen_path(),"--expected-foldgen-sha256",fx.foldgen_sha256(),
+          "--checker-out",str(root/"checker.json"),"--summary-out",str(root/"summary.json"),"--receipt",str(root/"receipt.json")]
     self.assertEqual(quiet(lambda:wrapper.main(args,rules=rules)),0,name)
    root=fx.build_cohort(Path(tmp)/"double","prefix",rules)
    args=[str(root/"audit.json"),"--root",str(root),"--run-manifest",str(root/"validation-manifest.json"),"--expected-source-commit",fx.SOURCE,
          "--binary",str(root/"synthetic-binary"),"--backup",str(root/"backup"),"--log",str(root/"pipeline.log"),"--launch","2000-01-01T00:00:00Z",
-         "--foldgen",fx.foldgen_path(),"--checker-out",str(root/"checker.json"),"--summary-out",str(root/"summary.json"),"--receipt",str(root/"receipt.json")]
+         "--foldgen",fx.foldgen_path(),"--expected-foldgen-sha256",fx.foldgen_sha256(),
+         "--checker-out",str(root/"checker.json"),"--summary-out",str(root/"summary.json"),"--receipt",str(root/"receipt.json")]
    self.assertEqual(quiet(lambda:wrapper.main(args,rules=rules,foldgen_factory=fx.FakeFoldGen)),2)
    audit=json.loads((root/"audit.json").read_text()); self.assertGreater(audit["summary"]["issue_count"],0)
    NEGATIVE.append({"control":"index-fold double against real-foldgen folds","result":"audit postflight rejected"})
