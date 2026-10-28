@@ -18,10 +18,16 @@ use anyhow::{Context, Result};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub const SKETCH: usize = 1000;
+pub const DISK_SPARSE_RESERVE: u64 = 30 * 1024 * 1024 * 1024;
+/// Prior MTB scale-up estimate, used only to plan a fresh block's preflight.
+/// Exact encoded lengths are checked before every kset write.
+const ESTIMATED_NEW_KSET_BYTES: u64 = 24 * 1024 * 1024;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Counted {
@@ -33,6 +39,10 @@ pub struct Counted {
     /// before digests.
     #[serde(default)]
     pub kset_digest: Option<String>,
+    /// Bottom-sketch of the same values. `None` only in old counts; `Some([])`
+    /// is a valid sketch for an all-empty kset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sketch: Option<Vec<u64>>,
     pub genes: Vec<FamilyHit>,
 }
 
@@ -42,6 +52,10 @@ pub struct CountSummary {
     pub genomes: Vec<Counted>,
     pub missing_fasta: Vec<String>,
     pub failed: Vec<(String, String)>,
+    /// Selected genomes not counted yet in an interrupted disk-sparse run.
+    /// Empty in every complete manifest, including manifests from old GRM.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pending: Vec<String>,
 }
 
 impl CountSummary {
@@ -61,6 +75,11 @@ impl CountSummary {
     /// Each genome's kset digest in counted order, which `grm {stage}`
     /// records beside what it builds from the ksets.
     fn kset_digests(&self, stage: &str) -> Result<Vec<String>> {
+        anyhow::ensure!(
+            self.pending.is_empty(),
+            "counted.json has {} selected genomes pending; finish the disk-sparse run before `grm {stage}`",
+            self.pending.len()
+        );
         self.genomes
             .iter()
             .map(|g| g.kset_digest.clone())
@@ -88,6 +107,20 @@ fn selection(layout: &Layout, slug: &str) -> Result<(Vec<String>, Vec<String>)> 
         .partition(|id| fasta_path(&fasta_dir, id).exists()))
 }
 
+fn write_sidecar(path: &Path, counted: &Counted, reserve: u64) -> Result<()> {
+    let bytes = serde_json::to_vec(counted)?;
+    if reserve != 0 {
+        matrix::ensure_free_space(
+            path.parent().unwrap_or(Path::new(".")),
+            bytes.len() as u64,
+            reserve,
+        )?;
+    }
+    std::fs::write(path, bytes)?;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
 fn count_one(
     id: &str,
     fasta: &Path,
@@ -96,6 +129,7 @@ fn count_one(
     space: &KmerSpace,
     catalog: Option<&Catalog>,
     (values, scratch): &mut (Vec<u64>, Vec<u64>),
+    reserve: u64,
 ) -> Result<Counted> {
     let version = catalog.map_or(String::new(), Catalog::calls_version);
     // A kset counted under another `--k` is not a cache hit.
@@ -103,13 +137,12 @@ fn count_one(
         && let Ok(bytes) = std::fs::read(sidecar)
         && let Ok(c) = serde_json::from_slice::<Counted>(&bytes)
     {
-        if c.catalog_version == version && c.kset_digest.is_some() {
+        if c.catalog_version == version && c.kset_digest.is_some() && c.sketch.is_some() {
             return Ok(c);
         }
-        // Catalog changed, or the sidecar predates kset digests:
-        // redo both from the stored kset, with its k-mer count. A
-        // sidecar from before digests can describe a kset of another
-        // k, since those counts wrote the kset without removing it.
+        // Catalog changed, or the sidecar predates kset digests/sketches:
+        // redo those from the stored kset, with its k-mer count. A sidecar
+        // from before digests can describe a kset of another k.
         let values = KsetReader::open(kset_path)?.read_all()?;
         let genes = catalog.map_or(vec![], |cat| {
             catalog::family_calls(cat, &cat.detect(&values, catalog::CALL_CONTAINMENT))
@@ -118,10 +151,11 @@ fn count_one(
             n_kmers: values.len() as u64,
             catalog_version: version,
             kset_digest: Some(kset::digest(&values)),
+            sketch: Some(values.iter().copied().take(SKETCH).collect()),
             genes,
             ..c
         };
-        std::fs::write(sidecar, serde_json::to_vec(&c)?)?;
+        write_sidecar(sidecar, &c, reserve)?;
         return Ok(c);
     }
     let stats = kset::count_into(fasta, space, 1, values, scratch)?;
@@ -130,7 +164,14 @@ fn count_one(
     // next run recounts, instead of the new kset with the old k-mer count and
     // gene calls.
     remove_if_present(sidecar).with_context(|| format!("remove {}", sidecar.display()))?;
-    kset::write(kset_path, id, space, values)?;
+    let dir = kset_path.parent().unwrap_or(Path::new("."));
+    kset::write_checked(kset_path, id, space, values, |_, need| {
+        if reserve == 0 {
+            Ok(())
+        } else {
+            matrix::ensure_free_space(dir, need, reserve)
+        }
+    })?;
     let genes = catalog.map_or(vec![], |cat| {
         catalog::family_calls(cat, &cat.detect(values, catalog::CALL_CONTAINMENT))
     });
@@ -140,9 +181,10 @@ fn count_one(
         stats,
         catalog_version: version,
         kset_digest: Some(kset::digest(values)),
+        sketch: Some(values.iter().copied().take(SKETCH).collect()),
         genes,
     };
-    std::fs::write(sidecar, serde_json::to_vec(&c)?)?;
+    write_sidecar(sidecar, &c, reserve)?;
     Ok(c)
 }
 
@@ -152,10 +194,16 @@ pub fn count(
     k: usize,
     catalog: Option<&Catalog>,
 ) -> Result<CountSummary> {
+    let previous = load_counted(layout, slug).ok();
+    if let Some(c) = previous.as_ref().filter(|c| !c.pending.is_empty()) {
+        anyhow::bail!(
+            "{slug}: counted.json has {} selected genomes pending from an interrupted disk-sparse run; resume `grm pipeline --disk-sparse` rather than starting a stock count",
+            c.pending.len()
+        );
+    }
     if catalog.is_none() {
         // Counting without a catalog records no gene calls, and learning
         // without them leaves every report without its catalog baseline.
-        let previous = load_counted(layout, slug).ok();
         if let Some(g) = previous
             .as_ref()
             .and_then(|c| c.called_with_other_catalog(""))
@@ -185,6 +233,7 @@ pub fn count(
                     &space,
                     catalog,
                     buffers,
+                    0,
                 );
                 let d = done.fetch_add(1, Ordering::Relaxed) + 1;
                 if d.is_multiple_of(200) || d == present.len() {
@@ -207,6 +256,7 @@ pub fn count(
         genomes,
         missing_fasta: missing,
         failed,
+        pending: vec![],
     };
     std::fs::write(
         layout.species_dir(slug).join("counted.json"),
@@ -244,13 +294,41 @@ pub struct Structure {
 }
 
 pub fn structure(layout: &Layout, slug: &str) -> Result<Structure> {
+    structure_with_reserve(layout, slug, 0)
+}
+
+/// `structure` with a free-disk preflight for its JSON output.
+pub fn structure_with_reserve(layout: &Layout, slug: &str, reserve: u64) -> Result<Structure> {
     let counted = load_counted(layout, slug)?;
     let kset_digests = counted.kset_digests("structure")?;
     let kdir = layout.kset_dir(slug);
     let sketches: Vec<Vec<u64>> = counted
         .genomes
         .par_iter()
-        .map(|g| KsetReader::open(&kdir.join(format!("{}.kset", g.genome_id)))?.sketch(SKETCH))
+        .map(|g| {
+            let path = kdir.join(format!("{}.kset", g.genome_id));
+            if std::fs::symlink_metadata(&path).is_ok() {
+                let reader = KsetReader::open(&path)?;
+                anyhow::ensure!(
+                    reader.k == counted.k,
+                    "{} holds {}-mers, not the counted {}-mers",
+                    path.display(),
+                    reader.k,
+                    counted.k
+                );
+                return reader.sketch(SKETCH);
+            }
+            let sketch = g
+                .sketch
+                .as_ref()
+                .with_context(|| format!("no kset or cached sketch for {}", g.genome_id))?;
+            anyhow::ensure!(
+                sketch.len() as u64 == g.n_kmers.min(SKETCH as u64),
+                "counted.json has the wrong sketch length for {}",
+                g.genome_id
+            );
+            Ok(sketch.clone())
+        })
         .collect::<Result<_>>()?;
     let n = sketches.len();
     let dist = cluster::distance_matrix(&sketches, SKETCH, counted.k);
@@ -279,10 +357,16 @@ pub fn structure(layout: &Layout, slug: &str) -> Result<Structure> {
         nearest,
         sketch_size: SKETCH,
     };
-    std::fs::write(
-        layout.species_dir(slug).join("structure.json"),
-        serde_json::to_vec(&s)?,
-    )?;
+    let out = layout.species_dir(slug).join("structure.json");
+    let bytes = serde_json::to_vec(&s)?;
+    if reserve != 0 {
+        matrix::ensure_free_space(
+            out.parent().unwrap_or(Path::new(".")),
+            bytes.len() as u64,
+            reserve,
+        )?;
+    }
+    std::fs::write(out, bytes)?;
     Ok(s)
 }
 
@@ -304,6 +388,686 @@ pub fn build_matrix(
     m.summary.kset_digests = digests;
     m.save(&layout.matrix_dir(slug))?;
     Ok(m.summary)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct SparseConfig {
+    k: usize,
+    genomes: Vec<String>,
+    missing_fasta: Vec<String>,
+    catalog_version: String,
+    block_width: usize,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct ActiveBlock {
+    first_col: usize,
+    /// Kset paths that predated this block. Every other kset in the block is
+    /// owned by this sparse run and may be deleted after partial verification.
+    preexisting: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct SavedSparse {
+    digest: String,
+    summary: matrix::MatrixSummary,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct SparseRun {
+    config: SparseConfig,
+    folded_columns: usize,
+    active: Option<ActiveBlock>,
+    saved: Option<SavedSparse>,
+}
+
+fn ensure_single_component(value: &str, what: &str) -> Result<()> {
+    let mut components = Path::new(value).components();
+    anyhow::ensure!(
+        matches!(components.next(), Some(std::path::Component::Normal(_)))
+            && components.next().is_none(),
+        "{what} is not one safe path component: {value:?}"
+    );
+    Ok(())
+}
+
+fn suffixed(path: &Path, suffix: &str) -> PathBuf {
+    let mut name = path.as_os_str().to_owned();
+    name.push(suffix);
+    PathBuf::from(name)
+}
+
+fn sync_dir(path: &Path) -> Result<()> {
+    File::open(path)
+        .and_then(|f| f.sync_all())
+        .with_context(|| format!("sync directory {}", path.display()))
+}
+
+/// Atomic, durable JSON for the two manifests a sparse resume depends on.
+fn write_json_durably<T: Serialize>(path: &Path, value: &T, reserve: u64) -> Result<()> {
+    let bytes = serde_json::to_vec_pretty(value)?;
+    let parent = path.parent().unwrap_or(Path::new("."));
+    if reserve != 0 {
+        matrix::ensure_free_space(parent, bytes.len() as u64, reserve)?;
+    }
+    let part = suffixed(path, ".part");
+    let result = (|| {
+        let mut file = File::create(&part).with_context(|| format!("create {}", part.display()))?;
+        file.write_all(&bytes)?;
+        file.sync_all()?;
+        drop(file);
+        std::fs::rename(&part, path)?;
+        sync_dir(parent)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&part);
+    }
+    result
+}
+
+/// Removes a direct-child regular file, never a symlink, directory, or tree.
+fn remove_owned_file(dir: &Path, name: &str) -> Result<bool> {
+    let path = dir.join(name);
+    anyhow::ensure!(
+        path.parent() == Some(dir),
+        "refusing non-child cleanup path {}",
+        path.display()
+    );
+    match std::fs::symlink_metadata(&path) {
+        Ok(metadata) => anyhow::ensure!(
+            metadata.file_type().is_file(),
+            "refusing to remove non-regular-file {}",
+            path.display()
+        ),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(e) => return Err(e.into()),
+    }
+    std::fs::remove_file(&path).with_context(|| format!("remove {}", path.display()))?;
+    Ok(true)
+}
+
+fn partial_path(run_dir: &Path, first_col: usize) -> PathBuf {
+    run_dir.join(format!("block-{first_col:05}.partial"))
+}
+
+fn expected_run_files(config: &SparseConfig) -> HashSet<String> {
+    let mut expected: HashSet<String> = ["run.json".into(), "run.json.part".into()].into();
+    for first in (0..config.genomes.len()).step_by(config.block_width) {
+        let partial = partial_path(Path::new(""), first);
+        let name = partial.file_name().unwrap().to_string_lossy().into_owned();
+        expected.insert(name.clone());
+        expected.insert(format!("{name}.part"));
+        expected.insert(format!("{name}.receipt.json"));
+        expected.insert(format!("{name}.receipt.json.part"));
+    }
+    expected
+}
+
+fn validate_run_entries(run_dir: &Path, config: &SparseConfig) -> Result<()> {
+    let expected = expected_run_files(config);
+    for entry in std::fs::read_dir(run_dir)? {
+        let entry = entry?;
+        let name = entry.file_name().into_string().map_err(|_| {
+            anyhow::anyhow!("non-UTF-8 filename in sparse run {}", run_dir.display())
+        })?;
+        anyhow::ensure!(
+            expected.contains(&name),
+            "unknown file {} in sparse run; refusing to touch or clean it",
+            entry.path().display()
+        );
+    }
+    Ok(())
+}
+
+fn sparse_run_dir(layout: &Layout, slug: &str, config: &SparseConfig) -> Result<PathBuf> {
+    let bytes = serde_json::to_vec(config)?;
+    let digest = ring::digest::digest(&ring::digest::SHA256, &bytes);
+    let hex = digest
+        .as_ref()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
+    Ok(layout.species_dir(slug).join("matrix-partials").join(hex))
+}
+
+fn digest_bytes(ctx: &mut ring::digest::Context, name: &str, bytes: &[u8]) {
+    ctx.update(name.as_bytes());
+    ctx.update(&(bytes.len() as u64).to_le_bytes());
+    ctx.update(bytes);
+}
+
+fn digest_u64s(ctx: &mut ring::digest::Context, name: &str, values: &[u64]) {
+    ctx.update(name.as_bytes());
+    ctx.update(&((values.len() * 8) as u64).to_le_bytes());
+    let mut bytes = Vec::with_capacity(1 << 20);
+    for chunk in values.chunks(1 << 15) {
+        bytes.clear();
+        for value in chunk {
+            bytes.extend(value.to_le_bytes());
+        }
+        ctx.update(&bytes);
+    }
+}
+
+fn digest_u32s(ctx: &mut ring::digest::Context, name: &str, values: &[u32]) {
+    ctx.update(name.as_bytes());
+    ctx.update(&((values.len() * 4) as u64).to_le_bytes());
+    let mut bytes = Vec::with_capacity(1 << 20);
+    for chunk in values.chunks(1 << 15) {
+        bytes.clear();
+        for value in chunk {
+            bytes.extend(value.to_le_bytes());
+        }
+        ctx.update(&bytes);
+    }
+}
+
+fn digest_hex(ctx: ring::digest::Context) -> String {
+    ctx.finish()
+        .as_ref()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
+fn sparse_matrix_digest(m: &matrix::FeatureMatrix) -> Result<String> {
+    let mut ctx = ring::digest::Context::new(&ring::digest::SHA256);
+    digest_bytes(
+        &mut ctx,
+        "matrix.json",
+        &serde_json::to_vec_pretty(&m.summary)?,
+    );
+    digest_u64s(&mut ctx, "patterns.bin", &m.patterns.data);
+    digest_u32s(&mut ctx, "support.bin", &m.support);
+    digest_u64s(&mut ctx, "kmer_offsets.bin", &m.kmer_offsets);
+    digest_u64s(&mut ctx, "kmers.bin", &m.kmers);
+    Ok(digest_hex(ctx))
+}
+
+fn saved_matrix_digest(dir: &Path) -> Result<String> {
+    let mut ctx = ring::digest::Context::new(&ring::digest::SHA256);
+    for name in [
+        "matrix.json",
+        "patterns.bin",
+        "support.bin",
+        "kmer_offsets.bin",
+        "kmers.bin",
+    ] {
+        let path = dir.join(name);
+        let len = std::fs::metadata(&path)?.len();
+        ctx.update(name.as_bytes());
+        ctx.update(&len.to_le_bytes());
+        let mut file = File::open(&path)?;
+        let mut bytes = vec![0u8; 1 << 20];
+        loop {
+            let got = file.read(&mut bytes)?;
+            if got == 0 {
+                break;
+            }
+            ctx.update(&bytes[..got]);
+        }
+    }
+    Ok(digest_hex(ctx))
+}
+
+fn verify_saved_sparse(dir: &Path, saved: &SavedSparse) -> Result<matrix::MatrixSummary> {
+    anyhow::ensure!(
+        saved_matrix_digest(dir)? == saved.digest,
+        "saved matrix in {} does not match the digest recorded before partial cleanup",
+        dir.display()
+    );
+    let loaded = matrix::FeatureMatrix::load(dir)?;
+    anyhow::ensure!(
+        serde_json::to_vec(&loaded.summary)? == serde_json::to_vec(&saved.summary)?,
+        "saved matrix summary in {} does not match the sparse run",
+        dir.display()
+    );
+    Ok(loaded.summary.clone())
+}
+
+fn cleanup_sparse_run(run_dir: &Path, run: &SparseRun) -> Result<()> {
+    validate_run_entries(run_dir, &run.config)?;
+    for first in (0..run.config.genomes.len()).step_by(run.config.block_width) {
+        let partial = partial_path(run_dir, first);
+        let name = partial.file_name().unwrap().to_string_lossy().into_owned();
+        for suffix in ["", ".part", ".receipt.json", ".receipt.json.part"] {
+            remove_owned_file(run_dir, &format!("{name}{suffix}"))?;
+        }
+    }
+    remove_owned_file(run_dir, "run.json.part")?;
+    remove_owned_file(run_dir, "run.json")?;
+    sync_dir(run_dir)?;
+    std::fs::remove_dir(run_dir)?;
+    if let Some(parent) = run_dir.parent()
+        && let Err(e) = std::fs::remove_dir(parent)
+        && e.kind() != std::io::ErrorKind::DirectoryNotEmpty
+        && e.kind() != std::io::ErrorKind::NotFound
+    {
+        return Err(e.into());
+    }
+    Ok(())
+}
+
+fn count_sparse_block(
+    layout: &Layout,
+    slug: &str,
+    ids: &[String],
+    space: &KmerSpace,
+    catalog: Option<&Catalog>,
+    reserve: u64,
+) -> Result<Vec<Counted>> {
+    let fasta_dir = layout.fasta_dir();
+    let kdir = layout.kset_dir(slug);
+    let results: Vec<(String, Result<Counted>)> = ids
+        .par_iter()
+        .map_init(
+            || (Vec::new(), Vec::new()),
+            |buffers, id| {
+                let result = count_one(
+                    id,
+                    &fasta_path(&fasta_dir, id),
+                    &kdir.join(format!("{id}.kset")),
+                    &kdir.join(format!("{id}.json")),
+                    space,
+                    catalog,
+                    buffers,
+                    reserve,
+                );
+                (id.clone(), result)
+            },
+        )
+        .collect();
+    results
+        .into_iter()
+        .map(|(id, result)| {
+            result.with_context(|| format!("{slug}: count {id} for the current disk-sparse block"))
+        })
+        .collect()
+}
+
+/// Counts, folds, merges and saves a matrix while holding at most one new
+/// block of ksets. Production always leaves `DISK_SPARSE_RESERVE` bytes free.
+pub fn build_matrix_disk_sparse(
+    layout: &Layout,
+    slug: &str,
+    k: usize,
+    catalog: Option<&Catalog>,
+    min_support: u32,
+    block_width: usize,
+) -> Result<matrix::MatrixSummary> {
+    build_matrix_disk_sparse_with(
+        layout,
+        slug,
+        k,
+        catalog,
+        min_support,
+        block_width,
+        DISK_SPARSE_RESERVE,
+        |_| Ok(()),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_matrix_disk_sparse_with(
+    layout: &Layout,
+    slug: &str,
+    k: usize,
+    catalog: Option<&Catalog>,
+    min_support: u32,
+    block_width: usize,
+    reserve: u64,
+    mut hook: impl FnMut(&str) -> Result<()>,
+) -> Result<matrix::MatrixSummary> {
+    anyhow::ensure!(
+        block_width >= 64
+            && block_width.is_multiple_of(64)
+            && block_width <= matrix::REVIEWED_COLUMNS,
+        "disk-sparse block width must be a multiple of 64 in 64..={} not {block_width}",
+        matrix::REVIEWED_COLUMNS
+    );
+    let space = KmerSpace::new(k);
+    ensure_single_component(slug, "species slug")?;
+    let (present, missing) = selection(layout, slug)?;
+    anyhow::ensure!(!present.is_empty(), "no selected genomes with FASTA files");
+    for id in &present {
+        ensure_single_component(id, "genome id")?;
+    }
+    let unique: HashSet<&str> = present.iter().map(String::as_str).collect();
+    anyhow::ensure!(
+        unique.len() == present.len(),
+        "selected genome ids are not unique"
+    );
+    matrix::ensure_reviewed(present.len(), matrix::REVIEWED_COLUMNS)?;
+    let config = SparseConfig {
+        k,
+        genomes: present,
+        missing_fasta: missing,
+        catalog_version: catalog.map_or(String::new(), Catalog::calls_version),
+        block_width,
+    };
+    let species_dir = layout.species_dir(slug);
+    // An exclusive directory lock is released by the OS even on a crash; two
+    // sparse callers cannot share and truncate one block's temporary files.
+    let lock =
+        File::open(&species_dir).with_context(|| format!("open {}", species_dir.display()))?;
+    lock.lock()
+        .with_context(|| format!("lock {}", species_dir.display()))?;
+    let _lock = lock;
+    // A crash before the first manifest rename can leave only our deterministic
+    // temporary. No other writer holds the species lock.
+    if remove_owned_file(&species_dir, "counted.json.part")? {
+        sync_dir(&species_dir)?;
+    }
+    if reserve != 0 {
+        matrix::ensure_free_space(&species_dir, 0, reserve)?;
+    }
+    let run_dir = sparse_run_dir(layout, slug, &config)?;
+    let run_path = run_dir.join("run.json");
+    let mut run: Option<SparseRun> = if run_path.exists() {
+        let run: SparseRun = serde_json::from_slice(&std::fs::read(&run_path)?)?;
+        anyhow::ensure!(
+            run.config == config,
+            "sparse run config does not match its directory"
+        );
+        Some(run)
+    } else {
+        None
+    };
+    let previous = load_counted(layout, slug).ok();
+    if catalog.is_none()
+        && let Some(g) = previous
+            .as_ref()
+            .and_then(|c| c.called_with_other_catalog(""))
+    {
+        anyhow::bail!(
+            "{slug}: counting without a catalog would drop gene calls from catalog {}; restore it with `grm fetch catalog`",
+            g.catalog_version
+        );
+    }
+    let compatible = previous.as_ref().is_some_and(|c| {
+        c.k == k
+            && c.failed.is_empty()
+            && c.missing_fasta == config.missing_fasta
+            && c.genomes.len() + c.pending.len() == config.genomes.len()
+            && c.genomes
+                .iter()
+                .map(|g| &g.genome_id)
+                .chain(c.pending.iter())
+                .eq(config.genomes.iter())
+            && c.genomes
+                .iter()
+                .all(|g| g.kset_digest.is_some() && g.catalog_version == config.catalog_version)
+    });
+    if run.is_some() {
+        anyhow::ensure!(
+            compatible,
+            "counted.json no longer reconstructs the sparse run's exact selection, k, catalog and completed columns"
+        );
+    }
+    let mut counted = if compatible {
+        previous.unwrap()
+    } else {
+        CountSummary {
+            k,
+            genomes: vec![],
+            missing_fasta: config.missing_fasta.clone(),
+            failed: vec![],
+            pending: config.genomes.clone(),
+        }
+    };
+
+    // A current matrix needs no sparse work. A manifest, especially one in
+    // the saved-but-not-cleaned phase, is still resumed below.
+    if run.is_none()
+        && counted.pending.is_empty()
+        && counted.genomes.iter().all(|g| g.sketch.is_some())
+        && let Ok(loaded) = matrix::FeatureMatrix::load(&layout.matrix_dir(slug))
+        && loaded.summary.min_support == min_support
+        && not_built_from(
+            &counted,
+            loaded.summary.k,
+            &loaded.summary.genomes,
+            &loaded.summary.kset_digests,
+        )
+        .is_none()
+    {
+        return Ok(loaded.summary.clone());
+    }
+
+    matrix::create_partial_dir(&run_dir)?;
+    validate_run_entries(&run_dir, &config)?;
+    if !compatible {
+        write_json_durably(&species_dir.join("counted.json"), &counted, reserve)?;
+    }
+    if run.is_none() {
+        // Only the manifest's own temporary is provably ours before the first
+        // successful manifest rename. Any other file is left for diagnosis.
+        let names: Vec<String> = std::fs::read_dir(&run_dir)?
+            .map(|e| Ok(e?.file_name().to_string_lossy().into_owned()))
+            .collect::<Result<_>>()?;
+        anyhow::ensure!(
+            names.iter().all(|name| name == "run.json.part"),
+            "sparse run {} has files but no run.json; refusing to adopt or delete them",
+            run_dir.display()
+        );
+        if !names.is_empty() {
+            remove_owned_file(&run_dir, "run.json.part")?;
+            sync_dir(&run_dir)?;
+        }
+        run = Some(SparseRun {
+            config: config.clone(),
+            folded_columns: 0,
+            active: None,
+            saved: None,
+        });
+        write_json_durably(&run_path, run.as_ref().unwrap(), reserve)?;
+    }
+    let mut run = run.take().unwrap();
+    let n = config.genomes.len();
+    let count_ceiling = run.folded_columns.saturating_add(block_width).min(n);
+    anyhow::ensure!(
+        run.folded_columns <= n
+            && (run.folded_columns == n || run.folded_columns.is_multiple_of(block_width))
+            && run.folded_columns <= counted.genomes.len()
+            && counted.genomes.len() <= count_ceiling,
+        "sparse run and counted.json disagree about completed columns"
+    );
+    if let Some(active) = &run.active {
+        anyhow::ensure!(
+            active.first_col == run.folded_columns && active.first_col < n,
+            "sparse run has an invalid active block start"
+        );
+        let end = (active.first_col + block_width).min(n);
+        let unique: HashSet<&str> = active.preexisting.iter().map(String::as_str).collect();
+        anyhow::ensure!(
+            unique.len() == active.preexisting.len()
+                && active
+                    .preexisting
+                    .iter()
+                    .all(|id| { config.genomes[active.first_col..end].contains(id) }),
+            "sparse run has an invalid active block"
+        );
+    }
+
+    if let Some(saved) = &run.saved {
+        anyhow::ensure!(
+            run.folded_columns == n && counted.pending.is_empty() && run.active.is_none(),
+            "saved sparse run has incomplete counting or folding"
+        );
+        let summary = verify_saved_sparse(&layout.matrix_dir(slug), saved)?;
+        cleanup_sparse_run(&run_dir, &run)?;
+        return Ok(summary);
+    }
+
+    // Folded blocks have already lost their owned ksets. A bad one is an
+    // integrity error, not something to merge or silently replace.
+    for first in (0..run.folded_columns).step_by(block_width) {
+        let end = (first + block_width).min(n);
+        let columns: Vec<matrix::Column> = counted.genomes[first..end]
+            .iter()
+            .map(|g| matrix::Column {
+                name: g.genome_id.clone(),
+                kset_digest: g.kset_digest.clone().unwrap(),
+            })
+            .collect();
+        matrix::verify_partial(&partial_path(&run_dir, first), &columns, first, k)?;
+    }
+
+    let kdir = layout.kset_dir(slug);
+    std::fs::create_dir_all(&kdir)?;
+    while run.folded_columns < n {
+        let first = run.folded_columns;
+        let end = (first + block_width).min(n);
+        let ids = &config.genomes[first..end];
+        if run.active.is_none() {
+            let preexisting = ids
+                .iter()
+                .filter(|id| std::fs::symlink_metadata(kdir.join(format!("{id}.kset"))).is_ok())
+                .cloned()
+                .collect();
+            run.active = Some(ActiveBlock {
+                first_col: first,
+                preexisting,
+            });
+            write_json_durably(&run_path, &run, reserve)?;
+        }
+        let active = run.active.clone().unwrap();
+        let partial = partial_path(&run_dir, first);
+        let partial_name = partial.file_name().unwrap().to_string_lossy().into_owned();
+        let expectations = |counted: &CountSummary| -> Vec<matrix::Column> {
+            counted.genomes[first..end]
+                .iter()
+                .map(|g| matrix::Column {
+                    name: g.genome_id.clone(),
+                    kset_digest: g.kset_digest.clone().unwrap(),
+                })
+                .collect()
+        };
+        let verified = counted.genomes.len() >= end
+            && matrix::verify_partial(&partial, &expectations(&counted), first, k).is_ok();
+        if !verified {
+            let needs_count = counted.genomes.len() < end
+                || counted.genomes[first..counted.genomes.len().min(end)]
+                    .iter()
+                    .any(|g| g.sketch.is_none())
+                || ids
+                    .iter()
+                    .any(|id| !std::fs::symlink_metadata(kdir.join(format!("{id}.kset"))).is_ok());
+            if needs_count {
+                if reserve != 0 {
+                    let estimate = ids.iter().enumerate().fold(0u64, |total, (i, id)| {
+                        let path = kdir.join(format!("{id}.kset"));
+                        let bytes =
+                            std::fs::metadata(&path)
+                                .map(|m| m.len())
+                                .unwrap_or_else(|_| {
+                                    counted
+                                        .genomes
+                                        .get(first + i)
+                                        .map(|g| {
+                                            // Six bytes per value is the measured
+                                            // MTB encoding estimate, not a limit.
+                                            16_384u64.saturating_add(6u64.saturating_mul(g.n_kmers))
+                                        })
+                                        .unwrap_or(ESTIMATED_NEW_KSET_BYTES)
+                                });
+                        total.saturating_add(bytes)
+                    });
+                    matrix::ensure_free_space(&kdir, estimate, reserve).with_context(|| {
+                        format!(
+                            "preflight the current block's estimated {estimate} bytes of ksets (exact lengths are checked again before each write)"
+                        )
+                    })?;
+                }
+                hook(&format!("before_count:{first}"))?;
+                let new = count_sparse_block(layout, slug, ids, &space, catalog, reserve)?;
+                // Recounting to recreate a missing cache must reproduce every
+                // existing expectation; it may not silently change a matrix.
+                for (i, c) in new.iter().enumerate() {
+                    if let Some(old) = counted.genomes.get(first + i) {
+                        anyhow::ensure!(
+                            old.genome_id == c.genome_id
+                                && old.kset_digest == c.kset_digest
+                                && old.catalog_version == c.catalog_version,
+                            "{} changed genome, kset digest or catalog while recreating a sparse block; start a new run from the changed inputs instead of rewriting expectations",
+                            c.genome_id
+                        );
+                    }
+                }
+                counted.genomes.truncate(first);
+                counted.genomes.extend(new);
+                counted.pending = config.genomes[end..].to_vec();
+                write_json_durably(&species_dir.join("counted.json"), &counted, reserve)?;
+            }
+            for suffix in ["", ".part", ".receipt.json", ".receipt.json.part"] {
+                remove_owned_file(&run_dir, &format!("{partial_name}{suffix}"))?;
+            }
+            let paths: Vec<PathBuf> = ids
+                .iter()
+                .map(|id| kdir.join(format!("{id}.kset")))
+                .collect();
+            matrix::write_partial(
+                &paths,
+                &expectations(&counted),
+                first,
+                &partial,
+                rayon::current_num_threads() * 2,
+                reserve,
+            )?;
+        }
+        // Re-open and hash the pair even when write_partial just returned.
+        // No owned kset is deleted before this succeeds.
+        matrix::verify_partial(&partial, &expectations(&counted), first, k)?;
+        for suffix in [".part", ".receipt.json.part"] {
+            remove_owned_file(&run_dir, &format!("{partial_name}{suffix}"))?;
+        }
+        sync_dir(&run_dir)?;
+        hook(&format!("after_partial:{first}"))?;
+        let preexisting: HashSet<&str> = active.preexisting.iter().map(String::as_str).collect();
+        for id in ids.iter().filter(|id| !preexisting.contains(id.as_str())) {
+            remove_owned_file(&kdir, &format!("{id}.kset"))?;
+        }
+        sync_dir(&kdir)?;
+        run.folded_columns = end;
+        run.active = None;
+        write_json_durably(&run_path, &run, reserve)?;
+        hook(&format!("after_fold:{first}"))?;
+        eprintln!("  {slug}: folded {end} / {n} genomes");
+    }
+    anyhow::ensure!(counted.pending.is_empty());
+
+    let columns: Vec<matrix::Column> = counted
+        .genomes
+        .iter()
+        .map(|g| matrix::Column {
+            name: g.genome_id.clone(),
+            kset_digest: g.kset_digest.clone().unwrap(),
+        })
+        .collect();
+    let partials: Vec<PathBuf> = (0..n)
+        .step_by(block_width)
+        .map(|first| partial_path(&run_dir, first))
+        .collect();
+    let mut m = matrix::build_from_partials(
+        &partials,
+        &columns,
+        k,
+        min_support,
+        rayon::current_num_threads() * 2,
+    )?;
+    m.summary.kset_digests = counted.kset_digests("matrix")?;
+    let saved = SavedSparse {
+        digest: sparse_matrix_digest(&m)?,
+        summary: m.summary.clone(),
+    };
+    m.save_with_reserve(&layout.matrix_dir(slug), reserve)?;
+    drop(m);
+    let summary = verify_saved_sparse(&layout.matrix_dir(slug), &saved)?;
+    run.saved = Some(saved);
+    write_json_durably(&run_path, &run, reserve)?;
+    hook("after_saved")?;
+    cleanup_sparse_run(&run_dir, &run)?;
+    Ok(summary)
 }
 
 /// Stages to rerun before learning so that the gene calls, structure, and
@@ -369,6 +1133,9 @@ struct BuiltFrom {
 /// those still on disk). That covers counts recorded before kset digests,
 /// which no structure or matrix matches.
 fn selection_matches(counted: &CountSummary, with_fasta: &[String]) -> bool {
+    if !counted.pending.is_empty() {
+        return false;
+    }
     let failed: HashSet<&str> = counted.failed.iter().map(|(id, _)| id.as_str()).collect();
     with_fasta
         .iter()
@@ -504,7 +1271,17 @@ mod tests {
         let mut buffers = (Vec::new(), Vec::new());
         let mut count = |k| {
             let space = KmerSpace::new(k);
-            count_one("g", &fasta, &kset_path, &json, &space, None, &mut buffers).unwrap()
+            count_one(
+                "g",
+                &fasta,
+                &kset_path,
+                &json,
+                &space,
+                None,
+                &mut buffers,
+                0,
+            )
+            .unwrap()
         };
         let k21 = count(21);
         let k31 = count(31);
@@ -526,7 +1303,16 @@ mod tests {
         let mut buffers = (Vec::new(), Vec::new());
         let mut count = |k| {
             let space = KmerSpace::new(k);
-            count_one("g", &fasta, &kset_path, &json, &space, None, &mut buffers)
+            count_one(
+                "g",
+                &fasta,
+                &kset_path,
+                &json,
+                &space,
+                None,
+                &mut buffers,
+                0,
+            )
         };
         let k21 = count(21).unwrap();
         // A directory where `kset::write` creates its temporary file stops a
@@ -553,7 +1339,17 @@ mod tests {
         let mut buffers = (Vec::new(), Vec::new());
         let mut count = |k| {
             let space = KmerSpace::new(k);
-            count_one("g", &fasta, &kset_path, &json, &space, None, &mut buffers).unwrap()
+            count_one(
+                "g",
+                &fasta,
+                &kset_path,
+                &json,
+                &space,
+                None,
+                &mut buffers,
+                0,
+            )
+            .unwrap()
         };
         let k21 = count(21);
         let mut old: serde_json::Value =
@@ -585,7 +1381,7 @@ mod tests {
                 dir.path().join(format!("{id}.kset")),
                 dir.path().join(format!("{id}.json")),
             );
-            count_one(id, &fasta, &kset_path, &json, &space, None, &mut buffers).unwrap()
+            count_one(id, &fasta, &kset_path, &json, &space, None, &mut buffers, 0).unwrap()
         };
         // One base changed: the 21 k-mers over it give way to 21 others.
         let mut other = SEQ.to_string();
@@ -606,7 +1402,18 @@ mod tests {
         let (kset_path, json) = (dir.path().join("g.kset"), dir.path().join("g.json"));
         let space = KmerSpace::new(21);
         let mut buffers = (Vec::new(), Vec::new());
-        let mut count = || count_one("g", &fasta, &kset_path, &json, &space, None, &mut buffers);
+        let mut count = || {
+            count_one(
+                "g",
+                &fasta,
+                &kset_path,
+                &json,
+                &space,
+                None,
+                &mut buffers,
+                0,
+            )
+        };
         let counted = count().unwrap();
         // The sidecar as `grm count` wrote it before kset digests.
         let mut old: serde_json::Value =
@@ -631,11 +1438,13 @@ mod tests {
                     stats: SeqStats::default(),
                     catalog_version: calls_version.into(),
                     kset_digest: Some(format!("kset of {id}")),
+                    sketch: Some(vec![]),
                     genes: vec![],
                 })
                 .collect(),
             missing_fasta: vec![],
             failed: vec![],
+            pending: vec![],
         }
     }
 
@@ -844,3 +1653,6 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod sparse_tests;

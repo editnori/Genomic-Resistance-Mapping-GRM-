@@ -44,7 +44,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// private functions that skip the check (docs/matrix-scaling.md).
 pub const REVIEWED_COLUMNS: usize = 4096;
 
-fn ensure_reviewed(n: usize, max_columns: usize) -> Result<()> {
+pub(crate) fn ensure_reviewed(n: usize, max_columns: usize) -> Result<()> {
     ensure!(
         n <= max_columns,
         "{n} genomes exceed the {max_columns} matrix columns that Dataset::project, the learners and reports have been reviewed for (docs/matrix-scaling.md)"
@@ -619,6 +619,11 @@ fn sync_file(file: &File, path: &Path, hook: SyncHook) -> Result<()> {
 
 /// Makes renames, creations and removals in `dir` durable.
 fn sync_dir(dir: &Path, hook: SyncHook) -> Result<()> {
+    let dir = if dir.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        dir
+    };
     hook(dir)?;
     File::open(dir)
         .and_then(|d| d.sync_all())
@@ -639,6 +644,12 @@ fn create_dir_durably(dir: &Path, hook: SyncHook) -> Result<()> {
         .collect();
     std::fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
     missing.iter().rev().try_for_each(|d| sync_parent(d, hook))
+}
+
+/// Creates a partial directory and every missing ancestor durably. A caller
+/// must do this before `write_partial` can justify deleting source ksets.
+pub fn create_partial_dir(dir: &Path) -> Result<()> {
+    create_dir_durably(dir, &no_fault)
 }
 
 /// A temporary file that is removed when dropped unless kept, so that an
@@ -1205,7 +1216,41 @@ impl PartialReader {
         );
         Ok(reader)
     }
+}
 
+/// Verifies one durable partial/receipt pair against the exact block a caller
+/// expects. This is the caller's gate before deleting that block's ksets.
+pub fn verify_partial(path: &Path, columns: &[Column], first_col: usize, k: usize) -> Result<()> {
+    let r = PartialReader::open_with_receipt(path, REVIEWED_COLUMNS)?;
+    ensure!(
+        r.k == k,
+        "{} is stale: it was written at k = {}, but k = {k} is expected",
+        path.display(),
+        r.k
+    );
+    ensure!(
+        r.first_col == first_col && r.width == columns.len(),
+        "{} holds columns from {} with width {}, but column {first_col} with width {} is expected",
+        path.display(),
+        r.first_col,
+        r.width,
+        columns.len()
+    );
+    if let Some(i) = (0..r.width).find(|&i| r.columns[i] != columns[i]) {
+        anyhow::bail!(
+            "{} is stale: column {} holds {} (kset {}), but {} (kset {}) is expected",
+            path.display(),
+            first_col + i,
+            r.columns[i].name,
+            r.columns[i].kset_digest,
+            columns[i].name,
+            columns[i].kset_digest
+        );
+    }
+    Ok(())
+}
+
+impl PartialReader {
     /// Appends bucket `bucket`'s k-mers to `kmers` and, for each, a slot to
     /// `slots`: FULL, or the index of its row (words_for(width) words) in
     /// `rows`. Full rows are not expanded, so `rows` takes no more memory
@@ -1476,9 +1521,10 @@ impl FeatureMatrix {
         self.write_files(dir, &serde_json::to_vec_pretty(&self.summary)?, &no_fault)
     }
 
-    /// `save`, refused before anything is written or removed when the save
+    /// `save`, refused before matrix files are written or removed when the save
     /// would at any point leave less than `reserve_bytes` free on `dir`'s
-    /// filesystem (see `save_peak`).
+    /// filesystem (see `save_peak`). A missing output directory may be created
+    /// before that refusal.
     pub fn save_with_reserve(&self, dir: &Path, reserve_bytes: u64) -> Result<()> {
         self.save_checked(dir, reserve_bytes, &free_bytes, &no_fault)
     }

@@ -267,6 +267,11 @@ pub fn load_inputs(layout: &Layout, slug: &str) -> Result<(SpeciesInputs, Option
     let t = Instant::now();
     let matrix = FeatureMatrix::load(&layout.matrix_dir(slug))?;
     let counted = species::load_counted(layout, slug)?;
+    anyhow::ensure!(
+        counted.pending.is_empty(),
+        "counted.json has {} selected genomes pending from a disk-sparse run; resume `grm pipeline --disk-sparse` before learning",
+        counted.pending.len()
+    );
     if let Some(g) = counted.undigested() {
         anyhow::bail!(
             "counted.json records no kset digest for {} (it predates them); rerun `grm count --species {slug}`",
@@ -2104,11 +2109,13 @@ mod tests {
                     },
                     catalog_version: calls.into(),
                     kset_digest: Some(digest.clone()),
+                    sketch: Some(vec![]),
                     genes: input.hits.get(g).cloned().unwrap_or_default(),
                 })
                 .collect(),
             missing_fasta: vec![],
             failed: vec![],
+            pending: vec![],
         };
         let dir = layout.species_dir("fixture");
         std::fs::write(

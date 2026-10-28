@@ -11,13 +11,12 @@ software built for them:
    partials needs only one block of ksets at a time.
 
 Status, 2026-10-28: software and synthetic tests only. No biological input
-was merged, no 4k or 8k MTB matrix was built, and nothing in the pipeline
-(`species.rs`, `main.rs`) calls the out-of-core path yet. The final
-integrity review's remaining findings are fixed: the re-save space check
-(M1), the expected-k binding (L1), orphan-partial cleanup (L2), and a
-durable matrix save. Those fixes still need a fresh independent review.
-The cap-4000 cohort is now frozen, but the MTB follow-up also waits for a
-reviewed disk-sparse wiring change.
+was merged and no 4k or 8k MTB matrix was built. Independent review closed
+the re-save space check (M1), expected-k binding (L1), orphan-partial cleanup
+(L2), and durable matrix save. The pipeline wiring described below is now
+implemented in this patch, including the review's durable-block-directory
+precondition (R2), but still needs its own independent wiring review. The
+cap-4000 biological run remains unauthorized until that review clears it.
 
 The wide key removes the packed **algorithmic** ceiling, not the downstream
 safety gate. Every public build/merge entry point, and `FeatureMatrix::load`,
@@ -158,7 +157,9 @@ does not apply either.
   `<out>.receipt.json` repeats those fields and records the partial's byte
   length and SHA-256. The partial and receipt are written through temporary
   files, `sync_all`ed, renamed, and followed by a parent-directory sync.
-  Success therefore means both are durable before a caller deletes ksets.
+  The caller first makes a new block directory and its ancestors durable with
+  `create_partial_dir` (review finding R2). Success therefore means both are
+  durable before a caller deletes ksets.
   Temporary suffixes append to the whole file name, so `x.a` and `x.b`
   cannot collide. Only one writer may write a given block at a time: two
   writers to the same `out` share, and truncate, `<out>.part`.
@@ -199,22 +200,58 @@ does not apply either.
   check a kset's reserved header bytes; this predates the partials and does
   not weaken them, because the digest covers every value read.
 
-The disk-sparse sequence a caller would run, which the small equivalence
-test and benchmark simulate, is:
+### Pipeline wiring (`species.rs`, `main.rs`)
 
-    derive expected names and kset digests from the counted manifest
-    for each block of W genomes, in column order, one writer per block:
-        ensure_free_space(block dir, estimated new bytes, reserve)
-        count the block's genomes to ksets
-        write_partial(block ksets, expected columns, first_col, reserve)
-        only after success, delete the block's ksets
+The opt-in commands are `grm matrix --disk-sparse` and
+`grm pipeline --disk-sparse`, with `--block-width` defaulting to 256. Width
+must be a multiple of 64 and no more than 4,096. A fresh direct sparse matrix
+builds `counted.json` incrementally at the pipeline default k = 31; an
+existing manifest keeps its k. Sparse pipeline mode cannot be combined with
+`--drop-ksets`. Stock commands keep their old behavior.
+
+The caller now performs this sequence under an exclusive species-directory
+lock (the OS releases it on process death):
+
+    derive selection, config k and catalog version
+    create the hashed run directory and its ancestors durably
+    for each block of W genomes, in column order:
+        record which kset paths predated the block
+        preflight an estimated block footprint against the 30 GiB reserve
+        count only this block, with an exact-length preflight before each kset
+        persist counted names, digests, sketches and any pending selections
+        write_partial and independently verify its receipt, SHA, k and columns
+        only then delete this block's ksets that were absent when it started
+        durably advance the folded-column position
     build_from_partials(all partials, all expected columns, config k)
-    save_with_reserve(matrix dir, reserve)
-    only after the save succeeds, delete the partials
+    save_with_reserve(matrix dir, 30 GiB)
+    hash the saved files and load them back
+    record that verified digest, then remove only this run's expected files
 
-Resume must reconstruct the same expected list and k, and rewrite every
-missing or stale block. Receipts make that decision explicit; they do not
-replace the caller's counted-manifest bookkeeping.
+A run directory is named by SHA-256 of the exact selection, k, catalog
+version and block width. `run.json` holds that config, the active block's
+preexisting paths, the folded position and, after saving, the matrix summary
+and digest. `counted.json` explicitly lists pending selections, so ordinary
+count/structure/matrix/learn cannot mistake a partial count for a complete
+one. A current matrix and complete sketches allow an early no-op return.
+
+Resume reconstructs the same expectations from these manifests. A missing,
+orphaned or stale active block is rewritten after its temporary files are
+removed; its ksets are retained until a replacement verifies. A stale block
+already marked folded is rejected rather than silently used. Unknown files,
+non-regular cleanup targets and files without an owning manifest are hard
+errors, never recursive-deletion candidates. Only the current run is cleaned;
+other config runs are not adopted or removed automatically.
+
+`Counted` also stores the bottom-sketch of the same counted values. Structure
+uses real ksets whenever they exist and these k/digest-bound sketches after
+sparse deletion. All current MTB probe assays are unsupported before any
+kset read. A species with kset-backed assays stops with an explicit error in
+sparse mode rather than triggering the stock all-genome recount.
+
+The small matrix-only equivalence test and benchmark simulate the lower-level
+sequence; `src/species/sparse_tests.rs` exercises the actual caller, including
+stock byte equality, ownership, resume, mixed k, low fds, reserve failures,
+save failure and saved-digest verification.
 
 ### Resource model
 
@@ -234,9 +271,10 @@ replace the caller's counted-manifest bookkeeping.
 check on 64-bit Linux (`statvfs` available bytes). `write_partial` checks
 its header/table and each encoded chunk against the reserve while writing.
 `FeatureMatrix::save_with_reserve` checks the whole save before it writes
-or removes anything, against the most the save holds at any point, not its
-net change. The merge itself only reads partials; its new output is the
-subsequent matrix save.
+or removes matrix files, against the most the save holds at any point, not
+its net change. A missing output directory may be created before a refusal.
+The merge itself only reads partials; its new output is the subsequent matrix
+save.
 
 The peak matters because a save replaces files one at a time. It removes
 `matrix.json`, then truncates and rewrites `patterns.bin`, `support.bin`,
@@ -397,6 +435,14 @@ Out-of-core integrity and scaling:
   `write_partial` fails with a hint to write narrower blocks and leaves no
   file, and 64-genome partials complete. The child's matrix digest equals
   `build`'s digest from the parent, which has no limit.
+- `species::sparse_tests`: actual caller tests for stock byte equality,
+  ownership of new versus preexisting ksets, exact order/digest binding,
+  interrupted and stale resume, orphan and unknown files, mixed-k all-empty
+  blocks, exact kset preflights, save failure, saved-digest cleanup gating,
+  and structure without ksets. One child runs the wired path under
+  `ulimit -Sn 96`; another is killed after partial verification and before
+  kset deletion, then resumed to the stock-identical matrix. MTB's current
+  probe assays are also shown not to read the deleted ksets.
 
 Tests that hold thousands of ksets open take turns behind a mutex and check
 `/proc/self/limits` first. They need a soft open-file limit of at least
@@ -516,46 +562,38 @@ out a difference of a few percent.
 - Private synthetic tests show that the wide and partial algorithms can be
   correct past their old key and fd limits. That is not production
   permission to exceed 4,096 columns.
-- `write_partial` + `build_from_partials` now provide content-bound,
-  durable, resumable building blocks for a future disk-sparse integration.
-  They are not wired into the pipeline, and their synthetic resource
-  measurements do not prove a real cap-4000 MTB merge fits.
+- `write_partial` + `build_from_partials` provide content-bound, durable,
+  resumable building blocks, now called by the opt-in disk-sparse pipeline.
+  Their synthetic resource measurements do not prove a real cap-4000 MTB
+  merge fits.
 
 ## What remains to be proven or built
 
-Fresh independent review of this integrity/scaling change comes before any
-biological run. After that, at minimum:
+Fresh independent review of the wiring change comes before any biological
+run. After that, at minimum:
 
-- **Pipeline integration (not built).** Nothing calls the partial path.
-  The count -> partial -> delete loop belongs in `species.rs` / `main.rs`
-  and needs its own change and review. It must persist and reconstruct the
-  expected names and kset digests and pass the config's k, use the
-  free-space/reserve APIs with a defensible estimate, delete ksets only
-  after durable partial+receipt success, and rewrite missing/stale blocks
-  on resume. It must also run one writer per block, delete any files a
-  failed cleanup names before resuming, and keep partials until the matrix
-  save returns Ok. The current tests exercise library calls, not pipeline
-  wiring or manifest bookkeeping.
-- **Other stages read ksets.** The count cache treats an existing kset as a
-  cache hit. `structure` takes MinHash sketches from ksets. Probe panels
-  (`analysis.rs` -> `probes::build_probes`) read ksets and fall back when
-  they are unreadable. Deleting ksets block by block means storing
-  sketches first, accepting recounts, and deciding how probes are built.
-  None of this is done.
+- **Biological pilot.** The pipeline wiring is implemented, but only
+  synthetic fixtures have run. On a newly frozen, small biological cohort,
+  first compare wired partial output with stock `build`, then test
+  catalog/assembly invalidation and interrupted resume. A cap-4000 pilot
+  follows only after those checks and resource measurement. No biological
+  pilot has run, and no real 4k or 8k resource claim is established.
+- **Other probe panels.** Count caches and structure are handled: counting
+  stores the bottom-sketch with each kset digest, and structure rereads a
+  real kset when present but uses that bound sketch after sparse deletion.
+  Every current MTB assay reports unsupported before reading ksets. Other
+  species with kset-backed probe assays stop with an explicit error instead
+  of an unbounded recount; a reviewed probe cache is still needed before
+  sparse mode can run those species end to end.
 - **Downstream review before any cap lift.** `Dataset::project`, learners,
   annotation, and reports were not reviewed or tested past 4,096 columns.
   Lifting the gate requires an explicit reviewed code change and downstream
   evidence, not a test helper, benchmark flag, or larger `ulimit`.
-- **Real-data pilot before 4k/8k.** On a newly frozen, small biological
-  cohort, first compare wired partial output with stock `build`, then test
-  catalog/assembly invalidation and interrupted resume. A cap-4000 pilot
-  follows only after those checks and resource measurement. No biological
-  pilot has run, and no real 4k or 8k resource claim is established.
-- **Real sizes.** Per-genome kset size (24 MB is the scale-up estimate),
-  distinct k-mers per block, full-row share, and partial size on real MTB
-  ksets are unmeasured. The disk table above rests on assumed D_block
-  values; the old synthetic block benchmark was not rerun after these
-  integrity changes.
+- **Real-data pilot measurements.** Per-genome kset size (24 MB is the
+  scale-up estimate), distinct k-mers per block, full-row share, and partial
+  size on real MTB ksets are unmeasured. The disk table above rests on
+  assumed D_block values; the old synthetic block benchmark was not rerun
+  after these integrity changes.
 - **Final matrix size.** `patterns.bin` is n_patterns x ceil(n/64) x 8
   bytes and `kmers.bin` is 8 B per kept k-mer. How many patterns and kept
   k-mers real 4k or 8k MTB data gives is unknown, so the matrix's own disk
@@ -571,7 +609,9 @@ biological run. After that, at minimum:
 - **Failure evidence.** Tests inject free-space exhaustion, corrupt or
   stale files, a blocked receipt, and a failure at every sync point of a
   partial write and a matrix save. Those sync failures come from a test
-  hook called just before each sync, not from a real fsync error. The tests
-  do not fill a real filesystem, kill a process mid-write, or verify
-  power-loss recovery on the deployment filesystem. fsync and
-  directory-sync behavior therefore remains a deployment validation item.
+  hook called just before each sync, not from a real fsync error. A wiring
+  test kills a child after a verified partial and before kset deletion, then
+  resumes to the stock-identical matrix. The tests do not fill a real
+  filesystem, kill a process in the middle of a partial write, or verify
+  power-loss recovery on the deployment filesystem. fsync and directory-sync
+  behavior therefore remains a deployment validation item.

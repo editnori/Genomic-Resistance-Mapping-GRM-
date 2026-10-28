@@ -152,6 +152,19 @@ fn get_varint(data: &[u8], pos: &mut usize) -> Result<u64> {
 /// Writes sorted, distinct mixed k-mers. Writes to `<path>.part` and renames,
 /// so an interrupted run never leaves a truncated kset behind.
 pub fn write(path: &Path, name: &str, space: &KmerSpace, values: &[u64]) -> Result<()> {
+    write_checked(path, name, space, values, |_, _| Ok(()))
+}
+
+/// `write` with an exact-length preflight before creating the temporary file.
+/// The old kset, if any, remains until the rename, so `bytes` is also the peak
+/// additional file length this write needs.
+pub fn write_checked(
+    path: &Path,
+    name: &str,
+    space: &KmerSpace,
+    values: &[u64],
+    preflight: impl FnOnce(&Path, u64) -> Result<()>,
+) -> Result<()> {
     debug_assert!(values.windows(2).all(|w| w[0] < w[1]));
     let bits = space.bits();
     let mut data = Vec::with_capacity(values.len() * 6);
@@ -169,6 +182,8 @@ pub fn write(path: &Path, name: &str, space: &KmerSpace, values: &[u64]) -> Resu
         }
     }
     offsets[BUCKETS] = data.len() as u64;
+    let table = (BUCKETS + 1) * 8 + BUCKETS * 4;
+    preflight(path, (24 + name.len() + table + data.len()) as u64)?;
 
     let part = path.with_extension("kset.part");
     let mut w =
@@ -367,6 +382,31 @@ mod tests {
         let mut v = vec![1, 1, 2];
         dedup_with_min_count(&mut v, 1);
         assert_eq!(v, vec![1, 2]);
+    }
+
+    #[test]
+    fn write_checked_preflights_exact_bytes_before_creating_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let space = KmerSpace::new(31);
+        let values = [0, 1, 1023, u64::MAX >> 2];
+        let path = dir.path().join("checked.kset");
+        let seen = std::cell::Cell::new(None);
+        write_checked(&path, "g", &space, &values, |_, need| {
+            assert!(!path.with_extension("kset.part").exists());
+            seen.set(Some(need));
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), seen.get().unwrap());
+
+        let refused = dir.path().join("refused.kset");
+        let err = write_checked(&refused, "g", &space, &values, |_, _| {
+            anyhow::bail!("injected full disk")
+        })
+        .unwrap_err();
+        assert!(format!("{err:#}").contains("injected full disk"));
+        assert!(!refused.exists());
+        assert!(!refused.with_extension("kset.part").exists());
     }
 
     #[test]
