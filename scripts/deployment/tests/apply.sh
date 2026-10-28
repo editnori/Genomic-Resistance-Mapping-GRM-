@@ -158,6 +158,14 @@ kill_live() {
 listens_as() { [ "$(listener "$LP")" = "$1" ]; }
 proc_alive() { [ -d "/proc/$1" ] && [ "$(sed 's/.*) //' "/proc/$1/stat" 2>/dev/null | cut -d' ' -f1)" != Z ]; }
 gone() { ! proc_alive "$1"; }
+# start_of PID: its start time (field 22 of /proc/PID/stat), or 0 once it is
+# gone, so a process that exited early fails an assertion instead of
+# aborting the suite on an unset field.
+start_of() {
+    local -a f
+    read -r -a f <<<"$(sed 's/.*) //' "/proc/$1/stat" 2>/dev/null)" || true
+    printf '%s\n' "${f[19]:-0}"
+}
 # The spawn marker named by serve-PORT.starting (default the live port).
 jmark() { sed -n 's/.* mark=\([^ ]*\) .*/\1/p' "$D/serve-${1:-$LP}.starting" 2>/dev/null || true; }
 locked() { ! flock -n "$1" true; }
@@ -187,13 +195,14 @@ killbg() {  # SIGKILL the background command; sets rc
     set -e
 }
 # hidden_lock FILE: a non-dumpable process (its descriptors and environment
-# unreadable to this user) takes FILE's flock (hidden=its PID).
+# unreadable to this user) takes FILE's flock (hidden=its PID). It waits for
+# the lock, so the locked probe below cannot make it give up.
 hidden_lock() {
     python3 -I -c '
 import ctypes, fcntl, os, sys, time
 ctypes.CDLL(None).prctl(4, 0)
 fd = os.open(sys.argv[1], os.O_RDWR)
-fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+fcntl.flock(fd, fcntl.LOCK_EX)
 time.sleep(600)
 ' "$1" >/dev/null 2>&1 &
     hidden=$!
@@ -948,8 +957,7 @@ imark=$(basename "$(find "$D/spawn" -type f -name '*.*' -print -quit)")
 ipid=$!
 wait_for 10 listens_as "$ipid" || true
 rm "$T/imp-bin/grm"
-read -r -a istat <<<"$(sed 's/.*) //' "/proc/$ipid/stat")"
-printf 'pid=%s start=%s label=rel2 publication=p275 token=%s mark=%s mark_id=%s\n' "$ipid" "${istat[19]}" "${imark%.*}" "$imark" \
+printf 'pid=%s start=%s label=rel2 publication=p275 token=%s mark=%s mark_id=%s\n' "$ipid" "$(start_of "$ipid")" "${imark%.*}" "$imark" \
     "$(stat -c %d:%i "$D/spawn/$imark")" >"$D/serve-$LP.pid"
 cp "$T/active.rel2" "$D/state/active"
 expect 2 'not identified by its recorded start: .*does not hold spawn/' "rollback refuses an impostor that does not hold the recorded marker" -- \
@@ -1354,20 +1362,22 @@ check "none of the refused runs started cloudflared" -- conn_free "$C2"
 
 # Identity is the open file description holding connector.lock's flock, with
 # the recorded start time and working directory; not a path, a command line
-# or an open descriptor 9.
+# or an open descriptor 9. A forged holder waits for the lock (flock -w), and
+# the test sees it hold the lock in its fdinfo instead of probing with flock,
+# which could take the lock at the forger's instant and make it give up.
+fd_locked() { grep -q '^lock:.*FLOCK.*WRITE' "/proc/$1/fdinfo/$2" 2>/dev/null; }
 (cd "$C2" && exec 9<>connector.lock && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
 forged=$!
 wait_for 5 test -e "/proc/$forged/fd/9" || true
-read -r -a fstat <<<"$(sed 's/.*) //' "/proc/$forged/stat")"
-printf '%s %s\n' "$forged" "${fstat[19]}" >"$C2/supervisor.pid"
+fstart=$(start_of "$forged")
+printf '%s %s\n' "$forged" "$fstart" >"$C2/supervisor.pid"
 expect 2 'no process holds the lock on .*connector.lock; no signal sent' \
     "connector stop refuses a shell in the directory with fd 9 on connector.lock while the lock is free" -- connector "$C2" stop
 check "the forged supervisor got no signal" -- proc_alive "$forged"
-(cd "$T" && exec 9<>"$C2/connector.lock" && flock -n 9 && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
+(cd "$T" && exec 9<>"$C2/connector.lock" && flock -w 10 9 && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
 forged3=$!
-wait_for 5 locked "$C2/connector.lock" || true
-read -r -a f3stat <<<"$(sed 's/.*) //' "/proc/$forged3/stat")"
-printf '%s %s\n' "$forged3" "${f3stat[19]}" >"$C2/supervisor.pid"
+wait_for 10 fd_locked "$forged3" 9 || true
+printf '%s %s\n' "$forged3" "$(start_of "$forged3")" >"$C2/supervisor.pid"
 expect 2 'works in another directory; no signal sent' \
     "connector stop refuses the holder of connector.lock when it works in another directory" -- connector "$C2" stop
 check "that lock holder got no signal" -- proc_alive "$forged3"
@@ -1377,14 +1387,13 @@ wait "$forged3" 2>/dev/null || true
 wait_for 5 eval '! locked "$C2/connector.lock"' || true
 sup_up
 cp "$C2/supervisor.pid" "$T/supervisor.real"
-printf '%s %s\n' "$forged" "${fstat[19]}" >"$C2/supervisor.pid"
+printf '%s %s\n' "$forged" "$fstart" >"$C2/supervisor.pid"
 expect 2 'does not hold the lock on .*connector.lock; no signal sent' \
     "connector stop refuses that shell while the real supervisor holds the lock" -- connector "$C2" stop
-(cd "$C2" && exec 9<>"$C1/connector.lock" && flock -n 9 && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
+(cd "$C2" && exec 9<>"$C1/connector.lock" && flock -w 10 9 && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
 forged2=$!
-wait_for 5 test -e "/proc/$forged2/fd/9" || true
-read -r -a fstat <<<"$(sed 's/.*) //' "/proc/$forged2/stat")"
-printf '%s %s\n' "$forged2" "${fstat[19]}" >"$C2/supervisor.pid"
+wait_for 10 fd_locked "$forged2" 9 || true
+printf '%s %s\n' "$forged2" "$(start_of "$forged2")" >"$C2/supervisor.pid"
 expect 2 'does not hold the lock on .*connector.lock; no signal sent' \
     "connector stop refuses a process in the directory holding another directory's lock" -- connector "$C2" stop
 check "the real and forged supervisors got no signal" -- eval 'proc_alive "$sup" && proc_alive "$forged" && proc_alive "$forged2"'
