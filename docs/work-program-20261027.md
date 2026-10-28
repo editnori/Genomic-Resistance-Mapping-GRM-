@@ -1,6 +1,6 @@
 # GRM work program and completion ledger
 
-Snapshot: 2026-10-28 06:46 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
+Snapshot: 2026-10-28 06:48 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
 
 ## Status vocabulary
 
@@ -333,6 +333,7 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
 
 ## Hard stops and explicit exclusions
 
+- **2026-10-28 06:26 UTC update:** at the user's request, a separate orchestration thread ([f0938831](t3-thread://v1/f0938831-71c8-4b35-a75d-62d5a5d96888)) started four Kimi lanes: the GWAS lane, the AMRFinder/WHO comparator, real-cohort k21 versus k31, and a matrix review plus MTB 4k wiring. They are owned by that thread, not by this orchestration. They received the shared-tree safety rules; their results are not reflected in this ledger until reconciled.
 - **Deployment suites:** never run `scripts/deployment/tests/*.sh` from the repository, only in a throwaway clone; from Git Bash always set `MSYS_NO_PATHCONV=1` for `wsl.exe`. Stage only your own paths; no `git add -A`, `clean`, `reset`, `stash` or `rm -rf` in the repository.
 - **Real-cohort multi-k:** a first capacity-gate stop was followed by an explicit execution refusal. Zero biological multi-k reports exist. Synthetic checks may continue; do not agent-shop the real-cohort run.
 - **AMRFinder repair/GWAS:** the resumed session was refused; 59 remote processes remain stopped and outputs preserved. Do not restart, rephrase or reroute that lane.
