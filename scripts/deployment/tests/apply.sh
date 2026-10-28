@@ -1247,8 +1247,11 @@ mkdir -p "$CARGO_TARGET_DIR/release"
 printf '#!/bin/sh\n' >"$CARGO_TARGET_DIR/release/grm"
 chmod +x "$CARGO_TARGET_DIR/release/grm"
 SH
+# npm ci stands in for a dependency's install script that rewrites the
+# extracted browser check; the release must still carry the commit's.
 cat >"$T/bin/npm" <<'SH'
 #!/bin/sh
+if [ "$1" = ci ]; then echo '// rewritten during npm ci' >scripts/browser-check.cjs; fi
 if [ "$1" = run ]; then mkdir -p dist/assets && echo '<!doctype html>' >dist/index.html && echo x >dist/assets/index-a.js; fi
 SH
 chmod +x "$T/bin/cargo" "$T/bin/npm"
@@ -1269,6 +1272,8 @@ check "the refused build reports the reserved label" -- grep -q 'already exists'
 check "only one build ran cargo" -- test "$(wc -l <"$T/cargo-runs")" = 1
 check "the built release verifies" -- bash -c 'source "$1/common.sh"; verify_release relB' _ "$S"
 check "the release records the built commit" -- test "$(cat "$D/release/relB/COMMIT")" = "$(git -C "$G" rev-parse HEAD)"
+check "npm ci rewrote the extracted browser check (the control)" -- \
+    grep -q 'rewritten during npm ci' "$D/src-relB/web/scripts/browser-check.cjs"
 check "the release carries the commit's browser check, listed in its manifest" -- \
     eval 'cmp -s "$G/web/scripts/browser-check.cjs" "$D/release/relB/browser-check.cjs" && grep -q " \./browser-check\.cjs$" "$D/release/relB/MANIFEST.sha256"'
 
@@ -1551,7 +1556,7 @@ wait_for 5 gone "$kid" || true
 rm -f "$C3/connector.failed"
 expect 1 'no connector supervisor holds' "after the manual recovery, status reports no supervisor and no failure" -- connector "$C3" status
 
-EXPECTED_ASSERTIONS=$((466 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((467 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

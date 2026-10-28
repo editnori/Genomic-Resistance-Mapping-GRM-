@@ -12,7 +12,8 @@
 # src-LABEL reserves the label before anything is extracted, so of two builds
 # under one label only the first proceeds. The release holds grm, dist/, COMMIT
 # and, when the commit has one, web/scripts/browser-check.cjs as
-# browser-check.cjs, which stage.sh runs.
+# browser-check.cjs, which stage.sh runs. That file is taken from the commit
+# itself, not from src-LABEL, where npm ci and npm run build have run.
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/common.sh"
 parse_args "$@"
@@ -49,6 +50,14 @@ for path in "$S.commit" "$R" "$R.partial" "$T"; do
 done
 git -C "$repo" archive "$commit" | tar -x -C "$S"
 printf '%s\n' "$commit" >"$S.commit"
+# The browser check is meant to verify the build independently, but npm ci and
+# npm run build run in src-LABEL/web, where a dependency's install script could
+# rewrite web/scripts/browser-check.cjs. So its blob in the commit (a regular
+# file, not a link) is noted before anything runs, and the release gets that
+# blob, checked by its ID.
+check_mode='' check_blob=''
+read -r check_mode _ check_blob _ < <(git -C "$repo" ls-tree --full-tree "$commit" web/scripts/browser-check.cjs) || true
+case $check_mode in 100644 | 100755) ;; *) check_blob='' ;; esac
 export CARGO_TARGET_DIR=$T CARGO_BUILD_JOBS=${GRM_BUILD_JOBS:-8} CARGO_INCREMENTAL=0
 (cd "$S" && nice -n 15 cargo build --release --locked)
 (cd "$S/web" && nice -n 15 npm ci --no-audit --no-fund && nice -n 15 npm run build)
@@ -57,8 +66,10 @@ cp "$T/release/grm" "$R.partial/grm"
 cp -a "$S/web/dist" "$R.partial/dist"
 cp "$S.commit" "$R.partial/COMMIT"
 # stage.sh runs the browser check from here, where the manifest binds it to COMMIT.
-if [ -f "$S/web/scripts/browser-check.cjs" ] && [ ! -L "$S/web/scripts/browser-check.cjs" ]; then
-    cp "$S/web/scripts/browser-check.cjs" "$R.partial/browser-check.cjs"
+if [ -n "$check_blob" ]; then
+    git -C "$repo" cat-file blob "$check_blob" >"$R.partial/browser-check.cjs"
+    [ "$(git -C "$repo" hash-object --no-filters -- "$R.partial/browser-check.cjs")" = "$check_blob" ] ||
+        die "the browser check copied into $R.partial is not blob $check_blob of $commit"
 fi
 (cd "$R.partial" && find . -type f ! -path ./MANIFEST.sha256 -print0 | LC_ALL=C sort -z | xargs -0 sha256sum >MANIFEST.sha256)
 chmod -R a-w "$R.partial"
