@@ -27,7 +27,8 @@
 # lock_free proves that none is left, including any this shell cannot see
 # (another user's or a non-dumpable process). mark_stop stops them, with their
 # process groups (until no member is left, even once a group's leader has
-# exited), and succeeds only on that proof and when every one of them stopped.
+# exited, but then only members tied to the start; see Stopping), and succeeds
+# only on that proof and when every one of them stopped.
 
 # PATH is absent, or a regular file that is not a link.
 plain_target() {
@@ -307,62 +308,135 @@ lock_free() {
 }
 
 # ---- Stopping ------------------------------------------------------------------
+#
+# A process started through setsid leads a process group, and a session,
+# numbered by its PID; everything it forks stays in that group unless it moves
+# itself out. While the leader is the process that started at START, every
+# member of the group is the start's own: the number is not reused while the
+# leader lives, and only processes of its own session can join the group. Once
+# the leader has exited, the number still names that group only while one of
+# its old members is left. When none is, an unrelated process may take the
+# number and form a new group with members but no leader, as a daemon that
+# double-forks, or a pipeline whose first process exited, leaves one. So a
+# group whose leader is gone is signalled only while every live member is tied
+# to the start: it was seen in the group while the leader lived (by PID and
+# start time), it carries the start's token as GRM_DEPLOY_SPAWN in its
+# environment (inherited across fork and exec), or it holds the start's
+# marker. A member that is none of these is never signalled, and the stop
+# fails, so the caller keeps its journal; that includes another user's or a
+# non-dumpable process, whose environment cannot be read.
 
 # tree_signal SIGNAL PID GROUP: signal PID, and process group GROUP if given.
+# For a PID just found alive, leading GROUP (connector.sh's signal handler).
 tree_signal() {
     kill -s "$1" "$2" 2>/dev/null || true
     if [ -n "$3" ]; then kill -s "$1" -- "-$3" 2>/dev/null || true; fi
 }
-# group_alive GROUP: a live (not zombie) process is in process group GROUP.
-group_alive() {
-    local p
+# group_members GROUP: the live (not zombie) members of process group GROUP, as
+# PID:START words.
+group_members() {
+    local p out=''
     for p in $(pgrep -g "$1" 2>/dev/null || true); do
-        proc_stat "$p" && return 0
+        if proc_stat "$p" && [ "$PS_PGRP" = "$1" ]; then out+=" $p:$PS_START"; fi
     done
-    return 1
+    printf '%s\n' "${out# }"
 }
 # group_left GROUP START: process group GROUP, which the process that started at
-# START leads or led, still has a live member. A group's ID is not reused while
-# it has a member, so the members of a group whose leader has exited are still
-# in that group; a live process with that PID and another start time shows that
-# the group ended and the number was reused, so it counts as gone.
+# START leads or led, may still have a live member. A live process with that
+# PID and another start time shows that the group ended and the number was
+# reused, so it counts as gone. Whether the members belong to the start is
+# group_untied's question.
 group_left() {
     if proc_stat "$1" && [ "$PS_START" != "$2" ]; then return 1; fi
-    group_alive "$1"
+    [ -n "$(group_members "$1")" ]
 }
-# tree_send SIGNAL PID START GROUP: signal PID while it is the process that
-# started at START, and process group GROUP, if given, while it has a member.
-tree_send() {
-    if alive "$2" "$3"; then kill -s "$1" "$2" 2>/dev/null || true; fi
-    if [ -n "$4" ] && group_left "$4" "$3"; then kill -s "$1" -- "-$4" 2>/dev/null || true; fi
+# group_untied GROUP TOKEN ID SEEN: the live members of GROUP not tied to a
+# start: not among SEEN's PID:START words, not carrying TOKEN (when given) as
+# GRM_DEPLOY_SPAWN, and not holding the marker with device:inode ID (when
+# given).
+group_untied() {
+    local m p out=''
+    for m in $(group_members "$1"); do
+        p=${m%%:*}
+        case " $4 " in *" $m "*) continue ;; esac
+        if [ -n "$2" ] && [ "$(env_value "$p" GRM_DEPLOY_SPAWN)" = "$2" ]; then continue; fi
+        if [ -n "$3" ] && holds "$p" "$3"; then continue; fi
+        alive "$p" "${m#*:}" || continue
+        out+=" $p"
+    done
+    printf '%s\n' "${out# }"
 }
-# stop_tree PID START [group]: stop the process that started at START, and its
-# process group when it leads one (a process started through setsid), unless
-# that is this shell's own group: SIGTERM (with SIGCONT, so a stopped process
-# acts on it), up to 10 s, then SIGKILL, up to 10 s. The group gets each signal
-# while it has a member, even after its leader has exited, so a descendant that
-# ignores SIGTERM is still killed. With "group", the group that PID led is
-# stopped even when PID has already exited. A PID now held by another process
-# counts as stopped and gets no signal. Succeeds once all of them are gone.
+# stop_tree PID START TOKEN ID [group]: stop the process that started at START,
+# and its process group when it leads one (a process started through setsid),
+# unless that is this shell's own group: SIGTERM (with SIGCONT, so a stopped
+# process acts on it), up to 10 s, then SIGKILL, up to 10 s. The group gets
+# each signal while it has a member, even after its leader has exited, so a
+# descendant that ignores SIGTERM is still killed; but once the leader is gone,
+# only while every member is tied to the start by TOKEN, the marker ID (either
+# may be empty) or having been seen in the group while the leader lived (see
+# above). With "group", the group that PID led is stopped even when PID has
+# already exited. A PID now held by another process counts as stopped and gets
+# no signal. Succeeds once all of them are gone; else returns 1 with the reason
+# in STOP_ERR.
 stop_tree() {
-    local pid=$1 start=$2 group='' sig _
+    local pid=$1 start=$2 token=$3 id=$4 group='' seen='' untied='' sig _
+    STOP_ERR=''
     if alive "$pid" "$start"; then
         if [ "$PS_PGRP" = "$pid" ]; then group=$pid; fi
-    elif [ "${3:-}" = group ] && group_left "$pid" "$start"; then
+    elif [ "${5:-}" = group ] && group_left "$pid" "$start"; then
         group=$pid
     else
         return 0
     fi
     if [ -n "$group" ] && { ! proc_stat "$$" || [ "$PS_PGRP" = "$group" ]; }; then group=''; fi
+    # A group already without its leader, with a member that is not the
+    # start's, is left alone at once: waiting would not tie it.
+    if [ -n "$group" ] && ! alive "$pid" "$start"; then
+        untied=$(group_untied "$group" "$token" "$id" '')
+        if [ -n "$untied" ]; then untied_err; return 1; fi
+    fi
     for sig in TERM KILL; do
-        tree_send "$sig" "$pid" "$start" "$group"
-        [ "$sig" = KILL ] || tree_send CONT "$pid" "$start" "$group"
+        tree_send "$sig"
+        [ "$sig" = KILL ] || tree_send CONT
         for _ in $(seq 1 40); do
+            note_members
             if ! alive "$pid" "$start" && { [ -z "$group" ] || ! group_left "$group" "$start"; }; then return 0; fi
             sleep 0.25
         done
     done
+    if [ -n "$group" ] && ! alive "$pid" "$start"; then untied=$(group_untied "$group" "$token" "$id" "$seen"); fi
+    if [ -n "$untied" ]; then untied_err; else STOP_ERR="pid $pid${group:+ or its process group} would not stop"; fi
     return 1
+}
+# stop_tree's helpers, which use its locals (pid, start, token, id, group, seen
+# and untied). tree_send SIGNAL signals the process while it is the one that
+# started at START, and its group while it has a member: while the process
+# lives at once, once it is gone only while every member is tied to the start,
+# else untied lists those that are not. The members are noted first, as the
+# signal may end the process.
+tree_send() {
+    note_members
+    if alive "$pid" "$start"; then kill -s "$1" "$pid" 2>/dev/null || true; fi
+    [ -n "$group" ] && group_left "$group" "$start" || return 0
+    if ! alive "$pid" "$start"; then
+        untied=$(group_untied "$group" "$token" "$id" "$seen")
+        [ -z "$untied" ] || return 0
+    fi
+    kill -s "$1" -- "-$group" 2>/dev/null || true
+}
+# note_members: while the process lives, add its group's members to seen. They
+# count only when it still lives after they were listed.
+note_members() {
+    local m list
+    [ -n "$group" ] && alive "$pid" "$start" || return 0
+    list=$(group_members "$group")
+    alive "$pid" "$start" || return 0
+    for m in $list; do
+        case " $seen " in *" $m "*) ;; *) seen+=" $m" ;; esac
+    done
+}
+untied_err() {
+    STOP_ERR="process group $group has members (pids $untied) that cannot be tied to this start: its leader, pid $pid, is gone, and they neither carry its token nor hold its marker, so they were not signalled; check them by hand (ps -o pid,pgid,sid,lstart,args -g $group)"
 }
 # SIGTERM PID and wait up to 10 s for it to exit. Given START, a PID now held by
 # another process counts as stopped and is not signalled.
@@ -419,27 +493,31 @@ mark_create() {
     rm -f -- "$path"
     return 1
 }
-# mark_stop ID FILE [PID START]: stop every process holding the marker ID
-# (and the registered PID, START, with the process group it leads or led, so a
-# descendant that closed the marker is found even after PID exited), with their
-# process groups, then require the proof that none is left: every stop
-# succeeded, no holder this shell can see, the registered process and its group
-# gone, and FILE, still the marker ID, with its lock free. Returns 1 with the
-# reason in MARK_ERR otherwise. This shell's own descriptor on the marker
-# (MARK_FD) must be closed first, or unlocked.
+# mark_stop ID FILE [PID START [TOKEN]]: stop every process holding the marker
+# ID (and the registered PID, START, with the process group it leads or led, so
+# a descendant that closed the marker is found even after PID exited), with
+# their process groups, whose members, once a leader is gone, must be tied to
+# the start by the marker, by TOKEN (the start's GRM_DEPLOY_SPAWN, if known) or
+# by having been seen in the group while the leader lived (see stop_tree).
+# Then require the proof that none is left: every stop succeeded, no holder
+# this shell can see, the registered process and its group gone, and FILE,
+# still the marker ID, with its lock free. Returns 1 with the reason in
+# MARK_ERR otherwise. This shell's own descriptor on the marker (MARK_FD) must
+# be closed first, or unlocked.
 mark_stop() {
-    local id=$1 file=$2 cpid=${3:-} cstart=${4:-} p s round pids
+    local id=$1 file=$2 cpid=${3:-} cstart=${4:-} token=${5:-} p s round pids
     MARK_ERR=''
     for round in 1 2 3; do
         pids=$(mark_holders "$id")
         if registered_left "$cpid" "$cstart"; then pids="$cpid $pids"; fi
         [ -n "${pids// /}" ] || break
         for p in $pids; do
+            STOP_ERR=''
             if [ "$p" = "$cpid" ]; then
-                stop_tree "$p" "$cstart" group || MARK_ERR="pid $p or its process group would not stop"
+                stop_tree "$p" "$cstart" "$token" "$id" group || MARK_ERR=${STOP_ERR:-"pid $p or its process group would not stop"}
             else
                 s=$(proc_start "$p") || continue
-                stop_tree "$p" "$s" || MARK_ERR="pid $p would not stop"
+                stop_tree "$p" "$s" "$token" "$id" || MARK_ERR=${STOP_ERR:-"pid $p would not stop"}
             fi
         done
     done

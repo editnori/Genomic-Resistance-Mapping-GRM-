@@ -468,7 +468,11 @@ no_pending_start() {
 # records the journal's token for a live PID holding the start's marker, the
 # start had committed and only the journal goes. Otherwise every process of
 # the start is stopped, and the journal (with the marker) is removed only once
-# the marker's lock is free; else it is kept and the script fails.
+# the marker's lock is free; else it is kept and the script fails. The
+# registered child's process group, once the child is gone, is stopped only
+# when each member carries the journal's token, holds the marker or was seen
+# in the group while the child lived: after a restart its number may lead an
+# unrelated group, which gets no signal and keeps the journal (lib.sh).
 resolve_start() {
     if pid_record "$1" && [ "$PID_TOKEN" = "$J_TOKEN" ] && alive "$PID_PID" "$PID_START" && holds "$PID_PID" "$J_MARK_ID"; then
         rm -f -- "$D/serve-$1.starting" || die "cannot remove $D/serve-$1.starting" 1
@@ -476,8 +480,8 @@ resolve_start() {
         return 0
     fi
     say "stopping pids ${ORPHANS:-none} left by an interrupted start of $J_LABEL with $J_PUB on port $1"
-    mark_stop "$J_MARK_ID" "$D/spawn/$J_MARK" "$J_CHILD" "$J_CHILD_START" ||
-        die "processes of the interrupted start of $J_LABEL with $J_PUB on port $1 may remain: $MARK_ERR; serve-$1.starting is kept: find and stop them, then remove it and spawn/$J_MARK by hand" 1
+    mark_stop "$J_MARK_ID" "$D/spawn/$J_MARK" "$J_CHILD" "$J_CHILD_START" "$J_TOKEN" ||
+        die "processes of the interrupted start of $J_LABEL with $J_PUB on port $1 may remain: $MARK_ERR; serve-$1.starting is kept: stop what is left of that start (its processes carry GRM_DEPLOY_SPAWN=$J_TOKEN), then remove it and spawn/$J_MARK by hand" 1
     rm -f -- "$D/spawn/$J_MARK" "$D/serve-$1.starting" || die "cannot remove $D/serve-$1.starting" 1
     say "resolved the interrupted start of $J_LABEL with $J_PUB on port $1 (stopped: ${ORPHANS:-none})"
 }
@@ -574,7 +578,7 @@ stop_spawn() {
     local child=${!:-} start
     close_fd MARK_FD
     if [ -n "$SPAWN_MARK_ID" ]; then
-        mark_stop "$SPAWN_MARK_ID" "$SPAWN_MARK" "$SPAWN_CHILD" "$SPAWN_CHILD_START" || {
+        mark_stop "$SPAWN_MARK_ID" "$SPAWN_MARK" "$SPAWN_CHILD" "$SPAWN_CHILD_START" "$SPAWN_TOKEN" || {
             say "processes of start $SPAWN_TOKEN may remain: $MARK_ERR"
             return 1
         }
@@ -582,7 +586,7 @@ stop_spawn() {
         return 0
     fi
     [ -n "$child" ] && [ "$(ppid_of "$child")" = "$$" ] && start=$(proc_start "$child") || return 0
-    stop_tree "$child" "$start"
+    stop_tree "$child" "$start" "$SPAWN_TOKEN" '' || { say "processes of start $SPAWN_TOKEN may remain: $STOP_ERR"; return 1; }
 }
 
 # Remove serve-PORT.starting if it journals this script's last start.

@@ -1110,6 +1110,53 @@ case $(state "$imp") in '' | Z) imp_state=gone ;; *) imp_state=alive ;; esac
 kill -KILL "$imp" 2>/dev/null
 echo "reuse=ok stage_rc=$rc impostor=$imp_state"
 SH
+# A reused process group number (the 2026-10-28 review's finding 1 and its
+# probe, resolve-reuse-probe.sh), through common.sh's pending_start and
+# resolve_start, which restore.sh --apply and stage.sh --apply run for an
+# interrupted start. The start is journaled and its registered child, PID
+# 4000, exits before it ever leads a group. An unrelated daemon then
+# double-forks: its intermediate takes PID 4000, calls setsid, forks a worker
+# and exits, so group 4000 has a member and no leader. resolve_start must
+# signal none of it, keep the journal and fail, saying why.
+cat >"$T/group-reuse.sh" <<'SH'
+set -u
+S=$1 ROOT=$2 N=4000
+export GRM_DEPLOY_ROOT=$ROOT GRM_PORT=8999
+mkdir -p "$ROOT/spawn"
+source "$S/common.sh"
+set +e
+SPAWN_TOKEN=$(cat /proc/sys/kernel/random/uuid)
+mark_create "$D/spawn" "$SPAWN_TOKEN" || { echo "no marker"; exit 3; }
+SPAWN_MARK=$MARK_PATH SPAWN_MARK_ID=$MARK_ID
+sleep 0.1 &
+owner=$!
+ostart=$(proc_start "$owner")
+echo $((N - 1)) >/proc/sys/kernel/ns_last_pid
+sleep 0.2 &
+child=$!
+cstart=$(proc_start "$child")
+wait "$owner" "$child"
+close_fd MARK_FD
+printf 'token=%s owner=%s owner_start=%s label=rel1 publication=p1 port=8999 mark=%s mark_id=%s child=%s child_start=%s\n' \
+    "$SPAWN_TOKEN" "$owner" "$ostart" "${SPAWN_MARK##*/}" "$SPAWN_MARK_ID" "$child" "$cstart" >"$D/serve-8999.starting"
+echo $((N - 1)) >/proc/sys/kernel/ns_last_pid
+setsid bash -c "sleep 300 </dev/null >/dev/null 2>&1 & echo \$! >$ROOT/worker.pid; exit 0"
+for _ in $(seq 50); do [ -s "$ROOT/worker.pid" ] && break; sleep 0.1; done
+worker=$(cat "$ROOT/worker.pid")
+wstart=$(proc_start "$worker")
+if [ "$child" != "$N" ] || ! proc_stat "$worker" || [ "$PS_PGRP" != "$N" ] || [ -e "/proc/$N" ]; then
+    echo "setup failed: child=$child worker=$worker pgid=${PS_PGRP:-}"
+    kill -KILL "$worker" 2>/dev/null
+    exit 3
+fi
+pending_start 8999
+( resolve_start 8999 ) >"$ROOT/resolve.out" 2>&1
+rc=$?
+if alive "$worker" "$wstart"; then w=alive; else w=KILLED; fi
+kill -KILL "$worker" 2>/dev/null
+if grep -q "process group $N has members (pids $worker) that cannot be tied to this start" "$ROOT/resolve.out"; then why=untied; else why=other; fi
+echo "resolve_rc=$rc journal_left=$([ -e "$D/serve-8999.starting" ] && echo yes || echo no) unrelated_worker=$w reason=$why"
+SH
 pidns=(unshare --user --map-root-user --pid --fork --mount-proc)
 skipped=0
 if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
@@ -1119,21 +1166,29 @@ if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
         test ! -e "$D/serve-$SP.starting" -a -z "$(listener "$SP")" -a ! -e "$D/go/rel3--p237"
     check "its receipts say the candidate exited before the checks finished" -- \
         grep -rq 'exited before the checks finished' "$D/stage"
+    expect 0 '^resolve_rc=1 journal_left=yes unrelated_worker=alive reason=untied$' \
+        "resolving a start whose child's number now leads an unrelated group signals none of it and keeps the journal" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/group-reuse.sh" "$S" "$T/group-reuse"
 else
-    echo "skip stage with a reused candidate PID (no unprivileged user and PID namespaces)"
-    skipped=$((skipped + 3))
+    echo "skip stage with a reused candidate PID and resolve with a reused group number (no unprivileged user and PID namespaces)"
+    skipped=$((skipped + 4))
 fi
 
 # Process groups, through lib.sh directly: a registered leader started under
-# setsid forks a descendant that closes the spawn marker, ignores SIGTERM and
-# stays in the leader's group. mark_stop must kill it whether the leader holds
-# the marker and exits on SIGTERM ("running") or has already exited
-# ("exited"), and must fail when a stop failed even if nothing holds the marker
-# by its final check ("failing").
+# setsid with the start's token (as start_service starts grm) forks a
+# descendant that closes the spawn marker, ignores SIGTERM and stays in the
+# leader's group. mark_stop must kill it when the leader holds the marker and
+# exits on SIGTERM, even without the token, because it was seen in the group
+# while the leader lived ("running"), and when the leader has already exited
+# and the descendant carries the token ("exited"). With the leader gone and
+# neither token nor marker, nothing ties the group to the start, so mark_stop
+# signals no member and fails ("untied"). It must also fail when a stop failed
+# even if nothing holds the marker by its final check ("failing").
 cat >"$T/group-stop.sh" <<'SH'
 set -u
 source "$1/lib.sh"
 dir=$2 mode=$3
+tok=$(cat /proc/sys/kernel/random/uuid)
 mark_create "$dir" grp || { echo "no marker"; exit 3; }
 if [ "$mode" = failing ]; then
     sleep 300 &
@@ -1143,11 +1198,12 @@ if [ "$mode" = failing ]; then
     echo "rc=$? err=$MARK_ERR"
     exit 0
 fi
-( exec setsid bash -c '
+( exec env GRM_DEPLOY_SPAWN="$tok" setsid bash -c '
+    case $2 in running | untied) unset GRM_DEPLOY_SPAWN ;; esac
     (trap "" TERM; exec sleep 300 '"$MARK_FD"'>&-) &
     echo "$!" >"$1.kid"
     while [ ! -e "$1.go" ]; do sleep 0.05; done
-    [ "$2" = exited ] && exit 0
+    [ "$2" = running ] || exit 0
     wait' _ "$dir/leader" "$mode" ) &
 leader=$!
 for _ in $(seq 100); do [ -s "$dir/leader.kid" ] && break; sleep 0.05; done
@@ -1157,18 +1213,21 @@ kstart=$(proc_start "$kid")
 for _ in $(seq 100); do ! holds "$kid" "$MARK_ID" && [ "$(proc_comm "$kid")" = sleep ] && break; sleep 0.05; done
 proc_stat "$kid" && [ "$PS_PGRP" = "$leader" ] || { echo "the descendant is not in the leader's group"; exit 3; }
 : >"$dir/leader.go"
-if [ "$mode" = exited ]; then wait "$leader"; fi
+if [ "$mode" != running ]; then wait "$leader"; fi
 close_fd MARK_FD
-mark_stop "$MARK_ID" "$MARK_PATH" "$leader" "$lstart"
+mark_stop "$MARK_ID" "$MARK_PATH" "$leader" "$lstart" "$tok"
 rc=$?
 if alive "$kid" "$kstart"; then k=alive; else k=gone; fi
 kill -KILL "$kid" 2>/dev/null
 echo "rc=$rc kid=$k err=$MARK_ERR"
 SH
-expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant in the group of a leader that exits on SIGTERM" -- \
+expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant seen in the group of a leader that exits on SIGTERM" -- \
     timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-running" running
-expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant in the group of a registered leader that had exited" -- \
+expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant carrying the token in the group of a registered leader that had exited" -- \
     timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-exited" exited
+expect 0 '^rc=1 kid=alive err=process group [0-9]+ has members \(pids [0-9]+\) that cannot be tied to this start' \
+    "mark_stop signals no member of an exited leader's group that has neither the token nor the marker, and fails" -- \
+    timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-untied" untied
 expect 0 '^rc=1 err=pid [0-9]+ would not stop$' "mark_stop fails after a failed stop even when no holder is left" -- \
     timeout -k 5 60 bash "$T/group-stop.sh" "$S" "$T/groups-failing" failing
 
@@ -1408,7 +1467,7 @@ pkill -KILL -P "$forged" || true
 pkill -KILL -P "$forged2" || true
 kill -KILL "$forged" "$forged2" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((451 - skipped))  # less the reused-PID case without user and PID namespaces
+EXPECTED_ASSERTIONS=$((453 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

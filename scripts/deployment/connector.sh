@@ -37,6 +37,12 @@
 # even before the PID is assigned, so a TERM at any point leaves no
 # cloudflared and no supervisor waiting for one.
 #
+# Each run gives cloudflared a fresh random token in its environment
+# (GRM_DEPLOY_SPAWN), which whatever it forks inherits. Once cloudflared has
+# exited, what it left in its process group is stopped only when each member
+# carries that token, holds connector.spawn or was seen in the group while
+# cloudflared lived (lib.sh stop_tree); a group number can be reused.
+#
 # Output is best effort (say): a closed output pipe makes a write fail, not
 # kill the supervisor (SIGPIPE is handled, so cloudflared still starts with
 # the default disposition), so cleanup always runs.
@@ -53,7 +59,7 @@ C=${GRM_CONNECTOR_DIR:?set GRM_CONNECTOR_DIR to the connector directory}
 C=${C%/}
 TOKEN=${GRM_TUNNEL_TOKEN_FILE:-$C/tunnel.token}
 PROTOCOL=${GRM_TUNNEL_PROTOCOL:-http2}
-LOCK_FD='' MARK_FD='' MARK_ID=''
+LOCK_FD='' MARK_FD='' MARK_ID='' SPAWN_TOKEN=''
 # run changes into the connector directory before cloudflared opens its files,
 # so a relative path would be checked in one directory and used in another.
 case $C in /?*) ;; *) die "GRM_CONNECTOR_DIR must be an absolute path: $C" 2 ;; esac
@@ -155,9 +161,9 @@ on_exit() {
     trap ':' TERM INT HUP
     set +e
     # With its process group, even if cloudflared itself has exited.
-    if [ -n "${child:-}" ] && [ -n "${child_start:-}" ]; then stop_tree "$child" "$child_start" group || rc=1; fi
+    if [ -n "${child:-}" ] && [ -n "${child_start:-}" ]; then stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" group || rc=1; fi
     close_fd MARK_FD
-    if [ -n "$MARK_ID" ] && ! mark_stop "$MARK_ID" "$C/connector.spawn"; then
+    if [ -n "$MARK_ID" ] && ! mark_stop "$MARK_ID" "$C/connector.spawn" '' '' "$SPAWN_TOKEN"; then
         say "FAIL: connector processes may remain: $MARK_ERR" >&2
         rc=1
     fi
@@ -174,6 +180,7 @@ run() {
     cd "$C"
     umask 077
     child='' child_start='' stopping=0
+    SPAWN_TOKEN=$(cat /proc/sys/kernel/random/uuid)
     trap on_signal TERM INT HUP
     open_fd LOCK_FD "$C/connector.lock" || die "$C/connector.lock cannot be opened as a regular file" 2
     flock -n "$LOCK_FD" || { say "a connector supervisor already holds $C/connector.lock"; exit 0; }
@@ -196,7 +203,7 @@ run() {
             alive "$$" "$me" || exit 97
             child_checkpoint conn-child-preexec
             alive "$$" "$me" || exit 97
-            exec setsid ./cloudflared tunnel --no-autoupdate --protocol "$PROTOCOL" --metrics 127.0.0.1:0 \
+            GRM_DEPLOY_SPAWN=$SPAWN_TOKEN exec setsid ./cloudflared tunnel --no-autoupdate --protocol "$PROTOCOL" --metrics 127.0.0.1:0 \
                 --log-directory "$C/logs" --pidfile "$C/connector.pid" run --token-file "$TOKEN"
         ) &
         checkpoint conn-forked
@@ -205,14 +212,14 @@ run() {
         checkpoint conn-assigned
         while [ -n "$child_start" ] && alive "$child" "$child_start"; do
             if ((stopping)); then
-                stop_tree "$child" "$child_start" || die "cloudflared pid $child would not stop" 1
+                stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" || die "cloudflared pid $child would not stop: $STOP_ERR" 1
                 break
             fi
             wait "$child" 2>/dev/null || true
         done
         # cloudflared exited: nothing it forked into its group may outlive it.
         if [ -n "$child_start" ]; then
-            stop_tree "$child" "$child_start" group || die "processes of cloudflared pid $child would not stop" 1
+            stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" group || die "processes of cloudflared pid $child would not stop: $STOP_ERR" 1
         fi
         child='' child_start=''
         for ((i = 0; i < 25 && !stopping; i++)); do sleep 0.2 {LOCK_FD}>&-; done
