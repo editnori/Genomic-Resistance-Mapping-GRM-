@@ -25,6 +25,12 @@ tiny_http = "0.12"
 [dev-dependencies]
 tempfile = "3"
 
+# The large-species lasso scan's fitting process (docs/lasso-stopping.md). An
+# example, so release and deployment builds leave it out.
+[[example]]
+name = "lasso-scan"
+path = "scripts/lasso-scan/main.rs"
+
 [profile.release]
 opt-level = 3
 lto = "thin"

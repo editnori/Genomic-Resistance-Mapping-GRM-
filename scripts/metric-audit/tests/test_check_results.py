@@ -408,6 +408,54 @@ class LassoSolverStatus(Case):
         rep["models"]["lasso_fit"] = empty_lasso_fit()
         self.fails(rep, "lasso model does not match its solver status")
 
+    def test_a_wrong_number_of_fold_records_fails(self):
+        for edit in ("drop", "add"):
+            with self.subTest(edit=edit):
+                rep = revision8_report()
+                fits = fx.row(rep, "random", "lasso")["lasso_fits"]
+                if edit == "drop":
+                    fits.pop()
+                else:
+                    fits.append(dict(fits[0]))
+                self.fails(rep, "malformed lasso fit status")
+
+    def test_a_nonempty_path_without_a_selected_point_fails(self):
+        # Random fold 4 is a null fit, so its calls cannot expose the record.
+        rep = revision8_report()
+        fx.row(rep, "random", "lasso")["lasso_fits"][4] = empty_lasso_fit() | {"path_points": 30}
+        self.fails(rep, "malformed lasso fit status")
+
+
+class LassoRecordsAgreeWithScores(Case):
+    """Each revision-8 fold record against that fold's calls and weight count."""
+
+    def test_an_empty_path_on_an_uncalled_fold_passes(self):
+        rep = revision8_report()
+        fx.row(rep, "random", "lasso")["lasso_fits"][4] = empty_lasso_fit()
+        self.passes(rep, [rf_line(rep)])
+
+    def test_an_empty_path_on_a_called_fold_fails(self):
+        rep = revision8_report()
+        fx.row(rep, "random", "lasso")["lasso_fits"][0] = empty_lasso_fit()
+        self.fails(rep, "lasso fold without a selected point has calls")
+
+    def test_a_weight_count_that_disagrees_with_the_calls_fails(self):
+        for fold, weights in ((0, 0.0), (4, 12.0)):
+            with self.subTest(fold=fold):
+                rep = revision8_report()
+                fx.row(rep, "random", "lasso")["fold_complexity"][fold] = weights
+                self.fails(rep, "lasso fold calls do not match its weight count")
+
+    def test_a_short_weight_count_list_fails(self):
+        rep = revision8_report()
+        fx.row(rep, "lineage", "lasso")["fold_complexity"].pop()
+        self.fails(rep, "fold complexity length")
+
+    def test_revision7_rows_need_no_agreement(self):
+        rep = fx.make_report()
+        fx.row(rep, "random", "lasso")["fold_complexity"][0] = 0.0
+        self.passes(rep, [rf_line(rep)])
+
 
 class LearnerRows(Case):
     def test_a_lineage_split_missing_the_gbt_row_fails(self):

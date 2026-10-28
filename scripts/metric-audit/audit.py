@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only metric audit of GRM result reports, revisions 5 to 7.
+"""Read-only metric audit of GRM result reports, revisions 5 to 8.
 
 From each report's saved per-sample labels and out-of-fold scores this
 recomputes, over the called isolates, the pooled confusion matrices and
@@ -14,11 +14,14 @@ published manifest. It writes only the output path it is given.
 
 Schema-1 reports (revisions 5 and 6) score every isolate: a null-model fold
 is one whose held-out scores are all exactly 0.5. Schema-2 reports
-(revision 7) leave a null fit's isolates uncalled: a null-model fold is one
-whose held-out scores are all null, and it has to be a gbt or lasso fold
-with complexity 0. The best learner of a schema-2 report is the highest
+(revisions 7 and 8) leave a null fit's isolates uncalled: a null-model fold
+is one whose held-out scores are all null, and it has to be a gbt or lasso
+fold with complexity 0. The best learner of a schema-2 report is the highest
 random-split balanced accuracy among learners that call every isolate on
-every split that ran, or none.
+every split that ran, or none. Revision 8 adds lasso solver evidence
+(lasso_fits and models.lasso_fit); check-results.py validates it, and this
+audit applies the schema-2 rules to the rest of a revision-8 report. It has
+not yet been run on a revision-8 run.
 
 usage: python3 -I audit.py OUT.json [species-glob] --revision N [--root DIR]
            (--backup DIR --log FILE --launch UTC | --reshaped)

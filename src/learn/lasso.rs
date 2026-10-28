@@ -560,6 +560,36 @@ mod tests {
     }
 
     #[test]
+    fn public_refit_and_model_only_wrappers_use_the_raised_cap_on_a_saved_panel() {
+        let f = fixtures()
+            .iter()
+            .find(|f| f.name == "streptococcus_agalactiae__clindamycin_lineage_fold0")
+            .unwrap();
+        let feats: Vec<u32> = (0..f.x.rows as u32).collect();
+        let (old, new) = f.runs();
+        assert!(old.iter().any(|f| !f.convergence.converged));
+        // The evaluator scores and saves the refit, so its cap is pinned by a
+        // default test too: the same penalties on the same mask repeat the
+        // converged path, and a 300-sweep refit leaves point 6 unconverged.
+        let lambdas: Vec<f64> = new.iter().map(|n| n.model.lambda).collect();
+        let refit = refit_path_with_status(&f.x, &f.y, &f.fit, &feats, &lambdas);
+        assert_eq!(refit.len(), new.len());
+        for (r, n) in refit.iter().zip(new) {
+            assert!(r.convergence.converged);
+            assert!(same(&r.model, &n.model));
+            assert_eq!(r.convergence, n.convergence);
+        }
+        // Nothing in production calls the model-only wrappers, so nothing
+        // else would notice them drifting from the status wrappers.
+        let path = fit_path(&f.x, &f.y, &f.fit, &feats, f.n_lambdas, f.max_nonzero);
+        let refit = refit_path(&f.x, &f.y, &f.fit, &feats, &lambdas);
+        assert_eq!((path.len(), refit.len()), (new.len(), new.len()));
+        for ((p, r), n) in path.iter().zip(&refit).zip(new) {
+            assert!(same(p, &n.model) && same(r, &n.model));
+        }
+    }
+
+    #[test]
     fn one_class_long_paths_are_empty_by_design() {
         let n = 80;
         let mut x = BitMatrix::with_cols(n);

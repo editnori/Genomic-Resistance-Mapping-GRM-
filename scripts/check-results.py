@@ -11,7 +11,10 @@ Revision 8 keeps schema 2 and adds mandatory lasso solver evidence: one
 `lasso_fits` record per outer fold and `models.lasso_fit` for the final fit.
 Each record contains path counts, the selected point, and selected/refit
 convergence statuses. Valid revision-8 reports have zero unconverged two-class
-lasso fits; missing or malformed evidence is not a substitute for it.
+lasso fits; missing or malformed evidence is not a substitute for it. Each
+fold's record must also agree with that fold's scores: a lasso fold is called
+exactly when its fold_complexity (the refit's weight count) is positive, and a
+fold whose record has no selected point (an empty path) has no calls.
 
 The best learner follows the schema. In schema 2 it is the highest
 random-split balanced accuracy among scm, cart, rf, gbt, and lasso rows
@@ -199,13 +202,20 @@ def main():
                 metrics = learner["metrics"]
                 no_call = learner.get("no_call")
                 identity = (str(path), split["scheme"], learner["learner"])
+                assert len(scores) == n and all(v is None or (isinstance(v, (int, float)) and math.isfinite(v)) for v in scores), ("scores",) + identity
                 if audit["revision"] >= 8 and learner["learner"] == "lasso":
                     fits = learner.get("lasso_fits")
                     assert fits is not None, ("revision-8 lasso fit status is required",) + identity
                     assert isinstance(fits, list) and len(fits) == split["folds"], ("malformed lasso fit status",) + identity
+                    weights = learner["fold_complexity"]
+                    assert isinstance(weights, list) and len(weights) == split["folds"], ("fold complexity length",) + identity
                     for fold, fit in enumerate(fits):
-                        check_lasso_fit(fit, identity + (fold,))
-                assert len(scores) == n and all(v is None or (isinstance(v, (int, float)) and math.isfinite(v)) for v in scores), ("scores",) + identity
+                        has_refit = check_lasso_fit(fit, identity + (fold,))
+                        # A fold is called exactly when its refit kept a weight,
+                        # and an empty path has no refit to call with.
+                        called = any(scores[i] is not None for i in range(n) if folds[i] == fold)
+                        assert called == (weights[fold] > 0), ("lasso fold calls do not match its weight count",) + identity + (fold,)
+                        assert has_refit or not called, ("lasso fold without a selected point has calls",) + identity + (fold,)
                 uncalled = {"resistant": sum(1 for t, v in zip(truth, scores) if v is None and t), "susceptible": sum(1 for t, v in zip(truth, scores) if v is None and not t)}
                 if learner["learner"] == "catalog" or schema == 1:
                     assert no_call is None and None not in scores, ("null score or no_call on a row that calls every isolate",) + identity
