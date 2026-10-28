@@ -209,17 +209,40 @@ builds `counted.json` incrementally at the pipeline default k = 31; an
 existing manifest keeps its k. Sparse pipeline mode cannot be combined with
 `--drop-ksets`. Stock commands keep their old behavior.
 
+`grm matrix --disk-sparse` counts, so it passes the same catalog gate as
+`grm count` before it counts, writes or deletes anything: a catalog that does
+not load stops it unless `--allow-missing-catalog` is given, and the catalog
+it then counts with is the one that loaded (never a silent fallback to no gene
+calls). Ksets counted with a catalog are never replaced by a count without
+one.
+
+Every sparse write stays inside the data root (`src/confine.rs`). The root may
+be a link, resolved once; below it, the species directory, `ksets`, `matrix`,
+`matrix-partials` and the run directory must be real directories, checked
+component by component and against their canonical path. Temporaries are
+created with `O_CREAT | O_EXCL | O_NOFOLLOW` (a stale regular temporary is
+removed first) and renamed only over a regular file or nothing; matrix
+binaries are unlinked and created anew rather than truncated. A link or other
+non-regular entry where a lane file belongs (manifests, sidecars, kset
+temporaries, matrix files, run files) is refused before any work. Ksets
+themselves may be links into a shared store: they are only read.
+
 The caller now performs this sequence under an exclusive species-directory
 lock (the OS releases it on process death):
 
     derive selection, config k and catalog version
+    refuse links where it writes; refuse another run's unfinished partials
+    refuse ksets it did not create that do not read at k
     create the hashed run directory and its ancestors durably
     for each block of W genomes, in column order:
         record which kset paths predated the block
-        preflight an estimated block footprint against the 30 GiB reserve
-        count only this block, with an exact-length preflight before each kset
+        preflight the block's ksets at their upper bound against the reserve
+        count only this block; each kset and sidecar claims its exact length
+          from one reserve ledger shared by the counting threads
         persist counted names, digests, sketches and any pending selections
-        write_partial and independently verify its receipt, SHA, k and columns
+        write_partial, then verify its receipt, SHA, k and columns, and read
+          it back: each column's k-mers must number counted.json's n_kmers
+          and hash to its kset digest
         only then delete this block's ksets that were absent when it started
         durably advance the folded-column position
     build_from_partials(all partials, all expected columns, config k)
@@ -236,11 +259,26 @@ one. A current matrix and complete sketches allow an early no-op return.
 
 Resume reconstructs the same expectations from these manifests. A missing,
 orphaned or stale active block is rewritten after its temporary files are
-removed; its ksets are retained until a replacement verifies. A stale block
-already marked folded is rejected rather than silently used. Unknown files,
-non-regular cleanup targets and files without an owning manifest are hard
-errors, never recursive-deletion candidates. Only the current run is cleaned;
-other config runs are not adopted or removed automatically.
+removed; its ksets are retained until a replacement verifies. A folded block
+is re-verified, content included, on every resume; a stale or edited one is
+rejected rather than silently used, even when its receipt was edited to
+match. Unknown files, non-regular cleanup targets and files without an owning
+manifest are hard errors, never recursive-deletion candidates. Only the
+current run is cleaned. A non-empty run of another config (another
+selection, k, catalog or block width) is neither adopted nor removed: a new
+run is refused while it exists, so its partials are never orphaned, and
+restoring its inputs resumes it. An empty run directory, which an
+interrupted cleanup can leave, is removed.
+
+A kset that predates a block is an input: it is read, may get a new sidecar,
+and is never rewritten or deleted. One at another k, unreadable, or (without
+a sidecar) different from a fresh count of its FASTA, is refused. A complete
+`counted.json` (a stock `grm count`, or a finished sparse run rebuilt at
+another min_support) is adopted block by block; ksets it no longer has are
+recounted and must reproduce its digests. A run that already saved its
+matrix finishes its cleanup at that matrix's min_support before another is
+built. Resuming a saved run syncs the matrix files, `run.json` and their
+directories again before any partial is removed.
 
 `Counted` also stores the bottom-sketch of the same counted values. Structure
 uses real ksets whenever they exist and these k/digest-bound sketches after

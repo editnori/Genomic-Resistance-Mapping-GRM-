@@ -157,13 +157,17 @@ pub fn write(path: &Path, name: &str, space: &KmerSpace, values: &[u64]) -> Resu
 
 /// `write` with an exact-length preflight before creating the temporary file.
 /// The old kset, if any, remains until the rename, so `bytes` is also the peak
-/// additional file length this write needs.
-pub fn write_checked(
+/// additional file length this write needs. What the preflight returns (a
+/// reserve claim, say) is held until the kset is renamed into place.
+///
+/// The temporary is created with `confine::create_part`, never through a
+/// link, and the kset only replaces a regular file or nothing.
+pub fn write_checked<G>(
     path: &Path,
     name: &str,
     space: &KmerSpace,
     values: &[u64],
-    preflight: impl FnOnce(&Path, u64) -> Result<()>,
+    preflight: impl FnOnce(&Path, u64) -> Result<G>,
 ) -> Result<()> {
     debug_assert!(values.windows(2).all(|w| w[0] < w[1]));
     let bits = space.bits();
@@ -182,29 +186,48 @@ pub fn write_checked(
         }
     }
     offsets[BUCKETS] = data.len() as u64;
-    let table = (BUCKETS + 1) * 8 + BUCKETS * 4;
-    preflight(path, (24 + name.len() + table + data.len()) as u64)?;
+    let _claim = preflight(path, encoded_len(name, data.len()))?;
 
     let part = path.with_extension("kset.part");
-    let mut w =
-        BufWriter::new(File::create(&part).with_context(|| format!("create {}", part.display()))?);
-    w.write_all(MAGIC)?;
-    w.write_all(&[space.k as u8, BUCKET_BITS as u8, 0, 0])?;
-    w.write_all(&(values.len() as u64).to_le_bytes())?;
-    w.write_all(&(name.len() as u32).to_le_bytes())?;
-    w.write_all(name.as_bytes())?;
-    for o in &offsets {
-        w.write_all(&o.to_le_bytes())?;
+    crate::confine::regular_or_absent(path)?;
+    let mut w = BufWriter::new(crate::confine::create_part(&part)?);
+    let written = (|| -> Result<()> {
+        w.write_all(MAGIC)?;
+        w.write_all(&[space.k as u8, BUCKET_BITS as u8, 0, 0])?;
+        w.write_all(&(values.len() as u64).to_le_bytes())?;
+        w.write_all(&(name.len() as u32).to_le_bytes())?;
+        w.write_all(name.as_bytes())?;
+        for o in &offsets {
+            w.write_all(&o.to_le_bytes())?;
+        }
+        for c in &counts {
+            w.write_all(&c.to_le_bytes())?;
+        }
+        w.write_all(&data)?;
+        // No fsync: a kset is a re-creatable cache, and the rename below
+        // already keeps an interrupted run from leaving a truncated file.
+        w.flush()?;
+        crate::confine::replace_with(&part, path)
+    })();
+    drop(w);
+    if written.is_err() && crate::confine::regular_or_absent(&part).unwrap_or(false) {
+        let _ = std::fs::remove_file(&part);
     }
-    for c in &counts {
-        w.write_all(&c.to_le_bytes())?;
-    }
-    w.write_all(&data)?;
-    // No fsync: a kset is a re-creatable cache, and the rename below
-    // already keeps an interrupted run from leaving a truncated file.
-    w.into_inner()?;
-    std::fs::rename(&part, path)?;
-    Ok(())
+    written
+}
+
+/// Bytes of a kset file whose name is `name` and whose varint data takes
+/// `data_len` bytes.
+fn encoded_len(name: &str, data_len: usize) -> u64 {
+    (24 + name.len() + (BUCKETS + 1) * 8 + BUCKETS * 4 + data_len) as u64
+}
+
+/// The longest a kset of `n_kmers` values, named `name`, can be: each value
+/// is stored as its gap from the previous one (or its bucket's floor), and a
+/// gap is below 2^(2k - BUCKET_BITS) <= 2^54, so its LEB128 takes at most 8
+/// bytes. Disk preflights use this, not a typical size.
+pub fn max_encoded_len(name: &str, n_kmers: u64) -> u64 {
+    encoded_len(name, 0).saturating_add(n_kmers.saturating_mul(8))
 }
 
 /// FNV-1a64 of a kset's sorted values. `grm count` records it in
@@ -400,13 +423,67 @@ mod tests {
         assert_eq!(std::fs::metadata(&path).unwrap().len(), seen.get().unwrap());
 
         let refused = dir.path().join("refused.kset");
-        let err = write_checked(&refused, "g", &space, &values, |_, _| {
+        let err = write_checked(&refused, "g", &space, &values, |_, _| -> Result<()> {
             anyhow::bail!("injected full disk")
         })
         .unwrap_err();
         assert!(format!("{err:#}").contains("injected full disk"));
         assert!(!refused.exists());
         assert!(!refused.with_extension("kset.part").exists());
+    }
+
+    #[test]
+    fn the_size_bound_holds_for_the_widest_gaps_at_every_k() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut rng = ChaCha8Rng::seed_from_u64(3);
+        for k in [crate::dna::MIN_K, 21, 31, MAX_K] {
+            let space = KmerSpace::new(k);
+            let mask = if k == 32 {
+                u64::MAX
+            } else {
+                (1u64 << (2 * k)) - 1
+            };
+            // One value per bucket, at the top of its range: the longest gaps.
+            let bits = space.bits();
+            let mut values: Vec<u64> = (0..BUCKETS)
+                .map(|b| bucket_floor(b, bits) | (mask >> BUCKET_BITS))
+                .collect();
+            values.extend((0..500).map(|_| rng.random::<u64>() & mask));
+            values.sort_unstable();
+            values.dedup();
+            let path = dir.path().join(format!("k{k}.kset"));
+            write(&path, "genome", &space, &values).unwrap();
+            let len = std::fs::metadata(&path).unwrap().len();
+            assert!(
+                len <= max_encoded_len("genome", values.len() as u64),
+                "k={k}: {len} bytes"
+            );
+        }
+    }
+
+    #[test]
+    fn writes_refuse_links_at_the_kset_and_its_temporary() {
+        let dir = tempfile::tempdir().unwrap();
+        let space = KmerSpace::new(21);
+        let victim = dir.path().join("victim");
+        std::fs::write(&victim, "shared store").unwrap();
+        let linked = dir.path().join("linked.kset");
+        std::os::unix::fs::symlink(&victim, &linked).unwrap();
+        assert!(write(&linked, "g", &space, &[1, 2]).is_err());
+        let part_linked = dir.path().join("part.kset");
+        std::os::unix::fs::symlink(&victim, part_linked.with_extension("kset.part")).unwrap();
+        assert!(write(&part_linked, "g", &space, &[1, 2]).is_err());
+        assert_eq!(std::fs::read(&victim).unwrap(), b"shared store");
+        assert!(linked.is_symlink() && !part_linked.exists());
+        // A stale regular temporary from an interrupted write is replaced.
+        let stale = dir.path().join("stale.kset");
+        std::fs::write(stale.with_extension("kset.part"), "torn").unwrap();
+        write(&stale, "g", &space, &[1, 2]).unwrap();
+        assert_eq!(
+            KsetReader::open(&stale).unwrap().read_all().unwrap(),
+            [1, 2]
+        );
+        assert!(!stale.with_extension("kset.part").exists());
     }
 
     #[test]

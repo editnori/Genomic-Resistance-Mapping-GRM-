@@ -16,11 +16,12 @@
 use crate::bits;
 use crate::bvbrc::{self, Client, Feature};
 use crate::catalog::Catalog;
+use crate::confine;
 use crate::dna::KmerSpace;
 use crate::fasta;
 use crate::layout::Layout;
 use crate::matrix::{Dataset, FeatureMatrix};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 
@@ -84,16 +85,34 @@ fn feature_kmers(matrix: &FeatureMatrix, ds: &Dataset, f: u32) -> (usize, Vec<u6
     (total, out)
 }
 
+/// A fetched annotation would be cached through a link: the data root's
+/// `bvbrc` or `bvbrc/features` points elsewhere, such as into a frozen,
+/// shared input store. `annotate` stops on this, rather than record it as one
+/// locus's annotation error, so training never writes into that store.
+#[derive(Debug)]
+pub struct FeatureCacheOutsideRoot;
+
+impl std::fmt::Display for FeatureCacheOutsideRoot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("fetched annotations are cached only in real directories below the data root; give this root its own bvbrc/features directory")
+    }
+}
+
 fn load_features(layout: &Layout, client: &Client, genome_id: &str) -> Result<Vec<Feature>> {
-    let path = layout.features_dir().join(format!("{genome_id}.json"));
+    let dir = layout.features_dir();
+    let path = dir.join(format!("{genome_id}.json"));
     if let Ok(bytes) = std::fs::read(&path)
         && let Ok(f) = serde_json::from_slice(&bytes)
     {
         return Ok(f);
     }
+    // Checked before fetching, so a refused cache costs no download.
+    let lane = confine::Lane::new(&layout.root).context(FeatureCacheOutsideRoot)?;
+    lane.create_dir_all(&dir, false)
+        .and_then(|()| lane.check_file(&path))
+        .context(FeatureCacheOutsideRoot)?;
     let features = client.fetch_features(genome_id)?;
-    std::fs::create_dir_all(layout.features_dir())?;
-    std::fs::write(&path, serde_json::to_vec(&features)?)?;
+    confine::write_atomic(&path, &serde_json::to_vec(&features)?, false)?;
     Ok(features)
 }
 
@@ -237,6 +256,7 @@ pub fn annotate(
         // downloads the annotation again.
         let (annotation, annotation_error) = match load_features(layout, client, &genome_id) {
             Ok(features) => (features, None),
+            Err(e) if e.is::<FeatureCacheOutsideRoot>() => return Err(e),
             Err(e) => {
                 eprintln!(
                     "    {genome_id}: no PATRIC annotation, so its loci have no gene or product: {e:#}"
@@ -409,5 +429,41 @@ mod tests {
         let annotated = locus();
         assert_eq!(annotated["gene"], "blaX");
         assert!(annotated.get("annotation_error").is_none(), "{annotated}");
+
+        // A root whose bvbrc links to a frozen store reads cached
+        // annotations through the link, but stops before fetching one into
+        // it: training never writes into that store.
+        let frozen = dir.path().join("frozen-bvbrc");
+        std::fs::create_dir_all(frozen.join("features")).unwrap();
+        let bvbrc = layout.root.join("bvbrc");
+        std::fs::rename(
+            bvbrc.join("features/g0.json"),
+            frozen.join("features/g0.json"),
+        )
+        .unwrap();
+        std::fs::remove_dir(bvbrc.join("features")).unwrap();
+        std::fs::remove_dir(&bvbrc).unwrap();
+        std::os::unix::fs::symlink(&frozen, &bvbrc).unwrap();
+        assert_eq!(locus()["gene"], "blaX");
+        std::fs::remove_file(frozen.join("features/g0.json")).unwrap();
+        let err = annotate(
+            &layout,
+            &Client::offline(),
+            &matrix,
+            &ds,
+            &BTreeSet::from([0]),
+            None,
+            &HashMap::new(),
+        )
+        .unwrap_err();
+        assert!(err.is::<FeatureCacheOutsideRoot>(), "{err:#}");
+        assert!(
+            format!("{err:#}").contains("symlinked directory"),
+            "{err:#}"
+        );
+        assert_eq!(
+            std::fs::read_dir(frozen.join("features")).unwrap().count(),
+            0
+        );
     }
 }

@@ -9,6 +9,7 @@
 use crate::bvbrc::fasta_path;
 use crate::catalog::{self, Catalog, FamilyHit};
 use crate::cluster;
+use crate::confine::{self, sync_dir};
 use crate::dna::KmerSpace;
 use crate::fasta::SeqStats;
 use crate::kset::{self, KsetReader};
@@ -19,15 +20,80 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub const SKETCH: usize = 1000;
 pub const DISK_SPARSE_RESERVE: u64 = 30 * 1024 * 1024 * 1024;
-/// Prior MTB scale-up estimate, used only to plan a fresh block's preflight.
-/// Exact encoded lengths are checked before every kset write.
-const ESTIMATED_NEW_KSET_BYTES: u64 = 24 * 1024 * 1024;
+
+/// Free disk that writers running at once share. Each write claims its exact
+/// length under one lock, against free space less what earlier claims still
+/// hold, and keeps the claim until its file is in place. Without the ledger,
+/// several counting threads could each pass the same check and write
+/// together past the reserve.
+struct Reserve {
+    bytes: u64,
+    claimed: Mutex<u64>,
+    free: fn(&Path) -> Result<u64>,
+}
+
+/// Released when dropped, once the claimed file is in place (and so counted
+/// by the filesystem's own free space).
+struct Claim<'a> {
+    reserve: &'a Reserve,
+    bytes: u64,
+}
+
+impl Reserve {
+    fn new(bytes: u64) -> Self {
+        Reserve {
+            bytes,
+            claimed: Mutex::new(0),
+            free: matrix::free_bytes,
+        }
+    }
+
+    fn claim(&self, dir: &Path, need: u64) -> Result<Claim<'_>> {
+        if self.bytes == 0 {
+            return Ok(Claim {
+                reserve: self,
+                bytes: 0,
+            });
+        }
+        let mut claimed = self
+            .claimed
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let free = (self.free)(dir)?;
+        anyhow::ensure!(
+            free >= self.bytes.saturating_add(*claimed).saturating_add(need),
+            "{} has {free} bytes free: writing {need} more beside the {} bytes other writers have claimed would cut into the {}-byte reserve",
+            dir.display(),
+            *claimed,
+            self.bytes
+        );
+        *claimed += need;
+        Ok(Claim {
+            reserve: self,
+            bytes: need,
+        })
+    }
+}
+
+impl Drop for Claim<'_> {
+    fn drop(&mut self) {
+        if self.bytes != 0 {
+            let mut claimed = self
+                .reserve
+                .claimed
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            *claimed -= self.bytes;
+        }
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Counted {
@@ -107,17 +173,12 @@ fn selection(layout: &Layout, slug: &str) -> Result<(Vec<String>, Vec<String>)> 
         .partition(|id| fasta_path(&fasta_dir, id).exists()))
 }
 
-fn write_sidecar(path: &Path, counted: &Counted, reserve: u64) -> Result<()> {
+/// Writes a sidecar through `<id>.json.part` and a rename, never through a
+/// link (see `confine`).
+fn write_sidecar(path: &Path, counted: &Counted, reserve: &Reserve) -> Result<()> {
     let bytes = serde_json::to_vec(counted)?;
-    if reserve != 0 {
-        matrix::ensure_free_space(
-            path.parent().unwrap_or(Path::new(".")),
-            bytes.len() as u64,
-            reserve,
-        )?;
-    }
-    std::fs::write(path, bytes)?;
-    Ok(())
+    let _claim = reserve.claim(path.parent().unwrap_or(Path::new(".")), bytes.len() as u64)?;
+    confine::write_atomic(path, &bytes, false)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -128,12 +189,53 @@ fn count_one(
     sidecar: &Path,
     space: &KmerSpace,
     catalog: Option<&Catalog>,
-    (values, scratch): &mut (Vec<u64>, Vec<u64>),
+    buffers: &mut (Vec<u64>, Vec<u64>),
     reserve: u64,
 ) -> Result<Counted> {
+    let reserve = Reserve::new(reserve);
+    count_one_with(
+        id, fasta, kset_path, sidecar, space, catalog, buffers, &reserve, false,
+    )
+}
+
+/// `count_one` against a shared reserve. With `keep`, a kset already at
+/// `kset_path` is an input that this count did not create: it is read, and
+/// may get a new sidecar, but is never rewritten. One at another k, or one
+/// that differs from a fresh count of its FASTA, is refused instead.
+#[allow(clippy::too_many_arguments)]
+fn count_one_with(
+    id: &str,
+    fasta: &Path,
+    kset_path: &Path,
+    sidecar: &Path,
+    space: &KmerSpace,
+    catalog: Option<&Catalog>,
+    (values, scratch): &mut (Vec<u64>, Vec<u64>),
+    reserve: &Reserve,
+    keep: bool,
+) -> Result<Counted> {
     let version = catalog.map_or(String::new(), Catalog::calls_version);
+    // The sidecar is GRM's own file: never read or written through a link.
+    let has_sidecar = confine::regular_or_absent(sidecar)?;
+    let kept = keep && std::fs::symlink_metadata(kset_path).is_ok();
+    if kept {
+        let reader = KsetReader::open(kset_path).with_context(|| {
+            format!(
+                "read the kset {} that this disk-sparse run did not create; it never rewrites one, so move it aside or delete it to have it recounted",
+                kset_path.display()
+            )
+        })?;
+        anyhow::ensure!(
+            reader.k == space.k,
+            "{} holds {}-mers, not the {}-mers this run counts; disk-sparse mode never rewrites a kset it did not create, so move it aside or delete it to have it recounted",
+            kset_path.display(),
+            reader.k,
+            space.k
+        );
+    }
     // A kset counted under another `--k` is not a cache hit.
     if KsetReader::open(kset_path).is_ok_and(|r| r.k == space.k)
+        && has_sidecar
         && let Ok(bytes) = std::fs::read(sidecar)
         && let Ok(c) = serde_json::from_slice::<Counted>(&bytes)
     {
@@ -164,14 +266,22 @@ fn count_one(
     // next run recounts, instead of the new kset with the old k-mer count and
     // gene calls.
     remove_if_present(sidecar).with_context(|| format!("remove {}", sidecar.display()))?;
-    let dir = kset_path.parent().unwrap_or(Path::new("."));
-    kset::write_checked(kset_path, id, space, values, |_, need| {
-        if reserve == 0 {
-            Ok(())
-        } else {
-            matrix::ensure_free_space(dir, need, reserve)
-        }
-    })?;
+    if kept {
+        // Only the sidecar was missing or unreadable. The kept kset stays
+        // byte for byte when it is exactly what this count gives.
+        let stored = KsetReader::open(kset_path)?.read_all()?;
+        anyhow::ensure!(
+            stored == *values,
+            "{} differs from a fresh count of {}; disk-sparse mode never rewrites a kset it did not create, so move it aside or delete it to have it recounted",
+            kset_path.display(),
+            fasta.display()
+        );
+    } else {
+        let dir = kset_path.parent().unwrap_or(Path::new("."));
+        kset::write_checked(kset_path, id, space, values, |_, need| {
+            reserve.claim(dir, need)
+        })?;
+    }
     let genes = catalog.map_or(vec![], |cat| {
         catalog::family_calls(cat, &cat.detect(values, catalog::CALL_CONTAINMENT))
     });
@@ -258,9 +368,10 @@ pub fn count(
         failed,
         pending: vec![],
     };
-    std::fs::write(
-        layout.species_dir(slug).join("counted.json"),
-        serde_json::to_vec(&summary)?,
+    confine::write_atomic(
+        &layout.species_dir(slug).join("counted.json"),
+        &serde_json::to_vec(&summary)?,
+        false,
     )?;
     Ok(summary)
 }
@@ -366,7 +477,7 @@ pub fn structure_with_reserve(layout: &Layout, slug: &str, reserve: u64) -> Resu
             reserve,
         )?;
     }
-    std::fs::write(out, bytes)?;
+    confine::write_atomic(&out, &bytes, false)?;
     Ok(s)
 }
 
@@ -431,38 +542,15 @@ fn ensure_single_component(value: &str, what: &str) -> Result<()> {
     Ok(())
 }
 
-fn suffixed(path: &Path, suffix: &str) -> PathBuf {
-    let mut name = path.as_os_str().to_owned();
-    name.push(suffix);
-    PathBuf::from(name)
-}
-
-fn sync_dir(path: &Path) -> Result<()> {
-    File::open(path)
-        .and_then(|f| f.sync_all())
-        .with_context(|| format!("sync directory {}", path.display()))
-}
-
-/// Atomic, durable JSON for the two manifests a sparse resume depends on.
+/// Atomic, durable JSON for the two manifests a sparse resume depends on,
+/// written through a no-follow temporary (see `confine::write_atomic`).
 fn write_json_durably<T: Serialize>(path: &Path, value: &T, reserve: u64) -> Result<()> {
     let bytes = serde_json::to_vec_pretty(value)?;
     let parent = path.parent().unwrap_or(Path::new("."));
     if reserve != 0 {
         matrix::ensure_free_space(parent, bytes.len() as u64, reserve)?;
     }
-    let part = suffixed(path, ".part");
-    let result = (|| {
-        let mut file = File::create(&part).with_context(|| format!("create {}", part.display()))?;
-        file.write_all(&bytes)?;
-        file.sync_all()?;
-        drop(file);
-        std::fs::rename(&part, path)?;
-        sync_dir(parent)
-    })();
-    if result.is_err() {
-        let _ = std::fs::remove_file(&part);
-    }
-    result
+    confine::write_atomic(path, &bytes, true)
 }
 
 /// Removes a direct-child regular file, never a symlink, directory, or tree.
@@ -513,6 +601,13 @@ fn validate_run_entries(run_dir: &Path, config: &SparseConfig) -> Result<()> {
         anyhow::ensure!(
             expected.contains(&name),
             "unknown file {} in sparse run; refusing to touch or clean it",
+            entry.path().display()
+        );
+        // A link or directory under a run file's name is never written
+        // through or removed.
+        anyhow::ensure!(
+            entry.file_type()?.is_file(),
+            "refusing non-regular entry {} in sparse run",
             entry.path().display()
         );
     }
@@ -648,13 +743,205 @@ fn cleanup_sparse_run(run_dir: &Path, run: &SparseRun) -> Result<()> {
     Ok(())
 }
 
+/// A sparse run directory's name: the SHA-256 of its config, in hex.
+fn is_run_name(name: &str) -> bool {
+    name.len() == 64
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+/// Settles `matrix-partials` before a run starts. An empty run directory is
+/// what a cleanup leaves when it stops between removing run.json and its
+/// directory; it holds nothing, so it is removed (and `matrix-partials` with
+/// it once empty). A non-empty directory of another run (another selection,
+/// k, catalog or block width) holds the only copy of the blocks whose ksets
+/// it deleted, so a new run is refused while it exists: it is neither
+/// orphaned nor counted against the reserve as if it were free. Anything
+/// that is not a run directory is refused too.
+fn settle_other_runs(species_dir: &Path, partials_dir: &Path, run_dir: &Path) -> Result<()> {
+    let entries = match std::fs::read_dir(partials_dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e).with_context(|| format!("read {}", partials_dir.display())),
+    };
+    let mut removed = false;
+    let mut left = 0;
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        let metadata = std::fs::symlink_metadata(&path)?;
+        anyhow::ensure!(
+            metadata.is_dir() && is_run_name(&name),
+            "unknown entry {} in {}; refusing to touch or clean it",
+            path.display(),
+            partials_dir.display()
+        );
+        if std::fs::read_dir(&path)?.next().is_none() {
+            std::fs::remove_dir(&path).with_context(|| format!("remove {}", path.display()))?;
+            removed = true;
+            continue;
+        }
+        anyhow::ensure!(
+            path.file_name() == run_dir.file_name(),
+            "{} holds an unfinished disk-sparse run of another selection, k, catalog or block width, whose partials stand in for ksets it deleted; finish it by restoring those inputs, or review and remove that directory, before starting another run",
+            path.display()
+        );
+        left += 1;
+    }
+    if removed {
+        sync_dir(partials_dir)?;
+    }
+    if left == 0 && removed {
+        std::fs::remove_dir(partials_dir)
+            .with_context(|| format!("remove {}", partials_dir.display()))?;
+        sync_dir(species_dir)?;
+    }
+    Ok(())
+}
+
+/// Refuses, before any work, a lane whose directories or files are links
+/// or other non-regular entries where sparse writes go (see `confine`).
+fn check_sparse_lane(
+    lane: &confine::Lane,
+    species_dir: &Path,
+    kdir: &Path,
+    matrix_dir: &Path,
+    partials_dir: &Path,
+    genomes: &[String],
+) -> Result<()> {
+    for name in [
+        "counted.json",
+        "counted.json.part",
+        "structure.json",
+        "structure.json.part",
+    ] {
+        lane.check_file(&species_dir.join(name))?;
+    }
+    if lane.check_dir_if_present(matrix_dir)? {
+        for name in MATRIX_FILES {
+            lane.check_file(&matrix_dir.join(name))?;
+        }
+        lane.check_file(&matrix_dir.join("matrix.json.part"))?;
+    }
+    lane.check_dir_if_present(partials_dir)?;
+    if lane.check_dir_if_present(kdir)? {
+        // The ksets themselves may be links to a shared store: they are only
+        // read, and never deleted unless this run wrote them (regular files).
+        for id in genomes {
+            for name in [
+                format!("{id}.json"),
+                format!("{id}.json.part"),
+                format!("{id}.kset.part"),
+            ] {
+                lane.check_file(&kdir.join(name))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Every existing kset of `genomes` outside `owned` opens at `k`.
+fn check_kept_ksets(
+    kdir: &Path,
+    genomes: &[String],
+    owned: &HashSet<&str>,
+    k: usize,
+) -> Result<()> {
+    genomes
+        .par_iter()
+        .filter(|id| !owned.contains(id.as_str()))
+        .try_for_each(|id| {
+            let path = kdir.join(format!("{id}.kset"));
+            if std::fs::symlink_metadata(&path).is_err() {
+                return Ok(());
+            }
+            let reader = KsetReader::open(&path).with_context(|| {
+                format!(
+                    "read the kset {} that this disk-sparse run did not create; it never rewrites one, so move it aside or delete it to have it recounted",
+                    path.display()
+                )
+            })?;
+            anyhow::ensure!(
+                reader.k == k,
+                "{} holds {}-mers, not the {k}-mers this run counts; disk-sparse mode never rewrites a kset it did not create, so move it aside or delete it to have it recounted",
+                path.display(),
+                reader.k
+            );
+            Ok(())
+        })
+}
+
+const MATRIX_FILES: [&str; 5] = [
+    "matrix.json",
+    "patterns.bin",
+    "support.bin",
+    "kmer_offsets.bin",
+    "kmers.bin",
+];
+
+/// Syncs the saved matrix and the manifest that records it once more. A
+/// crash after the saved run.json was renamed but before its directory was
+/// synced leaves both on disk, yet not necessarily durable; the partials
+/// they replace go only after this.
+fn resync_saved(matrix_dir: &Path, run_path: &Path, run_dir: &Path) -> Result<()> {
+    for name in MATRIX_FILES {
+        let path = matrix_dir.join(name);
+        File::open(&path)
+            .and_then(|f| f.sync_all())
+            .with_context(|| format!("sync {}", path.display()))?;
+    }
+    sync_dir(matrix_dir)?;
+    File::open(run_path)
+        .and_then(|f| f.sync_all())
+        .with_context(|| format!("sync {}", run_path.display()))?;
+    sync_dir(run_dir)
+}
+
+/// An upper bound on the k-mers a FASTA can hold: its decompressed length,
+/// since every k-mer ends at a distinct base.
+fn sequence_bytes(path: &Path) -> Result<u64> {
+    let mut reader = crate::fasta::open(path)?;
+    std::io::copy(&mut reader, &mut std::io::sink())
+        .with_context(|| format!("read {}", path.display()))
+}
+
+/// The most new kset bytes a block's count can write: an existing file at
+/// its length, a counted genome at the 8-bytes-per-k-mer ceiling of its
+/// recorded k-mer count, and an uncounted one at that ceiling for as many
+/// k-mers as its FASTA has bases (`kset::max_encoded_len`). An upper bound,
+/// not an estimate: real MTB ksets of 26-30 MB come in under it.
+fn block_kset_bound(
+    kdir: &Path,
+    fasta_dir: &Path,
+    ids: &[String],
+    counted: &[Counted],
+) -> Result<u64> {
+    ids.par_iter()
+        .enumerate()
+        .map(|(i, id)| {
+            if let Ok(m) = std::fs::metadata(kdir.join(format!("{id}.kset"))) {
+                return Ok(m.len());
+            }
+            let n_kmers = match counted.get(i) {
+                Some(g) => g.n_kmers,
+                None => sequence_bytes(&fasta_path(fasta_dir, id))?,
+            };
+            Ok(kset::max_encoded_len(id, n_kmers))
+        })
+        .try_reduce(|| 0, |a, b| Ok(a.saturating_add(b)))
+}
+
 fn count_sparse_block(
     layout: &Layout,
     slug: &str,
     ids: &[String],
     space: &KmerSpace,
     catalog: Option<&Catalog>,
-    reserve: u64,
+    reserve: &Reserve,
+    kept: &HashSet<&str>,
 ) -> Result<Vec<Counted>> {
     let fasta_dir = layout.fasta_dir();
     let kdir = layout.kset_dir(slug);
@@ -663,7 +950,7 @@ fn count_sparse_block(
         .map_init(
             || (Vec::new(), Vec::new()),
             |buffers, id| {
-                let result = count_one(
+                let result = count_one_with(
                     id,
                     &fasta_path(&fasta_dir, id),
                     &kdir.join(format!("{id}.kset")),
@@ -672,6 +959,7 @@ fn count_sparse_block(
                     catalog,
                     buffers,
                     reserve,
+                    kept.contains(id.as_str()),
                 );
                 (id.clone(), result)
             },
@@ -707,6 +995,26 @@ pub fn build_matrix_disk_sparse(
     )
 }
 
+/// The block's expected columns and k-mer counts, from counted.json.
+fn block_expectations(
+    counted: &CountSummary,
+    first: usize,
+    end: usize,
+) -> (Vec<matrix::Column>, Vec<u64>) {
+    counted.genomes[first..end]
+        .iter()
+        .map(|g| {
+            (
+                matrix::Column {
+                    name: g.genome_id.clone(),
+                    kset_digest: g.kset_digest.clone().unwrap(),
+                },
+                g.n_kmers,
+            )
+        })
+        .unzip()
+}
+
 #[allow(clippy::too_many_arguments)]
 fn build_matrix_disk_sparse_with(
     layout: &Layout,
@@ -727,6 +1035,12 @@ fn build_matrix_disk_sparse_with(
     );
     let space = KmerSpace::new(k);
     ensure_single_component(slug, "species slug")?;
+    // Every write below stays in real directories under the data root: no
+    // directory from the root down, and no file this run writes, may be a
+    // link (see `confine`).
+    let lane = confine::Lane::new(&layout.root)?;
+    let species_dir = layout.species_dir(slug);
+    lane.check_dir(&species_dir)?;
     let (present, missing) = selection(layout, slug)?;
     anyhow::ensure!(!present.is_empty(), "no selected genomes with FASTA files");
     for id in &present {
@@ -745,7 +1059,6 @@ fn build_matrix_disk_sparse_with(
         catalog_version: catalog.map_or(String::new(), Catalog::calls_version),
         block_width,
     };
-    let species_dir = layout.species_dir(slug);
     // An exclusive directory lock is released by the OS even on a crash; two
     // sparse callers cannot share and truncate one block's temporary files.
     let lock =
@@ -753,6 +1066,17 @@ fn build_matrix_disk_sparse_with(
     lock.lock()
         .with_context(|| format!("lock {}", species_dir.display()))?;
     let _lock = lock;
+    let kdir = layout.kset_dir(slug);
+    let matrix_dir = layout.matrix_dir(slug);
+    let partials_dir = species_dir.join("matrix-partials");
+    check_sparse_lane(
+        &lane,
+        &species_dir,
+        &kdir,
+        &matrix_dir,
+        &partials_dir,
+        &config.genomes,
+    )?;
     // A crash before the first manifest rename can leave only our deterministic
     // temporary. No other writer holds the species lock.
     if remove_owned_file(&species_dir, "counted.json.part")? {
@@ -762,8 +1086,9 @@ fn build_matrix_disk_sparse_with(
         matrix::ensure_free_space(&species_dir, 0, reserve)?;
     }
     let run_dir = sparse_run_dir(layout, slug, &config)?;
+    settle_other_runs(&species_dir, &partials_dir, &run_dir)?;
     let run_path = run_dir.join("run.json");
-    let mut run: Option<SparseRun> = if run_path.exists() {
+    let mut run: Option<SparseRun> = if lane.check_file(&run_path)? {
         let run: SparseRun = serde_json::from_slice(&std::fs::read(&run_path)?)?;
         anyhow::ensure!(
             run.config == config,
@@ -821,7 +1146,7 @@ fn build_matrix_disk_sparse_with(
     if run.is_none()
         && counted.pending.is_empty()
         && counted.genomes.iter().all(|g| g.sketch.is_some())
-        && let Ok(loaded) = matrix::FeatureMatrix::load(&layout.matrix_dir(slug))
+        && let Ok(loaded) = matrix::FeatureMatrix::load(&matrix_dir)
         && loaded.summary.min_support == min_support
         && not_built_from(
             &counted,
@@ -834,7 +1159,23 @@ fn build_matrix_disk_sparse_with(
         return Ok(loaded.summary.clone());
     }
 
-    matrix::create_partial_dir(&run_dir)?;
+    // Ksets this run did not create are inputs it never rewrites (see
+    // `count_one_with`). One that does not read at this k is refused before
+    // anything is written or recorded; the active block's own may be redone.
+    let owned: HashSet<&str> = run
+        .as_ref()
+        .and_then(|r| r.active.as_ref())
+        .map(|a| {
+            let end = (a.first_col + block_width).min(config.genomes.len());
+            config.genomes[a.first_col.min(end)..end]
+                .iter()
+                .map(String::as_str)
+                .filter(|id| !a.preexisting.iter().any(|p| p == id))
+                .collect()
+        })
+        .unwrap_or_default();
+    check_kept_ksets(&kdir, &config.genomes, &owned, k)?;
+    lane.create_dir_all(&run_dir, true)?;
     validate_run_entries(&run_dir, &config)?;
     if !compatible {
         write_json_durably(&species_dir.join("counted.json"), &counted, reserve)?;
@@ -865,11 +1206,17 @@ fn build_matrix_disk_sparse_with(
     let mut run = run.take().unwrap();
     let n = config.genomes.len();
     let count_ceiling = run.folded_columns.saturating_add(block_width).min(n);
+    // A run counts at most one block past its folded columns, unless the
+    // whole selection was already counted: a stock `grm count`, or a
+    // finished sparse run now rebuilt at another min_support. That count is
+    // adopted block by block; ksets it no longer has are recounted, and
+    // must reproduce its digests.
+    let fully_counted = counted.pending.is_empty() && counted.genomes.len() == n;
     anyhow::ensure!(
         run.folded_columns <= n
             && (run.folded_columns == n || run.folded_columns.is_multiple_of(block_width))
             && run.folded_columns <= counted.genomes.len()
-            && counted.genomes.len() <= count_ceiling,
+            && (counted.genomes.len() <= count_ceiling || fully_counted),
         "sparse run and counted.json disagree about completed columns"
     );
     if let Some(active) = &run.active {
@@ -894,7 +1241,16 @@ fn build_matrix_disk_sparse_with(
             run.folded_columns == n && counted.pending.is_empty() && run.active.is_none(),
             "saved sparse run has incomplete counting or folding"
         );
-        let summary = verify_saved_sparse(&layout.matrix_dir(slug), saved)?;
+        // min_support is not part of the run's config: blocks do not depend
+        // on it. A saved matrix at another min_support is finished first.
+        anyhow::ensure!(
+            saved.summary.min_support == min_support,
+            "the interrupted disk-sparse run already saved a matrix at min_support {}; rerun it with --min-support {} to finish its cleanup, then build at min_support {min_support}",
+            saved.summary.min_support,
+            saved.summary.min_support
+        );
+        let summary = verify_saved_sparse(&matrix_dir, saved)?;
+        resync_saved(&matrix_dir, &run_path, &run_dir)?;
         cleanup_sparse_run(&run_dir, &run)?;
         return Ok(summary);
     }
@@ -903,18 +1259,12 @@ fn build_matrix_disk_sparse_with(
     // integrity error, not something to merge or silently replace.
     for first in (0..run.folded_columns).step_by(block_width) {
         let end = (first + block_width).min(n);
-        let columns: Vec<matrix::Column> = counted.genomes[first..end]
-            .iter()
-            .map(|g| matrix::Column {
-                name: g.genome_id.clone(),
-                kset_digest: g.kset_digest.clone().unwrap(),
-            })
-            .collect();
-        matrix::verify_partial(&partial_path(&run_dir, first), &columns, first, k)?;
+        let (columns, n_kmers) = block_expectations(&counted, first, end);
+        matrix::verify_partial(&partial_path(&run_dir, first), &columns, &n_kmers, first, k)?;
     }
 
-    let kdir = layout.kset_dir(slug);
-    std::fs::create_dir_all(&kdir)?;
+    lane.create_dir_all(&kdir, false)?;
+    let ledger = Reserve::new(reserve);
     while run.folded_columns < n {
         let first = run.folded_columns;
         let end = (first + block_width).min(n);
@@ -932,19 +1282,13 @@ fn build_matrix_disk_sparse_with(
             write_json_durably(&run_path, &run, reserve)?;
         }
         let active = run.active.clone().unwrap();
+        let preexisting: HashSet<&str> = active.preexisting.iter().map(String::as_str).collect();
         let partial = partial_path(&run_dir, first);
         let partial_name = partial.file_name().unwrap().to_string_lossy().into_owned();
-        let expectations = |counted: &CountSummary| -> Vec<matrix::Column> {
-            counted.genomes[first..end]
-                .iter()
-                .map(|g| matrix::Column {
-                    name: g.genome_id.clone(),
-                    kset_digest: g.kset_digest.clone().unwrap(),
-                })
-                .collect()
+        let verified = counted.genomes.len() >= end && {
+            let (columns, n_kmers) = block_expectations(&counted, first, end);
+            matrix::verify_partial(&partial, &columns, &n_kmers, first, k).is_ok()
         };
-        let verified = counted.genomes.len() >= end
-            && matrix::verify_partial(&partial, &expectations(&counted), first, k).is_ok();
         if !verified {
             let needs_count = counted.genomes.len() < end
                 || counted.genomes[first..counted.genomes.len().min(end)]
@@ -955,32 +1299,22 @@ fn build_matrix_disk_sparse_with(
                     .any(|id| !std::fs::symlink_metadata(kdir.join(format!("{id}.kset"))).is_ok());
             if needs_count {
                 if reserve != 0 {
-                    let estimate = ids.iter().enumerate().fold(0u64, |total, (i, id)| {
-                        let path = kdir.join(format!("{id}.kset"));
-                        let bytes =
-                            std::fs::metadata(&path)
-                                .map(|m| m.len())
-                                .unwrap_or_else(|_| {
-                                    counted
-                                        .genomes
-                                        .get(first + i)
-                                        .map(|g| {
-                                            // Six bytes per value is the measured
-                                            // MTB encoding estimate, not a limit.
-                                            16_384u64.saturating_add(6u64.saturating_mul(g.n_kmers))
-                                        })
-                                        .unwrap_or(ESTIMATED_NEW_KSET_BYTES)
-                                });
-                        total.saturating_add(bytes)
-                    });
-                    matrix::ensure_free_space(&kdir, estimate, reserve).with_context(|| {
+                    let bound = block_kset_bound(
+                        &kdir,
+                        &layout.fasta_dir(),
+                        ids,
+                        counted.genomes.get(first..).unwrap_or(&[]),
+                    )?;
+                    matrix::ensure_free_space(&kdir, bound, reserve).with_context(|| {
                         format!(
-                            "preflight the current block's estimated {estimate} bytes of ksets (exact lengths are checked again before each write)"
+                            "preflight the current block's ksets at their {bound}-byte upper bound (each write also claims its exact length against the reserve)"
                         )
                     })?;
                 }
                 hook(&format!("before_count:{first}"))?;
-                let new = count_sparse_block(layout, slug, ids, &space, catalog, reserve)?;
+                lane.check_dir(&kdir)?;
+                let new =
+                    count_sparse_block(layout, slug, ids, &space, catalog, &ledger, &preexisting)?;
                 // Recounting to recreate a missing cache must reproduce every
                 // existing expectation; it may not silently change a matrix.
                 for (i, c) in new.iter().enumerate() {
@@ -1006,24 +1340,27 @@ fn build_matrix_disk_sparse_with(
                 .iter()
                 .map(|id| kdir.join(format!("{id}.kset")))
                 .collect();
+            lane.check_dir(&run_dir)?;
             matrix::write_partial(
                 &paths,
-                &expectations(&counted),
+                &block_expectations(&counted, first, end).0,
                 first,
                 &partial,
                 rayon::current_num_threads() * 2,
                 reserve,
             )?;
         }
-        // Re-open and hash the pair even when write_partial just returned.
-        // No owned kset is deleted before this succeeds.
-        matrix::verify_partial(&partial, &expectations(&counted), first, k)?;
+        // Re-open, hash and read back the pair even when write_partial just
+        // returned: every column must hold its genome's counted k-mers. No
+        // owned kset is deleted before this succeeds.
+        let (columns, n_kmers) = block_expectations(&counted, first, end);
+        matrix::verify_partial(&partial, &columns, &n_kmers, first, k)?;
         for suffix in [".part", ".receipt.json.part"] {
             remove_owned_file(&run_dir, &format!("{partial_name}{suffix}"))?;
         }
         sync_dir(&run_dir)?;
         hook(&format!("after_partial:{first}"))?;
-        let preexisting: HashSet<&str> = active.preexisting.iter().map(String::as_str).collect();
+        lane.check_dir(&kdir)?;
         for id in ids.iter().filter(|id| !preexisting.contains(id.as_str())) {
             remove_owned_file(&kdir, &format!("{id}.kset"))?;
         }
@@ -1060,9 +1397,10 @@ fn build_matrix_disk_sparse_with(
         digest: sparse_matrix_digest(&m)?,
         summary: m.summary.clone(),
     };
-    m.save_with_reserve(&layout.matrix_dir(slug), reserve)?;
+    lane.create_dir_all(&matrix_dir, true)?;
+    m.save_with_reserve(&matrix_dir, reserve)?;
     drop(m);
-    let summary = verify_saved_sparse(&layout.matrix_dir(slug), &saved)?;
+    let summary = verify_saved_sparse(&matrix_dir, &saved)?;
     run.saved = Some(saved);
     write_json_durably(&run_path, &run, reserve)?;
     hook("after_saved")?;

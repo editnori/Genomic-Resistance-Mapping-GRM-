@@ -81,6 +81,11 @@ enum Command {
         /// Genomes per sparse block; a multiple of 64 (default 256).
         #[arg(long, requires = "disk_sparse", value_parser = parse_block_width)]
         block_width: Option<usize>,
+        /// With --disk-sparse, count without catalog gene calls when the
+        /// AMRFinderPlus catalog does not load, instead of stopping (see
+        /// `grm count`). The sparse run counts, then deletes, its ksets.
+        #[arg(long, requires = "disk_sparse")]
+        allow_missing_catalog: bool,
     },
     /// Cross-validate every learner on each species x drug dataset, fit the
     /// final models, annotate their features, and write one report each.
@@ -189,12 +194,13 @@ fn run(cli: Cli) -> Result<()> {
             min_support,
             disk_sparse,
             block_width,
+            allow_missing_catalog,
         } => {
             if disk_sparse {
                 let width = block_width.unwrap_or(256);
-                species
-                    .iter()
-                    .try_for_each(|s| matrix_sparse(&layout, s, min_support, width))
+                species.iter().try_for_each(|s| {
+                    matrix_sparse(&layout, s, min_support, width, allow_missing_catalog)
+                })
             } else {
                 species
                     .iter()
@@ -233,7 +239,7 @@ fn run(cli: Cli) -> Result<()> {
                         workers,
                     },
                 )?;
-                count_to_matrix_with_mode(&layout, slug, sparse)?;
+                count_to_matrix_with_mode(&layout, slug, sparse, allow_missing_catalog)?;
                 if let Err(e) = learn(&layout, slug, &[], false) {
                     if !e.is::<grm::probes::KsetsUnreadable>() {
                         return Err(e);
@@ -294,12 +300,17 @@ fn parse_block_width(raw: &str) -> std::result::Result<usize, String> {
 /// Count, structure, and matrix, each rerun only when `stale_stages` finds
 /// its output out of date. Stock behavior is kept for existing callers/tests.
 fn count_to_matrix(layout: &Layout, slug: &str) -> Result<()> {
-    count_to_matrix_with_mode(layout, slug, None)
+    count_to_matrix_with_mode(layout, slug, None, false)
 }
 
-fn count_to_matrix_with_mode(layout: &Layout, slug: &str, sparse: Option<usize>) -> Result<()> {
-    let catalog = load_catalog(layout, PIPELINE_K);
+fn count_to_matrix_with_mode(
+    layout: &Layout,
+    slug: &str,
+    sparse: Option<usize>,
+    allow_missing_catalog: bool,
+) -> Result<()> {
     if let Some(width) = sparse {
+        let catalog = sparse_catalog(layout, PIPELINE_K, allow_missing_catalog)?;
         matrix_sparse_with_catalog(
             layout,
             slug,
@@ -322,6 +333,7 @@ fn count_to_matrix_with_mode(layout: &Layout, slug: &str, sparse: Option<usize>)
         }
         return Ok(());
     }
+    let catalog = load_catalog(layout, PIPELINE_K);
     let stale_stages = || {
         grm::species::stale_stages(
             layout,
@@ -387,12 +399,13 @@ fn load_catalog(layout: &Layout, k: usize) -> Option<Catalog> {
 /// unless `allow_missing_catalog`: counting without it records no gene calls.
 fn require_catalog(layout: &Layout, k: usize, allow_missing_catalog: bool) -> Result<()> {
     if !allow_missing_catalog {
-        Catalog::load(&layout.catalog_dir(), &grm::dna::KmerSpace::new(k)).context(
-            "the AMRFinderPlus catalog does not load, and counting without it records no gene calls, which leaves reports without the catalog baseline and gene panel detections; pass --allow-missing-catalog to count anyway",
-        )?;
+        Catalog::load(&layout.catalog_dir(), &grm::dna::KmerSpace::new(k))
+            .context(CATALOG_REQUIRED)?;
     }
     Ok(())
 }
+
+const CATALOG_REQUIRED: &str = "the AMRFinderPlus catalog does not load, and counting without it records no gene calls, which leaves reports without the catalog baseline and gene panel detections; pass --allow-missing-catalog to count anyway";
 
 fn count_with(layout: &Layout, slug: &str, k: usize, catalog: Option<&Catalog>) -> Result<()> {
     let started = std::time::Instant::now();
@@ -432,12 +445,40 @@ fn matrix(layout: &Layout, slug: &str, min_support: u32) -> Result<()> {
     Ok(())
 }
 
-fn matrix_sparse(layout: &Layout, slug: &str, min_support: u32, width: usize) -> Result<()> {
+fn matrix_sparse(
+    layout: &Layout,
+    slug: &str,
+    min_support: u32,
+    width: usize,
+    allow_missing_catalog: bool,
+) -> Result<()> {
     // A fresh sparse matrix builds counted.json incrementally. Existing
     // manifests keep their k; only a new one uses the count/pipeline default.
     let k = grm::species::load_counted(layout, slug).map_or(PIPELINE_K, |c| c.k);
-    let catalog = load_catalog(layout, k);
+    // A sparse matrix counts, so it passes the catalog gate `grm count` does
+    // before anything is counted, written or deleted.
+    require_catalog(layout, k, allow_missing_catalog)?;
+    let catalog = sparse_catalog(layout, k, allow_missing_catalog)?;
     matrix_sparse_with_catalog(layout, slug, min_support, k, catalog.as_ref(), width)
+}
+
+/// The catalog a disk-sparse count calls genes with. The sparse stages
+/// delete the ksets they count, so a catalog that does not load is an error
+/// here too, as in `require_catalog`, unless `allow_missing_catalog`: never
+/// a silent count without gene calls.
+fn sparse_catalog(
+    layout: &Layout,
+    k: usize,
+    allow_missing_catalog: bool,
+) -> Result<Option<Catalog>> {
+    match Catalog::load(&layout.catalog_dir(), &grm::dna::KmerSpace::new(k)) {
+        Ok(c) => Ok(Some(c)),
+        Err(e) if allow_missing_catalog => {
+            eprintln!("no catalog gene calls: {e:#}");
+            Ok(None)
+        }
+        Err(e) => Err(e.context(CATALOG_REQUIRED)),
+    }
 }
 
 fn matrix_sparse_with_catalog(
@@ -1341,6 +1382,95 @@ mod tests {
             ])
             .is_err()
         );
+    }
+
+    #[test]
+    fn disk_sparse_matrix_passes_the_catalog_gate_before_counting_or_deleting() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        let data = layout.root.to_str().unwrap().to_string();
+        let parse = |extra: &[&str]| {
+            let mut args = vec![
+                "grm",
+                "--data",
+                &data,
+                "matrix",
+                "--species",
+                SLUG,
+                "--disk-sparse",
+                "--block-width",
+                "64",
+            ];
+            args.extend_from_slice(extra);
+            Cli::try_parse_from(args).unwrap()
+        };
+        let species = layout.species_dir(SLUG);
+        let entries = || {
+            let mut names: Vec<String> = std::fs::read_dir(&species)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+                .collect();
+            names.sort();
+            names
+        };
+        // The catalog stops loading, as when its link target moves. Stock
+        // `grm count` refuses; so does the sparse matrix, before it writes.
+        std::fs::remove_file(layout.catalog_dir().join("AMR_CDS.fa")).unwrap();
+        let count = Cli::try_parse_from(["grm", "--data", &data, "count", "--species", SLUG]);
+        assert!(run(count.unwrap()).is_err());
+        let err = run(parse(&[])).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("--allow-missing-catalog"),
+            "{err:#}"
+        );
+        assert_eq!(entries(), ["genomes.txt"]);
+        // As with `grm count --allow-missing-catalog`, the flag counts without
+        // gene calls.
+        run(parse(&["--allow-missing-catalog"])).unwrap();
+        let counted = grm::species::load_counted(&layout, SLUG).unwrap();
+        assert!(counted.genomes.iter().all(|g| g.catalog_version.is_empty()));
+        assert!(
+            Cli::try_parse_from([
+                "grm",
+                "matrix",
+                "--species",
+                SLUG,
+                "--allow-missing-catalog"
+            ])
+            .is_err()
+        );
+
+        // Ksets counted with the catalog are never deleted for a count
+        // without it, flag or no flag.
+        let other = tempfile::tempdir().unwrap();
+        let layout = fixture(other.path());
+        count_to_matrix(&layout, SLUG).unwrap();
+        let ksets = layout.kset_dir(SLUG);
+        let kept = std::fs::read_dir(&ksets).unwrap().count();
+        let before = std::fs::read(layout.species_dir(SLUG).join("counted.json")).unwrap();
+        std::fs::remove_file(layout.catalog_dir().join("AMR_CDS.fa")).unwrap();
+        let data = layout.root.to_str().unwrap();
+        for extra in [&[][..], &["--allow-missing-catalog"]] {
+            let mut args = vec![
+                "grm",
+                "--data",
+                data,
+                "matrix",
+                "--species",
+                SLUG,
+                "--disk-sparse",
+                "--block-width",
+                "64",
+            ];
+            args.extend_from_slice(extra);
+            assert!(run(Cli::try_parse_from(args).unwrap()).is_err());
+            assert_eq!(std::fs::read_dir(&ksets).unwrap().count(), kept);
+            assert_eq!(
+                std::fs::read(layout.species_dir(SLUG).join("counted.json")).unwrap(),
+                before
+            );
+            assert!(!layout.species_dir(SLUG).join("matrix-partials").exists());
+        }
     }
 
     #[test]
