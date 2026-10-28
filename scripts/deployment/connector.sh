@@ -16,8 +16,8 @@
 #          its connector.lock; then stop any cloudflared a killed supervisor
 #          left (see connector.spawn below)
 #   GRM_CONNECTOR_DIR      root-only directory with cloudflared,
-#                          cloudflared.sha256 and logs/ (required)
-#   GRM_TUNNEL_TOKEN_FILE  owned by the caller, mode 0600 or 0400
+#                          cloudflared.sha256 and logs/ (required, absolute)
+#   GRM_TUNNEL_TOKEN_FILE  owned by the caller, mode 0600 or 0400, absolute
 #                          (default GRM_CONNECTOR_DIR/tunnel.token)
 #   GRM_TUNNEL_PROTOCOL    http2 (default; QUIC failed from the Vast host) or quic
 # cloudflared.sha256 must hold exactly one line, "SHA256  cloudflared" (or
@@ -36,18 +36,27 @@
 # alive, and the supervisor's signal handler stops the child it last forked
 # even before the PID is assigned, so a TERM at any point leaves no
 # cloudflared and no supervisor waiting for one.
+#
+# Output is best effort (say): a closed output pipe makes a write fail, not
+# kill the supervisor (SIGPIPE is handled, so cloudflared still starts with
+# the default disposition), so cleanup always runs.
 set -euo pipefail
+trap ':' PIPE
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/lib.sh"
+say() { printf '%s\n' "$*" 2>/dev/null || true; }
+die() {
+    say "FAIL: $1" >&2
+    exit "${2:-1}"
+}
 C=${GRM_CONNECTOR_DIR:?set GRM_CONNECTOR_DIR to the connector directory}
 C=${C%/}
 TOKEN=${GRM_TUNNEL_TOKEN_FILE:-$C/tunnel.token}
 PROTOCOL=${GRM_TUNNEL_PROTOCOL:-http2}
 LOCK_FD='' MARK_FD='' MARK_ID=''
-die() {
-    echo "FAIL: $1" >&2
-    exit "${2:-1}"
-}
+# run changes into the connector directory before cloudflared opens its files,
+# so a relative path would be checked in one directory and used in another.
+case $C in /?*) ;; *) die "GRM_CONNECTOR_DIR must be an absolute path: $C" 2 ;; esac
 need() {
     local tool
     for tool in "$@"; do
@@ -80,6 +89,7 @@ verify_binary() {
 check() {
     local version
     case $PROTOCOL in http2 | quic) ;; *) die "unsupported protocol $PROTOCOL" 2 ;; esac
+    case $TOKEN in /*) ;; *) die "GRM_TUNNEL_TOKEN_FILE must be an absolute path: $TOKEN" 2 ;; esac
     [ -d "$C" ] && [ ! -L "$C" ] || die "$C is not a directory" 2
     private "$C"
     verify_binary
@@ -87,7 +97,7 @@ check() {
     private "$TOKEN"
     private "$(dirname -- "$TOKEN")"
     version=$("$C/cloudflared" --version 2>/dev/null </dev/null | sed -n 1p) || true
-    echo "connector check pass: $version, protocol=$PROTOCOL, token file permissions ok"
+    say "connector check pass: $version, protocol=$PROTOCOL, token file permissions ok"
 }
 
 # The files run writes or locks are plain, and logs/ holds only regular files.
@@ -118,12 +128,12 @@ supervisor_absent() {
 reap_orphans() {
     local id held
     [ -e "$C/connector.spawn" ] || [ -L "$C/connector.spawn" ] || return 0
-    id=$(file_id "$C/connector.spawn") || { echo "FAIL: $C/connector.spawn is not a regular file" >&2; return 1; }
+    id=$(file_id "$C/connector.spawn") || { say "FAIL: $C/connector.spawn is not a regular file" >&2; return 1; }
     lock_free "$C/connector.spawn" && return 0
     held=$(mark_holders "$id")
-    echo "connector processes left by a supervisor that was killed: ${held:-none this user can see}"
-    mark_stop "$id" "$C/connector.spawn" || { echo "FAIL: they may remain: $MARK_ERR" >&2; return 1; }
-    echo "stopped the connector processes left by a killed supervisor: ${held:-none}"
+    say "connector processes left by a supervisor that was killed: ${held:-none this user can see}"
+    mark_stop "$id" "$C/connector.spawn" || { say "FAIL: they may remain: $MARK_ERR" >&2; return 1; }
+    say "stopped the connector processes left by a killed supervisor: ${held:-none}"
 }
 
 # Called on TERM, INT and HUP: stop at the next check, and stop the child
@@ -143,10 +153,12 @@ on_exit() {
     local rc=$?
     trap - EXIT
     trap ':' TERM INT HUP
-    if [ -n "${child:-}" ] && [ -n "${child_start:-}" ]; then stop_tree "$child" "$child_start" || rc=1; fi
+    set +e
+    # With its process group, even if cloudflared itself has exited.
+    if [ -n "${child:-}" ] && [ -n "${child_start:-}" ]; then stop_tree "$child" "$child_start" group || rc=1; fi
     close_fd MARK_FD
     if [ -n "$MARK_ID" ] && ! mark_stop "$MARK_ID" "$C/connector.spawn"; then
-        echo "FAIL: connector processes may remain: $MARK_ERR" >&2
+        say "FAIL: connector processes may remain: $MARK_ERR" >&2
         rc=1
     fi
     rm -f -- "$C/supervisor.pid" "$C/connector.pid"
@@ -164,7 +176,7 @@ run() {
     child='' child_start='' stopping=0
     trap on_signal TERM INT HUP
     open_fd LOCK_FD "$C/connector.lock" || die "$C/connector.lock cannot be opened as a regular file" 2
-    flock -n "$LOCK_FD" || { echo "a connector supervisor already holds $C/connector.lock"; exit 0; }
+    flock -n "$LOCK_FD" || { say "a connector supervisor already holds $C/connector.lock"; exit 0; }
     checkpoint conn-locked
     reap_orphans || die "not starting while processes of a killed supervisor may remain" 1
     mark_lock "$C/connector.spawn" || die "cannot lock $C/connector.spawn" 1
@@ -198,6 +210,10 @@ run() {
             fi
             wait "$child" 2>/dev/null || true
         done
+        # cloudflared exited: nothing it forked into its group may outlive it.
+        if [ -n "$child_start" ]; then
+            stop_tree "$child" "$child_start" group || die "processes of cloudflared pid $child would not stop" 1
+        fi
         child='' child_start=''
         for ((i = 0; i < 25 && !stopping; i++)); do sleep 0.2 {LOCK_FD}>&-; done
     done
@@ -236,7 +252,7 @@ stop() {
     [ -d "$C" ] && [ ! -L "$C" ] || die "$C is not a directory" 2
     here=$(cd -- "$C" && pwd -P)
     if [ ! -e "$C/supervisor.pid" ] && [ ! -L "$C/supervisor.pid" ]; then
-        echo "connector supervisor is not running"
+        say "connector supervisor is not running"
         if supervisor_absent; then reap_orphans || die "connector processes of a killed supervisor may remain" 1; fi
         return 0
     fi
@@ -245,7 +261,7 @@ stop() {
     pid=${BASH_REMATCH[1]}
     start=${BASH_REMATCH[2]}
     if ! alive "$pid" "$start"; then
-        echo "supervisor.pid is stale: pid $pid has exited or is another process now; no signal sent"
+        say "supervisor.pid is stale: pid $pid has exited or is another process now; no signal sent"
         if supervisor_absent; then reap_orphans || die "connector processes of a killed supervisor may remain" 1; fi
         return 0
     fi
@@ -255,7 +271,7 @@ stop() {
     for _ in $(seq 1 90); do
         if ! alive "$pid" "$start"; then
             if supervisor_absent; then reap_orphans || die "the supervisor stopped, but connector processes may remain" 1; fi
-            echo "connector stopped; the grm service is unchanged"
+            say "connector stopped; the grm service is unchanged"
             return 0
         fi
         sleep 0.5

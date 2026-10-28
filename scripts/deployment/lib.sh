@@ -26,7 +26,8 @@
 # (by device and inode, so a deleted or renamed marker still counts), and
 # lock_free proves that none is left, including any this shell cannot see
 # (another user's or a non-dumpable process). mark_stop stops them, with their
-# process groups, and succeeds only on that proof.
+# process groups (until no member is left, even once a group's leader has
+# exited), and succeeds only on that proof and when every one of them stopped.
 
 # PATH is absent, or a regular file that is not a link.
 plain_target() {
@@ -320,21 +321,44 @@ group_alive() {
     done
     return 1
 }
-# stop_tree PID START: stop the process that started at START, and its process
-# group when it leads one (a process started through setsid), unless that is
-# this shell's own group: SIGTERM (with SIGCONT, so a stopped process acts on
-# it), up to 10 s, then SIGKILL, up to 10 s. A PID now held by another process
+# group_left GROUP START: process group GROUP, which the process that started at
+# START leads or led, still has a live member. A group's ID is not reused while
+# it has a member, so the members of a group whose leader has exited are still
+# in that group; a live process with that PID and another start time shows that
+# the group ended and the number was reused, so it counts as gone.
+group_left() {
+    if proc_stat "$1" && [ "$PS_START" != "$2" ]; then return 1; fi
+    group_alive "$1"
+}
+# tree_send SIGNAL PID START GROUP: signal PID while it is the process that
+# started at START, and process group GROUP, if given, while it has a member.
+tree_send() {
+    if alive "$2" "$3"; then kill -s "$1" "$2" 2>/dev/null || true; fi
+    if [ -n "$4" ] && group_left "$4" "$3"; then kill -s "$1" -- "-$4" 2>/dev/null || true; fi
+}
+# stop_tree PID START [group]: stop the process that started at START, and its
+# process group when it leads one (a process started through setsid), unless
+# that is this shell's own group: SIGTERM (with SIGCONT, so a stopped process
+# acts on it), up to 10 s, then SIGKILL, up to 10 s. The group gets each signal
+# while it has a member, even after its leader has exited, so a descendant that
+# ignores SIGTERM is still killed. With "group", the group that PID led is
+# stopped even when PID has already exited. A PID now held by another process
 # counts as stopped and gets no signal. Succeeds once all of them are gone.
 stop_tree() {
-    local pid=$1 start=$2 group='' leads sig _
-    alive "$pid" "$start" || return 0
-    leads=$PS_PGRP
-    if [ "$leads" = "$pid" ] && proc_stat "$$" && [ "$PS_PGRP" != "$pid" ]; then group=$pid; fi
+    local pid=$1 start=$2 group='' sig _
+    if alive "$pid" "$start"; then
+        if [ "$PS_PGRP" = "$pid" ]; then group=$pid; fi
+    elif [ "${3:-}" = group ] && group_left "$pid" "$start"; then
+        group=$pid
+    else
+        return 0
+    fi
+    if [ -n "$group" ] && { ! proc_stat "$$" || [ "$PS_PGRP" = "$group" ]; }; then group=''; fi
     for sig in TERM KILL; do
-        alive "$pid" "$start" && tree_signal "$sig" "$pid" "$group"
-        [ "$sig" = KILL ] || { alive "$pid" "$start" && tree_signal CONT "$pid" "$group"; }
+        tree_send "$sig" "$pid" "$start" "$group"
+        [ "$sig" = KILL ] || tree_send CONT "$pid" "$start" "$group"
         for _ in $(seq 1 40); do
-            if ! alive "$pid" "$start" && { [ -z "$group" ] || ! group_alive "$group"; }; then return 0; fi
+            if ! alive "$pid" "$start" && { [ -z "$group" ] || ! group_left "$group" "$start"; }; then return 0; fi
             sleep 0.25
         done
     done
@@ -396,33 +420,46 @@ mark_create() {
     return 1
 }
 # mark_stop ID FILE [PID START]: stop every process holding the marker ID
-# (and the registered PID, START), with their process groups, then require the
-# proof that none is left: no holder this shell can see, the registered
-# process gone, and FILE, still the marker ID, with its lock free. Returns 1
-# with the reason in MARK_ERR otherwise. This shell's own descriptor on the
-# marker (MARK_FD) must be closed first, or unlocked.
+# (and the registered PID, START, with the process group it leads or led, so a
+# descendant that closed the marker is found even after PID exited), with their
+# process groups, then require the proof that none is left: every stop
+# succeeded, no holder this shell can see, the registered process and its group
+# gone, and FILE, still the marker ID, with its lock free. Returns 1 with the
+# reason in MARK_ERR otherwise. This shell's own descriptor on the marker
+# (MARK_FD) must be closed first, or unlocked.
 mark_stop() {
     local id=$1 file=$2 cpid=${3:-} cstart=${4:-} p s round pids
     MARK_ERR=''
     for round in 1 2 3; do
         pids=$(mark_holders "$id")
-        if [ -n "$cpid" ] && [ -n "$cstart" ] && alive "$cpid" "$cstart"; then pids="$cpid $pids"; fi
+        if registered_left "$cpid" "$cstart"; then pids="$cpid $pids"; fi
         [ -n "${pids// /}" ] || break
         for p in $pids; do
-            s=$(proc_start "$p") || continue
-            [ "$p" != "$cpid" ] || s=$cstart
-            stop_tree "$p" "$s" || MARK_ERR="pid $p would not stop"
+            if [ "$p" = "$cpid" ]; then
+                stop_tree "$p" "$cstart" group || MARK_ERR="pid $p or its process group would not stop"
+            else
+                s=$(proc_start "$p") || continue
+                stop_tree "$p" "$s" || MARK_ERR="pid $p would not stop"
+            fi
         done
     done
+    # A process that would not stop may have closed the marker, so the proof
+    # below would not see it.
+    [ -z "$MARK_ERR" ] || return 1
     pids=$(mark_holders "$id")
     [ -z "$pids" ] || { MARK_ERR="pids $pids still hold the marker"; return 1; }
-    if [ -n "$cpid" ] && [ -n "$cstart" ] && alive "$cpid" "$cstart"; then
-        MARK_ERR="the registered pid $cpid would not stop"
+    if registered_left "$cpid" "$cstart"; then
+        MARK_ERR="the registered pid $cpid or its process group would not stop"
         return 1
     fi
     [ "$(file_id "$file" 2>/dev/null)" = "$id" ] ||
         { MARK_ERR="${file##*/} is missing or replaced, so its lock cannot show that every process is gone"; return 1; }
     lock_free "$file" || { MARK_ERR="${file##*/} is still locked by a process this user cannot see"; return 1; }
+}
+# registered_left PID START: PID (if given) is still the process that started
+# at START, or the process group it led has a member.
+registered_left() {
+    [ -n "$1" ] && [ -n "$2" ] && { alive "$1" "$2" || group_left "$1" "$2"; }
 }
 
 # cmdline_arg PID FLAG: the argument after FLAG in PID's command line.

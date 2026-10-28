@@ -56,9 +56,11 @@ on_exit() {
 trap on_exit EXIT
 command -v cc >/dev/null || { echo "apply tests need cc to build the stub grm" >&2; exit 2; }
 D=$T/root
-read -r LP SP < <(python3 -I -c '
+# LP is the live port, SP the stage port, and XP a port where nothing listens
+# (the proxy that health checks must not use).
+read -r LP SP XP < <(python3 -I -c '
 import socket
-s = [socket.socket() for _ in range(2)]
+s = [socket.socket() for _ in range(3)]
 for x in s: x.bind(("127.0.0.1", 0))
 print(*[x.getsockname()[1] for x in s])')
 export GRM_DEPLOY_ROOT=$D GRM_PORT=$LP GRM_SKIP_BROWSER=1
@@ -156,6 +158,14 @@ kill_live() {
 listens_as() { [ "$(listener "$LP")" = "$1" ]; }
 proc_alive() { [ -d "/proc/$1" ] && [ "$(sed 's/.*) //' "/proc/$1/stat" 2>/dev/null | cut -d' ' -f1)" != Z ]; }
 gone() { ! proc_alive "$1"; }
+# start_of PID: its start time (field 22 of /proc/PID/stat), or 0 once it is
+# gone, so a process that exited early fails an assertion instead of
+# aborting the suite on an unset field.
+start_of() {
+    local -a f
+    read -r -a f <<<"$(sed 's/.*) //' "/proc/$1/stat" 2>/dev/null)" || true
+    printf '%s\n' "${f[19]:-0}"
+}
 # The spawn marker named by serve-PORT.starting (default the live port).
 jmark() { sed -n 's/.* mark=\([^ ]*\) .*/\1/p' "$D/serve-${1:-$LP}.starting" 2>/dev/null || true; }
 locked() { ! flock -n "$1" true; }
@@ -185,13 +195,14 @@ killbg() {  # SIGKILL the background command; sets rc
     set -e
 }
 # hidden_lock FILE: a non-dumpable process (its descriptors and environment
-# unreadable to this user) takes FILE's flock (hidden=its PID).
+# unreadable to this user) takes FILE's flock (hidden=its PID). It waits for
+# the lock, so the locked probe below cannot make it give up.
 hidden_lock() {
     python3 -I -c '
 import ctypes, fcntl, os, sys, time
 ctypes.CDLL(None).prctl(4, 0)
 fd = os.open(sys.argv[1], os.O_RDWR)
-fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+fcntl.flock(fd, fcntl.LOCK_EX)
 time.sleep(600)
 ' "$1" >/dev/null 2>&1 &
     hidden=$!
@@ -291,6 +302,7 @@ make_release() {
     cp "$T/grm-stub" "$R/grm"
     echo '<!doctype html><title>GRM</title>' >"$R/dist/index.html"
     echo "console.log('$1')" >"$R/dist/assets/index-test.js"
+    echo "// browser check of $1" >"$R/browser-check.cjs"
     printf '%s\n' "$2" >"$R/COMMIT"
     (cd "$R" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum >"$T/manifest" && mv "$T/manifest" MANIFEST.sha256)
     chmod -R a-w "$R"
@@ -475,6 +487,17 @@ check "SIGTERM during activation exits 1 after restoring the old pair" -- test "
 check "rel1 with p237 serves after the interruption" -- test "$(live)" = "rel1 p237"
 check "the interrupted candidate was stopped" -- test -z "$(running rel2)"
 check "the interrupted activation reports the old pair serving again" -- grep -q 'serving again' "$T/act.out"
+
+# A closed output pipe cannot cut recovery short: the reader of activation's
+# output exits once the candidate has started, the candidate then fails its
+# health check, and every later write fails instead of killing the script.
+set +e
+GRM_STUB_SLOW=/rel2/ GRM_STUB_BAD=/rel2/ bash -c 'bash "$1/activate.sh" rel2 p275 --apply 2>&1; echo "$?" >"$2"' _ "$S" "$T/pipe.rc" |
+    sed -n '/started rel2/q'
+set -e
+check "with its output pipe closed after the candidate started, the failed activation exits 1" -- \
+    test "$(cat "$T/pipe.rc" 2>/dev/null)" = 1
+check "with its output pipe closed, recovery stopped the candidate and rel1 serves again, recorded" -- rel1_back
 
 mark
 GRM_STUB_FAIL=/rel2/ bash "$S/activate.sh" rel2 p275 --apply >"$T/act.out" 2>&1 &
@@ -778,6 +801,25 @@ expect 0 'restore health pass: rel2 with p275' "argument-free restore after a cr
     bash "$S/restore.sh" --apply
 expect 0 'live health pass: rel1 with p237' "rollback to 237 after the restore" -- bash "$S/rollback.sh" --apply
 
+# Health requests ignore proxy settings: every proxy variable and a ~/.curlrc
+# name a loopback port where nothing listens, which would fail every check,
+# the rollback restart's included.
+mkdir "$T/curlhome"
+printf 'proxy = "http://127.0.0.1:%s"\n' "$XP" >"$T/curlhome/.curlrc"
+proxied() {
+    env HOME="$T/curlhome" http_proxy="http://127.0.0.1:$XP" HTTP_PROXY="http://127.0.0.1:$XP" \
+        all_proxy="http://127.0.0.1:$XP" ALL_PROXY="http://127.0.0.1:$XP" no_proxy= NO_PROXY= "$@"
+}
+check "a plain curl with those settings fails (the control)" -- \
+    eval '! proxied curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$LP/data/index.json"'
+expect 1 'serving again' "with proxy settings, a failed candidate's rollback restart is checked directly" -- \
+    proxied env GRM_STUB_BAD=/rel2/ bash "$S/activate.sh" rel2 p275 --apply
+expect 0 'live health pass: rel2 with p275' "with proxy settings, activation is checked directly" -- \
+    proxied bash "$S/activate.sh" rel2 p275 --apply
+expect 0 'smoke-pass .*datasets=275' "with proxy settings, status is checked directly" -- proxied bash "$S/status.sh"
+expect 0 'live health pass: rel1 with p237' "with proxy settings, rollback is checked directly" -- \
+    proxied bash "$S/rollback.sh" --apply
+
 # A damaged current release does not block a rollback to an intact previous
 # pair, but the damaged pair must be exactly what state/active records, is
 # never a rollback target and is never restarted.
@@ -915,8 +957,7 @@ imark=$(basename "$(find "$D/spawn" -type f -name '*.*' -print -quit)")
 ipid=$!
 wait_for 10 listens_as "$ipid" || true
 rm "$T/imp-bin/grm"
-read -r -a istat <<<"$(sed 's/.*) //' "/proc/$ipid/stat")"
-printf 'pid=%s start=%s label=rel2 publication=p275 token=%s mark=%s mark_id=%s\n' "$ipid" "${istat[19]}" "${imark%.*}" "$imark" \
+printf 'pid=%s start=%s label=rel2 publication=p275 token=%s mark=%s mark_id=%s\n' "$ipid" "$(start_of "$ipid")" "${imark%.*}" "$imark" \
     "$(stat -c %d:%i "$D/spawn/$imark")" >"$D/serve-$LP.pid"
 cp "$T/active.rel2" "$D/state/active"
 expect 2 'not identified by its recorded start: .*does not hold spawn/' "rollback refuses an impostor that does not hold the recorded marker" -- \
@@ -1012,10 +1053,130 @@ check "an approval path made a directory during the stage fails it" -- test "$rc
 check "that stage leaves no candidate or listener" -- test -z "$(running rel3)$(listener "$SP")"
 rmdir "$D/go/rel3--p237"
 
+# The browser check that stage runs is the release's own copy, which its
+# manifest binds to its commit; a different script in src-LABEL never runs.
+# node is a stub that records the script it was given.
+mkdir -p "$T/nodebin" "$T/playwright" "$D/src-rel3/web/scripts"
+cat >"$T/nodebin/node" <<'SH'
+#!/bin/sh
+printf '%s\n' "$1" >>"$GRM_TEST_ROOT/node.runs"
+exit "${GRM_STUB_NODE_RC:-0}"
+SH
+chmod +x "$T/nodebin/node"
+echo 'process.exit(0)' >"$D/src-rel3/web/scripts/browser-check.cjs"
+browser3() {  # browser3 [NAME=VALUE...]: stage rel3 with the browser check
+    env -u GRM_SKIP_BROWSER PATH="$T/nodebin:$PATH" GRM_PLAYWRIGHT_CORE="$T/playwright" GRM_EXPECT_DATASETS=237 "$@" \
+        bash "$S/stage.sh" rel3 p237 "$SP" --apply
+}
+expect 0 'stage pass: approved rel3 with p237 \(browser=pass\)' "stage runs the browser check and approves browser=pass" -- browser3
+check "the check that ran is the release's manifest-bound copy, not src-rel3's" -- \
+    test "$(cat "$T/node.runs")" = "$D/release/rel3/browser-check.cjs"
+check "the approval records browser=pass" -- grep -q '^stage=0 browser=pass ' "$D/go/rel3--p237"
+rm "$D/go/rel3--p237"
+expect 1 'stage rel3 with p237 failed' "a failing browser check fails the stage" -- browser3 GRM_STUB_NODE_RC=1
+check "the failed browser check wrote no approval and left no candidate" -- \
+    test ! -e "$D/go/rel3--p237" -a -z "$(running rel3)$(listener "$SP")"
+
+# A reused PID: in a new user and PID namespace, where this test may choose the
+# next PID, stage's candidate exits at once (GRM_STUB_FAIL), stage reaps it and
+# stops itself at "healthy", and a new process takes the candidate's PID.
+# Resumed, stage must fail without signalling that process.
+cat >"$T/pid-reuse.sh" <<'SH'
+S=$1 SP=$2
+env GRM_EXPECT_DATASETS=237 GRM_STUB_FAIL=/rel3/ GRM_TEST_SIGNAL_AT=healthy GRM_TEST_SIGNAL=STOP \
+    bash "$S/stage.sh" rel3 p237 "$SP" --apply >"$GRM_TEST_ROOT/reuse.out" 2>&1 &
+stage=$!
+state() { sed 's/.*) //' "/proc/$1/stat" 2>/dev/null | cut -d' ' -f1; }
+for _ in $(seq 300); do [ "$(state "$stage")" = T ] && break; sleep 0.1; done
+cand=$(sed -n 's/.* child=\([0-9]*\) .*/\1/p' "$GRM_DEPLOY_ROOT/serve-$SP.starting" 2>/dev/null)
+for _ in $(seq 100); do [ -n "$cand" ] && [ ! -e "/proc/$cand" ] && break; sleep 0.1; done
+if [ "$(state "$stage")" != T ] || [ -z "$cand" ] || [ -e "/proc/$cand" ]; then
+    echo "reuse=unset stage=$(state "$stage") cand=$cand"
+    kill -KILL "$stage"
+    exit 1
+fi
+echo "$((cand - 1))" >/proc/sys/kernel/ns_last_pid
+sleep 300 &
+imp=$!
+if [ "$imp" != "$cand" ]; then
+    echo "reuse=missed cand=$cand got=$imp"
+    kill -KILL "$stage" "$imp"
+    exit 1
+fi
+kill -CONT "$stage"
+wait "$stage"
+rc=$?
+case $(state "$imp") in '' | Z) imp_state=gone ;; *) imp_state=alive ;; esac
+kill -KILL "$imp" 2>/dev/null
+echo "reuse=ok stage_rc=$rc impostor=$imp_state"
+SH
+pidns=(unshare --user --map-root-user --pid --fork --mount-proc)
+skipped=0
+if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
+    expect 0 '^reuse=ok stage_rc=1 impostor=alive$' "stage fails, and signals no process that took its exited candidate's PID" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/pid-reuse.sh" "$S" "$SP"
+    check "that stage left no journal, listener or approval" -- \
+        test ! -e "$D/serve-$SP.starting" -a -z "$(listener "$SP")" -a ! -e "$D/go/rel3--p237"
+    check "its receipts say the candidate exited before the checks finished" -- \
+        grep -rq 'exited before the checks finished' "$D/stage"
+else
+    echo "skip stage with a reused candidate PID (no unprivileged user and PID namespaces)"
+    skipped=$((skipped + 3))
+fi
+
+# Process groups, through lib.sh directly: a registered leader started under
+# setsid forks a descendant that closes the spawn marker, ignores SIGTERM and
+# stays in the leader's group. mark_stop must kill it whether the leader holds
+# the marker and exits on SIGTERM ("running") or has already exited
+# ("exited"), and must fail when a stop failed even if nothing holds the marker
+# by its final check ("failing").
+cat >"$T/group-stop.sh" <<'SH'
+set -u
+source "$1/lib.sh"
+dir=$2 mode=$3
+mark_create "$dir" grp || { echo "no marker"; exit 3; }
+if [ "$mode" = failing ]; then
+    sleep 300 &
+    close_fd MARK_FD
+    stop_tree() { kill -KILL "$1" 2>/dev/null; sleep 0.5; return 1; }
+    mark_stop "$MARK_ID" "$MARK_PATH"
+    echo "rc=$? err=$MARK_ERR"
+    exit 0
+fi
+( exec setsid bash -c '
+    (trap "" TERM; exec sleep 300 '"$MARK_FD"'>&-) &
+    echo "$!" >"$1.kid"
+    while [ ! -e "$1.go" ]; do sleep 0.05; done
+    [ "$2" = exited ] && exit 0
+    wait' _ "$dir/leader" "$mode" ) &
+leader=$!
+for _ in $(seq 100); do [ -s "$dir/leader.kid" ] && break; sleep 0.05; done
+kid=$(cat "$dir/leader.kid")
+lstart=$(proc_start "$leader")
+kstart=$(proc_start "$kid")
+for _ in $(seq 100); do ! holds "$kid" "$MARK_ID" && [ "$(proc_comm "$kid")" = sleep ] && break; sleep 0.05; done
+proc_stat "$kid" && [ "$PS_PGRP" = "$leader" ] || { echo "the descendant is not in the leader's group"; exit 3; }
+: >"$dir/leader.go"
+if [ "$mode" = exited ]; then wait "$leader"; fi
+close_fd MARK_FD
+mark_stop "$MARK_ID" "$MARK_PATH" "$leader" "$lstart"
+rc=$?
+if alive "$kid" "$kstart"; then k=alive; else k=gone; fi
+kill -KILL "$kid" 2>/dev/null
+echo "rc=$rc kid=$k err=$MARK_ERR"
+SH
+expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant in the group of a leader that exits on SIGTERM" -- \
+    timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-running" running
+expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant in the group of a registered leader that had exited" -- \
+    timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-exited" exited
+expect 0 '^rc=1 err=pid [0-9]+ would not stop$' "mark_stop fails after a failed stop even when no holder is left" -- \
+    timeout -k 5 60 bash "$T/group-stop.sh" "$S" "$T/groups-failing" failing
+
 # Concurrent builds under one label: one builds, the other refuses at once.
 G=$T/source
-mkdir -p "$G/web" "$T/bin"
+mkdir -p "$G/web/scripts" "$T/bin"
 echo '{}' >"$G/web/package.json"
+echo '// browser check of the source commit' >"$G/web/scripts/browser-check.cjs"
 git -C "$G" init -q
 git -C "$G" add -A
 git -C "$G" -c user.name=test -c user.email=test@example.invalid commit -qm source
@@ -1049,6 +1210,8 @@ check "the refused build reports the reserved label" -- grep -q 'already exists'
 check "only one build ran cargo" -- test "$(wc -l <"$T/cargo-runs")" = 1
 check "the built release verifies" -- bash -c 'source "$1/common.sh"; verify_release relB' _ "$S"
 check "the release records the built commit" -- test "$(cat "$D/release/relB/COMMIT")" = "$(git -C "$G" rev-parse HEAD)"
+check "the release carries the commit's browser check, listed in its manifest" -- \
+    eval 'cmp -s "$G/web/scripts/browser-check.cjs" "$D/release/relB/browser-check.cjs" && grep -q " \./browser-check\.cjs$" "$D/release/relB/MANIFEST.sha256"'
 
 # Connector supervisors: the lock stays with the supervisor, and stop signals only
 # the supervisor of its own directory.
@@ -1158,6 +1321,19 @@ check "the next run stopped the orphaned cloudflared first and started its own" 
 check "the next run reported the orphan it stopped" -- grep -q 'stopped the connector processes left by a killed supervisor' "$T/sup2.log"
 expect 0 'connector stopped' "connector stop stops that supervisor" -- connector "$C2" stop
 check "it left no cloudflared or lock" -- wait_for 10 conn_free "$C2"
+# The same with the next run's output pipe closed at once: its report of the
+# orphan fails to write instead of killing it before it stops the orphan.
+sup_up
+old=$child
+kill -KILL "$sup"
+rm -f "$C2/supervisor.pid"
+setsid bash -c 'GRM_CONNECTOR_DIR=$1 bash "$2/connector.sh" run 2>&1 | true' _ "$C2" "$S" </dev/null &
+wait_for 10 test -s "$C2/supervisor.pid" || true
+sup=$(sed -n 's/ .*//p' "$C2/supervisor.pid" 2>/dev/null || true)
+check "with its output pipe closed, the next run stopped the orphaned cloudflared" -- wait_for 10 gone "$old"
+check "with its output pipe closed, the next run started its own cloudflared" -- eval 'test -n "$sup" && wait_for 10 has_child "$sup"'
+expect 0 'connector stopped' "connector stop stops the supervisor whose output pipe is closed" -- connector "$C2" stop
+check "that supervisor left no cloudflared or lock" -- wait_for 10 conn_free "$C2"
 
 # A holder of connector.spawn this user cannot see: run starts nothing.
 hidden_lock "$C2/connector.spawn"
@@ -1186,20 +1362,22 @@ check "none of the refused runs started cloudflared" -- conn_free "$C2"
 
 # Identity is the open file description holding connector.lock's flock, with
 # the recorded start time and working directory; not a path, a command line
-# or an open descriptor 9.
+# or an open descriptor 9. A forged holder waits for the lock (flock -w), and
+# the test sees it hold the lock in its fdinfo instead of probing with flock,
+# which could take the lock at the forger's instant and make it give up.
+fd_locked() { grep -q '^lock:.*FLOCK.*WRITE' "/proc/$1/fdinfo/$2" 2>/dev/null; }
 (cd "$C2" && exec 9<>connector.lock && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
 forged=$!
 wait_for 5 test -e "/proc/$forged/fd/9" || true
-read -r -a fstat <<<"$(sed 's/.*) //' "/proc/$forged/stat")"
-printf '%s %s\n' "$forged" "${fstat[19]}" >"$C2/supervisor.pid"
+fstart=$(start_of "$forged")
+printf '%s %s\n' "$forged" "$fstart" >"$C2/supervisor.pid"
 expect 2 'no process holds the lock on .*connector.lock; no signal sent' \
     "connector stop refuses a shell in the directory with fd 9 on connector.lock while the lock is free" -- connector "$C2" stop
 check "the forged supervisor got no signal" -- proc_alive "$forged"
-(cd "$T" && exec 9<>"$C2/connector.lock" && flock -n 9 && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
+(cd "$T" && exec 9<>"$C2/connector.lock" && flock -w 10 9 && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
 forged3=$!
-wait_for 5 locked "$C2/connector.lock" || true
-read -r -a f3stat <<<"$(sed 's/.*) //' "/proc/$forged3/stat")"
-printf '%s %s\n' "$forged3" "${f3stat[19]}" >"$C2/supervisor.pid"
+wait_for 10 fd_locked "$forged3" 9 || true
+printf '%s %s\n' "$forged3" "$(start_of "$forged3")" >"$C2/supervisor.pid"
 expect 2 'works in another directory; no signal sent' \
     "connector stop refuses the holder of connector.lock when it works in another directory" -- connector "$C2" stop
 check "that lock holder got no signal" -- proc_alive "$forged3"
@@ -1209,14 +1387,13 @@ wait "$forged3" 2>/dev/null || true
 wait_for 5 eval '! locked "$C2/connector.lock"' || true
 sup_up
 cp "$C2/supervisor.pid" "$T/supervisor.real"
-printf '%s %s\n' "$forged" "${fstat[19]}" >"$C2/supervisor.pid"
+printf '%s %s\n' "$forged" "$fstart" >"$C2/supervisor.pid"
 expect 2 'does not hold the lock on .*connector.lock; no signal sent' \
     "connector stop refuses that shell while the real supervisor holds the lock" -- connector "$C2" stop
-(cd "$C2" && exec 9<>"$C1/connector.lock" && flock -n 9 && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
+(cd "$C2" && exec 9<>"$C1/connector.lock" && flock -w 10 9 && exec bash -c 'sleep 300; :' "$S/connector.sh" run) >/dev/null 2>&1 </dev/null &
 forged2=$!
-wait_for 5 test -e "/proc/$forged2/fd/9" || true
-read -r -a fstat <<<"$(sed 's/.*) //' "/proc/$forged2/stat")"
-printf '%s %s\n' "$forged2" "${fstat[19]}" >"$C2/supervisor.pid"
+wait_for 10 fd_locked "$forged2" 9 || true
+printf '%s %s\n' "$forged2" "$(start_of "$forged2")" >"$C2/supervisor.pid"
 expect 2 'does not hold the lock on .*connector.lock; no signal sent' \
     "connector stop refuses a process in the directory holding another directory's lock" -- connector "$C2" stop
 check "the real and forged supervisors got no signal" -- eval 'proc_alive "$sup" && proc_alive "$forged" && proc_alive "$forged2"'
@@ -1231,7 +1408,7 @@ pkill -KILL -P "$forged" || true
 pkill -KILL -P "$forged2" || true
 kill -KILL "$forged" "$forged2" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=428
+EXPECTED_ASSERTIONS=$((451 - skipped))  # less the reused-PID case without user and PID namespaces
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

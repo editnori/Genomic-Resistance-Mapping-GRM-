@@ -10,7 +10,9 @@
 # Writes only src-LABEL, src-LABEL.commit, target-LABEL (removed after the
 # build) and release/LABEL, none of which may exist beforehand. Creating
 # src-LABEL reserves the label before anything is extracted, so of two builds
-# under one label only the first proceeds.
+# under one label only the first proceeds. The release holds grm, dist/, COMMIT
+# and, when the commit has one, web/scripts/browser-check.cjs as
+# browser-check.cjs, which stage.sh runs.
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/common.sh"
 parse_args "$@"
@@ -54,6 +56,10 @@ mkdir "$R.partial"
 cp "$T/release/grm" "$R.partial/grm"
 cp -a "$S/web/dist" "$R.partial/dist"
 cp "$S.commit" "$R.partial/COMMIT"
+# stage.sh runs the browser check from here, where the manifest binds it to COMMIT.
+if [ -f "$S/web/scripts/browser-check.cjs" ] && [ ! -L "$S/web/scripts/browser-check.cjs" ]; then
+    cp "$S/web/scripts/browser-check.cjs" "$R.partial/browser-check.cjs"
+fi
 (cd "$R.partial" && find . -type f ! -path ./MANIFEST.sha256 -print0 | LC_ALL=C sort -z | xargs -0 sha256sum >MANIFEST.sha256)
 chmod -R a-w "$R.partial"
 mv -T "$R.partial" "$R"

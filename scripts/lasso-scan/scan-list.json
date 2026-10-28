@@ -1,0 +1,278 @@
+{
+ "description": "The large-species lasso scan list; docs/lasso-stopping.md registers its stop rule.",
+ "selection": "chosen by measured revision-7 lasso cost: the five species with the most lasso seconds, and in each its three costliest datasets plus its datasets with the most samples and the most features. That is 18 datasets, listed most expensive first, the order the scan runs them in.",
+ "revision7": {
+  "source": "the 275 revision-7 candidate reports in data/backups/revision7-all23-candidate-20261027",
+  "reports": 275,
+  "lasso_seconds": 14989.12888435,
+  "report_seconds": 25087.948175865,
+  "species_by_lasso_seconds": [
+   "mycobacterium_tuberculosis",
+   "klebsiella_pneumoniae",
+   "salmonella_enterica",
+   "escherichia_coli",
+   "staphylococcus_aureus"
+  ]
+ },
+ "datasets": [
+  {
+   "species": "mycobacterium_tuberculosis",
+   "id": "mycobacterium_tuberculosis__delamanid",
+   "samples": 1248,
+   "features": 138448,
+   "lasso_seconds": 420.929992951,
+   "outer_fits": 10,
+   "report_seconds": 467.897925495,
+   "input_fingerprint": "275e461dec002050",
+   "rank": 1,
+   "chosen_for": [
+    "cost rank 1 in species"
+   ]
+  },
+  {
+   "species": "mycobacterium_tuberculosis",
+   "id": "mycobacterium_tuberculosis__linezolid",
+   "samples": 1248,
+   "features": 138448,
+   "lasso_seconds": 328.62650571899997,
+   "outer_fits": 10,
+   "report_seconds": 417.136843622,
+   "input_fingerprint": "5f1c186bd729467a",
+   "rank": 2,
+   "chosen_for": [
+    "cost rank 2 in species"
+   ]
+  },
+  {
+   "species": "salmonella_enterica",
+   "id": "salmonella_enterica__ampicillin",
+   "samples": 1997,
+   "features": 1071174,
+   "lasso_seconds": 315.32102919600004,
+   "outer_fits": 10,
+   "report_seconds": 412.419145642,
+   "input_fingerprint": "967cf0a8e9287261",
+   "rank": 3,
+   "chosen_for": [
+    "cost rank 1 in species",
+    "most samples in species",
+    "most features in species"
+   ]
+  },
+  {
+   "species": "mycobacterium_tuberculosis",
+   "id": "mycobacterium_tuberculosis__clofazimine",
+   "samples": 1303,
+   "features": 142108,
+   "lasso_seconds": 310.861351566,
+   "outer_fits": 10,
+   "report_seconds": 376.434140281,
+   "input_fingerprint": "ce1be6a7d61e0322",
+   "rank": 4,
+   "chosen_for": [
+    "cost rank 3 in species"
+   ]
+  },
+  {
+   "species": "mycobacterium_tuberculosis",
+   "id": "mycobacterium_tuberculosis__rifampin",
+   "samples": 1967,
+   "features": 165495,
+   "lasso_seconds": 229.106459285,
+   "outer_fits": 10,
+   "report_seconds": 266.767036098,
+   "input_fingerprint": "1240ceced82ae570",
+   "rank": 9,
+   "chosen_for": [
+    "most samples in species",
+    "most features in species"
+   ]
+  },
+  {
+   "species": "staphylococcus_aureus",
+   "id": "staphylococcus_aureus__erythromycin",
+   "samples": 1957,
+   "features": 687376,
+   "lasso_seconds": 210.17141497400002,
+   "outer_fits": 10,
+   "report_seconds": 300.627446945,
+   "input_fingerprint": "cc45bb5523eaca7a",
+   "rank": 11,
+   "chosen_for": [
+    "cost rank 1 in species",
+    "most samples in species",
+    "most features in species"
+   ]
+  },
+  {
+   "species": "salmonella_enterica",
+   "id": "salmonella_enterica__tetracycline",
+   "samples": 1869,
+   "features": 1041948,
+   "lasso_seconds": 203.049696472,
+   "outer_fits": 10,
+   "report_seconds": 286.485132998,
+   "input_fingerprint": "1a6a4663fa9d9c5e",
+   "rank": 13,
+   "chosen_for": [
+    "cost rank 2 in species"
+   ]
+  },
+  {
+   "species": "klebsiella_pneumoniae",
+   "id": "klebsiella_pneumoniae__ciprofloxacin",
+   "samples": 1699,
+   "features": 2634659,
+   "lasso_seconds": 200.541537568,
+   "outer_fits": 10,
+   "report_seconds": 311.745420944,
+   "input_fingerprint": "0e892cf86853d727",
+   "rank": 14,
+   "chosen_for": [
+    "cost rank 1 in species"
+   ]
+  },
+  {
+   "species": "staphylococcus_aureus",
+   "id": "staphylococcus_aureus__clindamycin",
+   "samples": 1543,
+   "features": 599652,
+   "lasso_seconds": 172.896847691,
+   "outer_fits": 10,
+   "report_seconds": 233.030267311,
+   "input_fingerprint": "93777c20612ae5e4",
+   "rank": 16,
+   "chosen_for": [
+    "cost rank 2 in species"
+   ]
+  },
+  {
+   "species": "klebsiella_pneumoniae",
+   "id": "klebsiella_pneumoniae__piperacillin_tazobactam",
+   "samples": 1457,
+   "features": 2604491,
+   "lasso_seconds": 167.272346135,
+   "outer_fits": 10,
+   "report_seconds": 288.446772641,
+   "input_fingerprint": "c2a2e50da0d36e2a",
+   "rank": 17,
+   "chosen_for": [
+    "cost rank 2 in species"
+   ]
+  },
+  {
+   "species": "klebsiella_pneumoniae",
+   "id": "klebsiella_pneumoniae__sulfamethoxazole_trimethoprim",
+   "samples": 1500,
+   "features": 2218778,
+   "lasso_seconds": 161.307399195,
+   "outer_fits": 10,
+   "report_seconds": 274.136025886,
+   "input_fingerprint": "e018ea5f5941f9d8",
+   "rank": 20,
+   "chosen_for": [
+    "cost rank 3 in species"
+   ]
+  },
+  {
+   "species": "salmonella_enterica",
+   "id": "salmonella_enterica__chloramphenicol",
+   "samples": 1989,
+   "features": 1069152,
+   "lasso_seconds": 159.79855786299998,
+   "outer_fits": 10,
+   "report_seconds": 241.42977078,
+   "input_fingerprint": "005e64fac75da063",
+   "rank": 21,
+   "chosen_for": [
+    "cost rank 3 in species"
+   ]
+  },
+  {
+   "species": "escherichia_coli",
+   "id": "escherichia_coli__ceftazidime",
+   "samples": 1465,
+   "features": 2782077,
+   "lasso_seconds": 147.208958371,
+   "outer_fits": 10,
+   "report_seconds": 271.945825723,
+   "input_fingerprint": "5c2a7c894adb8d65",
+   "rank": 25,
+   "chosen_for": [
+    "cost rank 1 in species"
+   ]
+  },
+  {
+   "species": "escherichia_coli",
+   "id": "escherichia_coli__ampicillin",
+   "samples": 1965,
+   "features": 3108702,
+   "lasso_seconds": 147.08101103,
+   "outer_fits": 10,
+   "report_seconds": 274.76766148,
+   "input_fingerprint": "6942a28ab72b3962",
+   "rank": 26,
+   "chosen_for": [
+    "cost rank 2 in species",
+    "most samples in species",
+    "most features in species"
+   ]
+  },
+  {
+   "species": "staphylococcus_aureus",
+   "id": "staphylococcus_aureus__penicillin",
+   "samples": 1508,
+   "features": 632991,
+   "lasso_seconds": 139.920308949,
+   "outer_fits": 10,
+   "report_seconds": 188.303067929,
+   "input_fingerprint": "17b54708fb3a7ee3",
+   "rank": 29,
+   "chosen_for": [
+    "cost rank 3 in species"
+   ]
+  },
+  {
+   "species": "escherichia_coli",
+   "id": "escherichia_coli__amoxicillin_clavulanate",
+   "samples": 1114,
+   "features": 2503507,
+   "lasso_seconds": 122.68670270799998,
+   "outer_fits": 10,
+   "report_seconds": 233.858382296,
+   "input_fingerprint": "3f63fc878429edfa",
+   "rank": 37,
+   "chosen_for": [
+    "cost rank 3 in species"
+   ]
+  },
+  {
+   "species": "klebsiella_pneumoniae",
+   "id": "klebsiella_pneumoniae__gentamicin",
+   "samples": 1841,
+   "features": 2693460,
+   "lasso_seconds": 121.28733174199999,
+   "outer_fits": 10,
+   "report_seconds": 239.501019475,
+   "input_fingerprint": "901b273fd58d6a75",
+   "rank": 38,
+   "chosen_for": [
+    "most samples in species"
+   ]
+  },
+  {
+   "species": "klebsiella_pneumoniae",
+   "id": "klebsiella_pneumoniae__amikacin",
+   "samples": 1586,
+   "features": 2696252,
+   "lasso_seconds": 83.109711891,
+   "outer_fits": 10,
+   "report_seconds": 183.076334751,
+   "input_fingerprint": "b425eecf4e832bd4",
+   "rank": 65,
+   "chosen_for": [
+    "most features in species"
+   ]
+  }
+ ]
+}

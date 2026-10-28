@@ -17,6 +17,7 @@
 # Layout under the root:
 #   published/NAME/{report/,SOURCE.sha256}       immutable report publications
 #   release/LABEL/{grm,dist/,COMMIT,MANIFEST.sha256}   immutable builds
+#                   [browser-check.cjs]          the commit's browser check (stage.sh)
 #   src-LABEL/, src-LABEL.commit                 extracted source of a build
 #   stage/LABEL--NAME--TIME/                     candidate check receipts
 #   go/LABEL--NAME                               approval of one build and one report copy
@@ -34,6 +35,11 @@
 # child_checkpoint). They do nothing unless set.
 
 set -euo pipefail
+# A closed output pipe (the operator's pipe or terminal went away) must not
+# kill a script mid-switch or cut its cleanup short: with SIGPIPE handled, a
+# write there fails instead, and say ignores that. Handled, not ignored, so a
+# started server gets the default disposition.
+trap ':' PIPE
 
 D=${GRM_DEPLOY_ROOT:?set GRM_DEPLOY_ROOT to the absolute deployment root}
 D=${D%/}
@@ -76,12 +82,13 @@ parse_args() {
     done
 }
 
-# The log copy is best effort: a full disk must not stop a rollback, and a
-# deploy.log that is a link, FIFO or directory is never opened (append_line).
+# Both copies are best effort: a closed output pipe or a full disk must not
+# stop a rollback, and a deploy.log that is a link, FIFO or directory is never
+# opened (append_line).
 say() {
     local line
     line="$(date -u +%FT%TZ) $*"
-    printf '%s\n' "$line"
+    printf '%s\n' "$line" 2>/dev/null || true
     if ((APPLY)) && [ -d "$D" ]; then append_line "$D/deploy.log" "$line"; fi
 }
 die() {
@@ -670,10 +677,12 @@ recorded_service() {
     RS_LABEL=$PID_LABEL RS_PUB=$PID_PUB
 }
 
+# Health requests go straight to 127.0.0.1: -q skips ~/.curlrc and --noproxy
+# '*' every proxy variable, either of which would send them elsewhere.
 wait_ready() {
     local _
     for _ in $(seq 1 40); do
-        curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:$1/data/index.json" && return 0
+        curl -q --noproxy '*' -sf -o /dev/null --max-time 2 "http://127.0.0.1:$1/data/index.json" && return 0
         sleep 0.25
     done
     return 1
