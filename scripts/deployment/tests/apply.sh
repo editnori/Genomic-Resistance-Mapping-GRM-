@@ -1228,6 +1228,39 @@ kill -KILL "$w" 2>/dev/null
 if grep -q 'is missing or replaced, so its lock cannot show' "$ROOT/resolve.out"; then why=replaced; else why=other; fi
 echo "resolve_rc=$rc journal_left=$([ -e "$D/serve-8999.starting" ] && echo yes || echo no) unrelated=$u orphans=[$ORPHANS] reason=$why"
 SH
+# A holder whose PID is reused while mark_stop stops an earlier holder (the
+# 2026-10-29 review of 742cd4f, finding 1). Two holders of a start's lock:
+# H1 ignores TERM for 6 s, H2 exits after 2 s. mark_stop lists both, then
+# spends about 6 s on H1; meanwhile unrelated work Q (own session, no marker,
+# no token) takes H2's PID. mark_stop must leave Q alone.
+cat >"$T/pid-recycle.sh" <<'SH'
+set -u
+S=$1 dir=$2
+source "$S/lib.sh"
+mark_create "$dir" recycle || { echo "no marker"; exit 3; }
+echo 199 >/proc/sys/kernel/ns_last_pid
+setsid bash -c 'trap "" TERM; sleep 6; :' </dev/null >/dev/null 2>&1 &
+h1=$!
+echo 299 >/proc/sys/kernel/ns_last_pid
+setsid sleep 2 </dev/null >/dev/null 2>&1 &
+h2=$!
+close_fd MARK_FD
+sleep 0.3
+holds "$h1" "$MARK_ID" && holds "$h2" "$MARK_ID" || { echo "setup=failed: the holders do not hold the marker"; exit 3; }
+( mark_stop "$MARK_ID" "$MARK_PATH"; echo "rc=$?" >"$dir/ms.out" ) &
+ms=$!
+wait "$h2"
+echo $((h2 - 1)) >/proc/sys/kernel/ns_last_pid
+setsid sleep 300 </dev/null >/dev/null 2>&1 &
+q=$!
+qs=$(proc_start "$q")
+wait "$ms"
+if alive "$q" "$qs"; then u=alive; else u=KILLED; fi
+{ kill -KILL "$q"; wait "$q"; } 2>/dev/null
+setup=ok
+[ "$q" = "$h2" ] || setup="failed: Q got pid $q, not $h2"
+echo "setup=$setup mark_stop_$(cat "$dir/ms.out") unrelated=$u"
+SH
 pidns=(unshare --user --map-root-user --pid --fork --mount-proc)
 skipped=0
 if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
@@ -1246,9 +1279,12 @@ if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
     expect 0 '^resolve_rc=1 journal_left=yes unrelated=alive orphans=\[\] reason=replaced$' \
         "resolving a start whose marker is gone signals no process that holds the old inode locked, and keeps the journal" -- \
         timeout -k 5 120 "${pidns[@]}" bash "$T/marker-holder.sh" "$S" "$T/marker-replaced" replaced
+    expect 0 '^setup=ok mark_stop_rc=0 unrelated=alive$' \
+        "mark_stop signals no process that took the PID of a holder that exited while an earlier holder was being stopped" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/pid-recycle.sh" "$S" "$T/pid-recycle"
 else
-    echo "skip stage with a reused candidate PID, resolve with a reused group number and resolve with an unrelated marker holder (no unprivileged user and PID namespaces)"
-    skipped=$((skipped + 6))
+    echo "skip stage with a reused candidate PID, resolve with a reused group number or an unrelated marker holder, and a reused holder PID (no unprivileged user and PID namespaces)"
+    skipped=$((skipped + 7))
 fi
 
 # A candidate that passes every check and then exits before the stop fails
@@ -1713,7 +1749,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((483 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((484 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

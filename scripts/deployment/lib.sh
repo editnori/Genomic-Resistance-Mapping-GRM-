@@ -316,6 +316,17 @@ lock_holders() {
     done
     printf '%s\n' "${out# }"
 }
+# lock_holder_ids ID: lock_holders ID as PID:START words. The start time is
+# read before and after the lock is seen, and must not change, so the word
+# names the process that held the lock even if its PID is reused later.
+lock_holder_ids() {
+    local p s out=''
+    for p in $(mark_holders "$1"); do
+        s=$(proc_start "$p") || continue
+        holds_lock "$p" "$1" && [ "$(proc_start "$p" 2>/dev/null)" = "$s" ] && out+=" $p:$s"
+    done
+    printf '%s\n' "${out# }"
+}
 # lock_free FILE: FILE is a regular file and no process holds an exclusive
 # flock on it (every lock these scripts hold is exclusive). Returns 1 while
 # one does, 2 when FILE is missing or not a plain file. The probe takes a
@@ -548,7 +559,9 @@ mark_create() {
 # seen in the group while the leader lived (see Stopping and stop_tree).
 # Then require the proof that none is left: every stop succeeded, the
 # registered process and its group gone, FILE still the marker ID, no holder
-# of its lock this shell can see, and its lock free. Returns 1 with the reason in
+# of its lock this shell can see, and its lock free. A holder
+# is stopped only while it is still the process that held the lock at the
+# scan (PID and start time). Returns 1 with the reason in
 # MARK_ERR otherwise. This shell's own descriptor on the marker (MARK_FD) must
 # be closed first, or unlocked.
 mark_stop() {
@@ -557,10 +570,15 @@ mark_stop() {
     for round in 1 2 3; do
         # The inode is the marker's only while FILE still names it (see
         # Stopping); else nothing is tied to the start by the marker.
+        # Holders are PID:START words read at the scan (lock_holder_ids):
+        # stopping one can take 20 s, in which a later one may exit and its PID
+        # go to unrelated work, so each is checked again, by its start time and
+        # its lock, just before it is stopped. The registered process is a bare
+        # PID, stopped by its journaled start time.
         pids='' mid=''
         if [ "$(file_id "$file" 2>/dev/null)" = "$id" ]; then
             mid=$id
-            pids=$(lock_holders "$id")
+            pids=$(lock_holder_ids "$id")
             # The marker may have gone during the scan.
             [ "$(file_id "$file" 2>/dev/null)" = "$id" ] || pids='' mid=''
         fi
@@ -571,7 +589,8 @@ mark_stop() {
             if [ "$p" = "$cpid" ]; then
                 stop_tree "$p" "$cstart" "$token" "$mid" group || MARK_ERR=${STOP_ERR:-"pid $p or its process group would not stop"}
             else
-                s=$(proc_start "$p") || continue
+                s=${p#*:} p=${p%%:*}
+                alive "$p" "$s" && [ -n "$mid" ] && holds_lock "$p" "$mid" && alive "$p" "$s" || continue
                 stop_tree "$p" "$s" "$token" "$mid" || MARK_ERR=${STOP_ERR:-"pid $p would not stop"}
             fi
         done
