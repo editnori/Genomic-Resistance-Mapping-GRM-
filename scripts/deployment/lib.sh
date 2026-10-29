@@ -273,15 +273,21 @@ fds_on() {
     printf '%s\n' "${out# }"
 }
 holds() { [ -n "$(fds_on "$1" "$2")" ]; }
-# fd_holds_flock PID FD: PID's descriptor FD is the open file description
-# holding an exclusive flock (the kernel lists it in /proc/PID/fdinfo/FD).
-fd_holds_flock() {
+# fd_lock_mode PID FD: print WRITE or READ when PID's descriptor FD is the open
+# file description holding an exclusive or a shared flock (the kernel lists it
+# in /proc/PID/fdinfo/FD); fails when it holds none.
+fd_lock_mode() {
     local line
     while IFS= read -r line; do
-        case $line in lock:*FLOCK*WRITE*) return 0 ;; esac
+        case $line in
+            lock:*FLOCK*WRITE*) echo WRITE; return 0 ;;
+            lock:*FLOCK*READ*) echo READ; return 0 ;;
+        esac
     done 2>/dev/null <"/proc/$1/fdinfo/$2"
     return 1
 }
+# fd_holds_flock PID FD: PID's descriptor FD holds an exclusive flock.
+fd_holds_flock() { [ "$(fd_lock_mode "$1" "$2")" = WRITE ]; }
 # mark_holders ID: the PIDs, other than this shell, with a descriptor open on
 # the file with device:inode ID, whatever its path is now. A process whose
 # descriptors this user cannot read is missed; lock_free still sees it.
@@ -325,6 +331,38 @@ lock_holder_ids() {
         s=$(proc_start "$p") || continue
         holds_lock "$p" "$1" && [ "$(proc_start "$p" 2>/dev/null)" = "$s" ] && out+=" $p:$s"
     done
+    printf '%s\n' "${out# }"
+}
+# any_lockers ID: PID:START of the processes (other than this shell) whose
+# descriptor on the file with device:inode ID holds a flock, shared or
+# exclusive.
+any_lockers() {
+    local p s fd out=''
+    for p in $(mark_holders "$1"); do
+        s=$(proc_start "$p") || continue
+        for fd in $(fds_on "$p" "$1"); do
+            if fd_lock_mode "$p" "$fd" >/dev/null; then out+=" $p:$s"; break; fi
+        done
+    done
+    printf '%s\n' "${out# }"
+}
+# steady_lockers ID: the PIDs of any_lockers ID that hold a flock in each of
+# five looks 0.2 s apart. A lock_free probe (a shared lock for an instant)
+# drops out; a process holding a lock it was not given at the start, such as
+# one of the start's that converted the lock to shared, stays.
+steady_lockers() {
+    local keep m next kept out='' _
+    keep=$(any_lockers "$1")
+    for _ in 1 2 3 4; do
+        [ -n "$keep" ] || break
+        sleep 0.2
+        next=" $(any_lockers "$1") " kept=''
+        for m in $keep; do
+            case $next in *" $m "*) kept+=" $m" ;; esac
+        done
+        keep=${kept# }
+    done
+    for m in $keep; do out+=" ${m%%:*}"; done
     printf '%s\n' "${out# }"
 }
 # lock_free FILE: FILE is a regular file and no process holds an exclusive
@@ -559,7 +597,8 @@ mark_create() {
 # seen in the group while the leader lived (see Stopping and stop_tree).
 # Then require the proof that none is left: every stop succeeded, the
 # registered process and its group gone, FILE still the marker ID, no holder
-# of its lock this shell can see, and its lock free. A holder
+# of its lock this shell can see, no process this shell can see holding any
+# other lock on it for a second (steady_lockers), and its lock free. A holder
 # is stopped only while it is still the process that held the lock at the
 # scan (PID and start time). Returns 1 with the reason in
 # MARK_ERR otherwise. This shell's own descriptor on the marker (MARK_FD) must
@@ -606,6 +645,11 @@ mark_stop() {
         { MARK_ERR="${file##*/} is missing or replaced, so its lock cannot show that every process is gone (no process holding its old inode was signalled)"; return 1; }
     pids=$(lock_holders "$id")
     [ -z "$pids" ] || { MARK_ERR="pids $pids still hold the marker"; return 1; }
+    # A process of the start that converted its lock to shared holds no
+    # exclusive lock, and the shared probe of lock_free does not conflict with
+    # it; a lock_free probe of another script holds one for an instant only.
+    pids=$(steady_lockers "$id")
+    [ -z "$pids" ] || { MARK_ERR="pids $pids hold a lock on ${file##*/} that is not the start's exclusive lock (a process of the start that changed its lock, or another process); none of them was signalled"; return 1; }
     lock_free "$file" || { MARK_ERR="${file##*/} is still locked by a process this user cannot see"; return 1; }
 }
 # registered_left PID START: PID (if given) is still the process that started

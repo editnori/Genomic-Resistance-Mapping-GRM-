@@ -1261,6 +1261,29 @@ setup=ok
 [ "$q" = "$h2" ] || setup="failed: Q got pid $q, not $h2"
 echo "setup=$setup mark_stop_$(cat "$dir/ms.out") unrelated=$u"
 SH
+# A process of the start that leaves the group and converts its inherited lock
+# to shared (the same review, finding 2). It holds no exclusive lock, and the
+# shared probe of lock_free does not conflict with it, so mark_stop must not
+# succeed: it signals nothing, fails and names it.
+cat >"$T/lock-shared.sh" <<'SH'
+set -u
+S=$1 dir=$2
+source "$S/lib.sh"
+mark_create "$dir" change || { echo "no marker"; exit 3; }
+setsid bash -c 'flock -s "$1" || exit 9; exec sleep 300' _ "$MARK_FD" </dev/null >/dev/null 2>&1 &
+c=$!
+close_fd MARK_FD
+for _ in $(seq 100); do [ "$(proc_comm "$c")" = sleep ] && break; sleep 0.05; done
+cs=$(proc_start "$c")
+lk=none
+for fd in $(fds_on "$c" "$MARK_ID"); do lk=$(awk '$1 == "lock:" {print $5}' "/proc/$c/fdinfo/$fd"); lk=${lk:-none}; done
+mark_stop "$MARK_ID" "$MARK_PATH"
+rc=$?
+if alive "$c" "$cs"; then s=alive; else s=KILLED; fi
+kill -KILL "$c" 2>/dev/null
+case $MARK_ERR in "pids $c hold a lock on "*" that is not the start's exclusive lock"*) why=named ;; *) why=other ;; esac
+echo "child_lock=$lk mark_stop_rc=$rc child=$s reason=$why"
+SH
 pidns=(unshare --user --map-root-user --pid --fork --mount-proc)
 skipped=0
 if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
@@ -1282,9 +1305,12 @@ if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
     expect 0 '^setup=ok mark_stop_rc=0 unrelated=alive$' \
         "mark_stop signals no process that took the PID of a holder that exited while an earlier holder was being stopped" -- \
         timeout -k 5 120 "${pidns[@]}" bash "$T/pid-recycle.sh" "$S" "$T/pid-recycle"
+    expect 0 '^child_lock=READ mark_stop_rc=1 child=alive reason=named$' \
+        "mark_stop fails, signalling nothing, while a process of the start that left the group holds the lock as shared" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/lock-shared.sh" "$S" "$T/lock-shared"
 else
-    echo "skip stage with a reused candidate PID, resolve with a reused group number or an unrelated marker holder, and a reused holder PID (no unprivileged user and PID namespaces)"
-    skipped=$((skipped + 7))
+    echo "skip stage with a reused candidate PID, resolve with a reused group number or an unrelated marker holder, a reused holder PID and a shared lock (no unprivileged user and PID namespaces)"
+    skipped=$((skipped + 8))
 fi
 
 # A candidate that passes every check and then exits before the stop fails
@@ -1380,7 +1406,8 @@ expect 0 '^rc=1 err=pid [0-9]+ would not stop$' "mark_stop fails after a failed 
 # processes are gone, so its lock is free; a probe (connector.sh status, say,
 # from a shell whose group it leads) takes it for an instant. Here the probe
 # is frozen while it holds it, through a flock wrapper; mark_stop must not
-# take it for a holder of the start's lock, and must succeed.
+# take it for a holder of the start's lock or signal it. Frozen, it holds its
+# shared lock through mark_stop's steady check, so mark_stop fails closed.
 cat >"$T/lock-probe.sh" <<'SH'
 set -u
 source "$1/lib.sh"
@@ -1399,8 +1426,8 @@ if alive "$p" "$pstart"; then s=alive; else s=KILLED; fi
 kill -KILL "$p" 2>/dev/null
 echo "probe_lock=$mode mark_stop_rc=$rc probe=$s"
 SH
-expect 0 '^probe_lock=READ mark_stop_rc=0 probe=alive$' \
-    "mark_stop signals no lock_free probe that holds the free marker lock, and succeeds" -- \
+expect 0 '^probe_lock=READ mark_stop_rc=1 probe=alive$' \
+    "mark_stop signals no lock_free probe that holds the free marker lock (frozen, so it fails closed)" -- \
     timeout -k 5 90 bash "$T/lock-probe.sh" "$S" "$T/lock-probe"
 
 # Concurrent builds under one label: one builds, the other refuses at once.
@@ -1749,7 +1776,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((484 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((485 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
