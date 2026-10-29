@@ -598,7 +598,8 @@ mark_create() {
 # Then require the proof that none is left: every stop succeeded, the
 # registered process and its group gone, FILE still the marker ID, no holder
 # of its lock this shell can see, no process this shell can see holding any
-# other lock on it for a second (steady_lockers), and its lock free. A holder
+# other lock on it for a second (steady_lockers), its lock free, and, given
+# TOKEN, no live process carrying it (token_holders). A holder
 # is stopped only while it is still the process that held the lock at the
 # scan (PID and start time). Returns 1 with the reason in
 # MARK_ERR otherwise. This shell's own descriptor on the marker (MARK_FD) must
@@ -651,6 +652,10 @@ mark_stop() {
     pids=$(steady_lockers "$id")
     [ -z "$pids" ] || { MARK_ERR="pids $pids hold a lock on ${file##*/} that is not the start's exclusive lock (a process of the start that changed its lock, or another process); none of them was signalled"; return 1; }
     lock_free "$file" || { MARK_ERR="${file##*/} is still locked by a process this user cannot see"; return 1; }
+    # A process of the start that closed or released the marker and left the
+    # group is found by nothing above, but still carries the token.
+    pids=$(token_holders "$token")
+    [ -z "$pids" ] || { MARK_ERR="pids $pids carry this start's token (GRM_DEPLOY_SPAWN=$token) but hold neither its lock nor its group; none of them was signalled"; return 1; }
 }
 # registered_left PID START: PID (if given) is still the process that started
 # at START, or the process group it led has a member.
@@ -675,6 +680,21 @@ env_value() {
     for entry in "${env[@]}"; do
         [ "${entry%%=*}" != "$2" ] || { printf '%s\n' "${entry#*=}"; return 0; }
     done
+}
+# token_holders TOKEN: the live PIDs, other than this shell, whose environment
+# holds GRM_DEPLOY_SPAWN=TOKEN. A start's token is a fresh random UUID that a
+# process gets only through the exec of the start's server or cloudflared, so
+# each is the start's own.
+token_holders() {
+    local f p out=''
+    [ -n "$1" ] || return 0
+    for f in $(grep -lzxF -- "GRM_DEPLOY_SPAWN=$1" /proc/[0-9]*/environ 2>/dev/null); do
+        p=${f#/proc/}
+        p=${p%%/*}
+        [ "$p" != "$$" ] && [ "$p" != "$BASHPID" ] && proc_stat "$p" || continue
+        out+=" $p"
+    done
+    printf '%s\n' "${out# }"
 }
 # proc_comm PID: its command name.
 proc_comm() {

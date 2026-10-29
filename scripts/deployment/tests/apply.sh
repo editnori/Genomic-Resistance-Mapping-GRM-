@@ -1310,6 +1310,34 @@ if alive "$w" "$ws"; then u=alive; else u=KILLED; fi
 case $MARK_ERR in *"is missing or replaced"*) why=replaced ;; *) why=other ;; esac
 echo "mark_stop_rc=$rc unrelated=$u reason=$why"
 SH
+# A process of the start (it carries the start's token) that leaves the group
+# after closing the marker ("closed") or releasing the inherited lock with
+# flock -u ("unlocked"), which releases it for every process sharing it (the
+# 742cd4f review, F3). Nothing ties it to the start but the token, so
+# mark_stop must not succeed: it signals nothing, fails and names it.
+cat >"$T/token-left.sh" <<'SH'
+set -u
+S=$1 dir=$2 mode=$3
+source "$S/lib.sh"
+tok=$(cat /proc/sys/kernel/random/uuid)
+mark_create "$dir" tokleft || { echo "no marker"; exit 3; }
+if [ "$mode" = closed ]; then
+    env GRM_DEPLOY_SPAWN="$tok" setsid bash -c 'eval "exec $1>&-"; exec sleep 300' _ "$MARK_FD" </dev/null >/dev/null 2>&1 &
+else
+    env GRM_DEPLOY_SPAWN="$tok" setsid bash -c 'flock -u "$1" || exit 9; exec sleep 300' _ "$MARK_FD" </dev/null >/dev/null 2>&1 &
+fi
+c=$!
+for _ in $(seq 100); do [ "$(proc_comm "$c")" = sleep ] && break; sleep 0.05; done
+close_fd MARK_FD
+cs=$(proc_start "$c")
+held=no; holds "$c" "$MARK_ID" && held=yes
+mark_stop "$MARK_ID" "$MARK_PATH" '' '' "$tok"
+rc=$?
+if alive "$c" "$cs"; then s=alive; else s=KILLED; fi
+{ kill -KILL "$c"; wait "$c"; } 2>/dev/null
+case $MARK_ERR in "pids $c carry this start's token"*) why=token ;; *) why=other ;; esac
+echo "mode=$mode holds_marker=$held mark_stop_rc=$rc child=$s reason=$why"
+SH
 pidns=(unshare --user --map-root-user --pid --fork --mount-proc)
 skipped=0
 if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
@@ -1337,9 +1365,15 @@ if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
     expect 0 '^mark_stop_rc=1 unrelated=alive reason=replaced$' \
         "mark_stop signals no holder found in a scan during which the marker went, and fails" -- \
         timeout -k 5 120 "${pidns[@]}" bash "$T/marker-scan.sh" "$S" "$T/marker-scan"
+    expect 0 '^mode=closed holds_marker=no mark_stop_rc=1 child=alive reason=token$' \
+        "mark_stop fails, signalling nothing, while a process of the start that closed the marker and left the group carries its token" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/token-left.sh" "$S" "$T/token-closed" closed
+    expect 0 '^mode=unlocked holds_marker=yes mark_stop_rc=1 child=alive reason=token$' \
+        "mark_stop fails, signalling nothing, while a process of the start that released the lock and left the group carries its token" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/token-left.sh" "$S" "$T/token-unlocked" unlocked
 else
-    echo "skip stage with a reused candidate PID, resolve with a reused group number or an unrelated marker holder, a reused holder PID, a shared lock and a marker gone during a scan (no unprivileged user and PID namespaces)"
-    skipped=$((skipped + 9))
+    echo "skip stage with a reused candidate PID, resolve with a reused group number or an unrelated marker holder, a reused holder PID, a shared lock, a marker gone during a scan and a token left behind (no unprivileged user and PID namespaces)"
+    skipped=$((skipped + 11))
 fi
 
 # A candidate that passes every check and then exits before the stop fails
@@ -1805,7 +1839,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((486 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((488 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
