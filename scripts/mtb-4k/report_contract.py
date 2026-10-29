@@ -17,6 +17,12 @@ the contract instead of stopping. That mode is for diagnosis only: compare_cohor
 run_revision8_checks.py load strictly, so any invalid report stops them (L3). Binding failures
 (hashes, fingerprint, identity) always stop, and a report's SHA-256 is checked before it is
 parsed, so a bound report corrupted into invalid JSON is a binding failure too (I1).
+
+IRLS0: irls_steps may be 0, as in the checker, and the every-step-capped rule applies only once a
+step was taken. 690815a writes irls_steps 0 when the warm start already meets the KKT tolerance
+(src/learn/lasso.rs:70), the pinned check-results.py:114 accepts any non-negative step count,
+and the K review treated that status as impossible because it was at 855bdba. Whether a status
+converged stays the checker's to judge.
 """
 from __future__ import annotations
 import hashlib, importlib.util, json, math, re, statistics, sys
@@ -243,11 +249,14 @@ def validate_config(config,where="eval_config"):
 
 def validate_convergence(status,where):
  expect_keys(status,CONVERGENCE_KEYS,where)
- steps=integer(status["irls_steps"],where+".irls_steps",1)
+ # IRLS0: 690815a takes 0 IRLS steps when the warm start already meets the KKT tolerance (lasso.rs:70),
+ # which check-results.py accepts; a step must have been taken before every step can hit the cap.
+ steps=integer(status["irls_steps"],where+".irls_steps")
  hits=integer(status["sweep_cap_hits"],where+".sweep_cap_hits")
  converged=boolean(status["converged"],where+".converged")
  if hits>steps: fail(where,"sweep_cap_hits exceeds irls_steps")
- if converged and hits==steps: fail(where,"converged status cannot have every IRLS step hit the sweep cap")
+ if steps>=1:
+  if converged and hits==steps: fail(where,"converged status cannot have every IRLS step hit the sweep cap")
 def validate_lasso_fit(fit,where,lambda_count):
  expect_keys(fit,FIT_KEYS,where)
  for key in ("path_points","path_unconverged"): integer(fit[key],f"{where}.{key}")

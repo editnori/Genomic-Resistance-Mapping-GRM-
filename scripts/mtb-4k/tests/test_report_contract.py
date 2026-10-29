@@ -7,6 +7,13 @@ usage: FOLDGEN=<foldgen binary> python3 -I scripts/mtb-4k/tests/test_report_cont
 
 Ported from K's tests/test_validators.py (GuardTests, SolverStatusTests, KnownAnswerTests) with
 paths adapted; every K assertion is kept. The fixtures draw folds from the real foldgen.
+
+IRLS0 (marked): two solver-status controls changed, not dropped. SolverStatusTests' zero-step
+case is now 0 steps with 1 cap hit (still rejected), and 0 steps with none, converged, is
+accepted; the E4 entry is now "convergence irls_steps=0 with sweep_cap_hits 1" (still rejected,
+38 in all). 690815a writes irls_steps 0 when the warm start already meets the KKT tolerance
+(src/learn/lasso.rs:70), the pinned check-results.py:114 accepts any non-negative step count,
+and the K review treated that status as impossible because it was at 855bdba.
 """
 import copy,hashlib,json,math,os,shutil,subprocess,sys,tempfile,unittest
 from pathlib import Path
@@ -142,7 +149,7 @@ class SolverStatusTests(unittest.TestCase):
   vc.validate_lasso_fit(fit,"valid intermediate cap",30)
   vc.validate_lasso_fit(fx.fit(empty=True),"valid empty path",30)
  def test_impossible_convergence_rejected_for_selected_and_refit(self):
-  cases=[("zero solver steps",0,0,"expected integer >= 1"),
+  cases=[("zero solver steps with a cap hit",0,1,"exceeds irls_steps"),  # CHANGED ASSERTION (IRLS0): was 0 steps, 0 hits
          ("cap hits exceed steps",1,2,"exceeds irls_steps"),
          ("every solver step capped",3,3,"every IRLS step")]
   for label,steps,hits,match in cases:
@@ -150,6 +157,21 @@ class SolverStatusTests(unittest.TestCase):
     with self.subTest(label=label,status=key):
      fit=fx.fit(); fit[key]={"irls_steps":steps,"sweep_cap_hits":hits,"converged":True}
      reject(self,label+"/"+key,match,lambda fit=fit:vc.validate_lasso_fit(fit,"synthetic",30))
+ def test_zero_step_warm_start_accepted_for_selected_and_refit(self):
+  # IRLS0: 690815a takes 0 IRLS steps where the warm start already meets the KKT tolerance.
+  for steps in (0,3):
+   for key in ("selected_convergence","refit_convergence"):
+    with self.subTest(steps=steps,status=key):
+     fit=fx.fit(); fit[key]={"irls_steps":steps,"sweep_cap_hits":0,"converged":True}
+     self.assertTrue(vc.validate_lasso_fit(fit,"synthetic",30))
+ def test_unconverged_zero_step_status_is_left_to_the_checker(self):
+  # IRLS0: the contract checks a status's keys and bounds; the pinned checker judges convergence.
+  status={"irls_steps":0,"sweep_cap_hits":0,"converged":False}
+  vc.validate_convergence(status,"synthetic")
+  fit=fx.fit(); fit["refit_convergence"]=status
+  with self.assertRaises(AssertionError) as raised: vc.upstream_checker.check_lasso_fit(copy.deepcopy(fit),("synthetic",))
+  self.assertIn("unconverged two-class lasso fit",raised.exception.args[0])
+  reject(self,"unconverged zero-step refit","invalid revision-8 lasso status",lambda:vc.validate_lasso_fit(fit,"synthetic",30))
  def test_excess_path_points_rejected(self):
   fit=fx.fit(); fit["path_points"]=31
   reject(self,"path exceeds configured lambdas","path_points exceeds eval_config.lasso_lambdas",
@@ -256,6 +278,7 @@ def _nan_score(s):
  return json.dumps(rep,separators=(",",":"),allow_nan=True)+"\n"
 # The reconciliation's E4 matrix (scripts/06_cross.py e4_mutation_matrix): K's guard mutations and
 # five raw-JSON cases. K rejected all 38, W 12, the checker at 2d30bba 21.
+# IRLS0: one entry's status changed, not dropped (the module docstring says why).
 MUTATIONS={
  "historical revision 7":(lambda r:r["evaluation"].update(revision=7),False),
  "wrong report schema 3":(lambda r:r.update(schema=3),False),
@@ -280,7 +303,7 @@ MUTATIONS={
  "float confusion count":(lambda r:L(r,0,1)["metrics"].update(tp=float(L(r,0,1)["metrics"]["tp"])),False),
  "negative fold complexity":(lambda r:L(r,0,1)["fold_complexity"].__setitem__(0,-1.0),False),
  "float schema 2.0":(lambda r:r.update(schema=2.0),False),
- "convergence irls_steps=0, converged":(lambda r:LF(r).update(selected_convergence={"irls_steps":0,"sweep_cap_hits":0,"converged":True}),False),
+ "convergence irls_steps=0 with sweep_cap_hits 1":(lambda r:LF(r).update(selected_convergence={"irls_steps":0,"sweep_cap_hits":1,"converged":True}),False),  # CHANGED ASSERTION (IRLS0): was {0,0,true}
  "sweep_cap_hits > irls_steps":(lambda r:LF(r).update(selected_convergence={"irls_steps":1,"sweep_cap_hits":2,"converged":True}),False),
  "every IRLS step capped yet converged":(lambda r:LF(r).update(refit_convergence={"irls_steps":1,"sweep_cap_hits":1,"converged":True}),False),
  "path_points 31 > lasso_lambdas 30":(lambda r:LF(r).update(path_points=31),False),
