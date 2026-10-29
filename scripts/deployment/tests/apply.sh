@@ -1339,6 +1339,33 @@ expect 0 '^rc=0 kid=gone err=$' "mark_stop still kills a TERM-ignoring descendan
     timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-sticky" sticky
 expect 0 '^rc=1 err=pid [0-9]+ would not stop$' "mark_stop fails after a failed stop even when no holder is left" -- \
     timeout -k 5 60 bash "$T/group-stop.sh" "$S" "$T/groups-failing" failing
+# A lock_free probe that holds the marker's lock at the instant a mark_stop
+# scans (the 2026-10-29 re-check of the marker fix, finding 1). The start's
+# processes are gone, so its lock is free; a probe (connector.sh status, say,
+# from a shell whose group it leads) takes it for an instant. Here the probe
+# is frozen while it holds it, through a flock wrapper; mark_stop must not
+# take it for a holder of the start's lock, and must succeed.
+cat >"$T/lock-probe.sh" <<'SH'
+set -u
+source "$1/lib.sh"
+dir=$2
+mark_create "$dir" probe || { echo "no marker"; exit 3; }
+close_fd MARK_FD
+( flock() { command flock "$@" && kill -s STOP "$BASHPID"; }; lock_free "$MARK_PATH" ) &
+p=$!
+for _ in $(seq 100); do [ "$(awk '{print $3}' "/proc/$p/stat" 2>/dev/null)" = T ] && break; sleep 0.05; done
+pstart=$(proc_start "$p")
+mode=none
+for fd in $(fds_on "$p" "$MARK_ID"); do mode=$(awk '$1 == "lock:" {print $5}' "/proc/$p/fdinfo/$fd"); done
+mark_stop "$MARK_ID" "$MARK_PATH"
+rc=$?
+if alive "$p" "$pstart"; then s=alive; else s=KILLED; fi
+kill -KILL "$p" 2>/dev/null
+echo "probe_lock=$mode mark_stop_rc=$rc probe=$s"
+SH
+expect 0 '^probe_lock=READ mark_stop_rc=0 probe=alive$' \
+    "mark_stop signals no lock_free probe that holds the free marker lock, and succeeds" -- \
+    timeout -k 5 90 bash "$T/lock-probe.sh" "$S" "$T/lock-probe"
 
 # Concurrent builds under one label: one builds, the other refuses at once.
 G=$T/source
@@ -1686,7 +1713,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((482 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((483 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

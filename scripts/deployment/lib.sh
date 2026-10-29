@@ -316,13 +316,16 @@ lock_holders() {
     done
     printf '%s\n' "${out# }"
 }
-# lock_free FILE: FILE is a regular file and no process holds a flock on it.
-# Returns 1 while one does, 2 when FILE is missing or not a plain file.
+# lock_free FILE: FILE is a regular file and no process holds an exclusive
+# flock on it (every lock these scripts hold is exclusive). Returns 1 while
+# one does, 2 when FILE is missing or not a plain file. The probe takes a
+# shared lock, so while it holds it for that instant it never looks like a
+# holder of the start's exclusive lock (holds_lock) to a concurrent mark_stop.
 lock_free() {
     local fd='' rc=0
     [ -f "$1" ] && [ ! -L "$1" ] || return 2
     open_fd fd "$1" || return 2
-    flock -n "$fd" || rc=1
+    flock -n -s "$fd" || rc=1
     close_fd fd
     return "$rc"
 }
@@ -558,6 +561,8 @@ mark_stop() {
         if [ "$(file_id "$file" 2>/dev/null)" = "$id" ]; then
             mid=$id
             pids=$(lock_holders "$id")
+            # The marker may have gone during the scan.
+            [ "$(file_id "$file" 2>/dev/null)" = "$id" ] || pids='' mid=''
         fi
         if registered_left "$cpid" "$cstart"; then pids="$cpid $pids"; fi
         [ -n "${pids// /}" ] || break
