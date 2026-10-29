@@ -9,9 +9,13 @@ script that imports a sibling module must put that directory back itself. The ot
 insert the path for themselves, which is how write_run_manifest.py, run_revision8_checks.py and
 compare_cohorts.py passed their suites while failing as the plan ran them. This file adds no path:
 
-- it reads the plan's bash blocks, finds every `python3 -I` command, and requires that set of
-  in-repo scripts to be exactly the reviewed one (a new plan command fails here until it is
-  listed), and that no in-repo script is run without -I;
+- it reads every fenced block of the plan, finds every Python command (any interpreter name or
+  path, an interpreter held in a variable such as `G="python3 $GUARD"`, flag clusters, `-c` and
+  `-m`), and requires that set of in-repo scripts to be exactly the reviewed one (a new plan
+  command fails here until it is listed), and every command to be exactly `python3 -I`, with
+  one exception: the wiring lane's guard, run as `python3 $GUARD` (N3 and N7 of the focused
+  re-check);
+- it runs the plan's fold-rebuild `python3 -I -c` check as written, beside a planted json.py;
 - it runs each with --help from a directory holding planted sibling-named modules (and with
   PYTHONPATH pointing at them): each must import its real siblings, never the planted ones;
 - it runs each with real, plan-shaped arguments on fixtures, far enough to reach its own checks;
@@ -19,7 +23,7 @@ compare_cohorts.py passed their suites while failing as the plan ran them. This 
 - no file in scripts/mtb-4k shadows a standard-library module, and every script that imports a
   sibling puts its own directory on sys.path first.
 """
-import json, os, re, shutil, subprocess, sys, tempfile, unittest
+import json, os, re, shlex, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
 LANE = Path(__file__).resolve().parents[1]
@@ -30,27 +34,73 @@ ENTRY = {"prepare_execution_roots.py", "fingerprint.py", "pilot_interrupt.py", "
          "metric-audit/audit.py"}
 EXTERNAL = {"/root/grm-research/grm-research-mtb-4k-cohort-r2/scripts/verify_evidence.py"}
 SIBLINGS = ("report_contract", "fingerprint", "prepare_execution_roots", "run_revision8_checks", "pilot_interrupt")
-INVOKE = re.compile(r'python3\s+-I\s+"?([^"\s]+\.py)"?')
-UNISOLATED = re.compile(r'python3\s+(?!-I\b|-c\b)"?([^"\s]+\.py)"?')
+# The wiring lane's guard runs as `python3 $GUARD`, read-only and as written; pilot_interrupt.py requires the launcher's
+# command line to be exactly that (N1), so it takes no -I.
+GUARD = "$GUARD"
+FENCE = re.compile(r"```[^\n]*\n(.*?)```", re.S)  # every fenced block, whatever its language
+INTERPRETER = re.compile(r"""(?<![^\s;|&({"'`])((?:/[\w.-]+)*/)?(python[0-9.]*)(?=[\s"']|$)""")
+ALIAS = re.compile(r"""(?<![\w$])(\w+)=(?:"([^"]*)"|'([^']*)'|([^\s;"']+))""")
+COMMENT = re.compile(r"(?:^|\s)#.*$", re.M)
 
 
-def bash_blocks(text):
-    return re.findall(r"```bash\n(.*?)```", text, re.S)
+def invocation(prefix, name, rest):
+    """One Python command: the interpreter word, its flag letters, and what it runs ("script", "c", "m" or None)."""
+    lexer = shlex.shlex(rest, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    try:
+        tokens = list(lexer)
+    except ValueError as exc:
+        return {"interpreter": (prefix or "") + name, "flags": None, "kind": None, "target": f"unparsable: {exc}"}
+    letters, i = [], 0
+    while i < len(tokens) and re.fullmatch(r"-[A-Za-z]+", tokens[i]):
+        cluster = tokens[i][1:]
+        for j, letter in enumerate(cluster):
+            if letter in "cm":
+                target = cluster[j + 1:] or (tokens[i + 1] if i + 1 < len(tokens) else None)
+                return {"interpreter": (prefix or "") + name, "flags": letters, "kind": letter, "target": target}
+            letters.append(letter)
+        i += 1
+    target = tokens[i] if i < len(tokens) and not re.fullmatch(r"[;&|()<>]+", tokens[i]) else None
+    if target is not None:
+        target = re.sub(r"\$\{(\w+)\}", r"$\1", target)
+    return {"interpreter": (prefix or "") + name, "flags": letters, "kind": "script" if target else None, "target": target}
 
 
-def plan_scripts():
-    """{in-repo script relative to scripts/mtb-4k or scripts/}, {external paths}, [unisolated]."""
-    found, external, unisolated = set(), set(), []
-    for block in bash_blocks(PLAN.read_text()):
-        for path in INVOKE.findall(block):
-            if path.startswith("$P/"):
-                found.add(path[3:])
-            elif path.startswith("$WS/scripts/"):
-                found.add(path[len("$WS/scripts/"):])
-            else:
-                external.add(path)
-        unisolated += [p for p in UNISOLATED.findall(block) if p.startswith(("$P/", "$WS/"))]
-    return found, external, unisolated
+def parse_plan(text):
+    """Every Python command in every fenced block, with interpreter variables (`G="python3 $GUARD"`, `PY=python3`)
+    expanded where they are used, continuation lines joined and comments dropped."""
+    found, aliases = [], {}
+    for block in FENCE.findall(text):
+        for line in COMMENT.sub("", block.replace("\\\n", " ")).splitlines():
+            for m in list(ALIAS.finditer(line)):
+                value = next(v for v in m.groups()[1:] if v is not None)
+                if INTERPRETER.match(value):
+                    aliases[m.group(1)] = value
+                    line = line.replace(m.group(0), " ")
+            for name, value in aliases.items():
+                line = re.sub(rf"\$\{{{name}\}}|\${name}\b", lambda _: value, line)
+            for m in INTERPRETER.finditer(line):
+                found.append({**invocation(m.group(1), m.group(2), line[m.end():]), "line": line.strip()})
+    return found
+
+
+def plan_scripts(text=None):
+    """{in-repo script relative to scripts/mtb-4k or scripts/}, {external paths}, [problems], [-c invocations]."""
+    found, external, problems, dash_c = set(), set(), [], []
+    for cmd in parse_plan(PLAN.read_text() if text is None else text):
+        kind, target = cmd["kind"], cmd["target"]
+        if kind == "script" and target.startswith("$P/"):
+            found.add(target[3:])
+        elif kind == "script" and target.startswith("$WS/scripts/"):
+            found.add(target[len("$WS/scripts/"):])
+        elif kind == "script" and target != GUARD:
+            external.add(target)
+        elif kind == "c":
+            dash_c.append(cmd)
+        want = [] if (kind, target) == ("script", GUARD) else ["I"]
+        if cmd["interpreter"] != "python3" or cmd["flags"] != want or kind not in ("script", "c"):
+            problems.append(cmd)
+    return found, external, problems, dash_c
 
 
 def path_of(rel):
@@ -83,12 +133,45 @@ class EntryPoints(unittest.TestCase):
             self.assertNotIn("ModuleNotFoundError", text)
 
     def test_the_plan_runs_exactly_these_entry_points_and_all_with_minus_I(self):
-        found, external, unisolated = plan_scripts()
+        found, external, problems, dash_c = plan_scripts()
         self.assertEqual(found, ENTRY)
         self.assertEqual(external, EXTERNAL)
-        self.assertEqual(unisolated, [])
+        self.assertEqual(problems, [])
+        self.assertEqual(len(dash_c), 2)  # the disk/RAM gate and the fold-rebuild check, both -I (N3)
         for rel in found:
             self.assertTrue(path_of(rel).is_file(), rel)
+
+    def test_the_parser_sees_every_shape_the_recheck_used(self):
+        # N7: each line, added to the plan, must change what the parser reports. The control must not.
+        plan = PLAN.read_text()
+        self.assertEqual(plan_scripts(plan + '\n```bash\npython3 -I "$P/compare_cohorts.py" --help\n```\n')[:3], plan_scripts(plan)[:3])
+        shapes = ['python3 -B "$P/compare_cohorts.py" --help', 'python3 -I -B "$P/unreviewed.py"', 'python3 -IB "$P/unreviewed.py"',
+                  'PY=python3; $PY -I "$P/unreviewed.py"', 'python3.12 -I "$P/unreviewed.py"', '/usr/bin/python3 -I "$P/unreviewed.py"',
+                  'python3 -I "${P}/unreviewed.py"', 'python3 -I "$P"/unreviewed.py', 'python3 -I -m unreviewed',
+                  'python3 "$P/compare_cohorts.py" --help', 'python3 -B "$P/prepare_execution_roots.py" --verify-frozen "$RUN"',
+                  'python3 -I -u "$P/compare_cohorts.py" --help', 'x=$(python3 -c "import json")',
+                  'G2="python3 -B $GUARD"; $G2 --log l --resources r -- true', 'python3 "$P/pilot_invalidation.py" \\\n  --copies c']
+        for shape in shapes:
+            for fence in ("bash", "sh", ""):
+                with self.subTest(shape=shape, fence=fence):
+                    found, external, problems, _ = plan_scripts(plan + f"\n```{fence}\n{shape}\n```\n")
+                    self.assertTrue(found != ENTRY or external != EXTERNAL or problems, shape)
+
+    def test_the_fold_rebuild_check_runs_isolated_as_written(self):
+        # N3: the plan's -c check, beside a planted json.py whose load() reports a clean rebuild.
+        [line] = [c["line"] for c in plan_scripts()[3] if "rev7-fold-rebuild.json" in c["line"]]
+        with tempfile.TemporaryDirectory() as tmp:
+            run, cwd = Path(tmp) / "run", Path(tmp) / "planted"
+            (run / "audit").mkdir(parents=True)
+            cwd.mkdir()
+            (cwd / "json.py").write_text('def load(f): return {"records": [{}] * 22}\n')
+            audit = run / "audit" / "rev7-fold-rebuild.json"
+            for issues, want in (([{"where": "splits[0].test_fold", "message": "differs"}], 1), ([], 0)):
+                with self.subTest(failed=bool(issues)):
+                    audit.write_text(json.dumps({"records": [{"issues": issues}] * 22}))
+                    p = subprocess.run(["bash", "-c", line], cwd=cwd, env={**os.environ, "RUN": str(run)}, capture_output=True, text=True)
+                    self.assertEqual(p.returncode, want, p.stderr)
+                    self.assertEqual(p.stdout.split(), ["22", "22" if issues else "0"])
 
     def test_each_entry_point_loads_its_own_siblings_under_minus_I_from_another_directory(self):
         for rel in sorted(ENTRY):
@@ -157,11 +240,26 @@ class EntryPoints(unittest.TestCase):
         self.assertEqual(p.returncode, 1)
         self.assertIn("missing", p.stderr)
         self.assertClean(p)
+        # pilot_interrupt.py --list-runs lists nothing on a root nothing runs against (N2).
+        p = self.run_isolated("pilot_interrupt.py", "--list-runs", "--data", base, "--grm", "/nonexistent/grm")
+        self.assertEqual((p.returncode, json.loads(p.stdout)), (0, []), p.stderr)
+        self.assertClean(p)
         # prepare_execution_roots.py --check-lane decides on a directory that is not a lane.
         (base / "data").mkdir()
         p = self.run_isolated("prepare_execution_roots.py", "--check-lane", base / "data")
         self.assertIn(p.returncode, (0, 1), p.stderr)
         self.assertClean(p)
+        # Missing inputs are a STOP line, not a traceback (N13).
+        p = self.run_isolated("prepare_execution_roots.py", "--verify-frozen", base / "no-run-root")
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertIn("STOP: --verify-frozen cannot read", p.stderr)
+        self.assertClean(p)
+        p = self.run_isolated("screen_duplicates.py", "--prefix-root", base / "no-prefix", "--added-root", base / "no-added",
+                              "--out", base / "duplicate-screen.json")
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertIn("screen_duplicates: STOP: FileNotFoundError", p.stderr)
+        self.assertClean(p)
+        self.assertFalse((base / "duplicate-screen.json").exists())
 
     def test_a_moved_pin_stops_each_report_contract_cli_with_exit_2(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -183,6 +281,21 @@ class EntryPoints(unittest.TestCase):
                     self.assertIn("STOP: cannot load the validators", p.stderr)
                     self.assertIn("differs from the reviewed pin", p.stderr)
                     self.assertNotIn("Traceback", p.stderr)
+
+    def test_a_sibling_already_loaded_from_elsewhere_is_a_stop(self):
+        # N10: the origin check after the import, with a look-alike already in sys.modules (where sys.path cannot help).
+        code = ("import runpy, sys, types; m = types.ModuleType(sys.argv[1]); m.__file__ = '/elsewhere/' + sys.argv[1] + '.py'; "
+                "sys.modules[sys.argv[1]] = m; script = sys.argv[2]; sys.argv = [script, '--help']; runpy.run_path(script, run_name='__main__')")
+        cases = {"write_run_manifest.py": "report_contract", "run_revision8_checks.py": "report_contract",
+                 "compare_cohorts.py": "report_contract", "pilot_invalidation.py": "pilot_interrupt"}
+        for script, module in cases.items():
+            with self.subTest(script):
+                p = subprocess.run([sys.executable, "-I", "-B", "-c", code, module, str(LANE / script)], cwd=self.cwd,
+                                   capture_output=True, text=True)
+                self.assertNotEqual(p.returncode, 0, p.stdout)
+                self.assertIn(f"{module} loaded from /elsewhere/{module}.py", p.stderr)
+                self.assertIn("STOP", p.stderr)
+                self.assertNotIn("usage", p.stdout.lower())
 
     def test_no_lane_file_shadows_the_standard_library(self):
         names = {p.stem for p in LANE.glob("*.py")} | {p.stem for p in (LANE / "tests").glob("*.py")}

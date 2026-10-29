@@ -4,13 +4,14 @@ usage: GRM=target/release/grm python3 -I scripts/mtb-4k/tests/test_pilot_interru
 
 A disk-sparse run at width 64 over 128 genomes is held after block 0 folds:
 genome 64's FASTA is a named pipe nobody writes, so the first read of block 1
-blocks. A wrapper standing in for the resource guard is the launcher: it runs
-GRM as its child (so its command line also contains `GRM --data ROOT
-matrix`, as the guard's and /usr/bin/time's do), and when the child ends it
-writes a record in the guard's form ({"command", "rc", "guard_reason"}). The
-helper must stop and kill GRM only, at folded_columns = 64, verify the kill in
-that record, and the run must then resume to the matrix an uninterrupted run
-gives.
+blocks. A stand-in for the resource guard is the launcher, a file named as the
+guard and run as the plan runs it (`python3 .../resource_guard.py --log L
+--resources R -- COMMAND`): it runs COMMAND as its child (so its command line
+also contains `GRM --data ROOT matrix`, as the guard's and /usr/bin/time's
+do), and when the child ends it writes a record in the guard's form
+({"command", "rc", "guard_reason"}). The helper must stop and kill GRM only,
+at folded_columns = 64, verify the kill in that record, and the run must then
+resume to the matrix an uninterrupted run gives.
 
 L1 (plan-validators review): the helper binds only to a process below the
 launcher. A stale exact-argv run outside it (a real GRM blocked on another
@@ -18,6 +19,12 @@ species of the same root) is never bound or signalled and is a stop. On every
 stop (nothing found, timeout, the run ending first, a foreign match, a bad
 guard record, an existing receipt) the launched run is stopped too, and a
 --launcher that is not a sibling job is refused with nothing signalled.
+
+The focused re-check: a sibling that is not this run's guard is refused with
+nothing signalled (N1); every stop lists the matching runs still going and
+signals none (N2); a signal during the stop after a taken receipt path does
+not abort it (N5); the stop kills deepest first, and a matrix.json in the
+stopped state is not an interrupted run (N10).
 """
 import json
 import os
@@ -37,9 +44,30 @@ import pilot_interrupt as pi  # noqa: E402
 
 SLUG = "mycobacterium_tuberculosis"
 FILES = ["matrix.json", "patterns.bin", "support.bin", "kmer_offsets.bin", "kmers.bin"]
-# The guard stand-in: argv[1] its resources record, argv[2] a guard reason to record ("" for none).
-WRAPPER = ("import json, subprocess, sys; r = subprocess.run(sys.argv[3:]); "
-           "open(sys.argv[1], 'w').write(json.dumps({'command': sys.argv[3:], 'rc': r.returncode, 'guard_reason': sys.argv[2] or None}))")
+# The guard stand-in: `resource_guard.py --reason R --log L --resources PATH -- COMMAND...` (R: a guard reason to
+# record, "" for none).
+GUARD_STAND_IN = """import json, subprocess, sys
+cut = sys.argv.index("--")
+opts = dict(zip(sys.argv[1:cut:2], sys.argv[2:cut:2]))
+r = subprocess.run(sys.argv[cut + 1:])
+open(opts["--resources"], "w").write(json.dumps({"command": sys.argv[cut + 1:], "rc": r.returncode,
+                                                  "guard_reason": opts["--reason"] or None}))
+"""
+
+
+def guard_command(base: Path, resources, command, reason=""):
+    """The plan's `python3 $GUARD --log ... --resources ... -- COMMAND`, with the stand-in as $GUARD."""
+    script = base / "guard-stand-in" / pi.GUARD
+    if not script.exists():
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text(GUARD_STAND_IN)
+    return [sys.executable, str(script), "--reason", reason, "--log", str(base / "guard.log"), "--resources", str(resources),
+            "--", *command]
+
+
+def idle(root):
+    """A guarded command that holds `GRM --data ROOT matrix` in its argv but runs only a sleep below the guard."""
+    return ["sh", "-c", "exec sleep 120", "--", grm(), "--data", str(root), "matrix"]
 
 
 def grm():
@@ -109,10 +137,18 @@ class Interrupt(unittest.TestCase):
         self.tmp.cleanup()
 
     def launch(self, resources, command, reason=""):
-        p = subprocess.Popen([sys.executable, "-I", "-B", "-c", WRAPPER, str(resources), reason, *command],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return self.start(guard_command(self.base, resources, command, reason))
+
+    def start(self, argv):
+        p = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.started.append(p)
         return p
+
+    def kill_orphan(self, pid):
+        """A run whose guard was killed: it is no longer below anything this test started."""
+        st = pi.proc_stat(pid)
+        if st is not None:
+            pi.signal_ident((pid, st[2]), signal.SIGKILL)
 
     def gated(self, name):
         """A root whose genome 64 is a pipe, and its text."""
@@ -175,7 +211,7 @@ class Interrupt(unittest.TestCase):
     def test_nothing_running_below_the_launcher_is_a_stop_that_stops_the_launch(self):
         root, _, _ = build_root(self.base / "idle")
         resources = self.base / "idle-guard.json"
-        wrapper = self.launch(resources, ["sleep", "120"])
+        wrapper = self.launch(resources, idle(root))
         self.assertTrue(wait_for(lambda: pi.descendants((wrapper.pid, 0))))
         sleeper = list(pi.descendants((wrapper.pid, 0)))[0]
         p = helper(root, self.base / "idle.json", wrapper.pid, resources, timeout=1)
@@ -296,7 +332,7 @@ class Interrupt(unittest.TestCase):
     def test_a_launcher_that_is_not_a_sibling_job_is_refused_and_nothing_is_signalled(self):
         root, _, _ = build_root(self.base / "wrong")
         resources = self.base / "wrong-guard.json"
-        wrapper = self.launch(resources, ["sleep", "120"])
+        wrapper = self.launch(resources, idle(root))
         self.assertTrue(wait_for(lambda: pi.descendants((wrapper.pid, 0))))
         child = list(pi.descendants((wrapper.pid, 0)))[0]
         for i, launcher in enumerate([1, os.getpid(), child, 0, -1, 2 ** 22 + 7]):
@@ -338,14 +374,138 @@ class Interrupt(unittest.TestCase):
         root, _, _ = self.gated("stale-record")
         resources = self.base / "stale-guard.json"
         resources.write_text('{"rc": 137, "guard_reason": null, "command": []}\n')
-        holder = self.base / "launch-guard.json"  # the launched run writes its own record elsewhere
-        wrapper = self.launch(holder, sparse(root))
+        wrapper = self.launch(resources, sparse(root))  # the launch's own record will land on the earlier one
         self.assertTrue(wait_for(lambda: pi.find_run(grm(), str(root))))
         p = helper(root, self.base / "stale.json", wrapper.pid, resources)
         self.assertEqual(p.returncode, 1)
         self.assertIn("a record from another launch", json.loads((self.base / "stale.json").read_text())["error"])
         self.assertEqual(wrapper.wait(timeout=60), 0)
         self.assertEqual(pi.find_run(grm(), str(root)), [])
+
+    def test_guard_problem_accepts_only_this_runs_guard(self):
+        g, d, r = "/x/grm", "/run/cohorts/pilot256/data", "/run/logs/pilot-sparse-1.json"
+        run = ["/usr/bin/time", "-v", g, "--data", d, "matrix", "--species", SLUG]
+        good = ["python3", "/tools/resource_guard.py", "--log", "l", "--resources", r, "--", *run]
+        self.assertIsNone(pi.guard_problem(good, r, g, d))
+        self.assertIsNone(pi.guard_problem(["/usr/bin/python3.12", *good[1:]], r, g, d))
+        bad = {
+            "not python": ["sleep", "300"],
+            "not the guard": ["python3", "/tools/other.py", "--resources", r, "--", *run],
+            "interpreter flag first": ["python3", "-I", "/tools/resource_guard.py", "--resources", r, "--", *run],
+            "other resources": ["python3", "/tools/resource_guard.py", "--resources", r + ".x", "--", *run],
+            "resources twice": ["python3", "/tools/resource_guard.py", "--resources", r, "--resources", r, "--", *run],
+            "resources after --": ["python3", "/tools/resource_guard.py", "--", "--resources", r, *run],
+            "no --": ["python3", "/tools/resource_guard.py", "--resources", r, *run],
+            "another root": ["python3", "/tools/resource_guard.py", "--resources", r, "--", g, "--data", d + "-stock", "matrix"],
+            "another subcommand": ["python3", "/tools/resource_guard.py", "--resources", r, "--", g, "--data", d, "structure"],
+            "empty": [],
+            "unreadable": None,
+        }
+        for name, argv in bad.items():
+            with self.subTest(name):
+                self.assertIsNotNone(pi.guard_problem(argv, r, g, d))
+
+    def test_a_sibling_that_is_not_this_runs_guard_is_refused_and_nothing_is_signalled(self):
+        # N1: the run, a guarded run on another root, and a plain sleep are all sibling jobs of the helper.
+        root, _, _ = self.gated("n1")
+        other_root, _, _ = self.gated("n1-other")
+        resources, other_resources = self.base / "n1-guard.json", self.base / "n1-other-guard.json"
+        real = self.launch(resources, sparse(root))
+        other = self.launch(other_resources, sparse(other_root))
+        plain = self.start(["sleep", "120"])
+        self.assertTrue(wait_for(lambda: pi.find_run(grm(), str(root)) and pi.find_run(grm(), str(other_root))))
+        runs = {str(root): pi.find_run(grm(), str(root)), str(other_root): pi.find_run(grm(), str(other_root))}
+        cases = {"a plain sleep": (plain.pid, resources), "another run's guard": (other.pid, resources),
+                 "another run's guard and its own resources": (other.pid, other_resources),
+                 "this run's guard, other resources": (real.pid, self.base / "n1-elsewhere.json")}
+        for i, (name, (launcher, res)) in enumerate(cases.items()):
+            with self.subTest(name):
+                p = helper(root, self.base / f"n1-{i}.json", launcher, res, timeout=1)
+                self.assertEqual(p.returncode, 1, p.stderr)
+                got = json.loads((self.base / f"n1-{i}.json").read_text())
+                self.assertIn("is not the resource guard of this run", got["error"])
+                self.assertEqual(got["launched_run_stopped"], {"frozen": [], "killed": [], "launcher_killed": False, "launcher_exited": False})
+                self.assertEqual([r["pid"] for r in got["still_running"]], runs[str(root)])
+                self.assertIn("still running, not signalled", got["error"])
+        for p in (real, other, plain):
+            self.assertIsNone(p.poll())
+        for pids in runs.values():
+            self.assertNotEqual(pi.proc_stat(pids[0])[0], "T")
+        self.assertEqual({k: pi.find_run(grm(), k) for k in runs}, runs)
+
+    def test_a_guard_that_dies_before_the_bind_leaves_its_run_listed_and_unsignalled(self):
+        # N2: the guard is killed before the helper starts; its GRM keeps running outside any launch.
+        root, _, _ = self.gated("n2")
+        resources = self.base / "n2-guard.json"
+        wrapper = self.launch(resources, sparse(root))
+        self.assertTrue(wait_for(lambda: pi.find_run(grm(), str(root))))
+        [run] = pi.find_run(grm(), str(root))
+        try:
+            wrapper.kill()
+            wrapper.wait()
+            p = helper(root, self.base / "n2.json", wrapper.pid, resources, timeout=1)
+            self.assertEqual(p.returncode, 1)
+            got = json.loads((self.base / "n2.json").read_text())
+            self.assertIn("not a running sibling job", got["error"])
+            self.assertEqual([r["pid"] for r in got["still_running"]], [run])
+            self.assertIn(f"still running, not signalled: [{run}]", p.stderr)
+            self.assertNotEqual(pi.proc_stat(run)[0], "T")
+            listed = subprocess.run([sys.executable, "-I", "-B", str(HELPER), "--list-runs", "--data", str(root), "--grm", grm()],
+                                    capture_output=True, text=True)
+            self.assertEqual(listed.returncode, 1, listed.stderr)
+            self.assertEqual([r["pid"] for r in json.loads(listed.stdout)], [run])
+            self.assertNotEqual(pi.proc_stat(run)[0], "T")
+        finally:
+            self.kill_orphan(run)
+        self.assertTrue(wait_for(lambda: not pi.find_run(grm(), str(root))))
+        listed = subprocess.run([sys.executable, "-I", "-B", str(HELPER), "--list-runs", "--data", str(root), "--grm", grm()],
+                                capture_output=True, text=True)
+        self.assertEqual((listed.returncode, json.loads(listed.stdout)), (0, []))
+
+    def test_a_signal_during_the_stop_after_a_taken_receipt_path_does_not_abort_it(self):
+        # N5: the launcher becomes the guard only after 2 s; the helper, stopping for a taken receipt path,
+        # gets SIGTERM while it waits for that. It must still stop the launch, without a traceback.
+        root, _, _ = self.gated("n5")
+        resources, receipt = self.base / "n5-guard.json", self.base / "n5.json"
+        receipt.write_text('{"earlier": true}\n')
+        guard = guard_command(self.base, resources, sparse(root))
+        delayed = self.start([sys.executable, "-c", "import os, sys, time; time.sleep(2); os.execv(sys.executable, [sys.executable, *sys.argv[1:]])",
+                              *guard[1:]])
+        watcher = subprocess.Popen([sys.executable, "-I", "-B", str(HELPER), "--launcher", str(delayed.pid), "--guard-resources", str(resources),
+                                    "--data", str(root), "--grm", grm(), "--folded", "64", "--receipt", str(receipt)],
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        self.started.append(watcher)
+        time.sleep(1.0)
+        watcher.send_signal(signal.SIGTERM)
+        _, err = watcher.communicate(timeout=120)
+        self.assertEqual(watcher.returncode, 1, err)
+        self.assertNotIn("Traceback", err)
+        self.assertIn("cannot reserve the receipt", err)
+        self.assertEqual(receipt.read_text(), '{"earlier": true}\n')
+        self.assertEqual(delayed.wait(timeout=60), 0)
+        self.assertEqual(pi.find_run(grm(), str(root)), [])
+
+    def test_the_stop_kills_deepest_first(self):
+        # N10: a process between the guard and GRM, as /usr/bin/time is; GRM is killed before it.
+        root, _, _ = self.gated("deep")
+        resources = self.base / "deep-guard.json"
+        middle = [sys.executable, "-c", "import subprocess, sys; sys.exit(subprocess.run(sys.argv[1:]).returncode)"]
+        wrapper = self.launch(resources, [*middle, *sparse(root)])
+        p = helper(root, self.base / "deep.json", wrapper.pid, resources, folded=128, timeout=3)
+        self.assertEqual(p.returncode, 1)
+        got = json.loads((self.base / "deep.json").read_text())
+        self.assertIn("did not reach 128", got["error"])
+        killed = got["launched_run_stopped"]["killed"]
+        self.assertEqual(len(killed), 2)
+        self.assertEqual(killed[0], got["pid"])  # GRM, the deepest, first
+        self.assertEqual(wrapper.wait(timeout=60), 0)
+
+    def test_a_matrix_json_in_the_stopped_state_is_not_an_interrupted_run(self):
+        # N10 (I5): every other field is the interrupted state.
+        state = {"folded_columns": 64, "saved": False, "matrix_json": False, "genomes": 128, "block_width": 64,
+                 "run_files": ["block-00000.partial", "block-00000.partial.receipt.json", "run.json"]}
+        self.assertEqual(pi.interrupted_problems(state, 64), [])
+        self.assertEqual(pi.interrupted_problems({**state, "matrix_json": True}, 64), ["a matrix.json exists"])
 
 
 if __name__ == "__main__":

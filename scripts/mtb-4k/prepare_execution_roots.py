@@ -227,7 +227,12 @@ def main() -> int:
     mode.add_argument("--check-lane", action="store_true")
     args = parser.parse_args()
     if args.verify_frozen:
-        return verify_frozen(args.path)
+        try:
+            return verify_frozen(args.path)
+        except (OSError, ValueError, KeyError) as exc:  # a missing or unreadable record is a stop, not a traceback
+            print(f"prepare_execution_roots: STOP: --verify-frozen cannot read {args.path}: {type(exc).__name__}: {exc}",
+                  file=sys.stderr)
+            return 1
     if args.check_lane:
         problems = check_lane(args.path)
         print(json.dumps({"data_root": str(args.path), "problems": problems}, indent=2))

@@ -1,5 +1,21 @@
 # MTB matched 2k / added-2k / 4k execution plan — NOT AUTHORIZED
 
+Revision 5 (2026-10-28, plan re-check fixes lane). The focused re-check of
+revision 4 (`5d2c24d`) returned `PLAN_VALIDATORS_REVIEW=APPROVED` for the
+small pilot of section 4 only, with Low findings N1–N4 and Info items
+N5–N13. In this revision `pilot_interrupt.py` accepts as `--launcher` only
+this run's guard, checked by its command line and `--resources` before any
+signal (N1). After any stop it lists every `$GRM --data $SP matrix` still
+running and signals none, and step a lists them again after its `wait`
+(N2). Both section-3 `python3 -c` checks run with `-I`, and
+`tests/test_entry_points.py` reads every fence and every Python command
+shape, `-c` included (N3, N7). A test now fails if the invalidation check's
+"the refused run changed nothing" or the view's existing-path refusal is
+removed (N4). A signal during the stop after a taken `--receipt` path no
+longer aborts it (N5). `--verify-frozen` and `screen_duplicates.py` stop
+with a line, not a traceback, on missing inputs (N13). Section 9 lists what
+is deferred. No change turns a stop into a pass.
+
 Revision 4 (2026-10-28, plan follow-ups lane). The independent review of
 revision 3 (`ffa43a9`) returned `PLAN_VALIDATORS_REVIEW=APPROVED` for the small
 pilot of section 4 only, with findings M1 and L1–L6. In this revision every
@@ -30,8 +46,10 @@ design in the merged `compare_cohorts.py`, and three new scripts:
 `write_run_manifest.py`, `fingerprint.py` and `diff_revision7_prefix.py`
 (sections 7 and 8). The code is the merge M0 of `79158f9` with the shared
 branch at `3483065`, then the N1–N8 commit, then the validator commit
-`ffa43a9` (reviewed as above), then revision 4's follow-up commit, which needs
-its own re-check. M0 is **not** the lasso-final merge (section 7).
+`ffa43a9` (reviewed as above), then revision 4's follow-up commit `5d2c24d`
+(approved for the pilot only by its focused re-check), then revision 5's
+commit, which needs its own re-check. M0 is **not** the lasso-final merge
+(section 7).
 
 **No command below has been run. No biological matrix, structure, training,
 report or 8k work exists. No 8k stage is planned or permitted.**
@@ -53,9 +71,9 @@ holds and all of these hold; otherwise `RUN_4K=NO`.
      line from that lineage's review of the merge.
    - `PLAN_VALIDATORS_REVIEW=APPROVED`, from the plan-and-validators review
      lineage, for the commit that carries this plan and `scripts/mtb-4k`.
-     `ffa43a9` has it for the section-4 pilot only (2026-10-28). Revision 4's
-     follow-up commit needs its own, from the focused re-check, before any
-     stage that runs revision-4 commands.
+     `ffa43a9` and revision 4's follow-up commit `5d2c24d` each have it for
+     the section-4 pilot only (2026-10-28). Revision 5's commit needs its
+     own, from a re-check, before any stage that runs revision-5 commands.
 2. **Pilot.** The parent authorizes the small frozen biological pilot
    (section 4), and every pilot acceptance check passes before the prefix
    stage.
@@ -131,7 +149,7 @@ export P=$WS/scripts/mtb-4k
 export GUARD=/root/grm-research/grm-mtb-4k-wiring-kimi-20261028/tools/resource_guard.py
 
 test ! -e "$RUN"
-python3 -c 'import os; p=os.statvfs("/root"); d=p.f_bavail*p.f_frsize; m={l.split(":",1)[0]:l.split(":",1)[1].strip() for l in open("/proc/meminfo")}; r=int(m["MemAvailable"].split()[0])*1024; print(d,r); assert d >= 45*1024**3 and r >= 64*1024**3'
+python3 -I -c 'import os; p=os.statvfs("/root"); d=p.f_bavail*p.f_frsize; m={l.split(":",1)[0]:l.split(":",1)[1].strip() for l in open("/proc/meminfo")}; r=int(m["MemAvailable"].split()[0])*1024; print(d,r); assert d >= 45*1024**3 and r >= 64*1024**3'
 python3 -I /root/grm-research/grm-research-mtb-4k-cohort-r2/scripts/verify_evidence.py --root /root/grm-research/grm-research-mtb-4k-cohort-r2
 python3 -I "$P/prepare_execution_roots.py" "$RUN"
 
@@ -166,7 +184,7 @@ python3 -I "$P/fingerprint.py" "$RUN/rev7-view/data" --make-view --matrix-from /
 # The metric audit rebuilds every saved revision-7 test_fold with this foldgen.
 python3 -I "$WS/scripts/metric-audit/audit.py" "$RUN/audit/rev7-fold-rebuild.json" $SLUG --revision 7 \
   --root /root/grm-extra-species-analysis-20261027 --reshaped --foldgen "$FOLDGEN"
-python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rev7-fold-rebuild.json"
+python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rev7-fold-rebuild.json"
 ```
 
 `prepare_execution_roots.py` derives every list from the frozen bytes and
@@ -253,9 +271,18 @@ still in the stopped state.
 It exits non-zero, and the pilot stops, when the run ends first, when the
 point is not reached in time, when anything else matches, or when a check
 fails. On every such stop it first stops the launch itself (freeze, kill
-what runs below the guard, let the guard record that and exit), so `|| exit
-1` never leaves a run going. A `--launcher` that is not a sibling job of the
-helper is refused and nothing is signalled.
+what runs below the guard, let the guard record that and exit), so the stop
+never leaves the launched run going. A `--launcher` that is not a sibling job of the
+helper is refused and nothing is signalled. So is a sibling whose command
+line is not this run's guard: `python3 $GUARD` with `--resources` equal to
+`--guard-resources`, and `$GRM --data $SP matrix` after its `--` (N1).
+
+The guard starts its command in a new session, so a guard that dies before
+the helper binds the run leaves `grm` running (N2). After any stop the
+helper lists every `$GRM --data $SP matrix` still running and signals none.
+After the helper and `wait`, step a runs `--list-runs`, which prints the same
+list and exits 1 when it is not empty: any process left is a stop for the
+operator, never a signal from the plan.
 
 ```bash
 G="python3 $GUARD"
@@ -266,8 +293,12 @@ $G --log $RUN/logs/pilot-sparse-1.log --resources $RUN/logs/pilot-sparse-1.json 
   /usr/bin/time -v "$GRM" --data "$SP" matrix --species $SLUG --min-support 2 --disk-sparse --block-width 128 &
 LAUNCHER=$!
 python3 -I "$P/pilot_interrupt.py" --launcher "$LAUNCHER" --guard-resources $RUN/logs/pilot-sparse-1.json \
-  --data "$SP" --grm "$GRM" --folded 128 --receipt $RUN/audit/pilot-interrupt.json || { wait "$LAUNCHER"; exit 1; }
-wait "$LAUNCHER"; test $? -eq 137 || exit 1   # the guard exits with time's status for the killed run: 128 + 9
+  --data "$SP" --grm "$GRM" --folded 128 --receipt $RUN/audit/pilot-interrupt.json
+HELPER_RC=$?
+wait "$LAUNCHER"; WAIT_RC=$?
+python3 -I "$P/pilot_interrupt.py" --list-runs --data "$SP" --grm "$GRM" || exit 1   # lists, never signals (N2)
+test "$HELPER_RC" -eq 0 || exit 1
+test "$WAIT_RC" -eq 137 || exit 1   # the guard exits with time's status for the killed run: 128 + 9
 ls $SP/species/$SLUG/ksets | wc -l          # record: block 0's owned ksets are gone, block 1's in progress
 # a2) the invalidation copies, taken now, of the interrupted root and before the resume
 mkdir $RUN/pilot-copies
@@ -322,7 +353,8 @@ Acceptance, all required:
   `folded_columns` = 128, no saved matrix, no `matrix.json`, and block 0's
   partial and receipt. The process was gone after the kill, the guard's
   record for step a shows the killed run (rc 137, no guard reason), `wait`
-  returned 137, and the root was still in the stopped state.
+  returned 137, the root was still in the stopped state, and `--list-runs`
+  found no `$GRM --data $SP matrix` still running.
 - Sparse and stock matrix files and `structure.json` are byte-identical.
 - The resume completes. No owned kset is deleted before its block's verified
   partial, no `matrix-partials`, owned ksets or `pending` are left, and the
@@ -652,3 +684,22 @@ steps run and pass.
   with nothing counted. The plan runs `grm count` only for the pilot's
   stock comparator, whose matrix must then equal the sparse run's byte for
   byte.
+- Deferred from the focused re-check of revision 4, one line each:
+  - N6: when `/usr/bin/time` is still exiting as a stop begins, the stop
+    can kill the guard before it writes its record (1 of 9 on Vast). Only
+    the stop path, which exits 1 anyway, is affected; a fix needs a new
+    settle design.
+  - N8: compare checks that checker and summary outputs agree with their
+    receipt, not that they came from that cohort's run. This matters in
+    section 8, not the pilot, and binding them is a runner and comparator
+    change.
+  - N9: the foldgen and `$SOURCE` pins read `HEAD`, so a dirty checkout
+    passes; section 3 still needs a clean-checkout check, outside this
+    revision's fixes.
+  - N11: `link-kset` accepts any refusal whose stderr says "symlink";
+    tightening it needs GRM's exact message pinned from the Rust source.
+  - N12: `--make-view` writes into a source root when the view path is
+    inside one; the plan's `$RUN/rev7-view` is outside both roots.
+  - N13, in part: `scripts/metric-audit/audit.py` still stops with a
+    traceback on missing inputs (still a non-zero stop); it is outside
+    `scripts/mtb-4k`.

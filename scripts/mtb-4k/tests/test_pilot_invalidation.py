@@ -7,8 +7,8 @@ held after block 0 folds (genome 64's FASTA is a pipe), interrupted by pilot_int
 guard stand-in, then copied with `cp -a` into the four copies the plan takes (L5). In each copy the
 pipe is replaced by the genome's real bytes, so a resume that is not refused would run to the end
 instead of blocking. The helper must report all four checks refused, change nothing in any copy,
-and fail when a check is not refused (the width check at the run's own width) or a copy is not
-the interrupted state.
+and fail when a check is not refused (the width check at the run's own width), when a refused run
+changes its copy (N4 of the focused re-check), or when a copy is not the interrupted state.
 """
 import hashlib
 import json
@@ -46,14 +46,13 @@ class Invalidation(unittest.TestCase):
         fifo.unlink()
         os.mkfifo(fifo)
         resources = base / "guard.json"
-        wrapper = subprocess.Popen([sys.executable, "-I", "-B", "-c", tpi.WRAPPER, str(resources), "", *tpi.sparse(root)],
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        wrapper = subprocess.Popen(tpi.guard_command(base, resources, tpi.sparse(root)), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         p = tpi.helper(root, base / "interrupt.json", wrapper.pid, resources)
         wrapper.wait(timeout=60)
         assert p.returncode == 0, p.stderr
         cls.copies = base / "copies"
         cls.copies.mkdir()
-        for name in piv.COPIES + ("control",):
+        for name in piv.COPIES + ("control", "tamper"):
             subprocess.run(["cp", "-a", str(cohort), str(cls.copies / name)], check=True)
             pipe = cls.copies / name / "data" / "fasta" / fifo.name
             pipe.unlink()
@@ -119,6 +118,18 @@ class Invalidation(unittest.TestCase):
         row = piv.check(self.copies / "control", args, None, 128, "unfinished disk-sparse run")
         self.assertIn("not the interrupted state", row["error"])
         self.assertNotIn("run", row)
+
+    def test_a_refusal_that_changes_the_copy_fails_the_check(self):
+        # N4: a stand-in GRM refuses with the wanted words and exit 1, but writes into the species directory.
+        fake = self.copies.parent / "refuse-and-write"
+        fake.write_text(f'#!/bin/sh\nprintf x > "$2/species/{SLUG}/written-by-a-refused-run"\n'
+                        'echo "unfinished disk-sparse run" >&2\nexit 1\n')
+        fake.chmod(0o755)
+        args = type("A", (), {"slug": SLUG, "width": 64, "grm": str(fake), "timeout": 300, "grm_arg": []})()
+        row = piv.check(self.copies / "tamper", args, None, 128, "unfinished disk-sparse run")
+        self.assertEqual(row["run"]["rc"], 1)
+        self.assertEqual(row["changed"], ["written-by-a-refused-run"])
+        self.assertIn("the refused run changed the copy", row["error"])
 
     def test_missing_copies_or_an_existing_receipt_stop(self):
         with tempfile.TemporaryDirectory() as tmp:

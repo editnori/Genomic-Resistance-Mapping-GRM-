@@ -133,6 +133,14 @@ def main():
     ap.add_argument("--near-jaccard", type=float, default=0.998)
     ap.add_argument("--out", required=True, type=Path)
     args = ap.parse_args()
+    try:
+        return run(args)
+    except (OSError, ValueError, KeyError) as exc:  # a missing or unreadable input is a stop, not a traceback
+        print(f"screen_duplicates: STOP: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+
+
+def run(args):
     genomes = load(args.prefix_root, "prefix") + load(args.added_root, "added")
     ids = {g["id"] for g in genomes}
     fasta_sha = {}

@@ -4,6 +4,7 @@
 usage: python3 -I pilot_interrupt.py --launcher PID --guard-resources GUARD.json
            --data ROOT --grm GRM --folded N --receipt OUT.json
            [--slug mycobacterium_tuberculosis] [--timeout 7200] [--poll 0.2]
+       python3 -I pilot_interrupt.py --list-runs --data ROOT --grm GRM
 
 The plan starts the resource guard in the background (guard -> /usr/bin/time
 -> `GRM --data ROOT matrix ... --disk-sparse`), then runs this with the
@@ -11,7 +12,11 @@ guard's PID (`$!`) as --launcher and the guard's --resources path. It:
 
 1. reserves --receipt (an existing one is never overwritten, and nothing is
    signalled before it is reserved), and requires the launcher to be a
-   running sibling of this process (a child of the same shell) and the
+   running sibling of this process (a child of the same shell) whose
+   command line is the resource guard of this run: `python3
+   .../resource_guard.py`, `--resources` equal to --guard-resources, and
+   `GRM --data ROOT matrix` after its `--` (N1 of the re-check). Any other
+   launcher is refused before anything is signalled. It also requires the
    guard's resources record not to exist yet;
 2. binds to the one process below the launcher whose command line starts
    with exactly `GRM --data ROOT matrix`, read from /proc (L1). Only the
@@ -40,6 +45,12 @@ below it, deepest first, and lets the launcher record that and exit (the
 launcher is killed too if nothing ran below it or it does not exit). So the
 plan never leaves a run going, and never resumes from an unknown state. The
 receipt records every state it saw and what it signalled.
+
+After any stop it lists every `GRM --data ROOT matrix` process still running,
+in the receipt and on stderr, and never signals one (N2): the guard starts
+its command in a new session, so a guard that dies before the bind leaves
+GRM running outside the launch. --list-runs prints that list alone and exits
+1 when it is not empty; the plan runs it after every step-a `wait`.
 """
 
 import argparse
@@ -51,6 +62,7 @@ import time
 from pathlib import Path
 
 KILLED = (137, -9)  # /usr/bin/time exits 128 + 9 for a SIGKILLed command; Popen reports -9
+GUARD = "resource_guard.py"
 
 
 class Stopped(Exception):
@@ -77,14 +89,54 @@ def proc_stat(pid):
 
 def sibling(pid):
     """The launcher's identity when it is a live sibling of this helper (a child of the same shell,
-    as the plan's `$!` is), else None. Nothing else is ever treated as the launcher, so a wrong
-    --launcher (1, the shell, another job) is refused and never signalled."""
+    as the plan's `$!` is), else None. A wrong --launcher (1, the shell, a process in a subshell) is
+    refused and never signalled; launcher_identity() also refuses a sibling that is not the guard."""
     if pid <= 1 or pid in (os.getpid(), os.getppid()):
         return None
     st = proc_stat(pid)
     if st is None or st[0] in ("Z", "X") or st[1] != os.getppid():
         return None
     return (pid, st[2])
+
+
+def guard_problem(argv, resources, grm, data):
+    """Why a command line is not the plan's resource guard for this run, else None: `python3
+    .../resource_guard.py`, `--resources` exactly once before its `--` and equal to --guard-resources,
+    and `GRM --data ROOT matrix` after it."""
+    if not argv or len(argv) < 2 or not Path(argv[0]).name.startswith("python") or Path(argv[1]).name != GUARD:
+        return f"its command line {argv} is not `python3 .../{GUARD} ...`"
+    if "--" not in argv:
+        return "its command line has no `--` before the guarded command"
+    cut = argv.index("--")
+    values = [argv[i + 1] for i in range(2, cut - 1) if argv[i] == "--resources"]
+    if values != [resources]:
+        return f"its --resources is {values}, not [{resources!r}]"
+    if not contains(argv[cut + 1:], [grm, "--data", data, "matrix"]):
+        return f"it does not guard `{grm} --data {data} matrix`"
+    return None
+
+
+def launcher_identity(args, wait=5.0):
+    """(pid, start, argv) of the plan's own `$!` and None, else (None, why); nothing is signalled
+    either way. The launcher must be a live sibling (sibling()) whose command line is this run's
+    guard (guard_problem()). bash forks before it execs the guard, so the command line gets `wait`
+    seconds to become the guard's."""
+    ident = sibling(args.launcher)
+    if ident is None:
+        return None, (f"the launcher {args.launcher} is not a running sibling job of this helper (a child of the same "
+                      "shell); pass the plan's own `$!`. Nothing was signalled")
+    deadline = time.time() + wait
+    while True:
+        argv = cmdline(ident[0])  # read before alive(): a live identity means argv was this process's
+        why = guard_problem(argv, args.guard_resources, args.grm, args.data)
+        if not alive(ident):
+            return None, f"the launcher {args.launcher} exited before it was identified. Nothing was signalled"
+        if why is None:
+            return ident + (argv,), None
+        if time.time() > deadline:
+            return None, (f"the launcher {args.launcher} is not the resource guard of this run: {why}; pass the plan's "
+                          "own `$!`. Nothing was signalled")
+        time.sleep(0.05)
 
 
 def alive(ident):
@@ -161,8 +213,8 @@ def stop_launched(launcher, grace=60, settle=5):
     if st is None or st[2] != launcher[1]:
         record["launcher_exited"] = True
         return record
-    if st[1] != os.getppid():  # checked again before any signal
-        record["refused"] = "the launcher is no longer a sibling of this helper"
+    if st[1] != os.getppid() or cmdline(launcher[0]) != launcher[2]:  # checked again before any signal
+        record["refused"] = "the launcher is no longer this run's guard and a sibling of this helper"
         return record
     deadline = time.time() + settle
     while alive(launcher) and not descendants(launcher) and time.time() < deadline:
@@ -195,6 +247,16 @@ def stop_launched(launcher, grace=60, settle=5):
         record["launcher_killed"] = signal_ident(launcher, signal.SIGKILL)
     record["launcher_exited"] = wait_gone([launcher], grace)
     return record
+
+
+def still_running(grm, data):
+    """Every `GRM --data ROOT matrix` process still running, listed and never signalled (N2)."""
+    return [{"pid": pid, "cmdline": cmdline(pid)} for pid in find_run(grm, data)]
+
+
+def left_message(left, grm, data):
+    return (f"; `{grm} --data {data} matrix` still running, not signalled: {[r['pid'] for r in left]}; "
+            "stop them before anything else" if left else "")
 
 
 def run_state(species: Path):
@@ -252,11 +314,8 @@ def contains(seq, part):
 
 
 def interrupt(args, species, launcher, receipt):
-    """Steps 1-5; returns None on a checked interrupt, else the reason to stop."""
-    if launcher is None:
-        return (f"the launcher {args.launcher} is not a running sibling job of this helper (a child of the same "
-                "shell); pass the plan's own `$!`. Nothing was signalled")
-    receipt["launcher"] = {"pid": launcher[0], "start": launcher[1], "cmdline": cmdline(launcher[0])}
+    """Steps 1-5 for an identified launcher; returns None on a checked interrupt, else the reason to stop."""
+    receipt["launcher"] = {"pid": launcher[0], "start": launcher[1], "cmdline": launcher[2]}
     if os.path.lexists(args.guard_resources):
         return f"{args.guard_resources} exists before this run ended: a record from another launch"
     deadline = time.time() + args.timeout
@@ -333,42 +392,62 @@ def interrupt(args, species, launcher, receipt):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--launcher", required=True, type=int)
-    ap.add_argument("--guard-resources", required=True)
+    ap.add_argument("--list-runs", action="store_true",
+                    help="only list every `GRM --data ROOT matrix` process still running; never signal; exit 1 if any")
+    ap.add_argument("--launcher", type=int)
+    ap.add_argument("--guard-resources")
     ap.add_argument("--data", required=True)
     ap.add_argument("--grm", required=True)
-    ap.add_argument("--folded", required=True, type=int)
-    ap.add_argument("--receipt", required=True, type=Path)
+    ap.add_argument("--folded", type=int)
+    ap.add_argument("--receipt", type=Path)
     ap.add_argument("--slug", default="mycobacterium_tuberculosis")
     ap.add_argument("--timeout", type=float, default=7200)
     ap.add_argument("--poll", type=float, default=0.2)
     args = ap.parse_args(argv)
+    if args.list_runs:
+        left = still_running(args.grm, args.data)
+        print(json.dumps(left, indent=1))
+        if left:
+            print(f"pilot_interrupt: STOP{left_message(left, args.grm, args.data)}", file=sys.stderr)
+        return 1 if left else 0
+    missing = [name for name in ("launcher", "guard_resources", "folded", "receipt") if getattr(args, name) is None]
+    if missing:
+        ap.error("the following arguments are required: " + ", ".join("--" + n.replace("_", "-") for n in missing))
     species = Path(args.data) / "species" / args.slug
-    launcher = sibling(args.launcher)
 
     def stop(signum, frame):
         raise Stopped(f"signal {signum}")
+
+    def ignore_signals():  # finish stopping the run before anything else (N5)
+        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+            signal.signal(sig, signal.SIG_IGN)
     for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(sig, stop)
     try:
         out = args.receipt.open("x")
     except OSError as exc:
-        stopped = stop_launched(launcher)
-        print(f"pilot_interrupt: STOP: cannot reserve the receipt {args.receipt}: {exc}; launched run stopped: {stopped}",
-              file=sys.stderr)
+        ignore_signals()
+        launcher, refusal = launcher_identity(args)
+        stopped = stop_launched(launcher) if refusal is None else {"refused": refusal}
+        left = still_running(args.grm, args.data)
+        print(f"pilot_interrupt: STOP: cannot reserve the receipt {args.receipt}: {exc}; launched run stopped: {stopped}"
+              + left_message(left, args.grm, args.data), file=sys.stderr)
         return 1
     receipt = {"data": args.data, "grm": args.grm, "folded_target": args.folded, "started": time.time(),
                "interrupted": False, "error": None, "seen": []}
     with out:
+        launcher = None
         try:
-            error = interrupt(args, species, launcher, receipt)
+            launcher, error = launcher_identity(args)
+            error = error or interrupt(args, species, launcher, receipt)
         except BaseException as exc:  # any error or signal still stops the launched run
             error = f"{type(exc).__name__}: {exc}"
         if error:
             receipt["interrupted"] = False
-            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
-                signal.signal(sig, signal.SIG_IGN)  # finish stopping the run before anything else
+            ignore_signals()
             receipt["launched_run_stopped"] = stop_launched(launcher)
+            receipt["still_running"] = still_running(args.grm, args.data)
+            error += left_message(receipt["still_running"], args.grm, args.data)
         receipt["error"] = error
         receipt["finished"] = time.time()
         json.dump(receipt, out, indent=1)

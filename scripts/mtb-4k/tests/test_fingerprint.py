@@ -190,6 +190,21 @@ class RevisionSevenView(unittest.TestCase):
         p = self.run_cli(self.view("empty"), "--check", "--expect-reports", 22)
         self.assertEqual(p.returncode, 1)  # ... --expect-reports does not
 
+    def test_any_existing_entry_at_the_view_path_is_refused_and_left_alone(self):
+        # N4: an empty directory (which mkdir(parents=True) alone would build into) and a dangling link.
+        empty = self.view("existing-dir")
+        empty.mkdir(parents=True)
+        dangling = self.view("existing-link")
+        dangling.parent.mkdir(parents=True)
+        os.symlink(Path(self.tmp.name) / "nowhere", dangling)
+        for view in (empty, dangling):
+            with self.subTest(view.parent.parent.name):
+                p = self.run_cli(view, "--make-view", "--matrix-from", self.pre, "--inputs-from", self.cand, "--check")
+                self.assertEqual(p.returncode, 2, p.stderr)
+                self.assertIn("exists; the view is built once", p.stderr)
+        self.assertEqual(os.listdir(empty), [])
+        self.assertEqual(os.readlink(dangling), str(Path(self.tmp.name) / "nowhere"))
+
     def test_a_missing_source_or_a_partial_flag_set_stops_before_anything_is_made(self):
         view = self.view("missing")
         p = self.run_cli(view, "--make-view", "--matrix-from", self.cand, "--inputs-from", self.cand, "--check")
