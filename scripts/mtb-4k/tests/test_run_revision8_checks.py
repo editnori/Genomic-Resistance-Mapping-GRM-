@@ -7,6 +7,12 @@ Ported from K's tests/test_validators.py WrapperTests. Path-adapted: the in-tree
 run instead of vendored copies, every run also writes --receipt, and --foldgen is the committed
 foldgen, which these fixtures' folds come from (K used an in-process double that emitted its index
 folds). The double stays for one injected-failure test. Every K assertion is kept.
+IRLS0 (marked): "wrapper final refit zero-step convergence" changed, not dropped. Its refit
+status is now 0 steps with 1 cap hit (still a stop before the checker), and it is named "wrapper
+final refit zero-step convergence with a cap hit". 690815a writes irls_steps 0 when the warm
+start already meets the KKT tolerance (src/learn/lasso.rs:70), the pinned check-results.py:114
+accepts any non-negative step count, and the K review treated that status as impossible because
+it was at 855bdba.
 
 Follow-up tests (plan-validators review): I4, the runner refuses a foldgen that is not the
 recorded build (--expected-foldgen-sha256, required); L2, verify_outputs, which the runner runs
@@ -68,8 +74,9 @@ class WrapperTests(unittest.TestCase):
  def test_final_impossible_statuses_stop_before_checker(self):
   self.reject_report_mutation("wrapper final selected impossible status and excess path",lambda r:r["models"]["lasso_fit"].update(
    path_points=31,selected_convergence={"irls_steps":1,"sweep_cap_hits":1,"converged":True}))
-  self.reject_report_mutation("wrapper final refit zero-step convergence",lambda r:r["models"]["lasso_fit"].update(
-   refit_convergence={"irls_steps":0,"sweep_cap_hits":0,"converged":True}))
+  # CHANGED ASSERTION (IRLS0): the refit status was {0,0,true}, which 690815a writes on a valid warm start.
+  self.reject_report_mutation("wrapper final refit zero-step convergence with a cap hit",lambda r:r["models"]["lasso_fit"].update(
+   refit_convergence={"irls_steps":0,"sweep_cap_hits":1,"converged":True}))
  def test_per_fold_impossible_statuses_stop_before_checker(self):
   self.reject_report_mutation("wrapper fold selected impossible status and excess path",lambda r:r["splits"][0]["learners"][4]["lasso_fits"][0].update(
    path_points=31,selected_convergence={"irls_steps":1,"sweep_cap_hits":2,"converged":True}))

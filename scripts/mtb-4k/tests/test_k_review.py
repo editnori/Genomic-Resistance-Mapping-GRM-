@@ -6,6 +6,10 @@ independent/test_review.py, SHA-256 77f559fe...), adapted at call signatures onl
 the canonical scripts/mtb-4k: the modules it imports, the temporary directories, the mutant
 copy (a pinned scripts tree instead of K's upstream/), the wrapper's --receipt, a skip when the
 Vast-only evidence is absent, and one assertion changed by decision D1 (marked).
+IRLS0 (marked): {0 steps, 0 cap hits, converged} moved from the impossible statuses to an
+accepted one. 690815a writes irls_steps 0 when the warm start already meets the KKT tolerance
+(src/learn/lasso.rs:70), the pinned check-results.py:114 accepts any non-negative step count,
+and the K review treated that status as impossible because it was at 855bdba.
 
 usage: FOLDGEN=<foldgen binary> python3 -I scripts/mtb-4k/tests/test_k_review.py --receipt OUT.json
 """
@@ -219,13 +223,14 @@ class SolverStatusTests(unittest.TestCase):
   self.assertTrue(vc.validate_lasso_fit(fit({"irls_steps":2,"sweep_cap_hits":1,"converged":True}),"valid-intermediate-cap",30))
 
  def test_impossible_iteration_cap_counts_fail_closed(self):
-  accepted=[]; statuses=({"irls_steps":0,"sweep_cap_hits":0,"converged":True},
-   {"irls_steps":1,"sweep_cap_hits":1,"converged":True},{"irls_steps":1,"sweep_cap_hits":2,"converged":True})
+  # CHANGED ASSERTION (IRLS0): {0,0,true} left the impossible set; 690815a writes it on a valid warm start.
+  accepted=[]; statuses=({"irls_steps":1,"sweep_cap_hits":1,"converged":True},{"irls_steps":1,"sweep_cap_hits":2,"converged":True})
   for status in statuses:
    try:vc.validate_lasso_fit(fit(status),"impossible-status",30)
    except vc.ValidationError:continue
    accepted.append(status)
   OBS["invalid_solver_status"].append({"direct_accepted":accepted}); self.assertEqual(accepted,[])
+  self.assertTrue(vc.validate_lasso_fit(fit({"irls_steps":0,"sweep_cap_hits":0,"converged":True}),"zero-step-warm-start",30))
 
  def test_full_wrapper_rejects_impossible_status_excess_path(self):
   with tempfile.TemporaryDirectory(dir=REVIEW) as tmp:

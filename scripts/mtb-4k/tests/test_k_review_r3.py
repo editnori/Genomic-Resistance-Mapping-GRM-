@@ -7,6 +7,13 @@ canonical scripts/mtb-4k: the modules it imports, the temporary directories, the
 --receipt and the real foldgen (these fixtures' folds come from it; K's runs used an index-fold
 double), and the mutant copies (a pinned scripts tree instead of K's upstream/). No assertion
 changed.
+IRLS0 (marked): four assertions changed. zero_step moved from the direct negative controls to
+the positive ones (7 negatives to 5); the four zero_step wrapper cases became positive controls
+(16 negatives to 12, plus 4 positives); and the without_positive_steps mutant became
+without_zero_step_cap_exemption. 690815a writes irls_steps 0 when the warm start already meets
+the KKT tolerance (src/learn/lasso.rs:70), the pinned check-results.py:114 accepts any
+non-negative step count, and the K review treated that status as impossible because it was at
+855bdba.
 
 usage: FOLDGEN=<foldgen binary> python3 -I scripts/mtb-4k/tests/test_k_review_r3.py --receipt OUT.json
 """
@@ -143,8 +150,11 @@ class SolverTests(unittest.TestCase):
                 fit[key]={"irls_steps":2,"sweep_cap_hits":1,"converged":True}
             self.assertTrue(vc.validate_lasso_fit(fit,"direct-valid-short",30))
         self.assertFalse(vc.validate_lasso_fit(fx.fit(empty=True),"direct-valid-empty",30))
-        statuses=(("zero_step",{"irls_steps":0,"sweep_cap_hits":0,"converged":True}),
-                  ("excess_cap",{"irls_steps":1,"sweep_cap_hits":2,"converged":True}),
+        # CHANGED ASSERTION (IRLS0): zero_step is a positive control; 690815a writes it on a valid warm start.
+        for key in ("selected_convergence","refit_convergence"):
+            fit=fx.fit(); fit[key]={"irls_steps":0,"sweep_cap_hits":0,"converged":True}
+            self.assertTrue(vc.validate_lasso_fit(fit,"direct-valid-zero-step",30))
+        statuses=(("excess_cap",{"irls_steps":1,"sweep_cap_hits":2,"converged":True}),
                   ("all_capped",{"irls_steps":1,"sweep_cap_hits":1,"converged":True}))
         for label,status in statuses:
             for key in ("selected_convergence","refit_convergence"):
@@ -155,7 +165,7 @@ class SolverTests(unittest.TestCase):
         fit=fx.fit(); fit["path_points"]=31
         with self.assertRaises(vc.ValidationError): vc.validate_lasso_fit(fit,"direct-excess-path",30)
         OBS["direct_negative_controls"].append({"kind":"excess_path","rejected":True})
-        self.assertEqual(len(OBS["direct_negative_controls"]),7)
+        self.assertEqual(len(OBS["direct_negative_controls"]),5)  # IRLS0: was 7, with zero_step
 
 class WrapperTests(unittest.TestCase):
     def setUp(self):
@@ -218,8 +228,10 @@ class WrapperTests(unittest.TestCase):
                     if key is not None: fit[key]=copy.deepcopy(status)
                 case=self.run_case(f"{location}/{key}/{kind}",mutate=mutate)
                 case.update({"location":location,"status_field":key,"kind":kind,"path_points":points,"status":status})
-                self.negative(case)
-        self.assertEqual(len(OBS["wrapper_negative_controls"]),16)
+                # CHANGED ASSERTION (IRLS0): the zero_step cases pass; every other input is the valid fixture.
+                if kind=="zero_step": self.positive(case)
+                else: self.negative(case)
+        self.assertEqual(len(OBS["wrapper_negative_controls"]),12)  # IRLS0: was 16, with the 4 zero_step cases
 
     def test_valid_intermediate_short_and_empty_pass(self):
         empty=[]
@@ -274,11 +286,13 @@ class MutationTests(unittest.TestCase):
             OBS["mutations"].append({"mutation":"remove survival outer complement","detected":True,"absolute_error":str(err)})
 
     def test_solver_guard_source_mutations_detected(self):
-        with self.mutated("without_positive_steps",'steps=integer(status["irls_steps"],where+".irls_steps",1)','steps=integer(status["irls_steps"],where+".irls_steps")') as mutant:
-            status={"irls_steps":0,"sweep_cap_hits":0,"converged":False}
-            with self.assertRaises(vc.ValidationError): vc.validate_convergence(status,"baseline-positive-steps")
-            mutant.validate_convergence(status,"mutant-positive-steps")
-            OBS["mutations"].append({"mutation":"remove positive IRLS requirement","detected":True})
+        # CHANGED ASSERTION (IRLS0): replaces without_positive_steps; 0 steps are valid, so the final-cap guard's
+        # exemption for them is what a mutant must not remove.
+        with self.mutated("without_zero_step_cap_exemption"," if steps>=1:\n  if converged and hits==steps: fail"," if True:\n  if converged and hits==steps: fail") as mutant:
+            status={"irls_steps":0,"sweep_cap_hits":0,"converged":True}
+            vc.validate_convergence(status,"baseline-zero-step")
+            with self.assertRaises(mutant.ValidationError): mutant.validate_convergence(status,"mutant-zero-step")
+            OBS["mutations"].append({"mutation":"remove the final-cap guard's zero-step exemption","detected":True})
         with self.mutated("without_cap_bound","if hits>steps: fail","if False: fail") as mutant:
             fit=fx.fit(); fit["selected_convergence"]={"irls_steps":1,"sweep_cap_hits":2,"converged":True}
             self.assertTrue(mutant.validate_lasso_fit(fit,"mutant-cap-bound",30))
