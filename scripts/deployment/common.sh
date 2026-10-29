@@ -442,11 +442,12 @@ read_journal() {
     J_CHILD_START=${FIELDS[child_start]:-}
 }
 
-# The processes of the journaled start: the marker's holders and the
-# registered child while it runs.
+# The processes of the journaled start: the holders of the marker's lock while
+# the marker is intact (lib.sh, Stopping), and the registered child while it
+# runs.
 journal_procs() {
-    local out
-    out=$(mark_holders "$J_MARK_ID")
+    local out=''
+    if [ "$(file_id "$D/spawn/$J_MARK" 2>/dev/null)" = "$J_MARK_ID" ]; then out=$(lock_holders "$J_MARK_ID"); fi
     if [ -n "$J_CHILD" ] && alive "$J_CHILD" "$J_CHILD_START" && [[ " $out " != *" $J_CHILD "* ]]; then
         out="$J_CHILD${out:+ $out}"
     fi

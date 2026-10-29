@@ -23,12 +23,13 @@
 # a flock on a marker file and forks with that descriptor open, so the child
 # holds the lock from the instant it exists, keeps it across exec, and so does
 # everything it forks. mark_holders finds every process with the marker open
-# (by device and inode, so a deleted or renamed marker still counts), and
-# lock_free proves that none is left, including any this shell cannot see
-# (another user's or a non-dumpable process). mark_stop stops them, with their
-# process groups (until no member is left, even once a group's leader has
-# exited, but then only members tied to the start; see Stopping), and succeeds
-# only on that proof and when every one of them stopped.
+# (by device and inode), lock_holders those whose descriptor holds its lock,
+# and lock_free proves that none is left, including any this shell cannot see
+# (another user's or a non-dumpable process). mark_stop stops the lock's
+# holders while the marker file is intact, with their process groups (until no
+# member is left, even once a group's leader has exited, but then only members
+# tied to the start; see Stopping), and succeeds only on that proof and when
+# every one of them stopped.
 
 # PATH is absent, or a regular file that is not a link.
 plain_target() {
@@ -296,6 +297,25 @@ mark_holders() {
     done
     printf '%s\n' "${out# }"
 }
+# holds_lock PID ID: one of PID's descriptors on the file with device:inode ID
+# is the open file description that holds its flock. Every process of a start
+# holds the marker that way, inherited at the fork; a process that merely
+# opened the file (a backup, an indexer, an operator's less) does not.
+holds_lock() {
+    local fd
+    for fd in $(fds_on "$1" "$2"); do
+        fd_holds_flock "$1" "$fd" && return 0
+    done
+    return 1
+}
+# lock_holders ID: those of mark_holders ID that hold the lock (holds_lock).
+lock_holders() {
+    local p out=''
+    for p in $(mark_holders "$1"); do
+        holds_lock "$p" "$1" && out+=" $p"
+    done
+    printf '%s\n' "${out# }"
+}
 # lock_free FILE: FILE is a regular file and no process holds a flock on it.
 # Returns 1 while one does, 2 when FILE is missing or not a plain file.
 lock_free() {
@@ -322,10 +342,19 @@ lock_free() {
 # to the start: it was seen in the group while the leader lived (by PID and
 # start time), it carries the start's token as GRM_DEPLOY_SPAWN in its
 # environment (inherited across fork and exec), or it holds the start's
-# marker. A tie, once found, holds for that PID and start time for the rest of
-# the stop. A member that is none of these is never signalled, and the stop
-# fails, so the caller keeps its journal; that includes another user's or a
-# non-dumpable process, whose environment cannot be read.
+# marker lock. A tie, once found, holds for that PID and start time for the
+# rest of the stop. A member that is none of these is never signalled, and the
+# stop fails, so the caller keeps its journal; that includes another user's or
+# a non-dumpable process, whose environment cannot be read.
+#
+# The marker identifies a start's processes by device and inode only while
+# its path still names that inode: once the file is gone the inode may be
+# freed and given to any new file, the next start's marker among them. And
+# only the open file description holding the lock is the start's; anyone may
+# open the file. So mark_stop signals a holder only while the marker is
+# intact and only when the holder's descriptor holds the lock (holds_lock);
+# with the marker gone or replaced it stops only the registered process, by
+# PID and start time, and fails.
 
 # tree_signal SIGNAL PID GROUP: signal PID, and process group GROUP if given.
 # For a PID just found alive, leading GROUP (connector.sh's signal handler).
@@ -353,15 +382,16 @@ group_left() {
 }
 # group_ties GROUP TOKEN ID SEEN: sort the live members of GROUP. Print the
 # PID:START words of those tied to a start (among SEEN's PID:START words,
-# carrying TOKEN as GRM_DEPLOY_SPAWN when TOKEN is given, or holding the marker
-# with device:inode ID when ID is given), then "|", then the PIDs of the rest.
+# carrying TOKEN as GRM_DEPLOY_SPAWN when TOKEN is given, or holding the lock
+# of the marker with device:inode ID when ID is given; mark_stop gives ID only
+# while the marker is intact), then "|", then the PIDs of the rest.
 group_ties() {
     local m p tied='' untied=''
     for m in $(group_members "$1"); do
         p=${m%%:*}
         case " $4 " in *" $m "*) tied+=" $m"; continue ;; esac
         if [ -n "$2" ] && [ "$(env_value "$p" GRM_DEPLOY_SPAWN)" = "$2" ]; then tied+=" $m"; continue; fi
-        if [ -n "$3" ] && holds "$p" "$3"; then tied+=" $m"; continue; fi
+        if [ -n "$3" ] && holds_lock "$p" "$3"; then tied+=" $m"; continue; fi
         alive "$p" "${m#*:}" || continue
         untied+=" $p"
     done
@@ -506,45 +536,52 @@ mark_create() {
     rm -f -- "$path"
     return 1
 }
-# mark_stop ID FILE [PID START [TOKEN]]: stop every process holding the marker
-# ID (and the registered PID, START, with the process group it leads or led, so
-# a descendant that closed the marker is found even after PID exited), with
-# their process groups, whose members, once a leader is gone, must be tied to
-# the start by the marker, by TOKEN (the start's GRM_DEPLOY_SPAWN, if known) or
-# by having been seen in the group while the leader lived (see stop_tree).
-# Then require the proof that none is left: every stop succeeded, no holder
-# this shell can see, the registered process and its group gone, and FILE,
-# still the marker ID, with its lock free. Returns 1 with the reason in
+# mark_stop ID FILE [PID START [TOKEN]]: stop every process holding the lock
+# of the marker ID while FILE is still that marker (and the registered PID,
+# START, with the process group it leads or led, so a descendant that closed
+# the marker is found even after PID exited), with their process groups, whose
+# members, once a leader is gone, must be tied to the start by the marker's
+# lock, by TOKEN (the start's GRM_DEPLOY_SPAWN, if known) or by having been
+# seen in the group while the leader lived (see Stopping and stop_tree).
+# Then require the proof that none is left: every stop succeeded, the
+# registered process and its group gone, FILE still the marker ID, no holder
+# of its lock this shell can see, and its lock free. Returns 1 with the reason in
 # MARK_ERR otherwise. This shell's own descriptor on the marker (MARK_FD) must
 # be closed first, or unlocked.
 mark_stop() {
-    local id=$1 file=$2 cpid=${3:-} cstart=${4:-} token=${5:-} p s round pids
+    local id=$1 file=$2 cpid=${3:-} cstart=${4:-} token=${5:-} p s round pids mid
     MARK_ERR=''
     for round in 1 2 3; do
-        pids=$(mark_holders "$id")
+        # The inode is the marker's only while FILE still names it (see
+        # Stopping); else nothing is tied to the start by the marker.
+        pids='' mid=''
+        if [ "$(file_id "$file" 2>/dev/null)" = "$id" ]; then
+            mid=$id
+            pids=$(lock_holders "$id")
+        fi
         if registered_left "$cpid" "$cstart"; then pids="$cpid $pids"; fi
         [ -n "${pids// /}" ] || break
         for p in $pids; do
             STOP_ERR=''
             if [ "$p" = "$cpid" ]; then
-                stop_tree "$p" "$cstart" "$token" "$id" group || MARK_ERR=${STOP_ERR:-"pid $p or its process group would not stop"}
+                stop_tree "$p" "$cstart" "$token" "$mid" group || MARK_ERR=${STOP_ERR:-"pid $p or its process group would not stop"}
             else
                 s=$(proc_start "$p") || continue
-                stop_tree "$p" "$s" "$token" "$id" || MARK_ERR=${STOP_ERR:-"pid $p would not stop"}
+                stop_tree "$p" "$s" "$token" "$mid" || MARK_ERR=${STOP_ERR:-"pid $p would not stop"}
             fi
         done
     done
     # A process that would not stop may have closed the marker, so the proof
     # below would not see it.
     [ -z "$MARK_ERR" ] || return 1
-    pids=$(mark_holders "$id")
-    [ -z "$pids" ] || { MARK_ERR="pids $pids still hold the marker"; return 1; }
     if registered_left "$cpid" "$cstart"; then
         MARK_ERR="the registered pid $cpid or its process group would not stop"
         return 1
     fi
     [ "$(file_id "$file" 2>/dev/null)" = "$id" ] ||
-        { MARK_ERR="${file##*/} is missing or replaced, so its lock cannot show that every process is gone"; return 1; }
+        { MARK_ERR="${file##*/} is missing or replaced, so its lock cannot show that every process is gone (no process holding its old inode was signalled)"; return 1; }
+    pids=$(lock_holders "$id")
+    [ -z "$pids" ] || { MARK_ERR="pids $pids still hold the marker"; return 1; }
     lock_free "$file" || { MARK_ERR="${file##*/} is still locked by a process this user cannot see"; return 1; }
 }
 # registered_left PID START: PID (if given) is still the process that started

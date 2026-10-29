@@ -145,7 +145,7 @@ reap_orphans() {
     [ -e "$C/connector.spawn" ] || [ -L "$C/connector.spawn" ] || return 0
     id=$(file_id "$C/connector.spawn") || { say "FAIL: $C/connector.spawn is not a regular file" >&2; return 1; }
     lock_free "$C/connector.spawn" && return 0
-    held=$(mark_holders "$id")
+    held=$(lock_holders "$id")
     say "connector processes left by a supervisor that was killed: ${held:-none this user can see}"
     mark_stop "$id" "$C/connector.spawn" || { say "FAIL: they may remain: $MARK_ERR" >&2; return 1; }
     say "stopped the connector processes left by a killed supervisor: ${held:-none}"
@@ -336,7 +336,7 @@ status() {
         if lock_free "$C/connector.spawn"; then
             say "no process holds connector.spawn"
         else
-            id=$(mark_holders "$id")
+            id=$(lock_holders "$id")
             say "connector.spawn is held by: ${id:-processes this user cannot see}"
         fi
     fi

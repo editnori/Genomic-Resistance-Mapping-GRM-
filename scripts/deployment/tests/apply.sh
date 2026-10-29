@@ -1176,6 +1176,58 @@ kill -KILL "$worker" 2>/dev/null
 if grep -q "process group $N has members (pids $worker) that cannot be tied to this start" "$ROOT/resolve.out"; then why=untied; else why=other; fi
 echo "resolve_rc=$rc journal_left=$([ -e "$D/serve-8999.starting" ] && echo yes || echo no) unrelated_worker=$w reason=$why"
 SH
+# A process outside the start with the marker's inode open (the 2026-10-29
+# review of the regression fix, finding 1), through pending_start and
+# resolve_start. The start is journaled and its processes are gone, so the
+# marker's lock is free. "reader": unrelated work (a backup, an indexer, an
+# operator's less) has the intact marker open without its lock; resolve_start
+# must signal it, resolve the journal and report no process of the start.
+# "replaced": the marker is gone while its inode is still held, as when the
+# marker was removed and the freed inode went to another file that unrelated
+# work (the next start, say) holds locked; a reused inode cannot be forced on
+# every filesystem, so here the unrelated process opens the marker and takes
+# its own lock before the marker is removed. resolve_start must signal none of
+# it, keep the journal and fail, saying the marker is gone.
+cat >"$T/marker-holder.sh" <<'SH'
+set -u
+S=$1 ROOT=$2 mode=$3
+export GRM_DEPLOY_ROOT=$ROOT GRM_PORT=8999
+mkdir -p "$ROOT/spawn"
+source "$S/common.sh"
+set +e
+SPAWN_TOKEN=$(cat /proc/sys/kernel/random/uuid)
+mark_create "$D/spawn" "$SPAWN_TOKEN" || { echo "no marker"; exit 3; }
+sleep 0.1 &
+owner=$!
+ostart=$(proc_start "$owner")
+wait "$owner"
+close_fd MARK_FD
+printf 'token=%s owner=%s owner_start=%s label=rel1 publication=p1 port=8999 mark=%s mark_id=%s\n' \
+    "$SPAWN_TOKEN" "$owner" "$ostart" "${MARK_PATH##*/}" "$MARK_ID" >"$D/serve-8999.starting"
+if [ "$mode" = reader ]; then
+    setsid bash -c 'exec sleep 300 3<"$1"' _ "$MARK_PATH" </dev/null >/dev/null 2>&1 &
+else
+    setsid bash -c 'exec 3<"$1"; flock -n 3 || exit 9; exec sleep 300' _ "$MARK_PATH" </dev/null >/dev/null 2>&1 &
+fi
+w=$!
+for _ in $(seq 100); do [ "$(proc_comm "$w")" = sleep ] && holds "$w" "$MARK_ID" && break; sleep 0.05; done
+wstart=$(proc_start "$w")
+lk=no
+for fd in $(fds_on "$w" "$MARK_ID"); do fd_holds_flock "$w" "$fd" && lk=yes; done
+if ! holds "$w" "$MARK_ID" || [ "$lk" != "$([ "$mode" = reader ] && echo no || echo yes)" ]; then
+    echo "setup failed: pid $w holds=$(holds "$w" "$MARK_ID" && echo yes || echo no) lock=$lk"
+    kill -KILL "$w" 2>/dev/null
+    exit 3
+fi
+[ "$mode" = reader ] || rm -f -- "$MARK_PATH"
+pending_start 8999
+( resolve_start 8999 ) >"$ROOT/resolve.out" 2>&1
+rc=$?
+if alive "$w" "$wstart"; then u=alive; else u=KILLED; fi
+kill -KILL "$w" 2>/dev/null
+if grep -q 'is missing or replaced, so its lock cannot show' "$ROOT/resolve.out"; then why=replaced; else why=other; fi
+echo "resolve_rc=$rc journal_left=$([ -e "$D/serve-8999.starting" ] && echo yes || echo no) unrelated=$u orphans=[$ORPHANS] reason=$why"
+SH
 pidns=(unshare --user --map-root-user --pid --fork --mount-proc)
 skipped=0
 if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
@@ -1188,9 +1240,15 @@ if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
     expect 0 '^resolve_rc=1 journal_left=yes unrelated_worker=alive reason=untied$' \
         "resolving a start whose child's number now leads an unrelated group signals none of it and keeps the journal" -- \
         timeout -k 5 120 "${pidns[@]}" bash "$T/group-reuse.sh" "$S" "$T/group-reuse"
+    expect 0 '^resolve_rc=0 journal_left=no unrelated=alive orphans=\[\] reason=other$' \
+        "resolving a start signals no process that merely has its intact marker open, and resolves the journal" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/marker-holder.sh" "$S" "$T/marker-reader" reader
+    expect 0 '^resolve_rc=1 journal_left=yes unrelated=alive orphans=\[\] reason=replaced$' \
+        "resolving a start whose marker is gone signals no process that holds the old inode locked, and keeps the journal" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/marker-holder.sh" "$S" "$T/marker-replaced" replaced
 else
-    echo "skip stage with a reused candidate PID and resolve with a reused group number (no unprivileged user and PID namespaces)"
-    skipped=$((skipped + 4))
+    echo "skip stage with a reused candidate PID, resolve with a reused group number and resolve with an unrelated marker holder (no unprivileged user and PID namespaces)"
+    skipped=$((skipped + 6))
 fi
 
 # A candidate that passes every check and then exits before the stop fails
@@ -1628,7 +1686,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((480 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((482 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
