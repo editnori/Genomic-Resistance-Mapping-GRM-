@@ -1284,6 +1284,32 @@ kill -KILL "$c" 2>/dev/null
 case $MARK_ERR in "pids $c hold a lock on "*" that is not the start's exclusive lock"*) why=named ;; *) why=other ;; esac
 echo "child_lock=$lk mark_stop_rc=$rc child=$s reason=$why"
 SH
+# The marker goes during mark_stop's scan for holders (the 742cd4f review,
+# F5): its inode may then be another file's, so a holder found in that scan
+# must not be signalled. Here unrelated work holds the marker's inode with its
+# own exclusive lock (the start's is free), and mark_holders is wrapped so that
+# its first call removes the marker, between mark_stop's check of the marker
+# and the end of the scan. mark_stop must leave it alone and fail.
+cat >"$T/marker-scan.sh" <<'SH'
+set -u
+S=$1 dir=$2
+source "$S/lib.sh"
+mark_create "$dir" scan || { echo "no marker"; exit 3; }
+close_fd MARK_FD
+setsid bash -c 'exec 3<"$1"; flock -n 3 || exit 9; exec sleep 300' _ "$MARK_PATH" </dev/null >/dev/null 2>&1 &
+w=$!
+for _ in $(seq 100); do [ "$(proc_comm "$w")" = sleep ] && break; sleep 0.05; done
+ws=$(proc_start "$w")
+holds "$w" "$MARK_ID" || { echo "setup failed: pid $w does not hold the marker"; kill -KILL "$w"; exit 3; }
+eval "$(declare -f mark_holders | sed '1s/mark_holders/real_mark_holders/')"
+mark_holders() { rm -f -- "$MARK_PATH"; real_mark_holders "$@"; }
+mark_stop "$MARK_ID" "$MARK_PATH"
+rc=$?
+if alive "$w" "$ws"; then u=alive; else u=KILLED; fi
+{ kill -KILL "$w"; wait "$w"; } 2>/dev/null
+case $MARK_ERR in *"is missing or replaced"*) why=replaced ;; *) why=other ;; esac
+echo "mark_stop_rc=$rc unrelated=$u reason=$why"
+SH
 pidns=(unshare --user --map-root-user --pid --fork --mount-proc)
 skipped=0
 if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
@@ -1308,9 +1334,12 @@ if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
     expect 0 '^child_lock=READ mark_stop_rc=1 child=alive reason=named$' \
         "mark_stop fails, signalling nothing, while a process of the start that left the group holds the lock as shared" -- \
         timeout -k 5 120 "${pidns[@]}" bash "$T/lock-shared.sh" "$S" "$T/lock-shared"
+    expect 0 '^mark_stop_rc=1 unrelated=alive reason=replaced$' \
+        "mark_stop signals no holder found in a scan during which the marker went, and fails" -- \
+        timeout -k 5 120 "${pidns[@]}" bash "$T/marker-scan.sh" "$S" "$T/marker-scan"
 else
-    echo "skip stage with a reused candidate PID, resolve with a reused group number or an unrelated marker holder, a reused holder PID and a shared lock (no unprivileged user and PID namespaces)"
-    skipped=$((skipped + 8))
+    echo "skip stage with a reused candidate PID, resolve with a reused group number or an unrelated marker holder, a reused holder PID, a shared lock and a marker gone during a scan (no unprivileged user and PID namespaces)"
+    skipped=$((skipped + 9))
 fi
 
 # A candidate that passes every check and then exits before the stop fails
@@ -1776,7 +1805,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((485 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((486 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
