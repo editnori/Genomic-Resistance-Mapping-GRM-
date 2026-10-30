@@ -22,3 +22,4 @@ pub mod report;
 pub mod research;
 pub mod serve;
 pub mod species;
+pub mod species_check;

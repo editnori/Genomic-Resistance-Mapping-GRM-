@@ -45,6 +45,15 @@ enum Command {
         #[arg(long, env = "GRM_SIGDRUG_VOCABULARY")]
         sigdrug_vocabulary: Option<PathBuf>,
     },
+    /// Compare each curated species' selected genomes with the species'
+    /// reference genome (Mash distance and GC) and record the genomes whose
+    /// sequence is another species, which `grm curate` then excludes.
+    SpeciesCheck {
+        /// Only sketch the FASTA files on hand into the sketch cache, for a
+        /// check that runs elsewhere.
+        #[arg(long)]
+        sketch_only: bool,
+    },
     /// Count k-mers for each downloaded genome of the species, with
     /// assembly stats and catalog gene calls.
     Count {
@@ -163,6 +172,7 @@ fn run(cli: Cli) -> Result<()> {
             min_class,
             sigdrug_vocabulary,
         } => run_curate(&layout, cap, min_class, sigdrug_vocabulary),
+        Command::SpeciesCheck { sketch_only } => species_check(&layout, sketch_only),
         Command::Count {
             species,
             k,
@@ -477,6 +487,9 @@ struct SpeciesSelection {
     datasets: usize,
     labeled_genomes: usize,
     selected_genomes: usize,
+    /// Selected genomes the species check has no verdict for, typically
+    /// ones not downloaded when it ran; None without a species check.
+    selected_unchecked: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -517,7 +530,18 @@ fn run_curate(
         }
     };
     let mut resolver = drugs::Resolver::new(vocab);
-    let curated = curate::curate(&records, &genomes, &cfg, &mut resolver)?;
+    let check_path = layout.species_check();
+    let check = if check_path.exists() {
+        Some(grm::species_check::read(&check_path)?)
+    } else {
+        eprintln!(
+            "no species check at {}; curating without one (run `grm species-check` to drop genomes of another species)",
+            check_path.display()
+        );
+        None
+    };
+    let wrong_species = check.as_ref().map(|c| c.failures()).unwrap_or_default();
+    let curated = curate::curate(&records, &genomes, &cfg, &wrong_species, &mut resolver)?;
 
     let dir = layout.curated();
     std::fs::create_dir_all(&dir)?;
@@ -578,6 +602,17 @@ fn run_curate(
             .collect::<BTreeSet<_>>()
             .len();
         let ids = curate::select_genomes(&curated.phenotypes, &curated.datasets, species, cap);
+        let selected_unchecked = check.as_ref().map(|c| {
+            let checked: BTreeSet<&str> = c
+                .genomes
+                .iter()
+                .filter(|g| g.species == species)
+                .map(|g| g.genome_id.as_str())
+                .collect();
+            ids.iter()
+                .filter(|id| !checked.contains(id.as_str()))
+                .count()
+        });
         let path = layout.species_dir(&slug).join("genomes.txt");
         ensure_parent(&path)?;
         std::fs::write(&path, ids.join("\n") + "\n")?;
@@ -587,6 +622,7 @@ fn run_curate(
             datasets: n_datasets,
             labeled_genomes: labeled,
             selected_genomes: ids.len(),
+            selected_unchecked,
         });
     }
     selections.sort_by_key(|a| std::cmp::Reverse(a.labeled_genomes));
@@ -607,6 +643,72 @@ fn run_curate(
             s.species, s.datasets, s.labeled_genomes, s.selected_genomes
         );
     }
+    Ok(())
+}
+
+fn species_check(layout: &Layout, sketch_only: bool) -> Result<()> {
+    #[derive(serde::Deserialize)]
+    struct Row {
+        species: String,
+        slug: String,
+    }
+    let path = layout.curated().join("species.json");
+    let rows: Vec<Row> = serde_json::from_slice(
+        &std::fs::read(&path)
+            .with_context(|| format!("run `grm curate` first ({})", path.display()))?,
+    )?;
+    let lists = rows
+        .into_iter()
+        .map(|r| {
+            let ids = read_lines(&layout.species_dir(&r.slug).join("genomes.txt"))?;
+            Ok((r.species, r.slug, ids))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let started = std::time::Instant::now();
+    let cohorts = grm::species_check::load_cohorts(layout, &lists)?;
+    let sketched: usize = cohorts.iter().map(|c| c.sketches.len()).sum();
+    let missing: usize = cohorts.iter().map(|c| c.unchecked.len()).sum();
+    eprintln!(
+        "{sketched} genomes sketched, {missing} without FASTA or sketch, in {:.0}s",
+        started.elapsed().as_secs_f64()
+    );
+    if sketch_only {
+        return Ok(());
+    }
+    let check = grm::species_check::check(cohorts, &Default::default());
+    let out = grm::species_check::write(layout, &check)?;
+    for s in &check.species {
+        eprintln!(
+            "  {:<40} {:>5} checked  {:>3} failed  {:>3} borderline  {:>4} unchecked  reference {}",
+            s.species,
+            s.checked,
+            s.failed,
+            s.borderline,
+            s.unchecked.len(),
+            s.reference
+        );
+    }
+    for p in &check.pairs {
+        let outcome = if p.same_group {
+            "borderline, one genomic group"
+        } else {
+            "fail"
+        };
+        eprintln!(
+            "  {} nearer {}: {} genomes ({:.2}%), {outcome}",
+            p.labelled,
+            p.nearer,
+            p.genomes,
+            p.share * 100.0
+        );
+    }
+    for g in &check.genomes {
+        if g.verdict == grm::species_check::Verdict::Fail {
+            let why = g.reason.as_deref().unwrap_or("");
+            eprintln!("  fail {} ({}): {why}", g.genome_id, g.species);
+        }
+    }
+    eprintln!("species check written to {}", out.display());
     Ok(())
 }
 
