@@ -30,6 +30,22 @@ The Gram matrix and its Cholesky factor change by one row as a column enters (on
 
 After the solve, the IRLS step is halved, up to 30 times, while it raises the penalized objective; near separation a full Newton step can overshoot. A step that no halving makes lower, or a solve that returns the current point, ends the point unconverged.
 
+### Revision 9: a step that rounding hides
+
+The revision-8 run stopped twice on the same solver weakness, each time with an invalid report: `vibrio_cholerae__nalidixic_acid` random fold 0, tuning path point 13 (100 IRLS steps, 99 of them with a solve at its 5,000-iteration guard, KKT 6.1e-4), and `salmonella_enterica__azithromycin` random fold 3, point 19 (3 IRLS steps, 2 solves stopped short, then no halving lowered the objective, KKT 2.8e-3). Every other point of the run converged.
+
+Both started with an active coefficient within rounding of zero. In V. cholerae, near-copies 2209, 2389 and 2401 (they differ in 2 of the 57 fitting samples) reached zero almost together in one step; only 2389 was set to zero, and 2209 was left at 2.4e-15. Every later sign-fixed step crossed 2209 at t ≈ 9e-14, where the objective's fall is below rounding, so every candidate step showed a change of zero or more (+1.8e-18) and none was taken. The solve then took the point for stationary and checked the zero columns there. They violated their conditions by up to 3.0e-4 because the rest of the active set still had far to go. In V. cholerae the worst was 2985, the exact complement of 2209 on the fitting samples, so `exchange` swapped the two on a rate of ±1e-18 (pure rounding), back and forth until the guard. In S. enterica (a crossing at t ≈ 1.6e-15, change +3.0e-19) each violator entered, its step was blocked by the same crossing, and it was blocked in turn, 31 of them, many near-copies of active columns.
+
+Exact complements were not the cause. Fold 0's screened set has 10,397 exact complement pairs (the independent 275 review's count), and every other point converges with them. Removing 2985 and 3174 from it (which is what folding complements into `representatives` would amount to) leaves point 13 failing exactly as before. Refusing the exchange, or detecting the 2-cycle, stops the swapping but leaves the solve stuck at the same point.
+
+The fix is in the line search. Every non-zero active coefficient carries its fixed sign. When each entering column's step moves in the direction of its own sign, the objective along the sign-fixed step equals the sign-fixed quadratic up to the first crossing, and that quadratic falls all the way to its minimizer at t = 1. So the first crossing always lowers the objective in exact arithmetic. When no candidate step shows a change below zero but there is a crossing before t = 1, the solve now steps to the first crossing anyway, and that coefficient leaves. Three smaller rules come with it, as the admin ruled:
+
+- An exchange must strictly improve: its rate has to be below zero by more than `INNER_TOL` (1e-9 on the standardized scale), the margin a zero column needs to enter at all. An exact complement of an active column has a rate of exactly zero, so rounding alone never decides it.
+- Tied violators are ordered by lowest column, not by how the list was built.
+- Every active coefficient that reaches zero in an exchange, to rounding, leaves, ties included, so no coefficient stays active at zero or past it.
+
+On the fitting sets saved from the two stops, V. cholerae point 13 now converges in 3 IRLS steps at KKT 2.2e-9 and S. enterica point 19 in 3 steps at KKT 8.2e-8, with no solve stopping short. Over all 22 fits of the two datasets (660 points) the new step fired at 4 points and the margin refusal never fired. Every point whose path never reached a firing is bit-identical to revision 8, and so is every point of the 16 saved fixture panels, where nothing fired. Downstream of a firing point the objective moves by at most 6.3e-14 and fitted probabilities on the fitting samples by at most 1.6e-6. Held-out scores can move more, up to 0.098 at V. cholerae fold 0 points 17 to 29: there the optimum puts weight on columns that are exact complements on the fitting samples but differ outside them, any split of that weight is optimal, and revision 8's split depended on its history.
+
 ### Convergence test
 
 A point converges when its KKT residual is at most 1e-6, on a two-class fit, with a finite intercept and coefficients. The KKT residual is the largest violation of the penalized objective's optimality conditions on the standardized scale: the intercept's gradient, and for each column with a carrier, with g its gradient over its standard deviation, |g + lambda sign(b)| when its coefficient b is non-zero and max(|g| - lambda, 0) when it is zero. This is the residual the fixture tests have always computed independently, at the same 1e-6 acceptance. It is checked before each IRLS step, so a warm start that already meets it takes 0 steps (point 0, at the largest penalty, always does). A NaN anywhere in it counts as a failure, since `f64::max` would drop it.
@@ -97,7 +113,9 @@ An invalid report is written for review but is not a finished dataset. `grm lear
 
 ## Report schema and independent checker
 
-`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **8**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 output must contain the new evidence.
+`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **9**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 and revision-9 output must contain the new evidence.
+
+Revision 9 changes only the lasso's active-set solve (above). It adds no report field and changes no field's meaning: `sweep_cap_hits` still counts IRLS steps whose solve stopped short, and the new step to a first crossing is part of an exact solve, not a short one. A revision-9 report meets the revision-8 rules below. The bump keeps revision-8 reports, whose lasso fits the old solve could leave unconverged where the new one converges, from being reused: a same-fingerprint revision-8 report is stale against revision 9.
 
 `EVALUATION_REVISION` stays 8 with the active-set solver. The revision exists to keep reports from different evaluation code apart: a saved report is stale when its revision differs, because `input_fingerprint` hashes inputs and settings, not code. No revision-8 report was ever produced, on Vast or locally: the only revision-8 run, the large-species scan, writes scan records, not reports, and it stopped on its first fit. So no saved report carries revision 8 from coordinate descent that a new run could wrongly reuse, and every revision-7 report is still stale against revision 8. The report schema, the solver-status record and the checker's rules are also unchanged. Bumping to 9 would only renumber a revision that was never released.
 
@@ -125,14 +143,14 @@ For a deliberate empty path, `path_points` and `path_unconverged` are zero and `
 
 `scripts/check-results.py` now:
 
-- accepts revisions 3 through 8 and rejects future revisions;
+- accepts revisions 3 through 9 and rejects future revisions, applying the revision-8 lasso rules to revision 9;
 - keeps the existing revision 3–7 schema, no-call, metric, split, and log semantics;
 - requires per-fold and final lasso status on every available revision-8 split, including reports whose lasso rows have null fits;
 - rejects missing fields, wrong types, negative or out-of-range counts and indices, a wrong number of fold records, a non-empty path with no selected point (or the reverse), inconsistent selected/refit presence, and a final model inconsistent with an empty-path record;
 - checks each fold's record against that fold's scores: a lasso fold is called exactly when its `fold_complexity` (the refit's weight count) is positive, and a fold whose record has no selected point has no calls; and
 - requires zero unconverged two-class lasso path points and true selected/final convergence before accepting `valid: true`.
 
-The checker tests cover a valid revision-8 report, a valid empty-path final fit with a null model, a valid empty-path record on an uncalled fold, and future-revision rejection.
+The checker tests cover a valid revision-8 report, a valid revision-9 report and the revision-8 rules applied to it, a valid empty-path final fit with a null model, a valid empty-path record on an uncalled fold, and future-revision rejection (revision 10). `metric-audit/audit.py` has no revision list: `--revision 9` audits a revision-9 run, and a test audits one clean.
 
 Negative cases cover missing, malformed and unconverged records; a saved model whose record has no refit; a dropped or extra fold record; a 30-point path with no selected point; an empty-path record on a called fold; a weight count that disagrees with the fold's calls; and a short `fold_complexity`.
 
@@ -148,7 +166,11 @@ A current-revision report whose `evaluation.valid` is not `true` is stale with r
 
 The saved cross-check panels are in `tests/data/lasso-stopping-fixtures.txt`. They preserve the 16 fixtures and candidate paths from the earlier cross-check, the best known objective at each point, and the 300-sweep trace. The tests no longer rerun the 300-sweep solver, which is gone; its saved trace and models stay as the record of what revision 7 did. Bit-exact checks (a refit or wrapper repeating a path) remain pinned to the Linux platform because `powf` and `exp` can differ by one ULP on other platforms.
 
-The lasso suite has nineteen default tests and one ignored release test. All 91 saved points now run by default: the C. jejuni panels that once took 2.3 million sweeps take seconds unoptimized. In particular:
+The lasso suite has 26 default tests and one ignored release test. All 91 saved points now run by default: the C. jejuni panels that once took 2.3 million sweeps take seconds unoptimized. In particular:
+
+- Revision 9's two real fitting sets are committed fixtures: `tests/data/lasso-vibrio-fold0-fixture.txt` (57 samples, 4,000 screened columns) and `tests/data/lasso-salmonella-fold3-fixture.txt.gz` (867 samples, 4,000 columns, gzipped). `vibrio_cholerae_fold0_converges_at_every_point` and `salmonella_enterica_fold3_converges_at_every_point` require every point of each 30-point path converged with no short solve and an independently recomputed KKT residual at most 1e-6; both fail on revision 8 at the point that stopped it. `the_saved_real_paths_are_the_same_at_any_thread_count` runs both paths in rayon pools of 1 and 64 threads, the second twice, and requires the same models and statuses, bit for bit.
+- `a_coefficient_within_rounding_of_zero_does_not_stall_the_solve` builds the stalled state directly, a least-squares solve with column 0 at plus or minus 1e-200 and the rest of the active set past its optimum, with four kinds of partner for column 0: an exact complement, an exact copy (collapse turned off), two disjoint columns whose union it is, and near-copies differing from it in one and two samples. It checks that the state is the stalled one (no candidate step shows a fall, column 0 crosses first at t below 1e-100, the complement violates its condition and is dependent), then requires the solve to finish exactly at the brute-force optimum. Revision 8 fails all four.
+- `an_exchange_must_lower_the_objective_by_more_than_rounding` sets the standard deviations so that an exchange's rate is -1e-14 (refused, nothing changed) or -5e-4 (taken, with both coefficients that reach zero together leaving), and `violators_tie_to_the_lowest_column` orders 64 tied violations.
 
 - `saved_panels_converge_and_agree_with_the_old_solver_where_it_settled` requires every two-class saved point to converge with an independently recomputed KKT residual at most 1e-6 and an objective within 1e-6 of the best known, no solve to stop short, and the raw one-class points to stay unconverged. At the 38 points where the 300-sweep solver settled without a cap, the two solutions must agree within 1e-9 in objective and 1e-4 in any fitted probability.
 - `campylobacter_failures_reach_the_reference_optimum` pins the three former C. jejuni failures: the saved 300-sweep models have KKT and excess objective above 1e-4, and the current solver converges there in 6, 6 and 5 IRLS steps with no short solve.
@@ -363,10 +385,10 @@ nohup nice -n 10 python3 -I -B scan.py --input-root "$ROOT" --out "$SCAN/scan" -
 
 The current published release remains revision 7. `scripts/deployment/` retains its revision-7 defaults and 237-dataset published-release expectations; this lane deliberately did not edit it while its independent review is active.
 
-At a future, authorized revision-8 staging/publishing operation, the operator must explicitly set:
+At a future, authorized revision-9 staging/publishing operation, the operator must explicitly set:
 
 ```bash
-GRM_EXPECT_REVISION=8
+GRM_EXPECT_REVISION=9
 GRM_EXPECT_DATASETS=275
 ```
 

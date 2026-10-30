@@ -56,9 +56,10 @@ def rf_line(report):
     return fx.done_line("rf", ba(report, "random", "rf"))
 
 
-def revision8_report():
-    """A schema-2 report with the mandatory clean revision-8 lasso evidence."""
-    rep = fx.make_report(revision=8)
+def revision8_report(revision=8):
+    """A schema-2 report with the mandatory clean revision-8 lasso evidence,
+    which revision 9 keeps."""
+    rep = fx.make_report(revision=revision)
 
     def status():
         return {"irls_steps": 3, "sweep_cap_hits": 0, "converged": True}
@@ -350,9 +351,25 @@ class SchemaAndRevision(Case):
         entry = self.passes(rep, [rf_line(rep)])
         self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (8, 2, "rf"))
 
-    def test_future_revision9_fails(self):
-        rep = revision8_report()
-        rep["evaluation"]["revision"] = 9
+    def test_revision9_report_with_clean_solver_status_passes(self):
+        rep = revision8_report(revision=9)
+        entry = self.passes(rep, [rf_line(rep)])
+        self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (9, 2, "rf"))
+
+    def test_revision9_reports_meet_the_revision8_lasso_rules(self):
+        rep = revision8_report(revision=9)
+        del rep["models"]["lasso_fit"]
+        self.fails(rep, "revision-8 lasso fit status is required")
+        rep = revision8_report(revision=9)
+        del fx.row(rep, "lineage", "lasso")["lasso_fits"]
+        self.fails(rep, "revision-8 lasso fit status is required")
+        rep = revision8_report(revision=9)
+        fx.row(rep, "random", "lasso")["lasso_fits"][2]["path_unconverged"] = 1
+        self.fails(rep, "unconverged two-class lasso fit")
+
+    def test_future_revision10_fails(self):
+        rep = revision8_report(revision=9)
+        rep["evaluation"]["revision"] = 10
         self.fails(rep, "'revision'")
 
 
