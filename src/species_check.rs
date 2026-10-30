@@ -14,6 +14,16 @@
 //! unaffected by a few foreign genomes, so contaminants cannot become the
 //! reference unless they are most of the species.
 //!
+//! Curation drops the genomes this check fails from `genomes.txt`, and its
+//! new selection brings in replacements. A rerun therefore checks every
+//! genome an earlier check recorded as well as the current selection, and
+//! keeps each species' reference from its first check: the medoid of the
+//! selection before any drop. A cohort that only grows and a fixed
+//! reference give every genome the same distances on every rerun, so a
+//! failed genome stays failed and `check -> curate` reaches a fixed point.
+//! A recorded genome with neither a cached sketch nor a FASTA file keeps
+//! its earlier verdict.
+//!
 //! Mash distance approximates 1 - ANI near the species boundary of about 95%
 //! ANI (distance 0.05). Species complexes (E. cloacae, K. oxytoca, E. faecium
 //! with E. lactis, P. aeruginosa with P. paraeruginosa) spread past that
@@ -43,7 +53,7 @@ use crate::layout::{Layout, ensure_parent};
 use anyhow::{Context, Result};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 
 /// Mash's default k: at 95% ANI, two genomes still share about a fifth of
@@ -287,18 +297,72 @@ fn medoid(sketches: &[GenomeSketch]) -> usize {
         .unwrap()
 }
 
+/// Each species' genomes to check: its current selection, then every other
+/// genome `previous` recorded for it, so genomes curation dropped stay
+/// judged.
+pub fn cohort_lists(
+    selected: Vec<(String, String, Vec<String>)>,
+    previous: Option<&SpeciesCheck>,
+) -> Vec<(String, String, Vec<String>)> {
+    selected
+        .into_iter()
+        .map(|(species, slug, mut ids)| {
+            let listed: HashSet<String> = ids.iter().cloned().collect();
+            let earlier = previous.into_iter().flat_map(|p| &p.genomes);
+            ids.extend(
+                earlier
+                    .filter(|g| g.species == species && !listed.contains(&g.genome_id))
+                    .map(|g| g.genome_id.clone()),
+            );
+            (species, slug, ids)
+        })
+        .collect()
+}
+
 /// Checks every cohort against its own reference and the other cohorts'.
-pub fn check(mut cohorts: Vec<Cohort>, cfg: &CheckConfig) -> SpeciesCheck {
+/// A species `previous` checked keeps that check's reference, and its
+/// recorded genomes that have no sketch now keep their recorded verdicts.
+pub fn check(
+    mut cohorts: Vec<Cohort>,
+    cfg: &CheckConfig,
+    previous: Option<&SpeciesCheck>,
+) -> Result<SpeciesCheck> {
+    if let Some(p) = previous {
+        anyhow::ensure!(
+            p.k == K && p.sketch_size == SKETCH,
+            "the earlier species check sketched at k = {} with {} hashes, this one at k = {K} with {SKETCH}; remove it to check afresh",
+            p.k,
+            p.sketch_size
+        );
+    }
     cohorts.retain(|c| !c.sketches.is_empty());
     cohorts.sort_by(|a, b| a.species.cmp(&b.species));
     for c in &mut cohorts {
         c.sketches.sort_by(|a, b| a.genome_id.cmp(&b.genome_id));
         c.unchecked.sort();
     }
+    let earlier = |species: &str| {
+        previous
+            .into_iter()
+            .flat_map(|p| &p.species)
+            .find(|s| s.species == species)
+    };
     let refs: Vec<&GenomeSketch> = cohorts
         .iter()
-        .map(|c| &c.sketches[medoid(&c.sketches)])
-        .collect();
+        .map(|c| match earlier(&c.species) {
+            Some(s) => c
+                .sketches
+                .iter()
+                .find(|g| g.genome_id == s.reference)
+                .with_context(|| {
+                    format!(
+                        "the {} reference {} an earlier check chose has no sketch or FASTA file; restore it, or remove the species check to choose references afresh",
+                        c.species, s.reference
+                    )
+                }),
+            None => Ok(&c.sketches[medoid(&c.sketches)]),
+        })
+        .collect::<Result<_>>()?;
     let mut species = Vec::new();
     let mut pairs = Vec::new();
     let mut genomes = Vec::new();
@@ -374,6 +438,19 @@ pub fn check(mut cohorts: Vec<Cohort>, cfg: &CheckConfig) -> SpeciesCheck {
                 }
             })
             .collect();
+        let mut checked = checked;
+        let mut unchecked = Vec::new();
+        for id in &c.unchecked {
+            let recorded = previous
+                .into_iter()
+                .flat_map(|p| &p.genomes)
+                .find(|g| g.species == c.species && &g.genome_id == id);
+            match recorded {
+                Some(g) => checked.push(g.clone()),
+                None => unchecked.push(id.clone()),
+            }
+        }
+        checked.sort_by(|a, b| a.genome_id.cmp(&b.genome_id));
         let mut pass: Vec<f64> = checked
             .iter()
             .filter(|g| g.verdict == Verdict::Pass)
@@ -390,7 +467,7 @@ pub fn check(mut cohorts: Vec<Cohort>, cfg: &CheckConfig) -> SpeciesCheck {
             checked: checked.len(),
             failed: count(Verdict::Fail),
             borderline: count(Verdict::Borderline),
-            unchecked: c.unchecked.clone(),
+            unchecked,
             distance_p50: quantile(&pass, 0.5),
             distance_p99: quantile(&pass, 0.99),
             distance_max_pass: pass.last().copied().unwrap_or(f64::NAN),
@@ -414,14 +491,14 @@ pub fn check(mut cohorts: Vec<Cohort>, cfg: &CheckConfig) -> SpeciesCheck {
         }
         genomes.extend(checked);
     }
-    SpeciesCheck {
+    Ok(SpeciesCheck {
         k: refs.first().map_or(K, |r| r.k),
         sketch_size: refs.first().map_or(SKETCH, |r| r.sketch_size),
         config: cfg.clone(),
         species,
         pairs,
         genomes,
-    }
+    })
 }
 
 pub fn sketch_path(layout: &Layout, genome_id: &str) -> PathBuf {
@@ -612,7 +689,9 @@ mod tests {
         let check = check(
             vec![cohort("Alpha a", alpha), cohort("Gamma g", gamma)],
             &CheckConfig::default(),
-        );
+            None,
+        )
+        .unwrap();
         assert_eq!(
             verdicts(&check, Verdict::Fail),
             vec![
@@ -661,7 +740,7 @@ mod tests {
             cohort("Klebsiella pneumoniae", kp),
             cohort("Klebsiella quasipneumoniae", kq),
         ];
-        let check = check(cohorts, &CheckConfig::default());
+        let check = check(cohorts, &CheckConfig::default(), None).unwrap();
         assert_eq!(
             verdicts(&check, Verdict::Fail),
             vec![("kq-as-kp", "Klebsiella pneumoniae")]
@@ -698,7 +777,9 @@ mod tests {
         let check = check(
             vec![cohort("Mycobacterium tuberculosis", sketches)],
             &CheckConfig::default(),
-        );
+            None,
+        )
+        .unwrap();
         let failed = verdicts(&check, Verdict::Fail);
         assert_eq!(
             failed,
@@ -757,7 +838,7 @@ mod tests {
                 cohort("Shigella flexneri", sf.clone()),
             ]
         };
-        let grouped = check(cohorts(), &CheckConfig::default());
+        let grouped = check(cohorts(), &CheckConfig::default(), None).unwrap();
         let crossed = [
             ("ec-as-ss", "Shigella sonnei"),
             ("ss-as-ec", "Escherichia coli"),
@@ -780,7 +861,7 @@ mod tests {
             genomic_groups: vec![],
             ..CheckConfig::default()
         };
-        let split = check(cohorts(), &ungrouped);
+        let split = check(cohorts(), &ungrouped, None).unwrap();
         let mut failed = verdicts(&split, Verdict::Fail);
         failed.sort();
         let mut expected = crossed.to_vec();
@@ -795,6 +876,44 @@ mod tests {
         assert_eq!(ss_as_ec.inside_species.as_deref(), Some("Shigella sonnei"));
     }
 
+    /// A rerun keeps the first check's reference although the cohort's
+    /// medoid has moved, and keeps a failed genome failed after curation
+    /// dropped it and its sketch is gone.
+    #[test]
+    fn a_rerun_keeps_its_references_and_its_failures() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut rng = ChaCha8Rng::seed_from_u64(6);
+        let root = random_genome(&mut rng, 0.5);
+        let mut first = strains(&mut rng, dir.path(), "a", &root, 9);
+        let foreign = random_genome(&mut rng, 0.5);
+        first.push(sketch(dir.path(), "foreign", &foreign));
+        let cfg = CheckConfig::default();
+        let before = check(vec![cohort("Alpha a", first.clone())], &cfg, None).unwrap();
+        assert_eq!(
+            verdicts(&before, Verdict::Fail),
+            vec![("foreign", "Alpha a")]
+        );
+
+        // Replacements from a sublineage 2% away outnumber the first
+        // genomes, and the failed genome left the selection with no sketch.
+        let sub = mutate(&mut rng, &root, 0.02);
+        let mut later: Vec<GenomeSketch> = first
+            .into_iter()
+            .filter(|g| g.genome_id != "foreign")
+            .collect();
+        later.extend(strains(&mut rng, dir.path(), "b", &sub, 15));
+        let mut grown = cohort("Alpha a", later);
+        grown.unchecked.push("foreign".into());
+        let fresh = check(vec![cohort("Alpha a", grown.sketches.clone())], &cfg, None).unwrap();
+        assert_ne!(fresh.species[0].reference, before.species[0].reference);
+
+        let rerun = check(vec![grown], &cfg, Some(&before)).unwrap();
+        assert_eq!(rerun.species[0].reference, before.species[0].reference);
+        assert_eq!(rerun.failures(), before.failures());
+        assert!(rerun.species[0].unchecked.is_empty());
+        assert_eq!(rerun.species[0].checked, 25);
+    }
+
     #[test]
     fn a_genome_past_the_boundary_with_no_closer_species_is_borderline() {
         let dir = tempfile::tempdir().unwrap();
@@ -803,7 +922,12 @@ mod tests {
         let mut genomes = strains(&mut rng, dir.path(), "a", &root, 10);
         let distant = mutate(&mut rng, &root, 0.07);
         genomes.push(sketch(dir.path(), "distant", &distant));
-        let check = check(vec![cohort("Alpha a", genomes)], &CheckConfig::default());
+        let check = check(
+            vec![cohort("Alpha a", genomes)],
+            &CheckConfig::default(),
+            None,
+        )
+        .unwrap();
         assert!(verdicts(&check, Verdict::Fail).is_empty());
         assert_eq!(
             verdicts(&check, Verdict::Borderline),

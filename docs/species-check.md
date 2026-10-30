@@ -11,13 +11,15 @@ The GRM admin ruling of 2026-10-29 added a species check for all 23 species. It 
 ## How it runs
 
 ```
-grm species-check          # sketches each curated species' genomes.txt, writes the verdicts
+grm species-check          # judges each species' genomes.txt, writes the verdicts
 grm curate                 # excludes the failed genomes, then selects as before
 grm fetch fasta            # downloads replacement genomes the new selection picked
-grm species-check          # checks the replacements; rerun curate if any fail
+grm species-check          # judges the replacements and keeps every earlier verdict
+grm curate                 # repeat the last three steps until nothing new fails
 ```
 
-- `grm species-check` reads `curated/species.json` and each species' `genomes.txt`. It sketches every FASTA it finds into `species-check/sketches/<genome_id>.json` (GC, length and sketch, cached) and writes `species-check/species_check.json`. `--sketch-only` fills the cache without judging, so a machine holding some of the FASTA files can sketch them for a check that runs elsewhere.
+- `grm species-check` reads `curated/species.json` and each species' `genomes.txt`, plus every genome the existing `species-check/species_check.json` recorded for that species. Curation drops failed genomes from `genomes.txt`, so a check that read only the selection would no longer see them, and the next `curate` would let them back in. Earlier genomes are judged again from their cached sketches. It sketches every FASTA it finds into `species-check/sketches/<genome_id>.json` (GC, length and sketch, cached) and writes `species-check/species_check.json`. `--sketch-only` fills the cache without judging, so a machine holding some of the FASTA files can sketch them for a check that runs elsewhere.
+- A species keeps the reference its first check chose, the medoid of its selection before any drop. Recomputed on later cohorts, the medoid moves once failures leave and replacements arrive: the independent review saw *A. baumannii* move from 470.2428 to 470.2437 and *E. cloacae* from 550.3494 to 550.1141. With the cohort only growing and the reference fixed, every genome keeps its distances, so a failed genome stays failed and `check -> curate` reaches a fixed point after the replacements are judged. A recorded genome with neither a cached sketch nor a FASTA file keeps its earlier verdict. If a reference's own sketch is gone, the check stops rather than choose another. Remove `species_check.json` to choose references afresh.
 - `grm curate` reads `species-check/species_check.json` when it exists. Each failed genome is excluded before any other QC, and recorded in `curated/qc.json` with the reason `species check: sequence is another species: <evidence>` and in `curated/funnel.json` under that key. Its phenotypes leave every dataset, so class counts and the dataset gate recompute. `curated/species.json` gains `selected_unchecked` per species: the selected genomes the check has no verdict for.
 - Selection is `select_genomes`, unchanged. The fresh selection is deterministic, but it is not the old selection minus the dropped genomes: dropped labels shrink class sizes, which shifts scores. For species above the cap, replacements fill the cap, and they need FASTA before the check can judge them. The admin accepted this on 2026-10-29.
 
@@ -40,7 +42,7 @@ Every checked genome is listed, sorted by species and then genome id.
 
 **Signal.** Each genome's sketch is the 1,000 smallest mixed canonical 21-mers of its assembly, the same values `KsetReader::sketch` reads from a kset counted at k = 21. k = 21 is Mash's default: at 95% ANI, two genomes still share about a fifth of their 21-mers, so the sketch resolves the species boundary. The Mash distance (`cluster::mash_distance`) approximates 1 - ANI near that boundary. GC is the G+C share of A, C, G and T in the assembly.
 
-**Reference.** Each species' reference is its medoid: the genome whose median Mash distance to the other genomes of its cohort is smallest. Ties go to the lower genome id, and cohorts are sorted by id, so the choice is deterministic. The reference comes from the cohort itself, so no download is needed. A median is unaffected by a few foreign genomes, so contaminants become the reference only if they are most of the cohort. The cost is that a species complex is measured from its largest member. For example, the *E. cloacae* reference 550.3494 sits in the cohort's main group, and the other complex members sit 0.085 to 0.111 from it.
+**Reference.** Each species' reference is its medoid: the genome whose median Mash distance to the other genomes of its cohort is smallest. Ties go to the lower genome id, and cohorts are sorted by id, so the choice is deterministic. The reference comes from the cohort itself, so no download is needed. A median is unaffected by a few foreign genomes, so contaminants become the reference only if they are most of the cohort. The medoid is chosen once, on the selection before any drop, and later checks keep it (see "How it runs"). The cost is that a species complex is measured from its largest member. For example, the *E. cloacae* reference 550.3494 sits in the cohort's main group, and the other complex members sit 0.085 to 0.111 from it.
 
 **Verdicts.** A genome fails when
 1. its distance to its own reference exceeds `fail_distance` = 0.13 (ANI estimate about 87%), or

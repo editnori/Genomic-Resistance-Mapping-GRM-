@@ -657,13 +657,22 @@ fn species_check(layout: &Layout, sketch_only: bool) -> Result<()> {
         &std::fs::read(&path)
             .with_context(|| format!("run `grm curate` first ({})", path.display()))?,
     )?;
-    let lists = rows
+    let selected = rows
         .into_iter()
         .map(|r| {
             let ids = read_lines(&layout.species_dir(&r.slug).join("genomes.txt"))?;
             Ok((r.species, r.slug, ids))
         })
         .collect::<Result<Vec<_>>>()?;
+    // Genomes an earlier check judged stay in, and so do its references:
+    // curation has since dropped the failures from genomes.txt.
+    let earlier_path = layout.species_check();
+    let earlier = if earlier_path.exists() {
+        Some(grm::species_check::read(&earlier_path)?)
+    } else {
+        None
+    };
+    let lists = grm::species_check::cohort_lists(selected, earlier.as_ref());
     let started = std::time::Instant::now();
     let cohorts = grm::species_check::load_cohorts(layout, &lists)?;
     let sketched: usize = cohorts.iter().map(|c| c.sketches.len()).sum();
@@ -675,7 +684,7 @@ fn species_check(layout: &Layout, sketch_only: bool) -> Result<()> {
     if sketch_only {
         return Ok(());
     }
-    let check = grm::species_check::check(cohorts, &Default::default());
+    let check = grm::species_check::check(cohorts, &Default::default(), earlier.as_ref())?;
     let out = grm::species_check::write(layout, &check)?;
     for s in &check.species {
         eprintln!(
@@ -1286,6 +1295,127 @@ mod tests {
                 .iter()
                 .all(|g| g.genes.is_empty() && g.catalog_version.is_empty())
         );
+    }
+
+    const FOREIGN: [&str; 3] = ["562.103", "562.108", "562.115"];
+
+    /// One species of 60 labelled genomes with FASTA files, three of them
+    /// unrelated sequence filed under it. Resistant calls are the rarer
+    /// class, so a cap of 50 selects all 20 resistant genomes, the foreign
+    /// three among them, and 30 of the 40 susceptible ones.
+    fn species_check_fixture(root: &Path) {
+        let mut rng = ChaCha8Rng::seed_from_u64(9);
+        let random = |rng: &mut ChaCha8Rng| -> Vec<u8> {
+            (0..100_000)
+                .map(|_| b"ACGT"[rng.random_range(0..4)])
+                .collect()
+        };
+        let species_root = random(&mut rng);
+        let (mut amr, mut meta) = (String::new(), String::new());
+        std::fs::create_dir_all(root.join("fasta")).unwrap();
+        std::fs::create_dir_all(root.join("bvbrc")).unwrap();
+        for i in 0..60 {
+            let (id, call) = if i < 20 {
+                (format!("562.{}", 100 + i), "Resistant")
+            } else {
+                (format!("562.{}", 180 + i), "Susceptible")
+            };
+            let seq: Vec<u8> = if FOREIGN.contains(&id.as_str()) {
+                random(&mut rng)
+            } else {
+                species_root
+                    .iter()
+                    .map(|&b| {
+                        if rng.random_bool(0.005) {
+                            b"ACGT"[rng.random_range(0..4)]
+                        } else {
+                            b
+                        }
+                    })
+                    .collect()
+            };
+            let mut fasta = format!(">{id}\n").into_bytes();
+            fasta.extend(&seq);
+            fasta.push(b'\n');
+            std::fs::write(grm::bvbrc::fasta_path(&root.join("fasta"), &id), fasta).unwrap();
+            let record = serde_json::json!({
+                "genome_id": id, "antibiotic": "meropenem", "resistant_phenotype": call,
+                "laboratory_typing_method": "Broth dilution",
+            });
+            amr += &format!("{record}\n");
+            let genome = serde_json::json!({
+                "genome_id": id, "species": "Escherichia coli", "genome_length": "100000",
+            });
+            meta += &format!("{genome}\n");
+        }
+        std::fs::write(root.join("bvbrc/genome_amr.jsonl"), amr).unwrap();
+        std::fs::write(root.join("bvbrc/genomes.jsonl"), meta).unwrap();
+    }
+
+    /// `curate` drops the failed genomes from genomes.txt and selects
+    /// replacements. The check that follows must still judge the dropped
+    /// genomes against the same reference, or the next `curate` lets them
+    /// back in.
+    #[test]
+    fn species_check_and_curate_reach_a_fixed_point() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        species_check_fixture(dir.path());
+        let folds = grm::learn::eval::EvalConfig::default().folds;
+        let selection =
+            || read_lines(&layout.species_dir("escherichia_coli").join("genomes.txt")).unwrap();
+        let foreign: Vec<String> = FOREIGN.map(String::from).to_vec();
+        let state = || {
+            let check: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(layout.species_check()).unwrap()).unwrap();
+            let failed: Vec<String> = check["genomes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|g| g["verdict"] == "fail")
+                .map(|g| g["genome_id"].as_str().unwrap().to_string())
+                .collect();
+            let references: Vec<String> = check["species"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|s| s["reference"].as_str().unwrap().to_string())
+                .collect();
+            let (_, qc): (serde_json::Value, BTreeMap<String, String>) =
+                serde_json::from_slice(&std::fs::read(layout.curated().join("qc.json")).unwrap())
+                    .unwrap();
+            let dropped: BTreeMap<String, String> = qc
+                .into_iter()
+                .filter(|(_, why)| why.starts_with(curate::SPECIES_CHECK_FAILED))
+                .collect();
+            (failed, references, dropped, selection())
+        };
+
+        run_curate(&layout, 50, folds, None).unwrap();
+        let first = selection();
+        assert!(foreign.iter().all(|id| first.contains(id)), "{first:?}");
+        let mut passes = Vec::new();
+        for _ in 0..3 {
+            species_check(&layout, false).unwrap();
+            run_curate(&layout, 50, folds, None).unwrap();
+            passes.push(state());
+        }
+        for (failed, _, dropped, selected) in &passes {
+            assert_eq!(failed, &foreign);
+            assert_eq!(dropped.keys().cloned().collect::<Vec<_>>(), foreign);
+            assert_eq!(selected.len(), 50);
+            assert!(
+                selected.iter().all(|id| !foreign.contains(id)),
+                "{selected:?}"
+            );
+        }
+        // The first pass judged the 50 first selected; later passes also
+        // judge the three replacements, so the evidence text may move once.
+        assert_eq!(passes[1].1, passes[0].1, "references moved");
+        assert_eq!(passes[1].3, passes[0].3, "selection moved");
+        assert_eq!(passes[2], passes[1]);
+        let check = grm::species_check::read(&layout.species_check()).unwrap();
+        assert_eq!(check.species[0].checked, 53);
     }
 
     #[test]
