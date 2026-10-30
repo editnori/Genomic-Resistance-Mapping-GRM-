@@ -1,6 +1,6 @@
 # GRM work program and completion ledger
 
-Snapshot: 2026-10-30 19:55 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
+Snapshot: 2026-10-30 21:50 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
 
 ## Status vocabulary
 
@@ -723,3 +723,23 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
 - 2026-10-30 19:5x UTC: **ways back into Vast.**
   - **The support ticket** (`support-ticket-draft.md` in the receipts folder) is approved to send. The Vast CLI has no support command, and the in-app browser has no signed-in Vast session, so it goes out from Layth's Vast account. No ticket number yet.
   - **An ssh route through the site's Cloudflare tunnel** is approved in principle. Because the connector runs cloudflared with `--token-file`, routes are set in Cloudflare. It needs Layth's Cloudflare action: a hostname on the existing tunnel pointing to `ssh://localhost:22`, behind an Access policy limited to his email. No unauthenticated ssh hostname. Main does the laptop side (`cloudflared access ssh` under a new alias) once he confirms.
+- 2026-10-30 21:5x UTC: **implementation program, progress since 19:55** (laptop only; all uncommitted, in isolated worktrees from `c90ebaf`). Vast ssh is still down, and the ticket and Cloudflare route are with Layth.
+  - **Closed:**
+    - **L:** main verified the closing round on a copy (`/home/layth/review/grm-main-l-close-20261030/RECEIPT.md`). 40 tests pass, the pins reproduce, and the re-checker's 17 mutants are all caught.
+    - **O:** approved, and its Low closed by main.
+    - **G:** APPROVED by independent review (`/home/layth/review/grm-review-task-g-20261030/REVIEW.md`, `6e57b3c8…862f`). All 11 injected faults were caught, and the plan hash agrees across Rust, B and D. A closing round on its 6 Lows is coded and waits for the heavy slot.
+    - **H:** gate passed (313 tests; all 6 mutants caught after one added assertion). Its independent review's static part found no High or Medium, and the review waits for the slot.
+    - **J:** APPROVED by the combined J and K re-check (`/home/layth/review/grm-recheck-jk-20261030/REVIEW.md`, `3b66098a…aeb6`). A closing round adds four tests.
+  - **Ablation contract v1.8 to v1.10** (`/home/layth/review/grm-ablation-contract-20261030/CONTRACT.md`, now `1ce28f53…cd78`; each earlier version is kept beside it):
+    - **v1.8 §15:** `equivalent` is withdrawn as a decision. J's re-check measured the false-equivalent rate at 0.0595 (heterogeneous) and 0.113 (skewed) at 60 clusters, so no floor holds 5%. A within-margin note is descriptive only, and the pooled sign-flip p is stated as testing "no effect in any species".
+    - **v1.9 §16:** Task I rulings. Label-dependent screening uses only the rows of the fit it serves, so inner tuning never sees screening done with validation labels. Cross-block collapse needs equal availability, and a block with no training rows is unavailable.
+    - **v1.10 §17:** pooled keys are planned ids, so a missing confirmatory pool can no longer vanish. K recomputes Holm and BH from the plan and enforces the few-species floor. Reports are written atomically as UTF-8.
+  - **Fix rounds running:**
+    - **K, round 6:** v1.10, after one Medium.
+    - **D, round 5:** the fourth re-check found 2 Mediums. The near-tie tolerance doesn't scale with summand size (fix: `math.fsum`), and the eps ignores the dtype.
+    - **N:** round 3 is done (85 tests, 71 of 71 mutants, all 10 of the re-checker's mutants caught).
+    - **M:** closing round done (40 tests, 51 of 51 mutants).
+  - **Re-checks:**
+    - The joint M, N and P re-check is running as a Workflow with four lenses and adversarial verification.
+    - The first workflow-run re-checks were D's fourth and the combined J and K check, each with three lenses, one verifier per lens and one writer.
+  - **Heavy slot order:** F's review now, then A's re-check, the I review, the H review and G's closing gate.
