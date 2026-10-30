@@ -53,8 +53,9 @@ enum Command {
         /// check that runs elsewhere.
         #[arg(long)]
         sketch_only: bool,
-        /// Ignore the existing species check: choose references afresh and
-        /// judge every genome without its recorded verdict.
+        /// Choose references afresh and judge every genome without its
+        /// recorded verdict. The genomes the existing species check
+        /// recorded are still judged, so the ones curation dropped stay out.
         #[arg(long)]
         reset: bool,
     },
@@ -668,10 +669,11 @@ fn species_check(layout: &Layout, sketch_only: bool, reset: bool) -> Result<()> 
             Ok((r.species, r.slug, ids))
         })
         .collect::<Result<Vec<_>>>()?;
-    // Genomes an earlier check judged stay in, and so do its references:
-    // curation has since dropped the failures from genomes.txt.
+    // Genomes an earlier check judged stay in, even after --reset: curation
+    // has since dropped the failures from genomes.txt. Without --reset its
+    // references and verdicts stay too.
     let earlier_path = layout.species_check();
-    let earlier = if earlier_path.exists() && !reset {
+    let earlier = if earlier_path.exists() {
         Some(grm::species_check::read(&earlier_path)?)
     } else {
         None
@@ -688,7 +690,8 @@ fn species_check(layout: &Layout, sketch_only: bool, reset: bool) -> Result<()> 
     if sketch_only {
         return Ok(());
     }
-    let check = grm::species_check::check(cohorts, &Default::default(), earlier.as_ref())?;
+    let recorded = if reset { None } else { earlier.as_ref() };
+    let check = grm::species_check::check(cohorts, &Default::default(), recorded)?;
     let out = grm::species_check::write(layout, &check)?;
     for s in &check.species {
         eprintln!(
@@ -1426,6 +1429,33 @@ mod tests {
         assert_eq!(passes[2], passes[1]);
         let check = grm::species_check::read(&layout.species_check()).unwrap();
         assert_eq!(check.species[0].checked, 53);
+    }
+
+    /// `--reset` drops the recorded references and verdicts, not the
+    /// recorded genomes. Curation has removed the failed ones from
+    /// genomes.txt, so a reset check that forgot them would let the next
+    /// curate select them again.
+    #[test]
+    fn a_reset_check_still_judges_the_genomes_curation_dropped() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        species_check_fixture(dir.path());
+        let folds = grm::learn::eval::EvalConfig::default().folds;
+        run_curate(&layout, 50, folds, None).unwrap();
+        species_check(&layout, false, false).unwrap();
+        run_curate(&layout, 50, folds, None).unwrap();
+        species_check(&layout, false, true).unwrap();
+        run_curate(&layout, 50, folds, None).unwrap();
+        let check = grm::species_check::read(&layout.species_check()).unwrap();
+        let failed: Vec<&str> = check.failures().keys().map(String::as_str).collect();
+        assert_eq!(failed, FOREIGN);
+        assert_eq!(check.species[0].checked, 53);
+        let selected =
+            read_lines(&layout.species_dir("escherichia_coli").join("genomes.txt")).unwrap();
+        assert!(
+            selected.iter().all(|id| !FOREIGN.contains(&id.as_str())),
+            "{selected:?}"
+        );
     }
 
     #[test]

@@ -29,7 +29,7 @@
 //! sketch nor a FASTA file keeps its earlier verdict, and a genome recorded
 //! as failed stays failed whatever a rerun judges, which `kept_fail`
 //! records. Only `grm species-check --reset` chooses references and
-//! verdicts afresh.
+//! verdicts afresh, and it still judges every recorded genome.
 //!
 //! Mash distance approximates 1 - ANI near the species boundary of about 95%
 //! ANI (distance 0.05). Species complexes (E. cloacae, K. oxytoca, E. faecium
@@ -196,7 +196,8 @@ pub struct GenomeCheck {
     pub reason: Option<String>,
     /// For a genome an earlier check failed and this one judged otherwise:
     /// what this check judged. The verdict stays fail, with the recorded
-    /// reason, until `--reset`.
+    /// reason and `inside_species`, until `--reset`; the numeric fields are
+    /// this check's.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kept_fail: Option<String>,
 }
