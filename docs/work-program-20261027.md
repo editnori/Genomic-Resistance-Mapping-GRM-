@@ -684,3 +684,24 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
   - **Temporal contract:** the five rulings in M's `splits.py` docstring; N is aligning to them.
   - **For revision 11:** A must merge together with the `EVALUATION_REVISION` 11 bump. The one-class balanced accuracy in `audit.py:211` and Rust `binary_metrics` is confirmed by D's reviewer.
   - **Laptop:** RAM floors are being enforced by dropping WSL's page cache (Windows fell to 0.3 GB free during A's review build). The load was about 24 on 12 cores.
+- 2026-10-30 12:3x–14:4x UTC: **implementation program A–P, progress.** No commits in any package worktree; counts below were re-run by main where marked.
+  - **Closed:**
+    - B: `RECHECK_TASK_B=APPROVED`, 62 tests, 51/51 mutations.
+    - C: the re-check's remaining items closed; 81 tests OK (main re-ran them at 14:4x).
+    - E: the re-check's two Lows closed; 34 tests OK (main re-ran them at 14:4x), and 92/92 frozen selections still match.
+  - **M, temporal splits: `RECHECK_TASK_M=APPROVED`** (`/home/layth/review/grm-recheck-task-m-20261030/REVIEW.md`, `baa0b849…450f`). 0 High, 0 Medium, 2 Low, 5 Info. No path from post-T information into train across 2,628 property comparisons; 34 tests; 34/34 of the implementer's mutants. A closing round is in progress for the 2 Lows, the shared tie-break, canonical JSON and rule 6.
+  - **N, temporal artifacts: `REVIEW_TASK_N=DEFECTS`** (`d0d788fc…5eee`). The resolver is correct and agrees with M on every label value over 403,200 adversarial reads. 4 Medium: canary false passes, where a real leak gets `passed=True` (knowability at T unchecked in two canaries, a cached fit hides a leak, no metadata perturbation outside train, a known-but-absent token accepted). 2 Low. Fix round in progress.
+  - **Temporal rulings (main):** the fit may use M's training rows only, so genomes public at T but labelled after T never shape the fit, unsupervised steps included. Same-day agreeing events resolve in canonical label order (smallest `source_release`, then `supersedes`) in both modules. New rule 6: `lineage` and `duplicate_group` are stripped, and an empty value is refused.
+  - **Open fix rounds:**
+    - A: `REVIEW_TASK_A=DEFECTS`. The code is correct, but 3 mutations that restore the original bug pass the suite. A test-only round waits for the heavy slot.
+    - D: the re-check found a power-check Medium plus Lows; second fix round.
+    - J: `REVIEW_TASK_J=DEFECTS`, 2 High: `equivalent` was reachable at few clusters or species, and pooled records were adjusted together with per-dataset records. Fixing to contract v1.3.
+    - K: the re-check found Lows only; round 3 aligns it to contract v1.3 so no adapter for J is needed.
+  - **Reviews running:** L, O and P. **To start:** F, G, H and I. G holds the heavy slot for its gate; A's test round, I and H follow in that order.
+  - **Ablation contract v1.3:** sha256 `28628ea87c7ce8c0b7e800b9dd633d36b8049d4af9f9063e07f8d4067ca9b62d`.
+    - v1.2 added: `equivalent` needs at least 10 units; jackknife-t or another proven-calibrated interval; families A–C use log loss only; `finalize` requires a complete family; a contrast with more than 10% undefined resamples is undefined; `pool` refuses mismatched inputs.
+    - v1.3 added: families A and B are pooled records only, and per-dataset contrasts are family C; a pooled record is never adjusted with per-dataset records; missingness carries `dataset`; the 90% interval nests inside the 95%; `ci_method` is an exact token.
+- 2026-10-30 14:3x UTC: **Vast ssh outage, diagnosis** (main, read-only through the Vast API). It is the host's network, not GRM's sshd or jobs.
+  - The container log shows the last accepted ssh sessions at about 12:37Z, then `remote port forwarding failed for listen port 29606`. Since then, the container's reverse tunnel to the proxy (`ssh3.vast.ai` = `184.72.168.0:22`) times out every ~12 s. The direct port 38018 is dead too; outbound HTTPS works, so the site keeps serving revision 9.
+  - The instance is `running`. `disk_usage` read 198 of 300 GiB at 14:30Z, against 259 at the outage, which fits the driver having removed g7's ksets. It can't say whether g8 has ended.
+  - `vastai execute` is refused on running instances, so there is no side channel. Ruling unchanged: wait, with no restart; main watches the disk and both ports every 2 min.
