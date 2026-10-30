@@ -7,6 +7,7 @@ pub mod bits;
 pub mod bvbrc;
 pub mod catalog;
 pub mod cluster;
+pub mod confine;
 pub mod curate;
 pub mod dna;
 pub mod drugs;
