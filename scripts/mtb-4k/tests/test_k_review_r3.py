@@ -14,6 +14,13 @@ without_zero_step_cap_exemption. 690815a writes irls_steps 0 when the warm start
 the KKT tolerance (src/learn/lasso.rs:70), the pinned check-results.py:114 accepts any
 non-negative step count, and the K review treated that status as impossible because it was at
 855bdba.
+R1 (marked): the every-step-capped rule is gone (690815a can converge after capped steps,
+docs/lasso-stopping.md:39, and the pinned checker accepts that). all_capped became a positive
+control in the direct test (with {3,3,true}) and in the wrapper (4 cases), and zero_step_cap
+({0,1,true}, hits exceed steps) took its place among the negatives (direct 5, wrapper 12, as
+before; the wrapper now has 20 cases and 8 positives). The mutants without_zero_step_cap_exemption
+and without_final_cap_guard targeted the removed rule; cap_bound_off_by_one and cap_bound_strict
+guard hits <= steps instead.
 
 usage: FOLDGEN=<foldgen binary> python3 -I scripts/mtb-4k/tests/test_k_review_r3.py --receipt OUT.json
 """
@@ -154,8 +161,13 @@ class SolverTests(unittest.TestCase):
         for key in ("selected_convergence","refit_convergence"):
             fit=fx.fit(); fit[key]={"irls_steps":0,"sweep_cap_hits":0,"converged":True}
             self.assertTrue(vc.validate_lasso_fit(fit,"direct-valid-zero-step",30))
+        # CHANGED ASSERTION (R1): all_capped is a positive control; zero_step_cap ({0,1,true}) replaces it.
+        for steps in (1,3):
+            for key in ("selected_convergence","refit_convergence"):
+                fit=fx.fit(); fit[key]={"irls_steps":steps,"sweep_cap_hits":steps,"converged":True}
+                self.assertTrue(vc.validate_lasso_fit(fit,"direct-valid-all-capped",30))
         statuses=(("excess_cap",{"irls_steps":1,"sweep_cap_hits":2,"converged":True}),
-                  ("all_capped",{"irls_steps":1,"sweep_cap_hits":1,"converged":True}))
+                  ("zero_step_cap",{"irls_steps":0,"sweep_cap_hits":1,"converged":True}))
         for label,status in statuses:
             for key in ("selected_convergence","refit_convergence"):
                 fit=fx.fit(); fit[key]=copy.deepcopy(status)
@@ -165,7 +177,7 @@ class SolverTests(unittest.TestCase):
         fit=fx.fit(); fit["path_points"]=31
         with self.assertRaises(vc.ValidationError): vc.validate_lasso_fit(fit,"direct-excess-path",30)
         OBS["direct_negative_controls"].append({"kind":"excess_path","rejected":True})
-        self.assertEqual(len(OBS["direct_negative_controls"]),5)  # IRLS0: was 7, with zero_step
+        self.assertEqual(len(OBS["direct_negative_controls"]),5)  # IRLS0: was 7, with zero_step; R1: zero_step_cap for all_capped
 
 class WrapperTests(unittest.TestCase):
     def setUp(self):
@@ -208,14 +220,16 @@ class WrapperTests(unittest.TestCase):
     def test_final_and_per_fold_fail_before_checker(self):
         statuses=(("zero_step",{"irls_steps":0,"sweep_cap_hits":0,"converged":True}),
                   ("excess_cap",{"irls_steps":1,"sweep_cap_hits":2,"converged":True}),
-                  ("all_capped",{"irls_steps":1,"sweep_cap_hits":1,"converged":True}))
+                  ("all_capped",{"irls_steps":1,"sweep_cap_hits":1,"converged":True}),
+                  ("zero_step_cap",{"irls_steps":0,"sweep_cap_hits":1,"converged":True}))  # R1: added
         cases=[]
         for location in ("final","per_fold"):
             cases.append((location,"selected_convergence",statuses[2][0],statuses[2][1],31,"prior_path31_selected_all_capped"))
             for key in ("selected_convergence","refit_convergence"):
                 for label,status in statuses: cases.append((location,key,label,status,None,label))
             cases.append((location,None,"excess_path_only",None,31,"excess_path_only"))
-        self.assertEqual(len(cases),16)
+        self.assertEqual(len(cases),20)  # R1: was 16, before zero_step_cap
+        positives_before=len(OBS["wrapper_positive_controls"])
         for location,key,label,status,points,kind in cases:
             with self.subTest(location=location,key=key,kind=kind):
                 def mutate(r,location=location,key=key,status=status,points=points):
@@ -229,9 +243,11 @@ class WrapperTests(unittest.TestCase):
                 case=self.run_case(f"{location}/{key}/{kind}",mutate=mutate)
                 case.update({"location":location,"status_field":key,"kind":kind,"path_points":points,"status":status})
                 # CHANGED ASSERTION (IRLS0): the zero_step cases pass; every other input is the valid fixture.
-                if kind=="zero_step": self.positive(case)
+                # CHANGED ASSERTION (R1): so do the all_capped ones, which 690815a can write.
+                if kind in ("zero_step","all_capped"): self.positive(case)
                 else: self.negative(case)
-        self.assertEqual(len(OBS["wrapper_negative_controls"]),12)  # IRLS0: was 16, with the 4 zero_step cases
+        self.assertEqual(len(OBS["wrapper_negative_controls"]),12)  # IRLS0: was 16, with the 4 zero_step cases; R1: 4 all_capped out, 4 zero_step_cap in
+        self.assertEqual(len(OBS["wrapper_positive_controls"])-positives_before,8)  # R1: 4 zero_step and 4 all_capped
 
     def test_valid_intermediate_short_and_empty_pass(self):
         empty=[]
@@ -286,21 +302,24 @@ class MutationTests(unittest.TestCase):
             OBS["mutations"].append({"mutation":"remove survival outer complement","detected":True,"absolute_error":str(err)})
 
     def test_solver_guard_source_mutations_detected(self):
-        # CHANGED ASSERTION (IRLS0): replaces without_positive_steps; 0 steps are valid, so the final-cap guard's
-        # exemption for them is what a mutant must not remove.
-        with self.mutated("without_zero_step_cap_exemption"," if steps>=1:\n  if converged and hits==steps: fail"," if True:\n  if converged and hits==steps: fail") as mutant:
-            status={"irls_steps":0,"sweep_cap_hits":0,"converged":True}
-            vc.validate_convergence(status,"baseline-zero-step")
-            with self.assertRaises(mutant.ValidationError): mutant.validate_convergence(status,"mutant-zero-step")
-            OBS["mutations"].append({"mutation":"remove the final-cap guard's zero-step exemption","detected":True})
+        # CHANGED ASSERTION (R1): replaces without_zero_step_cap_exemption, whose rule R1 removed. The bound
+        # hits <= steps is what is left, and an off-by-one in it must be caught at 0 steps.
+        with self.mutated("cap_bound_off_by_one","if hits>steps: fail","if hits>steps+1: fail") as mutant:
+            status={"irls_steps":0,"sweep_cap_hits":1,"converged":True}
+            with self.assertRaises(vc.ValidationError): vc.validate_convergence(status,"baseline-zero-step-cap")
+            mutant.validate_convergence(status,"mutant-zero-step-cap")
+            OBS["mutations"].append({"mutation":"loosen sweep_cap_hits <= irls_steps by one","detected":True})
         with self.mutated("without_cap_bound","if hits>steps: fail","if False: fail") as mutant:
             fit=fx.fit(); fit["selected_convergence"]={"irls_steps":1,"sweep_cap_hits":2,"converged":True}
             self.assertTrue(mutant.validate_lasso_fit(fit,"mutant-cap-bound",30))
             OBS["mutations"].append({"mutation":"remove sweep_cap_hits upper bound","detected":True})
-        with self.mutated("without_final_cap_guard","if converged and hits==steps: fail","if False: fail") as mutant:
-            fit=fx.fit(); fit["selected_convergence"]={"irls_steps":1,"sweep_cap_hits":1,"converged":True}
-            self.assertTrue(mutant.validate_lasso_fit(fit,"mutant-final-cap",30))
-            OBS["mutations"].append({"mutation":"remove final-step cap convergence guard","detected":True})
+        # CHANGED ASSERTION (R1): replaces without_final_cap_guard, whose rule R1 removed. A bound tightened to
+        # hits < steps would stop the valid all-capped statuses again.
+        with self.mutated("cap_bound_strict","if hits>steps: fail","if hits>=steps: fail") as mutant:
+            for status in ({"irls_steps":1,"sweep_cap_hits":1,"converged":True},{"irls_steps":0,"sweep_cap_hits":0,"converged":True}):
+                vc.validate_convergence(status,"baseline-cap-equals-steps")
+                with self.assertRaises(mutant.ValidationError): mutant.validate_convergence(status,"mutant-cap-equals-steps")
+            OBS["mutations"].append({"mutation":"tighten sweep_cap_hits <= irls_steps to <","detected":True})
         with self.mutated("without_path_bound",'if fit["path_points"]>lambda_count: fail','if False: fail') as mutant:
             fit=fx.fit(); fit["path_points"]=31
             self.assertTrue(mutant.validate_lasso_fit(fit,"mutant-path-bound",30))

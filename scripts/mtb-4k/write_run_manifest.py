@@ -2,6 +2,7 @@
 """Write a cohort's run manifest (grm-mtb-4k-run-manifest-v1) after `grm learn` and `grm report`.
 
 usage: python3 -I write_run_manifest.py ROOT --cohort NAME --source-commit SHA --binary GRM [--log PIPELINE_LOG]
+           [--profile r8|rN]
 
 ROOT is the cohort's execution root (RUN/cohorts/<name>, holding data/). The manifest binds what
 compare_cohorts.py and run_revision8_checks.py read, each by SHA-256: the genome list, the matrix
@@ -15,10 +16,12 @@ threshold; and each report with its input_fingerprint. Before writing anything i
   as `grm learn` gates them: a dataset that passes must have a report, one that does not gets a
   class-gate receipt with those counts and must have no report, and with --log its skip line must
   be in the pipeline log;
-- checks the finished manifest with report_contract.validate_manifest against the frozen cohort
-  rules, and writes it (validation-manifest.json, never over an existing one) only if it passes.
+- checks the finished manifest with report_contract.validate_manifest against the profile's
+  cohort rules, and writes it (validation-manifest.json, never over an existing one) only if it
+  passes.
 
-Exit 0 when written; 2 otherwise, including when the validators cannot load (a moved pin).
+The manifest's evaluation_revision is the profile's. Exit 0 when written; 2 otherwise, including
+when the validators cannot load (a moved pin, or an unfilled rN placeholder).
 """
 import argparse,copy,importlib,json,sys
 from pathlib import Path
@@ -31,8 +34,8 @@ def _sibling(name):
  module=importlib.import_module(name)
  if Path(module.__file__).resolve().parent!=LANE: raise ImportError(f"{name} loaded from {module.__file__}, not from {LANE}")
  return module
-try: vc=_sibling("report_contract"); fpmod=_sibling("fingerprint")
-except (ImportError,ValueError,OSError) as _exc:  # ValueError, OSError: report_contract's pin check
+try: vc=_sibling("report_contract"); fpmod=_sibling("fingerprint")  # report_contract activates --profile (default r8)
+except (ImportError,ValueError,OSError) as _exc:  # ValueError, OSError: report_contract's pin and profile checks
  print(f"write_run_manifest: STOP: cannot load the validators: {_exc}",file=sys.stderr); sys.exit(2)
 
 def build(root,cohort,source_commit,binary,log=None):
@@ -72,12 +75,14 @@ def build(root,cohort,source_commit,binary,log=None):
   "inputs":[{"path":rel,"sha256":vc.file_sha256(root/rel)} for rel in names],"reports":reports,"class_gate_unavailable":unavailable}
 
 def main(argv=None,rules=None):
- ap=argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+ ap=argparse.ArgumentParser(description=__doc__.split("\n\n")[0],allow_abbrev=False)
  ap.add_argument("root",type=Path); ap.add_argument("--cohort",required=True)
  ap.add_argument("--source-commit",required=True); ap.add_argument("--binary",required=True,type=Path); ap.add_argument("--log",type=Path)
+ ap.add_argument("--profile",choices=vc.PROFILE_NAMES,default="r8",help="evaluation profile (report_contract.py); read at import")
  args=ap.parse_args(argv)
  final=args.root/"validation-manifest.json"; part=args.root/"validation-manifest.json.part"
  try:
+  if args.profile!=vc.PROFILE: raise vc.ValidationError(f"--profile {args.profile} is not the active profile {vc.PROFILE}")
   if final.exists() or part.exists(): raise vc.ValidationError(f"{final} (or its .part) exists; a run manifest is written once")
   vc.digest(args.source_commit,"source commit",vc.COMMIT)
   manifest=build(args.root,args.cohort,args.source_commit,args.binary,args.log)

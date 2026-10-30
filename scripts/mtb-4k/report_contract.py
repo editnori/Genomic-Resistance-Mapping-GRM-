@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
-"""Strict revision-8 report contract over saved metadata and held-out scores only.
+"""Strict report contract for one evaluation profile over saved metadata and held-out scores only.
 
 Port of package K's validator_core.py (Vast grm-mtb-4k-validators-kimi-20261028-r2), reconciled
 with package W (RECONCILE.md section 5). It vendors nothing: the repo's own checker
 (scripts/check-results.py) and metric audit (scripts/metric-audit/audit.py) are loaded in place,
-after their SHA-256 match PINS, the blobs reviewed at 855bdba (unchanged through 3483065). A pin
-that moves is a stop until the pins are reviewed again.
+after their SHA-256 match the active profile's PINS. A pin that moves is a stop until the pins
+are reviewed again.
+
+Evaluation profiles. r8 is evaluation revision 8 with the blobs reviewed at 855bdba (unchanged
+through c70d678): the current run. rN is evaluation revision N on the same frozen cohort rules,
+for a cohort that has to move to revision N: its revision, pins, added report or status fields
+and convergence rule come from revision_n.py, which refuses while any of them is an @@NAME@@
+placeholder. The process's --profile (default r8) is read once, at import, so the pin check still
+runs before any argument parsing and every module of the process uses the same profile. Each CLI
+declares --profile too and stops if argparse reads another value. Defaulting to r8 fails closed
+at revision N's commit: the revision-8 pins and revision differ there.
 
 Changes from K: the per-fold lasso rule is the checker's (F1: a fold is called exactly when its
 complexity is positive, and a fold whose record has no selected point has no calls); a fourth
@@ -18,11 +27,17 @@ run_revision8_checks.py load strictly, so any invalid report stops them (L3). Bi
 (hashes, fingerprint, identity) always stop, and a report's SHA-256 is checked before it is
 parsed, so a bound report corrupted into invalid JSON is a binding failure too (I1).
 
-IRLS0: irls_steps may be 0, as in the checker, and the every-step-capped rule applies only once a
-step was taken. 690815a writes irls_steps 0 when the warm start already meets the KKT tolerance
-(src/learn/lasso.rs:70), the pinned check-results.py:114 accepts any non-negative step count,
-and the K review treated that status as impossible because it was at 855bdba. Whether a status
-converged stays the checker's to judge.
+IRLS0: irls_steps may be 0, as in the checker. 690815a writes irls_steps 0 when the warm start
+already meets the KKT tolerance (src/learn/lasso.rs:70), the pinned check-results.py:114 accepts
+any non-negative step count, and the K review treated that status as impossible because it was
+at 855bdba. Whether a status converged stays the checker's to judge.
+
+R1 (merge review of c70d678): the "every IRLS step capped yet converged" rule is gone. It came
+from the 855bdba solver. Under 690815a a step whose inner solve hits its iteration guard counts as
+a cap hit, and the point can still converge once its KKT residual meets the tolerance
+(docs/lasso-stopping.md:39), which check-results.py accepts, so the rule could stop a valid
+report. The contract keeps irls_steps >= 0, sweep_cap_hits >= 0 and sweep_cap_hits <= irls_steps,
+and leaves convergence to the checker, the same split as IRLS0.
 """
 from __future__ import annotations
 import hashlib, importlib.util, json, math, re, statistics, sys
@@ -34,7 +49,8 @@ LANE=Path(__file__).resolve().parent
 SCRIPTS=LANE.parent
 sys.path.insert(0,str(LANE))
 import fingerprint as fpmod  # noqa: E402
-SCHEMA,REVISION=2,8
+import revision_n as rev_n  # noqa: E402
+SCHEMA=2
 SPECIES="mycobacterium_tuberculosis"
 LEARNERS=("scm","cart","rf","gbt","lasso")
 RANKED={"cart","rf","gbt","lasso"}
@@ -44,13 +60,13 @@ FINGERPRINT=re.compile(r"[0-9a-f]{16}\Z")
 SHA256=re.compile(r"[0-9a-f]{64}\Z")
 COMMIT=re.compile(r"[0-9a-f]{40}\Z")
 TOL=1e-12
-# In-tree checker blobs this contract runs, as reviewed (RECONCILE.md section 3).
-PINS={"check-results.py":"e42392a9a6473e10a59854a312a2891a783e697cf8ebd2304fcc4204631a3774",
+# Profile r8's in-tree checker blobs, as reviewed (RECONCILE.md section 3).
+R8_PINS={"check-results.py":"e42392a9a6473e10a59854a312a2891a783e697cf8ebd2304fcc4204631a3774",
  "metric-audit/audit.py":"1f5a0468949616d6fa6609c9ee48c8507224827726cad0fa9ca4d7e09936f42f",
  "metric-audit/summarize.py":"fd5fdfab1bedb8118c95eaadef19452fc89786f371a5d1757bd784844eb3295f",
  "result_scope.py":"3bcb2db34b23accd9186a595e6e0002cbd3bc292ab548442d8a53ba94b65ae2a"}
 VALIDATOR_FILES=("report_contract.py","compare_cohorts.py","run_revision8_checks.py","fingerprint.py",
- "prepare_execution_roots.py","write_run_manifest.py")
+ "prepare_execution_roots.py","write_run_manifest.py","revision_n.py")
 DRUG_IDS={
  "amikacin":"mycobacterium_tuberculosis__amikacin","amoxicillin":"mycobacterium_tuberculosis__amoxicillin",
  "capreomycin":"mycobacterium_tuberculosis__capreomycin","ciprofloxacin":"mycobacterium_tuberculosis__ciprofloxacin",
@@ -78,13 +94,13 @@ class CohortRule:
  drugs:object  # tuple of drugs with reports; None: whatever the class gate gives on the root's genomes
  min_class:int=25
  unavailable:object=None  # frozen {drug:(R,S)} receipts; None: derived like drugs
-RULES={
+R8_RULES={
  "prefix":CohortRule(2000,"57af1c86c35fb0a4c62d3c0784a09804a919ba75941159d0c7b3cf56870aa2e3",ALL_DRUGS,unavailable={}),
  "added":CohortRule(2000,"a980d9e014fb90972a46b3fc01e65a9654deb58935d3ddf0f54018c19e7def85",ADDED_DRUGS,unavailable=ADDED_UNAVAILABLE),
  "full":CohortRule(4000,"80faef89571ecd2fd658204abd39fd4b55e5a86bfe8e4f379274162868f44eaf",ALL_DRUGS,unavailable={}),
  # prepare_execution_roots.matched_selection of the frozen 4,000 (measured read-only on Vast, 2026-10-28).
  "matched2k":CohortRule(2000,"212a21a5d2574e0d62d379fccddb0839c4f44f5a7cd36e43a558dc2c0926c3d1",None)}
-for _rule in RULES.values():  # every production cohort accounts for all 22 datasets
+for _rule in R8_RULES.values():  # every production cohort accounts for all 22 datasets
  assert _rule.drugs is None or set(_rule.drugs)|set(_rule.unavailable)==set(ALL_DRUGS)
 TOP_KEYS={"schema","evaluation","input_fingerprint","eval_config","id","species","species_slug","antibiotic",
  "drug_class","breakpoint","counts","lineage_threshold","catalog_groups","samples","splits","catalog","panels",
@@ -108,10 +124,11 @@ def file_sha256(path):
  with Path(path).open("rb") as stream:
   for chunk in iter(lambda:stream.read(1<<20),b""): h.update(chunk)
  return h.hexdigest()
-def pinned(rel):
+def pinned(rel,pins=None):
+ pins=PINS if pins is None else pins
  path=SCRIPTS/rel
  actual=file_sha256(path)
- if actual!=PINS[rel]: raise ValidationError(f"{path}: SHA-256 {actual} differs from the reviewed pin {PINS[rel]}")
+ if actual!=pins[rel]: raise ValidationError(f"{path}: SHA-256 {actual} differs from the reviewed pin {pins[rel]}")
  return path
 def check_pins(): return {rel:str(pinned(rel)) for rel in PINS}
 def validator_sha256(): return {name:file_sha256(LANE/name) for name in VALIDATOR_FILES if (LANE/name).is_file()}
@@ -119,9 +136,53 @@ def _load_module(name,path):
  spec=importlib.util.spec_from_file_location(name,path)
  if spec is None or spec.loader is None: raise RuntimeError(f"cannot load in-tree source {path}")
  module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); return module
-check_pins()
-upstream_audit=_load_module("grm_in_tree_metric_audit",pinned("metric-audit/audit.py"))
-upstream_checker=_load_module("grm_in_tree_result_checker",pinned("check-results.py"))
+
+# Evaluation profiles (module docstring). Activation binds PROFILE, REVISION, PINS, RULES, the two
+# in-tree modules and the report key sets, and changes nothing unless every step succeeds.
+PROFILE_NAMES=("r8","rN")
+BASE_KEYS={"TOP_KEYS":TOP_KEYS,"METRIC_KEYS":METRIC_KEYS,"CONFIG_KEYS":CONFIG_KEYS,"FOREST_KEYS":FOREST_KEYS,
+ "GBT_KEYS":GBT_KEYS,"FIT_KEYS":FIT_KEYS,"CONVERGENCE_KEYS":CONVERGENCE_KEYS}
+assert set(BASE_KEYS)==set(rev_n.KEY_SETS)
+PROFILE=REVISION=PINS=RULES=upstream_audit=upstream_checker=None
+def profile_from_argv(argv):
+ """The last --profile in argv, as argparse reads it (each CLI sets allow_abbrev=False), or r8."""
+ name="r8"
+ for i,arg in enumerate(argv):
+  if arg=="--": break
+  if arg=="--profile" and i+1<len(argv): name=argv[i+1]
+  elif arg.startswith("--profile="): name=arg.split("=",1)[1]
+ return name
+def revision_n_spec(name,values=None):
+ """(revision, pins, key sets) of revision N from revision_n.py. ValidationError when a value is an
+ unfilled placeholder or malformed, or revision N needs a contract change first."""
+ keys={k:frozenset(v) for k,v in BASE_KEYS.items()}
+ try: v=rev_n.require(rev_n.CONTRACT_NAMES,values)
+ except (rev_n.Unfilled,rev_n.Malformed) as exc: raise ValidationError(f"profile {name}: {exc}") from None
+ if v["RN_CONVERGENCE_STATUS_RULE"]!=rev_n.CONVERGENCE_AS_690815A:
+  raise ValidationError(f"profile {name}: RN_CONVERGENCE_STATUS_RULE is {v['RN_CONVERGENCE_STATUS_RULE']!r}; revision N's checker judges "
+   f"convergence statuses unlike 690815a, so validate_convergence needs a reviewed change first")
+ for k,new in v["RN_FIELD_CHANGES"].items():
+  if not keys[k]<=set(new): raise ValidationError(f"profile {name}: RN_FIELD_CHANGES drops or renames {sorted(keys[k]-set(new))} in {k}; that needs a reviewed contract change")
+  keys[k]=frozenset(new)
+ return v["REVISION_N"],{rel:v[n] for rel,n in rev_n.PIN_NAMES.items()},keys
+def profile_spec(name,values=None):
+ """(revision, pins, rules, key sets) of a profile. ValidationError when the profile is unknown, any
+ value it needs is an unfilled placeholder or malformed, or revision N needs a contract change."""
+ if name=="r8": return 8,dict(R8_PINS),R8_RULES,{k:frozenset(v) for k,v in BASE_KEYS.items()}
+ if name=="rN":
+  revision,pins,keys=revision_n_spec(name,values); return revision,pins,R8_RULES,keys
+ raise ValidationError(f"unknown evaluation profile {name!r}; expected one of {list(PROFILE_NAMES)}")
+def activate(name,values=None):
+ """Bind this module to profile `name`. `values` replaces revision_n.VALUES (tests only)."""
+ global PROFILE,REVISION,PINS,RULES,upstream_audit,upstream_checker
+ revision,pins,rules,keys=profile_spec(name,values)
+ for rel in pins: pinned(rel,pins)
+ audit=_load_module("grm_in_tree_metric_audit",pinned("metric-audit/audit.py",pins))
+ checker=_load_module("grm_in_tree_result_checker",pinned("check-results.py",pins))
+ PROFILE,REVISION,PINS,RULES,upstream_audit,upstream_checker=name,revision,pins,rules,audit,checker
+ globals().update({k:set(v) for k,v in keys.items()})
+ return name
+activate(profile_from_argv(sys.argv[1:]))
 def expect_keys(value,required,where,optional=None):
  if not isinstance(value,dict): fail(where,"expected object")
  optional=optional or set(); missing=sorted(required-set(value)); unknown=sorted(set(value)-required-optional)
@@ -249,14 +310,13 @@ def validate_config(config,where="eval_config"):
 
 def validate_convergence(status,where):
  expect_keys(status,CONVERGENCE_KEYS,where)
- # IRLS0: 690815a takes 0 IRLS steps when the warm start already meets the KKT tolerance (lasso.rs:70),
- # which check-results.py accepts; a step must have been taken before every step can hit the cap.
+ # IRLS0: 690815a takes 0 IRLS steps when the warm start already meets the KKT tolerance (lasso.rs:70).
+ # R1: a capped step can still end in a converged point (docs/lasso-stopping.md:39), so there is no
+ # every-step-capped rule. Both statuses pass check-results.py; whether one converged is its to judge.
  steps=integer(status["irls_steps"],where+".irls_steps")
  hits=integer(status["sweep_cap_hits"],where+".sweep_cap_hits")
- converged=boolean(status["converged"],where+".converged")
+ boolean(status["converged"],where+".converged")
  if hits>steps: fail(where,"sweep_cap_hits exceeds irls_steps")
- if steps>=1:
-  if converged and hits==steps: fail(where,"converged status cannot have every IRLS step hit the sweep cap")
 def validate_lasso_fit(fit,where,lambda_count):
  expect_keys(fit,FIT_KEYS,where)
  for key in ("path_points","path_unconverged"): integer(fit[key],f"{where}.{key}")
@@ -408,7 +468,7 @@ def validate_report(path,expected_id,expected,cohort):
  if sha!=expected["sha256"]: bind_fail(str(path),f"report SHA-256 differs from run manifest: {sha} != {expected['sha256']}")
  report=parse_json(raw,str(path))
  if not isinstance(report,dict) or not isinstance(report.get("evaluation"),dict): fail(str(path),"missing evaluation object")
- if not isinstance(report["evaluation"].get("revision"),int) or isinstance(report["evaluation"].get("revision"),bool) or report["evaluation"].get("revision")!=REVISION: fail(str(path),f"matched controls require evaluation revision 8, got {report['evaluation'].get('revision')!r}")
+ if not isinstance(report["evaluation"].get("revision"),int) or isinstance(report["evaluation"].get("revision"),bool) or report["evaluation"].get("revision")!=REVISION: fail(str(path),f"matched controls require evaluation revision {REVISION}, got {report['evaluation'].get('revision')!r}")
  expect_keys(report,TOP_KEYS,str(path))
  if not isinstance(report["schema"],int) or isinstance(report["schema"],bool) or report["schema"]!=SCHEMA: fail(str(path),f"matched controls require schema 2, got {report['schema']!r}")
  expect_keys(report["evaluation"],{"revision","valid","reasons","scope"},str(path)+".evaluation")

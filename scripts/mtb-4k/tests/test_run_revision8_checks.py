@@ -13,6 +13,12 @@ final refit zero-step convergence with a cap hit". 690815a writes irls_steps 0 w
 start already meets the KKT tolerance (src/learn/lasso.rs:70), the pinned check-results.py:114
 accepts any non-negative step count, and the K review treated that status as impossible because
 it was at 855bdba.
+R1 (marked): two statuses changed, not dropped. "wrapper final selected impossible status and
+excess path" now carries {1,2,true} (was {1,1,true}; still a stop), and "wrapper fold refit
+all-steps-capped convergence" ({1,1,true}) became "wrapper fold refit cap hits exceed steps"
+({2,3,true}; still a stop before the checker). A new positive control passes the complete
+wrapper with {1,1,true} and {3,3,true} on every fit: 690815a can write them, and the pinned
+check-results.py accepts them.
 
 Follow-up tests (plan-validators review): I4, the runner refuses a foldgen that is not the
 recorded build (--expected-foldgen-sha256, required); L2, verify_outputs, which the runner runs
@@ -73,15 +79,16 @@ class WrapperTests(unittest.TestCase):
   NEGATIVE.append({"control":"wrapper unknown final status","result":"stopped before checker"})
  def test_final_impossible_statuses_stop_before_checker(self):
   self.reject_report_mutation("wrapper final selected impossible status and excess path",lambda r:r["models"]["lasso_fit"].update(
-   path_points=31,selected_convergence={"irls_steps":1,"sweep_cap_hits":1,"converged":True}))
+   path_points=31,selected_convergence={"irls_steps":1,"sweep_cap_hits":2,"converged":True}))  # CHANGED ASSERTION (R1): was {1,1,true}
   # CHANGED ASSERTION (IRLS0): the refit status was {0,0,true}, which 690815a writes on a valid warm start.
   self.reject_report_mutation("wrapper final refit zero-step convergence with a cap hit",lambda r:r["models"]["lasso_fit"].update(
    refit_convergence={"irls_steps":0,"sweep_cap_hits":1,"converged":True}))
  def test_per_fold_impossible_statuses_stop_before_checker(self):
   self.reject_report_mutation("wrapper fold selected impossible status and excess path",lambda r:r["splits"][0]["learners"][4]["lasso_fits"][0].update(
    path_points=31,selected_convergence={"irls_steps":1,"sweep_cap_hits":2,"converged":True}))
-  self.reject_report_mutation("wrapper fold refit all-steps-capped convergence",lambda r:r["splits"][0]["learners"][4]["lasso_fits"][0].update(
-   refit_convergence={"irls_steps":1,"sweep_cap_hits":1,"converged":True}))
+  # CHANGED ASSERTION (R1): was "wrapper fold refit all-steps-capped convergence", {1,1,true}, which 690815a can write.
+  self.reject_report_mutation("wrapper fold refit cap hits exceed steps",lambda r:r["splits"][0]["learners"][4]["lasso_fits"][0].update(
+   refit_convergence={"irls_steps":2,"sweep_cap_hits":3,"converged":True}))
  def test_valid_intermediate_cap_passes_complete_wrapper(self):
   def mutate(r):
    fits=[r["models"]["lasso_fit"]]
@@ -91,6 +98,17 @@ class WrapperTests(unittest.TestCase):
      if fit[key] is not None: fit[key]={"irls_steps":2,"sweep_cap_hits":1,"converged":True}
   fx.mutate_report(self.root,self.did,mutate)
   code=self.run_wrapper(); self.assertEqual(code,0)
+ def test_all_steps_capped_converged_passes_complete_wrapper(self):
+  # R1: {1,1,true} and {3,3,true} on every fit pass the contract, the pinned checker and the audit.
+  def mutate(r):
+   fits=[r["models"]["lasso_fit"]]
+   for split in r["splits"]: fits.extend(split["learners"][4]["lasso_fits"])
+   for i,fit in enumerate(fits):
+    for key in ("selected_convergence","refit_convergence"):
+     if fit[key] is not None: fit[key]={"irls_steps":1+2*(i%2),"sweep_cap_hits":1+2*(i%2),"converged":True}
+  fx.mutate_report(self.root,self.did,mutate)
+  code=self.run_wrapper(); self.assertEqual(code,0)
+  self.assertTrue(json.loads((self.root/"receipt.json").read_text())["valid"])
  def test_added_14_reports_and_eight_skips_pass(self):
   root=fx.build_cohort(Path(self.tmp.name)/"added","added",self.rules); old=self.root; self.root=root
   try: code=self.run_wrapper()
