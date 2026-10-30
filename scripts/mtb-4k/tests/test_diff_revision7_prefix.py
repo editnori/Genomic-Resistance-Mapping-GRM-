@@ -137,6 +137,46 @@ class Diff(unittest.TestCase):
         self.assertEqual(self.run_diff(self.revision7("r8-on-rN"), new, "r8")[0], 2)
         self.assertIn("expected revision 8 against revision 7", self.last_stderr)
 
+    def kset_side(self, label, revision, field):
+        """A revision-`revision` side whose counted.json gives two samples one kset digest; field(i, j) is what each
+        report lists (None: leave the field out)."""
+        root = Path(self.tmp.name) / label / "data"
+        shutil.copytree(self.r8, root, symlinks=True)
+        sp = root / "species" / SLUG
+        first = json.loads(next((sp / "results").glob("*amikacin.json")).read_text())
+        a, b = first["samples"][0]["id"], first["samples"][1]["id"]
+        counted = json.loads((sp / "counted.json").read_text())
+        by = {g["genome_id"]: g for g in counted["genomes"]}
+        by[b]["kset_digest"] = by[a]["kset_digest"]
+        (sp / "counted.json").write_text(json.dumps(counted))
+        for path in (sp / "results").glob("*.json"):
+            report = json.loads(path.read_text())
+            report["evaluation"]["revision"] = revision
+            ids = [s["id"] for s in report["samples"]]
+            value = field(ids.index(a), ids.index(b))
+            if value is not None:
+                report["kset_duplicates"] = value
+            path.write_text(json.dumps(report))
+        return root
+
+    def test_kset_duplicates_only_from_the_threshold_and_only_as_the_digests_give(self):
+        ten = diff.DUPLICATE_ISOLATION_REVISION
+        with self.revision_n(ten):
+            code, out = self.run_diff(self.revision7("k-ok"), self.kset_side("k-ok-new", ten, lambda i, j: [[i, j]]), "rN")
+            self.assertEqual(code, 0, self.last_stderr)
+            for label, field in (("k-missing", lambda i, j: None), ("k-wrong", lambda i, j: [[i, j + 1]])):
+                code, out = self.run_diff(self.revision7(label), self.kset_side(label + "-new", ten, field), "rN")
+                self.assertEqual(code, 1, label)
+                self.assertIn("kset_duplicates (differs from the root's counted.json kset digests)", out["rows"][0]["differences"])
+        with self.revision_n(ten - 1):
+            code, out = self.run_diff(self.revision7("k-below"), self.kset_side("k-below-new", ten - 1, lambda i, j: [[i, j]]), "rN")
+            self.assertEqual(code, 1)
+            self.assertIn(f"kset_duplicates (not before revision {ten})", out["rows"][0]["differences"])
+        r7 = self.revision7("k-on-7", lambda r: r.update(kset_duplicates=[[0, 1]]))
+        code, out = self.run_diff(r7)
+        self.assertEqual(code, 1)
+        self.assertIn("kset_duplicates (on the revision-7 side)", next(r for r in out["rows"] if r["id"].endswith("amikacin"))["differences"])
+
     def test_an_unfilled_rn_refuses(self):
         new = self.revision_n_side(9)
         with self.revision_n("@@REVISION_N@@"):

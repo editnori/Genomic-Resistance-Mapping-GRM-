@@ -24,6 +24,12 @@ R9={"REVISION_N":9,"RN_CHECKER_COMMIT":"b2fd4337ce88be64767a3a552e87df21e64803c4
  "RN_PIN_RESULT_SCOPE":"3bcb2db34b23accd9186a595e6e0002cbd3bc292ab548442d8a53ba94b65ae2a",
  "RN_FIELD_CHANGES":{},"RN_CONVERGENCE_STATUS_RULE":"as-690815a"}
 
+# Revision 10 as relayed on 2026-10-30 (r10/integration, c90ebaf).
+R10={**R9,"REVISION_N":10,"RN_CHECKER_COMMIT":"c90ebaf48998dc244806ac435c3706bfd87c9a9b",
+ "RN_PIN_CHECK_RESULTS":"28b65bdbffb40ce6d4c010d6b7509855e9fa1b7c78d337889334492a2bcfa9df",
+ "RN_PIN_METRIC_AUDIT":"7b76746b896a7b4dab96ac360b4250e2bcdefa3bcb2dc5615d0414d8edfd1f30",
+ "RN_FIELD_CHANGES":{"OPTIONAL_TOP_KEYS":["kset_duplicates"]}}
+
 def run(script,*args,cwd):
  return subprocess.run([sys.executable,"-I","-B",str(script),*map(str,args)],cwd=cwd,capture_output=True,text=True)
 
@@ -86,6 +92,9 @@ class Placeholders(unittest.TestCase):
 class Filled(unittest.TestCase):
  def test_the_revision_9_facts_are_well_formed(self):
   self.assertEqual(rn.require(list(rn.TABLE),R9),R9)
+ def test_the_revision_10_facts_are_well_formed(self):
+  self.assertEqual(rn.require(list(rn.TABLE),R10),R10)
+  with self.assertRaises(rn.Malformed): rn.require(["RN_FIELD_CHANGES"],{**R10,"RN_FIELD_CHANGES":{"OPTIONAL_TOP_KEYS":[]}})
  def test_values_are_checked_by_kind(self):
   for name,bad in [("REVISION_N",8),("REVISION_N",9.0),("REVISION_N",True),("REVISION_N","9"),("RN_CHECKER_COMMIT","b2fd433"),
                    ("RN_CHECKER_COMMIT","B2FD4337CE88BE64767A3A552E87DF21E64803C4"),("RN_PIN_CHECK_RESULTS","0"*63),

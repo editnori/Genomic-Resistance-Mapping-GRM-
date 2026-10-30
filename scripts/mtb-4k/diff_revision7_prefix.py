@@ -13,6 +13,12 @@ allowed or not compared. Those are the lasso rows and models, `features` (the an
 lasso's top 30), and `evaluation`, which this diff never compares, though it checks its revision.
 `best_learner` is not a report field.
 
+kset_duplicates (duplicate isolation, revision 10; audit.py:66 and check-results.py:64 at c90ebaf hold
+DUPLICATE_ISOLATION_REVISION) is allowed on the new side only from that revision, and only equal to the groups
+the --revision8 root's counted.json digests give (audit.py:334-340). Revision 7 never carries it. A
+prefix that has a group moves its random folds, so its random split then differs from revision 7's and the
+diff reports it: a stop for review. MTB's cohorts have had no group.
+
 The prefix cohort's matrix is byte-identical to the frozen 2k matrix, and revision 8 changed only
 the lasso (docs/lasso-stopping.md, step 4). A whole-file comparison cannot show that, because
 `models.lasso_fit` sits before `rf_importance`, so this compares field by field. For each of the
@@ -32,6 +38,7 @@ Any difference in a field that must be identical exits 1; a missing dataset, a w
 an unfilled rN exits 2.
 """
 import argparse, importlib, json, sys
+from collections import defaultdict
 from pathlib import Path
 
 # M1: python3 -I (3.11+ implies -P) leaves this script's directory off sys.path. Put back that one
@@ -54,6 +61,7 @@ except ImportError as _exc:
     print(f"diff_revision7_prefix: STOP: cannot load revision_n: {_exc}", file=sys.stderr)
     sys.exit(2)
 
+DUPLICATE_ISOLATION_REVISION = 10  # audit.py:66 and check-results.py:64 at c90ebaf
 SAME_TOP = ["input_fingerprint", "eval_config", "id", "species", "species_slug", "antibiotic", "drug_class", "breakpoint", "counts",
             "lineage_threshold", "catalog_groups", "samples", "catalog", "panels", "unsupported_assays", "mic"]
 SAME_SPLIT = ["scheme", "folds", "n_groups", "test_fold", "unavailable_reason"]
@@ -97,7 +105,31 @@ def new_revision(profile):
     return 8 if profile == "r8" else rev_n.require(["REVISION_N"])["REVISION_N"]
 
 
-def diff_report(r8, r7, revision=8):
+def derived_kset_duplicates(samples, digests):
+    """audit.py:334-340 at c90ebaf: sample indices sharing a counted.json kset digest, groups of two or more, sorted."""
+    by_digest = defaultdict(list)
+    for i, s in enumerate(samples):
+        if digests.get(s["id"]) is None:
+            raise Stop(f"sample {s['id']} has no counted.json kset digest")
+        by_digest[digests[s["id"]]].append(i)
+    return sorted(g for g in by_digest.values() if len(g) > 1)
+
+
+def kset_differences(r8, r7, revision, digests):
+    out = []
+    if "kset_duplicates" in r7:
+        out.append("kset_duplicates (on the revision-7 side)")
+    if revision < DUPLICATE_ISOLATION_REVISION:
+        if "kset_duplicates" in r8:
+            out.append(f"kset_duplicates (not before revision {DUPLICATE_ISOLATION_REVISION})")
+        return out
+    want = derived_kset_duplicates(r8["samples"], digests)
+    if r8.get("kset_duplicates", []) != want:
+        out.append("kset_duplicates (differs from the root's counted.json kset digests)")
+    return out
+
+
+def diff_report(r8, r7, revision=8, digests=None):
     if r8.get("schema") != 2 or r7.get("schema") != 2:
         raise Stop(f"{r8.get('id')}: both reports must be schema 2")
     if r8["evaluation"]["revision"] != revision or r7["evaluation"]["revision"] != 7:
@@ -140,6 +172,7 @@ def diff_report(r8, r7, revision=8):
             differences.append(d)
     if "lasso_fit" not in r8["models"]:
         differences.append("models.lasso_fit (missing at revision 8)")
+    differences += kset_differences(r8, r7, revision, digests or {})
     return {"id": r8["id"], "identical_required_fields": not differences, "differences": differences,
             "lasso_rows_allowed_to_differ": lasso_rows, "not_compared": NOT_COMPARED}
 
@@ -154,13 +187,17 @@ def main(argv=None):
     args = ap.parse_args(argv)
     try:
         revision = new_revision(args.profile)
+        digests = {}
+        if revision >= DUPLICATE_ISOLATION_REVISION:
+            counted = json.loads((args.revision8 / "species" / args.slug / "counted.json").read_text())
+            digests = {g["genome_id"]: g.get("kset_digest") for g in counted["genomes"]}
         d8 = args.revision8 / "species" / args.slug / "results"
         d7 = args.revision7 / "species" / args.slug / "results"
         names8 = sorted(p.name for p in d8.glob("*.json"))
         names7 = sorted(p.name for p in d7.glob("*.json"))
         if not names8 or names8 != names7:
             raise Stop(f"dataset sets differ: only revision 8 {sorted(set(names8) - set(names7))}, only revision 7 {sorted(set(names7) - set(names8))}")
-        rows = [diff_report(json.loads((d8 / n).read_text()), json.loads((d7 / n).read_text()), revision) for n in names8]
+        rows = [diff_report(json.loads((d8 / n).read_text()), json.loads((d7 / n).read_text()), revision, digests) for n in names8]
     except (Stop, rev_n.Unfilled, rev_n.Malformed, OSError, KeyError, ValueError) as err:
         print(f"diff_revision7_prefix: STOP: {err}", file=sys.stderr)
         return 2

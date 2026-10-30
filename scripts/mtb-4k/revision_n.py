@@ -20,7 +20,10 @@ VALUES and nothing else. tests/test_revision_n.py holds for a wholly unfilled or
 file (since e354f99), so no test changes with a fill.
 Two values are decisions this file checks, not free text. RN_FIELD_CHANGES must be {} or, per
 key set, a list that keeps every revision-8 key (an addition); report_contract.py refuses a
-removal or rename, which needs a reviewed contract change. RN_CONVERGENCE_STATUS_RULE must be
+removal or rename, which needs a reviewed contract change. Its "OPTIONAL_TOP_KEYS" entry declares
+optional top-level report fields; report_contract.py accepts only those it validates
+(kset_duplicates), and requires kset_duplicates declared exactly from DUPLICATE_ISOLATION_REVISION
+(10) on. Revision 10's value is {"OPTIONAL_TOP_KEYS": ["kset_duplicates"]}. RN_CONVERGENCE_STATUS_RULE must be
 "as-690815a" for the contract to run: revision N's check-results.py judges a convergence status
 as 690815a's does (IRLS0, R1). Any other value means validate_convergence needs a reviewed change.
 """
@@ -89,7 +92,7 @@ def checked(name, value, table=None):
         "revision": lambda v: integer and v >= 9,
         "commit": lambda v: isinstance(v, str) and bool(COMMIT.fullmatch(v)),
         "sha256": lambda v: isinstance(v, str) and bool(SHA256.fullmatch(v)),
-        "field_changes": lambda v: isinstance(v, dict) and set(v) <= set(KEY_SETS)
+        "field_changes": lambda v: isinstance(v, dict) and set(v) <= set(KEY_SETS) | {"OPTIONAL_TOP_KEYS"}
         and all(isinstance(keys, list) and keys and all(isinstance(k, str) and k for k in keys) for keys in v.values()),
         "convergence": lambda v: isinstance(v, str) and bool(v),
     }[kind](value)

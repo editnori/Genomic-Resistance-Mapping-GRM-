@@ -150,7 +150,20 @@ PROFILE_NAMES=("r8","rN","rN-cleaned")
 BASE_KEYS={"TOP_KEYS":TOP_KEYS,"METRIC_KEYS":METRIC_KEYS,"CONFIG_KEYS":CONFIG_KEYS,"FOREST_KEYS":FOREST_KEYS,
  "GBT_KEYS":GBT_KEYS,"FIT_KEYS":FIT_KEYS,"CONVERGENCE_KEYS":CONVERGENCE_KEYS}
 assert set(BASE_KEYS)==set(rev_n.KEY_SETS)
+# Duplicate isolation, evaluation revision 10 (docs/duplicate-isolation.md at c90ebaf). Mirrored from c90ebaf:
+#   DUPLICATE_ISOLATION_REVISION: scripts/metric-audit/audit.py:66 and scripts/check-results.py:64.
+#   The groups: audit.py:334-340 `kset_duplicates` (the samples sharing a counted.json kset digest; groups of two or
+#     more, each ascending, sorted), compared with the stored field at audit.py:724-728.
+#   The field's shape, lineage and test-fold rules: check-results.py:276-285 (non-empty; ascending, distinct int
+#     members, at least two; sorted, disjoint and in range; one lineage per group; one test fold per group in every
+#     split that ran; only from DUPLICATE_ISOLATION_REVISION on).
+#   Not mirrored: audit.py:321 `isolate_groups`, the random-fold move. run_revision8_checks.py runs
+#     audit.py --revision N, which rebuilds the random folds with it (audit.py:346).
+# A pin that moves points a reviewer here.
+DUPLICATE_ISOLATION_REVISION=10
+OPTIONAL_TOP_VALIDATORS=("kset_duplicates",)  # optional top-level report fields this contract can validate
 PROFILE=REVISION=PINS=RULES=upstream_audit=upstream_checker=None
+OPTIONAL_TOP_KEYS=set()
 def profile_from_argv(argv):
  """The last --profile in argv, as argparse reads it (each CLI sets allow_abbrev=False), or r8."""
  name="r8"
@@ -160,18 +173,29 @@ def profile_from_argv(argv):
   elif arg.startswith("--profile="): name=arg.split("=",1)[1]
  return name
 def revision_n_spec(name,values=None):
- """(revision, pins, key sets) of revision N from revision_n.py. ValidationError when a value is an
- unfilled placeholder or malformed, or revision N needs a contract change first."""
+ """(revision, pins, key sets, optional top-level keys) of revision N from revision_n.py. ValidationError when a
+ value is an unfilled placeholder or malformed, or revision N needs a contract change first."""
  keys={k:frozenset(v) for k,v in BASE_KEYS.items()}
  try: v=rev_n.require(rev_n.CONTRACT_NAMES,values)
  except (rev_n.Unfilled,rev_n.Malformed) as exc: raise ValidationError(f"profile {name}: {exc}") from None
  if v["RN_CONVERGENCE_STATUS_RULE"]!=rev_n.CONVERGENCE_AS_690815A:
   raise ValidationError(f"profile {name}: RN_CONVERGENCE_STATUS_RULE is {v['RN_CONVERGENCE_STATUS_RULE']!r}; revision N's checker judges "
    f"convergence statuses unlike 690815a, so validate_convergence needs a reviewed change first")
+ optional=set()
  for k,new in v["RN_FIELD_CHANGES"].items():
+  if k=="OPTIONAL_TOP_KEYS":
+   unknown=sorted(set(new)-set(OPTIONAL_TOP_VALIDATORS))
+   if unknown: raise ValidationError(f"profile {name}: RN_FIELD_CHANGES declares optional report fields this contract cannot validate: {unknown}")
+   optional=set(new); continue
   if not keys[k]<=set(new): raise ValidationError(f"profile {name}: RN_FIELD_CHANGES drops or renames {sorted(keys[k]-set(new))} in {k}; that needs a reviewed contract change")
   keys[k]=frozenset(new)
- return v["REVISION_N"],{rel:v[n] for rel,n in rev_n.PIN_NAMES.items()},keys
+ # kset_duplicates belongs to exactly the revisions from DUPLICATE_ISOLATION_REVISION on, and must be declared there.
+ isolating=v["REVISION_N"]>=DUPLICATE_ISOLATION_REVISION
+ if isolating!=("kset_duplicates" in optional):
+  raise ValidationError(f"profile {name}: revision {v['REVISION_N']} {'writes' if isolating else 'cannot write'} kset_duplicates "
+   f"(DUPLICATE_ISOLATION_REVISION {DUPLICATE_ISOLATION_REVISION}), so RN_FIELD_CHANGES must {'declare' if isolating else 'not declare'} "
+   f"it under OPTIONAL_TOP_KEYS")
+ return v["REVISION_N"],{rel:v[n] for rel,n in rev_n.PIN_NAMES.items()},keys,optional
 def cleaned_rules(name,values=None):
  """The cleaned cohorts' rules from cleaned_rerun.py's pins (module docstring)."""
  try: v=rerun.require(rerun.CONTRACT_NAMES,values)
@@ -183,26 +207,27 @@ def cleaned_rules(name,values=None):
 def profile_spec(name,values=None,cleaned_values=None):
  """(revision, pins, rules, key sets) of a profile. ValidationError when the profile is unknown, any
  value it needs is an unfilled placeholder or malformed, or revision N needs a contract change."""
- if name=="r8": return 8,dict(R8_PINS),R8_RULES,{k:frozenset(v) for k,v in BASE_KEYS.items()}
+ if name=="r8": return 8,dict(R8_PINS),R8_RULES,{k:frozenset(v) for k,v in BASE_KEYS.items()},set()
  if name=="rN":
-  revision,pins,keys=revision_n_spec(name,values); return revision,pins,R8_RULES,keys
+  revision,pins,keys,optional=revision_n_spec(name,values); return revision,pins,R8_RULES,keys,optional
  if name=="rN-cleaned":
   missing=[]  # name every unfilled placeholder of both files at once
   for spec in (lambda:revision_n_spec(name,values),lambda:cleaned_rules(name,cleaned_values)):
    try: spec()
    except ValidationError as exc: missing.append(str(exc).split(": ",1)[1])
   if missing: raise ValidationError(f"profile {name}: "+"; ".join(missing))
-  revision,pins,keys=revision_n_spec(name,values); return revision,pins,cleaned_rules(name,cleaned_values),keys
+  revision,pins,keys,optional=revision_n_spec(name,values); return revision,pins,cleaned_rules(name,cleaned_values),keys,optional
  raise ValidationError(f"unknown evaluation profile {name!r}; expected one of {list(PROFILE_NAMES)}")
 def activate(name,values=None,cleaned_values=None):
  """Bind this module to profile `name`. `values` and `cleaned_values` replace revision_n.VALUES and
  cleaned_rerun.VALUES (tests only)."""
- global PROFILE,REVISION,PINS,RULES,upstream_audit,upstream_checker
- revision,pins,rules,keys=profile_spec(name,values,cleaned_values)
+ global PROFILE,REVISION,PINS,RULES,upstream_audit,upstream_checker,OPTIONAL_TOP_KEYS
+ revision,pins,rules,keys,optional=profile_spec(name,values,cleaned_values)
  for rel in pins: pinned(rel,pins)
  audit=_load_module("grm_in_tree_metric_audit",pinned("metric-audit/audit.py",pins))
  checker=_load_module("grm_in_tree_result_checker",pinned("check-results.py",pins))
  PROFILE,REVISION,PINS,RULES,upstream_audit,upstream_checker=name,revision,pins,rules,audit,checker
+ OPTIONAL_TOP_KEYS=set(optional)
  globals().update({k:set(v) for k,v in keys.items()})
  return name
 activate(profile_from_argv(sys.argv[1:]))
@@ -396,6 +421,7 @@ class CohortData:
  inputs:object=None
  invalid:dict=field(default_factory=dict)
  manifest_sha256:str=""
+ digests:dict=field(default_factory=dict)  # genome id -> counted.json kset digest
 
 def error_intervals(metrics):
  if metrics is None: return {"vme":None,"me":None,"sensitivity":None,"specificity":None}
@@ -492,7 +518,7 @@ def validate_report(path,expected_id,expected,cohort):
  report=parse_json(raw,str(path))
  if not isinstance(report,dict) or not isinstance(report.get("evaluation"),dict): fail(str(path),"missing evaluation object")
  if not isinstance(report["evaluation"].get("revision"),int) or isinstance(report["evaluation"].get("revision"),bool) or report["evaluation"].get("revision")!=REVISION: fail(str(path),f"matched controls require evaluation revision {REVISION}, got {report['evaluation'].get('revision')!r}")
- expect_keys(report,TOP_KEYS,str(path))
+ expect_keys(report,TOP_KEYS,str(path),OPTIONAL_TOP_KEYS)
  if not isinstance(report["schema"],int) or isinstance(report["schema"],bool) or report["schema"]!=SCHEMA: fail(str(path),f"matched controls require schema 2, got {report['schema']!r}")
  expect_keys(report["evaluation"],{"revision","valid","reasons","scope"},str(path)+".evaluation")
  if report["evaluation"]["valid"] is not True or report["evaluation"]["reasons"]!=[]: fail(str(path),"only evaluation.valid=true with empty reasons is accepted")
@@ -574,6 +600,7 @@ def validate_report(path,expected_id,expected,cohort):
   receipt["five_learner_medians"]=learner_medians([learners[name].receipt for name in LEARNERS])
   splits[scheme]=SplitData(scheme,True,None,dict(zip(ids,folds)),learners,receipt)
  if set(splits)!=set(SCHEMES): fail(str(path),"random and lineage analyses must be separate and complete")
+ if REVISION>=DUPLICATE_ISOLATION_REVISION: validate_kset_duplicates(report,samples,cohort.digests,str(path))
  models=report["models"]
  if not isinstance(models,dict) or "lasso_fit" not in models: fail(str(path),"revision 8 requires final models.lasso_fit")
  has_refit=validate_lasso_fit(models["lasso_fit"],str(path)+".models.lasso_fit",config["lasso_lambdas"])
@@ -585,6 +612,35 @@ def validate_report(path,expected_id,expected,cohort):
   "labels_from_mic":0,"min_class":counts["min_class"],"min_support":counts["min_support"]},"lineage_threshold":threshold,
   "eval_config":config,"splits":{scheme:splits[scheme].receipt for scheme in SCHEMES}}
  return ReportData(expected_id,drug,path,sha,fingerprint,config,threshold,{s.id:s for s in samples},ids,splits,receipt)
+
+def derived_kset_duplicates(samples,digests,where):
+ """audit.py:334-340 at c90ebaf: the sample indices sharing a counted.json kset digest, one ascending list per group
+ of two or more, sorted (so ordered by first member)."""
+ by_digest=defaultdict(list)
+ for i,s in enumerate(samples):
+  if digests.get(s.id) is None: fail(where,f"sample {s.id} has no counted.json kset digest")
+  by_digest[digests[s.id]].append(i)
+ return sorted(g for g in by_digest.values() if len(g)>1)
+def validate_kset_duplicates(report,samples,digests,where):
+ """From DUPLICATE_ISOLATION_REVISION: the stored kset_duplicates passes check-results.py:276-285's rules and is
+ exactly the groups the root's counted.json digests give (audit.py:724-728). Absent means no group."""
+ want=derived_kset_duplicates(samples,digests,where)
+ if "kset_duplicates" not in report:
+  if want: fail(where,f"kset_duplicates is missing: the root's counted.json digests give {len(want)} groups")
+  return
+ groups=report["kset_duplicates"]; n=len(samples); w=where+".kset_duplicates"
+ if not isinstance(groups,list) or not groups: fail(w,"must be a non-empty list when present (grm leaves it out when there is no group)")
+ for gi,g in enumerate(groups):
+  if not isinstance(g,list) or len(g)<2 or any(type(i) is not int for i in g) or g!=sorted(set(g)):
+   fail(f"{w}[{gi}]","must be an ascending list of two or more distinct sample indices")
+ members=[i for g in groups for i in g]
+ if groups!=sorted(groups) or len(set(members))!=len(members) or min(members)<0 or max(members)>=n:
+  fail(w,"groups out of order, overlapping or out of range")
+ if any(len({samples[i].lineage for i in g})!=1 for g in groups): fail(w,"a group spans lineages")
+ for split in report["splits"]:
+  if not split.get("unavailable_reason") and any(len({split["test_fold"][i] for i in g})!=1 for g in groups):
+   fail(w,f"a group spans test folds in the {split['scheme']} split")
+ if groups!=want: fail(w,f"differs from the root's counted.json kset digests: stored {groups[:5]}, derived {want[:5]}")
 
 def validate_catalog(report,samples,where):
  catalog=report["catalog"]
@@ -695,6 +751,7 @@ def validate_manifest(path,rules,collect_invalid=False):
  counted_path=root/"data/species"/SPECIES/"counted.json"; counted,_=read_json(counted_path)
  if counted.get("k")!=31 or [g.get("genome_id") for g in counted.get("genomes",[])]!=genomes: fail(str(counted_path),"counted genomes/k differ")
  if [g.get("kset_digest") for g in counted["genomes"]]!=digests or counted.get("missing_fasta")!=[] or counted.get("failed")!=[] or counted.get("pending",[])!=[]: fail(str(counted_path),"counted digests differ or pending/failed genomes remain")
+ cohort.digests={g["genome_id"]:g["kset_digest"] for g in counted["genomes"]}
  curated_path=root/"data/curated/datasets.json"; curated,_=read_json(curated_path)
  if not isinstance(curated,list): fail(str(curated_path),"expected dataset list")
  curated_by_id={row.get("id"):row for row in curated if isinstance(row,dict) and row.get("species_slug")==SPECIES}

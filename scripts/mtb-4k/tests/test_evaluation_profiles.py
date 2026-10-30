@@ -41,8 +41,12 @@ R9={"REVISION_N":9,"RN_CHECKER_COMMIT":"b2fd4337ce88be64767a3a552e87df21e64803c4
  "RN_PIN_RESULT_SCOPE":"3bcb2db34b23accd9186a595e6e0002cbd3bc292ab548442d8a53ba94b65ae2a",
  "RN_FIELD_CHANGES":{},"RN_CONVERGENCE_STATUS_RULE":"as-690815a"}
 TREE_PINS={name:vc.file_sha256(vc.SCRIPTS/rel) for rel,name in revision_n.PIN_NAMES.items()}
-OTHER=10 if vc.REVISION==9 else 9
-IN_TREE={**R9,**TREE_PINS,"REVISION_N":OTHER}
+# A revision the tree's checker does not accept: 9 on revision 8's blobs, 10 on revision 9's, 11 on revision 10's.
+OTHER=max(vc.REVISION,8)+1
+TEN=vc.DUPLICATE_ISOLATION_REVISION
+DECLARED={"OPTIONAL_TOP_KEYS":["kset_duplicates"]}  # revision 10's RN_FIELD_CHANGES (c90ebaf)
+IN_TREE={**R9,**TREE_PINS,"REVISION_N":OTHER,"RN_FIELD_CHANGES":DECLARED if OTHER>=TEN else {}}
+AT_TEN={**R9,**TREE_PINS,"REVISION_N":TEN,"RN_FIELD_CHANGES":DECLARED}
 UNFILLED={n:f"@@{n}@@" for n in revision_n.TABLE}
 
 def quiet(fn):
@@ -168,6 +172,88 @@ class Cleaned(unittest.TestCase):
     self.assertIn("cohort genome-list hash differs from frozen rule",str(stop.exception))
   finally: vc.activate(BASE)
 
+class KsetDuplicates(unittest.TestCase):
+ """Revision 10's kset_duplicates (duplicate isolation; report_contract.py cites c90ebaf's audit.py and check-results.py)."""
+ DID=vc.DRUG_IDS["amikacin"]
+ def setUp(self):
+  self.tmp=tempfile.TemporaryDirectory(); vc.activate("rN",AT_TEN)
+  self.rules=fx.make_rules({"prefix":("amikacin",)}); self.root=fx.build_cohort(Path(self.tmp.name)/"prefix","prefix",self.rules)
+  restamp(self.root,TEN); self.report_path=self.root/"data/species"/vc.SPECIES/"results"/(self.DID+".json")
+ def tearDown(self):
+  vc.activate(BASE); self.tmp.cleanup()
+ def report(self): return json.loads(self.report_path.read_text())
+ def pair(self,same_random=True,avoid=()):
+  """Two samples of one lineage, in the same random test fold or not."""
+  r=self.report(); rf=next(s for s in r["splits"] if s["scheme"]=="random")["test_fold"]; s=r["samples"]
+  for i in range(len(s)):
+   for j in range(i+1,len(s)):
+    if s[i]["lineage"]==s[j]["lineage"] and (rf[i]==rf[j])==same_random and not {i,j}&set(avoid): return i,j
+  raise AssertionError("no such pair in the fixture")
+ def share(self,i,j):
+  """Genome j takes genome i's kset digest in matrix.json, structure.json and counted.json, as identical ksets would."""
+  r=self.report(); a,b=r["samples"][i]["id"],r["samples"][j]["id"]; sp=self.root/"data/species"/vc.SPECIES
+  for f in (sp/"matrix/matrix.json",sp/"structure.json"):
+   m=json.loads(f.read_text()); m["kset_digests"][m["genomes"].index(b)]=m["kset_digests"][m["genomes"].index(a)]; fx.write_json(f,m)
+  c=json.loads((sp/"counted.json").read_text()); by={g["genome_id"]:g for g in c["genomes"]}
+  by[b]["kset_digest"]=by[a]["kset_digest"]; fx.write_json(sp/"counted.json",c)
+ def store(self,edit):
+  """The report edited, its fingerprint recomputed from the root, and the run manifest rebound."""
+  r=self.report(); edit(r); r["input_fingerprint"]=fx.fpmod.Inputs(self.root/"data",vc.SPECIES).fingerprint(self.DID,r["eval_config"])
+  fx.write_json(self.report_path,r); fx.refresh_root(self.root,"prefix")
+  m=json.loads((self.root/"validation-manifest.json").read_text())
+  m["reports"][self.DID].update(input_fingerprint=r["input_fingerprint"],sha256=fx.sha(self.report_path))
+  for e in m["inputs"]: e["sha256"]=fx.sha(self.root/e["path"])
+  for key in ("matrix","genomes"): m[key]["sha256"]=fx.sha(self.root/m[key]["path"])
+  fx.write_json(self.root/"validation-manifest.json",m)
+ def validate(self): return vc.validate_manifest(self.root/"validation-manifest.json",self.rules)
+ def refused(self,needle):
+  with self.assertRaises(vc.ValidationError) as stop: self.validate()
+  self.assertIn(needle,str(stop.exception)); return str(stop.exception)
+ def test_without_a_group_the_field_is_absent_and_the_report_passes(self):
+  self.store(lambda r:None); self.validate()
+  self.store(lambda r:r.update(kset_duplicates=[])); self.refused("must be a non-empty list when present")
+ def test_a_group_is_listed_exactly_as_the_digests_give(self):
+  i,j=self.pair(); self.share(i,j)
+  self.store(lambda r:None); self.refused("kset_duplicates is missing: the root's counted.json digests give 1 groups")
+  self.store(lambda r:r.update(kset_duplicates=[[i,j]])); cohort=self.validate(); self.assertIn(self.DID,cohort.reports)
+  k,l=self.pair(avoid=(i,j))  # one lineage, one random fold, but distinct digests
+  cases=[("wrong group",[[k,l]],"differs from the root's counted.json kset digests"),
+         ("unsorted group",[[j,i]],"must be an ascending list"),
+         ("overlapping groups",[[i,j],[i,j]],"groups out of order, overlapping or out of range"),
+         ("a one-member group",[[i]],"must be an ascending list"),
+         ("an index out of range",[[i,10**6]],"groups out of order, overlapping or out of range"),
+         ("not a list",{"0":[i,j]},"must be a non-empty list when present"),
+         ("empty list",[],"must be a non-empty list when present")]
+  for label,value,needle in cases:
+   with self.subTest(label):
+    self.store(lambda r,value=value:r.update(kset_duplicates=value)); self.refused(needle)
+ def test_members_split_across_random_folds_refuse(self):
+  i,j=self.pair(same_random=False); self.share(i,j)
+  self.store(lambda r:r.update(kset_duplicates=[[i,j]])); self.refused("a group spans test folds in the random split")
+ def test_the_field_below_the_threshold_refuses(self):
+  i,j=self.pair(); self.store(lambda r:r.update(kset_duplicates=[[i,j]]))
+  vc.activate("rN",{**R9,**TREE_PINS,"REVISION_N":TEN-1,"RN_FIELD_CHANGES":{}}); restamp(self.root,TEN-1)
+  self.store(lambda r:r.update(kset_duplicates=[[i,j]])); self.refused("unknown=['kset_duplicates']")
+ def test_the_declaration_is_required_exactly_from_the_threshold(self):
+  before=state()
+  for values,needle in (({**AT_TEN,"RN_FIELD_CHANGES":{}},"must declare it under OPTIONAL_TOP_KEYS"),
+                        ({**AT_TEN,"REVISION_N":TEN-1},"must not declare it under OPTIONAL_TOP_KEYS"),
+                        ({**AT_TEN,"RN_FIELD_CHANGES":{"OPTIONAL_TOP_KEYS":["kset_duplicates","other"]}},"cannot validate: ['other']")):
+   with self.subTest(needle):
+    with self.assertRaises(vc.ValidationError) as stop: vc.activate("rN",values)
+    self.assertIn(needle,str(stop.exception)); self.assertEqual(state(),before)
+ def test_an_l1_failure_is_the_invalid_report_stop(self):
+  # Known limit L1: a move can empty a class from a random test fold, and the dataset's evaluation fails. The
+  # comparator loads strictly (L3), so such a report is the existing invalid-report stop, never a crash.
+  self.store(lambda r:r["evaluation"].update(valid=False,reasons=["invalid random outer evaluation"]))
+  with self.assertRaises(vc.ValidationError): self.validate()
+  c=vc.validate_manifest(self.root/"validation-manifest.json",self.rules,collect_invalid=True); self.assertIn(self.DID,c.invalid)
+ def test_the_grouping_matches_audit_pys_own_when_the_tree_has_it(self):
+  samples=[vc.Sample(f"g{i}",True,0) for i in range(8)]; digests={"g0":"a","g1":"b","g2":"a","g3":"c","g4":"b","g5":"d","g6":"a","g7":"e"}
+  want=[[0,2,6],[1,4]]; self.assertEqual(vc.derived_kset_duplicates(samples,digests,"synthetic"),want)
+  if hasattr(vc.upstream_audit,"kset_duplicates"):  # audit.py from c90ebaf on
+   self.assertEqual(vc.upstream_audit.kset_duplicates([{"id":s.id} for s in samples],digests),want)
+
 class Active(unittest.TestCase):
  def test_rn_binds_revision_pins_rules_and_modules(self):
   with profile("rN",IN_TREE):
@@ -177,7 +263,7 @@ class Active(unittest.TestCase):
   self.assertEqual(vc.PROFILE,BASE)
  def test_an_added_field_extends_its_key_set_and_the_base_profile_restores_it(self):
   fit_keys=sorted(vc.BASE_KEYS["FIT_KEYS"]|{"exchange_steps"})
-  with profile("rN",{**IN_TREE,"RN_FIELD_CHANGES":{"FIT_KEYS":fit_keys}}):
+  with profile("rN",{**IN_TREE,"RN_FIELD_CHANGES":{**IN_TREE["RN_FIELD_CHANGES"],"FIT_KEYS":fit_keys}}):
    self.assertIn("exchange_steps",vc.FIT_KEYS)
    fit=fx.fit(); fit["exchange_steps"]=0
    vc.expect_keys(fit,vc.FIT_KEYS,"synthetic")

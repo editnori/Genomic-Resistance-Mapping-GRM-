@@ -571,6 +571,21 @@ Training, reports and the comparison run only when **all** of these hold:
    - no report or checker field added, renamed or redefined;
    - revision 9 judged under the revision-8 lasso rules.
 
+   For revision 10 (`c90ebaf`, `r10/integration`, the expected N), the relayed facts are:
+   - `check-results.py` `28b65bdb…` and `audit.py` `7b76746b…`, with `summarize.py` and
+     `result_scope.py` unchanged;
+   - revision 10 judged under the same lasso rules (`RN_CONVERGENCE_STATUS_RULE` `as-690815a`);
+   - one added optional report field, so `RN_FIELD_CHANGES` is
+     `{"OPTIONAL_TOP_KEYS": ["kset_duplicates"]}`.
+
+   From `DUPLICATE_ISOLATION_REVISION` (10), `report_contract.py` accepts `kset_duplicates` only
+   as exactly the groups the root's `counted.json` digests give (`audit.py:334-340`). It must also
+   pass `check-results.py:276-285`'s shape, lineage and test-fold rules. Below 10 the field is
+   refused. `audit.py --revision N` rebuilds the random folds with the move (`isolate_groups`,
+   `audit.py:321`).
+
+   Known limit L1: a move can empty a class from a random test fold. That dataset's evaluation
+   then fails, and the comparator stops on the invalid report (section 8).
    The filling commit must take its values from that commit, not from this text. A moved pin, an
    added or renamed field, or another convergence rule is a stop until `report_contract.py` is
    reviewed again; that stop is intended.
