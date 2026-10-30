@@ -10,6 +10,11 @@ IRLS0 (marked): {0 steps, 0 cap hits, converged} moved from the impossible statu
 accepted one. 690815a writes irls_steps 0 when the warm start already meets the KKT tolerance
 (src/learn/lasso.rs:70), the pinned check-results.py:114 accepts any non-negative step count,
 and the K review treated that status as impossible because it was at 855bdba.
+R1 (marked): {1 step, 1 cap hit, converged} left the impossible statuses as well, and {1,1,true}
+and {3,3,true} get positive assertions; {0,1,true} took its place (hits exceed steps). The full
+wrapper's excess-path control now carries {1,2,true}. Under 690815a a step whose inner solve hits
+its iteration guard counts as a cap hit and the point can still converge
+(docs/lasso-stopping.md:39), which the pinned check-results.py accepts.
 
 usage: FOLDGEN=<foldgen binary> python3 -I scripts/mtb-4k/tests/test_k_review.py --receipt OUT.json
 """
@@ -224,20 +229,23 @@ class SolverStatusTests(unittest.TestCase):
 
  def test_impossible_iteration_cap_counts_fail_closed(self):
   # CHANGED ASSERTION (IRLS0): {0,0,true} left the impossible set; 690815a writes it on a valid warm start.
-  accepted=[]; statuses=({"irls_steps":1,"sweep_cap_hits":1,"converged":True},{"irls_steps":1,"sweep_cap_hits":2,"converged":True})
+  # CHANGED ASSERTION (R1): {1,1,true} left the impossible set too; {0,1,true} joined it (hits > steps at 0 steps).
+  accepted=[]; statuses=({"irls_steps":0,"sweep_cap_hits":1,"converged":True},{"irls_steps":1,"sweep_cap_hits":2,"converged":True})
   for status in statuses:
    try:vc.validate_lasso_fit(fit(status),"impossible-status",30)
    except vc.ValidationError:continue
    accepted.append(status)
   OBS["invalid_solver_status"].append({"direct_accepted":accepted}); self.assertEqual(accepted,[])
   self.assertTrue(vc.validate_lasso_fit(fit({"irls_steps":0,"sweep_cap_hits":0,"converged":True}),"zero-step-warm-start",30))
+  for steps in (1,3):  # R1: every step capped, then converged
+   self.assertTrue(vc.validate_lasso_fit(fit({"irls_steps":steps,"sweep_cap_hits":steps,"converged":True}),"all-capped-converged",30))
 
  def test_full_wrapper_rejects_impossible_status_excess_path(self):
   with tempfile.TemporaryDirectory(dir=REVIEW) as tmp:
    rules=fx.make_rules(); root=fx.build_cohort(Path(tmp)/"prefix","prefix",rules); did=vc.DRUG_IDS["amikacin"]
    path=root/"data/species"/vc.SPECIES/"results"/(did+".json"); report=json.loads(path.read_text())
    report["models"]["lasso_fit"]["path_points"]=report["eval_config"]["lasso_lambdas"]+1
-   report["models"]["lasso_fit"]["selected_convergence"]={"irls_steps":1,"sweep_cap_hits":1,"converged":True}
+   report["models"]["lasso_fit"]["selected_convergence"]={"irls_steps":1,"sweep_cap_hits":2,"converged":True}  # CHANGED ASSERTION (R1): was {1,1,true}
    fx.write_json(path,report); fx.refresh_root(root,"prefix")
    args=[str(root/"audit.json"),"--root",str(root),"--run-manifest",str(root/"validation-manifest.json"),
     "--expected-source-commit",fx.SOURCE,"--binary",str(root/"synthetic-binary"),"--backup",str(root/"backup"),
@@ -247,7 +255,7 @@ class SolverStatusTests(unittest.TestCase):
    code=wrapper.main(args,rules=rules,foldgen_factory=fx.FakeFoldGen); valid=None
    if (root/"audit.json").exists():valid=json.loads((root/"audit.json").read_text())["summary"]["revision8_wrapper"]["valid"]
    OBS["invalid_solver_status"].append({"wrapper_exit":code,"wrapper_valid":valid,"path_points":31,
-    "configured_lasso_lambdas":30,"selected_convergence":{"irls_steps":1,"sweep_cap_hits":1,"converged":True}})
+    "configured_lasso_lambdas":30,"selected_convergence":{"irls_steps":1,"sweep_cap_hits":2,"converged":True}})
    self.assertNotEqual(code,0,"full checker/auditor/wrapper accepted impossible revision-8 solver evidence")
 
 def flatten(suite):

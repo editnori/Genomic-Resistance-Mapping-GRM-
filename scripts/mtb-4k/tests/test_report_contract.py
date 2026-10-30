@@ -14,6 +14,15 @@ accepted; the E4 entry is now "convergence irls_steps=0 with sweep_cap_hits 1" (
 38 in all). 690815a writes irls_steps 0 when the warm start already meets the KKT tolerance
 (src/learn/lasso.rs:70), the pinned check-results.py:114 accepts any non-negative step count,
 and the K review treated that status as impossible because it was at 855bdba.
+
+R1 (marked): the contract no longer rejects a converged status whose every IRLS step hit the cap.
+SolverStatusTests' "every solver step capped" ({3,3,true}) became "cap hits exceed steps after
+two steps" ({2,3,true}, still rejected), and a new test accepts {1,1,true}, {3,3,true} and
+{3,1,true} for selected and refit, in the contract and in the pinned checker. The E4 entry
+"every IRLS step capped yet converged" ({1,1,true} on the refit) became "refit sweep_cap_hits >
+irls_steps" ({3,4,true}, still rejected, 38 in all). Under 690815a a step whose inner solve hits
+its iteration guard counts as a cap hit and the point can still converge
+(docs/lasso-stopping.md:39), which check-results.py accepts.
 """
 import copy,hashlib,json,math,os,shutil,subprocess,sys,tempfile,unittest
 from pathlib import Path
@@ -151,12 +160,20 @@ class SolverStatusTests(unittest.TestCase):
  def test_impossible_convergence_rejected_for_selected_and_refit(self):
   cases=[("zero solver steps with a cap hit",0,1,"exceeds irls_steps"),  # CHANGED ASSERTION (IRLS0): was 0 steps, 0 hits
          ("cap hits exceed steps",1,2,"exceeds irls_steps"),
-         ("every solver step capped",3,3,"every IRLS step")]
+         ("cap hits exceed steps after two steps",2,3,"exceeds irls_steps")]  # CHANGED ASSERTION (R1): was 3 steps, 3 hits
   for label,steps,hits,match in cases:
    for key in ("selected_convergence","refit_convergence"):
     with self.subTest(label=label,status=key):
      fit=fx.fit(); fit[key]={"irls_steps":steps,"sweep_cap_hits":hits,"converged":True}
      reject(self,label+"/"+key,match,lambda fit=fit:vc.validate_lasso_fit(fit,"synthetic",30))
+ def test_capped_steps_that_converge_are_accepted_for_selected_and_refit(self):
+  # R1: under 690815a a capped step can still end in a converged point, and check-results.py accepts it.
+  for steps,hits in ((1,1),(3,3),(3,1)):
+   for key in ("selected_convergence","refit_convergence"):
+    with self.subTest(steps=steps,hits=hits,status=key):
+     fit=fx.fit(); fit[key]={"irls_steps":steps,"sweep_cap_hits":hits,"converged":True}
+     self.assertTrue(vc.validate_lasso_fit(fit,"synthetic",30))
+     vc.upstream_checker.check_lasso_fit(copy.deepcopy(fit),("synthetic",))
  def test_zero_step_warm_start_accepted_for_selected_and_refit(self):
   # IRLS0: 690815a takes 0 IRLS steps where the warm start already meets the KKT tolerance.
   for steps in (0,3):
@@ -305,7 +322,7 @@ MUTATIONS={
  "float schema 2.0":(lambda r:r.update(schema=2.0),False),
  "convergence irls_steps=0 with sweep_cap_hits 1":(lambda r:LF(r).update(selected_convergence={"irls_steps":0,"sweep_cap_hits":1,"converged":True}),False),  # CHANGED ASSERTION (IRLS0): was {0,0,true}
  "sweep_cap_hits > irls_steps":(lambda r:LF(r).update(selected_convergence={"irls_steps":1,"sweep_cap_hits":2,"converged":True}),False),
- "every IRLS step capped yet converged":(lambda r:LF(r).update(refit_convergence={"irls_steps":1,"sweep_cap_hits":1,"converged":True}),False),
+ "refit sweep_cap_hits > irls_steps":(lambda r:LF(r).update(refit_convergence={"irls_steps":3,"sweep_cap_hits":4,"converged":True}),False),  # CHANGED ASSERTION (R1): was "every IRLS step capped yet converged", {1,1,true}
  "path_points 31 > lasso_lambdas 30":(lambda r:LF(r).update(path_points=31),False),
  "selected_point == path_points":(lambda r:LF(r).update(selected_point=30),False),
  "convergence object without irls_steps/sweep_cap_hits (W fixture shape)":(lambda r:LF(r).update(selected_convergence={"converged":True}),False),
@@ -421,7 +438,7 @@ class MatchedAndPinTests(unittest.TestCase):
  def test_a_checker_blob_that_moved_from_its_pin_stops_the_contract(self):
   with tempfile.TemporaryDirectory() as tmp:
    scripts=Path(tmp)/"scripts"
-   for rel in list(vc.PINS)+["mtb-4k/report_contract.py","mtb-4k/fingerprint.py"]:
+   for rel in list(vc.PINS)+["mtb-4k/report_contract.py","mtb-4k/fingerprint.py","mtb-4k/revision_n.py"]:
     (scripts/rel).parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(vc.SCRIPTS/rel,scripts/rel)
    probe=[sys.executable,"-I","-B","-c",f"import sys; sys.path.insert(0,{str(scripts/'mtb-4k')!r}); import report_contract; print('loaded')"]
    self.assertEqual(subprocess.run(probe,capture_output=True,text=True).returncode,0)

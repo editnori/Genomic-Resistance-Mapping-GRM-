@@ -20,6 +20,8 @@ compare_cohorts.py passed their suites while failing as the plan ran them. This 
   PYTHONPATH pointing at them): each must import its real siblings, never the planted ones;
 - it runs each with real, plan-shaped arguments on fixtures, far enough to reach its own checks;
 - a pin that moves stops each of the three report_contract CLIs with exit 2 (I1), not a traceback;
+- so does --profile rN while revision_n.py holds its placeholders, naming each, before any
+  argument is parsed and with nothing written; revision_n.py itself runs from another directory;
 - no file in scripts/mtb-4k shadows a standard-library module, and every script that imports a
   sibling puts its own directory on sys.path first.
 """
@@ -33,7 +35,7 @@ ENTRY = {"prepare_execution_roots.py", "fingerprint.py", "pilot_interrupt.py", "
          "screen_duplicates.py", "write_run_manifest.py", "run_revision8_checks.py", "diff_revision7_prefix.py", "compare_cohorts.py",
          "metric-audit/audit.py"}
 EXTERNAL = {"/root/grm-research/grm-research-mtb-4k-cohort-r2/scripts/verify_evidence.py"}
-SIBLINGS = ("report_contract", "fingerprint", "prepare_execution_roots", "run_revision8_checks", "pilot_interrupt")
+SIBLINGS = ("report_contract", "fingerprint", "prepare_execution_roots", "run_revision8_checks", "pilot_interrupt", "revision_n")
 # The wiring lane's guard runs as `python3 $GUARD`, read-only and as written; pilot_interrupt.py requires the launcher's
 # command line to be exactly that (N1), so it takes no -I.
 GUARD = "$GUARD"
@@ -281,6 +283,36 @@ class EntryPoints(unittest.TestCase):
                     self.assertIn("STOP: cannot load the validators", p.stderr)
                     self.assertIn("differs from the reviewed pin", p.stderr)
                     self.assertNotIn("Traceback", p.stderr)
+
+    def test_profile_rn_refuses_in_each_report_contract_cli_while_revision_n_is_unfilled(self):
+        base = Path(self.tmp.name) / "profile-rn"
+        base.mkdir()
+        cases = {"write_run_manifest.py": [base, "--cohort", "prefix", "--source-commit", "1" * 40, "--binary", base / "grm"],
+                 "run_revision8_checks.py": [base / "audit.json", "--root", base, "--run-manifest", base / "validation-manifest.json",
+                                             "--expected-source-commit", "1" * 40, "--binary", base / "grm", "--backup", base,
+                                             "--log", base / "log", "--launch", "2000-01-01T00:00:00Z", "--foldgen", base / "fg",
+                                             "--expected-foldgen-sha256", "0" * 64, "--checker-out", base / "checker.json",
+                                             "--summary-out", base / "summary.json", "--receipt", base / "receipt.json"],
+                 "compare_cohorts.py": ["--cohort", f"prefix={base}", "--duplicates", base / "screen.json", "--expected-source-commit",
+                                        "1" * 40, "--expected-foldgen-sha256", "0" * 64, "--out", base / "compare.json"]}
+        for cli, args in cases.items():
+            for profile in (["--profile", "rN"], ["--profile=rN"]):
+                with self.subTest(cli=cli, profile=profile):
+                    for extra in ([], ["--help"]):
+                        p = self.run_isolated(cli, *args, *profile, *extra)
+                        self.assertEqual(p.returncode, 2, p.stderr)
+                        self.assertIn("STOP: cannot load the validators: profile rN: unfilled placeholder(s): @@REVISION_N@@", p.stderr)
+                        self.assertIn("@@RN_CONVERGENCE_STATUS_RULE@@", p.stderr)
+                        self.assertNotIn("usage", p.stdout.lower())
+                        self.assertClean(p)
+        self.assertEqual(sorted(os.listdir(base)), [])
+        p = self.run_isolated("revision_n.py", "--help")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertClean(p)
+        p = self.run_isolated("revision_n.py", "status")
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("revision_n: STOP: unfilled placeholder(s)", p.stderr)
+        self.assertClean(p)
 
     def test_a_sibling_already_loaded_from_elsewhere_is_a_stop(self):
         # N10: the origin check after the import, with a look-alike already in sys.modules (where sys.path cannot help).

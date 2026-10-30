@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Validate and compare the matched MTB revision-8 cohorts (stdlib only; saved scores and metadata only).
+"""Validate and compare the matched MTB cohorts of one evaluation profile (stdlib only; saved scores and metadata only).
 
 usage: python3 -I compare_cohorts.py
            --cohort prefix=ROOT --cohort added=ROOT --cohort full=ROOT --cohort matched2k=ROOT
            --checker-receipt prefix=PATH ... (one per cohort, from run_revision8_checks.py)
            --duplicates SCREEN.json [--accept-reviewed-duplicates SHA256]
-           --expected-source-commit SHA --expected-foldgen-sha256 SHA256 --out OUT.json
+           --expected-source-commit SHA --expected-foldgen-sha256 SHA256 --out OUT.json [--profile r8|rN]
+
+The profile (report_contract.py) sets the evaluation revision, checker pins and cohort rules:
+r8, the default, is revision 8; rN is revision N on the same frozen cohorts, which stops with
+exit 2 while revision_n.py holds a placeholder it needs.
 
 ROOT is a cohort's execution root (RUN/cohorts/<name>): validation-manifest.json from
 write_run_manifest.py, beside data/. The canonical merge of packages K and W (RECONCILE.md): K's
@@ -270,7 +274,7 @@ def load_receipt(path,cohort,expected_source,expected_foldgen):
  if rec["schema"]!=RECEIPT_SCHEMA: vc.fail(where,"not a run_revision8_checks.py receipt")
  if rec["cohort"]!=cohort.name: vc.fail(where,f"receipt is for cohort {rec['cohort']!r}, not {cohort.name!r}")
  if rec["valid"] is not True or rec["errors"]!=[]: vc.fail(where,"the revision-8 checks did not pass")
- if rec["evaluation_revision"]!=vc.REVISION: vc.fail(where,"receipt is not for evaluation revision 8")
+ if rec["evaluation_revision"]!=vc.REVISION: vc.fail(where,f"receipt is not for evaluation revision {vc.REVISION}")
  if rec["reports"]!=len(cohort.manifest["reports"]) or rec["class_gate_skips"]!=len(cohort.manifest["class_gate_unavailable"]): vc.fail(where,"receipt report or skip count differs from the run manifest")
  if rec["run_manifest_sha256"]!=cohort.manifest_sha256: vc.fail(where,"receipt was written for another run manifest")
  if rec["source_commit"]!=expected_source or rec["binary_sha256"]!=cohort.manifest["binary_sha256"]: vc.fail(where,"receipt source or binary differs")
@@ -394,7 +398,8 @@ def parse_pairs(specs,what):
  return out
 
 def main(argv=None):
- parser=argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+ parser=argparse.ArgumentParser(description=__doc__.split("\n\n")[0],allow_abbrev=False)
+ parser.add_argument("--profile",choices=vc.PROFILE_NAMES,default="r8",help="evaluation profile (report_contract.py); read at import")
  parser.add_argument("--cohort",action="append",default=[],required=True)
  parser.add_argument("--checker-receipt",action="append",default=[])
  parser.add_argument("--duplicates",required=True)
@@ -404,6 +409,8 @@ def main(argv=None):
  parser.add_argument("--out",required=True,type=Path)
  args=parser.parse_args(argv)
  try:
+  if args.profile!=vc.PROFILE: raise vc.ValidationError(f"--profile {args.profile} is not the active profile {vc.PROFILE}")
+  vc.check_pins()
   result=compare(parse_pairs(args.cohort,"cohort"),parse_pairs(args.checker_receipt,"checker-receipt"),args.duplicates,
                  args.expected_source_commit,accept_duplicates=args.accept_reviewed_duplicates,expected_foldgen=args.expected_foldgen_sha256)
  except (vc.ValidationError,OSError,KeyError,TypeError,ValueError,ArithmeticError) as exc:
