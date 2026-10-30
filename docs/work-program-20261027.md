@@ -642,3 +642,25 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
   - **Checked:** the reviewer's own merge reproduces `857d2df`'s tree, all 11 cherry-picks are faithful, and fills 1–3 recompute.
   - **`analysis.rs`, checked in code:** sparse and stock digests match, so `kset_duplicates` agrees.
   - **Non-blocking:** Low, the Vast run is the first end-to-end use of the merged `grm`; Info, no disk-sparse duplicate fixture, though MTB has 0 kset pairs. The cleaned-cohort run is staged and waits for GRM's g8 to end.
+- 2026-10-30 11:1x–11:4x UTC: **revision-10 g4 (A. baumannii), attempt 2: PASS.**
+  - **Restart:** KSD's verifier builds had finished, but their cleanup was stuck behind KSD's own HOLD. 62c28a5b deleted the 9 targets directly, taking free space from 54.83 to 111.30 GB. The driver launched g4-a2 at 11:19:29 with 95.08 GB free.
+  - **Run:** count 36 s (ksets 40,398,033,204 B, identical to a1), exit 0 at 11:37:51, 18 reports, ksets removed, `g4.done` at 11:38:12.
+  - **Independent check:** 153/275 reports, 0 issues, 18/18 class (a), no duplicate groups. 13 reports lost one or more of the 3 dropped genomes (`1310623.3`, `1310638.3`, `470.7458`).
+    - 5 reports lost no samples. Doxycycline changes only in fingerprint, pattern count and lineage labels. In cefepime, minocycline and moxifloxacin, curation reordered the samples, and the index-based outer folds **and MIC folds** follow.
+  - **7 more best-learner flips, all class (a):** ampicillin-sulbactam rf→cart, cefotaxime lasso→scm, ceftazidime gbt→cart, ciprofloxacin cart→gbt, gentamicin gbt→cart, SXT gbt→cart, tetracycline gbt→cart. Running total 18: A. baumannii 7, E. cloacae 6, Shigella 5.
+  - **g5 (MTB)** launched at 11:38:12 with about 114.5 GB free.
+- 2026-10-30 11:4x UTC: **Task A, duplicate-safe random inner tuning: DONE by the recovery owner, verified by main.** The work is uncommitted in `/home/layth/review/grm-task-a-inner-tuning-20261030` (`task/a-inner-tuning`, base `c90ebaf`).
+  - **Diff:** `src/learn/eval.rs` and `mod.rs`, +438/−86. sha256 `6ba5c25c…` (eval) and `334427e5…` (mod).
+  - **Policy:** `tuning_groups`, used by every call site. Lineage scheme: lineage groups. Random scheme without duplicates: `None`, the old stratified path. Random scheme with duplicates: each group takes its lowest member's index as its id, and every other sample keeps its own.
+  - **Kept from the original owner:** the policy, the `GBT_HOLDOUT` and `LASSO_HOLDOUT` constants, and 5 tests.
+  - **Added by the recovery owner:** error-text fixes, a duplicate variant of the `lasso_only` equivalence test, and a new test for the new failure mode. Without those, 3 of the 7 mutants passed.
+  - **Gate:**
+    - `fmt` and `clippy -D warnings` clean.
+    - `cargo test --release` **301 passed, 0 failed, 8 ignored** (lib 277, main 22, 1 + 1). Main read the logs.
+    - **7/7 one-line mutants caught.**
+    - A no-duplicate `evaluate` dump is **byte-identical to `c90ebaf`** (89,890 B, `8c28c821…`). Main confirmed it with `cmp`.
+    - `target/` deleted.
+  - **Follow-up:** `EVALUATION_REVISION` 11, checker updates, and `docs/duplicate-isolation.md`. In the grouped path, holdouts become about 1/7 (gbt) and 1/5 (lasso) of training.
+  - **Open design questions for the revision-11 brief:**
+    - (1) A dataset that revision 10 evaluates can now **fail its whole random split** when an outer training set's resistant genomes are all one duplicate group. That's likely with rare resistance in clonal genomes. Options: keep it as a hard failure (R3 documented skip), mark the random split unavailable with a reason, or fall back to stratified tuning with a recorded reason. The fallback reopens the leak.
+    - (2) `final_models` still tunes without groups, so the final penalty and early stopping can see a genome and its copy. No reported metric leaks, but the published hyperparameters can be biased. Grouping them would change `finals`.
