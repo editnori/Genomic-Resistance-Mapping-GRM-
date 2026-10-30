@@ -59,7 +59,7 @@ class WrapperTests(unittest.TestCase):
  def test_complete_wrapper_and_summarizer_pass(self):
   code=self.run_wrapper(); self.assertEqual(code,0)
   audit=json.loads((self.root/"audit.json").read_text()); self.assertTrue(audit["summary"]["revision8_wrapper"]["valid"]); self.assertEqual(audit["summary"]["by_revision"],{str(vc.REVISION):22})
-  summary=json.loads((self.root/"summary.json").read_text()); self.assertEqual(summary["coverage"][str(vc.REVISION)]["files"],22); self.assertEqual(summary["coverage"]["8"]["issues"],0)
+  summary=json.loads((self.root/"summary.json").read_text()); self.assertEqual(summary["coverage"][str(vc.REVISION)]["files"],22); self.assertEqual(summary["coverage"][str(vc.REVISION)]["issues"],0)
   receipt=json.loads((self.root/"receipt.json").read_text())
   self.assertEqual((receipt["schema"],receipt["cohort"],receipt["valid"],receipt["errors"],receipt["reports"]),("grm-mtb-4k-revision8-check-receipt-v1","prefix",True,[],22))
   self.assertEqual(receipt["run_manifest_sha256"],vc.file_sha256(self.root/"validation-manifest.json")); self.assertEqual(receipt["pins"],vc.PINS)
