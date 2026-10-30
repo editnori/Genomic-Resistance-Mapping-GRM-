@@ -362,7 +362,7 @@ def contract_copy(directory,old=None,new=None):
  review harnesses' mutation tests copied K's vendored upstream/ the same way."""
  import shutil
  scripts=Path(directory)/"scripts"
- for rel in list(vc.PINS)+["mtb-4k/fingerprint.py","mtb-4k/revision_n.py"]:
+ for rel in list(vc.PINS)+["mtb-4k/fingerprint.py","mtb-4k/revision_n.py","mtb-4k/cleaned_rerun.py"]:
   (scripts/rel).parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(vc.SCRIPTS/rel,scripts/rel)
  source=(vc.LANE/"report_contract.py").read_text()
  if old is not None:

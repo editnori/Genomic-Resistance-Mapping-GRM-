@@ -205,6 +205,22 @@ class RevisionSevenView(unittest.TestCase):
         self.assertEqual(os.listdir(empty), [])
         self.assertEqual(os.readlink(dangling), str(Path(self.tmp.name) / "nowhere"))
 
+    def test_reports_from_takes_the_results_of_a_third_root(self):
+        # Plan revision 6, section 7b: revision N's reports against revision N's matrix and the rerun's inputs.
+        view, out = self.view("third"), Path(self.tmp.name) / "third.json"
+        p = self.run_cli(view, "--make-view", "--matrix-from", self.pre, "--inputs-from", self.empty, "--reports-from", self.cand,
+                         "--check", "--expect-reports", 2, "--out", out)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        got = json.loads(out.read_text())
+        self.assertEqual((len(got["reports"]), got["matched"]), (2, 2))
+        sp = f"species/{fx.vc.SPECIES}"
+        self.assertEqual(got["view"][f"{sp}/results"], str(self.cand / sp / "results"))
+        self.assertEqual(got["view"]["curated"], str(self.empty / "curated"))
+        p = self.run_cli(self.view("third-alone"), "--check", "--reports-from", self.cand)
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("--reports-from needs --make-view", p.stderr)
+        self.assertFalse(os.path.lexists(self.view("third-alone")))
+
     def test_a_missing_source_or_a_partial_flag_set_stops_before_anything_is_made(self):
         view = self.view("missing")
         p = self.run_cli(view, "--make-view", "--matrix-from", self.cand, "--inputs-from", self.cand, "--check")

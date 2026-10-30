@@ -32,10 +32,10 @@ def candidate(base: Path) -> Path:
     return c
 
 
-def cohort(base: Path):
+def cohort(base: Path, ids=None):
     """4,000 one-line FASTA in two stores, the cohort evidence files, and a
     candidate whose annotation cache holds 40 cohort genomes and 30 others."""
-    ids = [f"1773.{100000 + i}" for i in range(4000)]
+    ids = list(ids) if ids is not None else [f"1773.{100000 + i}" for i in range(4000)]
     stores = [base / "store-a", base / "store-b"]
     for s in stores:
         s.mkdir()
@@ -70,8 +70,8 @@ class Prepare(unittest.TestCase):
     def tearDown(self):
         prep.EVIDENCE, prep.CANDIDATE, prep.ALLOWED_FASTA_PARENTS, prep.EXPECTED, prep.free_bytes = self.saved
 
-    def redirect(self, base: Path):
-        ids, stores, ev, c = cohort(base)
+    def redirect(self, base: Path, ids=None):
+        ids, stores, ev, c = cohort(base, ids)
         h = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()  # noqa: E731
         prep.EVIDENCE, prep.CANDIDATE = ev, c
         prep.ALLOWED_FASTA_PARENTS = set(stores)
@@ -143,7 +143,7 @@ class Prepare(unittest.TestCase):
             base = Path(tmp)
             ids, stores, ev, c = self.redirect(base)
             run = base / "run"
-            rc, _ = self.main(run)
+            rc, _ = self.main(run, "--cohorts", "frozen")
             self.assertEqual(rc, 0)
             receipt = json.loads((run / "preparation.json").read_text())
             seeded = receipt["features_seeded_per_cohort"]
@@ -181,6 +181,9 @@ class Prepare(unittest.TestCase):
             self.assertEqual(json.loads(out)["links_changed"], [str(link)])
             rc, out = self.main("--check-lane", run / "cohorts" / "added" / "data")
             self.assertEqual(rc, 1, out)
+            # Frozen mode keeps the pilot roots and writes the cohort FASTA manifest for the screen.
+            self.assertIn("pilot256", receipt["cohorts"])
+            self.assertEqual(len((run / "fasta-manifest.tsv").read_text().splitlines()), 4001)
             # A cohort list edited after preparation is a stop.
             genomes = run / "cohorts" / "prefix" / "data" / "species" / prep.SLUG / "genomes.txt"
             genomes.write_text(genomes.read_text() + "extra\n")
@@ -188,7 +191,7 @@ class Prepare(unittest.TestCase):
             self.assertIn("cohort list changed", " ".join(json.loads(out)["links_changed"]))
             # An existing run root is refused.
             with self.assertRaises(SystemExit):
-                self.main(run)
+                self.main(run, "--cohorts", "frozen")
 
     def test_the_disk_floor_stops_preparation_before_anything_is_written(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -201,11 +204,11 @@ class Prepare(unittest.TestCase):
                              for p in prep.cached_features(prep.CANDIDATE, self.cohort_ids(name)))
             prep.free_bytes = lambda _: prep.MIN_FREE_AFTER + copy_bytes - 1
             with self.assertRaises(SystemExit) as stop:
-                self.main(run)
+                self.main(run, "--cohorts", "frozen")
             self.assertIn("below the", str(stop.exception))
             self.assertFalse(os.path.lexists(run))
             prep.free_bytes = lambda _: prep.MIN_FREE_AFTER + copy_bytes
-            self.assertEqual(self.main(run)[0], 0)
+            self.assertEqual(self.main(run, "--cohorts", "frozen")[0], 0)
 
     def cohort_ids(self, name):
         ids = (prep.EVIDENCE / "results/genomes-4000.txt").read_text().splitlines()
@@ -217,7 +220,7 @@ class Prepare(unittest.TestCase):
             self.redirect(base)
             prep.EXPECTED = {**prep.EXPECTED, "matched2k": ("0" * 64, 2000)}
             with self.assertRaises(AssertionError):
-                self.main(base / "run")
+                self.main(base / "run", "--cohorts", "frozen")
             self.assertFalse(os.path.lexists(base / "run"))
 
     def test_the_frozen_matched2k_hash_is_the_contracts(self):
@@ -226,12 +229,32 @@ class Prepare(unittest.TestCase):
         vc = pb.vc
         self.assertEqual(self.saved[3]["matched2k"][0], vc.RULES["matched2k"].genomes_sha256)
 
+    def test_preparing_needs_cohorts_and_cleaned_refuses_unfilled_values_first(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp) / "run"
+            with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                self.main(run)  # no --cohorts
+            saved = dict(prep.rerun.VALUES)
+            try:
+                prep.rerun.VALUES.update({n: f"@@{n}@@" for n in prep.rerun.TABLE})
+                prep.EVIDENCE = Path(tmp) / "no-evidence"  # never read: the placeholders refuse first
+                with self.assertRaises(SystemExit) as stop:
+                    self.main(run, "--cohorts", "cleaned")
+                self.assertIn("unfilled placeholder(s): @@SPECIES_CHECK_PATH@@", str(stop.exception))
+                with self.assertRaises(SystemExit) as stop:
+                    self.main("--derive-cleaned")
+                self.assertIn("@@RN_FULL_GENOMES_PATH@@", str(stop.exception))
+            finally:
+                prep.rerun.VALUES.clear()
+                prep.rerun.VALUES.update(saved)
+            self.assertFalse(os.path.lexists(run))
+
     def test_check_lane_refuses_links_where_grm_writes(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             ids, _, _, _ = self.redirect(base)
             run = base / "run"
-            self.assertEqual(self.main(run)[0], 0)
+            self.assertEqual(self.main(run, "--cohorts", "frozen")[0], 0)
             data = run / "cohorts" / "full" / "data"
             outside = base / "outside"
             outside.mkdir()

@@ -11,7 +11,13 @@ Evaluation profiles. r8 is evaluation revision 8 with the blobs reviewed at 855b
 through c70d678): the current run. rN is evaluation revision N on the same frozen cohort rules,
 for a cohort that has to move to revision N: its revision, pins, added report or status fields
 and convergence rule come from revision_n.py, which refuses while any of them is an @@NAME@@
-placeholder. The process's --profile (default r8) is read once, at import, so the pin check still
+placeholder. rN-cleaned is revision N on the cleaned cohorts of plan revision 6: revision_n.py's
+values with cleaned_rerun.py's cohort pins (hash and size of each cleaned list). Its drug sets
+stay frozen (22 for prefix and full, the 14 for added; matched2k derived) and are checked against
+the class gate recomputed from the root's phenotypes, so a cleaned cohort that changes either is a
+stop; the added cohort's eight class-gate receipts are derived from the phenotypes, not frozen,
+because the fresh selection's added rows differ from the frozen ones by more than the exclusions.
+The process's --profile (default r8) is read once, at import, so the pin check still
 runs before any argument parsing and every module of the process uses the same profile. Each CLI
 declares --profile too and stops if argparse reads another value. Defaulting to r8 fails closed
 at revision N's commit: the revision-8 pins and revision differ there.
@@ -50,6 +56,7 @@ SCRIPTS=LANE.parent
 sys.path.insert(0,str(LANE))
 import fingerprint as fpmod  # noqa: E402
 import revision_n as rev_n  # noqa: E402
+import cleaned_rerun as rerun  # noqa: E402
 SCHEMA=2
 SPECIES="mycobacterium_tuberculosis"
 LEARNERS=("scm","cart","rf","gbt","lasso")
@@ -66,7 +73,7 @@ R8_PINS={"check-results.py":"e42392a9a6473e10a59854a312a2891a783e697cf8ebd2304fc
  "metric-audit/summarize.py":"fd5fdfab1bedb8118c95eaadef19452fc89786f371a5d1757bd784844eb3295f",
  "result_scope.py":"3bcb2db34b23accd9186a595e6e0002cbd3bc292ab548442d8a53ba94b65ae2a"}
 VALIDATOR_FILES=("report_contract.py","compare_cohorts.py","run_revision8_checks.py","fingerprint.py",
- "prepare_execution_roots.py","write_run_manifest.py","revision_n.py")
+ "prepare_execution_roots.py","write_run_manifest.py","revision_n.py","cleaned_rerun.py")
 DRUG_IDS={
  "amikacin":"mycobacterium_tuberculosis__amikacin","amoxicillin":"mycobacterium_tuberculosis__amoxicillin",
  "capreomycin":"mycobacterium_tuberculosis__capreomycin","ciprofloxacin":"mycobacterium_tuberculosis__ciprofloxacin",
@@ -139,7 +146,7 @@ def _load_module(name,path):
 
 # Evaluation profiles (module docstring). Activation binds PROFILE, REVISION, PINS, RULES, the two
 # in-tree modules and the report key sets, and changes nothing unless every step succeeds.
-PROFILE_NAMES=("r8","rN")
+PROFILE_NAMES=("r8","rN","rN-cleaned")
 BASE_KEYS={"TOP_KEYS":TOP_KEYS,"METRIC_KEYS":METRIC_KEYS,"CONFIG_KEYS":CONFIG_KEYS,"FOREST_KEYS":FOREST_KEYS,
  "GBT_KEYS":GBT_KEYS,"FIT_KEYS":FIT_KEYS,"CONVERGENCE_KEYS":CONVERGENCE_KEYS}
 assert set(BASE_KEYS)==set(rev_n.KEY_SETS)
@@ -165,17 +172,33 @@ def revision_n_spec(name,values=None):
   if not keys[k]<=set(new): raise ValidationError(f"profile {name}: RN_FIELD_CHANGES drops or renames {sorted(keys[k]-set(new))} in {k}; that needs a reviewed contract change")
   keys[k]=frozenset(new)
  return v["REVISION_N"],{rel:v[n] for rel,n in rev_n.PIN_NAMES.items()},keys
-def profile_spec(name,values=None):
+def cleaned_rules(name,values=None):
+ """The cleaned cohorts' rules from cleaned_rerun.py's pins (module docstring)."""
+ try: v=rerun.require(rerun.CONTRACT_NAMES,values)
+ except (rerun.Unfilled,rerun.Malformed) as exc: raise ValidationError(f"profile {name}: {exc}") from None
+ def rule(cohort,*args,**kw):
+  sha,count=rerun.COHORT_PINS[cohort]; return CohortRule(v[count],v[sha],*args,**kw)
+ return {"prefix":rule("prefix",ALL_DRUGS,unavailable={}),"added":rule("added",ADDED_DRUGS,unavailable=None),
+  "full":rule("full",ALL_DRUGS,unavailable={}),"matched2k":rule("matched2k",None)}
+def profile_spec(name,values=None,cleaned_values=None):
  """(revision, pins, rules, key sets) of a profile. ValidationError when the profile is unknown, any
  value it needs is an unfilled placeholder or malformed, or revision N needs a contract change."""
  if name=="r8": return 8,dict(R8_PINS),R8_RULES,{k:frozenset(v) for k,v in BASE_KEYS.items()}
  if name=="rN":
   revision,pins,keys=revision_n_spec(name,values); return revision,pins,R8_RULES,keys
+ if name=="rN-cleaned":
+  missing=[]  # name every unfilled placeholder of both files at once
+  for spec in (lambda:revision_n_spec(name,values),lambda:cleaned_rules(name,cleaned_values)):
+   try: spec()
+   except ValidationError as exc: missing.append(str(exc).split(": ",1)[1])
+  if missing: raise ValidationError(f"profile {name}: "+"; ".join(missing))
+  revision,pins,keys=revision_n_spec(name,values); return revision,pins,cleaned_rules(name,cleaned_values),keys
  raise ValidationError(f"unknown evaluation profile {name!r}; expected one of {list(PROFILE_NAMES)}")
-def activate(name,values=None):
- """Bind this module to profile `name`. `values` replaces revision_n.VALUES (tests only)."""
+def activate(name,values=None,cleaned_values=None):
+ """Bind this module to profile `name`. `values` and `cleaned_values` replace revision_n.VALUES and
+ cleaned_rerun.VALUES (tests only)."""
  global PROFILE,REVISION,PINS,RULES,upstream_audit,upstream_checker
- revision,pins,rules,keys=profile_spec(name,values)
+ revision,pins,rules,keys=profile_spec(name,values,cleaned_values)
  for rel in pins: pinned(rel,pins)
  audit=_load_module("grm_in_tree_metric_audit",pinned("metric-audit/audit.py",pins))
  checker=_load_module("grm_in_tree_result_checker",pinned("check-results.py",pins))

@@ -1,4 +1,50 @@
-# MTB matched 2k / added-2k / 4k execution plan — NOT AUTHORIZED
+# MTB matched 2k / added-2k / 4k execution plan: revision 6, cleaned cohorts
+
+Revision 6 (2026-10-29, plan-r6 lane). Revision 5 (SHA-256 `2807de98…`) ran the frozen
+cohorts on revision 8 from `c70d678`. The matrix review then found two genomes in the frozen
+prefix that are not *M. tuberculosis*: `1773.41701` (most likely *M. abscessus*, `blaMAB`) and
+`1773.40949` (GC 68.4%). Both are also in full and matched2k. Revision 6 runs the **cleaned
+cohorts** on evaluation revision N, the first revision whose data pipeline carries the species
+check. The admin's rulings of 2026-10-29 set its shape:
+
+- **The cohorts are revision N's fresh selection.** After the species check fails the two genomes,
+  `grm curate` reruns selection on the cleaned labels. The cleaned 2k is revision N's own MTB 2k
+  `genomes.txt`, not the frozen prefix minus two: replacements fill the cap, and the order may
+  shift near score ties. The cleaned full cohort is revision N's cap-4000 selection. **Its first
+  rows must be the cleaned 2k exactly**, and a difference is a stop before any root exists.
+  Added is the rows after the prefix, and matched2k is the same smallest-SHA-256 rule on the
+  cleaned full list, at the prefix's size (section 2).
+- **Replacements must pass, in order, the species check, curation, the FASTA fetch, and then the
+  species check again**, before they enter any matrix. The plan binds the second (post-fetch)
+  species check by hash. Root preparation refuses any cohort genome that check fails, has no
+  verdict for, or lists as unchecked, and any selection whose `species.json` reports
+  `selected_unchecked` other than 0. Borderline genomes are recorded and never excluded.
+- **When it runs.** The species check's review found defects, and it moves to revision 10 with
+  duplicate isolation (the orchestrator, 2026-10-29). So the revision-9 rerun of the 4k cohorts is
+  uncleaned (`b2fd433`, under revision 5's plan with `--profile rN`). This plan is expected to run
+  after it, on N = 10: branch (b) of section 8. The alternative, branch (a), was a single cleaned
+  revision-9 run with no with/without comparison; it applies only if the check lands in the
+  revision that reruns the cohorts. N stays a placeholder. Nothing here assumes 9 or 10, and
+  nothing assumes a run came before.
+- **Revision N's MTB 2k candidate is a reference checked after training, not a gate before it.**
+  The prefix `cmp` against its matrix, the fingerprint view, the fold rebuild and the field-level
+  diff against its reports (sections 7b and 9) run once that candidate exists. They are recorded
+  as `PENDING REFERENCE` until then, and they are required for the final result. Nothing else is
+  relaxed.
+
+Every value that does not exist yet is an `@@NAME@@` placeholder in one of two files (section 2).
+`revision_n.py` holds revision N's validator values, and `cleaned_rerun.py` holds the cleaned
+cohorts' inputs. Each script refuses, naming every unfilled value it needs, until a reviewed commit
+fills them. Every command that loads the report contract (`write_run_manifest.py`,
+`run_revision8_checks.py`, `compare_cohorts.py`) passes `--profile rN-cleaned`, because the
+default `r8` cannot load on a revision-N tree. The code is four commits on `c70d678`:
+- `f6c2b87`, the revision-N validators, with R1, which removes the every-step-capped convergence
+  rule;
+- `e354f99`, the validator suite under `MTB4K_TEST_PROFILE`;
+- `8bb1a9b`, `diff_revision7_prefix.py --profile`;
+- this plan and its scripts. Section 1's gates stand, read for revision N. **No revision-6 command has been run.**
+
+## Earlier revisions
 
 Revision 5 (2026-10-28, plan re-check fixes lane). The focused re-check of
 revision 4 (`5d2c24d`) returned `PLAN_VALIDATORS_REVIEW=APPROVED` for the
@@ -51,8 +97,8 @@ branch at `3483065`, then the N1–N8 commit, then the validator commit
 commit, which needs its own re-check. M0 is **not** the lasso-final merge
 (section 7).
 
-**No command below has been run. No biological matrix, structure, training,
-report or 8k work exists. No 8k stage is planned or permitted.**
+Revision 5's statement that no command had run was true when it was written; the current run has
+since executed revision 5. No 8k stage is planned or permitted.
 
 ## 1. Gates
 
@@ -104,61 +150,113 @@ The 4,096-column cap is unchanged.
 
 ## 2. Frozen inputs and cohorts
 
-- Cohort evidence: `/root/grm-research/grm-research-mtb-4k-cohort-r2`.
-- Full 4k: `results/genomes-4000.txt`, 4,000 IDs, SHA-256 `80faef89571ecd2fd658204abd39fd4b55e5a86bfe8e4f379274162868f44eaf`.
-- Prefix 2k: rows 1–2000, the exact byte prefix, SHA-256 `57af1c86c35fb0a4c62d3c0784a09804a919ba75941159d0c7b3cf56870aa2e3`.
-- Added 2k: rows 2001–4000, SHA-256 `a980d9e014fb90972a46b3fc01e65a9654deb58935d3ddf0f54018c19e7def85`.
-- FASTA: `results/fasta-manifest.tsv` (4,000 hashes, reproduced twice). FASTA are linked, never copied or modified; root preparation hashes each against the manifest, and `--verify-frozen` hashes them again after every stage.
-- Frozen 2k reference matrix: `/root/grm-revision7-preflight/data/species/mycobacterium_tuberculosis/matrix` (2,000 columns, k=31, min_support=2, 315,444 patterns, 6,041,188 kept k-mers).
-- Inputs linked read-only: the candidate root `/root/grm-extra-species-analysis-20261027/data` (`catalog`, `curated`, and the BV-BRC record files). Each training cohort gets lane-local copies of the cached annotations of its own genomes only (section 3).
+Revision 6 binds every cohort input by hash. Values that do not exist yet are placeholders,
+filled by a reviewed commit and listed in section 2.1.
 
-Cohorts, each in its own data root, all built by `prepare_execution_roots.py`:
+- **Cohort evidence:** `/root/grm-research/grm-research-mtb-4k-cohort-r2`, as in revision 5. Its
+  frozen 4k list (`80faef89…`), prefix (`57af1c86…`), added (`a980d9e0…`) and FASTA manifest are
+  still verified at preparation: they are the comparison basis, and the source of every FASTA
+  the cleaned cohorts share with them.
+- **Post-fetch species check:** `species_check.json`, at `SPECIES_CHECK_PATH` with
+  `SPECIES_CHECK_SHA256`. Its MTB `fail` genomes are the exclusions. They must include `1773.41701`
+  and `1773.40949` and number `EXCLUSIONS_COUNT`. Its `borderline` genomes are recorded per cohort
+  in `preparation.json` and never excluded. On 2026-10-29 the species-check lane reported six:
+  `1773.18404`, `1773.3676`, `1773.18177`, `1773.40722`, `1773.18213` and `1773.5309` (the last in
+  added).
+- **Revision N's selections:** the 2k `genomes.txt` (`RN_PREFIX_GENOMES_*`) and the cap-4000
+  selection (`RN_FULL_GENOMES_*`), each with its `curated/species.json` (`RN_*_SPECIES_JSON_*`),
+  whose MTB `selected_unchecked` must be 0.
+- **Inputs:** `RN_INPUT_ROOT` provides catalog, curated, the BV-BRC records and cached annotations.
+  These are revision N's curation, on which the fresh selection was made. Its whole set is bound in
+  `frozen-inputs.json` at preparation, as revision 5 bound the candidate's.
+- **FASTA:** a genome in the frozen 4k list links to its frozen-manifest FASTA. A replacement links
+  to its row in the bound replacement manifest (`RN_FASTA_MANIFEST_*`), a file directly under
+  `RN_FASTA_STORE`. Both are hash-checked at preparation and by every `--verify-frozen`. The
+  preparation writes `$RUN/fasta-manifest.tsv` over every cohort genome for the duplicate screen.
+- **Reference (pending until it exists):** revision N's trained MTB 2k candidate under
+  `RN_REFERENCE_ROOT` (`data/species/mycobacterium_tuberculosis/{genomes.txt,matrix,results}`),
+  read only by section 7b.
 
 | Cohort | Genomes | Role |
 |---|---|---|
-| `pilot256`, `pilot256-stock` | rows 1–256 | the small biological pilot and its stock comparator (section 4); never trained, so no annotations |
-| `prefix` | rows 1–2000 | the frozen 2k candidate; byte-compared with the frozen matrix |
-| `added` | rows 2001–4000 | an independent cohort, not a suffix of the matrix files |
-| `full` | all 4,000 | the 4k cohort |
-| `matched2k` | 2,000 of the 4,000, chosen by the smallest SHA-256 of `grm-mtb-4k-matched2k-20261028:<id>`, in frozen order | the size-matched control (section 8) |
+| `prefix` | revision N's MTB 2k selection | the cleaned 2k; after training, checked against revision N's candidate (section 7b) |
+| `added` | the cap-4000 selection's rows after the prefix | the genomes full adds; disjoint from prefix |
+| `full` | revision N's cap-4000 selection, whose first rows are the prefix | the cleaned 4k |
+| `matched2k` | as many as the prefix, chosen from full by the smallest SHA-256 of `grm-mtb-4k-matched2k-20261028:<id>`, in full's order | the size-matched control (section 8) |
 
-Prefix and full have 22 eligible datasets; added has 14 (amikacin,
-capreomycin, delamanid, ethambutol, ethionamide, isoniazid, kanamycin,
-moxifloxacin, ofloxacin, prothionamide, pyrazinamide, rifabutin, rifampin,
-streptomycin). Eight are unavailable in the added cohort under the
-25-per-class gate. `matched2k` eligibility is whatever the same gate gives on
-its genomes. It is derived, never assumed: `write_run_manifest.py` recomputes
-the gate from the root's own phenotypes on its matrix genomes,
-`report_contract.py` requires the report set to equal it, and
-`compare_cohorts.py` lists it. Read-only on Vast on 2026-10-28 (the
-plan-validators review), the candidate's labels gave matched2k 21 eligible
-drugs; only amoxicillin (25 resistant in all 4k) failed. The fixtures model 14.
+There are no pilot roots: section 4 is not repeated. Each cohort list must equal its `CLEANED_*`
+pin (hash and count). `prepare_execution_roots.py --derive-cleaned` prints those pins from the
+bound inputs once the rest is filled, and writes nothing.
 
-All training uses the same source, evaluation revision 8, `EvalConfig`,
-seeds, learner set and min_support=2. Old revision-7 reports are historical
-comparators only.
+**Report counts: frozen sets, derived counts.** The eligible drug sets stay frozen, with a check:
+22 for prefix and full, the 14 of revision 5 for added, and matched2k whatever the class gate
+gives. `report_contract.py`'s `rN-cleaned` rules require the report set to equal the class gate
+recomputed from the root's own phenotypes, so a cleaned cohort that moves a drug across the
+25-per-class gate is a stop. The eight not-interpretable drugs of section 8 and the added cohort's
+14 are prespecified analysis sets, and `compare_cohorts.py` stops if cleaning changes either. The
+per-drug class counts, including the added cohort's eight class-gate receipts, are derived from
+the phenotypes, not frozen. The fresh selection's added rows differ from the frozen rows by more
+than the exclusions, so revision 5's frozen counts no longer apply. They are still cross-checked
+three ways: `grm learn`'s gate and skip lines, the contract's recomputation from the phenotypes,
+and section 8's F3 check from the full cohort's labels.
+
+All training uses one source, evaluation revision N, `EvalConfig`, seeds, learner set and
+min_support=2. Revision-8 reports, the current run's included, are not cohorts of this plan.
+
+### 2.1 Placeholders
+
+`python3 -I scripts/mtb-4k/revision_n.py status` and `cleaned_rerun.py status` list each value and
+whether it is filled. A filling commit changes only these values and the "every value is unfilled"
+assertion of the matching test. "Prepare" values are needed before section 3, and "reference"
+values only for section 7b.
+
+| Placeholder | File | Needed for | What it is |
+|---|---|---|---|
+| `@@REVISION_N@@` | `revision_n.py` | prepare | evaluation revision N: the first that carries the species check (expected 10; not assumed) |
+| `@@RN_CHECKER_COMMIT@@` | `revision_n.py` | prepare | revision N's checker commit; `verify-checkout` requires `$WS` to descend from it |
+| `@@RN_PIN_CHECK_RESULTS@@`, `@@RN_PIN_METRIC_AUDIT@@`, `@@RN_PIN_SUMMARIZE@@`, `@@RN_PIN_RESULT_SCOPE@@` | `revision_n.py` | prepare | SHA-256 of the four checker files at that commit |
+| `@@RN_FIELD_CHANGES@@` | `revision_n.py` | prepare | report or status fields revision N adds, `{}` for none; a drop or rename refuses |
+| `@@RN_CONVERGENCE_STATUS_RULE@@` | `revision_n.py` | prepare | `as-690815a` if revision N's checker judges convergence statuses as 690815a's does (IRLS0, R1); anything else refuses |
+| `@@SPECIES_CHECK_PATH@@`, `@@SPECIES_CHECK_SHA256@@` | `cleaned_rerun.py` | prepare | the post-fetch `species_check.json` |
+| `@@SPECIES_CHECK_FORMAT@@` | `cleaned_rerun.py` | prepare | `species-check-relayed-20261029` once the committed schemas match the parser; anything else refuses |
+| `@@EXCLUSIONS_COUNT@@` | `cleaned_rerun.py` | prepare | how many MTB genomes it fails (at least the two) |
+| `@@RN_PREFIX_GENOMES_PATH@@`, `@@RN_PREFIX_GENOMES_SHA256@@` | `cleaned_rerun.py` | prepare | revision N's MTB 2k selection |
+| `@@RN_PREFIX_SPECIES_JSON_PATH@@`, `@@RN_PREFIX_SPECIES_JSON_SHA256@@` | `cleaned_rerun.py` | prepare | its `curated/species.json` |
+| `@@RN_FULL_GENOMES_PATH@@`, `@@RN_FULL_GENOMES_SHA256@@` | `cleaned_rerun.py` | prepare | revision N's cap-4000 selection |
+| `@@RN_FULL_SPECIES_JSON_PATH@@`, `@@RN_FULL_SPECIES_JSON_SHA256@@` | `cleaned_rerun.py` | prepare | its `curated/species.json` |
+| `@@RN_INPUT_ROOT@@` | `cleaned_rerun.py` | prepare | the data root of catalog, curated, records and annotations |
+| `@@RN_FASTA_MANIFEST_PATH@@`, `@@RN_FASTA_MANIFEST_SHA256@@` | `cleaned_rerun.py` | prepare | the FASTA manifest of the replacements, in the cohort evidence's columns |
+| `@@RN_FASTA_STORE@@` | `cleaned_rerun.py` | prepare | the directory of those FASTA |
+| `@@CLEANED_PREFIX_SHA256@@`, `@@CLEANED_PREFIX_COUNT@@`, and the same for `ADDED`, `FULL`, `MATCHED2K` | `cleaned_rerun.py` | prepare | the four cleaned lists, from `--derive-cleaned` |
+| `@@RN_REFERENCE_ROOT@@` | `cleaned_rerun.py` | reference | revision N's trained MTB 2k candidate root |
 
 ## 3. Root setup (future, after gates 1–4)
 
+A fresh run root and a fresh checkout: nothing of the current run's `$RUN` is reused or written.
+
 ```bash
-export WS=/root/grm-research/grm-mtb-4k-execution-src   # a reviewed checkout of the approved commit
-export RUN=/root/grm-research/grm-mtb-4k-execution-r1
+export WS=/root/grm-research/grm-mtb-4k-cleaned-src    # a reviewed, clean checkout of the merge of revision N's commit with this branch
+export RUN=/root/grm-research/grm-mtb-4k-cleaned-r1    # new; never the current run's root
 export SLUG=mycobacterium_tuberculosis
 export P=$WS/scripts/mtb-4k
+export PROFILE=rN-cleaned                              # every report_contract CLI passes --profile "$PROFILE"
 # The wiring lane's process-group guard (31 GiB disk / 48 GiB RAM floors), used read-only.
 export GUARD=/root/grm-research/grm-mtb-4k-wiring-kimi-20261028/tools/resource_guard.py
 
 test ! -e "$RUN"
+python3 -I "$P/revision_n.py" status || exit 1                     # every revision-N value filled and well formed
+python3 -I "$P/cleaned_rerun.py" status --group prepare || exit 1   # every cohort input filled and well formed
+python3 -I "$P/revision_n.py" verify-checkout "$WS" || exit 1       # clean, descends from RN_CHECKER_COMMIT, holds the pinned checker blobs
+REVISION_N=$(python3 -I "$P/revision_n.py" get REVISION_N) || exit 1
+export REVISION_N
 python3 -I -c 'import os; p=os.statvfs("/root"); d=p.f_bavail*p.f_frsize; m={l.split(":",1)[0]:l.split(":",1)[1].strip() for l in open("/proc/meminfo")}; r=int(m["MemAvailable"].split()[0])*1024; print(d,r); assert d >= 45*1024**3 and r >= 64*1024**3'
 python3 -I /root/grm-research/grm-research-mtb-4k-cohort-r2/scripts/verify_evidence.py --root /root/grm-research/grm-research-mtb-4k-cohort-r2
-python3 -I "$P/prepare_execution_roots.py" "$RUN"
+python3 -I "$P/prepare_execution_roots.py" "$RUN" --cohorts cleaned || exit 1   # derives the four lists and requires the CLEANED_* pins
 
 (cd "$WS" && CARGO_TARGET_DIR="$RUN/target" CARGO_BUILD_JOBS=16 RAYON_NUM_THREADS=16 cargo build --release --locked --offline)
 export GRM="$RUN/target/release/grm"
 sha256sum "$GRM" | tee "$RUN/logs/grm-binary.sha256"
-# The committed foldgen, which rebuilds every saved test_fold (section 7). Its source is the reviewed
-# tree (the tree at ffa43a9; a lasso-final merge that changes it stops here for review), and the
-# build's SHA-256, recorded once, is the --expected-foldgen-sha256 of every check after it (I4).
+# The committed foldgen; a revision-N merge that changes its tree stops here for review (I4).
 test "$(git -C "$WS" rev-parse HEAD:scripts/metric-audit/foldgen)" = dc8317faf778fd96f496cc0226515ca7b19d688d || exit 1
 (cd "$WS/scripts/metric-audit/foldgen" && CARGO_TARGET_DIR="$RUN/target-foldgen" cargo build --release --locked --offline)
 export FOLDGEN="$RUN/target-foldgen/release/foldgen"
@@ -167,87 +265,60 @@ export FOLDGEN_SHA256=$(cut -d' ' -f1 "$RUN/logs/foldgen-binary.sha256")
 export SOURCE=$(git -C "$WS" rev-parse HEAD)   # the one --expected-source-commit for every check
 ```
 
-Before any matrix stage, two read-only checks against the revision-7 2k
-candidate must pass with these builds. Both were run by the
-plan-and-validators lane on 2026-10-28 (its receipt), and are repeated here
-because the execution build is new:
+`prepare_execution_roots.py --cohorts cleaned` refuses before it creates anything when:
 
-```bash
-# fingerprint.py reproduces every revision-7 report's input_fingerprint from the frozen roots. --make-view
-# first builds $RUN/rev7-view/data from links only (L5): the preflight root's matrix, counted.json and
-# structure.json (the matrix the reports were learned from), and the candidate's curated, catalog and saved
-# reports. It refuses an existing view and writes nothing into either root. --expect-reports 22: an empty
-# results directory would otherwise pass --check.
-python3 -I "$P/fingerprint.py" "$RUN/rev7-view/data" --make-view --matrix-from /root/grm-revision7-preflight/data \
-  --inputs-from /root/grm-extra-species-analysis-20261027/data --check --expect-reports 22 \
-  --out "$RUN/audit/rev7-fingerprints.json" || exit 1
-# The metric audit rebuilds every saved revision-7 test_fold with this foldgen.
-python3 -I "$WS/scripts/metric-audit/audit.py" "$RUN/audit/rev7-fold-rebuild.json" $SLUG --revision 7 \
-  --root /root/grm-extra-species-analysis-20261027 --reshaped --foldgen "$FOLDGEN"
-python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rev7-fold-rebuild.json"
-```
+- a value it reads is unfilled;
+- an input differs from its bound SHA-256;
+- the cleaned 2k is not the first rows of the cleaned 4k;
+- a cohort genome has no verdict in the species check, fails it, or is on its unchecked list;
+- a selection's `species.json` reports `selected_unchecked` other than 0, or a length other than
+  its list's;
+- the species check does not fail both ruled genomes, or fails other than `EXCLUSIONS_COUNT` MTB
+  genomes;
+- the replacement FASTA manifest covers other than exactly the replacements, or a FASTA differs
+  from its manifest;
+- a cleaned list differs from its `CLEANED_*` pin;
+- 45 GiB would not stay free after the annotation copies.
 
-`prepare_execution_roots.py` derives every list from the frozen bytes and
-checks the prefix/added hashes. It hashes every FASTA against the cohort's
-FASTA manifest, then creates only new directories and FASTA links. In each
-root, `catalog` and `curated` link to the candidate's read-only directories,
-and `bvbrc` is a **real lane-local directory**: the two record files link to
-the candidate, and `features/` holds copies of the candidate's cached
-annotations for that cohort's own genomes only, each checked against
-`frozen-inputs.json`. `grm learn` reads an annotation only for a genome in
-the cohort it trains (`annotate::load_features`), so no other file is ever
-read. The two pilot roots never train and get an empty `features/`.
-
-**Disk (N1).** Revision 2 copied the whole cache, 1,868 files and
-1,477,799,489 bytes, into all six roots: 8,866,796,934 bytes, which failed
-the 45 GiB gate before the pilot. Of the 1,868 files only 191 belong to
-cohort genomes. The copies are now those files only. Measured read-only on
-Vast at 15:58 UTC on 2026-10-28 with the script's own selection:
-
-| Cohort | Files | Bytes |
-|---|---|---|
-| prefix | 170 | 128,989,934 |
-| added | 21 | 15,904,550 |
-| full | 191 | 144,894,484 |
-| matched2k | 101 | 76,661,462 |
-| pilot256, pilot256-stock | 0 | 0 |
-| **total** | 483 | **366,450,430** (0.34 GiB) |
-
-The script refuses before it creates anything unless 45 GiB stay free after
-the copy, and `preparation.json` records the bytes copied and the free space
-before and after. The 45 GiB gate is measured at preflight, immediately
-before each stage (gate 4), and never taken from an earlier reading. Earlier
-readings are history, not gate results: 45,345,652,736 bytes (42.2 GiB) free
-at 15:58 UTC on 2026-10-28, below the gate, and 56,999,018,496 bytes
-(53.08 GiB) at 18:14 UTC the same day (the plan-validators review).
-
-`grm learn` fetches missing annotations from BV-BRC into the cohort's
-lane-local directory only. It never writes through a `bvbrc` or `features`
-link: a fetch that would write through one is refused
-(`annotate::FeatureCacheOutsideRoot`). It may read cached annotations
-through a link, so `--check-lane` flags any such link before training. It
-writes reports only through real directories below the root and never
-through a link (`confine`). So training never writes into the frozen
-candidate root. Before any stage that writes a cohort root, and after it:
+It then makes the four training roots, and no pilot roots. Each root links its FASTA, links
+`catalog` and `curated` to `RN_INPUT_ROOT`, and has a lane-local `bvbrc` as in revision 5.
+`preparation.json` records the exclusions, the borderline genomes per cohort, the replacements,
+and how the prefix and full lists differ from the frozen rows. `frozen-inputs.json` binds the
+input root, every FASTA, every cohort list and every cleaned input. `--verify-frozen` re-hashes
+all of them, and `--check-lane` reads the input root and FASTA stores from that record. The
+lane checks of revision 5 apply unchanged to these roots:
 
 ```bash
 python3 -I "$P/prepare_execution_roots.py" --check-lane "$RUN/cohorts/<cohort>/data"   # any problem is a stop
 python3 -I "$P/prepare_execution_roots.py" --verify-frozen "$RUN"                      # any change is a stop
 ```
 
-`--check-lane` refuses a link anywhere but where preparation made one
-(catalog, curated, the two record files and each FASTA) and any entry that is
-not a real directory or regular file; it covers `grm report`, whose writes
-GRM does not confine itself. `--verify-frozen` re-hashes the candidate's
-catalog, curated, records and whole annotation cache, every FASTA in the
-linked store, each cohort's `genomes.txt`, and checks that every FASTA link
-still points where preparation put it.
+Revision 5's two read-only checks against the revision-7 candidate move to section 7b, against
+revision N's candidate. They checked that the execution build reproduces real reports'
+fingerprints and folds. For this rerun the reports that matter are revision N's, which the prefix
+is diffed against. The foldgen tree is the pinned `dc8317f`, the same as the one that rebuilt the
+revision-7 folds, so repeating the revision-7 checks adds nothing. Revision N's `audit.py` would
+also have to keep auditing revision 7, which is not this plan's to require.
 
-Newly fetched annotations are not frozen. After training, record their
-SHA-256 (`find $RUN/cohorts/*/data/bvbrc/features -newer $RUN/preparation.json -type f -exec sha256sum {} +`)
-in the receipt, and treat their content as network input that changed.
+**Expected time and disk for sections 3–6, from the current run's measured stages (its section 5
+receipt).** Preparation hashes the 4,000 frozen FASTA, the replacements and the input root; its
+time was not measured here. Section 5 took 57 min 10 s for four matrices, their validations, containment and the
+duplicate screen. Section 6 took 64 s. Allow about 1 h 15 min. The peak disk growth was
+6,226,591,744 B (5.80 GiB), during the full matrix. The kept full matrix was 367,757,922 B, and
+the annotation copies 366,450,430 B. The cleaned cohorts drop the two genomes' roughly 9.2 M rare
+k-mers each, so expect slightly less. Training (section 7) took 16 min 31 s for prefix (22
+reports) and 13 min 41 s for added (14). Full had 9 of 22 reports after 17 min, so allow about
+2 h 15 min for section 7 with its checks. The 45 GiB gate is re-measured before every stage, as in
+revision 5.
 
 ## 4. The small frozen biological pilot (gate 2)
+
+**Not repeated in revision 6.** The admin ruled on 2026-10-29 that the cleaned run makes fresh roots,
+matrices and structures without repeating the pilot. The pilot passed on 2026-10-29 (attempt 3)
+under revision 5. The review of the revision-N merge must confirm that revision N leaves matrix
+building unchanged (`src/matrix.rs`, `src/species.rs`, `src/species/`, `src/confine.rs`, `src/layout.rs`);
+if it does not, the pilot is repeated before section 5. A cleaned run root has no pilot cohorts.
+The text and commands below are revision 5's, kept for the record.
 
 It is separate from the 2,000-genome prefix stage and uses its own two roots,
 on rows 1–256 of the frozen order (SHA-256 recorded in `preparation.json`).
@@ -371,18 +442,9 @@ Acceptance, all required:
 
 ## 5. Matrix-only stages (future, separately authorized)
 
-The sparse matrix runs at width 128, with 16 Rayon threads and under the
-guard. **No `--allow-missing-catalog`**: the catalog must load, or the run
-stops before counting.
-
-The per-block preflight is now an upper bound, not an estimate. An uncounted
-genome is bounded at 8 bytes per FASTA base plus 12 KiB, about 35 MB for a
-4.4 Mbp MTB assembly, so about 4.5 GB per 128-genome block. Real 2k MTB ksets
-are about 26–30 MB. Each kset and sidecar write also claims its exact length
-from one reserve ledger shared by the counting threads. At a 45 GiB start,
-about 6.3 GB of partials, one block's 4.5 GB bound and the about 0.4 GB
-matrix fit inside the 15 GiB above the reserve. The pilot replaces these
-with measured figures.
+The sparse matrix runs at width 128, with 16 Rayon threads and under the guard. **No
+`--allow-missing-catalog`**: the catalog must load, or the run stops before counting. The
+per-block preflight bound and its arithmetic are revision 5's, and the pilot measured them.
 
 ```bash
 for cohort in prefix added full matched2k; do
@@ -395,10 +457,7 @@ for cohort in prefix added full matched2k; do
     --out $RUN/audit/$cohort-matrix-validation.json || exit 1
   python3 -I "$P/prepare_execution_roots.py" --verify-frozen "$RUN" || exit 1
 done
-for f in matrix.json patterns.bin support.bin kmer_offsets.bin kmers.bin; do
-  cmp $RUN/cohorts/prefix/data/species/$SLUG/matrix/$f /root/grm-revision7-preflight/data/species/$SLUG/matrix/$f || exit 1
-done
-# Containment (N3): each 2k cohort against the full cohort's matrix, after all four exist.
+# Containment (N3): each 2k cohort against the cleaned full matrix, after all four exist.
 F=$RUN/cohorts/full/data/species/$SLUG/matrix
 for cohort in prefix added matched2k; do
   D=$RUN/cohorts/$cohort/data
@@ -407,61 +466,34 @@ for cohort in prefix added matched2k; do
 done
 ```
 
-Run the cohorts one at a time, prefix first. Any failure stops the later
-ones. Re-check the resource gate before each.
+Run the cohorts one at a time, prefix first. Any failure stops the later ones. Re-check the
+resource gate before each.
 
-`validate_matrix.py` checks binding to `counted.json` and `genomes.txt`. It
-checks structure: non-empty patterns in first-appearance order, every k-mer
-inside the 2k-bit space and in exactly one pattern, distinct rows, the
-support filter, and that distinct equals kept plus rare plus core. It checks
-every column against its genome's bottom sketch. It recounts 16 seeded
-genomes plus any `--recount-ids` from FASTA, independently of GRM; each must
-reproduce `counted.json`'s k-mer count, FNV kset digest and sketch, and then
-its whole column.
+Revision 5's byte comparison of the prefix matrix with a frozen matrix moves to section 7b. It
+now compares against revision N's MTB 2k candidate, which may not be staged yet, and it never
+blocks training. Until it passes, the receipt records `PENDING REFERENCE`. Without it, section 5
+proves each cleaned matrix by the exact region, the 16 recounts and the recount bounds. It proves
+each 2k cohort against the cleaned full matrix by containment. Revision 5's chain to stock-built
+content ran through the frozen prefix, and here it runs through section 7b's `cmp`.
 
-Revision 2 called that recount "the independent content check" for added,
-full and matched2k, but it never looked at the k-mers a matrix leaves out
-(N3): a dropped kept pattern, a dropped kept k-mer, a kept k-mer moved to the
-rare count and a matrix built at min_support 3 but labelled 2 all passed,
-even with every genome recounted. Three checks now cover omissions:
+`validate_matrix.py` checks the binding to `counted.json` and `genomes.txt`, the structure, every
+column against its genome's bottom sketch, and 16 seeded recounts from FASTA, independently of
+GRM. Its three omission checks (exact region, recount bounds, containment) are revision 5's
+unchanged. Their blind spot is in section 9.
 
-- **Exact region.** Below the smallest sketch threshold every genome's
-  membership is known from its sketch, so support is exact there and the kept
-  set must be exactly the k-mers with support in [2, n − 2].
-- **Recount bounds.** A recounted k-mer the matrix leaves out must be rare or
-  core. One that at least two known genomes hold and at least two lack
-  (recounted genomes, plus sketches where they reach) is neither, so it is a
-  missing kept k-mer. With every genome recounted, this is exact, and the
-  rare, core and distinct counts must equal the recount's.
-- **Containment (`--superset`).** A k-mer kept in a sub-cohort is kept in the
-  full cohort, and a k-mer kept in the full cohort whose support over a
-  sub-cohort's genomes is in [2, n − 2] is kept there. So prefix, added and
-  matched2k must each equal the full matrix's rows restricted to their
-  columns and filtered at min_support 2, k-mer for k-mer and bit for bit,
-  with the same kset digests. The prefix is byte-identical to the frozen stock
-  matrix, so the full matrix is checked against stock-built content on every
-  k-mer the prefix keeps; added and matched2k are checked against the full
-  matrix on every k-mer either keeps. A k-mer kept in the full matrix and in
-  none of the three sub-cohorts is checked only by the exact region and the
-  recount bounds.
-
-After each cohort, check the receipt: no `pending`, no `matrix-partials`, no
-owned ksets, exact order and digests, and the resource minima.
+After each cohort, check the receipt: no `pending`, no `matrix-partials`, no owned ksets, exact
+order and digests, and the resource minima.
 
 ### Duplicate screen (after the prefix and added matrices, before training)
 
 ```bash
 python3 -I "$P/screen_duplicates.py" --prefix-root $RUN/cohorts/prefix/data --added-root $RUN/cohorts/added/data \
-  --fasta-manifest /root/grm-research/grm-research-mtb-4k-cohort-r2/results/fasta-manifest.tsv \
+  --fasta-manifest $RUN/fasta-manifest.tsv \
   --genomes-jsonl $RUN/cohorts/full/data/bvbrc/genomes.jsonl --out $RUN/audit/duplicate-screen.json
 ```
 
-The screen looks for exact duplicates (same FASTA SHA-256, same kset digest,
-same non-empty BioSample or assembly accession) and near duplicates (bottom-
-sketch Jaccard ≥ 0.998), within each cohort and across the two.
-`cross_cohort_exact > 0` is a stop: the parent decides whether the cohorts
-stand. Near duplicates are listed. The primary lineage split groups them,
-and the comparator records the screen.
+The manifest is the one preparation wrote over every cohort genome, replacements included. The
+screen and its stop (`cross_cohort_exact > 0`) are revision 5's.
 
 ## 6. Structure (separate go-ahead after matrix review)
 
@@ -472,58 +504,39 @@ for cohort in prefix added full matched2k; do
 done
 ```
 
-## 7. Training and reports: the revision-8 gate
+## 7. Training and reports: the revision-N gate
 
 Training, reports and the comparison run only when **all** of these hold:
 
-1. **The reviewed revision-8 lasso guards and checker are in the binary.**
-   They are being finished on the shared repo's
-   `recovery/working-tree-20261028` branch. When the branch was rewritten at
-   12:13 UTC on 2026-10-28 to remove attribution trailers, every commit ID
-   changed; the old-to-new map is at the end of
-   `docs/work-program-20261027.md`. At `3483065` (fetched 15:32 UTC) the last
-   code commits are `43c187b` (lasso scan build; was `6a46127`) on top of
-   `855bdba` (closes the revision-8 review findings; was `5d8cd05`) on top
-   of `fb7ba09` (the migration guards; was `bf01371`). The wiring commits
-   are now `fd559c9` (was `dd1f6d3`) and `79158f9` (was `176e3cc`).
-   `79158f9` alone does not contain the lasso commits; the merge M0 does.
-   **None of these is lasso-final.** The large-species lasso scan from
-   `43c187b` stopped with a no-go on MTB delamanid (fold 0 past its budget).
-   As of 2026-10-28 (the shared branch at `af10294`), the diagnosis lane is
-   closed: its result is recorded at `e172fde`. An active-set solver
-   (`4b87633`) is under independent review, and a re-scan needs user
-   approval. Neither is lasso-final, and this plan pins neither. Pick up the
-   first commit on that branch that
-   the lasso lane records as final, that passes its scan rule, and whose
-   checker an independent review records as approved; expect it after
-   `43c187b`. Do not build or adopt a parallel revision-8 checker here.
-2. **The training binary comes from a reviewed merge** of that commit with
-   the wiring commits, the N1–N8 commit and the validator commit, in that
-   order, trailer-free. Re-run `cargo test` and the wiring adversarial checks
-   on the merge, then check the validators' pins: `report_contract.PINS`
-   holds the SHA-256 of `check-results.py`, `metric-audit/audit.py`,
-   `summarize.py` and `result_scope.py` as reviewed at `855bdba`. If
-   lasso-final moves any of them, or adds or renames a solver-status field,
-   the contract stops until the pins and its exact-key checks are reviewed
-   again; that stop is intended.
-3. **Every cohort passes `run_revision8_checks.py`.** It is not a parallel
-   checker. Before the checker runs, the run manifest and every report must
-   pass `report_contract.py`, which includes each report's input fingerprint
-   recomputed from the root. Then it runs the in-tree
-   `scripts/check-results.py` (zero unconverged two-class lasso fits, valid
-   per-fold `lasso_fits` and `models.lasso_fit`), `scripts/metric-audit/audit.py
-   --revision 8` with this cohort's backup, log and launch timestamp and the
-   `foldgen` built above, which rebuilds every saved test_fold, and
-   `summarize.py`. Only when all three pass and K's postflight holds does it
-   write the receipt that `compare_cohorts.py` requires and parses (F5): a
-   placeholder, a failed run, another run manifest, other pins or an output
-   changed afterwards is a stop.
-4. **An invalid report is a stop.** On revision 8, `grm learn` stops a species
-   when a report's `evaluation.valid` is not true. Record the dataset and its
-   reasons, and stop that cohort's training for parent review. Any solver
-   status field the checker does not recognize is a stop, not something to
-   ignore. `run_revision8_checks.py` gives a cohort with an invalid report no
-   receipt, and `compare_cohorts.py` stops on one too (L3, section 8).
+1. **Revision N's checker is reviewed and in the binary.** `$WS` is a reviewed merge of revision
+   N's commit with this branch's two commits, trailer-free. `revision_n.py verify-checkout` passed
+   in section 3: `HEAD` descends from `RN_CHECKER_COMMIT`, and the four checker files hold the
+   pinned SHA-256 in `$WS` and at that commit. `cargo test` and the wiring adversarial checks pass
+   on the merge, and so does the validator suite under `MTB4K_TEST_PROFILE=rN`
+   (`tests/profile_boot.py`). For reference, revision 9's facts as relayed on 2026-10-29 are below.
+   Revision N's values will differ, at least in the revision and the checker pins:
+   - `b2fd433` (`EVALUATION_REVISION = 9`);
+   - `check-results.py` `b7e5a8a0…`, `audit.py` `c1af2ead…`, `summarize.py` `fd5fdfab…`,
+     `result_scope.py` `3bcb2db3…`;
+   - no report or checker field added, renamed or redefined;
+   - revision 9 judged under the revision-8 lasso rules.
+
+   The filling commit must take its values from that commit, not from this text. A moved pin, an
+   added or renamed field, or another convergence rule is a stop until `report_contract.py` is
+   reviewed again; that stop is intended.
+2. **Every cohort passes `run_revision8_checks.py --profile rN-cleaned`.** It is not a parallel
+   checker. It runs revision 5's chain with revision N's numbers:
+   - the run manifest and every report pass `report_contract.py` under the `rN-cleaned` rules,
+     with each report's input fingerprint recomputed from the root;
+   - the in-tree `scripts/check-results.py`;
+   - `scripts/metric-audit/audit.py --revision $REVISION_N`, with this cohort's backup, log and
+     launch, and the foldgen built in section 3, which rebuilds every saved test_fold;
+   - `summarize.py`.
+
+   Only when all of these pass does it write the receipt that `compare_cohorts.py` requires. The
+   file and receipt keep their revision-8 names, and `evaluation_revision` in the receipt says N.
+3. **An invalid report is a stop.** Record the dataset and its reasons, and stop that cohort's
+   training for parent review. Any solver status field the checker does not recognize is a stop.
 
 ```bash
 for cohort in prefix added full matched2k; do
@@ -538,38 +551,67 @@ for cohort in prefix added full matched2k; do
   python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
   python3 -I "$P/prepare_execution_roots.py" --verify-frozen "$RUN" || exit 1
   python3 -I "$P/write_run_manifest.py" "$C" --cohort $cohort --source-commit "$SOURCE" --binary "$GRM" \
-    --log $RUN/logs/$cohort-learn.log || exit 1
+    --log $RUN/logs/$cohort-learn.log --profile "$PROFILE" || exit 1
   python3 -I "$P/run_revision8_checks.py" $RUN/audit/$cohort-audit.json --root "$C" --run-manifest "$C/validation-manifest.json" \
     --expected-source-commit "$SOURCE" --binary "$GRM" --backup "$RUN/backups/$cohort" --log $RUN/logs/$cohort-learn.log \
     --launch "$LAUNCH" --foldgen "$FOLDGEN" --expected-foldgen-sha256 "$FOLDGEN_SHA256" --checker-out $RUN/audit/$cohort-check-results.json \
-    --summary-out $RUN/audit/$cohort-summary.json --receipt $RUN/audit/$cohort-revision8-receipt.json || exit 1
+    --summary-out $RUN/audit/$cohort-summary.json --receipt $RUN/audit/$cohort-revision8-receipt.json --profile "$PROFILE" || exit 1
 done
-# The prefix against the revision-7 2k candidate, field by field (only the lasso may differ).
-python3 -I "$P/diff_revision7_prefix.py" --revision8 $RUN/cohorts/prefix/data \
-  --revision7 /root/grm-extra-species-analysis-20261027/data --out $RUN/audit/prefix-vs-revision7.json || exit 1
 ```
 
-`write_run_manifest.py` binds each cohort's inputs, reports and
-class-gate receipts by SHA-256, recomputing every input fingerprint and
-every dataset's class counts from the root first. Expected report counts
-are 22 prefix, 14 added and 22 full (frozen in `report_contract.RULES`), and
-for matched2k whatever the class gate gives on its genomes. That count is
-derived from the root's phenotypes, not frozen; 21 on the candidate's labels
-on 2026-10-28 (section 2). MTB's unsupported probe assays must not
-trigger a stock recount. Build dashboard data only in the new roots, each
-after `--check-lane`. Do not publish, deploy, replace candidate reports or
-touch the live site.
+`write_run_manifest.py` binds each cohort's inputs, reports and class-gate receipts by SHA-256,
+after recomputing every input fingerprint and every dataset's class counts from the root.
+Expected report counts are 22 for prefix and full and 14 for added (frozen with a check, section
+2), and whatever the class gate gives for matched2k. Build dashboard data only in the new roots,
+each after `--check-lane`. Do not publish, deploy, replace candidate reports or touch the live
+site.
 
-`diff_revision7_prefix.py` is the field-level check that
-`docs/lasso-stopping.md` asks for: the prefix matrix is byte-identical to
-the frozen 2k matrix, so every report's input fingerprint, samples, catalog,
-panels, MIC, splits and non-lasso learner rows must equal the revision-7
-candidate's; only the lasso rows and models may differ.
+### 7b. Revision N's MTB 2k candidate (pending reference; required for the final result)
+
+These checks need revision N's trained MTB 2k candidate (`RN_REFERENCE_ROOT`). Run them as soon as
+it is staged on Vast, before or after sections 5–7 have finished; they never block training. Until
+they pass, every receipt and summary of this run carries `PENDING REFERENCE`, and no final result
+is stated. A failure is a stop for review, never something to skip.
+
+```bash
+REF=$(python3 -I "$P/cleaned_rerun.py" get RN_REFERENCE_ROOT) || exit 1     # unfilled: PENDING REFERENCE
+INPUT_ROOT=$(python3 -I "$P/cleaned_rerun.py" get RN_INPUT_ROOT) || exit 1
+R=$REF/data/species/$SLUG
+sha256sum $R/genomes.txt $R/counted.json $R/structure.json $R/matrix/* $R/results/*.json | tee $RUN/audit/reference-sha256.txt
+# The reference must be revision N's candidate for this very prefix, and its matrix the prefix's, byte for byte.
+cmp $RUN/cohorts/prefix/data/species/$SLUG/genomes.txt $R/genomes.txt || exit 1
+for f in matrix.json patterns.bin support.bin kmer_offsets.bin kmers.bin; do
+  cmp $RUN/cohorts/prefix/data/species/$SLUG/matrix/$f $R/matrix/$f || exit 1
+done
+# fingerprint.py reproduces each reference report's input_fingerprint from revision N's matrix and the rerun's
+# inputs (RN_INPUT_ROOT's curated and catalog), in a link-only view outside both roots.
+python3 -I "$P/fingerprint.py" "$RUN/rN-view/data" --make-view --matrix-from "$REF/data" --inputs-from "$INPUT_ROOT" \
+  --reports-from "$REF/data" --check --expect-reports 22 --out "$RUN/audit/rN-fingerprints.json" || exit 1
+# The metric audit rebuilds every saved test_fold of the reference with this foldgen.
+python3 -I "$WS/scripts/metric-audit/audit.py" "$RUN/audit/rN-fold-rebuild.json" $SLUG --revision "$REVISION_N" \
+  --root "$REF" --reshaped --foldgen "$FOLDGEN"
+python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rN-fold-rebuild.json"
+# The prefix against the reference, every field (diff_reference_prefix.py).
+python3 -I "$P/diff_reference_prefix.py" --prefix $RUN/cohorts/prefix/data --reference "$REF/data" \
+  --out $RUN/audit/prefix-vs-reference.json || exit 1
+```
+
+**What must match, and why.** The two sides share the same genome list (checked), a byte-identical
+matrix (checked), the same inputs (the fingerprint view), and the same revision, solver,
+`EvalConfig` and seeds. So `diff_reference_prefix.py` requires every field to be identical, lasso
+included. Only the wall-clock `seconds`, at the top level and on each learner row, is left out.
+The revision-9 note of 2026-10-29 says only lasso-derived parts move between revisions:
+`features`, `best_learner` and `evaluation.revision`. Within one revision none of them may differ,
+so they are compared too. A degenerate lasso optimum (exact complement columns on a fold's fitting
+samples) can move held-out scores by up to about 0.1 at equal objective, but only across solvers.
+Within one Rust source, a lasso-only difference here is a stop for review, not noise. The
+reviewer then checks whether the reference was built from another Rust tree or Rayon thread
+count before calling it anything else.
 
 ## 8. Matched analysis (after section 7)
 
 ```bash
-python3 -I "$P/compare_cohorts.py" \
+python3 -I "$P/compare_cohorts.py" --profile "$PROFILE" \
   --cohort prefix=$RUN/cohorts/prefix --cohort added=$RUN/cohorts/added \
   --cohort full=$RUN/cohorts/full --cohort matched2k=$RUN/cohorts/matched2k \
   --checker-receipt prefix=$RUN/audit/prefix-revision8-receipt.json --checker-receipt added=$RUN/audit/added-revision8-receipt.json \
@@ -577,6 +619,61 @@ python3 -I "$P/compare_cohorts.py" \
   --duplicates $RUN/audit/duplicate-screen.json --expected-source-commit "$SOURCE" --expected-foldgen-sha256 "$FOLDGEN_SHA256" \
   --out $RUN/audit/compare-cohorts.json
 ```
+
+The comparison is within revision N and within this run. Prefix, added, full and matched2k come
+from one selection, one binary and one checker, so no solver change sits between them. Exit codes,
+stops, decision D1 and the prespecified rules are revision 5's, with two changes. First,
+`matched2k` is `matched_selection` of the cleaned full cohort at the prefix's size (F6). Second,
+the eight not-interpretable drugs and the added cohort's 14 eligible drugs are checked against the
+same frozen sets. The counts quoted in revision 5's list (levofloxacin 774 resistant and 1
+susceptible; para-aminosalicylic acid 5 resistant) are the frozen added rows'. The cleaned added
+rows give their own counts, which the comparator derives and records. If cleaning moves a drug in
+or out of either set, that is a stop for the parent, not a new rule.
+
+**With/without contaminants, and what can be compared (confounding note).**
+
+- **(b) Expected: this cleaned run on N = 10, after the uncleaned revision-9 rerun.** A
+  with/without comparison is then possible, and it is **cohort-level**. The uncleaned cohorts are
+  the frozen 4k with the two genomes. The cleaned ones are a fresh selection: two genomes out,
+  replacements in, and order shifts near score ties, in the prefix and in full.
+  - **Solver confound.** If revision 10's solver is unchanged from 9, there is none: the same
+    solver, `EvalConfig` and seeds on both sides. Check it before any comparison: `src/learn/`
+    and the lasso path must be unchanged between `b2fd433` and `RN_CHECKER_COMMIT`. A
+    `check-results.py` change that only admits revision 10 changes no judgement. If the solver
+    did change, the confound returns for lasso only. The revision-9 note says no non-lasso bytes
+    change from code, and a degenerate optimum can move lasso held-out scores by about 0.1 at
+    equal objective. So bound it by reading the four non-lasso learners (scm, cart, rf, gbt) and
+    the catalog row apart from lasso. Optionally, retrain the uncleaned prefix on revision 10 as a
+    solver control. That is the same cohort, not the dropped ablation, and costs about 35 minutes
+    for prefix and about 1 h 30 min for full on Vast.
+  - **Duplicate isolation is a second revision-10 change.** If it changes how duplicates are
+    grouped into folds or lineages, the two sides also differ in fold construction, not only in
+    cohort. That is a method change, so name it in any statement. Bound it by comparing the
+    random split (seeded shuffle, untouched if isolation acts only on grouping) with the lineage
+    split, once its effect is documented.
+  - **What it can support.** Per drug, how the results of the uncleaned and the cleaned selections
+    differ, as whole cohorts: lineage-split medians and per-learner rows, paired on the genomes
+    common to both, with section 8's descriptive McNemar counts.
+  - **What it cannot support.**
+    - Any attribution to the two genomes alone. Replacements and order shifts change the cohort
+      too, and every fold moves: grm's folds are a seeded shuffle over each cohort's own samples.
+      Decision D1 measured 28–62% of common genomes changing fold, and about 80% is expected.
+    - Any claim about the six borderline genomes, which both sides keep.
+    - Anything external, prospective or clinical.
+  - **The feature-space effect.** It is real but not a label effect. The matrix review found about
+    1.58 M MTB-core k-mers kept only because the two genomes lack them: core counts were 1,613 in
+    prefix against 1,584,185 in added. Removing the two drops those k-mers from the kept set, and
+    with them the screening of every learner. A difference no larger than the run-to-run fold
+    noise is not attributable to anything.
+  - **Cost.** The comparison itself is light, but no script does it yet. `compare_cohorts.py`
+    compares cohorts within one run, so a cross-run comparator mode is new code and needs review.
+- **(a) Alternative: one cleaned run that is also the cohorts' rerun.** This applies only if the
+  species check lands in the revision that reruns the 4k cohorts. Then there is no with/without
+  comparison: the admin dropped it as low value, since the two genomes have bottom-sketch Jaccard
+  0.001 against the cohort (the matrix review). Section 8 compares prefix, added, full and matched2k
+  within that revision, and nothing is confounded by a solver change.
+
+Revision 5's text, which stands for revision 6:
 
 Exit 0 means complete. Exit 1 means output was written but the comparison is
 invalid (source, binary, foldgen or EvalConfig differing across cohorts, a
@@ -667,39 +764,47 @@ steps run and pass.
 
 ## 9. Not covered
 
-- Real power loss and filesystem-specific ordering on the Vast overlay.
-  Durability was tested through fsync and rename order, not power cuts.
-- Real 4k kset, partial and RAM sizes; the pilot measures them.
-- Revision-8 training, checking and reporting at 4k. These wait for section 7.
-- The data root and its ancestors are trusted, and bind mounts are not
-  detected (N7). `grm fetch` is not confined; the plan does not run it.
-- The containment blind spot of section 5 is real and was measured by the
-  plan-validators review. In a 256-genome cohort, 1,540 of 21,529 kept
-  k-mers of the full matrix (7.2%) are kept in no sub-cohort, and dropping
-  one of them outside the exact region passed the full cohort's 16-recount
-  validation and all three containment checks.
-- `--check-lane` does not flag hardlinks, and `--verify-frozen` does not
-  notice a catalog file replaced by a link to identical bytes (a change of no
-  content). A `grm count` in which every genome lacks its FASTA exits 0
-  with nothing counted. The plan runs `grm count` only for the pilot's
-  stock comparator, whose matrix must then equal the sparse run's byte for
-  byte.
-- Deferred from the focused re-check of revision 4, one line each:
-  - N6: when `/usr/bin/time` is still exiting as a stop begins, the stop
-    can kill the guard before it writes its record (1 of 9 on Vast). Only
-    the stop path, which exits 1 anyway, is affected; a fix needs a new
-    settle design.
-  - N8: compare checks that checker and summary outputs agree with their
-    receipt, not that they came from that cohort's run. This matters in
-    section 8, not the pilot, and binding them is a runner and comparator
-    change.
-  - N9: the foldgen and `$SOURCE` pins read `HEAD`, so a dirty checkout
-    passes; section 3 still needs a clean-checkout check, outside this
-    revision's fixes.
-  - N11: `link-kset` accepts any refusal whose stderr says "symlink";
-    tightening it needs GRM's exact message pinned from the Rust source.
-  - N12: `--make-view` writes into a source root when the view path is
-    inside one; the plan's `$RUN/rev7-view` is outside both roots.
-  - N13, in part: `scripts/metric-audit/audit.py` still stops with a
-    traceback on missing inputs (still a non-zero stop); it is outside
-    `scripts/mtb-4k`.
+- **Pending reference.** Section 7b needs revision N's trained MTB 2k candidate (`RN_REFERENCE_ROOT`),
+  which may not be staged when this run trains. Until 7b passes, two links are unproven:
+  - the chain from the cleaned matrices to stock-built content (revision 5 had it through the
+    frozen prefix);
+  - the claim that this run reproduces revision N's own candidate field for field.
+
+  Results carry `PENDING REFERENCE` until then and are not final. A 7b failure is a stop for
+  review.
+- **Borderline genomes stay in.** Six MTB genomes are borderline: MTB by sequence, but GC 62.7–64.6%
+  and 4.52–4.83 Mb, so they probably carry foreign contigs. They are `1773.18404`, `1773.3676`,
+  `1773.18177`, `1773.40722`, `1773.18213` and `1773.5309` (in added). They are recorded per cohort
+  in `preparation.json` and never excluded. A contig-level check comes in revision 10. It is out of
+  scope here, and a result touched by them is not qualified beyond that record.
+- **The species check's schemas are provisional.** On 2026-10-29 the relayed `species_check.json`
+  (`5ba9d78e…`) and the scratch copy read on the laptop (`a11832f4…`, which adds `pairs`,
+  `config.exempt_pairs`, `held_pairs` and a per-genome `inside_species`) already differed.
+  `prepare_execution_roots.py` parses only these fields:
+  - the MTB `species` entry (`slug`, `species`, `unchecked`, `failed`, `borderline`);
+  - each genome row's `genome_id`, `species` and `verdict`;
+  - the selection's `curated/species.json` list (`slug`, `selected_genomes`,
+    `selected_unchecked`).
+
+  It ignores everything else. `SPECIES_CHECK_FORMAT` is filled only when the committed code
+  writes those fields so.
+- **The species check is not re-derived here.** The plan trusts the bound post-fetch output's
+  verdicts. Its method (GC plus a bottom-1000 MinHash at k=21 against a per-species medoid, fail
+  at d > 0.13 or inside another species' 0.05 boundary) is the species-check lane's to review.
+- **Fresh-selection drift.** Replacements and order shifts near score ties are accepted by
+  ruling. The cleaned 2k must still be the cleaned 4k's first rows. The plan does not measure how
+  either list differs from the frozen ones beyond what `preparation.json` records: who left, who
+  joined, and whether the common genomes keep their order.
+- Unchanged from revision 5, and still not covered:
+  - real power loss and filesystem-specific ordering on the Vast overlay;
+  - the data root and its ancestors are trusted, and bind mounts are not detected (N7);
+  - `grm fetch` is not confined, and the plan does not run it;
+  - the containment blind spot of section 5 (k-mers kept in full and in no 2k cohort are checked
+    only by the exact region and the recount bounds);
+  - `--check-lane` does not flag hardlinks;
+  - the deferred items N6, N8, N9 (only partly closed here: `revision_n.py verify-checkout`
+    requires a clean checkout of `$WS`), N11, N12 and N13 (`audit.py` still stops with a
+    traceback on missing inputs).
+- This plan does not run `diff_revision7_prefix.py`: its prefix is a fresh selection, not the
+  frozen revision-7 prefix. Since `8bb1a9b` that script takes `--profile rN` for a revision-9 rerun
+  of the uncleaned cohorts (revision 5's section 7). Its field rules are unchanged.

@@ -20,13 +20,14 @@ seen to move.
   and the comparator's receipt check. A root restamped to OTHER stops at the tree's checker, which
   accepts revisions up to the suite's only.
 """
-import contextlib,copy,io,json,os,re,shutil,subprocess,sys,tempfile,unittest
+import contextlib,copy,hashlib,io,json,os,re,shutil,subprocess,sys,tempfile,unittest
 from pathlib import Path
 LANE=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(LANE)); sys.path.insert(0,str(LANE/"tests"))
 import profile_boot as pb  # noqa: E402  (MTB4K_TEST_PROFILE, before report_contract loads)
 import report_contract as vc
 import revision_n
+import cleaned_rerun
 import run_revision8_checks as wrapper
 import compare_cohorts as cc
 import fixtures as fx
@@ -132,6 +133,40 @@ class Refusals(unittest.TestCase):
    with profile("rN",R9): self.assertEqual((vc.PROFILE,vc.REVISION),("rN",9))
   else:
    self.refused(R9,"differs from the reviewed pin")
+
+class Cleaned(unittest.TestCase):
+ """Profile rN-cleaned: revision N's values with the cleaned cohort pins of plan revision 6."""
+ def pins(self,**edit):
+  v={n:f"@@{n}@@" for n in cleaned_rerun.TABLE}
+  for name in fx.COHORTS:
+   sha,count=cleaned_rerun.COHORT_PINS[name]
+   v[sha]=hashlib.sha256(fx.genome_bytes(name)).hexdigest(); v[count]=len(fx.cohort_genomes(name))
+  v.update(edit); return v
+ def test_unfilled_values_of_either_file_refuse_naming_both(self):
+  before=state()
+  with self.assertRaises(vc.ValidationError) as stop: vc.activate("rN-cleaned",UNFILLED,{n:f"@@{n}@@" for n in cleaned_rerun.TABLE})
+  self.assertIn("@@REVISION_N@@",str(stop.exception)); self.assertIn("@@CLEANED_MATCHED2K_COUNT@@",str(stop.exception))
+  with self.assertRaises(vc.ValidationError) as stop: vc.activate("rN-cleaned",IN_TREE,self.pins(CLEANED_ADDED_COUNT="@@CLEANED_ADDED_COUNT@@"))
+  self.assertIn("@@CLEANED_ADDED_COUNT@@",str(stop.exception)); self.assertNotIn("@@REVISION_N@@",str(stop.exception))
+  self.assertEqual(state(),before)
+ def test_the_cleaned_rules_bind_the_pins_and_keep_the_drug_sets(self):
+  vc.activate("rN-cleaned",IN_TREE,self.pins())
+  try:
+   self.assertEqual((vc.PROFILE,vc.REVISION),("rN-cleaned",OTHER))
+   for name in fx.COHORTS:
+    self.assertEqual((vc.RULES[name].size,vc.RULES[name].genomes_sha256),(len(fx.cohort_genomes(name)),__import__("hashlib").sha256(fx.genome_bytes(name)).hexdigest()))
+   self.assertEqual(vc.RULES["prefix"].drugs,vc.ALL_DRUGS); self.assertEqual(vc.RULES["full"].drugs,vc.ALL_DRUGS)
+   self.assertEqual((vc.RULES["added"].drugs,vc.RULES["added"].unavailable),(vc.ADDED_DRUGS,None))
+   self.assertIsNone(vc.RULES["matched2k"].drugs)
+   with tempfile.TemporaryDirectory() as tmp:
+    root=fx.build_cohort(Path(tmp)/"added","added",fx.make_rules())
+    restamp(root,OTHER)
+    cohort=vc.validate_manifest(root/"validation-manifest.json",vc.RULES)  # the eight receipts derived from the phenotypes
+    self.assertEqual(len(cohort.reports),14)
+    vc.activate("rN-cleaned",IN_TREE,self.pins(CLEANED_ADDED_SHA256="0"*64))
+    with self.assertRaises(vc.ValidationError) as stop: vc.validate_manifest(root/"validation-manifest.json",vc.RULES)
+    self.assertIn("cohort genome-list hash differs from frozen rule",str(stop.exception))
+  finally: vc.activate(BASE)
 
 class Active(unittest.TestCase):
  def test_rn_binds_revision_pins_rules_and_modules(self):

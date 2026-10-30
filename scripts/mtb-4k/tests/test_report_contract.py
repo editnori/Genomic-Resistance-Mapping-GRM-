@@ -439,7 +439,7 @@ class MatchedAndPinTests(unittest.TestCase):
  def test_a_checker_blob_that_moved_from_its_pin_stops_the_contract(self):
   with tempfile.TemporaryDirectory() as tmp:
    scripts=Path(tmp)/"scripts"
-   for rel in list(vc.PINS)+["mtb-4k/report_contract.py","mtb-4k/fingerprint.py","mtb-4k/revision_n.py"]:
+   for rel in list(vc.PINS)+["mtb-4k/report_contract.py","mtb-4k/fingerprint.py","mtb-4k/revision_n.py","mtb-4k/cleaned_rerun.py"]:
     (scripts/rel).parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(vc.SCRIPTS/rel,scripts/rel)
    probe=[sys.executable,"-I","-B","-c",f"import sys; sys.argv=['probe','--profile',{pb.PROFILE!r}]; sys.path.insert(0,{str(scripts/'mtb-4k')!r}); import report_contract; print('loaded')"]
    self.assertEqual(subprocess.run(probe,capture_output=True,text=True).returncode,0)

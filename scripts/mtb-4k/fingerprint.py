@@ -3,7 +3,8 @@
 
 usage: python3 -I fingerprint.py DATA_ROOT [--slug mycobacterium_tuberculosis]
            [--check] [--expect-reports N] [--out OUT.json]
-           [--make-view --matrix-from MATRIX_DATA_ROOT --inputs-from INPUTS_DATA_ROOT]
+           [--make-view --matrix-from MATRIX_DATA_ROOT --inputs-from INPUTS_DATA_ROOT
+            [--reports-from REPORTS_DATA_ROOT]]
 
 `grm learn` stamps every report with `input_fingerprint`
 (src/analysis.rs `input_fingerprint`, unchanged since evaluation revision 7):
@@ -39,7 +40,10 @@ MATRIX_DATA_ROOT's (the frozen revision-7 preflight root, which holds the
 matrix), and curated, catalog and species/<slug>/results to
 INPUTS_DATA_ROOT's (the revision-7 candidate, whose reports were learned
 from that matrix). It refuses an existing DATA_ROOT or a missing source, and
-creates nothing but the view's directories and links.
+creates nothing but the view's directories and links. --reports-from takes
+species/<slug>/results from a third root instead (plan revision 6): revision
+N's saved reports, checked against revision N's matrix and the frozen
+candidate's curated and catalog, which are the inputs the rerun links.
 """
 
 import argparse
@@ -217,13 +221,14 @@ class Inputs:
         return h.hex()
 
 
-def make_view(view: Path, matrix_from: Path, inputs_from: Path, slug: str):
+def make_view(view: Path, matrix_from: Path, inputs_from: Path, slug: str, reports_from: Path = None):
     """Build the link-only view described in the module docstring; return {link: target}."""
     if view.exists() or view.is_symlink():
         raise ValueError(f"{view} exists; the view is built once, into a new path")
     sp = f"species/{slug}"
+    reports_from = inputs_from if reports_from is None else reports_from
     links = {f"{sp}/matrix": matrix_from / sp / "matrix", f"{sp}/counted.json": matrix_from / sp / "counted.json",
-             f"{sp}/structure.json": matrix_from / sp / "structure.json", f"{sp}/results": inputs_from / sp / "results",
+             f"{sp}/structure.json": matrix_from / sp / "structure.json", f"{sp}/results": reports_from / sp / "results",
              "curated": inputs_from / "curated", "catalog": inputs_from / "catalog"}
     links = {rel: Path(os.path.abspath(target)) for rel, target in links.items()}
     missing = [str(t) for t in links.values() if not t.exists()]
@@ -257,11 +262,14 @@ def main():
     ap.add_argument("--make-view", action="store_true")
     ap.add_argument("--matrix-from", type=Path)
     ap.add_argument("--inputs-from", type=Path)
+    ap.add_argument("--reports-from", type=Path)
     args = ap.parse_args()
     if args.make_view != (args.matrix_from is not None) or args.make_view != (args.inputs_from is not None):
         ap.error("--make-view needs --matrix-from and --inputs-from, and they need --make-view")
+    if args.reports_from is not None and not args.make_view:
+        ap.error("--reports-from needs --make-view")
     try:
-        view = make_view(args.data_root, args.matrix_from, args.inputs_from, args.slug) if args.make_view else None
+        view = make_view(args.data_root, args.matrix_from, args.inputs_from, args.slug, args.reports_from) if args.make_view else None
         result = check_reports(args.data_root, args.slug)
     except (OSError, KeyError, ValueError) as err:
         print(f"fingerprint: STOP: {err}", file=sys.stderr)

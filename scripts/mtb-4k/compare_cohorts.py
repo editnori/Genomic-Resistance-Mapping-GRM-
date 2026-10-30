@@ -8,8 +8,12 @@ usage: python3 -I compare_cohorts.py
            --expected-source-commit SHA --expected-foldgen-sha256 SHA256 --out OUT.json [--profile r8|rN]
 
 The profile (report_contract.py) sets the evaluation revision, checker pins and cohort rules:
-r8, the default, is revision 8; rN is revision N on the same frozen cohorts, which stops with
-exit 2 while revision_n.py holds a placeholder it needs.
+r8, the default, is revision 8; rN is revision N on the same frozen cohorts; rN-cleaned is
+revision N on plan revision 6's cleaned cohorts. rN and rN-cleaned stop with exit 2 while
+revision_n.py or cleaned_rerun.py holds a placeholder they need. matched2k is matched_selection
+of the full cohort at the prefix's size. The frozen eight not-interpretable drugs and the added
+cohort's frozen 14 are prespecified analysis sets in every profile: a cleaned cohort that
+changes either is a stop.
 
 ROOT is a cohort's execution root (RUN/cohorts/<name>): validation-manifest.json from
 write_run_manifest.py, beside data/. The canonical merge of packages K and W (RECONCILE.md): K's
@@ -326,7 +330,8 @@ def compare(paths,receipts,duplicates,expected_source,rules=None,accept_duplicat
  if not isinstance(screen,dict) or not isinstance(screen.get("cross_cohort_exact"),int): vc.fail(str(screen_path),"not a screen_duplicates.py output")
  if screen["cross_cohort_exact"] and accept_duplicates!=screen_sha: vc.fail(str(screen_path),f"the duplicate screen reports {screen['cross_cohort_exact']} exact cross-cohort duplicates; stop for a parent decision")
  p,a,f,m=(cohorts[x] for x in COHORTS)
- if m.genomes!=prep.matched_selection(f.genomes): vc.fail("matched2k","cohort is not matched_selection of the full cohort (F6)")
+ # F6, at the prefix's size: 2,000 of the frozen 4,000 (r8, rN), or the cleaned prefix's count (rN-cleaned).
+ if m.genomes!=prep.matched_selection(f.genomes,len(p.genomes)): vc.fail("matched2k","cohort is not matched_selection of the full cohort at the prefix's size (F6)")
  problems,added_counts=cross_check_labels(cohorts)
  if problems: vc.fail("class gates (F3)","; ".join(problems[:10]))
  flagged={d:f"{r} resistant and {s} susceptible isolates among the added genomes (fewer than {MIN_CLASS} of a class)"

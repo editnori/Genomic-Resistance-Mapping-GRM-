@@ -31,11 +31,13 @@ from pathlib import Path
 LANE = Path(__file__).resolve().parents[1]
 SCRIPTS = LANE.parent
 PLAN = LANE / "4k-execution-plan.md"
+# Plan revision 6: the reference diff is diff_reference_prefix.py, and revision_n.py and cleaned_rerun.py gate the run.
 ENTRY = {"prepare_execution_roots.py", "fingerprint.py", "pilot_interrupt.py", "pilot_invalidation.py", "validate_matrix.py",
-         "screen_duplicates.py", "write_run_manifest.py", "run_revision8_checks.py", "diff_revision7_prefix.py", "compare_cohorts.py",
-         "metric-audit/audit.py"}
+         "screen_duplicates.py", "write_run_manifest.py", "run_revision8_checks.py", "diff_reference_prefix.py", "compare_cohorts.py",
+         "metric-audit/audit.py", "revision_n.py", "cleaned_rerun.py"}
 EXTERNAL = {"/root/grm-research/grm-research-mtb-4k-cohort-r2/scripts/verify_evidence.py"}
-SIBLINGS = ("report_contract", "fingerprint", "prepare_execution_roots", "run_revision8_checks", "pilot_interrupt", "revision_n")
+SIBLINGS = ("report_contract", "fingerprint", "prepare_execution_roots", "run_revision8_checks", "pilot_interrupt", "revision_n",
+            "cleaned_rerun")
 # The wiring lane's guard runs as `python3 $GUARD`, read-only and as written; pilot_interrupt.py requires the launcher's
 # command line to be exactly that (N1), so it takes no -I.
 GUARD = "$GUARD"
@@ -165,13 +167,13 @@ class EntryPoints(unittest.TestCase):
 
     def test_the_fold_rebuild_check_runs_isolated_as_written(self):
         # N3: the plan's -c check, beside a planted json.py whose load() reports a clean rebuild.
-        [line] = [c["line"] for c in plan_scripts()[3] if "rev7-fold-rebuild.json" in c["line"]]
+        [line] = [c["line"] for c in plan_scripts()[3] if "rN-fold-rebuild.json" in c["line"]]
         with tempfile.TemporaryDirectory() as tmp:
             run, cwd = Path(tmp) / "run", Path(tmp) / "planted"
             (run / "audit").mkdir(parents=True)
             cwd.mkdir()
             (cwd / "json.py").write_text('def load(f): return {"records": [{}] * 22}\n')
-            audit = run / "audit" / "rev7-fold-rebuild.json"
+            audit = run / "audit" / "rN-fold-rebuild.json"
             for issues, want in (([{"where": "splits[0].test_fold", "message": "differs"}], 1), ([], 0)):
                 with self.subTest(failed=bool(issues)):
                     audit.write_text(json.dumps({"records": [{"issues": issues}] * 22}))
@@ -306,6 +308,11 @@ class EntryPoints(unittest.TestCase):
         self.assertEqual(len(names), 8)
         block = "VALUES = {\n" + "".join(f'    "{name}": "@@{name}@@",\n' for name in names) + "}\n"
         (lane / "revision_n.py").write_text(text[:start] + block + text[end:])
+        text = (lane / "cleaned_rerun.py").read_text()
+        start = text.index("\nVALUES = {\n") + 1
+        end = text.index("\n}\n", start) + 3
+        names = re.findall(r'^    "([A-Z0-9_]+)": ', text[start:end], flags=re.M)
+        (lane / "cleaned_rerun.py").write_text(text[:start] + "VALUES = {\n" + "".join(f'    "{n}": "@@{n}@@",\n' for n in names) + "}\n" + text[end:])
 
         def run_copy(rel, *args):
             return subprocess.run([sys.executable, "-I", "-B", str(lane / rel), *map(str, args)], cwd=self.cwd, env=self.env,
@@ -328,6 +335,20 @@ class EntryPoints(unittest.TestCase):
                         self.assertIn("@@RN_CONVERGENCE_STATUS_RULE@@", p.stderr)
                         self.assertNotIn("usage", p.stdout.lower())
                         self.assertClean(p)
+        for cli, args in cases.items():
+            with self.subTest(cli=cli, profile="rN-cleaned"):
+                p = run_copy(cli, *args, "--profile", "rN-cleaned")
+                self.assertEqual(p.returncode, 2, p.stderr)
+                self.assertIn("STOP: cannot load the validators: profile rN-cleaned: unfilled placeholder(s): @@REVISION_N@@", p.stderr)
+                self.assertIn("@@CLEANED_PREFIX_SHA256@@", p.stderr)
+                self.assertClean(p)
+        p = run_copy("prepare_execution_roots.py", base / "run", "--cohorts", "cleaned")
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertIn("refusing: unfilled placeholder(s): @@SPECIES_CHECK_PATH@@", p.stderr)
+        self.assertClean(p)
+        p = run_copy("cleaned_rerun.py", "status", "--group", "prepare")
+        self.assertEqual(p.returncode, 2)
+        self.assertIn("cleaned_rerun: STOP: unfilled placeholder(s)", p.stderr)
         self.assertEqual(sorted(os.listdir(base)), [])
         p = self.run_isolated("revision_n.py", "--help")
         self.assertEqual(p.returncode, 0, p.stderr)
