@@ -103,8 +103,9 @@ impl Default for CheckConfig {
     fn default() -> Self {
         CheckConfig {
             // Across the 23 species of revision 9, species complexes reach
-            // 0.111 (E. cloacae) and the next genome is at 0.146, a
-            // Klebsiella filed as E. coli. 0.13 falls in that gap.
+            // 0.111 (E. cloacae) and the next genome is at 0.146: 562.42818,
+            // filed as E. coli and otherwise unidentified (GC 51.9%, nearest
+            // S. sonnei). 0.13 falls in that gap.
             fail_distance: 0.13,
             species_distance: 0.05,
             gc_z: 6.0,
