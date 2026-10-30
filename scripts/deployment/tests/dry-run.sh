@@ -38,6 +38,7 @@ unset GRM_PLAYWRIGHT_CORE GRM_SKIP_BROWSER GRM_SOURCE_REPO GRM_TUNNEL_TOKEN_FILE
 export GRM_TEST_MARKER=$T/grm-ran
 pass=0
 fail=0
+skipped=0
 # Every guard against a hang is "timeout -k 5 N": a script that traps TERM and
 # is blocked in open() never runs its trap, so TERM alone could wait forever.
 
@@ -130,7 +131,12 @@ expect 0 'published pub1 files=4' "publish --apply into temporary root" -- \
     bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub1 --apply
 expect 2 'already exists' "publish refuses an existing name" -- \
     bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub1 --apply
-expect 1 '' "publication is read-only" -- test -w "$D/published/pub1/report/index.json"
+if [ "$(id -u)" != 0 ]; then
+    expect 1 '' "publication is read-only" -- test -w "$D/published/pub1/report/index.json"
+else
+    echo "skip publication is read-only (root ignores the mode)"
+    skipped=$((skipped + 1))
+fi
 mkdir -p "$D/go"
 approval rel1 pub1 >"$D/go/rel1--pub1"
 variant() {  # copy the source report to $T/NAME and print its path
@@ -601,7 +607,7 @@ rm "$C/cloudflared.sha256"
 mv "$T/cloudflared.sha256" "$C/cloudflared.sha256"
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=195
+EXPECTED_ASSERTIONS=$((195 - skipped))  # less the root-only skip
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"
