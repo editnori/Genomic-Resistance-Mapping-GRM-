@@ -111,7 +111,7 @@ VALUES = {
     "CLEANED_FULL_COUNT": 4000,
     "CLEANED_MATCHED2K_SHA256": "efe0e90769b460e8d5949ab38881f24f8b137d29912d3ec3dfb7eaeb870be9ad",
     "CLEANED_MATCHED2K_COUNT": 2000,
-    "RN_REFERENCE_ROOT": "@@RN_REFERENCE_ROOT@@",
+    "RN_REFERENCE_ROOT": "/root/grm-r10-275-run-20261030",
 }
 
 # The input root's files the cohorts' labels, gates, gene calls and fingerprints come from, each bound by hash
