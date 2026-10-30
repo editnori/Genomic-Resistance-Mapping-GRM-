@@ -209,6 +209,14 @@ time.sleep(600)
     EXTRA_PIDS+=" $hidden"
     wait_for 10 locked "$1" || true
 }
+# unlist PID: drop PID from EXTRA_PIDS once it has been killed and reaped, so
+# reap never signals the number again (the PR 64 review, L1): it may by then
+# belong to an unrelated process.
+unlist() {
+    local p out=''
+    for p in $EXTRA_PIDS; do [ "$p" = "$1" ] || out+=" $p"; done
+    EXTRA_PIDS=$out
+}
 
 # Stub grm: grm --data DIR serve --app DIR --port N. GRM_STUB_FAIL, _SLOW,
 # _BAD and _IGNORE_TERM, when a substring of its path, make it exit at once,
@@ -551,6 +559,7 @@ check "it waited 5 s first and started nothing; state/active still names rel1" -
     eval 'test "$((SECONDS - lock_t0))" -ge 5 && logged "waiting up to 5 s" && test -z "$(running rel1)$(listener "$LP")" -a ! -e "$D/serve-$LP.starting" -a "$(field active label)" = rel1'
 kill -KILL "$hidden"
 wait "$hidden" 2>/dev/null || true
+unlist "$hidden"
 expect 0 'restore health pass: rel1 with p237' "once that holder is gone, restore recovers" -- bash "$S/restore.sh" --apply
 # deploy.lock stays held after a script is killed outright until every
 # short-lived child it forked with the lock open exits, such as the sleep of
@@ -600,6 +609,7 @@ expect 2 'state/active no longer records rel1 with p237' \
     timeout -k 5 120 env GRM_RESTORE_LOCK_WAIT=60 bash "$S/restore.sh" --apply
 wait "$committer" || true
 wait "$hidden" 2>/dev/null || true
+unlist "$hidden"
 check "rel2 was committed while restore waited, and restore started nothing and left state/active naming rel2" -- \
     eval 'logged "waiting up to 60 s" && test "$(field active label)" = rel2 -a -z "$(running rel1)$(running rel2)$(listener "$LP")" -a ! -e "$D/serve-$LP.starting"'
 expect 0 'restore health pass: rel2 with p275' "the next argument-free restore starts rel2, which state/active names" -- \
@@ -767,6 +777,7 @@ check "the journal and marker are kept and nothing started" -- \
 expect 2 'interrupted start of rel2' "activation still refuses that port" -- bash "$S/activate.sh" rel2 p275 --apply
 kill -KILL "$hidden"
 wait "$hidden" 2>/dev/null || true
+unlist "$hidden"
 expect 0 'restore health pass: rel1 with p237' "once the hidden holder is gone, restore resolves the journal" -- bash "$S/restore.sh" --apply
 check "after the hidden holder, rel1 is back and the marker is removed" -- eval 'rel1_back && test ! -e "$D/spawn/$m"'
 at journaled KILL bash "$S/activate.sh" rel2 p275 --apply
@@ -1876,6 +1887,7 @@ expect 1 'may remain' "connector run starts nothing while a hidden process holds
 check "no supervisor record or cloudflared was started" -- eval 'test ! -e "$C2/supervisor.pid" && ! locked "$C2/connector.lock"'
 kill -KILL "$hidden"
 wait "$hidden" 2>/dev/null || true
+unlist "$hidden"
 
 # Links, FIFOs and special files at every connector path are refused before
 # anything is opened, so nothing blocks.
