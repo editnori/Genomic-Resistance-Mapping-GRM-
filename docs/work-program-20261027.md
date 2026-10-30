@@ -664,3 +664,23 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
   - **Open design questions for the revision-11 brief:**
     - (1) A dataset that revision 10 evaluates can now **fail its whole random split** when an outer training set's resistant genomes are all one duplicate group. That's likely with rare resistance in clonal genomes. Options: keep it as a hard failure (R3 documented skip), mark the random split unavailable with a reason, or fall back to stratified tuning with a recorded reason. The fallback reopens the leak.
     - (2) `final_models` still tunes without groups, so the final penalty and early stopping can see a genome and its copy. No reported metric leaks, but the published hyperparameters can be biased. Grouping them would change `finals`.
+- 2026-10-30 11:53–12:2x UTC: **revision-10 g5 (MTB) PASS** under both checks: 22 reports, class (a), the 2 drops replaced by checked genomes, 7 flips with most margins ≤ 0.002, 175/275 reviewed and 25 flips in total. g6 (E. coli) launched at 11:53:16, its ksets 56.4 GiB, free 52.1 GB at its last reading.
+- 2026-10-30 12:38 UTC → ongoing: **Vast ssh outage.** Both the direct port `104.234.155.173:38018` and the proxy `ssh3.vast.ai:29606` refuse connections, for GRM, for KSD and for the reviewer.
+  - **The container is alive:** genomicresistance.com still serves revision 9 through its tunnel, and the Vast API shows it running with 3,694 min uptime and 259/300 GiB used.
+  - **Revision 10's driver runs on the box and needs no ssh.** It's presumed progressing, with g7 (K. pneumoniae) consistent with the disk use.
+  - **Ruling (main, agreed with 62c28a5b):** wait; no restart or reboot, which would kill the stage and KSD's jobs. Lanes retry every 5 min. If it's still down at about 15:00 UTC, options go to the admin.
+- 2026-10-30 12:xx–14:00 UTC: **implementation program, packages A–P** (Layth's expanded request). Each package has its own worktree from `c90ebaf` under `/home/layth/review/grm-task-<x>-20261030`, with no commits; one Opus owner per package and an independent reviewer per package.
+  - **Account `layth88818` failed on rate limits** (H, I, L, P and reviewer D, all before doing any work). Replacements started from clean worktrees on the other accounts.
+  - **Implemented:** A (re-gated), B, C, D, E, F (gate passed in its slot: fmt, clippy, 280 + 22 tests), J (30 tests), K, L (23), M, N (50), O (19), P (24). G, H and I are written and wait for the heavy slot.
+  - **Reviews so far:**
+    - B: `DEFECTS`, 4 Medium, then fixed and `RECHECK_TASK_B=APPROVED` (`05f4861e…`).
+    - C: `DEFECTS`, H1: a tampered protocol was accepted. Fixed, re-check running.
+    - D: `DEFECTS`, 3 Medium (missing inner plans passed, silent loss of permutation power, KS sidedness). Fixed, re-check running.
+    - E: `DEFECTS`, M1: ungrouped rows counted as singleton groups. Fixed; the re-check found 2 Lows, being closed.
+    - M: `DEFECTS`, M-1: **a real temporal leak**, post-T label history changing train. Fixed, re-check running.
+    - K: `DEFECTS`, 1 High (J's null shapes refused). Fixed against the contract.
+    - A, J and O: reviews running.
+  - **Binding ablation contract v1.1:** `/home/layth/review/grm-ablation-contract-20261030/CONTRACT.md`, sha256 `002c1427…96b4`. It fixes the Contrast, pooled, prediction, block-spec and missingness records, the decision rule and the canonical JSON across H, I, J, K and L.
+  - **Temporal contract:** the five rulings in M's `splits.py` docstring; N is aligning to them.
+  - **For revision 11:** A must merge together with the `EVALUATION_REVISION` 11 bump. The one-class balanced accuracy in `audit.py:211` and Rust `binary_metrics` is confirmed by D's reviewer.
+  - **Laptop:** RAM floors are being enforced by dropping WSL's page cache (Windows fell to 0.3 GB free during A's review build). The load was about 24 on 12 cores.
