@@ -43,6 +43,8 @@ trap ':' PIPE
 
 D=${GRM_DEPLOY_ROOT:?set GRM_DEPLOY_ROOT to the absolute deployment root}
 D=${D%/}
+# Every signal sent to another process is journalled here first (lib.sh, Signal journal).
+SIGNAL_LOG=$D/deploy.log
 case $D in
     /?*) ;;
     *) echo "GRM_DEPLOY_ROOT must be an absolute path: $D" >&2; exit 2 ;;
@@ -470,6 +472,20 @@ pending_start() {
     ORPHANS=$(journal_procs)
 }
 
+# would_stop_orphans: the dry run of resolve_start's stop: each process of the
+# journaled start (ORPHANS) with its start time, command line and tie.
+would_stop_orphans() {
+    local p s
+    for p in $ORPHANS; do
+        s=$(proc_start "$p") || continue
+        if [ "$p" = "$J_CHILD" ]; then
+            would_signal "$p" "$s" "the registered child of the interrupted start of $J_LABEL with $J_PUB (token $J_TOKEN), with the process group it leads or led"
+        else
+            would_signal "$p" "$s" "holds the lock of spawn/$J_MARK ($J_MARK_ID), the marker of the interrupted start of $J_LABEL with $J_PUB"
+        fi
+    done
+}
+
 # Refuse to act on PORT while an interrupted start there is unresolved.
 no_pending_start() {
     pending_start "$1"
@@ -598,6 +614,7 @@ stop_spawn() {
         return 0
     fi
     [ -n "$child" ] && [ "$(ppid_of "$child")" = "$$" ] && start=$(proc_start "$child") || return 0
+    SIG_WHY="this script's own child, pid $child with start $start, forked for start $SPAWN_TOKEN without a marker"
     stop_tree "$child" "$start" "$SPAWN_TOKEN" '' || { say "processes of start $SPAWN_TOKEN may remain: $STOP_ERR"; return 1; }
 }
 

@@ -639,6 +639,31 @@ preexec child-preexec bash "$S/restore.sh" --apply
 preexec_resolved "restore killed with its child paused before exec" 'restore health pass: rel1 with p237' \
     bash "$S/restore.sh" --apply
 check "after the restore's paused child, rel1 is back" -- rel1_back
+# The signal journal (the admin's ruling, 2026-10-29). An interrupted restore
+# leaves a journalled start with a paused child. The dry run shows the signal
+# restore would send it, with the reason. While deploy.log, the journal,
+# cannot be written (here a directory), restore --apply sends nothing, keeps
+# the journal and fails, the child still there; with deploy.log back it
+# resolves the start, and deploy.log holds the journal line of each signal.
+kill_live
+preexec child-preexec bash "$S/restore.sh" --apply
+wait_for 10 grep -q " child=$kid " "$D/serve-$LP.starting" || true
+killbg
+check "journal: the killed restore's journal registers its paused child" -- grep -q " child=$kid " "$D/serve-$LP.starting"
+expect 0 "dry-run: would send TERM .*to pid $kid .*the registered child of the interrupted start" \
+    "the restore dry run shows each signal it would send, with its target and reason" -- bash "$S/restore.sh"
+mv "$D/deploy.log" "$T/deploy.log.keep"
+mkdir "$D/deploy.log"
+expect 1 'cannot write the signal journal' "restore sends no signal and fails while the signal journal cannot be written" -- bash "$S/restore.sh" --apply
+check "journal: the paused child is still there and the journal is kept" -- test -e "/proc/$kid" -a -e "$D/serve-$LP.starting"
+rmdir "$D/deploy.log"
+mv "$T/deploy.log.keep" "$D/deploy.log"
+expect 0 'restore health pass: rel1 with p237' "with the journal writable again, restore resolves the start and restores rel1" -- bash "$S/restore.sh" --apply
+check "journal: the paused child is gone" -- wait_for 10 gone "$kid"
+check "journal: deploy.log has the TERM to that child, with its reason" -- \
+    eval 'grep -F "signal TERM to pid $kid (start " "$D/deploy.log" | grep -qF "the start'"'"'s registered child"'
+kill -CONT "$kid" 2>/dev/null || true
+check "journal: rel1 is back" -- rel1_back
 
 # Unknown survival fails closed: a process this user cannot see holds the
 # marker's lock, or the marker is gone, so restore keeps the journal, starts
@@ -1237,6 +1262,28 @@ cat >"$T/pid-recycle.sh" <<'SH'
 set -u
 S=$1 dir=$2
 source "$S/lib.sh"
+# The signal journal and a trace of every kill the scripts make while
+# tracing=1: check_journal prints ok:N when each of the N traced kills has its
+# journal line, in order, with the same signal and target.
+SIGNAL_LOG=$dir.journal
+trace=$dir.kills tracing=0
+: >"$trace"
+kill() { [ "$tracing" = 0 ] || printf '%s\n' "$*" >>"$trace"; builtin kill "$@"; }
+check_journal() {
+    local -a ks js
+    local i sig tgt want
+    mapfile -t ks <"$trace"
+    mapfile -t js < <(grep ' signal ' "$SIGNAL_LOG" 2>/dev/null)
+    [ "${#ks[@]}" = "${#js[@]}" ] || { echo "mismatch:${#ks[@]}kills/${#js[@]}lines"; return; }
+    for i in "${!ks[@]}"; do
+        set -- ${ks[i]}
+        sig=$2 tgt=$3
+        [ "$tgt" != -- ] || tgt=$4
+        case $tgt in -*) want="signal $sig to process group ${tgt#-} " ;; *) want="signal $sig to pid $tgt " ;; esac
+        [[ ${js[i]} == *"$want"* ]] || { echo "unjournalled:${ks[i]}"; return; }
+    done
+    echo "ok:${#ks[@]}"
+}
 mark_create "$dir" recycle || { echo "no marker"; exit 3; }
 echo 199 >/proc/sys/kernel/ns_last_pid
 setsid bash -c 'trap "" TERM; sleep 6; :' </dev/null >/dev/null 2>&1 &
@@ -1247,7 +1294,7 @@ h2=$!
 close_fd MARK_FD
 sleep 0.3
 holds "$h1" "$MARK_ID" && holds "$h2" "$MARK_ID" || { echo "setup=failed: the holders do not hold the marker"; exit 3; }
-( mark_stop "$MARK_ID" "$MARK_PATH"; echo "rc=$?" >"$dir/ms.out" ) &
+( tracing=1; mark_stop "$MARK_ID" "$MARK_PATH"; echo "rc=$?" >"$dir/ms.out" ) &
 ms=$!
 wait "$h2"
 echo $((h2 - 1)) >/proc/sys/kernel/ns_last_pid
@@ -1259,7 +1306,7 @@ if alive "$q" "$qs"; then u=alive; else u=KILLED; fi
 { kill -KILL "$q"; wait "$q"; } 2>/dev/null
 setup=ok
 [ "$q" = "$h2" ] || setup="failed: Q got pid $q, not $h2"
-echo "setup=$setup mark_stop_$(cat "$dir/ms.out") unrelated=$u"
+echo "setup=$setup mark_stop_$(cat "$dir/ms.out") unrelated=$u journal=$(check_journal) q_named=$(grep -c "to pid $q (start $qs," "$SIGNAL_LOG")"
 SH
 # A process of the start that leaves the group and converts its inherited lock
 # to shared (the same review, finding 2). It holds no exclusive lock, and the
@@ -1269,6 +1316,7 @@ cat >"$T/lock-shared.sh" <<'SH'
 set -u
 S=$1 dir=$2
 source "$S/lib.sh"
+SIGNAL_LOG=$2.journal
 mark_create "$dir" change || { echo "no marker"; exit 3; }
 setsid bash -c 'flock -s "$1" || exit 9; exec sleep 300' _ "$MARK_FD" </dev/null >/dev/null 2>&1 &
 c=$!
@@ -1294,6 +1342,7 @@ cat >"$T/marker-scan.sh" <<'SH'
 set -u
 S=$1 dir=$2
 source "$S/lib.sh"
+SIGNAL_LOG=$2.journal
 mark_create "$dir" scan || { echo "no marker"; exit 3; }
 close_fd MARK_FD
 setsid bash -c 'exec 3<"$1"; flock -n 3 || exit 9; exec sleep 300' _ "$MARK_PATH" </dev/null >/dev/null 2>&1 &
@@ -1319,6 +1368,7 @@ cat >"$T/token-left.sh" <<'SH'
 set -u
 S=$1 dir=$2 mode=$3
 source "$S/lib.sh"
+SIGNAL_LOG=$2.journal
 tok=$(cat /proc/sys/kernel/random/uuid)
 mark_create "$dir" tokleft || { echo "no marker"; exit 3; }
 if [ "$mode" = closed ]; then
@@ -1356,7 +1406,7 @@ if "${pidns[@]}" sh -c 'echo 1 >/proc/sys/kernel/ns_last_pid' 2>/dev/null; then
     expect 0 '^resolve_rc=1 journal_left=yes unrelated=alive orphans=\[\] reason=replaced$' \
         "resolving a start whose marker is gone signals no process that holds the old inode locked, and keeps the journal" -- \
         timeout -k 5 120 "${pidns[@]}" bash "$T/marker-holder.sh" "$S" "$T/marker-replaced" replaced
-    expect 0 '^setup=ok mark_stop_rc=0 unrelated=alive$' \
+    expect 0 '^setup=ok mark_stop_rc=0 unrelated=alive journal=ok:[1-9][0-9]* q_named=0$' \
         "mark_stop signals no process that took the PID of a holder that exited while an earlier holder was being stopped" -- \
         timeout -k 5 120 "${pidns[@]}" bash "$T/pid-recycle.sh" "$S" "$T/pid-recycle"
     expect 0 '^child_lock=READ mark_stop_rc=1 child=alive reason=named$' \
@@ -1405,6 +1455,28 @@ cat >"$T/group-stop.sh" <<'SH'
 set -u
 source "$1/lib.sh"
 dir=$2 mode=$3
+# The signal journal and a trace of every kill the scripts make while
+# tracing=1: check_journal prints ok:N when each of the N traced kills has its
+# journal line, in order, with the same signal and target.
+SIGNAL_LOG=$dir.journal
+trace=$dir.kills tracing=0
+: >"$trace"
+kill() { [ "$tracing" = 0 ] || printf '%s\n' "$*" >>"$trace"; builtin kill "$@"; }
+check_journal() {
+    local -a ks js
+    local i sig tgt want
+    mapfile -t ks <"$trace"
+    mapfile -t js < <(grep ' signal ' "$SIGNAL_LOG" 2>/dev/null)
+    [ "${#ks[@]}" = "${#js[@]}" ] || { echo "mismatch:${#ks[@]}kills/${#js[@]}lines"; return; }
+    for i in "${!ks[@]}"; do
+        set -- ${ks[i]}
+        sig=$2 tgt=$3
+        [ "$tgt" != -- ] || tgt=$4
+        case $tgt in -*) want="signal $sig to process group ${tgt#-} " ;; *) want="signal $sig to pid $tgt " ;; esac
+        [[ ${js[i]} == *"$want"* ]] || { echo "unjournalled:${ks[i]}"; return; }
+    done
+    echo "ok:${#ks[@]}"
+}
 tok=$(cat /proc/sys/kernel/random/uuid)
 mark_create "$dir" grp || { echo "no marker"; exit 3; }
 if [ "$mode" = failing ]; then
@@ -1447,23 +1519,72 @@ proc_stat "$kid" && [ "$PS_PGRP" = "$leader" ] || { echo "the descendant is not 
 if [ "$mode" != running ]; then wait "$leader"; fi
 close_fd MARK_FD
 if [ "$mode" = sticky ]; then (sleep 1; : >"$dir/leader.go2") & fi
+tracing=1
 mark_stop "$MARK_ID" "$MARK_PATH" "$leader" "$lstart" "$tok"
 rc=$?
+tracing=0
 if alive "$kid" "$kstart"; then k=alive; else k=gone; fi
 kill -KILL "$kid" 2>/dev/null
-echo "rc=$rc kid=$k err=$MARK_ERR"
+echo "rc=$rc kid=$k err=$MARK_ERR journal=$(check_journal)"
 SH
-expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant seen in the group of a leader that exits on SIGTERM" -- \
+expect 0 '^rc=0 kid=gone err= journal=ok:[1-9][0-9]*$' "mark_stop kills a TERM-ignoring descendant seen in the group of a leader that exits on SIGTERM" -- \
     timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-running" running
-expect 0 '^rc=0 kid=gone err=$' "mark_stop kills a TERM-ignoring descendant carrying the token in the group of a registered leader that had exited" -- \
+expect 0 '^rc=0 kid=gone err= journal=ok:[1-9][0-9]*$' "mark_stop kills a TERM-ignoring descendant carrying the token in the group of a registered leader that had exited" -- \
     timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-exited" exited
-expect 0 '^rc=1 kid=alive err=process group [0-9]+ has members \(pids [0-9]+\) that cannot be tied to this start' \
+expect 0 '^rc=1 kid=alive err=process group [0-9]+ has members \(pids [0-9]+\) that cannot be tied to this start.* journal=ok:0$' \
     "mark_stop signals no member of an exited leader's group that has neither the token nor the marker, and fails" -- \
     timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-untied" untied
-expect 0 '^rc=0 kid=gone err=$' "mark_stop still kills a TERM-ignoring descendant that carried the token and then exec'd without it" -- \
+expect 0 '^rc=0 kid=gone err= journal=ok:[1-9][0-9]*$' "mark_stop still kills a TERM-ignoring descendant that carried the token and then exec'd without it" -- \
     timeout -k 5 90 bash "$T/group-stop.sh" "$S" "$T/groups-sticky" sticky
 expect 0 '^rc=1 err=pid [0-9]+ would not stop$' "mark_stop fails after a failed stop even when no holder is left" -- \
     timeout -k 5 60 bash "$T/group-stop.sh" "$S" "$T/groups-failing" failing
+# The signal journal cannot be written (the admin's ruling, 2026-10-29): a
+# holder of the start's lock must get no signal, and mark_stop must fail,
+# saying why. Here SIGNAL_LOG is a directory.
+cat >"$T/journal-closed.sh" <<'SH'
+set -u
+source "$1/lib.sh"
+dir=$2
+# The signal journal and a trace of every kill the scripts make while
+# tracing=1: check_journal prints ok:N when each of the N traced kills has its
+# journal line, in order, with the same signal and target.
+trace=$dir.kills tracing=0
+: >"$trace"
+kill() { [ "$tracing" = 0 ] || printf '%s\n' "$*" >>"$trace"; builtin kill "$@"; }
+check_journal() {
+    local -a ks js
+    local i sig tgt want
+    mapfile -t ks <"$trace"
+    mapfile -t js < <(grep ' signal ' "$SIGNAL_LOG" 2>/dev/null)
+    [ "${#ks[@]}" = "${#js[@]}" ] || { echo "mismatch:${#ks[@]}kills/${#js[@]}lines"; return; }
+    for i in "${!ks[@]}"; do
+        set -- ${ks[i]}
+        sig=$2 tgt=$3
+        [ "$tgt" != -- ] || tgt=$4
+        case $tgt in -*) want="signal $sig to process group ${tgt#-} " ;; *) want="signal $sig to pid $tgt " ;; esac
+        [[ ${js[i]} == *"$want"* ]] || { echo "unjournalled:${ks[i]}"; return; }
+    done
+    echo "ok:${#ks[@]}"
+}
+mark_create "$dir" closed || { echo "no marker"; exit 3; }
+sleep 300 &
+h=$!
+hs=$(proc_start "$h")
+close_fd MARK_FD
+mkdir -p "$dir.journal-dir"
+SIGNAL_LOG=$dir.journal-dir
+tracing=1
+mark_stop "$MARK_ID" "$MARK_PATH"
+rc=$?
+tracing=0
+if alive "$h" "$hs"; then s=alive; else s=KILLED; fi
+{ builtin kill -KILL "$h"; wait "$h"; } 2>/dev/null
+case $MARK_ERR in *"cannot write the signal journal"*) why=journal ;; *) why=other ;; esac
+echo "rc=$rc holder=$s kills=$(grep -c . "$trace") reason=$why"
+SH
+expect 0 '^rc=1 holder=alive kills=0 reason=journal$' \
+    "mark_stop sends no signal and fails when the signal journal cannot be written" -- \
+    timeout -k 5 60 bash "$T/journal-closed.sh" "$S" "$T/journal-closed"
 # A lock_free probe that holds the marker's lock at the instant a mark_stop
 # scans (the 2026-10-29 re-check of the marker fix, finding 1). The start's
 # processes are gone, so its lock is free; a probe (connector.sh status, say,
@@ -1474,6 +1595,7 @@ expect 0 '^rc=1 err=pid [0-9]+ would not stop$' "mark_stop fails after a failed 
 cat >"$T/lock-probe.sh" <<'SH'
 set -u
 source "$1/lib.sh"
+SIGNAL_LOG=$2.journal
 dir=$2
 mark_create "$dir" probe || { echo "no marker"; exit 3; }
 close_fd MARK_FD
@@ -1839,7 +1961,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((488 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((497 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

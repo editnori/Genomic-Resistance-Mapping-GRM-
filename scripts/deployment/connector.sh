@@ -65,6 +65,8 @@ die() {
 }
 C=${GRM_CONNECTOR_DIR:?set GRM_CONNECTOR_DIR to the connector directory}
 C=${C%/}
+# Every signal sent to another process is journalled here first (lib.sh, Signal journal).
+SIGNAL_LOG=$C/signals.log
 TOKEN=${GRM_TUNNEL_TOKEN_FILE:-$C/tunnel.token}
 PROTOCOL=${GRM_TUNNEL_PROTOCOL:-http2}
 LOCK_FD='' MARK_FD='' MARK_ID='' SPAWN_TOKEN=''
@@ -175,8 +177,9 @@ on_signal() {
         [ -n "$p" ] && [ "$(ppid_of "$p")" = "$$" ] && s=$(proc_start "$p") || return 0
     fi
     [ -n "$s" ] && alive "$p" "$s" || return 0
-    if [ "$PS_PGRP" = "$p" ]; then tree_signal TERM "$p" "$p"; else tree_signal TERM "$p" ''; fi
-    tree_signal CONT "$p" ''
+    SIG_WHY="cloudflared, this supervisor's child, pid $p with start $s (run token $SPAWN_TOKEN), after a TERM, INT or HUP to the supervisor"
+    if [ "$PS_PGRP" = "$p" ]; then tree_signal TERM "$p" "$s" "$p" || return 0; else tree_signal TERM "$p" "$s" '' || return 0; fi
+    tree_signal CONT "$p" "$s" '' || true
 }
 on_exit() {
     local rc=$?
@@ -186,6 +189,7 @@ on_exit() {
     # With its process group, even if cloudflared itself has exited (start 0
     # when it exited before its start time was read; see run). A failure
     # already recorded (exit 3) is not recorded again.
+    SIG_WHY="cloudflared, this supervisor's child, pid ${child:-} with start ${child_start:-unknown} (run token $SPAWN_TOKEN)"
     if [ -n "${child:-}" ] &&
         ! stop_tree "$child" "${child_start:-0}" "$SPAWN_TOKEN" "$MARK_ID" group; then
         [ "$rc" = 3 ] || stop_failed "cannot stop cloudflared pid $child: $STOP_ERR"
@@ -244,6 +248,7 @@ run() {
         checkpoint conn-assigned
         while [ -n "$child_start" ] && alive "$child" "$child_start"; do
             if ((stopping)); then
+                SIG_WHY="cloudflared, this supervisor's child, pid $child with start ${child_start:-unknown} (run token $SPAWN_TOKEN)"
                 stop_tree "$child" "$child_start" "$SPAWN_TOKEN" "$MARK_ID" || { stop_failed "cannot stop cloudflared pid $child: $STOP_ERR"; exit 3; }
                 break
             fi
@@ -253,6 +258,7 @@ run() {
         # When it exited before its start time could be read, that time is
         # unknown: 0 matches no live process, so only the members tied to this
         # run by its token or connector.spawn are signalled.
+        SIG_WHY="cloudflared, this supervisor's child, pid $child with start ${child_start:-unknown} (run token $SPAWN_TOKEN)"
         stop_tree "$child" "${child_start:-0}" "$SPAWN_TOKEN" "$MARK_ID" group ||
             { stop_failed "cannot stop what cloudflared pid $child left in its process group: $STOP_ERR"; exit 3; }
         child='' child_start=''
@@ -308,7 +314,8 @@ stop() {
     fi
     supervisor_identity "$pid" "$start" "$here" ||
         die "pid $pid is not the supervisor of this connector directory: $SUP_ERR; no signal sent" 2
-    kill -TERM "$pid"
+    send_signal TERM "$pid" "$start" "the connector supervisor of $here (supervisor.pid, and it holds the flock on connector.lock)" ||
+        die "$SIG_ERR; the supervisor keeps running" 3
     for _ in $(seq 1 90); do
         if ! alive "$pid" "$start"; then
             if supervisor_absent; then reap_orphans || die "the supervisor stopped, but connector processes may remain" 1; fi

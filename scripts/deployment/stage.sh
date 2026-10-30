@@ -50,7 +50,7 @@ plain_dir "$D/go" && plain_target "$approval" && start_paths_ok "$sport" ||
 pending_start "$sport"
 if ((PENDING)); then
     say "serve-$sport.starting: an interrupted stage of $J_LABEL with $J_PUB by pid $J_OWNER left: ${ORPHANS:-no process}"
-    if ((APPLY)); then resolve_start "$sport"; else would "stop pids ${ORPHANS:-none} and remove the journal"; fi
+    if ((APPLY)); then resolve_start "$sport"; else would "stop pids ${ORPHANS:-none} and remove the journal"; would_stop_orphans; fi
 fi
 if ((APPLY)) || ((PENDING == 0)); then
     [ -z "$(listener_pids "$sport")" ] || die "port $sport is in use" 2
@@ -106,7 +106,7 @@ fi
 if ! alive "$pid" "$pstart"; then
     echo "pid $pid exited before the checks finished" >"$out/stop.log"
     rc=1
-elif ! stop_pid "$pid" "$pstart"; then
+elif SIG_WHY="this stage's candidate on port $sport, pid $pid with start $pstart, $label with $pub (its own start, token $SPAWN_TOKEN)" && ! stop_pid "$pid" "$pstart"; then
     echo "pid $pid ignored SIGTERM" >"$out/stop.log"
     rc=1
     kill_pid "$pid" "$pstart" || die "staging pid $pid on port $sport would not stop; stop it by hand" 1
