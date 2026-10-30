@@ -885,6 +885,27 @@ mod tests {
         assert_eq!(curated.funnel.genomes_passing_qc, 59);
     }
 
+    /// A failed genome is excluded for its species check even when its
+    /// metadata names no species, which the next QC step would report.
+    #[test]
+    fn the_species_check_exclusion_comes_before_the_no_species_qc() {
+        let (records, mut genomes) = reported_and_inferred(30, 30, 0);
+        assert_eq!(genomes[0].genome_id, "562.0");
+        genomes[0].species = None;
+        let wrong = BTreeMap::from([("562.0".to_string(), "Mash distance 0.3".to_string())]);
+        let curated = curate(
+            &records,
+            &genomes,
+            &QcConfig::default(),
+            &wrong,
+            &mut Resolver::new(Default::default()),
+        )
+        .unwrap();
+        assert!(curated.qc_failures["562.0"].starts_with(SPECIES_CHECK_FAILED));
+        assert_eq!(curated.funnel.genomes_failed_qc.get("no species"), None);
+        assert_eq!(curated.funnel.genomes_failed_qc[SPECIES_CHECK_FAILED], 1);
+    }
+
     #[test]
     fn datasets_admit_a_class_of_exactly_min_class() {
         let exact = reported_and_inferred(24, 24, 0);

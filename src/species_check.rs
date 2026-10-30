@@ -772,7 +772,13 @@ mod tests {
         );
         assert!(verdicts(&check, Verdict::Borderline).is_empty());
         let stray = check.genomes.iter().find(|g| g.genome_id == "foreign.3");
-        assert_eq!(stray.unwrap().nearest_species.as_deref(), Some("Gamma g"));
+        let stray = stray.unwrap();
+        assert_eq!(stray.nearest_species.as_deref(), Some("Gamma g"));
+        // The Gamma strain is inside the Gamma boundary, but it failed past
+        // the fail distance, so no nearer-species pair counts it.
+        assert_eq!(stray.inside_species.as_deref(), Some("Gamma g"));
+        assert!(stray.distance > CheckConfig::default().fail_distance);
+        assert!(check.pairs.is_empty(), "{:?}", check.pairs);
         assert!(check.species[0].reference.starts_with("alpha."));
         let failures = check.failures();
         assert_eq!(failures.len(), 3);
@@ -1101,6 +1107,92 @@ mod tests {
         );
         let pairs: Vec<&str> = rerun.pairs.iter().map(|p| p.nearer.as_str()).collect();
         assert_eq!(pairs, vec![KQ]);
+    }
+
+    fn fixed(id: &str, gc: f64, sketch: &[u64]) -> GenomeSketch {
+        GenomeSketch {
+            genome_id: id.into(),
+            k: K,
+            sketch_size: SKETCH,
+            length: 0,
+            gc,
+            sketch: sketch.to_vec(),
+        }
+    }
+
+    /// Four genomes in two identical pairs all have the same median
+    /// distance, so the reference is the lowest id, whatever the input order.
+    #[test]
+    fn a_tied_medoid_goes_to_the_lowest_genome_id() {
+        let a: Vec<u64> = (0..1000).collect();
+        let b: Vec<u64> = (500..1500).collect();
+        let genomes = vec![
+            fixed("t.3", 0.5, &b),
+            fixed("t.1", 0.5, &a),
+            fixed("t.2", 0.5, &b),
+            fixed("t.0", 0.5, &a),
+        ];
+        let check = check(
+            vec![cohort("Alpha a", genomes)],
+            &CheckConfig::default(),
+            None,
+        )
+        .unwrap();
+        assert_eq!(check.species[0].reference, "t.0");
+    }
+
+    /// GC makes a genome borderline only when it is both more than `gc_z`
+    /// robust standard deviations and at least `gc_points` points off the
+    /// species median, and it never fails one.
+    #[test]
+    fn gc_is_borderline_only_far_off_in_both_measures() {
+        let same: Vec<u64> = (0..1000).collect();
+        let tight = (0..8).map(|i| fixed(&format!("t.{i}"), 0.5 + i as f64 * 1e-5, &same));
+        let mut genomes: Vec<GenomeSketch> = tight.collect();
+        // 3 points and 0.5 points off a species spread of 0.0001.
+        genomes.push(fixed("gc.far", 0.53, &same));
+        genomes.push(fixed("gc.near", 0.505, &same));
+        let cfg = CheckConfig::default();
+        let check_gc = |genomes: Vec<GenomeSketch>| {
+            check(vec![cohort("Alpha a", genomes)], &cfg, None).unwrap()
+        };
+        let tight = check_gc(genomes);
+        assert_eq!(
+            verdicts(&tight, Verdict::Borderline),
+            vec![("gc.far", "Alpha a")]
+        );
+        assert!(verdicts(&tight, Verdict::Fail).is_empty());
+        let far = tight
+            .genomes
+            .iter()
+            .find(|g| g.genome_id == "gc.far")
+            .unwrap();
+        assert!(
+            far.reason.as_deref().unwrap().ends_with("SD off"),
+            "{far:?}"
+        );
+        let near = tight
+            .genomes
+            .iter()
+            .find(|g| g.genome_id == "gc.near")
+            .unwrap();
+        assert!(near.gc_z > cfg.gc_z, "{near:?}");
+
+        // 1.5 points off the median of a species whose GC spreads over 4
+        // points: under `gc_z` robust standard deviations.
+        let wide = (0..9).map(|i| fixed(&format!("w.{i}"), 0.48 + i as f64 * 0.005, &same));
+        let mut genomes: Vec<GenomeSketch> = wide.collect();
+        genomes.push(fixed("gc.wide", 0.52, &same));
+        let wide = check_gc(genomes);
+        assert!(verdicts(&wide, Verdict::Borderline).is_empty());
+        let g = wide
+            .genomes
+            .iter()
+            .find(|g| g.genome_id == "gc.wide")
+            .unwrap();
+        assert!(
+            g.gc_z.abs() < cfg.gc_z && (g.gc - wide.species[0].gc_median) * 100.0 >= cfg.gc_points
+        );
     }
 
     #[test]

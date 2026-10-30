@@ -1450,7 +1450,8 @@ mod tests {
         species_check(&layout, false, true).unwrap();
         run_curate(&layout, 50, folds, None).unwrap();
         let check = grm::species_check::read(&layout.species_check()).unwrap();
-        let failed: Vec<&str> = check.failures().keys().map(String::as_str).collect();
+        let failures = check.failures();
+        let failed: Vec<&str> = failures.keys().map(String::as_str).collect();
         assert_eq!(failed, FOREIGN);
         assert_eq!(check.species[0].checked, 53);
         let selected =
@@ -1484,7 +1485,8 @@ mod tests {
         );
         species_check(&layout, false, false).unwrap();
         let check = grm::species_check::read(&layout.species_check()).unwrap();
-        let failed: Vec<&str> = check.failures().keys().map(String::as_str).collect();
+        let failures = check.failures();
+        let failed: Vec<&str> = failures.keys().map(String::as_str).collect();
         assert_eq!(failed, FOREIGN);
     }
 
