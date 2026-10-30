@@ -152,7 +152,7 @@ bash scripts/deployment/tests/dry-run.sh
 bash scripts/deployment/tests/apply.sh
 ```
 
-`bash -n` parses only its first file, so `xargs -n1` runs it once per script. The deployment tests run in temporary directories; `apply.sh` needs `cc`, starts stub servers on free loopback ports, injects signals at each step of a start and in the forked child before it execs, and takes about 15 to 20 minutes on a loaded host. Both suites fail if any assertion is skipped. `data/work/deployment-mutation-20261027/grm-mutate-v3.py` checks that the suites catch each of 33 deployment defects: the 32 found by three reviews and a receipt collision found while fixing them ([docs/deployment.md](docs/deployment.md#checks)).
+`bash -n` parses only its first file, so `xargs -n1` runs it once per script. The deployment tests run in temporary directories; `apply.sh` needs `cc`, starts stub servers on free loopback ports, injects signals at each step of a start and in the forked child before it execs, and takes about 15 to 20 minutes on a loaded host. Both suites fail if any assertion is skipped. A mutation harness, kept outside the repository, checked that the suites catch each reviewed deployment defect ([docs/deployment.md](docs/deployment.md#checks)).
 
 `scripts/check-results.py` and `scripts/metric-audit/` check saved reports apart from the Rust code that wrote them. The checker recomputes each learner's confusion counts and balanced accuracy from the saved scores; the metric audit also rebuilds the folds with the `foldgen` helper, recalculates the metrics, and checks the run against its backup and log. Build `foldgen` and run their tests:
 
