@@ -369,6 +369,16 @@ GC alone never fails a genome, since contaminating contigs and plasmids also mov
 - *A. baumannii*: three genomes at 0.18 to 0.19 with GC 42.5 to 43.0% against 39.0%: another species, none of the 23.
 - *S. enterica*: one genome filed under taxon 90370 (serovar Typhi) at 0.165, GC 55.3% against 52.1%: unidentified, nearest the *E. cloacae* reference at 0.096.
 
+### Selection after the drop (measured 2026-10-30)
+
+`grm curate` at `3a39fa3` (binary sha256 `789c02d0…c3b6`) on the frozen BV-BRC inputs with the frozen SigDrug vocabulary, run one at a time in `/home/layth/review/grm-r9-curate/`. Without a species check, it reproduces every frozen selection: all 23 species at cap 2000, and the MTB 4k list at cap 4000 (sha256 `80faef89…4eaf`). With the check (`species_check.json` sha256 `25df721e…2d71`):
+
+- Every dataset survives at both caps (277), with the same 22 MTB datasets. Labelled MTB genomes go from 32,060 to 32,058.
+- MTB at cap 2000: 2,000 genomes (sha256 `b104d8bd…9a64`). `1773.41701` and `1773.40949` leave, and `1773.42018` and `1773.42548` from the added 2k enter at positions 1,999 and 2,000. The check had judged both, so `selected_unchecked` is 0. The selection is fresh: 458 positions differ from the old list minus the two drops, because dropped labels shift the class weights.
+- MTB at cap 4000: 4,000 genomes (sha256 `f2a18a43…fd75`). The same two leave, and `1422016.3` and `1422018.3` enter at positions 3,999 and 4,000. Neither has been judged (`selected_unchecked` 2), so they need FASTA and a check before a 4k run. 1,998 of the old added 2k remain.
+- The cleaned 2k is the exact prefix of the cleaned 4k.
+- Other species at cap 2000: *K. pneumoniae* (68), *E. coli* (4) and *S. enterica* (1) fill their caps with replacements that have not been judged. *A. baumannii* (1,705 → 1,702) and *E. cloacae* (271 → 270) are under the cap and only shrink. The revision-9 rerun needs one `fetch fasta → species-check → curate` round for the 73 replacements.
+
 ### MTB GC and length outliers
 
 Six *M. tuberculosis* genomes are *M. tuberculosis* by sequence (own distance 0.0014 to 0.0033) but carry GC 62.7 to 64.6% against a 65.6% median, and assemblies of 4.52 to 4.83 Mb against about 4.41 Mb. They likely carry foreign contigs. By the admin ruling of 2026-10-29 they stay in and are recorded here. Their 4k-list positions are 115, 436, 869, 1086, 1265 and 3630; only the last is in the added 2k.
@@ -377,3 +387,7 @@ Six *M. tuberculosis* genomes are *M. tuberculosis* by sequence (own distance 0.
 
 - Add a contig-level contamination check: genomes of the right species carrying foreign contigs, such as the six MTB outliers above, pass a whole-genome identity check.
 - The nearer-species rule measures against one medoid per species. Species complexes measured from their largest member (*E. cloacae*, *K. oxytoca*) stay borderline. Splitting them would need per-complex references.
+- From the independent review of `a553eaf..2f082d8` (approved 2026-10-30), notes only, no change made:
+  - `curated/species.json` gains `selected_unchecked`, which is `null` without a species check. So the file differs from revision 9's even when no check ran.
+  - `curated/qc.json` writes its genome map in `HashMap` order, so key order varies between runs. This predates the species check; the content is the same.
+  - The medoid tie-break uses string genome-id order, so `1773.10` sorts before `1773.9`. MTB's reference won an 11-way tie on median distance, so it rests on that order. A numeric or explicit tie-break would make the choice easier to read.
