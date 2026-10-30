@@ -23,8 +23,11 @@ comes from cleaned_rerun.py, and the script refuses, before it creates anything,
 reads is an unfilled placeholder. Each input is read only at its bound SHA-256: the post-fetch
 species check (species_check.json), revision N's MTB 2k and cap-4000 selections (genomes.txt
 form) with each selection's curated/species.json, a FASTA manifest for the cohort genomes the
-frozen 4k list does not hold, and RN_INPUT_ROOT's curated/datasets.json, curated/phenotypes.jsonl
-and catalog/version.txt. Then, by the admin's rulings of 2026-10-29:
+frozen 4k list does not hold, and RN_INPUT_ROOT's curated/datasets.json, curated/phenotypes.jsonl,
+catalog/version.txt, catalog/AMR_CDS.fa and catalog/ReferenceGeneCatalog.txt. RN_INPUT_MANIFEST_SHA256
+binds the sorted path<TAB>sha256 manifest of every input-root file a cohort root can read
+(input_root_files: catalog/ and curated/ whole, the two record files, the cohort genomes' cached
+annotations); --derive-cleaned prints it with the CLEANED_* pins. Then, by the admin's rulings of 2026-10-29:
 
   prefix          revision N's own 2k selection (a fresh selection, not the frozen rows)
   full            revision N's cap-4000 selection, whose first rows must be exactly the prefix:
@@ -292,6 +295,31 @@ def replacement_fasta(data: bytes, ids, store: Path):
     return sources
 
 
+def input_root_files(input_root: Path, full_ids):
+    """Every RN_INPUT_ROOT file a cleaned cohort root can read, by the rules that make the roots: all of
+    catalog/ and curated/ (each linked whole), the two BV-BRC record files (linked) and the cached annotations
+    of the cohort genomes (copied by prepare_bvbrc; every cohort is part of full)."""
+    files = []
+    for sub in ("catalog", "curated"):
+        files += [p for p in (input_root / sub).rglob("*") if p.is_file()]
+    files += [input_root / "bvbrc" / name for name in BVBRC_RECORDS]
+    files += cached_features(input_root, full_ids)
+    return sorted(files)
+
+
+def input_root_manifest(input_root: Path, full_ids):
+    """The sorted `path<TAB>sha256` manifest of input_root_files (paths relative to the root), and {path: sha256}."""
+    hashes = {str(p): sha256_file(p) for p in input_root_files(input_root, full_ids)}
+    lines = sorted(f"{Path(p).relative_to(input_root)}\t{h}\n" for p, h in hashes.items())
+    return "".join(lines).encode(), hashes
+
+
+def derived_pins(cohorts, input_root: Path):
+    """{name: value} of every DERIVED_NAMES value: the four cleaned lists and the input-root manifest."""
+    manifest, _ = input_root_manifest(input_root, cohorts["full"])
+    return {**cohort_pins(cohorts), "RN_INPUT_MANIFEST_SHA256": sha256_bytes(manifest)}
+
+
 def load_cleaned(frozen_full):
     """The cleaned cohorts from the bound inputs, the values that bind them, and what preparation.json records."""
     try:
@@ -321,8 +349,12 @@ def load_cleaned(frozen_full):
     store = Path(v["RN_FASTA_STORE"])
     fasta = replacement_fasta(read("RN_FASTA_MANIFEST_PATH", "RN_FASTA_MANIFEST_SHA256", "the replacement FASTA manifest"),
                               info["replacements"], store)
+    # The re-check's N1: every input-root file the cohort roots can read, recorded for --verify-frozen.
+    manifest, hashes = input_root_manifest(input_root, cohorts["full"])
+    bound.update(hashes)
     record = {"bound": bound, "species_check_format": v["SPECIES_CHECK_FORMAT"], "species_check_mtb": summary,
-              "input_root": v["RN_INPUT_ROOT"], "fasta_store": str(store)}
+              "input_root": v["RN_INPUT_ROOT"], "fasta_store": str(store),
+              "input_manifest": {"sha256": sha256_bytes(manifest), "files": len(hashes)}}
     return cohorts, {**record, **info}, fasta
 
 
@@ -509,7 +541,8 @@ def main() -> int:
         except (rerun.Unfilled, rerun.Malformed) as exc:
             refuse(str(exc))
         cleaned_ids, info, _ = load_cleaned(frozen_cohorts()[0]["full"])
-        print(json.dumps({"pins": cohort_pins(cleaned_ids), **{k: v for k, v in info.items() if k != "bound"}}, indent=1))
+        pins = derived_pins(cleaned_ids, Path(info["input_root"]))
+        print(json.dumps({"pins": pins, **{k: v for k, v in info.items() if k != "bound"}}, indent=1))
         return 0
     if args.path is None or (args.cohorts is not None) == (args.verify_frozen or args.check_lane):
         parser.error("give RUN_ROOT with --cohorts to prepare, or a path with --verify-frozen or --check-lane")
@@ -529,7 +562,7 @@ def main() -> int:
         raise SystemExit(f"refusing existing run root: {run_root}")
     if args.cohorts == "cleaned":  # every cleaned value, before any input is read
         try:
-            rerun.require(rerun.INPUT_NAMES + rerun.CONTRACT_NAMES)
+            rerun.require(rerun.INPUT_NAMES + rerun.DERIVED_NAMES)
         except (rerun.Unfilled, rerun.Malformed) as exc:
             refuse(str(exc))
 
@@ -540,13 +573,13 @@ def main() -> int:
     if args.cohorts == "cleaned":
         cleaned_ids, cleaned, replacement_sources = load_cleaned(frozen_full)
         try:
-            pins = rerun.require(rerun.CONTRACT_NAMES)
+            pins = rerun.require(rerun.DERIVED_NAMES)
         except (rerun.Unfilled, rerun.Malformed) as exc:
             refuse(str(exc))
-        derived = cohort_pins(cleaned_ids)
+        derived = derived_pins(cleaned_ids, Path(cleaned["input_root"]))
         differ = sorted(n for n in derived if derived[n] != pins[n])
         if differ:
-            refuse(f"the cleaned cohorts differ from their pins {differ}: derived {[derived[n] for n in differ]}")
+            refuse(f"the cleaned cohorts or the input-root manifest differ from their pins {differ}: derived {[derived[n] for n in differ]}")
         # The section 4 pilot is not repeated: a cleaned run root holds the four training cohorts only.
         cohort_ids = dict(cleaned_ids)
         cohort_bytes = {name: "".join(f"{g}\n" for g in ids).encode() for name, ids in cohort_ids.items()}

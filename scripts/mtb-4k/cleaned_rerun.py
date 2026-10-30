@@ -62,6 +62,10 @@ TABLE = {
     "RN_INPUT_DATASETS_SHA256": ("sha256", "prepare", "SHA-256 of RN_INPUT_ROOT/curated/datasets.json"),
     "RN_INPUT_PHENOTYPES_SHA256": ("sha256", "prepare", "SHA-256 of RN_INPUT_ROOT/curated/phenotypes.jsonl (the labels)"),
     "RN_INPUT_CATALOG_VERSION_SHA256": ("sha256", "prepare", "SHA-256 of RN_INPUT_ROOT/catalog/version.txt"),
+    "RN_INPUT_CATALOG_CDS_SHA256": ("sha256", "prepare", "SHA-256 of RN_INPUT_ROOT/catalog/AMR_CDS.fa"),
+    "RN_INPUT_CATALOG_REFERENCE_SHA256": ("sha256", "prepare", "SHA-256 of RN_INPUT_ROOT/catalog/ReferenceGeneCatalog.txt"),
+    "RN_INPUT_MANIFEST_SHA256": ("sha256", "prepare", "SHA-256 of the sorted path<TAB>sha256 manifest of every RN_INPUT_ROOT file the "
+                                 "cohort roots can read (prepare --derive-cleaned prints it)"),
     "RN_FASTA_MANIFEST_PATH": ("path", "prepare", "a fasta-manifest.tsv (the cohort evidence's columns) for cohort genomes outside the frozen 4k"),
     "RN_FASTA_MANIFEST_SHA256": ("sha256", "prepare", "its SHA-256"),
     "RN_FASTA_STORE": ("path", "prepare", "the directory holding those FASTA"),
@@ -93,6 +97,9 @@ VALUES = {
     "RN_INPUT_DATASETS_SHA256": "@@RN_INPUT_DATASETS_SHA256@@",
     "RN_INPUT_PHENOTYPES_SHA256": "@@RN_INPUT_PHENOTYPES_SHA256@@",
     "RN_INPUT_CATALOG_VERSION_SHA256": "@@RN_INPUT_CATALOG_VERSION_SHA256@@",
+    "RN_INPUT_CATALOG_CDS_SHA256": "@@RN_INPUT_CATALOG_CDS_SHA256@@",
+    "RN_INPUT_CATALOG_REFERENCE_SHA256": "@@RN_INPUT_CATALOG_REFERENCE_SHA256@@",
+    "RN_INPUT_MANIFEST_SHA256": "@@RN_INPUT_MANIFEST_SHA256@@",
     "RN_FASTA_MANIFEST_PATH": "@@RN_FASTA_MANIFEST_PATH@@",
     "RN_FASTA_MANIFEST_SHA256": "@@RN_FASTA_MANIFEST_SHA256@@",
     "RN_FASTA_STORE": "@@RN_FASTA_STORE@@",
@@ -107,14 +114,18 @@ VALUES = {
     "RN_REFERENCE_ROOT": "@@RN_REFERENCE_ROOT@@",
 }
 
-# The input root's files the cohorts' labels, gates and fingerprints come from, each bound by hash (review P1).
+# The input root's files the cohorts' labels, gates, gene calls and fingerprints come from, each bound by hash
+# (review P1; the re-check's N1 added the two catalog files grm matrix loads, which GRM identifies only by version.txt).
 INPUT_ROOT_FILES = {"curated/datasets.json": "RN_INPUT_DATASETS_SHA256", "curated/phenotypes.jsonl": "RN_INPUT_PHENOTYPES_SHA256",
-                    "catalog/version.txt": "RN_INPUT_CATALOG_VERSION_SHA256"}
+                    "catalog/version.txt": "RN_INPUT_CATALOG_VERSION_SHA256", "catalog/AMR_CDS.fa": "RN_INPUT_CATALOG_CDS_SHA256",
+                    "catalog/ReferenceGeneCatalog.txt": "RN_INPUT_CATALOG_REFERENCE_SHA256"}
 COHORT_PINS = {name: (f"CLEANED_{name.upper()}_SHA256", f"CLEANED_{name.upper()}_COUNT")
                for name in ("prefix", "added", "full", "matched2k")}
 GROUPS = {g: [n for n, (_, group, _) in TABLE.items() if group == g] for g in ("prepare", "reference")}
-INPUT_NAMES = [n for n in GROUPS["prepare"] if not n.startswith("CLEANED_")]
 CONTRACT_NAMES = [n for pair in COHORT_PINS.values() for n in pair]
+# Values derived from the bound inputs, which preparation recomputes and requires (--derive-cleaned prints them).
+DERIVED_NAMES = CONTRACT_NAMES + ["RN_INPUT_MANIFEST_SHA256"]
+INPUT_NAMES = [n for n in GROUPS["prepare"] if n not in DERIVED_NAMES]
 Unfilled, Malformed = rev_n.Unfilled, rev_n.Malformed
 
 

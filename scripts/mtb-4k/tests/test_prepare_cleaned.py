@@ -4,7 +4,7 @@ post-fetch species check, in the shapes relayed on 2026-10-29.
 
 usage: python3 -I scripts/mtb-4k/tests/test_prepare_cleaned.py
 """
-import contextlib,csv,gzip,hashlib,io,json,os,sys,tempfile,unittest
+import contextlib,csv,gzip,hashlib,io,json,os,shutil,sys,tempfile,unittest
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE.parent)); sys.path.insert(0,str(HERE))
@@ -39,6 +39,9 @@ class Cleaned(unittest.TestCase):
    rows.append({"genome_id":g,"size_bytes":len(b),"sha256":sha(b),"canonical_source_path":str(p)})
   self.fasta_rows=rows
   (prep.CANDIDATE/"curated"/"phenotypes.jsonl").write_text('{"genome_id":"1773.100000","antibiotic":"isoniazid","label":"R"}\n')
+  (prep.CANDIDATE/"catalog"/"AMR_CDS.fa").write_text(">blaX\nATGAAA\n")
+  (prep.CANDIDATE/"catalog"/"ReferenceGeneCatalog.txt").write_text("allele\tgene_family\nblaX-1\tblaX\n")
+  (prep.CANDIDATE/"curated"/"funnel.json").write_text("{}\n")
   self.write_inputs()
 
  def tearDown(self):
@@ -74,7 +77,7 @@ class Cleaned(unittest.TestCase):
   prep.rerun.VALUES.update(values)
   full_list=list(full); n=len(prefix)
   derived={"prefix":list(prefix),"added":full_list[n:],"full":full_list,"matched2k":prep.matched_selection(full_list,n)}
-  prep.rerun.VALUES.update(prep.cohort_pins(derived))
+  prep.rerun.VALUES.update(prep.derived_pins(derived,prep.CANDIDATE))
   return derived
 
  def main(self,*argv):
@@ -163,6 +166,41 @@ class Cleaned(unittest.TestCase):
  def setUp_store_again(self):
   for row in self.fasta_rows:
    p=Path(row["canonical_source_path"]); p.write_bytes(gzip.compress(f">c\nTTGA{row['genome_id']}\n".encode(),mtime=0))
+
+ def test_the_input_manifest_is_exactly_what_the_cohort_roots_can_read_and_any_change_stops(self):
+  # The re-check's N1. The set: walk every prepared cohort root, follow its links into RN_INPUT_ROOT, and map each
+  # copied annotation back to its source. It must equal input_root_files, which the manifest hashes.
+  run=self.base/"run"; self.assertEqual(self.main(run,"--cohorts","cleaned")[0],0)
+  root=prep.CANDIDATE.resolve(); seen=set()
+  for name in ("prefix","added","full","matched2k"):
+   data=run/"cohorts"/name/"data"
+   for top,dirs,files in os.walk(data,followlinks=True):
+    for f in files:
+     p=Path(top)/f; real=p.resolve()
+     if real.is_relative_to(root): seen.add(real)
+     elif p.parent==data/"bvbrc"/"features": seen.add(root/"bvbrc"/"features"/f)
+  expected={p.resolve() for p in prep.input_root_files(prep.CANDIDATE,self.full)}
+  self.assertEqual(seen,expected)
+  self.assertIn(root/"curated"/"funnel.json",expected); self.assertIn(root/"bvbrc"/"genomes.jsonl",expected)
+  self.assertTrue(any(p.parent.name=="features" for p in expected))
+  frozen=json.loads((run/"frozen-inputs.json").read_text())["cleaned"]
+  self.assertEqual(frozen["input_manifest"]["files"],len(expected))
+  for p in expected: self.assertIn(str(prep.CANDIDATE/p.relative_to(root)),frozen["bound"])
+  # A change to any file in the set stops preparation; one outside it does not.
+  feature=next(p for p in prep.input_root_files(prep.CANDIDATE,self.full) if p.parent.name=="features")
+  shutil.rmtree(run)  # a refused preparation makes no run root, so this is removed once
+  for path in (prep.CANDIDATE/"curated"/"funnel.json",prep.CANDIDATE/"bvbrc"/"genomes.jsonl",feature,prep.CANDIDATE/"catalog"/"AMR_CDS.fa"):
+   with self.subTest(path=path.name):
+    original=path.read_bytes(); path.write_bytes(original+b"\n")
+    self.refused("AMR_CDS.fa" if path.name=="AMR_CDS.fa" else "RN_INPUT_MANIFEST_SHA256")
+    path.write_bytes(original)
+  (prep.CANDIDATE/"curated"/"new.json").write_text("{}")
+  self.refused("RN_INPUT_MANIFEST_SHA256"); (prep.CANDIDATE/"curated"/"new.json").unlink()
+  outside=prep.CANDIDATE/"bvbrc"/"features"/"other.0.json"; outside.write_text(outside.read_text()+"x")
+  self.assertEqual(self.main(run,"--cohorts","cleaned")[0],0)
+  # And after preparation, --verify-frozen catches a change to a manifest file.
+  path=prep.CANDIDATE/"curated"/"funnel.json"; path.write_text("{\"x\":1}\n")
+  rc,out=self.main("--verify-frozen",run); self.assertEqual(rc,1); self.assertIn(str(path),json.loads(out)["changed"])
 
  def test_matched_selection_takes_the_prefix_size(self):
   ids=[f"g{i}" for i in range(4000)]

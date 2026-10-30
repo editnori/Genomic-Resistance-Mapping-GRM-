@@ -167,8 +167,18 @@ filled by a reviewed commit and listed in section 2.1.
   selection (`RN_FULL_GENOMES_*`), each with its `curated/species.json` (`RN_*_SPECIES_JSON_*`),
   whose MTB `selected_unchecked` must be 0.
 - **Inputs:** `RN_INPUT_ROOT` provides catalog, curated, the BV-BRC records and cached annotations.
-  Its `curated/datasets.json`, `curated/phenotypes.jsonl` (the labels) and `catalog/version.txt`
-  are bound by hash (`RN_INPUT_*_SHA256`) and checked before root preparation (review P1).
+  Five of its files are bound by hash and checked before root preparation (review P1, re-check N1):
+  `curated/datasets.json`, `curated/phenotypes.jsonl` (the labels), `catalog/version.txt`,
+  `catalog/AMR_CDS.fa` and `catalog/ReferenceGeneCatalog.txt`. The last two are what `grm matrix` loads
+  for gene calls; GRM identifies a catalog only by `version.txt`. `RN_INPUT_MANIFEST_SHA256` then binds
+  everything a cohort root can read from the input root, as a sorted `path<TAB>sha256` manifest:
+  - all of `catalog/` and `curated/`, which are linked whole, so they include `funnel.json` and
+    `drug_names.json`, which `grm report` reads;
+  - the two BV-BRC record files (`genomes.jsonl` feeds the duplicate screen);
+  - the cohort genomes' cached annotations, which `grm learn` reads.
+
+  The set comes from the same rules that make the roots, and a test walks the prepared roots to
+  check it. Nothing the cohorts read from the input root is bound only at preparation.
   These are revision N's curation, on which the fresh selection was made. Its whole set is bound in
   `frozen-inputs.json` at preparation, as revision 5 bound the candidate's.
 - **FASTA:** a genome in the frozen 4k list links to its frozen-manifest FASTA. A replacement links
@@ -227,7 +237,8 @@ values only for section 7b.
 | `@@RN_FULL_GENOMES_PATH@@`, `@@RN_FULL_GENOMES_SHA256@@` | `cleaned_rerun.py` | prepare | revision N's cap-4000 selection |
 | `@@RN_FULL_SPECIES_JSON_PATH@@`, `@@RN_FULL_SPECIES_JSON_SHA256@@` | `cleaned_rerun.py` | prepare | its `curated/species.json` |
 | `@@RN_INPUT_ROOT@@` | `cleaned_rerun.py` | prepare | the data root of catalog, curated, records and annotations |
-| `@@RN_INPUT_DATASETS_SHA256@@`, `@@RN_INPUT_PHENOTYPES_SHA256@@`, `@@RN_INPUT_CATALOG_VERSION_SHA256@@` | `cleaned_rerun.py` | prepare | SHA-256 of its `curated/datasets.json`, `curated/phenotypes.jsonl` and `catalog/version.txt` |
+| `@@RN_INPUT_DATASETS_SHA256@@`, `@@RN_INPUT_PHENOTYPES_SHA256@@`, `@@RN_INPUT_CATALOG_VERSION_SHA256@@`, `@@RN_INPUT_CATALOG_CDS_SHA256@@`, `@@RN_INPUT_CATALOG_REFERENCE_SHA256@@` | `cleaned_rerun.py` | prepare | SHA-256 of its `curated/datasets.json`, `curated/phenotypes.jsonl`, `catalog/version.txt`, `catalog/AMR_CDS.fa` and `catalog/ReferenceGeneCatalog.txt` |
+| `@@RN_INPUT_MANIFEST_SHA256@@` | `cleaned_rerun.py` | prepare | SHA-256 of the manifest of every input-root file the cohort roots can read, from `--derive-cleaned` |
 | `@@RN_FASTA_MANIFEST_PATH@@`, `@@RN_FASTA_MANIFEST_SHA256@@` | `cleaned_rerun.py` | prepare | the FASTA manifest of the replacements, in the cohort evidence's columns |
 | `@@RN_FASTA_STORE@@` | `cleaned_rerun.py` | prepare | the directory of those FASTA |
 | `@@CLEANED_PREFIX_SHA256@@`, `@@CLEANED_PREFIX_COUNT@@`, and the same for `ADDED`, `FULL`, `MATCHED2K` | `cleaned_rerun.py` | prepare | the four cleaned lists, from `--derive-cleaned` |
@@ -246,24 +257,25 @@ export PROFILE=rN-cleaned                              # every report_contract C
 # The wiring lane's process-group guard (31 GiB disk / 48 GiB RAM floors), used read-only.
 export GUARD=/root/grm-research/grm-mtb-4k-wiring-kimi-20261028/tools/resource_guard.py
 
-test ! -e "$RUN"
+set -o pipefail                                        # a failed sha256sum stops a `| tee` line too
+test ! -e "$RUN" || exit 1
 python3 -I "$P/revision_n.py" status || exit 1                     # every revision-N value filled and well formed
 python3 -I "$P/cleaned_rerun.py" status --group prepare || exit 1   # every cohort input filled and well formed
 python3 -I "$P/revision_n.py" verify-checkout "$WS" || exit 1       # clean, descends from RN_CHECKER_COMMIT, holds the pinned checker blobs
 REVISION_N=$(python3 -I "$P/revision_n.py" get REVISION_N) || exit 1
 export REVISION_N
-python3 -I -c 'import os; p=os.statvfs("/root"); d=p.f_bavail*p.f_frsize; m={l.split(":",1)[0]:l.split(":",1)[1].strip() for l in open("/proc/meminfo")}; r=int(m["MemAvailable"].split()[0])*1024; print(d,r); assert d >= 45*1024**3 and r >= 64*1024**3'
-python3 -I /root/grm-research/grm-research-mtb-4k-cohort-r2/scripts/verify_evidence.py --root /root/grm-research/grm-research-mtb-4k-cohort-r2
+python3 -I -c 'import os; p=os.statvfs("/root"); d=p.f_bavail*p.f_frsize; m={l.split(":",1)[0]:l.split(":",1)[1].strip() for l in open("/proc/meminfo")}; r=int(m["MemAvailable"].split()[0])*1024; print(d,r); assert d >= 45*1024**3 and r >= 64*1024**3' || exit 1
+python3 -I /root/grm-research/grm-research-mtb-4k-cohort-r2/scripts/verify_evidence.py --root /root/grm-research/grm-research-mtb-4k-cohort-r2 || exit 1
 python3 -I "$P/prepare_execution_roots.py" "$RUN" --cohorts cleaned || exit 1   # derives the four lists and requires the CLEANED_* pins
 
-(cd "$WS" && CARGO_TARGET_DIR="$RUN/target" CARGO_BUILD_JOBS=16 RAYON_NUM_THREADS=16 cargo build --release --locked --offline)
+(cd "$WS" && CARGO_TARGET_DIR="$RUN/target" CARGO_BUILD_JOBS=16 RAYON_NUM_THREADS=16 cargo build --release --locked --offline) || exit 1
 export GRM="$RUN/target/release/grm"
-sha256sum "$GRM" | tee "$RUN/logs/grm-binary.sha256"
+sha256sum "$GRM" | tee "$RUN/logs/grm-binary.sha256" || exit 1
 # The committed foldgen; a revision-N merge that changes its tree stops here for review (I4).
 test "$(git -C "$WS" rev-parse HEAD:scripts/metric-audit/foldgen)" = dc8317faf778fd96f496cc0226515ca7b19d688d || exit 1
-(cd "$WS/scripts/metric-audit/foldgen" && CARGO_TARGET_DIR="$RUN/target-foldgen" cargo build --release --locked --offline)
+(cd "$WS/scripts/metric-audit/foldgen" && CARGO_TARGET_DIR="$RUN/target-foldgen" cargo build --release --locked --offline) || exit 1
 export FOLDGEN="$RUN/target-foldgen/release/foldgen"
-sha256sum "$FOLDGEN" | tee "$RUN/logs/foldgen-binary.sha256"
+sha256sum "$FOLDGEN" | tee "$RUN/logs/foldgen-binary.sha256" || exit 1
 export FOLDGEN_SHA256=$(cut -d' ' -f1 "$RUN/logs/foldgen-binary.sha256")
 export SOURCE=$(git -C "$WS" rev-parse HEAD)   # the one --expected-source-commit for every check
 ```
@@ -319,9 +331,19 @@ revision 5.
 **Not repeated in revision 6.** The admin ruled on 2026-10-29 that the cleaned run makes fresh roots,
 matrices and structures without repeating the pilot. The pilot passed on 2026-10-29 (attempt 3)
 under revision 5. The review of the revision-N merge must confirm that revision N leaves matrix
-building unchanged (`src/matrix.rs`, `src/kset.rs`, the `matrix` wiring in `src/main.rs`, `src/species.rs`,
-`src/species/`, `src/confine.rs`, `src/layout.rs`);
-if it does not, the pilot is repeated before section 5. A cleaned run root has no pilot cohorts.
+building unchanged. **Rule:** no change, between revision 5's build source (`c70d678`) and the merge,
+to the matrix code or anything it transitively uses, to the `matrix` and `count` wiring in
+`src/main.rs`, or to `src/lib.rs`, `Cargo.toml` or `Cargo.lock`. Otherwise the pilot is repeated
+before section 5.
+
+The current expansion of the rule is the transitive `crate::` closure of `src/matrix.rs`,
+`src/kset.rs` and `src/species.rs`, generated from the code at `c70d678`:
+- `src/bits.rs`, `src/bvbrc.rs`, `src/catalog.rs`, `src/cluster.rs`, `src/confine.rs`, `src/dna.rs`,
+  `src/drugs.rs`, `src/fasta.rs`, `src/fnv.rs`, `src/kset.rs`, `src/layout.rs`, `src/matrix.rs`,
+  `src/probes.rs`, `src/species.rs` and `src/species/`;
+- plus `src/main.rs`'s wiring, `src/lib.rs`, `Cargo.toml` and `Cargo.lock`.
+
+If the merge adds a `use` to any of these, the rule covers the new module too. A cleaned run root has no pilot cohorts.
 The text and commands below are revision 5's, kept for the record.
 
 It is separate from the 2,000-genome prefix stage and uses its own two roots,
@@ -455,7 +477,7 @@ for cohort in prefix added full matched2k; do
   D=$RUN/cohorts/$cohort/data
   python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
   python3 "$GUARD" --log $RUN/logs/$cohort-matrix.log --resources $RUN/logs/$cohort-matrix-resources.json -- \
-    /usr/bin/time -v "$GRM" --data "$D" matrix --species $SLUG --min-support 2 --disk-sparse --block-width 128
+    /usr/bin/time -v "$GRM" --data "$D" matrix --species $SLUG --min-support 2 --disk-sparse --block-width 128 || exit 1
   python3 -I "$P/validate_matrix.py" --matrix $D/species/$SLUG/matrix --counted $D/species/$SLUG/counted.json \
     --genomes $D/species/$SLUG/genomes.txt --fasta-dir $D/fasta --recount 16 --require-recount \
     --out $RUN/audit/$cohort-matrix-validation.json || exit 1
@@ -504,7 +526,7 @@ screen and its stop (`cross_cohort_exact > 0`) are revision 5's.
 ```bash
 for cohort in prefix added full matched2k; do
   python3 "$GUARD" --log $RUN/logs/$cohort-structure.log --resources $RUN/logs/$cohort-structure-resources.json -- \
-    "$GRM" --data "$RUN/cohorts/$cohort/data" structure --species $SLUG
+    "$GRM" --data "$RUN/cohorts/$cohort/data" structure --species $SLUG || exit 1
 done
 ```
 
@@ -578,10 +600,11 @@ they pass, every receipt and summary of this run carries `PENDING REFERENCE`, an
 is stated. A failure is a stop for review, never something to skip.
 
 ```bash
+set -o pipefail
 REF=$(python3 -I "$P/cleaned_rerun.py" get RN_REFERENCE_ROOT) || exit 1     # unfilled: PENDING REFERENCE
 INPUT_ROOT=$(python3 -I "$P/cleaned_rerun.py" get RN_INPUT_ROOT) || exit 1
 R=$REF/data/species/$SLUG
-sha256sum $R/genomes.txt $R/counted.json $R/structure.json $R/matrix/* $R/results/*.json | tee $RUN/audit/reference-sha256.txt
+sha256sum $R/genomes.txt $R/counted.json $R/structure.json $R/matrix/* $R/results/*.json | tee $RUN/audit/reference-sha256.txt || exit 1
 # The reference must be revision N's candidate for this very prefix, and its matrix the prefix's, byte for byte.
 cmp $RUN/cohorts/prefix/data/species/$SLUG/genomes.txt $R/genomes.txt || exit 1
 for f in matrix.json patterns.bin support.bin kmer_offsets.bin kmers.bin; do
