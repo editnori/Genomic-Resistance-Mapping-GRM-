@@ -28,6 +28,7 @@ import copy,hashlib,json,math,os,shutil,subprocess,sys,tempfile,unittest
 from pathlib import Path
 LANE=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(LANE)); sys.path.insert(0,str(LANE/"tests"))
+import profile_boot as pb  # noqa: E402  (MTB4K_TEST_PROFILE, before report_contract loads)
 import report_contract as vc
 import fixtures as fx
 
@@ -55,7 +56,7 @@ class GuardTests(unittest.TestCase):
   path=self.root/"data/species"/vc.SPECIES/"results"/(self.did+".json"); path.write_text(fn(path.read_text()))
   if rehash: self.rehash()
  def test_historical_revision7_rejected(self):
-  self.change(lambda r:r["evaluation"].update(revision=7)); reject(self,"historical revision 7","revision 8",self.validate)
+  self.change(lambda r:r["evaluation"].update(revision=7)); reject(self,"historical revision 7",f"revision {vc.REVISION}",self.validate)
  def test_wrong_schema_rejected(self):
   self.change(lambda r:r.update(schema=3)); reject(self,"wrong report schema","schema 2",self.validate)
  def test_invalid_evaluation_rejected(self):
@@ -440,7 +441,7 @@ class MatchedAndPinTests(unittest.TestCase):
    scripts=Path(tmp)/"scripts"
    for rel in list(vc.PINS)+["mtb-4k/report_contract.py","mtb-4k/fingerprint.py","mtb-4k/revision_n.py"]:
     (scripts/rel).parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(vc.SCRIPTS/rel,scripts/rel)
-   probe=[sys.executable,"-I","-B","-c",f"import sys; sys.path.insert(0,{str(scripts/'mtb-4k')!r}); import report_contract; print('loaded')"]
+   probe=[sys.executable,"-I","-B","-c",f"import sys; sys.argv=['probe','--profile',{pb.PROFILE!r}]; sys.path.insert(0,{str(scripts/'mtb-4k')!r}); import report_contract; print('loaded')"]
    self.assertEqual(subprocess.run(probe,capture_output=True,text=True).returncode,0)
    with (scripts/"check-results.py").open("a") as f: f.write("\n# edited\n")
    p=subprocess.run(probe,capture_output=True,text=True)

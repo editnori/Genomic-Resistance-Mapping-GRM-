@@ -23,6 +23,7 @@ from pathlib import Path
 from types import SimpleNamespace
 LANE=Path(__file__).resolve().parents[1]; REVIEW=None
 sys.path.insert(0,str(LANE)); sys.path.insert(0,str(LANE/"tests"))
+import profile_boot as pb  # noqa: E402  (MTB4K_TEST_PROFILE, before report_contract loads)
 import report_contract as vc, compare_cohorts as cc, run_revision8_checks as wrapper, fixtures as fx
 EVIDENCE=Path("/root/grm-research/grm-research-mtb-scaleup-rev7cand-r1/results/audit.json")
 def readable(path):
@@ -146,7 +147,7 @@ class NumericalTests(unittest.TestCase):
    mutant=fx.contract_copy(Path(tmp)/"mutant",needle,"for _ in range(4):")
    spec=importlib.util.spec_from_file_location("review_cp_mutant",mutant); module=importlib.util.module_from_spec(spec)
    sys.modules[spec.name]=module
-   try:spec.loader.exec_module(module); got=module.clopper_pearson(3,10)
+   try:pb.exec_module(spec,module); got=module.clopper_pearson(3,10)
    finally:sys.modules.pop(spec.name,None)
   lower,upper=reference_cp(3,10); discrepancy=max(abs(D(got["lower"])-lower),abs(D(got["upper"])-upper))
   self.assertGreater(float(discrepancy),1e-3)
@@ -252,7 +253,7 @@ class SolverStatusTests(unittest.TestCase):
     "--log",str(root/"pipeline.log"),"--launch","2000-01-01T00:00:00Z","--foldgen",str(root/"synthetic-foldgen"),
     "--expected-foldgen-sha256",fx.sha(root/"synthetic-foldgen"),  # path-adapted (I4)
     "--checker-out",str(root/"checker.json"),"--summary-out",str(root/"summary.json"),"--receipt",str(root/"receipt.json")]
-   code=wrapper.main(args,rules=rules,foldgen_factory=fx.FakeFoldGen); valid=None
+   code=wrapper.main(pb.argv(args),rules=rules,foldgen_factory=fx.FakeFoldGen); valid=None
    if (root/"audit.json").exists():valid=json.loads((root/"audit.json").read_text())["summary"]["revision8_wrapper"]["valid"]
    OBS["invalid_solver_status"].append({"wrapper_exit":code,"wrapper_valid":valid,"path_points":31,
     "configured_lasso_lambdas":30,"selected_convergence":{"irls_steps":1,"sweep_cap_hits":2,"converged":True}})

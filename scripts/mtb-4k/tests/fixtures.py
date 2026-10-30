@@ -1,4 +1,5 @@
-"""Small synthetic revision-8 roots; no biological input or learned result.
+"""Small synthetic roots of the suite's evaluation revision (MTB4K_TEST_PROFILE; profile_boot.py, r8 by
+default); no biological input or learned result.
 
 Port of package K's tests/fixtures.py. Differences: every report's random and lineage test_fold
 comes from the committed foldgen (FOLDGEN, built from scripts/metric-audit/foldgen), as `grm learn`
@@ -12,6 +13,7 @@ tests: on these fixtures it disagrees with every saved fold.
 import atexit,copy,hashlib,json,math,os,struct,subprocess,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+import profile_boot as pb  # noqa: E402  (MTB4K_TEST_PROFILE, before report_contract loads)
 import report_contract as vc
 import fingerprint as fpmod
 import prepare_execution_roots as prep
@@ -189,7 +191,7 @@ def make_report(cohort,drug,lineage_by_id,lineage_available=True,fg=None,fingerp
   split["learners"].append({"learner":"catalog","metrics":None,"fold_balanced_accuracy":[],"roc":[],
    "scores":[1.0 if c else 0.0 for c in catalog_calls],"conformal":[],"fold_complexity":[],"seconds":0.0})
   splits.append(split)
- report={"schema":2,"evaluation":{"revision":8,"valid":True,"reasons":[],"scope":SCOPE},
+ report={"schema":2,"evaluation":{"revision":vc.REVISION,"valid":True,"reasons":[],"scope":SCOPE},
   "input_fingerprint":fingerprint,"eval_config":copy.deepcopy(CONFIG),
   "id":did,"species":SPECIES_NAME,"species_slug":vc.SPECIES,"antibiotic":drug,"drug_class":"synthetic","breakpoint":None,
   "counts":{"samples":n,"resistant":sum(truth),"susceptible":n-sum(truth),"labels_from_mic":0,"labels_from_mic_excluded":0,
@@ -233,7 +235,7 @@ def refresh_root(root,name):
   best_rows.append({"id":did,"evaluation":report["evaluation"],"best_learner":None if best is None else best[0],
    "best_random":None if best is None else best[1],"best_lineage":lineage_best,
    "learners":[{"learner":n,"random":lite(report,"random",n),"lineage":lite(report,"lineage",n)} for n in vc.LEARNERS]})
- write_json(root/"data/report/index.json",{"schema":2,"evaluation_revision":8,"generated_at":"synthetic","datasets":best_rows,"panels":[],"unsupported_panels":[]})
+ write_json(root/"data/report/index.json",{"schema":2,"evaluation_revision":vc.REVISION,"generated_at":"synthetic","datasets":best_rows,"panels":[],"unsupported_panels":[]})
  log=[done_line(report) for _,report in sorted(reports.items())]
  manifest_path=root/"validation-manifest.json"
  if manifest_path.exists():
@@ -307,7 +309,7 @@ def build_cohort(root,name,rules,lineage_available=True,fg=None):
   unavailable.append({"id":vc.DRUG_IDS[drug],"antibiotic":drug,"min_class":25,"resistant":r,"susceptible":s,"reason":vc.CLASS_SKIP})
  names=input_names()
  manifest={"schema":"grm-mtb-4k-run-manifest-v1","cohort":name,"species_slug":vc.SPECIES,"source_commit":SOURCE,
-  "binary_sha256":sha(root/"synthetic-binary"),"evaluation_revision":8,"report_schema":2,"eval_config":copy.deepcopy(CONFIG),
+  "binary_sha256":sha(root/"synthetic-binary"),"evaluation_revision":vc.REVISION,"report_schema":2,"eval_config":copy.deepcopy(CONFIG),
   "lineage_threshold":0.0001,"genomes":{"path":names[0],"sha256":sha(root/names[0])},
   "matrix":{"path":names[1],"sha256":sha(root/names[1]),"k":31,"min_support":2},
   "inputs":[{"path":rel,"sha256":sha(root/rel)} for rel in names],"reports":report_entries,"class_gate_unavailable":unavailable}
@@ -321,19 +323,19 @@ def passing_outputs(root,manifest,source=SOURCE):
  checks (the runner's own outputs are tested end to end). Since L2 the comparator re-reads them."""
  root=Path(root); n=len(manifest["reports"]); base=f"{root}/data/species/{vc.SPECIES}/results"
  skips=[{"file":f"{base}/{row['id']}.json"} for row in manifest["class_gate_unavailable"]]
- records=[{"id":did,"file":f"{base}/{did}.json","sha256":entry["sha256"],"issues":[],"revision":8,"schema":2,"valid":True,
-  "written_after_launch":True,"identical_to_backup":False,"log_done":3.0,"published_revision":8,"published_identical":True,
+ records=[{"id":did,"file":f"{base}/{did}.json","sha256":entry["sha256"],"issues":[],"revision":vc.REVISION,"schema":2,"valid":True,
+  "written_after_launch":True,"identical_to_backup":False,"log_done":3.0,"published_revision":vc.REVISION,"published_identical":True,
   "manifest_compared":True,"counted_hits_match_samples":True,"samples_missing_from_counted":0,"counts":{"labels_from_mic":0}}
   for did,entry in sorted(manifest["reports"].items())]
- summary={"revision":8,"files":n,"by_revision":{"8":n},"by_schema":{"2":n},"errors":[],"files_with_issues":[],"not_in_current_curation":[],
-  "not_run":[],"missing_curated_results":[],"issue_count":0,"manifest_schema":2,"manifest_evaluation_revision":8,"manifest_compared":n,
+ summary={"revision":vc.REVISION,"files":n,"by_revision":{str(vc.REVISION):n},"by_schema":{"2":n},"errors":[],"files_with_issues":[],"not_in_current_curation":[],
+  "not_run":[],"missing_curated_results":[],"issue_count":0,"manifest_schema":2,"manifest_evaluation_revision":vc.REVISION,"manifest_compared":n,
   "log_done":n,"species_finished":[vc.SPECIES],"class_minimum_skipped":skips,
   "revision8_wrapper":{"schema":"grm-revision8-audit-wrapper-v2","valid":True,"errors":[],"checker_pins":dict(vc.PINS),
    "run_source_commit":source,"run_manifest_sha256":sha(root/"validation-manifest.json"),"binary_sha256":manifest["binary_sha256"],
    "foldgen_sha256":foldgen_sha256(),"biological_execution":False}}
- checker={"reports":[{"id":did,"revision":8} for did in sorted(manifest["reports"])],"class_minimum_skipped":skips,
+ checker={"reports":[{"id":did,"revision":vc.REVISION} for did in sorted(manifest["reports"])],"class_minimum_skipped":skips,
   "missing_curated_results":[],"not_in_current_curation":[]}
- return {"checker":checker,"audit":{"summary":summary,"records":records},"summary":{"coverage":{"8":{"files":n,"issues":0}}}}
+ return {"checker":checker,"audit":{"summary":summary,"records":records},"summary":{"coverage":{str(vc.REVISION):{"files":n,"issues":0}}}}
 
 def write_receipt(root,name=None,source=SOURCE,edit=None,outputs_edit=None):
  """A receipt in run_revision8_checks.py's form, bound to the root's current run manifest and to
@@ -345,7 +347,7 @@ def write_receipt(root,name=None,source=SOURCE,edit=None,outputs_edit=None):
  outputs={}
  for key in ("checker","audit","summary"):
   p=root/f"synthetic-{key}.json"; p.write_text(json.dumps(bodies[key])+"\n"); outputs[key]={"path":str(p),"sha256":sha(p)}
- receipt={"schema":"grm-mtb-4k-revision8-check-receipt-v1","cohort":name or manifest["cohort"],"valid":True,"errors":[],"evaluation_revision":8,
+ receipt={"schema":"grm-mtb-4k-revision8-check-receipt-v1","cohort":name or manifest["cohort"],"valid":True,"errors":[],"evaluation_revision":vc.REVISION,
   "reports":len(manifest["reports"]),"class_gate_skips":len(manifest["class_gate_unavailable"]),"run_manifest":str(manifest_path),
   "run_manifest_sha256":sha(manifest_path),"source_commit":source,"binary_sha256":manifest["binary_sha256"],"foldgen":foldgen_path(),
   "foldgen_sha256":sha(Path(foldgen_path())),"pins":dict(vc.PINS),"validator_sha256":vc.validator_sha256(),"outputs":outputs,
