@@ -315,19 +315,103 @@ def input_root_manifest(input_root: Path, full_ids):
     return "".join(lines).encode(), hashes
 
 
+# src/bvbrc.rs:129-145 `struct Feature` (no deny_unknown_fields, so other keys are allowed):
+#   patric_id, gene, product: Option<String>, #[serde(default, deserialize_with = "opt_text")] -> any value
+#   accession, strand: String, #[serde(deserialize_with = "text")] -> required, and value_text must not be None
+#   start, end: u64 -> required JSON integers in [0, 2^64 - 1]; not a float, a bool or a string
+# src/bvbrc.rs:404-426 value_text: None for null, a string that trims (Rust char::is_whitespace) to empty, or an array
+# with no item that has text; any other value (number, bool, object) has text.
+FEATURE_TEXT = ("accession", "strand")
+FEATURE_U64 = ("start", "end")
+U64_MAX = 2**64 - 1
+RUST_WHITESPACE = set("\t\n\x0b\x0c\r \x85\xa0\u1680\u2028\u2029\u202f\u205f\u3000") | {chr(c) for c in range(0x2000, 0x200b)}
+
+
+def _value_text(v):
+    if v is None:
+        return None
+    if isinstance(v, str):
+        t = v.strip("".join(RUST_WHITESPACE))
+        return t or None
+    if isinstance(v, list):
+        parts = [t for t in map(_value_text, v) if t is not None]
+        return ";".join(parts) if parts else None
+    return "text"
+
+
+def _no_lone_surrogates(v):
+    """serde_json refuses a \\u escape that leaves an unpaired surrogate; Python's json keeps it."""
+    if isinstance(v, str):
+        return not any(0xD800 <= ord(c) <= 0xDFFF for c in v)
+    if isinstance(v, list):
+        return all(map(_no_lone_surrogates, v))
+    if isinstance(v, dict):
+        return all(_no_lone_surrogates(k) and _no_lone_surrogates(x) for k, x in v.items())
+    return True
+
+
+def annotation_problem(data: bytes):
+    """Why src/annotate.rs `load_features` (lines 101-108) would not use these bytes, and so fetch from BV-BRC, or
+    None. It mirrors serde_json::from_slice::<Vec<Feature>>. Where it is stricter than GRM (any duplicate key, an
+    element given as an array) it refuses a file GRM would read; it never accepts one GRM would fetch."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return "not UTF-8"
+    if text.startswith("\ufeff"):
+        return "a byte-order mark"
+
+    def pairs(items):
+        keys = [k for k, _ in items]
+        if len(set(keys)) != len(keys):
+            raise ValueError("duplicate key")
+        return dict(items)
+
+    def constant(name):
+        raise ValueError(f"{name} is not JSON")
+
+    try:
+        value = json.loads(text, object_pairs_hook=pairs, parse_constant=constant)
+    except ValueError as exc:
+        return f"not strict JSON ({exc})"
+    if not _no_lone_surrogates(value):
+        return "an unpaired surrogate escape"
+    if not isinstance(value, list):
+        return "not a list"
+    for i, row in enumerate(value):
+        if not isinstance(row, dict):
+            return f"element {i} is not a Feature object"
+        for key in FEATURE_TEXT:
+            if key not in row:
+                return f"element {i}: missing field {key}"
+            if _value_text(row[key]) is None:
+                return f"element {i}: {key} has no text"
+        for key in FEATURE_U64:
+            if key not in row:
+                return f"element {i}: missing field {key}"
+            v = row[key]
+            if not isinstance(v, int) or isinstance(v, bool) or not 0 <= v <= U64_MAX:
+                return f"element {i}: {key} is not a u64"
+    return None
+
+
 def missing_annotations(input_root: Path, ids):
-    """The genomes `grm learn` would fetch from BV-BRC: src/annotate.rs `load_features` (lines 101-117) reads
-    bvbrc/features/<id>.json and fetches the annotation whenever it cannot read or parse that file. A cached file
-    must be a regular file (as cached_features copies it) holding a JSON list."""
-    out = []
+    """{genome: why} for the genomes `grm learn` would fetch from BV-BRC: src/annotate.rs `load_features`
+    (lines 101-117) reads bvbrc/features/<id>.json and fetches the annotation whenever it cannot read it or
+    deserialize it as Vec<Feature> (annotation_problem). A cached file must also be a regular file, as
+    cached_features copies it."""
+    out = {}
     for gid in ids:
         p = input_root / "bvbrc" / "features" / f"{gid}.json"
+        if p.is_symlink() or not p.is_file():
+            out[gid] = "no regular file"
+            continue
         try:
-            ok = p.is_file() and not p.is_symlink() and isinstance(json.loads(p.read_bytes()), list)
-        except (OSError, ValueError):
-            ok = False
-        if not ok:
-            out.append(gid)
+            why = annotation_problem(p.read_bytes())
+        except OSError as exc:
+            why = f"unreadable ({exc})"
+        if why:
+            out[gid] = why
     return out
 
 
@@ -365,9 +449,10 @@ def load_cleaned(frozen_full):
     # Every cohort genome's annotation must be cached, so grm learn fetches nothing during the run.
     missing = missing_annotations(input_root, cohorts["full"])
     if missing:
+        first = list(missing)[:20]
         refuse(f"{len(missing)} cohort genomes have no usable cached annotation at RN_INPUT_ROOT/bvbrc/features/<id>.json, "
-               f"so grm learn would fetch them from BV-BRC during the run (src/annotate.rs:101-117); first {min(len(missing), 20)}: "
-               f"{missing[:20]}")
+               f"so grm learn would fetch them from BV-BRC during the run (src/annotate.rs:101-117, src/bvbrc.rs:129-145); "
+               f"first {len(first)}: {first}; first reason: {missing[first[0]]}")
     if len(info["exclusions"]) != v["EXCLUSIONS_COUNT"]:
         refuse(f"the species check fails {len(info['exclusions'])} MTB genomes, not EXCLUSIONS_COUNT {v['EXCLUSIONS_COUNT']}")
     store = Path(v["RN_FASTA_STORE"])
@@ -402,6 +487,12 @@ def check_input_root(root: Path):
         p = root / "bvbrc" / name
         if p.is_symlink() or not p.is_file():
             refuse(f"the input root {root} has no regular bvbrc/{name}")
+    features = root / "bvbrc" / "features"
+    if features.is_symlink() or (features.exists() and not features.is_dir()):
+        refuse(f"the input root {root} has a bvbrc/features that is not a real directory")
+    odd = sorted(p.name for p in features.iterdir() if p.is_symlink() or not p.is_file()) if features.is_dir() else []
+    if odd:
+        refuse(f"the input root {root} has {len(odd)} entries in bvbrc/features that are not regular files: {odd[:20]}")
 
 
 def frozen_manifest(candidate: Path):
@@ -420,9 +511,10 @@ def frozen_manifest(candidate: Path):
         if p.is_file() and not p.is_symlink():
             out[str(p)] = sha256_file(p)
     features = candidate / "bvbrc" / "features"
-    for p in sorted(features.iterdir()) if features.is_dir() else []:
-        assert p.is_file() and not p.is_symlink(), p
-        out[str(p)] = sha256_file(p)
+    for p in sorted(features.iterdir()) if features.is_dir() and not features.is_symlink() else []:
+        # Review B2: no assert. Preparation has refused such an entry (check_input_root); one that appears later is
+        # recorded by kind, so --verify-frozen reports it as changed.
+        out[str(p)] = sha256_file(p) if p.is_file() and not p.is_symlink() else "not a regular file"
     return out
 
 
@@ -449,14 +541,39 @@ def prepare_bvbrc(data: Path, candidate: Path, manifest: dict, ids):
         os.symlink(candidate / "bvbrc" / name, bvbrc / name)
     features = bvbrc / "features"
     features.mkdir()
-    copied = {"files": 0, "bytes": 0}
+    copied = {"files": 0, "bytes": 0, "sha256": {}}
     for p in cached_features(candidate, ids):
         target = features / p.name
         shutil.copyfile(p, target)
         assert sha256_file(target) == manifest[str(p)], f"{p} changed while it was copied"
         copied["files"] += 1
         copied["bytes"] += target.stat().st_size
+        copied["sha256"][p.name] = manifest[str(p)]
     return copied
+
+
+def check_annotations(data: Path):
+    """The re-check's B1 backstop, run after each cohort's `grm learn`: the cohort's bvbrc/features must hold exactly
+    the annotations preparation copied, by name and SHA-256 (preparation.json). A new or changed file means grm learn
+    fetched an annotation from BV-BRC during the run; a missing one, that the lane was edited. Returns problems."""
+    run_root = data.parent.parent.parent
+    record = json.loads((run_root / "preparation.json").read_text())["features_seeded_per_cohort"][data.parent.name]
+    if "sha256" not in record:
+        return [f"{run_root}/preparation.json records no annotation hashes for {data.parent.name} (prepared before this check)"]
+    expected = record["sha256"]
+    features = data / "bvbrc" / "features"
+    problems = []
+    actual = {}
+    for p in sorted(features.iterdir()) if features.is_dir() and not features.is_symlink() else []:
+        if p.is_symlink() or not p.is_file():
+            problems.append(f"{p} is not a regular file")
+        else:
+            actual[p.name] = sha256_file(p)
+    problems += [f"{features / n} was added after preparation: a live BV-BRC fetch" for n in sorted(set(actual) - set(expected))]
+    problems += [f"{features / n} changed after preparation: a live BV-BRC fetch or an edit" for n in sorted(set(actual) & set(expected))
+                 if actual[n] != expected[n]]
+    problems += [f"{features / n} was removed after preparation" for n in sorted(set(expected) - set(actual))]
+    return problems
 
 
 def verify_frozen(run_root: Path) -> int:
@@ -570,6 +687,8 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--verify-frozen", action="store_true")
     mode.add_argument("--check-lane", action="store_true")
+    mode.add_argument("--check-annotations", action="store_true",
+                      help="after grm learn: the cohort's bvbrc/features holds exactly the annotations preparation copied")
     mode.add_argument("--derive-cleaned", action="store_true", help="print the CLEANED_* pins from the bound inputs; write nothing")
     args = parser.parse_args()
     if args.derive_cleaned:
@@ -583,8 +702,17 @@ def main() -> int:
         pins = derived_pins(cleaned_ids, Path(info["input_root"]))
         print(json.dumps({"pins": pins, **{k: v for k, v in info.items() if k != "bound"}}, indent=1))
         return 0
-    if args.path is None or (args.cohorts is not None) == (args.verify_frozen or args.check_lane):
-        parser.error("give RUN_ROOT with --cohorts to prepare, or a path with --verify-frozen or --check-lane")
+    if args.path is None or (args.cohorts is not None) == (args.verify_frozen or args.check_lane or args.check_annotations):
+        parser.error("give RUN_ROOT with --cohorts to prepare, or a path with --verify-frozen, --check-lane or --check-annotations")
+    if args.check_annotations:
+        try:
+            problems = check_annotations(args.path)
+        except (OSError, ValueError, KeyError) as exc:
+            problems = [f"cannot check {args.path}: {type(exc).__name__}: {exc}"]
+        print(json.dumps({"data_root": str(args.path), "problems": problems}, indent=2))
+        if problems:
+            print("prepare_execution_roots: STOP: the cohort's annotations are not the ones preparation copied", file=sys.stderr)
+        return 1 if problems else 0
     if args.verify_frozen:
         try:
             return verify_frozen(args.path)

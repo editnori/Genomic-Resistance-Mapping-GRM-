@@ -167,6 +167,8 @@ filled by a reviewed commit and listed in section 2.1.
   selection (`RN_FULL_GENOMES_*`), each with its `curated/species.json` (`RN_*_SPECIES_JSON_*`),
   whose MTB `selected_unchecked` must be 0.
 - **Inputs:** `RN_INPUT_ROOT` provides catalog, curated, the BV-BRC records and cached annotations.
+  These are revision N's curation, on which the fresh selection was made. Its whole set is bound in
+  `frozen-inputs.json` at preparation, as revision 5 bound the candidate's.
   Five of its files are bound by hash and checked before root preparation (review P1, re-check N1):
   `curated/datasets.json`, `curated/phenotypes.jsonl` (the labels), `catalog/version.txt`,
   `catalog/AMR_CDS.fa` and `catalog/ReferenceGeneCatalog.txt`. The last two are what `grm matrix` loads
@@ -181,17 +183,23 @@ filled by a reviewed commit and listed in section 2.1.
   check it. Nothing the cohorts read from the input root is bound only at preparation.
 - **Annotations must all be cached; `grm learn` must fetch nothing.** `load_features`
   (`src/annotate.rs:101-117`) reads `bvbrc/features/<id>.json` and fetches the annotation from BV-BRC
-  whenever it cannot read or parse that file. The revision-9 run fetched 230 annotations live
-  during training, an unbound and non-reproducible input. So revision N's staging must cache an
-  annotation for every selected genome in `RN_INPUT_ROOT`. Preparation refuses, before creating
-  anything, if any genome of any cohort has none, naming up to 20 and giving the count. The cached
-  annotations are part of the input manifest.
+  whenever it cannot read that file or deserialize it as `Vec<Feature>`. `Feature` is at
+  `src/bvbrc.rs:129-145`: `accession` and `strand` must have text under `value_text`
+  (`src/bvbrc.rs:404-426`), `start` and `end` must be `u64`, and other keys are allowed. The
+  revision-9 run fetched 230 annotations live during training, an unbound and non-reproducible
+  input. So 024208eb's revision-10 staging (revision N's) must cache a valid annotation for every
+  selected genome in `RN_INPUT_ROOT`.
+  - **Before preparation:** it refuses, before creating anything, if any genome of any cohort has
+    none, or has one that does not deserialize as GRM would (`annotation_problem` mirrors
+    `serde_json`'s `Vec<Feature>`). The refusal names up to 20 genomes, gives the count and the
+    first reason. The cached annotations are part of the input manifest.
+  - **After each cohort's `grm learn`, as a backstop:** `--check-annotations` (section 7) requires
+    the lane's `bvbrc/features` to hold exactly the files preparation copied, by name and SHA-256.
+    A new or changed annotation means a live fetch happened, and the run stops.
 - **Staging, not this plan, completes the species check.** Revision N's cap-4000 entrants arrive
   unchecked (`selected_unchecked` > 0). Staging must fetch them and run the species check again until
   `selected_unchecked` is 0 for both selections; the species-check lane (024208eb) produces it. This
   plan only refuses otherwise.
-  These are revision N's curation, on which the fresh selection was made. Its whole set is bound in
-  `frozen-inputs.json` at preparation, as revision 5 bound the candidate's.
 - **FASTA:** a genome in the frozen 4k list links to its frozen-manifest FASTA. A replacement links
   to its row in the bound replacement manifest (`RN_FASTA_MANIFEST_*`), a file directly under
   `RN_FASTA_STORE`. Both are hash-checked at preparation and by every `--verify-frozen`. The
@@ -357,7 +365,7 @@ The current expansion of the rule is the transitive `crate::` closure of `src/ma
 - `src/bits.rs`, `src/bvbrc.rs`, `src/catalog.rs`, `src/cluster.rs`, `src/confine.rs`, `src/dna.rs`,
   `src/drugs.rs`, `src/fasta.rs`, `src/fnv.rs`, `src/kset.rs`, `src/layout.rs`, `src/matrix.rs`,
   `src/probes.rs`, `src/species.rs` and `src/species/`;
-- plus `src/main.rs`'s wiring, `src/lib.rs`, `Cargo.toml` and `Cargo.lock`.
+- plus `src/main.rs`'s wiring, `src/lib.rs`, `Cargo.toml`, `Cargo.lock` and `.cargo/config.toml`.
 
 If the merge adds a `use` to any of these, the rule covers the new module too. A cleaned run root has no pilot cohorts.
 The text and commands below are revision 5's, kept for the record.
@@ -588,6 +596,7 @@ for cohort in prefix added full matched2k; do
   LAUNCH=$(date -u +%Y-%m-%dT%H:%M:%SZ); echo "$LAUNCH" > "$RUN/logs/$cohort-learn.launch"
   python3 "$GUARD" --log $RUN/logs/$cohort-learn.log --resources $RUN/logs/$cohort-learn-resources.json -- \
     /usr/bin/time -v "$GRM" --data "$D" learn --species $SLUG || exit 1
+  python3 -I "$P/prepare_execution_roots.py" --check-annotations "$D" || exit 1   # no live BV-BRC fetch during learn
   python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
   "$GRM" --data "$D" report || exit 1                # dashboard data in this root only
   python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
@@ -600,6 +609,14 @@ for cohort in prefix added full matched2k; do
     --summary-out $RUN/audit/$cohort-summary.json --receipt $RUN/audit/$cohort-revision8-receipt.json --profile "$PROFILE" || exit 1
 done
 ```
+
+**Deviations from revision 5's section 7.**
+- Every contract CLI passes `--profile rN-cleaned`.
+- `--check-annotations` runs after each `grm learn` (re-check B1). The cohort's `bvbrc/features`
+  must hold exactly the annotations preparation copied (`preparation.json`,
+  `features_seeded_per_cohort.<cohort>.sha256`). Any added or changed file means `grm learn`
+  fetched from BV-BRC, and the run stops.
+- Section 7b replaces the revision-7 diff.
 
 `write_run_manifest.py` binds each cohort's inputs, reports and class-gate receipts by SHA-256,
 after recomputing every input fingerprint and every dataset's class counts from the root.

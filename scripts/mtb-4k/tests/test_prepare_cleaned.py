@@ -17,6 +17,11 @@ BORDERLINE="1773.100114"  # a frozen prefix genome the check calls borderline: k
 REPLACEMENTS=["1773.900001","1773.900002"]
 
 def sha(b): return hashlib.sha256(b).hexdigest()
+def valid_annotation(g):
+ """A cached annotation GRM's Vec<Feature> deserializes (src/bvbrc.rs:129-145): two rows, optional fields and an extra key."""
+ return json.dumps([{"patric_id":f"fig|{g}.peg.1","accession":"NC_000962.3","start":1,"end":1524,"strand":"+","gene":"dnaA",
+                     "product":"Chromosomal replication initiator protein DnaA","note":"extra keys are allowed"},
+                    {"accession":"NC_000962.3","start":2052,"end":3260,"strand":"+"}])
 def lines(ids): return "".join(f"{g}\n" for g in ids).encode()
 
 class Cleaned(unittest.TestCase):
@@ -43,7 +48,7 @@ class Cleaned(unittest.TestCase):
   (prep.CANDIDATE/"catalog"/"ReferenceGeneCatalog.txt").write_text("allele\tgene_family\nblaX-1\tblaX\n")
   (prep.CANDIDATE/"curated"/"funnel.json").write_text("{}\n")
   # Every cohort genome has a usable cached annotation, as revision N's staging must provide.
-  for g in ids+REPLACEMENTS: (prep.CANDIDATE/"bvbrc"/"features"/f"{g}.json").write_text(f'[{{"gene": "{g}"}}]')
+  for g in ids+REPLACEMENTS: (prep.CANDIDATE/"bvbrc"/"features"/f"{g}.json").write_text(valid_annotation(g))
   self.write_inputs()
 
  def tearDown(self):
@@ -226,8 +231,67 @@ class Cleaned(unittest.TestCase):
   for g in self.full[3000:3030]: (prep.CANDIDATE/"bvbrc"/"features"/f"{g}.json").unlink()
   self.write_inputs(); message=self.refused("30 cohort genomes have no usable cached annotation")
   self.assertIn("first 20",message); self.assertEqual(sum(g in message for g in self.full[3000:3030]),20)
-  for g in self.full[3000:3030]: (prep.CANDIDATE/"bvbrc"/"features"/f"{g}.json").write_text(f'[{{"gene": "{g}"}}]')
+  for g in self.full[3000:3030]: (prep.CANDIDATE/"bvbrc"/"features"/f"{g}.json").write_text(valid_annotation(g))
   self.write_inputs(); self.assertEqual(self.main(self.base/"run","--cohorts","cleaned")[0],0)
+
+ def test_an_annotation_is_usable_only_if_it_deserializes_as_grms_vec_feature(self):
+  # The re-check's B1: the reviewer's demo (g1-g6 refused by Rust, so fetched; g7 read) and more cases.
+  ok=lambda v:{"accession":"a","start":1,"end":2,"strand":"+",**v}  # noqa: E731
+  refused={"g1 no accession":'[{"gene": "x"}]',"g2 element not an object":"[1]",
+   "g3 negative start":'[{"accession": "a", "start": -1, "end": 2, "strand": "+"}]',
+   "g4 blank accession":'[{"accession": "", "start": 1, "end": 2, "strand": "+"}]',
+   "g5 NaN":'[{"accession": "a", "start": 1, "end": 2, "strand": "+", "gene": NaN}]',
+   "g6 float start":'[{"accession": "a", "start": 1.0, "end": 2, "strand": "+"}]',
+   "g8 not a list":'{"accession": "a"}',"whitespace accession":json.dumps([ok({"accession":" \u3000\t"})]),
+   "null strand":json.dumps([ok({"strand":None})]),"empty-text array accession":json.dumps([ok({"accession":["", None, " "]})]),
+   "missing end":'[{"accession": "a", "start": 1, "strand": "+"}]',"bool start":json.dumps([ok({"start":True})]),
+   "string start":json.dumps([ok({"start":"1"})]),"start above u64":json.dumps([ok({"start":2**64})]),
+   "exponent start":'[{"accession": "a", "start": 1e2, "end": 2, "strand": "+"}]',
+   "Infinity":'[{"accession": "a", "start": 1, "end": 2, "strand": "+", "product": Infinity}]',
+   "duplicate key":'[{"accession": "a", "accession": "b", "start": 1, "end": 2, "strand": "+"}]',
+   "array element":'[["a", 1, 2, "+"]]',"lone surrogate":'[{"accession": "\\ud800", "start": 1, "end": 2, "strand": "+"}]',
+   "trailing comma":'[{"accession": "a", "start": 1, "end": 2, "strand": "+"},]'}
+  for label,text in refused.items():
+   with self.subTest(refused=label): self.assertIsNotNone(prep.annotation_problem(text.encode()),label)
+  for label,data in {"BOM":b"\xef\xbb\xbf[]","not UTF-8":b"[\"\xff\"]"}.items():
+   with self.subTest(refused=label): self.assertIsNotNone(prep.annotation_problem(data),label)
+  accepted={"g7":'[{"accession": "a", "start": 1, "end": 2, "strand": "+"}]',"empty list":"[]",
+   "multi-element with optional fields":valid_annotation("1773.1"),
+   "numeric and array text":json.dumps([ok({"accession":7,"strand":["", "-"]})]),"object text":json.dumps([ok({"strand":{"s":1}})]),
+   "u64 bounds":json.dumps([ok({"start":0,"end":2**64-1})]),"null optional fields":json.dumps([ok({"gene":None,"product":None,"patric_id":3})]),
+   "trimmed accession":json.dumps([ok({"accession":"  a  "})])}
+  for label,text in accepted.items():
+   with self.subTest(accepted=label): self.assertIsNone(prep.annotation_problem(text.encode()),label)
+  # In preparation: one cohort genome's annotation as the reviewer's g1 stops it, naming the genome and the reason.
+  gid=self.full[1234]; path=prep.CANDIDATE/"bvbrc"/"features"/f"{gid}.json"; original=path.read_bytes()
+  path.write_text('[{"gene": "x"}]'); self.write_inputs()
+  message=self.refused("1 cohort genomes have no usable cached annotation"); self.assertIn(gid,message); self.assertIn("missing field accession",message)
+  path.write_bytes(original)
+
+ def test_after_learn_the_lane_holds_exactly_the_annotations_preparation_copied(self):
+  # The re-check's B1 backstop: a new, changed or removed annotation in a cohort's bvbrc/features stops the run.
+  run=self.base/"run"; self.assertEqual(self.main(run,"--cohorts","cleaned")[0],0)
+  for name in ("prefix","added","full","matched2k"):
+   rc,out=self.main("--check-annotations",run/"cohorts"/name/"data"); self.assertEqual(rc,0,out)
+  features=run/"cohorts/prefix/data/bvbrc/features"
+  fetched=features/"1773.999999.json"; fetched.write_text(valid_annotation("1773.999999"))
+  with contextlib.redirect_stderr(io.StringIO()) as err: rc,out=self.main("--check-annotations",run/"cohorts/prefix/data")
+  self.assertEqual(rc,1); self.assertIn("was added after preparation: a live BV-BRC fetch",out); self.assertIn("STOP",err.getvalue())
+  fetched.unlink()
+  copied=sorted(features.iterdir())[0]; original=copied.read_bytes(); copied.write_text("[]")
+  rc,out=self.main("--check-annotations",run/"cohorts/prefix/data"); self.assertEqual(rc,1); self.assertIn("changed after preparation",out)
+  copied.unlink(); rc,out=self.main("--check-annotations",run/"cohorts/prefix/data"); self.assertEqual(rc,1); self.assertIn("was removed",out)
+  copied.write_bytes(original); self.assertEqual(self.main("--check-annotations",run/"cohorts/prefix/data")[0],0)
+
+ def test_an_odd_entry_in_the_annotation_cache_is_a_clean_refusal_or_a_change(self):
+  # The re-check's B2: a subdirectory or a link in RN_INPUT_ROOT/bvbrc/features, before preparation and after it.
+  odd=prep.CANDIDATE/"bvbrc"/"features"/"subdir"; odd.mkdir(); self.write_inputs()
+  self.refused("entries in bvbrc/features that are not regular files: ['subdir']"); odd.rmdir()
+  link=prep.CANDIDATE/"bvbrc"/"features"/"other.link.json"; os.symlink(prep.CANDIDATE/"bvbrc"/"features"/"other.0.json",link)
+  self.write_inputs(); self.refused("['other.link.json']"); link.unlink()
+  self.write_inputs(); run=self.base/"run"; self.assertEqual(self.main(run,"--cohorts","cleaned")[0],0)
+  os.symlink(prep.CANDIDATE/"bvbrc"/"features"/"other.0.json",link)
+  rc,out=self.main("--verify-frozen",run); self.assertEqual(rc,1); self.assertIn(str(link),json.loads(out)["changed"]); link.unlink()
 
  def test_a_missing_record_file_is_a_clean_refusal_and_verify_frozen_reports_it(self):
   # Review A2: no traceback, nothing created.

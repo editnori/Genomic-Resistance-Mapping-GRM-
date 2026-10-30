@@ -154,8 +154,9 @@ class Prepare(unittest.TestCase):
             self.assertEqual(seeded["prefix"]["files"], len(cached & prefix))
             self.assertEqual(seeded["added"]["files"], len(cached - prefix))
             self.assertEqual(seeded["matched2k"]["files"], len(cached & matched))
-            self.assertEqual(seeded["pilot256"], {"files": 0, "bytes": 0})
-            self.assertEqual(seeded["pilot256-stock"], {"files": 0, "bytes": 0})
+            self.assertEqual(seeded["pilot256"], {"files": 0, "bytes": 0, "sha256": {}})
+            self.assertEqual(seeded["pilot256-stock"], {"files": 0, "bytes": 0, "sha256": {}})
+            self.assertEqual(len(seeded["full"]["sha256"]), 40)
             self.assertEqual(receipt["disk"]["annotation_bytes_copied"], sum(s["bytes"] for s in seeded.values()))
             self.assertEqual(receipt["fasta_sha256_checked"], 4000)
             for name in receipt["cohorts"]:
