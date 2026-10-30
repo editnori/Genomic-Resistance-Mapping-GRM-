@@ -1,6 +1,6 @@
 # GRM work program and completion ledger
 
-Snapshot: 2026-10-30 09:00 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
+Snapshot: 2026-10-30 09:25 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
 
 ## Status vocabulary
 
@@ -19,7 +19,7 @@ A request can have different states for different stages. Do not collapse these 
 
 | Item | Current evidence |
 |---|---|
-| Current source | Branch `recovery/working-tree-20261028` (pushed). Revision 9 is `b2fd433` on `r9/lasso-exchange-fix`, which is not yet merged into the recovery branch (the test merge is clean). Revision-10 parts: `r9/species-check` (`7ba865c`, review APPROVED), the solver follow-up `f8bb6d2` (gating on Vast) and `r10/dup-isolation` (`2b24e50`, under review). The pull request to `main` is next (goal 6). |
+| Current source | `main` is at `05bf5ad`, PR #64 merged 2026-10-30 09:21:25 UTC. Its tree equals `recovery/working-tree-20261028` at `2d04e7a`, and its `src/`, `Cargo*`, `.cargo/` and `web/` equal live revision 9 (`b2fd433`). Revision 10 is `c90ebaf` on `r10/integration` (pushed), with its 275-report run in progress on Vast. |
 | Dataset definition | One species–antibiotic pair, admitted with at least 25 reported resistant and 25 reported susceptible genomes. |
 | Curated inventory | 23 species, 277 datasets, 23,761 selected genomes. |
 | Live reports | **Revision 9, live since 2026-10-30 07:52:27 UTC**: 275 reports over 23 species, schema 2, source `b2fd433`. The 2 class-minimum skips are in `SKIPS.json` (`9f83f721…`). The rollback target is revision 8. |
@@ -579,3 +579,13 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
     - Revision-9 results are not seeded into the fresh revision-10 root.
     - If g7 or g8 is short at its turn, the driver waits and main rules.
   - **234bc2b6:** plan revision 6 is now `b91ede7` (annotation-completeness refusal, A1–A3); both suites pass, 247 tests each. Its validators will mirror `kset_duplicates`. Its section-5 screen found 0 exact kset pairs in the MTB 4k cohorts.
+- 2026-10-30 08:5x–09:21 UTC: **goal 6 done: PR #64 merged into `main`** (merge commit `05bf5ad`, 09:21:25 UTC, `--match-head-commit 2d04e7a`).
+  - **Fixes for the review's findings:** `c7c0023` (L2, dry-run root skip), `bf5c130` (M1: the boot hook removes only a file `mktemp` created, never `/dev/null`; L3: one retry of the active pair before the revision-8 fallback; 5 new dry-run cases with `mktemp` and `rm` shims), `1dbf26b` (L1, reaped helper PIDs dropped) and `2d04e7a` (L4 and I6: the boot-hook docs, README revision 9 live, no pointer to the missing harness file).
+  - **Live:** the boot hook was reinstalled on Vast as `/root/grm-ops-20261029/boot-active.sh` (`0cb7201c…ece8c`); the old copy is kept as `boot-active.sh.before-m1-20261030`. The normal dry run resolves to revision 9. The forced fallback fails, retries once, then falls back to revision 8.
+  - **Re-check:** `PR64_RECHECK=APPROVED` (`/home/layth/review/grm-pr64-recheck-20261030/REVIEW.md`, `43e1446c…d7a9`). Every M1 exit path was checked, and the old hook was reproduced deleting `/dev/null` under shims and on a real `mktemp` failure. Suites: `bash -n` 19, dry-run 199/199 as root and 200/200 non-root, the old hook 194/199, apply 484/484. The live copy is byte-identical to the commit.
+  - **Open notes, not blocking:** L1-R (`docs/deployment.md:286` still says 195 assertions), I1-R (`dry-run.sh` skips its boot-hook cases if the hook file is missing), I2-R (the hook tests always use `BOOT_RETRY_WAIT=0`), I3-R (where `COMMIT` lives), plus the first review's L5, L6 and Info items.
+- 2026-10-30 09:11:24 UTC: **revision-10 275-report run launched** on `c90ebaf` (grm `ad1a1318…a086`, source.tar `5ed4b581…1d28`, built on Vast). It's in `/root/grm-r10-275-run-20261030`, a fresh root with no revision-9 results.
+  - **Gates:** g1 (16 unchanged species) 35, g2 E. cloacae 39, g3 N. gonorrhoeae 56, g4 A. baumannii 71, g5 MTB 82, g6 E. coli 91, g7 K. pneumoniae 96 (measured live), g8 S. enterica 89, last. Free at launch: 115.4 GiB, after the approved deletions of the revision-8 run root's `data/` and `source/` (its `data/curated` is kept for `deploy-r8.sh:35`), `/root/grm/data/backups`, the revision-8 diagnosis scratch and the stage target. All are logged in `DELETIONS.log`.
+  - **Binding selection** (regenerated with `c90ebaf`, byte-identical to Phase A): MTB 2k `b104d8bd…`, MTB 4k `f2a18a43…`, 2k `species.json` `1ab28557…`, 4k `species.json` `97e80c08…`, post-fetch `species_check.json` `d80eef29…`. The one byte difference is `curated/qc.json`, whose key order follows a HashMap; its content is identical and nothing but a unit test reads it. These were sent to 234bc2b6.
+  - **Every report is classified against the published revision 9:** unchanged (only `revision` and seconds), (a) changed-cohort species, (b) `kset_duplicates`, (c) anything else, which stops the driver. The features manifest before learn has 5,768 files. Revision 9's two class-minimum skips still fall short.
+  - **Independent output review, first checkpoint:** provenance PASS (a rebuild of source.tar matches the binary's code sections), confinement PASS in all 6 rounds, and a from-scratch reimplementation reproduces all 76 fresh verdicts. 80 drops: AB 3, ECL 1, EC 4, KP 69, MTB 2, SE 1. L1 (Low): the binding file's per-species GC statistics come from the light cohort. Main's ruling: keep `d80eef29` and quote GC against whole-species medians in the release notes.
