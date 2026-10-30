@@ -612,3 +612,13 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
     - (c) **Selection does change measurably.** On S. flexneri (74% of samples in pairs), the random-scheme lasso picks a median 91% of the way along its path, against 36% under lineage. scm and cart are denser too.
   - **Release notes:** a "Known limits" paragraph in the reviewer's wording, plus a note beside the 3 S. flexneri flips.
   - **Revision 11:** pass composite duplicate groups to the random scheme's `training_folds` and `tuning_holdout`, add split-plan tests, and retune S. flexneri and S. sonnei. This changes nothing in the running job.
+- 2026-10-30 10:3x UTC: **MTB 4k (thread `234bc2b6`): `MERGE_R10=READY`.** The revision-10 training merge is head `bc7b74226ea09c82172d1793d322759dddc41621` (tree `ea64ac1f…`).
+  - **What it holds:** `c90ebaf` + G (merge `857d2df`) + IRLS0 + plan revision 6's 10 commits (to `5c69f31`) + fill 1 (revision-10 `VALUES`) + fill 2 (the cohort binding from GRM's Phase B: MTB 2k `b104d8bd…`, 4k `f2a18a43…`, `species_check.json` `d80eef29…`) + fill 3 (`RN_REFERENCE_ROOT` = `/root/grm-r10-275-run-20261030`).
+  - **Bundle:** `a193b1a5de72e15c614bad5308a4e59f7763eeb6a8e7fe50a0c42eef1c5e1e8e`, in `/root/grm-research/grm-mtb-4k-train-merge-r10-opus-20261030/`; receipt `5160c8e8…`, 373 sums OK.
+  - **Heavy run on the laptop slot,** ended 10:32:41, targets deleted.
+    - `cargo test` 331/0/10, with fmt, clippy and probes clean.
+    - Validator suite under rN: 20/20 runs, 259 tests.
+    - 0 R1 statuses; all 12 revision-10 harness reports pass the contract.
+    - Wiring harness: 1,073 of 1,085 rows pass. The rest are the 10 known rows, `mr-learn`'s hard-coded revision, and `rrplan`, a revision-5 prepare replica that plan revision 6's `test_entry_points.py` covers.
+  - **Its input root on Vast:** `/root/grm-research/grm-mtb-4k-cleaned-r10-20261030/`, 4.05 GB of real copies, no FASTA duplicated.
+  - **Next:** an independent merge review is running (laptop-light). The cleaned-cohort run on Vast starts only after GRM's g8 ends, and its reference checks need GRM's run complete.
