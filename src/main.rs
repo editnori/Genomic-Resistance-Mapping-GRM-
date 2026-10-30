@@ -690,6 +690,9 @@ fn species_check(layout: &Layout, sketch_only: bool, reset: bool) -> Result<()> 
     if sketch_only {
         return Ok(());
     }
+    if reset && let Some(e) = &earlier {
+        grm::species_check::ensure_recorded_failures_judgeable(&cohorts, e)?;
+    }
     let recorded = if reset { None } else { earlier.as_ref() };
     let check = grm::species_check::check(cohorts, &Default::default(), recorded)?;
     let out = grm::species_check::write(layout, &check)?;
@@ -1456,6 +1459,33 @@ mod tests {
             selected.iter().all(|id| !FOREIGN.contains(&id.as_str())),
             "{selected:?}"
         );
+    }
+
+    /// A reset check cannot judge a recorded failure with no sketch and no
+    /// FASTA file, so it stops instead of dropping it from the record. A
+    /// check without --reset keeps its recorded verdict.
+    #[test]
+    fn a_reset_check_stops_on_a_recorded_failure_it_cannot_judge() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        species_check_fixture(dir.path());
+        let folds = grm::learn::eval::EvalConfig::default().folds;
+        run_curate(&layout, 50, folds, None).unwrap();
+        species_check(&layout, false, false).unwrap();
+        run_curate(&layout, 50, folds, None).unwrap();
+        let gone = FOREIGN[1];
+        std::fs::remove_file(grm::species_check::sketch_path(&layout, gone)).unwrap();
+        std::fs::remove_file(grm::bvbrc::fasta_path(&layout.fasta_dir(), gone)).unwrap();
+
+        let err = species_check(&layout, false, true).unwrap_err().to_string();
+        assert!(
+            err.contains(&format!("cannot judge {gone} (Escherichia coli)")),
+            "{err}"
+        );
+        species_check(&layout, false, false).unwrap();
+        let check = grm::species_check::read(&layout.species_check()).unwrap();
+        let failed: Vec<&str> = check.failures().keys().map(String::as_str).collect();
+        assert_eq!(failed, FOREIGN);
     }
 
     #[test]

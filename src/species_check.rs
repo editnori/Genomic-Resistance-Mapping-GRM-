@@ -339,6 +339,27 @@ pub fn cohort_lists(
         .collect()
 }
 
+/// Under `--reset`, a genome `recorded` failed that has no sketch now would
+/// leave the record unjudged, and the next curate would select it again.
+pub fn ensure_recorded_failures_judgeable(
+    cohorts: &[Cohort],
+    recorded: &SpeciesCheck,
+) -> Result<()> {
+    for c in cohorts {
+        for id in &c.unchecked {
+            let failed = recorded.genomes.iter().any(|g| {
+                g.species == c.species && &g.genome_id == id && g.verdict == Verdict::Fail
+            });
+            anyhow::ensure!(
+                !failed,
+                "species check --reset cannot judge {id} ({}): an earlier check failed it, and it has no sketch or FASTA file here; restore one, or check without --reset to keep its recorded verdict",
+                c.species
+            );
+        }
+    }
+    Ok(())
+}
+
 /// Checks every cohort against its own reference and the other cohorts'.
 /// Every species `previous` checked must be among the cohorts with its
 /// reference sketched, and keeps that reference. Its recorded genomes that
