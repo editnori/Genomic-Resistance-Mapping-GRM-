@@ -32,6 +32,16 @@ impl Layout {
         self.root.join("curated")
     }
 
+    /// `grm species-check`: its sketch cache and the verdicts `grm curate`
+    /// reads.
+    pub fn species_check_dir(&self) -> PathBuf {
+        self.root.join("species-check")
+    }
+
+    pub fn species_check(&self) -> PathBuf {
+        self.species_check_dir().join("species_check.json")
+    }
+
     pub fn species_dir(&self, slug: &str) -> PathBuf {
         self.root.join("species").join(slug)
     }

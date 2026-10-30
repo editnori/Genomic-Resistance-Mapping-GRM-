@@ -310,6 +310,9 @@ fn species_of(g: &GenomeRecord) -> Option<String> {
     (words.len() == 2 && words[0].chars().next()?.is_uppercase()).then(|| words.join(" "))
 }
 
+/// The QC reason for genomes `grm species-check` failed.
+pub const SPECIES_CHECK_FAILED: &str = "species check: sequence is another species";
+
 fn qc_failure(g: &GenomeRecord, median_len: f64, cfg: &QcConfig) -> Option<&'static str> {
     if g.genome_quality.as_deref() == Some("Poor") {
         return Some("BV-BRC quality: Poor");
@@ -332,10 +335,13 @@ fn qc_failure(g: &GenomeRecord, median_len: f64, cfg: &QcConfig) -> Option<&'sta
     }
 }
 
+/// `wrong_species` maps the genomes `grm species-check` failed to why. They
+/// are excluded before any other QC, so no dataset counts them.
 pub fn curate(
     records: &[AmrRecord],
     genomes: &[GenomeRecord],
     cfg: &QcConfig,
+    wrong_species: &BTreeMap<String, String>,
     resolver: &mut Resolver,
 ) -> Result<Curated> {
     let mut funnel = Funnel {
@@ -372,6 +378,14 @@ pub fn curate(
             funnel.genomes_without_metadata += 1;
             continue;
         };
+        if let Some(why) = wrong_species.get(*id) {
+            *funnel
+                .genomes_failed_qc
+                .entry(SPECIES_CHECK_FAILED.into())
+                .or_default() += 1;
+            qc_failures.insert(id.to_string(), format!("{SPECIES_CHECK_FAILED}: {why}"));
+            continue;
+        }
         let Some(sp) = species_of(g) else {
             *funnel
                 .genomes_failed_qc
@@ -740,7 +754,14 @@ mod tests {
             })
             .collect();
         let mut resolver = Resolver::new(Default::default());
-        let curated = curate(&records, &genomes, &QcConfig::default(), &mut resolver).unwrap();
+        let curated = curate(
+            &records,
+            &genomes,
+            &QcConfig::default(),
+            &BTreeMap::new(),
+            &mut resolver,
+        )
+        .unwrap();
 
         let label = |id: &str| {
             curated
@@ -805,6 +826,7 @@ mod tests {
             records,
             genomes,
             &cfg,
+            &BTreeMap::new(),
             &mut Resolver::new(Default::default()),
         )
         .unwrap()
@@ -838,6 +860,50 @@ mod tests {
         let d = &reported.datasets[0];
         let counts = (d.n_resistant, d.n_susceptible, d.n_labels_from_mic);
         assert_eq!(counts, (24, 30, 0));
+    }
+
+    #[test]
+    fn species_check_failures_are_excluded_before_qc_and_from_class_counts() {
+        let (records, genomes) = reported_and_inferred(30, 30, 0);
+        let wrong = BTreeMap::from([("562.0".to_string(), "Mash distance 0.3".to_string())]);
+        let curated = curate(
+            &records,
+            &genomes,
+            &QcConfig::default(),
+            &wrong,
+            &mut Resolver::new(Default::default()),
+        )
+        .unwrap();
+        let d = &curated.datasets[0];
+        assert_eq!((d.n_resistant, d.n_susceptible), (29, 30));
+        assert!(curated.phenotypes.iter().all(|p| p.genome_id != "562.0"));
+        assert_eq!(
+            curated.qc_failures["562.0"],
+            format!("{SPECIES_CHECK_FAILED}: Mash distance 0.3")
+        );
+        assert_eq!(curated.funnel.genomes_failed_qc[SPECIES_CHECK_FAILED], 1);
+        assert_eq!(curated.funnel.genomes_passing_qc, 59);
+    }
+
+    /// A failed genome is excluded for its species check even when its
+    /// metadata names no species, which the next QC step would report.
+    #[test]
+    fn the_species_check_exclusion_comes_before_the_no_species_qc() {
+        let (records, mut genomes) = reported_and_inferred(30, 30, 0);
+        assert_eq!(genomes[0].genome_id, "562.0");
+        genomes[0].species = None;
+        let wrong = BTreeMap::from([("562.0".to_string(), "Mash distance 0.3".to_string())]);
+        let curated = curate(
+            &records,
+            &genomes,
+            &QcConfig::default(),
+            &wrong,
+            &mut Resolver::new(Default::default()),
+        )
+        .unwrap();
+        assert!(curated.qc_failures["562.0"].starts_with(SPECIES_CHECK_FAILED));
+        assert_eq!(curated.funnel.genomes_failed_qc.get("no species"), None);
+        assert_eq!(curated.funnel.genomes_failed_qc[SPECIES_CHECK_FAILED], 1);
     }
 
     #[test]

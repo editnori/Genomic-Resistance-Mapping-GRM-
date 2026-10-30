@@ -45,6 +45,20 @@ enum Command {
         #[arg(long, env = "GRM_SIGDRUG_VOCABULARY")]
         sigdrug_vocabulary: Option<PathBuf>,
     },
+    /// Compare each curated species' selected genomes with the species'
+    /// reference genome (Mash distance and GC) and record the genomes whose
+    /// sequence is another species, which `grm curate` then excludes.
+    SpeciesCheck {
+        /// Only sketch the FASTA files on hand into the sketch cache, for a
+        /// check that runs elsewhere.
+        #[arg(long)]
+        sketch_only: bool,
+        /// Choose references afresh and judge every genome without its
+        /// recorded verdict. The genomes the existing species check
+        /// recorded are still judged, so the ones curation dropped stay out.
+        #[arg(long)]
+        reset: bool,
+    },
     /// Count k-mers for each downloaded genome of the species, with
     /// assembly stats and catalog gene calls.
     Count {
@@ -163,6 +177,7 @@ fn run(cli: Cli) -> Result<()> {
             min_class,
             sigdrug_vocabulary,
         } => run_curate(&layout, cap, min_class, sigdrug_vocabulary),
+        Command::SpeciesCheck { sketch_only, reset } => species_check(&layout, sketch_only, reset),
         Command::Count {
             species,
             k,
@@ -477,6 +492,9 @@ struct SpeciesSelection {
     datasets: usize,
     labeled_genomes: usize,
     selected_genomes: usize,
+    /// Selected genomes the species check has no verdict for, typically
+    /// ones not downloaded when it ran; None without a species check.
+    selected_unchecked: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -517,7 +535,18 @@ fn run_curate(
         }
     };
     let mut resolver = drugs::Resolver::new(vocab);
-    let curated = curate::curate(&records, &genomes, &cfg, &mut resolver)?;
+    let check_path = layout.species_check();
+    let check = if check_path.exists() {
+        Some(grm::species_check::read(&check_path)?)
+    } else {
+        eprintln!(
+            "no species check at {}; curating without one (run `grm species-check` to drop genomes of another species)",
+            check_path.display()
+        );
+        None
+    };
+    let wrong_species = check.as_ref().map(|c| c.failures()).unwrap_or_default();
+    let curated = curate::curate(&records, &genomes, &cfg, &wrong_species, &mut resolver)?;
 
     let dir = layout.curated();
     std::fs::create_dir_all(&dir)?;
@@ -578,6 +607,17 @@ fn run_curate(
             .collect::<BTreeSet<_>>()
             .len();
         let ids = curate::select_genomes(&curated.phenotypes, &curated.datasets, species, cap);
+        let selected_unchecked = check.as_ref().map(|c| {
+            let checked: BTreeSet<&str> = c
+                .genomes
+                .iter()
+                .filter(|g| g.species == species)
+                .map(|g| g.genome_id.as_str())
+                .collect();
+            ids.iter()
+                .filter(|id| !checked.contains(id.as_str()))
+                .count()
+        });
         let path = layout.species_dir(&slug).join("genomes.txt");
         ensure_parent(&path)?;
         std::fs::write(&path, ids.join("\n") + "\n")?;
@@ -587,6 +627,7 @@ fn run_curate(
             datasets: n_datasets,
             labeled_genomes: labeled,
             selected_genomes: ids.len(),
+            selected_unchecked,
         });
     }
     selections.sort_by_key(|a| std::cmp::Reverse(a.labeled_genomes));
@@ -607,6 +648,92 @@ fn run_curate(
             s.species, s.datasets, s.labeled_genomes, s.selected_genomes
         );
     }
+    Ok(())
+}
+
+fn species_check(layout: &Layout, sketch_only: bool, reset: bool) -> Result<()> {
+    #[derive(serde::Deserialize)]
+    struct Row {
+        species: String,
+        slug: String,
+    }
+    let path = layout.curated().join("species.json");
+    let rows: Vec<Row> = serde_json::from_slice(
+        &std::fs::read(&path)
+            .with_context(|| format!("run `grm curate` first ({})", path.display()))?,
+    )?;
+    let selected = rows
+        .into_iter()
+        .map(|r| {
+            let ids = read_lines(&layout.species_dir(&r.slug).join("genomes.txt"))?;
+            Ok((r.species, r.slug, ids))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    // Genomes an earlier check judged stay in, even after --reset: curation
+    // has since dropped the failures from genomes.txt. Without --reset its
+    // references and verdicts stay too.
+    let earlier_path = layout.species_check();
+    let earlier = if earlier_path.exists() {
+        Some(grm::species_check::read(&earlier_path)?)
+    } else {
+        None
+    };
+    let lists = grm::species_check::cohort_lists(selected, earlier.as_ref());
+    let started = std::time::Instant::now();
+    let cohorts = grm::species_check::load_cohorts(layout, &lists)?;
+    let sketched: usize = cohorts.iter().map(|c| c.sketches.len()).sum();
+    let missing: usize = cohorts.iter().map(|c| c.unchecked.len()).sum();
+    eprintln!(
+        "{sketched} genomes sketched, {missing} without FASTA or sketch, in {:.0}s",
+        started.elapsed().as_secs_f64()
+    );
+    if sketch_only {
+        return Ok(());
+    }
+    if reset && let Some(e) = &earlier {
+        grm::species_check::ensure_recorded_failures_judgeable(&cohorts, e)?;
+    }
+    let recorded = if reset { None } else { earlier.as_ref() };
+    let check = grm::species_check::check(cohorts, &Default::default(), recorded)?;
+    let out = grm::species_check::write(layout, &check)?;
+    for s in &check.species {
+        eprintln!(
+            "  {:<40} {:>5} checked  {:>3} failed  {:>3} borderline  {:>4} unchecked  reference {}",
+            s.species,
+            s.checked,
+            s.failed,
+            s.borderline,
+            s.unchecked.len(),
+            s.reference
+        );
+    }
+    for p in &check.pairs {
+        let outcome = if p.same_group {
+            "borderline, one genomic group"
+        } else {
+            "fail"
+        };
+        eprintln!(
+            "  {} nearer {}: {} genomes ({:.2}%), {outcome}",
+            p.labelled,
+            p.nearer,
+            p.genomes,
+            p.share * 100.0
+        );
+    }
+    for g in &check.genomes {
+        if let Some(now) = &g.kept_fail {
+            eprintln!(
+                "  kept failed {} ({}): recorded as failed, this check judged {now}; --reset to rejudge",
+                g.genome_id, g.species
+            );
+        }
+        if g.verdict == grm::species_check::Verdict::Fail {
+            let why = g.reason.as_deref().unwrap_or("");
+            eprintln!("  fail {} ({}): {why}", g.genome_id, g.species);
+        }
+    }
+    eprintln!("species check written to {}", out.display());
     Ok(())
 }
 
@@ -1184,6 +1311,183 @@ mod tests {
                 .iter()
                 .all(|g| g.genes.is_empty() && g.catalog_version.is_empty())
         );
+    }
+
+    const FOREIGN: [&str; 3] = ["562.103", "562.108", "562.115"];
+
+    /// One species of 60 labelled genomes with FASTA files, three of them
+    /// unrelated sequence filed under it. Resistant calls are the rarer
+    /// class, so a cap of 50 selects all 20 resistant genomes, the foreign
+    /// three among them, and 30 of the 40 susceptible ones.
+    fn species_check_fixture(root: &Path) {
+        let mut rng = ChaCha8Rng::seed_from_u64(9);
+        let random = |rng: &mut ChaCha8Rng| -> Vec<u8> {
+            (0..100_000)
+                .map(|_| b"ACGT"[rng.random_range(0..4)])
+                .collect()
+        };
+        let species_root = random(&mut rng);
+        let (mut amr, mut meta) = (String::new(), String::new());
+        std::fs::create_dir_all(root.join("fasta")).unwrap();
+        std::fs::create_dir_all(root.join("bvbrc")).unwrap();
+        for i in 0..60 {
+            let (id, call) = if i < 20 {
+                (format!("562.{}", 100 + i), "Resistant")
+            } else {
+                (format!("562.{}", 180 + i), "Susceptible")
+            };
+            let seq: Vec<u8> = if FOREIGN.contains(&id.as_str()) {
+                random(&mut rng)
+            } else {
+                species_root
+                    .iter()
+                    .map(|&b| {
+                        if rng.random_bool(0.005) {
+                            b"ACGT"[rng.random_range(0..4)]
+                        } else {
+                            b
+                        }
+                    })
+                    .collect()
+            };
+            let mut fasta = format!(">{id}\n").into_bytes();
+            fasta.extend(&seq);
+            fasta.push(b'\n');
+            std::fs::write(grm::bvbrc::fasta_path(&root.join("fasta"), &id), fasta).unwrap();
+            let record = serde_json::json!({
+                "genome_id": id, "antibiotic": "meropenem", "resistant_phenotype": call,
+                "laboratory_typing_method": "Broth dilution",
+            });
+            amr += &format!("{record}\n");
+            let genome = serde_json::json!({
+                "genome_id": id, "species": "Escherichia coli", "genome_length": "100000",
+            });
+            meta += &format!("{genome}\n");
+        }
+        std::fs::write(root.join("bvbrc/genome_amr.jsonl"), amr).unwrap();
+        std::fs::write(root.join("bvbrc/genomes.jsonl"), meta).unwrap();
+    }
+
+    /// `curate` drops the failed genomes from genomes.txt and selects
+    /// replacements. The check that follows must still judge the dropped
+    /// genomes against the same reference, or the next `curate` lets them
+    /// back in.
+    #[test]
+    fn species_check_and_curate_reach_a_fixed_point() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        species_check_fixture(dir.path());
+        let folds = grm::learn::eval::EvalConfig::default().folds;
+        let selection =
+            || read_lines(&layout.species_dir("escherichia_coli").join("genomes.txt")).unwrap();
+        let foreign: Vec<String> = FOREIGN.map(String::from).to_vec();
+        let state = || {
+            let check: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(layout.species_check()).unwrap()).unwrap();
+            let failed: Vec<String> = check["genomes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|g| g["verdict"] == "fail")
+                .map(|g| g["genome_id"].as_str().unwrap().to_string())
+                .collect();
+            let references: Vec<String> = check["species"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|s| s["reference"].as_str().unwrap().to_string())
+                .collect();
+            let (_, qc): (serde_json::Value, BTreeMap<String, String>) =
+                serde_json::from_slice(&std::fs::read(layout.curated().join("qc.json")).unwrap())
+                    .unwrap();
+            let dropped: BTreeMap<String, String> = qc
+                .into_iter()
+                .filter(|(_, why)| why.starts_with(curate::SPECIES_CHECK_FAILED))
+                .collect();
+            (failed, references, dropped, selection())
+        };
+
+        run_curate(&layout, 50, folds, None).unwrap();
+        let first = selection();
+        assert!(foreign.iter().all(|id| first.contains(id)), "{first:?}");
+        let mut passes = Vec::new();
+        for _ in 0..3 {
+            species_check(&layout, false, false).unwrap();
+            run_curate(&layout, 50, folds, None).unwrap();
+            passes.push(state());
+        }
+        for (failed, _, dropped, selected) in &passes {
+            assert_eq!(failed, &foreign);
+            assert_eq!(dropped.keys().cloned().collect::<Vec<_>>(), foreign);
+            assert_eq!(selected.len(), 50);
+            assert!(
+                selected.iter().all(|id| !foreign.contains(id)),
+                "{selected:?}"
+            );
+        }
+        // The first pass judged the 50 first selected; later passes also
+        // judge the three replacements, so the evidence text may move once.
+        assert_eq!(passes[1].1, passes[0].1, "references moved");
+        assert_eq!(passes[1].3, passes[0].3, "selection moved");
+        assert_eq!(passes[2], passes[1]);
+        let check = grm::species_check::read(&layout.species_check()).unwrap();
+        assert_eq!(check.species[0].checked, 53);
+    }
+
+    /// `--reset` drops the recorded references and verdicts, not the
+    /// recorded genomes. Curation has removed the failed ones from
+    /// genomes.txt, so a reset check that forgot them would let the next
+    /// curate select them again.
+    #[test]
+    fn a_reset_check_still_judges_the_genomes_curation_dropped() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        species_check_fixture(dir.path());
+        let folds = grm::learn::eval::EvalConfig::default().folds;
+        run_curate(&layout, 50, folds, None).unwrap();
+        species_check(&layout, false, false).unwrap();
+        run_curate(&layout, 50, folds, None).unwrap();
+        species_check(&layout, false, true).unwrap();
+        run_curate(&layout, 50, folds, None).unwrap();
+        let check = grm::species_check::read(&layout.species_check()).unwrap();
+        let failures = check.failures();
+        let failed: Vec<&str> = failures.keys().map(String::as_str).collect();
+        assert_eq!(failed, FOREIGN);
+        assert_eq!(check.species[0].checked, 53);
+        let selected =
+            read_lines(&layout.species_dir("escherichia_coli").join("genomes.txt")).unwrap();
+        assert!(
+            selected.iter().all(|id| !FOREIGN.contains(&id.as_str())),
+            "{selected:?}"
+        );
+    }
+
+    /// A reset check cannot judge a recorded failure with no sketch and no
+    /// FASTA file, so it stops instead of dropping it from the record. A
+    /// check without --reset keeps its recorded verdict.
+    #[test]
+    fn a_reset_check_stops_on_a_recorded_failure_it_cannot_judge() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        species_check_fixture(dir.path());
+        let folds = grm::learn::eval::EvalConfig::default().folds;
+        run_curate(&layout, 50, folds, None).unwrap();
+        species_check(&layout, false, false).unwrap();
+        run_curate(&layout, 50, folds, None).unwrap();
+        let gone = FOREIGN[1];
+        std::fs::remove_file(grm::species_check::sketch_path(&layout, gone)).unwrap();
+        std::fs::remove_file(grm::bvbrc::fasta_path(&layout.fasta_dir(), gone)).unwrap();
+
+        let err = species_check(&layout, false, true).unwrap_err().to_string();
+        assert!(
+            err.contains(&format!("cannot judge {gone} (Escherichia coli)")),
+            "{err}"
+        );
+        species_check(&layout, false, false).unwrap();
+        let check = grm::species_check::read(&layout.species_check()).unwrap();
+        let failures = check.failures();
+        let failed: Vec<&str> = failures.keys().map(String::as_str).collect();
+        assert_eq!(failed, FOREIGN);
     }
 
     #[test]
