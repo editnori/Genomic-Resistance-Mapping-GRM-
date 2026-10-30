@@ -29,9 +29,10 @@ checked as one release. A revision-10 root holds only revision-10 reports.
 A report may list kset_duplicates: the samples with identical kset digests,
 one ascending list of two or more sample indices per group, ordered by first
 member and disjoint. Each group shares a lineage and sits whole in one test
-fold of every split that ran. A report without the field has no such group,
-or comes from a revision before duplicate isolation; the metric audit tells
-the two apart from counted.json.
+fold of every split that ran. Only reports from DUPLICATE_ISOLATION_REVISION
+on may list it. A report without the field has no such group or predates
+isolation; only the metric audit, which reads counted.json, can tell whether
+a field that should be there is missing.
 
 The best learner follows the schema. In schema 2 it is the highest
 random-split balanced accuracy among scm, cart, rf, gbt, and lasso rows
@@ -58,6 +59,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from result_scope import select_results
 
 LEARNERS = ["scm", "cart", "rf", "gbt", "lasso"]
+# The first evaluation revision that isolates kset duplicates; audit.py
+# holds the same value.
+DUPLICATE_ISOLATION_REVISION = 10
 NO_WINNER = "no learner calls every isolate"
 DONE = re.compile(r"\s+(\S+__\S+) done in \S+ \((.*)\)$")
 WINNER = re.compile(r"best random-split learner among those that call every isolate: (\S+) (\S+)")
@@ -278,6 +282,7 @@ def main():
             for split in report["splits"]:
                 if not split.get("unavailable_reason"):
                     assert all(len({split["test_fold"][i] for i in g}) == 1 for g in duplicates), ("a kset duplicate group spans test folds", path, split["scheme"])
+            assert audit["revision"] >= DUPLICATE_ISOLATION_REVISION, ("kset_duplicates in a report before revision %d" % DUPLICATE_ISOLATION_REVISION, path, audit["revision"])
         mic = report.get("mic")
         if mic:
             assert len(mic["predicted"]) == n, path

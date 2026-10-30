@@ -9,10 +9,13 @@
 //! identify a causal resistance mechanism.
 //!
 //! Both outer splits keep each k-mer-identical duplicate group (`duplicates`)
-//! whole in one test fold, so no genome is scored by a fit that trained on
-//! its own copy. The random folds move each group by `isolate_groups`; the
-//! lineage folds hold them already, since identical genomes share a lineage.
-//! Inner tuning folds are drawn as before and may split a group.
+//! whole in one test fold, so no held-out score in `splits` comes from a fit
+//! that trained on the genome's own copy. The random folds move each group
+//! by `isolate_groups`; the lineage folds hold them already, since identical
+//! genomes share a lineage. Inner tuning folds and the MIC regression's own
+//! folds (`evaluate_mic`) are drawn as before and may split a group. A move
+//! can leave a random test fold without one class, and then the dataset
+//! fails like any invalid random split (docs/duplicate-isolation.md).
 //!
 //! Hyperparameters are chosen inside each training fold (inner folds follow
 //! the outer scheme), and feature screening sees only fitting samples.
@@ -1541,6 +1544,57 @@ mod tests {
         assert_eq!(
             serde_json::to_vec(&plain.finals).unwrap(),
             serde_json::to_vec(&grouped.finals).unwrap()
+        );
+    }
+
+    #[test]
+    fn a_move_that_empties_a_class_from_a_random_fold_fails_the_dataset() {
+        // Ten resistant genomes in 80, two per stratified fold. Each resistant
+        // genome of one fold is paired with a lower-index resistant genome in
+        // another fold, so every tie sends it there and the fold keeps none.
+        // A known limit: min_class >= folds no longer guarantees a valid
+        // random split once groups move.
+        let n = 80;
+        let y = Bits::from_indices(n, 0..10);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        x.push_row(Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0)).words());
+        let mut groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        let mut cfg = small_config();
+        cfg.folds = 5;
+        let base = stratified_folds(&y, cfg.folds, cfg.seed);
+        let duplicates = (0..cfg.folds)
+            .find_map(|t| {
+                let mut used = vec![];
+                let mut pairs = vec![];
+                for r in (0..10).filter(|&i| base[i] == t) {
+                    let p = (0..r).find(|&p| base[p] != t && !used.contains(&p))?;
+                    used.push(p);
+                    pairs.push(vec![p, r]);
+                }
+                Some(pairs)
+            })
+            .unwrap();
+        for g in &duplicates {
+            groups[g[1]] = groups[g[0]];
+        }
+        let plain = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg);
+        assert!(plain.is_ok(), "{:#}", plain.err().unwrap());
+        let error = evaluate(
+            "fixture__fixturemycin",
+            &x,
+            &y,
+            &groups,
+            &duplicates,
+            3,
+            None,
+            &cfg,
+        )
+        .err()
+        .unwrap();
+        assert!(
+            format!("{error:#}").contains("invalid random outer evaluation"),
+            "{error:#}"
         );
     }
 
