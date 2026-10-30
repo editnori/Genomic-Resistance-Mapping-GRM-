@@ -19,6 +19,11 @@ fold whose record has no selected point (an empty path) has no calls.
 Revision 9 changes only the lasso's active-set solve. Its reports have the
 revision-8 fields and meet the revision-8 rules.
 
+Every report in a root must have the same evaluation revision. A run stopped
+part-way leaves new reports beside old ones, and revision 8's and 9's are
+the same shape, so a root that mixes revisions is refused rather than
+checked as one release.
+
 The best learner follows the schema. In schema 2 it is the highest
 random-split balanced accuracy among scm, cart, rf, gbt, and lasso rows
 that call every isolate on every split that ran, or none. Schema-1 runs
@@ -275,11 +280,13 @@ def main():
                         "best_learner": None if best is None else best[0], "log_checked": logged is not None and report["id"] in logged,
                         "unavailable_splits": {s["scheme"]: s["unavailable_reason"] for s in report["splits"] if s.get("unavailable_reason")}})
 
+    revisions = sorted({r["revision"] for r in checked})
+    assert len(revisions) <= 1, ("root mixes evaluation revisions", revisions)
     receipt = {"checked_at": datetime.datetime.now(datetime.timezone.utc).isoformat(), "log": None if args.log is None else str(args.log), "skip_log": None if skip_log is None else str(skip_log), "reports": checked, **scope}
     out = args.out or root / "logs/result-validation-receipt.json"
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps(receipt, indent=2) + "\n")
-    print(json.dumps({"reports": len(checked), "revisions": sorted({r["revision"] for r in checked}), "schemas": sorted({r["schema"] for r in checked}),
+    print(json.dumps({"reports": len(checked), "revisions": revisions, "schemas": sorted({r["schema"] for r in checked}),
                       "rows_with_no_call": sum(r["rows_with_no_call"] for r in checked), "without_best_learner": sum(r["best_learner"] is None for r in checked),
                       "log_checked": sum(r["log_checked"] for r in checked), **scope}))
 

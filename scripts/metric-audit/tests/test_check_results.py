@@ -372,6 +372,31 @@ class SchemaAndRevision(Case):
         rep["evaluation"]["revision"] = 10
         self.fails(rep, "'revision'")
 
+    def test_a_root_that_mixes_revisions_fails(self):
+        # Two valid reports of one species; only their revisions differ.
+        other = fx.SLUG + "__othermycin"
+
+        def run(first, second):
+            second = dict(second, id=other)
+            with tempfile.TemporaryDirectory() as tmp:
+                fx.write_json(os.path.join(tmp, "curated", "datasets.json"),
+                              [{"id": fx.ID, "species_slug": fx.SLUG}, {"id": other, "species_slug": fx.SLUG}])
+                for report in (first, second):
+                    fx.write_json(os.path.join(tmp, "species", fx.SLUG, "results", report["id"] + ".json"), report)
+                return fx.run_checker(tmp)
+
+        same = run(revision8_report(revision=9), revision8_report(revision=9))
+        self.assertEqual(same.returncode, 0, same.stderr[-1500:])
+        self.assertEqual(json.loads(same.stdout)["revisions"], [9])
+        for revisions in ((8, 9), (7, 9), (7, 8)):
+            with self.subTest(revisions=revisions):
+                mixed = run(*(revision8_report(revision=r) if r >= 8 else fx.make_report(revision=r) for r in revisions))
+                self.assertNotEqual(mixed.returncode, 0)
+                last = mixed.stderr.strip().splitlines()[-1]
+                self.assertTrue(last.startswith("AssertionError"), mixed.stderr[-1500:])
+                self.assertIn("root mixes evaluation revisions", last)
+                self.assertIn(str(list(revisions)), last)
+
 
 class LassoSolverStatus(Case):
     def test_missing_per_fold_lasso_status_fails(self):
