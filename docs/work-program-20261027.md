@@ -1,6 +1,6 @@
 # GRM work program and completion ledger
 
-Snapshot: 2026-10-30 09:25 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
+Snapshot: 2026-10-30 19:55 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
 
 ## Status vocabulary
 
@@ -705,3 +705,21 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
   - The container log shows the last accepted ssh sessions at about 12:37Z, then `remote port forwarding failed for listen port 29606`. Since then, the container's reverse tunnel to the proxy (`ssh3.vast.ai` = `184.72.168.0:22`) times out every ~12 s. The direct port 38018 is dead too; outbound HTTPS works, so the site keeps serving revision 9.
   - The instance is `running`. `disk_usage` read 198 of 300 GiB at 14:30Z, against 259 at the outage, which fits the driver having removed g7's ksets. It can't say whether g8 has ended.
   - `vastai execute` is refused on running instances, so there is no side channel. Ruling unchanged: wait, with no restart; main watches the disk and both ports every 2 min.
+- 2026-10-30 19:1x UTC: **main resumed after rate limits.** Account `layth88808` hit its weekly limit at about 16:35Z (it resets Nov 1, 18:00Z), stopping the main thread and five agents. Main moved H's owner, N's owner, L's owner and the J and D re-checks to `claudeAgent` and `claudeAgent_layth888`, with their context unchanged.
+  - **M:** APPROVED on the combined M and N re-check (`/home/layth/review/grm-recheck-task-mn-20261030/REVIEW.md`, `b0fd2da7…d3b3`): 0 High, 0 Medium, 1 Low. M and N agreed on all 387,267 full-event reads. M has a closing round on rule 6 v2 and the `ensure_ascii` pin.
+  - **N:** DEFECTS, 2 Medium and 2 Low. The positive control is checked per fit rather than per key, and no perturbation moves non-training dates. Round 3 is running.
+  - **O:** APPROVED on re-check (`/home/layth/review/grm-recheck-task-o-20261030/REVIEW.md`, `95257aa0…7a3e`). Main closed its one Low by adding two test assertions; the re-checker's N1 and N13 mutants now fail (`/home/layth/review/grm-main-o-l1-20261030/RECEIPT.md`).
+  - **P:** round 2 is done, with 45 tests and 89 of 93 mutants caught (4 equivalent). Rule 6 v2 is shared verbatim by M, N and P. One re-check covers M, N and P after N's round 3.
+  - **K:** round 4 is done, with 117 tests and all 86 mutants caught. The L → J → K end-to-end run gave 0 gaps and 0 failures. A fresh K re-check follows J's.
+  - **I:** the gate passed (lib 280 passed, 0 failed) and all 7 mutants were caught. Its independent review has started.
+  - **H:** in the laptop heavy slot. The queue after H is the G review, the F review, A's re-check, then the I review.
+  - **Shared laptop memory rule:** adopted from 62c28a5b's decision 433. No new agent starts above 95 of 113 GB commit or below 4 GB free RAM, and at 105 GB the newest, lowest-priority agent pauses.
+- 2026-10-30 19:35 UTC: **one Vast reboot, under the GRM admin's go; ssh not restored.** 62c28a5b agreed beforehand. The API showed CPU at 0.03% and disk flat at 198 of 300 GiB since 14:30Z, so revision 10 was no longer computing.
+  - `vastai reboot instance 57398482` was accepted at 19:35:25Z, and the container restarted (sshd started listening at 19:35:39Z).
+  - The reverse tunnel to `ssh3.vast.ai` (184.72.168.0:22) still times out during the banner exchange, and 38018 was still refused at 19:50:34Z. From the laptop, ssh1–ssh9 all answer normally, so the fault is the host's network.
+  - genomicresistance.com answered 200 on all 32 checks. The disk and `/var/tmp/opus-builders` were kept. The reboot is not to be repeated.
+  - Receipts: `/home/layth/review/grm-main-vast-reboot-20261030/` (`SHA256SUMS`).
+  - Credit was $10.44 at about 19:46Z at $1.02/h, so it runs dry about 06:00Z Oct 31 unless Layth tops it up.
+- 2026-10-30 19:5x UTC: **ways back into Vast.**
+  - **The support ticket** (`support-ticket-draft.md` in the receipts folder) is approved to send. The Vast CLI has no support command, and the in-app browser has no signed-in Vast session, so it goes out from Layth's Vast account. No ticket number yet.
+  - **An ssh route through the site's Cloudflare tunnel** is approved in principle. Because the connector runs cloudflared with `--token-file`, routes are set in Cloudflare. It needs Layth's Cloudflare action: a hostname on the existing tunnel pointing to `ssh://localhost:22`, behind an Access policy limited to his email. No unauthenticated ssh hostname. Main does the laptop side (`cloudflared access ssh` under a new alias) once he confirms.
