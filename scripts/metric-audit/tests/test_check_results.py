@@ -327,6 +327,33 @@ class TestFold(Case):
         self.fails(rep, "unavailable split")
 
 
+class KsetDuplicates(Case):
+    def test_an_isolated_pair_passes(self):
+        rep, _ = fx.isolated_report()
+        self.passes(rep, [rf_line(rep)])
+
+    def test_a_pair_across_two_test_folds_fails(self):
+        rep, _ = fx.isolated_report()
+        b = rep["kset_duplicates"][0][1]
+        rep["splits"][0]["test_fold"][b] = fx.FOLDS["random"][b]
+        fx.rescore(rep)
+        self.fails(rep, "a kset duplicate group spans test folds")
+
+    def test_a_pair_across_two_lineages_fails(self):
+        rep = fx.make_report()
+        rep["kset_duplicates"] = [[0, 5]]
+        self.fails(rep, "a kset duplicate group spans lineages")
+
+    def test_malformed_groups_fail(self):
+        for groups, reason in [([], "malformed kset_duplicates"), ([[3]], "malformed kset_duplicates"),
+                               ([[2, 1]], "malformed kset_duplicates"), ([[0, 1], [1, 2]], "overlapping"),
+                               ([[5, 6], [0, 1]], "out of order"), ([[78, 80]], "out of range")]:
+            with self.subTest(groups=groups):
+                rep = fx.make_report()
+                rep["kset_duplicates"] = groups
+                self.fails(rep, reason)
+
+
 class SchemaAndRevision(Case):
     def test_revision7_in_schema1_fails(self):
         rep = fx.make_report()

@@ -196,6 +196,11 @@ pub struct DatasetReport {
     pub lineage_threshold: f32,
     pub catalog_groups: Vec<String>,
     pub samples: Vec<Sample>,
+    /// The k-mer-identical duplicate groups (`kset_duplicates`) as sample
+    /// indices. Each sits whole in one test fold of every split that ran.
+    /// Left out when there are none, so such a report is unchanged.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub kset_duplicates: Vec<Vec<usize>>,
     pub splits: Vec<SplitResult>,
     pub catalog: Option<CatalogBaseline>,
     pub panels: Vec<PanelResult>,
@@ -497,6 +502,7 @@ pub fn analyze_dataset(
         min_support,
         ds,
         groups,
+        duplicates,
     }) = eval_inputs(input, spec)?
     else {
         return Ok(None);
@@ -533,6 +539,7 @@ pub fn analyze_dataset(
         &ds.x,
         &ds.y,
         &groups,
+        &duplicates,
         min_support,
         Some(MicInput {
             mic: &mics,
@@ -736,6 +743,7 @@ pub fn analyze_dataset(
         lineage_threshold: input.structure.lineages.threshold,
         catalog_groups,
         samples,
+        kset_duplicates: duplicates,
         splits: out.splits,
         catalog: catalog_baseline,
         panels,
@@ -756,6 +764,8 @@ struct EvalInputs<'a> {
     ds: Dataset,
     /// Each sample's lineage.
     groups: Vec<u32>,
+    /// The cohort's k-mer-identical duplicate groups (`kset_duplicates`).
+    duplicates: Vec<Vec<usize>>,
 }
 
 /// The dataset's cohort, its projection at the dataset's support floor, and
@@ -781,13 +791,29 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
         .iter()
         .map(|&col| input.structure.lineages.labels[col])
         .collect();
+    let duplicates = kset_duplicates(&c.columns, &input.matrix.summary.kset_digests);
     Ok(Some(EvalInputs {
         cohort: c,
         resistant,
         min_support,
         ds,
         groups,
+        duplicates,
     }))
+}
+
+/// The samples whose genomes have the same kset digest, that is the same
+/// canonical k-mer set: one ascending list of sample indices per group of two
+/// or more, ordered by first member. `columns` holds each sample's matrix
+/// column and `digests` each column's digest.
+fn kset_duplicates(columns: &[usize], digests: &[String]) -> Vec<Vec<usize>> {
+    let mut by_digest: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (i, &col) in columns.iter().enumerate() {
+        by_digest.entry(digests[col].as_str()).or_default().push(i);
+    }
+    let mut groups: Vec<Vec<usize>> = by_digest.into_values().filter(|g| g.len() > 1).collect();
+    groups.sort_unstable();
+    groups
 }
 
 /// Runs only the lasso fits of each named dataset's evaluation
@@ -836,6 +862,7 @@ pub fn lasso_scan(
                 &e.ds.x,
                 &e.ds.y,
                 &e.groups,
+                &e.duplicates,
                 e.min_support,
                 cfg,
                 &mut |event| observe(id, event),
@@ -1639,6 +1666,19 @@ mod tests {
         write_atomic(&path, b"{}").unwrap();
         assert_eq!(std::fs::read(&path).unwrap(), b"{}");
         assert!(!dir.path().join("d.json.tmp").exists());
+    }
+
+    #[test]
+    fn kset_duplicates_group_samples_by_digest_in_sample_order() {
+        let digests: Vec<String> = ["a", "b", "a", "c", "b", "a", "d"]
+            .map(String::from)
+            .to_vec();
+        // Samples 0..7 sit in columns 6, 0, 2, 4, 5, 1, 3: digests d a a b a b c.
+        assert_eq!(
+            kset_duplicates(&[6, 0, 2, 4, 5, 1, 3], &digests),
+            [vec![1, 2, 4], vec![3, 5]]
+        );
+        assert!(kset_duplicates(&[0, 1, 3, 6], &digests).is_empty());
     }
 
     #[test]
@@ -2645,6 +2685,7 @@ mod tests {
             &e.ds.x,
             &e.ds.y,
             &e.groups,
+            &e.duplicates,
             e.min_support,
             None,
             &cfg,
