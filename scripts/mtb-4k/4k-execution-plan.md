@@ -643,9 +643,7 @@ or out of either set, that is a stop for the parent, not a new rule.
     did change, the confound returns for lasso only. The revision-9 note says no non-lasso bytes
     change from code, and a degenerate optimum can move lasso held-out scores by about 0.1 at
     equal objective. So bound it by reading the four non-lasso learners (scm, cart, rf, gbt) and
-    the catalog row apart from lasso. Optionally, retrain the uncleaned prefix on revision 10 as a
-    solver control. That is the same cohort, not the dropped ablation, and costs about 35 minutes
-    for prefix and about 1 h 30 min for full on Vast.
+    the catalog row apart from lasso.
   - **Duplicate isolation is a second revision-10 change.** If it changes how duplicates are
     grouped into folds or lineages, the two sides also differ in fold construction, not only in
     cohort. That is a method change, so name it in any statement. Bound it by comparing the
@@ -665,8 +663,19 @@ or out of either set, that is a stop for the parent, not a new rule.
     prefix against 1,584,185 in added. Removing the two drops those k-mers from the kept set, and
     with them the screening of every learner. A difference no larger than the run-to-run fold
     noise is not attributable to anything.
-  - **Cost.** The comparison itself is light, but no script does it yet. `compare_cohorts.py`
-    compares cohorts within one run, so a cross-run comparator mode is new code and needs review.
+  - **Ruling (the GRM admin thread, 2026-10-30, after `PLAN_R6=READY`).**
+    1. **No uncleaned control run on revision 10.** No quantitative with/without claim will be
+       made, so there is nothing to deconfound. The difference is 2 genomes of 2,000 or 4,000, at
+       bottom-sketch Jaccard 0.001, and the replacements reshuffle the cohort.
+    2. **No cross-run comparator.** The with/without difference is described only qualitatively.
+       The write-up says plainly that the difference is cohort-level, confounded with revision
+       10's duplicate isolation and any solver change, and not measured. It gives no number and no
+       direction for the effect of the two genomes. The bounding readings and the "can support"
+       list above describe what a measured comparison could have shown; none is run.
+    3. **What counts as the result.** The uncleaned revision-9 run is the first complete MTB 4k
+       result, and its section 8 is also the like-for-like comparison with revision 7. This
+       cleaned revision-10 run's own section 8, prefix against full inside the revision, becomes
+       the canonical result once it exists.
 - **(a) Alternative: one cleaned run that is also the cohorts' rerun.** This applies only if the
   species check lands in the revision that reruns the 4k cohorts. Then there is no with/without
   comparison: the admin dropped it as low value, since the two genomes have bottom-sketch Jaccard
