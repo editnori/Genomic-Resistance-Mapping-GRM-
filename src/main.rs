@@ -495,7 +495,9 @@ fn run_curate(
 ) -> Result<()> {
     // `grm learn` gates each dataset at this minimum; below the outer fold
     // count, a random-split fold lacks a class and `grm learn` stops with an
-    // error.
+    // error. At or above it, moving duplicate groups whole
+    // (`learn::isolate_groups`) can still empty a fold of one class in a
+    // small cohort with many duplicates (docs/duplicate-isolation.md).
     let folds = grm::learn::eval::EvalConfig::default().folds;
     anyhow::ensure!(
         min_class >= folds,

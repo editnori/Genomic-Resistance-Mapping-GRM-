@@ -327,9 +327,10 @@ class TestFold(Case):
 
 
 class KsetDuplicates(Case):
-    def test_an_isolated_pair_passes(self):
+    def test_an_isolated_pair_before_revision_10_fails_on_the_revision_gate(self):
+        # A well-formed isolated pair, so only the revision gate refuses it.
         rep, _ = fx.isolated_report()
-        self.passes(rep, [rf_line(rep)])
+        self.fails(rep, "kset_duplicates in a report before revision 10")
 
     def test_a_pair_across_two_test_folds_fails(self):
         rep, _ = fx.isolated_report()

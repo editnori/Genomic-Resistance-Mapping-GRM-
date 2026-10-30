@@ -195,8 +195,9 @@ pub struct DatasetReport {
     pub catalog_groups: Vec<String>,
     pub samples: Vec<Sample>,
     /// The k-mer-identical duplicate groups (`kset_duplicates`) as sample
-    /// indices. Each sits whole in one test fold of every split that ran.
-    /// Left out when there are none, so such a report is unchanged.
+    /// indices. Each sits whole in one test fold of every entry in `splits`
+    /// that ran; `mic` draws its own folds and may split one. Left out when
+    /// there are none, so such a report is unchanged.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub kset_duplicates: Vec<Vec<usize>>,
     pub splits: Vec<SplitResult>,
