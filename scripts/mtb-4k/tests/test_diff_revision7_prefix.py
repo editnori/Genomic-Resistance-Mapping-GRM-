@@ -47,6 +47,11 @@ class Diff(unittest.TestCase):
         cls.tmp = tempfile.TemporaryDirectory()
         rules = fx.make_rules({"prefix": ("amikacin", "isoniazid")})
         cls.r8 = fx.build_cohort(Path(cls.tmp.name) / "r8", "prefix", rules) / "data"
+        # The fixtures stamp the suite's revision (MTB4K_TEST_PROFILE); the script under test compares revision 8 with 7.
+        for path in (cls.r8 / "species" / SLUG / "results").glob("*.json"):
+            report = json.loads(path.read_text())
+            report["evaluation"]["revision"] = 8
+            path.write_text(json.dumps(report))
 
     @classmethod
     def tearDownClass(cls):

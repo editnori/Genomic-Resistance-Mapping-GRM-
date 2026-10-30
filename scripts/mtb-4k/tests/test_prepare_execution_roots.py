@@ -222,7 +222,8 @@ class Prepare(unittest.TestCase):
 
     def test_the_frozen_matched2k_hash_is_the_contracts(self):
         sys.path.insert(0, str(HERE))
-        import report_contract as vc  # noqa: E402
+        import profile_boot as pb  # noqa: E402
+        vc = pb.vc
         self.assertEqual(self.saved[3]["matched2k"][0], vc.RULES["matched2k"].genomes_sha256)
 
     def test_check_lane_refuses_links_where_grm_writes(self):

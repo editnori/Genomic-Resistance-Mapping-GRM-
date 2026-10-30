@@ -28,6 +28,7 @@ import argparse,contextlib,copy,decimal,functools,importlib.util,io,json,math,sh
 from pathlib import Path
 LANE=Path(__file__).resolve().parents[1]; REVIEW=None
 sys.path.insert(0,str(LANE)); sys.path.insert(0,str(LANE/"tests"))
+import profile_boot as pb  # noqa: E402  (MTB4K_TEST_PROFILE, before report_contract loads)
 import report_contract as vc, run_revision8_checks as wrapper, fixtures as fx
 D=decimal.Decimal; decimal.getcontext().prec=100
 TOL=D("2e-12"); EXTREME_P=1-1e-12
@@ -190,7 +191,7 @@ class WrapperTests(unittest.TestCase):
             if mutate is not None: fx.mutate_report(root,self.did,mutate)
             stdout=io.StringIO(); stderr=io.StringIO()
             with contextlib.redirect_stdout(stdout),contextlib.redirect_stderr(stderr):
-                code=wrapper.main(wrapper_args(root),rules=self.rules)
+                code=wrapper.main(pb.argv(wrapper_args(root)),rules=self.rules)
             result={"label":label,"cohort":cohort,"exit":code,"checker_exists":(root/"checker.json").exists(),
                     "audit_exists":(root/"audit.json").exists(),"summary_exists":(root/"summary.json").exists(),
                     "stdout":stdout.getvalue(),"stderr":stderr.getvalue()}
@@ -263,16 +264,16 @@ class WrapperTests(unittest.TestCase):
                 for key in ("selected_convergence","refit_convergence"):
                     fit[key]={"irls_steps":2,"sweep_cap_hits":1,"converged":True}
         case=self.run_case("valid_intermediate_cap_short_and_per_fold_empty",mutate=valid_short)
-        self.positive(case); self.assertTrue(empty); self.assertEqual(case["by_revision"],{"8":22})
+        self.positive(case); self.assertTrue(empty); self.assertEqual(case["by_revision"],{str(vc.REVISION):22})
         def final_empty(r):
             r["models"]["lasso_fit"]=fx.fit(empty=True); r["models"]["lasso"]=None
         case=self.run_case("valid_final_empty_path",mutate=final_empty)
-        self.positive(case); self.assertEqual(case["by_revision"],{"8":22})
+        self.positive(case); self.assertEqual(case["by_revision"],{str(vc.REVISION):22})
 
     def test_added_14_and_eight_skips_wrapper(self):
         case=self.run_case("added_14_and_eight_skips",cohort="added")
         self.positive(case)
-        self.assertEqual(case["by_revision"],{"8":14})
+        self.assertEqual(case["by_revision"],{str(vc.REVISION):14})
         self.assertEqual(case["class_minimum_skipped"],8)
         self.assertEqual(case["checker_reports"],14)
         self.assertEqual(case["checker_skips"],8)
@@ -285,7 +286,7 @@ class MutationTests(unittest.TestCase):
             spec=importlib.util.spec_from_file_location("r3_"+name,mutant)
             module=importlib.util.module_from_spec(spec); sys.modules[spec.name]=module
             try:
-                spec.loader.exec_module(module); yield module
+                pb.exec_module(spec,module); yield module
             finally: sys.modules.pop(spec.name,None)
 
     def test_beta_guard_source_mutations_detected(self):

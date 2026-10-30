@@ -17,6 +17,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
+import profile_boot as pb  # noqa: E402  (MTB4K_TEST_PROFILE, before report_contract loads)
 import fixtures as fx  # noqa: E402
 import report_contract as vc  # noqa: E402
 import write_run_manifest as wm  # noqa: E402
@@ -45,7 +46,7 @@ class Write(unittest.TestCase):
             argv += ["--log", str(root / "pipeline.log")]
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = wm.main(argv, rules=self.rules)
+            code = wm.main(pb.argv(argv), rules=self.rules)
         return code, err.getvalue()
 
     def test_each_cohorts_manifest_is_rebuilt_from_the_root_alone(self):

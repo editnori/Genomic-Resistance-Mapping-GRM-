@@ -39,6 +39,10 @@ SIBLINGS = ("report_contract", "fingerprint", "prepare_execution_roots", "run_re
 # The wiring lane's guard runs as `python3 $GUARD`, read-only and as written; pilot_interrupt.py requires the launcher's
 # command line to be exactly that (N1), so it takes no -I.
 GUARD = "$GUARD"
+# The three CLIs that load report_contract run under the suite's profile (tests/profile_boot.py reads the same
+# variable); their argparse default, r8, cannot load on a revision-N tree.
+PROFILE = os.environ.get("MTB4K_TEST_PROFILE", "r8")
+CONTRACT_CLIS = {"write_run_manifest.py", "run_revision8_checks.py", "compare_cohorts.py"}
 FENCE = re.compile(r"```[^\n]*\n(.*?)```", re.S)  # every fenced block, whatever its language
 INTERPRETER = re.compile(r"""(?<![^\s;|&({"'`])((?:/[\w.-]+)*/)?(python[0-9.]*)(?=[\s"']|$)""")
 ALIAS = re.compile(r"""(?<![\w$])(\w+)=(?:"([^"]*)"|'([^']*)'|([^\s;"']+))""")
@@ -178,7 +182,7 @@ class EntryPoints(unittest.TestCase):
     def test_each_entry_point_loads_its_own_siblings_under_minus_I_from_another_directory(self):
         for rel in sorted(ENTRY):
             with self.subTest(rel):
-                p = self.run_isolated(rel, "--help")
+                p = self.run_isolated(rel, "--help", *(["--profile", PROFILE] if rel in CONTRACT_CLIS else []))
                 self.assertEqual(p.returncode, 0, p.stderr[-2000:])
                 self.assertIn("usage", p.stdout.lower())
                 self.assertClean(p)
@@ -196,7 +200,7 @@ class EntryPoints(unittest.TestCase):
         held = base / "held-manifest.json"
         manifest.rename(held)
         p = self.run_isolated("write_run_manifest.py", root, "--cohort", "prefix", "--source-commit", fx.SOURCE,
-                              "--binary", root / "synthetic-binary", "--log", root / "pipeline.log")
+                              "--binary", root / "synthetic-binary", "--log", root / "pipeline.log", "--profile", PROFILE)
         self.assertEqual(p.returncode, 2, p.stderr)
         self.assertIn(frozen, p.stderr)
         self.assertClean(p)
@@ -208,7 +212,8 @@ class EntryPoints(unittest.TestCase):
                               "--expected-source-commit", fx.SOURCE, "--binary", root / "synthetic-binary", "--backup", root / "backup",
                               "--log", root / "pipeline.log", "--launch", "2000-01-01T00:00:00Z", "--foldgen", fx.foldgen_path(),
                               "--expected-foldgen-sha256", fx.foldgen_sha256(), "--checker-out", audit / "prefix-check-results.json",
-                              "--summary-out", audit / "prefix-summary.json", "--receipt", audit / "prefix-revision8-receipt.json")
+                              "--summary-out", audit / "prefix-summary.json", "--receipt", audit / "prefix-revision8-receipt.json",
+                              "--profile", PROFILE)
         self.assertEqual(p.returncode, 2, p.stderr)
         self.assertIn(frozen, p.stderr)
         self.assertClean(p)
@@ -217,7 +222,7 @@ class EntryPoints(unittest.TestCase):
         receipts = [f"--checker-receipt={n}={audit}/{n}-revision8-receipt.json" for n in ("prefix", "added", "full", "matched2k")]
         p = self.run_isolated("compare_cohorts.py", *cohorts, *receipts, "--duplicates", audit / "duplicate-screen.json",
                               "--expected-source-commit", fx.SOURCE, "--expected-foldgen-sha256", fx.foldgen_sha256(),
-                              "--out", audit / "compare-cohorts.json")
+                              "--out", audit / "compare-cohorts.json", "--profile", PROFILE)
         self.assertEqual(p.returncode, 2, p.stderr)
         self.assertIn(frozen, p.stderr)
         self.assertClean(p)
@@ -272,13 +277,15 @@ class EntryPoints(unittest.TestCase):
                 shutil.copyfile(SCRIPTS / rel, scripts / rel)
             clis = ("write_run_manifest.py", "run_revision8_checks.py", "compare_cohorts.py")
             for cli in clis:
-                p = subprocess.run([sys.executable, "-I", "-B", str(scripts / "mtb-4k" / cli), "--help"], cwd=self.cwd, capture_output=True, text=True)
+                p = subprocess.run([sys.executable, "-I", "-B", str(scripts / "mtb-4k" / cli), "--help", "--profile", PROFILE], cwd=self.cwd,
+                                   capture_output=True, text=True)
                 self.assertEqual(p.returncode, 0, (cli, p.stderr))
             with (scripts / "check-results.py").open("a") as f:
                 f.write("\n# edited\n")
             for cli in clis:
                 with self.subTest(cli):
-                    p = subprocess.run([sys.executable, "-I", "-B", str(scripts / "mtb-4k" / cli), "--help"], cwd=self.cwd, capture_output=True, text=True)
+                    p = subprocess.run([sys.executable, "-I", "-B", str(scripts / "mtb-4k" / cli), "--help", "--profile", PROFILE], cwd=self.cwd,
+                                       capture_output=True, text=True)
                     self.assertEqual(p.returncode, 2, p.stderr)
                     self.assertIn("STOP: cannot load the validators", p.stderr)
                     self.assertIn("differs from the reviewed pin", p.stderr)
@@ -287,6 +294,22 @@ class EntryPoints(unittest.TestCase):
     def test_profile_rn_refuses_in_each_report_contract_cli_while_revision_n_is_unfilled(self):
         base = Path(self.tmp.name) / "profile-rn"
         base.mkdir()
+        lane = Path(self.tmp.name) / "unfilled" / "scripts" / "mtb-4k"
+        shutil.copytree(LANE, lane, ignore=shutil.ignore_patterns("tests", "__pycache__"))
+        for rel in ("check-results.py", "result_scope.py", "metric-audit/audit.py", "metric-audit/summarize.py"):
+            (lane.parent / rel).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(SCRIPTS / rel, lane.parent / rel)
+        text = (lane / "revision_n.py").read_text()
+        start = text.index("\nVALUES = {\n") + 1
+        end = text.index("\n}\n", start) + 3
+        names = re.findall(r'^    "([A-Z0-9_]+)": ', text[start:end], flags=re.M)
+        self.assertEqual(len(names), 8)
+        block = "VALUES = {\n" + "".join(f'    "{name}": "@@{name}@@",\n' for name in names) + "}\n"
+        (lane / "revision_n.py").write_text(text[:start] + block + text[end:])
+
+        def run_copy(rel, *args):
+            return subprocess.run([sys.executable, "-I", "-B", str(lane / rel), *map(str, args)], cwd=self.cwd, env=self.env,
+                                  capture_output=True, text=True, timeout=600)
         cases = {"write_run_manifest.py": [base, "--cohort", "prefix", "--source-commit", "1" * 40, "--binary", base / "grm"],
                  "run_revision8_checks.py": [base / "audit.json", "--root", base, "--run-manifest", base / "validation-manifest.json",
                                              "--expected-source-commit", "1" * 40, "--binary", base / "grm", "--backup", base,
@@ -299,7 +322,7 @@ class EntryPoints(unittest.TestCase):
             for profile in (["--profile", "rN"], ["--profile=rN"]):
                 with self.subTest(cli=cli, profile=profile):
                     for extra in ([], ["--help"]):
-                        p = self.run_isolated(cli, *args, *profile, *extra)
+                        p = run_copy(cli, *args, *profile, *extra)
                         self.assertEqual(p.returncode, 2, p.stderr)
                         self.assertIn("STOP: cannot load the validators: profile rN: unfilled placeholder(s): @@REVISION_N@@", p.stderr)
                         self.assertIn("@@RN_CONVERGENCE_STATUS_RULE@@", p.stderr)
@@ -309,7 +332,7 @@ class EntryPoints(unittest.TestCase):
         p = self.run_isolated("revision_n.py", "--help")
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertClean(p)
-        p = self.run_isolated("revision_n.py", "status")
+        p = run_copy("revision_n.py", "status")
         self.assertEqual(p.returncode, 2)
         self.assertIn("revision_n: STOP: unfilled placeholder(s)", p.stderr)
         self.assertClean(p)

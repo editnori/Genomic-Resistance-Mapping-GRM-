@@ -24,6 +24,7 @@ import contextlib,copy,hashlib,io,json,shutil,sys,tempfile,unittest
 from pathlib import Path
 LANE=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(LANE)); sys.path.insert(0,str(LANE/"tests"))
+import profile_boot as pb  # noqa: E402  (MTB4K_TEST_PROFILE, before report_contract loads)
 import report_contract as vc
 import compare_cohorts as cc
 import run_revision8_checks as runner
@@ -55,7 +56,7 @@ def run_main(roots,base,rules,extra=(),outputs_edit=None):
  cc.vc.RULES=rules
  err=io.StringIO()
  try:
-  with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(err): code=cc.main(argv)
+  with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(err): code=cc.main(pb.argv(argv))
  finally: cc.vc.RULES=saved
  return code,(json.loads(out.read_text()) if out.exists() else None),err.getvalue()
 
@@ -265,7 +266,7 @@ class FixTests(Base):
     ("another cohort's receipt",lambda r:{**r,"cohort":"prefix"},"not 'added'"),
     ("an older run manifest",lambda r:{**r,"run_manifest_sha256":"0"*64},"another run manifest"),
     ("other checker blobs",lambda r:{**r,"pins":{**r["pins"],"check-results.py":"0"*64}},"reviewed pins"),
-    ("revision 7",lambda r:{**r,"evaluation_revision":7},"revision 8"),
+    ("revision 7",lambda r:{**r,"evaluation_revision":7},f"revision {vc.REVISION}"),
     ("a report count that differs",lambda r:{**r,"reports":13},"count differs"),
     ("biological execution claimed",lambda r:{**r,"biological_execution":True},"biological")]:
    with self.subTest(label):
@@ -339,7 +340,7 @@ class FollowupTests(Base):
    ("an audited record with issues",record(issues=[{"where":"x","what":"y"}]),"issues present"),
    ("revision 7 records",summary(by_revision={"7":22}),"wrong revisions"),
    ("checker reports missing",lambda o:o["checker"]["reports"].pop(),"checker report count"),
-   ("summarizer issues",lambda o:o["summary"]["coverage"]["8"].update(issues=1),"summarizer coverage"),
+   ("summarizer issues",lambda o:o["summary"]["coverage"][str(vc.REVISION)].update(issues=1),"summarizer coverage"),
   ]
   for label,edit,match in cases:
    with self.subTest(label):
@@ -351,10 +352,10 @@ class FollowupTests(Base):
   i=next(i for i,f in enumerate(split["test_fold"]) if f==0 and report["samples"][i]["resistant"]); j=next(j for j,f in enumerate(split["test_fold"]) if f==1 and report["samples"][j]["resistant"])
   split["test_fold"][i],split["test_fold"][j]=split["test_fold"][j],split["test_fold"][i]; fx.rescore(report); fx.write_json(path,report); rehash(root,did); fx.refresh_root(root,"prefix")
   args=runner_args(root,"real")
-  with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()): self.assertEqual(runner.main(args,rules=self.rules),2)
+  with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()): self.assertEqual(runner.main(pb.argv(args),rules=self.rules),2)
   self.assertFalse((root/"real-receipt.json").exists())
   outputs={"checker":root/"real-checker.json","audit":root/"real-audit.json","summary":root/"real-summary.json"}
-  if not outputs["summary"].exists(): outputs["summary"].write_text(json.dumps({"coverage":{"8":{"files":22,"issues":0}}})+"\n")
+  if not outputs["summary"].exists(): outputs["summary"].write_text(json.dumps({"coverage":{str(vc.REVISION):{"files":22,"issues":0}}})+"\n")
   forged=fx.write_receipt(root,edit=lambda r:{**r,"outputs":{k:{"path":str(v),"sha256":fx.sha(v)} for k,v in outputs.items()}})
   receipts={n:str(forged) if n=="prefix" else str(fx.write_receipt(r)) for n,r in self.roots.items()}
   reject(self,"L2 receipt forged over the runner's real failed outputs","do not record a pass",
@@ -370,7 +371,7 @@ class FollowupTests(Base):
   reject(self,"I4 receipt foldgen is not the recorded build","not the recorded build",lambda:run_compare(self.roots,self.rules,foldgen="0"*64))
   reject(self,"I4 malformed expected foldgen","malformed digest",lambda:run_compare(self.roots,self.rules,foldgen="not-a-digest"))
   with contextlib.redirect_stderr(io.StringIO()) as err, self.assertRaises(SystemExit) as stop:
-   cc.main([f"--cohort={n}={r}" for n,r in self.roots.items()]+["--duplicates","x","--expected-source-commit",fx.SOURCE,"--out","x"])
+   cc.main(pb.argv([f"--cohort={n}={r}" for n,r in self.roots.items()]+["--duplicates","x","--expected-source-commit",fx.SOURCE,"--out","x"]))
   self.assertEqual(stop.exception.code,2); self.assertIn("--expected-foldgen-sha256",err.getvalue())
  def test_i9_a_matched_control_with_no_pair_is_invalid(self):
   order=["g1","g2","g3","g4"]; truth={"g1":True,"g2":False,"g3":True,"g4":False}
@@ -401,7 +402,7 @@ class EndToEndRealFoldsTests(unittest.TestCase):
    rules=fx.make_rules(); roots={n:fx.build_cohort(Path(tmp)/n,n,rules) for n in fx.COHORTS}; receipts={}
    for name,root in roots.items():
     # Path-adapted (I4): the runner requires the recorded foldgen build.
-    with contextlib.redirect_stdout(io.StringIO()): self.assertEqual(runner.main(runner_args(root,"real"),rules=rules),0,name)
+    with contextlib.redirect_stdout(io.StringIO()): self.assertEqual(runner.main(pb.argv(runner_args(root,"real")),rules=rules),0,name)
     receipts[name]=str(root/"real-receipt.json")
    # L2: the comparator re-reads the runner's real outputs and accepts them.
    out=cc.compare({n:str(r) for n,r in roots.items()},receipts,str(screen(tmp)),fx.SOURCE,rules,expected_foldgen=fx.foldgen_sha256())
