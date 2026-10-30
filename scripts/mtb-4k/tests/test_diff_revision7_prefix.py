@@ -67,10 +67,12 @@ class Diff(unittest.TestCase):
             (root / "species" / SLUG / "results" / path.name).write_text(json.dumps(r7))
         return root
 
-    def run_diff(self, r7):
+    def run_diff(self, r7, new=None, profile=None):
         out = r7.parent / "diff.json"
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            code = diff.main(["--revision8", str(self.r8), "--revision7", str(r7), "--out", str(out)])
+        argv = ["--revision8", str(new or self.r8), "--revision7", str(r7), "--out", str(out)] + (["--profile", profile] if profile else [])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            code = diff.main(argv)
+        self.last_stderr = err.getvalue()
         return code, json.loads(out.read_text()) if out.exists() else None
 
     def test_only_the_lasso_may_differ(self):
@@ -92,6 +94,55 @@ class Diff(unittest.TestCase):
                 self.assertEqual(code, 1, label)
                 row = next(r for r in out["rows"] if r["id"].endswith("amikacin"))
                 self.assertTrue(any(d.startswith(where) for d in row["differences"]), row["differences"])
+
+    def revision_n_side(self, revision):
+        """The revision-8 side restamped to `revision`, as revision N's prefix would be: only lasso-derived parts may move."""
+        root = Path(self.tmp.name) / f"rN-{revision}" / "data"
+        if not root.exists():
+            shutil.copytree(self.r8, root, symlinks=True)
+            for path in (root / "species" / SLUG / "results").glob("*.json"):
+                report = json.loads(path.read_text())
+                report["evaluation"]["revision"] = revision
+                report["features"] = [{"feature": 7, "note": "lasso top-30 annotation"}]
+                for split in report["splits"]:
+                    for row in split["learners"]:
+                        if row["learner"] == "lasso":
+                            row["scores"] = [None if v is None else max(0.0, v - 0.02) for v in row["scores"]]
+                path.write_text(json.dumps(report))
+        return root
+
+    @contextlib.contextmanager
+    def revision_n(self, value):
+        saved = dict(diff.rev_n.VALUES)
+        diff.rev_n.VALUES["REVISION_N"] = value
+        try:
+            yield
+        finally:
+            diff.rev_n.VALUES.clear()
+            diff.rev_n.VALUES.update(saved)
+
+    def test_profile_rn_takes_revision_n_and_keeps_the_field_rules(self):
+        new = self.revision_n_side(9)
+        with self.revision_n(9):
+            code, out = self.run_diff(self.revision7("rN-same"), new, "rN")
+            self.assertEqual(code, 0, self.last_stderr)
+            self.assertEqual((out["profile"], out["evaluation_revision"], out["identical"]), ("rN", 9, 2))
+            code, out = self.run_diff(self.revision7("rN-cart", lambda r: r["splits"][0]["learners"][1]["scores"].__setitem__(0, 0.5)), new, "rN")
+            self.assertEqual(code, 1)
+            row = next(r for r in out["rows"] if r["id"].endswith("amikacin"))
+            self.assertTrue(any(d.startswith("splits.random.learners.cart") for d in row["differences"]), row["differences"])
+            # The revision-8 side is not revision N, and revision N is not the r8 profile's.
+            self.assertEqual(self.run_diff(self.revision7("rN-r8side"), self.r8, "rN")[0], 2)
+            self.assertIn("expected revision 9 against revision 7", self.last_stderr)
+        self.assertEqual(self.run_diff(self.revision7("r8-on-rN"), new, "r8")[0], 2)
+        self.assertIn("expected revision 8 against revision 7", self.last_stderr)
+
+    def test_an_unfilled_rn_refuses(self):
+        new = self.revision_n_side(9)
+        with self.revision_n("@@REVISION_N@@"):
+            code, out = self.run_diff(self.revision7("rN-unfilled"), new, "rN")
+        self.assertEqual((code, out), (2, None))
+        self.assertIn("diff_revision7_prefix: STOP: unfilled placeholder(s): @@REVISION_N@@", self.last_stderr)
 
     def test_wrong_revisions_or_dataset_sets_stop(self):
         r7 = self.revision7("wrong-revision", lambda r: r["evaluation"].update(revision=8))
