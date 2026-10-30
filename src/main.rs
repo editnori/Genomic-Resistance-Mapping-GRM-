@@ -688,13 +688,18 @@ fn species_check(layout: &Layout, sketch_only: bool) -> Result<()> {
     let out = grm::species_check::write(layout, &check)?;
     for s in &check.species {
         eprintln!(
-            "  {:<40} {:>5} checked  {:>3} failed  {:>3} borderline  {:>4} unchecked  reference {}",
+            "  {:<40} {:>5} checked  {:>3} failed  {:>3} borderline  {:>4} unchecked  reference {}{}",
             s.species,
             s.checked,
             s.failed,
             s.borderline,
             s.unchecked.len(),
-            s.reference
+            s.reference,
+            if s.carried {
+                "  (kept from the earlier check: none judged now)"
+            } else {
+                ""
+            }
         );
     }
     for p in &check.pairs {

@@ -22,7 +22,11 @@
 //! reference give every genome the same distances on every rerun, so a
 //! failed genome stays failed and `check -> curate` reaches a fixed point.
 //! A recorded genome with neither a cached sketch nor a FASTA file keeps
-//! its earlier verdict.
+//! its earlier verdict, and so does every genome of a recorded species
+//! this check cannot judge at all: one with no sketches on this machine,
+//! or one no longer among the curated species. Curation excludes failed
+//! genomes by id whatever their species, so a failure is never dropped
+//! from the record.
 //!
 //! Mash distance approximates 1 - ANI near the species boundary of about 95%
 //! ANI (distance 0.05). Species complexes (E. cloacae, K. oxytoca, E. faecium
@@ -221,6 +225,10 @@ pub struct SpeciesSummary {
     pub distance_p50: f64,
     pub distance_p99: f64,
     pub distance_max_pass: f64,
+    /// Copied unchanged from an earlier check that judged this species,
+    /// since this one could judge none of its genomes.
+    #[serde(default)]
+    pub carried: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -471,6 +479,7 @@ pub fn check(
             distance_p50: quantile(&pass, 0.5),
             distance_p99: quantile(&pass, 0.99),
             distance_max_pass: pass.last().copied().unwrap_or(f64::NAN),
+            carried: false,
         });
         let mut inside: BTreeMap<&str, usize> = BTreeMap::new();
         for g in &checked {
@@ -491,6 +500,24 @@ pub fn check(
         }
         genomes.extend(checked);
     }
+    for s in previous.into_iter().flat_map(|p| &p.species) {
+        if species
+            .iter()
+            .any(|j: &SpeciesSummary| j.species == s.species)
+        {
+            continue;
+        }
+        let p = previous.unwrap();
+        species.push(SpeciesSummary {
+            carried: true,
+            ..s.clone()
+        });
+        genomes.extend(p.genomes.iter().filter(|g| g.species == s.species).cloned());
+        pairs.extend(p.pairs.iter().filter(|x| x.labelled == s.species).cloned());
+    }
+    species.sort_by(|a, b| a.species.cmp(&b.species));
+    genomes.sort_by(|a, b| (&a.species, &a.genome_id).cmp(&(&b.species, &b.genome_id)));
+    pairs.sort_by(|a, b| (&a.labelled, &a.nearer).cmp(&(&b.labelled, &b.nearer)));
     Ok(SpeciesCheck {
         k: refs.first().map_or(K, |r| r.k),
         sketch_size: refs.first().map_or(SKETCH, |r| r.sketch_size),
@@ -912,6 +939,70 @@ mod tests {
         assert_eq!(rerun.failures(), before.failures());
         assert!(rerun.species[0].unchecked.is_empty());
         assert_eq!(rerun.species[0].checked, 25);
+    }
+
+    /// A rerun that can judge none of a species' genomes (no sketches here)
+    /// or no longer lists a species (gone from curated/species.json) keeps
+    /// every verdict recorded for it.
+    #[test]
+    fn a_rerun_keeps_species_it_cannot_judge() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut rng = ChaCha8Rng::seed_from_u64(7);
+        let mut cohorts = Vec::new();
+        let mut ids = Vec::new();
+        for name in ["Alpha a", "Delta d", "Gamma g"] {
+            let prefix = name[..1].to_lowercase();
+            let root = random_genome(&mut rng, 0.5);
+            let mut genomes = strains(&mut rng, dir.path(), &prefix, &root, 6);
+            let foreign = random_genome(&mut rng, 0.5);
+            genomes.push(sketch(dir.path(), &format!("{prefix}.foreign"), &foreign));
+            ids.push(
+                genomes
+                    .iter()
+                    .map(|g| g.genome_id.clone())
+                    .collect::<Vec<_>>(),
+            );
+            cohorts.push(cohort(name, genomes));
+        }
+        let cfg = CheckConfig::default();
+        let before = check(cohorts, &cfg, None).unwrap();
+        assert_eq!(before.failures().len(), 3);
+
+        let delta = before.genomes.iter().filter(|g| g.species == "Delta d");
+        let delta_ids: Vec<String> = delta.map(|g| g.genome_id.clone()).collect();
+        let sketched = |id: &String| {
+            sketch_fasta(
+                id,
+                &dir.path().join(format!("{id}.fna")),
+                &KmerSpace::new(K),
+                SKETCH,
+            )
+            .unwrap()
+        };
+        // Alpha is listed with no sketch at all; Gamma is not listed.
+        let mut alpha = cohort("Alpha a", vec![]);
+        alpha.unchecked = ids[0].clone();
+        let delta = cohort("Delta d", delta_ids.iter().map(sketched).collect());
+        let rerun = check(vec![alpha, delta], &cfg, Some(&before)).unwrap();
+
+        assert_eq!(rerun.failures(), before.failures());
+        let carried: Vec<(&str, bool)> = rerun
+            .species
+            .iter()
+            .map(|s| (s.species.as_str(), s.carried))
+            .collect();
+        assert_eq!(
+            carried,
+            vec![("Alpha a", true), ("Delta d", false), ("Gamma g", true)]
+        );
+        let listed = |c: &SpeciesCheck| {
+            c.genomes
+                .iter()
+                .map(|g| (g.species.clone(), g.genome_id.clone()))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(listed(&rerun), listed(&before));
+        assert_eq!(rerun.species[2].reference, before.species[2].reference);
     }
 
     #[test]
