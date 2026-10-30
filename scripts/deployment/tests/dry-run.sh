@@ -606,8 +606,71 @@ expect 2 'cloudflared.sha256 is missing' "connector check refuses a FIFO manifes
 rm "$C/cloudflared.sha256"
 mv "$T/cloudflared.sha256" "$C/cloudflared.sha256"
 
+# The Vast boot hook, ops/vast/boot-active.sh (the PR 64 review, M1 and L3),
+# run with PATH shims and a stub restore.sh in a directory of its own. The rm
+# shim logs every call and never passes /dev/null on to the real rm, so the
+# old hook's rm of /dev/null is caught without removing anything. Each run
+# prints its exit code, the rm calls on /dev/null, the restores of the active
+# pair, the fallback restores, the BOOT-FALLBACK lines and the temporary files
+# left behind.
+BOOT_HOOK=$REPO/ops/vast/boot-active.sh
+cat >"$T/boot-hook.sh" <<'SH'
+set -u
+hook=$1 dir=$2 mktemp_mode=$3 active=$4 dry=${5:-}
+mkdir -p "$dir/bin" "$dir/scripts/deployment" "$dir/root/state" "$dir/tmp"
+real_rm=$(command -v rm)
+cat >"$dir/bin/rm" <<EOF2
+#!/bin/sh
+echo "rm \$*" >>"$dir/rm.log"
+for a in "\$@"; do [ "\$a" != /dev/null ] || exit 0; done
+exec $real_rm "\$@"
+EOF2
+if [ "$mktemp_mode" = fail ]; then printf '#!/bin/sh\nexit 1\n' >"$dir/bin/mktemp"; fi
+cat >"$dir/scripts/deployment/restore.sh" <<EOF2
+n=\$(cat "$dir/active.count" 2>/dev/null || echo 0)
+case "\$*" in
+    "" | --apply)
+        n=\$((n + 1)); echo "\$n" >"$dir/active.count"
+        case $active in
+            pass) exit 0 ;;
+            once) [ "\$n" -ge 2 ] && exit 0; echo "2026-10-30T00:00:00Z FAIL: stub transient failure"; exit 1 ;;
+            *) echo "2026-10-30T00:00:00Z FAIL: stub failure"; exit 1 ;;
+        esac ;;
+    "ui-r8-690815a rev8-273-20261029"*) echo fallback >>"$dir/fallback.log"; exit 0 ;;
+esac
+exit 9
+EOF2
+chmod +x "$dir"/bin/*
+printf 'label=ui-r9-test\npublication=rev9-test\n' >"$dir/root/state/active"
+env PATH="$dir/bin:$PATH" TMPDIR="$dir/tmp" BOOT_DEPLOY_ROOT="$dir/root" BOOT_SCRIPTS="$dir/scripts/deployment" \
+    BOOT_RETRY_WAIT=0 bash "$hook" $dry >"$dir/out" 2>&1
+rc=$?
+cnt() { if [ -f "$2" ]; then grep -c -- "$1" "$2"; else echo 0; fi; }
+echo "exit=$rc rm_devnull=$(cnt ' /dev/null' "$dir/rm.log") active_tries=$(cat "$dir/active.count" 2>/dev/null || echo 0) fallback=$(cnt . "$dir/fallback.log") marker=$(cnt . "$dir/root/BOOT-FALLBACK") tmp_left=$(ls -A "$dir/tmp" | wc -l)"
+SH
+if [ -f "$BOOT_HOOK" ]; then
+    expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
+        "boot hook: with mktemp failing it never removes /dev/null, and falls back after a retry" -- \
+        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot1" fail fail
+    expect 0 '^exit=0 rm_devnull=0 active_tries=1 fallback=0 marker=0 tmp_left=0$' \
+        "boot hook: with mktemp failing and the active pair healthy it never removes /dev/null" -- \
+        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot2" fail pass
+    expect 0 '^exit=0 rm_devnull=0 active_tries=2 fallback=0 marker=0 tmp_left=0$' \
+        "boot hook: a transient failure of the active pair is retried once, with no fallback and no marker" -- \
+        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot3" ok once
+    expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
+        "boot hook: an active pair that fails twice falls back, writes BOOT-FALLBACK and removes its temporary file" -- \
+        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot4" ok fail
+    expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=0 tmp_left=0$' \
+        "boot hook: the dry run retries without waiting, falls back and writes no marker" -- \
+        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot5" ok fail --dry-run
+else
+    echo "skip the boot hook cases ($BOOT_HOOK is not in this tree)"
+    skipped=$((skipped + 5))
+fi
+
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=$((195 - skipped))  # less the root-only skip
+EXPECTED_ASSERTIONS=$((200 - skipped))  # less the root-only and missing-boot-hook skips
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"
