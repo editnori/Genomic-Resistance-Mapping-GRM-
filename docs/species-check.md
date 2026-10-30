@@ -383,7 +383,7 @@ GC alone never fails a genome, since contaminating contigs and plasmids also mov
 
 Six *M. tuberculosis* genomes are *M. tuberculosis* by sequence (own distance 0.0014 to 0.0033) but carry GC 62.7 to 64.6% against a 65.6% median, and assemblies of 4.52 to 4.83 Mb against about 4.41 Mb. They likely carry foreign contigs. By the admin ruling of 2026-10-29 they stay in and are recorded here. Their 4k-list positions are 115, 436, 869, 1086, 1265 and 3630; only the last is in the added 2k.
 
-## Revision-10 notes
+## Follow-up notes (not in revision 10)
 
 - Add a contig-level contamination check: genomes of the right species carrying foreign contigs, such as the six MTB outliers above, pass a whole-genome identity check.
 - The nearer-species rule measures against one medoid per species. Species complexes measured from their largest member (*E. cloacae*, *K. oxytoca*) stay borderline. Splitting them would need per-complex references.
