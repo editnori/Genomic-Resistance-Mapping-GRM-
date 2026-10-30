@@ -1,12 +1,16 @@
 // The published report's species files, when GRM_REPORT_DIR names a report
-// directory (the variable vite.config.ts reads): lineage blocks, profile
-// totals and pair coverage checked against the files themselves, plus the
+// directory (the variable vite.config.ts reads): lineage blocks (and the
+// compact map a species with few blocks gets), profile totals and pair
+// coverage checked against the files themselves, plus the
 // revision-7 M. tuberculosis acceptance figures. Skipped without it, so the
 // fixture-only suite stays self-contained.
 
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { parseManifest, parseSpecies } from "../data/validate";
-import { blockCalls, blockSize, drugTotals, lineageBlocks, testedOf, treeBreak } from "./lineageBlocks";
+import { blockCalls, blockSize, drugTotals, drugsByCalls, lineageBlocks, testedOf, treeBreak } from "./lineageBlocks";
+import { COMPACT_BLOCKS, CompactBlocks, blockLayout, compactBlocksText } from "./CompactBlocks";
 import { MIN_JOINT, crossPairs, jointCalls, pairSummary } from "./crossPairs";
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
@@ -22,13 +26,32 @@ describe.skipIf(dir === undefined)("published species files", () => {
   it("tile every species into blocks that keep every call, and enumerate every pair", async () => {
     const manifest = parseManifest(await read("index.json"));
     const lines: string[] = [];
+    const compact: string[] = [];
     for (const row of manifest.species.filter((s) => s.genomes_analyzed > 0)) {
       const s = parseSpecies(await read(`species/${row.slug}.json`));
       const blocks = lineageBlocks(s);
       expect(blocks.reduce((a, b) => a + blockSize(b), 0)).toBe(s.genomes.length);
       blocks.forEach((b, i) => expect(b.start).toBe(i === 0 ? 0 : blocks[i - 1]!.end));
-      expect(blocks.length).toBeGreaterThanOrEqual(7);
+      // Every analyzed species has a map. A small population (fewer than
+      // COMPACT_BLOCKS blocks) is drawn compact, with every block and its
+      // map-drug calls in words; a larger one spreads its columns.
+      expect(blocks.length).toBeGreaterThanOrEqual(1);
       expect(blocks.length).toBeLessThanOrEqual(60);
+      const layout = blockLayout(blocks.length);
+      expect(layout).toBe(blocks.length < COMPACT_BLOCKS ? "compact" : "spread");
+      if (layout === "compact") {
+        const drug = drugsByCalls(s)[0]!;
+        const html = renderToStaticMarkup(createElement(CompactBlocks, { report: s, blocks, drug }));
+        const rows = [...html.matchAll(/<tr class="text-ink"><th scope="row"[^>]*>([^<]*)<\/th>((?:<td[^>]*>[^<]*<\/td>)+)<\/tr>/g)];
+        expect(rows).toHaveLength(blocks.length);
+        const cells = rows.map((r) => [...r[2]!.matchAll(/<td[^>]*>([^<]*)<\/td>/g)].map((c) => Number(c[1]!.replace(/,/g, ""))));
+        const t = drugTotals(s, drug);
+        expect([0, 1, 2, 3, 4].map((k) => cells.reduce((a, c) => a + c[k]!, 0))).toEqual([s.genomes.length, t.r, t.i, t.s, t.untested]);
+        expect(html).toContain(`data-compact-blocks="${blocks.length}"`);
+        expect(html).toContain(compactBlocksText(s, blocks).replace(/&/g, "&amp;"));
+        expect(compactBlocksText(s, blocks)).toContain(`make only ${blocks.length} block${blocks.length === 1 ? "" : "s"}: `);
+        compact.push(`${row.slug} ${blocks.length}`);
+      }
       const calls = blockCalls(s, blocks);
       s.drugs.forEach((_, j) => {
         const want = drugTotals(s, j);
@@ -50,6 +73,7 @@ describe.skipIf(dir === undefined)("published species files", () => {
       );
     }
     console.log(lines.join("\n"));
+    console.log(`compact maps: ${compact.length === 0 ? "none" : compact.join(", ")}`);
   });
 
   it("gives M. tuberculosis 38 blocks, 173 of 231 pairs and its two outlier genomes", async () => {

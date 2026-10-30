@@ -12,7 +12,8 @@ use crate::dna::KmerSpace;
 use crate::fnv::Fnv;
 use crate::layout::{Layout, remove_if_present};
 use crate::learn::eval::{
-    self, EvalConfig, FinalModels, LearnerResult, MicInput, MicResult, SplitResult,
+    self, EvalConfig, FinalModels, LassoFitAudit, LassoOnlyEvent, LassoProgress, LearnerResult,
+    MicInput, MicResult, SplitResult,
 };
 use crate::learn::gbt::GbtParams;
 use crate::learn::tree::ForestParams;
@@ -30,7 +31,9 @@ use std::time::Instant;
 /// balanced accuracy, and null metrics when it called no isolate. A schema-1
 /// reader stops at its version check instead of reading them as numbers.
 pub const REPORT_SCHEMA: u32 = 2;
-pub const EVALUATION_REVISION: u32 = 7;
+/// Revision 8 added the lasso solver evidence; revision 9 changes only the
+/// lasso's active-set solve (docs/lasso-stopping.md).
+pub const EVALUATION_REVISION: u32 = 9;
 
 #[derive(Serialize)]
 pub struct EvaluationAudit {
@@ -42,11 +45,47 @@ pub struct EvaluationAudit {
     pub scope: String,
 }
 
-fn evaluation_audit() -> EvaluationAudit {
+fn evaluation_audit(
+    splits: &[SplitResult],
+    final_lasso: Option<&LassoFitAudit>,
+) -> EvaluationAudit {
+    let mut reasons = Vec::new();
+    for split in splits.iter().filter(|s| s.unavailable_reason.is_none()) {
+        let lasso = split.learners.iter().find(|l| l.learner == "lasso");
+        match lasso.and_then(|l| l.lasso_fits.as_deref()) {
+            None => reasons.push(format!(
+                "{} split has no per-fold lasso solver status",
+                split.scheme
+            )),
+            Some(fits) if fits.len() != split.folds => reasons.push(format!(
+                "{} split has {} lasso solver records for {} folds",
+                split.scheme,
+                fits.len(),
+                split.folds
+            )),
+            Some(fits) => {
+                for (fold, fit) in fits.iter().enumerate() {
+                    if fit.has_unconverged() {
+                        reasons.push(format!(
+                            "{} split outer fold {fold} has an unconverged two-class lasso fit",
+                            split.scheme
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    match final_lasso {
+        None => reasons.push("final model has no lasso solver status".into()),
+        Some(fit) if fit.has_unconverged() => {
+            reasons.push("final model has an unconverged two-class lasso fit".into())
+        }
+        Some(_) => {}
+    }
     EvaluationAudit {
         revision: EVALUATION_REVISION,
-        valid: true,
-        reasons: vec![],
+        valid: reasons.is_empty(),
+        reasons,
         scope: "Internal cross-validation on public BV-BRC genomes scored against reported R/S labels. Feature selection and tuning use only each outer fold's training samples; inner tuning shares that outer-training feature set. MIC thresholds are fitted within training folds. This is not external or clinical validation.".into(),
     }
 }
@@ -445,31 +484,24 @@ pub fn analyze_dataset(
     fingerprint: String,
 ) -> Result<Option<DatasetReport>> {
     let started = Instant::now();
-    let Cohort {
-        rows,
-        columns,
-        n_resistant: n_r,
-        labels_from_mic_excluded,
-        meets_min_class,
-    } = cohort(spec, &input.phenotypes, &input.matrix.summary.genomes);
-    if !meets_min_class {
+    let Some(EvalInputs {
+        cohort:
+            Cohort {
+                rows,
+                columns,
+                n_resistant: n_r,
+                labels_from_mic_excluded,
+                ..
+            },
+        resistant,
+        min_support,
+        ds,
+        groups,
+    }) = eval_inputs(input, spec)?
+    else {
         return Ok(None);
-    }
-    let resistant: Vec<bool> = rows.iter().map(|p| p.reported == Some(Call::R)).collect();
+    };
     let n = rows.len();
-    let min_support = (n as u32 / 200).max(3);
-    // Per-fit candidates are a subset of the projection only when the species
-    // matrix kept every k-mer that min_support could admit.
-    anyhow::ensure!(
-        input.matrix.summary.min_support <= min_support,
-        "the species matrix was built with min_support {} above the dataset's {min_support}; rebuild it with `grm matrix --min-support {min_support}` or lower",
-        input.matrix.summary.min_support
-    );
-    let ds = Dataset::project(&input.matrix, columns.clone(), &resistant, min_support);
-    let groups: Vec<u32> = columns
-        .iter()
-        .map(|&c| input.structure.lineages.labels[c])
-        .collect();
     let mics: Vec<Option<Mic>> = rows.iter().map(|p| p.mic).collect();
     eprintln!(
         "    {}: {n} samples ({n_r} R), {} features",
@@ -497,6 +529,7 @@ pub fn analyze_dataset(
     }
 
     let mut out = eval::evaluate(
+        &spec.id,
         &ds.x,
         &ds.y,
         &groups,
@@ -545,6 +578,7 @@ pub fn analyze_dataset(
                     fold_complexity: vec![],
                     seconds: 0.0,
                     no_call: None,
+                    lasso_fits: None,
                 });
             }
             let mut table: BTreeMap<String, GroupRow> = BTreeMap::new();
@@ -676,7 +710,7 @@ pub fn analyze_dataset(
     out.lineage_threshold = Some(input.structure.lineages.threshold as f64);
     Ok(Some(DatasetReport {
         schema: REPORT_SCHEMA,
-        evaluation: evaluation_audit(),
+        evaluation: evaluation_audit(&out.splits, out.finals.lasso_fit.as_ref()),
         input_fingerprint: fingerprint,
         eval_config: cfg.clone(),
         id: spec.id.clone(),
@@ -711,6 +745,105 @@ pub fn analyze_dataset(
         features,
         seconds: started.elapsed().as_secs_f64(),
     }))
+}
+
+/// What `evaluate` reads for one dataset.
+struct EvalInputs<'a> {
+    cohort: Cohort<'a>,
+    /// Each cohort row's reported call.
+    resistant: Vec<bool>,
+    min_support: u32,
+    ds: Dataset,
+    /// Each sample's lineage.
+    groups: Vec<u32>,
+}
+
+/// The dataset's cohort, its projection at the dataset's support floor, and
+/// its lineages, as `analyze_dataset` evaluates them; None when a class falls
+/// short of the dataset's class minimum.
+fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Option<EvalInputs<'a>>> {
+    let c = cohort(spec, &input.phenotypes, &input.matrix.summary.genomes);
+    if !c.meets_min_class {
+        return Ok(None);
+    }
+    let resistant: Vec<bool> = c.rows.iter().map(|p| p.reported == Some(Call::R)).collect();
+    let min_support = (c.rows.len() as u32 / 200).max(3);
+    // Per-fit candidates are a subset of the projection only when the species
+    // matrix kept every k-mer that min_support could admit.
+    anyhow::ensure!(
+        input.matrix.summary.min_support <= min_support,
+        "the species matrix was built with min_support {} above the dataset's {min_support}; rebuild it with `grm matrix --min-support {min_support}` or lower",
+        input.matrix.summary.min_support
+    );
+    let ds = Dataset::project(&input.matrix, c.columns.clone(), &resistant, min_support);
+    let groups = c
+        .columns
+        .iter()
+        .map(|&col| input.structure.lineages.labels[col])
+        .collect();
+    Ok(Some(EvalInputs {
+        cohort: c,
+        resistant,
+        min_support,
+        ds,
+        groups,
+    }))
+}
+
+/// Runs only the lasso fits of each named dataset's evaluation
+/// (`eval::lasso_only`), on the inputs, cohort, projection, and lineages
+/// `analyze_dataset` would evaluate, after reporting each dataset's inputs and
+/// input fingerprint. With `fit` false it reports the inputs alone.
+/// `progress` sees each penalty point as it is solved. It reads `layout` and
+/// writes nothing. The large-species lasso scan (`scripts/lasso-scan`) runs
+/// it.
+pub fn lasso_scan(
+    layout: &Layout,
+    slug: &str,
+    ids: &[String],
+    cfg: &EvalConfig,
+    fit: bool,
+    observe: &mut dyn FnMut(&str, &LassoOnlyEvent) -> Result<()>,
+    progress: &mut dyn FnMut(&str, &LassoProgress),
+) -> Result<()> {
+    let (input, catalog) = load_inputs(layout, slug)?;
+    let digest = matrix_digest(&input.matrix);
+    for id in ids {
+        let started = Instant::now();
+        let spec = input
+            .datasets
+            .iter()
+            .find(|d| d.id == *id)
+            .with_context(|| format!("{slug} has no curated dataset {id}"))?;
+        let fingerprint = input_fingerprint(&input, spec, catalog.as_ref(), cfg, digest);
+        let e = eval_inputs(&input, spec)?
+            .with_context(|| format!("{id} is short of its class minimum and has no report"))?;
+        observe(
+            id,
+            &LassoOnlyEvent::Inputs {
+                samples: e.resistant.len(),
+                resistant: e.cohort.n_resistant,
+                features: e.ds.n_features(),
+                lineages: e.groups.iter().collect::<BTreeSet<_>>().len(),
+                min_support: e.min_support,
+                input_fingerprint: fingerprint,
+                seconds: started.elapsed().as_secs_f64(),
+            },
+        )?;
+        if fit {
+            eval::lasso_only(
+                id,
+                &e.ds.x,
+                &e.ds.y,
+                &e.groups,
+                e.min_support,
+                cfg,
+                &mut |event| observe(id, event),
+                &mut |point| progress(id, point),
+            )?;
+        }
+    }
+    Ok(())
 }
 
 /// One dataset's samples among the species' matrix genomes.
@@ -806,10 +939,8 @@ pub fn analyze_species(
             Some(report) => {
                 write_atomic(&path, &serde_json::to_vec(&report)?)?;
                 eprintln!(
-                    "    {} done in {:.0}s ({})",
-                    spec.id,
-                    report.seconds,
-                    best_learner_words(&report.splits)?
+                    "{}",
+                    done_line(&spec.id, report.seconds, &report.evaluation, &report.splits)?
                 );
                 written.push(spec.id.clone());
             }
@@ -827,6 +958,27 @@ pub fn analyze_species(
         }
     }
     Ok(written)
+}
+
+/// The log's done line for a report just written. A report whose evaluation
+/// audit is invalid is an error instead: it stays on disk for review, the
+/// species stops as it does on a lasso error, and `stale_reason` recomputes
+/// it on resume rather than reusing it.
+fn done_line(
+    id: &str,
+    seconds: f64,
+    evaluation: &EvaluationAudit,
+    splits: &[SplitResult],
+) -> Result<String> {
+    anyhow::ensure!(
+        evaluation.valid,
+        "{id}: report written, but its evaluation audit is not valid: {}",
+        evaluation.reasons.join("; ")
+    );
+    Ok(format!(
+        "    {id} done in {seconds:.0}s ({})",
+        best_learner_words(splits)?
+    ))
 }
 
 /// The log's words for the learner `grm report` will name best, picked by
@@ -856,8 +1008,9 @@ pub fn row_bits(x: &BitMatrix, f: usize) -> Bits {
 }
 
 /// Why a saved report has to be recomputed, or None when this evaluation
-/// revision wrote it from the inputs `fingerprint` identifies and every
-/// feature locus has its reference annotation.
+/// revision wrote it from the inputs `fingerprint` identifies, its
+/// evaluation audit is valid, and every feature locus has its reference
+/// annotation. An invalid report is never reused as a finished one.
 fn stale_reason(report: &serde_json::Value, fingerprint: &str) -> Option<&'static str> {
     if report["evaluation"]["revision"].as_u64() != Some(EVALUATION_REVISION as u64) {
         return Some("evaluation audit revision changed");
@@ -872,6 +1025,9 @@ fn stale_reason(report: &serde_json::Value, fingerprint: &str) -> Option<&'stati
     match report["input_fingerprint"].as_str() {
         None => Some("report has no input fingerprint"),
         Some(saved) if saved != fingerprint => Some("inputs changed since the report was written"),
+        Some(_) if report["evaluation"]["valid"].as_bool() != Some(true) => {
+            Some("saved report's evaluation audit is not valid")
+        }
         Some(_) if unannotated => Some("a feature's reference annotation failed to download"),
         Some(_) => None,
     }
@@ -1086,18 +1242,40 @@ mod tests {
         let key = "0123456789abcdef";
         let saved = |revision: u32, fingerprint: &str| {
             serde_json::json!({
-                "evaluation": {"revision": revision},
+                "evaluation": {"revision": revision, "valid": true},
                 "input_fingerprint": fingerprint,
             })
         };
+        assert_eq!(EVALUATION_REVISION, 9);
         assert_eq!(stale_reason(&saved(EVALUATION_REVISION, key), key), None);
-        // Only the evaluation revision and the inputs recompute a report; a
-        // schema bump alone keeps a current schema-1 report.
+        // Revision 8's solver could stop where revision 9's converges, and
+        // a valid revision-8 report has the same fields as a revision-9 one.
+        for old in [7, 8] {
+            assert_eq!(
+                stale_reason(&saved(old, key), key),
+                Some("evaluation audit revision changed"),
+                "a same-fingerprint revision-{old} lasso result must not enter revision 9"
+            );
+        }
+        // A current report whose audit is invalid, or says nothing, is not a
+        // finished one: an unconverged point that was not selected must not
+        // pass for done on resume.
+        for valid in [serde_json::json!(false), serde_json::json!(null)] {
+            let mut report = saved(EVALUATION_REVISION, key);
+            report["evaluation"]["valid"] = valid;
+            assert_eq!(
+                stale_reason(&report, key),
+                Some("saved report's evaluation audit is not valid")
+            );
+        }
+        // Only the evaluation revision, its validity, and the inputs
+        // recompute a report; a schema bump alone keeps a current schema-1
+        // report.
         assert_eq!(
             stale_reason(
                 &serde_json::json!({
                     "schema": 1,
-                    "evaluation": {"revision": EVALUATION_REVISION},
+                    "evaluation": {"revision": EVALUATION_REVISION, "valid": true},
                     "input_fingerprint": key,
                 }),
                 key
@@ -1133,7 +1311,7 @@ mod tests {
         let key = "0123456789abcdef";
         let saved = |locus: serde_json::Value| {
             serde_json::json!({
-                "evaluation": {"revision": EVALUATION_REVISION},
+                "evaluation": {"revision": EVALUATION_REVISION, "valid": true},
                 "input_fingerprint": key,
                 "features": [{"feature": 0, "locus": null}, {"feature": 1, "locus": locus}],
             })
@@ -1222,7 +1400,19 @@ mod tests {
 
     #[test]
     fn audit_limits_validity_to_internal_cross_validation() {
-        let report = serde_json::to_value(evaluation_audit()).unwrap();
+        let convergence = crate::learn::lasso::Convergence {
+            irls_steps: 3,
+            sweep_cap_hits: 0,
+            converged: true,
+        };
+        let clean = LassoFitAudit {
+            path_points: 1,
+            path_unconverged: 0,
+            selected_point: Some(0),
+            selected_convergence: Some(convergence),
+            refit_convergence: Some(convergence),
+        };
+        let report = serde_json::to_value(evaluation_audit(&[], Some(&clean))).unwrap();
         assert_eq!(report["revision"], EVALUATION_REVISION);
         assert_eq!(report["valid"], true);
         assert_eq!(report["reasons"], serde_json::json!([]));
@@ -1231,6 +1421,169 @@ mod tests {
                 .as_str()
                 .unwrap()
                 .contains("not external or clinical validation")
+        );
+
+        for bad in [
+            LassoFitAudit {
+                path_unconverged: 1,
+                ..clean.clone()
+            },
+            LassoFitAudit {
+                selected_convergence: Some(crate::learn::lasso::Convergence {
+                    converged: false,
+                    ..convergence
+                }),
+                ..clean.clone()
+            },
+            LassoFitAudit {
+                refit_convergence: Some(crate::learn::lasso::Convergence {
+                    converged: false,
+                    ..convergence
+                }),
+                ..clean.clone()
+            },
+        ] {
+            let audit = evaluation_audit(&[], Some(&bad));
+            assert!(!audit.valid);
+            assert!(!audit.reasons.is_empty());
+        }
+        assert!(!evaluation_audit(&[], None).valid);
+
+        let split = SplitResult {
+            scheme: "random".into(),
+            folds: 1,
+            n_groups: 2,
+            test_fold: vec![],
+            learners: vec![LearnerResult {
+                learner: "lasso".into(),
+                metrics: None,
+                fold_balanced_accuracy: vec![],
+                roc: vec![],
+                scores: vec![],
+                conformal: vec![],
+                fold_complexity: vec![0.0],
+                seconds: 0.0,
+                no_call: None,
+                lasso_fits: Some(vec![LassoFitAudit {
+                    path_unconverged: 1,
+                    ..clean.clone()
+                }]),
+            }],
+            unavailable_reason: None,
+        };
+        assert!(!evaluation_audit(&[split], Some(&clean)).valid);
+    }
+
+    fn clean_lasso_fit() -> LassoFitAudit {
+        let convergence = crate::learn::lasso::Convergence {
+            irls_steps: 3,
+            sweep_cap_hits: 0,
+            converged: true,
+        };
+        LassoFitAudit {
+            path_points: 4,
+            path_unconverged: 0,
+            selected_point: Some(2),
+            selected_convergence: Some(convergence),
+            refit_convergence: Some(convergence),
+        }
+    }
+
+    /// A two-fold random split whose lasso row holds `fits`.
+    fn lasso_split(fits: Option<Vec<LassoFitAudit>>) -> SplitResult {
+        SplitResult {
+            scheme: "random".into(),
+            folds: 2,
+            n_groups: 4,
+            test_fold: vec![],
+            learners: vec![LearnerResult {
+                learner: "lasso".into(),
+                metrics: None,
+                fold_balanced_accuracy: vec![],
+                roc: vec![],
+                scores: vec![],
+                conformal: vec![],
+                fold_complexity: vec![0.0, 0.0],
+                seconds: 0.0,
+                no_call: None,
+                lasso_fits: fits,
+            }],
+            unavailable_reason: None,
+        }
+    }
+
+    #[test]
+    fn every_available_split_needs_one_clean_lasso_record_per_fold() {
+        let clean = clean_lasso_fit();
+        let audit = |split| evaluation_audit(&[split], Some(&clean));
+        let valid = audit(lasso_split(Some(vec![clean.clone(); 2])));
+        assert!(valid.valid, "{:?}", valid.reasons);
+
+        let missing = audit(lasso_split(None));
+        assert!(!missing.valid);
+        assert_eq!(
+            missing.reasons,
+            ["random split has no per-fold lasso solver status"]
+        );
+        for records in [1, 3] {
+            let wrong = audit(lasso_split(Some(vec![clean.clone(); records])));
+            assert!(!wrong.valid);
+            assert_eq!(
+                wrong.reasons,
+                [format!(
+                    "random split has {records} lasso solver records for 2 folds"
+                )]
+            );
+        }
+        // A split with no lasso row at all has no status either.
+        let mut no_row = lasso_split(None);
+        no_row.learners.clear();
+        assert_eq!(
+            audit(no_row).reasons,
+            ["random split has no per-fold lasso solver status"]
+        );
+        // An unavailable split fits nothing and needs no record.
+        let mut unavailable = lasso_split(None);
+        unavailable.learners.clear();
+        unavailable.unavailable_reason = Some("too few lineages".into());
+        assert!(audit(unavailable).valid);
+    }
+
+    #[test]
+    fn an_invalid_report_is_kept_but_never_logged_done() {
+        let id = "fixture__meropenem";
+        let clean = clean_lasso_fit();
+        let line = done_line(id, 12.4, &evaluation_audit(&[], Some(&clean)), &[]).unwrap();
+        assert_eq!(
+            line,
+            "    fixture__meropenem done in 12s (no learner calls every isolate)"
+        );
+
+        // An unconverged point that was not selected leaves a written report
+        // whose audit is invalid: an error naming the dataset and why, and no
+        // line the result checker would read as done.
+        let excluded = LassoFitAudit {
+            path_unconverged: 1,
+            ..clean
+        };
+        let audit = evaluation_audit(&[], Some(&excluded));
+        let error = done_line(id, 12.4, &audit, &[]).unwrap_err().to_string();
+        assert!(
+            error.starts_with("fixture__meropenem: report written"),
+            "{error}"
+        );
+        assert!(
+            error.contains("final model has an unconverged two-class lasso fit"),
+            "{error}"
+        );
+        assert!(!error.contains(" done in "), "{error}");
+        let saved = serde_json::json!({
+            "evaluation": serde_json::to_value(&audit).unwrap(),
+            "input_fingerprint": "0123456789abcdef",
+        });
+        assert_eq!(
+            stale_reason(&saved, "0123456789abcdef"),
+            Some("saved report's evaluation audit is not valid")
         );
     }
 
@@ -1252,6 +1605,7 @@ mod tests {
                 resistant: uncalled,
                 susceptible: 0,
             }),
+            lasso_fits: None,
         };
         let split = |scheme: &str, learners| SplitResult {
             scheme: scheme.into(),
@@ -2061,7 +2415,7 @@ mod tests {
         std::fs::create_dir_all(&results).unwrap();
         let path = results.join(format!("fixture__{antibiotic}.json"));
         let saved = serde_json::to_vec(&serde_json::json!({
-            "evaluation": {"revision": EVALUATION_REVISION},
+            "evaluation": {"revision": EVALUATION_REVISION, "valid": true},
             "input_fingerprint": key(input, &dataset(antibiotic), catalog),
         }))
         .unwrap();
@@ -2085,9 +2439,10 @@ mod tests {
             .join("fixture__ciprofloxacin.json");
         std::fs::write(
             &stale,
-            serde_json::to_vec(
-                &serde_json::json!({"evaluation": {"revision": EVALUATION_REVISION}}),
-            )
+            serde_json::to_vec(&serde_json::json!({
+                "evaluation": {"revision": 7},
+                "input_fingerprint": key(&input, &dataset("ciprofloxacin"), None),
+            }))
             .unwrap(),
         )
         .unwrap();
@@ -2105,6 +2460,305 @@ mod tests {
         std::fs::write(&patterns, bytes).unwrap();
         learn(&layout).unwrap();
         assert!(!current.exists());
+    }
+
+    #[test]
+    fn learn_recomputes_a_current_report_whose_audit_is_invalid() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let input = inputs();
+        write_inputs(&layout, &input, "");
+        let (report, saved) = save_report(&layout, &input, None, "meropenem");
+        let mut invalid: serde_json::Value = serde_json::from_slice(&saved).unwrap();
+        invalid["evaluation"]["valid"] = false.into();
+        invalid["evaluation"]["reasons"] =
+            serde_json::json!(["random split outer fold 1 has an unconverged two-class lasso fit"]);
+        std::fs::write(&report, serde_json::to_vec(&invalid).unwrap()).unwrap();
+        // Same revision and fingerprint, so only the audit decides: the
+        // report is recomputed, which for this fixture removes it.
+        learn(&layout).unwrap();
+        assert!(!report.exists());
+    }
+
+    /// 150 genomes in 30 lineages of five. Meropenem calls every third
+    /// genome resistant; two features mark resistance and three are noise.
+    fn scan_inputs() -> SpeciesInputs {
+        let n = 150;
+        let genomes: Vec<String> = (0..n).map(|i| format!("g{i}")).collect();
+        let kset_digests: Vec<String> = genomes.iter().map(|g| format!("kset of {g}")).collect();
+        let rules: [fn(usize) -> bool; 5] = [
+            |i| (i % 3 == 0 && i % 10 != 0) || i % 20 == 1,
+            |i| i % 3 == 0 && i % 7 != 0,
+            |i| i % 5 == 0,
+            |i| i % 7 == 1,
+            |i| i % 4 < 2,
+        ];
+        let mut patterns = BitMatrix::with_cols(n);
+        let mut support = Vec::new();
+        for rule in rules {
+            let row = Bits::from_indices(n, (0..n).filter(|&i| rule(i)));
+            support.push(row.count());
+            patterns.push_row(row.words());
+        }
+        SpeciesInputs {
+            matrix: FeatureMatrix {
+                summary: MatrixSummary {
+                    k: 7,
+                    genomes: genomes.clone(),
+                    min_support: 1,
+                    n_patterns: rules.len(),
+                    kmers_distinct: 5,
+                    kmers_kept: 5,
+                    kmers_rare: 0,
+                    kmers_core: 0,
+                    kset_digests: kset_digests.clone(),
+                },
+                patterns,
+                support,
+                kmer_offsets: (0..=5).collect(),
+                kmers: (0x21..0x26).collect(),
+            },
+            structure: Structure {
+                genomes: genomes.clone(),
+                k: 7,
+                kset_digests,
+                lineages: crate::cluster::Lineages {
+                    threshold: 0.005,
+                    labels: (0..n).map(|i| (i / 5) as u32).collect(),
+                    n_clusters: 30,
+                    largest_share: 1.0 / 30.0,
+                },
+                merges: vec![],
+                leaf_order: vec![],
+                coords: vec![],
+                nearest: vec![],
+                sketch_size: species::SKETCH,
+            },
+            hits: HashMap::new(),
+            contigs: genomes.iter().map(|g| (g.clone(), 40)).collect(),
+            phenotypes: genomes
+                .iter()
+                .enumerate()
+                .map(|(i, g)| {
+                    let call = if i % 3 == 0 { Call::R } else { Call::S };
+                    phenotype(g, "meropenem", call, None)
+                })
+                .collect(),
+            genomes: genomes
+                .iter()
+                .map(|g| {
+                    let record = GenomeRecord {
+                        genome_id: g.clone(),
+                        ..Default::default()
+                    };
+                    (g.clone(), record)
+                })
+                .collect(),
+            datasets: vec![dataset("meropenem")],
+        }
+    }
+
+    /// Every file under `dir` with its size and modification time.
+    fn tree(dir: &std::path::Path) -> Vec<(std::path::PathBuf, u64, std::time::SystemTime)> {
+        let mut out = Vec::new();
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            let meta = std::fs::metadata(&path).unwrap();
+            if meta.is_dir() {
+                out.extend(tree(&path));
+            } else {
+                out.push((path, meta.len(), meta.modified().unwrap()));
+            }
+        }
+        out.sort();
+        out
+    }
+
+    #[test]
+    fn the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let input = scan_inputs();
+        write_inputs(&layout, &input, "");
+        let before = tree(dir.path());
+        let cfg = EvalConfig {
+            forest: ForestParams {
+                n_trees: 4,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 5,
+                ..Default::default()
+            },
+            lasso_lambdas: 10,
+            ..Default::default()
+        };
+        let spec = dataset("meropenem");
+        let ids = [spec.id.clone()];
+        let mut events = Vec::new();
+        let mut points = 0;
+        lasso_scan(
+            &layout,
+            "fixture",
+            &ids,
+            &cfg,
+            true,
+            &mut |id, e| {
+                assert_eq!(id, spec.id);
+                events.push(e.clone());
+                Ok(())
+            },
+            &mut |id, _| {
+                assert_eq!(id, spec.id);
+                points += 1;
+            },
+        )
+        .unwrap();
+        // The scan reads the data root and writes nothing to it.
+        assert_eq!(tree(dir.path()), before);
+
+        let LassoOnlyEvent::Inputs {
+            samples,
+            resistant,
+            lineages,
+            min_support,
+            input_fingerprint: fingerprint,
+            ..
+        } = &events[0]
+        else {
+            panic!("{:?}", events[0]);
+        };
+        assert_eq!(
+            (*samples, *resistant, *lineages, *min_support),
+            (150, 50, 30, 3)
+        );
+        let digest = matrix_digest(&input.matrix);
+        assert_eq!(
+            *fingerprint,
+            input_fingerprint(&input, &spec, None, &cfg, digest)
+        );
+
+        // Its fits are the evaluator's lasso fits on the report's inputs.
+        let e = eval_inputs(&input, &spec).unwrap().unwrap();
+        let out = eval::evaluate(
+            &spec.id,
+            &e.ds.x,
+            &e.ds.y,
+            &e.groups,
+            e.min_support,
+            None,
+            &cfg,
+        )
+        .unwrap();
+        let fits: Vec<&eval::LassoOnlyFit> = events
+            .iter()
+            .filter_map(|e| match e {
+                LassoOnlyEvent::Fit(f) => Some(f),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(fits.len(), 2 * cfg.folds + 1);
+        let traced: usize = fits
+            .iter()
+            .map(|f| f.trace.path.len() + f.trace.refit.len())
+            .sum();
+        assert_eq!(points, traced);
+        for split in &out.splits {
+            assert!(split.unavailable_reason.is_none());
+            let lasso = split
+                .learners
+                .iter()
+                .find(|l| l.learner == "lasso")
+                .unwrap();
+            for (fold, audit) in lasso.lasso_fits.as_ref().unwrap().iter().enumerate() {
+                let fit = fits
+                    .iter()
+                    .find(|f| f.scheme == split.scheme && f.outer_fold == Some(fold))
+                    .unwrap();
+                assert_eq!(fit.audit.as_ref(), Some(audit));
+            }
+        }
+        let last = fits.last().unwrap();
+        assert_eq!(last.audit, out.finals.lasso_fit);
+        assert_eq!(
+            last.model.as_ref().map(|m| &m.coef),
+            out.finals.lasso.as_ref().map(|m| &m.coef)
+        );
+
+        // Without fits it reports the inputs alone, and it refuses a dataset
+        // the curation does not list before fitting anything.
+        let mut inputs_only = Vec::new();
+        lasso_scan(
+            &layout,
+            "fixture",
+            &ids,
+            &cfg,
+            false,
+            &mut |_, e| {
+                inputs_only.push(e.clone());
+                Ok(())
+            },
+            &mut |_, _| unreachable!("nothing is fitted"),
+        )
+        .unwrap();
+        assert!(matches!(&inputs_only[..], [LassoOnlyEvent::Inputs { .. }]));
+        let missing = ["fixture__nothing".to_string()];
+        let error = lasso_scan(
+            &layout,
+            "fixture",
+            &missing,
+            &cfg,
+            true,
+            &mut |_, _| unreachable!("nothing to report"),
+            &mut |_, _| unreachable!("nothing is fitted"),
+        )
+        .unwrap_err();
+        assert!(format!("{error:#}").contains("no curated dataset fixture__nothing"));
+    }
+
+    /// Writes `scan_inputs` as a data root, with a stand-in revision-7 report
+    /// whose fingerprint matches, for the scan harness's end-to-end test
+    /// (`scripts/lasso-scan/smoke.sh`).
+    #[test]
+    #[ignore = "writes the scan smoke root; set GRM_LASSO_SCAN_FIXTURE to a new directory"]
+    fn write_lasso_scan_fixture_root() {
+        let root = std::path::PathBuf::from(
+            std::env::var("GRM_LASSO_SCAN_FIXTURE").expect("set GRM_LASSO_SCAN_FIXTURE"),
+        );
+        assert!(
+            std::fs::read_dir(&root).map_or(true, |mut d| d.next().is_none()),
+            "{} must be new or empty",
+            root.display()
+        );
+        let layout = Layout::new(&root);
+        let input = scan_inputs();
+        write_inputs(&layout, &input, "");
+        let spec = dataset("meropenem");
+        let results = layout.results_dir("fixture");
+        std::fs::create_dir_all(&results).unwrap();
+        // The scan reads revision-7 lasso seconds from each split's lasso row:
+        // far more than a debug build takes on this fixture, so a clean smoke
+        // run is a go.
+        let split = |scheme: &str| {
+            serde_json::json!({
+                "scheme": scheme,
+                "folds": 5,
+                "learners": [{"learner": "lasso", "seconds": 30.0}],
+            })
+        };
+        let report = serde_json::json!({
+            "evaluation": {"revision": 7, "valid": true},
+            "id": spec.id,
+            "species_slug": "fixture",
+            "input_fingerprint": key(&input, &spec, None),
+            "seconds": 3.0,
+            "splits": [split("random"), split("lineage")],
+        });
+        std::fs::write(
+            results.join(format!("{}.json", spec.id)),
+            serde_json::to_vec(&report).unwrap(),
+        )
+        .unwrap();
     }
 
     #[test]

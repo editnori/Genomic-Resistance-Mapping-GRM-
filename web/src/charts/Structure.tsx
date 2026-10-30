@@ -5,6 +5,9 @@
 // single genomes at no less than MIN_GENOME_PX a column, with a minimap of
 // every genome, a draggable, arrow-key brush, Previous/Next and the window's
 // position. Table lists the map drug by block, then every genome's calls.
+// A species with fewer than COMPACT_BLOCKS blocks draws them as a compact
+// map: fixed-width columns, with the blocks and the map drug's calls in
+// words under it (CompactBlocks.tsx).
 // Click, tap or Enter pins a block or a genome; the inspector beside the
 // figure (below it when the width cannot hold both) keeps its details until
 // Escape or Clear. Hover only previews an id and a value. The figure is one
@@ -38,6 +41,7 @@ import {
   type TreeBreak,
 } from "./lineageBlocks";
 import { LinkedTable, type LinkedColumn } from "./LinkedTable";
+import { COMPACT_BLOCK_PX, CompactBlocks, blockLayout } from "./CompactBlocks";
 
 export type StructureView = "blocks" | "genomes" | "table";
 
@@ -277,7 +281,10 @@ export const StructureExplorer = ({
   const gPlotW = Math.max(viewW, 120);
   const win = Math.max(1, Math.min(n, Math.floor(gPlotW / MIN_GENOME_PX)));
   const gColW = gPlotW / win;
-  const plotW = genomesView ? gPlotW : Math.max(viewW, B * MIN_BLOCK_PX);
+  // A compact map's columns keep a fixed width, narrower only when the
+  // visible width cannot hold them.
+  const layout = blockLayout(B);
+  const plotW = genomesView ? gPlotW : layout === "compact" ? B * Math.max(MIN_BLOCK_PX, Math.min(COMPACT_BLOCK_PX, Math.floor(viewW / B))) : Math.max(viewW, B * MIN_BLOCK_PX);
   const colW = B === 0 ? plotW : plotW / B;
   const start = Math.max(0, Math.min(ws, n - win));
 
@@ -637,12 +644,12 @@ export const StructureExplorer = ({
         {view === "table" ? (
           <StructureTables report={report} model={model} order={order} drug={drug} pick={pick} onPick={onPick} />
         ) : (
-          <>
+          <div data-block-layout={genomesView ? undefined : layout}>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
               <StateLegend />
               {genomesView ? (
                 <GenomeWindowBar n={n} start={start} win={win} blocks={blocks} onMove={moveWindowTo} />
-              ) : (
+              ) : layout === "compact" ? null : (
                 <p className="text-control text-muted-text">
                   {`${plural(B, "block")}: ${plural(model.named, "lineage")} of at least ${BLOCK_MIN_GENOMES} genomes, ${plural(B - model.named, "pool")} of smaller ones`}
                 </p>
@@ -652,8 +659,9 @@ export const StructureExplorer = ({
             {!genomesView && plotW > viewW + 1 ? (
               <p className="mt-2 text-control tabular-nums text-muted-text" aria-live="polite">{`Blocks ${visibleFirst}–${visibleLast} of ${B} in view; scroll sideways for the rest.`}</p>
             ) : null}
+            {!genomesView && layout === "compact" ? <CompactBlocks report={report} blocks={blocks} drug={drug} /> : null}
             {model.brk !== null ? <BreakNote brk={model.brk} /> : null}
-          </>
+          </div>
         )}
         {caption !== undefined ? <p className="prose-measure mt-3 text-note text-muted-text">{caption}</p> : null}
       </div>

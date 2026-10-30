@@ -6,10 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fixtureFile } from "../dev/fixtures/files";
 import { parseCorpus, parseManifest, parseSpecies } from "../data/validate";
 import { capitalize, int, pct } from "../data/format";
-import type { Manifest } from "../data/schema";
+import type { Manifest, SpeciesReport } from "../data/schema";
 import type { Navigator } from "../app/router";
 import { ThemeProvider } from "../theme/ThemeProvider";
-import { drugTotals, drugsByCalls, lineageBlocks, rsOf } from "../charts/lineageBlocks";
+import { BLOCK_MIN_GENOMES, drugTotals, drugsByCalls, lineageBlocks, rsOf } from "../charts/lineageBlocks";
+import { COMPACT_BLOCKS, COMPACT_BLOCK_PX, blockLayout } from "../charts/CompactBlocks";
 import { MIN_JOINT, crossPairs, pairSummary } from "../charts/crossPairs";
 import { SpeciesView, drugResult } from "./SpeciesView";
 
@@ -139,6 +140,89 @@ describe("species population structure", () => {
       totals.s,
       totals.untested,
     ]);
+  });
+});
+
+/** The fixture species with its genomes regrouped into `groups` lineages,
+ *  each a contiguous run of the leaf order of at least BLOCK_MIN_GENOMES
+ *  genomes, so lineageBlocks makes exactly that many blocks. */
+const regrouped = (groups: number): SpeciesReport => {
+  const s = structuredClone(report);
+  const per = Math.floor(s.leaf_order.length / groups);
+  s.leaf_order.forEach((g, pos) => {
+    s.genomes[g]!.lineage = Math.min(groups - 1, Math.floor(pos / per));
+  });
+  s.n_lineages = groups;
+  // A slug of its own, so the loader's cache never serves the fixture file.
+  s.slug = `${report.slug}-in-${groups}`;
+  return s;
+};
+
+const renderSpecies = async (s: SpeciesReport) => {
+  vi.stubGlobal("fetch", async (path: string) => new Response(JSON.stringify(path === `/data/species/${s.slug}.json` ? s : fixtureFile(path)), { headers: { "Content-Type": "application/json" } }));
+  const m: Manifest = { ...manifest, species: [...manifest.species, { ...first, slug: s.slug }] };
+  const host = document.createElement("div");
+  document.body.append(host);
+  const r = createRoot(host);
+  root = r;
+  await act(async () => {
+    r.render(createElement(ThemeProvider, { children: createElement(SpeciesView, { manifest: m, nav: navFor(s.slug) }) }));
+  });
+  await act(async () => {
+    await new Promise((done) => setTimeout(done, 0));
+  });
+  return host;
+};
+
+describe("small population maps", () => {
+  it("draws one block as a compact map with its genomes, lineage and map-drug calls in words", async () => {
+    const s = regrouped(1);
+    expect(report.genomes.length).toBeGreaterThanOrEqual(BLOCK_MIN_GENOMES);
+    const blocks = lineageBlocks(s);
+    expect(blocks).toHaveLength(1);
+    const host = await renderSpecies(s);
+    const map = host.querySelector("#sp-structure [data-block-layout]")!;
+    expect(map.getAttribute("data-block-layout")).toBe("compact");
+    const grid = map.querySelector('[role="grid"]')!;
+    expect(grid.getAttribute("aria-label")).toContain(`1 lineage block of ${int(s.genomes.length)} genomes`);
+    // One column at the compact width, not stretched across the figure.
+    expect(grid.parentElement!.style.width).toBe(`${COMPACT_BLOCK_PX}px`);
+    const compact = map.querySelector("[data-compact-blocks]")!;
+    expect(compact.getAttribute("data-compact-blocks")).toBe("1");
+    expect(compact.textContent).toContain(`${int(s.genomes.length)} genomes in 1 lineage make only 1 block: 1 lineage of at least ${BLOCK_MIN_GENOMES} genomes.`);
+    const drug = drugsByCalls(s)[0]!;
+    const table = compact.querySelector(`table[aria-label="${capitalize(s.drugs[drug]!)} calls in each of the 1 block"]`)!;
+    const rows = [...table.querySelectorAll("tbody tr")];
+    expect(rows).toHaveLength(1);
+    const t = drugTotals(s, drug);
+    expect([...rows[0]!.children].map((c) => c.textContent)).toEqual(["1. Lineage 0", int(s.genomes.length), int(t.r), int(t.i), int(t.s), int(t.untested)]);
+    // The spread map's one-line block summary gives way to the note.
+    expect(map.textContent).not.toMatch(/pools? of smaller ones/);
+  });
+
+  it("lists every block of a small map, and its counts add up to the species totals", async () => {
+    const s = regrouped(3);
+    const blocks = lineageBlocks(s);
+    expect(blocks).toHaveLength(3);
+    const host = await renderSpecies(s);
+    const compact = host.querySelector("#sp-structure [data-compact-blocks]")!;
+    expect(compact.getAttribute("data-compact-blocks")).toBe("3");
+    const rows = [...compact.querySelectorAll("tbody tr")];
+    expect(rows.map((r) => r.firstElementChild!.textContent)).toEqual(["1. Lineage 0", "2. Lineage 1", "3. Lineage 2"]);
+    const drug = drugsByCalls(s)[0]!;
+    const t = drugTotals(s, drug);
+    const sum = (col: number) => rows.reduce((a, r) => a + Number(r.children[col]!.textContent!.replace(/,/g, "")), 0);
+    expect([sum(1), sum(2), sum(3), sum(4), sum(5)]).toEqual([s.genomes.length, t.r, t.i, t.s, t.untested]);
+  });
+
+  it("keeps the spread map, with no compact note, from COMPACT_BLOCKS blocks up", async () => {
+    const blocks = lineageBlocks(report);
+    const host = await render(manifest, navFor(null));
+    const map = host.querySelector("#sp-structure [data-block-layout]")!;
+    expect(map.getAttribute("data-block-layout")).toBe(blocks.length < COMPACT_BLOCKS ? "compact" : "spread");
+    expect(map.querySelector("[data-compact-blocks]") === null).toBe(blocks.length >= COMPACT_BLOCKS);
+    if (blocks.length >= COMPACT_BLOCKS) expect(map.textContent).toMatch(/\d+ blocks: .* of at least 20 genomes, \d+ pools? of smaller ones/);
+    expect([0, 1, 6, 7, 60].map(blockLayout)).toEqual(["spread", "compact", "compact", "spread", "spread"]);
   });
 });
 

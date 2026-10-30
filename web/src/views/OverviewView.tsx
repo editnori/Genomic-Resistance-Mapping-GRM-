@@ -1,8 +1,9 @@
-// What GRM found: the report in six numbered sections. The data behind the
-// reports, then the four findings Present shares, each with its lead, a
-// figure, a caption that says what a mark is, and short notes on coverage in
-// view; last, the limits every number shares. The panel section also holds
-// every panel result; /tests lands on it through the #panels anchor.
+// What GRM found: a five-step primer for a reader new to the terms, then the
+// report in six numbered sections. The data behind the reports, then the
+// four findings Present shares, each with its lead, a figure, a caption that
+// says what a mark is, and short notes on coverage in view; last, the limits
+// every number shares. The panel section also holds every panel result;
+// /tests lands on it through the #panels anchor.
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
@@ -11,6 +12,7 @@ import { int, plural } from "../data/format";
 import type { Navigator } from "../app/router";
 import { ViewHeader } from "../ui/ViewHeader";
 import { FOCUS_RING, PanelState, VIEW_SHELL } from "../ui/primitives";
+import { PrimerSection } from "./primer";
 import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding } from "./findings";
 
 /** The anchor of the panel section, where /tests redirects. */
@@ -135,6 +137,7 @@ export const OverviewView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
         </div>
       ) : (
         <div className="mt-10 space-y-12">
+          <PrimerSection manifest={manifest} nav={nav} firstFinding={findings[0]!.id} />
           {findings.map((f, i) => (
             <ReportSection key={f.id} n={i + 1} finding={f} open={f.id === PANELS_ANCHOR && hash === PANELS_ANCHOR} />
           ))}

@@ -3,8 +3,9 @@
 // sort, filter or Show all moves a column; below the table's floor it
 // scrolls sideways under a sticky Dataset column. Values are plain text: a
 // check marks a value that meets its bar, coral marks a gap over 5 points
-// and blue a catalog rule within 2 points of Lineage or ahead, and a key
-// over the table says so in words. One search row carries the search, the
+// and blue a catalog rule within 2 points of Lineage or ahead, a shape and
+// colour before each drug class name mark its family, and a key over the
+// table says so in words. One search row carries the search, the
 // Filters button below 1440px, and the one result count; below 640px the
 // search takes its own row. From 1440px the filters are a rail in the same
 // grid. Search, filters, sort and Show all survive a trip away and Back.
@@ -28,6 +29,7 @@ import { FilterRail, FiltersButton, railGrid, RailCheck, RailChecks, RailControl
 import { FOCUS_RING, GhostButton, MeetsMark, VIEW_SHELL } from "../ui/primitives";
 import { useClipped } from "../ui/useClipped";
 import { useCountUp } from "../ui/useCountUp";
+import { byFamily, ClassGlyph, ClassKey, ClassName } from "../ui/drugClass";
 
 const MIN_N = [
   { id: "0", label: "Any size" },
@@ -227,7 +229,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
           <span className="whitespace-nowrap">
             <i>{speciesShort(r.species)}</i> ·
           </span>{" "}
-          {r.drug_class}
+          <ClassName drugClass={r.drug_class} />
         </span>
       </span>
     ),
@@ -370,7 +372,9 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
 ];
 
 /** What the table's marks mean, printed once over it. Each mark is shown
- *  as it appears in the cells, then said in words. */
+ *  as it appears in the cells, then said in words. The drug-class key
+ *  always takes the second line, so the key is two lines at every width
+ *  the rail docks and the rail's first group stays on the header line. */
 const TableKey = () => (
   <p className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-control text-muted-text">
     <span className="inline-flex items-baseline gap-1">
@@ -385,6 +389,7 @@ const TableKey = () => (
     <span>
       <span className="font-medium text-blue">Catalog</span> within 2 points of Lineage, or ahead
     </span>
+    <ClassKey className="basis-full" />
   </p>
 );
 
@@ -411,7 +416,8 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
   const learnerCounts = countBy(rows, axes, "learner", (r) => r.best_learner ?? "none");
   const withoutMinN = rowsWithout(rows, axes, "minN");
   const speciesNames = [...new Set(rows.map((r) => r.species))].sort((a, b) => (speciesCounts.get(b) ?? 0) - (speciesCounts.get(a) ?? 0) || a.localeCompare(b));
-  const classNames = [...new Set(rows.map((r) => r.drug_class))].sort((a, b) => (classCounts.get(b) ?? 0) - (classCounts.get(a) ?? 0) || a.localeCompare(b));
+  // Classes list by family, so each family's mark runs in one block.
+  const classNames = byFamily([...new Set(rows.map((r) => r.drug_class))], (c) => classCounts.get(c) ?? 0);
   const clearAll = () => {
     setF(ARRIVAL);
     setQuery("");
@@ -436,7 +442,7 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
           <Dropdown
             ariaLabel="Drug class"
             rest="All drug classes"
-            options={classNames.map((c) => ({ id: c, label: capitalize(c), count: classCounts.get(c) ?? 0 }))}
+            options={classNames.map((c) => ({ id: c, label: capitalize(c), count: classCounts.get(c) ?? 0, icon: <ClassGlyph drugClass={c} /> }))}
             mode={{ kind: "many", value: f.classes, onChange: (classes) => setF({ ...f, classes }) }}
           />
         </RailControl>
@@ -486,7 +492,7 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search antibiotic, species, drug class, or gene"
-                className={`ui-control-target h-10 w-full rounded-full border border-hair bg-paper-pure pl-10 pr-4 text-body text-ink placeholder:text-muted-text transition-colors duration-fast ease-out hover:border-blue/40 ${FOCUS_RING}`}
+                className={`ui-control-target h-10 w-full rounded-md border border-hair bg-paper-pure pl-10 pr-4 text-body text-ink placeholder:text-muted-text transition-colors duration-fast ease-out hover:border-blue/40 ${FOCUS_RING}`}
               />
             </label>
             <FiltersButton rail={rail} activeCount={active} />

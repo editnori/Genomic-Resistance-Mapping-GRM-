@@ -1,0 +1,773 @@
+# shellcheck shell=bash
+# Primitives shared by common.sh (and so every deployment script), connector.sh
+# and smoke.sh: safe file access, process identity, and the supervision of
+# processes they start. Source it; do not run it. It sets no options and reads
+# no configuration.
+#
+# Safe file access. No record, lock, log, pid or marker file is opened when it
+# is a link, FIFO, socket, device or directory, and no open can block:
+#   - reads (safe_line, safe_sha256, and parse_fields in common.sh) go through
+#     GRM_PY, which opens with O_NOFOLLOW and O_NONBLOCK and checks the
+#     descriptor it got;
+#   - descriptors bash itself holds (locks, logs, spawn markers) come from
+#     open_fd or open_append, which check the path, open it read-write (so a
+#     FIFO swapped in after the check cannot block the open) and then check
+#     the descriptor: it must be a regular file at that very path;
+#   - whole files are written by write_file: a new temporary file, renamed
+#     over the target and read back.
+#
+# Process identity is a PID plus its start time (proc_start), never a PID
+# alone, a path or a command line.
+#
+# Supervised processes. A script that starts a long-lived process first takes
+# a flock on a marker file and forks with that descriptor open, so the child
+# holds the lock from the instant it exists, keeps it across exec, and so does
+# everything it forks. mark_holders finds every process with the marker open
+# (by device and inode), lock_holders those whose descriptor holds its lock,
+# and lock_free proves that none is left, including any this shell cannot see
+# (another user's or a non-dumpable process). mark_stop stops the lock's
+# holders while the marker file is intact, with their process groups (until no
+# member is left, even once a group's leader has exited, but then only members
+# tied to the start; see Stopping), and succeeds only on that proof and when
+# every one of them stopped.
+
+# PATH is absent, or a regular file that is not a link.
+plain_target() {
+    [ ! -L "$1" ] && { [ ! -e "$1" ] || [ -f "$1" ]; }
+}
+# DIR is absent, or a directory that is not a link.
+plain_dir() {
+    [ ! -L "$1" ] && { [ ! -e "$1" ] || [ -d "$1" ]; }
+}
+
+# python3 -I -c "$GRM_PY" OP FILE [ARG]: read FILE without following a link or
+# blocking on a FIFO; it must be a regular file. On failure print "ERR reason"
+# and exit 1. OP is
+#   sha256        print its SHA-256
+#   line MAX      print its only line: at most MAX bytes of printable ASCII
+#                 ending in its single newline, with no other byte after it
+#   fields FORM   print "key value" lines of its key=value fields (common.sh
+#                 parse_fields; FORM line or lines), at most 64 KiB
+GRM_PY='
+import hashlib, os, re, stat, sys
+
+def fail(msg):
+    print("ERR " + msg)
+    sys.exit(1)
+
+def open_plain(path):
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
+        fail("is missing")
+    except OSError as error:
+        fail(f"cannot be read ({error.strerror})")
+    if stat.S_ISLNK(st.st_mode):
+        fail("is a link")
+    if not stat.S_ISREG(st.st_mode):
+        fail("is not a regular file")
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_NOCTTY)
+    except OSError as error:
+        fail(f"cannot be read ({error.strerror})")
+    if not stat.S_ISREG(os.fstat(fd).st_mode):
+        fail("is not a regular file")
+    return fd
+
+def read_capped(fd, limit, label):
+    data = b""
+    while len(data) <= limit:
+        chunk = os.read(fd, limit + 1 - len(data))
+        if not chunk:
+            break
+        data += chunk
+    if len(data) > limit:
+        fail(f"is larger than {label}")
+    return data
+
+def text(data):
+    if not data:
+        fail("is empty")
+    for offset, byte in enumerate(data):
+        if byte != 10 and not 32 <= byte <= 126:
+            fail(f"holds byte 0x{byte:02x} at offset {offset}; only printable ASCII and newlines are allowed")
+    if not data.endswith(b"\n"):
+        fail("does not end with a newline")
+    return data[:-1].decode("ascii")
+
+op, path = sys.argv[1:3]
+fd = open_plain(path)
+if op == "sha256":
+    digest = hashlib.sha256()
+    while True:
+        chunk = os.read(fd, 1 << 20)
+        if not chunk:
+            break
+        digest.update(chunk)
+    print(digest.hexdigest())
+elif op == "line":
+    limit = int(sys.argv[3])
+    body = text(read_capped(fd, limit, f"{limit} bytes"))
+    if "\n" in body:
+        fail(f"has {body.count(chr(10)) + 1} lines, expected one")
+    print(body)
+elif op == "fields":
+    body = text(read_capped(fd, 65536, "64 KiB"))
+    if sys.argv[3] == "line":
+        if "\n" in body:
+            fail(f"has {body.count(chr(10)) + 1} lines, expected one")
+        tokens = body.split(" ")
+    else:
+        tokens = body.split("\n")
+    seen = set()
+    out = []
+    for token in tokens:
+        if not token:
+            fail("has an empty field (a blank line, or a doubled, leading or trailing space)")
+        match = re.fullmatch(r"([a-z][a-z0-9_]*)=([A-Za-z0-9._:/+-]+)", token)
+        if not match:
+            fail(f"has a malformed field {token[:80]!r}")
+        if match[1] in seen:
+            fail(f"repeats field {match[1]}")
+        seen.add(match[1])
+        out.append(f"{match[1]} {match[2]}")
+    print("\n".join(out))
+else:
+    fail(f"unknown operation {op}")
+'
+
+# safe_line FILE [MAX]: print FILE's only line (GRM_PY line; MAX default 4096).
+safe_line() {
+    local out
+    out=$(python3 -I -c "$GRM_PY" line "$1" "${2:-4096}") || return 1
+    printf '%s\n' "$out"
+}
+# safe_sha256 FILE: print the SHA-256 of a regular FILE.
+safe_sha256() {
+    local out
+    out=$(python3 -I -c "$GRM_PY" sha256 "$1") || return 1
+    printf '%s\n' "$out"
+}
+
+# open_fd VAR FILE: open FILE read-write (creating it when absent) on a new
+# descriptor and store its number in VAR. Fails with nothing left open unless
+# FILE was absent or a regular file that is not a link, and the descriptor is
+# a regular file at that path: a link or FIFO swapped in after the check is
+# caught on the descriptor, and a read-write open never blocks on a FIFO.
+open_fd() {
+    local __fd __want __self=$BASHPID
+    plain_target "$2" || return 1
+    __want=$(cd -- "$(dirname -- "$2")" 2>/dev/null && pwd -P) || return 1
+    __want=$__want/${2##*/}
+    { exec {__fd}<>"$2"; } 2>/dev/null || return 1
+    if [ ! -L "$2" ] && [ -f "/proc/$__self/fd/$__fd" ] && [ "$(readlink "/proc/$__self/fd/$__fd")" = "$__want" ]; then
+        printf -v "$1" '%s' "$__fd"
+        return 0
+    fi
+    exec {__fd}>&-
+    return 1
+}
+# open_append VAR FILE: open_fd, then the same file again for appending.
+open_append() {
+    local __rw __ap __self=$BASHPID
+    open_fd __rw "$2" || return 1
+    { exec {__ap}>>"/proc/$__self/fd/$__rw"; } 2>/dev/null || { exec {__rw}>&-; return 1; }
+    exec {__rw}>&-
+    printf -v "$1" '%s' "$__ap"
+}
+# close_fd VAR: close the descriptor whose number VAR holds, if any, and clear VAR.
+close_fd() {
+    local __n=${!1:-}
+    [ -z "$__n" ] || exec {__n}>&-
+    printf -v "$1" '%s' ''
+}
+# append_line FILE TEXT: best effort; never fails, never blocks.
+append_line() {
+    local fd=''
+    open_append fd "$1" || return 0
+    { printf '%s\n' "$2" >&"$fd"; } 2>/dev/null || true
+    close_fd fd
+}
+
+# write_file FILE CONTENT: atomically replace FILE with CONTENT. FILE must be
+# absent or a regular file, never a link, directory, FIFO or other special
+# file, in a directory that is not a link. CONTENT goes to a new temporary file
+# beside FILE, is checked there byte for byte, renamed over FILE with mv -T
+# (which fails on a directory instead of moving into it), and checked byte for
+# byte again in FILE through GRM_PY. Any failure returns 1; before the rename
+# FILE is left as it was.
+write_file() {
+    local file=$1 content=$2 dir want tmp
+    dir=${file%/*}
+    [ -d "$dir" ] && [ ! -L "$dir" ] && plain_target "$file" || return 1
+    want=$(printf '%s' "$content" | sha256sum | cut -d' ' -f1)
+    tmp=$(mktemp -- "$dir/.${file##*/}.XXXXXX" 2>/dev/null) || return 1
+    if printf '%s' "$content" 2>/dev/null >"$tmp" && chmod 644 "$tmp" &&
+        checkpoint "write:${file##*/}" &&
+        [ "$(safe_sha256 "$tmp")" = "$want" ] &&
+        mv -fT -- "$tmp" "$file" 2>/dev/null &&
+        checkpoint "renamed:${file##*/}" &&
+        [ "$(safe_sha256 "$file")" = "$want" ]; then
+        return 0
+    fi
+    rm -f -- "$tmp"
+    return 1
+}
+
+# Test hooks (tests/apply.sh). GRM_TEST_SIGNAL_AT=NAME makes the script send
+# itself GRM_TEST_SIGNAL (TERM by default; KILL and STOP are used too) at
+# checkpoint NAME. GRM_TEST_CHILD_AT=NAME makes a forked child stop itself
+# (SIGSTOP) at child_checkpoint NAME, before it execs. Both do nothing unless
+# set.
+checkpoint() {
+    [ "${GRM_TEST_SIGNAL_AT:-}" = "$1" ] || return 0
+    kill -s "${GRM_TEST_SIGNAL:-TERM}" "$$"
+}
+child_checkpoint() {
+    [ "${GRM_TEST_CHILD_AT:-}" = "$1" ] || return 0
+    kill -s STOP "$BASHPID"
+}
+
+# ---- Process identity --------------------------------------------------------
+
+# proc_stat PID: set PS_STATE, PS_PPID, PS_PGRP, PS_SID and PS_START (clock
+# ticks after boot, field 22 of /proc/PID/stat) and succeed, unless PID is
+# gone or a zombie.
+proc_stat() {
+    local line
+    local -a f
+    { read -r line <"/proc/$1/stat"; } 2>/dev/null || return 1
+    read -r -a f <<<"${line##*) }"
+    [ "${f[0]:-Z}" != Z ] && [ "${f[0]}" != X ] || return 1
+    PS_STATE=${f[0]} PS_PPID=${f[1]} PS_PGRP=${f[2]} PS_SID=${f[3]} PS_START=${f[19]}
+}
+# The start time of PID; fails when PID is gone or a zombie.
+proc_start() {
+    proc_stat "$1" || return 1
+    printf '%s\n' "$PS_START"
+}
+# alive PID [START]: PID runs, and is the process that started at START.
+alive() {
+    proc_stat "$1" || return 1
+    [ -z "${2:-}" ] || [ "$PS_START" = "$2" ]
+}
+# The parent PID of PID, or nothing.
+ppid_of() {
+    if proc_stat "$1"; then printf '%s\n' "$PS_PPID"; fi
+}
+# file_id FILE: "device:inode" of a regular FILE that is not a link.
+file_id() {
+    [ -f "$1" ] && [ ! -L "$1" ] || return 1
+    stat -c %d:%i -- "$1"
+}
+# fd_id FD: "device:inode" of this shell's open descriptor FD.
+fd_id() {
+    stat -L -c %d:%i -- "/proc/$BASHPID/fd/$1"
+}
+# fds_on PID ID: PID's descriptors open on the file with device:inode ID.
+fds_on() {
+    local link out=''
+    for link in "/proc/$1/fd/"*; do
+        [ "$(stat -L -c %d:%i -- "$link" 2>/dev/null)" = "$2" ] && out+=" ${link##*/}"
+    done
+    printf '%s\n' "${out# }"
+}
+holds() { [ -n "$(fds_on "$1" "$2")" ]; }
+# fd_lock_mode PID FD: print WRITE or READ when PID's descriptor FD is the open
+# file description holding an exclusive or a shared flock (the kernel lists it
+# in /proc/PID/fdinfo/FD); fails when it holds none.
+fd_lock_mode() {
+    local line
+    while IFS= read -r line; do
+        case $line in
+            lock:*FLOCK*WRITE*) echo WRITE; return 0 ;;
+            lock:*FLOCK*READ*) echo READ; return 0 ;;
+        esac
+    done 2>/dev/null <"/proc/$1/fdinfo/$2"
+    return 1
+}
+# fd_holds_flock PID FD: PID's descriptor FD holds an exclusive flock.
+fd_holds_flock() { [ "$(fd_lock_mode "$1" "$2")" = WRITE ]; }
+# mark_holders ID: the PIDs, other than this shell, with a descriptor open on
+# the file with device:inode ID, whatever its path is now. A process whose
+# descriptors this user cannot read is missed; lock_free still sees it.
+mark_holders() {
+    local links link pid out=''
+    links=$(find -L /proc/[0-9]*/fd -mindepth 1 -maxdepth 1 -inum "${1#*:}" 2>/dev/null) || true
+    for link in $links; do
+        pid=${link#/proc/}
+        pid=${pid%%/*}
+        [ "$pid" != "$$" ] && [ "$pid" != "$BASHPID" ] || continue
+        [ "$(stat -L -c %d:%i -- "$link" 2>/dev/null)" = "$1" ] || continue
+        case " $out " in *" $pid "*) ;; *) out+=" $pid" ;; esac
+    done
+    printf '%s\n' "${out# }"
+}
+# holds_lock PID ID: one of PID's descriptors on the file with device:inode ID
+# is the open file description that holds its flock. Every process of a start
+# holds the marker that way, inherited at the fork; a process that merely
+# opened the file (a backup, an indexer, an operator's less) does not.
+holds_lock() {
+    local fd
+    for fd in $(fds_on "$1" "$2"); do
+        fd_holds_flock "$1" "$fd" && return 0
+    done
+    return 1
+}
+# lock_holders ID: those of mark_holders ID that hold the lock (holds_lock).
+lock_holders() {
+    local p out=''
+    for p in $(mark_holders "$1"); do
+        holds_lock "$p" "$1" && out+=" $p"
+    done
+    printf '%s\n' "${out# }"
+}
+# lock_holder_ids ID: lock_holders ID as PID:START words. The start time is
+# read before and after the lock is seen, and must not change, so the word
+# names the process that held the lock even if its PID is reused later.
+lock_holder_ids() {
+    local p s out=''
+    for p in $(mark_holders "$1"); do
+        s=$(proc_start "$p") || continue
+        holds_lock "$p" "$1" && [ "$(proc_start "$p" 2>/dev/null)" = "$s" ] && out+=" $p:$s"
+    done
+    printf '%s\n' "${out# }"
+}
+# any_lockers ID: PID:START of the processes (other than this shell) whose
+# descriptor on the file with device:inode ID holds a flock, shared or
+# exclusive.
+any_lockers() {
+    local p s fd out=''
+    for p in $(mark_holders "$1"); do
+        s=$(proc_start "$p") || continue
+        for fd in $(fds_on "$p" "$1"); do
+            if fd_lock_mode "$p" "$fd" >/dev/null; then out+=" $p:$s"; break; fi
+        done
+    done
+    printf '%s\n' "${out# }"
+}
+# steady_lockers ID: the PIDs of any_lockers ID that hold a flock in each of
+# five looks 0.2 s apart. A lock_free probe (a shared lock for an instant)
+# drops out; a process holding a lock it was not given at the start, such as
+# one of the start's that converted the lock to shared, stays.
+steady_lockers() {
+    local keep m next kept out='' _
+    keep=$(any_lockers "$1")
+    for _ in 1 2 3 4; do
+        [ -n "$keep" ] || break
+        sleep 0.2
+        next=" $(any_lockers "$1") " kept=''
+        for m in $keep; do
+            case $next in *" $m "*) kept+=" $m" ;; esac
+        done
+        keep=${kept# }
+    done
+    for m in $keep; do out+=" ${m%%:*}"; done
+    printf '%s\n' "${out# }"
+}
+# lock_free FILE: FILE is a regular file and no process holds an exclusive
+# flock on it (every lock these scripts hold is exclusive). Returns 1 while
+# one does, 2 when FILE is missing or not a plain file. The probe takes a
+# shared lock, so while it holds it for that instant it never looks like a
+# holder of the start's exclusive lock (holds_lock) to a concurrent mark_stop.
+lock_free() {
+    local fd='' rc=0
+    [ -f "$1" ] && [ ! -L "$1" ] || return 2
+    open_fd fd "$1" || return 2
+    flock -n -s "$fd" || rc=1
+    close_fd fd
+    return "$rc"
+}
+
+# ---- Signal journal ------------------------------------------------------------
+#
+# Every signal these scripts send to another process goes through send_signal
+# or send_group, which first write a journal line to SIGNAL_LOG (common.sh
+# sets deploy.log, connector.sh signals.log in its directory) and to standard
+# error: the UTC time, the signal, the target (a PID with its start time and
+# command line, or a process group with each member's PID, start time and
+# command name) and the reason, which the caller sets in SIG_WHY (which lock,
+# registered child or token tied it to the start). The journal write must
+# succeed: when SIGNAL_LOG is unset or cannot be written (a link, FIFO or
+# directory, a full disk, a write error), nothing is sent, the send fails with
+# the reason in SIG_ERR, and so does the stop that asked for it. The only
+# signals not journalled are the test hooks' signals to this shell itself
+# (checkpoint, child_checkpoint).
+SIG_WHY=''
+SIG_ERR=''
+# proc_cmd PID: PID's command line, arguments separated by spaces, cut at 200
+# bytes.
+proc_cmd() {
+    local -a argv
+    local s
+    { mapfile -d '' -t argv <"/proc/$1/cmdline"; } 2>/dev/null || true
+    s="${argv[*]}"
+    printf '%s\n' "${s:0:200}"
+}
+# journal_signal LINE: append LINE to SIGNAL_LOG and print it on standard error
+# (best effort); fails when it cannot be appended.
+journal_signal() {
+    local fd=''
+    [ -n "${SIGNAL_LOG:-}" ] || return 1
+    open_append fd "$SIGNAL_LOG" || return 1
+    if ! { printf '%s\n' "$1" >&"$fd"; } 2>/dev/null; then
+        close_fd fd
+        return 1
+    fi
+    close_fd fd
+    { printf '%s\n' "$1" >&2; } 2>/dev/null || true
+}
+# send_signal SIGNAL PID START [REASON]: journal, then send SIGNAL to PID, the
+# process that started at START. REASON defaults to SIG_WHY.
+send_signal() {
+    local why=${4:-${SIG_WHY:-no reason given}}
+    journal_signal "$(date -u +%FT%TZ) signal $1 to pid $2 (start $3, cmd [$(proc_cmd "$2")]): $why" ||
+        { SIG_ERR="cannot write the signal journal (${SIGNAL_LOG:-unset}); SIG$1 to pid $2 was not sent"; return 1; }
+    kill -s "$1" "$2" 2>/dev/null || true
+}
+# send_group SIGNAL PGID [REASON]: journal, then send SIGNAL to process group
+# PGID; the line lists its members as PID:START:COMMAND.
+send_group() {
+    local why=${3:-${SIG_WHY:-no reason given}} m list=''
+    for m in $(group_members "$2"); do list+=" ${m%%:*}:${m#*:}:$(proc_comm "${m%%:*}")"; done
+    journal_signal "$(date -u +%FT%TZ) signal $1 to process group $2 (members${list:- none}): $why" ||
+        { SIG_ERR="cannot write the signal journal (${SIGNAL_LOG:-unset}); SIG$1 to process group $2 was not sent"; return 1; }
+    kill -s "$1" -- "-$2" 2>/dev/null || true
+}
+# would_signal PID START REASON: the dry-run line for a stop that --apply would
+# make (SIGTERM, then SIGKILL after 10 s).
+would_signal() {
+    printf 'dry-run: would send TERM (then KILL after 10 s) to pid %s (start %s, cmd [%s]): %s\n' "$1" "$2" "$(proc_cmd "$1")" "$3"
+}
+
+# ---- Stopping ------------------------------------------------------------------
+#
+# A process started through setsid leads a process group, and a session,
+# numbered by its PID; everything it forks stays in that group unless it moves
+# itself out. While the leader is the process that started at START, every
+# member of the group is the start's own: the number is not reused while the
+# leader lives, and only processes of its own session can join the group. Once
+# the leader has exited, the number still names that group only while one of
+# its old members is left. When none is, an unrelated process may take the
+# number and form a new group with members but no leader, as a daemon that
+# double-forks, or a pipeline whose first process exited, leaves one. So a
+# group whose leader is gone is signalled only while every live member is tied
+# to the start: it was seen in the group while the leader lived (by PID and
+# start time), it carries the start's token as GRM_DEPLOY_SPAWN in its
+# environment (inherited across fork and exec), or it holds the start's
+# marker lock. A tie, once found, holds for that PID and start time for the
+# rest of the stop. A member that is none of these is never signalled, and the
+# stop fails, so the caller keeps its journal; that includes another user's or
+# a non-dumpable process, whose environment cannot be read.
+#
+# The marker identifies a start's processes by device and inode only while
+# its path still names that inode: once the file is gone the inode may be
+# freed and given to any new file, the next start's marker among them. And
+# only the open file description holding the lock is the start's; anyone may
+# open the file. So mark_stop signals a holder only while the marker is
+# intact and only when the holder's descriptor holds the lock (holds_lock);
+# with the marker gone or replaced it stops only the registered process, by
+# PID and start time, and fails.
+
+# tree_signal SIGNAL PID START GROUP: signal PID, and process group GROUP if
+# given, journalled with SIG_WHY. For a PID just found alive with START,
+# leading GROUP (connector.sh's signal handler). Fails, sending no more, when
+# the journal cannot be written.
+tree_signal() {
+    send_signal "$1" "$2" "$3" || return 1
+    if [ -n "$4" ]; then send_group "$1" "$4" "${SIG_WHY:-no reason given}; the group pid $2 leads" || return 1; fi
+}
+# group_members GROUP: the live (not zombie) members of process group GROUP, as
+# PID:START words.
+group_members() {
+    local p out=''
+    for p in $(pgrep -g "$1" 2>/dev/null || true); do
+        if proc_stat "$p" && [ "$PS_PGRP" = "$1" ]; then out+=" $p:$PS_START"; fi
+    done
+    printf '%s\n' "${out# }"
+}
+# group_left GROUP START: process group GROUP, which the process that started at
+# START leads or led, may still have a live member. A live process with that
+# PID and another start time shows that the group ended and the number was
+# reused, so it counts as gone. Whether the members belong to the start is
+# group_ties's question.
+group_left() {
+    if proc_stat "$1" && [ "$PS_START" != "$2" ]; then return 1; fi
+    [ -n "$(group_members "$1")" ]
+}
+# group_ties GROUP TOKEN ID SEEN: sort the live members of GROUP. Print the
+# PID:START words of those tied to a start (among SEEN's PID:START words,
+# carrying TOKEN as GRM_DEPLOY_SPAWN when TOKEN is given, or holding the lock
+# of the marker with device:inode ID when ID is given; mark_stop gives ID only
+# while the marker is intact), then "|", then the PIDs of the rest.
+group_ties() {
+    local m p tied='' untied=''
+    for m in $(group_members "$1"); do
+        p=${m%%:*}
+        case " $4 " in *" $m "*) tied+=" $m"; continue ;; esac
+        if [ -n "$2" ] && [ "$(env_value "$p" GRM_DEPLOY_SPAWN)" = "$2" ]; then tied+=" $m"; continue; fi
+        if [ -n "$3" ] && holds_lock "$p" "$3"; then tied+=" $m"; continue; fi
+        alive "$p" "${m#*:}" || continue
+        untied+=" $p"
+    done
+    printf '%s|%s\n' "${tied# }" "${untied# }"
+}
+# stop_tree PID START TOKEN ID [group]: stop the process that started at START,
+# and its process group when it leads one (a process started through setsid),
+# unless that is this shell's own group: SIGTERM (with SIGCONT, so a stopped
+# process acts on it), up to 10 s, then SIGKILL, up to 10 s. The group gets
+# each signal while it has a member, even after its leader has exited, so a
+# descendant that ignores SIGTERM is still killed; but once the leader is gone,
+# only while every member is tied to the start by TOKEN, the marker ID (either
+# may be empty) or having been seen in the group while the leader lived (see
+# above). With "group", the group that PID led is stopped even when PID has
+# already exited. A PID now held by another process counts as stopped and gets
+# no signal. Succeeds once all of them are gone; else returns 1 with the reason
+# in STOP_ERR.
+stop_tree() {
+    local pid=$1 start=$2 token=$3 id=$4 group='' seen='' untied='' sig _
+    STOP_ERR=''
+    if alive "$pid" "$start"; then
+        if [ "$PS_PGRP" = "$pid" ]; then group=$pid; fi
+    elif [ "${5:-}" = group ] && group_left "$pid" "$start"; then
+        group=$pid
+    else
+        return 0
+    fi
+    if [ -n "$group" ] && { ! proc_stat "$$" || [ "$PS_PGRP" = "$group" ]; }; then group=''; fi
+    # A group already without its leader, with a member that is not the
+    # start's, is left alone at once: waiting would not tie it.
+    if [ -n "$group" ] && ! alive "$pid" "$start"; then
+        sort_members
+        if [ -n "$untied" ]; then untied_err; return 1; fi
+    fi
+    for sig in TERM KILL; do
+        tree_send "$sig" || { STOP_ERR=$SIG_ERR; return 1; }
+        if [ "$sig" != KILL ]; then tree_send CONT || { STOP_ERR=$SIG_ERR; return 1; }; fi
+        for _ in $(seq 1 40); do
+            note_members
+            if ! alive "$pid" "$start" && { [ -z "$group" ] || ! group_left "$group" "$start"; }; then return 0; fi
+            sleep 0.25
+        done
+    done
+    if [ -n "$group" ] && ! alive "$pid" "$start"; then sort_members; fi
+    if [ -n "$untied" ]; then untied_err; else STOP_ERR="pid $pid${group:+ or its process group} would not stop"; fi
+    return 1
+}
+# stop_tree's helpers, which use its locals (pid, start, token, id, group, seen
+# and untied). tree_send SIGNAL signals the process while it is the one that
+# started at START, and its group while it has a member: while the process
+# lives at once, once it is gone only while every member is tied to the start,
+# else untied lists those that are not. The members are noted first, as the
+# signal may end the process.
+tree_send() {
+    note_members
+    if alive "$pid" "$start"; then send_signal "$1" "$pid" "$start" || return 1; fi
+    [ -n "$group" ] && group_left "$group" "$start" || return 0
+    if alive "$pid" "$start"; then
+        send_group "$1" "$group" "${SIG_WHY:-no reason given}; the group pid $pid (start $start) leads, while it runs" || return 1
+        return 0
+    fi
+    sort_members
+    [ -z "$untied" ] || return 0
+    send_group "$1" "$group" "${SIG_WHY:-no reason given}; the group pid $pid (start $start) led, now without it, every member tied to the start (seen while it ran, its token or its marker lock: $seen)" || return 1
+}
+# sort_members: set untied to the group's members not tied to the start, and
+# add those that are to seen. A tie holds for that process (its PID and start
+# time) for the rest of the stop, so one that execs without the token after it
+# was tied, as a descendant starting up may, stays tied.
+sort_members() {
+    local out m
+    out=$(group_ties "$group" "$token" "$id" "$seen")
+    for m in ${out%%|*}; do
+        case " $seen " in *" $m "*) ;; *) seen+=" $m" ;; esac
+    done
+    untied=${out#*|}
+}
+# note_members: while the process lives, add its group's members to seen. They
+# count only when it still lives after they were listed.
+note_members() {
+    local m list
+    [ -n "$group" ] && alive "$pid" "$start" || return 0
+    list=$(group_members "$group")
+    alive "$pid" "$start" || return 0
+    for m in $list; do
+        case " $seen " in *" $m "*) ;; *) seen+=" $m" ;; esac
+    done
+}
+untied_err() {
+    STOP_ERR="process group $group has members (pids $untied) that cannot be tied to this start: its leader, pid $pid, is gone, and they neither carry its token nor hold its marker, so they were not signalled; check them by hand (ps -o pid,pgid,sid,lstart,args -g $group)"
+}
+# SIGTERM PID and wait up to 10 s for it to exit. Given START, a PID now held by
+# another process counts as stopped and is not signalled. Journalled with
+# SIG_WHY; fails, sending nothing, when the journal cannot be written.
+stop_pid() {
+    local _
+    alive "$1" "${2:-}" || return 0
+    send_signal TERM "$1" "${2:-unknown}" || return 1
+    for _ in $(seq 1 40); do
+        alive "$1" "${2:-}" || return 0
+        sleep 0.25
+    done
+    return 1
+}
+# SIGKILL PID [START]; succeeds only once the process is gone. Journalled like
+# stop_pid.
+kill_pid() {
+    local _
+    alive "$1" "${2:-}" || return 0
+    send_signal KILL "$1" "${2:-unknown}" || return 1
+    for _ in $(seq 1 20); do
+        alive "$1" "${2:-}" || return 0
+        sleep 0.25
+    done
+    return 1
+}
+# stop_pid, then kill_pid.
+ensure_stopped() {
+    stop_pid "$@" || kill_pid "$@"
+}
+
+# ---- Spawn markers -------------------------------------------------------------
+
+# mark_lock FILE: open FILE (created if absent) on MARK_FD, set MARK_ID and take
+# its flock. Returns 0 locked, 3 when another process holds the lock (MARK_FD
+# stays open), 1 when FILE cannot be opened as a plain file (nothing open).
+mark_lock() {
+    MARK_FD='' MARK_ID=''
+    open_fd MARK_FD "$1" || return 1
+    MARK_ID=$(fd_id "$MARK_FD") || { close_fd MARK_FD; return 1; }
+    flock -n "$MARK_FD" || return 3
+}
+# mark_create DIR NAME: make a new marker DIR/NAME.XXXXXX and mark_lock it; set
+# MARK_PATH.
+mark_create() {
+    local path
+    MARK_PATH='' MARK_FD='' MARK_ID=''
+    plain_dir "$1" || return 1
+    [ -d "$1" ] || mkdir -m 755 -- "$1" 2>/dev/null || return 1
+    path=$(mktemp -- "$1/$2.XXXXXX" 2>/dev/null) || return 1
+    if mark_lock "$path"; then
+        MARK_PATH=$path
+        return 0
+    fi
+    close_fd MARK_FD
+    rm -f -- "$path"
+    return 1
+}
+# mark_stop ID FILE [PID START [TOKEN]]: stop every process holding the lock
+# of the marker ID while FILE is still that marker (and the registered PID,
+# START, with the process group it leads or led, so a descendant that closed
+# the marker is found even after PID exited), with their process groups, whose
+# members, once a leader is gone, must be tied to the start by the marker's
+# lock, by TOKEN (the start's GRM_DEPLOY_SPAWN, if known) or by having been
+# seen in the group while the leader lived (see Stopping and stop_tree).
+# Then require the proof that none is left: every stop succeeded, the
+# registered process and its group gone, FILE still the marker ID, no holder
+# of its lock this shell can see, no process this shell can see holding any
+# other lock on it for a second (steady_lockers), its lock free, and, given
+# TOKEN, no live process carrying it (token_holders). A holder
+# is stopped only while it is still the process that held the lock at the
+# scan (PID and start time). Returns 1 with the reason in
+# MARK_ERR otherwise. This shell's own descriptor on the marker (MARK_FD) must
+# be closed first, or unlocked.
+mark_stop() {
+    local id=$1 file=$2 cpid=${3:-} cstart=${4:-} token=${5:-} p s round pids mid
+    MARK_ERR=''
+    for round in 1 2 3; do
+        # The inode is the marker's only while FILE still names it (see
+        # Stopping); else nothing is tied to the start by the marker.
+        # Holders are PID:START words read at the scan (lock_holder_ids):
+        # stopping one can take 20 s, in which a later one may exit and its PID
+        # go to unrelated work, so each is checked again, by its start time and
+        # its lock, just before it is stopped. The registered process is a bare
+        # PID, stopped by its journaled start time.
+        pids='' mid=''
+        if [ "$(file_id "$file" 2>/dev/null)" = "$id" ]; then
+            mid=$id
+            pids=$(lock_holder_ids "$id")
+            # The marker may have gone during the scan.
+            [ "$(file_id "$file" 2>/dev/null)" = "$id" ] || pids='' mid=''
+        fi
+        if registered_left "$cpid" "$cstart"; then pids="$cpid $pids"; fi
+        [ -n "${pids// /}" ] || break
+        for p in $pids; do
+            STOP_ERR=''
+            if [ "$p" = "$cpid" ]; then
+                SIG_WHY="the start's registered child, pid $p with start $cstart${token:+, token $token}${file:+, marker ${file##*/}}"
+                stop_tree "$p" "$cstart" "$token" "$mid" group || MARK_ERR=${STOP_ERR:-"pid $p or its process group would not stop"}
+            else
+                s=${p#*:} p=${p%%:*}
+                alive "$p" "$s" && [ -n "$mid" ] && holds_lock "$p" "$mid" && alive "$p" "$s" || continue
+                SIG_WHY="holds the lock of spawn marker ${file##*/} (device:inode $mid), pid $p with start $s"
+                stop_tree "$p" "$s" "$token" "$mid" || MARK_ERR=${STOP_ERR:-"pid $p would not stop"}
+            fi
+        done
+    done
+    # A process that would not stop may have closed the marker, so the proof
+    # below would not see it.
+    [ -z "$MARK_ERR" ] || return 1
+    if registered_left "$cpid" "$cstart"; then
+        MARK_ERR="the registered pid $cpid or its process group would not stop"
+        return 1
+    fi
+    [ "$(file_id "$file" 2>/dev/null)" = "$id" ] ||
+        { MARK_ERR="${file##*/} is missing or replaced, so its lock cannot show that every process is gone (no process holding its old inode was signalled)"; return 1; }
+    pids=$(lock_holders "$id")
+    [ -z "$pids" ] || { MARK_ERR="pids $pids still hold the marker"; return 1; }
+    # A process of the start that converted its lock to shared holds no
+    # exclusive lock, and the shared probe of lock_free does not conflict with
+    # it; a lock_free probe of another script holds one for an instant only.
+    pids=$(steady_lockers "$id")
+    [ -z "$pids" ] || { MARK_ERR="pids $pids hold a lock on ${file##*/} that is not the start's exclusive lock (a process of the start that changed its lock, or another process); none of them was signalled"; return 1; }
+    lock_free "$file" || { MARK_ERR="${file##*/} is still locked by a process this user cannot see"; return 1; }
+    # A process of the start that closed or released the marker and left the
+    # group is found by nothing above, but still carries the token.
+    pids=$(token_holders "$token")
+    [ -z "$pids" ] || { MARK_ERR="pids $pids carry this start's token (GRM_DEPLOY_SPAWN=$token) but hold neither its lock nor its group; none of them was signalled"; return 1; }
+}
+# registered_left PID START: PID (if given) is still the process that started
+# at START, or the process group it led has a member.
+registered_left() {
+    [ -n "$1" ] && [ -n "$2" ] && { alive "$1" "$2" || group_left "$1" "$2"; }
+}
+
+# cmdline_arg PID FLAG: the argument after FLAG in PID's command line.
+cmdline_arg() {
+    local -a argv
+    local i
+    { mapfile -d '' -t argv <"/proc/$1/cmdline"; } 2>/dev/null || return 0
+    for ((i = 0; i + 1 < ${#argv[@]}; i++)); do
+        [ "${argv[i]}" != "$2" ] || { printf '%s\n' "${argv[i + 1]}"; return 0; }
+    done
+}
+# env_value PID NAME: the value of NAME in PID's environment, if readable.
+env_value() {
+    local -a env
+    local entry
+    { mapfile -d '' -t env <"/proc/$1/environ"; } 2>/dev/null || return 0
+    for entry in "${env[@]}"; do
+        [ "${entry%%=*}" != "$2" ] || { printf '%s\n' "${entry#*=}"; return 0; }
+    done
+}
+# token_holders TOKEN: the live PIDs, other than this shell, whose environment
+# holds GRM_DEPLOY_SPAWN=TOKEN. A start's token is a fresh random UUID that a
+# process gets only through the exec of the start's server or cloudflared, so
+# each is the start's own.
+token_holders() {
+    local f p out=''
+    [ -n "$1" ] || return 0
+    for f in $(grep -lzxF -- "GRM_DEPLOY_SPAWN=$1" /proc/[0-9]*/environ 2>/dev/null); do
+        p=${f#/proc/}
+        p=${p%%/*}
+        [ "$p" != "$$" ] && [ "$p" != "$BASHPID" ] && proc_stat "$p" || continue
+        out+=" $p"
+    done
+    printf '%s\n' "${out# }"
+}
+# proc_comm PID: its command name.
+proc_comm() {
+    local comm=''
+    { read -r comm <"/proc/$1/comm"; } 2>/dev/null || true
+    printf '%s\n' "$comm"
+}

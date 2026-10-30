@@ -54,6 +54,10 @@ tail -f data/logs/pipeline.log
 
 The launcher writes its PID to `data/logs/pipeline.pid` and, on exit, its exit code to `data/logs/pipeline.exit`. A launcher killed by SIGKILL writes no exit file and leaves its PID file behind, so check that PID and the log as well.
 
+## Deploy
+
+genomicresistance.com is one `grm serve` on a Vast container behind a Cloudflare Tunnel. [docs/deployment.md](docs/deployment.md) covers local preview from the verified backup, publishing a report copy, building and staging a release, activation, rollback, restoring after a container restart, and the tunnel connector. The publish, build, stage, activate, rollback, restore and legacy-approval scripts in `scripts/deployment/` change nothing under the deployment root without `--apply`; `connector.sh run` and `stop` act at once, and `status.sh` and `smoke.sh` write only a temporary directory. Before serving a pair, the scripts verify the build and report trees against their SHA-256 manifests and require a stage approval bound to both manifests (`status.sh` does not verify manifests). Approvals and state files are strict one-record ASCII files, written atomically and read back. Every server start is journaled, and every process it starts holds a locked spawn marker from the fork on, so an interrupted or killed start is found and stopped, and its journal is kept while the lock shows a survivor the scripts cannot see. A rollback identifies a damaged current server by its recorded start (PID, start time, token and marker), not by its executable. Records, locks and logs are opened only when they are regular files, so a link or FIFO is refused without blocking. The tunnel token is read only by cloudflared, through `--token-file`.
+
 ## Stages
 
 Every command takes `--data <directory>` (default `data`), and the output paths are relative to it:
@@ -109,11 +113,11 @@ The original Python/Kover application and its saved results are in the [legacy a
 
 ## Reuse
 
-The current source is evaluation revision 7 and writes schema 2 for dataset reports and the report index, which can hold null scores and metrics. The dashboard also reads schema 1, written by revision 6 and earlier, where every learner scored every isolate. Pulling new source recomputes nothing, so each saved report keeps the revision and cohort it was computed with until a run recomputes it.
+The current source is evaluation revision 9, and the published reports are revision 9: since 2026-10-30, genomicresistance.com serves 275 dataset reports over 23 species, built from `b2fd433`. The results above describe the earlier revision-7 run. Revision 8 fixes how the lasso stops: a fit that stops at a solver cap can no longer be selected, scored or saved, each report records how every lasso fit stopped, and any unconverged point makes the report invalid ([docs/lasso-stopping.md](docs/lasso-stopping.md)). Two datasets of the revision-8 run stopped on an unconverged lasso fit; revision 9 fixes the active-set solve that stalled there and changes nothing else. It still writes schema 2 for dataset reports and the report index, which can hold null scores and metrics. The dashboard also reads schema 1, written by revision 6 and earlier, where every learner scored every isolate. Pulling new source recomputes nothing, so each saved report keeps the revision and cohort it was computed with until a run recomputes it.
 
 Before reusing count, structure, and matrix, the pipeline checks the genome selection and order, k = 31, the matrix minimum support of 2, the catalog version behind the gene calls, and each genome's kset digest (a hash of its k-mers). A mismatch, including stages built by hand at another `--k` or `--min-support`, reruns counting, which reuses ksets on disk at k = 31 and recounts the rest from FASTA, then rebuilds the stages that no longer match. Direct `grm learn` refuses the same mismatches and names the command to rerun.
 
-A learned report is reused only when its evaluation revision and input fingerprint match and no feature records a failed BV-BRC annotation download. Such a feature has no gene or product and records the error in `annotation_error`, so the next run recomputes its report. The fingerprint hashes the matrix digest, the antibiotic and its MIC breakpoint, the dataset's class minimum, the count of excluded MIC-inferred labels, the evaluation settings, the lineage threshold, the catalog version, and each evaluated genome's reported call, MIC, lineage, and gene calls in matrix order. Because it uses the kset digests recorded in the matrix, deleting ksets with `--drop-ksets` keeps results current, and editing a kset outside `grm count` goes unnoticed. Genome metadata, contig counts, and drug class change only descriptive fields and are left out, so run `grm learn --force` after changing only those. A schema change alone recomputes nothing.
+A learned report is reused only when its evaluation revision and input fingerprint match, its evaluation audit is valid, and no feature records a failed BV-BRC annotation download. A report whose audit is invalid is written for review, but `grm learn` stops with an error instead of logging it as done, and the next run recomputes it. Such a feature has no gene or product and records the error in `annotation_error`, so the next run recomputes its report. The fingerprint hashes the matrix digest, the antibiotic and its MIC breakpoint, the dataset's class minimum, the count of excluded MIC-inferred labels, the evaluation settings, the lineage threshold, the catalog version, and each evaluated genome's reported call, MIC, lineage, and gene calls in matrix order. Because it uses the kset digests recorded in the matrix, deleting ksets with `--drop-ksets` keeps results current, and editing a kset outside `grm count` goes unnoticed. Genome metadata, contig counts, and drug class change only descriptive fields and are left out, so run `grm learn --force` after changing only those. A schema change alone recomputes nothing.
 
 Revision-6 data predates kset digests, and every revision-6 report is recomputed because the evaluation revision changed, so one pipeline run recounts, rebuilds the stages that no longer match, and relearns. Name the species with `--species`; without it, the pipeline also downloads and counts every curated species that has no counts yet. Until the run finishes, the dashboard shows revision-7 reports for finished species beside revision-6 reports for the rest.
 
@@ -141,8 +145,12 @@ cargo fmt --check
 npm --prefix web test
 npm --prefix web run typecheck
 npm --prefix web run build
-bash -n scripts/run-pipeline.sh
+printf '%s\n' scripts/run-pipeline.sh scripts/deployment/*.sh scripts/deployment/tests/*.sh | xargs -n1 bash -n
+bash scripts/deployment/tests/dry-run.sh
+bash scripts/deployment/tests/apply.sh
 ```
+
+`bash -n` parses only its first file, so `xargs -n1` runs it once per script. The deployment tests run in temporary directories; `apply.sh` needs `cc`, starts stub servers on free loopback ports, injects signals at each step of a start and in the forked child before it execs, and takes about 15 to 20 minutes on a loaded host. Both suites fail if any assertion is skipped. A mutation harness, kept outside the repository, checked that the suites catch each reviewed deployment defect ([docs/deployment.md](docs/deployment.md#checks)).
 
 `scripts/check-results.py` and `scripts/metric-audit/` check saved reports apart from the Rust code that wrote them. The checker recomputes each learner's confusion counts and balanced accuracy from the saved scores; the metric audit also rebuilds the folds with the `foldgen` helper, recalculates the metrics, and checks the run against its backup and log. Build `foldgen` and run their tests:
 

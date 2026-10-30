@@ -17,6 +17,7 @@ import type { Navigator } from "../../app/router";
 import { ModalDialog } from "../../ui/ModalDialog";
 import { Disclosure, FactRows, FOCUS_RING, GhostButton, PanelState } from "../../ui/primitives";
 import { takeLaunch } from "../../ui/launch";
+import { ClassName } from "../../ui/drugClass";
 import { LearnerSection } from "./LearnerSection";
 import { ModelSection } from "./ModelSection";
 import { MechanismSection } from "./MechanismSection";
@@ -244,7 +245,7 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
                   </>
                 ) : null}
                 <span>
-                  {row.drug_class} · {int(row.n)} isolates, {int(row.n_resistant)} resistant · {plural(row.lineages, "lineage")}
+                  <ClassName drugClass={row.drug_class} /> · {int(row.n)} isolates, {int(row.n_resistant)} resistant · {plural(row.lineages, "lineage")}
                   {micLabelWords(row)}
                 </span>
               </p>
@@ -260,8 +261,9 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
           </div>
           </div>
           {report.status === "ready" ? (
-            <nav aria-label="Sections" className={`${COLUMN} mt-2.5`}>
-              <div className="scroll-thin -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
+            // The current section's underline sits on the header's rule.
+            <nav aria-label="Sections" className={`${COLUMN} -mb-[11px] mt-1.5`}>
+              <div className="scroll-thin -mx-1 flex gap-4 overflow-x-auto px-1 pt-0.5">
                 {JUMPS.map((j) => (
                   <button
                     key={j.id}
@@ -270,8 +272,8 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
                     onClick={() =>
                       document.getElementById(j.id)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" })
                     }
-                    className={`ui-control-target inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border px-3 text-control transition-[color,background-color,border-color,transform] duration-fast ease-out active:scale-[0.98] ${FOCUS_RING} ${
-                      section === j.id ? "border-transparent bg-surface-control font-semibold text-ink" : "border-hair font-medium text-ink hover:border-blue/50 hover:text-blue"
+                    className={`ui-control-target inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-sm border-b-2 text-control transition-[color,border-color] duration-fast ease-out ${FOCUS_RING} ${
+                      section === j.id ? "border-ink font-semibold text-ink" : "border-transparent font-medium text-muted-text hover:border-hair hover:text-blue"
                     }`}
                   >
                     {j.label}

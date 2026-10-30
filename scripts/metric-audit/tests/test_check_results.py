@@ -56,6 +56,32 @@ def rf_line(report):
     return fx.done_line("rf", ba(report, "random", "rf"))
 
 
+def revision8_report(revision=8):
+    """A schema-2 report with the mandatory clean revision-8 lasso evidence,
+    which revision 9 keeps."""
+    rep = fx.make_report(revision=revision)
+
+    def status():
+        return {"irls_steps": 3, "sweep_cap_hits": 0, "converged": True}
+
+    def fit():
+        return {"path_points": 30, "path_unconverged": 0, "selected_point": 2,
+                "selected_convergence": status(), "refit_convergence": status()}
+
+    for split in rep["splits"]:
+        if split.get("unavailable_reason") is None:
+            fx.row(rep, split["scheme"], "lasso")["lasso_fits"] = [fit() for _ in range(split["folds"])]
+    rep["models"]["lasso"] = {"intercept": -1.0, "coef": [[4, 0.5]], "lambda": 0.01}
+    rep["models"]["lasso_fit"] = fit()
+    return rep
+
+
+def empty_lasso_fit():
+    """The record for a deliberate empty path: no penalty admits a feature."""
+    return {"path_points": 0, "path_unconverged": 0, "selected_point": None,
+            "selected_convergence": None, "refit_convergence": None}
+
+
 class ValidReports(Case):
     def test_revision7_report_with_null_folds_passes_and_names_rf(self):
         rep = fx.make_report()
@@ -320,10 +346,132 @@ class SchemaAndRevision(Case):
         del rep["schema"]
         self.fails(rep, "schema does not match the revision")
 
-    def test_revision8_fails(self):
-        rep = fx.make_report()
-        rep["evaluation"]["revision"] = 8
+    def test_revision8_report_with_clean_solver_status_passes(self):
+        rep = revision8_report()
+        entry = self.passes(rep, [rf_line(rep)])
+        self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (8, 2, "rf"))
+
+    def test_revision9_report_with_clean_solver_status_passes(self):
+        rep = revision8_report(revision=9)
+        entry = self.passes(rep, [rf_line(rep)])
+        self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (9, 2, "rf"))
+
+    def test_revision9_reports_meet_the_revision8_lasso_rules(self):
+        rep = revision8_report(revision=9)
+        del rep["models"]["lasso_fit"]
+        self.fails(rep, "revision-8 lasso fit status is required")
+        rep = revision8_report(revision=9)
+        del fx.row(rep, "lineage", "lasso")["lasso_fits"]
+        self.fails(rep, "revision-8 lasso fit status is required")
+        rep = revision8_report(revision=9)
+        fx.row(rep, "random", "lasso")["lasso_fits"][2]["path_unconverged"] = 1
+        self.fails(rep, "unconverged two-class lasso fit")
+
+    def test_future_revision10_fails(self):
+        rep = revision8_report(revision=9)
+        rep["evaluation"]["revision"] = 10
         self.fails(rep, "'revision'")
+
+
+class LassoSolverStatus(Case):
+    def test_missing_per_fold_lasso_status_fails(self):
+        rep = revision8_report()
+        del fx.row(rep, "random", "lasso")["lasso_fits"]
+        self.fails(rep, "revision-8 lasso fit status is required")
+
+    def test_missing_final_lasso_status_fails(self):
+        rep = revision8_report()
+        del rep["models"]["lasso_fit"]
+        self.fails(rep, "revision-8 lasso fit status is required")
+
+    def test_malformed_convergence_boolean_fails(self):
+        rep = revision8_report()
+        fx.row(rep, "lineage", "lasso")["lasso_fits"][1]["selected_convergence"]["converged"] = "true"
+        self.fails(rep, "malformed lasso convergence status")
+
+    def test_malformed_path_count_fails(self):
+        rep = revision8_report()
+        fx.row(rep, "random", "lasso")["lasso_fits"][0]["path_unconverged"] = "0"
+        self.fails(rep, "malformed lasso fit status")
+
+    def test_unconverged_path_point_fails(self):
+        rep = revision8_report()
+        fx.row(rep, "random", "lasso")["lasso_fits"][2]["path_unconverged"] = 1
+        self.fails(rep, "unconverged two-class lasso fit")
+
+    def test_unconverged_selected_point_fails(self):
+        rep = revision8_report()
+        fx.row(rep, "lineage", "lasso")["lasso_fits"][0]["selected_convergence"]["converged"] = False
+        self.fails(rep, "unconverged two-class lasso fit")
+
+    def test_unconverged_final_refit_fails(self):
+        rep = revision8_report()
+        rep["models"]["lasso_fit"]["refit_convergence"]["converged"] = False
+        self.fails(rep, "unconverged two-class lasso fit")
+
+    def test_selected_point_without_refit_status_fails(self):
+        rep = revision8_report()
+        rep["models"]["lasso_fit"]["refit_convergence"] = None
+        self.fails(rep, "malformed lasso fit status")
+
+    def test_empty_final_path_with_a_null_model_passes(self):
+        rep = revision8_report()
+        rep["models"]["lasso"] = None
+        rep["models"]["lasso_fit"] = empty_lasso_fit()
+        self.passes(rep, [rf_line(rep)])
+
+    def test_saved_lasso_model_without_a_refit_record_fails(self):
+        rep = revision8_report()
+        rep["models"]["lasso_fit"] = empty_lasso_fit()
+        self.fails(rep, "lasso model does not match its solver status")
+
+    def test_a_wrong_number_of_fold_records_fails(self):
+        for edit in ("drop", "add"):
+            with self.subTest(edit=edit):
+                rep = revision8_report()
+                fits = fx.row(rep, "random", "lasso")["lasso_fits"]
+                if edit == "drop":
+                    fits.pop()
+                else:
+                    fits.append(dict(fits[0]))
+                self.fails(rep, "malformed lasso fit status")
+
+    def test_a_nonempty_path_without_a_selected_point_fails(self):
+        # Random fold 4 is a null fit, so its calls cannot expose the record.
+        rep = revision8_report()
+        fx.row(rep, "random", "lasso")["lasso_fits"][4] = empty_lasso_fit() | {"path_points": 30}
+        self.fails(rep, "malformed lasso fit status")
+
+
+class LassoRecordsAgreeWithScores(Case):
+    """Each revision-8 fold record against that fold's calls and weight count."""
+
+    def test_an_empty_path_on_an_uncalled_fold_passes(self):
+        rep = revision8_report()
+        fx.row(rep, "random", "lasso")["lasso_fits"][4] = empty_lasso_fit()
+        self.passes(rep, [rf_line(rep)])
+
+    def test_an_empty_path_on_a_called_fold_fails(self):
+        rep = revision8_report()
+        fx.row(rep, "random", "lasso")["lasso_fits"][0] = empty_lasso_fit()
+        self.fails(rep, "lasso fold without a selected point has calls")
+
+    def test_a_weight_count_that_disagrees_with_the_calls_fails(self):
+        for fold, weights in ((0, 0.0), (4, 12.0)):
+            with self.subTest(fold=fold):
+                rep = revision8_report()
+                fx.row(rep, "random", "lasso")["fold_complexity"][fold] = weights
+                self.fails(rep, "lasso fold calls do not match its weight count")
+
+    def test_a_short_weight_count_list_fails(self):
+        rep = revision8_report()
+        fx.row(rep, "lineage", "lasso")["fold_complexity"].pop()
+        self.fails(rep, "fold complexity length")
+
+    def test_revision7_rows_need_no_agreement(self):
+        rep = fx.make_report()
+        fx.row(rep, "random", "lasso")["fold_complexity"][0] = 0.0
+        self.passes(rep, [rf_line(rep)])
 
 
 class LearnerRows(Case):

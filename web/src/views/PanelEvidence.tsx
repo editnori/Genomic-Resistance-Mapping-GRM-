@@ -13,6 +13,7 @@ import { noBestWords } from "../data/derive/overview";
 import { Dropdown } from "../ui/Dropdown";
 import { DataTable, type Column } from "../ui/DataTable";
 import { GhostButton, ScrollFrame } from "../ui/primitives";
+import { byFamily, ClassGlyph, ClassName } from "../ui/drugClass";
 
 interface Filters {
   species: Set<string>;
@@ -128,7 +129,7 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
         <Dropdown
           ariaLabel="Drug class"
           rest="All drug classes"
-          options={[...new Set(all.map((r) => r.row?.drug_class ?? ""))].sort().map((c) => ({ id: c, label: capitalize(c), count: classCounts.get(c) ?? 0 }))}
+          options={byFamily([...new Set(all.map((r) => r.row?.drug_class ?? ""))]).map((c) => ({ id: c, label: capitalize(c), count: classCounts.get(c) ?? 0, icon: <ClassGlyph drugClass={c} /> }))}
           mode={{ kind: "many", value: f.classes, onChange: (classes) => setF({ ...f, classes }) }}
         />
         <Dropdown
@@ -213,7 +214,7 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
                     return (
                       <tr key={c.drugClass} className="border-b border-hair">
                         <th scope="row" className="whitespace-nowrap px-2 py-2 text-left font-medium text-ink">
-                          {capitalize(c.drugClass)}
+                          <ClassName drugClass={c.drugClass} label={capitalize(c.drugClass)} />
                         </th>
                         <td className="px-2 py-2 text-right tabular-nums">{int(c.datasets)}</td>
                         <td className="px-2 py-2 text-right tabular-nums">{int(c.resistant)}</td>

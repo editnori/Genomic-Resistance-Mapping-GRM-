@@ -1086,6 +1086,7 @@ mod tests {
             fold_complexity: vec![],
             seconds: 0.0,
             no_call: None,
+            lasso_fits: None,
         };
         let reason = "fewer than twice as many lineages as requested folds";
         let random = SplitResult {
