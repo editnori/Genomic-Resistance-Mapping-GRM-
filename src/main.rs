@@ -53,6 +53,10 @@ enum Command {
         /// check that runs elsewhere.
         #[arg(long)]
         sketch_only: bool,
+        /// Ignore the existing species check: choose references afresh and
+        /// judge every genome without its recorded verdict.
+        #[arg(long)]
+        reset: bool,
     },
     /// Count k-mers for each downloaded genome of the species, with
     /// assembly stats and catalog gene calls.
@@ -172,7 +176,7 @@ fn run(cli: Cli) -> Result<()> {
             min_class,
             sigdrug_vocabulary,
         } => run_curate(&layout, cap, min_class, sigdrug_vocabulary),
-        Command::SpeciesCheck { sketch_only } => species_check(&layout, sketch_only),
+        Command::SpeciesCheck { sketch_only, reset } => species_check(&layout, sketch_only, reset),
         Command::Count {
             species,
             k,
@@ -646,7 +650,7 @@ fn run_curate(
     Ok(())
 }
 
-fn species_check(layout: &Layout, sketch_only: bool) -> Result<()> {
+fn species_check(layout: &Layout, sketch_only: bool, reset: bool) -> Result<()> {
     #[derive(serde::Deserialize)]
     struct Row {
         species: String,
@@ -667,7 +671,7 @@ fn species_check(layout: &Layout, sketch_only: bool) -> Result<()> {
     // Genomes an earlier check judged stay in, and so do its references:
     // curation has since dropped the failures from genomes.txt.
     let earlier_path = layout.species_check();
-    let earlier = if earlier_path.exists() {
+    let earlier = if earlier_path.exists() && !reset {
         Some(grm::species_check::read(&earlier_path)?)
     } else {
         None
@@ -688,18 +692,13 @@ fn species_check(layout: &Layout, sketch_only: bool) -> Result<()> {
     let out = grm::species_check::write(layout, &check)?;
     for s in &check.species {
         eprintln!(
-            "  {:<40} {:>5} checked  {:>3} failed  {:>3} borderline  {:>4} unchecked  reference {}{}",
+            "  {:<40} {:>5} checked  {:>3} failed  {:>3} borderline  {:>4} unchecked  reference {}",
             s.species,
             s.checked,
             s.failed,
             s.borderline,
             s.unchecked.len(),
-            s.reference,
-            if s.carried {
-                "  (kept from the earlier check: none judged now)"
-            } else {
-                ""
-            }
+            s.reference
         );
     }
     for p in &check.pairs {
@@ -717,6 +716,12 @@ fn species_check(layout: &Layout, sketch_only: bool) -> Result<()> {
         );
     }
     for g in &check.genomes {
+        if let Some(now) = &g.kept_fail {
+            eprintln!(
+                "  kept failed {} ({}): recorded as failed, this check judged {now}; --reset to rejudge",
+                g.genome_id, g.species
+            );
+        }
         if g.verdict == grm::species_check::Verdict::Fail {
             let why = g.reason.as_deref().unwrap_or("");
             eprintln!("  fail {} ({}): {why}", g.genome_id, g.species);
@@ -1401,7 +1406,7 @@ mod tests {
         assert!(foreign.iter().all(|id| first.contains(id)), "{first:?}");
         let mut passes = Vec::new();
         for _ in 0..3 {
-            species_check(&layout, false).unwrap();
+            species_check(&layout, false, false).unwrap();
             run_curate(&layout, 50, folds, None).unwrap();
             passes.push(state());
         }

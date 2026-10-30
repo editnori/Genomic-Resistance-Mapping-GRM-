@@ -21,12 +21,15 @@
 //! selection before any drop. A cohort that only grows and a fixed
 //! reference give every genome the same distances on every rerun, so a
 //! failed genome stays failed and `check -> curate` reaches a fixed point.
-//! A recorded genome with neither a cached sketch nor a FASTA file keeps
-//! its earlier verdict, and so does every genome of a recorded species
-//! this check cannot judge at all: one with no sketches on this machine,
-//! or one no longer among the curated species. Curation excludes failed
-//! genomes by id whatever their species, so a failure is never dropped
-//! from the record.
+//! A recorded species that has left the curated species is still judged,
+//! from its cached sketches, because its reference is a nearer species for
+//! the others: without the K. quasipneumoniae reference, the K. pneumoniae
+//! genomes that are K. quasipneumoniae would pass. A recorded reference
+//! with no sketch stops the check. A recorded genome with neither a cached
+//! sketch nor a FASTA file keeps its earlier verdict, and a genome recorded
+//! as failed stays failed whatever a rerun judges, which `kept_fail`
+//! records. Only `grm species-check --reset` chooses references and
+//! verdicts afresh.
 //!
 //! Mash distance approximates 1 - ANI near the species boundary of about 95%
 //! ANI (distance 0.05). Species complexes (E. cloacae, K. oxytoca, E. faecium
@@ -57,7 +60,7 @@ use crate::layout::{Layout, ensure_parent};
 use anyhow::{Context, Result};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 /// Mash's default k: at 95% ANI, two genomes still share about a fifth of
@@ -191,6 +194,11 @@ pub struct GenomeCheck {
     /// within its boundary; one outside the genome's genomic group first.
     pub inside_species: Option<String>,
     pub reason: Option<String>,
+    /// For a genome an earlier check failed and this one judged otherwise:
+    /// what this check judged. The verdict stays fail, with the recorded
+    /// reason, until `--reset`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kept_fail: Option<String>,
 }
 
 /// Genomes of one labelled species inside another species' boundary and
@@ -225,10 +233,6 @@ pub struct SpeciesSummary {
     pub distance_p50: f64,
     pub distance_p99: f64,
     pub distance_max_pass: f64,
-    /// Copied unchanged from an earlier check that judged this species,
-    /// since this one could judge none of its genomes.
-    #[serde(default)]
-    pub carried: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -307,11 +311,18 @@ fn medoid(sketches: &[GenomeSketch]) -> usize {
 
 /// Each species' genomes to check: its current selection, then every other
 /// genome `previous` recorded for it, so genomes curation dropped stay
-/// judged.
+/// judged. Species `previous` recorded and the selection no longer lists
+/// follow with their recorded genomes.
 pub fn cohort_lists(
-    selected: Vec<(String, String, Vec<String>)>,
+    mut selected: Vec<(String, String, Vec<String>)>,
     previous: Option<&SpeciesCheck>,
 ) -> Vec<(String, String, Vec<String>)> {
+    let listed: HashSet<String> = selected.iter().map(|(sp, _, _)| sp.clone()).collect();
+    for s in previous.into_iter().flat_map(|p| &p.species) {
+        if !listed.contains(&s.species) {
+            selected.push((s.species.clone(), s.slug.clone(), vec![]));
+        }
+    }
     selected
         .into_iter()
         .map(|(species, slug, mut ids)| {
@@ -328,8 +339,10 @@ pub fn cohort_lists(
 }
 
 /// Checks every cohort against its own reference and the other cohorts'.
-/// A species `previous` checked keeps that check's reference, and its
-/// recorded genomes that have no sketch now keep their recorded verdicts.
+/// Every species `previous` checked must be among the cohorts with its
+/// reference sketched, and keeps that reference. Its recorded genomes that
+/// have no sketch now keep their recorded verdicts, and its recorded
+/// failures stay failures.
 pub fn check(
     mut cohorts: Vec<Cohort>,
     cfg: &CheckConfig,
@@ -343,6 +356,22 @@ pub fn check(
             p.sketch_size
         );
     }
+    for s in previous.into_iter().flat_map(|p| &p.species) {
+        let sketched = cohorts.iter().any(|c| {
+            c.species == s.species && c.sketches.iter().any(|g| g.genome_id == s.reference)
+        });
+        anyhow::ensure!(
+            sketched,
+            "the {} reference {} an earlier check chose has no sketch or FASTA file here, and every later check measures against it; restore it, or rerun with --reset to choose references afresh",
+            s.species,
+            s.reference
+        );
+    }
+    let recorded: HashMap<(&str, &str), &GenomeCheck> = previous
+        .into_iter()
+        .flat_map(|p| &p.genomes)
+        .map(|g| ((g.species.as_str(), g.genome_id.as_str()), g))
+        .collect();
     cohorts.retain(|c| !c.sketches.is_empty());
     cohorts.sort_by(|a, b| a.species.cmp(&b.species));
     for c in &mut cohorts {
@@ -431,7 +460,7 @@ pub fn check(
                     (Verdict::Pass, String::new())
                 };
                 let reason = (verdict != Verdict::Pass).then(|| format!("{evidence}; {why}"));
-                GenomeCheck {
+                let mut judged = GenomeCheck {
                     genome_id: g.genome_id.clone(),
                     species: c.species.clone(),
                     verdict,
@@ -443,18 +472,29 @@ pub fn check(
                     nearest_distance: nearest.map(|(_, od)| od),
                     inside_species: inside_other.map(|(o, _)| cohorts[o].species.clone()),
                     reason,
+                    kept_fail: None,
+                };
+                if let Some(r) = recorded.get(&(c.species.as_str(), g.genome_id.as_str()))
+                    && r.verdict == Verdict::Fail
+                    && judged.verdict != Verdict::Fail
+                {
+                    let now = match judged.verdict {
+                        Verdict::Pass => "pass".to_string(),
+                        _ => format!("borderline: {}", judged.reason.as_deref().unwrap_or("")),
+                    };
+                    judged.kept_fail = Some(now);
+                    judged.verdict = Verdict::Fail;
+                    judged.reason.clone_from(&r.reason);
+                    judged.inside_species.clone_from(&r.inside_species);
                 }
+                judged
             })
             .collect();
         let mut checked = checked;
         let mut unchecked = Vec::new();
         for id in &c.unchecked {
-            let recorded = previous
-                .into_iter()
-                .flat_map(|p| &p.genomes)
-                .find(|g| g.species == c.species && &g.genome_id == id);
-            match recorded {
-                Some(g) => checked.push(g.clone()),
+            match recorded.get(&(c.species.as_str(), id.as_str())) {
+                Some(g) => checked.push((*g).clone()),
                 None => unchecked.push(id.clone()),
             }
         }
@@ -479,7 +519,6 @@ pub fn check(
             distance_p50: quantile(&pass, 0.5),
             distance_p99: quantile(&pass, 0.99),
             distance_max_pass: pass.last().copied().unwrap_or(f64::NAN),
-            carried: false,
         });
         let mut inside: BTreeMap<&str, usize> = BTreeMap::new();
         for g in &checked {
@@ -500,24 +539,6 @@ pub fn check(
         }
         genomes.extend(checked);
     }
-    for s in previous.into_iter().flat_map(|p| &p.species) {
-        if species
-            .iter()
-            .any(|j: &SpeciesSummary| j.species == s.species)
-        {
-            continue;
-        }
-        let p = previous.unwrap();
-        species.push(SpeciesSummary {
-            carried: true,
-            ..s.clone()
-        });
-        genomes.extend(p.genomes.iter().filter(|g| g.species == s.species).cloned());
-        pairs.extend(p.pairs.iter().filter(|x| x.labelled == s.species).cloned());
-    }
-    species.sort_by(|a, b| a.species.cmp(&b.species));
-    genomes.sort_by(|a, b| (&a.species, &a.genome_id).cmp(&(&b.species, &b.genome_id)));
-    pairs.sort_by(|a, b| (&a.labelled, &a.nearer).cmp(&(&b.labelled, &b.nearer)));
     Ok(SpeciesCheck {
         k: refs.first().map_or(K, |r| r.k),
         sketch_size: refs.first().map_or(SKETCH, |r| r.sketch_size),
@@ -941,68 +962,123 @@ mod tests {
         assert_eq!(rerun.species[0].checked, 25);
     }
 
-    /// A rerun that can judge none of a species' genomes (no sketches here)
-    /// or no longer lists a species (gone from curated/species.json) keeps
-    /// every verdict recorded for it.
+    /// K. quasipneumoniae filed as K. pneumoniae fails by the nearer-species
+    /// rule against the K. quasipneumoniae reference.
+    fn klebsiella(dir: &Path) -> (Vec<GenomeSketch>, Vec<GenomeSketch>) {
+        let mut rng = ChaCha8Rng::seed_from_u64(8);
+        let pneumoniae = random_genome(&mut rng, 0.57);
+        let quasi = mutate(&mut rng, &pneumoniae, 0.06);
+        let mut kp = strains(&mut rng, dir, "kp", &pneumoniae, 8);
+        let filed_wrong = mutate(&mut rng, &quasi, 0.005);
+        kp.push(sketch(dir, "kq-as-kp", &filed_wrong));
+        (kp, strains(&mut rng, dir, "kq", &quasi, 6))
+    }
+
+    const KP: &str = "Klebsiella pneumoniae";
+    const KQ: &str = "Klebsiella quasipneumoniae";
+
+    /// A species that left the curated species is still judged from its
+    /// sketches, so the failure it is the nearer species for survives.
     #[test]
-    fn a_rerun_keeps_species_it_cannot_judge() {
+    fn a_nearer_species_that_left_the_selection_still_fails_its_relatives() {
         let dir = tempfile::tempdir().unwrap();
-        let mut rng = ChaCha8Rng::seed_from_u64(7);
-        let mut cohorts = Vec::new();
-        let mut ids = Vec::new();
-        for name in ["Alpha a", "Delta d", "Gamma g"] {
-            let prefix = name[..1].to_lowercase();
-            let root = random_genome(&mut rng, 0.5);
-            let mut genomes = strains(&mut rng, dir.path(), &prefix, &root, 6);
-            let foreign = random_genome(&mut rng, 0.5);
-            genomes.push(sketch(dir.path(), &format!("{prefix}.foreign"), &foreign));
-            ids.push(
-                genomes
-                    .iter()
-                    .map(|g| g.genome_id.clone())
-                    .collect::<Vec<_>>(),
-            );
-            cohorts.push(cohort(name, genomes));
-        }
+        let (kp, kq) = klebsiella(dir.path());
         let cfg = CheckConfig::default();
-        let before = check(cohorts, &cfg, None).unwrap();
-        assert_eq!(before.failures().len(), 3);
+        let before = check(
+            vec![cohort(KP, kp.clone()), cohort(KQ, kq.clone())],
+            &cfg,
+            None,
+        )
+        .unwrap();
+        let failed = verdicts(&before, Verdict::Fail);
+        assert_eq!(failed, vec![("kq-as-kp", KP)]);
 
-        let delta = before.genomes.iter().filter(|g| g.species == "Delta d");
-        let delta_ids: Vec<String> = delta.map(|g| g.genome_id.clone()).collect();
-        let sketched = |id: &String| {
-            sketch_fasta(
-                id,
-                &dir.path().join(format!("{id}.fna")),
-                &KmerSpace::new(K),
-                SKETCH,
-            )
-            .unwrap()
-        };
-        // Alpha is listed with no sketch at all; Gamma is not listed.
-        let mut alpha = cohort("Alpha a", vec![]);
-        alpha.unchecked = ids[0].clone();
-        let delta = cohort("Delta d", delta_ids.iter().map(sketched).collect());
-        let rerun = check(vec![alpha, delta], &cfg, Some(&before)).unwrap();
-
-        assert_eq!(rerun.failures(), before.failures());
-        let carried: Vec<(&str, bool)> = rerun
-            .species
+        // The rerun's curated species list K. pneumoniae only.
+        let ids = |c: &[GenomeSketch]| c.iter().map(|g| g.genome_id.clone()).collect::<Vec<_>>();
+        let lists = cohort_lists(vec![(KP.into(), "kp".into(), ids(&kp))], Some(&before));
+        let listed: Vec<(&str, usize)> = lists
             .iter()
-            .map(|s| (s.species.as_str(), s.carried))
+            .map(|(s, _, l)| (s.as_str(), l.len()))
             .collect();
+        assert_eq!(listed, vec![(KP, 9), (KQ, 6)]);
+        let all: Vec<GenomeSketch> = kp.iter().chain(&kq).cloned().collect();
+        let cohorts = lists
+            .iter()
+            .map(|(sp, _, l)| {
+                cohort(
+                    sp,
+                    all.iter()
+                        .filter(|g| l.contains(&g.genome_id))
+                        .cloned()
+                        .collect(),
+                )
+            })
+            .collect();
+        let rerun = check(cohorts, &cfg, Some(&before)).unwrap();
+        assert_eq!(rerun.failures(), before.failures());
+        let g = rerun
+            .genomes
+            .iter()
+            .find(|g| g.genome_id == "kq-as-kp")
+            .unwrap();
         assert_eq!(
-            carried,
-            vec![("Alpha a", true), ("Delta d", false), ("Gamma g", true)]
+            (g.inside_species.as_deref(), g.kept_fail.as_ref()),
+            (Some(KQ), None)
         );
-        let listed = |c: &SpeciesCheck| {
-            c.genomes
-                .iter()
-                .map(|g| (g.species.clone(), g.genome_id.clone()))
-                .collect::<Vec<_>>()
+    }
+
+    /// A recorded species whose reference has no sketch here cannot be
+    /// measured against, so the check stops instead of judging without it.
+    #[test]
+    fn a_rerun_without_a_recorded_reference_stops() {
+        let dir = tempfile::tempdir().unwrap();
+        let (kp, kq) = klebsiella(dir.path());
+        let cfg = CheckConfig::default();
+        let before = check(vec![cohort(KP, kp.clone()), cohort(KQ, kq)], &cfg, None).unwrap();
+        let reference = &before.species[1].reference;
+        let mut unsketched = cohort(KQ, vec![]);
+        unsketched.unchecked = vec![reference.clone()];
+        for cohorts in [
+            vec![cohort(KP, kp.clone())],
+            vec![cohort(KP, kp.clone()), unsketched],
+        ] {
+            let err = check(cohorts, &cfg, Some(&before)).unwrap_err().to_string();
+            assert!(
+                err.contains(&format!("the {KQ} reference {reference}")),
+                "{err}"
+            );
+        }
+    }
+
+    /// A genome recorded as failed stays failed when a rerun judges it
+    /// otherwise, here under a configuration that puts both Klebsiella in
+    /// one genomic group, and the rerun records what it judged.
+    #[test]
+    fn a_recorded_failure_stays_failed_until_reset() {
+        let dir = tempfile::tempdir().unwrap();
+        let (kp, kq) = klebsiella(dir.path());
+        let cfg = CheckConfig::default();
+        let cohorts = || vec![cohort(KP, kp.clone()), cohort(KQ, kq.clone())];
+        let before = check(cohorts(), &cfg, None).unwrap();
+        let grouped = CheckConfig {
+            genomic_groups: vec![vec!["Klebsiella *".into()]],
+            ..CheckConfig::default()
         };
-        assert_eq!(listed(&rerun), listed(&before));
-        assert_eq!(rerun.species[2].reference, before.species[2].reference);
+        let reset = check(cohorts(), &grouped, None).unwrap();
+        assert!(verdicts(&reset, Verdict::Fail).is_empty());
+        let rerun = check(cohorts(), &grouped, Some(&before)).unwrap();
+        assert_eq!(rerun.failures(), before.failures());
+        let g = rerun
+            .genomes
+            .iter()
+            .find(|g| g.genome_id == "kq-as-kp")
+            .unwrap();
+        assert!(
+            g.kept_fail.as_deref().unwrap().starts_with("borderline: "),
+            "{g:?}"
+        );
+        let pairs: Vec<&str> = rerun.pairs.iter().map(|p| p.nearer.as_str()).collect();
+        assert_eq!(pairs, vec![KQ]);
     }
 
     #[test]
