@@ -139,6 +139,7 @@ recover() {
         if owns_port "$PORT" "$old_pid" && { ((damaged)) || health "$old_label" "$old_pub" "$PORT" >/dev/null 2>&1; }; then
             die "activation interrupted before pid $old_pid stopped; $old_label with $old_pub is still serving" 1
         fi
+        SIG_WHY="the live server being replaced on port $PORT, pid $old_pid with start $old_start, $old_label with $old_pub"
         ensure_stopped "$old_pid" "$old_start" || die "pid $old_pid neither serves nor stops; nothing healthy on $PORT" 4
     fi
     if ((damaged)); then
@@ -167,6 +168,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 say "stopping pid=$old_pid"
+SIG_WHY="the live server being replaced on port $PORT, pid $old_pid with start $old_start, $old_label with $old_pub"
 if ! stop_pid "$old_pid" "$old_start"; then
     if owns_port "$PORT" "$old_pid"; then
         phase=kept

@@ -76,6 +76,7 @@ if ((PENDING)); then
     say "serve-$PORT.starting: a start of $J_LABEL with $J_PUB by pid $J_OWNER was interrupted; its processes: ${ORPHANS:-none}"
     if ! ((APPLY)); then
         would "stop pids ${ORPHANS:-none} unless serve-$PORT.pid shows that start committed, remove the journal, then restore $label with $pub"
+        would_stop_orphans
         exit 0
     fi
     take_lock

@@ -379,6 +379,67 @@ lock_free() {
     return "$rc"
 }
 
+# ---- Signal journal ------------------------------------------------------------
+#
+# Every signal these scripts send to another process goes through send_signal
+# or send_group, which first write a journal line to SIGNAL_LOG (common.sh
+# sets deploy.log, connector.sh signals.log in its directory) and to standard
+# error: the UTC time, the signal, the target (a PID with its start time and
+# command line, or a process group with each member's PID, start time and
+# command name) and the reason, which the caller sets in SIG_WHY (which lock,
+# registered child or token tied it to the start). The journal write must
+# succeed: when SIGNAL_LOG is unset or cannot be written (a link, FIFO or
+# directory, a full disk, a write error), nothing is sent, the send fails with
+# the reason in SIG_ERR, and so does the stop that asked for it. The only
+# signals not journalled are the test hooks' signals to this shell itself
+# (checkpoint, child_checkpoint).
+SIG_WHY=''
+SIG_ERR=''
+# proc_cmd PID: PID's command line, arguments separated by spaces, cut at 200
+# bytes.
+proc_cmd() {
+    local -a argv
+    local s
+    { mapfile -d '' -t argv <"/proc/$1/cmdline"; } 2>/dev/null || true
+    s="${argv[*]}"
+    printf '%s\n' "${s:0:200}"
+}
+# journal_signal LINE: append LINE to SIGNAL_LOG and print it on standard error
+# (best effort); fails when it cannot be appended.
+journal_signal() {
+    local fd=''
+    [ -n "${SIGNAL_LOG:-}" ] || return 1
+    open_append fd "$SIGNAL_LOG" || return 1
+    if ! { printf '%s\n' "$1" >&"$fd"; } 2>/dev/null; then
+        close_fd fd
+        return 1
+    fi
+    close_fd fd
+    { printf '%s\n' "$1" >&2; } 2>/dev/null || true
+}
+# send_signal SIGNAL PID START [REASON]: journal, then send SIGNAL to PID, the
+# process that started at START. REASON defaults to SIG_WHY.
+send_signal() {
+    local why=${4:-${SIG_WHY:-no reason given}}
+    journal_signal "$(date -u +%FT%TZ) signal $1 to pid $2 (start $3, cmd [$(proc_cmd "$2")]): $why" ||
+        { SIG_ERR="cannot write the signal journal (${SIGNAL_LOG:-unset}); SIG$1 to pid $2 was not sent"; return 1; }
+    kill -s "$1" "$2" 2>/dev/null || true
+}
+# send_group SIGNAL PGID [REASON]: journal, then send SIGNAL to process group
+# PGID; the line lists its members as PID:START:COMMAND.
+send_group() {
+    local why=${3:-${SIG_WHY:-no reason given}} m list=''
+    for m in $(group_members "$2"); do list+=" ${m%%:*}:${m#*:}:$(proc_comm "${m%%:*}")"; done
+    journal_signal "$(date -u +%FT%TZ) signal $1 to process group $2 (members${list:- none}): $why" ||
+        { SIG_ERR="cannot write the signal journal (${SIGNAL_LOG:-unset}); SIG$1 to process group $2 was not sent"; return 1; }
+    kill -s "$1" -- "-$2" 2>/dev/null || true
+}
+# would_signal PID START REASON: the dry-run line for a stop that --apply would
+# make (SIGTERM, then SIGKILL after 10 s).
+would_signal() {
+    printf 'dry-run: would send TERM (then KILL after 10 s) to pid %s (start %s, cmd [%s]): %s\n' "$1" "$2" "$(proc_cmd "$1")" "$3"
+}
+
 # ---- Stopping ------------------------------------------------------------------
 #
 # A process started through setsid leads a process group, and a session,
@@ -408,11 +469,13 @@ lock_free() {
 # with the marker gone or replaced it stops only the registered process, by
 # PID and start time, and fails.
 
-# tree_signal SIGNAL PID GROUP: signal PID, and process group GROUP if given.
-# For a PID just found alive, leading GROUP (connector.sh's signal handler).
+# tree_signal SIGNAL PID START GROUP: signal PID, and process group GROUP if
+# given, journalled with SIG_WHY. For a PID just found alive with START,
+# leading GROUP (connector.sh's signal handler). Fails, sending no more, when
+# the journal cannot be written.
 tree_signal() {
-    kill -s "$1" "$2" 2>/dev/null || true
-    if [ -n "$3" ]; then kill -s "$1" -- "-$3" 2>/dev/null || true; fi
+    send_signal "$1" "$2" "$3" || return 1
+    if [ -n "$4" ]; then send_group "$1" "$4" "${SIG_WHY:-no reason given}; the group pid $2 leads" || return 1; fi
 }
 # group_members GROUP: the live (not zombie) members of process group GROUP, as
 # PID:START words.
@@ -479,8 +542,8 @@ stop_tree() {
         if [ -n "$untied" ]; then untied_err; return 1; fi
     fi
     for sig in TERM KILL; do
-        tree_send "$sig"
-        [ "$sig" = KILL ] || tree_send CONT
+        tree_send "$sig" || { STOP_ERR=$SIG_ERR; return 1; }
+        if [ "$sig" != KILL ]; then tree_send CONT || { STOP_ERR=$SIG_ERR; return 1; }; fi
         for _ in $(seq 1 40); do
             note_members
             if ! alive "$pid" "$start" && { [ -z "$group" ] || ! group_left "$group" "$start"; }; then return 0; fi
@@ -499,13 +562,15 @@ stop_tree() {
 # signal may end the process.
 tree_send() {
     note_members
-    if alive "$pid" "$start"; then kill -s "$1" "$pid" 2>/dev/null || true; fi
+    if alive "$pid" "$start"; then send_signal "$1" "$pid" "$start" || return 1; fi
     [ -n "$group" ] && group_left "$group" "$start" || return 0
-    if ! alive "$pid" "$start"; then
-        sort_members
-        [ -z "$untied" ] || return 0
+    if alive "$pid" "$start"; then
+        send_group "$1" "$group" "${SIG_WHY:-no reason given}; the group pid $pid (start $start) leads, while it runs" || return 1
+        return 0
     fi
-    kill -s "$1" -- "-$group" 2>/dev/null || true
+    sort_members
+    [ -z "$untied" ] || return 0
+    send_group "$1" "$group" "${SIG_WHY:-no reason given}; the group pid $pid (start $start) led, now without it, every member tied to the start (seen while it ran, its token or its marker lock: $seen)" || return 1
 }
 # sort_members: set untied to the group's members not tied to the start, and
 # add those that are to seen. A tie holds for that process (its PID and start
@@ -534,22 +599,24 @@ untied_err() {
     STOP_ERR="process group $group has members (pids $untied) that cannot be tied to this start: its leader, pid $pid, is gone, and they neither carry its token nor hold its marker, so they were not signalled; check them by hand (ps -o pid,pgid,sid,lstart,args -g $group)"
 }
 # SIGTERM PID and wait up to 10 s for it to exit. Given START, a PID now held by
-# another process counts as stopped and is not signalled.
+# another process counts as stopped and is not signalled. Journalled with
+# SIG_WHY; fails, sending nothing, when the journal cannot be written.
 stop_pid() {
     local _
     alive "$1" "${2:-}" || return 0
-    kill -TERM "$1" 2>/dev/null || return 0
+    send_signal TERM "$1" "${2:-unknown}" || return 1
     for _ in $(seq 1 40); do
         alive "$1" "${2:-}" || return 0
         sleep 0.25
     done
     return 1
 }
-# SIGKILL PID [START]; succeeds only once the process is gone.
+# SIGKILL PID [START]; succeeds only once the process is gone. Journalled like
+# stop_pid.
 kill_pid() {
     local _
     alive "$1" "${2:-}" || return 0
-    kill -KILL "$1" 2>/dev/null || true
+    send_signal KILL "$1" "${2:-unknown}" || return 1
     for _ in $(seq 1 20); do
         alive "$1" "${2:-}" || return 0
         sleep 0.25
@@ -627,10 +694,12 @@ mark_stop() {
         for p in $pids; do
             STOP_ERR=''
             if [ "$p" = "$cpid" ]; then
+                SIG_WHY="the start's registered child, pid $p with start $cstart${token:+, token $token}${file:+, marker ${file##*/}}"
                 stop_tree "$p" "$cstart" "$token" "$mid" group || MARK_ERR=${STOP_ERR:-"pid $p or its process group would not stop"}
             else
                 s=${p#*:} p=${p%%:*}
                 alive "$p" "$s" && [ -n "$mid" ] && holds_lock "$p" "$mid" && alive "$p" "$s" || continue
+                SIG_WHY="holds the lock of spawn marker ${file##*/} (device:inode $mid), pid $p with start $s"
                 stop_tree "$p" "$s" "$token" "$mid" || MARK_ERR=${STOP_ERR:-"pid $p would not stop"}
             fi
         done
