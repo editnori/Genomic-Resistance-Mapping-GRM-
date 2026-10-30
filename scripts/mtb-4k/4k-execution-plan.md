@@ -179,6 +179,17 @@ filled by a reviewed commit and listed in section 2.1.
 
   The set comes from the same rules that make the roots, and a test walks the prepared roots to
   check it. Nothing the cohorts read from the input root is bound only at preparation.
+- **Annotations must all be cached; `grm learn` must fetch nothing.** `load_features`
+  (`src/annotate.rs:101-117`) reads `bvbrc/features/<id>.json` and fetches the annotation from BV-BRC
+  whenever it cannot read or parse that file. The revision-9 run fetched 230 annotations live
+  during training, an unbound and non-reproducible input. So revision N's staging must cache an
+  annotation for every selected genome in `RN_INPUT_ROOT`. Preparation refuses, before creating
+  anything, if any genome of any cohort has none, naming up to 20 and giving the count. The cached
+  annotations are part of the input manifest.
+- **Staging, not this plan, completes the species check.** Revision N's cap-4000 entrants arrive
+  unchecked (`selected_unchecked` > 0). Staging must fetch them and run the species check again until
+  `selected_unchecked` is 0 for both selections; the species-check lane (024208eb) produces it. This
+  plan only refuses otherwise.
   These are revision N's curation, on which the fresh selection was made. Its whole set is bound in
   `frozen-inputs.json` at preparation, as revision 5 bound the candidate's.
 - **FASTA:** a genome in the frozen 4k list links to its frozen-manifest FASTA. A replacement links
@@ -288,6 +299,8 @@ export SOURCE=$(git -C "$WS" rev-parse HEAD)   # the one --expected-source-commi
 - a cohort genome has no verdict in the species check, fails it, or is on its unchecked list;
 - a selection's `species.json` reports `selected_unchecked` other than 0, or a length other than
   its list's;
+- the input root lacks real `catalog/` or `curated/` directories or a BV-BRC record file;
+- a cohort genome has no usable cached annotation (so `grm learn` would fetch it);
 - the species check does not fail both ruled genomes, or fails other than `EXCLUSIONS_COUNT` MTB
   genomes;
 - the replacement FASTA manifest covers other than exactly the replacements, or a FASTA differs
@@ -333,8 +346,11 @@ matrices and structures without repeating the pilot. The pilot passed on 2026-10
 under revision 5. The review of the revision-N merge must confirm that revision N leaves matrix
 building unchanged. **Rule:** no change, between revision 5's build source (`c70d678`) and the merge,
 to the matrix code or anything it transitively uses, to the `matrix` and `count` wiring in
-`src/main.rs`, or to `src/lib.rs`, `Cargo.toml` or `Cargo.lock`. Otherwise the pilot is repeated
-before section 5.
+`src/main.rs`, or to `src/lib.rs`, `Cargo.toml`, `Cargo.lock` or `.cargo/config.toml`. The last sets
+`target-cpu=native`, so it changes the machine code of every matrix module. Otherwise the pilot is
+repeated before section 5. Binary hashes are host-specific for the same reason: the training binary
+is built and its hash recorded on the host that runs it (section 3), never copied from another
+host.
 
 The current expansion of the rule is the transitive `crate::` closure of `src/matrix.rs`,
 `src/kset.rs` and `src/species.rs`, generated from the code at `c70d678`:

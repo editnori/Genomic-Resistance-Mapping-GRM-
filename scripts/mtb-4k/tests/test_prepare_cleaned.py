@@ -42,6 +42,8 @@ class Cleaned(unittest.TestCase):
   (prep.CANDIDATE/"catalog"/"AMR_CDS.fa").write_text(">blaX\nATGAAA\n")
   (prep.CANDIDATE/"catalog"/"ReferenceGeneCatalog.txt").write_text("allele\tgene_family\nblaX-1\tblaX\n")
   (prep.CANDIDATE/"curated"/"funnel.json").write_text("{}\n")
+  # Every cohort genome has a usable cached annotation, as revision N's staging must provide.
+  for g in ids+REPLACEMENTS: (prep.CANDIDATE/"bvbrc"/"features"/f"{g}.json").write_text(f'[{{"gene": "{g}"}}]')
   self.write_inputs()
 
  def tearDown(self):
@@ -174,11 +176,18 @@ class Cleaned(unittest.TestCase):
   root=prep.CANDIDATE.resolve(); seen=set()
   for name in ("prefix","added","full","matched2k"):
    data=run/"cohorts"/name/"data"
+   stores=[s.resolve() for s in prep.ALLOWED_FASTA_PARENTS|{self.store}]
    for top,dirs,files in os.walk(data,followlinks=True):
     for f in files:
      p=Path(top)/f; real=p.resolve()
-     if real.is_relative_to(root): seen.add(real)
-     elif p.parent==data/"bvbrc"/"features": seen.add(root/"bvbrc"/"features"/f)
+     if real.is_relative_to(root): seen.add(real); continue  # a link into RN_INPUT_ROOT
+     rel=p.relative_to(data)
+     if rel==Path("species")/prep.SLUG/"genomes.txt" or any(real.is_relative_to(s) for s in stores): continue  # written by prepare; FASTA
+     # Review A3: anything else must be a copy of the input-root file at the same path, and it counts as read.
+     source=root/rel
+     self.assertTrue(source.is_file() and source.read_bytes()==p.read_bytes(),
+                     f"{p} is no link into RN_INPUT_ROOT, no copy of one of its files and not written by preparation")
+     seen.add(source)
   expected={p.resolve() for p in prep.input_root_files(prep.CANDIDATE,self.full)}
   self.assertEqual(seen,expected)
   self.assertIn(root/"curated"/"funnel.json",expected); self.assertIn(root/"bvbrc"/"genomes.jsonl",expected)
@@ -201,6 +210,34 @@ class Cleaned(unittest.TestCase):
   # And after preparation, --verify-frozen catches a change to a manifest file.
   path=prep.CANDIDATE/"curated"/"funnel.json"; path.write_text("{\"x\":1}\n")
   rc,out=self.main("--verify-frozen",run); self.assertEqual(rc,1); self.assertIn(str(path),json.loads(out)["changed"])
+
+ def test_a_missing_or_unusable_cached_annotation_stops_before_anything_is_created(self):
+  # grm learn fetches an annotation it cannot read or parse (src/annotate.rs:101-117); the cleaned run must fetch none.
+  added=self.full[2500]; replacement=REPLACEMENTS[0]
+  for gid,edit in ((added,"delete"),(replacement,"delete"),(added,"garble"),(added,"object")):
+   with self.subTest(gid=gid,edit=edit):
+    path=prep.CANDIDATE/"bvbrc"/"features"/f"{gid}.json"; original=path.read_bytes()
+    if edit=="delete": path.unlink()
+    else: path.write_text("not json" if edit=="garble" else '{"gene": "x"}')
+    self.write_inputs()
+    message=self.refused("1 cohort genomes have no usable cached annotation")
+    self.assertIn(gid,message)
+    path.write_bytes(original)
+  for g in self.full[3000:3030]: (prep.CANDIDATE/"bvbrc"/"features"/f"{g}.json").unlink()
+  self.write_inputs(); message=self.refused("30 cohort genomes have no usable cached annotation")
+  self.assertIn("first 20",message); self.assertEqual(sum(g in message for g in self.full[3000:3030]),20)
+  for g in self.full[3000:3030]: (prep.CANDIDATE/"bvbrc"/"features"/f"{g}.json").write_text(f'[{{"gene": "{g}"}}]')
+  self.write_inputs(); self.assertEqual(self.main(self.base/"run","--cohorts","cleaned")[0],0)
+
+ def test_a_missing_record_file_is_a_clean_refusal_and_verify_frozen_reports_it(self):
+  # Review A2: no traceback, nothing created.
+  self.write_inputs(); rec=prep.CANDIDATE/"bvbrc"/"genomes.jsonl"; original=rec.read_bytes(); rec.unlink()
+  self.refused("has no regular bvbrc/genomes.jsonl")
+  rec.write_bytes(original); self.write_inputs()
+  run=self.base/"run"; self.assertEqual(self.main(run,"--cohorts","cleaned")[0],0)
+  rec.unlink()
+  rc,out=self.main("--verify-frozen",run); self.assertEqual(rc,1); self.assertIn(str(rec),json.loads(out)["changed"])
+  rec.write_bytes(original)
 
  def test_matched_selection_takes_the_prefix_size(self):
   ids=[f"g{i}" for i in range(4000)]

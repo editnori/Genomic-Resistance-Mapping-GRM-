@@ -27,7 +27,8 @@ frozen 4k list does not hold, and RN_INPUT_ROOT's curated/datasets.json, curated
 catalog/version.txt, catalog/AMR_CDS.fa and catalog/ReferenceGeneCatalog.txt. RN_INPUT_MANIFEST_SHA256
 binds the sorted path<TAB>sha256 manifest of every input-root file a cohort root can read
 (input_root_files: catalog/ and curated/ whole, the two record files, the cohort genomes' cached
-annotations); --derive-cleaned prints it with the CLEANED_* pins. Then, by the admin's rulings of 2026-10-29:
+annotations); --derive-cleaned prints it with the CLEANED_* pins. Every cohort genome must have a
+usable cached annotation (missing_annotations), so grm learn fetches nothing from BV-BRC during the run. Then, by the admin's rulings of 2026-10-29:
 
   prefix          revision N's own 2k selection (a fresh selection, not the frozen rows)
   full            revision N's cap-4000 selection, whose first rows must be exactly the prefix:
@@ -314,6 +315,22 @@ def input_root_manifest(input_root: Path, full_ids):
     return "".join(lines).encode(), hashes
 
 
+def missing_annotations(input_root: Path, ids):
+    """The genomes `grm learn` would fetch from BV-BRC: src/annotate.rs `load_features` (lines 101-117) reads
+    bvbrc/features/<id>.json and fetches the annotation whenever it cannot read or parse that file. A cached file
+    must be a regular file (as cached_features copies it) holding a JSON list."""
+    out = []
+    for gid in ids:
+        p = input_root / "bvbrc" / "features" / f"{gid}.json"
+        try:
+            ok = p.is_file() and not p.is_symlink() and isinstance(json.loads(p.read_bytes()), list)
+        except (OSError, ValueError):
+            ok = False
+        if not ok:
+            out.append(gid)
+    return out
+
+
 def derived_pins(cohorts, input_root: Path):
     """{name: value} of every DERIVED_NAMES value: the four cleaned lists and the input-root manifest."""
     manifest, _ = input_root_manifest(input_root, cohorts["full"])
@@ -328,6 +345,7 @@ def load_cleaned(frozen_full):
         refuse(str(exc))
     bound = {}
     input_root = Path(v["RN_INPUT_ROOT"])
+    check_input_root(input_root)
     for rel, sha_name in rerun.INPUT_ROOT_FILES.items():  # the labels and catalog the cohorts are learned from (review P1)
         bound[str(input_root / rel)] = v[sha_name]
         read_bound(input_root / rel, v[sha_name], f"RN_INPUT_ROOT's {rel}")
@@ -344,6 +362,12 @@ def load_cleaned(frozen_full):
     species_selection(read("RN_FULL_SPECIES_JSON_PATH", "RN_FULL_SPECIES_JSON_SHA256", "the cap-4000 selection's species.json"),
                       "the cap-4000 selection's species.json", len(full))
     cohorts, info = cleaned_cohorts(frozen_full, verdicts, unchecked, prefix, full)
+    # Every cohort genome's annotation must be cached, so grm learn fetches nothing during the run.
+    missing = missing_annotations(input_root, cohorts["full"])
+    if missing:
+        refuse(f"{len(missing)} cohort genomes have no usable cached annotation at RN_INPUT_ROOT/bvbrc/features/<id>.json, "
+               f"so grm learn would fetch them from BV-BRC during the run (src/annotate.rs:101-117); first {min(len(missing), 20)}: "
+               f"{missing[:20]}")
     if len(info["exclusions"]) != v["EXCLUSIONS_COUNT"]:
         refuse(f"the species check fails {len(info['exclusions'])} MTB genomes, not EXCLUSIONS_COUNT {v['EXCLUSIONS_COUNT']}")
     store = Path(v["RN_FASTA_STORE"])
@@ -367,19 +391,34 @@ def cohort_pins(cohorts):
     return out
 
 
+def check_input_root(root: Path):
+    """Refuse an input root without what every cohort root links: real catalog/ and curated/ directories and the two
+    BV-BRC record files (review A2: a clean refusal, not a traceback). Preparation calls it before reading the root."""
+    for sub in ("catalog", "curated"):
+        d = root / sub
+        if d.is_symlink() or not d.is_dir():
+            refuse(f"the input root {root} has no real {sub}/ directory")
+    for name in BVBRC_RECORDS:
+        p = root / "bvbrc" / name
+        if p.is_symlink() or not p.is_file():
+            refuse(f"the input root {root} has no regular bvbrc/{name}")
+
+
 def frozen_manifest(candidate: Path):
-    """SHA-256 of every frozen input file the roots read or link."""
+    """SHA-256 of every frozen input file the roots read or link. A file that is not there is left out, so
+    --verify-frozen reports it as changed; preparation has refused such a root already (check_input_root)."""
     out = {}
     for sub in ["catalog", "curated"]:
         d = candidate / sub
-        assert d.is_dir() and not d.is_symlink(), d
+        if d.is_symlink() or not d.is_dir():
+            continue
         for p in sorted(d.rglob("*")):
             if p.is_file():
                 out[str(p)] = sha256_file(p)
     for name in BVBRC_RECORDS:
         p = candidate / "bvbrc" / name
-        assert p.is_file() and not p.is_symlink(), p
-        out[str(p)] = sha256_file(p)
+        if p.is_file() and not p.is_symlink():
+            out[str(p)] = sha256_file(p)
     features = candidate / "bvbrc" / "features"
     for p in sorted(features.iterdir()) if features.is_dir() else []:
         assert p.is_file() and not p.is_symlink(), p
@@ -609,6 +648,7 @@ def main() -> int:
         sources = {g: rec for g, rec in sources.items() if g in linked}  # every cohort genome, and only those
     assert linked <= set(sources), sorted(linked - set(sources))[:10]
 
+    check_input_root(candidate)
     # The annotation copies are the only bytes this script writes in bulk.
     copies = {name: cached_features(candidate, cohort_ids[name]) for name in TRAINING}
     copy_bytes = sum(p.stat().st_size for files in copies.values() for p in files)
