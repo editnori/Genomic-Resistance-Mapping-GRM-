@@ -12,6 +12,13 @@ breakpoints, eval_config, and the final forest's importance rows. It also
 compares each file with the pre-run backup, the pipeline log, and the
 published manifest. It writes only the output path it is given.
 
+From DUPLICATE_ISOLATION_REVISION on, the random folds keep each
+k-mer-identical duplicate group whole: the audit rebuilds the groups from
+counted.json's kset digests, requires the report's kset_duplicates to equal
+them, and rebuilds the random folds with each group moved into the fold
+holding most of its members (a tie goes to the fold of its lowest-index
+member). Earlier reports have no groups.
+
 Schema-1 reports (revisions 5 and 6) score every isolate: a null-model fold
 is one whose held-out scores are all exactly 0.5. Schema-2 reports
 (revisions 7 and 8) leave a null fit's isolates uncalled: a null-model fold
@@ -52,6 +59,9 @@ from result_scope import select_results
 FOLDGEN = LANE + "/foldgen/target/release/foldgen"
 ROOT = os.path.dirname(os.path.dirname(LANE))
 REVISION = None
+# The first evaluation revision that isolates kset duplicates in the outer
+# folds. Set when the change is released.
+DUPLICATE_ISOLATION_REVISION = 10
 BACKUP = None
 LOG = None
 LAUNCH_EPOCH = None
@@ -306,10 +316,33 @@ def fold_settings(rep):
     return cfg.get("folds", K), cfg.get("seed", SEED)
 
 
+def isolate_groups(folds, groups, k):
+    """Each group moved whole into the fold holding most of its members; a
+    tie goes to the fold of its lowest-index member among the tied folds."""
+    out = list(folds)
+    for group in groups:
+        count = Counter(folds[i] for i in group)
+        top = max(count.values())
+        anchor = next(folds[i] for i in group if count[folds[i]] == top)
+        for i in group:
+            out[i] = anchor
+    return out
+
+
+def kset_duplicates(samples, digests):
+    """Sample indices sharing a kset digest, one ascending list per group of
+    two or more, ordered by first member."""
+    by_digest = defaultdict(list)
+    for i, s in enumerate(samples):
+        by_digest[digests[s["id"]]].append(i)
+    return sorted(g for g in by_digest.values() if len(g) > 1)
+
+
 def fold_partition(rep, fg, truth):
     k, seed = fold_settings(rep)
     lineage = [s["lineage"] for s in rep["samples"]]
-    return {"random": fg.stratified(truth, k, seed), "lineage": fg.grouped(truth, lineage, k, seed)}
+    random = isolate_groups(fg.stratified(truth, k, seed), rep.get("kset_duplicates", []), k)
+    return {"random": random, "lineage": fg.grouped(truth, lineage, k, seed)}
 
 
 def is_null_fold(schema, held):
@@ -673,12 +706,25 @@ def audit_file(path, fg, counted_cache, log_done, log_recomputed, manifest):
     check(not wrong, "rf feature card counts differ from its bits", features=wrong[:5])
     rec["rf_cards_checked"] = sum(1 for fid in ids[:30] if fid in cards)
 
-    # Catalog baseline and catalog panels from counted.json hits.
-    hits = counted_cache.get(slug)
-    if hits is None:
+    # Catalog baseline and catalog panels from counted.json hits, and the
+    # kset duplicate groups the random folds were built around from its
+    # digests.
+    counted = counted_cache.get(slug)
+    if counted is None:
         cpath = "%s/data/species/%s/counted.json" % (ROOT, slug)
-        hits = {g["genome_id"]: g["genes"] for g in json.load(open(cpath))["genomes"]}
-        counted_cache[slug] = hits
+        genomes = json.load(open(cpath))["genomes"]
+        counted = ({g["genome_id"]: g["genes"] for g in genomes}, {g["genome_id"]: g.get("kset_digest") for g in genomes})
+        counted_cache[slug] = counted
+    hits, digests = counted
+    if rec["revision"] >= DUPLICATE_ISOLATION_REVISION:
+        undigested = [s["id"] for s in samples if digests.get(s["id"]) is None]
+        check(not undigested, "samples without a counted.json kset digest", where="kset_duplicates", samples=undigested[:5])
+        want = [] if undigested else kset_duplicates(samples, digests)
+    else:
+        want = []
+    stored = rep.get("kset_duplicates", [])
+    check(stored == want, "kset_duplicates differ from counted.json's kset digests", where="kset_duplicates",
+          stored=len(stored), computed=len(want))
     groups_names = rep["catalog_groups"]
     mapping_ok = all(
         s["id"] in hits and [groups_names[g] for g in s["groups"]] == [h["group"] for h in hits[s["id"]]]

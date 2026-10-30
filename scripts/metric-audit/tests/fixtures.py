@@ -217,6 +217,22 @@ def make_report(revision=7, null_fits=NULL_FITS, forest_variant=0, lineage_avail
     return rescore(report)
 
 
+def isolated_report(revision=7):
+    """make_report with one k-mer-identical pair isolated as grm does it: two
+    same-lineage isolates in different random folds, neither in lasso's null
+    fold 4, listed in kset_duplicates, the second moved to the first's fold
+    (a tie goes to the lower-index member's fold), every row rescored.
+    Returns the report and the counted.json kset digests the pair shares."""
+    rep = make_report(revision)
+    f = FOLDS["random"]
+    a, b = next((a, b) for a in range(N) for b in range(a + 1, N)
+                if LINEAGE[a] == LINEAGE[b] and f[a] != f[b] and 4 not in (f[a], f[b]))
+    rep["kset_duplicates"] = [[a, b]]
+    rep["splits"][0]["test_fold"][b] = f[a]
+    shared = "kset of " + rep["samples"][a]["id"]
+    return rescore(rep), {rep["samples"][i]["id"]: shared for i in (a, b)}
+
+
 def row(report, scheme, learner):
     split = next(s for s in report["splits"] if s["scheme"] == scheme)
     return next(r for r in split["learners"] if r["learner"] == learner)
@@ -286,15 +302,18 @@ def run_checker(root, *args):
     return subprocess.run([sys.executable, "-I", CHECKER, root, *args], capture_output=True, text=True)
 
 
-def audit_root(tmp, report, index=None, backup=None, log_lines=(), published=True):
+def audit_root(tmp, report, index=None, backup=None, log_lines=(), published=True, digests=None):
     """A /root/grm-shaped tree for audit.py: the report, counted.json for its
-    catalog calls, the manifest and its published copy, a backup, and a log."""
+    catalog calls and kset digests (each genome its own unless `digests`
+    names one), the manifest and its published copy, a backup, and a log."""
+    digests = digests or {}
     root = os.path.join(tmp, "root")
     path = os.path.join(root, "data", "species", SLUG, "results", ID + ".json")
     write_json(path, report)
     write_json(os.path.join(root, "data", "curated", "datasets.json"), [{"id": ID, "species_slug": SLUG}])
     write_json(os.path.join(root, "data", "species", SLUG, "counted.json"),
-               {"genomes": [{"genome_id": s["id"], "genes": [{"group": "blaFIX", "family": "blaFIX"}] if s["groups"] else []}
+               {"genomes": [{"genome_id": s["id"], "genes": [{"group": "blaFIX", "family": "blaFIX"}] if s["groups"] else [],
+                             "kset_digest": digests.get(s["id"], "kset of " + s["id"])}
                             for s in report["samples"]]})
     write_json(os.path.join(root, "data", "report", "index.json"), index if index is not None else manifest(report, "rf"))
     if published:

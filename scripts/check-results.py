@@ -16,6 +16,13 @@ fold's record must also agree with that fold's scores: a lasso fold is called
 exactly when its fold_complexity (the refit's weight count) is positive, and a
 fold whose record has no selected point (an empty path) has no calls.
 
+A report may list kset_duplicates: the samples with identical kset digests,
+one ascending list of two or more sample indices per group, ordered by first
+member and disjoint. Each group shares a lineage and sits whole in one test
+fold of every split that ran. A report without the field has no such group,
+or comes from a revision before duplicate isolation; the metric audit tells
+the two apart from counted.json.
+
 The best learner follows the schema. In schema 2 it is the highest
 random-split balanced accuracy among scm, cart, rf, gbt, and lasso rows
 that call every isolate on every split that ran, or none. Schema-1 runs
@@ -252,6 +259,15 @@ def main():
                         assert None not in fold and fold_ba[k] is not None, ("a fold is called in part",) + identity + (k,)
                         assert math.isclose(fold_ba[k], balanced_accuracy([truth[i] for i in held], fold), abs_tol=1e-12), ("fold balanced accuracy",) + identity + (k,)
                 entries += 1
+        duplicates = report.get("kset_duplicates")
+        if duplicates is not None:
+            members = [i for group in duplicates for i in group]
+            assert duplicates and all(isinstance(g, list) and len(g) >= 2 and all(type(i) is int for i in g) and g == sorted(set(g)) for g in duplicates), ("malformed kset_duplicates", path)
+            assert duplicates == sorted(duplicates) and len(set(members)) == len(members) and 0 <= min(members) and max(members) < n, ("kset_duplicates out of order, overlapping or out of range", path)
+            assert all(len({samples[i]["lineage"] for i in g}) == 1 for g in duplicates), ("a kset duplicate group spans lineages", path)
+            for split in report["splits"]:
+                if not split.get("unavailable_reason"):
+                    assert all(len({split["test_fold"][i] for i in g}) == 1 for g in duplicates), ("a kset duplicate group spans test folds", path, split["scheme"])
         mic = report.get("mic")
         if mic:
             assert len(mic["predicted"]) == n, path
