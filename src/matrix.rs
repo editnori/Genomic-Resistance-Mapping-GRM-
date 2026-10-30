@@ -44,7 +44,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// private functions that skip the check (docs/matrix-scaling.md).
 pub const REVIEWED_COLUMNS: usize = 4096;
 
-fn ensure_reviewed(n: usize, max_columns: usize) -> Result<()> {
+pub(crate) fn ensure_reviewed(n: usize, max_columns: usize) -> Result<()> {
     ensure!(
         n <= max_columns,
         "{n} genomes exceed the {max_columns} matrix columns that Dataset::project, the learners and reports have been reviewed for (docs/matrix-scaling.md)"
@@ -619,6 +619,11 @@ fn sync_file(file: &File, path: &Path, hook: SyncHook) -> Result<()> {
 
 /// Makes renames, creations and removals in `dir` durable.
 fn sync_dir(dir: &Path, hook: SyncHook) -> Result<()> {
+    let dir = if dir.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        dir
+    };
     hook(dir)?;
     File::open(dir)
         .and_then(|d| d.sync_all())
@@ -641,6 +646,30 @@ fn create_dir_durably(dir: &Path, hook: SyncHook) -> Result<()> {
     missing.iter().rev().try_for_each(|d| sync_parent(d, hook))
 }
 
+/// `dir` is a real directory, not a link to one.
+fn ensure_real_dir(dir: &Path) -> Result<()> {
+    ensure!(
+        ensure_real_dir_if_present(dir)?,
+        "{} does not exist",
+        dir.display()
+    );
+    Ok(())
+}
+
+/// As `ensure_real_dir`, but a missing `dir` is Ok(false).
+fn ensure_real_dir_if_present(dir: &Path) -> Result<bool> {
+    match std::fs::symlink_metadata(dir) {
+        Ok(m) if m.file_type().is_symlink() => anyhow::bail!(
+            "refusing symlinked matrix directory {}: matrix files are written only into a real directory",
+            dir.display()
+        ),
+        Ok(m) if m.is_dir() => Ok(true),
+        Ok(_) => anyhow::bail!("{} is not a directory", dir.display()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e).with_context(|| format!("inspect {}", dir.display())),
+    }
+}
+
 /// A temporary file that is removed when dropped unless kept, so that an
 /// error at any point after creating it leaves nothing behind.
 struct TempFile {
@@ -659,17 +688,21 @@ impl Drop for TempFile {
 /// Writes `bytes` to `path` through `<path>.part`: synced, renamed, and
 /// the directory synced. An error from that last sync leaves the file in
 /// place; the caller decides whether to remove it.
+///
+/// The temporary is created with `confine::create_part` (never through a
+/// link), and `path` is only replaced when it is a regular file or absent.
 fn write_durably(path: &Path, bytes: &[u8], hook: SyncHook) -> Result<()> {
     let part = with_suffix(path, ".part");
+    crate::confine::regular_or_absent(path)?;
+    let mut file = crate::confine::create_part(&part)?;
     let mut tmp = TempFile {
         path: part.clone(),
         keep: false,
     };
-    let mut file = File::create(&part).with_context(|| format!("create {}", part.display()))?;
     file.write_all(bytes)?;
     sync_file(&file, &part, hook)?;
     drop(file);
-    std::fs::rename(&part, path).with_context(|| format!("rename to {}", path.display()))?;
+    crate::confine::replace_with(&part, path)?;
     tmp.keep = true;
     sync_parent(path, hook)
 }
@@ -883,6 +916,9 @@ fn write_partial_with(
     // block is left to merge.
     let receipt_at = receipt_path(out);
     for old in [receipt_at.as_path(), out] {
+        // A link or directory where a block file belongs is refused, never
+        // removed or written through.
+        crate::confine::regular_or_absent(old)?;
         remove_if_present(old).with_context(|| format!("remove {}", old.display()))?;
     }
     sync_parent(out, limits.sync)?;
@@ -897,12 +933,12 @@ fn write_partial_with(
         limits.reserve,
     )?;
     let part = with_suffix(out, ".part");
+    let created = crate::confine::create_part(&part)?;
     let mut tmp = TempFile {
         path: part.clone(),
         keep: false,
     };
-    let mut w =
-        BufWriter::new(File::create(&part).with_context(|| format!("create {}", part.display()))?);
+    let mut w = BufWriter::new(created);
     w.write_all(PART_MAGIC)?;
     w.write_all(&[k as u8, BUCKET_BITS as u8, 0, 0, 0, 0, 0, 0])?;
     w.write_all(&(first_col as u64).to_le_bytes())?;
@@ -961,7 +997,7 @@ fn write_partial_with(
     drop(read);
     drop(file);
     let receipt_json = serde_json::to_vec_pretty(&receipt)?;
-    std::fs::rename(&part, out).with_context(|| format!("rename to {}", out.display()))?;
+    crate::confine::replace_with(&part, out)?;
     tmp.keep = true;
     // Without its receipt the partial is refused, but it would hold its
     // disk until rewritten, so a failure from here on removes it again.
@@ -1205,7 +1241,129 @@ impl PartialReader {
         );
         Ok(reader)
     }
+}
 
+/// Verifies one durable partial/receipt pair against the exact block a caller
+/// expects. This is the caller's gate before deleting that block's ksets.
+///
+/// The receipt only binds the file to what its writer produced: a partial
+/// edited together with its receipt still matches it. So the content is
+/// checked against the counts as well. A partial holds every k-mer of its
+/// block (nothing is filtered yet), so each column's k-mers, read back in
+/// order, must number `n_kmers[i]` and hash to `columns[i].kset_digest`,
+/// exactly as `kset::digest` hashed that genome's kset when it was counted.
+pub fn verify_partial(
+    path: &Path,
+    columns: &[Column],
+    n_kmers: &[u64],
+    first_col: usize,
+    k: usize,
+) -> Result<()> {
+    ensure!(
+        n_kmers.len() == columns.len(),
+        "{} k-mer counts for {} expected columns",
+        n_kmers.len(),
+        columns.len()
+    );
+    let r = verify_partial_header(path, columns, first_col, k)?;
+    let found = column_contents(&r)?;
+    for (i, ((count, digest), (c, &want))) in
+        found.iter().zip(columns.iter().zip(n_kmers)).enumerate()
+    {
+        let digest = Fnv(*digest).hex();
+        ensure!(
+            *count == want && digest == c.kset_digest,
+            "{}: column {} ({}) holds {count} k-mers with digest {digest}, but counted.json records {want} with digest {}: the partial does not hold that genome's kset",
+            path.display(),
+            first_col + i,
+            c.name,
+            c.kset_digest
+        );
+    }
+    Ok(())
+}
+
+/// Each column's k-mer count and `kset::digest` over its k-mers, in value
+/// order. Buckets are read in order; within one, groups of eight columns
+/// are hashed in parallel.
+fn column_contents(r: &PartialReader) -> Result<Vec<(u64, u64)>> {
+    const GROUP: usize = 8;
+    let words = r.full_row.len();
+    let mut groups: Vec<Vec<(u64, Fnv)>> = (0..r.width.div_ceil(GROUP))
+        .map(|g| {
+            (g * GROUP..((g + 1) * GROUP).min(r.width))
+                .map(|_| (0, Fnv::new()))
+                .collect()
+        })
+        .collect();
+    let (mut bytes, mut kmers, mut slots, mut rows) =
+        (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    for bucket in 0..BUCKETS {
+        kmers.clear();
+        slots.clear();
+        rows.clear();
+        r.read_bucket(bucket, &mut bytes, &mut kmers, &mut slots, &mut rows)?;
+        groups.par_iter_mut().enumerate().for_each(|(g, states)| {
+            let (word, shift) = (g * GROUP / 64, (g * GROUP % 64) as u32);
+            for (&value, &slot) in kmers.iter().zip(&slots) {
+                let row = match slot {
+                    FULL => r.full_row[word],
+                    s => rows[s as usize * words + word],
+                };
+                let mut members = (row >> shift) & ((1u64 << GROUP) - 1);
+                while members != 0 {
+                    let (count, h) = &mut states[members.trailing_zeros() as usize];
+                    *count += 1;
+                    h.u64(value);
+                    members &= members - 1;
+                }
+            }
+        });
+    }
+    Ok(groups
+        .into_iter()
+        .flatten()
+        .map(|(count, h)| (count, h.0))
+        .collect())
+}
+
+/// The receipt, k, block start, and column checks of `verify_partial`.
+fn verify_partial_header(
+    path: &Path,
+    columns: &[Column],
+    first_col: usize,
+    k: usize,
+) -> Result<PartialReader> {
+    let r = PartialReader::open_with_receipt(path, REVIEWED_COLUMNS)?;
+    ensure!(
+        r.k == k,
+        "{} is stale: it was written at k = {}, but k = {k} is expected",
+        path.display(),
+        r.k
+    );
+    ensure!(
+        r.first_col == first_col && r.width == columns.len(),
+        "{} holds columns from {} with width {}, but column {first_col} with width {} is expected",
+        path.display(),
+        r.first_col,
+        r.width,
+        columns.len()
+    );
+    if let Some(i) = (0..r.width).find(|&i| r.columns[i] != columns[i]) {
+        anyhow::bail!(
+            "{} is stale: column {} holds {} (kset {}), but {} (kset {}) is expected",
+            path.display(),
+            first_col + i,
+            r.columns[i].name,
+            r.columns[i].kset_digest,
+            columns[i].name,
+            columns[i].kset_digest
+        );
+    }
+    Ok(r)
+}
+
+impl PartialReader {
     /// Appends bucket `bucket`'s k-mers to `kmers` and, for each, a slot to
     /// `slots`: FULL, or the index of its row (words_for(width) words) in
     /// `rows`. Full rows are not expanded, so `rows` takes no more memory
@@ -1472,13 +1630,15 @@ impl FeatureMatrix {
     /// written last, so an interrupted or failed save leaves no matrix.json
     /// and `load` refuses the directory.
     pub fn save(&self, dir: &Path) -> Result<()> {
+        ensure_real_dir_if_present(dir)?;
         create_dir_durably(dir, &no_fault)?;
         self.write_files(dir, &serde_json::to_vec_pretty(&self.summary)?, &no_fault)
     }
 
-    /// `save`, refused before anything is written or removed when the save
+    /// `save`, refused before matrix files are written or removed when the save
     /// would at any point leave less than `reserve_bytes` free on `dir`'s
-    /// filesystem (see `save_peak`).
+    /// filesystem (see `save_peak`). A missing output directory may be created
+    /// before that refusal.
     pub fn save_with_reserve(&self, dir: &Path, reserve_bytes: u64) -> Result<()> {
         self.save_checked(dir, reserve_bytes, &free_bytes, &no_fault)
     }
@@ -1490,6 +1650,7 @@ impl FeatureMatrix {
         free: &dyn Fn(&Path) -> Result<u64>,
         sync: SyncHook,
     ) -> Result<()> {
+        ensure_real_dir_if_present(dir)?;
         create_dir_durably(dir, sync)?;
         let summary = serde_json::to_vec_pretty(&self.summary)?;
         let old = |name: &str| {
@@ -1533,17 +1694,23 @@ impl FeatureMatrix {
     }
 
     fn write_files(&self, dir: &Path, summary_json: &[u8], sync: SyncHook) -> Result<()> {
+        // Nothing is written through a link: a linked directory, or a link
+        // or directory where a matrix file belongs, is refused.
+        ensure_real_dir(dir)?;
+        let summary = dir.join("matrix.json");
+        crate::confine::regular_or_absent(&summary)?;
         // A summary left from an earlier save would mark half-written
         // binaries as a complete matrix, so it goes, durably, before they
         // are touched.
-        let summary = dir.join("matrix.json");
         remove_if_present(&summary).with_context(|| format!("remove {}", summary.display()))?;
         sync_dir(dir, sync)?;
         for (name, body) in self.binaries() {
             let path = dir.join(name);
-            let mut w = BufWriter::new(
-                File::create(&path).with_context(|| format!("create {}", path.display()))?,
-            );
+            // Unlinked and created anew, rather than truncated, so that no
+            // other name for the old file (a hard link) is rewritten.
+            crate::confine::regular_or_absent(&path)?;
+            remove_if_present(&path).with_context(|| format!("remove {}", path.display()))?;
+            let mut w = BufWriter::new(crate::confine::create_new(&path)?);
             body.write_to(&mut w)
                 .and_then(|()| w.flush())
                 .with_context(|| format!("write {}", path.display()))?;
@@ -3310,7 +3477,8 @@ mod tests {
             .unwrap();
         let msg = format!("{err:#}");
         assert!(
-            msg.contains("were removed") && msg.contains(&format!("create {}", blocker.display())),
+            msg.contains("were removed")
+                && msg.contains(&format!("non-regular-file {}", blocker.display())),
             "{msg}"
         );
         assert!(!out.exists() && !receipt_path(&out).exists());

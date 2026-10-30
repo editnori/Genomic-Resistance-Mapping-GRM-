@@ -270,6 +270,11 @@ pub fn load_inputs(layout: &Layout, slug: &str) -> Result<(SpeciesInputs, Option
     let t = Instant::now();
     let matrix = FeatureMatrix::load(&layout.matrix_dir(slug))?;
     let counted = species::load_counted(layout, slug)?;
+    anyhow::ensure!(
+        counted.pending.is_empty(),
+        "counted.json has {} selected genomes pending from a disk-sparse run; resume `grm pipeline --disk-sparse` before learning",
+        counted.pending.len()
+    );
     if let Some(g) = counted.undigested() {
         anyhow::bail!(
             "counted.json records no kset digest for {} (it predates them); rerun `grm count --species {slug}`",
@@ -907,7 +912,9 @@ pub fn analyze_species(
     let digest = matrix_digest(&input.matrix);
     let client = Client::new();
     let dir = layout.results_dir(slug);
-    std::fs::create_dir_all(&dir)?;
+    // Reports go only through real directories below the data root (see
+    // `confine`), so a linked results directory cannot send them elsewhere.
+    crate::confine::Lane::new(&layout.root)?.create_dir_all(&dir, false)?;
     let mut specs: Vec<&DatasetSpec> = input
         .datasets
         .iter()
@@ -995,11 +1002,10 @@ fn best_learner_words(splits: &[SplitResult]) -> Result<String> {
 }
 
 /// Readers such as scheduled report rebuilds see the old file or the new
-/// one, never a partial write.
+/// one, never a partial write, and a link at the report or its temporary
+/// is refused rather than written through (see `confine::write_atomic`).
 fn write_atomic(path: &std::path::Path, bytes: &[u8]) -> Result<()> {
-    let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, bytes).with_context(|| format!("write {}", tmp.display()))?;
-    std::fs::rename(&tmp, path).with_context(|| format!("replace {}", path.display()))
+    crate::confine::write_atomic(path, bytes, false)
 }
 
 /// Bits helper for tests and callers that hold a raw row.
@@ -1639,6 +1645,30 @@ mod tests {
         write_atomic(&path, b"{}").unwrap();
         assert_eq!(std::fs::read(&path).unwrap(), b"{}");
         assert!(!dir.path().join("d.json.tmp").exists());
+        assert!(!dir.path().join("d.json.part").exists());
+        // A link where the report belongs is refused, and its target kept.
+        let victim = dir.path().join("victim.json");
+        std::fs::write(&victim, b"outside").unwrap();
+        let linked = dir.path().join("linked.json");
+        std::os::unix::fs::symlink(&victim, &linked).unwrap();
+        assert!(write_atomic(&linked, b"{}").is_err());
+        assert_eq!(std::fs::read(&victim).unwrap(), b"outside");
+    }
+
+    #[test]
+    fn learn_writes_reports_only_through_real_directories_below_the_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let input = inputs();
+        write_inputs(&layout, &input, "");
+        let outside = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), layout.results_dir("fixture")).unwrap();
+        let err = learn(&layout).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("symlinked directory"),
+            "{err:#}"
+        );
+        assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(), 0);
     }
 
     #[test]
@@ -2351,11 +2381,13 @@ mod tests {
                     },
                     catalog_version: calls.into(),
                     kset_digest: Some(digest.clone()),
+                    sketch: Some(vec![]),
                     genes: input.hits.get(g).cloned().unwrap_or_default(),
                 })
                 .collect(),
             missing_fasta: vec![],
             failed: vec![],
+            pending: vec![],
         };
         let dir = layout.species_dir("fixture");
         std::fs::write(
