@@ -394,9 +394,14 @@ class SchemaAndRevision(Case):
         fx.row(rep, "random", "lasso")["lasso_fits"][2]["path_unconverged"] = 1
         self.fails(rep, "unconverged two-class lasso fit")
 
-    def test_future_revision10_fails(self):
-        rep = revision8_report(revision=9)
-        rep["evaluation"]["revision"] = 10
+    def test_revision10_report_with_an_isolated_pair_passes(self):
+        rep, _ = fx.isolated_report(report=revision8_report(revision=10))
+        entry = self.passes(rep, [rf_line(rep)])
+        self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (10, 2, "rf"))
+
+    def test_future_revision11_fails(self):
+        rep = revision8_report(revision=10)
+        rep["evaluation"]["revision"] = 11
         self.fails(rep, "'revision'")
 
     def test_a_root_that_mixes_revisions_fails(self):
@@ -415,7 +420,7 @@ class SchemaAndRevision(Case):
         same = run(revision8_report(revision=9), revision8_report(revision=9))
         self.assertEqual(same.returncode, 0, same.stderr[-1500:])
         self.assertEqual(json.loads(same.stdout)["revisions"], [9])
-        for revisions in ((8, 9), (7, 9), (7, 8)):
+        for revisions in ((9, 10), (8, 9), (7, 9), (7, 8)):
             with self.subTest(revisions=revisions):
                 mixed = run(*(revision8_report(revision=r) if r >= 8 else fx.make_report(revision=r) for r in revisions))
                 self.assertNotEqual(mixed.returncode, 0)

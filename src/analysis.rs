@@ -32,8 +32,10 @@ use std::time::Instant;
 /// reader stops at its version check instead of reading them as numbers.
 pub const REPORT_SCHEMA: u32 = 2;
 /// Revision 8 added the lasso solver evidence; revision 9 changes only the
-/// lasso's active-set solve (docs/lasso-stopping.md).
-pub const EVALUATION_REVISION: u32 = 9;
+/// lasso's active-set solve (docs/lasso-stopping.md). Revision 10 adds the
+/// species identity check (docs/species-check.md) and keeps k-mer-identical
+/// duplicates whole in one outer fold (docs/duplicate-isolation.md).
+pub const EVALUATION_REVISION: u32 = 10;
 
 #[derive(Serialize)]
 pub struct EvaluationAudit {
@@ -1273,15 +1275,16 @@ mod tests {
                 "input_fingerprint": fingerprint,
             })
         };
-        assert_eq!(EVALUATION_REVISION, 9);
+        assert_eq!(EVALUATION_REVISION, 10);
         assert_eq!(stale_reason(&saved(EVALUATION_REVISION, key), key), None);
-        // Revision 8's solver could stop where revision 9's converges, and
-        // a valid revision-8 report has the same fields as a revision-9 one.
-        for old in [7, 8] {
+        // Revision 8's solver could stop where revision 9's converges, and a
+        // revision-9 report may have scored a genome with its own copy in
+        // training. The input fingerprint does not see either change.
+        for old in [7, 8, 9] {
             assert_eq!(
                 stale_reason(&saved(old, key), key),
                 Some("evaluation audit revision changed"),
-                "a same-fingerprint revision-{old} lasso result must not enter revision 9"
+                "a same-fingerprint revision-{old} result must not enter revision 10"
             );
         }
         // A current report whose audit is invalid, or says nothing, is not a

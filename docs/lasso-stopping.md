@@ -113,7 +113,9 @@ An invalid report is written for review but is not a finished dataset. `grm lear
 
 ## Report schema and independent checker
 
-`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **9**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 and revision-9 output must contain the new evidence.
+`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **10**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8, revision-9 and revision-10 output must contain the new evidence.
+
+Revision 10 keeps this lasso and its evidence unchanged. It adds the species identity check ([species-check.md](species-check.md)) and keeps k-mer-identical duplicates whole in one outer fold, listed in the new `kset_duplicates` field ([duplicate-isolation.md](duplicate-isolation.md)). A revision-10 report meets the revision-8 rules below, and a same-fingerprint revision-9 report is stale against revision 10.
 
 Revision 9 changes only the lasso's active-set solve (above). It adds no report field and changes no field's meaning: `sweep_cap_hits` still counts IRLS steps whose solve stopped short, and the new step to a first crossing is part of an exact solve, not a short one. A revision-9 report meets the revision-8 rules below. The bump keeps revision-8 reports, whose lasso fits the old solve could leave unconverged where the new one converges, from being reused: a same-fingerprint revision-8 report is stale against revision 9.
 
@@ -143,15 +145,15 @@ For a deliberate empty path, `path_points` and `path_unconverged` are zero and `
 
 `scripts/check-results.py` now:
 
-- accepts revisions 3 through 9 and rejects future revisions, applying the revision-8 lasso rules to revision 9;
-- refuses a root whose reports have more than one evaluation revision, such as revision-8 reports left beside revision-9 ones by a run stopped part-way;
+- accepts revisions 3 through 10 and rejects future revisions, applying the revision-8 lasso rules to revisions 9 and 10;
+- refuses a root whose reports have more than one evaluation revision, such as revision-8 reports left beside revision-9 ones by a run stopped part-way, so a revision-10 root must hold only revision-10 reports;
 - keeps the existing revision 3–7 schema, no-call, metric, split, and log semantics;
 - requires per-fold and final lasso status on every available revision-8 split, including reports whose lasso rows have null fits;
 - rejects missing fields, wrong types, negative or out-of-range counts and indices, a wrong number of fold records, a non-empty path with no selected point (or the reverse), inconsistent selected/refit presence, and a final model inconsistent with an empty-path record;
 - checks each fold's record against that fold's scores: a lasso fold is called exactly when its `fold_complexity` (the refit's weight count) is positive, and a fold whose record has no selected point has no calls; and
 - requires zero unconverged two-class lasso path points and true selected/final convergence before accepting `valid: true`.
 
-The checker tests cover a valid revision-8 report, a valid revision-9 report and the revision-8 rules applied to it, a root mixing two revisions (8 with 9, 7 with 9, 7 with 8) beside one holding two revision-9 reports, a valid empty-path final fit with a null model, a valid empty-path record on an uncalled fold, and future-revision rejection (revision 10). `metric-audit/audit.py` has no revision list: `--revision 9` audits a revision-9 run, and a test audits one clean.
+The checker tests cover a valid revision-8 report, a valid revision-9 report and the revision-8 rules applied to it, a valid revision-10 report with an isolated duplicate pair, a root mixing two revisions (9 with 10, 8 with 9, 7 with 9, 7 with 8) beside one holding two revision-9 reports, a valid empty-path final fit with a null model, a valid empty-path record on an uncalled fold, and future-revision rejection (revision 11). `metric-audit/audit.py` has no revision list: `--revision 9` audits a revision-9 run and `--revision 10` a revision-10 one, and tests audit both clean.
 
 Negative cases cover missing, malformed and unconverged records; a saved model whose record has no refit; a dropped or extra fold record; a 30-point path with no selected point; an empty-path record on a called fold; a weight count that disagrees with the fold's calls; and a short `fold_complexity`.
 
@@ -387,12 +389,14 @@ nohup nice -n 10 python3 -I -B scan.py --input-root "$ROOT" --out "$SCAN/scan" -
 
 The current published release remains revision 7. `scripts/deployment/` retains its revision-7 defaults and 237-dataset published-release expectations; this lane deliberately did not edit it while its independent review is active.
 
-At a future, authorized revision-9 staging/publishing operation, the operator must explicitly set:
+At a future, authorized revision-10 staging/publishing operation, the operator must explicitly set:
 
 ```bash
-GRM_EXPECT_REVISION=9
-GRM_EXPECT_DATASETS=275
+GRM_EXPECT_REVISION=10
+GRM_EXPECT_DATASETS=<reports in the revision-10 run>
 ```
+
+The revision-9 run wrote 275 reports. The species check reselects some cohorts, so take the revision-10 count from its run, not from this page.
 
 Those are operation-time requirements, not changes to the current defaults and not evidence that staging or publication has occurred.
 

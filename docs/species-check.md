@@ -1,6 +1,6 @@
-# Species identity check (revision 9)
+# Species identity check (revision 10)
 
-Status: implemented on branch `r9/species-check`; awaiting its independent review. Revision 9 includes it only if that review has passed by the time revision 9's rerun starts; otherwise it goes into revision 10. Revision 8 is unchanged.
+Status: implemented on branch `r9/species-check` (code reviewed at `3a39fa3`, review approved 2026-10-30) and released in evaluation revision 10, merged on `r10/integration`. Revisions 8 and 9 do not include it. The "revision 9" counts below were measured for the revision-9 rerun and describe the cohorts revision 10 starts from.
 
 ## Why
 
@@ -377,7 +377,7 @@ GC alone never fails a genome, since contaminating contigs and plasmids also mov
 - MTB at cap 2000: 2,000 genomes (sha256 `b104d8bd…9a64`). `1773.41701` and `1773.40949` leave, and `1773.42018` and `1773.42548` from the added 2k enter at positions 1,999 and 2,000. The check had judged both, so `selected_unchecked` is 0. The selection is fresh: 458 positions differ from the old list minus the two drops, because dropped labels shift the class weights.
 - MTB at cap 4000: 4,000 genomes (sha256 `f2a18a43…fd75`). The same two leave, and `1422016.3` and `1422018.3` enter at positions 3,999 and 4,000. Neither has been judged (`selected_unchecked` 2), so they need FASTA and a check before a 4k run. 1,998 of the old added 2k remain.
 - The cleaned 2k is the exact prefix of the cleaned 4k.
-- Other species at cap 2000: *K. pneumoniae* (68), *E. coli* (4) and *S. enterica* (1) fill their caps with replacements that have not been judged. *A. baumannii* (1,705 → 1,702) and *E. cloacae* (271 → 270) are under the cap and only shrink. The revision-9 rerun needs one `fetch fasta → species-check → curate` round for the 73 replacements.
+- Other species at cap 2000: *K. pneumoniae* (68), *E. coli* (4) and *S. enterica* (1) fill their caps with replacements that have not been judged. *A. baumannii* (1,705 → 1,702) and *E. cloacae* (271 → 270) are under the cap and only shrink. The revision-10 rerun needs one `fetch fasta → species-check → curate` round for the 73 replacements.
 
 ### MTB GC and length outliers
 

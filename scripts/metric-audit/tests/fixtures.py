@@ -217,13 +217,14 @@ def make_report(revision=7, null_fits=NULL_FITS, forest_variant=0, lineage_avail
     return rescore(report)
 
 
-def isolated_report(revision=7):
-    """make_report with one k-mer-identical pair isolated as grm does it: two
+def isolated_report(revision=7, report=None):
+    """`report` (make_report by default) with one k-mer-identical pair
+    isolated as grm does it: two
     same-lineage isolates in different random folds, neither in lasso's null
     fold 4, listed in kset_duplicates, the second moved to the first's fold
     (a tie goes to the lower-index member's fold), every row rescored.
     Returns the report and the counted.json kset digests the pair shares."""
-    rep = make_report(revision)
+    rep = make_report(revision) if report is None else report
     f = FOLDS["random"]
     a, b = next((a, b) for a in range(N) for b in range(a + 1, N)
                 if LINEAGE[a] == LINEAGE[b] and f[a] != f[b] and 4 not in (f[a], f[b]))
