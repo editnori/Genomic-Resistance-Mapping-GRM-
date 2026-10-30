@@ -22,8 +22,9 @@ With --cohorts cleaned (plan revision 6, the cleaned-cohort rerun on revision N)
 comes from cleaned_rerun.py, and the script refuses, before it creates anything, while one it
 reads is an unfilled placeholder. Each input is read only at its bound SHA-256: the post-fetch
 species check (species_check.json), revision N's MTB 2k and cap-4000 selections (genomes.txt
-form) with each selection's curated/species.json, and a FASTA manifest for the cohort genomes the
-frozen 4k list does not hold. Then, by the admin's rulings of 2026-10-29:
+form) with each selection's curated/species.json, a FASTA manifest for the cohort genomes the
+frozen 4k list does not hold, and RN_INPUT_ROOT's curated/datasets.json, curated/phenotypes.jsonl
+and catalog/version.txt. Then, by the admin's rulings of 2026-10-29:
 
   prefix          revision N's own 2k selection (a fresh selection, not the frozen rows)
   full            revision N's cap-4000 selection, whose first rows must be exactly the prefix:
@@ -298,6 +299,10 @@ def load_cleaned(frozen_full):
     except (rerun.Unfilled, rerun.Malformed) as exc:
         refuse(str(exc))
     bound = {}
+    input_root = Path(v["RN_INPUT_ROOT"])
+    for rel, sha_name in rerun.INPUT_ROOT_FILES.items():  # the labels and catalog the cohorts are learned from (review P1)
+        bound[str(input_root / rel)] = v[sha_name]
+        read_bound(input_root / rel, v[sha_name], f"RN_INPUT_ROOT's {rel}")
 
     def read(path_name, sha_name, what):
         bound[v[path_name]] = v[sha_name]

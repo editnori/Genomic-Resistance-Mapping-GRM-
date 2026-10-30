@@ -167,6 +167,8 @@ filled by a reviewed commit and listed in section 2.1.
   selection (`RN_FULL_GENOMES_*`), each with its `curated/species.json` (`RN_*_SPECIES_JSON_*`),
   whose MTB `selected_unchecked` must be 0.
 - **Inputs:** `RN_INPUT_ROOT` provides catalog, curated, the BV-BRC records and cached annotations.
+  Its `curated/datasets.json`, `curated/phenotypes.jsonl` (the labels) and `catalog/version.txt`
+  are bound by hash (`RN_INPUT_*_SHA256`) and checked before root preparation (review P1).
   These are revision N's curation, on which the fresh selection was made. Its whole set is bound in
   `frozen-inputs.json` at preparation, as revision 5 bound the candidate's.
 - **FASTA:** a genome in the frozen 4k list links to its frozen-manifest FASTA. A replacement links
@@ -206,8 +208,8 @@ min_support=2. Revision-8 reports, the current run's included, are not cohorts o
 ### 2.1 Placeholders
 
 `python3 -I scripts/mtb-4k/revision_n.py status` and `cleaned_rerun.py status` list each value and
-whether it is filled. A filling commit changes only these values and the "every value is unfilled"
-assertion of the matching test. "Prepare" values are needed before section 3, and "reference"
+whether it is filled. A filling commit changes `VALUES` only; the tests hold for a wholly unfilled
+or a wholly filled file. "Prepare" values are needed before section 3, and "reference"
 values only for section 7b.
 
 | Placeholder | File | Needed for | What it is |
@@ -225,6 +227,7 @@ values only for section 7b.
 | `@@RN_FULL_GENOMES_PATH@@`, `@@RN_FULL_GENOMES_SHA256@@` | `cleaned_rerun.py` | prepare | revision N's cap-4000 selection |
 | `@@RN_FULL_SPECIES_JSON_PATH@@`, `@@RN_FULL_SPECIES_JSON_SHA256@@` | `cleaned_rerun.py` | prepare | its `curated/species.json` |
 | `@@RN_INPUT_ROOT@@` | `cleaned_rerun.py` | prepare | the data root of catalog, curated, records and annotations |
+| `@@RN_INPUT_DATASETS_SHA256@@`, `@@RN_INPUT_PHENOTYPES_SHA256@@`, `@@RN_INPUT_CATALOG_VERSION_SHA256@@` | `cleaned_rerun.py` | prepare | SHA-256 of its `curated/datasets.json`, `curated/phenotypes.jsonl` and `catalog/version.txt` |
 | `@@RN_FASTA_MANIFEST_PATH@@`, `@@RN_FASTA_MANIFEST_SHA256@@` | `cleaned_rerun.py` | prepare | the FASTA manifest of the replacements, in the cohort evidence's columns |
 | `@@RN_FASTA_STORE@@` | `cleaned_rerun.py` | prepare | the directory of those FASTA |
 | `@@CLEANED_PREFIX_SHA256@@`, `@@CLEANED_PREFIX_COUNT@@`, and the same for `ADDED`, `FULL`, `MATCHED2K` | `cleaned_rerun.py` | prepare | the four cleaned lists, from `--derive-cleaned` |
@@ -316,7 +319,8 @@ revision 5.
 **Not repeated in revision 6.** The admin ruled on 2026-10-29 that the cleaned run makes fresh roots,
 matrices and structures without repeating the pilot. The pilot passed on 2026-10-29 (attempt 3)
 under revision 5. The review of the revision-N merge must confirm that revision N leaves matrix
-building unchanged (`src/matrix.rs`, `src/species.rs`, `src/species/`, `src/confine.rs`, `src/layout.rs`);
+building unchanged (`src/matrix.rs`, `src/kset.rs`, the `matrix` wiring in `src/main.rs`, `src/species.rs`,
+`src/species/`, `src/confine.rs`, `src/layout.rs`);
 if it does not, the pilot is repeated before section 5. A cleaned run root has no pilot cohorts.
 The text and commands below are revision 5's, kept for the record.
 
@@ -589,8 +593,8 @@ python3 -I "$P/fingerprint.py" "$RUN/rN-view/data" --make-view --matrix-from "$R
   --reports-from "$REF/data" --check --expect-reports 22 --out "$RUN/audit/rN-fingerprints.json" || exit 1
 # The metric audit rebuilds every saved test_fold of the reference with this foldgen.
 python3 -I "$WS/scripts/metric-audit/audit.py" "$RUN/audit/rN-fold-rebuild.json" $SLUG --revision "$REVISION_N" \
-  --root "$REF" --reshaped --foldgen "$FOLDGEN"
-python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rN-fold-rebuild.json"
+  --root "$REF" --reshaped --foldgen "$FOLDGEN" || exit 1
+python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rN-fold-rebuild.json" || exit 1
 # The prefix against the reference, every field (diff_reference_prefix.py).
 python3 -I "$P/diff_reference_prefix.py" --prefix $RUN/cohorts/prefix/data --reference "$REF/data" \
   --out $RUN/audit/prefix-vs-reference.json || exit 1
@@ -633,7 +637,8 @@ or out of either set, that is a stop for the parent, not a new rule.
 **With/without contaminants, and what can be compared (confounding note).**
 
 - **(b) Expected: this cleaned run on N = 10, after the uncleaned revision-9 rerun.** A
-  with/without comparison is then possible, and it is **cohort-level**. The uncleaned cohorts are
+  with/without comparison would then be possible, and **cohort-level**; by the ruling below it is
+  described only qualitatively, and nothing is measured. The uncleaned cohorts are
   the frozen 4k with the two genomes. The cleaned ones are a fresh selection: two genomes out,
   replacements in, and order shifts near score ties, in the prefix and in full.
   - **Solver confound.** If revision 10's solver is unchanged from 9, there is none: the same
@@ -673,9 +678,11 @@ or out of either set, that is a stop for the parent, not a new rule.
        direction for the effect of the two genomes. The bounding readings and the "can support"
        list above describe what a measured comparison could have shown; none is run.
     3. **What counts as the result.** The uncleaned revision-9 run is the first complete MTB 4k
-       result, and its section 8 is also the like-for-like comparison with revision 7. This
-       cleaned revision-10 run's own section 8, prefix against full inside the revision, becomes
-       the canonical result once it exists.
+       result, and the like-for-like comparison with revision 7. That comparison is its section
+       7 diff (`diff_revision7_prefix.py --profile rN`, its prefix against the revision-7
+       candidate); its section 8 compares within revision 9. This cleaned revision-10 run's own
+       section 8, prefix against full inside the revision, becomes the canonical result once it
+       exists.
 - **(a) Alternative: one cleaned run that is also the cohorts' rerun.** This applies only if the
   species check lands in the revision that reruns the 4k cohorts. Then there is no with/without
   comparison: the admin dropped it as low value, since the two genomes have bottom-sketch Jaccard

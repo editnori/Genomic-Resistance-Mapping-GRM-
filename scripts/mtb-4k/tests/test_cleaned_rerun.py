@@ -17,7 +17,8 @@ FILLED={"SPECIES_CHECK_PATH":"/data/species-check/species_check.json","SPECIES_C
  "RN_PREFIX_SPECIES_JSON_PATH":"/r9/data/curated/species.json","RN_PREFIX_SPECIES_JSON_SHA256":H,
  "RN_FULL_GENOMES_PATH":"/r9-4k/data/species/mycobacterium_tuberculosis/genomes.txt","RN_FULL_GENOMES_SHA256":H,
  "RN_FULL_SPECIES_JSON_PATH":"/r9-4k/data/curated/species.json","RN_FULL_SPECIES_JSON_SHA256":H,
- "RN_INPUT_ROOT":"/r9/data","RN_FASTA_MANIFEST_PATH":"/r9/fasta-manifest.tsv","RN_FASTA_MANIFEST_SHA256":H,
+ "RN_INPUT_ROOT":"/r9/data","RN_INPUT_DATASETS_SHA256":H,"RN_INPUT_PHENOTYPES_SHA256":H,"RN_INPUT_CATALOG_VERSION_SHA256":H,
+ "RN_FASTA_MANIFEST_PATH":"/r9/fasta-manifest.tsv","RN_FASTA_MANIFEST_SHA256":H,
  "RN_FASTA_STORE":"/r9/data/fasta","CLEANED_PREFIX_SHA256":H,"CLEANED_PREFIX_COUNT":2000,"CLEANED_ADDED_SHA256":H,
  "CLEANED_ADDED_COUNT":2000,"CLEANED_FULL_SHA256":H,"CLEANED_FULL_COUNT":4000,"CLEANED_MATCHED2K_SHA256":H,
  "CLEANED_MATCHED2K_COUNT":2000,"RN_REFERENCE_ROOT":"/r9"}
@@ -41,6 +42,8 @@ class Placeholders(unittest.TestCase):
   self.assertEqual(cr.GROUPS["reference"],["RN_REFERENCE_ROOT"])
   self.assertEqual(sorted(cr.INPUT_NAMES+cr.CONTRACT_NAMES),sorted(cr.GROUPS["prepare"]))
   self.assertEqual(cr.REQUIRED_EXCLUSIONS,("1773.41701","1773.40949"))
+  self.assertEqual(set(cr.INPUT_ROOT_FILES.values())<=set(cr.INPUT_NAMES),True)
+  self.assertEqual(sorted(cr.INPUT_ROOT_FILES),["catalog/version.txt","curated/datasets.json","curated/phenotypes.jsonl"])
  def test_the_committed_file_is_wholly_unfilled_and_refuses_or_wholly_filled(self):
   missing=[n for n in cr.TABLE if cr.rev_n.is_placeholder(cr.VALUES[n])]
   self.assertIn(missing,[list(cr.TABLE),[]],"cleaned_rerun.py is partly filled")

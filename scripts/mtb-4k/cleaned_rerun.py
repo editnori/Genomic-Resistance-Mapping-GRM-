@@ -26,9 +26,9 @@ prefix's size. The species check's MTB "fail" genomes are the exclusions, and th
 genome must have a verdict in the bound post-fetch species check and none may be "fail", and each
 selection's curated/species.json must report selected_unchecked 0 for MTB.
 
-To fill: replace a placeholder string in VALUES with the reviewed value, in a commit that changes
-nothing else here, and update tests/test_cleaned_rerun.py's assertion that every value is
-unfilled. SPECIES_CHECK_FORMAT is a decision this file checks, not free text: it must be
+To fill: replace placeholder strings in VALUES with the reviewed values, in a commit that changes
+VALUES and nothing else. The tests hold for a wholly unfilled or a wholly filled file, so no test
+changes with a fill. SPECIES_CHECK_FORMAT is a decision this file checks, not free text: it must be
 SPECIES_CHECK_FORMAT_PARSED, meaning that the committed species-check code writes the schemas
 prepare_execution_roots.py parses (species_check.json and curated/species.json as relayed on
 2026-10-29). Any other value means the parser needs a reviewed change first.
@@ -59,6 +59,9 @@ TABLE = {
     "RN_FULL_SPECIES_JSON_PATH": ("path", "prepare", "the curated/species.json of that selection"),
     "RN_FULL_SPECIES_JSON_SHA256": ("sha256", "prepare", "its SHA-256"),
     "RN_INPUT_ROOT": ("path", "prepare", "the data root whose catalog, curated, BV-BRC records and annotations the cohorts link"),
+    "RN_INPUT_DATASETS_SHA256": ("sha256", "prepare", "SHA-256 of RN_INPUT_ROOT/curated/datasets.json"),
+    "RN_INPUT_PHENOTYPES_SHA256": ("sha256", "prepare", "SHA-256 of RN_INPUT_ROOT/curated/phenotypes.jsonl (the labels)"),
+    "RN_INPUT_CATALOG_VERSION_SHA256": ("sha256", "prepare", "SHA-256 of RN_INPUT_ROOT/catalog/version.txt"),
     "RN_FASTA_MANIFEST_PATH": ("path", "prepare", "a fasta-manifest.tsv (the cohort evidence's columns) for cohort genomes outside the frozen 4k"),
     "RN_FASTA_MANIFEST_SHA256": ("sha256", "prepare", "its SHA-256"),
     "RN_FASTA_STORE": ("path", "prepare", "the directory holding those FASTA"),
@@ -87,6 +90,9 @@ VALUES = {
     "RN_FULL_SPECIES_JSON_PATH": "@@RN_FULL_SPECIES_JSON_PATH@@",
     "RN_FULL_SPECIES_JSON_SHA256": "@@RN_FULL_SPECIES_JSON_SHA256@@",
     "RN_INPUT_ROOT": "@@RN_INPUT_ROOT@@",
+    "RN_INPUT_DATASETS_SHA256": "@@RN_INPUT_DATASETS_SHA256@@",
+    "RN_INPUT_PHENOTYPES_SHA256": "@@RN_INPUT_PHENOTYPES_SHA256@@",
+    "RN_INPUT_CATALOG_VERSION_SHA256": "@@RN_INPUT_CATALOG_VERSION_SHA256@@",
     "RN_FASTA_MANIFEST_PATH": "@@RN_FASTA_MANIFEST_PATH@@",
     "RN_FASTA_MANIFEST_SHA256": "@@RN_FASTA_MANIFEST_SHA256@@",
     "RN_FASTA_STORE": "@@RN_FASTA_STORE@@",
@@ -101,6 +107,9 @@ VALUES = {
     "RN_REFERENCE_ROOT": "@@RN_REFERENCE_ROOT@@",
 }
 
+# The input root's files the cohorts' labels, gates and fingerprints come from, each bound by hash (review P1).
+INPUT_ROOT_FILES = {"curated/datasets.json": "RN_INPUT_DATASETS_SHA256", "curated/phenotypes.jsonl": "RN_INPUT_PHENOTYPES_SHA256",
+                    "catalog/version.txt": "RN_INPUT_CATALOG_VERSION_SHA256"}
 COHORT_PINS = {name: (f"CLEANED_{name.upper()}_SHA256", f"CLEANED_{name.upper()}_COUNT")
                for name in ("prefix", "added", "full", "matched2k")}
 GROUPS = {g: [n for n, (_, group, _) in TABLE.items() if group == g] for g in ("prepare", "reference")}

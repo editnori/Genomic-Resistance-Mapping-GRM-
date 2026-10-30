@@ -38,6 +38,7 @@ class Cleaned(unittest.TestCase):
    p=self.store/f"{g}.fna.gz"; p.write_bytes(gzip.compress(f">c\nTTGA{g}\n".encode(),mtime=0)); b=p.read_bytes()
    rows.append({"genome_id":g,"size_bytes":len(b),"sha256":sha(b),"canonical_source_path":str(p)})
   self.fasta_rows=rows
+  (prep.CANDIDATE/"curated"/"phenotypes.jsonl").write_text('{"genome_id":"1773.100000","antibiotic":"isoniazid","label":"R"}\n')
   self.write_inputs()
 
  def tearDown(self):
@@ -68,7 +69,8 @@ class Cleaned(unittest.TestCase):
    "RN_FULL_GENOMES_PATH":str(d/"full-genomes.txt"),"RN_FULL_GENOMES_SHA256":h["full-genomes.txt"],
    "RN_FULL_SPECIES_JSON_PATH":str(d/"full-species.json"),"RN_FULL_SPECIES_JSON_SHA256":h["full-species.json"],
    "RN_INPUT_ROOT":str(prep.CANDIDATE),"RN_FASTA_MANIFEST_PATH":str(d/"fasta-manifest.tsv"),"RN_FASTA_MANIFEST_SHA256":h["fasta-manifest.tsv"],
-   "RN_FASTA_STORE":str(self.store),"RN_REFERENCE_ROOT":"@@RN_REFERENCE_ROOT@@"}
+   "RN_FASTA_STORE":str(self.store),"RN_REFERENCE_ROOT":"@@RN_REFERENCE_ROOT@@",
+   **{name:sha((prep.CANDIDATE/rel).read_bytes()) for rel,name in prep.rerun.INPUT_ROOT_FILES.items()}}
   prep.rerun.VALUES.update(values)
   full_list=list(full); n=len(prefix)
   derived={"prefix":list(prefix),"added":full_list[n:],"full":full_list,"matched2k":prep.matched_selection(full_list,n)}
@@ -143,6 +145,20 @@ class Cleaned(unittest.TestCase):
   self.write_inputs(); prep.rerun.VALUES["RN_INPUT_ROOT"]="@@RN_INPUT_ROOT@@"; self.refused("@@RN_INPUT_ROOT@@")
   self.write_inputs(); prep.rerun.VALUES["CLEANED_MATCHED2K_COUNT"]="@@CLEANED_MATCHED2K_COUNT@@"; self.refused("@@CLEANED_MATCHED2K_COUNT@@")
   self.write_inputs(fmt="species-check-v2"); self.refused("reviewed parser change")
+
+ def test_the_input_roots_labels_and_catalog_are_bound_before_anything_is_read(self):
+  # Review P1: RN_INPUT_ROOT's curated/datasets.json, curated/phenotypes.jsonl and catalog/version.txt each have a bound hash.
+  for rel,name in prep.rerun.INPUT_ROOT_FILES.items():
+   with self.subTest(rel=rel):
+    self.write_inputs(); path=prep.CANDIDATE/rel; original=path.read_bytes()
+    path.write_bytes(original+b"\n"); self.refused(f"RN_INPUT_ROOT's {rel}")
+    path.write_bytes(original)
+    self.write_inputs(); prep.rerun.VALUES[name]=f"@@{name}@@"; self.refused(f"@@{name}@@")
+  self.write_inputs(); run=self.base/"run"; self.assertEqual(self.main(run,"--cohorts","cleaned")[0],0)
+  bound=json.loads((run/"frozen-inputs.json").read_text())["cleaned"]["bound"]
+  for rel in prep.rerun.INPUT_ROOT_FILES: self.assertIn(str(prep.CANDIDATE/rel),bound)
+  ph=prep.CANDIDATE/"curated"/"phenotypes.jsonl"; ph.write_bytes(ph.read_bytes()+b"\n")
+  rc,out=self.main("--verify-frozen",run); self.assertEqual(rc,1); self.assertIn(str(ph),json.loads(out)["changed"])
 
  def setUp_store_again(self):
   for row in self.fasta_rows:

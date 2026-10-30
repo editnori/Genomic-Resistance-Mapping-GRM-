@@ -15,8 +15,9 @@ placeholder or malformed. verify-checkout requires WORKTREE to be a clean git ch
 descends from RN_CHECKER_COMMIT, with the four checker files report_contract.py pins holding
 their pinned SHA-256 both in WORKTREE and at RN_CHECKER_COMMIT; it exits 1 on any problem.
 
-To fill: replace a placeholder string in VALUES with the reviewed value, in a commit that changes
-nothing else here, and update tests/test_revision_n.py's assertion that every value is unfilled.
+To fill: replace placeholder strings in VALUES with the reviewed values, in a commit that changes
+VALUES and nothing else. tests/test_revision_n.py holds for a wholly unfilled or a wholly filled
+file (since e354f99), so no test changes with a fill.
 Two values are decisions this file checks, not free text. RN_FIELD_CHANGES must be {} or, per
 key set, a list that keeps every revision-8 key (an addition); report_contract.py refuses a
 removal or rename, which needs a reviewed contract change. RN_CONVERGENCE_STATUS_RULE must be
