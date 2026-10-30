@@ -31,7 +31,9 @@ use std::time::Instant;
 /// balanced accuracy, and null metrics when it called no isolate. A schema-1
 /// reader stops at its version check instead of reading them as numbers.
 pub const REPORT_SCHEMA: u32 = 2;
-pub const EVALUATION_REVISION: u32 = 8;
+/// Revision 8 added the lasso solver evidence; revision 9 changes only the
+/// lasso's active-set solve (docs/lasso-stopping.md).
+pub const EVALUATION_REVISION: u32 = 9;
 
 #[derive(Serialize)]
 pub struct EvaluationAudit {
@@ -1244,13 +1246,17 @@ mod tests {
                 "input_fingerprint": fingerprint,
             })
         };
-        assert_eq!(EVALUATION_REVISION, 8);
+        assert_eq!(EVALUATION_REVISION, 9);
         assert_eq!(stale_reason(&saved(EVALUATION_REVISION, key), key), None);
-        assert_eq!(
-            stale_reason(&saved(7, key), key),
-            Some("evaluation audit revision changed"),
-            "a same-fingerprint revision-7 lasso result must not enter revision 8"
-        );
+        // Revision 8's solver could stop where revision 9's converges, and
+        // a valid revision-8 report has the same fields as a revision-9 one.
+        for old in [7, 8] {
+            assert_eq!(
+                stale_reason(&saved(old, key), key),
+                Some("evaluation audit revision changed"),
+                "a same-fingerprint revision-{old} lasso result must not enter revision 9"
+            );
+        }
         // A current report whose audit is invalid, or says nothing, is not a
         // finished one: an unconverged point that was not selected must not
         // pass for done on resume.

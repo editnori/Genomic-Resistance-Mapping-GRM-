@@ -581,6 +581,15 @@ fn crossing(c: f64, d: f64) -> Option<f64> {
     (c != 0.0 && c * (c + d) <= 0.0).then(|| -c / d)
 }
 
+/// The first point t < 1 where a non-zero coefficient of c + t d, past the
+/// unpenalized intercept at index 0, reaches zero.
+fn first_crossing(c: &[f64], d: &[f64]) -> Option<f64> {
+    (1..c.len())
+        .filter_map(|i| crossing(c[i], d[i]))
+        .filter(|&t| t < 1.0)
+        .min_by(f64::total_cmp)
+}
+
 /// The feature-sign line search on c + t d, with index 0 the unpenalized
 /// intercept and `pen[i - 1]` the penalty of coefficient i. It evaluates the
 /// least-squares objective's change at each point where a non-zero
@@ -853,7 +862,30 @@ impl<'a> Wls<'a> {
             }
             let pen: Vec<f64> = self.active.iter().map(|&k| self.pen(k)).collect();
             let (t, change) = line_search(&c, &d, slope, curv, &pen);
-            if change < 0.0 {
+            // Every non-zero active coefficient has its fixed sign. When each
+            // entering one moves in the direction of its own, the objective
+            // equals the sign-fixed quadratic along d up to the first point
+            // where a non-zero coefficient reaches zero, so it falls all the
+            // way there. A coefficient within rounding of zero crosses so
+            // early that the fall is below rounding and no step shows a
+            // change below zero. Step to that crossing anyway, so that it
+            // leaves; otherwise it blocks every step, and each entering
+            // column is blocked in turn or the zero columns are checked at a
+            // point that is not stationary.
+            let with_signs = self
+                .active
+                .iter()
+                .zip(&self.sign)
+                .zip(&d[1..])
+                .all(|((&k, &s), &dk)| beta[k] != 0.0 || dk * s > 0.0);
+            let step = if change < 0.0 {
+                Some(t)
+            } else if with_signs {
+                first_crossing(&c, &d)
+            } else {
+                None
+            };
+            if let Some(t) = step {
                 *b0 = c[0] + t * d[0];
                 for (i, &k) in self.active.iter().enumerate() {
                     let (ci, di) = (c[i + 1], d[i + 1]);
@@ -966,7 +998,9 @@ impl<'a> Wls<'a> {
                 out.push((k, v, g));
             }
         }
-        out.sort_by(|a, b| b.1.total_cmp(&a.1));
+        // A tie goes to the lowest column, so the order is a property of the
+        // violations alone, not of how the list was built.
+        out.sort_unstable_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
         Some(out)
     }
 
@@ -978,8 +1012,9 @@ impl<'a> Wls<'a> {
     /// lowers the objective at the rate pen_k - |g| < 0. Follow that
     /// direction to the first active coefficient that reaches zero, which
     /// leaves so that k can join, or to the minimum when the pivot is
-    /// positive. False, with nothing changed, when rounding leaves no
-    /// descent.
+    /// positive. False, with nothing changed, unless the exchange strictly
+    /// improves: its rate must be below zero by more than `INNER_TOL` on the
+    /// standardized scale, the margin a zero column needs to enter at all.
     fn exchange(
         &mut self,
         k: usize,
@@ -1005,7 +1040,13 @@ impl<'a> Wls<'a> {
             .map(|((&j, &s), &vi)| self.pen(j) * s * vi)
             .sum();
         let rate = dot(&grad, &v) - theta * g + penalty_rate + self.pen(k);
-        if rate.is_nan() || rate >= 0.0 {
+        // The smooth part of the rate is zero up to rounding, since the fit
+        // does not change, so the rate is pen_k less the active penalties it
+        // displaces. An exact complement of an active column (x_k = 1 - x_j,
+        // the same standard deviation) displaces exactly its own penalty, as
+        // a copy would without the collapse: its rate is zero, and acting
+        // on the sign rounding gives it would swap the two back and forth.
+        if rate.is_nan() || rate >= -INNER_TOL * self.prob.sd[k] {
             return false;
         }
         let curv = dep.pivot.max(0.0);
@@ -1014,11 +1055,9 @@ impl<'a> Wls<'a> {
         } else {
             f64::INFINITY
         };
-        let mut leaving = None;
-        for (i, (&ci, &vi)) in c[1..].iter().zip(&v[1..]).enumerate() {
+        for (&ci, &vi) in c[1..].iter().zip(&v[1..]) {
             if ci * vi < 0.0 && -ci / vi < t {
                 t = -ci / vi;
-                leaving = Some(i);
             }
         }
         if !t.is_finite() {
@@ -1027,11 +1066,18 @@ impl<'a> Wls<'a> {
         let saved: Vec<(usize, f64)> = self.active.iter().map(|&j| (j, beta[j])).collect();
         *b0 = c[0] + t * v[0];
         for (i, &j) in self.active.iter().enumerate() {
-            beta[j] = c[i + 1] + t * v[i + 1];
+            let (ci, next) = (c[i + 1], c[i + 1] + t * v[i + 1]);
+            // Every coefficient that reaches zero at t, to rounding, leaves:
+            // the first one, any that ties with it, and any that rounding
+            // carries past zero, so each one still active keeps its fixed
+            // sign.
+            let leaves = ci * next <= 0.0 || next.abs() <= 8.0 * f64::EPSILON * ci.abs();
+            beta[j] = if leaves { 0.0 } else { next };
         }
-        if let Some(i) = leaving {
-            beta[self.active[i]] = 0.0;
-            self.remove(i);
+        for i in (0..self.active.len()).rev() {
+            if beta[self.active[i]] == 0.0 {
+                self.remove(i);
+            }
         }
         beta[k] = theta * t;
         if self.push(k, theta, 0.0).is_ok() {
@@ -1666,13 +1712,21 @@ mod tests {
     /// pattern's signs; a singular pattern is skipped, since some optimum
     /// has linearly independent non-zero columns.
     fn brute_force(wls: &Wls) -> f64 {
+        let all: Vec<usize> = (0..wls.prob.columns.len()).collect();
+        brute_force_over(wls, &all).0
+    }
+
+    /// `brute_force` with only the columns in `free` allowed off zero: the
+    /// minimum and its intercept and coefficients.
+    fn brute_force_over(wls: &Wls, free: &[usize]) -> (f64, f64, Vec<f64>) {
         let p = wls.prob.columns.len();
         let n = wls.w.len();
-        let mut best = f64::INFINITY;
-        for code in 0..3usize.pow(p as u32) {
-            let signs: Vec<f64> = (0..p)
-                .map(|k| [0.0, 1.0, -1.0][code / 3usize.pow(k as u32) % 3])
-                .collect();
+        let mut best = (f64::INFINITY, 0.0, vec![0.0; p]);
+        for code in 0..3usize.pow(free.len() as u32) {
+            let mut signs = vec![0.0; p];
+            for (i, &k) in free.iter().enumerate() {
+                signs[k] = [0.0, 1.0, -1.0][code / 3usize.pow(i as u32) % 3];
+            }
             let on: Vec<usize> = (0..p).filter(|&k| signs[k] != 0.0).collect();
             let column = |i: usize, j: usize| -> f64 {
                 if i == 0 {
@@ -1702,7 +1756,10 @@ mod tests {
                 beta[k] = sol[i + 1];
             }
             if on.iter().all(|&k| beta[k] * signs[k] >= 0.0) {
-                best = best.min(wls_objective(wls, sol[0], &beta));
+                let found = wls_objective(wls, sol[0], &beta);
+                if found < best.0 {
+                    best = (found, sol[0], beta);
+                }
             }
         }
         best
@@ -2193,14 +2250,16 @@ mod tests {
     /// pivot can round to a small positive number, so `PIVOT_TOL`, not exact
     /// arithmetic, keeps it out of the factor. Checked for a disjoint union
     /// and for the complement of an active column.
+    /// A uniform draw in [lo, hi) from a 64-bit LCG state.
+    fn uniform(state: &mut u64, lo: f64, hi: f64) -> f64 {
+        *state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        lo + (hi - lo) * ((*state >> 11) as f64 / (1u64 << 53) as f64)
+    }
+
     #[test]
     fn push_refuses_exactly_dependent_columns_under_unequal_weights() {
-        fn uniform(state: &mut u64, lo: f64, hi: f64) -> f64 {
-            *state = state
-                .wrapping_mul(6364136223846793005)
-                .wrapping_add(1442695040888963407);
-            lo + (hi - lo) * ((*state >> 11) as f64 / (1u64 << 53) as f64)
-        }
         let n = 60;
         let (x, y) = union_panel();
         let prob = Problem::new(&x, &y, &Bits::ones(n), &[0, 1, 2, 3]);
@@ -2229,5 +2288,428 @@ mod tests {
                 "complement joined the factor, draw {draw}"
             );
         }
+    }
+
+    /// A tuning path saved from real data, in the format of the header of
+    /// `tests/data/lasso-vibrio-fold0-fixture.txt`: only the fitting samples,
+    /// all of them fitted.
+    struct PathFixture {
+        x: BitMatrix,
+        y: Bits,
+        fit: Bits,
+        n_lambdas: usize,
+        max_nonzero: usize,
+    }
+
+    impl PathFixture {
+        fn parse(text: &str) -> PathFixture {
+            let mut lines = text.lines().filter(|l| !l.starts_with('#'));
+            let head: Vec<&str> = lines.next().unwrap().split(' ').collect();
+            assert_eq!(head[0], "fixture");
+            let n: usize = head[1].parse().unwrap();
+            let mut f = PathFixture {
+                x: BitMatrix::with_cols(n),
+                y: Bits::zeros(n),
+                fit: Bits::ones(n),
+                n_lambdas: head[3].parse().unwrap(),
+                max_nonzero: head[4].parse().unwrap(),
+            };
+            for line in lines {
+                let (key, bits) = line.split_once(' ').unwrap();
+                match key {
+                    "y" => f.y = hex_bits(n, bits),
+                    "r" => f.x.push_row(hex_bits(n, bits).words()),
+                    other => panic!("unknown fixture line {other}"),
+                }
+            }
+            assert_eq!(f.x.rows, head[2].parse::<usize>().unwrap());
+            f
+        }
+
+        fn column(&self, k: usize) -> Bits {
+            Bits::from_words(self.x.cols, self.x.row(k).to_vec())
+        }
+
+        fn path(&self) -> Vec<LassoFit> {
+            let feats: Vec<u32> = (0..self.x.rows as u32).collect();
+            fit_path_with_status(
+                &self.x,
+                &self.y,
+                &self.fit,
+                &feats,
+                self.n_lambdas,
+                self.max_nonzero,
+                &mut |_| {},
+            )
+        }
+    }
+
+    /// V. cholerae nalidixic acid, random split, outer fold 0: the tuning
+    /// path that stopped the revision-8 run at point 13.
+    fn vibrio() -> &'static PathFixture {
+        static PARSED: std::sync::OnceLock<PathFixture> = std::sync::OnceLock::new();
+        PARSED.get_or_init(|| {
+            PathFixture::parse(include_str!(
+                "../../tests/data/lasso-vibrio-fold0-fixture.txt"
+            ))
+        })
+    }
+
+    #[test]
+    fn vibrio_cholerae_fold0_converges_at_every_point() {
+        let f = vibrio();
+        let n = f.x.cols;
+        assert_eq!((n, f.x.rows, f.y.count()), (57, 4000, 31));
+        // Two exact complement pairs on the fitting samples: disjoint, and
+        // together on every sample.
+        for (a, b) in [(2209, 2985), (2389, 3174)] {
+            let (a, b) = (f.column(a), f.column(b));
+            assert_eq!((a.and(&b).count(), a.or(&b).count()), (0, n as u32));
+        }
+        let path = f.path();
+        assert_eq!(path.len(), 30);
+        // Revision 8 stopped at point 13 after 100 IRLS steps, 99 of them
+        // with a solve at its 5,000-iteration guard, at KKT 6.1e-4: column
+        // 2209 sat at 2.4e-15, its crossing blocked every step, and
+        // exchanges swapped it with its complement 2985 on rounding.
+        assert_eq!(path[13].model.lambda, 2.1903036636112934e-2);
+        for (i, p) in path.iter().enumerate() {
+            let c = p.convergence;
+            assert!(c.converged && c.sweep_cap_hits == 0, "point {i} {c:?}");
+            let (_, kkt) = objective_and_kkt(&f.x, &f.y, &f.fit, &p.model);
+            assert!(kkt <= KKT_TOL, "point {i}: KKT {kkt:e}");
+        }
+        assert!(path[13].convergence.irls_steps <= 5, "{:?}", path[13]);
+    }
+
+    /// S. enterica azithromycin, random split, outer fold 3: the tuning path
+    /// that stopped the revision-8 run at point 19.
+    fn salmonella() -> &'static PathFixture {
+        static PARSED: std::sync::OnceLock<PathFixture> = std::sync::OnceLock::new();
+        PARSED.get_or_init(|| {
+            use std::io::Read;
+            let gz = include_bytes!("../../tests/data/lasso-salmonella-fold3-fixture.txt.gz");
+            let mut text = String::new();
+            flate2::read::GzDecoder::new(&gz[..])
+                .read_to_string(&mut text)
+                .unwrap();
+            PathFixture::parse(&text)
+        })
+    }
+
+    #[test]
+    fn salmonella_enterica_fold3_converges_at_every_point() {
+        let f = salmonella();
+        assert_eq!((f.x.cols, f.x.rows, f.y.count()), (867, 4000, 118));
+        // Near-copies of column 0 on the fitting samples, none exact.
+        for (k, differ) in [(1, 1), (3, 2), (4, 2)] {
+            let (a, b) = (f.column(0), f.column(k));
+            assert_eq!(a.or(&b).count() - a.and(&b).count(), differ, "column {k}");
+        }
+        let path = f.path();
+        assert_eq!(path.len(), 30);
+        // Revision 8 stopped at point 19 after 3 IRLS steps at KKT 2.8e-3:
+        // a coefficient within rounding of zero blocked every step, so 31
+        // entering columns, near-copies of active ones among them, were
+        // blocked in turn, the solves stopped short, and the third IRLS
+        // step found no halving that lowered the objective.
+        assert_eq!(path[19].model.lambda, 6.6846962608593284e-3);
+        for (i, p) in path.iter().enumerate() {
+            let c = p.convergence;
+            assert!(c.converged && c.sweep_cap_hits == 0, "point {i} {c:?}");
+            let (_, kkt) = objective_and_kkt(&f.x, &f.y, &f.fit, &p.model);
+            assert!(kkt <= KKT_TOL, "point {i}: KKT {kkt:e}");
+        }
+    }
+
+    #[test]
+    fn the_saved_real_paths_are_the_same_at_any_thread_count() {
+        for f in [vibrio(), salmonella()] {
+            let run = |threads| {
+                rayon::ThreadPoolBuilder::new()
+                    .num_threads(threads)
+                    .build()
+                    .unwrap()
+                    .install(|| f.path())
+            };
+            let (one, many, again) = (run(1), run(64), run(64));
+            assert_eq!((one.len(), many.len(), again.len()), (30, 30, 30));
+            for ((a, b), c) in one.iter().zip(&many).zip(&again) {
+                assert!(same(&a.model, &b.model) && same(&b.model, &c.model));
+                assert_eq!(
+                    (a.convergence, b.convergence),
+                    (c.convergence, c.convergence)
+                );
+            }
+        }
+    }
+
+    /// How the column that starts within rounding of zero, column 0, depends
+    /// on its partners.
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    enum Dependence {
+        /// Its exact complement, the V. cholerae pair.
+        Complement,
+        /// An exact copy, with the collapse into one coefficient turned off.
+        Copy,
+        /// It is the union of two disjoint partners.
+        Union,
+        /// Its partners differ from it in one sample and in two, the
+        /// S. enterica near-copies; nothing is exactly dependent.
+        NearCopy,
+    }
+
+    /// One IRLS step's least-squares problem in the state that stalled
+    /// V. cholerae fold 0: a random panel whose columns 1 to m - 1 sit at
+    /// their optimum scaled up by 1 + kappa, so the solve has to shrink
+    /// them, column 0 at plus or minus 1e-200, and its partners at zero. The
+    /// draws come from `seed`. Returns the problem, its representatives,
+    /// lambda, the linear predictor and the warm start (b0, beta).
+    #[allow(clippy::type_complexity)]
+    fn stalled(seed: u64, dep: Dependence) -> (Problem, Vec<usize>, f64, Vec<f64>, f64, Vec<f64>) {
+        let mut st = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0xA5A5;
+        let n = 30 + uniform(&mut st, 0.0, 30.0) as usize;
+        let m = 3 + uniform(&mut st, 0.0, 4.0) as usize;
+        let mut columns: Vec<Vec<u32>> = (0..m)
+            .map(|_| {
+                (0..n as u32)
+                    .filter(|_| uniform(&mut st, 0.0, 1.0) < 0.4)
+                    .collect()
+            })
+            .collect();
+        if uniform(&mut st, 0.0, 1.0) < 0.6 {
+            // Column 1 is column 0 with one sample switched.
+            let mut c = columns[0].clone();
+            let flip = uniform(&mut st, 0.0, n as f64) as u32;
+            match c.iter().position(|&v| v == flip) {
+                Some(i) => {
+                    c.remove(i);
+                }
+                None => {
+                    c.push(flip);
+                    c.sort();
+                }
+            }
+            columns[1] = c;
+        }
+        assert!(columns.iter().all(|c| c.len() >= 2 && c.len() + 2 <= n));
+        match dep {
+            Dependence::Complement => {
+                let c = (0..n as u32).filter(|j| !columns[0].contains(j)).collect();
+                columns.push(c);
+            }
+            Dependence::Copy => columns.push(columns[0].clone()),
+            Dependence::Union => {
+                let (even, odd) = columns[0].iter().partition(|&&j| j % 2 == 0);
+                columns.push(even);
+                columns.push(odd);
+            }
+            Dependence::NearCopy => {
+                let outside = (0..n as u32).find(|j| !columns[0].contains(j)).unwrap();
+                let mut one = columns[0].clone();
+                one.push(outside);
+                one.sort();
+                let two = one
+                    .iter()
+                    .copied()
+                    .filter(|&j| j != columns[0][0])
+                    .collect();
+                columns.push(one);
+                columns.push(two);
+            }
+        }
+        let p = columns.len();
+        let weights = [1.5, -1.0, 0.8, 0.5, -0.5, 0.3, 0.7];
+        let y: Vec<f64> = (0..n)
+            .map(|j| {
+                let s: f64 = columns[..m]
+                    .iter()
+                    .zip(weights)
+                    .filter(|(c, _)| c.contains(&(j as u32)))
+                    .map(|(_, w)| w)
+                    .sum();
+                let p = crate::learn::gbt::sigmoid(s - 0.3);
+                (uniform(&mut st, 0.0, 1.0) < p) as u8 as f64
+            })
+            .collect();
+        let (nf, pos) = (n as f64, y.iter().sum::<f64>());
+        assert!(pos >= 2.0 && pos <= nf - 2.0);
+        let prob = Problem {
+            sd: columns
+                .iter()
+                .map(|c| {
+                    let q = c.len() as f64 / nf;
+                    (q * (1.0 - q)).sqrt().max(1e-6)
+                })
+                .collect(),
+            columns,
+            features: (0..p as u32).collect(),
+            samples: (0..n).collect(),
+            class_weight: y
+                .iter()
+                .map(|&t| nf / (2.0 * if t == 1.0 { pos } else { nf - pos }))
+                .collect(),
+            y,
+        };
+        let rep: Vec<usize> = (0..p).collect();
+        if dep != Dependence::Copy {
+            assert_eq!(representatives(&prob.columns), rep);
+        }
+        let lambda = uniform(&mut st, 0.002, 0.06);
+        let spread = uniform(&mut st, 0.0, 3.0);
+        let eta: Vec<f64> = (0..n).map(|_| uniform(&mut st, -spread, spread)).collect();
+        let wls = Wls::new(&prob, &rep, lambda, &eta).unwrap();
+        let others: Vec<usize> = (1..m).collect();
+        let (_, b0, optimum) = brute_force_over(&wls, &others);
+        assert!(others.iter().any(|&k| optimum[k] != 0.0));
+        let kappa = uniform(&mut st, 0.0, 0.3);
+        let mut beta: Vec<f64> = optimum.iter().map(|b| b * (1.0 + kappa)).collect();
+        beta[0] = if uniform(&mut st, 0.0, 1.0) < 0.5 {
+            1e-200
+        } else {
+            -1e-200
+        };
+        (prob, rep, lambda, eta, b0, beta)
+    }
+
+    #[test]
+    fn a_coefficient_within_rounding_of_zero_does_not_stall_the_solve() {
+        for dep in [
+            Dependence::Complement,
+            Dependence::Copy,
+            Dependence::Union,
+            Dependence::NearCopy,
+        ] {
+            let (prob, rep, lambda, eta, b0, beta) = stalled(53, dep);
+            // The stalled state. Column 0 crosses zero so early that no step
+            // shows the objective falling, though the rest of the active set
+            // still has far to go.
+            let mut probe = Wls::new(&prob, &rep, lambda, &eta).unwrap();
+            for (k, &b) in beta.iter().enumerate() {
+                if b != 0.0 {
+                    assert!(probe.push(k, b.signum(), PIVOT_TOL).is_ok());
+                }
+            }
+            assert_eq!(probe.active[0], 0);
+            let c = probe.coefficients(b0, &beta);
+            let d: Vec<f64> = probe
+                .sign_fixed()
+                .iter()
+                .zip(&c)
+                .map(|(a, b)| a - b)
+                .collect();
+            let slope: f64 = probe
+                .gram_times(&c)
+                .iter()
+                .zip(&probe.xwz)
+                .zip(&d)
+                .map(|((g, b), di)| (g - b) * di)
+                .sum();
+            let curv = dot(&d, &probe.gram_times(&d));
+            let pen: Vec<f64> = probe.active.iter().map(|&k| probe.pen(k)).collect();
+            let (_, change) = line_search(&c, &d, slope, curv, &pen);
+            assert!(change >= 0.0, "{dep:?}: {change:e}");
+            assert!(crossing(c[1], d[1]).is_some_and(|t| t < 1e-100), "{dep:?}");
+            assert!(d[2..].iter().any(|v| v.abs() > 1e-3), "{dep:?}: {d:?}");
+            if dep == Dependence::Complement {
+                // Revision 8 checked the zero columns there. As in
+                // V. cholerae, the complement violated its condition and
+                // could not join the factor, so it was exchanged with column
+                // 0 on rounding. With the other partners, each entering
+                // column was blocked in turn instead.
+                let violators = probe
+                    .violators(b0, &beta, &vec![false; beta.len()])
+                    .unwrap();
+                let partner = prob.columns.len() - 1;
+                assert!(violators.iter().any(|v| v.0 == partner), "{dep:?}");
+                assert!(probe.push(partner, 1.0, PIVOT_TOL).is_err(), "{dep:?}");
+            }
+
+            let mut wls = Wls::new(&prob, &rep, lambda, &eta).unwrap();
+            let (mut b0, mut beta) = (b0, beta);
+            assert!(wls.solve(&mut b0, &mut beta, 1000), "{dep:?}");
+            let found = wls_objective(&wls, b0, &beta);
+            let best = brute_force(&wls);
+            assert!(
+                found - best <= 1e-12 * best.abs().max(1.0),
+                "{dep:?}: {found} {best}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_exchange_must_lower_the_objective_by_more_than_rounding() {
+        // Column 2 is the union of the disjoint columns 0 and 1. Moving the
+        // weight of both onto it leaves the fit as it is and changes the
+        // objective at the rate lambda (sd_2 - sd_0 - sd_1); each standard
+        // deviation is set here to fix that rate.
+        let (x, y) = union_panel();
+        let lambda = 0.01;
+        let eta = vec![0.0; x.cols];
+        for (gain, taken) in [(1e-12, false), (0.05, true)] {
+            let mut prob = Problem::new(&x, &y, &Bits::ones(x.cols), &[0, 1, 2, 3]);
+            prob.sd[2] = prob.sd[0] + prob.sd[1] - gain;
+            let rep = representatives(&prob.columns);
+            let mut wls = Wls::new(&prob, &rep, lambda, &eta).unwrap();
+            let (mut b0, mut beta) = (-0.5, vec![0.5, 0.5, 0.0, 0.0]);
+            assert!(wls.push(0, 1.0, PIVOT_TOL).is_ok() && wls.push(1, 1.0, PIVOT_TOL).is_ok());
+            let Err(dep) = wls.push(2, 1.0, PIVOT_TOL) else {
+                panic!("the union joined the factor");
+            };
+            // Column 2's descent rate: 16 of its 20 samples are resistant.
+            let mut fit = vec![0.0; x.cols];
+            linear_predictor(&prob, b0, &beta, &mut fit);
+            let g: f64 = prob.columns[2]
+                .iter()
+                .map(|&j| wls.w[j as usize] * (wls.z[j as usize] - fit[j as usize]))
+                .sum();
+            assert!(g > 0.0);
+            assert_eq!(wls.exchange(2, g, dep, &mut b0, &mut beta), taken, "{gain}");
+            if taken {
+                // Both columns reach zero together, and both leave.
+                assert_eq!(wls.active, [2]);
+                assert_eq!((beta[0], beta[1]), (0.0, 0.0));
+                assert!((beta[2] - 0.5).abs() < 1e-12, "{beta:?}");
+            } else {
+                assert_eq!(wls.active, [0, 1]);
+                assert_eq!((b0, beta), (-0.5, vec![0.5, 0.5, 0.0, 0.0]));
+            }
+        }
+    }
+
+    #[test]
+    fn violators_tie_to_the_lowest_column() {
+        // 64 disjoint columns of 4 samples. The even ones hold 3 resistant
+        // samples and the odd ones 4, so at zero every even column has the
+        // same violation, bit for bit, and every odd one a larger one.
+        let blocks = 64;
+        let n = 4 * blocks;
+        let columns: Vec<Vec<u32>> = (0..blocks as u32)
+            .map(|b| (4 * b..4 * b + 4).collect())
+            .collect();
+        let y: Vec<f64> = (0..n)
+            .map(|j| ((j / 4) % 2 == 1 || j % 4 != 3) as u8 as f64)
+            .collect();
+        let prob = Problem {
+            sd: vec![0.5; blocks],
+            features: (0..blocks as u32).collect(),
+            samples: (0..n).collect(),
+            class_weight: vec![1.0; n],
+            columns,
+            y,
+        };
+        let rep = representatives(&prob.columns);
+        let wls = Wls::new(&prob, &rep, 0.001, &vec![0.0; n]).unwrap();
+        let found: Vec<usize> = wls
+            .violators(0.0, &vec![0.0; blocks], &vec![false; blocks])
+            .unwrap()
+            .iter()
+            .map(|v| v.0)
+            .collect();
+        let expected: Vec<usize> = (1..blocks)
+            .step_by(2)
+            .chain((0..blocks).step_by(2))
+            .collect();
+        assert_eq!(found, expected);
     }
 }

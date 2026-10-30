@@ -16,6 +16,9 @@ fold's record must also agree with that fold's scores: a lasso fold is called
 exactly when its fold_complexity (the refit's weight count) is positive, and a
 fold whose record has no selected point (an empty path) has no calls.
 
+Revision 9 changes only the lasso's active-set solve. Its reports have the
+revision-8 fields and meet the revision-8 rules.
+
 The best learner follows the schema. In schema 2 it is the highest
 random-split balanced accuracy among scm, cart, rf, gbt, and lasso rows
 that call every isolate on every split that ran, or none. Schema-1 runs
@@ -161,7 +164,7 @@ def main():
         truth = [sample["resistant"] for sample in samples]
         nr = sum(truth)
         ns = n - nr
-        assert audit["revision"] in (3, 4, 5, 6, 7, 8) and audit["valid"] is True, ("revision", path)
+        assert audit["revision"] in (3, 4, 5, 6, 7, 8, 9) and audit["valid"] is True, ("revision", path)
         assert schema == (2 if args.reshaped or audit["revision"] >= 7 else 1), ("schema does not match the revision", path, schema)
         assert "not external or clinical validation" in audit["scope"], path
         if audit["revision"] >= 8:

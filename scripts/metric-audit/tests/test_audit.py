@@ -110,6 +110,12 @@ class ConsistentRuns(Case):
         self.assertIn("random/rf", rec["vs_backup"]["learners_with_changed_scores"])
         self.assertIn("lineage/rf", rec["vs_backup"]["learners_with_changed_scores"])
 
+    def test_a_revision9_run_audits_clean(self):
+        rep = fx.make_report(revision=9)
+        rec = self.run_audit(rep, fx.manifest(rep, "rf", evaluation_revision=9), revision=9)
+        self.assertClean(rec)
+        self.assertEqual((rec["revision"], rec["schema"], rec["best"]["learner"]), (9, 2, "rf"))
+
     def test_a_row_without_any_call_audits_clean_with_null_manifest_rates(self):
         rep = fx.make_report()
         empty_gbt(rep)
