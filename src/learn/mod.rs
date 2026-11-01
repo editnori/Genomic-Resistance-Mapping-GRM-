@@ -350,11 +350,16 @@ pub fn validate_folds(y: &Bits, train: &Bits, folds: &[usize], k: usize) -> anyh
     Ok(())
 }
 
-/// Hold out whole lineages for tuning when the outer evaluation is grouped.
+/// Hold out whole groups for tuning when `groups` is given: lineages, or the
+/// random split's duplicate groups. The holdout is then the grouped fold, of
+/// round(1 / frac), closest to `frac` of `train` that keeps both classes on
+/// both sides. Without groups, it is `frac` of each class (`holdout`).
+/// Errors name a group by `unit`: "lineage", or "group" for duplicate groups.
 pub fn tuning_holdout(
     train: &Bits,
     y: &Bits,
     groups: Option<&[u32]>,
+    unit: &str,
     frac: f64,
     seed: u64,
 ) -> anyhow::Result<(Bits, Bits)> {
@@ -364,7 +369,7 @@ pub fn tuning_holdout(
             .map(|i| groups[i])
             .collect::<std::collections::BTreeSet<_>>()
             .len();
-        anyhow::ensure!(n_groups >= 2, "tuning needs at least two training lineages");
+        anyhow::ensure!(n_groups >= 2, "tuning needs at least two training {unit}s");
         let k = ((1.0 / frac).round() as usize).max(2).min(n_groups);
         let folds = training_folds(y, train, Some(groups), k, seed);
         fold_masks(&folds, k)
@@ -382,7 +387,7 @@ pub fn tuning_holdout(
                     .abs()
                     .total_cmp(&(b.1.count() as f64 - target).abs())
             })
-            .ok_or_else(|| anyhow::anyhow!("no lineage tuning partition contains both classes"))?
+            .ok_or_else(|| anyhow::anyhow!("no {unit} tuning partition contains both classes"))?
     } else {
         holdout(train, y, frac, seed)
     };
@@ -595,7 +600,7 @@ mod tests {
         let y = Bits::from_indices(40, (0..40).filter(|i| i % 2 == 0));
         let groups: Vec<u32> = (0..40).map(|i| i / 4).collect();
         let train = Bits::from_indices(40, 0..32);
-        let (fit, val) = tuning_holdout(&train, &y, Some(&groups), 0.2, 42).unwrap();
+        let (fit, val) = tuning_holdout(&train, &y, Some(&groups), "lineage", 0.2, 42).unwrap();
         assert_eq!(fit.and(&val).count(), 0);
         assert_eq!(fit.count() + val.count(), train.count());
         assert_eq!(fit.and_not(&train).count() + val.and_not(&train).count(), 0);
