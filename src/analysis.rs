@@ -35,7 +35,9 @@ pub const REPORT_SCHEMA: u32 = 2;
 /// lasso's active-set solve (docs/lasso-stopping.md). Revision 10 adds the
 /// species identity check (docs/species-check.md) and keeps k-mer-identical
 /// duplicates whole in one outer fold (docs/duplicate-isolation.md).
-pub const EVALUATION_REVISION: u32 = 10;
+/// Revision 11 keeps those groups whole in the random split's inner tuning
+/// too (`eval::tuning_groups`).
+pub const EVALUATION_REVISION: u32 = 11;
 
 #[derive(Serialize)]
 pub struct EvaluationAudit {
@@ -1276,16 +1278,18 @@ mod tests {
                 "input_fingerprint": fingerprint,
             })
         };
-        assert_eq!(EVALUATION_REVISION, 10);
+        assert_eq!(EVALUATION_REVISION, 11);
         assert_eq!(stale_reason(&saved(EVALUATION_REVISION, key), key), None);
-        // Revision 8's solver could stop where revision 9's converges, and a
+        // Revision 8's solver could stop where revision 9's converges, a
         // revision-9 report may have scored a genome with its own copy in
-        // training. The input fingerprint does not see either change.
-        for old in [7, 8, 9] {
+        // training, and a revision-10 report's random-split tuning may have
+        // put a genome and its copy on both sides of a tuning partition. The
+        // input fingerprint sees none of these changes.
+        for old in [7, 8, 9, 10] {
             assert_eq!(
                 stale_reason(&saved(old, key), key),
                 Some("evaluation audit revision changed"),
-                "a same-fingerprint revision-{old} result must not enter revision 10"
+                "a same-fingerprint revision-{old} result must not enter revision 11"
             );
         }
         // A current report whose audit is invalid, or says nothing, is not a
