@@ -745,6 +745,13 @@ pub struct GroupSamplingPlan {
 /// phenotype label, so the selection cannot depend on any task's labels
 /// except through the declared `always` stratum.
 ///
+/// Plan one species per call, with only that species' genomes in `eligible`.
+/// Group ids aren't tied to a species, and `EligibleGenome` carries none, so
+/// a group id that two species share would make one group of both. Its
+/// round-robin share and every `probability` in it would then be wrong, with
+/// no error. The caller must check this; `docs/ablation-runner.md` states it
+/// with the ablation runner's other obligations.
+///
 /// The draw order is every stratum genome in id order, then the remaining
 /// genomes taken round-robin across their groups:
 ///

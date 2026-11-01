@@ -601,6 +601,13 @@ pub fn screen_block(
 /// rows of one block would coalesce here, which contract §19 rules out. Call
 /// this before any learner's own duplicate collapse, which keeps one twin's
 /// row as it stands.
+///
+/// Never split a collapsed column back into per-block columns, for example to
+/// report each block's importance: that puts the representative's placeholder
+/// back on samples only a lower-priority twin observes (contract §18). The
+/// provenance says which source supplied how many samples. The arm runner's
+/// full order, `block_candidates`, then `screen_block` once per fit (§16),
+/// then this, then the learners, is in `docs/ablation-runner.md`.
 pub fn assemble(blocks: &[EncodedBlock], train: &Bits) -> EncodedBlock {
     let n = train.len();
     assert!(blocks.iter().all(|b| b.x.cols == n));
