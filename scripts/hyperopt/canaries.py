@@ -900,7 +900,12 @@ def permutation_null(statistic, labels, groups, n_perm=999, seed=0, strata=None,
       infinite. p_value is then NaN, so it reads neither as a leak nor as
       clean, and details give non_finite_draws and observed_finite.
     With a custom permute the group checks are reported as not applicable
-    and only the draw checks run.
+    and only the draw checks run. Those check each draw's shape, 0/1 values
+    and class counts, not its distribution: a custom permute must draw
+    uniformly within the caller's exchangeable set. A permuter that draws
+    valid permutations from the wrong distribution, such as one that swaps a
+    single positive and negative per draw, can read a leak as clean with
+    power passing.
     """
     if n_perm < 1:
         raise ValueError("permutation_null needs n_perm >= 1")

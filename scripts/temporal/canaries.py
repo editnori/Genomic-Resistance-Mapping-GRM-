@@ -71,8 +71,10 @@ from its output on that input's training view fails, whatever it reads,
 including whether any test-period data is present at all, provided the
 difference shows in what the fingerprint reads: the allowlisted types and
 their value forms, and dtype forms with their alias character (see
-invariance_to_test_data; any other type is refused). The canary guards
-against honest fits that accidentally read test-period data. It doesn't
+invariance_to_test_data; any other type is refused). It doesn't read the
+order of dict and set entries, which it compares sorted, so a fit whose
+output differs only there passes. The canary guards against honest fits that
+accidentally read test-period data. It doesn't
 defend against a fit built to hide information on purpose in private
 (underscore) attributes, object internals, memory layout or padding bytes.
 drop_non_training removes every genome outside the training rows, and
@@ -598,10 +600,10 @@ def _canonical(value):
     dict's sorted key-value pairs, a set's or frozenset's sorted elements, and
     a list's or tuple's elements in order, each through this function; an
     ndarray as _canonical_array reads it; a numpy scalar's dtype.str, dtype
-    char and bytes (the char tells aliases such as longlong and int64 apart). Anything else, a subclass included
-    (namedtuple, defaultdict, OrderedDict, a dict subclass, a dataclass,
-    scipy sparse, numpy.matrix, numpy.ma.MaskedArray, pandas), raises
-    TypeError."""
+    char and bytes (the char tells aliases such as longlong and int64 apart).
+    Anything else, a subclass included (namedtuple, defaultdict, OrderedDict,
+    a dict subclass, a dataclass, scipy sparse, numpy.matrix,
+    numpy.ma.MaskedArray, pandas), raises TypeError."""
     kind = type(value)
     if value is None or kind is bool or kind is str:
         return value
@@ -1037,10 +1039,10 @@ def invariance_to_test_data(records, features, cutoff, fit, perturbations=None, 
     features, model), and its keys must each be an exact str, else TypeError
     (MC3-1, which supersedes NLK-2's same-str() refusal); anything else is
     the single key "<fit>", which a dict may not use. A key that only one of
-    two runs returns counts as changed. The canary guards against honest fits that accidentally read test-period
-    data. It doesn't defend against a fit built to hide information on purpose in
-    private (underscore) attributes, object internals, memory layout or padding
-    bytes.
+    two runs returns counts as changed. The canary guards against honest fits
+    that accidentally read test-period data. It doesn't defend against a fit
+    built to hide information on purpose in private (underscore) attributes,
+    object internals, memory layout or padding bytes.
 
     The fingerprint fails closed (MC2-1): every fitted value, and every value
     inside it, must have exactly one of these types: None, bool, int, float,
@@ -1061,9 +1063,11 @@ def invariance_to_test_data(records, features, cutoff, fit, perturbations=None, 
     view (its .base), its strides, C or Fortran order, the writeable and
     aligned flags, a structured dtype's aligned-struct flag and its padding
     bytes. Padding can be filled by accident (np.empty over a reused buffer,
-    and np.save keeps it), but it never reaches a value a model reads. The fit
-    must be
-    a pure function of its three inputs: it is called several times, and a fit
+    and np.save keeps it), but it never reaches a value a model reads. Not
+    read either (MC5-1): the order of dict and set entries, since a dict's
+    pairs and a set's elements are compared sorted; a fit whose dict differs
+    only in insertion order passes. The fit must be a pure function of its
+    three inputs: it is called several times, and a fit
     that caches across calls (by cutoff, path or anything else) cannot be
     certified. In particular it must not cache on anything outside its
     training view: a cache keyed on the training rows alone, whose value was

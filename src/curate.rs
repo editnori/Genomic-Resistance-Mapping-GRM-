@@ -1442,6 +1442,23 @@ mod tests {
         assert_eq!(select_genomes(&ph, &ds, "C d", 9), vec!["h1", "h2"]);
     }
 
+    #[test]
+    fn target_drugs_come_from_the_requested_species_datasets_only() {
+        use super::Call::R;
+        // F-1: A b has a dataset for x only; y is a C d dataset drug. g2's
+        // y call is A b's own phenotype, but no A b dataset tests y, so it
+        // scores nothing. Taking target drugs from every species' datasets
+        // would select g2 as well.
+        let ph = vec![
+            phenotype("g1", "A b", "x", R, false, false),
+            phenotype("g2", "A b", "y", R, false, false),
+            phenotype("h1", "C d", "y", R, false, false),
+        ];
+        let ds = vec![dataset("A b", "x"), dataset("C d", "y")];
+        assert_eq!(select_genomes(&ph, &ds, "A b", 9), vec!["g1"]);
+        assert_eq!(select_genomes(&ph, &ds, "C d", 9), vec!["h1"]);
+    }
+
     fn eligible(rows: &[(&str, &str)]) -> Vec<EligibleGenome> {
         rows.iter()
             .map(|&(genome, group)| EligibleGenome {
@@ -1640,6 +1657,26 @@ mod tests {
                 "Cargo.lock no longer pins {name} {version}"
             );
             assert!(GROUP_SAMPLING_RNG.contains(&format!("{name} {version} ")));
+            // F-2: the entry found is the one GRM builds with. Cargo.toml asks
+            // for 0.9 of rand and rand_chacha, and cargo resolves one
+            // semver-compatible version of each, so the lock holds one entry
+            // per crate, inside that requirement.
+            assert!(
+                version.starts_with("0.9."),
+                "{name} {version} is outside 0.9"
+            );
+            assert_eq!(
+                lock.matches(&format!("name = \"{name}\"\n")).count(),
+                1,
+                "Cargo.lock holds more than one {name}"
+            );
+        }
+        let manifest = include_str!("../Cargo.toml").replace("\r\n", "\n");
+        for name in ["rand", "rand_chacha"] {
+            assert!(
+                manifest.contains(&format!("\n{name} = \"0.9\"\n")),
+                "Cargo.toml no longer asks for {name} 0.9"
+            );
         }
     }
 

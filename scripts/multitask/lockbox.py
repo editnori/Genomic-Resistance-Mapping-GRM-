@@ -44,15 +44,7 @@ Not access control. The manifest is readable without unseal: it lists the
 lockbox genome ids and publishes the lockbox's per-task class counts. unseal
 is a procedural record of approved use, not a lock.
 
-Identifiers (rule 6, v2, shared with Tasks M and N). For `lineage` and
-`duplicate_group`, a non-null value is first stripped of surrounding
-whitespace with Python `str.strip()`. The stripped value is refused if it's
-empty, or if it contains any character outside printable ASCII (U+0021 to
-U+007E) other than an interior space (U+0020). Two distinct values of one
-field in one input that are equal under
-`unicodedata.normalize("NFKC", v).casefold()` are refused as an alias
-collision, naming both. Values are otherwise kept as given. All refusals are
-`ValueError` naming the genome or the two values.
+Identifiers (rule 6, v2, shared with Tasks M and N). For `lineage` and `duplicate_group`, a non-null value is first stripped of surrounding whitespace with Python `str.strip()`. The stripped value is refused if it's empty, or if it contains any character outside printable ASCII (U+0021 to U+007E) other than an interior space (U+0020). Two distinct values of one field in one input that are equal under `unicodedata.normalize("NFKC", v).casefold()` are refused as an alias collision, naming both. Values are otherwise kept as given. All refusals are `ValueError` naming the genome or the two values.
 
 Task P additions: the lockbox also runs the alias check across its stored
 values (lockbox ids, held-out lineages, stored groups and their members),

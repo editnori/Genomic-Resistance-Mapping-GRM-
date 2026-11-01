@@ -1790,6 +1790,16 @@ class TrainingViewOnly(unittest.TestCase):
                       np.ma.masked_array([1.0], fill_value=-1.0), np.ma.MaskedArray([1.0], hard_mask=True)):
             with self.subTest(repr(value)), self.assertRaisesRegex(TypeError, "an ndarray subclass"):
                 C.fingerprint(value)
+        # MC5-2: a masked array inside a 1-d object array, or in a structured
+        # array's object field, is refused too, not read after filled().
+        holder = np.empty(1, dtype=object)
+        holder[0] = np.ma.MaskedArray([1.0, 2.0], mask=[False, True])
+        field = np.empty(1, dtype=[("w", object)])
+        field["w"][0] = np.ma.MaskedArray([1.0, 2.0], mask=[False, True])
+        for name, value in (("object array element", holder), ("structured object field element", field)):
+            with self.subTest(name), self.assertRaisesRegex(
+                    TypeError, r"cannot fingerprint a fitted numpy\.ma\.core\.MaskedArray \(an ndarray subclass\)"):
+                C.fingerprint(value)
         # MX-3: each field's values, not just the names and dtypes.
         self.assertNotEqual(C.fingerprint(np.zeros(2, dtype=[("katG", "f8")])),
                             C.fingerprint(np.ones(2, dtype=[("katG", "f8")])))

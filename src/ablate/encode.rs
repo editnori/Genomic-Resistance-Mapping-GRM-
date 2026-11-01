@@ -23,11 +23,14 @@
 //! samples are in its state. The one threshold covers both the per-column
 //! not-assessable indicators and the block-unavailable indicator.
 //!
-//! The indicators themselves are never missing (contract §20). Each is an
-//! observation of availability: the block-unavailable indicator on every
-//! sample, and a not-assessable indicator wherever its block has a row. Only
-//! a feature's value in a missing state is a placeholder: a 0, or the
-//! training median's thermometer bits.
+//! Indicators are observations of availability (contract §20, worded as in
+//! §21): the block-unavailable indicator observes every sample, and a
+//! not-assessable indicator observes every sample where its block has a row.
+//! On every sample an indicator observes, its value is an observation, not a
+//! placeholder. Where its block has no row, a not-assessable indicator does
+//! not observe: it reads 0 and gives way like a feature's placeholder. A
+//! feature's value in a missing state is a placeholder: a 0, or the training
+//! median's thermometer bits.
 //!
 //! A block with no encoding is unavailable, and `fit_encoder` returns an error
 //! carrying the reason; the arm planner reports that arm unavailable with it.
@@ -311,12 +314,11 @@ fn cutpoints(sorted: &[u32]) -> Vec<u32> {
     cuts
 }
 
-/// The spec in the contract's canonical JSON (CONTRACT.md §7). serde_json's
-/// map is sorted and its output compact, so for an ASCII spec these are the
-/// bytes of H's `BlockSpec::canonical_json`, which replaces this at
-/// integration.
+/// The spec in the contract's canonical JSON (CONTRACT.md §7): H's
+/// `BlockSpec::canonical_json`, which escapes every character outside
+/// printable ASCII as Python's `ensure_ascii=True` does.
 fn spec_json(spec: &BlockSpec) -> Result<String> {
-    Ok(serde_json::to_string(&serde_json::to_value(spec)?)?)
+    spec.canonical_json()
 }
 
 fn spec_sha256(spec: &BlockSpec) -> Result<String> {
@@ -1704,5 +1706,78 @@ mod tests {
         );
         assert_eq!(supplied(&arm, 0), [("C", 9), ("P", 1), ("P", 0)]);
         assert_eq!(arm.x.row(0), Bits::from_indices(10, [0, 1, 2, 8]).words());
+    }
+
+    #[test]
+    fn the_spec_hash_reads_hs_canonical_json_on_non_ascii_specs() {
+        // H's canonical bytes escape é, DEL, ≥ and a character outside the
+        // BMP as Python's json.dumps(..., ensure_ascii=True) does; serde_json
+        // writes them raw, which is the form this module used before Q.
+        let ascii = spec("K", BlockKind::Anonymous, 5, Some(4000));
+        let wide = BlockSpec {
+            version: "v\u{e9}\u{7f}\u{2265}\u{1f600}".into(),
+            ..ascii.clone()
+        };
+        for s in [&ascii, &wide] {
+            assert_eq!(spec_json(s).unwrap(), s.canonical_json().unwrap());
+        }
+        let json = spec_json(&wide).unwrap();
+        assert!(
+            json.contains(r#""version":"v\u00e9\u007f\u2265\ud83d\ude00""#),
+            "{json}"
+        );
+        assert!(json.is_ascii());
+        let raw = serde_json::to_string(&serde_json::to_value(&wide).unwrap()).unwrap();
+        assert_ne!(json, raw);
+        assert_eq!(
+            serde_json::to_string(&serde_json::to_value(&ascii).unwrap()).unwrap(),
+            spec_json(&ascii).unwrap()
+        );
+        let digest = ring::digest::digest(&ring::digest::SHA256, json.as_bytes());
+        let hex: String = digest.as_ref().iter().map(|b| format!("{b:02x}")).collect();
+        assert_eq!(spec_sha256(&wide).unwrap(), hex);
+    }
+
+    /// Main's close-check probe MP1 (C-1). Section 18's fallback where the
+    /// representative's placeholder is 0 and a lower-priority twin's
+    /// placeholder is 1. s0..s7 train. C (priority 0) has no row for s9 and
+    /// cannot assess s8, so it reads 0 on both. N (priority 3) has no row for
+    /// s8 or s9, so its AtLeast(5) bit takes the training median 5 there and
+    /// reads 1. Nobody observes s8 or s9, so both take C's 0; a fallback that
+    /// ORs the sources' rows (mutant MC03) gives 1.
+    #[test]
+    fn the_fallback_is_the_representatives_placeholder_where_it_is_0() {
+        let all = ids(10);
+        let train = mask(10, |i| i < 8);
+        let n = RawBlock {
+            spec: spec("N", BlockKind::Count, 3, None),
+            sample_ids: all[..8].to_vec(),
+            names: vec!["copies".into()],
+            cols: vec![RawColumn::Count {
+                values: [5, 5, 5, 5, 5, 0, 0, 0].map(Some).to_vec(),
+            }],
+        };
+        let mut c_assessable = Bits::ones(9);
+        c_assessable.remove(8);
+        let c = binary(
+            spec("C", BlockKind::CuratedExact, 0, None),
+            &all[..9],
+            Bits::from_indices(9, [0, 1, 2, 3, 4]),
+            c_assessable,
+        );
+        let blocks = [&n, &c].map(|raw| encode(raw, &all, &train));
+        assert_eq!(blocks[0].prov.len(), 1);
+        assert_eq!(blocks[0].prov[0].sources[0].role, ColumnRole::AtLeast(5));
+        assert!(blocks[0].x.get(0, 8) && blocks[0].x.get(0, 9));
+        assert_eq!(blocks[1].prov.len(), 1, "C has no indicator");
+        let arm = assemble(&blocks, &train);
+        assert_eq!(arm.x.rows, 1);
+        assert_eq!(supplied(&arm, 0), [("C", 8), ("N", 0)]);
+        assert!(!arm.x.get(0, 8), "nobody observes s8: C's 0 stands");
+        assert!(!arm.x.get(0, 9), "nobody observes s9: C's 0 stands");
+        assert_eq!(
+            arm.x.row(0),
+            Bits::from_indices(10, [0, 1, 2, 3, 4]).words()
+        );
     }
 }

@@ -473,6 +473,11 @@ class BuildCases(unittest.TestCase):
         contrasts[0]["ci"] = [0, 10 ** 400]
         self.refuse(r"contrasts\[0\].ci", contrasts=contrasts)
         self.refuse("not_produced: keys must be non-empty strings, not 1$", not_produced={1: "x"})
+        # Every bad key is listed, not only the first (RKC-I1).
+        with self.assertRaises(SchemaError) as caught:
+            build(not_produced={**NOT_PRODUCED, 1: "x", 2: "y"})
+        for key in (1, 2):
+            self.assertIn(f"not_produced: keys must be non-empty strings, not {key}", caught.exception.errors)
 
     def test_inputs_are_not_mutated_or_aliased(self):
         parts = good_inputs()
@@ -1207,6 +1212,33 @@ class WriteCases(unittest.TestCase):
                 lambda src, dst: dst == base / "empty" / rp.MARKDOWN_NAME), self.assertRaises(SchemaError):
             rp.write_report(self.later, base / "empty")
         self.assertTrue((base / "empty").is_dir())
+
+    def test_temporary_files_go_where_the_kernel_resolves_out_dir(self):
+        """RKC-L1: with OUT_DIR base/link/../z and base/link a symlink to deep/real, the kernel resolves the folder
+        to base/deep/z. The temporary and backup files are made there too, not in the lexical base/z, so the write
+        works without a base/z and leaves an unrelated base/z untouched."""
+        base = Path(self.tmp.name) / "l"
+        (base / "deep" / "real").mkdir(parents=True)
+        (base / "link").symlink_to("deep/real")
+        out = base / "link" / ".." / "z"
+        real_folder = Path(os.path.realpath(base / "deep")) / "z"
+        rp.write_report(self.later, out)
+        self.assertFalse((base / "z").exists())
+        self.assertEqual(sorted(x.name for x in real_folder.iterdir()), [rp.JSON_NAME, rp.MARKDOWN_NAME])
+        self.assertEqual(rp.load_report(real_folder / rp.JSON_NAME), self.later)
+        (base / "z").mkdir()
+        made, real = [], tempfile.mkstemp
+
+        def mkstemp(*args, **kwargs):
+            fd, name = real(*args, **kwargs)
+            made.append(Path(name))
+            return fd, name
+        with mock.patch.object(rp.tempfile, "mkstemp", side_effect=mkstemp):
+            rp.write_report(self.later, out)
+        self.assertEqual(list((base / "z").iterdir()), [])
+        self.assertEqual(sorted(p.suffix for p in made), [".bak", ".bak", ".tmp", ".tmp"])
+        self.assertEqual({p.parent for p in made}, {real_folder})
+        self.assertEqual(sorted(x.name for x in real_folder.iterdir()), [rp.JSON_NAME, rp.MARKDOWN_NAME])
 
     def test_a_failed_mkdir_removes_the_parents_it_made(self):
         """RK8-L1: when making OUT_DIR itself, or a parent, fails after the folders above it were made, those are

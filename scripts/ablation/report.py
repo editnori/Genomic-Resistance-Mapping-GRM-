@@ -433,8 +433,10 @@ def _umask():
 
 
 def _reserve(out, final, suffix):
-    """A fresh empty file named after final in out, closed; mkstemp picks a name nothing else holds."""
-    fd, name = tempfile.mkstemp(dir=out, prefix=f".{final.name}.", suffix=suffix)
+    """A fresh empty file named after final in out, closed; mkstemp picks a name nothing else holds. out is
+    resolved first, as the kernel resolves it for the renames: mkstemp alone resolves ".." lexically, which
+    after a symlinked folder names another folder (RKC-L1)."""
+    fd, name = tempfile.mkstemp(dir=os.path.realpath(out), prefix=f".{final.name}.", suffix=suffix)
     os.close(fd)
     return Path(name)
 

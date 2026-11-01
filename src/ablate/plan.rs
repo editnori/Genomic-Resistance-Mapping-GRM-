@@ -27,11 +27,12 @@ use serde_json::Value;
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
-/// The fraction of outer-training samples boosting holds out to stop early.
-pub const GBT_HOLDOUT: f64 = 0.15;
+/// The fraction of outer-training samples boosting holds out to stop early:
+/// `learn::eval`'s own share, so plans and evaluations can't drift apart.
+pub const GBT_HOLDOUT: f64 = crate::learn::eval::GBT_HOLDOUT;
 /// The fraction of outer-training samples the lasso holds out to choose its
-/// penalty.
-pub const LASSO_HOLDOUT: f64 = 0.2;
+/// penalty: `learn::eval`'s own share.
+pub const LASSO_HOLDOUT: f64 = crate::learn::eval::LASSO_HOLDOUT;
 /// The `format` of every plan this module writes. It is part of the hashed
 /// bytes, so a change of layout changes every hash.
 pub const PLAN_FORMAT: &str = "grm-fold-plan-v1";
@@ -173,29 +174,17 @@ impl GroupIds {
 ///   duplicate group takes its lowest member's index and every other sample
 ///   keeps its own index.
 ///
-/// To be unified with Task A's `learn::eval::tuning_groups` at integration:
-/// both must give the same ids, or plans and evaluations diverge.
+/// This is `learn::eval::tuning_groups`, the ids `evaluate` tunes on, so
+/// plans and evaluations can't diverge. That function gives each member its
+/// group's first index, which is the lowest because duplicate groups are
+/// ascending (`GroupIds::new` checks this).
 pub fn tuning_groups(
     scheme: Scheme,
     lineage: &[u32],
     duplicates: &[Vec<usize>],
 ) -> Option<Vec<u32>> {
-    match scheme {
-        Scheme::Lineage => Some(lineage.to_vec()),
-        Scheme::Random if duplicates.is_empty() => None,
-        Scheme::Random => {
-            let id = |i: usize| u32::try_from(i).expect("sample indices fit in u32");
-            let mut ids: Vec<u32> = (0..lineage.len()).map(id).collect();
-            for group in duplicates {
-                if let Some(&lowest) = group.iter().min() {
-                    for &i in group {
-                        ids[i] = id(lowest);
-                    }
-                }
-            }
-            Some(ids)
-        }
-    }
+    crate::learn::eval::tuning_groups(scheme.as_str(), lineage, duplicates)
+        .map(std::borrow::Cow::into_owned)
 }
 
 /// The seed repeat `repeat` draws its outer folds from. Repeat 0 uses `seed`
@@ -500,7 +489,8 @@ fn fold_tuning_plan(
     validate_folds(y, train, &folds, inner_k)
         .with_context(|| format!("invalid {scheme} inner evaluation in outer fold {fi}"))?;
     let holdout = |frac| {
-        tuning_holdout(train, y, tuning, frac, seed)
+        let unit = crate::learn::eval::tuning_unit(scheme.as_str());
+        tuning_holdout(train, y, tuning, unit, frac, seed)
             .with_context(|| format!("invalid {scheme} tuning holdout in outer fold {fi}"))
     };
     let (_, gbt) = holdout(GBT_HOLDOUT)?;
@@ -946,7 +936,8 @@ mod tests {
                 assert_eq!(plan.inner[fi], expected, "{scheme} outer fold {fi}");
                 let held = &plan.holdouts[fi];
                 for (frac, got) in [(0.15, &held.gbt), (0.2, &held.lasso)] {
-                    let (_, val) = tuning_holdout(&train, &y, tuning, frac, seed).unwrap();
+                    let unit = crate::learn::eval::tuning_unit(scheme.as_str());
+                    let (_, val) = tuning_holdout(&train, &y, tuning, unit, frac, seed).unwrap();
                     assert_eq!(*got, val.iter_ones().collect::<Vec<_>>());
                 }
             }
@@ -1659,5 +1650,139 @@ mod tests {
             format!("{error:#}").contains("a dataset has an empty name"),
             "{error:#}"
         );
+    }
+
+    /// The tuning ids and holdout shares G used before integration, kept as
+    /// the reference that Task A's functions must reproduce.
+    fn pre_integration_tuning_groups(
+        scheme: Scheme,
+        lineage: &[u32],
+        duplicates: &[Vec<usize>],
+    ) -> Option<Vec<u32>> {
+        match scheme {
+            Scheme::Lineage => Some(lineage.to_vec()),
+            Scheme::Random if duplicates.is_empty() => None,
+            Scheme::Random => {
+                let mut ids: Vec<u32> = (0..lineage.len() as u32).collect();
+                for group in duplicates {
+                    if let Some(&lowest) = group.iter().min() {
+                        for &i in group {
+                            ids[i] = lowest as u32;
+                        }
+                    }
+                }
+                Some(ids)
+            }
+        }
+    }
+
+    #[test]
+    fn tuning_groups_and_holdout_shares_are_task_a_s() {
+        assert_eq!((GBT_HOLDOUT, LASSO_HOLDOUT), (0.15, 0.2));
+        // xorshift64, so the cases need no extra crate.
+        let mut state = 0x9e37_79b9_7f4a_7c15_u64;
+        let mut next = |m: usize| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            (state % m as u64) as usize
+        };
+        for case in 0..500 {
+            let n = 2 + next(40);
+            let lineage: Vec<u32> = (0..n).map(|_| next(5) as u32).collect();
+            let mut duplicate = Vec::new();
+            for l in 0..5 {
+                let members: Vec<usize> = (0..n).filter(|&i| lineage[i] == l).collect();
+                let mut rest = members.as_slice();
+                while rest.len() >= 2 {
+                    let take = 1 + next(rest.len());
+                    if take >= 2 && next(2) == 0 {
+                        duplicate.push(rest[..take].to_vec());
+                    }
+                    rest = &rest[take..];
+                }
+            }
+            let groups = GroupIds::new(lineage, duplicate, None).unwrap();
+            for scheme in [Random, Lineage] {
+                assert_eq!(
+                    tuning_groups(scheme, groups.lineage(), groups.duplicate()),
+                    pre_integration_tuning_groups(scheme, groups.lineage(), groups.duplicate()),
+                    "case {case}, {scheme}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_tuning_holdout_failure_reads_as_check_split_plan_words_it() {
+        // Task A's `a_grouped_holdout_that_fails_after_its_inner_folds_pass_
+        // stops_the_plan`, through the planner: outer fold 0 tests two
+        // resistant and two susceptible genomes, and its inner folds pass,
+        // but six groups of 100 fail boosting's grouped holdout and four fail
+        // the lasso's. The plan gives `evaluate`'s reason, naming the unit.
+        for (big, failing) in [(6, "gbt"), (4, "lasso")] {
+            let mut units: Vec<(usize, usize)> = vec![(98, 1), (1, 97)];
+            units.extend(std::iter::repeat_n((0, 100), big));
+            let mut labels = vec![true, true, false, false];
+            let mut duplicates = Vec::new();
+            for (r, s) in units {
+                let start = labels.len();
+                labels.extend((0..r + s).map(|j| j < r));
+                duplicates.push((start..labels.len()).collect::<Vec<usize>>());
+            }
+            labels.extend([false; 3]);
+            let n = labels.len();
+            let y = Bits::from_indices(n, (0..n).filter(|&i| labels[i]));
+            let mut ids: Vec<u32> = (0..n as u32).collect();
+            for g in &duplicates {
+                for &i in g {
+                    ids[i] = g[0] as u32;
+                }
+            }
+            let outer: Vec<usize> = (0..n).map(|i| usize::from(i >= 4)).collect();
+            for (scheme, listed, reason) in [
+                (Random, duplicates, "no group tuning partition"),
+                (Lineage, vec![], "no lineage tuning partition"),
+            ] {
+                let groups = GroupIds::new(ids.clone(), listed, None).unwrap();
+                let error = nested_plan(&y, &groups, scheme, &outer, 2, 2, 42).unwrap_err();
+                assert_eq!(
+                    format!("{error:#}"),
+                    format!(
+                        "invalid {scheme} tuning holdout in outer fold 0: \
+                         {reason} contains both classes"
+                    ),
+                    "{big} groups of 100 fail the {failing} holdout"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn check_structure_refuses_fewer_than_two_outer_or_inner_folds() {
+        // An unavailable plan has no inner folds or holdouts, so only the
+        // fold-count floor refuses a re-hashed k = 1 or inner_k = 1.
+        let (y, g) = fixture();
+        let mut base = fold_plan(&y, &g, Random, 5, 3, 42, 0).unwrap();
+        base.unavailable_reason = Some("a reason".to_string());
+        base.inner.clear();
+        base.holdouts.clear();
+        base.sha256 = base.compute_sha256().unwrap();
+        base.check_structure().unwrap();
+        for (k, inner_k) in [(1, 3), (5, 1)] {
+            let mut plan = base.clone();
+            plan.k = k;
+            plan.inner_k = inner_k;
+            if k == 1 {
+                plan.outer = vec![0; plan.outer.len()];
+            }
+            plan.sha256 = plan.compute_sha256().unwrap();
+            let error = plan.check_structure().unwrap_err();
+            assert_eq!(
+                format!("{error:#}"),
+                "fold plan needs at least two outer and two inner folds",
+                "k {k}, inner_k {inner_k}"
+            );
+        }
     }
 }

@@ -1383,6 +1383,31 @@ class PermutationPower(Canary):
         for name, (permute, message) in refused.items():
             with self.subTest(name), self.assertRaisesRegex(ValueError, message):
                 c.permutation_null(leak, labels, None, n_perm=199, permute=permute)
+        # Unbalanced labels pin which class holds which count: flipping 8 of 24
+        # positives to 16 keeps the multiset {8, 16} of counts (MD-1).
+        unbalanced = np.array([1] * 8 + [0] * 16)
+        with self.subTest("flipped classes"), self.assertRaisesRegex(
+                ValueError, r"changed the class counts from \[16, 8\] to \[8, 16\]"):
+            c.permutation_null(lambda y: float(y @ (100.0 + unbalanced)), unbalanced, None,
+                               n_perm=199, permute=lambda y, g, rng, s: 1 - rng.permutation(y))
+        # The shape is checked on every draw, not only the first (MD-3): a
+        # second draw shaped (24, 1) holds the right labels and counts.
+        calls = []
+
+        def second_draw_is_a_column(y, g, rng, s):
+            calls.append(None)
+            drawn = rng.permutation(y)
+            return drawn if len(calls) == 1 else drawn.reshape(-1, 1)
+
+        with self.subTest("later draw reshaped"), self.assertRaisesRegex(
+                ValueError, r"permute returned shape \(24, 1\) for labels of shape \(24,\)"):
+            c.permutation_null(leak, labels, None, n_perm=199, permute=second_draw_is_a_column)
+        self.assertEqual(len(calls), 2)
+        # A 0-d draw is refused loudly, as len()'s TypeError rather than a
+        # ValueError (MD-5).
+        with self.subTest("0-d draw"), self.assertRaisesRegex(TypeError, "unsized"):
+            c.permutation_null(leak, labels, None, n_perm=199,
+                               permute=lambda y, g, rng, s: np.array(1))
         kept = {
             "true permutation": lambda y, g, rng, s: rng.permutation(y),
             "stratified permutation": lambda y, g, rng, s: np.concatenate([rng.permutation(y[:12]),

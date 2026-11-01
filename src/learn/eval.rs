@@ -404,9 +404,9 @@ fn lasso_scores(m: Option<&lasso::LassoModel>, x: &BitMatrix) -> Option<Vec<f64>
 }
 
 /// The share of training samples boosting holds out for early stopping.
-const GBT_HOLDOUT: f64 = 0.15;
+pub(crate) const GBT_HOLDOUT: f64 = 0.15;
 /// The share of training samples the lasso holds out to choose its penalty.
-const LASSO_HOLDOUT: f64 = 0.2;
+pub(crate) const LASSO_HOLDOUT: f64 = 0.2;
 
 fn fit_gbt(
     x: &BitMatrix,
@@ -977,7 +977,7 @@ fn outer_splits(
 /// the valid one of round(1 / fraction) grouped folds closest in size to the
 /// fraction, not that fraction of each class: boosting holds out about 1/7
 /// of training (not 15%), the lasso about 1/5.
-fn tuning_groups<'a>(
+pub(crate) fn tuning_groups<'a>(
     scheme: &str,
     groups: &'a [u32],
     duplicates: &[Vec<usize>],
@@ -999,7 +999,7 @@ fn tuning_groups<'a>(
 
 /// What tuning errors call one of `scheme`'s tuning groups. The lineage
 /// split keeps its revision-10 error text.
-fn tuning_unit(scheme: &str) -> &'static str {
+pub(crate) fn tuning_unit(scheme: &str) -> &'static str {
     if scheme == "lineage" {
         "lineage"
     } else {
@@ -2048,6 +2048,30 @@ mod tests {
                     )
                 );
             }
+        }
+    }
+
+    #[test]
+    fn two_training_groups_are_enough_for_a_grouped_holdout() {
+        // I1: k is 2 here, and each lineage is one side with both classes.
+        let y = Bits::from_indices(8, [0, 4]);
+        let groups = [1u32, 1, 1, 1, 2, 2, 2, 2];
+        let (fit, val) = tuning_holdout(
+            &Bits::ones(8),
+            &y,
+            Some(&groups),
+            "lineage",
+            LASSO_HOLDOUT,
+            42,
+        )
+        .unwrap();
+        assert_eq!(fit.count() + val.count(), 8);
+        for side in [&fit, &val] {
+            let members: Vec<usize> = side.iter_ones().collect();
+            assert!(
+                members == [0, 1, 2, 3] || members == [4, 5, 6, 7],
+                "{members:?}"
+            );
         }
     }
 
