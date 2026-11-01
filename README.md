@@ -139,6 +139,8 @@ It verifies the revision-5 reports against the snapshot hash list pinned in the 
 
 ## Checks
 
+`.github/workflows/ci.yml` runs the Rust, Python and deployment-toolkit checks on every push and pull request, but not the web app's; [docs/ci.md](docs/ci.md) lists its jobs and what it leaves out.
+
 ```bash
 cargo test --locked
 cargo fmt --check
