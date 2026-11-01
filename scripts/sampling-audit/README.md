@@ -119,7 +119,7 @@ Group metrics need a group id for every scored genome, not just the selected one
 
 BV-BRC metadata already carries `mlst` and `cgmlst_hc5`, `cgmlst_hc20` and `cgmlst_hc100`, which `groups_from_metadata.py` turns into group files. The r9 group files came from check4k's metadata, read only:
 
-- Path: `/home/layth/review/grm-r9-curate/check4k/bvbrc/genomes.jsonl`, a symlink to `/home/layth/review/grm-r9-species-check-data/bvbrc/genomes.jsonl`.
+- Path: `<r9-curate>/check4k/bvbrc/genomes.jsonl`, a symlink to `<r9-species-check-data>/bvbrc/genomes.jsonl`. `<r9-curate>` is the folder holding the four frozen r9 curate runs, `grm-r9-curate/` on the laptop, and `<r9-species-check-data>` is the r9 species-check data folder, `grm-r9-species-check-data/` beside it. Neither is in the repository.
 - sha256: `d60e2b15f2cc0ed0466a1016da1761869fb42cc7e9fdd817c1ff7051e759a80e`.
 
 Coverage depends on the denominator. Over metadata genomes (records whose BV-BRC `species` field names the species, before QC), `cgmlst_hc100` covers:
@@ -141,4 +141,4 @@ A full run on real cohorts still needs these exports:
 
 ## Checked against frozen runs
 
-On 2026-10-30 the port reproduced the four frozen r9 curate runs in `/home/layth/review/grm-r9-curate/`. For base2k and check2k at cap 2,000, and base4k and check4k at cap 4,000, all 23 species matched `genomes.txt` id for id and in order. Every `genomes.txt` matched the run's `SHA256SUMS`. The inputs were each run's `curated/phenotypes.jsonl` and `datasets.json`. Those two files are not in `SHA256SUMS`, so `compare_frozen.py` records their digests. Each comparison took 8 to 26 s. The 2026-10-30 fix round re-ran all four with the same 92 of 92 result.
+On 2026-10-30 the port reproduced the four frozen r9 curate runs in `<r9-curate>`, the folder named above. For base2k and check2k at cap 2,000, and base4k and check4k at cap 4,000, all 23 species matched `genomes.txt` id for id and in order. Every `genomes.txt` matched the run's `SHA256SUMS`. The inputs were each run's `curated/phenotypes.jsonl` and `datasets.json`. Those two files are not in `SHA256SUMS`, so `compare_frozen.py` records their digests. Each comparison took 8 to 26 s. The 2026-10-30 fix round re-ran all four with the same 92 of 92 result.

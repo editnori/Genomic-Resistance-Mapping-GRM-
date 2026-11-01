@@ -5,8 +5,9 @@ phenotype y (1 = resistant, R; 0 = susceptible, S), the feature blocks the
 ablation compares, and a truth manifest naming every planted effect. No real
 data is read. to_json() gives the canonical bytes (contract section 7): the
 same config and seed give the same bytes whatever the worker count, dict
-order or PYTHONHASHSEED. The contract is
-/home/layth/review/grm-ablation-contract-20261030/CONTRACT.md v1.7: block
+order or PYTHONHASHSEED. The contract is the GRM ablation data contract v1.7
+(main orchestration ruling, 2026-10-30, sha256
+04226450be4c0550cab27f5fa366c1df6f6bcdb4df22681aac3e4820680911b0): block
 specs and the missingness audit follow sections 5, 6 and 8, rate_diff_p and
 the column format section 11, the single-class refusal's scope section 13,
 and column names section 14.

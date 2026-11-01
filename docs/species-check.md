@@ -371,7 +371,7 @@ GC alone never fails a genome, since contaminating contigs and plasmids also mov
 
 ### Selection after the drop (measured 2026-10-30)
 
-`grm curate` at `3a39fa3` (binary sha256 `789c02d0…c3b6`) on the frozen BV-BRC inputs with the frozen SigDrug vocabulary, run one at a time in `/home/layth/review/grm-r9-curate/`. Without a species check, it reproduces every frozen selection: all 23 species at cap 2000, and the MTB 4k list at cap 4000 (sha256 `80faef89…4eaf`). With the check (`species_check.json` sha256 `25df721e…2d71`):
+`grm curate` at `3a39fa3` (binary sha256 `789c02d0…c3b6`) on the frozen BV-BRC inputs with the frozen SigDrug vocabulary, run one at a time in `grm-r9-curate/` on the laptop, outside the repository. Without a species check, it reproduces every frozen selection: all 23 species at cap 2000, and the MTB 4k list at cap 4000 (sha256 `80faef89…4eaf`). With the check (`species_check.json` sha256 `25df721e…2d71`):
 
 - Every dataset survives at both caps (277), with the same 22 MTB datasets. Labelled MTB genomes go from 32,060 to 32,058.
 - MTB at cap 2000: 2,000 genomes (sha256 `b104d8bd…9a64`). `1773.41701` and `1773.40949` leave, and `1773.42018` and `1773.42548` from the added 2k enter at positions 1,999 and 2,000. The check had judged both, so `selected_unchecked` is 0. The selection is fresh: 458 positions differ from the old list minus the two drops, because dropped labels shift the class weights.
