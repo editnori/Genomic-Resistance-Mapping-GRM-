@@ -4,7 +4,8 @@
 # outlives its command, contacts Cloudflare or touches a real deployment: the
 # release's grm is a stub that records any run, the "live" port must have no
 # listener, and every script except publish.sh (into the temporary root) runs
-# without --apply. tests/apply.sh covers the --apply paths.
+# without --apply, but for stage.sh --apply runs that are refused before they
+# start anything. tests/apply.sh covers the --apply paths.
 # usage: bash scripts/deployment/tests/dry-run.sh
 set -euo pipefail
 S=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -169,6 +170,119 @@ expect 1 'evaluation_revision 7, expected 6' "publish refuses an unexpected revi
     env GRM_EXPECT_REVISION=6 bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-rev
 expect 2 'invalid name' "publish refuses a path-like name" -- \
     bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" ../escape
+
+# From revision 8, every dataset's own evaluation revision, in its index row
+# and in its report, must be the expected one too: grm report stamps the index
+# with its own revision, so a root left with reports of an earlier revision
+# passes the index alone. Revision 7 keeps the index checks only (the report
+# above records no per-dataset revision).
+audit_json() { [ "$1" = - ] || printf ',"evaluation":{"revision":%s}' "$1"; }
+rehash() { (cd "$T/$1" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) >"$T/$1.sha256"; }
+rev_report() {  # rev_report NAME REVISION A B [A-REPORT B-REPORT]: $T/NAME and its manifest, an index at REVISION whose rows give sp__a and sp__b revisions A and B (JSON, or - for none), as do their reports unless given apart
+    local r=$T/$1
+    rm -rf "$r"
+    mkdir -p "$r/datasets"
+    printf '{"schema":2,"evaluation_revision":%s,"datasets":[{"id":"sp__a"%s},{"id":"sp__b"%s}]}\n' \
+        "$2" "$(audit_json "$3")" "$(audit_json "$4")" >"$r/index.json"
+    echo '{"corpus":1}' >"$r/corpus.json"
+    printf '{"id":"sp__a"%s}\n' "$(audit_json "${5:-$3}")" >"$r/datasets/sp__a.json"
+    printf '{"id":"sp__b"%s}\n' "$(audit_json "${6:-$4}")" >"$r/datasets/sp__b.json"
+    rehash "$1"
+}
+rev_publish() {  # rev_publish REVISION NAME PUB [--apply]: publish $T/NAME as PUB, expecting REVISION
+    env GRM_EXPECT_REVISION="$1" bash "$S/publish.sh" "$T/$2" "$T/$2.sha256" "$3" "${@:4}"
+}
+rev_report r11 11 11 11
+rev_report r10 10 10 10
+rev_report mix-one 11 11 10          # one dataset left at 10, indexed as grm report does
+rev_report mix-all 11 10 10          # every dataset at 10, indexed by a revision-11 grm
+rev_report mix-report 11 11 11 11 10 # the index says 11 throughout; one report says 10
+rev_report mix-row 11 11 10 11 11
+rev_report no-audit 11 - -
+rev_report bad-audit 11 '"11"' 11.0
+rev_report not-json 11 11 11
+echo '{"id":"sp__b",' >"$T/not-json/datasets/sp__b.json"
+rehash not-json
+rev_report r8-no-audit 8 - -
+rev_report r7-mixed 7 7 6
+expect 0 'dry-run: would copy' "publish dry run accepts revision 11 with every dataset at 11" -- rev_publish 11 r11 pub-r11
+expect 0 'dry-run: would copy' "publish dry run accepts revision 10 with every dataset at 10" -- rev_publish 10 r10 pub-r10
+expect 1 'evaluation_revision 10, expected 11' "publish refuses revision 10 when 11 is expected" -- rev_publish 11 r10 pub-r10
+expect 1 'evaluation_revision 11, expected 10' "publish refuses revision 11 when 10 is expected" -- rev_publish 10 r11 pub-r11
+expect 1 'datasets with index evaluation.revision 10, expected 11: sp__b$' \
+    "publish dry run refuses a revision-11 index with one dataset at 10, naming it" -- rev_publish 11 mix-one pub-mix
+expect 1 'datasets whose report has evaluation.revision 10, expected 11: sp__a, sp__b$' \
+    "publish dry run refuses a revision-11 index over revision-10 datasets, naming them" -- rev_publish 11 mix-all pub-mix
+expect 1 'datasets whose report has evaluation.revision 10, expected 11: sp__b$' \
+    "publish --apply refuses a revision-11 index with one dataset at 10, naming it" -- rev_publish 11 mix-one pub-mix --apply
+expect 1 'datasets with index evaluation.revision 10, expected 11: sp__a, sp__b$' \
+    "publish --apply refuses a revision-11 index over revision-10 datasets, naming them" -- rev_publish 11 mix-all pub-mix --apply
+expect 0 '' "the refused publish --apply runs published nothing" -- \
+    test ! -e "$D/published/pub-mix" -a ! -e "$D/published/pub-mix.partial"
+expect 1 'datasets whose report has evaluation.revision 10, expected 11: sp__b$' \
+    "publish refuses a report at 10 under an index that says 11 throughout" -- rev_publish 11 mix-report pub-mix
+expect 1 'datasets with index evaluation.revision 10, expected 11: sp__b$' \
+    "publish refuses an index row at 10 over a report at 11" -- rev_publish 11 mix-row pub-mix
+expect 1 'datasets whose report has evaluation.revision missing, expected 11: sp__a, sp__b$' \
+    "publish refuses revision-11 datasets that record no revision" -- rev_publish 11 no-audit pub-mix
+expect 1 "datasets with index evaluation.revision '11', expected 11: sp__a\$" \
+    "publish refuses a dataset revision that is a string" -- rev_publish 11 bad-audit pub-mix
+expect 1 'datasets whose report has evaluation.revision 11.0, expected 11: sp__b$' \
+    "publish refuses a dataset revision that is not an integer" -- rev_publish 11 bad-audit pub-mix
+expect 1 'datasets whose report is not readable JSON: sp__b$' \
+    "publish refuses a dataset report that is not JSON" -- rev_publish 11 not-json pub-mix
+expect 1 'datasets with index evaluation.revision missing, expected 8: sp__a, sp__b$' \
+    "from revision 8, every dataset must record its revision" -- rev_publish 8 r8-no-audit pub-mix
+expect 0 'dry-run: would copy' "revision 7 keeps the index checks only" -- rev_publish 7 r7-mixed pub-mix
+expect 0 'published pub-r11 files=4' "publish --apply accepts revision 11 with every dataset at 11" -- \
+    rev_publish 11 r11 pub-r11 --apply
+expect 0 'published pub-r10 files=4' "publish --apply accepts revision 10 with every dataset at 10" -- \
+    rev_publish 10 r10 pub-r10 --apply
+# stage.sh checks the publication the same way; these are copied in by hand,
+# past publish.sh. Its --apply runs stop at the check, before anything starts.
+hand_publish() {  # hand_publish NAME PUB: $T/NAME as published/PUB
+    mkdir -p "$D/published/$2"
+    cp -a "$T/$1" "$D/published/$2/report"
+    cp "$T/$1.sha256" "$D/published/$2/SOURCE.sha256"
+}
+hand_publish mix-one pub-mix-one
+hand_publish mix-all pub-mix-all
+hand_publish mix-report pub-mix-report
+rev_stage() {  # rev_stage REVISION PUB [--apply]: stage rel2 with PUB on the spare port, expecting REVISION
+    env GRM_SKIP_BROWSER=1 GRM_EXPECT_REVISION="$1" bash "$S/stage.sh" rel2 "$2" "$STAGE_PORT" "${@:3}"
+}
+expect 1 'evaluation.revision 10, expected 11: sp__b$' \
+    "stage dry run refuses a revision-11 index with one dataset at 10, naming it" -- rev_stage 11 pub-mix-one
+expect 1 'evaluation.revision 10, expected 11: sp__b$' \
+    "stage --apply refuses a revision-11 index with one dataset at 10, naming it" -- rev_stage 11 pub-mix-one --apply
+expect 1 'evaluation.revision 10, expected 11: sp__a, sp__b$' \
+    "stage dry run refuses a revision-11 index over revision-10 datasets, naming them" -- rev_stage 11 pub-mix-all
+expect 1 'evaluation.revision 10, expected 11: sp__a, sp__b$' \
+    "stage --apply refuses a revision-11 index over revision-10 datasets, naming them" -- rev_stage 11 pub-mix-all --apply
+expect 1 'datasets whose report has evaluation.revision 10, expected 11: sp__b$' \
+    "stage --apply refuses a report at 10 under an index that says 11 throughout" -- rev_stage 11 pub-mix-report --apply
+expect 0 '' "the refused stage --apply runs started and approved nothing" -- \
+    test ! -e "$D/stage" -a ! -e "$D/spawn" -a ! -e "$D/serve-$STAGE_PORT.starting" -a ! -e "$D/go/rel2--pub-mix-one" -a ! -e "$D/go/rel2--pub-mix-all"
+expect 0 'dry-run: would serve rel2 with pub-r11' "stage dry run accepts revision 11 with every dataset at 11" -- rev_stage 11 pub-r11
+expect 0 'dry-run: would serve rel2 with pub-r10' "stage dry run accepts revision 10 with every dataset at 10" -- rev_stage 10 pub-r10
+expect 1 'evaluation_revision 10, expected 11' "stage refuses revision 10 when 11 is expected" -- rev_stage 11 pub-r10
+expect 1 'evaluation_revision 11, expected 10' "stage refuses revision 11 when 10 is expected" -- rev_stage 10 pub-r11
+# With --apply, a publication whose datasets all match passes the check and is
+# stopped at the next one, before anything starts: its approval path is a
+# directory here.
+mkdir "$D/go/rel2--pub-r11" "$D/go/rel2--pub-r10"
+expect 2 'rel2--pub-r11, serve-2.starting.* is a link, directory or special file' \
+    "stage --apply passes revision 11 with every dataset at 11" -- rev_stage 11 pub-r11 --apply
+expect 2 'rel2--pub-r10, serve-2.starting.* is a link, directory or special file' \
+    "stage --apply passes revision 10 with every dataset at 10" -- rev_stage 10 pub-r10 --apply
+rmdir "$D/go/rel2--pub-r11" "$D/go/rel2--pub-r10"
+# activate.sh, rollback.sh and restore.sh check it against the approval.
+approval rel1 pub-mix-one | sed 's/ revision=7 / revision=11 /' >"$D/go/rel1--pub-mix-one"
+approval rel1 pub-r11 | sed 's/ revision=7 / revision=11 /' >"$D/go/rel1--pub-r11"
+expect 1 'evaluation.revision 10, expected 11: sp__b$' \
+    "restore refuses a revision-11 approval of a publication with one dataset at 10" -- bash "$S/restore.sh" rel1 pub-mix-one
+expect 0 'dry-run: would start rel1 with pub-r11' \
+    "restore accepts a revision-11 approval of a publication with every dataset at 11" -- bash "$S/restore.sh" rel1 pub-r11
 
 # Damaged and malformed releases and publications.
 cp -a "$D/published/pub1" "$D/published/pub-bad"
@@ -601,7 +715,7 @@ rm "$C/cloudflared.sha256"
 mv "$T/cloudflared.sha256" "$C/cloudflared.sha256"
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=195
+EXPECTED_ASSERTIONS=228
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"

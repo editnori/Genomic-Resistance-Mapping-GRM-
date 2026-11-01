@@ -130,7 +130,14 @@ verify_tree() {
 }
 
 # The report's index has schema $2, revision $3 and $4 datasets, and lists
-# exactly the dataset reports present.
+# exactly the dataset reports present. From revision 8 on, every dataset also
+# records revision $3 as its evaluation.revision, an integer, both in its
+# index row and in its own report; a missing or malformed one fails. grm
+# report stamps the index with its own revision but copies each dataset's
+# audit, so the index alone passes a root that still holds reports of an
+# earlier revision. Revision 7 and earlier keep the index checks only: the
+# revision-7 publication predates this rule, and activate.sh, rollback.sh and
+# restore.sh check it here again against its approval.
 check_report_index() {
     python3 -I - "$@" <<'PY' || die "report $1 does not match schema $2, revision $3, $4 datasets"
 import json, os, sys
@@ -149,6 +156,23 @@ if len(ids) != count or len(set(ids)) != count:
     problems.append(f"index lists {len(ids)} datasets ({len(set(ids))} distinct), expected {count}")
 if sorted(ids) != files:
     problems.append(f"index datasets differ from the {len(files)} files in datasets/")
+if revision >= 8:
+    stale = {}
+    audits = [("with index", d["id"], d) for d in index["datasets"]]
+    for name in files:
+        try:
+            with open(os.path.join(root, "datasets", name + ".json")) as f:
+                audits.append(("whose report has", name, json.load(f)))
+        except (OSError, ValueError):
+            stale.setdefault("datasets whose report is not readable JSON", []).append(name)
+    for where, name, record in audits:
+        audit = record.get("evaluation") if isinstance(record, dict) else None
+        found = audit.get("revision") if isinstance(audit, dict) else None
+        if type(found) is not int or found != revision:
+            got = "missing" if found is None else repr(found)
+            stale.setdefault(f"datasets {where} evaluation.revision {got}, expected {revision}", []).append(name)
+    for what, names in sorted(stale.items()):
+        problems.append(f"{what}: {', '.join(sorted(names))}")
 for problem in problems:
     print(problem, file=sys.stderr)
 sys.exit(1 if problems else 0)
