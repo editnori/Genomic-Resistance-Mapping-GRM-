@@ -13,12 +13,19 @@
 # state/active or serve-PORT.pid does not record it yet, --apply records it, so
 # a later restore.sh without arguments finds it. Refuses when anything else
 # holds the port. A failed or interrupted start stops what it started, leaving
-# nothing serving and state/active as it was.
+# nothing serving and state/active as it was. --apply waits up to
+# GRM_RESTORE_LOCK_WAIT seconds (default 5) for deploy.lock, which a deploy
+# script killed outright leaves held until its short-lived children exit; a
+# lock still held then is another deployment's, and restore refuses (exit 2).
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/common.sh"
 parse_args "$@"
 set -- ${ARGS[@]+"${ARGS[@]}"}
 need curl python3 sha256sum fuser flock setsid pgrep
+# The longest such child is a health poll's curl (--max-time 2, wait_ready);
+# 5 s covers it with room on a loaded host.
+LOCK_WAIT=${GRM_RESTORE_LOCK_WAIT:-5}
+[[ $LOCK_WAIT =~ ^[0-9]+$ ]] || die "GRM_RESTORE_LOCK_WAIT must be a whole number of seconds: $LOCK_WAIT" 2
 case $# in
     0) verify_state active; label=$ST_LABEL; pub=$ST_PUB ;;
     2) label=$1; pub=$2; verify_target "$label" "$pub" ;;
@@ -57,7 +64,7 @@ if ((PENDING)); then
         would "stop pids ${ORPHANS:-none} unless serve-$PORT.pid shows that start committed, remove the journal, then restore $label with $pub"
         exit 0
     fi
-    lock_root
+    lock_root "$LOCK_WAIT"
     pending_start "$PORT"
     if ((PENDING)); then resolve_start "$PORT"; fi
 fi
@@ -74,7 +81,7 @@ if [ -n "$live_pid" ]; then
         exit 0
     fi
     checked=$live_pid
-    lock_root
+    lock_root "$LOCK_WAIT"
     no_pending_start "$PORT"
     check_port
     [ "$live_pid" = "$checked" ] || die "the service on $PORT changed during the checks" 2
@@ -95,7 +102,7 @@ if ! ((APPLY)); then
     exit 0
 fi
 
-lock_root
+lock_root "$LOCK_WAIT"
 no_pending_start "$PORT"
 check_port
 [ -z "$live_pid" ] || die "pid $live_pid started serving $PORT during the checks; run restore.sh again" 2

@@ -521,6 +521,62 @@ check "state/active still names the stopped pair" -- test "$(field active label)
 expect 0 'restore health pass: rel1 with p237' "argument-free restore recovers after SIGKILL" -- \
     bash "$S/restore.sh" --apply
 
+# The health check (smoke.sh, 20 s a request) runs without deploy.lock's
+# descriptor, so a script killed during it leaves no long holder. A curl
+# wrapper records whether each request inherited one.
+mkdir "$T/fdbin"
+printf '#!/bin/sh\nif find /proc/$$/fd -lname %s | grep -q .; then h=held; else h=free; fi\necho "$h $*" >>%s\nexec %s "$@"\n' \
+    "$D/deploy.lock" "$T/curl.fds" "$(command -v curl)" >"$T/fdbin/curl"
+chmod +x "$T/fdbin/curl"
+expect 0 'live health pass: rel2 with p275' "activate rel2 with a curl that records the descriptors it inherits" -- \
+    env PATH="$T/fdbin:$PATH" bash "$S/activate.sh" rel2 p275 --apply
+check "no request of its health check (smoke.sh) held deploy.lock" -- \
+    eval 'grep -q "^free .*--max-time 20 " "$T/curl.fds" && ! grep -q "^held .*--max-time 20 " "$T/curl.fds"'
+expect 0 'live health pass: rel1 with p237' "rollback returns to rel1" -- bash "$S/rollback.sh" --apply
+# A lock still held after the wait is another deployment's: restore refuses
+# with the same message and exit code and starts nothing. Activation never
+# waits.
+hidden_lock "$D/deploy.lock"
+mark
+expect 2 'another deployment holds' "activation refuses at once while another process holds deploy.lock" -- \
+    bash "$S/activate.sh" rel2 p275 --apply
+kill_live
+expect 2 'another deployment holds' "with GRM_RESTORE_LOCK_WAIT=0 restore refuses at once" -- \
+    env GRM_RESTORE_LOCK_WAIT=0 bash "$S/restore.sh" --apply
+check "neither waited for the lock" -- eval '! logged "waiting up to"'
+lock_t0=$SECONDS
+expect 2 'another deployment holds' "restore refuses a lock still held after its 5 s wait" -- \
+    timeout -k 5 60 bash "$S/restore.sh" --apply
+check "it waited 5 s first and started nothing; state/active still names rel1" -- \
+    eval 'test "$((SECONDS - lock_t0))" -ge 5 && logged "waiting up to 5 s" && test -z "$(running rel1)$(listener "$LP")" -a ! -e "$D/serve-$LP.starting" -a "$(field active label)" = rel1'
+kill -KILL "$hidden"
+wait "$hidden" 2>/dev/null || true
+expect 0 'restore health pass: rel1 with p237' "once that holder is gone, restore recovers" -- bash "$S/restore.sh" --apply
+# deploy.lock stays held after a script is killed outright until every
+# short-lived child it forked with the lock open exits, such as the sleep of
+# activation's health poll in the SIGKILL case above; restore waits for that,
+# up to GRM_RESTORE_LOCK_WAIT seconds (default 5). A sleep wrapper makes that
+# poll sleep 4 s here, and activation is killed in it.
+real_sleep=$(command -v sleep)
+mkdir "$T/slowbin"
+printf '#!/bin/sh\n[ "$1" != 0.25 ] || set -- 4\nexec %s "$@"\n' "$real_sleep" >"$T/slowbin/sleep"
+chmod +x "$T/slowbin/sleep"
+poll_sleep() { orphan=$(pgrep -P "$apid" -fx "$real_sleep 4"); }
+mark
+PATH="$T/slowbin:$PATH" GRM_STUB_FAIL=/rel2/ bash "$S/activate.sh" rel2 p275 --apply >"$T/act.out" 2>&1 &
+apid=$!
+orphan=''
+wait_for 15 logged "started rel2" && wait_for 15 poll_sleep || true
+check "activation reaches the sleep of its health poll" -- test -n "$orphan"
+kill -KILL "$apid" || true
+wait "$apid" 2>/dev/null || true
+check "after SIGKILL that orphaned sleep holds deploy.lock" -- \
+    eval 'locked "$D/deploy.lock" && test -n "$(find "/proc/$orphan/fd" -lname "$D/deploy.lock" 2>/dev/null)"'
+mark
+expect 0 'restore health pass: rel1 with p237' "restore waits for the orphaned sleep to free deploy.lock, then recovers" -- \
+    bash "$S/restore.sh" --apply
+check "restore said it was waiting for deploy.lock; rel1 is back" -- eval 'logged "waiting up to 5 s" && rel1_back'
+
 # Every step of a start can be interrupted. TERM (and INT, HUP) at any
 # checkpoint, including between the fork and the assignment of the PID, stops
 # the candidate, found by $! and its token, and restores rel1.
@@ -624,6 +680,8 @@ check "the killed activation's journal is kept until it is resolved" -- test -e 
 expect 0 'restore health pass: rel1 with p237' "restore then resolves that journal and restores rel1" -- bash "$S/restore.sh" --apply
 check "after the resumed child, rel1 is back" -- rel1_back
 preexec child-forked bash "$S/activate.sh" rel2 p275 --apply
+check "the child paused at the fork has already closed its deploy.lock descriptor" -- \
+    eval 'test -n "$kid" -a -r "/proc/$kid/fd" && test -z "$(find "/proc/$kid/fd" -lname "$D/deploy.lock" 2>/dev/null)"'
 preexec_resolved "activation killed with its child paused at the fork" 'restore health pass: rel1 with p237' \
     bash "$S/restore.sh" --apply
 check "after the child paused at the fork, rel1 is back" -- rel1_back
@@ -1839,7 +1897,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((488 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((502 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

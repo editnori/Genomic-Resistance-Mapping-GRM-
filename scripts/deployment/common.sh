@@ -364,10 +364,17 @@ note_expect_env() {
 
 # Take the root lock on LOCK_FD, once per script. Every process a script forks
 # for the long term closes LOCK_FD, so none holds the lock after the script.
+# A short-lived child (a sleep, a health poll) of a script killed outright
+# holds it until that child exits: lock_root SECONDS waits up to SECONDS for
+# it (restore.sh); without SECONDS it refuses at once.
 lock_root() {
     ((LOCKED)) && return 0
     open_fd LOCK_FD "$D/deploy.lock" || die "$D/deploy.lock is a link, directory or special file" 2
-    flock -n "$LOCK_FD" || die "another deployment holds $D/deploy.lock" 2
+    if ! flock -n "$LOCK_FD"; then
+        [ "${1:-0}" -gt 0 ] || die "another deployment holds $D/deploy.lock" 2
+        say "$D/deploy.lock is held; waiting up to $1 s for it"
+        flock -w "$1" "$LOCK_FD" || die "another deployment holds $D/deploy.lock" 2
+    fi
     LOCKED=1
 }
 
@@ -729,12 +736,17 @@ wait_ready() {
 }
 
 # Byte and index checks of LABEL serving NAME on a port, against the schema,
-# revision and dataset count in APPROVED[LABEL--NAME].
+# revision and dataset count in APPROVED[LABEL--NAME]. smoke.sh allows 20 s a
+# request, so it does not inherit the deployment lock (LOCK_FD): a script
+# killed during the check leaves no long holder of the lock.
 health() {
     local s r n
     read -r s r n <<<"${APPROVED[$1--$2]:?no approval loaded for $1 with $2}"
-    GRM_EXPECT_SCHEMA=$s GRM_EXPECT_REVISION=$r GRM_EXPECT_DATASETS=$n \
-        bash "$HERE/smoke.sh" "$3" "$D/published/$2/report" "$D/release/$1/dist"
+    (
+        [ -z "$LOCK_FD" ] || exec {LOCK_FD}>&-
+        GRM_EXPECT_SCHEMA=$s GRM_EXPECT_REVISION=$r GRM_EXPECT_DATASETS=$n \
+            exec bash "$HERE/smoke.sh" "$3" "$D/published/$2/report" "$D/release/$1/dist"
+    )
 }
 
 # PID, and no other process, listens on the live port and serves LABEL with
