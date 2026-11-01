@@ -19,12 +19,12 @@
 //!   sample_ids      the sample id, in report order
 //!   labels          R or S, then m when the label came from an MIC
 //!   lineages        the lineage cluster as a decimal integer
-//!   mic_values      - without an MIC, else "<censor> <log2>"
+//!   mic_values      - without an MIC, else "\<censor> \<log2>"
 //!   mic_predicted   the saved predicted log2 MICs: - for null, else the
 //!                   f64's bits as 16 lowercase hex digits; the guard holds
 //!                   null when the report has no MIC model
 //!   scores          for each split and learner in report order,
-//!                   "#<scheme> <learner>" and then its held-out scores,
+//!                   "#\<scheme> \<learner>" and then its held-out scores,
 //!                   encoded as mic_predicted is
 //!
 //! The MIC lane read the samples, MICs, and saved MIC predictions; the

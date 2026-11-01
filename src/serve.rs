@@ -1,7 +1,7 @@
 //! Serves the built dashboard and its report data from one process.
 //!
-//!   /data/<path>   files under the report directory (`grm report` output)
-//!   /<path>        files under the built web app; unknown paths get
+//!   /data/\<path>  files under the report directory (`grm report` output)
+//!   /\<path>       files under the built web app; unknown paths get
 //!                  index.html so client-side routes load
 
 use anyhow::{Context, Result};
