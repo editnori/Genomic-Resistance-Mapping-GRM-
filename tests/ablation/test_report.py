@@ -1394,6 +1394,42 @@ class WriteCases(unittest.TestCase):
                 self.assertEqual({x.parent for x in made}, {out})
                 self.assertEqual(sorted(x.name for x in out.iterdir()), [rp.JSON_NAME, rp.MARKDOWN_NAME])
 
+    def test_cleanup_removes_only_this_runs_files(self):
+        """R's L1 and RD-L1: a failed write and a good one each remove only the files that run made. Other runs'
+        temporary files and backups of both reports stay byte for byte (a kept backup is the only copy of that
+        report): after each late failure, after an early one, after a good write over a report, and after a
+        first write into a folder that holds only foreign files (kills R's PM3 and PM4 and RD68's PX1 to PX6)."""
+        theirs = {f".{final}.{tag}.{kind}": f"another run's .{kind} of {final}\n".encode()
+                  for final, tag in ((rp.JSON_NAME, "k3j9x0q1"), (rp.MARKDOWN_NAME, "q9w8e7r6"))
+                  for kind in ("tmp", "bak")}
+        fresh = Path(self.tmp.name) / "foreign-only"
+        fresh.mkdir()
+        for out in (self.out, fresh):
+            for name, data in theirs.items():
+                (out / name).write_bytes(data)
+        everything = sorted([rp.JSON_NAME, rp.MARKDOWN_NAME, *theirs])
+        md, js = self.out / rp.MARKDOWN_NAME, self.out / rp.JSON_NAME
+        failures = [
+            ("second rename (Markdown) fails", self.fail_when(lambda src, dst: src.suffix == ".tmp" and dst == md)),
+            ("first rename (JSON) fails", self.fail_when(lambda src, dst: src.suffix == ".tmp" and dst == js)),
+            ("Markdown backup fails", self.fail_when(lambda src, dst: src == md and dst.suffix == ".bak")),
+            ("writing the first temporary file fails, before any backup",
+             mock.patch.object(rp.os, "fchmod", side_effect=OSError(errno.EIO, "injected write failure"))),
+        ]
+        for name, failure in failures:
+            with self.subTest(case=name):
+                with failure, self.assertRaises(SchemaError):
+                    rp.write_report(self.later, self.out)
+                self.assertEqual(self.listing(), everything)
+                self.assertEqual({f: (self.out / f).read_bytes() for f in self.before}, self.before)
+                self.assertEqual({f: (self.out / f).read_bytes() for f in theirs}, theirs)
+        for name, out in (("a good write over a report", self.out), ("a first write", fresh)):
+            with self.subTest(case=name):
+                rp.write_report(self.later, out)
+                self.assertEqual(sorted(x.name for x in out.iterdir()), everything)
+                self.assertEqual(rp.load_report(out / rp.JSON_NAME), self.later)
+                self.assertEqual({f: (out / f).read_bytes() for f in theirs}, theirs)
+
 
 class CommandLineCases(unittest.TestCase):
     def write_inputs(self, tmp):

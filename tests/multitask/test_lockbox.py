@@ -309,6 +309,18 @@ class Identifiers(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, message):
                         check()
 
+    def test_rule_6_text_is_ms_and_ns_byte_for_byte(self):
+        # R's L4: lockbox.py's rule 6 paragraph is Task M's line in scripts/temporal/splits.py, and Task N's in
+        # canaries.py, minus "6. ", byte for byte. R's PM5, one extra space after "N).", fails here.
+        rule = {name: [line for line in (ROOT / "scripts" / "temporal" / name).read_bytes().split(b"\n")
+                       if line.startswith(b"6. For `lineage` and `duplicate_group`")]
+                for name in ("splits.py", "canaries.py")}
+        self.assertEqual([len(lines) for lines in rule.values()], [1, 1])
+        self.assertEqual(rule["canaries.py"], rule["splits.py"])
+        ours = [line for line in (ROOT / "scripts" / "multitask" / "lockbox.py").read_bytes().split(b"\n")
+                if line.startswith(b"Identifiers (rule 6")]
+        self.assertEqual(ours, [b"Identifiers (rule 6, v2, shared with Tasks M and N). " + rule["splits.py"][0][3:]])
+
 
 class Seal(unittest.TestCase):
     def test_seal_is_sha256_of_canonical_json(self):

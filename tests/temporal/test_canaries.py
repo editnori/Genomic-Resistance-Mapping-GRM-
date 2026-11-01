@@ -1147,7 +1147,7 @@ class DropNonTraining(unittest.TestCase):
                                   ("NC6", nc6_hyperparameters_declared, {"constant_keys": ["schema", "l2"]})):
             with self.subTest(name):
                 if fit is nc5_m_train_embargo_30 and M is None:
-                    self.skipTest("Task M's splits.py is neither merged nor in its worktree")
+                    self.skipTest("Task M's splits.py is not in this tree")
                 result = self.run_mnp(fit, **kwargs)
                 self.assertTrue(result.passed, result)
 
@@ -2184,15 +2184,14 @@ class UnseenVocabulary(unittest.TestCase):
                          (("x4", A.UNKNOWN, "token repeated"),))
 
 
-M_SPLITS = (ROOT / "scripts" / "temporal" / "splits.py",
-            Path("/home/layth/review/grm-task-m-temporal-splits-20261030/scripts/temporal/splits.py"))
+M_SPLITS = ROOT / "scripts" / "temporal" / "splits.py"
 
 
 def load_m():
-    """Task M's splits.py, read-only and without writing bytecode beside it:
-    the merged copy when present, else M's worktree."""
-    path = next((p for p in M_SPLITS if p.is_file()), None)
-    if path is None:
+    """Task M's splits.py in this tree, read-only and without writing bytecode
+    beside it; None when the tree has no copy."""
+    path = M_SPLITS
+    if not path.is_file():
         return None, None
     key = "grm_temporal_splits_crosscheck"
     module = sys.modules.get(key)
@@ -2271,7 +2270,7 @@ def m_train(rows, cutoff, antibiotic="INH"):
     return M.split_at(rows, cutoff, 90, 0, cutoff + dt.timedelta(days=365), antibiotic)["train"]
 
 
-@unittest.skipIf(M is None, "Task M's splits.py is neither merged nor in its worktree")
+@unittest.skipIf(M is None, "Task M's splits.py is not in this tree")
 class CrossCheckWithM(unittest.TestCase):
     """N's loader and label_as_of against M's splits.py on the same rows."""
 

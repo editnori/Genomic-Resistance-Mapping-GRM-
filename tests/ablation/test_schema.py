@@ -3,8 +3,8 @@ v1.5: good records pass, each malformed field fails, null shapes, the decision
 rule and claim levels hold.
 
 usage: python3 -I -B -m unittest discover -s tests/ablation -t .
-Set GRM_TASK_J_STATS to the path of J's stats.py to also check that K's
-mirrored constants equal J's (skipped otherwise).
+K's mirrored constants are checked against J's stats.py: the tree's own
+scripts/ablation/stats.py, or the copy GRM_TASK_J_STATS names.
 The good_* builders are shared with test_report.py.
 """
 import copy
@@ -18,6 +18,7 @@ from pathlib import Path
 from scripts.ablation import schema
 from scripts.ablation.schema import SchemaError
 
+ROOT = Path(__file__).resolve().parents[2]
 H1, H2, H3, H4 = ("1" * 64, "2" * 64, "3" * 64, "4" * 64)
 LINEAGE_PLANS, RANDOM_PLANS = ["a" * 64, "c" * 64], ["b" * 64, "d" * 64]
 METHOD = "cluster_jackknife_t"
@@ -537,10 +538,10 @@ class EquivalenceWithdrawnCases(unittest.TestCase):
             with self.subTest(n=n):
                 schema.validate_pooled(good_pooled(**values, n_units=n, decision="inconclusive"))
 
-    @unittest.skipUnless(os.environ.get("GRM_TASK_J_STATS"), "set GRM_TASK_J_STATS to J's stats.py to cross-check")
     def test_constants_match_j(self):
-        """J's stats.py is the source; K mirrors its values. Section 15 removed MIN_EQUIVALENCE_UNITS."""
-        path = Path(os.environ["GRM_TASK_J_STATS"])
+        """J's stats.py is the source; K mirrors its values. Section 15 removed MIN_EQUIVALENCE_UNITS.
+        J's file is the tree's own unless GRM_TASK_J_STATS names another copy (R's L6: a plain run checks)."""
+        path = Path(os.environ.get("GRM_TASK_J_STATS") or ROOT / "scripts" / "ablation" / "stats.py")
         spec = importlib.util.spec_from_file_location("grm_task_j_stats", path)
         st = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = st  # J's dataclasses look their module up while it loads

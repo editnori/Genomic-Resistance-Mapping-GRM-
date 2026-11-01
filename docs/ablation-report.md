@@ -230,7 +230,7 @@ Family D has no p-value, so its decision is always `inconclusive`.
 
 **No `equivalent` (§15).** J's re-check measured P(`equivalent` | true difference = margin) above 0.05 at every cluster floor it tried, so `equivalent` is withdrawn. `schema.DECISIONS` is `improves`, `worse` and `inconclusive`, and a record that says `equivalent` is refused on validation and on reload. `ci_tost` stays required with its §1 meaning; it decides nothing and feeds only the descriptive within-margin note below. The §12 floors (`MIN_EQUIVALENCE_UNITS`) are gone from K and from J. Restoring an equivalence decision needs a contract bump backed by a calibration study.
 
-Set `GRM_TASK_J_STATS` to J's `stats.py` and the suite also checks K's mirrored constants against J's: the decision set, the few-clusters and undefined-share constants, the method set, families, adjustments, primary endpoints and record keys, and that `expected_decision` and J's `decide` agree over a grid of intervals and adjusted p-values. It also checks that J no longer has `MIN_EQUIVALENCE_UNITS`.
+The suite also checks K's mirrored constants against J's `scripts/ablation/stats.py`, or against the copy `GRM_TASK_J_STATS` names: the decision set, the few-clusters and undefined-share constants, the method set, families, adjustments, primary endpoints and record keys, and that `expected_decision` and J's `decide` agree over a grid of intervals and adjusted p-values. It also checks that J no longer has `MIN_EQUIVALENCE_UNITS`.
 
 ## Pooled record (§2)
 
