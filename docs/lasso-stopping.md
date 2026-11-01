@@ -147,15 +147,15 @@ For a deliberate empty path, `path_points` and `path_unconverged` are zero and `
 
 `scripts/check-results.py` now:
 
-- accepts revisions 3 through 10 and rejects future revisions, applying the revision-8 lasso rules to revisions 9 and 10;
-- refuses a root whose reports have more than one evaluation revision, such as revision-8 reports left beside revision-9 ones by a run stopped part-way, so a revision-10 root must hold only revision-10 reports;
+- accepts revisions 3 through 11 and rejects future revisions, applying the revision-8 lasso rules to revisions 9 to 11;
+- refuses a root whose reports have more than one evaluation revision, such as revision-8 reports left beside revision-9 ones by a run stopped part-way, so a revision-11 root must hold only revision-11 reports;
 - keeps the existing revision 3–7 schema, no-call, metric, split, and log semantics;
 - requires per-fold and final lasso status on every available revision-8 split, including reports whose lasso rows have null fits;
 - rejects missing fields, wrong types, negative or out-of-range counts and indices, a wrong number of fold records, a non-empty path with no selected point (or the reverse), inconsistent selected/refit presence, and a final model inconsistent with an empty-path record;
 - checks each fold's record against that fold's scores: a lasso fold is called exactly when its `fold_complexity` (the refit's weight count) is positive, and a fold whose record has no selected point has no calls; and
 - requires zero unconverged two-class lasso path points and true selected/final convergence before accepting `valid: true`.
 
-The checker tests cover a valid revision-8 report, a valid revision-9 report and the revision-8 rules applied to it, a valid revision-10 report with an isolated duplicate pair, a root mixing two revisions (9 with 10, 8 with 9, 7 with 9, 7 with 8) beside one holding two revision-9 reports, a valid empty-path final fit with a null model, a valid empty-path record on an uncalled fold, and future-revision rejection (revision 11). `metric-audit/audit.py` has no revision list: `--revision 9` audits a revision-9 run and `--revision 10` a revision-10 one, and tests audit both clean.
+The checker tests cover a valid revision-8 report, a valid revision-9 report and the revision-8 rules applied to it, valid revision-10 and revision-11 reports with an isolated duplicate pair, a root mixing two revisions (10 with 11, 9 with 10, 8 with 9, 7 with 9, 7 with 8) beside one holding two revision-9 reports, a valid empty-path final fit with a null model, a valid empty-path record on an uncalled fold, and future-revision rejection (revision 12). `metric-audit/audit.py` has no revision list: `--revision 9` audits a revision-9 run, `--revision 10` a revision-10 one and `--revision 11` a revision-11 one, and tests audit all three clean.
 
 Negative cases cover missing, malformed and unconverged records; a saved model whose record has no refit; a dropped or extra fold record; a 30-point path with no selected point; an empty-path record on a called fold; a weight count that disagrees with the fold's calls; and a short `fold_complexity`.
 
@@ -391,14 +391,14 @@ nohup nice -n 10 python3 -I -B scan.py --input-root "$ROOT" --out "$SCAN/scan" -
 
 Revision 9 (275 datasets over 23 species) has been the published release since 2026-10-30 07:52 UTC. `scripts/deployment/` still defaults to revision 7 and 237 datasets (`common.sh`, `smoke.sh`), so every staging or publishing step must set the expected values explicitly, as below.
 
-At a future, authorized revision-10 staging/publishing operation, the operator must explicitly set:
+At a future, authorized revision-11 staging/publishing operation, the operator must explicitly set:
 
 ```bash
-GRM_EXPECT_REVISION=10
-GRM_EXPECT_DATASETS=<reports in the revision-10 run>
+GRM_EXPECT_REVISION=11
+GRM_EXPECT_DATASETS=<reports in the revision-11 run>
 ```
 
-The revision-9 run wrote 275 reports. The species check reselects some cohorts, so take the revision-10 count from its run, not from this page.
+The revision-9 run wrote 275 reports. The species check reselects some cohorts, so take the revision-11 count from its run, not from this page.
 
 Those are operation-time requirements, not changes to the current defaults and not evidence that staging or publication has occurred.
 
