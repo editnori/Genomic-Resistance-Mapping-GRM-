@@ -1,4 +1,8 @@
-# Bitset AND + popcount is the inner loop of every learner. Without a native
-# target, `count_ones` lowers to a software fallback several times slower.
+# Bitset AND + popcount is the inner loop of every learner. x86-64-v3 (AVX2,
+# BMI2, POPCNT: Intel Haswell, AMD Zen and newer) gives `count_ones` a
+# hardware popcount and runs on any such CPU; the generic x86-64 target lowers
+# it to a software fallback several times slower. For a long run on the host
+# that builds it, RUSTFLAGS="-C target-cpu=native" builds for that host's CPU
+# instead, AVX-512 included; such a binary may not start on another CPU.
 [build]
-rustflags = ["-C", "target-cpu=native"]
+rustflags = ["-C", "target-cpu=x86-64-v3"]

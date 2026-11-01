@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build grm and the dashboard from one commit and install them as a new,
-# immutable release. Build on the host that serves it: .cargo/config.toml sets
-# target-cpu=native.
+# immutable release, on the host that serves it. .cargo/config.toml builds for
+# x86-64-v3, which needs AVX2.
 # usage: build-release.sh LABEL COMMIT [--apply]
 #   GRM_SOURCE_REPO   git checkout to archive COMMIT from (default: this checkout)
 #   GRM_EXTRA_PATH    prepended to PATH, e.g. for cargo and node outside PATH

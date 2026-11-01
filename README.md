@@ -6,7 +6,7 @@ GRM measures how well a bacterial isolate's genome predicts its laboratory antim
 
 Use Linux or WSL with Rust 1.89 or newer, Node.js 22 and npm, and Bash, `flock`, and `nice` for the pipeline launcher. Python 3 is needed only for the report checks.
 
-`.cargo/config.toml` sets `target-cpu=native` so the learners' bit counting uses the CPU's popcount instruction, which means the binary should be built on the machine that runs it.
+`.cargo/config.toml` sets `target-cpu=x86-64-v3`, so the learners' bit counting uses the CPU's popcount instruction and the binary runs on any x86-64 CPU with AVX2 (Intel Haswell, AMD Zen and newer). For a long run on the machine that builds it, `RUSTFLAGS="-C target-cpu=native" cargo build --release --locked` builds for that CPU instead; that binary may not start on another CPU.
 
 ```bash
 cargo build --release --locked

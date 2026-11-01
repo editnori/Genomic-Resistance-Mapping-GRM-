@@ -358,7 +358,7 @@ Its `catalog` is a symlink to `/root/grm/data/catalog`. If that catalog has chan
 
 The launch needs separate user approval. Build the binary from a clean export of the frozen commit, on Ubuntu 24.04 with glibc 2.39 as on Vast, so nothing is compiled on Vast.
 
-`.cargo/config.toml` builds for the build machine's CPU (`target-cpu=native`), and revision 7 was built on Vast for its AMD EPYC 7K62, which LLVM calls `znver2`. So set `RUSTFLAGS` to build for that CPU instead. Rust does not contract or reorder floating-point operations for a target CPU, so the fits are the same; the timing is comparable with revision 7's.
+`.cargo/config.toml` then built for the build machine's CPU (`target-cpu=native`), and revision 7 was built on Vast for its AMD EPYC 7K62, which LLVM calls `znver2`. So set `RUSTFLAGS` to build for that CPU instead. Rust does not contract or reorder floating-point operations for a target CPU, so the fits are the same; the timing is comparable with revision 7's.
 
 Then stage the binary in a new directory on Vast, check the plan and inputs without fitting, and launch detached:
 

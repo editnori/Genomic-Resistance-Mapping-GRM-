@@ -131,7 +131,7 @@ bash $G/publish.sh /root/grm-incoming-rev7/report /root/grm-incoming-rev7/SOURCE
 
 ## Build and stage a release
 
-On the host that will serve it (`.cargo/config.toml` builds for the native CPU):
+On the host that will serve it (`.cargo/config.toml` builds for `x86-64-v3`, which needs AVX2):
 
 ```bash
 export GRM_EXTRA_PATH=/root/.cargo/bin:/root/grm/.tools/node/bin
