@@ -649,6 +649,40 @@ check "the journal is kept and the committed rel2 still serves, the same process
 expect 0 'restore health pass: rel2 with p275' "the next argument-free restore resolves that start and restarts rel2" -- \
     bash "$S/restore.sh" --apply
 expect 0 'live health pass: rel1 with p237' "rollback returns to rel1" -- bash "$S/rollback.sh" --apply
+# rollback.sh reads state/previous before deploy.lock (REVIEW-DEPLOY I1). An
+# activation that commits between that read and rollback's first look at the
+# live service moves state/previous; switching to the pair read would undo that
+# activation's record, which no serial order of the two gives. A fuser shim
+# pauses the rollback at its first listener lookup, after both of its reads of
+# state/previous (rel2 with p275), while the suite activates rel3 in place of
+# rel1. Resumed, the rollback must refuse under the lock, changing nothing.
+expect 0 'stage pass' "stage rel3 with p237 for the rollback race" -- \
+    env GRM_EXPECT_DATASETS=237 bash "$S/stage.sh" rel3 p237 "$SP" --apply
+cp "$D/state/previous" "$T/previous.rel2"
+mkdir "$T/pausebin"
+printf '#!/bin/sh\nif [ -n "${GRM_TEST_PAUSE:-}" ] && mkdir "$GRM_TEST_PAUSE.taken" 2>/dev/null; then\n    : >"$GRM_TEST_PAUSE.reached"\n    while [ ! -e "$GRM_TEST_PAUSE.go" ]; do sleep 0.1; done\nfi\nexec %s "$@"\n' \
+    "$(command -v fuser)" >"$T/pausebin/fuser"
+chmod +x "$T/pausebin/fuser"
+env PATH="$T/pausebin:$PATH" GRM_TEST_PAUSE="$T/rbpause" bash "$S/rollback.sh" --apply >"$T/rb.out" 2>&1 &
+rb=$!
+check "rollback read state/previous (rel2 with p275) and paused at its first listener lookup" -- \
+    eval 'wait_for 30 test -e "$T/rbpause.reached" && grep -q "rollback target from state/previous: rel2 with p275" "$T/rb.out"'
+expect 0 'live health pass: rel3 with p237' "meanwhile an activation switches rel1 to rel3 and commits it" -- \
+    bash "$S/activate.sh" rel3 p237 --apply
+: >"$T/rbpause.go"
+set +e
+wait "$rb"
+rc=$?
+set -e
+check "the resumed rollback refuses under the lock (exit 2): state/previous no longer records rel2 with p275" -- \
+    eval 'test "$rc" = 2 && grep -q "state/previous no longer records rel2 with p275" "$T/rb.out"'
+check "it changed nothing: rel3 serves, state/active names rel3 and state/previous rel1, and no rel2 runs" -- \
+    eval 'test "$(live)" = "rel3 p237" -a "$(field active label)" = rel3 -a "$(field previous label)" = rel1 -a -z "$(running rel2)" -a ! -e "$D/serve-$LP.starting"'
+expect 0 'live health pass: rel1 with p237' "activation returns to rel1" -- bash "$S/activate.sh" rel1 p237 --apply
+mv -f "$T/previous.rel2" "$D/state/previous"
+rm "$D/go/rel3--p237"
+check "state/previous records rel2 again, and rel3 has no approval" -- \
+    test "$(field previous label)" = rel2 -a ! -e "$D/go/rel3--p237"
 
 # Every step of a start can be interrupted. TERM (and INT, HUP) at any
 # checkpoint, including between the fork and the assignment of the PID, stops
@@ -2094,7 +2128,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((520 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((527 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
