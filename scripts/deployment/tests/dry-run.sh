@@ -284,6 +284,43 @@ expect 1 'evaluation.revision 10, expected 11: sp__b$' \
 expect 0 'dry-run: would start rel1 with pub-r11' \
     "restore accepts a revision-11 approval of a publication with every dataset at 11" -- bash "$S/restore.sh" rel1 pub-r11
 
+# The GRM_EXPECT_* defaults are the revision-7 publication's, and 237 is its
+# count, not a later revision's: publish.sh, stage.sh and approve-legacy.sh
+# refuse another revision without GRM_EXPECT_DATASETS, before they read
+# anything. A revision-11 root that happens to hold 237 reports (a stopped
+# run, say) would otherwise pass on revision 7's count.
+r=$T/r11-237
+mkdir -p "$r/datasets"
+rows=''
+for i in $(seq -w 1 237); do
+    printf '{"id":"sp__d%s","evaluation":{"revision":11}}\n' "$i" >"$r/datasets/sp__d$i.json"
+    rows+="${rows:+,}{\"id\":\"sp__d$i\",\"evaluation\":{\"revision\":11}}"
+done
+printf '{"schema":2,"evaluation_revision":11,"datasets":[%s]}\n' "$rows" >"$r/index.json"
+echo '{"corpus":1}' >"$r/corpus.json"
+rehash r11-237
+no_count() { env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=11 "$@"; }
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' \
+    "publish dry run refuses revision 11 without GRM_EXPECT_DATASETS, though the root holds 237 reports" -- \
+    no_count bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-default
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "publish --apply refuses it too" -- \
+    no_count bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-default --apply
+expect 0 '' "the refused publish published nothing" -- \
+    test ! -e "$D/published/pub-r11-default" -a ! -e "$D/published/pub-r11-default.partial"
+expect 0 'published pub-r11-237 files=239' "publish --apply accepts that root with GRM_EXPECT_DATASETS=237 set" -- \
+    env GRM_EXPECT_DATASETS=237 GRM_EXPECT_REVISION=11 bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-237 --apply
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "stage refuses revision 11 without GRM_EXPECT_DATASETS" -- \
+    no_count env GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel2 pub-r11-237 "$STAGE_PORT"
+expect 0 'dry-run: would serve rel2 with pub-r11-237' "stage dry run accepts it with GRM_EXPECT_DATASETS=237 set" -- \
+    env GRM_SKIP_BROWSER=1 GRM_EXPECT_DATASETS=237 GRM_EXPECT_REVISION=11 bash "$S/stage.sh" rel2 pub-r11-237 "$STAGE_PORT"
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "approve-legacy refuses revision 11 without GRM_EXPECT_DATASETS" -- \
+    no_count bash "$S/approve-legacy.sh" rel1 pub-r11-237
+expect 1 'index lists 2 datasets \(2 distinct\), expected 237' \
+    "with no GRM_EXPECT_* set, as in the revision-7 runbook, publish still checks revision 7 and 237 datasets" -- \
+    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-legacy
+expect 0 'GRM_EXPECT_\* is not used here' "restore, which checks the approval, is not refused for revision 11 without a count" -- \
+    no_count bash "$S/restore.sh" rel1 pub1
+
 # Damaged and malformed releases and publications.
 cp -a "$D/published/pub1" "$D/published/pub-bad"
 chmod -R u+w "$D/published/pub-bad"
@@ -715,7 +752,7 @@ rm "$C/cloudflared.sha256"
 mv "$T/cloudflared.sha256" "$C/cloudflared.sha256"
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=228
+EXPECTED_ASSERTIONS=237
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"

@@ -15,6 +15,7 @@ set -- "${ARGS[@]}"
 label=$1
 pub=$2
 need curl python3 sha256sum fuser
+check_expect
 check_name "$label"
 check_name "$pub"
 legacy=$D/GO-$label

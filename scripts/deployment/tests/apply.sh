@@ -576,6 +576,35 @@ mark
 expect 0 'restore health pass: rel1 with p237' "restore waits for the orphaned sleep to free deploy.lock, then recovers" -- \
     bash "$S/restore.sh" --apply
 check "restore said it was waiting for deploy.lock; rel1 is back" -- eval 'logged "waiting up to 5 s" && rel1_back'
+# An argument-free restore reads state/active before it holds deploy.lock. If
+# an activation commits another pair while restore waits for the lock, and
+# that pair then dies, restore must not start the older pair it read. Here a
+# hidden process holds the lock, the suite commits rel2 with p275 in its place
+# as activation would (the record common.sh write_state writes), and nothing
+# serves when the lock is freed.
+rel2_active() {
+    printf 'label=rel2\npublication=p275\ncommit=%s\nrelease_manifest=%s\nreport_manifest=%s\nschema=2\nrevision=7\ndatasets=275\nat=%s\n' \
+        "$(cat "$D/release/rel2/COMMIT")" "$(sha256sum <"$D/release/rel2/MANIFEST.sha256" | cut -d' ' -f1)" \
+        "$(sha256sum <"$D/published/p275/SOURCE.sha256" | cut -d' ' -f1)" "$(date -u +%FT%TZ)"
+}
+kill_live
+hidden_lock "$D/deploy.lock"
+mark
+(
+    wait_for 30 logged "waiting up to 60 s" && rel2_active >"$T/active.race" && mv -f "$T/active.race" "$D/state/active"
+    kill -KILL "$hidden"
+) &
+committer=$!
+expect 2 'state/active no longer records rel1 with p237' \
+    "a restore that read rel1 and waited for deploy.lock while rel2 was committed refuses once it holds the lock" -- \
+    timeout -k 5 120 env GRM_RESTORE_LOCK_WAIT=60 bash "$S/restore.sh" --apply
+wait "$committer" || true
+wait "$hidden" 2>/dev/null || true
+check "rel2 was committed while restore waited, and restore started nothing and left state/active naming rel2" -- \
+    eval 'logged "waiting up to 60 s" && test "$(field active label)" = rel2 -a -z "$(running rel1)$(running rel2)$(listener "$LP")" -a ! -e "$D/serve-$LP.starting"'
+expect 0 'restore health pass: rel2 with p275' "the next argument-free restore starts rel2, which state/active names" -- \
+    bash "$S/restore.sh" --apply
+expect 0 'live health pass: rel1 with p237' "rollback returns to rel1" -- bash "$S/rollback.sh" --apply
 
 # Every step of a start can be interrupted. TERM (and INT, HUP) at any
 # checkpoint, including between the fork and the assignment of the PID, stops
@@ -1897,7 +1926,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((502 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((506 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

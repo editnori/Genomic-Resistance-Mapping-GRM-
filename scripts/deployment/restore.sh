@@ -17,6 +17,9 @@
 # GRM_RESTORE_LOCK_WAIT seconds (default 5) for deploy.lock, which a deploy
 # script killed outright leaves held until its short-lived children exit; a
 # lock still held then is another deployment's, and restore refuses (exit 2).
+# Without arguments it reads state/active before it holds the lock, so once
+# it holds it, it checks that state/active still records that pair, and
+# refuses (exit 2) if another deployment committed a different one meanwhile.
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/common.sh"
 parse_args "$@"
@@ -27,11 +30,22 @@ need curl python3 sha256sum fuser flock setsid pgrep
 LOCK_WAIT=${GRM_RESTORE_LOCK_WAIT:-5}
 [[ $LOCK_WAIT =~ ^[0-9]+$ ]] || die "GRM_RESTORE_LOCK_WAIT must be a whole number of seconds: $LOCK_WAIT" 2
 case $# in
-    0) verify_state active; label=$ST_LABEL; pub=$ST_PUB ;;
-    2) label=$1; pub=$2; verify_target "$label" "$pub" ;;
+    0) verify_state active; label=$ST_LABEL; pub=$ST_PUB; from_state=1 ;;
+    2) label=$1; pub=$2; verify_target "$label" "$pub"; from_state=0 ;;
     *) die "usage: restore.sh [LABEL PUBLICATION] [--apply]" 2 ;;
 esac
 note_expect_env
+
+# Take deploy.lock. Without arguments the target came from state/active, read
+# before the lock: an activation may have committed another pair since, while
+# restore waited for the lock, and if that pair has died, starting the one read
+# would bring back an older pair. Refuse instead; a rerun reads the new one.
+take_lock() {
+    lock_root "$LOCK_WAIT"
+    if ((from_state)) && ! state_is active "$label" "$pub"; then
+        die "state/active no longer records $label with $pub: another deployment changed it after restore read it; nothing was changed, run restore.sh again" 2
+    fi
+}
 
 # Set live_pid to the healthy target serving PORT, or '' when nothing listens;
 # refuse anything else.
@@ -64,7 +78,7 @@ if ((PENDING)); then
         would "stop pids ${ORPHANS:-none} unless serve-$PORT.pid shows that start committed, remove the journal, then restore $label with $pub"
         exit 0
     fi
-    lock_root "$LOCK_WAIT"
+    take_lock
     pending_start "$PORT"
     if ((PENDING)); then resolve_start "$PORT"; fi
 fi
@@ -81,7 +95,7 @@ if [ -n "$live_pid" ]; then
         exit 0
     fi
     checked=$live_pid
-    lock_root "$LOCK_WAIT"
+    take_lock
     no_pending_start "$PORT"
     check_port
     [ "$live_pid" = "$checked" ] || die "the service on $PORT changed during the checks" 2
@@ -102,7 +116,7 @@ if ! ((APPLY)); then
     exit 0
 fi
 
-lock_root "$LOCK_WAIT"
+take_lock
 no_pending_start "$PORT"
 check_port
 [ -z "$live_pid" ] || die "pid $live_pid started serving $PORT during the checks; run restore.sh again" 2

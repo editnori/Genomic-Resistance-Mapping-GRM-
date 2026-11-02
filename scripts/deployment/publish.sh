@@ -11,6 +11,7 @@ parse_args "$@"
 set -- "${ARGS[@]}"
 [ $# -eq 3 ] || die "usage: publish.sh SOURCE_REPORT_DIR SOURCE_MANIFEST NAME [--apply]" 2
 need python3 sha256sum
+check_expect
 src=$(cd -- "$1" && pwd)
 manifest=$(cd -- "$(dirname -- "$2")" && pwd)/$(basename -- "$2")
 name=$3

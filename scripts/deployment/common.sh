@@ -7,12 +7,15 @@
 #   GRM_PORT             live loopback port (default 8641)
 #   GRM_EXPECT_SCHEMA    report index schema (default 2)
 #   GRM_EXPECT_REVISION  report evaluation revision (default 7)
-#   GRM_EXPECT_DATASETS  dataset report count (default 237)
+#   GRM_EXPECT_DATASETS  dataset report count (default 237; required when
+#                        GRM_EXPECT_REVISION is not 7)
 # GRM_EXPECT_* is what publish.sh, stage.sh and approve-legacy.sh require of a
-# report. The approval they lead to records those values, and activate.sh,
-# rollback.sh, restore.sh and status.sh check each pair against its own
-# approval, so a 275-dataset candidate and a 237-dataset rollback target need
-# no shared setting.
+# report. The defaults are the revision-7 publication's, kept for its legacy
+# runbook (docs/deployment.md); 237 is that release's count, so another
+# revision must name its own (check_expect). The approval they lead to records
+# those values, and activate.sh, rollback.sh, restore.sh and status.sh check
+# each pair against its own approval, so a 275-dataset candidate and a
+# 237-dataset rollback target need no shared setting.
 #
 # Layout under the root:
 #   published/NAME/{report/,SOURCE.sha256}       immutable report publications
@@ -360,6 +363,15 @@ note_expect_env() {
     if [ -n "${GRM_EXPECT_SCHEMA:-}${GRM_EXPECT_REVISION:-}${GRM_EXPECT_DATASETS:-}" ]; then
         say "note: GRM_EXPECT_* is not used here; each pair is checked against the schema, revision and dataset count its approval records"
     fi
+}
+
+# publish.sh, stage.sh and approve-legacy.sh, before they read anything: the
+# default count, 237, is revision 7's, so a report of another revision is
+# never checked against it. Without this, a revision-11 root that happened to
+# hold 237 reports (a stopped run, say) would pass on revision 7's count.
+check_expect() {
+    [ "$EXPECT_REVISION" -eq 7 ] || [ -n "${GRM_EXPECT_DATASETS:-}" ] ||
+        die "GRM_EXPECT_REVISION=$EXPECT_REVISION needs GRM_EXPECT_DATASETS, that revision's report count: the default, 237, is revision 7's" 2
 }
 
 # Take the root lock on LOCK_FD, once per script. Every process a script forks

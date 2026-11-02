@@ -26,6 +26,7 @@ sport=$3
 [[ $sport =~ ^[0-9]+$ ]] && ((sport > 0 && sport < 65536)) || die "invalid port $sport" 2
 [ "$sport" != "$PORT" ] || die "$sport is the live port; stage on a spare one" 2
 need curl python3 sha256sum fuser flock setsid pgrep
+check_expect
 verify_release "$label"
 release_files=$VT_LISTED
 verify_publication "$pub" "$EXPECT_SCHEMA" "$EXPECT_REVISION" "$EXPECT_DATASETS"
