@@ -317,6 +317,12 @@ expect 0 'published pub-r11-237 files=239' "publish --apply accepts that root wi
     env GRM_EXPECT_DATASETS=237 GRM_EXPECT_REVISION=11 bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-237 --apply
 expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "stage refuses revision 11 without GRM_EXPECT_DATASETS" -- \
     no_count env GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel2 pub-r11-237 "$STAGE_PORT"
+# stage.sh refuses the unset count before it reads anything (REVIEW-DEPLOY
+# L3): with a publication that does not exist, the count is still what it
+# reports, not the missing publication.
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' \
+    "stage refuses the unset count before it reads the release or the publication (a missing one here)" -- \
+    no_count env GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel2 pub-missing "$STAGE_PORT"
 expect 0 'dry-run: would serve rel2 with pub-r11-237' "stage dry run accepts it with GRM_EXPECT_DATASETS=237 set" -- \
     env GRM_SKIP_BROWSER=1 GRM_EXPECT_DATASETS=237 GRM_EXPECT_REVISION=11 bash "$S/stage.sh" rel2 pub-r11-237 "$STAGE_PORT"
 expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "approve-legacy refuses revision 11 without GRM_EXPECT_DATASETS" -- \
@@ -324,6 +330,12 @@ expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "approve-legacy refu
 expect 1 'index lists 2 datasets \(2 distinct\), expected 237' \
     "with no GRM_EXPECT_* set, as in the revision-7 runbook, publish still checks revision 7 and 237 datasets" -- \
     env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-legacy
+# A runbook that names revision 7 explicitly, without a count, is the
+# revision-7 runbook too (REVIEW-DEPLOY L2): check_expect asks whether the
+# revision is 7, not whether GRM_EXPECT_REVISION is set.
+expect 1 'index lists 2 datasets \(2 distinct\), expected 237' \
+    "with GRM_EXPECT_REVISION=7 set and no count, publish is not refused and checks revision 7's 237 datasets" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-legacy
 expect 0 'GRM_EXPECT_\* is not used here' "restore, which checks the approval, is not refused for revision 11 without a count" -- \
     no_count bash "$S/restore.sh" rel1 pub1
 
@@ -821,7 +833,7 @@ else
 fi
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=$((242 - skipped))  # less the root-only and missing-boot-hook skips
+EXPECTED_ASSERTIONS=$((244 - skipped))  # less the root-only and missing-boot-hook skips
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"

@@ -615,6 +615,40 @@ check "rel2 was committed while restore waited, and restore started nothing and 
 expect 0 'restore health pass: rel2 with p275' "the next argument-free restore starts rel2, which state/active names" -- \
     bash "$S/restore.sh" --apply
 expect 0 'live health pass: rel1 with p237' "rollback returns to rel1" -- bash "$S/rollback.sh" --apply
+# The same re-check comes first in the interrupted-start branch
+# (REVIEW-DEPLOY L1). An activation killed after its state commit leaves rel2
+# serving, state/active naming it, no serve-PORT.pid record of it and a
+# journal whose script is gone. A restore that read rel1 and that journal,
+# and then waited for deploy.lock while rel2 was committed, must refuse
+# before it resolves the journal, which would stop the healthy rel2. Here
+# state/active holds rel1's record while restore reads it, and the suite puts
+# rel2's back while restore waits.
+cp "$D/state/active" "$T/active.rel1"
+at committed KILL bash "$S/activate.sh" rel2 p275 --apply
+committed_pid=$(listener "$LP")
+committed_start=$(start_of "${committed_pid:-0}")
+check "an activation killed after its state commit leaves rel2 serving, its journal and state/active naming rel2" -- \
+    eval 'test -n "$committed_pid" -a "$(live)" = "rel2 p275" -a -e "$D/serve-$LP.starting" -a "$(field active label)" = rel2'
+cp "$D/state/active" "$T/active.rel2"
+cp "$T/active.rel1" "$T/active.race" && mv -f "$T/active.race" "$D/state/active"
+hidden_lock "$D/deploy.lock"
+mark
+(
+    wait_for 30 logged "waiting up to 60 s" && cp "$T/active.rel2" "$T/active.race" && mv -f "$T/active.race" "$D/state/active"
+    kill -KILL "$hidden"
+) &
+committer=$!
+expect 2 'state/active no longer records rel1 with p237' \
+    "a restore that read rel1 and an interrupted start, then waited for deploy.lock while rel2 was committed, refuses before resolving it" -- \
+    timeout -k 5 120 env GRM_RESTORE_LOCK_WAIT=60 bash "$S/restore.sh" --apply
+wait "$committer" || true
+wait "$hidden" 2>/dev/null || true
+unlist "$hidden"
+check "the journal is kept and the committed rel2 still serves, the same process, with state/active naming it" -- \
+    eval 'test -e "$D/serve-$LP.starting" -a "$(listener "$LP")" = "$committed_pid" -a "$(start_of "$committed_pid")" = "$committed_start" -a "$(field active label)" = rel2'
+expect 0 'restore health pass: rel2 with p275' "the next argument-free restore resolves that start and restarts rel2" -- \
+    bash "$S/restore.sh" --apply
+expect 0 'live health pass: rel1 with p237' "rollback returns to rel1" -- bash "$S/rollback.sh" --apply
 
 # Every step of a start can be interrupted. TERM (and INT, HUP) at any
 # checkpoint, including between the fork and the assignment of the PID, stops
@@ -2060,7 +2094,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((515 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((520 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
