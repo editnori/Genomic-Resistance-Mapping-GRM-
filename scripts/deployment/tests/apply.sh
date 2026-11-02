@@ -680,6 +680,35 @@ check "it changed nothing: rel3 serves, state/active names rel3 and state/previo
     eval 'test "$(live)" = "rel3 p237" -a "$(field active label)" = rel3 -a "$(field previous label)" = rel1 -a -z "$(running rel2)" -a ! -e "$D/serve-$LP.starting"'
 expect 0 'live health pass: rel1 with p237' "activation returns to rel1" -- bash "$S/activate.sh" rel1 p237 --apply
 mv -f "$T/previous.rel2" "$D/state/previous"
+# The re-check must run under the lock, not just before it (REVIEW-DS2 L1;
+# REVIEW-DS's probe). lock_root opens deploy.lock and then runs flock, found
+# through PATH, before the lock is held. A flock shim holds the rollback
+# (target rel2) there, after any check placed before lock_root. Meanwhile an
+# activation of rel3 is killed right after it records rel1 in state/previous
+# and state/active, before it stops rel1: the live service is unchanged, so
+# only a state/previous check made under the lock sees the change.
+mkdir "$T/pausebin2"
+printf '#!/bin/sh\nif [ -n "${GRM_TEST_PAUSE:-}" ] && [ "$1" = -n ]; then\n    case $(readlink "/proc/$$/fd/$2" 2>/dev/null) in\n    */deploy.lock) if mkdir "$GRM_TEST_PAUSE.taken" 2>/dev/null; then : >"$GRM_TEST_PAUSE.reached"; while [ ! -e "$GRM_TEST_PAUSE.go" ]; do sleep 0.1; done; fi ;;\n    esac\nfi\nexec %s "$@"\n' \
+    "$(command -v flock)" >"$T/pausebin2/flock"
+chmod +x "$T/pausebin2/flock"
+cp "$D/state/previous" "$T/previous.k1"
+env PATH="$T/pausebin2:$PATH" GRM_TEST_PAUSE="$T/k1pause" bash "$S/rollback.sh" --apply >"$T/k1.out" 2>&1 &
+k1=$!
+check "a rollback to rel2 is held in lock_root's flock on deploy.lock, before the lock" -- \
+    eval 'wait_for 30 test -e "$T/k1pause.reached" && grep -q "rollback target from state/previous: rel2 with p275" "$T/k1.out"'
+at renamed:active KILL bash "$S/activate.sh" rel3 p237 --apply
+check "meanwhile an activation killed after its records leaves state/previous naming rel1, and rel1 still serves" -- \
+    eval 'test "$(field previous label)" = rel1 -a "$(live)" = "rel1 p237" -a ! -e "$D/serve-$LP.starting"'
+: >"$T/k1pause.go"
+set +e
+wait "$k1"
+k1rc=$?
+set -e
+check "once it holds the lock the rollback refuses (exit 2), and rel1 still serves" -- \
+    eval 'test "$k1rc" = 2 && grep -q "state/previous no longer records rel2 with p275" "$T/k1.out" && test "$(live)" = "rel1 p237"'
+[ "$k1rc" = 2 ] || sed 's/^/     rollback: /' "$T/k1.out"
+if [ "$(live)" != "rel1 p237" ]; then bash "$S/activate.sh" rel1 p237 --apply >/dev/null 2>&1 || true; fi
+mv -f "$T/previous.k1" "$D/state/previous"
 rm "$D/go/rel3--p237"
 check "state/previous records rel2 again, and rel3 has no approval" -- \
     test "$(field previous label)" = rel2 -a ! -e "$D/go/rel3--p237"
@@ -2207,7 +2236,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((540 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((543 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
