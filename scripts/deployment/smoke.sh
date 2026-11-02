@@ -7,7 +7,8 @@
 # temporary directory (mktemp), removed on exit.
 # usage: smoke.sh PORT REPORT_DIR DIST_DIR
 #   GRM_EXPECT_SCHEMA (default 2), GRM_EXPECT_REVISION (7), GRM_EXPECT_DATASETS
-#   (237, revision 7's count; required for any other revision)
+#   (237, revision 7's count; required for any other revision); each a whole
+#   number in ASCII digits
 set -euo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 port=$1
@@ -19,6 +20,16 @@ count=${GRM_EXPECT_DATASETS:-237}
 [ "$revision" = 7 ] || [ -n "${GRM_EXPECT_DATASETS:-}" ] || { echo "FAIL GRM_EXPECT_REVISION=$revision needs GRM_EXPECT_DATASETS, that revision's report count: the default, 237, is revision 7's"; exit 2; }
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
+
+# Digits only, as common.sh requires of GRM_EXPECT_*. The index check reads
+# these with Python's int(), which also takes "10\r" (a CRLF env file), "1_0"
+# and full-width digits, but bash's -ge below does not, so such a revision
+# skipped the per-dataset check and passed. The class lists the digits, so no
+# locale widens it.
+for pair in "GRM_EXPECT_SCHEMA=$schema" "GRM_EXPECT_REVISION=$revision" "GRM_EXPECT_DATASETS=$count"; do
+    [[ ${pair#*=} =~ ^[0123456789]+$ ]] ||
+        { echo "FAIL ${pair%%=*} must be a whole number in ASCII digits, not $(printf %q "${pair#*=}")"; exit 2; }
+done
 
 check() {
     local url=$1 file=$2 got want

@@ -1042,6 +1042,39 @@ expect 1 'FAIL served index.json' "with GRM_EXPECT_REVISION=7 set and no count, 
 kill -KILL "$s8" 2>/dev/null || true
 wait "$s8" 2>/dev/null || true
 check "the revision-8 stub is gone and the spare port free" -- wait_for 5 port_free "$SP"
+# smoke.sh refuses an expected value that is not a whole number in ASCII
+# digits (REVIEW-DS2 M1). Python's int() reads "10\r", "1_0" and full-width
+# 10 as 10, and bash's -ge does not, so these skipped the per-dataset check
+# and passed. The stub serves a revision-10 index whose every row and served
+# report record revision 7.
+mkdir -p "$T/s10/report/datasets"
+python3 -I - "$T/s10/report" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+ids = ["sp__t1", "sp__t2", "sp__t3"]
+with open(os.path.join(root, "index.json"), "w") as f:
+    json.dump({"schema": 2, "evaluation_revision": 10, "datasets": [{"id": i, "evaluation": {"revision": 7}} for i in ids]}, f)
+with open(os.path.join(root, "corpus.json"), "w") as f:
+    json.dump({"corpus": 3}, f)
+for i in ids:
+    with open(os.path.join(root, "datasets", i + ".json"), "w") as f:
+        json.dump({"id": i, "evaluation": {"revision": 7}}, f)
+PY
+"$T/grm-stub" --data "$T/s10" serve --app "$D/release/rel1/dist" --port "$SP" >/dev/null 2>&1 &
+s10=$!
+wait_for 10 eval '! port_free "$SP"' || true
+smoke10() { env GRM_EXPECT_SCHEMA=2 GRM_EXPECT_REVISION="$1" GRM_EXPECT_DATASETS=3 bash "$S/smoke.sh" "$SP" "$T/s10/report" "$D/release/rel1/dist"; }
+expect 1 'with index evaluation.revision 7, expected 10: sp__t1, sp__t2, sp__t3' \
+    "control: smoke.sh fails a revision-10 index whose rows and reports record revision 7" -- smoke10 10
+expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' \
+    "smoke.sh refuses GRM_EXPECT_REVISION=10 with a trailing CR (a CRLF env file)" -- smoke10 "$(printf '10\r')"
+expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' \
+    "smoke.sh refuses GRM_EXPECT_REVISION=1_0" -- smoke10 1_0
+expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' \
+    "smoke.sh refuses GRM_EXPECT_REVISION in full-width digits" -- smoke10 "$(printf '\357\274\221\357\274\220')"
+kill -KILL "$s10" 2>/dev/null || true
+wait "$s10" 2>/dev/null || true
+check "the revision-10 stub is gone and the spare port free" -- wait_for 5 port_free "$SP"
 expect 0 'live health pass: rel2 with p275' "rollback again switches forward to 275" -- bash "$S/rollback.sh" --apply
 kill -KILL "$(listener "$LP")"
 wait_for 5 port_free "$LP" || true
@@ -2174,7 +2207,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((535 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((540 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
