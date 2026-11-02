@@ -996,6 +996,15 @@ expect 0 'smoke-pass .*datasets=275' "status checks the live pair against its ap
 check "status and smoke.sh leave no temporary files" -- test -z "$(ls -A "$T/tmp")"
 expect 0 'live health pass: rel1 with p237' "rollback 275 -> 237" -- bash "$S/rollback.sh" --apply
 check "rel1 with p237 serves" -- test "$(live)" = "rel1 p237"
+# status.sh checks a live pair without a valid approval against GRM_EXPECT_*,
+# and refuses another revision than 7 without a count (REVIEW-DEPLOY I3), as
+# check_expect does, rather than checking it against revision 7's 237.
+mv "$D/go/rel1--p237" "$T/rel1--p237.keep"
+expect 0 'smoke-pass .*revision=7 datasets=237' "status checks a live pair without an approval against the GRM_EXPECT_* defaults" -- \
+    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/status.sh"
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "status refuses to check that pair against revision 11 without a count" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=11 bash "$S/status.sh"
+mv "$T/rel1--p237.keep" "$D/go/rel1--p237"
 # smoke.sh checks every served dataset's revision from revision 8 on (U-13),
 # as check_report_index does for a publication: each index row and each served
 # datasets/ID.json records evaluation.revision. The stub serves a three-dataset
@@ -1026,6 +1035,10 @@ cp "$T/s8.r2" "$T/s8/report/datasets/sp__r2.json"
 sed 's/{"id": "sp__r3", "evaluation": {"revision": 8}}/{"id": "sp__r3"}/' "$T/s8.index" >"$T/s8/report/index.json"
 expect 1 'with index evaluation.revision missing, expected 8: sp__r3' "smoke.sh fails a served index row without the revision" -- smoke8
 cp "$T/s8.index" "$T/s8/report/index.json"
+expect 2 'GRM_EXPECT_REVISION=8 needs GRM_EXPECT_DATASETS' "smoke.sh run directly refuses revision 8 without a count (REVIEW-DEPLOY I3)" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=8 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
+expect 1 'FAIL served index.json' "with GRM_EXPECT_REVISION=7 set and no count, smoke.sh is not refused and checks revision 7's 237" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
 kill -KILL "$s8" 2>/dev/null || true
 wait "$s8" 2>/dev/null || true
 check "the revision-8 stub is gone and the spare port free" -- wait_for 5 port_free "$SP"
@@ -2161,7 +2174,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((531 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((535 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

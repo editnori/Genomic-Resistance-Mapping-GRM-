@@ -51,6 +51,7 @@ if (check_go "$label" "$pub") >/dev/null 2>&1; then
         say "state/active does not record the live pair; see restore.sh"
     fi
 else
+    check_expect
     say "the live pair has no valid approval; checking it against GRM_EXPECT_* (schema $EXPECT_SCHEMA, revision $EXPECT_REVISION, $EXPECT_DATASETS datasets)"
     APPROVED[$label--$pub]="$EXPECT_SCHEMA $EXPECT_REVISION $EXPECT_DATASETS"
 fi

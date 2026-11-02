@@ -6,7 +6,8 @@
 # served report. It only sends GET requests to 127.0.0.1 and writes only a
 # temporary directory (mktemp), removed on exit.
 # usage: smoke.sh PORT REPORT_DIR DIST_DIR
-#   GRM_EXPECT_SCHEMA (default 2), GRM_EXPECT_REVISION (7), GRM_EXPECT_DATASETS (237)
+#   GRM_EXPECT_SCHEMA (default 2), GRM_EXPECT_REVISION (7), GRM_EXPECT_DATASETS
+#   (237, revision 7's count; required for any other revision)
 set -euo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 port=$1
@@ -15,6 +16,7 @@ dist=$3
 schema=${GRM_EXPECT_SCHEMA:-2}
 revision=${GRM_EXPECT_REVISION:-7}
 count=${GRM_EXPECT_DATASETS:-237}
+[ "$revision" = 7 ] || [ -n "${GRM_EXPECT_DATASETS:-}" ] || { echo "FAIL GRM_EXPECT_REVISION=$revision needs GRM_EXPECT_DATASETS, that revision's report count: the default, 237, is revision 7's"; exit 2; }
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 

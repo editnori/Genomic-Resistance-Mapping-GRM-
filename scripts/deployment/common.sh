@@ -367,9 +367,10 @@ note_expect_env() {
     fi
 }
 
-# publish.sh, stage.sh and approve-legacy.sh, before they read anything: the
-# default count, 237, is revision 7's, so a report of another revision is
-# never checked against it. Without this, a revision-11 root that happened to
+# publish.sh, stage.sh and approve-legacy.sh, before they read anything, and
+# status.sh, before it checks a live pair without a valid approval against
+# GRM_EXPECT_*: the default count, 237, is revision 7's, so a report of
+# another revision is never checked against it. Without this, a revision-11 root that happened to
 # hold 237 reports (a stopped run, say) would pass on revision 7's count.
 check_expect() {
     [ "$EXPECT_REVISION" -eq 7 ] || [ -n "${GRM_EXPECT_DATASETS:-}" ] ||
