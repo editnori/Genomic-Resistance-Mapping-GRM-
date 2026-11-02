@@ -28,7 +28,7 @@ list() {
     }
     /^[0-9]+ tests?, [0-9]+ benchmarks?$/ { counted += $1 }
     END {
-      if (n != counted) { print "rust-test-names.sh: read " n " tests, but libtest counted " counted > "/dev/stderr"; exit 3 }
+      if (n != counted) { print "rust-test-names.sh: read " n+0 " tests, but libtest counted " counted+0 > "/dev/stderr"; exit 3 }
     }'
 }
 
