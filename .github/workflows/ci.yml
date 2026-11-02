@@ -1,4 +1,4 @@
-# The Rust, Python and deployment-toolkit checks, on synthetic and unit
+# The Rust, Python, web and deployment-toolkit checks, on synthetic and unit
 # fixtures only: no real data, network service, secret or deployment.
 # docs/ci.md lists each job's baseline and the checks that stay outside CI.
 name: CI
@@ -73,6 +73,10 @@ jobs:
           key: cargo-test-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '.cargo/config.toml') }}
           restore-keys: cargo-test-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-
       - run: cargo test --release --locked
+      # A test added, removed, renamed or ignored changes the list, and so does a
+      # module whose `pub mod` line is dropped, though the run above still passes.
+      - name: Compare the test names with tests/rust-test-names.txt
+        run: bash scripts/ci/rust-test-names.sh --check
 
   rust-doc:
     name: Rust docs
@@ -210,3 +214,32 @@ jobs:
       - run: bash scripts/deployment/tests/dry-run.sh
       # Known to flake on small runners: docs/ci.md.
       - run: bash scripts/deployment/tests/apply.sh
+
+  web:
+    name: Web typecheck, build and unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # The README asks for Node.js 22; vitest 5 needs 22.12 or newer.
+      NODE_VERSION: 22.23.4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Check Node
+        run: |
+          node --version
+          npm --version
+          test "$(node --version)" = "v$NODE_VERSION" || { echo "::error::node is $(node --version), not v$NODE_VERSION"; exit 1; }
+      - run: npm --prefix web ci --no-audit --no-fund
+      - run: npm --prefix web run typecheck
+      - run: npm --prefix web run build
+      # src/charts/realdata.test.ts skips: it needs GRM_REPORT_DIR, a published report.
+      - run: npm --prefix web test
+      - name: Check the build changed no tracked file
+        run: git diff --exit-code --stat
