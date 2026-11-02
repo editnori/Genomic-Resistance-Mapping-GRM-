@@ -1064,6 +1064,19 @@ cp "$T/s8.r2" "$T/s8/report/datasets/sp__r2.json"
 sed 's/{"id": "sp__r3", "evaluation": {"revision": 8}}/{"id": "sp__r3"}/' "$T/s8.index" >"$T/s8/report/index.json"
 expect 1 'with index evaluation.revision missing, expected 8: sp__r3' "smoke.sh fails a served index row without the revision" -- smoke8
 cp "$T/s8.index" "$T/s8/report/index.json"
+# Every report and every row is checked, as an integer (REVIEW-DS2 L2; from
+# its probe): the last served report, the first index row, and a served
+# report whose revision is the string "8".
+cp "$T/s8/report/datasets/sp__r3.json" "$T/s8.r3"
+printf '{"id": "sp__r3", "evaluation": {"revision": 7}}' >"$T/s8/report/datasets/sp__r3.json"
+expect 1 'served report has evaluation.revision 7, expected 8: sp__r3' "smoke.sh fails the last served dataset report recording another revision" -- smoke8
+cp "$T/s8.r3" "$T/s8/report/datasets/sp__r3.json"
+sed 's/{"id": "sp__r1", "evaluation": {"revision": 8}}/{"id": "sp__r1", "evaluation": {"revision": 7}}/' "$T/s8.index" >"$T/s8/report/index.json"
+expect 1 'with index evaluation.revision 7, expected 8: sp__r1' "smoke.sh fails the first index row recording another revision" -- smoke8
+cp "$T/s8.index" "$T/s8/report/index.json"
+printf '{"id": "sp__r2", "evaluation": {"revision": "8"}}' >"$T/s8/report/datasets/sp__r2.json"
+expect 1 'served report has evaluation.revision .8., expected 8: sp__r2' "smoke.sh fails a served report whose revision is the string 8" -- smoke8
+cp "$T/s8.r2" "$T/s8/report/datasets/sp__r2.json"
 expect 2 'GRM_EXPECT_REVISION=8 needs GRM_EXPECT_DATASETS' "smoke.sh run directly refuses revision 8 without a count (REVIEW-DEPLOY I3)" -- \
     env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=8 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
 expect 1 'FAIL served index.json' "with GRM_EXPECT_REVISION=7 set and no count, smoke.sh is not refused and checks revision 7's 237" -- \
@@ -2236,7 +2249,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((543 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((546 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
