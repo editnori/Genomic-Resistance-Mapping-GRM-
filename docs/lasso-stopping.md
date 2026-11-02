@@ -350,6 +350,8 @@ Each fit line it writes holds at most 30 tuning and 30 refit statuses and one we
 
 ### Inputs on Vast
 
+**The Vast host is gone.** This section and the launch procedure below name the Vast host, which was destroyed on 2026-10-31 along with its `/root/` input roots, so neither runs as written; they stay as the record of the planned launch. When the scan is rescheduled, the procedure must be redone for the new host before the scan runs, including everything that assumed Vast: the input roots and staging directory, the glibc 2.39 and `znver2` build, the 2026-10-28 free-space figure, and h, registered as 1 for the Vast host class.
+
 The revision-7 candidate root, `/root/grm-extra-species-analysis-20261027/data`, holds no matrices for the five scan species. They are in `/root/grm-revision7-preflight/data`. The candidate copied that root's counts, structures and reports for the 13 original species hash-equal, and its reports carry the same input fingerprints (M. tuberculosis delamanid: `275e461dec002050` in both). The scan reads that root.
 
 Its `catalog` is a symlink to `/root/grm/data/catalog`. If that catalog has changed since revision 7, loading fails or the fingerprints differ. The inputs-only check below catches either before any fit. It also catches a matrix the current code cannot load, since the matrix commits `7cc39ed` and `0df8eb9` came after revision 7.

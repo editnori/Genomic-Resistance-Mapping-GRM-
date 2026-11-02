@@ -2,6 +2,11 @@
 // artifact that a vite preview serves with GRM_REPORT_DIR set to one
 // read-only fixture.
 // node browser-check-final.cjs <playwright-core> <output-dir> <base-url> <fixture-dir>
+// GRM_CHROMIUM, when set, is the Chromium executable to launch; unset or
+// empty, that playwright-core launches its own browser. The check used to pin
+// the headless shell of Chromium build 1248 on the release host; to keep that
+// build there, set
+// GRM_CHROMIUM=/root/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell
 // Expectations come from the fixture's own index.json, not from the UI code.
 // Assertions that encoded r13's removals are rewritten to the DESIGN.md
 // contract: visible titles, the view nav, judged cells as plain text, the
@@ -843,7 +848,7 @@ async function boundaries(browser) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: '/root/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell', headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+  const browser = await chromium.launch({ executablePath: process.env.GRM_CHROMIUM || undefined, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   try {
     const favicon = await fetch(BASE + '/favicon.svg');
     check('favicon is the mark', favicon.ok && (favicon.headers.get('content-type') ?? '').includes('svg') && (await favicon.text()).includes('#ff8c66'), favicon.status);

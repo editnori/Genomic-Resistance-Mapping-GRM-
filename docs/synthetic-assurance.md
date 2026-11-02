@@ -2,7 +2,7 @@
 
 Two integration test targets check the fold-mask and k-mer code against specifications computed inside the tests, using seeded synthetic integers and byte strings only. They call the public `grm` functions directly (`grm::learn::{fold_masks, training_folds, validate_folds}`, `grm::bits`, `grm::dna::KmerSpace`) and write every input and output as evidence for an independent oracle and for the offline Bend2 checks below. No genome, phenotype or report data is read.
 
-The full runs were recorded on 2026-10-27 against source commit 9f193bf (archive sha256 `2c32a295…a691a2`) with Rust 1.98.1, `--locked --offline`, in `/root/grm-synthetic-assurance-20261027-cont-yAuKsr` on Vast; its `receipts/VERDICT.md`, `final-results.json` and `output-files.sha256` are the authority for the numbers here. `src/` has not changed since that commit.
+The full runs were recorded on 2026-10-27 against source commit 9f193bf (archive sha256 `2c32a295…a691a2`) with Rust 1.98.1, `--locked --offline`, in `/root/grm-synthetic-assurance-20261027-cont-yAuKsr` on Vast; its `receipts/VERDICT.md`, `final-results.json` and `output-files.sha256` are the authority for the numbers here. That folder is historical: it was on the Vast host, which was destroyed on 2026-10-31, and is no longer available. `src/` has not changed since that commit.
 
 ## Tests
 
@@ -74,7 +74,7 @@ Bend and Lean are not cargo dependencies and nothing in `cargo test` runs them. 
 | Lean 4.34.0 `lean-4.34.0-linux.zip` | `5f14e0f3762058a529b1598f4355e6787c5f155be1bcce72ae288b9c35e3adb4` |
 | `bendtt` kernel | `e943466a914ee7eb0ca53c8d720ff57ed07c55c4026a861362fe17faaba3e05f` |
 
-The model files are in `/root/grm-bend2-foldmask-20261026/{source,vectors}` and the toolchain in `/root/grm-bend2-pilot-20261026`. To check a run, verify those hashes, copy each book's `VECTORS.bend` and `cases_*.bend` into a fresh `bendcheck/BOOK/` beside a copy of `CHECK.bend`, put `MODEL.bend` in `bendcheck/source/`, make the copies read-only, and run each step for `PROOF.bend` and for `bendcheck/{ext45,rand}/VECTORS.bend`:
+The model files were in `/root/grm-bend2-foldmask-20261026/{source,vectors}` and the toolchain in `/root/grm-bend2-pilot-20261026`. Both folders are historical: they were on the Vast host, which was destroyed on 2026-10-31, and are no longer available (the toolchain folder had already been deleted on 2026-10-29, after a verified laptop copy; see [`work-program-20261027.md`](work-program-20261027.md)). To check a run, verify those hashes, copy each book's `VECTORS.bend` and `cases_*.bend` into a fresh `bendcheck/BOOK/` beside a copy of `CHECK.bend`, put `MODEL.bend` in `bendcheck/source/`, make the copies read-only, and run each step for `PROOF.bend` and for `bendcheck/{ext45,rand}/VECTORS.bend`:
 
 ```bash
 bend FILE                                  # check
