@@ -276,6 +276,12 @@ class OneStandardError(unittest.TestCase):
             self.assertIn("not an independent-sample inference", text)
         self.assertIn("descriptive", sel.select_history.__doc__ + sel.__doc__)
 
+    def test_score_label_is_carried(self):
+        # REVIEW-HPO L1 (RV8).
+        r = sel.select_history([trial(0, [1, 2])], protocol())
+        self.assertEqual(r["score_label"], sel.SCORE_LABEL)
+        self.assertIn("inner-tuning score", r["score_label"])
+
 
 class Refusals(unittest.TestCase):
     def refused(self, trials, proto=None):
@@ -701,6 +707,15 @@ class TaskBPlan(unittest.TestCase):
                       '"lr":0.5} is not the planned config {"depth":5,'
                       '"kind":"b","lr":0.0542856848}', e.problems[0])
 
+    def test_off_plan_config_is_refused_on_a_trial_that_is_not_ok(self):
+        # REVIEW-HPO L1 (RV10): such a trial is never selectable, but it
+        # still spends budget, so its config must be the planned one too.
+        for status, scores in (("failed", []), ("unconverged", [0.5])):
+            with self.subTest(status):
+                forged = b_trial(self.p, 3, scores, depth=8, status=status)
+                self.assertEqual(self.refused(b_history(self.p, None, forged)).codes,
+                                 {"off_plan"})
+
     def test_trial_past_the_budget_is_refused(self):
         extra = b_trial(self.p, 4, [1, 1], depth=3)
         e = self.refused(self.h + [extra])
@@ -724,6 +739,10 @@ class TaskBPlan(unittest.TestCase):
     def test_reordered_history_is_refused(self):
         swapped = [self.h[1], self.h[0]] + self.h[2:]
         self.assertEqual(self.refused(swapped).codes, {"off_plan_order"})
+        # The last two swapped: the whole plan's order counts (REVIEW-HPO
+        # L1, RV9).
+        at_end = self.h[:-2] + [self.h[-1], self.h[-2]]
+        self.assertEqual(self.refused(at_end).codes, {"off_plan_order"})
         by_family = sorted(self.h, key=lambda t: t["family"])
         self.assertEqual(self.refused(by_family).codes, {"off_plan_order"})
 
@@ -910,7 +929,25 @@ class Budgets(unittest.TestCase):
             ("under_budget", "cart"), ("trial_id_gap", "cart"),
             ("over_budget", "rf"), ("no_trials", "gbt"),
             ("unequal_planned", None), ("unequal_used", None),
-            ("unequal_ok", None)})
+            ("unequal_ok", None), ("unequal_fit_count", None),
+            ("unequal_seconds", None)})
+
+    def test_unequal_compute_is_flagged(self):
+        # Review F6: equal trial counts, but cart's default ran a grid.
+        budgets = {"cart": 1, "rf": 1}
+        trials = [trial(0, [1, 2], fit_count=43, seconds=9.0),
+                  trial(0, [1, 2], family="rf")]
+        b = sel.budget_accounting(trials, protocol(budgets=budgets))
+        self.assertEqual(b["flags"], [
+            {"code": "unequal_fit_count", "family": None,
+             "message": "fits differ across families: cart 43, rf 2"},
+            {"code": "unequal_seconds", "family": None,
+             "message": "seconds differ across families: cart 9.0, rf 0.5"}])
+        for field, code in (("fit_count", "unequal_fit_count"),
+                            ("seconds", "unequal_seconds")):
+            trials = [trial(0, [1, 2], **{field: 7}), trial(0, [1, 2], family="rf")]
+            b = sel.budget_accounting(trials, protocol(budgets=budgets))
+            self.assertEqual([f["code"] for f in b["flags"]], [code], field)
 
     def test_equal_budgets_raise_no_flag(self):
         trials = [trial(0, [1, 2]), trial(0, [1, 2], family="rf")]

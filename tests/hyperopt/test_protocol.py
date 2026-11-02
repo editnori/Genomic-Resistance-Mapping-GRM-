@@ -2,12 +2,15 @@
 import copy
 import json
 import os
+import re
 import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.hyperopt import protocol as hp
 
 FOLD_PLAN = "f" * 64
+RUST = Path(__file__).resolve().parents[2] / "src" / "learn"
 
 
 def build(**kwargs):
@@ -231,6 +234,73 @@ class ProtocolValidationTests(unittest.TestCase):
                 protocol["protocol_hash"] = hp.compute_hash(protocol)
                 with self.assertRaises(hp.ProtocolError):
                     hp.verify_protocol(protocol)
+
+
+def rust_literal(text):
+    """A Rust numeric literal as the JSON number the protocol writes."""
+    return float(text) if re.fullmatch(r"\d+\.\d+", text) else int(text)
+
+
+def rust_default(file, name):
+    """The `field: value` lines of `impl Default for <name>` in src/learn."""
+    text = (RUST / file).read_text()
+    block = re.search(rf"impl Default for {name} \{{\s*fn default\(\) -> Self \{{"
+                      rf"\s*{name} \{{\n(.*?)\n\s*\}}\n", text, re.S)
+    if block is None:
+        raise AssertionError(f"no `impl Default for {name}` in src/learn/{file}")
+    return dict(re.findall(r"^\s*(\w+): (.+),$", block.group(1), re.M))
+
+
+def rust_after(file, start, pattern):
+    """The first match of `pattern` after `start` in src/learn/<file>."""
+    text = (RUST / file).read_text()
+    match = re.search(pattern, text[text.index(start):])
+    if match is None:
+        raise AssertionError(f"{pattern!r} not found after {start!r} in src/learn/{file}")
+    return match.group(1)
+
+
+class RustDefaultTests(unittest.TestCase):
+    """Review F7: trial 0 is production's default, so each default is read
+    back from the Rust source it copies, and a changed Rust default fails
+    here instead of drifting from the protocol."""
+
+    def assertSame(self, got, want):
+        # Canonical JSON, so an int and a float of equal value differ.
+        self.assertEqual(hp.canonical_json(got), hp.canonical_json(want))
+
+    def test_fixed_defaults_are_the_rust_default_impls(self):
+        for family, file, name in (("rf", "tree.rs", "ForestParams"),
+                                   ("gbt", "gbt.rs", "GbtParams")):
+            with self.subTest(family):
+                fields = rust_default(file, name)
+                default = hp.FAMILIES[family]["default"]
+                self.assertSame({k: rust_literal(fields[k]) for k in default}, default)
+        config = rust_default("eval.rs", "EvalConfig")
+        self.assertEqual((config["forest"], config["gbt"]),
+                         ("ForestParams::default()", "GbtParams::default()"))
+        self.assertSame(hp.FAMILIES["lasso"]["default"],
+                        {"n_lambdas": rust_literal(config["lasso_lambdas"])})
+        # The path's smallest-penalty ratio is fixed, so it is not searched (F1).
+        self.assertEqual(rust_after("lasso.rs", "fn path_problem(",
+                                    r"let ratio: f64 = ([^;]+);"), "1e-3")
+
+    def test_internal_search_defaults_are_the_rust_grids(self):
+        config = rust_default("eval.rs", "EvalConfig")
+        scm, cart = hp.FAMILIES["scm"]["default"], hp.FAMILIES["cart"]["default"]
+        grid = rust_after("scm.rs", "pub const P_GRID", r"= \[([^\]]*)\];")
+        self.assertSame(scm["p"], [rust_literal(v.strip()) for v in grid.split(",")])
+        kinds = rust_after("scm.rs", "pub fn select(", r"for kind in \[([^\]]*)\]")
+        self.assertEqual(scm["kind"], [k.strip().removeprefix("Kind::").lower()
+                                       for k in kinds.split(",")])
+        self.assertEqual(scm["max_rules"],
+                         list(range(1, rust_literal(config["scm_max_rules"]) + 1)))
+        self.assertEqual(cart["max_depth"],
+                         list(range(1, rust_literal(config["cart_max_depth"]) + 1)))
+        for file, start in (("eval.rs", "fn fit_cart("), ("tree.rs", "pub fn select_depth(")):
+            with self.subTest(start):
+                self.assertSame(cart["min_leaf"],
+                                [rust_literal(rust_after(file, start, r"min_leaf: (\d+),"))])
 
 
 if __name__ == "__main__":

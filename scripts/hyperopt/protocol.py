@@ -563,7 +563,7 @@ def history_line(record):
     return canonical_json(record) + "\n"
 
 
-def read_history(path, protocol=None, folds=None, *, partial=False):
+def read_history(path, protocol=None, folds=None, *, fold_plan=None, partial=False):
     """Parse and validate a history JSONL; refuse mixed protocol hashes.
 
     Every line must be canonical and end in a bare `\\n`; the file is read
@@ -571,15 +571,28 @@ def read_history(path, protocol=None, folds=None, *, partial=False):
     line without a newline was cut short by a crash; it is refused, not
     resumed, and the operator must delete the partial line before
     rerunning. With `folds`, the fold plan's inner fold ids, its inner
-    scores must fit them (see `validate_record`). With `protocol`, `folds`
-    is required, every record must also belong to the protocol, and the
-    records must be its planned trials (`search.plan_trials`) in run order,
-    each with its planned config. Every planned trial must be present,
-    unless `partial` is true: then a prefix of the plan, as an interrupted
-    search leaves, is accepted, which is how `run_search` resumes.
+    scores must fit them (see `validate_record`). With `fold_plan`, the
+    folds are its inner fold ids, and a `folds` given too must equal them.
+    With `protocol`, `fold_plan` is required and must be the plan the
+    protocol pins (`search.check_fold_plan`), since fold ids alone are not
+    tied to its `fold_plan_hash`. Every record must also belong to the
+    protocol, and the records must be its planned trials
+    (`search.plan_trials`) in run order, each with its planned config.
+    Every planned trial must be present, unless `partial` is true: then a
+    prefix of the plan, as an interrupted search leaves, is accepted, which
+    is how `run_search` resumes.
     """
-    _require(protocol is None or folds is not None,
-             "read_history needs the fold plan's inner fold ids (folds) with a protocol")
+    _require(protocol is None or fold_plan is not None,
+             "read_history needs the fold plan the protocol pins (fold_plan) with a protocol; "
+             "fold ids alone are not tied to its fold_plan_hash")
+    if fold_plan is not None:
+        from .search import check_fold_plan  # search imports this module
+        plan_folds = (inner_fold_ids(fold_plan) if protocol is None
+                      else check_fold_plan(protocol, fold_plan))
+        if folds is not None:
+            _require(list(folds) == plan_folds,
+                     f"folds {list(folds)} are not the fold plan's inner folds {plan_folds}")
+        folds = plan_folds
     try:
         with open(path, encoding="ascii", newline="") as stream:
             text = stream.read()

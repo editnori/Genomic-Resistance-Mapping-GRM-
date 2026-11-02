@@ -7,12 +7,14 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import re
 import shutil
 import sys
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -202,10 +204,38 @@ class Report(unittest.TestCase):
             self.assertNotIn(bare, self.md)
         cart = self.report["runs"][0]["families"]["cart"]
         mean, _, se = select.fold_stats([0.80, 0.82])
-        self.assertEqual((cart["selected"]["mean"], cart["best"]["mean"],
-                          cart["best"]["se"]), (mean, mean, se))
+        self.assertEqual((cart["selected"]["inner_tuning_mean"],
+                          cart["best"]["inner_tuning_mean"],
+                          cart["best"]["inner_tuning_se"]), (mean, mean, se))
         self.assertIn("| cart | 1 | 3 |  | 0.81 | 1 | 0.81 | 0.01 | 1 |",
                       self.md)
+
+    def test_json_score_keys_say_inner_tuning(self):
+        # REVIEW-HPO L3: a mean, SD or SE read on its own keeps its label.
+        def keys(value):
+            if isinstance(value, dict):
+                return set(value) | set().union(*map(keys, value.values()))
+            if isinstance(value, list):
+                return set().union(*map(keys, value))
+            return set()
+
+        runs = keys(self.report["runs"])
+        self.assertFalse({"mean", "sd", "se"} & runs)
+        self.assertTrue({"inner_tuning_mean", "inner_tuning_sd",
+                         "inner_tuning_se"} <= runs)
+        cart = self.report["runs"][0]["families"]["cart"]
+        row = next(t for t in self.report["runs"][0]["trials"]
+                   if (t["family"], t["trial_id"]) == ("cart", 1))
+        mean, sd, se = select.fold_stats([0.80, 0.82])
+        self.assertEqual((row["inner_tuning_mean"], row["inner_tuning_sd"],
+                          row["inner_tuning_se"]), (mean, sd, se))
+        self.assertEqual(cart["candidate_set"][0]["inner_tuning_mean"], mean)
+        # select.py's own result keeps its keys; only the report renames.
+        s = select.select_history(run("outer0")["trials"], protocol(), PLAN_A)
+        self.assertEqual(s["families"]["cart"]["selected"]["mean"], mean)
+        # Stability's mean is of hyperparameter values, not a score.
+        self.assertIn("mean", self.report["stability"]["families"]["cart"]
+                      ["params"]["depth"]["numeric"])
 
     def test_se_is_labelled_descriptive_in_plain_text(self):
         self.assertIn("descriptive", self.report["se_label"])
@@ -239,9 +269,61 @@ class Report(unittest.TestCase):
         self.assertIn("unequal_feasible", {f["code"] for f in
                                            rep["runs"][0]["budgets"]["flags"]})
 
+    def test_build_report_computes_the_file_digest(self):
+        # REVIEW-HPO I2: the digest is of the bytes the records are parsed
+        # from, computed here; a caller's own digest is never shown.
+        p = protocol()
+        data = canonical_lines(history(p)).encode()
+        r = report.build_report([{"label": "outer0", "protocol": p,
+                                  "history_bytes": data,
+                                  "fold_plan": PLAN_A}])["runs"][0]
+        digest = hashlib.sha256(data).hexdigest()
+        self.assertEqual((r["history_sha256"], r["history_file_sha256"]),
+                         (digest, digest))
+        for extra, code in (({"history_file_sha256": "0" * 64}, "untrusted_digest"),
+                            ({"history_file_sha256": digest}, "untrusted_digest"),
+                            ({"history_bytes": data}, "bad_run")):
+            with self.subTest(code=code):
+                with self.assertRaises(report.HistoryError) as cm:
+                    report.build_report([dict(run("outer0"), **extra)])
+                self.assertEqual(cm.exception.codes, {code})
+
+    def test_a_search_over_a_parameter_production_lacks_is_labelled(self):
+        # REVIEW-HPO I1: a protocol from before review F1 still searches the
+        # lasso's lambda_min_ratio. It verifies and selects as before, and
+        # both outputs say production can't set that parameter.
+        p = protocol()
+        p["families"]["lasso"] = {
+            "default": {"lambda_min_ratio": 0.001, "n_lambdas": 30},
+            "space": {"lambda_min_ratio": {"type": "float", "low": 0.0001,
+                                           "high": 0.1, "log": True},
+                      "n_lambdas": {"type": "int", "low": 10, "high": 100,
+                                    "log": False}}}
+        p["protocol_hash"] = rehash(p)
+        trials = history(p)
+        s = select.select_history(trials, p, PLAN_A)
+        rep = report.build_report([{"label": "pre-F1", "protocol": p,
+                                    "trials": trials, "fold_plan": PLAN_A}])
+        r = rep["runs"][0]
+        self.assertEqual(s["warnings"], r["warnings"])
+        self.assertEqual([(w["code"], w["family"]) for w in r["warnings"]],
+                         [("no_production_knob", "lasso")])
+        self.assertIn("lasso searches lambda_min_ratio: production fixes",
+                      r["warnings"][0]["message"])
+        self.assertIn(f"Warnings:\n- no_production_knob: "
+                      f"{r['warnings'][0]['message']}\n",
+                      report.render_markdown(rep))
+        self.assertEqual({f: v["selected"]["trial_id"]
+                          for f, v in r["families"].items()},
+                         {"cart": 1, "lasso": 0})
+        # Today's protocols carry no warning.
+        self.assertEqual(self.report["runs"][0]["warnings"], [])
+        self.assertNotIn("Warnings:", self.md)
+
     def test_report_is_strict_json(self):
         text = json.dumps(self.report, allow_nan=False)
-        self.assertEqual(json.loads(text)["schema"], "grm-hyperopt-report/1")
+        # Schema 2 renamed the score keys (INNER_TUNING).
+        self.assertEqual(json.loads(text)["schema"], "grm-hyperopt-report/2")
 
     def test_refusals_name_the_run(self):
         bad = run("outer1")
@@ -327,6 +409,55 @@ class Cli(unittest.TestCase):
         self.assertIn(f"canonical history sha256 {canonical}, history file "
                       f"sha256 {file_digest},",
                       (self.dir / "r.md").read_text())
+
+    def test_file_digest_is_of_the_bytes(self):
+        # REVIEW-HPO L1 (RV7): CRLF endings parse to the canonical records,
+        # so only a digest of the bytes, not of the text, tells them apart.
+        p = protocol()
+        text = canonical_lines(history(p))
+        rc, err = self.main((json.dumps(p), text.replace("\n", "\r\n")))
+        self.assertEqual((rc, err), (0, ""))
+        data = (self.dir / "h0.jsonl").read_bytes()
+        self.assertIn(b"\r\n", data)
+        run = json.loads((self.dir / "r.json").read_text())["runs"][0]
+        self.assertEqual((run["history_sha256"], run["history_file_sha256"]),
+                         (hashlib.sha256(text.encode()).hexdigest(),
+                          hashlib.sha256(data).hexdigest()))
+
+    def test_the_history_is_read_once(self):
+        # REVIEW-HPO I2: the file is replaced on disk as soon as it is first
+        # opened. The open stream still reads the first file, so one read
+        # gives that file's records and digest; a second read would pair
+        # them with the other file's digest.
+        p = protocol()
+        first = canonical_lines(history(p, best=1)).encode()
+        path = self.dir / "h0.jsonl"
+        path.write_bytes(first)
+        (self.dir / "next.jsonl").write_bytes(
+            canonical_lines(history(p, best=0)).encode())
+        real, swapped = io.open, []
+
+        def replacing(file, *args, **kwargs):
+            stream = real(file, *args, **kwargs)
+            mode = args[0] if args else kwargs.get("mode", "r")
+            if os.fspath(file) == str(path) and "r" in mode and not swapped:
+                swapped.append(mode)
+                os.replace(self.dir / "next.jsonl", path)
+            return stream
+
+        argv = ["--run", "outer0", self.write("p0.json", json.dumps(p)),
+                str(path), self.write("f0.json", json.dumps(PLAN_A)),
+                "--out-json", str(self.dir / "r.json"),
+                "--out-md", str(self.dir / "r.md")]
+        with mock.patch("builtins.open", replacing), \
+                mock.patch("io.open", replacing):
+            self.assertEqual(report.main(argv), 0)
+        self.assertEqual(len(swapped), 1)
+        run = json.loads((self.dir / "r.json").read_text())["runs"][0]
+        digest = hashlib.sha256(first).hexdigest()
+        self.assertEqual((run["history_sha256"], run["history_file_sha256"]),
+                         (digest, digest))
+        self.assertEqual(run["families"]["cart"]["selected"]["trial_id"], 1)
 
     def test_refuses_histories_the_protocol_never_produced(self):
         # Review F2 and F8, through the CLI: an off-plan config with perfect

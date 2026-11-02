@@ -14,6 +14,15 @@ does not refit a selected config on the outer training fold or score it
 on the untouched outer test fold; both outputs name that as a remaining
 dependency (select.OUTER_EVALUATION).
 
+The JSON also says so in its key names. The `mean`, `sd` and `se` that
+select.py gives each trial, and the `mean` and `se` of each family's
+`best`, `selected` and `candidate_set` entries, are `inner_tuning_mean`,
+`inner_tuning_sd` and `inner_tuning_se` here (INNER_TUNING), so a value
+read on its own keeps its label. Schema 2 made this rename and added each
+run's `warnings` (below); a schema 1 report used the bare keys.
+Stability's `mean` is the mean of selected hyperparameter values, not a
+score, and keeps its name.
+
 usage: python3 -I -B scripts/hyperopt/report.py
            --run LABEL PROTOCOL.json HISTORY.jsonl FOLD_PLAN.json [--run ...]
            --out-json REPORT.json --out-md REPORT.md
@@ -28,8 +37,14 @@ select.validate_history).
 
 Each run gives two digests of its history. `history_sha256` is the sha256
 of its records as canonical JSON lines (select.history_sha256), the bytes
-Task B's search writes; `history_file_sha256` is the sha256 of the file as
-read. They differ exactly when the file is not in that canonical form.
+Task B's search writes; `history_file_sha256` is the sha256 of the file's
+bytes, read once and parsed from those same bytes, so the records and the
+digest describe one file. They differ exactly when the file is not in that
+canonical form.
+
+A run whose protocol searches a parameter production has no knob for, such
+as a lasso protocol from before review F1, is selected as usual and
+labelled in both outputs (`warnings`; select.NO_PRODUCTION_KNOB).
 
 Exit status: 0 written; 2 refused, with every problem on stderr and nothing
 written.
@@ -42,7 +57,10 @@ import os
 import sys
 from pathlib import Path
 
-SCHEMA = "grm-hyperopt-report/1"
+SCHEMA = "grm-hyperopt-report/2"
+# The report's names for select.py's inner-tuning scores (review F3).
+INNER_TUNING = {"mean": "inner_tuning_mean", "sd": "inner_tuning_sd",
+                "se": "inner_tuning_se"}
 
 
 def _load_select():
@@ -64,9 +82,14 @@ HistoryError = select.HistoryError
 
 
 def build_report(runs, trusted_flat=False):
-    """runs: a list of {"label", "protocol", "trials", "fold_plan"}, one per
-    history, each optionally with "history_file_sha256", the sha256 of the
-    file the trials were read from (null in the report without it).
+    """runs: a list of {"label", "protocol", "fold_plan"}, one per history,
+    each with its history as exactly one of
+    - "history_bytes", the bytes of its file. This parses them
+      (select.parse_history) and hashes the same bytes, so
+      history_file_sha256 is the digest of the bytes the records came from;
+    - "trials", records built in memory; history_file_sha256 is then null.
+    The digest is never taken from the caller: a run that supplies
+    "history_file_sha256" is refused (untrusted_digest).
     "fold_plan" is required with Task B's protocol. Returns the report dict;
     raises HistoryError if any history, protocol or fold plan does not
     match, or the runs cannot be pooled for stability (see
@@ -76,25 +99,24 @@ def build_report(runs, trusted_flat=False):
     out, selections, problems = [], [], []
     for run in runs:
         try:
+            records, file_sha256 = _history(run)
             protocol = select.as_protocol(run["protocol"], trusted_flat)
-            s = select.select_history(run["trials"], protocol,
-                                      run.get("fold_plan"))
+            s = select.select_history(records, protocol, run.get("fold_plan"))
         except HistoryError as e:
             problems += [f"{p} [run {run['label']}]" for p in e.problems]
             continue
         selections.append(s)
-        trials = [dict(row, family=fam)
+        trials = [_inner_tuning(dict(row, family=fam))
                   for fam, f in s["families"].items() for row in f["trials"]]
         out.append({
             "label": run["label"],
             "protocol": protocol.to_dict(),
             "history_sha256": s["history_sha256"],
-            "history_file_sha256": run.get("history_file_sha256"),
+            "history_file_sha256": file_sha256,
             "folds": s["folds"],
+            "warnings": s["warnings"],
             "n_trials": len(trials),
-            "families": {fam: {k: v for k, v in f.items()
-                               if k not in ("trials", "se_label")}
-                         for fam, f in s["families"].items()},
+            "families": {fam: _family(f) for fam, f in s["families"].items()},
             "budgets": s["budgets"],
             "trials": trials,
         })
@@ -112,6 +134,38 @@ def build_report(runs, trusted_flat=False):
         "runs": out,
         "stability": stab,
     }
+
+
+def _history(run):
+    """A run's records, and the sha256 of the bytes they were parsed from
+    (None for records given as such)."""
+    if "history_file_sha256" in run:
+        raise HistoryError(["untrusted_digest: history_file_sha256 is the "
+                            "sha256 of history_bytes, computed here, never "
+                            "taken from the caller"])
+    if ("trials" in run) == ("history_bytes" in run):
+        raise HistoryError(["bad_run: give the history as exactly one of "
+                            "trials and history_bytes"])
+    if "trials" in run:
+        return run["trials"], None
+    data = run["history_bytes"]
+    return select.parse_history(data), hashlib.sha256(data).hexdigest()
+
+
+def _inner_tuning(row):
+    """row with its mean, SD and SE under their INNER_TUNING names."""
+    return {INNER_TUNING.get(k, k): v for k, v in row.items()}
+
+
+def _family(f):
+    """A family's selection without its trial rows, which the run lists,
+    and with every score named for the inner tuning it comes from."""
+    out = {k: v for k, v in f.items() if k not in ("trials", "se_label")}
+    for key in ("best", "selected"):
+        if out[key] is not None:
+            out[key] = _inner_tuning(out[key])
+    out["candidate_set"] = [_inner_tuning(c) for c in out["candidate_set"]]
+    return out
 
 
 def render_markdown(report):
@@ -148,6 +202,11 @@ def _run_lines(run):
         f"inner folds {_folds(run['folds'])}; "
         f"{run['n_trials']} trials ("
         + ", ".join(f"{n} {s}" for s, n in sorted(statuses.items())) + ").",
+    ]
+    if run["warnings"]:
+        lines += ["", "Warnings:"]
+        lines += [f"- {w['code']}: {w['message']}" for w in run["warnings"]]
+    lines += [
         "", "Constraints: " + ("; ".join(
             f"{c['metric']} {c['op']} {c['bound']}" for c in p["constraints"])
             or "none") + ".",
@@ -164,8 +223,9 @@ def _run_lines(run):
         s, b = f["selected"], f["best"]
         lines.append(
             f"| {fam} | {s['trial_id']} | {_num(s['complexity'])} | "
-            f"{_yes(s['is_default'])} | {_num(s['mean'])} | {b['trial_id']} | "
-            f"{_num(b['mean'])} | {_num(b['se'])} | "
+            f"{_yes(s['is_default'])} | {_num(s['inner_tuning_mean'])} | "
+            f"{b['trial_id']} | {_num(b['inner_tuning_mean'])} | "
+            f"{_num(b['inner_tuning_se'])} | "
             + ", ".join(str(c["trial_id"]) for c in f["candidate_set"]) + " |")
     for fam, f in run["families"].items():
         if f["selected"] is not None:
@@ -210,7 +270,8 @@ def _run_lines(run):
             f"{_cell(t['reason'], t['status'] != 'ok')} | "
             f"{_cell('; '.join(t['excluded_because']), False)} | "
             f"{_num(t['complexity'])} | "
-            f"{_yes(t['is_default'])} | {_num(t['mean'])} | {_num(t['se'])} | "
+            f"{_yes(t['is_default'])} | {_num(t['inner_tuning_mean'])} | "
+            f"{_num(t['inner_tuning_se'])} | "
             f"{_yes(t['in_candidate_set'])} | {_yes(t['selected'])} |")
 
     unused = [t for t in run["trials"]
@@ -313,9 +374,8 @@ def main(argv=None):
         for label, protocol, history, fold_plan in args.run:
             runs.append({"label": label,
                          "protocol": select.load_protocol(protocol),
-                         "trials": select.load_history(history),
-                         "history_file_sha256": hashlib.sha256(
-                             Path(history).read_bytes()).hexdigest(),
+                         # One read; build_report parses and hashes it.
+                         "history_bytes": Path(history).read_bytes(),
                          "fold_plan": select.load_fold_plan(fold_plan)})
         report = build_report(runs)
         # Encode both before writing either: a run label or family name that

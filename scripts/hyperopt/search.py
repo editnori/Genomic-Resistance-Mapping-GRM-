@@ -9,7 +9,8 @@ sha256(canonical_json([seeds.sampler, family, trial_id, param]))
 adding a parameter or a family leaves the other draws unchanged.
 
 - int: `low + floor(u * (high - low + 1))`; on a log scale
-  `floor(exp(log(low) + u * (log(high + 1) - log(low))))`.
+  `floor(exp(log(low) + u * (log(high + 1) - log(low))))`, with the `exp`
+  rounded to 10 significant digits before the floor, as a float is.
 - float: `low + u * (high - low)`, or `exp` of the same on a log scale,
   then rounded to 10 significant digits so a last-bit difference in a
   platform's `exp` does not change the history bytes.
@@ -73,7 +74,8 @@ def sample_value(spec, u):
     low, high = spec["low"], spec["high"]
     if spec["type"] == "int":
         if spec["log"]:
-            value = math.floor(math.exp(math.log(low) + u * (math.log(high + 1) - math.log(low))))
+            value = math.exp(math.log(low) + u * (math.log(high + 1) - math.log(low)))
+            value = math.floor(float(f"{value:.10g}"))
         else:
             value = low + math.floor(u * (high - low + 1))
     else:
@@ -180,7 +182,7 @@ def run_search(protocol, objective, *, fold_plan, history_path, fold_plan_hash=N
     folds = check_fold_plan(protocol, fold_plan)
     plan = plan_trials(protocol)
     # read_history refuses records that are not a prefix of the plan.
-    done = (read_history(history_path, protocol, folds, partial=True)
+    done = (read_history(history_path, protocol, folds, fold_plan=fold_plan, partial=True)
             if os.path.exists(history_path) else [])
     records = list(done)
     with open(history_path, "a", encoding="ascii", newline="") as stream:

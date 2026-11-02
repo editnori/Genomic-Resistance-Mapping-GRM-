@@ -4,6 +4,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import math
 import os
 import sys
 import tempfile
@@ -140,6 +141,28 @@ class DeterminismTests(SearchCase):
         counts = collections.Counter(search.sample_value(spec, i / 400) for i in range(400))
         self.assertEqual(counts, {1: 100, 2: 100, 3: 100, 4: 100})
 
+    def test_log_int_draws_are_rounded_like_floats(self):
+        # Review F10: a platform's exp one bit either side of 5 floors to
+        # the same int, as it rounds to the same float. Both copies of the
+        # draw (search.py and select.py) must agree.
+        ints = {"type": "int", "low": 1, "high": 9, "log": True}
+        floats = {"type": "float", "low": 1.0, "high": 9.0, "log": True}
+        for exp in (math.nextafter(5.0, 0.0), 5.0, math.nextafter(5.0, 6.0)):
+            with self.subTest(exp=exp), mock.patch("math.exp", return_value=exp):
+                self.assertEqual(search.sample_value(ints, 0.5), 5)
+                self.assertEqual(sel._sample_value(ints, 0.5), 5)
+                self.assertEqual(search.sample_value(floats, 0.5), 5.0)
+
+    def test_default_plan_is_pinned(self):
+        # The sampler is not in protocol_hash, so this pins every planned
+        # config of the default protocol. Review F10's rounding of log-scale
+        # int draws moved none of them.
+        plan = search.plan_trials(hp.build_protocol(FOLD_PLAN_HASH))
+        digest = hashlib.sha256(hp.canonical_json(
+            [[t["trial_id"], t["family"], t["config"]] for t in plan]).encode()).hexdigest()
+        self.assertEqual((len(plan), digest), (
+            160, "179fe95d605d05854c0b9e46b5bc5c6d52086da82c06ac4a2800ae62eb27b096"))
+
     def test_adding_a_family_keeps_other_draws(self):
         small = search.plan_trials(build(families=("cart",)))
         large = [t for t in search.plan_trials(build()) if t["family"] == "cart"]
@@ -201,7 +224,7 @@ class HistoryTests(SearchCase):
     def test_jsonl_round_trips(self):
         protocol = build()
         records = self.run_search(protocol)
-        read = hp.read_history(self.path(), protocol, [0, 1, 2])
+        read = hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
         self.assertEqual(read, records)
         self.assertEqual("".join(map(hp.history_line, read)).encode(), self.read_bytes())
 
@@ -233,7 +256,7 @@ class HistoryTests(SearchCase):
                 with open(self.path(), "w") as stream:
                     stream.write(lines[0] + line)
                 with self.assertRaisesRegex(hp.ProtocolError, message):
-                    hp.read_history(self.path(), protocol, FOLDS)
+                    hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
 
     def test_crlf_line_endings_are_refused(self):
         protocol = build(families=("generic",), trials_per_family=4)
@@ -247,7 +270,7 @@ class HistoryTests(SearchCase):
                 with open(self.path(), "wb") as stream:
                     stream.write(bad)
                 with self.assertRaisesRegex(hp.ProtocolError, ":1: carriage return"):
-                    hp.read_history(self.path(), protocol, FOLDS)
+                    hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
                 with self.assertRaisesRegex(hp.ProtocolError, "carriage return"):
                     self.run_search(protocol)
                 self.assertEqual(self.read_bytes(), bad)
@@ -257,7 +280,7 @@ class HistoryTests(SearchCase):
         self.run_search(protocol)
         self.rewrite_line(1, lambda r: r.update(seconds=10**400))
         with self.assertRaisesRegex(hp.ProtocolError, ":2: seconds must be"):
-            hp.read_history(self.path(), protocol, FOLDS)
+            hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
 
     def test_non_ascii_history_is_a_protocol_error(self):
         protocol = build(families=("generic",), trials_per_family=2)
@@ -265,7 +288,7 @@ class HistoryTests(SearchCase):
         with open(self.path(), "ab") as stream:
             stream.write(b"\xc3\xa9\n")
         with self.assertRaisesRegex(hp.ProtocolError, "not ASCII"):
-            hp.read_history(self.path(), protocol, FOLDS)
+            hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
 
     def test_repeated_trial_is_refused(self):
         protocol = build(families=("generic",), trials_per_family=2)
@@ -275,29 +298,80 @@ class HistoryTests(SearchCase):
         with open(self.path(), "a") as stream:
             stream.write(first)
         with self.assertRaisesRegex(hp.ProtocolError, "repeats"):
-            hp.read_history(self.path(), protocol, FOLDS)
+            hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
 
-    def test_protocol_needs_the_plan_folds(self):
+    def test_protocol_needs_the_fold_plan_it_pins(self):
+        # REVIEW-HPO L2: fold ids alone are not tied to the protocol's
+        # fold_plan_hash, so the plan is required and checked.
         protocol = build(families=("generic",), trials_per_family=2)
         self.run_search(protocol)
-        with self.assertRaisesRegex(hp.ProtocolError, "needs the fold plan's inner fold ids"):
-            hp.read_history(self.path(), protocol)
-        self.assertEqual(len(hp.read_history(self.path(), protocol, FOLDS)), 2)
+        for folds in (None, FOLDS):
+            with self.assertRaisesRegex(hp.ProtocolError, "needs the fold plan the protocol pins"):
+                hp.read_history(self.path(), protocol, folds)
+        with self.assertRaisesRegex(hp.ProtocolError, "fold plan hashes to"):
+            hp.read_history(self.path(), protocol, fold_plan={"inner_folds": 3, "outer_fold": 1})
+        self.assertEqual(len(hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)), 2)
+        self.assertEqual(len(hp.read_history(self.path(), protocol, FOLDS, fold_plan=FOLD_PLAN)), 2)
+
+    def test_fold_ids_that_disagree_with_the_plan_are_refused(self):
+        # The review's L2 probe: every trial drops fold 2, and the caller
+        # passes folds [0, 1], which fit the records but not the plan.
+        protocol = build(families=("generic",), trials_per_family=3)
+        self.run_search(protocol)
+        for index in range(3):
+            self.rewrite_line(index, lambda r: r.update(inner_scores=r["inner_scores"][:2]))
+        with self.assertRaisesRegex(hp.ProtocolError, "needs the fold plan the protocol pins"):
+            hp.read_history(self.path(), protocol, [0, 1])
+        with self.assertRaisesRegex(hp.ProtocolError, r"folds \[0, 1\] are not the fold "
+                                    r"plan's inner folds \[0, 1, 2\]"):
+            hp.read_history(self.path(), protocol, [0, 1], fold_plan=FOLD_PLAN)
+        with self.assertRaisesRegex(hp.ProtocolError,
+                                    ":1: inner_scores: an ok trial must report exactly"):
+            hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
+        # Without a protocol nothing pins the plan; its fold ids are the folds.
+        self.assertEqual(len(hp.read_history(self.path(), fold_plan={"inner_folds": 2})), 3)
+        with self.assertRaisesRegex(hp.ProtocolError, "an ok trial must report exactly"):
+            hp.read_history(self.path(), fold_plan=FOLD_PLAN)
 
     def test_truncated_history_is_refused_unless_partial(self):
-        # Review F8: the first lines of a history are not the whole search.
+        # Review F8: the first lines of a history are not the whole search,
+        # even when only its last trial is missing (REVIEW-HPO L1, RV2).
         protocol = build(trials_per_family=2)
         records = self.run_search(protocol)
         with open(self.path()) as stream:
             lines = stream.readlines()
-        with open(self.path(), "w") as stream:
-            stream.writelines(lines[:7])
-        with self.assertRaisesRegex(hp.ProtocolError, "holds 7 of the plan's 12 trials"):
-            hp.read_history(self.path(), protocol, FOLDS)
-        self.assertEqual(hp.read_history(self.path(), protocol, FOLDS, partial=True),
-                         records[:7])
-        self.assertEqual(self.run_search(protocol), records)
-        self.assertEqual(hp.read_history(self.path(), protocol, FOLDS), records)
+        for kept in (7, 11):
+            with self.subTest(kept=kept):
+                with open(self.path(), "w") as stream:
+                    stream.writelines(lines[:kept])
+                with self.assertRaisesRegex(hp.ProtocolError,
+                                            f"holds {kept} of the plan's 12 trials"):
+                    hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
+                self.assertEqual(hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN,
+                                                 partial=True), records[:kept])
+                self.assertEqual(self.run_search(protocol), records)
+                self.assertEqual(hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN),
+                                 records)
+
+    def test_swapped_records_are_refused(self):
+        # REVIEW-HPO L1 (RV1): each record is still a planned trial, but not
+        # the one the plan runs at its line, at the start or at the end.
+        protocol = build(families=("cart", "generic"), trials_per_family=3)
+        self.run_search(protocol)
+        with open(self.path()) as stream:
+            lines = stream.readlines()
+        for first, planned in ((0, "cart:0"), (4, "cart:2")):
+            with self.subTest(first=first):
+                swapped = list(lines)
+                swapped[first:first + 2] = lines[first + 1], lines[first]
+                with open(self.path(), "w") as stream:
+                    stream.writelines(swapped)
+                for partial in (False, True):
+                    with self.assertRaisesRegex(hp.ProtocolError,
+                                                f":{first + 1}: record is not planned trial "
+                                                f"{planned}$"):
+                        hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN,
+                                        partial=partial)
 
     def test_records_past_the_plan_are_refused(self):
         protocol = build(families=("generic",), trials_per_family=2)
@@ -312,7 +386,7 @@ class HistoryTests(SearchCase):
                                       protocol["protocol_hash"]))
         for partial in (False, True):
             with self.assertRaisesRegex(hp.ProtocolError, "3 records exceed the plan's 2"):
-                hp.read_history(self.path(), protocol, FOLDS, partial=partial)
+                hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN, partial=partial)
 
     def test_select_replays_the_search_plan(self):
         # select.py, loaded by path as report.py loads it, rebuilds the plan
@@ -486,7 +560,7 @@ class FailureTests(SearchCase):
         self.assertEqual(len(defaults["cart"]["inner_scores"]), 1)
         self.assertIsNone(defaults["scm"]["complexity"])
         self.assertTrue(all(r["status"] == "ok" for r in records if not r["is_default"]))
-        self.assertEqual(hp.read_history(self.path(), protocol, [0, 1, 2]), records)
+        self.assertEqual(hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN), records)
 
     def test_results_off_the_plan_folds_become_failed_trials(self):
         def ragged(family, config, fold_plan, seed):
@@ -519,7 +593,7 @@ class FailureTests(SearchCase):
         ok_folds = {tuple(s["fold"] for s in r["inner_scores"])
                     for r in records if r["status"] == "ok"}
         self.assertEqual(ok_folds, {(0, 1, 2)})
-        self.assertEqual(hp.read_history(self.path(), protocol, [0, 1, 2]), records)
+        self.assertEqual(hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN), records)
 
     def test_malformed_results_become_failed_trials(self):
         cases = {
@@ -572,7 +646,7 @@ class FailureTests(SearchCase):
                 records = self.run_search(protocol, huge, path=path)
                 self.assertEqual([r["status"] for r in records], ["failed", "ok"])
                 self.assertIn(reason, records[0]["reason"])
-                self.assertEqual(hp.read_history(path, protocol, [0, 1, 2]), records)
+                self.assertEqual(hp.read_history(path, protocol, fold_plan=FOLD_PLAN), records)
 
 
 class RefusalTests(SearchCase):
@@ -628,7 +702,7 @@ class RefusalTests(SearchCase):
         self.rewrite_line(1, lambda r: r.update(inner_scores=r["inner_scores"][1:]))
         with self.assertRaisesRegex(hp.ProtocolError,
                                     ":2: inner_scores: an ok trial must report exactly"):
-            hp.read_history(self.path(), protocol, FOLDS)
+            hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
         with self.assertRaisesRegex(hp.ProtocolError,
                                     ":2: inner_scores: an ok trial must report exactly"):
             self.run_search(protocol)
@@ -641,7 +715,7 @@ class RefusalTests(SearchCase):
         self.assertIsNone(hp.config_problem(records[2]["config"],
                                             protocol["families"]["generic"]["space"]))
         with self.assertRaisesRegex(hp.ProtocolError, ":2: record is not planned trial generic:1"):
-            hp.read_history(self.path(), protocol, FOLDS)
+            hp.read_history(self.path(), protocol, fold_plan=FOLD_PLAN)
         with self.assertRaisesRegex(hp.ProtocolError, "not planned trial generic:1"):
             self.run_search(protocol)
 

@@ -61,6 +61,7 @@ script's own directory off sys.path.
 """
 import copy
 import hashlib
+import io
 import json
 import math
 from collections import Counter
@@ -105,6 +106,17 @@ RULE = (
     "them prefer lower complexity, then the default config, then the lowest "
     "trial id"
 )
+
+# Searched parameters production has no knob for. A protocol may still list
+# one: before review F1, Task B's lasso searched lambda_min_ratio. Such a
+# protocol verifies and selects as before; select_history labels it
+# (`warnings`), so its selection isn't read as a config production can fit.
+NO_PRODUCTION_KNOB = {
+    ("lasso", "lambda_min_ratio"): (
+        "production fixes the lasso path's smallest-penalty ratio at 1e-3 "
+        "(lasso.rs path_problem) and has no knob for it, so a config that "
+        "varies it is not one production can fit (review F1)"),
+}
 
 # Relative slack on the one-SE boundary, so a trial whose mean lies exactly on
 # it in real arithmetic is not dropped by floating-point rounding.
@@ -352,11 +364,19 @@ def _load_json(path, code):
 
 
 def load_history(path):
-    """Read a JSONL trial history. Refuses a last line without its newline
-    (cut short by a crash), blank lines, lines that are not JSON, NaN or
-    Infinity, and objects with a repeated key."""
+    """Read a JSONL trial history file; see parse_history."""
+    with open(path, "rb") as f:
+        return parse_history(f.read())
+
+
+def parse_history(data):
+    """Parse the bytes of a JSONL trial history, decoded as UTF-8 with
+    universal newlines, as open() reads a text file. A caller that also
+    hashes the file hashes these same bytes. Refuses a last line without
+    its newline (cut short by a crash), blank lines, lines that are not
+    JSON, NaN or Infinity, and objects with a repeated key."""
     trials, problems = [], []
-    with open(path, encoding="utf-8") as f:
+    with io.TextIOWrapper(io.BytesIO(data), encoding="utf-8") as f:
         text = f.read()
     if text and not text.endswith("\n"):
         problems.append("bad_json: the last line has no newline, so it may "
@@ -600,13 +620,19 @@ def select_history(trials, protocol, fold_plan=None):
 
     Returns the objective, direction, hashes, the protocol's search_hash,
     planned budgets and constraints, history_sha256, inner folds, SE_LABEL,
-    SCORE_LABEL, RULE, `families` (one result per budgeted family; see
+    SCORE_LABEL, RULE, `warnings` (each family that searches a parameter in
+    NO_PRODUCTION_KNOB, as {code, family, message}; the selection is
+    unchanged), `families` (one result per budgeted family; see
     _select_family) and `budgets` (see budget_accounting)."""
     p = as_protocol(protocol)
     folds = validate_history(trials, p, fold_plan)
     by_family = {fam: [] for fam in p.budgets}
     for t in trials:
         by_family[t["family"]].append(t)
+    warnings = [
+        _flag("no_production_knob", fam, f"{fam} searches {param}: {why}")
+        for (fam, param), why in sorted(NO_PRODUCTION_KNOB.items())
+        if param in (p.families or {}).get(fam, {}).get("space", {})]
     return {
         "objective": p.objective,
         "direction": p.direction,
@@ -620,6 +646,7 @@ def select_history(trials, protocol, fold_plan=None):
         "se_label": SE_LABEL,
         "score_label": SCORE_LABEL,
         "rule": RULE,
+        "warnings": warnings,
         "families": {fam: _select_family(fam, ts, folds, p)
                      for fam, ts in by_family.items()},
         "budgets": _budgets(trials, p, folds),
@@ -747,8 +774,9 @@ def _budgets(trials, p, folds):
     `cost_unreported`, the failed trials with a null fit_count or seconds.
     `flags` lists, each with a code: families under or over budget or with no
     trials, trial ids that are not 0..used-1, families with fold_set_mismatch
-    trials, and unequal planned, used, ok or (with constraints) feasible
-    counts across families."""
+    trials, unequal planned, used, ok or (with constraints) feasible
+    counts across families, and unequal total fit_count or seconds, since
+    equal trial counts can hide unequal compute."""
     families, flags = {}, []
     for fam, planned in p.budgets.items():
         ts = [t for t in trials if t["family"] == fam]
@@ -795,6 +823,14 @@ def _budgets(trials, p, folds):
         values = {fam: b[what] for fam, b in families.items()}
         if len(set(values.values())) > 1:
             flags.append(_flag(f"unequal_{what}", None, f"{what} trials differ "
+                               "across families: " + ", ".join(
+                                   f"{f} {v}" for f, v in values.items())))
+    # An internal-search default runs production's whole grid in one trial,
+    # so equal trial counts can still spend unequal compute (review F6).
+    for what, name in (("fit_count", "fits"), ("seconds", "seconds")):
+        values = {fam: b[what] for fam, b in families.items()}
+        if len(set(values.values())) > 1:
+            flags.append(_flag(f"unequal_{what}", None, f"{name} differ "
                                "across families: " + ", ".join(
                                    f"{f} {v}" for f, v in values.items())))
     return {"families": families, "flags": flags}
@@ -1016,8 +1052,9 @@ def _sample_value(spec, u):
     low, high = spec["low"], spec["high"]
     if spec["type"] == "int":
         if spec["log"]:
-            value = math.floor(math.exp(math.log(low) + u * (
-                math.log(high + 1) - math.log(low))))
+            value = math.exp(math.log(low) + u * (
+                math.log(high + 1) - math.log(low)))
+            value = math.floor(float(f"{value:.10g}"))
         else:
             value = low + math.floor(u * (high - low + 1))
     else:
