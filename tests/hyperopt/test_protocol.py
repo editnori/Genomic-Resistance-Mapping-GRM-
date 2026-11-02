@@ -251,12 +251,34 @@ def rust_default(file, name):
     return dict(re.findall(r"^\s*(\w+): (.+),$", block.group(1), re.M))
 
 
+def rust_item(text, start):
+    """The Rust item that begins at `start`: through the `}` that closes its
+    body, or through its `;` if it has no body (a `const`). Brackets are
+    counted, so a `;` inside `[f64; 5]` doesn't end it."""
+    i = text.index(start)
+    depth, body = 0, False
+    for j in range(i, len(text)):
+        c = text[j]
+        if c in "([{":
+            depth += 1
+            body = body or (c == "{" and depth == 1)
+        elif c in ")]}":
+            depth -= 1
+            if depth == 0 and c == "}" and body:
+                return text[i:j + 1]
+        elif c == ";" and depth == 0 and not body:
+            return text[i:j + 1]
+    raise AssertionError(f"the item at {start!r} doesn't end")
+
+
 def rust_after(file, start, pattern):
-    """The first match of `pattern` after `start` in src/learn/<file>."""
+    """The first match of `pattern` inside the item that begins at `start` in
+    src/learn/<file>. The search stops at the item's end, so a default that
+    stops being a literal fails here rather than matching a later item."""
     text = (RUST / file).read_text()
-    match = re.search(pattern, text[text.index(start):])
+    match = re.search(pattern, rust_item(text, start))
     if match is None:
-        raise AssertionError(f"{pattern!r} not found after {start!r} in src/learn/{file}")
+        raise AssertionError(f"{pattern!r} not found in the item at {start!r} in src/learn/{file}")
     return match.group(1)
 
 
