@@ -1,10 +1,10 @@
 # Continuous integration
 
-`.github/workflows/ci.yml` runs the Rust, Python and deployment-toolkit checks on every push and pull request. The jobs use synthetic and unit fixtures from the tree: none reads real data, uses a secret or deploys anything, and the network serves only the source, the toolchain and packages. The workflow can only read the repository (`permissions: contents: read`), its checkouts keep no credentials, and a newer push to a pull request cancels that pull request's older run.
+`.github/workflows/ci.yml` runs the Rust, Python, deployment-toolkit and web checks on every push and pull request. The jobs use synthetic and unit fixtures from the tree: none reads real data, uses a secret or deploys anything, and the network serves only the source, the toolchain and packages. The workflow can only read the repository (`permissions: contents: read`), its checkouts keep no credentials, and a newer push to a pull request cancels that pull request's older run.
 
 ## Jobs
 
-Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are those of the commit that added this workflow (evaluation revision 11).
+Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are those of the commit that last changed them (evaluation revision 11).
 
 | Job | Runs | Result |
 |---|---|---|
@@ -22,7 +22,7 @@ The deployment suites run offline, in temporary roots, with loopback ports only.
 
 ## Rust test names
 
-`cargo test` still passes when a module's tests leave the build. Delete a module's `pub mod` line and its tests are no longer compiled, so nothing runs them and nothing fails: deleting `pub mod encode;` or `pub mod plan;` from `src/ablate/mod.rs` drops 24 or 23 tests.
+`cargo test` still passes when a module's tests leave the build. Put a `#[cfg(...)]` that is never true on a module's `mod tests`, and its tests are no longer compiled, so nothing runs them and nothing fails: doing that to `src/ablate/plan.rs`'s tests drops 21 tests.
 
 The `rust-test` job therefore compares the tests it built with `tests/rust-test-names.txt`. That file lists every test, sorted, as its crate root and name, for example `src/lib.rs ablate::encode::tests::…` or `tests/foldmask_extended.rs …`. `scripts/ci/rust-test-names.sh --check` reads the names from `cargo test --release --locked -- --list` and fails on any difference, printed as a diff: a `-` line is a test that left the build, and a `+` line is a new one.
 

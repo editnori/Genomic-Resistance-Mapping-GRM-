@@ -1,6 +1,6 @@
 # What an ablation arm runner must do
 
-No code in the tree runs ablation arms yet. The parts exist: G's fold plans (`src/ablate/plan.rs`), H's blocks (`blocks.rs`; 4 of 6 adapter types present, N and X unavailable), I's encoders (`encode.rs`) and F's group-sampling plan (`src/curate.rs`), each tested on its own. The order they run in and the samples each one sees are the caller's job, and a mistake in either gives a wrong result with no error. This page lists what the runner owes, and what the curation code that calls `plan_group_sampling` owes.
+No code in the tree runs ablation arms yet. The parts exist: G's fold plans (`src/ablate/plan.rs`), H's blocks (`blocks.rs`; 4 of 6 blocks available: N and X have adapter types but no source), I's encoders (`encode.rs`) and F's group-sampling plan (`src/curate.rs`), each tested on its own. The order they run in and the samples each one sees are the caller's job, and a mistake in either gives a wrong result with no error. This page lists what the runner owes, and what the curation code that calls `plan_group_sampling` owes.
 
 Section numbers are those of the GRM ablation data contract v1.14 (main orchestration ruling, 2026-10-31, sha256 `2300fbdbf920f847518a3f1628843826360f709b170c551f38db50d1f13deb76`). Where this page or the code disagrees with the contract, the contract wins.
 
@@ -28,7 +28,7 @@ No runner function exists, so it has no signature yet. The data at its edges is 
 
 **In:**
 - one `FoldPlan` per (dataset, split, repeat), from `plan::fold_plan` (`src/ablate/plan.rs:388`), that passes `FoldPlan::verify` (`plan.rs:360`). A plan that can't be scored (`is_available`, `plan.rs:262`) has its `unavailable_reason`, and K's run manifest records such a run as `unavailable` with that reason ([ablation-report.md](ablation-report.md#run-manifest)).
-- the arm's blocks, each admitted with `blocks::admit` (`src/ablate/blocks.rs:843`) over the dataset's sample ids. 4 of 6 adapter types present; N and X unavailable. `admit` refuses N and X with their reasons (`blocks.rs:204-205`, `:848-850`), and an `ok` run uses no unavailable block.
+- the arm's blocks, each admitted with `blocks::admit` (`src/ablate/blocks.rs:843`) over the dataset's sample ids. 4 of 6 blocks are available: N and X have adapter types but no source, and `admit` refuses them with their reasons (`blocks.rs:204-205`, `:848-850`), and an `ok` run uses no unavailable block.
 - the labels, in the plan's sample order, and an `EvalConfig` (`src/learn/eval.rs:54-66`) for the learners. G's plan for the pipeline's own folds takes its `k`, `inner_k` and `seed` from `EvalConfig`'s `folds`, `inner_folds` and `seed` (`plan.rs:237-242`, `:370-375`). The encoder takes an `EncodeConfig` (`src/ablate/encode.rs:48-53`).
 
 **Out:** contract §4 prediction rows, one per (dataset, arm, learner, split, repeat, sample_id), with J's field names (`scripts/ablation/stats.py:150-151`) and K's `PREDICTION` record (`scripts/ablation/schema.py:310-314`). A row's `fold` is the sample's outer test fold in the plan, and its `fold_plan_sha256` is the plan's `sha256`, the same across arms and learners. A no-call row has `called` false and scores the training prevalence.

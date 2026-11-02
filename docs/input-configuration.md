@@ -39,7 +39,7 @@ Learner settings are a separate thing. `scripts/hyperopt` searches learner knobs
 
 **Recorded direction.** The work program's entry of 30 Oct 10:1x UTC (`docs/work-program-20261027.md` at commit `744e636`, line 596; this branch's copy of the file doesn't have the entry) says: keep a legacy selection that is byte-compatible with today's, and add a separately versioned group-stratified design. "No unreviewed switch." No switch has been approved.
 
-**What a call from `run_curate` would have to supply.** `plan_group_sampling` takes:
+**What `plan_group_sampling` takes:**
 - `eligible`, one `EligibleGenome` per genome: its id and its group id, for a representative already past QC and deduplication (`curate.rs:690-701`);
 - `always`, the always-included stratum: its ids, a reason, and whether labels chose it (`curate.rs:703-713`);
 - `cap` and `seed`.
@@ -65,7 +65,7 @@ The rules recorded for such a call:
 
 `grm learn` on its own doesn't compare k with 31. `load_inputs` refuses a structure or matrix that wasn't built from `counted.json` as it is (`analysis.rs:279-313`), and then uses the matrix's own k (`analysis.rs:319`, `:534`). Each report records k (`analysis.rs:743`), and the input fingerprint changes with it (`analysis.rs:2180`, in `fingerprint_changes_with_every_input_the_evaluation_reads`).
 
-**What a configurable k would have to reach.** These read k today, or read something built at k:
+**What reads k today.** These read k, or read something built at k:
 - the catalog gene calls, loaded in a k-mer space of that k (`main.rs:318-337`);
 - the stale-stage check (`species.rs:321`, `:416`) and kset reuse (`species.rs:102`);
 - the stage folders, which hold one k per species in a data root (`layout.rs:45-55`);
@@ -83,7 +83,7 @@ So a change of k can change the lineage labels and the duplicate groups, and wit
 
 **Flag.** None.
 
-**H's registry.** `REGISTRY` (`src/ablate/blocks.rs:209`) defines six blocks. 4 of 6 adapter types present; N and X unavailable.
+**H's registry.** `REGISTRY` (`src/ablate/blocks.rs:209`) defines six blocks. 4 of 6 are available: N and X have adapter types but no source, so they are always unavailable.
 
 | Block | What it is | Adapter | State |
 |---|---|---|---|

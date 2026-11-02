@@ -112,7 +112,7 @@ The report records each file's sha256 in `predictions_sha256`. That field is nul
 
 An available block (`unavailable_reason` null) needs a non-empty `version` and a 64-hex `source_sha256`. An unavailable block may have `""` for both; a non-empty `source_sha256` must still be a hash.
 
-H's registry names six kinds. 4 of 6 adapter types present; N and X unavailable. `CountSource` (N) and `ContextSource` (X) have no source, and H's `admit` refuses them with their reasons (`src/ablate/blocks.rs:204-205`), so a manifest can list N or X only as an unavailable block. A future N or X source must be reviewed, built by a sealed adapter in `blocks.rs`, label-free, and pass the source-proxy refusal ([input-configuration.md](input-configuration.md#feature-families)).
+H's registry names six kinds. 4 of 6 blocks are available. `CountSource` (N) and `ContextSource` (X) are adapter types with no source, and H's `admit` refuses them with their reasons (`src/ablate/blocks.rs:204-205`), so a manifest can list N or X only as an unavailable block. A future N or X source must be reviewed, built by a sealed adapter in `blocks.rs`, label-free, and pass the source-proxy refusal ([input-configuration.md](input-configuration.md#feature-families)).
 
 L's synthetic noise block (§8) has:
 
