@@ -391,7 +391,7 @@ nohup nice -n 10 python3 -I -B scan.py --input-root "$ROOT" --out "$SCAN/scan" -
 
 ## Deployment settings and downstream work
 
-Revision 9 (275 datasets over 23 species) has been the published release since 2026-10-30 07:52 UTC. `scripts/deployment/` still defaults to revision 7 and 237 datasets (`common.sh`, `smoke.sh`), so every staging or publishing step must set the expected values explicitly, as below.
+Revision 9 (275 datasets over 23 species) was the published release from 2026-10-30 07:52 UTC until the Vast host was destroyed on 2026-10-31. `scripts/deployment/` still defaults to revision 7 and 237 datasets (`common.sh`, `smoke.sh`), so every staging or publishing step must set the expected values explicitly, as below.
 
 At a future, authorized revision-11 staging/publishing operation, the operator must explicitly set:
 

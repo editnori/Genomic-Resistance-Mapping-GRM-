@@ -3,7 +3,7 @@
 // read-only fixture.
 // node browser-check-final.cjs <playwright-core> <output-dir> <base-url> <fixture-dir>
 // GRM_CHROMIUM, when set, is the Chromium executable to launch; unset or
-// empty, that playwright-core launches its own browser. The check used to pin
+// empty, playwright-core launches its own browser. The check used to pin
 // the headless shell of Chromium build 1248 on the release host; to keep that
 // build there, set
 // GRM_CHROMIUM=/root/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell

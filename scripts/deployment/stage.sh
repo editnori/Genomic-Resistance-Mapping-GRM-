@@ -8,6 +8,9 @@
 #                        (the release's browser-check.cjs, which its manifest
 #                        binds to its commit); its Chromium needs
 #                        LD_LIBRARY_PATH and node on PATH
+#   GRM_CHROMIUM         Chromium executable the browser check launches, for a
+#                        release whose browser-check.cjs reads it; unset or
+#                        empty, playwright-core launches its own
 #   GRM_SKIP_BROWSER=1   approve on the HTTP checks alone; the approval says so
 # Receipts go to stage/LABEL--PUBLICATION--TIME.XXXXXX; approval to go/LABEL--PUBLICATION.
 # The candidate is stopped on every exit, interruption included; if it cannot
