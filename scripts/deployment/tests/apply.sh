@@ -996,6 +996,39 @@ expect 0 'smoke-pass .*datasets=275' "status checks the live pair against its ap
 check "status and smoke.sh leave no temporary files" -- test -z "$(ls -A "$T/tmp")"
 expect 0 'live health pass: rel1 with p237' "rollback 275 -> 237" -- bash "$S/rollback.sh" --apply
 check "rel1 with p237 serves" -- test "$(live)" = "rel1 p237"
+# smoke.sh checks every served dataset's revision from revision 8 on (U-13),
+# as check_report_index does for a publication: each index row and each served
+# datasets/ID.json records evaluation.revision. The stub serves a three-dataset
+# revision-8 report on the spare port.
+mkdir -p "$T/s8/report/datasets"
+python3 -I - "$T/s8/report" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+ids = ["sp__r1", "sp__r2", "sp__r3"]
+with open(os.path.join(root, "index.json"), "w") as f:
+    json.dump({"schema": 2, "evaluation_revision": 8, "datasets": [{"id": i, "evaluation": {"revision": 8}} for i in ids]}, f)
+with open(os.path.join(root, "corpus.json"), "w") as f:
+    json.dump({"corpus": 3}, f)
+for i in ids:
+    with open(os.path.join(root, "datasets", i + ".json"), "w") as f:
+        json.dump({"id": i, "evaluation": {"revision": 8}}, f)
+PY
+cp "$T/s8/report/index.json" "$T/s8.index"
+cp "$T/s8/report/datasets/sp__r2.json" "$T/s8.r2"
+"$T/grm-stub" --data "$T/s8" serve --app "$D/release/rel1/dist" --port "$SP" >/dev/null 2>&1 &
+s8=$!
+wait_for 10 eval '! port_free "$SP"' || true
+smoke8() { env GRM_EXPECT_SCHEMA=2 GRM_EXPECT_REVISION=8 GRM_EXPECT_DATASETS=3 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"; }
+expect 0 'smoke-pass port=[0-9]+ schema=2 revision=8 datasets=3' "smoke.sh passes a revision-8 report whose served datasets all record revision 8" -- smoke8
+printf '{"id": "sp__r2", "evaluation": {"revision": 7}}' >"$T/s8/report/datasets/sp__r2.json"
+expect 1 'served report has evaluation.revision 7, expected 8: sp__r2' "smoke.sh fails a served dataset report that records another revision" -- smoke8
+cp "$T/s8.r2" "$T/s8/report/datasets/sp__r2.json"
+sed 's/{"id": "sp__r3", "evaluation": {"revision": 8}}/{"id": "sp__r3"}/' "$T/s8.index" >"$T/s8/report/index.json"
+expect 1 'with index evaluation.revision missing, expected 8: sp__r3' "smoke.sh fails a served index row without the revision" -- smoke8
+cp "$T/s8.index" "$T/s8/report/index.json"
+kill -KILL "$s8" 2>/dev/null || true
+wait "$s8" 2>/dev/null || true
+check "the revision-8 stub is gone and the spare port free" -- wait_for 5 port_free "$SP"
 expect 0 'live health pass: rel2 with p275' "rollback again switches forward to 275" -- bash "$S/rollback.sh" --apply
 kill -KILL "$(listener "$LP")"
 wait_for 5 port_free "$LP" || true
@@ -2128,7 +2161,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((527 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((531 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

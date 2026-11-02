@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Check that a running grm serve returns the exact bytes of an app build and a
 # report tree, and that the served index has the expected schema, evaluation
-# revision and dataset count. It only sends GET requests to 127.0.0.1 and
-# writes only a temporary directory (mktemp), removed on exit.
+# revision and dataset count. From revision 8 on, every dataset the served
+# index lists must also record that revision, in its index row and in its
+# served report. It only sends GET requests to 127.0.0.1 and writes only a
+# temporary directory (mktemp), removed on exit.
 # usage: smoke.sh PORT REPORT_DIR DIST_DIR
 #   GRM_EXPECT_SCHEMA (default 2), GRM_EXPECT_REVISION (7), GRM_EXPECT_DATASETS (237)
 set -euo pipefail
@@ -51,4 +53,49 @@ got = (index.get("schema"), index.get("evaluation_revision"), len(index.get("dat
 if got != (schema, revision, count):
     sys.exit(f"schema/revision/datasets {got}, expected {(schema, revision, count)}")
 PY
+# From revision 8 on, as check_report_index (common.sh) requires of a
+# publication: each dataset the served index lists records the revision as its
+# evaluation.revision, an integer, in its index row and in the report served
+# for it. grm report stamps the index with its own revision, so the index alone
+# can pass reports of an earlier revision.
+if [ "$revision" -ge 8 ]; then
+    cp "$tmp/body" "$tmp/index.json"
+    python3 -I - "$tmp/index.json" >"$tmp/ids" <<'PY' || { echo "FAIL served index.json dataset ids"; exit 1; }
+import json, re, sys
+for d in json.load(open(sys.argv[1]))["datasets"]:
+    i = d.get("id") if isinstance(d, dict) else None
+    if not isinstance(i, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", i):
+        sys.exit(f"dataset id {i!r} is not a plain name")
+    print(i)
+PY
+    mkdir "$tmp/datasets"
+    while read -r id; do
+        curl -q --noproxy '*' -sS --fail --max-time 20 "http://127.0.0.1:$port/data/datasets/$id.json" -o "$tmp/datasets/$id.json" || {
+            echo "FAIL /data/datasets/$id.json unreachable"
+            exit 1
+        }
+    done <"$tmp/ids"
+    python3 -I - "$tmp/index.json" "$tmp/datasets" "$revision" <<'PY' || { echo "FAIL served dataset revisions"; exit 1; }
+import json, os, sys
+index = json.load(open(sys.argv[1]))
+root, revision = sys.argv[2], int(sys.argv[3])
+stale = {}
+audits = [("with index", d["id"], d) for d in index["datasets"]]
+for d in index["datasets"]:
+    try:
+        with open(os.path.join(root, d["id"] + ".json")) as f:
+            audits.append(("whose served report has", d["id"], json.load(f)))
+    except (OSError, ValueError):
+        stale.setdefault("datasets whose served report is not readable JSON", []).append(d["id"])
+for where, name, record in audits:
+    audit = record.get("evaluation") if isinstance(record, dict) else None
+    found = audit.get("revision") if isinstance(audit, dict) else None
+    if type(found) is not int or found != revision:
+        got = "missing" if found is None else repr(found)
+        stale.setdefault(f"datasets {where} evaluation.revision {got}, expected {revision}", []).append(name)
+for what, names in sorted(stale.items()):
+    print(f"{what}: {', '.join(sorted(names))}", file=sys.stderr)
+sys.exit(1 if stale else 0)
+PY
+fi
 echo "smoke-pass port=$port schema=$schema revision=$revision datasets=$count"
