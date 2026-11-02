@@ -47,13 +47,31 @@ def b_hash(p, ensure_ascii=True):
         allow_nan=False).encode("utf-8")).hexdigest()
 
 
-def b_protocol(constraints=(), direction="maximize", fit=7, n=4, plan=FH,
+def b_plan(outer=None):
+    """A fold plan with inner folds 0 and 1; `outer` makes another outer
+    fold's plan, with its own hash."""
+    return {"inner_folds": 2} if outer is None else {"inner_folds": 2,
+                                                     "outer_fold": outer}
+
+
+def plan_hash(plan):
+    """Task B's fold_plan_hash, written out independently of select.py."""
+    return hashlib.sha256(json.dumps(
+        plan, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
+        allow_nan=False).encode("ascii")).hexdigest()
+
+
+BP = b_plan()
+
+
+def b_protocol(constraints=(), direction="maximize", fit=7, n=4, plan=BP,
                names=("cart",), **kw):
-    """Task B's protocol shape with a true protocol_hash. Each family's
-    default is depth 0; its space is depth 0..9, lr 0.0..1.0 (float) and
-    kind a or b."""
+    """Task B's protocol shape with a true protocol_hash, pinning fold plan
+    `plan`. Each family's default is depth 0; its space is depth 0..9, lr
+    0.0..1.0 (float) and kind a or b. With sampler seed 1, cart's planned
+    trials 1 to 4 have depth 2, 9, 5 and 3."""
     p = dict({
-        "schema_version": 1, "fold_plan_hash": plan,
+        "schema_version": 1, "fold_plan_hash": plan_hash(plan),
         "objective": {"name": "auc", "direction": direction,
                       "constraints": [dict(c) for c in constraints]},
         "seeds": {"sampler": 1, "fit": fit}, "trials_per_family": n,
@@ -69,13 +87,25 @@ def b_protocol(constraints=(), direction="maximize", fit=7, n=4, plan=FH,
     return p
 
 
-def b_trial(p, tid, scores, depth=None, **kw):
-    """A record that belongs to Task B protocol p."""
-    fields = {"config": {"depth": tid if depth is None else depth,
-                         "kind": "a", "lr": 0.5},
+def b_trial(p, tid, scores, depth=None, family="cart", **kw):
+    """A record that belongs to Task B protocol p, with its planned config
+    unless `depth` (an off-plan config of that depth) or `config` is given."""
+    config = (next(c for f, t, c in sel.planned_trials(p) if (f, t) == (family, tid))
+              if depth is None else {"depth": depth, "kind": "a", "lr": 0.5})
+    fields = {"config": config, "family": family,
               "protocol_hash": p["protocol_hash"], "seed": p["seeds"]["fit"],
               "fold_plan_hash": p["fold_plan_hash"]}
     return trial(tid, scores, **dict(fields, **kw))
+
+
+def b_history(p, scores=None, *records):
+    """p's whole plan in run order: every trial ok, scored scores[(family,
+    trial_id)] or [0, 0], and each of `records` in place of the planned
+    trial with its family and trial id."""
+    scores = scores or {}
+    swap = {(t["family"], t["trial_id"]): t for t in records}
+    return [swap.get((f, t)) or b_trial(p, t, scores.get((f, t), [0, 0]), family=f)
+            for f, t, _ in sel.planned_trials(p)]
 
 
 def trial(tid, scores, family="cart", complexity=1.0, status="ok",
@@ -460,29 +490,40 @@ class TaskBProtocol(unittest.TestCase):
         self.assertEqual(p.budgets, {"cart": 2, "rf": 2})
         self.assertEqual(p.constraints,
                          ({"metric": "acc", "op": ">=", "bound": 0.5},))
-        self.assertEqual((p.protocol_hash, p.fit_seed), (bp["protocol_hash"], 7))
-        r = sel.select_history([b_trial(bp, 0, [1, 2]), b_trial(bp, 1, [3, 3]),
-                                b_trial(bp, 0, [1, 2], family="rf")], bp)
+        self.assertEqual((p.protocol_hash, p.fit_seed, p.sampler_seed),
+                         (bp["protocol_hash"], 7, 1))
+        r = sel.select_history(b_history(bp, {("cart", 0): [1, 2],
+                                              ("cart", 1): [3, 3],
+                                              ("rf", 0): [1, 2]}), bp, BP)
         self.assertEqual(family(r)["selected"]["trial_id"], 1)
+        self.assertEqual(r["folds"], [0, 1])
 
     def test_refuses_bad_task_b_protocol(self):
         for kw in [{"trials_per_family": 0}, {"families": {}},
                    {"objective": {"name": "auc", "direction": "up",
                                   "constraints": []}},
-                   {"seeds": {"sampler": 1}},
+                   {"seeds": {"sampler": 1}}, {"seeds": {"fit": 7}},
+                   {"seeds": {"sampler": "1", "fit": 7}},
                    {"schema_version": 2}, {"schema_version": True},
                    {"schema_version": "1"}]:
             with self.assertRaises(sel.HistoryError) as cm:
                 sel.Protocol.from_dict(b_protocol(**kw))
             self.assertEqual(cm.exception.codes, {"bad_protocol"}, kw)
-        for spec in [{"type": "int", "low": 3, "high": 1},
+        for spec in [{"type": "int", "low": 3, "high": 1, "log": False},
+                     {"type": "int", "low": 1, "high": 3},
+                     {"type": "int", "low": 1, "high": 3, "log": 0},
+                     {"type": "float", "low": 0.0, "high": 1.0, "log": True},
                      {"type": "grid", "values": [1]}]:
             with self.assertRaises(sel.HistoryError) as cm:
                 sel.Protocol.from_dict(b_protocol(families={"cart": {
                     "default": {"d": 1}, "space": {"d": spec}}}))
             self.assertEqual(cm.exception.problems, [
                 "bad_protocol: family cart: space d must be {type: int or "
-                "float, low <= high} or {type: choice, values: [...]}"])
+                "float, low <= high, log: boolean, low > 0 on a log scale} "
+                "or {type: choice, values: [...]}"], spec)
+        sel.Protocol.from_dict(b_protocol(families={"cart": {
+            "default": {"d": 1}, "space": {"d": {
+                "type": "int", "low": 1, "high": 3, "log": True}}}}))
 
     def test_defaults_are_fixed_or_internal_search(self):
         space = b_protocol()["families"]["cart"]["space"]
@@ -536,30 +577,31 @@ class TaskBProtocol(unittest.TestCase):
 
     def test_edited_direction_with_stale_hash_is_refused(self):
         # Reviewer case 1: flip the direction and keep the old hash.
-        bp = b_protocol()
+        bp = b_protocol(n=3)
         trials = [b_trial(bp, 0, [1, 1]), b_trial(bp, 1, [9, 9]),
                   b_trial(bp, 2, [5, 5])]
-        self.assertEqual(family(sel.select_history(trials, bp))
+        self.assertEqual(family(sel.select_history(trials, bp, BP))
                          ["selected"]["trial_id"], 1)
         tampered = copy.deepcopy(bp)
         tampered["objective"]["direction"] = "minimize"
         with self.assertRaises(sel.HistoryError) as cm:
-            sel.select_history(trials, tampered)
+            sel.select_history(trials, tampered, BP)
         self.assertEqual(cm.exception.codes, {"protocol_hash_mismatch"})
         self.assertIn(bp["protocol_hash"], cm.exception.problems[0])
 
     def test_loosened_constraint_with_stale_hash_is_refused(self):
         # Reviewer case 2 (probe P5): complexity <= 0.5 leaves nothing
         # feasible; loosening the bound to 10 would select trial 1.
-        bp = b_protocol([{"metric": "complexity", "op": "<=", "bound": 0.5}])
+        bp = b_protocol([{"metric": "complexity", "op": "<=", "bound": 0.5}],
+                        n=2)
         trials = [b_trial(bp, 0, [0.7, 0.8]),
                   b_trial(bp, 1, [0.9, 0.95], complexity=3)]
-        self.assertEqual(family(sel.select_history(trials, bp))["status"],
+        self.assertEqual(family(sel.select_history(trials, bp, BP))["status"],
                          "no_feasible_trials")
         tampered = copy.deepcopy(bp)
         tampered["objective"]["constraints"][0]["bound"] = 10
         with self.assertRaises(sel.HistoryError) as cm:
-            sel.select_history(trials, tampered)
+            sel.select_history(trials, tampered, BP)
         self.assertEqual(cm.exception.codes, {"protocol_hash_mismatch"})
 
 
@@ -568,8 +610,9 @@ class TaskBRecordRules(unittest.TestCase):
         self.p = b_protocol()
 
     def refused(self, *trials):
+        """Codes refusing the whole plan with `trials` in place."""
         with self.assertRaises(sel.HistoryError) as cm:
-            sel.select_history(list(trials), self.p)
+            sel.select_history(b_history(self.p, None, *trials), self.p, BP)
         return cm.exception.codes
 
     def test_unknown_field(self):
@@ -593,9 +636,14 @@ class TaskBRecordRules(unittest.TestCase):
                        {"depth": 1, "kind": "a", "lr": 0.5, "x": 1}]:
             t = b_trial(self.p, 1, [1, 2], config=config)
             self.assertEqual(self.refused(good, t), {"bad_config"}, config)
-        # Both bounds are inclusive.
-        sel.select_history([good, b_trial(self.p, 1, [1, 2], config={
-            "depth": 9, "kind": "b", "lr": 0.0})], self.p)
+        # Both bounds are inclusive, so the space holds this config; the
+        # plan never drew it, so a history holding it is refused as off plan.
+        edge = {"depth": 9, "kind": "b", "lr": 0.0}
+        self.assertIsNone(sel._config_problem(
+            edge, self.p["families"]["cart"]["space"]))
+        self.assertEqual(self.refused(good, b_trial(self.p, 1, [1, 2],
+                                                    config=edge)),
+                         {"off_plan"})
 
     def test_trial_zero_must_be_the_default_which_may_lie_outside_the_space(self):
         self.assertEqual(self.refused(b_trial(self.p, 0, [1, 2], depth=1)),
@@ -607,8 +655,9 @@ class TaskBRecordRules(unittest.TestCase):
         self.p["families"]["cart"]["default"] = default
         self.p["protocol_hash"] = b_hash(self.p)
         t0 = b_trial(self.p, 0, [1, 2], config=copy.deepcopy(default))
-        self.assertEqual(family(sel.select_history([t0], self.p))
-                         ["selected"]["config"], default)
+        self.assertEqual(family(sel.select_history(
+            b_history(self.p, None, t0), self.p, BP))["selected"]["config"],
+            default)
         self.assertEqual(self.refused(t0, b_trial(self.p, 1, [1, 2],
                                                   config=copy.deepcopy(default))),
                          {"bad_config"})
@@ -619,6 +668,127 @@ class TaskBRecordRules(unittest.TestCase):
         # Trial 0 must be the default exactly, not another grid.
         self.assertEqual(self.refused(b_trial(self.p, 0, [1, 2], config=dict(
             default, depth=[1, 2]))), {"bad_config"})
+
+
+class TaskBPlan(unittest.TestCase):
+    """Review F2 and F8: a Task B history must be the one its protocol's
+    search writes on the fold plan it pins."""
+
+    def setUp(self):
+        self.p = b_protocol(names=("cart", "rf"))
+        self.h = b_history(self.p, {("cart", 2): [0.5, 0.6]})
+
+    def refused(self, trials, plan=BP, p=None):
+        with self.assertRaises(sel.HistoryError) as cm:
+            sel.select_history(trials, p or self.p, plan)
+        return cm.exception
+
+    def test_the_planned_history_is_accepted(self):
+        r = sel.select_history(self.h, self.p, BP)
+        self.assertEqual((r["folds"], family(r)["selected"]["trial_id"]),
+                         ([0, 1], 2))
+        self.assertEqual(sel.budget_accounting(self.h, self.p, BP)["flags"], [])
+
+    def test_off_plan_config_is_refused(self):
+        # The review's counterexample: an in-space config the plan never drew,
+        # with perfect scores, in place of planned cart trial 3 (depth 5).
+        forged = b_trial(self.p, 3, [1, 1], depth=8, complexity=1.0)
+        self.assertIsNone(sel._config_problem(
+            forged["config"], self.p["families"]["cart"]["space"]))
+        e = self.refused(b_history(self.p, None, forged))
+        self.assertEqual(e.codes, {"off_plan"})
+        self.assertIn('record 7 (cart trial 3): config {"depth":8,"kind":"a",'
+                      '"lr":0.5} is not the planned config {"depth":5,'
+                      '"kind":"b","lr":0.0542856848}', e.problems[0])
+
+    def test_trial_past_the_budget_is_refused(self):
+        extra = b_trial(self.p, 4, [1, 1], depth=3)
+        e = self.refused(self.h + [extra])
+        self.assertEqual(e.problems, ["off_plan: record 9 (cart trial 4) is "
+                                      "not a planned trial: the plan has "
+                                      "trials 0..3"])
+
+    def test_truncated_history_is_refused(self):
+        # Review F8: the first lines of a search are not a full selection.
+        e = self.refused(self.h[:3])
+        self.assertEqual(e.problems, ["incomplete_history: the plan has 8 "
+                                      "trials, and 5 are missing: rf 1, "
+                                      "cart 2, rf 2, cart 3, rf 3"])
+        e = self.refused(self.h[:1])
+        self.assertIn("7 are missing: rf 0, cart 1, rf 1, cart 2, rf 2 and 2 "
+                      "more", e.problems[0])
+        self.assertEqual(self.refused([t for t in self.h
+                                       if t["family"] == "cart"]).codes,
+                         {"incomplete_history"})
+
+    def test_reordered_history_is_refused(self):
+        swapped = [self.h[1], self.h[0]] + self.h[2:]
+        self.assertEqual(self.refused(swapped).codes, {"off_plan_order"})
+        by_family = sorted(self.h, key=lambda t: t["family"])
+        self.assertEqual(self.refused(by_family).codes, {"off_plan_order"})
+
+    def test_fold_subsets_and_omitted_folds_are_refused(self):
+        plan = {"inner_folds": 3}
+        p = b_protocol(names=("cart", "rf"), plan=plan)
+        full = b_history(p, {(f, t): [0.5, 0.6, 0.7] for f in ("cart", "rf")
+                             for t in range(4)})
+        self.assertEqual(sel.select_history(full, p, plan)["folds"], [0, 1, 2])
+        # Every trial drops fold 2: a consistent subset the plan does not have.
+        subset = b_history(p)
+        e = self.refused(subset, plan, p)
+        self.assertEqual(e.codes, {"off_plan_folds"})
+        self.assertIn("record 1 (cart trial 0) is ok on folds [0, 1]; the fold "
+                      "plan's inner folds are [0, 1, 2]", e.problems[0])
+        # One ok trial omits fold 1.
+        gap = copy.deepcopy(full)
+        del gap[2]["inner_scores"][1]
+        self.assertEqual(len(self.refused(gap, plan, p).problems), 1)
+        # A failed trial may report a subset, but no fold outside the plan.
+        failed = copy.deepcopy(full)
+        failed[2].update(status="failed", reason="x",
+                         inner_scores=failed[2]["inner_scores"][:1])
+        sel.select_history(failed, p, plan)
+        failed[2]["inner_scores"] = [{"fold": 3, "metrics": {"auc": 1}}]
+        self.assertEqual(self.refused(failed, plan, p).codes, {"off_plan_folds"})
+
+    def test_fold_plan_is_required_and_must_be_the_pinned_one(self):
+        self.assertEqual(self.refused(self.h, None).problems, [
+            f"missing_fold_plan: the protocol pins fold plan "
+            f"{self.p['fold_plan_hash']}; without it no trial's folds can "
+            "be checked"])
+        e = self.refused(self.h, b_plan(9))
+        self.assertEqual(e.codes, {"bad_fold_plan"})
+        self.assertIn(f"hashes to {plan_hash(b_plan(9))}", e.problems[0])
+        self.assertEqual(self.refused(self.h, {"inner_folds": float("nan")})
+                         .codes, {"bad_fold_plan"})
+        for bad in ({"inner_folds": 1}, {"inner_folds": "2"},
+                    {"inner_folds": [0, 0, None]}, {"inner_folds": [0, -1]},
+                    {"inner_folds": [0, True]}, {"folds": 2}, [0, 1]):
+            p = b_protocol(names=("cart", "rf"), plan=bad)
+            with self.assertRaises(sel.HistoryError) as cm:
+                sel.select_history(b_history(p), p, bad)
+            self.assertEqual(cm.exception.codes, {"bad_fold_plan"}, bad)
+        labels = {"inner_folds": [1, None, 0, 1, 0]}
+        p = b_protocol(names=("cart", "rf"), plan=labels)
+        self.assertEqual(sel.select_history(b_history(p), p, labels)["folds"],
+                         [0, 1])
+
+    def test_folds_are_the_plans_even_with_no_ok_trial(self):
+        failed = [dict(t, status="failed", reason="x", inner_scores=[])
+                  for t in self.h]
+        r = sel.select_history(failed, self.p, BP)
+        self.assertEqual((r["folds"], family(r)["status"]),
+                         ([0, 1], "no_ok_trials"))
+
+    def test_a_fold_plan_given_with_a_flat_protocol_is_checked(self):
+        p = protocol(fold_plan_hash=plan_hash(BP), budgets={"cart": 2})
+        trials = [trial(0, [1, 2], fold_plan_hash=plan_hash(BP)),
+                  trial(1, [9, 9, 9], fold_plan_hash=plan_hash(BP))]
+        self.assertEqual(family(sel.select_history(trials, p))["excluded"][0]
+                         ["trial_id"], 0)
+        with self.assertRaises(sel.HistoryError) as cm:
+            sel.select_history(trials, p, BP)
+        self.assertEqual(cm.exception.codes, {"off_plan_folds"})
 
 
 class FoldSets(unittest.TestCase):
@@ -841,26 +1011,25 @@ class Stability(unittest.TestCase):
                 "lr": [0.5]}
         space = b_protocol()["families"]["cart"]["space"]
 
-        def run(i, default_wins):
-            p = b_protocol(plan=f"plan-{i}", families={"cart": {
+        def run(i, winner):
+            # Outer fold i; trial `winner` wins. Planned depths: trial 1 is 2,
+            # trial 2 is 9.
+            p = b_protocol(plan=b_plan(i), n=3, families={"cart": {
                 "default": grid, "space": space}})
-            win, lose = [9, 9], [0, 0]
-            return sel.select_history([
-                b_trial(p, 0, win if default_wins else lose,
-                        config=copy.deepcopy(grid)),
-                b_trial(p, 1, lose if default_wins else win, depth=4 + i)], p)
+            return sel.select_history(b_history(p, {("cart", winner): [9, 9]}),
+                                      p, b_plan(i))
 
-        f = sel.stability([run(0, True), run(1, False), run(2, False)])[
+        f = sel.stability([run(0, 0), run(1, 1), run(2, 2)])[
             "families"]["cart"]
         self.assertEqual((f["selected_in"], f["default_selected"]), (3, 1))
         depth = f["params"]["depth"]
         self.assertEqual(depth["present"], 3)
         self.assertEqual({k: depth["numeric"][k] for k in
                           ("n", "skipped", "min", "max", "median")},
-                         {"n": 2, "skipped": 1, "min": 5, "max": 6,
+                         {"n": 2, "skipped": 1, "min": 2, "max": 9,
                           "median": 5.5})
         self.assertEqual([v["value"] for v in depth["value_counts"]],
-                         [5, 6, [1, 2, 3]])
+                         [2, 9, [1, 2, 3]])
         self.assertEqual(f["params"]["lr"]["numeric"]["skipped"], 1)
         flag = f["params"]["internal_search"]
         self.assertEqual((flag["present"], flag["numeric"]["n"],
@@ -877,46 +1046,51 @@ class Stability(unittest.TestCase):
 
     def test_refuses_one_experiment_pooled_twice(self):
         # The re-check's S8-S11: one outer fold reaches the pool twice
-        # through copies that are not byte-identical.
+        # through copies that are not byte-identical. A rerun reaches
+        # stability and is refused there; a reordered, cut or split copy is
+        # no longer the plan's history, so select refuses it first.
         p = b_protocol()
         h = [b_trial(p, i, [1 + i, 2 + i]) for i in range(4)]
         rerun = [dict(t, seconds=t["seconds"] + 0.001) for t in h]
-        for name, other in [("swapped lines", [h[1], h[0], h[2], h[3]]),
-                            ("last trial dropped", h[:-1]),
-                            ("rerun with measured seconds", rerun),
-                            ("split by trial id", h[2:])]:
-            first = h[:2] if name == "split by trial id" else h
+        with self.assertRaises(sel.HistoryError) as cm:
+            sel.stability([sel.select_history(h, p, BP),
+                           sel.select_history(rerun, p, BP)], ["a", "b"])
+        self.assertEqual(cm.exception.problems, [
+            f"duplicate_experiment: runs a, b hold the same experiment "
+            f"(protocol_hash {p['protocol_hash']})"])
+        for name, other, code in [
+                ("swapped lines", [h[1], h[0], h[2], h[3]], "off_plan_order"),
+                ("last trial dropped", h[:-1], "incomplete_history"),
+                ("split by trial id", h[2:], "incomplete_history"),
+                ("split by trial id", h[:2], "incomplete_history")]:
             with self.assertRaises(sel.HistoryError) as cm:
-                sel.stability([sel.select_history(first, p),
-                               sel.select_history(other, p)], ["a", "b"])
-            self.assertEqual(cm.exception.codes, {"duplicate_experiment"}, name)
-            self.assertEqual(cm.exception.problems, [
-                f"duplicate_experiment: runs a, b hold the same experiment "
-                f"(protocol_hash {p['protocol_hash']})"], name)
+                sel.select_history(other, p, BP)
+            self.assertEqual(cm.exception.codes, {code}, name)
 
     def test_refuses_runs_with_different_protocols(self):
-        def run(p, seconds=0.5):
-            return sel.select_history([b_trial(p, 0, [1, 2], seconds=seconds),
-                                       b_trial(p, 1, [3, 4])], p)
+        def run(p, plan=b_plan(1)):
+            return sel.select_history(
+                b_history(p, {("cart", 0): [1, 2], ("cart", 1): [3, 4]}), p,
+                plan)
 
         def codes(*runs):
             with self.assertRaises(sel.HistoryError) as cm:
                 sel.stability(list(runs))
             return cm.exception.codes
 
-        base = b_protocol(plan="plan-A")
+        base = b_protocol(plan=b_plan(0))
         # Different fold plans (so different protocol hashes) pool.
-        other_plan = b_protocol(plan="plan-B")
+        other_plan = b_protocol(plan=b_plan(1))
         self.assertNotEqual(base["protocol_hash"], other_plan["protocol_hash"])
-        s = sel.stability([run(base), run(other_plan)])
+        s = sel.stability([run(base, b_plan(0)), run(other_plan)])
         self.assertEqual(s["families"]["cart"]["selected_in"], 2)
-        self.assertEqual(codes(run(base), run(b_protocol(plan="plan-B", n=5))),
+        base = run(base, b_plan(0))
+        self.assertEqual(codes(base, run(b_protocol(plan=b_plan(1), n=5))),
                          {"mixed_budgets"})
-        self.assertEqual(codes(run(base), run(b_protocol(
+        self.assertEqual(codes(base, run(b_protocol(
             [{"metric": "complexity", "op": "<=", "bound": 9}],
-            plan="plan-B"))), {"mixed_constraints"})
-        self.assertEqual(codes(run(base), run(b_protocol(plan="plan-B",
-                                                         fit=8))),
+            plan=b_plan(1)))), {"mixed_constraints"})
+        self.assertEqual(codes(base, run(b_protocol(plan=b_plan(1), fit=8))),
                          {"mixed_protocol"})
 
 

@@ -8,18 +8,34 @@ status and reason, and give each family's selection, candidate set and
 budget, the budget flags, and, across runs, the stability of the selected
 hyperparameters. Both say the SE is descriptive (select.SE_LABEL).
 
+Every mean and SE in the report is an inner-tuning score, never test
+performance (select.SCORE_LABEL), and both outputs say so. This package
+does not refit a selected config on the outer training fold or score it
+on the untouched outer test fold; both outputs name that as a remaining
+dependency (select.OUTER_EVALUATION).
+
 usage: python3 -I -B scripts/hyperopt/report.py
-           --run LABEL PROTOCOL.json HISTORY.jsonl [--run ...]
+           --run LABEL PROTOCOL.json HISTORY.jsonl FOLD_PLAN.json [--run ...]
            --out-json REPORT.json --out-md REPORT.md
 
 PROTOCOL.json is Task B's protocol (protocol.py). Its protocol_hash must
 match its content, so a protocol edited after the search is refused. The
 flat test-only protocol shape is refused here. See select.Protocol.from_dict.
+FOLD_PLAN.json is the fold plan the protocol pins. The history must be the
+one the protocol's search writes on it: every planned trial with its
+planned config, in run order, each scored on the plan's inner folds (see
+select.validate_history).
+
+Each run gives two digests of its history. `history_sha256` is the sha256
+of its records as canonical JSON lines (select.history_sha256), the bytes
+Task B's search writes; `history_file_sha256` is the sha256 of the file as
+read. They differ exactly when the file is not in that canonical form.
 
 Exit status: 0 written; 2 refused, with every problem on stderr and nothing
 written.
 """
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -48,9 +64,12 @@ HistoryError = select.HistoryError
 
 
 def build_report(runs, trusted_flat=False):
-    """runs: a list of {"label", "protocol", "trials"}, one per history.
-    Returns the report dict; raises HistoryError if any history or protocol
-    does not match, or the runs cannot be pooled for stability (see
+    """runs: a list of {"label", "protocol", "trials", "fold_plan"}, one per
+    history, each optionally with "history_file_sha256", the sha256 of the
+    file the trials were read from (null in the report without it).
+    "fold_plan" is required with Task B's protocol. Returns the report dict;
+    raises HistoryError if any history, protocol or fold plan does not
+    match, or the runs cannot be pooled for stability (see
     select.stability). trusted_flat accepts flat protocols, for tests only."""
     if not runs:
         raise HistoryError(["no_runs: the report needs at least one run"])
@@ -58,7 +77,8 @@ def build_report(runs, trusted_flat=False):
     for run in runs:
         try:
             protocol = select.as_protocol(run["protocol"], trusted_flat)
-            s = select.select_history(run["trials"], protocol)
+            s = select.select_history(run["trials"], protocol,
+                                      run.get("fold_plan"))
         except HistoryError as e:
             problems += [f"{p} [run {run['label']}]" for p in e.problems]
             continue
@@ -69,6 +89,7 @@ def build_report(runs, trusted_flat=False):
             "label": run["label"],
             "protocol": protocol.to_dict(),
             "history_sha256": s["history_sha256"],
+            "history_file_sha256": run.get("history_file_sha256"),
             "folds": s["folds"],
             "n_trials": len(trials),
             "families": {fam: {k: v for k, v in f.items()
@@ -85,6 +106,8 @@ def build_report(runs, trusted_flat=False):
         "objective": selections[0]["objective"],
         "direction": selections[0]["direction"],
         "se_label": select.SE_LABEL,
+        "score_label": select.SCORE_LABEL,
+        "outer_evaluation": select.OUTER_EVALUATION,
         "rule": select.RULE,
         "runs": out,
         "stability": stab,
@@ -98,6 +121,10 @@ def render_markdown(report):
         "",
         f"Objective: {report['objective']} ({report['direction']}).",
         f"Rule: {report['rule']}.",
+        "",
+        f"Scores: {report['score_label']}",
+        "",
+        f"Outer evaluation: {report['outer_evaluation']}",
         "",
         f"SE note: {report['se_label']}",
     ]
@@ -115,7 +142,9 @@ def _run_lines(run):
     lines = [
         "", f"## Run {run['label']}", "",
         f"protocol_hash {p['protocol_hash']}, fold_plan_hash "
-        f"{p['fold_plan_hash']}, history sha256 {run['history_sha256']}, "
+        f"{p['fold_plan_hash']}, canonical history sha256 "
+        f"{run['history_sha256']}, history file sha256 "
+        f"{run['history_file_sha256'] or 'not given'}, "
         f"inner folds {_folds(run['folds'])}; "
         f"{run['n_trials']} trials ("
         + ", ".join(f"{n} {s}" for s, n in sorted(statuses.items())) + ").",
@@ -123,8 +152,9 @@ def _run_lines(run):
             f"{c['metric']} {c['op']} {c['bound']}" for c in p["constraints"])
             or "none") + ".",
         "", "### Selection", "",
-        "| family | selected trial | complexity | default | mean | best trial "
-        "| best mean | best SE (descriptive) | candidate set |",
+        "| family | selected trial | complexity | default "
+        "| inner-tuning mean | best trial | best inner-tuning mean "
+        "| best inner-tuning SE (descriptive) | candidate set |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
     for fam, f in run["families"].items():
@@ -171,8 +201,8 @@ def _run_lines(run):
 
     lines += ["", f"### All trials ({run['n_trials']})", "",
               "| family | trial | status | reason | excluded because "
-              "| complexity | default | mean | SE (descriptive) | candidate "
-              "| selected |",
+              "| complexity | default | inner-tuning mean "
+              "| inner-tuning SE (descriptive) | candidate | selected |",
               "|---|---|---|---|---|---|---|---|---|---|---|"]
     for t in run["trials"]:
         lines.append(
@@ -273,17 +303,20 @@ def _write_all(outputs):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--run", nargs=3, action="append", required=True,
-                    metavar=("LABEL", "PROTOCOL", "HISTORY"))
+    ap.add_argument("--run", nargs=4, action="append", required=True,
+                    metavar=("LABEL", "PROTOCOL", "HISTORY", "FOLD_PLAN"))
     ap.add_argument("--out-json", required=True)
     ap.add_argument("--out-md", required=True)
     args = ap.parse_args(argv)
     try:
         runs = []
-        for label, protocol, history in args.run:
+        for label, protocol, history, fold_plan in args.run:
             runs.append({"label": label,
                          "protocol": select.load_protocol(protocol),
-                         "trials": select.load_history(history)})
+                         "trials": select.load_history(history),
+                         "history_file_sha256": hashlib.sha256(
+                             Path(history).read_bytes()).hexdigest(),
+                         "fold_plan": select.load_fold_plan(fold_plan)})
         report = build_report(runs)
         # Encode both before writing either: a run label or family name that
         # is not valid UTF-8 (a lone surrogate) fails here, not mid-write.

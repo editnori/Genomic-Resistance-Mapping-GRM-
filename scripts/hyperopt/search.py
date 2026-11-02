@@ -179,14 +179,9 @@ def run_search(protocol, objective, *, fold_plan, history_path, fold_plan_hash=N
                             f"{protocol['fold_plan_hash']!r}")
     folds = check_fold_plan(protocol, fold_plan)
     plan = plan_trials(protocol)
-    done = read_history(history_path, protocol, folds) if os.path.exists(history_path) else []
-    if len(done) > len(plan):
-        raise ProtocolError(f"{history_path}: {len(done)} records exceed the plan's {len(plan)}")
-    for number, (record, trial) in enumerate(zip(done, plan), 1):
-        if any(canonical_json(record[key]) != canonical_json(trial[key])
-               for key in ("family", "trial_id", "config")):
-            raise ProtocolError(f"{history_path}:{number}: record is not planned trial "
-                                f"{trial['family']}:{trial['trial_id']}")
+    # read_history refuses records that are not a prefix of the plan.
+    done = (read_history(history_path, protocol, folds, partial=True)
+            if os.path.exists(history_path) else [])
     records = list(done)
     with open(history_path, "a", encoding="ascii", newline="") as stream:
         for trial in plan[len(done):]:

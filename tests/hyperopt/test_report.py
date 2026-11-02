@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import re
 import shutil
 import sys
 import unittest
@@ -26,11 +27,17 @@ def _load(name, path):
 
 
 report = _load("grm_hyperopt_report", ROOT / "scripts/hyperopt/report.py")
+select = report.select
+
+# Two outer folds' plans, each with inner folds 0 and 1.
+PLAN_A = {"inner_folds": 2, "outer_fold": 0}
+PLAN_B = {"inner_folds": 2, "outer_fold": 1}
 
 
-def protocol(plan="plan-A", constraints=(), names=("cart", "lasso")):
-    """Task B's protocol shape, hashed as Task B hashes it."""
-    p = {"schema_version": 1, "fold_plan_hash": plan,
+def protocol(plan=PLAN_A, constraints=(), names=("cart", "lasso")):
+    """Task B's protocol shape, hashed as Task B hashes it. With sampler
+    seed 3, cart's planned trials 1 and 2 have depth 7 and 8."""
+    p = {"schema_version": 1, "fold_plan_hash": rehash(plan),
          "objective": {"name": "auc", "direction": "maximize",
                        "constraints": [dict(c) for c in constraints]},
          "seeds": {"sampler": 3, "fit": 1}, "trials_per_family": 3,
@@ -48,12 +55,18 @@ def rehash(p):
         allow_nan=False).encode("utf-8")).hexdigest()
 
 
+def planned(p, family, tid):
+    return next(c for f, t, c in select.planned_trials(p)
+                if (f, t) == (family, tid))
+
+
 def trial(p, tid, scores, family="cart", status="ok", reason=None,
           config=None, complexity=1.0, cost=(None, 1.5)):
-    """cost is (fit_count, seconds); fit_count None means one fit per fold."""
+    """cost is (fit_count, seconds); fit_count None means one fit per fold.
+    The config is the planned one unless given."""
     fits, seconds = cost
     t = {"protocol_hash": p["protocol_hash"], "trial_id": tid,
-         "family": family, "config": config or {"depth": tid},
+         "family": family, "config": config or planned(p, family, tid),
          "complexity": complexity, "is_default": tid == 0, "seed": 1,
          "fold_plan_hash": p["fold_plan_hash"], "status": status,
          "inner_scores": [{"fold": f, "metrics": {"auc": s}}
@@ -65,34 +78,40 @@ def trial(p, tid, scores, family="cart", status="ok", reason=None,
     return t
 
 
-def history(p, depth=3):
+def history(p, best=1):
+    """The whole plan in run order; cart trial `best` (0 or 1) scores
+    0.80 and 0.82, the other 0.70 and 0.72."""
+    hi, lo = [0.80, 0.82], [0.70, 0.72]
     return [
-        trial(p, 0, [0.70, 0.72]),
-        trial(p, 1, [0.80, 0.82], config={"depth": depth}, complexity=3),
-        # A failed record as Task B's search writes one.
+        trial(p, 0, hi if best == 0 else lo),
+        trial(p, 0, [0.60, 0.62], family="lasso"),
+        trial(p, 1, hi if best == 1 else lo, complexity=3),
+        trial(p, 1, [0.90, 0.90], family="lasso", status="unconverged",
+              reason="path stopped at lambda 7"),
+        # Failed records as Task B's search writes them.
         trial(p, 2, [], status="failed",
               reason="tree | split crashed\nat node 4", complexity=None,
               cost=(0, None)),
-        trial(p, 0, [0.60, 0.62], family="lasso"),
-        trial(p, 1, [0.90, 0.90], family="lasso", status="unconverged",
-              reason="path stopped at lambda 7"),
+        trial(p, 2, [], family="lasso", status="failed",
+              reason="solver diverged", complexity=None, cost=(0, None)),
     ]
 
 
-def run(label, plan="plan-A", depth=3, constraints=()):
+def run(label, plan=PLAN_A, best=1, constraints=()):
     p = protocol(plan, constraints)
-    return {"label": label, "protocol": p, "trials": history(p, depth)}
+    return {"label": label, "protocol": p, "trials": history(p, best),
+            "fold_plan": plan}
 
 
 class Report(unittest.TestCase):
     def setUp(self):
         self.report = report.build_report(
-            [run("outer0"), run("outer1", "plan-B", depth=5)])
+            [run("outer0"), run("outer1", PLAN_B, best=0)])
         self.md = report.render_markdown(self.report)
 
     def test_every_trial_is_listed_with_status_and_reason(self):
         for r, h in zip(self.report["runs"],
-                        [history(protocol()), history(protocol("plan-B"), 5)]):
+                        [history(protocol()), history(protocol(PLAN_B), 0)]):
             self.assertEqual(r["n_trials"], len(h))
             got = sorted((t["family"], t["trial_id"], t["status"], t["reason"])
                          for t in r["trials"])
@@ -103,12 +122,12 @@ class Report(unittest.TestCase):
                       "| status is failed |", self.md)
         self.assertIn("| lasso | 1 | unconverged | path stopped at lambda 7 "
                       "| status is unconverged |", self.md)
-        self.assertEqual(self.md.count("### All trials (5)"), 2)
+        self.assertEqual(self.md.count("### All trials (6)"), 2)
         all_rows = [line for line in self.md.splitlines()
                     if line.startswith("| cart |") or line.startswith("| lasso |")]
-        # Per run: 5 trial rows, 2 excluded rows, 2 selection rows, 2 budgets
+        # Per run: 6 trial rows, 3 excluded rows, 2 selection rows, 2 budgets
         # and 1 row of unused fold scores.
-        self.assertEqual(len(all_rows), 2 * (5 + 2 + 2 + 2 + 1))
+        self.assertEqual(len(all_rows), 2 * (6 + 3 + 2 + 2 + 1))
 
     def test_unused_fold_scores_are_kept(self):
         rows = {(t["family"], t["trial_id"]): t
@@ -126,7 +145,10 @@ class Report(unittest.TestCase):
                        + "\n" for t in history(protocol()))
         self.assertEqual(r["history_sha256"],
                          hashlib.sha256(text.encode()).hexdigest())
-        self.assertIn(f"history sha256 {r['history_sha256']}", self.md)
+        # Built from records, not read from a file: no file digest.
+        self.assertIsNone(r["history_file_sha256"])
+        self.assertIn(f"canonical history sha256 {r['history_sha256']}, "
+                      "history file sha256 not given,", self.md)
 
     def test_selection_candidates_and_budgets(self):
         r = self.report["runs"][0]
@@ -139,23 +161,51 @@ class Report(unittest.TestCase):
         self.assertEqual(lasso["selected"]["trial_id"], 0)
         self.assertEqual(r["budgets"]["families"]["cart"]["failed"], 1)
         self.assertEqual({f["code"] for f in r["budgets"]["flags"]},
-                         {"under_budget", "unequal_used", "unequal_ok"})
-        self.assertIn("- under_budget: lasso used 2 of 3 planned trials",
-                      self.md)
+                         {"unequal_ok"})
+        self.assertIn("- unequal_ok: ok trials differ across families: "
+                      "cart 2, lasso 1", self.md)
         selected = [t for t in r["trials"] if t["selected"]]
         self.assertEqual({(t["family"], t["trial_id"]) for t in selected},
                          {("cart", 1), ("lasso", 0)})
 
     def test_stability_across_runs(self):
+        # outer0 selects cart trial 1 (planned depth 7), outer1 the default.
         cart = self.report["stability"]["families"]["cart"]
-        self.assertEqual(cart["selected_in"], 2)
+        self.assertEqual((cart["selected_in"], cart["default_selected"]), (2, 1))
         self.assertEqual(cart["params"]["depth"]["value_counts"],
-                         [{"value": 3, "count": 1, "fraction": 0.5},
-                          {"value": 5, "count": 1, "fraction": 0.5}])
+                         [{"value": 0, "count": 1, "fraction": 0.5},
+                          {"value": 7, "count": 1, "fraction": 0.5}])
         self.assertEqual(self.report["stability"]["families"]["lasso"]
                          ["default_selected"], 2)
         self.assertIn("## Stability across runs (2)", self.md)
-        self.assertIn("| depth | 2 | 2 | 0.5 | 3 | 4 | 5 | 0 |", self.md)
+        self.assertIn("| depth | 2 | 2 | 0.5 | 0 | 3.5 | 7 | 0 |", self.md)
+
+    def test_scores_are_labelled_inner_tuning_never_test_performance(self):
+        # Review F3: the labels change, the values do not.
+        self.assertEqual(self.report["score_label"], select.SCORE_LABEL)
+        self.assertIn("inner-tuning score", select.SCORE_LABEL)
+        self.assertIn("None is test performance", select.SCORE_LABEL)
+        self.assertEqual(self.report["outer_evaluation"], select.OUTER_EVALUATION)
+        self.assertIn("untouched outer test fold", select.OUTER_EVALUATION)
+        self.assertIn("remaining dependency", select.OUTER_EVALUATION)
+        lines = self.md.splitlines()
+        self.assertIn(f"Scores: {select.SCORE_LABEL}", lines)
+        self.assertIn(f"Outer evaluation: {select.OUTER_EVALUATION}", lines)
+        self.assertIn("| family | selected trial | complexity | default "
+                      "| inner-tuning mean | best trial | best inner-tuning mean "
+                      "| best inner-tuning SE (descriptive) | candidate set |",
+                      lines)
+        self.assertIn("| complexity | default | inner-tuning mean "
+                      "| inner-tuning SE (descriptive) | candidate | selected |",
+                      self.md)
+        for bare in ("| mean |", "| best mean |", "| SE (descriptive) |"):
+            self.assertNotIn(bare, self.md)
+        cart = self.report["runs"][0]["families"]["cart"]
+        mean, _, se = select.fold_stats([0.80, 0.82])
+        self.assertEqual((cart["selected"]["mean"], cart["best"]["mean"],
+                          cart["best"]["se"]), (mean, mean, se))
+        self.assertIn("| cart | 1 | 3 |  | 0.81 | 1 | 0.81 | 0.01 | 1 |",
+                      self.md)
 
     def test_se_is_labelled_descriptive_in_plain_text(self):
         self.assertIn("descriptive", self.report["se_label"])
@@ -185,7 +235,7 @@ class Report(unittest.TestCase):
                       "(auc is 0.71) |\n", md)
         self.assertIn("| cart | 0 | ok |  | constraint auc >= 0.75 not met "
                       "(auc is 0.71) | 1 | yes |", md)
-        self.assertIn("### Excluded trials (4)", md)
+        self.assertIn("### Excluded trials (5)", md)
         self.assertIn("unequal_feasible", {f["code"] for f in
                                            rep["runs"][0]["budgets"]["flags"]})
 
@@ -217,12 +267,15 @@ class Cli(unittest.TestCase):
         return str(self.dir / name)
 
     def main(self, *runs, label="outer", out_md=None):
-        """Run the CLI on (protocol text, history text) pairs; returns the
-        exit code and stderr."""
+        """Run the CLI on (protocol text, history text) pairs, each with
+        PLAN_A as its fold plan unless a third item gives the plan's text;
+        returns the exit code and stderr."""
         args = []
-        for i, (proto, hist) in enumerate(runs):
+        for i, (proto, hist, *plan) in enumerate(runs):
             args += ["--run", f"{label}{i}", self.write(f"p{i}.json", proto),
-                     self.write(f"h{i}.jsonl", hist)]
+                     self.write(f"h{i}.jsonl", hist),
+                     self.write(f"f{i}.json", plan[0] if plan
+                                else json.dumps(PLAN_A))]
         err = io.StringIO()
         with redirect_stderr(err):
             rc = report.main(args + ["--out-json", str(self.dir / "r.json"),
@@ -241,13 +294,83 @@ class Cli(unittest.TestCase):
 
     def test_writes_json_and_markdown(self):
         p = protocol()
-        rc, err = self.main((json.dumps(p), lines(history(p))))
+        rc, err = self.main((json.dumps(p), canonical_lines(history(p))))
         self.assertEqual((rc, err), (0, ""))
         out = json.loads((self.dir / "r.json").read_text())
-        self.assertEqual(len(out["runs"][0]["trials"]), 5)
-        self.assertIn("SE note:", (self.dir / "r.md").read_text())
+        self.assertEqual(len(out["runs"][0]["trials"]), 6)
+        md = (self.dir / "r.md").read_text()
+        self.assertIn("SE note:", md)
         self.assertEqual(sorted(p.name for p in self.dir.iterdir()),
-                         ["h0.jsonl", "p0.json", "r.json", "r.md"])
+                         ["f0.json", "h0.jsonl", "p0.json", "r.json", "r.md"])
+        # A canonical file: its sha256 is the canonical history digest.
+        digest = hashlib.sha256((self.dir / "h0.jsonl").read_bytes()).hexdigest()
+        run = out["runs"][0]
+        self.assertEqual((run["history_sha256"], run["history_file_sha256"]),
+                         (digest, digest))
+        self.assertIn(f"canonical history sha256 {digest}, history file "
+                      f"sha256 {digest},", md)
+
+    def test_reports_both_digests_of_a_non_canonical_history(self):
+        # Review F9: the file's sha256 and the canonical digest differ, and
+        # the report names each for what it is.
+        p = protocol()
+        rc, err = self.main((json.dumps(p), lines(history(p))))
+        self.assertEqual((rc, err), (0, ""))
+        run = json.loads((self.dir / "r.json").read_text())["runs"][0]
+        file_digest = hashlib.sha256(
+            (self.dir / "h0.jsonl").read_bytes()).hexdigest()
+        canonical = hashlib.sha256(
+            canonical_lines(history(p)).encode()).hexdigest()
+        self.assertNotEqual(file_digest, canonical)
+        self.assertEqual((run["history_sha256"], run["history_file_sha256"]),
+                         (canonical, file_digest))
+        self.assertIn(f"canonical history sha256 {canonical}, history file "
+                      f"sha256 {file_digest},",
+                      (self.dir / "r.md").read_text())
+
+    def test_refuses_histories_the_protocol_never_produced(self):
+        # Review F2 and F8, through the CLI: an off-plan config with perfect
+        # scores, a fold subset, a truncated history and one out of order.
+        p = protocol()
+        h = history(p)
+        forged = copy.deepcopy(h)
+        forged[2].update(config={"depth": 3},
+                         inner_scores=[{"fold": f, "metrics": {"auc": 1.0}}
+                                       for f in (0, 1)])
+        subset = copy.deepcopy(h)
+        for t in subset:
+            t["inner_scores"] = t["inner_scores"][:1]
+        cases = {"off_plan": forged, "off_plan_folds": subset,
+                 "incomplete_history": h[:4],
+                 "off_plan_order": [h[1], h[0]] + h[2:]}
+        for code, trials in cases.items():
+            with self.subTest(code):
+                err = self.refused((json.dumps(p), lines(trials)))
+                self.assertEqual(set(re.findall(r"^  ([a-z_]+):", err, re.M)),
+                                 {code})
+
+    def test_refuses_a_fold_plan_the_protocol_does_not_pin(self):
+        p = protocol()
+        good = lines(history(p))
+        err = self.refused((json.dumps(p), good, json.dumps(PLAN_B)))
+        self.assertIn(f"bad_fold_plan: the fold plan hashes to {rehash(PLAN_B)}",
+                      err)
+        for text in ('{"inner_folds": 2, "inner_folds": 2, "outer_fold": 0}',
+                     '{"inner_folds": NaN}', "{"):
+            with self.subTest(text):
+                self.assertIn("bad_fold_plan",
+                              self.refused((json.dumps(p), good, text)))
+
+    def test_the_fold_plan_argument_is_required(self):
+        p = protocol()
+        err = io.StringIO()
+        with redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+            report.main(["--run", "outer0", self.write("p.json", json.dumps(p)),
+                         self.write("h.jsonl", lines(history(p))),
+                         "--out-json", str(self.dir / "r.json"),
+                         "--out-md", str(self.dir / "r.md")])
+        self.assertEqual(cm.exception.code, 2)
+        self.assertFalse((self.dir / "r.json").exists())
 
     def test_refuses_and_writes_nothing(self):
         p = protocol()
@@ -319,8 +442,8 @@ class Cli(unittest.TestCase):
                            label="lab\udcff")
         self.assertIn("bad_name", err)
         p = protocol(names=("cart", "\ud800"))
-        trials = [trial(p, 0, [0.7, 0.8]), trial(p, 0, [0.6, 0.7],
-                                                 family="\ud800")]
+        trials = [trial(p, t, [0.7, 0.8], family=f)
+                  for f, t, _ in select.planned_trials(p)]
         self.assertIn("bad_name", self.refused((json.dumps(p), lines(trials))))
 
     def test_a_failed_write_leaves_nothing(self):
@@ -331,7 +454,14 @@ class Cli(unittest.TestCase):
 
 
 def lines(trials):
+    """JSON lines with spaces after the separators: not Task B's canonical
+    form."""
     return "".join(json.dumps(t) + "\n" for t in trials)
+
+
+def canonical_lines(trials):
+    return "".join(json.dumps(t, sort_keys=True, separators=(",", ":")) + "\n"
+                   for t in trials)
 
 
 if __name__ == "__main__":

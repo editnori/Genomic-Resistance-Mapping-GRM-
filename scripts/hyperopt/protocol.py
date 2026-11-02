@@ -133,7 +133,9 @@ INTERNAL_SEARCH = "internal_search"
 
 # Trial 0 is the production default. rf, gbt and lasso fit one fixed config:
 # `ForestParams::default()`, `GbtParams::default()` and the lasso's 30-point
-# path with its 1e-3 smallest-penalty ratio. scm and cart search internally
+# path. The lasso searches `n_lambdas` only: production fixes the path's
+# smallest-penalty ratio at 1e-3 (`lasso.rs:272`) and exposes no knob for
+# it, so it is not a search dimension. scm and cart search internally
 # (`scm::select` at `scm.rs:218-262`, `tree::select_depth` at
 # `tree.rs:228-251`), so their defaults list production's grids: scm both
 # kinds, `P_GRID` and 1..`scm_max_rules` (6) rules; cart depths
@@ -179,9 +181,8 @@ FAMILIES = {
         },
     },
     "lasso": {
-        "default": {"lambda_min_ratio": 0.001, "n_lambdas": 30},
+        "default": {"n_lambdas": 30},
         "space": {
-            "lambda_min_ratio": {"type": "float", "low": 0.0001, "high": 0.1, "log": True},
             "n_lambdas": {"type": "int", "low": 10, "high": 100, "log": False},
         },
     },
@@ -562,17 +563,23 @@ def history_line(record):
     return canonical_json(record) + "\n"
 
 
-def read_history(path, protocol=None, folds=None):
+def read_history(path, protocol=None, folds=None, *, partial=False):
     """Parse and validate a history JSONL; refuse mixed protocol hashes.
 
     Every line must be canonical and end in a bare `\\n`; the file is read
     without newline translation, so a `\\r\\n` ending is refused. A last
     line without a newline was cut short by a crash; it is refused, not
     resumed, and the operator must delete the partial line before
-    rerunning. With `protocol`, every record must also belong to it; with
-    `folds`, its inner scores must fit those inner fold ids (see
-    `validate_record`).
+    rerunning. With `folds`, the fold plan's inner fold ids, its inner
+    scores must fit them (see `validate_record`). With `protocol`, `folds`
+    is required, every record must also belong to the protocol, and the
+    records must be its planned trials (`search.plan_trials`) in run order,
+    each with its planned config. Every planned trial must be present,
+    unless `partial` is true: then a prefix of the plan, as an interrupted
+    search leaves, is accepted, which is how `run_search` resumes.
     """
+    _require(protocol is None or folds is not None,
+             "read_history needs the fold plan's inner fold ids (folds) with a protocol")
     try:
         with open(path, encoding="ascii", newline="") as stream:
             text = stream.read()
@@ -598,9 +605,20 @@ def read_history(path, protocol=None, folds=None):
     keys = [(r["family"], r["trial_id"]) for r in records]
     _require(len(set(keys)) == len(keys), f"{path}: a (family, trial_id) repeats")
     if protocol is not None:
-        for number, record in enumerate(records, 1):
+        from .search import plan_trials  # search imports this module
+        plan = plan_trials(protocol)
+        _require(len(records) <= len(plan),
+                 f"{path}: {len(records)} records exceed the plan's {len(plan)}")
+        for number, (record, trial) in enumerate(zip(records, plan), 1):
             try:
                 _check_against_protocol(record, protocol)
             except ProtocolError as err:
                 raise ProtocolError(f"{path}:{number}: {err}") from err
+            _require(all(canonical_json(record[key]) == canonical_json(trial[key])
+                         for key in ("family", "trial_id", "config")),
+                     f"{path}:{number}: record is not planned trial "
+                     f"{trial['family']}:{trial['trial_id']}")
+        _require(partial or len(records) == len(plan),
+                 f"{path}: holds {len(records)} of the plan's {len(plan)} trials; resume the "
+                 "search to finish it before reading it whole")
     return records

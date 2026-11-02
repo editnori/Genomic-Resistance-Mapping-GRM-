@@ -21,6 +21,13 @@ class ProtocolHashTests(unittest.TestCase):
         self.assertEqual(first["protocol_hash"], hp.compute_hash(first))
         self.assertRegex(first["protocol_hash"], "^[0-9a-f]{64}$")
 
+    def test_default_protocol_hash_is_pinned(self):
+        # Changes when any default, space, budget, seed or objective does. The
+        # review's F1 dropped lasso lambda_min_ratio, which moved it from
+        # 47edf88bfb507184812b28fb9247f7d17663576a94e2664b670a3c7edf526a39.
+        self.assertEqual(build()["protocol_hash"],
+                         "e5c93376219cbe5feea30deb282e4104623b753395a6d9f25a21cf4df9ca8a4b")
+
     def test_hash_ignores_key_order(self):
         protocol = build()
         reordered = {key: protocol[key] for key in reversed(list(protocol))}
@@ -129,6 +136,13 @@ class ProtocolValidationTests(unittest.TestCase):
                 family = hp.FAMILIES[name]
                 self.assertFalse(hp.is_internal_search(family["default"]))
                 self.assertIsNone(hp.config_problem(family["default"], family["space"]))
+
+    def test_lasso_searches_only_what_production_exposes(self):
+        # fit_path_with_status takes n_lambdas; the smallest-penalty ratio is
+        # fixed at 1e-3 inside lasso.rs (review F1), so it is not searched.
+        self.assertEqual(hp.FAMILIES["lasso"], {
+            "default": {"n_lambdas": 30},
+            "space": {"n_lambdas": {"type": "int", "low": 10, "high": 100, "log": False}}})
 
     def test_bad_internal_search_defaults_are_refused(self):
         space = hp.FAMILIES["cart"]["space"]

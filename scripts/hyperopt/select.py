@@ -7,11 +7,20 @@ module checks the protocol against its own protocol_hash, checks the history
 against the protocol and Task B's record rules, refuses one that does not
 match, and then, for each learner family:
 
+- with Task B's protocol, refuses a history its search did not write. The
+  fold plan the protocol pins is required and must hash to its
+  fold_plan_hash; every ok trial must score exactly that plan's inner folds
+  and every failed or unconverged trial a subset of them. The records must
+  be the protocol's planned trials (planned_trials, search.py's
+  deterministic plan), every one, each with its planned config, in run
+  order, so an off-plan config, a fold subset or a truncated history is
+  refused;
 - excludes the failed and unconverged trials, recording each one, its status
   and its reason, and keeping whatever fold scores they reported;
-- excludes an ok trial scored on a different fold set from the history's
-  inner folds (fold_set_mismatch), and flags the family. The history's inner
-  folds are the fold set the most ok trials report; a tie goes to the larger
+- with a flat test-only protocol and no fold plan, excludes an ok trial
+  scored on a different fold set from the history's inner folds
+  (fold_set_mismatch), and flags the family. The history's inner folds are
+  then the fold set the most ok trials report; a tie goes to the larger
   set, then to the lexicographically smallest fold list. A failed or
   unconverged trial reporting a fold outside that set is refused;
 - scores every ok trial by its mean objective over the inner folds, and the
@@ -33,6 +42,11 @@ The SE is descriptive. Inner folds share training data, so the fold scores are
 not independent samples and the SE is not the basis of any test, interval or
 p-value. SE_LABEL says so, and every output that carries an SE carries it.
 
+Every mean, SD and SE is an inner-tuning score, not test performance
+(SCORE_LABEL). Nothing here refits a selected config on the outer training
+fold or scores it on the untouched outer test fold (OUTER_EVALUATION); that
+remains a dependency outside this package.
+
 It also counts each family's budget (planned against used trials, ok, failed
 and unconverged trials, fits and seconds), flags unequal budgets, and, given
 the selections from several histories (outer folds or repeats), reports how
@@ -45,6 +59,7 @@ module for any program that puts this directory first on sys.path. Load it by
 path (report.py and the tests do) or run Python with -I, which keeps a
 script's own directory off sys.path.
 """
+import copy
 import hashlib
 import json
 import math
@@ -66,6 +81,21 @@ SE_LABEL = (
     "inner-fold scores divided by the square root of the number of folds. "
     "Inner folds share training data, so the fold scores are not independent "
     "samples and this SE is not an independent-sample inference."
+)
+
+SCORE_LABEL = (
+    "Every mean, SD and SE here is an inner-tuning score: the objective over "
+    "the inner folds of one outer training fold, used only to choose a "
+    "config. None is test performance. Choosing the best inner mean biases "
+    "it upward, so a selected trial's inner-tuning mean overstates how its "
+    "config scores on samples it was not tuned on."
+)
+
+OUTER_EVALUATION = (
+    "Not in this package: refitting the selected config on the whole outer "
+    "training fold and scoring it on the untouched outer test fold. That "
+    "outer refit and evaluation is a remaining dependency; until a driver "
+    "does it, no score here estimates performance."
 )
 
 RULE = (
@@ -120,8 +150,9 @@ class Protocol:
     """What a history must match: the objective metric and its direction, the
     constraints, the expected hashes, and the planned number of trials for
     each family. From Task B's protocol, also the fit seed every record must
-    carry and each family's default config and search space; both are None
-    on a flat protocol. `search_hash` is the sha256 of the protocol without
+    carry, each family's default config and search space, and the sampler
+    seed that draws the planned configs; all three are None on a flat
+    protocol. `search_hash` is the sha256 of the protocol without
     protocol_hash and fold_plan_hash: runs that differ only in their fold
     plan share it."""
     objective: str
@@ -133,6 +164,7 @@ class Protocol:
     fit_seed: object = None
     families: object = None
     search_hash: str = ""
+    sampler_seed: object = None
 
     @classmethod
     def from_dict(cls, d, trusted_flat=False):
@@ -153,7 +185,7 @@ class Protocol:
         problems = []
         if not isinstance(d, dict):
             raise HistoryError(["bad_protocol: the protocol is not an object"])
-        fit_seed = families = None
+        fit_seed = families = sampler_seed = None
         if isinstance(d.get("objective"), dict):
             obj = d["objective"]
             objective, direction = obj.get("name"), obj.get("direction")
@@ -180,6 +212,11 @@ class Protocol:
             fit_seed = seeds.get("fit") if isinstance(seeds, dict) else None
             if not _is_int(fit_seed):
                 problems.append("bad_protocol: seeds.fit must be an integer")
+            sampler_seed = (seeds.get("sampler") if isinstance(seeds, dict)
+                            else None)
+            if not _is_int(sampler_seed):
+                problems.append("bad_protocol: seeds.sampler must be an "
+                                "integer")
             stored = d.get("protocol_hash")
             try:
                 actual = content_hash(d)
@@ -240,7 +277,7 @@ class Protocol:
         return cls(objective, direction, d["protocol_hash"],
                    d["fold_plan_hash"], dict(sorted(budgets.items())),
                    tuple(dict(c) for c in constraints), fit_seed, families,
-                   search)
+                   search, sampler_seed)
 
     def to_dict(self):
         d = asdict(self)
@@ -269,21 +306,49 @@ def content_hash(protocol):
 
 def history_sha256(trials):
     """sha256 of the history as canonical JSON lines. Task B writes each
-    record as one canonical line, so for its histories this is the sha256 of
-    the file."""
+    record as one canonical line, so for a file its search wrote this is the
+    sha256 of the file; for any other file the two differ, and report.py
+    gives both."""
     return _sha256("".join(_canonical(t) + "\n" for t in trials))
+
+
+def planned_trials(protocol):
+    """Task B's deterministic plan (search.plan_trials) for a Task B
+    protocol: every trial in run order, trial id then family name, as
+    (family, trial_id, config). Trial 0 is the family default; a later
+    trial draws each parameter as search.py documents, from seeds.sampler.
+    A flat protocol has no plan, so None."""
+    p = as_protocol(protocol)
+    if p.families is None:
+        return None
+    n, = set(p.budgets.values())    # Task B gives every family one budget
+    return [(fam, tid, copy.deepcopy(p.families[fam]["default"]) if tid == 0
+             else {param: _sample_value(spec, _uniform(p.sampler_seed, fam,
+                                                       tid, param))
+                   for param, spec in sorted(p.families[fam]["space"].items())})
+            for tid in range(n) for fam in sorted(p.families)]
 
 
 def load_protocol(path):
     """Read a protocol JSON file. Refuses bad JSON, NaN or Infinity and
     repeated keys; from_dict checks the content."""
+    return _load_json(path, "bad_protocol")
+
+
+def load_fold_plan(path):
+    """Read a fold plan JSON file, refusing what load_protocol refuses;
+    validate_history checks it against the protocol."""
+    return _load_json(path, "bad_fold_plan")
+
+
+def _load_json(path, code):
     with open(path, encoding="utf-8") as f:
         text = f.read()
     try:
         return json.loads(text, object_pairs_hook=_no_dup_keys,
                           parse_constant=_no_constant)
     except (ValueError, RecursionError) as e:
-        raise HistoryError([f"bad_protocol: {path}: {e}"]) from None
+        raise HistoryError([f"{code}: {path}: {e}"]) from None
 
 
 def load_history(path):
@@ -310,12 +375,24 @@ def load_history(path):
     return trials
 
 
-def validate_history(trials, protocol):
+def validate_history(trials, protocol, fold_plan=None):
     """Check every record against the schema, Task B's record rules and the
-    protocol. Returns the history's sorted inner fold ids: the fold set the
-    most ok trials report, ties to the larger set and then the
-    lexicographically smallest list (none if no trial is ok). Raises
-    HistoryError listing every problem otherwise."""
+    protocol.
+
+    With Task B's protocol, also check that the protocol's search wrote the
+    history: fold_plan, required, must hash to the protocol's
+    fold_plan_hash (bad_fold_plan, missing_fold_plan); an ok trial must
+    score exactly the plan's inner folds and any other trial a subset of
+    them (off_plan_folds); each record must be a planned trial with its
+    planned config (off_plan); every planned trial must be present
+    (incomplete_history); and the records must be in run order
+    (off_plan_order). A flat protocol has no plan; a fold_plan given with
+    one is checked the same way.
+
+    Returns the history's sorted inner fold ids: the fold plan's, or
+    without one the fold set the most ok trials report, ties to the larger
+    set and then the lexicographically smallest list (none if no trial is
+    ok). Raises HistoryError listing every problem otherwise."""
     p = as_protocol(protocol)
     problems = []
 
@@ -325,6 +402,13 @@ def validate_history(trials, protocol):
     if not isinstance(trials, list) or not trials:
         raise HistoryError(["empty_history: no trial records"])
 
+    plan_folds = None
+    if fold_plan is not None or p.families is not None:
+        plan_folds = _plan_folds(fold_plan, p, bad)
+    planned = planned_trials(p)
+    plan_configs = (None if planned is None else
+                    {(fam, tid): config for fam, tid, config in planned})
+    order = []             # (family, trial_id) of each well-formed record
     first_seen = {}
     protocol_hashes, plan_hashes = {}, {}
     ok_folds = {}          # fold tuple -> records of ok trials
@@ -360,6 +444,7 @@ def validate_history(trials, protocol):
             continue
 
         key = (t["family"], t["trial_id"])
+        order.append(key)
         where = f"record {n} ({t['family']} trial {t['trial_id']})"
         if key in first_seen:
             bad("duplicate_trial_id",
@@ -386,9 +471,23 @@ def validate_history(trials, protocol):
                 problem = _config_problem(t["config"], spec["space"])
                 if problem:
                     bad("bad_config", f"{where}: config {problem}")
+                elif key not in plan_configs:
+                    bad("off_plan", f"{where} is not a planned trial: the "
+                        f"plan has trials 0..{p.budgets[t['family']] - 1}")
+                elif _canonical(t["config"]) != _canonical(plan_configs[key]):
+                    bad("off_plan", f"{where}: config "
+                        f"{_canonical(t['config'])} is not the planned "
+                        f"config {_canonical(plan_configs[key])}")
 
         folds = _check_scores(t, p.metric_names(), where, bad)
         if folds is None:
+            continue
+        if plan_folds is not None and (
+                folds != plan_folds if t["status"] == "ok"
+                else not set(folds) <= set(plan_folds)):
+            bad("off_plan_folds", f"{where} is {t['status']} on folds "
+                f"{list(folds)}; the fold plan's inner folds are "
+                f"{list(plan_folds)}")
             continue
         if t["status"] == "ok":
             ok_folds.setdefault(folds, []).append(n)
@@ -415,13 +514,28 @@ def validate_history(trials, protocol):
     for fam, recs in sorted(unbudgeted.items()):
         bad("unbudgeted_family",
             f"family {fam} has no budget in the protocol ({_records(recs)})")
+    # Counting needs every record well-formed.
+    if planned is not None and len(order) == len(trials):
+        want = [(fam, tid) for fam, tid, _ in planned]
+        absent = [key for key in want if key not in first_seen]
+        if absent:
+            bad("incomplete_history", f"the plan has {len(want)} trials, "
+                f"and {len(absent)} are missing: "
+                + ", ".join(f"{fam} {tid}" for fam, tid in absent[:5])
+                + (f" and {len(absent) - 5} more" if len(absent) > 5 else ""))
+        elif order != want and len(order) == len(want):
+            bad("off_plan_order", "the records are not in the plan's run "
+                "order (trial id, then family name)")
 
-    # The history's inner folds are the fold set the most ok trials report;
-    # a tie goes to the larger set, then to the lexicographically smallest
-    # fold list. An ok trial on any other set is excluded later
-    # (fold_set_mismatch); a failed or unconverged trial must stay inside it.
+    # The history's inner folds are the fold plan's; without one, the fold
+    # set the most ok trials report, a tie going to the larger set, then to
+    # the lexicographically smallest fold list. An ok trial on any other set
+    # is excluded later (fold_set_mismatch); a failed or unconverged trial
+    # must stay inside it.
     folds = ()
-    if ok_folds:
+    if plan_folds is not None:
+        folds = plan_folds
+    elif ok_folds:
         folds = min(ok_folds, key=lambda f: (-len(ok_folds[f]), -len(f), f))
         if len(folds) < 2:
             bad("too_few_folds", f"ok trials have {len(folds)} inner fold; "
@@ -480,15 +594,16 @@ def preference_key(trial):
     return (trial["complexity"], not trial["is_default"], trial["trial_id"])
 
 
-def select_history(trials, protocol):
+def select_history(trials, protocol, fold_plan=None):
     """Validate one history and select a config for each budgeted family.
+    Task B's protocol needs the fold plan it pins (see validate_history).
 
     Returns the objective, direction, hashes, the protocol's search_hash,
     planned budgets and constraints, history_sha256, inner folds, SE_LABEL,
-    RULE, `families` (one result per budgeted family; see _select_family)
-    and `budgets` (see budget_accounting)."""
+    SCORE_LABEL, RULE, `families` (one result per budgeted family; see
+    _select_family) and `budgets` (see budget_accounting)."""
     p = as_protocol(protocol)
-    folds = validate_history(trials, p)
+    folds = validate_history(trials, p, fold_plan)
     by_family = {fam: [] for fam in p.budgets}
     for t in trials:
         by_family[t["family"]].append(t)
@@ -503,6 +618,7 @@ def select_history(trials, protocol):
         "history_sha256": history_sha256(trials),
         "folds": folds,
         "se_label": SE_LABEL,
+        "score_label": SCORE_LABEL,
         "rule": RULE,
         "families": {fam: _select_family(fam, ts, folds, p)
                      for fam, ts in by_family.items()},
@@ -617,10 +733,10 @@ def _select_family(family, trials, folds, p):
     return result
 
 
-def budget_accounting(trials, protocol):
+def budget_accounting(trials, protocol, fold_plan=None):
     """Validate a history and count its budget per family."""
     p = as_protocol(protocol)
-    return _budgets(trials, p, validate_history(trials, p))
+    return _budgets(trials, p, validate_history(trials, p, fold_plan))
 
 
 def _budgets(trials, p, folds):
@@ -848,6 +964,72 @@ def _finite_sum(values):
         return False
 
 
+def _plan_folds(fold_plan, p, bad):
+    """The fold plan's sorted inner fold ids as a tuple, read as Task B's
+    inner_fold_ids reads them, once the plan hashes to the protocol's
+    fold_plan_hash (Task B's fold_plan_hash). None after reporting a
+    problem."""
+    if fold_plan is None:
+        bad("missing_fold_plan", f"the protocol pins fold plan "
+            f"{p.fold_plan_hash}; without it no trial's folds can be checked")
+        return None
+    try:
+        digest = _sha256(_canonical(fold_plan))
+    except (TypeError, ValueError) as e:
+        bad("bad_fold_plan", f"the fold plan is not plain JSON ({e})")
+        return None
+    if digest != p.fold_plan_hash:
+        bad("bad_fold_plan", f"the fold plan hashes to {digest}, not the "
+            f"protocol's fold_plan_hash {p.fold_plan_hash}")
+        return None
+    spec = fold_plan.get("inner_folds") if isinstance(fold_plan, dict) else None
+    if _is_int(spec):
+        folds = tuple(range(spec))
+    elif isinstance(spec, (list, tuple)) and all(
+            v is None or (_is_int(v) and v >= 0) for v in spec):
+        folds = tuple(sorted({v for v in spec if v is not None}))
+    else:
+        bad("bad_fold_plan", "the fold plan's inner_folds must be an integer "
+            "or a list of per-sample labels (non-negative integers or null)")
+        return None
+    if len(folds) < 2:
+        bad("bad_fold_plan", f"the fold plan defines {len(folds)} inner "
+            "folds; at least 2 are needed")
+        return None
+    return folds
+
+
+def _uniform(seed, family, trial_id, param):
+    """search.py's draw: a uniform in [0, 1) from the sha256 of the
+    canonical [seed, family, trial_id, param]."""
+    digest = hashlib.sha256(_canonical([seed, family, trial_id, param])
+                            .encode()).digest()
+    return (int.from_bytes(digest[:8], "big") >> 11) / 2**53
+
+
+def _sample_value(spec, u):
+    """search.sample_value: the value spec draws at u. The tests compare
+    planned_trials with search.plan_trials, so the two cannot drift."""
+    if spec["type"] == "choice":
+        values = spec["values"]
+        return values[min(math.floor(u * len(values)), len(values) - 1)]
+    low, high = spec["low"], spec["high"]
+    if spec["type"] == "int":
+        if spec["log"]:
+            value = math.floor(math.exp(math.log(low) + u * (
+                math.log(high + 1) - math.log(low))))
+        else:
+            value = low + math.floor(u * (high - low + 1))
+    else:
+        if spec["log"]:
+            value = math.exp(math.log(low) + u * (math.log(high)
+                                                  - math.log(low)))
+        else:
+            value = low + u * (high - low)
+        value = float(f"{value:.10g}")
+    return min(max(value, low), high)
+
+
 def _family_problems(spec):
     """Why a protocol family is not {default, space: {param: spec}} with each
     spec an int or float range or a choice list and the default one of Task
@@ -873,12 +1055,14 @@ def _family_problems(spec):
             typed = _is_int if kind == "int" else (
                 lambda v: isinstance(v, float) and _is_finite(v))
             ok = (typed(s.get("low")) and typed(s.get("high"))
-                  and s["low"] <= s["high"])
+                  and s["low"] <= s["high"] and isinstance(s.get("log"), bool)
+                  and (not s["log"] or s["low"] > 0))
         else:
             ok = False
         if not ok:
             problems.append(f"space {param} must be {{type: int or float, "
-                            "low <= high} or {type: choice, values: [...]}")
+                            "low <= high, log: boolean, low > 0 on a log "
+                            "scale} or {type: choice, values: [...]}")
     if problems:
         return problems
     problem = _default_problem(spec["default"], spec["space"])
