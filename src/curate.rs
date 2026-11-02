@@ -1654,6 +1654,7 @@ mod tests {
     fn the_recorded_generator_matches_cargo_lock() {
         // A checkout with CRLF line endings must read the same entries.
         let lock = include_str!("../Cargo.lock").replace("\r\n", "\n");
+        const CRATES_IO: &str = "registry+https://github.com/rust-lang/crates.io-index";
         for (name, version) in [
             ("rand", "0.9.5"),
             ("rand_chacha", "0.9.0"),
@@ -1667,10 +1668,14 @@ mod tests {
             // F-2: the entry found is the one GRM builds with. Cargo.toml asks
             // for 0.9 of rand and rand_chacha, and cargo resolves one
             // semver-compatible version of each, so the lock holds one entry
-            // per crate, inside that requirement.
+            // per crate, inside that requirement. That entry must be the
+            // crates.io release: a path, git or patched source of the same
+            // version could draw differently.
             assert!(
-                version.starts_with("0.9."),
-                "{name} {version} is outside 0.9"
+                lock.contains(&format!(
+                    "name = \"{name}\"\nversion = \"{version}\"\nsource = \"{CRATES_IO}\"\n"
+                )),
+                "Cargo.lock's {name} {version} is not the crates.io release"
             );
             assert_eq!(
                 lock.matches(&format!("name = \"{name}\"\n")).count(),

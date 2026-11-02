@@ -1747,6 +1747,20 @@ mod tests {
     }
 
     #[test]
+    fn the_k_screen_cap_is_the_evaluations_screened_features() {
+        // One retained-feature budget. The K block's cap reaches
+        // `screen_block` through the admitted block's spec, and `evaluate`
+        // screens to `screened_features`. If the two drift apart, a K-only
+        // arm keeps a different number of patterns than the pipeline offers
+        // boosting, the lasso and the forest.
+        let budget = crate::learn::eval::EvalConfig::default().screened_features;
+        assert_eq!(K_SCREEN_CAP, budget);
+        let matrix = matrix_fixture();
+        let block = admit(&KmerSource::new(&matrix).unwrap(), &matrix.summary.genomes).unwrap();
+        assert_eq!(block.spec().screen_cap, Some(budget));
+    }
+
+    #[test]
     fn the_deny_list_refuses_each_source_proxy() {
         use ProxyKind::*;
         let cases: &[(ProxyKind, &[&str])] = &[

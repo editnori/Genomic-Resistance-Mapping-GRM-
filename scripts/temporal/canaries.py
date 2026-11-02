@@ -74,23 +74,22 @@ their value forms, and dtype forms with their alias character (see
 invariance_to_test_data; any other type is refused). It doesn't read the
 order of dict and set entries, which it compares sorted, so a fit whose
 output differs only there passes. The canary guards against honest fits that
-accidentally read test-period data. It doesn't
-defend against a fit built to hide information on purpose in private
-(underscore) attributes, object internals, memory layout or padding bytes.
-drop_non_training removes every genome outside the training rows, and
-drop_post_cutoff_events
-removes every undated event and every event recorded after T from every
-genome; each leaves the other kind in place, so together they say which kind
-a fit reads (value, date, source or supersedes of a later event, or any field
-of another genome). The other perturbations change one
-kind of test-period data at a time (later and undated labels with their
-dates, sources and supersedes, same-day conflicts, genes, lineage, group and
-dates, added genomes), which catches a fit whose dependence cancels out when
-that data simply disappears. training_view_only also removes every
-antibiotic that only test-period records carry, so a fit that names a label
-column for each antibiotic in its input is caught. None of them covers a fit
-that caches across calls, or a dependence that shows only at other input sizes
-than the one the canary ran on (see invariance_to_test_data).
+accidentally read test-period data. It doesn't defend against a fit built to
+hide information on purpose in private (underscore) attributes, object
+internals, memory layout or padding bytes. drop_non_training removes every
+genome outside the training rows, and drop_post_cutoff_events removes every
+undated event and every event recorded after T from every genome; each leaves
+the other kind in place, so together they say which kind a fit reads (value,
+date, source or supersedes of a later event, or any field of another genome).
+The other perturbations change one kind of test-period data at a time (later
+and undated labels with their dates, sources and supersedes, same-day
+conflicts, genes, lineage, group and dates, added genomes), which catches a
+fit whose dependence cancels out when that data simply disappears.
+training_view_only also removes every antibiotic that only test-period
+records carry, so a fit that names a label column for each antibiotic in its
+input is caught. None of them covers a fit that caches across calls, or a
+dependence that shows only at other input sizes than the one the canary ran
+on (see invariance_to_test_data).
 """
 from __future__ import annotations
 

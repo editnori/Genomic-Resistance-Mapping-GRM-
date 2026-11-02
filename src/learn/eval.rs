@@ -955,14 +955,16 @@ fn outer_splits(
 /// the lasso's holdouts) keeps whole inside each outer training set:
 /// - `lineage`: the lineage groups;
 /// - `random` without duplicate groups: none, so tuning stays stratified;
-/// - `random` with duplicate groups: each group takes its lowest member's
+/// - `random` with duplicate groups: each group takes its first member's
 ///   index as its id and every other sample its own index, so a genome and
 ///   its copy never sit on both sides of a tuning partition.
 ///
-/// The lowest member is part of the contract, not one choice among equals.
-/// Any member's index would keep groups whole, but ids set the order the
-/// groups are shuffled from, so another member would redraw every random
-/// tuning partition and change reported results.
+/// The first member, the lowest because `check_inputs` requires ascending
+/// groups, is part of the contract, not one choice among equals. Any
+/// member's index would keep groups whole, but ids set the order the groups
+/// are shuffled from, so another member would redraw every random tuning
+/// partition and change reported results. This function doesn't check the
+/// order itself.
 ///
 /// The outer random folds hold each group whole, so a training set holds a
 /// group entirely or not at all, and ids are sample indices: no outer test

@@ -171,13 +171,14 @@ impl GroupIds {
 /// - lineage: the lineages, as at c90ebaf;
 /// - random without duplicates: None, the c90ebaf stratified path;
 /// - random with duplicates: composite ids, where every member of a
-///   duplicate group takes its lowest member's index and every other sample
+///   duplicate group takes its first member's index and every other sample
 ///   keeps its own index.
 ///
 /// This is `learn::eval::tuning_groups`, the ids `evaluate` tunes on, so
-/// plans and evaluations can't diverge. That function gives each member its
-/// group's first index, which is the lowest because duplicate groups are
-/// ascending (`GroupIds::new` checks this).
+/// plans and evaluations can't diverge. The first member is the lowest when
+/// the group is ascending, as `GroupIds::new` and `evaluate` require, but
+/// this function takes raw slices and doesn't check: an unsorted group takes
+/// its first member's index, not its lowest.
 pub fn tuning_groups(
     scheme: Scheme,
     lineage: &[u32],
@@ -1720,6 +1721,8 @@ mod tests {
         // resistant and two susceptible genomes, and its inner folds pass,
         // but six groups of 100 fail boosting's grouped holdout and four fail
         // the lasso's. The plan gives `evaluate`'s reason, naming the unit.
+        // Both holdouts fail in the same words, so each case also draws both
+        // on their own: only the named one fails, so the plan's error is its.
         for (big, failing) in [(6, "gbt"), (4, "lasso")] {
             let mut units: Vec<(usize, usize)> = vec![(98, 1), (1, 97)];
             units.extend(std::iter::repeat_n((0, 100), big));
@@ -1754,6 +1757,24 @@ mod tests {
                     ),
                     "{big} groups of 100 fail the {failing} holdout"
                 );
+                let train = Bits::from_indices(n, 4..n);
+                let tuning = tuning_groups(scheme, groups.lineage(), groups.duplicate());
+                let unit = crate::learn::eval::tuning_unit(scheme.as_str());
+                let seed = fold_seed(42, 0);
+                for (name, frac) in [("gbt", GBT_HOLDOUT), ("lasso", LASSO_HOLDOUT)] {
+                    let held = tuning_holdout(&train, &y, tuning.as_deref(), unit, frac, seed);
+                    match held {
+                        Err(error) => assert_eq!(
+                            (name, format!("{error:#}")),
+                            (failing, format!("{reason} contains both classes")),
+                            "{scheme}: {big} groups of 100 fail the {name} holdout"
+                        ),
+                        Ok(_) => assert_ne!(
+                            name, failing,
+                            "{scheme}: {big} groups of 100 pass the {name} holdout"
+                        ),
+                    }
+                }
             }
         }
     }
