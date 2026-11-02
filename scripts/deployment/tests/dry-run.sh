@@ -811,29 +811,27 @@ rc=$?
 cnt() { if [ -f "$2" ]; then grep -c -- "$1" "$2"; else echo 0; fi; }
 echo "exit=$rc rm_devnull=$(cnt ' /dev/null' "$dir/rm.log") active_tries=$(cat "$dir/active.count" 2>/dev/null || echo 0) fallback=$(cnt . "$dir/fallback.log") marker=$(cnt . "$dir/root/BOOT-FALLBACK") tmp_left=$(ls -A "$dir/tmp" | wc -l)"
 SH
-if [ -f "$BOOT_HOOK" ]; then
-    expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
-        "boot hook: with mktemp failing it never removes /dev/null, and falls back after a retry" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot1" fail fail
-    expect 0 '^exit=0 rm_devnull=0 active_tries=1 fallback=0 marker=0 tmp_left=0$' \
-        "boot hook: with mktemp failing and the active pair healthy it never removes /dev/null" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot2" fail pass
-    expect 0 '^exit=0 rm_devnull=0 active_tries=2 fallback=0 marker=0 tmp_left=0$' \
-        "boot hook: a transient failure of the active pair is retried once, with no fallback and no marker" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot3" ok once
-    expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
-        "boot hook: an active pair that fails twice falls back, writes BOOT-FALLBACK and removes its temporary file" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot4" ok fail
-    expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=0 tmp_left=0$' \
-        "boot hook: the dry run retries without waiting, falls back and writes no marker" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot5" ok fail --dry-run
-else
-    echo "skip the boot hook cases ($BOOT_HOOK is not in this tree)"
-    skipped=$((skipped + 5))
-fi
+# The hook must be in the tree: both suites fail, rather than skip, when an
+# assertion cannot run (README.md, REVIEW-DS2 I4).
+expect 0 '' "the boot hook, ops/vast/boot-active.sh, is in this tree" -- test -f "$BOOT_HOOK"
+expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
+    "boot hook: with mktemp failing it never removes /dev/null, and falls back after a retry" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot1" fail fail
+expect 0 '^exit=0 rm_devnull=0 active_tries=1 fallback=0 marker=0 tmp_left=0$' \
+    "boot hook: with mktemp failing and the active pair healthy it never removes /dev/null" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot2" fail pass
+expect 0 '^exit=0 rm_devnull=0 active_tries=2 fallback=0 marker=0 tmp_left=0$' \
+    "boot hook: a transient failure of the active pair is retried once, with no fallback and no marker" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot3" ok once
+expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
+    "boot hook: an active pair that fails twice falls back, writes BOOT-FALLBACK and removes its temporary file" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot4" ok fail
+expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=0 tmp_left=0$' \
+    "boot hook: the dry run retries without waiting, falls back and writes no marker" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot5" ok fail --dry-run
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=$((244 - skipped))  # less the root-only and missing-boot-hook skips
+EXPECTED_ASSERTIONS=$((245 - skipped))  # less the root-only skip
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"
