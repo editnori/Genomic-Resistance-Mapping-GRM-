@@ -17,8 +17,8 @@
 //! show. Two samples have no matrix column, so whether the encoder emits the
 //! block-unavailable indicator depends on which samples it is fitted on.
 //! Sparse patterns sit at the training support floor, and pairs of patterns
-//! differ on one sample only, so the support filter and the within-block
-//! collapse depend on which samples they read.
+//! differ only on one sample and its duplicates, so the support filter and
+//! the within-block collapse depend on which samples they read.
 use grm::ablate::blocks::{K_SCREEN_CAP, KmerSource, PredictorBlock, admit};
 use grm::ablate::encode::{
     EncodeConfig, EncodedBlock, assemble, block_candidates, fit_encoder, screen_block, transform,
@@ -556,6 +556,15 @@ fn check_the_toy_can_show_a_leak(toy: &Toy, arm: &Arm) {
 /// label by design, and G's tests show its inner folds and holdouts read
 /// training labels only. Then §16: relabelling boosting's holdout leaves the
 /// candidates and the screened block as they were.
+///
+/// The two perturbations catch different leaks, so both stay. Giving every
+/// outer test sample a column changes how many absent samples an encoder
+/// that reads test samples sees, so its block-unavailable indicator changes
+/// in a fold that tests an absent sample. Giving none a column makes each
+/// pair of training twins identical on every sample with a column, so a
+/// within-block collapse that reads test samples now merges a pair it kept
+/// apart in the unperturbed fit. The first perturbation can't show that,
+/// because the redrawn test bits still tell the pair apart.
 fn check_no_test_sample_reaches_a_fit(toy: &Toy, arm: &Arm) {
     let mut rng = ChaCha8Rng::seed_from_u64(SEED + 1);
     for (f, run) in arm.runs.iter().enumerate() {
