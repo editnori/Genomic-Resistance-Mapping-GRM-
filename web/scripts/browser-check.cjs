@@ -136,7 +136,10 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
   }
   if (finding === 2) {
     const lo = Math.max(0, Math.floor(Math.min(0.5, ...expected.catalog.flatMap(d => [d.catalog.balanced_accuracy, d.best_lineage])) * 10) / 10);
-    check(tag + ' catalog 50% reference', geometry.refs.some(r => close(r.y, 22 + (1 - 0.5) / (1 - lo) * (geometry.height - 56))), geometry.refs);
+    // CatalogScatter draws the 50% line only when its axis starts below 50%
+    // (lo < 0.5); at lo = 0.5 the axis floor is 50% and no line is drawn.
+    const at50 = geometry.refs.filter(r => close(r.y, 22 + (1 - 0.5) / (1 - lo) * (geometry.height - 56)));
+    check(tag + ' catalog 50% reference', lo < 0.5 ? at50.length > 0 : at50.length === 0, { lo, refs: geometry.refs });
     check(tag + ' catalog region counts', geometry.text.includes(expected.stats.catalogAhead + ' ahead by more than 2') && geometry.text.includes(expected.stats.catalogWithin + ' within 2 points') && geometry.text.includes(expected.stats.catalogBehind + ' behind by more than 2'), geometry.text);
   } else check(tag + ' finding ' + finding + ' reference positions', wanted.length === geometry.refs.length && wanted.every((x, i) => close(geometry.refs[i].x, x)), { wanted, actual: geometry.refs });
 }
@@ -466,7 +469,14 @@ async function interactions(page, tag, width) {
   const rows = table.locator('[data-row-open]');
   await rows.nth(0).focus(); await page.keyboard.press('ArrowDown');
   check(tag + ' keyboard row movement', await rows.nth(1).evaluate(e => e === document.activeElement), null);
-  const tint = await rows.nth(1).evaluate(e => getComputedStyle(e.closest('tr')).backgroundColor);
+  // The tint is a colour transition (transition-colors on the row), so it
+  // lands a frame or two after focus moves: read it after two frames, and
+  // keep polling each frame for up to a second while it is still clear.
+  const tint = await rows.nth(1).evaluate(e => new Promise(resolve => {
+    const row = e.closest('tr'), start = performance.now();
+    const read = () => { const c = getComputedStyle(row).backgroundColor; if (c !== 'rgba(0, 0, 0, 0)' || performance.now() - start > 1000) resolve(c); else requestAnimationFrame(read); };
+    requestAnimationFrame(() => requestAnimationFrame(read));
+  }));
   check(tag + ' focused row tints', tint !== 'rgba(0, 0, 0, 0)', tint);
   const stickyTint = await table.evaluate(region => { const rs = [...region.querySelectorAll('tbody tr')]; return { focused: getComputedStyle(rs[1].children[0]).backgroundColor, rest: getComputedStyle(rs[3].children[0]).backgroundColor }; });
   check(tag + ' focus tint reaches the sticky cell', stickyTint.focused !== stickyTint.rest, stickyTint);
