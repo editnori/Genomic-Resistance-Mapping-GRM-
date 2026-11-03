@@ -13,7 +13,7 @@ Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are those of 
 | `rust-doc` | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked` | pass |
 | `metric-audit` | `cargo build --locked --release` in `scripts/metric-audit/foldgen`, then `python3 -I -B -W error <file> -v` for each test file | `test_check_results.py` 106, `test_audit.py` 98, `test_scripts.py` 3; `scripts/lasso-scan/test_scan.py` 26 with 4 skipped |
 | `python`, one job per suite | `python3 -s -P -B -W error -m unittest discover -s <suite> -t . -v` under `env -i` at `PYTHONHASHSEED` 0, 1 and 4242, then once with `-I` in place of `-s -P` | `tests/hyperopt` 322, `scripts/sampling-audit/tests` 34, `tests/ablation` 238, `tests/temporal` 163, `tests/multitask` 72 |
-| `deployment` | `bash scripts/deployment/tests/dry-run.sh`, then `bash scripts/deployment/tests/apply.sh` | 245 passed; 548 passed |
+| `deployment` | `bash scripts/deployment/tests/dry-run.sh`, then `bash scripts/deployment/tests/apply.sh` | 245 passed; 551 passed |
 | `web` | `npm --prefix web ci`, then `run typecheck`, `run build` and `test` (vitest), on Node 22.23.4 | 35 test files passed, 1 skipped; 280 tests passed, 2 skipped |
 
 The `python` jobs discover `scripts/sampling-audit/tests` without `-t .` and set `GRM_TASK_J_STATS` to the tree's `scripts/ablation/stats.py`. The `tests/ablation` job also runs once without it, at `PYTHONHASHSEED=0`, so `test_schema.py` finds that file by itself. A unittest run fails if any test is skipped, except `test_scan.py`, whose 4 `RealBinary` tests need the binary and fixture root that `scripts/lasso-scan/smoke.sh` builds. A `python` job also fails if its suite changed a tracked file.

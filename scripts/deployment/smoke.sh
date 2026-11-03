@@ -8,7 +8,8 @@
 # usage: smoke.sh PORT REPORT_DIR DIST_DIR
 #   GRM_EXPECT_SCHEMA (default 2), GRM_EXPECT_REVISION (7), GRM_EXPECT_DATASETS
 #   (237, revision 7's count; required for any other revision); each a whole
-#   number of at most 18 ASCII digits
+#   number of at most 18 ASCII digits. Without GRM_EXPECT_DATASETS it says that
+#   the count it checks is that default.
 set -euo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 port=$1
@@ -31,6 +32,9 @@ for pair in "GRM_EXPECT_SCHEMA=$schema" "GRM_EXPECT_REVISION=$revision" "GRM_EXP
     [[ ${pair#*=} =~ ^[0123456789]{1,18}$ ]] ||
         { echo "FAIL ${pair%%=*} must be a whole number in ASCII digits, at most 18 of them, not $(printf %q "${pair#*=}")"; exit 2; }
 done
+# The count's source is check_expect's (common.sh): GRM_EXPECT_DATASETS, or
+# revision 7's 237. Say so when it is the default.
+[ -n "${GRM_EXPECT_DATASETS:-}" ] || echo "note: GRM_EXPECT_DATASETS is unset, so the count checked is the default, 237, revision 7's"
 
 check() {
     local url=$1 file=$2 got want
