@@ -60,6 +60,9 @@ const stateRows = [
   ...(() => { const d = manifest.datasets.find(x => x.catalog === null); return d ? [[d, 'No rule']] : []; })(),
   ...(() => { const d = manifest.datasets.find(x => x.mic_essential_agreement === null); return d ? [[d, 'No MIC']] : []; })(),
 ];
+// A lone rule of 80 characters or more, longer than any rule column at the
+// check's widths holds on one line (--shape full writes one).
+const longRule = manifest.datasets.find(d => d.scm_rules.length === 1 && d.scm_rules[0].length >= 80);
 const inspectId = manifest.datasets.some(d => d.id === 'escherichia_coli__ceftriaxone') ? 'escherichia_coli__ceftriaxone' : manifest.datasets[0].id;
 const speciesSlug = manifest.species.find(s => s.slug === 'escherichia_coli' && s.genomes_analyzed > 0)?.slug ?? manifest.species.find(s => s.genomes_analyzed > 0).slug;
 const speciesName = manifest.species.find(s => s.slug === speciesSlug).species;
@@ -138,8 +141,11 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     const lo = Math.max(0, Math.floor(Math.min(0.5, ...expected.catalog.flatMap(d => [d.catalog.balanced_accuracy, d.best_lineage])) * 10) / 10);
     // CatalogScatter draws the 50% line only when its axis starts below 50%
     // (lo < 0.5); at lo = 0.5 the axis floor is 50% and no line is drawn.
+    // A missing line counts only from a figure that drew: a box, and one
+    // mark per dataset with a catalog score and a lineage score.
     const at50 = geometry.refs.filter(r => close(r.y, 22 + (1 - 0.5) / (1 - lo) * (geometry.height - 56)));
-    check(tag + ' catalog 50% reference', lo < 0.5 ? at50.length > 0 : at50.length === 0, { lo, refs: geometry.refs });
+    const drawn = geometry.width > 0 && geometry.height > 0 && geometry.ids.length === expected.catalog.length;
+    check(tag + ' catalog 50% reference', drawn && (lo < 0.5 ? at50.length > 0 : at50.length === 0), { lo, drawn, marks: geometry.ids.length, refs: geometry.refs });
     check(tag + ' catalog region counts', geometry.text.includes(expected.stats.catalogAhead + ' ahead by more than 2') && geometry.text.includes(expected.stats.catalogWithin + ' within 2 points') && geometry.text.includes(expected.stats.catalogBehind + ' behind by more than 2'), geometry.text);
   } else check(tag + ' finding ' + finding + ' reference positions', wanted.length === geometry.refs.length && wanted.every((x, i) => close(geometry.refs[i].x, x)), { wanted, actual: geometry.refs });
 }
@@ -334,6 +340,30 @@ async function chrome(page, tag, width) {
   check(tag + ' dashed rule under the top bar', c.rule === 'dashed', c.rule);
 }
 
+/** A lone rule too long for its cell shows cut to one line and is itself
+ *  the button that shows it whole, in place, without opening the row
+ *  (DatasetsView's RuleCell): by click, by keyboard and, on a touch screen,
+ *  by tap. Each way opens it and closes it again. Every wait is bounded, so
+ *  a cell that stops working fails this check rather than the context. */
+async function longRuleCheck(page, tag, ways) {
+  if (longRule === undefined) return;
+  await page.getByRole('searchbox', { name: 'Search datasets' }).fill(longRule.antibiotic + ' ' + longRule.species);
+  const text = page.getByRole('region', { name: 'Datasets', exact: true }).getByText(longRule.scm_rules[0], { exact: true });
+  const button = text.locator('xpath=ancestor::button[1]');
+  const read = async () => { await settle(page); return text.evaluate(e => ({ clipped: e.scrollWidth > e.clientWidth + 1, expanded: e.closest('button')?.getAttribute('aria-expanded') ?? null, dialog: document.querySelector('dialog[open]') !== null }), null, { timeout: 2000 }).catch(() => null); };
+  const act = way => (way === 'tap' ? button.tap({ timeout: 2000 }) : way === 'keyboard' ? button.focus({ timeout: 2000 }).then(() => page.keyboard.press('Enter')) : button.click({ timeout: 2000 })).then(() => true, () => false);
+  await text.waitFor({ timeout: 5000 }).catch(() => {});
+  // The cell measures itself once it has rendered; give the button a moment.
+  await button.waitFor({ timeout: 2000 }).catch(() => {});
+  const steps = [['closed', await read()]];
+  for (const way of ways) for (const want of ['open', 'closed']) {
+    if (steps[steps.length - 1][1]?.expanded == null) break;
+    steps.push([way + ' ' + want, (await act(way)) ? await read() : null]);
+  }
+  const ok = steps.length === 1 + 2 * ways.length && steps.every(([name, s]) => s !== null && !s.dialog && (name.endsWith('open') ? !s.clipped && s.expanded === 'true' : s.clipped && s.expanded === 'false'));
+  check(tag + ' long rule cut to one line opens whole in place by ' + ways.join(' and '), ok, { dataset: longRule.id, steps });
+}
+
 async function interactions(page, tag, width) {
   await page.goto(BASE + '/datasets');
   const search = page.getByRole('searchbox', { name: 'Search datasets' });
@@ -467,17 +497,26 @@ async function interactions(page, tag, width) {
   await page.keyboard.press('Enter');
   check(tag + ' keyboard sorting', await table.locator('th[aria-sort="descending"]').textContent() === 'Random', null);
   const rows = table.locator('[data-row-open]');
+  // Off the table first: a hovered row has a tint of its own (blue at 3.5%),
+  // which must not stand in for the focus tint.
+  await page.mouse.move(2, 2);
   await rows.nth(0).focus(); await page.keyboard.press('ArrowDown');
   check(tag + ' keyboard row movement', await rows.nth(1).evaluate(e => e === document.activeElement), null);
   // The tint is a colour transition (transition-colors on the row), so it
-  // lands a frame or two after focus moves: read it after two frames, and
-  // keep polling each frame for up to a second while it is still clear.
+  // lands a frame or more after focus moves. Read it after two frames, then
+  // each frame until two frames in a row agree on a colour that isn't
+  // clear, for up to a second, and compare that colour with the focus tint,
+  // blue at 5% (DataTable's focus-within:bg-blue/[0.05]).
   const tint = await rows.nth(1).evaluate(e => new Promise(resolve => {
     const row = e.closest('tr'), start = performance.now();
-    const read = () => { const c = getComputedStyle(row).backgroundColor; if (c !== 'rgba(0, 0, 0, 0)' || performance.now() - start > 1000) resolve(c); else requestAnimationFrame(read); };
+    const probe = document.createElement('div');
+    probe.style.backgroundColor = 'rgb(' + getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() + ' / 0.05)';
+    document.body.append(probe); const want = getComputedStyle(probe).backgroundColor; probe.remove();
+    let last = null;
+    const read = () => { const c = getComputedStyle(row).backgroundColor; const settled = c === last && c !== 'rgba(0, 0, 0, 0)'; if (settled || performance.now() - start > 1000) resolve({ colour: c, settled, want }); else { last = c; requestAnimationFrame(read); } };
     requestAnimationFrame(() => requestAnimationFrame(read));
   }));
-  check(tag + ' focused row tints', tint !== 'rgba(0, 0, 0, 0)', tint);
+  check(tag + ' focused row tints', tint.settled && tint.colour === tint.want, tint);
   const stickyTint = await table.evaluate(region => { const rs = [...region.querySelectorAll('tbody tr')]; return { focused: getComputedStyle(rs[1].children[0]).backgroundColor, rest: getComputedStyle(rs[3].children[0]).backgroundColor }; });
   check(tag + ' focus tint reaches the sticky cell', stickyTint.focused !== stickyTint.rest, stickyTint);
   await shot(page, tag + '-row-focus');
@@ -492,6 +531,7 @@ async function interactions(page, tag, width) {
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   check(tag + ' inspector focus return', await rows.nth(1).evaluate(e => e === document.activeElement), await activeName(page));
+  await longRuleCheck(page, tag, ['click', 'keyboard']);
 
   await page.goto(BASE + '/datasets?dataset=' + inspectId);
   await page.locator('#ds-model').waitFor();
@@ -538,8 +578,17 @@ async function interactions(page, tag, width) {
   const drug = page.getByRole('combobox', { name: /^Map drug/ });
   const outline = () => page.evaluate(() => { const o = [...document.querySelectorAll('[role="grid"] ~ div[aria-hidden="true"]')].find(e => e.className.includes('border-ink')); return o ? getComputedStyle(o).transform : null; });
   const was = await outline();
-  await drug.click(); await page.getByRole('option').nth(1).click(); await settle(page);
-  const now = await outline();
+  await drug.click(); await page.getByRole('option').nth(1).click();
+  // The choice reaches the outline through a state update and a transform
+  // transition, so the move can land a few frames late: as with the row
+  // tint, read after two frames and keep polling each frame for up to a
+  // second while it has not moved.
+  const now = await page.evaluate(was => new Promise(resolve => {
+    const read = () => { const o = [...document.querySelectorAll('[role="grid"] ~ div[aria-hidden="true"]')].find(e => e.className.includes('border-ink')); return o ? getComputedStyle(o).transform : null; };
+    const start = performance.now();
+    const poll = () => { const t = read(); if ((t !== null && t !== was) || performance.now() - start > 1000) resolve(t); else requestAnimationFrame(poll); };
+    requestAnimationFrame(() => requestAnimationFrame(poll));
+  }), was);
   check(tag + ' chosen drug outline moves to its row', was !== null && now !== null && was !== now, { was, now });
   await scrollTo(page, '#sp-cross');
   await shot(page, tag + '-cross-matrix');
@@ -558,7 +607,13 @@ async function interactions(page, tag, width) {
   check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
   await scrollTo(page, '#m-funnel'); await shot(page, tag + '-definitions');
   check(tag + ' top bar stays in view after scrolling Methods', await page.evaluate(() => document.querySelector('header').getBoundingClientRect().top >= -1 && document.scrollingElement.scrollTop === 0), null);
-  if (await page.locator('#m-unsupported').count() > 0) { await scrollTo(page, '#m-unsupported'); await shot(page, tag + '-unscored'); }
+  // Assays the report could not score: one entry each in Methods, naming
+  // its datasets' drugs and its reason, or no such part when there are none.
+  const unscored = manifest.unsupported_panels ?? [];
+  const unscoredPart = await page.evaluate(() => { const p = document.getElementById('m-unsupported'); return p ? [...p.querySelectorAll('li')].map(li => li.textContent) : null; });
+  check(tag + ' assays not scored listed in Methods', unscored.length === 0 ? unscoredPart === null
+    : unscoredPart !== null && unscoredPart.length === new Set(unscored.map(u => u.panel)).size && unscored.every(u => unscoredPart.some(t => t.includes(u.name) && t.includes('Not scored.') && t.toLowerCase().includes(u.antibiotic.toLowerCase()) && t.toLowerCase().includes(u.reason.toLowerCase()))), { unscored: unscored.map(u => [u.panel, u.dataset]), part: unscoredPart });
+  if (unscoredPart !== null) { await scrollTo(page, '#m-unsupported'); await shot(page, tag + '-unscored'); }
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
   for (const button of await page.getByRole('button', { name: 'Method and coverage' }).all()) await button.click();
@@ -842,6 +897,7 @@ async function boundaries(browser) {
   check('forced colors: judged values keep plain readable text and no ring', await page.locator('[data-verdict]').first().evaluate(e => getComputedStyle(e).boxShadow === 'none' && e.textContent.trim().length > 0), null);
   const forcedMarks = await page.evaluate(() => [...document.querySelectorAll('.dataset-sub svg.class-glyph')].map(g => { const s = g.querySelector('circle, rect, path'); return { shape: g.getAttribute('data-shape'), paint: g.getAttribute('data-shape') === 'ring' ? getComputedStyle(s).stroke : getComputedStyle(s).fill }; }));
   check('forced colors: class marks share one system ink and keep distinct shapes', forcedMarks.length > 0 && new Set(forcedMarks.map(m => m.paint)).size === 1 && new Set(forcedMarks.map(m => m.shape)).size >= Math.min(2, new Set(manifest.datasets.map(d => d.drug_class)).size), forcedMarks.slice(0, 6));
+  await longRuleCheck(page, 'touch 390', ['tap']);
   await page.goto(BASE);
   await page.getByRole('button', { name: 'Present', exact: true }).click();
   const deck = page.getByRole('dialog', { name: 'GRM findings presentation' });

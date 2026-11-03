@@ -6,18 +6,24 @@
 // imported.
 //
 // Run it from the repository root with Node 22. tsx is not a repo
-// dependency, so npx fetches it:
+// dependency: npx downloads it from the npm registry, a tool download, not
+// data. tsx keeps its transform cache and an IPC pipe in /tmp/tsx-<uid>/;
+// the script itself writes only into <out-dir>. Anything but the two paths
+// and one --shape is refused with rc 2.
 //
 //   npx --yes tsx@4.23.15 web/scripts/synthetic-report.mts web <out-dir> [--shape base|r11|wide|full]
 //   (cd <out-dir> && sha256sum -c SOURCE.sha256)
 //
 // Then serve the tree on 127.0.0.1, either way, and run the check against it
 // with playwright-core installed outside the app (GRM_CHROMIUM unset uses
-// Playwright's own Chromium):
+// Playwright's own Chromium). Resolve <out-dir> before the cd into web/,
+// where a relative path would miss the tree, and never leave GRM_REPORT_DIR
+// out: without it vite serves ../data/report, the real report tree.
 //
-//   (cd web && npm run build && GRM_REPORT_DIR=<out-dir> npm run preview -- --port 4173 --strictPort) &
-//   #  or: mkdir -p <root> && ln -s <out-dir> <root>/report && grm --data <root> serve --app web/dist --port 4173 &
-//   node web/scripts/browser-check.cjs <dir>/node_modules/playwright-core <receipt-dir> http://127.0.0.1:4173 <out-dir>
+//   out=$(realpath <out-dir>)
+//   (cd web && npm run build && GRM_REPORT_DIR="$out" npm run preview -- --port 4173 --strictPort) &
+//   #  or: mkdir -p <root> && ln -s "$out" <root>/report && grm --data <root> serve --app web/dist --port 4173 &
+//   node web/scripts/browser-check.cjs <dir>/node_modules/playwright-core <receipt-dir> http://127.0.0.1:4173 "$out"
 //
 // Identifiers are made generic before writing, so no row can be read as a
 // real isolate: genome ids (BV-BRC-shaped "573.10037" in the generator)
@@ -39,7 +45,10 @@
 //   reaches, 35 rows in all (see the full block): a lineage split whose fold
 //   lacks a class, one with too few lineages, a dataset with no catalog rule,
 //   an assay that is not scored, and a single rule long enough to clip at
-//   390px. The check's state rows then find all four states.
+//   390px. One of them also has a catalog rule below 50%, so the Overview's
+//   catalog figure starts under 50% and draws its 50% line. The check's
+//   state rows then find all four states, and it asserts the unscored assay,
+//   the clipped rule and the 50% line.
 //
 // The tree is written to an empty or new directory, with SYNTHETIC.txt and
 // SOURCE.sha256 (sha256sum lines for every JSON file, sorted by path).
@@ -53,8 +62,10 @@ const SHAPES = ["base", "r11", "wide", "full"];
 const args = process.argv.slice(2);
 const shapeAt = args.indexOf("--shape");
 const shape = shapeAt === -1 ? "base" : args.splice(shapeAt, 2)[1];
-const [webDir, outDir] = args;
-if (webDir === undefined || outDir === undefined || shape === undefined || !SHAPES.includes(shape)) {
+const [webDir, outDir, ...extra] = args;
+// Two paths and one known --shape, nothing else: a typo such as `--shap full`
+// is refused rather than read as the base shape.
+if (webDir === undefined || outDir === undefined || extra.length > 0 || [webDir, outDir].some((a) => a.startsWith("-")) || shape === undefined || !SHAPES.includes(shape)) {
   console.error("usage: tsx web/scripts/synthetic-report.mts <web-dir> <out-dir> [--shape base|r11|wide|full]");
   process.exit(2);
 }
@@ -66,6 +77,8 @@ if (existsSync(out) && readdirSync(out).length > 0) {
 
 const generator = pathToFileURL(resolve(webDir, "src/dev/fixtures/generate.ts")).href;
 const { buildFixture } = (await import(generator)) as typeof import("../src/dev/fixtures/generate");
+const stats = pathToFileURL(resolve(webDir, "src/dev/fixtures/stats.ts")).href;
+const { binaryMetrics } = (await import(stats)) as typeof import("../src/dev/fixtures/stats");
 const fixture = buildFixture();
 
 // Generic identifiers, assigned in first-seen order so reruns match.
@@ -101,14 +114,16 @@ for (const [slug, file] of fixture.species) {
 }
 
 interface Locus { genome_id: string; contig: string; patric_id: string | null; gene: string | null; product: string | null }
-interface Split { scheme: string; folds: number; n_groups: number; learners: { learner: string; metrics: Record<string, number> | null }[]; unavailable_reason?: string }
+interface Split { scheme: string; folds: number; n_groups: number; learners: { learner: string; metrics: Record<string, number> | null; scores: number[] }[]; unavailable_reason?: string }
+interface CatalogGroup { group: string; class: string; subclass: string; counts_for_rule: boolean }
 interface DatasetJson {
   id: string;
-  samples: { id: string; catalog_resistant: boolean | null }[];
+  samples: { id: string; resistant: boolean; groups: number[]; catalog_resistant: boolean | null }[];
   features: { feature: number; catalog_families: string[]; catalog_products: string[]; locus: Locus | null }[];
   panels: { id: string; metrics: Record<string, number>; no_call?: unknown }[];
   splits: Split[];
-  catalog: unknown;
+  catalog_groups: string[];
+  catalog: { rule: string[][]; metrics: Record<string, number>; groups: CatalogGroup[] } | null;
   unsupported_assays?: { id: string; name: string; mirrors: string; reason: string }[];
   models: { scm: { kind: string; rules: { feature: number; presence: boolean }[]; steps: unknown[]; importance: number[] } };
   evaluation?: unknown;
@@ -272,6 +287,29 @@ if (shape === "full") {
     scm.importance = scm.importance.slice(0, 1);
     scm.kind = "conjunction";
     row.scm_rules = [`${rule.presence ? "presence of" : "absence of"} ${product}`];
+  }
+  // A catalog rule below 50%, on the same meropenem copy: a too-broad rule,
+  // any gene of the BETA-LACTAM subclass, which the intrinsic SHV gives
+  // nearly every isolate. It calls almost all of them resistant, so its
+  // balanced accuracy is just under 50% and the Overview's catalog figure
+  // starts below 50% and draws its 50% line (CatalogScatter.tsx). The calls
+  // follow generate.ts's ruleCall over each sample's catalog groups; the
+  // metrics, catalog learner, group table and row follow from the calls.
+  {
+    const { row, d } = at(C.rows, "meropenem");
+    const catalog = d.catalog!;
+    const rule = [["S:BETA-LACTAM"]];
+    const byName = new Map(catalog.groups.map((g) => [g.group, g]));
+    const matches = (token: string, g: CatalogGroup) => (token.startsWith("C:") ? g.class : g.subclass).split("/").some((t) => t.trim() === token.slice(2));
+    const calls = d.samples.map((s) => rule.every((alts) => s.groups.some((i) => alts.some((t) => matches(t, byName.get(d.catalog_groups[i]!)!)))));
+    const metrics = binaryMetrics(d.samples.map((s) => s.resistant), calls.map(Number), false) as unknown as Record<string, number>;
+    catalog.rule = rule;
+    catalog.metrics = metrics;
+    catalog.groups.forEach((g) => (g.counts_for_rule = rule.some((alts) => alts.some((t) => matches(t, g)))));
+    d.samples.forEach((s, i) => (s.catalog_resistant = calls[i]!));
+    d.splits.forEach((s) => s.learners.filter((l) => l.learner === "catalog").forEach((l) => Object.assign(l, { metrics, scores: calls.map(Number) })));
+    const { balanced_accuracy, sensitivity, specificity, vme, me, auroc } = metrics;
+    row.catalog = { balanced_accuracy, sensitivity, specificity, vme, me, auroc };
   }
 }
 
