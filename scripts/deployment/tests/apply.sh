@@ -1096,7 +1096,10 @@ expect 1 'FAIL served index.json' "with GRM_EXPECT_REVISION=7 set and no count, 
 expect 1 'note: GRM_EXPECT_DATASETS is unset, so the count checked is the default, 237' \
     "run directly without a count, smoke.sh says that the count it checks is the 237 default (U-23)" -- \
     env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
-check "with a count set, smoke.sh prints no such note" -- eval '! smoke8 2>&1 | grep -q "note: GRM_EXPECT_DATASETS"'
+# The output is captured first: in a pipe, grep -q exits at the note, smoke.sh
+# then dies of SIGPIPE, and under pipefail "!" turns that into a pass.
+no_note() { local out; out=$(smoke8 2>&1) || true; ! grep -q 'note: GRM_EXPECT_DATASETS' <<<"$out"; }
+check "with a count set, smoke.sh prints no such note" -- no_note
 kill -KILL "$s8" 2>/dev/null || true
 wait "$s8" 2>/dev/null || true
 check "the revision-8 stub is gone and the spare port free" -- wait_for 5 port_free "$SP"
