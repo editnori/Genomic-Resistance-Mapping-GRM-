@@ -1064,13 +1064,17 @@ cp "$T/s8.r2" "$T/s8/report/datasets/sp__r2.json"
 sed 's/{"id": "sp__r3", "evaluation": {"revision": 8}}/{"id": "sp__r3"}/' "$T/s8.index" >"$T/s8/report/index.json"
 expect 1 'with index evaluation.revision missing, expected 8: sp__r3' "smoke.sh fails a served index row without the revision" -- smoke8
 cp "$T/s8.index" "$T/s8/report/index.json"
-# Every report and every row is checked, as an integer (REVIEW-DS2 L2; from
-# its probe): the last served report, the first index row, and a served
-# report whose revision is the string "8".
+# Every report and every row is checked, as an integer (REVIEW-DS2 L2 and
+# REVIEW-DS3 L-B, from their probes): the first and the last served reports,
+# the first index row, and a served report whose revision is the string "8".
 cp "$T/s8/report/datasets/sp__r3.json" "$T/s8.r3"
 printf '{"id": "sp__r3", "evaluation": {"revision": 7}}' >"$T/s8/report/datasets/sp__r3.json"
 expect 1 'served report has evaluation.revision 7, expected 8: sp__r3' "smoke.sh fails the last served dataset report recording another revision" -- smoke8
 cp "$T/s8.r3" "$T/s8/report/datasets/sp__r3.json"
+cp "$T/s8/report/datasets/sp__r1.json" "$T/s8.r1"
+printf '{"id": "sp__r1", "evaluation": {"revision": 7}}' >"$T/s8/report/datasets/sp__r1.json"
+expect 1 'served report has evaluation.revision 7, expected 8: sp__r1' "smoke.sh fails the first served dataset report recording another revision" -- smoke8
+cp "$T/s8.r1" "$T/s8/report/datasets/sp__r1.json"
 sed 's/{"id": "sp__r1", "evaluation": {"revision": 8}}/{"id": "sp__r1", "evaluation": {"revision": 7}}/' "$T/s8.index" >"$T/s8/report/index.json"
 expect 1 'with index evaluation.revision 7, expected 8: sp__r1' "smoke.sh fails the first index row recording another revision" -- smoke8
 cp "$T/s8.index" "$T/s8/report/index.json"
@@ -1114,6 +1118,8 @@ expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' \
     "smoke.sh refuses GRM_EXPECT_REVISION=1_0" -- smoke10 1_0
 expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' \
     "smoke.sh refuses GRM_EXPECT_REVISION in full-width digits" -- smoke10 "$(printf '\357\274\221\357\274\220')"
+expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits, at most 18 of them' \
+    "smoke.sh refuses a 19-digit GRM_EXPECT_REVISION, 2^63, which bash's -ge cannot read (REVIEW-DS3 L-A)" -- smoke10 9223372036854775808
 kill -KILL "$s10" 2>/dev/null || true
 wait "$s10" 2>/dev/null || true
 check "the revision-10 stub is gone and the spare port free" -- wait_for 5 port_free "$SP"
@@ -2249,7 +2255,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((546 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((548 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

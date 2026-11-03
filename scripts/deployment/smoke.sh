@@ -8,7 +8,7 @@
 # usage: smoke.sh PORT REPORT_DIR DIST_DIR
 #   GRM_EXPECT_SCHEMA (default 2), GRM_EXPECT_REVISION (7), GRM_EXPECT_DATASETS
 #   (237, revision 7's count; required for any other revision); each a whole
-#   number in ASCII digits
+#   number of at most 18 ASCII digits
 set -euo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 port=$1
@@ -25,10 +25,11 @@ trap 'rm -rf "$tmp"' EXIT
 # these with Python's int(), which also takes "10\r" (a CRLF env file), "1_0"
 # and full-width digits, but bash's -ge below does not, so such a revision
 # skipped the per-dataset check and passed. The class lists the digits, so no
-# locale widens it.
+# locale widens it. At most 18 of them: from 2^63 on, -ge errors, which counts
+# as false, so such a revision skipped the check the same way.
 for pair in "GRM_EXPECT_SCHEMA=$schema" "GRM_EXPECT_REVISION=$revision" "GRM_EXPECT_DATASETS=$count"; do
-    [[ ${pair#*=} =~ ^[0123456789]+$ ]] ||
-        { echo "FAIL ${pair%%=*} must be a whole number in ASCII digits, not $(printf %q "${pair#*=}")"; exit 2; }
+    [[ ${pair#*=} =~ ^[0123456789]{1,18}$ ]] ||
+        { echo "FAIL ${pair%%=*} must be a whole number in ASCII digits, at most 18 of them, not $(printf %q "${pair#*=}")"; exit 2; }
 done
 
 check() {
