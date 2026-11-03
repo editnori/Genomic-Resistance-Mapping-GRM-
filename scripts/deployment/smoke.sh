@@ -75,6 +75,10 @@ schema, revision, count = map(int, sys.argv[2:])
 got = (index.get("schema"), index.get("evaluation_revision"), len(index.get("datasets", [])))
 if got != (schema, revision, count):
     sys.exit(f"schema/revision/datasets {got}, expected {(schema, revision, count)}")
+# Distinct dataset ids, as check_report_index requires of the publication.
+ids = [json.dumps(d.get("id") if isinstance(d, dict) else None) for d in index.get("datasets", [])]
+if len(set(ids)) != len(ids):
+    sys.exit(f"index lists {len(ids)} datasets ({len(set(ids))} distinct)")
 PY
 # From revision 8 on, as check_report_index (common.sh) requires of a
 # publication: each dataset the served index lists records the revision as its
