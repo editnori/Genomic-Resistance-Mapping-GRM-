@@ -61,6 +61,11 @@ EXPECT_DATASETS=${GRM_EXPECT_DATASETS:-237}
 for value in "$PORT" "$EXPECT_SCHEMA" "$EXPECT_REVISION" "$EXPECT_DATASETS"; do
     [[ $value =~ ^[0-9]+$ ]] || { echo "not a number: $value" >&2; exit 2; }
 done
+# The port as smoke.sh reads it: no leading zero, which grm and curl read as
+# decimal but bash arithmetic as octal, and nothing past 65535. Before this,
+# 08641 passed here and then failed every health check.
+[[ $PORT =~ ^[123456789][0123456789]{0,4}$ ]] && ((PORT <= 65535)) ||
+    { echo "GRM_PORT must be a port number, 1 to 65535 in ASCII digits with no leading zero, not $PORT" >&2; exit 2; }
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/lib.sh"
 APPLY=0

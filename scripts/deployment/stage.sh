@@ -26,7 +26,8 @@ set -- ${ARGS[@]+"${ARGS[@]}"}
 label=$1
 pub=$2
 sport=$3
-[[ $sport =~ ^[0-9]+$ ]] && ((sport > 0 && sport < 65536)) || die "invalid port $sport" 2
+[[ $sport =~ ^[123456789][0123456789]{0,4}$ ]] && ((sport <= 65535)) ||
+    die "invalid port $sport: a port number, 1 to 65535 in ASCII digits with no leading zero" 2
 [ "$sport" != "$PORT" ] || die "$sport is the live port; stage on a spare one" 2
 need curl python3 sha256sum fuser flock setsid pgrep
 check_expect

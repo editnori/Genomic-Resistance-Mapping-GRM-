@@ -1034,6 +1034,9 @@ expect 0 'smoke-pass .*revision=7 datasets=237' "status checks a live pair witho
 expect 0 '237 datasets from the default, revision 7.s count, since GRM_EXPECT_DATASETS is unset' \
     "status says that the count it checks that pair against is the 237 default (U-23)" -- \
     env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/status.sh"
+expect 0 '237 datasets from GRM_EXPECT_DATASETS\)' \
+    "status names GRM_EXPECT_DATASETS as the count's source when it is set (REVIEW-DS4 I1)" -- \
+    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION GRM_EXPECT_DATASETS=237 bash "$S/status.sh"
 expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "status refuses to check that pair against revision 11 without a count" -- \
     env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=11 bash "$S/status.sh"
 mv "$T/rel1--p237.keep" "$D/go/rel1--p237"
@@ -1089,11 +1092,22 @@ cp "$T/s8.r2" "$T/s8/report/datasets/sp__r2.json"
 sed 's/{"id": "sp__r2", "evaluation": {"revision": 8}}/{"id": "sp__r1", "evaluation": {"revision": 8}}/' "$T/s8.index" >"$T/s8/report/index.json"
 expect 1 'index lists 3 datasets \(2 distinct\)' "smoke.sh fails a served index that lists a dataset id twice" -- smoke8
 cp "$T/s8.index" "$T/s8/report/index.json"
+# Every row is checked, at every revision (REVIEW-DS4 L2): a revision-7 index
+# whose last row repeats the first id fails too.
+python3 -I - "$T/s8/report/index.json" <<'PY'
+import json, sys
+rows = [{"id": i, "evaluation": {"revision": 7}} for i in ("sp__r1", "sp__r2", "sp__r1")]
+with open(sys.argv[1], "w") as f:
+    json.dump({"schema": 2, "evaluation_revision": 7, "datasets": rows}, f)
+PY
+expect 1 'index lists 3 datasets \(2 distinct\)' "smoke.sh fails a revision-7 index whose last row repeats the first id" -- \
+    env GRM_EXPECT_SCHEMA=2 GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=3 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
+cp "$T/s8.index" "$T/s8/report/index.json"
 expect 2 'GRM_EXPECT_REVISION=8 needs GRM_EXPECT_DATASETS' "smoke.sh run directly refuses revision 8 without a count (REVIEW-DEPLOY I3)" -- \
     env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=8 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
 expect 1 'FAIL served index.json' "with GRM_EXPECT_REVISION=7 set and no count, smoke.sh is not refused and checks revision 7's 237" -- \
     env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
-expect 1 'note: GRM_EXPECT_DATASETS is unset, so the count checked is the default, 237' \
+expect 1 'note: GRM_EXPECT_DATASETS is unset or empty, so the count checked is the default, 237' \
     "run directly without a count, smoke.sh says that the count it checks is the 237 default (U-23)" -- \
     env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
 # The output is captured first: in a pipe, grep -q exits at the note, smoke.sh
@@ -1159,6 +1173,7 @@ early() {
 check "smoke.sh refuses a port with userinfo, 1@127.0.0.2:PORT, and fetches nothing" -- early "1@127.0.0.2:$SP" 'PORT must be a port number'
 check "smoke.sh refuses port 0 and fetches nothing" -- early 0 'PORT must be a port number'
 check "smoke.sh refuses port 65536 and fetches nothing" -- early 65536 'PORT must be a port number'
+check "smoke.sh refuses port 080, a leading zero, and fetches nothing" -- early 080 'PORT must be a port number'
 # GRM_EXPECT_SCHEMA and GRM_EXPECT_DATASETS must be ASCII digits too
 # (REVIEW-DS3 I-A), not just the revision.
 check "smoke.sh refuses GRM_EXPECT_SCHEMA=2 with a trailing CR and fetches nothing" -- \
@@ -2306,7 +2321,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((560 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((563 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

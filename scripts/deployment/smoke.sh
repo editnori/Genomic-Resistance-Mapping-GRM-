@@ -6,7 +6,8 @@
 # served report. It only sends GET requests to 127.0.0.1 and writes only a
 # temporary directory (mktemp), removed on exit.
 # usage: smoke.sh PORT REPORT_DIR DIST_DIR
-#   PORT: a port number, 1 to 65535 in ASCII digits (refused otherwise, exit 2)
+#   PORT: a port number, 1 to 65535 in ASCII digits with no leading zero
+#   (refused otherwise, exit 2)
 #   GRM_EXPECT_SCHEMA (default 2), GRM_EXPECT_REVISION (7), GRM_EXPECT_DATASETS
 #   (237, revision 7's count; required for any other revision); each a whole
 #   number of at most 18 ASCII digits. Without GRM_EXPECT_DATASETS it says that
@@ -36,10 +37,10 @@ done
 # A plain port number only: anything else in the URL, such as userinfo
 # (1@127.0.0.2:PORT), would send every request to another host.
 [[ $port =~ ^[123456789][0123456789]{0,4}$ ]] && ((port <= 65535)) ||
-    { echo "FAIL PORT must be a port number, 1 to 65535 in ASCII digits, not $(printf %q "$port")"; exit 2; }
+    { echo "FAIL PORT must be a port number, 1 to 65535 in ASCII digits with no leading zero, not $(printf %q "$port")"; exit 2; }
 # The count's source is check_expect's (common.sh): GRM_EXPECT_DATASETS, or
 # revision 7's 237. Say so when it is the default.
-[ -n "${GRM_EXPECT_DATASETS:-}" ] || echo "note: GRM_EXPECT_DATASETS is unset, so the count checked is the default, 237, revision 7's"
+[ -n "${GRM_EXPECT_DATASETS:-}" ] || echo "note: GRM_EXPECT_DATASETS is unset or empty, so the count checked is the default, 237, revision 7's"
 
 check() {
     local url=$1 file=$2 got want

@@ -11,7 +11,7 @@
 set -euo pipefail
 S=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 REPO=$(cd -- "$S/../.." && pwd)
-git -C "$REPO" rev-parse -q --verify HEAD >/dev/null ||
+git -C "$REPO" rev-parse -q --verify HEAD >/dev/null 2>&1 ||
     { echo "FAIL tests/dry-run.sh needs a git checkout with a commit (the build cases archive HEAD); $REPO is not one"; exit 2; }
 . "$S/tests/tmproot.sh"
 T=$(make_test_root) || exit 2
@@ -833,8 +833,16 @@ expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=0 tmp_left=0$' \
     "boot hook: the dry run retries without waiting, falls back and writes no marker" -- \
     timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot5" ok fail --dry-run
 
+# The live port as smoke.sh reads it (REVIEW-DS4 L1): a leading zero, which
+# grm and curl read as decimal, passed the digits check and then failed every
+# health check. It is refused before anything runs, and so is such a stage port.
+expect 2 'GRM_PORT must be a port number' "publish refuses a GRM_PORT with a leading zero before reading anything" -- \
+    env GRM_PORT="0$LIVE_PORT" bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-port
+expect 2 'invalid port 0641' "stage refuses a spare port with a leading zero" -- \
+    bash "$S/stage.sh" rel1 pub1 0641
+
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=$((245 - skipped))  # less the root-only skip
+EXPECTED_ASSERTIONS=$((247 - skipped))  # less the root-only skip
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"
