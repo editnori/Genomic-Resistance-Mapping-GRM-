@@ -1156,6 +1156,12 @@ early() {
 check "smoke.sh refuses a port with userinfo, 1@127.0.0.2:PORT, and fetches nothing" -- early "1@127.0.0.2:$SP" 'PORT must be a port number'
 check "smoke.sh refuses port 0 and fetches nothing" -- early 0 'PORT must be a port number'
 check "smoke.sh refuses port 65536 and fetches nothing" -- early 65536 'PORT must be a port number'
+# GRM_EXPECT_SCHEMA and GRM_EXPECT_DATASETS must be ASCII digits too
+# (REVIEW-DS3 I-A), not just the revision.
+check "smoke.sh refuses GRM_EXPECT_SCHEMA=2 with a trailing CR and fetches nothing" -- \
+    early "$SP" 'GRM_EXPECT_SCHEMA must be a whole number in ASCII digits' "GRM_EXPECT_SCHEMA=$(printf '2\r')"
+check "smoke.sh refuses GRM_EXPECT_DATASETS in a full-width digit and fetches nothing" -- \
+    early "$SP" 'GRM_EXPECT_DATASETS must be a whole number in ASCII digits' GRM_EXPECT_REVISION=10 "GRM_EXPECT_DATASETS=$(printf '\357\274\223')"
 expect 0 'live health pass: rel2 with p275' "rollback again switches forward to 275" -- bash "$S/rollback.sh" --apply
 kill -KILL "$(listener "$LP")"
 wait_for 5 port_free "$LP" || true
@@ -2288,7 +2294,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((555 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((557 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
