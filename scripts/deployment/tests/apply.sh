@@ -1162,6 +1162,15 @@ check "smoke.sh refuses GRM_EXPECT_SCHEMA=2 with a trailing CR and fetches nothi
     early "$SP" 'GRM_EXPECT_SCHEMA must be a whole number in ASCII digits' "GRM_EXPECT_SCHEMA=$(printf '2\r')"
 check "smoke.sh refuses GRM_EXPECT_DATASETS in a full-width digit and fetches nothing" -- \
     early "$SP" 'GRM_EXPECT_DATASETS must be a whole number in ASCII digits' GRM_EXPECT_REVISION=10 "GRM_EXPECT_DATASETS=$(printf '\357\274\223')"
+# Every other exit-2 refusal in smoke.sh comes before any request too
+# (REVIEW-DS3 I-B): the count refusal, a revision that is not ASCII digits,
+# and one of 19 digits.
+check "smoke.sh refuses revision 10 without a count and fetches nothing" -- \
+    early "$SP" 'GRM_EXPECT_REVISION=10 needs GRM_EXPECT_DATASETS' GRM_EXPECT_REVISION=10
+check "smoke.sh refuses GRM_EXPECT_REVISION=1_0 and fetches nothing" -- \
+    early "$SP" 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' GRM_EXPECT_REVISION=1_0 GRM_EXPECT_DATASETS=3
+check "smoke.sh refuses a 19-digit GRM_EXPECT_REVISION and fetches nothing" -- \
+    early "$SP" 'at most 18 of them' GRM_EXPECT_REVISION=9223372036854775808 GRM_EXPECT_DATASETS=3
 expect 0 'live health pass: rel2 with p275' "rollback again switches forward to 275" -- bash "$S/rollback.sh" --apply
 kill -KILL "$(listener "$LP")"
 wait_for 5 port_free "$LP" || true
@@ -2294,7 +2303,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((557 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((560 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
