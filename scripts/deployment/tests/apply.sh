@@ -1130,6 +1130,27 @@ expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits, at most 18
 kill -KILL "$s10" 2>/dev/null || true
 wait "$s10" 2>/dev/null || true
 check "the revision-10 stub is gone and the spare port free" -- wait_for 5 port_free "$SP"
+# Refusals come before any request. Nothing listens on the spare port now, so
+# a request would print "unreachable" and exit 1. early PORT PATTERN [ENV...]:
+# smoke.sh, with GRM_EXPECT_* unset but for ENV, exits 2 with PATTERN and
+# fetches nothing.
+early() {
+    local port=$1 pat=$2 out rc
+    shift 2
+    set +e
+    out=$(env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS "$@" \
+        bash "$S/smoke.sh" "$port" "$T/s10/report" "$D/release/rel1/dist" 2>&1)
+    rc=$?
+    set -e
+    if [ "$rc" = 2 ] && grep -q -- "$pat" <<<"$out" && ! grep -q 'unreachable\|^ok ' <<<"$out"; then return 0; fi
+    printf 'rc=%s\n%s\n' "$rc" "$out"
+    return 1
+}
+# smoke.sh refuses a PORT that is not a plain port number (REVIEW-DS2 I2): a
+# port with userinfo sent every request to another host.
+check "smoke.sh refuses a port with userinfo, 1@127.0.0.2:PORT, and fetches nothing" -- early "1@127.0.0.2:$SP" 'PORT must be a port number'
+check "smoke.sh refuses port 0 and fetches nothing" -- early 0 'PORT must be a port number'
+check "smoke.sh refuses port 65536 and fetches nothing" -- early 65536 'PORT must be a port number'
 expect 0 'live health pass: rel2 with p275' "rollback again switches forward to 275" -- bash "$S/rollback.sh" --apply
 kill -KILL "$(listener "$LP")"
 wait_for 5 port_free "$LP" || true
@@ -2262,7 +2283,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((551 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((554 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
