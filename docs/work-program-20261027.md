@@ -2,6 +2,8 @@
 
 Snapshot: 2026-10-30 21:50 UTC. This is a living status document, not a claim that active work is finished. Update the snapshot and evidence links when a lane completes.
 
+> **2026-11-02 03:5x UTC, correction pointer.** The snapshot, headline, active lanes and request rows below predate the loss of Vast on 2026-10-31 and the revision-11 work. The change log's entries dated 2026-10-31 to 2026-11-02 correct them, and the countable status of every item is in `/home/layth/review/grm-register-20261102/REGISTER.md`. The full-pipeline input optimizer was not built, integrated or run (change log, 2026-11-02).
+
 ## Status vocabulary
 
 A request can have different states for different stages. Do not collapse these into one percentage:
@@ -743,3 +745,280 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
     - The joint M, N and P re-check is running as a Workflow with four lenses and adversarial verification.
     - The first workflow-run re-checks were D's fourth and the combined J and K check, each with three lenses, one verifier per lens and one writer.
   - **Heavy slot order:** F's review now, then A's re-check, the I review, the H review and G's closing gate.
+- 2026-10-31 02:26–02:30 UTC: **Vast instance 57398482 lost.** genomicresistance.com returned HTTP 530 (Cloudflare 1033, tunnel origin not connected) at 02:26:12Z (`/home/layth/review/grm-main-vast-emergency-20261031/hdr.txt`), and the instance was destroyed at about 02:30Z. The backup to `Layth_Ctakes:/vast-backup/57398482/` saved nothing. Inventory: `/home/layth/review/grm-surviving-inventory-20261031/INVENTORY.md` (sha256 `3ce6844a8b40c250a32d829a957d3d0557c62e298933236d68e6f440d40d2329`).
+  - **Lost:**
+    - all revision-10 run output, g1–g8 (175 reports checked on Vast, none copied to the laptop), with its receipts, logs and staging: the 4.46 GB annotation pre-cache, the 75 replacement FASTA files and the frozen-input manifests. **Revision 10 cannot resume;**
+    - the reviewer's Vast workspace;
+    - the 5,473 selected genomes' FASTA that were only on Vast;
+    - every ksets, matrix and counted file;
+    - every serving and deploy artifact: the revision-9, 8 and 2 UI releases and binaries, the published copies, `grm-ops` state, journals and logs, `onstart.sh` and the cloudflared token file;
+    - the MTB cleaned-cohort input root, so that run never started.
+  - **Survives, on the laptop only:** the revision-8 and revision-9 report trees (`data/backups/revision9-275-candidate-20261030`, `SHA256SUMS` `33837880…82d1`), 23,375 FASTA files, the review folders, the A–P worktrees (bundled at 04:14Z, `BUNDLES.sha256` `cc0bd682…5242`) and the MTB training bundles (`17c4067`, `bc7b742`, `26fcd23`; copied to the Windows disk, `BUNDLES.sha256` `0e942c1b…c882`).
+  - **This supersedes:**
+    - the `Current headline` rows on revision 10 "in progress", revision 9 "live" and the UI "HTTP 200";
+    - the local UI through an SSH tunnel;
+    - the Vast data awaiting decision (line 40 at `744e636`);
+    - the MTB run "waits for g8" (lines 624 and 644 at `744e636`);
+    - the outage rulings at lines 669–670 and 717–725 of `744e636`, which are moot.
+  - The site has stayed at 530 since then (530 again at 03:24Z on 2 Nov).
+- 2026-10-31 02:30–09:1x UTC: **the work moved to Boat sandboxes** (share 75 xlarge-hours to Nov 30, 6 GRM sandboxes at once; lanes file `/home/layth/review/GRM-BOAT-LANES-20261031.md`). Records: main's `boat-grm/NOTES.md` and `ALLOCATION.md`.
+  - **Closed by main's verification on Boat:** G (`MAIN_CLOSE_TASK_G=APPROVED`, `b78f1660…dabfeb`), H (`1ce7aac7…75904`), A (`RECHECK2_TASK_A=APPROVED`, `48728afd…08c8`), D (`9165c4df…30ad`), F (`d816cd20…3e63`), K (`555a4c79…ce4f`), I (`a561ffdc…966d`) and N (`MAIN_CLOSE_TASK_N=APPROVED` after five closing rounds, `753d61bc…9559`).
+  - **Ablation contract** v1.11 to v1.14 (§18–§21), now `2300fbdb…eb76`.
+  - **Boat runner** `grm-boat.sh` and the template `grm-tmpl-rust1981-c90ebaf`. Measured xlarge: 16 vCPU, 31 GiB RAM, 260 GiB available disk.
+  - **Website recovery staged:** `WEB_RECOVERY_STAGED=PASS` (`/home/layth/review/grm-web-recovery-20261031/`). `b2fd433` was built, and revisions 9 and 8 were served byte-identical on 127.0.0.1. No cutover; the host, tunnel, DNS and boot-hook decisions are Layth's (`RUNBOOK.md` `7a65ffd6…a48c`).
+  - **Real-data preflight** (planning only): `/home/layth/review/grm-realdata-preflight-20261031/OPEN-DECISIONS.md` (`cbf19ce2…2892`), with D1–D14 for Layth; D5 dropped at 05:47Z.
+  - **Migration review:** `MIGRATION_REVIEW=ISSUES`, records only, no work lost.
+- 2026-10-31 09:1x–11:2x UTC: **all 16 packages A–P closed; Q integrated them; R approved.**
+  - **Q:** `Q_INTEGRATION=READY_FOR_R` (`/home/layth/review/grm-q-integration-receipts-20261031/Q-REPORT.md`, `2acc87aa…2220`). Rust 385/0/8; Python 257/34/237/163/71; every pin passes.
+  - **R:** `R_FINAL_REVIEW=APPROVED` (`/home/layth/review/grm-final-review-r-20261031/R-REVIEW.md`, `a2161ee6…adfc`). No High or Medium; 7 Low, 7 Info and 8 decisions for Layth. R records that `ablate::*` and `plan_group_sampling` have no production caller.
+  - **Boat use** at the end of the program: about 13.9 of 75 xlarge-hours.
+- 2026-10-31 22:05 – 2026-11-01 00:52 UTC: **decision packs, all staged, none applied:** PACK-D1 (revision 11), PACK-D68 (runner obligations and four Lows) and CPU-D2 (timing).
+  - **Re-checks:** `RECHECK-D68` APPROVED (`cc5a09d5…93ed`); main fixed its RD-L1 and RD-L2 in D8 v2, which was tested by main and not independently re-reviewed. `RECHECK-D1` APPROVED but partial (`f09ab68a…c5a8`); main finished its gates (`/home/layth/review/grm-main-d1-finish-20261031/REPORT.md`, `eebdc4b1…6d4`).
+  - **CPU-D2:** `ISSUES` for process breaks only (`98d36416…7138`). It recommended `x86-64-v3`.
+  - **Lock flake:** an `apply.sh` `deploy.lock` flake on 4 vCPU was diagnosed as Low and fail-closed.
+- 2026-11-01: **Layth's rulings**, relayed by the repository-administration thread:
+  - D1: bump `EVALUATION_REVISION` to 11;
+  - D2: `x86-64-v3` by default;
+  - D6 and D8: apply the packs;
+  - commits per package, with no `FIXES.md` and no Claude attribution.
+
+  The no-commit gate was lifted only for the reviewed implementation and those follow-ups. Push, PR, deploy, cutover, real data, MTB publication and `RUN_4K` stay held.
+- 2026-11-01 05:5x–06:28 UTC: **`r11/integration` built and validated, local only.** It is 22 commits on `c90ebaf`: packages A–P (`d69c954` … `1a76fd5`), Q `239ac6e` (byte-identical to R's tree), then `653d51a`, `dd3cd96`, `1c09278`, `44c8503` and `b32456e`.
+  - **Validation** (`/home/layth/review/grm-r11-commits-20261101/REPORT.md`, `153c03a1…8520`): `git am` replay with equal trees; Rust 385/0/8; metric audit 106/98/3; Python 257/34/238/163/72; `dry-run.sh` 195/0; `apply.sh` 488/0 on control runs.
+- 2026-11-01 21:00–22:25 UTC: **five follow-up lanes, integrated as 6 more local commits:**
+  - RUST-DOCS `95a6cda`;
+  - PORTABLE-PATHS `a983742`;
+  - DEPLOY-REV `696832e` (every dataset's revision is checked from revision 8 on);
+  - LOCK-RESTORE `48e2dab` (restore waits up to 5 s for the lock);
+  - CI-D4 `d473e87` (`.github/workflows/ci.yml`, never run on GitHub);
+  - main's follow-up `b90be1c`.
+
+  Validated (`/home/layth/review/grm-r11-followups-20261101/REPORT.md`, `ec0c55c7…e04f`): `cargo doc -D warnings` 0, Rust 385/0/8, `dry-run.sh` 228/0 and `apply.sh` 502/0 on xlarge and 4 vCPU. `r11/integration` is now 28 local commits with no upstream.
+- 2026-11-01 23:4x – 2026-11-02 00:0x UTC: **user rule on Boat use.** GRM has no concurrency cap, and the 75 xlarge-hours are a guide, not a cap. The laptop memory check and the plan floor (150 VM-hours) still apply before each box. The lanes file and the runner carry it (`GRM_CAP=64` as a runaway guard). It changes no hold.
+- 2026-11-02 00:27–00:48 UTC: **hyperparameter full review of `b90be1c`: `HYPERPARAMETER_REVIEW=CHANGES_REQUIRED`, `SYNTHETIC_OPTIMIZATION=PASS`** (`/home/layth/review/grm-hyperparameter-full-review-20261101/REPORT.md`, `deaa33ab…e38d`).
+  - **Four Mediums:**
+    - F1: lasso `lambda_min_ratio` is searched but fixed in production;
+    - F2: off-plan histories and fold subsets are accepted;
+    - F3: no outer refit and no untouched-fold score;
+    - F4: the one-SE rule with the complexity preference chose CART and GBT configs worse than the defaults on outer folds.
+  - **Lows and Infos:** F5–F8 Low, F9–F10 Info.
+  - **What PASS means:** it covers learner knobs on one 315-row synthetic cohort with 200 prebuilt columns. The search has no k, cohort size, feature-block or retained-feature dimension.
+- 2026-11-02 02:54 UTC: **current wave**, launched by main under Layth's "every unfinished thing in grm needs subagents on boat.dev". Six Opus 5.5 lanes:
+  - HPO-FIX (F1, F2 with F8 and F9, F3);
+  - HPO-F4 (F4, analysis only);
+  - DATA-AUDIT (dataset completeness);
+  - DEPLOY-FIX (the restore read-before-lock race, then D3);
+  - WEB-PORT (the browser-check path and the Vast-era docs);
+  - REGISTER (this entry).
+
+  Holds unchanged.
+- 2026-11-02 03:5x UTC: **correction to the completion claims.** The administration thread said on 1 Nov 20:55Z that the original checklist was "100% implemented and reviewed" and "18/18 stages". At 23:29Z it said the optimizer is designed to evaluate the selection on untouched outer folds.
+  - **The correction:** A–R completed the component packages and their integration review; the full-pipeline input optimizer was not built, integrated or run. "100%" and "18/18" count the 16 packages, Q and R only.
+  - **What exists:** no input-configuration search, and no full-pipeline comparison, so no difference has been measured. The hyperparameter package doesn't refit or score outer folds (F3). The learner-knob repairs (HPO-FIX, HPO-F4) don't complete it.
+  - **Why it matters:** Layth's request, positions 266, 298 and 783 of that thread, was an optimizer over the input data: genome count, which genomes, k-mer length, feature families and the retained-feature budget.
+  - **State at `b90be1c`:**
+    - k is the fixed `PIPELINE_K = 31` (`src/main.rs:259`);
+    - the cap and class minimum are per-run flags (`main.rs:35-41`), not an evaluated factor;
+    - learners read only the k-mer matrix (`analysis.rs:793`);
+    - the screen is fixed at 4,000 (`eval.rs:77`);
+    - `ablate::*` (G, H, I) and `plan_group_sampling` (F) have no production caller (`docs/ablation-runner.md:3`: "No code in the tree runs ablation arms yet");
+    - H has 4 of 6 adapter types; N and X are unavailable.
+  - **Register:** `/home/layth/review/grm-register-20261102/REGISTER.md`, §1–§3. The next safe software steps are in `UNOWNED.md`, and the decisions are Layth's (UD-1 to UD-4).
+- 2026-11-02 03:5x UTC: **status corrections from evidence** (the rows above are left as dated history).
+  - **Current source:** `origin/main` is still `05bf5ad` (revision-9 code). `r11/integration` (`b90be1c`, revision 11) is 28 commits ahead of `c90ebaf`, unpushed, with no bundle.
+  - **Missing from r11:** it lacks six toolkit/ops commits that are on `origin/main`: `415f3c8` (signal journal), `0c6d845` (boot hook), `c7c0023`, `bf5c130` (boot-hook `/dev/null` fix), `1dbf26b` and `2d04e7a`. A merge is needed before any release from r11.
+  - **Live reports:** none; the site has been at HTTP 530 since 31 Oct. Revision 9 was the last served release. `README.md:116` at `b90be1c` still says "the published reports above are revision 7".
+  - **Next revision:** revision 11. No revision-11 report exists, and every real-data run waits for Layth's preflight decisions.
+  - **A10:** waits on a revision-11 real-data run.
+  - **A45:** Layth's decision to push and PR r11, after the merge above.
+  - **A48:** Layth's hosting decisions in `RUNBOOK.md`.
+  - **Active lanes:** the table's lanes are finished or lost. The current lanes are the 02:54Z wave above.
+  - **Full register at 03:59Z:** 174 counted items: 92 DONE, 13 ACTIVE, 28 WAITING, 41 REQUIRES USER DECISION (`REGISTER.md` §12).
+- 2026-11-02 04:0x UTC: **two rows from main.**
+  - **HPO-F4 READY**, learner-knob selection only: `/home/layth/review/grm-hpo-f4-20261102/hpo-f4.diff` (`65469d469b06e6fed6ce1c83f8226533cb9e60ec6f19183c3c467ce8547b31ba`) adds `docs/hyperopt-selection.md` and 24 toy tests (281 = 257 + 24, with 9 expected failures, at 3 seeds and under `-I`). It reproduced F4's numbers from the archive and proposes criteria A1–A6, which aren't ratified: today's rule passes A1 and A3 and fails A2, A4 and A5. It is not integrated and not yet independently reviewed. It doesn't cover input-data configuration.
+  - **Boat runner exit-86 fix awaits main's install.** It was built and tested by the Kimi lane `grm-kimi-boat-bootstrap-20261102` (18/18 checks on `bx_5q8kk46u`, candidate `a8fb921f…c858`) and reviewed by Astra with no blocking issue. It counts as done only with main's install receipt.
+  - **Register totals then:** 92 DONE, 12 ACTIVE, 29 WAITING, 41 REQUIRES USER DECISION.
+- 2026-11-02 04:1x UTC: **runner fix installed; DEPLOY-FIX READY.**
+  - **Runner:** main installed `grm-boat.sh` `a8fb921f2acfaa08cd6c1666335df81232f9bceb415ea181610eb7dc03c6a858` at 04:03:18Z and kept the old runner as `grm-boat.sh.1aa97ace`. Receipt: `/home/layth/review/grm-runner-install-20261102/` (`SHA256SUMS` `b81825ee0d8e96e740c5595165dcb2d8433681f81be5094b0f7f28fbc8073e6f`). On a second fresh box, a run with no pushed tree exits 86 with the new message and creates no directory; a command's exit 37 comes back as 37; an existing folder gives 0. `install.log`'s first check had two failed assertions (exit 37 read 0; the folder existed), which look like its own `bash -c` quoting; the second box's direct commands replace them. Built by Kimi, reviewed by Astra, integrated by main.
+  - **DEPLOY-FIX READY, not integrated:** `/home/layth/review/grm-deploy-fix-20261102/deploy-fix.diff` (`0a5f05ea5283ba440a089ca1359c1c332c3b88e7b2c54f872fb5e9bfe71567e3`). Restore re-checks `state/active` under the lock; the new test fails on the old code (502/4) and passes on the new. For D3, `publish.sh`, `stage.sh` and `approve-legacy.sh` refuse when the revision isn't 7 and `GRM_EXPECT_DATASETS` is unset; the defaults stay 2/7/237, and choosing them is Layth's. `dry-run.sh` 237/0; `apply.sh` 506/0, three times on 4 vCPU and once on xlarge. A fresh independent review comes next, then integration.
+  - **Register totals now:** 93 DONE, 10 ACTIVE, 30 WAITING, 41 REQUIRES USER DECISION.
+- 2026-11-02 04:3x UTC: **administrative correction to the register's decision rows** (main). Earlier entries stand; this one corrects them.
+  - **The optimizer's scope is specified, not open.** Layth set it in positions 266, 298, 521 and 783 of the administration thread: a full-pipeline comparison across cohort count and selection, k-mer size, feature blocks and retained-feature count. It isn't asked again. The 03:5x entry's reference to Layth's decisions "UD-1 to UD-4" is replaced by four separate parts:
+    - the unchosen experimental values (UD-1a);
+    - implementation design (caller placement, the runner interface, a configurable k), which waits on design work that main launches under the holds;
+    - N and X, an unavailable capability with no reviewed source;
+    - the real-data run, which stays outside the executable scope. Only the hold-lifting decision is Layth's (UD-2a).
+
+    The optimizer stays not built, not integrated and not run, with no measured difference.
+  - **Recorded requirements aren't re-asked.** A06, A14, A20, A22 and A34 are unfinished recorded requirements, now WAITING with a task or a dependency. A12, and accepting 234bc2b6's receipts for A15 and A16, stay Layth's choices. The logo and motion (A29, A30) need Layth's actual acceptance; none is recorded.
+  - **Decisions are kept apart by kind,** so no single yes lifts several:
+    - release and hosting: push, PR, MTB branch publication, the website;
+    - external data transfer and destinations: real data in Boat, re-fetch, off-machine copies;
+    - scientific and safety holds: biological execution, real-data validation, `RUN_4K`.
+
+    Refused work (the real-cohort k comparison; the AMRFinder repair and GWAS lane) and biological optimisation stay outside the executable scope and are not routed.
+  - **Who launches the waiting software tasks:**
+    - main launches U-01 after DEPLOY-FIX's review and integration, U-13 after U-01, and U-14 after REVIEW-HPO and the HPO-FIX integration;
+    - main integrates HPO-F4, DEPLOY-FIX, HPO-FIX and WEB-PORT after REVIEW-HPO and REVIEW-DEPLOY;
+    - U-06 is not released.
+  - **Lane reports since 04:1x,** read in the lanes' own folders:
+    - `HPO_FIX=READY` (`/home/layth/review/grm-hpo-fix-20261102/REPORT.md`, `8a2af1c2…c15b`);
+    - WEB-PORT finished (`/home/layth/review/grm-web-port-20261102/REPORT.md`, `cfbda6b0…f5ca`);
+    - `DATA_AUDIT=READY` (`/home/layth/review/grm-data-audit-20261102/AUDIT.md`, `57977fb4…f6ba`). It corrects the preflight's hash counts: of the missing files, 4,969 have a recorded hash and 1,944 don't.
+  - **The counts are checklist rows, not agents.** Package, finding and work-program rows overlap, so no completion percentage is derived from them. Register totals at 04:3x: 174 counted rows, 94 DONE, 0 ACTIVE, 53 WAITING, 27 REQUIRES USER DECISION. At 04:1x they were 93, 10, 30 and 41.
+- 2026-11-02 04:5x UTC: **running owners for the waiting software rows** (main). Main launched nine lanes at 04:15Z and 04:45Z; all were running and none had reported at 04:5x:
+  - REVIEW-DEPLOY: a fresh review of DEPLOY-FIX and WEB-PORT;
+  - REVIEW-HPO: a fresh review of HPO-FIX and HPO-F4, including whether they stack;
+  - DOCS-INPUT: U-19, U-03, U-04, U-07's doc, U-08, U-09, U-10;
+  - DOCS-STATUS: U-15;
+  - RUST-TOYS: U-05, U-07's pin test, U-11;
+  - CI-NAMES: U-12;
+  - UI-PREP: U-16 preparation on synthetic fixtures, and the A34 and UI literal-behaviour table;
+  - SOURCE-PRESERVE: U-02, U-17;
+  - DOCS-TRACE: U-20, U-21 (docs only, new files).
+
+  The register rows they cover are ACTIVE, each with its task link.
+  - **U-16, main's disposition:** a read-only browser check against the already-published revision-9 tree, served on 127.0.0.1 with nothing leaving the laptop, is allowed and isn't a real-data run. Main launches it after WEB-PORT's integration and UI-PREP's report. It doesn't replace Layth's visual acceptance of the logo and motion (A29, A30).
+  - **Still launched by main when their dependency clears:** U-01 (after REVIEW-DEPLOY and DEPLOY-FIX's integration), U-13 (after U-01), U-14 (after REVIEW-HPO and the HPO-FIX integration), and the four integrations. U-06 stays unreleased.
+  - **Lane results:** DATA-AUDIT (`AUDIT.md` `57977fb4…f6ba`) confirmed all six figures and corrected three breakdowns. HPO-FIX (`hpo-fix.diff` `68b7b1a9…4d23`) is in REVIEW-HPO.
+  - **Register totals at 04:5x:** 174 counted rows, 94 DONE, 35 ACTIVE, 18 WAITING, 27 REQUIRES USER DECISION. At 04:3x they were 94, 0, 53 and 27.
+- 2026-11-02 07:0x UTC: **integrations 3 and 4, reviews, and the next wave** (main's facts as of 06:5x). From this entry, a register row is DONE only when its work is integrated into `r11/integration` and covered by a passed batch validation.
+  - **Integration 3 validated at 05:40Z on HEAD `e967b288`:**
+    - commits: DEPLOY-FIX `e7bbb936`, WEB-PORT `25d53410`, DOCS-STATUS `445b80f1`, and main's follow-up `e967b288`;
+    - results: replay trees equal; Rust 385/0/8; Python green; `dry-run.sh` 237/0; `apply.sh` 506/0 (`/home/layth/review/grm-r11-integ3-20261102/logs-*`);
+    - review: REVIEW-DEPLOY approved DEPLOY-FIX and WEB-PORT first (`/home/layth/review/grm-review-deploy-20261102/REVIEW.md` `1d9eb20f…eb2a`, `REVIEW_DEPLOY=APPROVED`).
+
+    The restore race, WEB-PORT's four doc and path items and the stale README line are DONE. D3's safeguard is in; the defaults themselves (2/7/237) stay Layth's choice. REVIEW-DEPLOY's L1, L2, L3, I1 (the same race class in `rollback.sh`) and I4 went to DEPLOY-SYNC.
+  - **Integration 4, local, not yet validated:** HPO-FIX `6f1949fc`, DOCS-TRACE `c8cd6c91`, and `55f1049f` (the `docs/ci.md` count). Their validation is batched with batch 5. REVIEW-HPO (`/home/layth/review/grm-review-hpo-20261102/REVIEW.md` `55097608…45f5`, `REVIEW_HPO=DEFECTS`) found HPO-FIX correct; its two Mediums were in HPO-F4's test file.
+  - **HPO-F4 v2 READY at 06:41Z** (`hpo-f4-v2.diff` `b9cb30f1…c89d`; `REPORT-v2.md` `ce84420b…23a0`). Main will launch one fresh review of v2 together with HPO-FOLLOW, once HPO-FOLLOW reports.
+  - **Running lanes:**
+    - HPO-FOLLOW: F6, F7, F10 and REVIEW-HPO's L1–L3;
+    - DEPLOY-SYNC: U-01's six ops cherry-picks, U-13 and REVIEW-DEPLOY's routed findings;
+    - REVIEW-W2B: a review of RUST-TOYS (`c761657c…f676`), CI-NAMES (`f9406ac0…`) and DOCS-INPUT (`7475f8bc…`), all READY;
+    - UI-CHECKFIX: UI-PREP's two check faults, full-state synthetic coverage and an A29/A30 review pack, which isn't acceptance.
+
+    The documentation reviews don't move the input-data configuration rows: that capability stays SPECIFIED, not built, not integrated and not run, with no measured difference.
+  - **UI-PREP** (`/home/layth/review/grm-ui-prep-20261102/REPORT.md` `146d5820…cc38`) reported ISSUES: no UI defect, and two faults in `browser-check.cjs` itself. U-16 runs after UI-CHECKFIX. A34's requirement stands; what a hold should do, and whether hover may reveal clipped text, is a narrow choice for Layth. A29 and A30 still need Layth's actual acceptance.
+  - **SOURCE-PRESERVE** (`/home/layth/review/grm-source-preserve-20261102/PRESERVE.md` `23d61d1a…b3c7`): bundles verified at `b90be1c`; main re-bundles after batch 5. None of the 134 ignored `data/research` files in the lasso-fix worktree is duplicated, so all 134 are single copies.
+  - **Runner:** `a8fb921f…a858` is still live. An argument-preservation candidate (`a1ecf172…b85a76`) is built and tested, not approved; it installs only after its fresh review passes.
+  - **Provider event:** claude-opus-5-5 returned HTTP 429 at 06:02Z. Five lanes' first runs failed and four resumed in their own threads; REVIEW-W2 was cancelled with no finding and replaced by REVIEW-W2B. No box was left billing, and no row moved because of it.
+  - **Holds unchanged:** `RUN_4K=NO`; the biological-execution, real-data, training, release and deploy holds; refused work not routed.
+  - **Register totals at 07:0x:** 204 counted rows (30 added for later findings and a split S1): 107 DONE, 34 ACTIVE, 35 WAITING, 28 REQUIRES USER DECISION. At 04:5x there were 174 rows: 94, 35, 18 and 27. These are checklist rows; they overlap, and there is no completion percentage.
+- 2026-11-02 14:3x UTC: **integration 5 validated; five reviews; the runner; two lanes running** (main's facts as of 14:1x). All of it is local on `r11/integration`, unpushed.
+  - **Integration 5a, validated at 08:37Z:** RUST-TOYS `89b7e498`, CI-NAMES `8c761eea`, DOCS-INPUT `b298b6cc`, and main's fixes for REVIEW-W2B's doc Lows `1bd94431`. Its replay from `c90ebaf` covers integration 4, so HPO-FIX `6f1949fc`, DOCS-TRACE `c8cd6c91` and `55f1049f` are validated too.
+  - **Integration 5b, validated at 10:35Z on HEAD `ff97992c`** (46 commits after `c90ebaf`, 14 after `e967b288`):
+    - commits: RUST-TOYS-L1 `c917dead`, the TL1 doc fix `2af8e350`, HPO-FOLLOW `b3d1bf61`, HPO-F4 v2 `1dbf1ac8`, main's `89e2a4b0` (F7's parse bounded to one item), the CI doc's hyperopt count 322 `3835aa9e`, and UI-CHECKFIX `ff97992c`;
+    - counts: all 46 trees equal; Rust 387/0/8 with 395 names, `--check` rc 0; doc, fmt, clippy and build rc 0; metric audit 106/98/3 and 26 (4 skipped); hyperopt 322, sampling 34, ablation 238, temporal 163, multitask 72 at 3 seeds and `-I`; web 280/2; `dry-run.sh` 237/0; `apply.sh` 506/0;
+    - logs: `/home/layth/review/grm-r11-integ5-20261102/logs-xl5b/grm-logs/val5b/STEPS` (`79daf229…1d14`), and `logs-xl/grm-logs/val5/STEPS` for 5a.
+  - **Reviews:**
+    - approved: REVIEW-W2B (`d839fe8c…`), REVIEW-TL1 (`33699e52…`), REVIEW-HPO2 (`e7027c05…`) and REVIEW-UI (`918e0361…`);
+    - defects: REVIEW-DS2 (`511a5937…`), with M1 in DEPLOY-SYNC v1.
+  - **Runner:** the argument-preserving runner `210386c8…` was installed at 07:57:28Z and checked through one default box (`/home/layth/review/grm-runner-install-20261102/check-argv/RECEIPT.md` `72a24368…`).
+  - **Running:** DEPLOY-SYNC v2 (U-01, U-13, REVIEW-DEPLOY's routed findings and REVIEW-DS2's M1; branch at `14dd585`; report pending; then REVIEW-DS3, then integration), and UI-CHECKFIX-2 (REVIEW-UI's L1, L2 and the outline flake). Both resumed at 14:1x after the 429 pause.
+  - **Corrections:**
+    - **"4 of 6 adapter types" was wrong.** All six adapter types exist; 4 of 6 blocks are available, and N and X have adapter types but no source. That is the wording of `1bd94431`. Earlier entries that say "4 of 6 adapter types" are corrected by this one.
+    - **DOCS-INPUT's items are done as design docs only.** The input-data comparison stays SPECIFIED, not built, not integrated and not run, with no measured difference. Its rows stay ACTIVE.
+    - **Learner-knob rows never count toward input-data configuration.**
+    - **HPO-F4's analysis is integrated.** Ratifying its criteria A1–A6 stays Layth's decision.
+    - **Still Layth's:** A29 and A30 (the review pack is review material, not acceptance), A34, R-D3 and A45.
+  - **Holds unchanged:** `RUN_4K=NO`; the biological-execution, real-data, deployment and MTB holds; U-06 not released.
+  - **Register totals at 14:3x:** 234 counted rows (30 added for the five reviews' findings): 152 DONE, 19 ACTIVE, 34 WAITING, 29 REQUIRES USER DECISION. At 07:0x there were 204 rows: 107, 34, 35 and 28. These are checklist rows; they overlap, and there is no completion percentage.
+- 2026-11-02 14:5x UTC: **main's answers and dispositions** (follow-up to the 14:3x entry). All of it is local, unpushed.
+  - **HPO:**
+    - **RVH-L4 is closed.** HPO-F4 v2 replaced all 9 `expectedFailure` tests with pinned checks (`/home/layth/review/grm-hpo-f4-20261102/REPORT-v2.md:16-17`), and REVIEW-HPO2 killed every mutant from RV1 to RV14, RV13 included.
+    - **RVH-I3, which is U-22's I3, is closed as designed, with no change** (REVIEW-HPO's line 89; HPO-FOLLOW's REPORT line 76).
+  - **DEPLOY-SYNC v2 reported READY at 14:20Z:**
+    - head `14dd585`, 14 commits on `e967b288`; dry-run 245/0 and apply 546/0 on a default box and an xlarge; all 8 mutants died; bundle `fb47ec43…`;
+    - REVIEW-DS2's findings: M1 in `dd8d80d`, L1 in `36984e3`, L2 in `a89e6d0`, I4 in `14dd585`; L3 is fixed in the REPORT's wording, and I2 is noted only.
+
+    REVIEW-DS3, a fresh review, has been running since 14:2x.
+  - **UI:** UI-CHECKFIX-2 runs in the UI-CHECKFIX owner thread (a fresh task since 14:15Z). U-25 (REVIEW-UI's L3, I2, I4, I7–I9) was folded into it at 14:4x.
+  - **Main's dispositions:**
+    - **U-24 (the names guard's message)** is done by main as `88381753` on `ff97992c`, checked on the laptop with synthetic output (`/home/layth/review/grm-r11-integ5-20261102/u24.log`). It waits for validation 5c. `r11/integration` HEAD is now `88381753`: 47 commits after `c90ebaf`, 67 ahead of `origin/main` and 16 behind, unpushed.
+    - **U-23** waits on REVIEW-DS3; then it goes to the DEPLOY-SYNC owner.
+    - **U-16 isn't launched.** Layth's current instruction scopes this work to "non-biological software maintenance and synthetic-only checks", and U-16 serves the published revision-9 report tree, which isn't synthetic. Main has asked root to confirm.
+  - **Re-bundle done:** `grm-r11-integration-ff97992c.bundle` (`98c77d5e40006a4397e2bc48a5dc63af803df483c7f94bbf8c7ea06a70e56f82`), verified by a fresh clone at `ff97992c`; DEPLOY-SYNC's bundle is kept as well. `BUNDLES.sha256` checks all 6 entries.
+  - **Holds unchanged:** `RUN_4K=NO`; the biological-execution, real-data, deployment and MTB holds.
+  - **Register totals at 14:5x:** 234 counted rows (none added): 155 DONE, 27 ACTIVE, 22 WAITING, 30 REQUIRES USER DECISION. At 14:3x they were 152, 19, 34 and 29. These are checklist rows; they overlap, and there is no completion percentage.
+- 2026-11-02 15:0x UTC: **root's scope clarification for U-16.** At 14:5x root confirmed that main may run U-16 as the previously allowed check: laptop-only and read-only. Root said its "synthetic-only checks" wording was too broad.
+  - **What it covers:** only "UI behavior inspection of the existing published revision-9 report tree" (`data/backups/revision9-275-candidate-20261030/release/data/report`, `SOURCE.sha256` `213a9978…`).
+  - **The rules:**
+    - serve on 127.0.0.1 only;
+    - no off-laptop transfer and no Boat;
+    - check rendering, navigation and asset loading, without regenerating or analysing biological results;
+    - keep the report files unchanged;
+    - every execution, real-data, deployment, MTB, `RUN_4K=NO`, review, memory and no-attribution hold stays.
+  - **What it isn't:** Layth's visual acceptance of the logo and motion.
+  - **The lane:** U-16 launched at 14:5x as one narrow lane. It uses `ff97992c`'s web and `browser-check.cjs`, served by `vite preview` on 127.0.0.1 with Playwright's Chromium, for three runs. It verifies the tree 302/302 against `SOURCE.sha256` before and after.
+  - **Restated by root:**
+    - the validated boundary stays `ff97992c`, with the unvalidated local commit `88381753` (U-24) on top;
+    - DEPLOY-SYNC stays unintegrated pending REVIEW-DS3;
+    - U-24 waits for validation 5c.
+  - **S8 is done.** Main made `grm-r9-lasso-fix-data-research-20261102.tar` (`de31048e…730d`) and its manifest (`c0fb7a32…b695`, 134 lines), and confirmed them at 15:0x with hashes only. They hold the 134 single-copy files from `data/research/grm-r9-lasso-fix-20261029/`, and every entry checks. Laptop only.
+  - **W2B-I6 (U-24)** stays WAITING on validation 5c, as main agreed.
+  - **Register totals at 15:0x:** 234 counted rows (none added): 156 DONE, 28 ACTIVE, 21 WAITING, 29 REQUIRES USER DECISION. At 14:5x they were 155, 27, 22 and 30. These are checklist rows; they overlap, and there is no completion percentage.
+- 2026-11-03 05:1x UTC: **validation 5c passed; DEPLOY-SYNC integrated; U-16 done** (main's facts as of 05:0x). Layth has said the Opus limit is lifted again; every hold stays.
+  - **Validation 5c, PASSED at 05:03Z on 3 Nov** (`bx_xnqwkj6z`, deleted):
+    - **the new validated boundary:** `r11/integration` HEAD `7d04e74c`, 63 commits after `c90ebaf`, unpushed;
+    - **what it covers:** U-24 `88381753`; DEPLOY-SYNC's 14 commits, cherry-picked in order (`fb4ea1ac` … `7b52292a`); main's `444d1cd1` for REVIEW-DS3's L-A and L-B; and `7d04e74c` (`docs/ci.md` 245/548);
+    - **counts:** all 63 trees equal; Rust 387/0/8 with 395 names; hyperopt 322, sampling 34, ablation 238, temporal 163, multitask 72; web 280/2; `dry-run.sh` 245/0; `apply.sh` 548/0;
+    - **evidence:** `/home/layth/review/grm-r11-integ5-20261102/logs-xl5c/grm-logs/val5c/STEPS` (`e3185303…96ef`) and `launch5c.log`.
+
+    The six toolkit/ops commits from `origin/main` are now on r11 as cherry-picks. `git rev-list` still counts r11 16 behind `origin/main` by commit identity, and 83 ahead.
+  - **REVIEW-DS3** (`/home/layth/review/grm-review-ds3-20261102/REVIEW.md` `2a08f6a4…4697`): DEFECTS, with two Lows and three Infos and no Medium.
+    - **L-A:** `smoke.sh` accepted 19 or more digits, which bash's `-ge` can't read. Main's `444d1cd1` caps it at 18.
+    - **L-B:** no test covered the first served report. `444d1cd1` adds one.
+    - **The fix's check:** on a default box, apply 548/0, and each mutant failed exactly its new case (`/home/layth/review/grm-r11-integ5-20261102/ds3check.log`). The fix is validated in 5c.
+    - **The three Infos** went to DEPLOY-SYNC v3, together with U-23 (REVIEW-DEPLOY's I3; REVIEW-DS2's I2 and I5). It runs as task `74ddf8cc` in the DEPLOY-SYNC owner thread, on `7d04e74c`, branch `deploy-sync-3`. Then a fresh review, then integration.
+  - **U-16 done at 04:53Z** (`/home/layth/review/grm-u16-r9check-20261102/REPORT.md` `b533a096…f8cc5`; `SHA256SUMS` `d50b5fe9…f594`, 1,998/1,998):
+    - 6 runs, 3 under vite and 3 under `grm serve`, all on 127.0.0.1;
+    - each run 1,669/1,669 across 337 distinct checks, with no failures of any kind;
+    - the revision-9 tree 302/302 before and after, unchanged; nothing regenerated or analysed;
+    - it isn't Layth's visual acceptance of the logo and motion.
+
+    **Two findings:**
+    - a test-only guard for the check's setup, which touches `localStorage` on a blank page (11 page errors per run), for a later browser-check round;
+    - a low-priority product question for Layth: should published trees ship `/data/research.json`? It gives 32 × 404 per run, and the app treats it as optional. The ledger's hard-stop list keeps `research.json` absent until a separate compatibility decision, so this is that decision.
+  - **UI-CHECKFIX-2 was READY at 15:16Z on 2 Nov** (`ui-checkfix2.diff` `45b66ca7…d6a3`, U-25 included). REVIEW-UI2 failed on the 429 with no findings and was cancelled; REVIEW-UI2B has been reviewing it since 04:4x.
+  - **Re-bundle:** `grm-r11-integration-7d04e74c.bundle` (`e0b3e6e5b60fb9031c6ff22851d6c3c19114fc5e26bc12c3d62f0fa4a53819e4`); a fresh clone gives HEAD `7d04e74c`, and all 7 `BUNDLES.sha256` entries check.
+  - **Unchanged:**
+    - the input-data comparison is specified, not built, not integrated and not run, with no measured difference;
+    - A29, A30, A34, R-D3 and the push stay Layth's;
+    - `RUN_4K=NO` and the biological-execution, real-data, deployment and MTB holds stay.
+  - **Register totals at 05:1x:** 241 counted rows (7 added): 172 DONE, 21 ACTIVE, 18 WAITING, 30 REQUIRES USER DECISION. At 15:0x on 2 Nov there were 234 rows: 156, 28, 21 and 29. These are checklist rows; they overlap, and there is no completion percentage.
+- 2026-11-03 06:1x UTC: **validation 5d passed; UI-CHECKFIX-2 integrated** (main's facts as of 06:0x).
+  - **REVIEW-UI2B approved UI-CHECKFIX-2 at 05:45Z** (`/home/layth/review/grm-review-ui2b-20261103/REVIEW.md` `5fb69cd9…cdda352`, no Medium):
+    - one Low: L1, the row-tint check passes an always-on tint (mutant `r-tint-always` survives at 1,602/1,602);
+    - six Infos: I1, the outline's destination row isn't checked; I2, the absent-line branch checks only the 50% height; I3, an A34 note with no decision; I4, the long-rule check is skipped silently; I5, record only; I6, the unscored assertion doesn't check the species.
+  - **Integration and validation 5d:**
+    - `ui-checkfix2.diff` (`45b66ca7…`) became `166a7ae0` on `7d04e74c`;
+    - validation 5d PASSED at 05:59Z (`bx_x5ewdcu6`, deleted): all 64 trees equal; Rust 387/0/8 with 395 names; hyperopt 322, sampling 34, ablation 238, temporal 163, multitask 72; web 280/2; `node --check browser-check.cjs` rc 0; `dry-run.sh` 245/0; `apply.sh` 548/0 (`/home/layth/review/grm-r11-integ5-20261102/logs-xl5d/grm-logs/val5d/STEPS` `547da11b…a352`);
+    - **the new validated boundary:** `166a7ae0`, 64 commits after `c90ebaf`, unpushed. `git rev-list` gives 84 ahead of `origin/main` and 16 behind by commit identity.
+
+    REVIEW-UI's L1, L2, L3, the outline flake, and U-25's I2, I4 and I7–I9 are now done.
+  - **UI-CHECKFIX-3** (task `96955ed9` in the UI-CHECKFIX owner thread, on `166a7ae0`) carries U-26 (the setup-script guard) and REVIEW-UI2B's L1, both required, plus I1, I2, I4 and I6, optional. REVIEW-UI2B's I3 stays tied to A34: if Layth's choice adds a hover reveal, the check's closed and keyboard reads must move the pointer away first.
+  - **DEPLOY-SYNC v3 is READY** (`deploy-sync-3` `492cb5b`, 8 commits on `7d04e74c`; bundle `7056a3a8…`; dry-run 245/0 and apply 560/0 on both boxes). REVIEW-DS4, a fresh review, is running; integration follows it.
+  - **Not yet re-bundled:** no bundle at `166a7ae0` is reported yet; the latest is at `7d04e74c`.
+  - **Unchanged:**
+    - the input-data comparison is specified, not built, not integrated and not run, with no measured difference;
+    - Layth's decisions stay his;
+    - every hold stays.
+  - **Register totals at 06:1x:** 248 counted rows (7 added): 180 DONE, 20 ACTIVE, 18 WAITING, 30 REQUIRES USER DECISION. At 05:1x there were 241 rows: 172, 21, 18 and 30. These are checklist rows; they overlap, and there is no completion percentage.
+- 2026-11-03 07:1x UTC: **REVIEW-DS4's findings fixed; validation 5e passed; DEPLOY-SYNC v3 integrated** (main's facts as of 07:0x).
+  - **REVIEW-DS4** (`/home/layth/review/grm-review-ds4-20261103/REVIEW.md` `c9506ad7…188a96`) found DEFECTS, with two Lows, five Infos and no Medium.
+    - **Confirmed closed:** every targeted finding (U-23; REVIEW-DS2's I2 and I5; REVIEW-DS3's I-A to I-C; main's `dry-run.sh` git-checkout Info).
+    - **L1:** `common.sh` took any digits for `GRM_PORT`, so `08641` passed and then failed every health check, and `stage.sh` read `0641` as octal 417.
+    - **L2:** the duplicate-id test pinned one shape.
+    - **Infos:** I1, `status.sh`'s count-source wording untested; I2, "unset" printed for an empty count; I3, git's fatal line leaked from `dry-run.sh`; I4, the docs omitted "no leading zero"; I5, record only.
+  - **Main's fix:** `747c054`, one commit after the 8 v3 picks, then `docs/ci.md` 247/563 (`84539b8e`). It was checked on two xlarge boxes (`bx_wntu3jb5`, `bx_hmcvexwr`, deleted) in a git checkout of the exact tree:
+    - dry-run 247/0, apply 563/0;
+    - REVIEW-DS4's four surviving mutants and main's two new ones each fail exactly their one new case;
+    - evidence: `/home/layth/review/grm-r11-integ5-20261102/ds4check.log` (`86d4f139…6da6`).
+  - **Integration and validation 5e:**
+    - integration: `r11/integration` HEAD `84539b8e`, 74 commits after `c90ebaf`, holding DEPLOY-SYNC v3's 8 commits (`246ef12` … `492cb5b`, cherry-picked), main's DS4 fix and the CI counts;
+    - validation: PASSED at 07:06Z (`bx_pawc24bx`, deleted): all 74 trees equal; Rust 387/0/8 with 395 names; Python 21/21 suite lines OK; web 280/2; `dry-run.sh` 247/0; `apply.sh` 563/0 (`/home/layth/review/grm-r11-integ5-20261102/logs-xl5e/grm-logs/val5e/STEPS` `141f8602…7fc95`);
+    - **the new validated boundary:** `84539b8e`, unpushed. `git rev-list` gives 94 ahead of `origin/main` and 16 behind by commit identity.
+  - **Re-bundle:** `grm-r11-integration-84539b8e.bundle` (`cd55c6a7b60c88efa096b190a6493a08043974999b62f5d734203270edeee57f`); a fresh clone gives HEAD `84539b8e`, and all 9 `BUNDLES.sha256` entries check.
+  - **Still running:** UI-CHECKFIX-3 (U-26).
+  - **Unchanged:** the input-data comparison is specified, not built, not integrated and not run, with no measured difference; Layth's decisions stay his; every hold stays.
+  - **Register totals at 07:1x:** 256 counted rows (8 added): 194 DONE, 14 ACTIVE, 18 WAITING, 30 REQUIRES USER DECISION. At 06:1x there were 248 rows: 180, 20, 18 and 30. These are checklist rows; they overlap, and there is no completion percentage.
