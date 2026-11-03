@@ -24,6 +24,9 @@ fs.mkdirSync(OUT, { recursive: true });
 const manifest = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'index.json')));
 const checks = [], screenshots = [], errors = [];
 const check = (name, pass, actual) => checks.push({ name, pass: Boolean(pass), actual });
+// Checks a tree gives nothing to test, named in the receipt rather than
+// dropped from the total without a word.
+const skipped = [];
 const median = values => { const s = [...values].sort((a, b) => a - b), k = s.length >> 1; return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2; };
 const best = d => d.learners.find(l => l.learner === d.best_learner)?.random;
 const expected = {
@@ -63,6 +66,9 @@ const stateRows = [
 // A lone rule of 80 characters or more, longer than any rule column at the
 // check's widths holds on one line (--shape full writes one).
 const longRule = manifest.datasets.find(d => d.scm_rules.length === 1 && d.scm_rules[0].length >= 80);
+// The app's short species name (data/format.ts): "Synthetic species C" is
+// "S. species C", with a non-breaking space after the initial.
+const speciesShort = species => { const [genus, ...rest] = species.split(' '); return genus !== undefined && rest.length > 0 ? genus.charAt(0) + '.\u00a0' + rest.join(' ') : species; };
 const inspectId = manifest.datasets.some(d => d.id === 'escherichia_coli__ceftriaxone') ? 'escherichia_coli__ceftriaxone' : manifest.datasets[0].id;
 const speciesSlug = manifest.species.find(s => s.slug === 'escherichia_coli' && s.genomes_analyzed > 0)?.slug ?? manifest.species.find(s => s.genomes_analyzed > 0).slug;
 const speciesName = manifest.species.find(s => s.slug === speciesSlug).species;
@@ -145,7 +151,9 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     // mark per dataset with a catalog score and a lineage score.
     const at50 = geometry.refs.filter(r => close(r.y, 22 + (1 - 0.5) / (1 - lo) * (geometry.height - 56)));
     const drawn = geometry.width > 0 && geometry.height > 0 && geometry.ids.length === expected.catalog.length;
-    check(tag + ' catalog 50% reference', drawn && (lo < 0.5 ? at50.length > 0 : at50.length === 0), { lo, drawn, marks: geometry.ids.length, refs: geometry.refs });
+    // RefLineH is the figure's only aria-hidden line, so with no 50% line
+    // there is no reference line at all.
+    check(tag + ' catalog 50% reference', drawn && (lo < 0.5 ? at50.length > 0 : geometry.refs.length === 0), { lo, drawn, marks: geometry.ids.length, refs: geometry.refs });
     check(tag + ' catalog region counts', geometry.text.includes(expected.stats.catalogAhead + ' ahead by more than 2') && geometry.text.includes(expected.stats.catalogWithin + ' within 2 points') && geometry.text.includes(expected.stats.catalogBehind + ' behind by more than 2'), geometry.text);
   } else check(tag + ' finding ' + finding + ' reference positions', wanted.length === geometry.refs.length && wanted.every((x, i) => close(geometry.refs[i].x, x)), { wanted, actual: geometry.refs });
 }
@@ -346,7 +354,7 @@ async function chrome(page, tag, width) {
  *  by tap. Each way opens it and closes it again. Every wait is bounded, so
  *  a cell that stops working fails this check rather than the context. */
 async function longRuleCheck(page, tag, ways) {
-  if (longRule === undefined) return;
+  if (longRule === undefined) { skipped.push({ check: tag + ' long rule cut to one line opens whole in place by ' + ways.join(' and '), reason: 'no lone rule of 80 characters or more in this tree' }); return; }
   await page.getByRole('searchbox', { name: 'Search datasets' }).fill(longRule.antibiotic + ' ' + longRule.species);
   const text = page.getByRole('region', { name: 'Datasets', exact: true }).getByText(longRule.scm_rules[0], { exact: true });
   const button = text.locator('xpath=ancestor::button[1]');
@@ -517,6 +525,10 @@ async function interactions(page, tag, width) {
     requestAnimationFrame(() => requestAnimationFrame(read));
   }));
   check(tag + ' focused row tints', tint.settled && tint.colour === tint.want, tint);
+  // The tint follows focus: a row that has never had it, with the pointer
+  // still off the table, has none.
+  const unfocused = await rows.nth(3).evaluate(e => getComputedStyle(e.closest('tr')).backgroundColor);
+  check(tag + ' unfocused row has no tint', unfocused === 'rgba(0, 0, 0, 0)', unfocused);
   const stickyTint = await table.evaluate(region => { const rs = [...region.querySelectorAll('tbody tr')]; return { focused: getComputedStyle(rs[1].children[0]).backgroundColor, rest: getComputedStyle(rs[3].children[0]).backgroundColor }; });
   check(tag + ' focus tint reaches the sticky cell', stickyTint.focused !== stickyTint.rest, stickyTint);
   await shot(page, tag + '-row-focus');
@@ -576,20 +588,25 @@ async function interactions(page, tag, width) {
   const purpose = await page.evaluate(() => document.querySelector('[data-view-scroll] header h1 + p')?.textContent);
   check(tag + ' species purpose line', purpose === 'How genomes cluster into lineages, and how resistance follows them.', purpose);
   const drug = page.getByRole('combobox', { name: /^Map drug/ });
-  const outline = () => page.evaluate(() => { const o = [...document.querySelectorAll('[role="grid"] ~ div[aria-hidden="true"]')].find(e => e.className.includes('border-ink')); return o ? getComputedStyle(o).transform : null; });
+  // The outline is one map row tall and sits at the drug's row, so choosing
+  // the drug k rows down moves it k times its own height.
+  const outline = () => page.evaluate(() => { const o = [...document.querySelectorAll('[role="grid"] ~ div[aria-hidden="true"]')].find(e => e.className.includes('border-ink')); return o ? { y: new DOMMatrixReadOnly(getComputedStyle(o).transform).m42, h: o.offsetHeight } : null; });
   const was = await outline();
-  await drug.click(); await page.getByRole('option').nth(1).click();
+  await drug.click();
+  const from = await page.getByRole('option').evaluateAll(os => os.findIndex(o => o.getAttribute('aria-selected') === 'true'));
+  await page.getByRole('option').nth(1).click();
+  const want = was === null ? null : was.y + was.h * (1 - from);
   // The choice reaches the outline through a state update and a transform
   // transition, so the move can land a few frames late: as with the row
   // tint, read after two frames and keep polling each frame for up to a
-  // second while it has not moved.
-  const now = await page.evaluate(was => new Promise(resolve => {
-    const read = () => { const o = [...document.querySelectorAll('[role="grid"] ~ div[aria-hidden="true"]')].find(e => e.className.includes('border-ink')); return o ? getComputedStyle(o).transform : null; };
+  // second until it sits on the chosen row.
+  const now = await page.evaluate(want => new Promise(resolve => {
+    const read = () => { const o = [...document.querySelectorAll('[role="grid"] ~ div[aria-hidden="true"]')].find(e => e.className.includes('border-ink')); return o ? new DOMMatrixReadOnly(getComputedStyle(o).transform).m42 : null; };
     const start = performance.now();
-    const poll = () => { const t = read(); if ((t !== null && t !== was) || performance.now() - start > 1000) resolve(t); else requestAnimationFrame(poll); };
+    const poll = () => { const y = read(); if ((y !== null && want !== null && Math.abs(y - want) <= 0.5) || performance.now() - start > 1000) resolve(y); else requestAnimationFrame(poll); };
     requestAnimationFrame(() => requestAnimationFrame(poll));
-  }), was);
-  check(tag + ' chosen drug outline moves to its row', was !== null && now !== null && was !== now, { was, now });
+  }), want);
+  check(tag + ' chosen drug outline moves to its row', was !== null && was.h > 0 && from >= 0 && from !== 1 && now !== null && Math.abs(now - want) <= 0.5, { was, from, to: 1, want, now });
   await scrollTo(page, '#sp-cross');
   await shot(page, tag + '-cross-matrix');
   await shot(page, tag + '-cross-table');
@@ -612,7 +629,7 @@ async function interactions(page, tag, width) {
   const unscored = manifest.unsupported_panels ?? [];
   const unscoredPart = await page.evaluate(() => { const p = document.getElementById('m-unsupported'); return p ? [...p.querySelectorAll('li')].map(li => li.textContent) : null; });
   check(tag + ' assays not scored listed in Methods', unscored.length === 0 ? unscoredPart === null
-    : unscoredPart !== null && unscoredPart.length === new Set(unscored.map(u => u.panel)).size && unscored.every(u => unscoredPart.some(t => t.includes(u.name) && t.includes('Not scored.') && t.toLowerCase().includes(u.antibiotic.toLowerCase()) && t.toLowerCase().includes(u.reason.toLowerCase()))), { unscored: unscored.map(u => [u.panel, u.dataset]), part: unscoredPart });
+    : unscoredPart !== null && unscoredPart.length === new Set(unscored.map(u => u.panel)).size && unscored.every(u => unscoredPart.some(t => t.includes(u.name) && t.includes('Not scored.') && t.toLowerCase().includes((u.antibiotic + ' in ' + speciesShort(u.species)).toLowerCase()) && t.toLowerCase().includes(u.reason.toLowerCase()))), { unscored: unscored.map(u => [u.panel, u.dataset]), part: unscoredPart });
   if (unscoredPart !== null) { await scrollTo(page, '#m-unsupported'); await shot(page, tag + '-unscored'); }
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
@@ -655,7 +672,7 @@ async function interactions(page, tag, width) {
 async function states(browser, width, height, theme) {
   const tag = width + '-' + theme;
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
-  await context.addInitScript(t => localStorage.setItem('grm-theme', t), theme);
+  await context.addInitScript(t => { if (/^https?:$/.test(location.protocol)) localStorage.setItem('grm-theme', t); }, theme);
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
@@ -875,7 +892,7 @@ async function normalMotion(browser) {
 
 async function boundaries(browser) {
   const context = await browser.newContext({ viewport: { width: 900, height: 900 }, reducedMotion: 'reduce', hasTouch: true });
-  await context.addInitScript(() => localStorage.setItem('grm-filter-rail-open', '1'));
+  await context.addInitScript(() => { if (/^https?:$/.test(location.protocol)) localStorage.setItem('grm-filter-rail-open', '1'); });
   const page = await context.newPage();
   for (const width of [899, 900, 1279, 1280, 1439, 1440, 1680]) {
     await page.setViewportSize({ width, height: 900 }); await page.goto(BASE + '/datasets'); await page.getByRole('searchbox', { name: 'Search datasets' }).waitFor();
@@ -920,7 +937,10 @@ async function boundaries(browser) {
     check('favicon is the mark', favicon.ok && (favicon.headers.get('content-type') ?? '').includes('svg') && (await favicon.text()).includes('#ff8c66'), favicon.status);
     for (const [width, height] of [[1280, 720], [1440, 900], [390, 844]]) for (const theme of ['light', 'dark']) {
       const context = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion: 'reduce' });
-      await context.addInitScript(theme => { localStorage.setItem('grm-theme', theme); localStorage.setItem('grm-filter-rail-open', '1'); }, theme);
+      // Init scripts also run on each new page's first about:blank, which has
+      // no storage, so touching localStorage there is a page error. Every
+      // init script here sets it only on the app's own http(s) pages.
+      await context.addInitScript(theme => { if (!/^https?:$/.test(location.protocol)) return; localStorage.setItem('grm-theme', theme); localStorage.setItem('grm-filter-rail-open', '1'); }, theme);
       const page = await context.newPage();
       const cdp = await context.newCDPSession(page);
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
@@ -958,8 +978,8 @@ async function boundaries(browser) {
     await boundaries(browser);
     await normalMotion(browser);
   } finally { await browser.close(); }
-  const receipt = { source: { fixture: FIXTURE, schema: manifest.schema, generated: manifest.generated_at, revision: manifest.evaluation_revision, datasets: expected.datasets, panelRows: manifest.panels.length }, independent: expected.stats, stateRows: stateRows.map(([d, w]) => [d.id, w]), checks, screenshots, errors, passed: checks.every(c => c.pass) && errors.length === 0 };
+  const receipt = { source: { fixture: FIXTURE, schema: manifest.schema, generated: manifest.generated_at, revision: manifest.evaluation_revision, datasets: expected.datasets, panelRows: manifest.panels.length }, independent: expected.stats, stateRows: stateRows.map(([d, w]) => [d.id, w]), skipped, checks, screenshots, errors, passed: checks.every(c => c.pass) && errors.length === 0 };
   fs.writeFileSync(path.join(OUT, 'receipt.json'), JSON.stringify(receipt, null, 2));
-  console.log(JSON.stringify({ passed: receipt.passed, checks: checks.length, failures: checks.filter(c => !c.pass).map(c => ({ name: c.name, actual: c.actual })), errors, screenshots: screenshots.length }, null, 2));
+  console.log(JSON.stringify({ passed: receipt.passed, checks: checks.length, skipped, failures: checks.filter(c => !c.pass).map(c => ({ name: c.name, actual: c.actual })), errors, screenshots: screenshots.length }, null, 2));
   process.exitCode = receipt.passed ? 0 : 1;
 })().catch(e => { console.error(e); process.exitCode = 1; });
