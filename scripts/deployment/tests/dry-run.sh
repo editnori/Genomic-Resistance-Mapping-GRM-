@@ -5,11 +5,14 @@
 # release's grm is a stub that records any run, the "live" port must have no
 # listener, and every script except publish.sh (into the temporary root) runs
 # without --apply, but for stage.sh --apply runs that are refused before they
-# start anything. tests/apply.sh covers the --apply paths.
+# start anything. tests/apply.sh covers the --apply paths. It needs a git
+# checkout with a commit: the build cases archive HEAD (build-release.sh).
 # usage: bash scripts/deployment/tests/dry-run.sh
 set -euo pipefail
 S=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 REPO=$(cd -- "$S/../.." && pwd)
+git -C "$REPO" rev-parse -q --verify HEAD >/dev/null ||
+    { echo "FAIL tests/dry-run.sh needs a git checkout with a commit (the build cases archive HEAD); $REPO is not one"; exit 2; }
 . "$S/tests/tmproot.sh"
 T=$(make_test_root) || exit 2
 # Every assertion below must run: a command that fails under set -e or
