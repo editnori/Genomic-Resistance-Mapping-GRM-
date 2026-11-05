@@ -4,7 +4,8 @@
 # SOURCE_MANIFEST lists every report file as "SHA256  ./path" (SOURCE.sha256 in
 # a verified backup such as data/backups/revision7-published-20261025). The
 # source must match it before anything is copied, its index must match
-# GRM_EXPECT_*, and published/NAME must not exist yet.
+# GRM_EXPECT_* (GRM_EXPECT_REVISION and GRM_EXPECT_DATASETS are required; exit
+# 5 without them), and published/NAME must not exist yet.
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/common.sh"
 parse_args "$@"

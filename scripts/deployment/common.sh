@@ -6,13 +6,13 @@
 #   GRM_DEPLOY_ROOT      absolute deployment root (required)
 #   GRM_PORT             live loopback port (default 8641)
 #   GRM_EXPECT_SCHEMA    report index schema (default 2)
-#   GRM_EXPECT_REVISION  report evaluation revision (default 7)
-#   GRM_EXPECT_DATASETS  dataset report count (default 237; required when
-#                        GRM_EXPECT_REVISION is not 7)
+#   GRM_EXPECT_REVISION  report evaluation revision (required, no default)
+#   GRM_EXPECT_DATASETS  dataset report count (required, no default)
 # GRM_EXPECT_* is what publish.sh, stage.sh and approve-legacy.sh require of a
-# report. The defaults are the revision-7 publication's, kept for its legacy
-# runbook (docs/deployment.md); 237 is that release's count, so another
-# revision must name its own (check_expect). The approval they lead to records
+# report. The revision and count have no default, since any default is some
+# earlier release's (revision 7's 237 was one): those scripts refuse with
+# exit 5 when either is unset or not a positive whole number (check_expect).
+# The approval they lead to records
 # those values, and activate.sh, rollback.sh, restore.sh and status.sh check
 # each pair against its own approval, so a 275-dataset candidate and a
 # 237-dataset rollback target need no shared setting.
@@ -56,9 +56,9 @@ esac
 if [ -d "$D" ]; then D=$(cd -- "$D" && pwd -P); fi
 PORT=${GRM_PORT:-8641}
 EXPECT_SCHEMA=${GRM_EXPECT_SCHEMA:-2}
-EXPECT_REVISION=${GRM_EXPECT_REVISION:-7}
-EXPECT_DATASETS=${GRM_EXPECT_DATASETS:-237}
-for value in "$PORT" "$EXPECT_SCHEMA" "$EXPECT_REVISION" "$EXPECT_DATASETS"; do
+EXPECT_REVISION=${GRM_EXPECT_REVISION:-}
+EXPECT_DATASETS=${GRM_EXPECT_DATASETS:-}
+for value in "$PORT" "$EXPECT_SCHEMA"; do
     [[ $value =~ ^[0-9]+$ ]] || { echo "not a number: $value" >&2; exit 2; }
 done
 # The port as smoke.sh reads it: no leading zero, which grm and curl read as
@@ -374,12 +374,20 @@ note_expect_env() {
 
 # publish.sh, stage.sh and approve-legacy.sh, before they read anything, and
 # status.sh, before it checks a live pair without a valid approval against
-# GRM_EXPECT_*: the default count, 237, is revision 7's, so a report of
-# another revision is never checked against it. Without this, a revision-11 root that happened to
-# hold 237 reports (a stopped run, say) would pass on revision 7's count.
+# GRM_EXPECT_*: the revision and the dataset count must both be set, each a
+# positive whole number of at most 18 ASCII digits with no leading zero, or
+# the script refuses with exit 5, which no other refusal uses. They had
+# defaults, revision 7's 7 and 237, and a revision-11 root that happened to
+# hold 237 reports (a stopped run, say) would have passed on them.
 check_expect() {
-    [ "$EXPECT_REVISION" -eq 7 ] || [ -n "${GRM_EXPECT_DATASETS:-}" ] ||
-        die "GRM_EXPECT_REVISION=$EXPECT_REVISION needs GRM_EXPECT_DATASETS, that revision's report count: the default, 237, is revision 7's" 2
+    local name value
+    for name in GRM_EXPECT_REVISION GRM_EXPECT_DATASETS; do
+        value=${!name:-}
+        [ -n "$value" ] ||
+            die "$name is unset or empty; set GRM_EXPECT_REVISION and GRM_EXPECT_DATASETS to the report's evaluation revision and dataset count, which have no default" 5
+        [[ $value =~ ^[123456789][0123456789]{0,17}$ ]] ||
+            die "$name must be a positive whole number, at most 18 ASCII digits with no leading zero, not $(printf %q "$value")" 5
+    done
 }
 
 # Take the root lock on LOCK_FD, once per script. Every process a script forks

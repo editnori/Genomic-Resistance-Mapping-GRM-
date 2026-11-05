@@ -7,6 +7,7 @@
 # anywhere), say stage=0, name the release's commit, and name no other
 # publication. Every other pair needs stage.sh.
 # usage: approve-legacy.sh LABEL PUBLICATION [--apply]
+#   GRM_EXPECT_REVISION and GRM_EXPECT_DATASETS are required (exit 5 without them)
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/common.sh"
 parse_args "$@"
