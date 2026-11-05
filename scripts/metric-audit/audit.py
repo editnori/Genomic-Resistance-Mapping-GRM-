@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only metric audit of GRM result reports, revisions 5 to 11.
+"""Read-only metric audit of GRM result reports, revisions 5 to 12.
 
 From each report's saved per-sample labels and out-of-fold scores this
 recomputes, over the called isolates, the pooled confusion matrices and

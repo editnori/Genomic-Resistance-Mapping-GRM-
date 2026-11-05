@@ -14,9 +14,10 @@
 //! by `isolate_groups`; the lineage folds hold them already, since identical
 //! genomes share a lineage. Inner tuning keeps each group whole too: the
 //! random split tunes on duplicate groups (`tuning_groups`), the lineage
-//! split on lineages. The MIC regression's own folds (`evaluate_mic`) and
-//! the final models' tuning are drawn as before and may split a group. A
-//! move can leave a random test fold without one class, and then the dataset
+//! split on lineages. From revision 12 the final models tune on the
+//! duplicate groups as well (`final_tuning`). Only the MIC regression's own
+//! folds (`evaluate_mic`) are drawn as before and may split a group. A move
+//! can leave a random test fold without one class, and then the dataset
 //! fails like any invalid random split (docs/duplicate-isolation.md).
 //!
 //! Hyperparameters are chosen inside each training fold (inner folds follow
@@ -867,7 +868,8 @@ pub fn evaluate(
     }
 
     let mic_result = mic.and_then(|m| evaluate_mic(x, y, min_support, &m, cfg));
-    let finals = final_models(dataset, x, y, min_support, cfg)?;
+    let tuning = final_tuning(groups, duplicates);
+    let finals = final_models(dataset, x, y, tuning.as_deref(), min_support, cfg)?;
     Ok(EvalOutput {
         splits,
         mic: mic_result,
@@ -1105,16 +1107,25 @@ pub fn lasso_only(
             })?;
         }
     }
-    final_plan(x, y, min_support, cfg)?;
+    let tuning = final_tuning(groups, duplicates);
+    final_plan(x, y, tuning.as_deref(), min_support, cfg)?;
     observed_lasso("final", None, observe, |trace| {
-        final_lasso(dataset, x, y, cfg, trace, &mut |stage, point| {
-            progress(&LassoProgress {
-                scheme: "final",
-                outer_fold: None,
-                stage,
-                point: *point,
-            })
-        })
+        final_lasso(
+            dataset,
+            x,
+            y,
+            tuning.as_deref(),
+            cfg,
+            trace,
+            &mut |stage, point| {
+                progress(&LassoProgress {
+                    scheme: "final",
+                    outer_fold: None,
+                    stage,
+                    point: *point,
+                })
+            },
+        )
     })
 }
 
@@ -1163,15 +1174,26 @@ fn top_weighted(imp: std::collections::HashMap<u32, f64>, k: usize) -> Vec<Weigh
     v
 }
 
+/// The groups the final models tune on (scm and cart's inner folds,
+/// boosting's and the lasso's holdouts): the duplicate groups, as the random
+/// split's inner tuning draws them (`tuning_groups`), so a genome and its
+/// copy never sit on both sides of a final tuning partition. Lineages play
+/// no part. Without duplicate groups it is None, and the final models tune
+/// by class as revision 11's did.
+fn final_tuning<'a>(groups: &'a [u32], duplicates: &[Vec<usize>]) -> Option<Cow<'a, [u32]>> {
+    tuning_groups("random", groups, duplicates)
+}
+
 fn final_models(
     dataset: &str,
     x: &BitMatrix,
     y: &Bits,
+    tuning: Option<&[u32]>,
     min_support: u32,
     cfg: &EvalConfig,
 ) -> Result<FinalModels> {
     let all = Bits::ones(x.cols);
-    let inner = final_plan(x, y, min_support, cfg)?;
+    let inner = final_plan(x, y, tuning, min_support, cfg)?;
     let choice = scm::select(x, y, &all, cfg.scm_max_rules, &inner, cfg.inner_folds);
     let model = scm::fit(x, y, &all, choice.kind, choice.p, choice.n_rules, true);
     let importance = scm::rule_importance(&model, x, y, &all);
@@ -1191,12 +1213,13 @@ fn final_models(
         dataset,
         x,
         y,
+        tuning,
         cfg,
         &mut LassoTrace::default(),
         &mut |_, _| {},
     )?;
     let (_, rf_importance) = fit_rf(x, y, &all, cfg, cfg.seed + 17);
-    let (_, gbt_model) = fit_gbt(x, y, &all, None, "group", cfg, cfg.seed + 13)?;
+    let (_, gbt_model) = fit_gbt(x, y, &all, tuning, "group", cfg, cfg.seed + 13)?;
     Ok(FinalModels {
         scm: FinalScm {
             kind: model.kind,
@@ -1215,25 +1238,37 @@ fn final_models(
     })
 }
 
-/// The final models' preconditions, and their inner folds. They train on
-/// every sample, so their candidates are the dataset matrix itself; that
-/// keeps their feature ids valid for annotation.
-fn final_plan(x: &BitMatrix, y: &Bits, min_support: u32, cfg: &EvalConfig) -> Result<Vec<usize>> {
+/// The final models' preconditions, and their inner folds, drawn on
+/// `tuning` (`final_tuning`). They train on every sample, so their
+/// candidates are the dataset matrix itself; that keeps their feature ids
+/// valid for annotation. Without groups the folds are revision 11's
+/// stratified ones: `training_folds` over every sample is
+/// `stratified_folds`.
+fn final_plan(
+    x: &BitMatrix,
+    y: &Bits,
+    tuning: Option<&[u32]>,
+    min_support: u32,
+    cfg: &EvalConfig,
+) -> Result<Vec<usize>> {
     let all = Bits::ones(x.cols);
     ensure!(
         training_candidates(x, &all, min_support).1.len() == x.rows,
         "final models need a matrix filtered and collapsed on all samples at min_support {min_support}"
     );
-    let inner = stratified_folds(y, cfg.inner_folds, cfg.seed + 7);
-    validate_folds(y, &all, &inner, cfg.inner_folds)?;
+    let inner = training_folds(y, &all, tuning, cfg.inner_folds, cfg.seed + 7);
+    validate_folds(y, &all, &inner, cfg.inner_folds)
+        .context("invalid final-model inner evaluation")?;
     Ok(inner)
 }
 
-/// The final lasso: every sample, no lineage groups, and its own seed.
+/// The final lasso: every sample, its holdout drawn on `tuning`
+/// (`final_tuning`), and its own seed.
 fn final_lasso(
     dataset: &str,
     x: &BitMatrix,
     y: &Bits,
+    tuning: Option<&[u32]>,
     cfg: &EvalConfig,
     trace: &mut LassoTrace,
     progress: &mut dyn FnMut(&str, &lasso::PointProgress),
@@ -1242,7 +1277,7 @@ fn final_lasso(
         x,
         y,
         &Bits::ones(x.cols),
-        None,
+        tuning,
         cfg,
         cfg.seed + 11,
         LassoContext {
@@ -1911,6 +1946,105 @@ mod tests {
                 (inner, holdouts.to_vec())
             );
         }
+    }
+
+    /// The final models' tuning partitions over every sample, drawn as
+    /// `final_models` draws them: scm and cart's inner folds, then the
+    /// boosting and lasso holdouts with their own seeds.
+    fn final_tuning_plan(x: &BitMatrix, y: &Bits, tuning: Option<&[u32]>) -> InnerPlan {
+        let cfg = EvalConfig::default();
+        let all = Bits::ones(y.len());
+        let holdouts = [(GBT_HOLDOUT, cfg.seed + 13), (LASSO_HOLDOUT, cfg.seed + 11)]
+            .map(|(frac, seed)| tuning_holdout(&all, y, tuning, "group", frac, seed).unwrap())
+            .to_vec();
+        (final_plan(x, y, tuning, 1, &cfg).unwrap(), holdouts)
+    }
+
+    #[test]
+    fn final_tuning_keeps_each_duplicate_group_whole() {
+        let (x, y, groups) = duplicate_fixture();
+        let duplicates = identical_columns(&x);
+        assert_eq!(duplicates.len(), 20);
+        // Groups that straddle a final inner fold or either final holdout.
+        let straddling = |(inner, holdouts): &InnerPlan| {
+            duplicates
+                .iter()
+                .filter(|g| {
+                    g.iter().any(|&i| inner[i] != inner[g[0]])
+                        || holdouts.iter().any(|(_, val)| {
+                            g.iter().any(|&i| val.contains(i) != val.contains(g[0]))
+                        })
+                })
+                .count()
+        };
+        let tuning = final_tuning(&groups, &duplicates);
+        assert_eq!(tuning, tuning_groups("random", &groups, &duplicates));
+        assert_eq!(straddling(&final_tuning_plan(&x, &y, tuning.as_deref())), 0);
+        // Revision 11's final tuning, by class, split some of them.
+        assert!(straddling(&final_tuning_plan(&x, &y, None)) > 0);
+        // Without duplicate groups the final folds are revision 11's.
+        assert_eq!(final_tuning(&groups, &[]), None);
+        let cfg = EvalConfig::default();
+        assert_eq!(
+            final_tuning_plan(&x, &y, None).0,
+            stratified_folds(&y, cfg.inner_folds, cfg.seed + 7)
+        );
+    }
+
+    #[test]
+    fn final_models_tune_on_the_duplicate_groups() {
+        // evaluate's final models are the ones fitted on final_tuning's
+        // partitions: scm's choice and cart's depth come from the grouped
+        // inner folds, and boosting from the grouped holdout.
+        let (x, y, groups) = duplicate_fixture();
+        let duplicates = identical_columns(&x);
+        let cfg = EvalConfig::default();
+        let all = Bits::ones(y.len());
+        let tuning = final_tuning(&groups, &duplicates);
+        let (inner, _) = final_tuning_plan(&x, &y, tuning.as_deref());
+        let out = evaluate(
+            "fixture__fixturemycin",
+            &x,
+            &y,
+            &groups,
+            &duplicates,
+            1,
+            None,
+            &cfg,
+        )
+        .unwrap();
+        let choice = scm::select(&x, &y, &all, cfg.scm_max_rules, &inner, cfg.inner_folds);
+        assert_eq!(
+            (
+                out.finals.scm.kind,
+                out.finals.scm.p,
+                out.finals.scm.cv_error
+            ),
+            (choice.kind, choice.p, choice.cv_error)
+        );
+        let (depth, _) =
+            tree::select_depth(&x, &y, &all, &inner, cfg.inner_folds, cfg.cart_max_depth);
+        assert_eq!(out.finals.cart_depth, depth);
+        let (_, gbt) = fit_gbt(
+            &x,
+            &y,
+            &all,
+            tuning.as_deref(),
+            "group",
+            &cfg,
+            cfg.seed + 13,
+        )
+        .unwrap();
+        assert_eq!(
+            serde_json::to_value(&out.finals.gbt_importance).unwrap(),
+            serde_json::to_value(top_weighted(gbt.importance(), 50)).unwrap()
+        );
+        let direct =
+            final_models("fixture__fixturemycin", &x, &y, tuning.as_deref(), 1, &cfg).unwrap();
+        assert_eq!(
+            serde_json::to_value(&out.finals).unwrap(),
+            serde_json::to_value(&direct).unwrap()
+        );
     }
 
     #[test]
@@ -2702,7 +2836,7 @@ mod tests {
         let cfg = small_config();
         let screened = screen(&x, &y, &Bits::ones(n), cfg.screened_features);
         assert_eq!(screened[0], 3);
-        let finals = final_models("fixture__fixturemycin", &x, &y, 3, &cfg).unwrap();
+        let finals = final_models("fixture__fixturemycin", &x, &y, None, 3, &cfg).unwrap();
         assert_eq!(finals.rf_importance[0].feature, 3);
         assert!(
             finals
