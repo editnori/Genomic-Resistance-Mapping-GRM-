@@ -362,6 +362,8 @@ for script in publish stage approve-legacy; do
         refused "$script" GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=0
     expect 5 'GRM_EXPECT_DATASETS must be a positive whole number' "$script refuses GRM_EXPECT_DATASETS=-2" -- \
         refused "$script" GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=-2
+    expect 5 'GRM_EXPECT_DATASETS must be a positive whole number' "$script refuses GRM_EXPECT_DATASETS=0275" -- \
+        refused "$script" GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=0275
 done
 expect 0 '' "the refused runs changed nothing under the root" -- test "$(snapshot)" = "$refused_before"
 expect 0 'GRM_EXPECT_\* is not used here' "restore, which checks the approval, is not refused for revision 11 without a count" -- \
@@ -869,7 +871,7 @@ expect 2 'invalid port 0641' "stage refuses a spare port with a leading zero" --
     bash "$S/stage.sh" rel1 pub1 0641
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=$((282 - skipped))  # less the root-only skip
+EXPECTED_ASSERTIONS=$((285 - skipped))  # less the root-only skip
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"

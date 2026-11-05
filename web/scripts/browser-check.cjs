@@ -401,7 +401,10 @@ async function ruleTipCheck(page, tag) {
  *  over the rule cell, and a touch there is a touch on the row. */
 async function holdCheck(page, context, tag) {
   const cdp = await context.newCDPSession(page);
-  const hold = async (locator, ms, move = 0) => {
+  // Holds for ms, calls `during` once before the lift, and returns what it read,
+  // or null when no touch reaches the element. The click Chromium sends on the
+  // lift does what a tap does, so only a read before the lift shows the hold acted.
+  const hold = async (locator, ms, move = 0, during = async () => null) => {
     const point = await locator.evaluate(el => {
       el.scrollIntoView({ block: 'center', inline: 'center' });
       const r = el.getBoundingClientRect(), y = r.top + r.height / 2;
@@ -411,15 +414,16 @@ async function holdCheck(page, context, tag) {
       }
       return null;
     }, null, { timeout: 2000 }).catch(() => null);
-    if (point === null) return false;
+    if (point === null) return null;
     const { x, y } = point;
     await settle(page);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
     if (move) { await page.waitForTimeout(50); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + move, y }] }); }
     await page.waitForTimeout(ms);
+    const beforeLift = await during();
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await settle(page);
-    return true;
+    return { beforeLift };
   };
   const region = page.getByRole('region', { name: 'Datasets', exact: true });
   const search = page.getByRole('searchbox', { name: 'Search datasets' });
@@ -430,9 +434,14 @@ async function holdCheck(page, context, tag) {
     const text = region.getByText(longRule.scm_rules[0], { exact: true });
     await text.waitFor({ timeout: 5000 }).catch(() => {});
     const read = () => text.evaluate(e => ({ clipped: e.scrollWidth > e.clientWidth + 1, expanded: e.closest('button')?.getAttribute('aria-expanded') ?? null, dialog: document.querySelector('dialog[open]') !== null }), null, { timeout: 2000 }).catch(() => null);
-    const steps = [['closed', await read()]];
-    for (const [step, move] of [['hold open', 0], ['hold closed', 0], ['moved hold closed', 40]]) steps.push([step, (await hold(text, 800, move)) ? await read() : null]);
-    const ok = steps.every(([step, s]) => s !== null && !s.dialog && (step.endsWith('open') ? !s.clipped && s.expanded === 'true' : s.clipped && s.expanded === 'false'));
+    const steps = [['closed', await read(), null]];
+    for (const [step, move] of [['hold open', 0], ['hold closed', 0], ['moved hold closed', 40]]) {
+      const held = await hold(text, 800, move, read);
+      steps.push([step, held === null ? null : await read(), held?.beforeLift ?? null]);
+    }
+    // Each hold's state must already hold before the lift, as well as after it.
+    const as = (step, s) => s !== null && !s.dialog && (step.endsWith('open') ? !s.clipped && s.expanded === 'true' : s.clipped && s.expanded === 'false');
+    const ok = steps.every(([step, after, before]) => as(step, after) && (step === 'closed' || as(step, before)));
     check(name, ok, { dataset: longRule.id, steps });
   }
   await search.fill('');
@@ -442,9 +451,11 @@ async function holdCheck(page, context, tag) {
   // Pinned by key: once open, the row's toggle reads Fewer, and `more` moves on to the next row.
   const key = await more.evaluate(e => e.closest('tr').getAttribute('data-row-key'), null, { timeout: 2000 }).catch(() => null);
   const row = region.locator(`tr[data-row-key="${key}"]`);
-  const held = await hold(row.locator('[data-row-ignore]').first(), 800);
-  const opened = held ? await row.evaluate(r => ({ rules: r.querySelectorAll('ol li').length, expanded: r.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded'), dialog: document.querySelector('dialog[open]') !== null }), null, { timeout: 2000 }).catch(() => null) : null;
-  check(tag + ' hold on the first of several rules opens them all in place', opened !== null && opened.rules === want && opened.expanded === 'true' && !opened.dialog, { want, opened });
+  const readRow = () => row.evaluate(r => ({ rules: r.querySelectorAll('ol li').length, expanded: r.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded'), dialog: document.querySelector('dialog[open]') !== null }), null, { timeout: 2000 }).catch(() => null);
+  const held = await hold(row.locator('[data-row-ignore]').first(), 800, 0, readRow);
+  const opened = held === null ? null : await readRow();
+  const whole = s => s !== null && s.rules === want && s.expanded === 'true' && !s.dialog;
+  check(tag + ' hold on the first of several rules opens them all in place', whole(opened) && whole(held?.beforeLift ?? null), { want, opened, beforeLift: held?.beforeLift ?? null });
   if (opened?.expanded === 'true') await row.getByRole('button', { name: 'Fewer' }).tap({ timeout: 2000 }).catch(() => {});
 }
 

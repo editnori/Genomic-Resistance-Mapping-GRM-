@@ -6,7 +6,8 @@
 // once the rule has shrunk back under the finger, opens the row behind it.
 // A click from the keyboard (detail 0) is never swallowed. Mouse and pen
 // presses are left alone: for them a click is the way in. A hold target
-// should also be HOLD_TARGET, so a long press selects no text.
+// should also be HOLD_TARGET, so a long press on a touch screen selects no
+// text.
 
 import { useEffect, useRef, type MouseEvent, type PointerEvent } from "react";
 
@@ -14,8 +15,8 @@ import { useEffect, useRef, type MouseEvent, type PointerEvent } from "react";
 // start a text selection and cancel the pointer first.
 export const HOLD_MS = 400;
 export const HOLD_SLOP_PX = 10;
-/** No text selection or callout on a long press. */
-export const HOLD_TARGET = "select-none [-webkit-touch-callout:none]";
+/** No text selection or callout on a long press; a mouse can still select. */
+export const HOLD_TARGET = "[@media(pointer:coarse)]:select-none [-webkit-touch-callout:none]";
 /** How long after the lift a hold's click is still swallowed. */
 export const LIFT_CLICK_MS = 800;
 

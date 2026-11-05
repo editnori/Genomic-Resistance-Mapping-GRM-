@@ -256,7 +256,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
           : ""}
         {anyWithoutCall ? " A learner that calls no isolate on a split has no rate there and shows No call." : ""}
         {anyInterval
-          ? " Under VME and ME, the 95% Clopper-Pearson interval from this report's own counts: VME over the resistant isolates the row called, ME over the susceptible ones; a range's tooltip gives its counts. It reflects which isolates happened to be sampled, not calibration or clinical performance."
+          ? " Under VME and ME, the 95% Clopper-Pearson interval from this report's own counts: VME over the resistant isolates the row called, ME over the susceptible ones; a range's tooltip gives its counts. It treats the isolates as independent and reflects which ones happened to be sampled, not calibration or clinical performance."
           : ""}
         {anyNullFold
           ? " This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
