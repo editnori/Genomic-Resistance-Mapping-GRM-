@@ -3,17 +3,21 @@
 //
 //   /data/<path>  pub/<publication>/report/<path>; a missing path is 404
 //   /<path>       app/<label>/dist/<path>; an unknown path gets index.html
-//                 so client-side routes load
+//                 so client-side routes load. An /assets/ miss is tried in
+//                 state/previous's app first, so a tab opened before an app
+//                 switch still loads its lazy chunks
 //
 // state/active names the pair. ops/cloudflare/scripts/activate.sh writes it
 // with one PUT, and every request reads it, so a switch is atomic: each
-// response comes wholly from one pair. Releases under app/ and pub/ are never
+// response comes from the pair its request read, or, for an /assets/ miss,
+// from state/previous's app. Releases under app/ and pub/ are never
 // overwritten (publish.sh refuses an existing prefix).
 //
 // Beyond grm serve: an ETag on every object response, with If-None-Match
 // (304) and If-Range, and 503 while no pair is active.
 
 const ACTIVE_KEY = 'state/active';
+const PREVIOUS_KEY = 'state/previous';
 const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 
@@ -101,12 +105,13 @@ function rawPath(url) {
   return path.split('?')[0].split('#')[0];
 }
 
-async function activePair(bucket) {
-  const object = await bucket.get(ACTIVE_KEY);
+// The pair record at `key` (state/active or state/previous), or null if none.
+async function pairAt(bucket, key) {
+  const object = await bucket.get(key);
   if (object === null) return null;
   const pair = JSON.parse(await object.text());
   if (!NAME.test(pair.app ?? '') || !NAME.test(pair.publication ?? '')) {
-    throw new Error(`${ACTIVE_KEY} names no valid pair`);
+    throw new Error(`${key} names no valid pair`);
   }
   return pair;
 }
@@ -171,7 +176,7 @@ export async function handle(request, bucket) {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return text(405, 'method not allowed', { Allow: 'GET, HEAD' });
   }
-  const pair = await activePair(bucket);
+  const pair = await pairAt(bucket, ACTIVE_KEY);
   if (pair === null) return text(503, 'no active release');
   const app = `app/${pair.app}/dist/`;
   const index = app + 'index.html';
@@ -184,9 +189,27 @@ export async function handle(request, bucket) {
   const key = url === '/' ? index : keyUnder(app, url);
   if (key !== null) {
     // Hashed build output is immutable; a fallback for a missing asset is not.
-    const cache = url.startsWith('/assets/') && key.startsWith(app + 'assets/') ? IMMUTABLE : 'no-cache';
-    const response = await objectResponse(bucket, key, cache, request);
+    const asset = url.startsWith('/assets/') && key.startsWith(app + 'assets/');
+    const response = await objectResponse(bucket, key, asset ? IMMUTABLE : 'no-cache', request);
     if (response) return response;
+    // A tab loaded before a switch to a new app label still asks for the old
+    // app's chunks. Hashed names can't collide, so serve them from the
+    // previous app rather than as index.html, which fails as a module. This
+    // is best effort: a state/previous that doesn't parse leaves the miss to
+    // index.html, as before, instead of failing it.
+    if (asset) {
+      let previous = null;
+      try {
+        previous = await pairAt(bucket, PREVIOUS_KEY);
+      } catch (error) {
+        console.error(String(error));
+      }
+      if (previous !== null && previous.app !== pair.app) {
+        const old = `app/${previous.app}/dist/` + key.slice(app.length);
+        const response = await objectResponse(bucket, old, IMMUTABLE, request);
+        if (response) return response;
+      }
+    }
   }
   const response = await objectResponse(bucket, index, 'no-cache', request);
   if (response) return response;

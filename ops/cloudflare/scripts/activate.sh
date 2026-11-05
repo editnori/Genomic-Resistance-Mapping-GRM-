@@ -4,8 +4,9 @@
 # Both must be sealed, their claims must name their seals' digests, and every
 # object of both is read back and hashed first. Then state/previous gets the
 # pair state/active names (if any), a history record is written, and
-# state/active gets the new pair: one PUT, so the Worker serves either the old
-# pair or the new one, never a mix. With GRM_SITE_URL set, smoke.py then
+# state/active gets the new pair: one PUT, so each response comes from the old
+# pair or the new one (an /assets/ miss can also come from state/previous's
+# app; docs/static-hosting.md). With GRM_SITE_URL set, smoke.py then
 # checks the served site, and a failure restores both state objects (exit 1).
 # rollback.sh runs this with --rollback, which also requires the pair to be
 # the one state/previous names.

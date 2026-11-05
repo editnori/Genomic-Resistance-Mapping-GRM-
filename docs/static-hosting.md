@@ -11,17 +11,17 @@ Nothing here has run against a Cloudflare account yet. Everything below was test
 | Request | Answer |
 |---|---|
 | `/data/PATH` | `pub/NAME/report/PATH` of the active publication; 404 `not found` (`no-store`) when it is missing, a directory, or the path has a `..` segment. `/data/research.json` is 404, as the app expects |
-| `/` and any other path | `app/LABEL/dist/PATH` of the active app; an unknown path gets `index.html`, so client routes such as `/species/NAME` load |
+| `/` and any other path | `app/LABEL/dist/PATH` of the active app; an unknown path gets `index.html`, so client routes such as `/species/NAME` load. A path under `/assets/` that the active app lacks is tried in the `state/previous` app first, when that app has another label |
 | Methods other than GET and HEAD | 405 with `Allow: GET, HEAD` |
 | `Range: bytes=…` | one range: 206 with `Content-Range`; a list, a malformed or unsatisfiable range: 416 with `Content-Range: bytes */SIZE`. Ranges past the end are clamped, as in `grm serve` |
 | Content types | `serve.rs`'s table (html, js, mjs, css, json, svg, png, woff2, woff, ico), else `application/octet-stream` |
-| `Cache-Control` | `public, max-age=31536000, immutable` for files under `/assets/` that exist; `no-cache` for everything else served, including the `index.html` fallback; `no-store` for errors |
+| `Cache-Control` | `public, max-age=31536000, immutable` for files under `/assets/` that exist, in the active app or the previous one; `no-cache` for everything else served, including the `index.html` fallback; `no-store` for errors |
 
-Beyond `grm serve`, every object response carries an `ETag` and honours `If-None-Match` (304) and `If-Range`, and the Worker answers 503 while no pair is active. One difference cannot be removed: the Workers runtime resolves `..` and `%2e%2e` segments in the URL before the Worker sees it, so `/data/../x` arrives as `/x` and gets `index.html` (200) where `grm serve` answers 404. Nothing outside the active pair's prefixes is reachable either way. Browsers resolve those segments themselves, so the app never sends them.
+Beyond `grm serve`, every object response carries an `ETag` and honours `If-None-Match` (304) and `If-Range`, and the Worker answers 503 while no pair is active. One difference cannot be removed: the Workers runtime resolves `..` and `%2e%2e` segments in the URL before the Worker sees it, so `/data/../x` arrives as `/x` and gets `index.html` (200) where `grm serve` answers 404. Nothing outside the active pair's prefixes, and the previous app's `assets/`, is reachable either way. Browsers resolve those segments themselves, so the app never sends them.
 
-Each request reads `state/active` once, so it is answered wholly from one pair. R2 is strongly consistent, so a switch takes effect for the next request everywhere.
+Each request reads `state/active` once, so it is answered from that one pair; only an `/assets/` miss also reads `state/previous` (below). R2 is strongly consistent, so a switch takes effect for the next request everywhere.
 
-**Known limit, to fix before the next app switch.** A tab opened before a switch to a new app label keeps the old app in memory. Its lazy-loaded chunks under `/assets/` no longer exist in the new app, so they come back as `index.html` (200 `text/html`), and the Present page fails in that tab until it reloads; it can also read new data under the old index. Switching publications under the same app label is unaffected. The fix is for the Worker to serve `/assets/` misses from the `state/previous` app too.
+**A tab opened before a switch.** It keeps the old app in memory and asks for that app's lazy-loaded chunks under `/assets/`, such as the Present page's. The new app doesn't have them, so the Worker serves them from the `state/previous` app (hashed names can't collide). That covers one activation back, since `state/previous` names the pair that was active just before the latest activation. After an app switch and then a publication-only switch, both records name the new app, so a tab from before the app switch gets `index.html` for those chunks, as does a tab two app switches old, and its Present page fails until it reloads. A `state/previous` that doesn't parse is ignored here, so those misses get `index.html` rather than an error. Until it reloads, such a tab also reads `/data/` from the new publication under the index it already holds.
 
 ## Bucket layout and guarantees
 
@@ -38,7 +38,7 @@ Each request reads `state/active` once, so it is answered wholly from one pair. 
 
 - **A release is immutable once published.** `publish.sh` and `publish-app.sh` refuse a name whose claim or seal exists, so an interrupted upload leaves its claim and the retry takes a new name. Nothing in these scripts deletes or overwrites under `app/` or `pub/`. Two operators publishing the same new name at the same instant are not guarded against (Wrangler has no conditional write); run one operator at a time. The same holds for `activate.sh` and `rollback.sh`: two at once could each record the other's pair as `state/previous`.
 - **Only sealed, intact releases are activated.** `activate.sh` requires both seals, requires each claim to name its seal's digest, and reads back and hashes every object of both before it switches.
-- **Activation is atomic.** It writes `state/previous` (the old active pair), a history record, then `state/active`, each read back and compared. The Worker reads only `state/active`, one object, so it serves the old pair or the new one, never a mix. With `GRM_SITE_URL` set, `smoke.py` then checks the served site, and a failure restores both state objects byte for byte (exit 1).
+- **Activation is atomic.** It writes `state/previous` (the old active pair), a history record, then `state/active`, each read back and compared. The Worker reads `state/active`, one object, so each response comes from one pair, the old or the new (an `/assets/` miss also reads `state/previous`, above). With `GRM_SITE_URL` set, `smoke.py` then checks the served site, and a failure restores both state objects byte for byte (exit 1).
 - **Rollback names the previous release.** `rollback.sh` activates the pair in `state/previous`, with every activation check, and swaps the two, so a second rollback switches forward again.
 - **Every step is logged.** Each `--apply` step appends a UTC line to `GRM_SITE_LOG`, and failures too. Dry runs (no `--apply`) run every read-only check, print what they would do and log nothing.
 
@@ -63,6 +63,7 @@ All take their configuration from the environment; see the header of `ops/cloudf
 - `release.sh`: publish refusals (missing expectations, wrong count or revision, tampered source, bad name, existing name, existing claim), activation refusals (unsealed, tampered object, missing app, already active), activation and rollback state, the served check and its restore, the log.
 - `routes.py`: the Worker against `grm serve` on the same tree, route by route: status, the headers above and body SHA-256.
 - `ranges.py`: range requests on one large file against its bytes on disk.
+- `long-key.mjs` and `previous-assets.mjs` (plain `node`, a stub bucket): a path whose key passes R2's 1,024-byte limit answers as missing, not 500; and an `/assets/` miss is served from the previous app only when that app has another label (with ranges and conditional requests as usual), never for `/data/` or other paths, and a `state/previous` that doesn't parse gives `index.html`, not 500.
 
 ## Runbook: revision 9 live
 
