@@ -84,14 +84,31 @@ fn feature_kmers(matrix: &FeatureMatrix, ds: &Dataset, f: u32) -> (usize, Vec<u6
     (total, out)
 }
 
+/// BV-BRC returns a genome's features in no fixed order, and the locus picks
+/// below keep the first of equal candidates (`min_by_key`), so a download's
+/// order could choose the gene. Sorting on every field fixes the choice.
+fn in_order(mut features: Vec<Feature>) -> Vec<Feature> {
+    features.sort_by(|a, b| {
+        a.accession
+            .cmp(&b.accession)
+            .then(a.start.cmp(&b.start))
+            .then(a.end.cmp(&b.end))
+            .then_with(|| a.strand.cmp(&b.strand))
+            .then_with(|| a.patric_id.cmp(&b.patric_id))
+            .then_with(|| a.gene.cmp(&b.gene))
+            .then_with(|| a.product.cmp(&b.product))
+    });
+    features
+}
+
 fn load_features(layout: &Layout, client: &Client, genome_id: &str) -> Result<Vec<Feature>> {
     let path = layout.features_dir().join(format!("{genome_id}.json"));
     if let Ok(bytes) = std::fs::read(&path)
         && let Ok(f) = serde_json::from_slice(&bytes)
     {
-        return Ok(f);
+        return Ok(in_order(f));
     }
-    let features = client.fetch_features(genome_id)?;
+    let features = in_order(client.fetch_features(genome_id)?);
     std::fs::create_dir_all(layout.features_dir())?;
     std::fs::write(&path, serde_json::to_vec(&features)?)?;
     Ok(features)
@@ -357,12 +374,11 @@ mod tests {
     use super::*;
     use crate::kset;
 
-    #[test]
-    fn a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached() {
-        let dir = tempfile::tempdir().unwrap();
-        let layout = Layout::new(dir.path());
+    /// g0 carries an accessory block, the only feature, that g1 lacks. Its
+    /// k-mers sit at 55–104 on g0's contig `c`.
+    fn accessory_fixture(dir: &std::path::Path) -> (Layout, FeatureMatrix, Dataset) {
+        let layout = Layout::new(dir);
         let space = KmerSpace::new(15);
-        // g0 carries an accessory block, the only feature, that g1 lacks.
         let core = "ACGTTGCAAGGCTTACCGATAGCTAGGCTTAACGGTACCATGCAGTTCAGGA";
         let accessory = "TTTGGGCCCAAATGTGTCACAGGATCCATGCAAGCTTGGACTGACCTAGG";
         std::fs::create_dir_all(layout.fasta_dir()).unwrap();
@@ -372,26 +388,35 @@ mod tests {
                 let fasta = bvbrc::fasta_path(&layout.fasta_dir(), id);
                 std::fs::write(&fasta, format!(">c\n{seq}\n")).unwrap();
                 let (values, _) = kset::count_file(&fasta, &space, 1).unwrap();
-                let path = dir.path().join(format!("{id}.kset"));
+                let path = dir.join(format!("{id}.kset"));
                 kset::write(&path, id, &space, &values).unwrap();
                 path
             })
             .collect();
         let matrix = crate::matrix::build(&ksets, 1, 8).unwrap();
         let ds = Dataset::project(&matrix, vec![0, 1], &[true, false], 1);
-        let locus = || {
-            let notes = annotate(
-                &layout,
-                &Client::offline(),
-                &matrix,
-                &ds,
-                &BTreeSet::from([0]),
-                None,
-                &HashMap::new(),
-            )
-            .unwrap();
-            serde_json::to_value(&notes[0].locus).unwrap()
-        };
+        (layout, matrix, ds)
+    }
+
+    fn locus_of(layout: &Layout, matrix: &FeatureMatrix, ds: &Dataset) -> serde_json::Value {
+        let notes = annotate(
+            layout,
+            &Client::offline(),
+            matrix,
+            ds,
+            &BTreeSet::from([0]),
+            None,
+            &HashMap::new(),
+        )
+        .unwrap();
+        serde_json::to_value(&notes[0].locus).unwrap()
+    }
+
+    #[test]
+    fn a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, matrix, ds) = accessory_fixture(dir.path());
+        let locus = || locus_of(&layout, &matrix, &ds);
         // No features are cached for g0, and BV-BRC cannot be reached.
         let missing = locus();
         assert_eq!(missing["genome_id"], "g0");
@@ -409,5 +434,21 @@ mod tests {
         let annotated = locus();
         assert_eq!(annotated["gene"], "blaX");
         assert!(annotated.get("annotation_error").is_none(), "{annotated}");
+    }
+
+    #[test]
+    fn the_cached_feature_order_does_not_choose_the_gene() {
+        // Two CDS of the same length both hold the accessory k-mers. The one
+        // with the lower start names the locus, whichever way round the cache
+        // lists them.
+        let a = r#"{"accession": "c", "start": 1, "end": 200, "strand": "+", "gene": "blaA"}"#;
+        let b = r#"{"accession": "c", "start": 2, "end": 201, "strand": "+", "gene": "blaB"}"#;
+        for listed in [format!("[{a}, {b}]"), format!("[{b}, {a}]")] {
+            let dir = tempfile::tempdir().unwrap();
+            let (layout, matrix, ds) = accessory_fixture(dir.path());
+            std::fs::create_dir_all(layout.features_dir()).unwrap();
+            std::fs::write(layout.features_dir().join("g0.json"), &listed).unwrap();
+            assert_eq!(locus_of(&layout, &matrix, &ds)["gene"], "blaA", "{listed}");
+        }
     }
 }

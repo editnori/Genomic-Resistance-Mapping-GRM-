@@ -103,6 +103,7 @@ src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason
 src/lib.rs analysis::tests::unsupported_assays_are_listed_with_their_reason_instead_of_a_panel
 src/lib.rs analysis::tests::write_lasso_scan_fixture_root [ignored]
 src/lib.rs annotate::tests::a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached
+src/lib.rs annotate::tests::the_cached_feature_order_does_not_choose_the_gene
 src/lib.rs bits::tests::set_algebra_and_counts
 src/lib.rs bvbrc::tests::parses_mixed_type_fields
 src/lib.rs catalog::tests::catalog_loads_both_accessions_and_trims_the_version
