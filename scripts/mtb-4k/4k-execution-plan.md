@@ -28,6 +28,9 @@ PF-D8, D14 as corrected by I4 and M2, M3, and "MTB carry-over into X4"). What ch
   (section 3).
 - **Reference.** `RN_REFERENCE_ROOT` is revision 12's g5 data root itself, so section 7b reads `$REF/species/...`,
   not `$REF/data/species/...`, and the fold rebuild reads it through a one-link view.
+- **Prefix gate instead of the pilot (main's Q1 ruling).** The build-target change would repeat section 4's pilot;
+  instead X1 stops right after `matrix:prefix` unless the prefix matrix equals box R7's g5 matrix of the same 2,000
+  genomes byte for byte (section 5).
 
 A new plan revision needs its own review: gate 1's `PLAN_VALIDATORS_REVIEW=APPROVED` for the commit that carries
 revision 7. Revision 6's text below stands except where revision 7 changes it.
@@ -435,10 +438,11 @@ whose matrix code the pilot's conclusion was carried to), main's side of the mer
 `.cargo/config.toml` (`target-cpu=native` to `x86-64-v3`, main's `b32456e`); `src/lib.rs` (declares the new modules
 `ablate` and `intervals`, which no module of the closure uses); `src/main.rs` (the `intervals` command, not the
 `matrix` or `count` wiring); and `src/matrix.rs` (two doc-comment lines). The config change changes the machine code
-of every matrix module, so **by this rule the pilot is repeated before section 5, unless main rules otherwise**. It
-is an open question for main (MTB-PREP's report, Q1). Section 7b's `cmp` of X1's sparse prefix matrix with box R7's
-stock-built matrix of the same 2,000 genomes, both built for `x86-64-v3`, is the evidence the alternative would rest
-on; X4 runs it.
+of every matrix module, so by this rule the pilot would be repeated before section 5. **Main ruled (5 Nov, Q1 (b)):
+no pilot repeat.** Instead X1 stops right after `matrix:prefix` unless the prefix `genomes.txt` and its five matrix
+files are byte-identical to revision 12's g5 matrix of the same 2,000 genomes (box R7's, built by the stock
+pipeline, pushed as `/home/user/grm-ref`): section 7b's comparison, moved to the earliest point (section 5). The
+pilot's launcher is gone, and resources are covered by PF-D7's measured gates.
 The text and commands below are revision 5's, kept for the record.
 
 It is separate from the 2,000-genome prefix stage and uses its own two roots,
@@ -590,9 +594,22 @@ done
 Run the cohorts one at a time, prefix first. Any failure stops the later ones. Re-check the
 resource gate before each.
 
+**The prefix gate (revision 7, main's Q1 ruling).** Right after the prefix matrix is built, before its validation
+and before any other cohort, the prefix must equal revision 12's g5 reference byte for byte; any difference, or a
+file missing on either side, is a stop. The kit (`mtb-box.sh`'s `prefix_vs_reference`) writes the same comparison
+as a receipt, `$RUN/audit/prefix-matrix-vs-reference.json`, with each file's SHA-256 on both sides:
+
+```bash
+REF=/home/user/grm-ref    # revision 12's g5 data root (box R7's out/data)
+for f in genomes.txt matrix/matrix.json matrix/patterns.bin matrix/support.bin matrix/kmer_offsets.bin matrix/kmers.bin; do
+  cmp "$RUN/cohorts/prefix/data/species/$SLUG/$f" "$REF/species/$SLUG/$f" || exit 1   # STOP: not the g5 matrix
+done
+```
+
 Revision 5's byte comparison of the prefix matrix with a frozen matrix moves to section 7b. It
-now compares against revision N's MTB 2k candidate, which may not be staged yet, and it never
-blocks training. Until it passes, the receipt records `PENDING REFERENCE`. Without it, section 5
+now compares against revision N's MTB 2k candidate. (Revision 6 let it wait, never blocking training, with
+`PENDING REFERENCE` until it passed; revision 7 runs it as the prefix gate above, because box R7 finishes before X1,
+and X4 repeats it.) Apart from it, section 5
 proves each cleaned matrix by the exact region, the 16 recounts and the recount bounds. It proves
 each 2k cohort against the cleaned full matrix by containment. Revision 5's chain to stock-built
 content ran through the frozen prefix, and here it runs through section 7b's `cmp`.
@@ -713,7 +730,8 @@ site.
 ### 7b. Revision N's MTB 2k candidate (pending reference; required for the final result)
 
 These checks need revision N's trained MTB 2k candidate (`RN_REFERENCE_ROOT`). Run them as soon as
-it is staged on Vast, before or after sections 5–7 have finished; they never block training. Until
+it is staged on Vast, before or after sections 5–7 have finished; they never block training (revision 7: the
+prefix `cmp` below has already run as section 5's prefix gate, which does stop X1). Until
 they pass, every receipt and summary of this run carries `PENDING REFERENCE`, and no final result
 is stated. A failure is a stop for review, never something to skip.
 
@@ -1000,7 +1018,13 @@ both. What each box receives, every set through `grm-boat.sh push-data` and pinn
   `drive.sh` from `RESTORE_DIRS` (two sources must agree on any file both hold). `restore` checks the set against its
   manifest before it copies anything into `$RUN`.
 
-The kit's `mtb-box.sh` runs the sections. For revision 7 it must do what sections 3 and 7b say: run
-`verify_evidence.py` from `$P` (not from `$MTB_EVIDENCE`); leave `revision_n.py verify-checkout` and the foldgen tree
-pin to the laptop before the box, since the box's source has no `.git`; and run 7b's fold rebuild through the
-one-link view. Until it does, `prepare` stops in the box.
+The kit's `mtb-box.sh` runs the sections, and `drive.sh` drives each box (both at their revision-7 versions, main's
+rulings of 5 Nov on MTB-PREP's K1–K3 and Q1):
+
+- **K1:** `prepare` runs `verify_evidence.py` from `$P`, never from `$MTB_EVIDENCE`.
+- **K2:** before `new`, `drive.sh` runs the source's `revision_n.py verify-checkout "$SRC"` and the foldgen tree pin on
+  the laptop, writes `verify-checkout.json` and `foldgen-tree.txt` in the stage folder, and refuses (exit 2, no box)
+  on either failing. The box no longer runs them: its source has no `.git`.
+- **Q1:** X1 stops right after `matrix:prefix` unless the prefix matrix equals the g5 reference (section 5's prefix
+  gate); X4's section 7b repeats the same `cmp`.
+- **K3:** `reference` runs 7b's fold rebuild through the one-link view, with the `-c` check.
