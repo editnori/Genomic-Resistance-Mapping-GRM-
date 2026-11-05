@@ -139,7 +139,7 @@ class Direction(unittest.TestCase):
         trials = [trial(0, [1, 1]), trial(1, [9, 9]), trial(2, [5, 5])]
         f = family(sel.select_history(trials, protocol("maximize")))
         self.assertEqual(f["best"]["trial_id"], 1)
-        self.assertEqual(f["selected"]["trial_id"], 1)
+        self.assertEqual(f["selected"]["trial_id"], 0)
 
     def test_minimize_picks_the_lowest_mean(self):
         trials = [trial(0, [1, 1]), trial(1, [9, 9]), trial(2, [5, 5])]
@@ -147,19 +147,11 @@ class Direction(unittest.TestCase):
         self.assertEqual(f["best"]["trial_id"], 0)
         self.assertEqual(f["selected"]["trial_id"], 0)
 
-    def test_the_se_window_opens_toward_worse_scores(self):
-        # Best mean 5, SE 1. Maximize: the window is [4, 5]; minimize, with
-        # the best at 5 too, it is [5, 6].
-        up = family(sel.select_history(
-            [trial(0, [4, 6], complexity=3), trial(1, [4, 4], complexity=1)],
-            protocol("maximize")))
-        self.assertEqual(up["threshold"], 4.0)
-        self.assertEqual([c["trial_id"] for c in up["candidate_set"]], [1, 0])
-        down = family(sel.select_history(
-            [trial(0, [4, 6], complexity=3), trial(2, [6, 6], complexity=1)],
-            protocol("minimize")))
-        self.assertEqual(down["threshold"], 6.0)
-        self.assertEqual([c["trial_id"] for c in down["candidate_set"]], [2, 0])
+    def test_minimize_ranks_the_best_but_selects_the_default(self):
+        f = family(sel.select_history(
+            [trial(0, [0.14, 0.16]), trial(2, [0.1, 0.1])], protocol("minimize")))
+        self.assertEqual((f["best"]["trial_id"], f["selected"]["trial_id"]), (2, 0))
+        self.assertAlmostEqual(f["default_gain"], 0.05, places=15)
 
 
 class Exclusions(unittest.TestCase):
@@ -188,12 +180,22 @@ class Exclusions(unittest.TestCase):
         self.assertIsNone(rows[1]["mean"])
         self.assertFalse(rows[1]["in_candidate_set"])
 
-    def test_a_family_with_no_ok_trial_selects_nothing(self):
+    def test_a_failed_default_is_still_selected(self):
         trials = [trial(0, [], status="failed", reason="boom")]
-        f = family(sel.select_history(trials, protocol()))
-        self.assertEqual(f["status"], "no_ok_trials")
-        self.assertIsNone(f["selected"])
+        r = sel.select_history(trials, protocol())
+        f = family(r)
+        self.assertEqual((f["status"], f["selected"]["trial_id"]), ("selected", 0))
+        self.assertIsNone(f["selected"]["mean"])
+        self.assertIsNone(f["best"])
+        self.assertFalse(f["default_feasible"])
         self.assertEqual(len(f["excluded"]), 1)
+        self.assertEqual([w["code"] for w in r["warnings"]],
+                         ["default_not_feasible"])
+
+    def test_a_history_without_a_default_selects_nothing(self):
+        f = family(sel.select_history([trial(1, [0.9, 0.9])], protocol()))
+        self.assertEqual((f["status"], f["selected"], f["best"]),
+                         ("no_default", None, None))
 
     def test_a_budgeted_family_with_no_trials(self):
         trials = [trial(0, [1, 2])]
@@ -201,7 +203,9 @@ class Exclusions(unittest.TestCase):
         self.assertEqual(family(r, "rf")["status"], "no_trials")
 
 
-class OneStandardError(unittest.TestCase):
+class FixedDefault(unittest.TestCase):
+    """DECISIONS F4's fallback: the default is selected whatever the scores."""
+
     def test_exact_se_on_a_hand_built_example(self):
         # Scores 1, 3, 5, 7: mean 4, squared deviations 9+1+1+9 = 20,
         # sample variance 20/3, SD sqrt(20/3), SE sqrt(20/3)/2.
@@ -212,62 +216,61 @@ class OneStandardError(unittest.TestCase):
         # Two folds: SE is half the gap, exactly.
         self.assertEqual(sel.fold_stats([4, 6]), (5.0, math.sqrt(2), 1.0))
 
-    def test_threshold_uses_the_best_trials_se_and_is_inclusive(self):
-        # Best: trial 1, mean 5, SE 1, so the maximize threshold is 4.
-        # Trial 2 has mean exactly 4 (in); trial 3 has 3.9 (out), though its
-        # own SE is large: only the best trial's SE counts.
-        trials = [trial(0, [0, 0], complexity=9),
-                  trial(1, [4, 6], complexity=5),
-                  trial(2, [4, 4], complexity=3),
-                  trial(3, [-2.1, 9.9], complexity=1)]
-        f = family(sel.select_history(trials, protocol()))
-        self.assertEqual(f["best"], {"trial_id": 1, "mean": 5.0, "se": 1.0})
-        self.assertEqual(f["threshold"], 4.0)
-        self.assertEqual([c["trial_id"] for c in f["candidate_set"]], [2, 1])
-        self.assertEqual(f["selected"]["trial_id"], 2)
-        self.assertFalse(f["selected"]["is_best"])
-
-    def test_boundary_survives_rounding(self):
-        # 0.1 + 0.2 style rounding must not drop a trial on the boundary:
-        # best mean 0.3, SE 0.1, candidate mean 0.2.
-        trials = [trial(0, [0.2, 0.4], complexity=2),
-                  trial(1, [0.2, 0.2], complexity=1)]
-        f = family(sel.select_history(trials, protocol()))
-        self.assertEqual(f["selected"]["trial_id"], 1)
-
-    def test_lower_complexity_beats_the_default(self):
-        trials = [trial(0, [5, 5], complexity=2), trial(1, [4, 6], complexity=1)]
-        f = family(sel.select_history(trials, protocol()))
-        self.assertEqual([c["trial_id"] for c in f["candidate_set"]], [1, 0])
-        self.assertEqual(f["selected"]["trial_id"], 1)
-
-    def test_the_default_wins_a_complexity_tie(self):
-        trials = [trial(0, [4.5, 4.5], complexity=2),
-                  trial(1, [4, 6], complexity=2), trial(2, [5, 5], complexity=2)]
-        f = family(sel.select_history(trials, protocol()))
+    def test_the_default_is_selected_however_far_it_trails(self):
+        trials = [trial(0, [0.50, 0.50], complexity=9), trial(1, [0.95, 0.95]),
+                  trial(2, [0.83, 0.83], complexity=1)]
+        r = sel.select_history(trials, protocol())
+        f = family(r)
+        self.assertEqual(f["best"], {"trial_id": 1, "mean": 0.95, "se": 0.0})
+        self.assertAlmostEqual(f["default_gain"], 0.45, places=15)
+        self.assertTrue(f["default_feasible"])
+        self.assertEqual([c["trial_id"] for c in f["candidate_set"]], [0])
         self.assertEqual(f["selected"]["trial_id"], 0)
-        # The schema makes trial 0 the default, so in a history the default
-        # also has the lowest id; the key itself ranks default before id.
+        self.assertFalse(f["selected"]["is_best"])
+        rows = {row["trial_id"]: row for row in f["trials"]}
+        self.assertEqual([rows[i]["selected"] for i in range(3)],
+                         [True, False, False])
+        self.assertEqual([rows[i]["in_candidate_set"] for i in range(3)],
+                         [True, False, False])
+        self.assertEqual(r["warnings"], [])
+        self.assertIn("fixed default (DECISIONS F4 fallback", r["rule"])
+        self.assertNotIn("gamma", r)
+
+    def test_a_default_that_is_best_is_selected_as_best(self):
+        f = family(sel.select_history(
+            [trial(0, [0.9, 0.9]), trial(1, [0.9, 0.9]), trial(2, [0.8, 0.8])],
+            protocol()))
+        self.assertEqual((f["best"]["trial_id"], f["selected"]["trial_id"]), (0, 0))
+        self.assertTrue(f["selected"]["is_best"])
+        self.assertEqual(f["default_gain"], 0.0)
+
+    def test_best_ties_go_to_the_default_then_the_lowest_id(self):
+        f = family(sel.select_history(
+            [trial(0, [0.5, 0.5]), trial(5, [0.9, 0.9], complexity=1),
+             trial(3, [0.8, 1.0], complexity=9)],
+            protocol(budgets={"cart": 6})))
+        self.assertEqual((f["best"]["trial_id"], f["selected"]["trial_id"]), (3, 0))
         key = sel.preference_key
         a = {"complexity": 2, "is_default": True, "trial_id": 9}
         b = {"complexity": 2, "is_default": False, "trial_id": 1}
         c = {"complexity": 1, "is_default": False, "trial_id": 5}
-        self.assertEqual(sorted([a, b, c], key=key), [c, a, b])
+        self.assertEqual(sorted([a, b, c], key=key), [a, b, c])
 
-    def test_lowest_id_breaks_the_last_tie(self):
-        trials = [trial(0, [0, 0], complexity=1), trial(5, [4, 6], complexity=2),
-                  trial(3, [4, 6], complexity=2), trial(4, [5, 5], complexity=3)]
-        f = family(sel.select_history(trials, protocol(budgets={"cart": 6})))
-        self.assertEqual([c["trial_id"] for c in f["candidate_set"]], [3, 5, 4])
-        self.assertEqual(f["selected"]["trial_id"], 3)
+    def test_an_infeasible_default_is_selected_and_flagged(self):
+        r = sel.select_history(
+            [trial(0, [0.8, 0.8], acc=[0.1, 0.1]), trial(1, [0.7, 0.7])],
+            protocol(constraints=[{"metric": "acc", "op": ">=", "bound": 0.5}]))
+        f = family(r)
+        self.assertEqual((f["selected"]["trial_id"], f["best"]["trial_id"]), (0, 1))
+        self.assertEqual((f["default_feasible"], f["default_gain"]), (False, None))
+        self.assertEqual([(w["code"], w["family"]) for w in r["warnings"]],
+                         [("default_not_feasible", "cart")])
 
-    def test_equal_best_means_resolve_by_preference(self):
-        trials = [trial(1, [4, 6], complexity=2), trial(2, [5, 5], complexity=1)]
-        trials.insert(0, trial(0, [0, 0]))
-        f = family(sel.select_history(trials, protocol()))
-        self.assertEqual(f["best"]["trial_id"], 2)
-        self.assertEqual(f["best"]["se"], 0.0)
-        self.assertEqual([c["trial_id"] for c in f["candidate_set"]], [2, 1])
+    def test_the_selected_inner_mean_is_labelled_selection_biased(self):
+        f = family(sel.select_history([trial(0, [0.8, 0.8])], protocol()))
+        self.assertEqual(f["selected"]["score_label"], sel.SELECTED_SCORE_LABEL)
+        self.assertIn("selection-biased tuning score",
+                      f["selected"]["score_label"])
 
     def test_se_label_is_carried(self):
         r = sel.select_history([trial(0, [1, 2])], protocol())
@@ -437,8 +440,9 @@ class Constraints(unittest.TestCase):
         f = family(r)
         self.assertEqual((f["n_ok"], f["n_feasible"]), (4, 2))
         self.assertEqual(f["best"], {"trial_id": 2, "mean": 8.0, "se": 0.0})
-        self.assertEqual(f["selected"]["trial_id"], 2)
-        self.assertEqual([c["trial_id"] for c in f["candidate_set"]], [2])
+        self.assertEqual(f["selected"]["trial_id"], 0)
+        self.assertEqual([c["trial_id"] for c in f["candidate_set"]], [0])
+        self.assertEqual(f["default_gain"], 3.0)
         self.assertEqual(f["excluded"], [
             {"trial_id": 1, "status": "ok", "reason": None,
              "excluded_because": ["constraint acc >= 0.5 not met (acc is 0.2)"]},
@@ -454,15 +458,16 @@ class Constraints(unittest.TestCase):
         self.assertFalse(rows[0]["excluded"])
         b = r["budgets"]["families"]["cart"]
         self.assertEqual((b["ok"], b["feasible"], b["infeasible"]), (4, 2, 2))
-        # Without constraints, the same history selects trial 1.
+        # Without constraints, the same history's best is trial 1; the
+        # default is selected either way.
         self.assertEqual(family(sel.select_history(
-            self.history(), protocol()))["selected"]["trial_id"], 1)
+            self.history(), protocol()))["best"]["trial_id"], 1)
 
     def test_no_feasible_trial(self):
         f = family(sel.select_history(self.history(), protocol(constraints=[
             {"metric": "auc", "op": ">=", "bound": 10}])))
-        self.assertEqual(f["status"], "no_feasible_trials")
-        self.assertIsNone(f["selected"])
+        self.assertEqual((f["status"], f["selected"]["trial_id"]), ("selected", 0))
+        self.assertEqual((f["best"], f["default_feasible"]), (None, False))
         self.assertEqual(len(f["excluded"]), 4)
 
     def test_unequal_feasible_flag_only_with_constraints(self):
@@ -501,7 +506,8 @@ class TaskBProtocol(unittest.TestCase):
         r = sel.select_history(b_history(bp, {("cart", 0): [1, 2],
                                               ("cart", 1): [3, 3],
                                               ("rf", 0): [1, 2]}), bp, BP)
-        self.assertEqual(family(r)["selected"]["trial_id"], 1)
+        self.assertEqual(family(r)["best"]["trial_id"], 1)
+        self.assertEqual(family(r)["selected"]["trial_id"], 0)
         self.assertEqual(r["folds"], [0, 1])
 
     def test_refuses_bad_task_b_protocol(self):
@@ -587,7 +593,7 @@ class TaskBProtocol(unittest.TestCase):
         trials = [b_trial(bp, 0, [1, 1]), b_trial(bp, 1, [9, 9]),
                   b_trial(bp, 2, [5, 5])]
         self.assertEqual(family(sel.select_history(trials, bp, BP))
-                         ["selected"]["trial_id"], 1)
+                         ["best"]["trial_id"], 1)
         tampered = copy.deepcopy(bp)
         tampered["objective"]["direction"] = "minimize"
         with self.assertRaises(sel.HistoryError) as cm:
@@ -602,8 +608,7 @@ class TaskBProtocol(unittest.TestCase):
                         n=2)
         trials = [b_trial(bp, 0, [0.7, 0.8]),
                   b_trial(bp, 1, [0.9, 0.95], complexity=3)]
-        self.assertEqual(family(sel.select_history(trials, bp, BP))["status"],
-                         "no_feasible_trials")
+        self.assertIsNone(family(sel.select_history(trials, bp, BP))["best"])
         tampered = copy.deepcopy(bp)
         tampered["objective"]["constraints"][0]["bound"] = 10
         with self.assertRaises(sel.HistoryError) as cm:
@@ -691,8 +696,8 @@ class TaskBPlan(unittest.TestCase):
 
     def test_the_planned_history_is_accepted(self):
         r = sel.select_history(self.h, self.p, BP)
-        self.assertEqual((r["folds"], family(r)["selected"]["trial_id"]),
-                         ([0, 1], 2))
+        self.assertEqual((r["folds"], family(r)["best"]["trial_id"],
+                          family(r)["selected"]["trial_id"]), ([0, 1], 2, 0))
         self.assertEqual(sel.budget_accounting(self.h, self.p, BP)["flags"], [])
 
     def test_off_plan_config_is_refused(self):
@@ -796,8 +801,8 @@ class TaskBPlan(unittest.TestCase):
         failed = [dict(t, status="failed", reason="x", inner_scores=[])
                   for t in self.h]
         r = sel.select_history(failed, self.p, BP)
-        self.assertEqual((r["folds"], family(r)["status"]),
-                         ([0, 1], "no_ok_trials"))
+        self.assertEqual((r["folds"], family(r)["status"],
+                          family(r)["default_feasible"]), ([0, 1], "selected", False))
 
     def test_a_fold_plan_given_with_a_flat_protocol_is_checked(self):
         p = protocol(fold_plan_hash=plan_hash(BP), budgets={"cart": 2})
@@ -856,7 +861,7 @@ class FoldSets(unittest.TestCase):
         rf2["inner_scores"].append({"fold": 9, "metrics": {"auc": 99, "acc": 0.5}})
         r = sel.select_history(trials, protocol(budgets=dict.fromkeys(names, 3)))
         self.assertEqual(r["folds"], [0, 1, 2])
-        self.assertEqual({f: v["selected"]["trial_id"]
+        self.assertEqual({f: v["best"]["trial_id"]
                           for f, v in r["families"].items()},
                          {"cart": 2, "gbt": 2, "lasso": 2, "rf": 1, "scm": 2})
         self.assertEqual(family(r, "rf")["excluded"][0]["excluded_because"], [
@@ -973,26 +978,26 @@ def outer(trials, i, **kw):
 
 class Stability(unittest.TestCase):
     def run_with(self, depth_and_score, run=0):
-        """Outer fold `run`: a history where trial 1 (config depth d,
-        min_leaf 5, and lr unless it is None) wins clearly."""
+        """Outer fold `run`: a history whose default (config depth d,
+        min_leaf 5, and lr unless it is None) is selected, though trial 1
+        scores higher."""
         d, lr = depth_and_score
         config = {"depth": d, "min_leaf": 5}
         if lr is not None:
             config["lr"] = lr
-        trials = [trial(0, [0, 0], config={"depth": 1, "min_leaf": 5}),
-                  trial(1, [9, 9], config=config)]
+        trials = [trial(0, [0, 0], config=config),
+                  trial(1, [9, 9], config={"depth": 1, "min_leaf": 5})]
         return outer(trials, run, budgets={"cart": 2})
 
     def test_counts_and_spread(self):
         runs = [self.run_with(x, i) for i, x in enumerate(
             [(4, "a"), (4, "a"), (8, "b"), (6, None)])]
-        failed = outer([trial(0, [], status="failed"),
-                        trial(1, [], status="failed")], 4, budgets={"cart": 2})
+        failed = outer([trial(1, [], status="failed")], 4, budgets={"cart": 2})
         s = sel.stability(runs + [failed], ["o0", "o1", "o2", "o3", "o4"])
         f = s["families"]["cart"]
         self.assertEqual((f["n_runs"], f["selected_in"]), (5, 4))
         self.assertEqual(f["runs_without_selection"], ["o4"])
-        self.assertEqual(f["default_selected"], 0)
+        self.assertEqual(f["default_selected"], 4)
         self.assertEqual([(c["config"]["depth"], c["count"], c["runs"])
                           for c in f["configs"]],
                          [(4, 2, ["o0", "o1"]), (6, 1, ["o3"]), (8, 1, ["o2"])])
@@ -1022,8 +1027,8 @@ class Stability(unittest.TestCase):
         self.assertEqual(f["params"]["min_leaf"]["distinct"], 1)
 
     def test_integer_and_float_values_stay_distinct(self):
-        runs = [outer([trial(0, [0, 0], config={"lr": 0}),
-                       trial(1, [9, 9], config={"lr": lr})], i,
+        runs = [outer([trial(0, [0, 0], config={"lr": lr}),
+                       trial(1, [9, 9], config={"lr": 0})], i,
                       budgets={"cart": 2}) for i, lr in enumerate((1, 1.0, 1))]
         f = sel.stability(runs)["families"]["cart"]
         self.assertEqual([(c["config"], c["count"]) for c in f["configs"]],
@@ -1046,19 +1051,15 @@ class Stability(unittest.TestCase):
     def test_numeric_spread_skips_internal_search_lists(self):
         grid = {"internal_search": True, "depth": [1, 2, 3], "kind": ["a", "b"],
                 "lr": [0.5]}
-        space = b_protocol()["families"]["cart"]["space"]
 
-        def run(i, winner):
-            # Outer fold i; trial `winner` wins. Planned depths: trial 1 is 2,
-            # trial 2 is 9.
-            p = b_protocol(plan=b_plan(i), n=3, families={"cart": {
-                "default": grid, "space": space}})
-            return sel.select_history(b_history(p, {("cart", winner): [9, 9]}),
-                                      p, b_plan(i))
+        def run(i, default):
+            # Outer fold i, whose default config is `default`.
+            return outer([trial(0, [9, 9], config=default)], i,
+                         budgets={"cart": 1})
 
-        f = sel.stability([run(0, 0), run(1, 1), run(2, 2)])[
-            "families"]["cart"]
-        self.assertEqual((f["selected_in"], f["default_selected"]), (3, 1))
+        f = sel.stability([run(0, grid), run(1, {"depth": 2}),
+                           run(2, {"depth": 9})])["families"]["cart"]
+        self.assertEqual((f["selected_in"], f["default_selected"]), (3, 3))
         depth = f["params"]["depth"]
         self.assertEqual(depth["present"], 3)
         self.assertEqual({k: depth["numeric"][k] for k in

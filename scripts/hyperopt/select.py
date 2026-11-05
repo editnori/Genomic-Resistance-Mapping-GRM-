@@ -30,15 +30,18 @@ match, and then, for each learner family:
   to that trial field; any other applies to the mean of that metric over the
   trial's inner folds. An ok trial that fails one is excluded as infeasible,
   with the constraint and its value recorded;
-- applies the one-standard-error rule to the feasible ok trials. The best
-  trial has the best mean (ties go to the preference order below). The
-  candidates are the feasible trials whose mean is within one SE of the best
-  mean, where the SE is the best trial's.
-  Among the candidates it prefers lower complexity, then the default config,
-  then the lowest trial id. The candidates are also returned as the
-  indistinguishable-candidate set.
+- selects the family default, the fixed default production runs, whatever
+  the inner scores (RULE; docs/hyperopt-selection.md). This is DECISIONS
+  F4's fallback: the default-anchored rule met A1 to A5 on the toy suite
+  but failed A6, so no tuned config replaces a default. The search's
+  trials are still checked, scored and listed, and the best feasible trial
+  is reported for the record (`best`, `default_gain`), never selected. A
+  default that is not feasible (failed, unconverged, off the history's
+  folds or outside a constraint) is still the selection, and the family
+  and the run say so (`default_feasible`, a `default_not_feasible`
+  warning). A history with no default trial selects nothing.
 
-The SE is descriptive. Inner folds share training data, so the fold scores are
+The SE is descriptive and sets no boundary. Inner folds share training data, so the fold scores are
 not independent samples and the SE is not the basis of any test, interval or
 p-value. SE_LABEL says so, and every output that carries an SE carries it.
 
@@ -88,8 +91,16 @@ SCORE_LABEL = (
     "Every mean, SD and SE here is an inner-tuning score: the objective over "
     "the inner folds of one outer training fold, used only to choose a "
     "config. None is test performance. Choosing the best inner mean biases "
-    "it upward, so a selected trial's inner-tuning mean overstates how its "
-    "config scores on samples it was not tuned on."
+    "it upward, so a selected trial's inner-tuning mean is a selection-biased "
+    "tuning score: it overstates how its config scores on samples it was "
+    "not tuned on. Report the selected config's outer-fold score instead."
+)
+
+# What a selected trial's inner mean is, carried beside it.
+SELECTED_SCORE_LABEL = (
+    "selection-biased tuning score: the selected trial's inner-tuning mean, "
+    "not an estimate of its performance. Its score on the outer test fold, "
+    "which the selection never saw, is the one to report."
 )
 
 OUTER_EVALUATION = (
@@ -100,11 +111,12 @@ OUTER_EVALUATION = (
 )
 
 RULE = (
-    "one-standard-error rule: candidates are the ok trials that meet every "
-    "constraint and whose mean objective is within one SE (the best "
-    "trial's) of the best such mean; among "
-    "them prefer lower complexity, then the default config, then the lowest "
-    "trial id"
+    "fixed default (DECISIONS F4 fallback, 5 Nov 2026): each family's "
+    "default config is selected whatever the inner scores, so no tuned "
+    "config replaces it. The default-anchored rule (keep the default unless "
+    "the best inner mean beats it by more than 0.04) met A1 to A5 on the "
+    "toy suite but lost more than 0.005 to the default on the lineage split "
+    "for scm in A6's paired outer comparison (docs/hyperopt-selection.md)"
 )
 
 # Searched parameters production has no knob for. A protocol may still list
@@ -117,10 +129,6 @@ NO_PRODUCTION_KNOB = {
         "(lasso.rs path_problem) and has no knob for it, so a config that "
         "varies it is not one production can fit (review F1)"),
 }
-
-# Relative slack on the one-SE boundary, so a trial whose mean lies exactly on
-# it in real arithmetic is not dropped by floating-point rounding.
-BOUNDARY_RTOL = 1e-12
 
 # The trial record schema: field name and a check of its value. The fields in
 # TRIAL_FIELDS may also be null on a failed trial. `reason` is present exactly
@@ -609,9 +617,9 @@ def constraint_check(trial, protocol):
 
 
 def preference_key(trial):
-    """Order among indistinguishable candidates: lower complexity, then the
-    default config, then the lowest trial id."""
-    return (trial["complexity"], not trial["is_default"], trial["trial_id"])
+    """Order among trials with equal means: the default config, then the
+    lowest trial id. Complexity plays no part."""
+    return (not trial["is_default"], trial["trial_id"])
 
 
 def select_history(trials, protocol, fold_plan=None):
@@ -620,19 +628,28 @@ def select_history(trials, protocol, fold_plan=None):
 
     Returns the objective, direction, hashes, the protocol's search_hash,
     planned budgets and constraints, history_sha256, inner folds, SE_LABEL,
-    SCORE_LABEL, RULE, `warnings` (each family that searches a parameter in
-    NO_PRODUCTION_KNOB, as {code, family, message}; the selection is
-    unchanged), `families` (one result per budgeted family; see
-    _select_family) and `budgets` (see budget_accounting)."""
+    SCORE_LABEL, RULE, `warnings` (each family that searches a
+    parameter in NO_PRODUCTION_KNOB, and each family whose selected default
+    is not a feasible trial, as {code, family, message}), `families`
+    (one result per budgeted family; see _select_family) and `budgets` (see
+    budget_accounting)."""
     p = as_protocol(protocol)
     folds = validate_history(trials, p, fold_plan)
     by_family = {fam: [] for fam in p.budgets}
     for t in trials:
         by_family[t["family"]].append(t)
+    families = {fam: _select_family(fam, ts, folds, p)
+                for fam, ts in by_family.items()}
     warnings = [
         _flag("no_production_knob", fam, f"{fam} searches {param}: {why}")
         for (fam, param), why in sorted(NO_PRODUCTION_KNOB.items())
         if param in (p.families or {}).get(fam, {}).get("space", {})]
+    warnings += [
+        _flag("default_not_feasible", fam, f"{fam}'s default is selected, "
+              "as the fixed-default rule requires, though it is not a "
+              "feasible trial")
+        for fam, f in families.items()
+        if f["status"] == "selected" and not f["default_feasible"]]
     return {
         "objective": p.objective,
         "direction": p.direction,
@@ -647,14 +664,13 @@ def select_history(trials, protocol, fold_plan=None):
         "score_label": SCORE_LABEL,
         "rule": RULE,
         "warnings": warnings,
-        "families": {fam: _select_family(fam, ts, folds, p)
-                     for fam, ts in by_family.items()},
+        "families": families,
         "budgets": _budgets(trials, p, folds),
     }
 
 
 def _select_family(family, trials, folds, p):
-    """The one-SE selection for one family.
+    """The fixed-default selection for one family.
 
     `trials` has one row per trial, excluded ones included, ordered by trial
     id: status, reason (the trial's own, null on ok trials), config,
@@ -667,11 +683,16 @@ def _select_family(family, trials, folds, p):
     unconverged or fold_set_mismatch trial keeps its fold_scores as
     reported, used for nothing. An infeasible ok trial keeps its mean and SE
     but is excluded.
-    `excluded` lists the excluded trials and why. `best` is the best-mean
-    feasible trial, `threshold` the one-SE boundary, `candidate_set` the
-    indistinguishable candidates in preference order, and `selected` the
-    first of them. `status` is "selected", "no_feasible_trials" (ok trials,
-    none meets the constraints), "no_ok_trials" or "no_trials"."""
+    `excluded` lists the excluded trials and why. `selected` is the default
+    trial, whatever its scores, with its inner mean labelled
+    (SELECTED_SCORE_LABEL) as a selection-biased tuning score;
+    `candidate_set` holds it alone. `default_feasible` says whether it is a
+    feasible trial. For the record only, `best` is the best-mean feasible
+    trial (ties to the default, then the lowest trial id) and
+    `default_gain` how far its mean beats the default's, in the objective's
+    direction (null unless the default is feasible); neither changes the
+    selection. `status` is "selected", "no_default" (no trial 0) or
+    "no_trials"."""
     rows = []
     for t in sorted(trials, key=lambda t: t["trial_id"]):
         row = {
@@ -717,45 +738,40 @@ def _select_family(family, trials, folds, p):
                  "reason": r["reason"],
                  "excluded_because": r["excluded_because"]}
                 for r in rows if r["excluded"]]
-    n_ok = sum(r["status"] == "ok" for r in rows)
+    ok = [r for r in rows if not r["excluded"]]
+    default = next((r for r in rows if r["is_default"]), None)
     result = {
         "family": family,
         "n_trials": len(rows),
-        "n_ok": n_ok,
-        "n_feasible": len(rows) - len(excluded),
+        "n_ok": sum(r["status"] == "ok" for r in rows),
+        "n_feasible": len(ok),
         "excluded": excluded,
         "best": None,
-        "threshold": None,
+        "default_feasible": default is not None and not default["excluded"],
+        "default_gain": None,
         "candidate_set": [],
         "selected": None,
-        "status": ("no_trials" if not rows else
-                   "no_feasible_trials" if n_ok else "no_ok_trials"),
+        "status": "no_trials" if not rows else "no_default",
         "se_label": SE_LABEL,
         "trials": rows,
     }
-    ok = [r for r in rows if not r["excluded"]]
-    if not ok:
+    if default is None:
         return result
-
-    sign = 1 if p.direction == "minimize" else -1
-    best = min(ok, key=lambda r: (sign * r["mean"], preference_key(r)))
-    threshold = best["mean"] + sign * best["se"]
-    slack = BOUNDARY_RTOL * max(1.0, abs(threshold))
-    candidates = sorted(
-        (r for r in ok if sign * (r["mean"] - threshold) <= slack),
-        key=preference_key)
-    for r in candidates:
-        r["in_candidate_set"] = True
-    chosen = candidates[0]
-    chosen["selected"] = True
+    default["in_candidate_set"] = default["selected"] = True
+    best = None
+    if ok:
+        sign = 1 if p.direction == "minimize" else -1
+        best = min(ok, key=lambda r: (sign * r["mean"], preference_key(r)))
+        result["best"] = {"trial_id": best["trial_id"], "mean": best["mean"],
+                          "se": best["se"]}
+        if result["default_feasible"]:
+            result["default_gain"] = sign * (default["mean"] - best["mean"])
     result.update(
         status="selected",
-        best={"trial_id": best["trial_id"], "mean": best["mean"],
-              "se": best["se"]},
-        threshold=threshold,
-        candidate_set=[_brief(r) for r in candidates],
-        selected=dict(_brief(chosen), config=chosen["config"],
-                      is_best=chosen is best),
+        candidate_set=[_brief(default)],
+        selected=dict(_brief(default), config=default["config"],
+                      is_best=default is best,
+                      score_label=SELECTED_SCORE_LABEL),
     )
     return result
 
@@ -979,7 +995,8 @@ def _check_scores(t, metrics, where, bad):
 
 def _check_range(t, p, where, bad):
     """Report an ok trial whose finite scores still overflow: a mean, SD,
-    SE, one-SE boundary or constraint mean that is not a finite float."""
+    SE, mean plus or minus one SE, or constraint mean that is not a finite
+    float."""
     scores = [s["metrics"][p.objective] for s in t["inner_scores"]]
     try:
         mean, sd, se = fold_stats(scores)

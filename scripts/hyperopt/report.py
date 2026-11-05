@@ -2,7 +2,8 @@
 
 Each run is one history (one outer training fold or repeat) with its protocol.
 select.py, beside this file, checks each history and selects a config per
-family by the one-standard-error rule; this writes a JSON report and a short
+family (select.RULE: the fixed default, DECISIONS F4's fallback);
+this writes a JSON report and a short
 Markdown summary. Both list every trial, excluded ones included, with its
 status and reason, and give each family's selection, candidate set and
 budget, the budget flags, and, across runs, the stability of the selected
@@ -16,10 +17,16 @@ dependency (select.OUTER_EVALUATION).
 
 The JSON also says so in its key names. The `mean`, `sd` and `se` that
 select.py gives each trial, and the `mean` and `se` of each family's
-`best`, `selected` and `candidate_set` entries, are `inner_tuning_mean`,
-`inner_tuning_sd` and `inner_tuning_se` here (INNER_TUNING), so a value
-read on its own keeps its label. Schema 2 made this rename and added each
-run's `warnings` (below); a schema 1 report used the bare keys.
+`best`, `selected` and `candidate_set` entries, are
+`inner_tuning_mean`, `inner_tuning_sd` and `inner_tuning_se` here
+(INNER_TUNING), so a value read on its own keeps its label. Schema 2 made
+this rename and added each run's `warnings` (below); a schema 1 report used
+the bare keys. Schema 3 selects each family's fixed default, not the
+one-SE rule's pick: a family's `selected` and only candidate is its
+default, `best` and `default_gain` are kept for the record, a family has
+`default_feasible` and no `threshold`, a history without a default trial
+gives `no_default`, and the selected entry's inner mean is labelled a
+selection-biased tuning score (select.SELECTED_SCORE_LABEL).
 Stability's `mean` is the mean of selected hyperparameter values, not a
 score, and keeps its name.
 
@@ -57,7 +64,7 @@ import os
 import sys
 from pathlib import Path
 
-SCHEMA = "grm-hyperopt-report/2"
+SCHEMA = "grm-hyperopt-report/3"
 # The report's names for select.py's inner-tuning scores (review F3).
 INNER_TUNING = {"mean": "inner_tuning_mean", "sd": "inner_tuning_sd",
                 "se": "inner_tuning_se"}
@@ -212,7 +219,8 @@ def _run_lines(run):
             or "none") + ".",
         "", "### Selection", "",
         "| family | selected trial | complexity | default "
-        "| inner-tuning mean | best trial | best inner-tuning mean "
+        "| inner-tuning mean (selection-biased) | best trial "
+        "| best inner-tuning mean "
         "| best inner-tuning SE (descriptive) | candidate set |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
@@ -220,12 +228,12 @@ def _run_lines(run):
         if f["selected"] is None:
             lines.append(f"| {fam} | none ({f['status']}) |  |  |  |  |  |  |  |")
             continue
-        s, b = f["selected"], f["best"]
+        s, b = f["selected"], f["best"] or {}
         lines.append(
             f"| {fam} | {s['trial_id']} | {_num(s['complexity'])} | "
             f"{_yes(s['is_default'])} | {_num(s['inner_tuning_mean'])} | "
-            f"{b['trial_id']} | {_num(b['inner_tuning_mean'])} | "
-            f"{_num(b['inner_tuning_se'])} | "
+            f"{b.get('trial_id', '')} | {_num(b.get('inner_tuning_mean'))} | "
+            f"{_num(b.get('inner_tuning_se'))} | "
             + ", ".join(str(c["trial_id"]) for c in f["candidate_set"]) + " |")
     for fam, f in run["families"].items():
         if f["selected"] is not None:
