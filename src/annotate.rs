@@ -438,12 +438,13 @@ mod tests {
 
     #[test]
     fn the_cached_feature_order_does_not_choose_the_gene() {
-        // Two CDS of the same length both hold the accessory k-mers. The one
-        // with the lower start names the locus, whichever way round the cache
-        // lists them.
+        // CDS of the same length that all hold the accessory k-mers. blaA
+        // names the locus whichever way round the cache lists them: before
+        // blaB on start, and before blaC, which has the same span, on gene.
         let a = r#"{"accession": "c", "start": 1, "end": 200, "strand": "+", "gene": "blaA"}"#;
         let b = r#"{"accession": "c", "start": 2, "end": 201, "strand": "+", "gene": "blaB"}"#;
-        for listed in [format!("[{a}, {b}]"), format!("[{b}, {a}]")] {
+        let c = r#"{"accession": "c", "start": 1, "end": 200, "strand": "+", "gene": "blaC"}"#;
+        for listed in [[a, b], [b, a], [a, c], [c, a]].map(|[p, q]| format!("[{p}, {q}]")) {
             let dir = tempfile::tempdir().unwrap();
             let (layout, matrix, ds) = accessory_fixture(dir.path());
             std::fs::create_dir_all(layout.features_dir()).unwrap();

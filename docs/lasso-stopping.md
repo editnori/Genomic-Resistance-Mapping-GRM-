@@ -113,7 +113,7 @@ An invalid report is written for review but is not a finished dataset. `grm lear
 
 ## Report schema and independent checker
 
-`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **12**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 to revision-11 output must contain the new evidence.
+`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **12**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 to revision-12 output must contain the new evidence.
 
 Revision 11 keeps this lasso and its evidence unchanged and adds no report field. It draws the random split's inner tuning on the kset duplicate groups ([duplicate-isolation.md](duplicate-isolation.md)), which can change the scores of a dataset that has a group. A revision-11 report meets the revision-8 rules below, and a same-fingerprint revision-10 report is stale against revision 11. Revision 12 draws the final lasso's holdout on the same duplicate groups, adds no report field, and makes a same-fingerprint revision-11 report stale.
 

@@ -2039,6 +2039,33 @@ mod tests {
             serde_json::to_value(&out.finals.gbt_importance).unwrap(),
             serde_json::to_value(top_weighted(gbt.importance(), 50)).unwrap()
         );
+        // The final lasso's holdout is grouped too: its audit is the grouped
+        // fit's, which on this fixture differs from a holdout drawn by class.
+        let lasso_audit = |groups: Option<&[u32]>| {
+            let (scored, _) = fit_lasso_traced(
+                &x,
+                &y,
+                &all,
+                groups,
+                &cfg,
+                cfg.seed + 11,
+                LassoContext {
+                    dataset: "fixture__fixturemycin",
+                    scheme: "final",
+                    outer_fold: None,
+                },
+                &mut LassoTrace::default(),
+                &mut |_, _| {},
+            )
+            .unwrap();
+            serde_json::to_value(&scored.lasso_fit).unwrap()
+        };
+        let grouped = lasso_audit(tuning.as_deref());
+        assert_ne!(grouped, lasso_audit(None));
+        assert_eq!(
+            serde_json::to_value(&out.finals.lasso_fit).unwrap(),
+            grouped
+        );
         let direct =
             final_models("fixture__fixturemycin", &x, &y, tuning.as_deref(), 1, &cfg).unwrap();
         assert_eq!(
