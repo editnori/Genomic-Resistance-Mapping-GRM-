@@ -448,6 +448,22 @@ async function holdCheck(page, context, tag) {
   if (opened?.expanded === 'true') await row.getByRole('button', { name: 'Fewer' }).tap({ timeout: 2000 }).catch(() => {});
 }
 
+/** With intervals/<id>.json beside the report (`grm intervals`), the open
+ *  inspector shows each random-split VME and ME the file has under its
+ *  value, with the isolates it counts as a tooltip (X2). A tree without
+ *  the file has no interval to show, and says so in the receipt. */
+async function intervalCheck(page, tag) {
+  const name = tag + ' learner table shows the offline 95% intervals of VME and ME';
+  const file = path.join(FIXTURE, 'intervals', inspectId + '.json');
+  if (!fs.existsSync(file)) { skipped.push({ check: name, reason: 'no intervals/' + inspectId + '.json in this tree' }); return; }
+  const rows = JSON.parse(fs.readFileSync(file)).splits.find(s => s.scheme === 'random')?.learners ?? [];
+  const want = rows.flatMap(r => [r.vme, r.me]).filter(v => v !== null).map(v => v.x + ' of ' + v.n);
+  const shown = await page.locator('#ds-learners').evaluate(s => [...s.querySelectorAll('td span[title$="isolates called susceptible"], td span[title$="isolates called resistant"]')].map(e => ({ title: e.getAttribute('title'), text: e.textContent })), null, { timeout: 2000 }).catch(() => null);
+  const counts = shown?.map(e => (e.title.match(/^([\d,]+ of [\d,]+)/)?.[1] ?? '').replace(/,/g, ''));
+  const ok = shown !== null && shown.length === want.length && want.length > 0 && JSON.stringify([...counts].sort()) === JSON.stringify([...want].sort()) && shown.every(e => /^95% interval \d+\.\d%–\d+\.\d%$/.test(e.text));
+  check(name, ok, { want: want.length, shown: shown?.slice(0, 4) });
+}
+
 async function interactions(page, tag, width) {
   await page.goto(BASE + '/datasets');
   const search = page.getByRole('searchbox', { name: 'Search datasets' });
@@ -1068,7 +1084,7 @@ async function boundaries(browser) {
       const cdp = await context.newCDPSession(page);
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       page.on('pageerror', error => errors.push({ theme, width, message: error.message }));
-      page.on('response', r => { if (r.status() >= 400 && !r.url().endsWith('/data/research.json')) errors.push({ theme, width, url: r.url(), status: r.status() }); });
+      page.on('response', r => { if (r.status() >= 400 && !r.url().endsWith('/data/research.json') && !(r.status() === 404 && r.url().includes('/data/intervals/'))) errors.push({ theme, width, url: r.url(), status: r.status() }); });
       const tag = width + '-' + theme;
       try {
         await page.goto(BASE);
@@ -1093,6 +1109,7 @@ async function boundaries(browser) {
         await page.goto(BASE + '/datasets?dataset=' + inspectId);
         await page.locator('#ds-learners').waitFor();
         await shot(page, tag + '-inspector');
+        await intervalCheck(page, tag);
         await interactions(page, tag, width);
         await states(browser, width, height, theme);
       } catch (error) { errors.push({ theme, width, message: error.stack }); }

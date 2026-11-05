@@ -125,6 +125,11 @@ enum Command {
         #[arg(long, default_value = KOVER_RESULTS)]
         kover: PathBuf,
     },
+    /// Write offline 95% Clopper-Pearson intervals for each learner row's
+    /// VME and ME under <data>/report/intervals/, one file per dataset report
+    /// that index.json lists, each pinned to its report's SHA-256 and counts.
+    /// No report file changes.
+    Intervals,
     /// Write the dashboard's research file: the revision-5 MIC baseline and
     /// selective-calling results under <data>/research, each with a guard on
     /// the revision-5 cohort it describes.
@@ -245,6 +250,11 @@ fn run(cli: Cli) -> Result<()> {
             Ok(())
         }
         Command::Report { kover } => report(&layout, &kover),
+        Command::Intervals => {
+            let n = grm::intervals::write(&layout.root.join("report"))?;
+            eprintln!("intervals written for {n} dataset reports");
+            Ok(())
+        }
         Command::Research {
             revision5_reports,
             out,

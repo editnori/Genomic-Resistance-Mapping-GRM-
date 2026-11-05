@@ -8,6 +8,7 @@ import { LearnerStripRow, StripAxis } from "../../charts/LearnerStrip";
 import { BarPill, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../../ui/primitives";
 
 import type { Resource } from "../../data/load";
+import { intervalKey, type RateInterval, type RowIntervals } from "../../data/intervals";
 import { SelectiveResearch } from "./SelectiveResearch";
 
 const STRIP_MIN = 220;
@@ -38,6 +39,16 @@ const CalledCell = ({ r, l }: { r: DatasetReport; l: LearnerResult }) => {
   );
 };
 
+/** A rate's offline 95% interval under its value, with the isolates it
+ *  counts in a native tooltip; nothing when the row has none. */
+const RateRange = ({ ci, of, as }: { ci: RateInterval | null | undefined; of: string; as: string }) =>
+  ci === null || ci === undefined ? null : (
+    <span className="block whitespace-nowrap text-tiny tabular-nums text-muted-text" title={`${int(ci.x)} of ${int(ci.n)} ${of} isolates called ${as}`}>
+      <span className="sr-only">95% interval </span>
+      {pct(ci.lo)}–{pct(ci.hi)}
+    </span>
+  );
+
 /** Null folds in a report written before no-calls, which scored them 0.5;
  *  the note under the table says what that did to the rates. */
 const NullFoldCell = ({ l }: { l: LearnerResult }) => {
@@ -59,7 +70,7 @@ const uncalledLines = (r: DatasetReport, rows: readonly (LearnerResult | undefin
     ];
   });
 
-export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: Resource<Research> }) => {
+export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; research?: Resource<Research>; intervals?: RowIntervals }) => {
   const [scheme, setScheme] = useState<Scheme>("random");
   const frame = useRef<HTMLDivElement | null>(null);
   // Wide, the strip takes what the number columns leave, within bounds; on
@@ -115,6 +126,8 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
   const errorsOf = (l: Learner) => learnerOf(r, scheme, l);
   // The rows the Called column reads, named in words under the table.
   const uncalled = noCalls ? uncalledLines(r, learners.map(errorsOf), scheme) : [];
+  const ciOf = (l: Learner) => intervals?.get(intervalKey(scheme, l));
+  const anyInterval = learners.some((l) => ciOf(l) !== undefined);
 
   return (
     <Section
@@ -214,9 +227,11 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
                     <>
                       <td className="px-2 py-1 text-right">
                         <BarPill value={m.vme} bar={BARS.vme} />
+                        <RateRange ci={ciOf(l)?.vme} of="resistant" as="susceptible" />
                       </td>
                       <td className="px-2 py-1 text-right">
                         <BarPill value={m.me} bar={BARS.me} />
+                        <RateRange ci={ciOf(l)?.me} of="susceptible" as="resistant" />
                       </td>
                     </>
                   )}
@@ -240,6 +255,9 @@ export const LearnerSection = ({ r, research }: { r: DatasetReport; research?: R
           ? " A fold where boosting kept no tree, or the lasso kept no weight, gets no call: every rate covers the isolates called, and Called gives their share."
           : ""}
         {anyWithoutCall ? " A learner that calls no isolate on a split has no rate there and shows No call." : ""}
+        {anyInterval
+          ? " Under VME and ME, the 95% Clopper-Pearson interval from this report's own counts: VME over the resistant isolates the row called, ME over the susceptible ones; a range's tooltip gives its counts. It reflects which isolates happened to be sampled, not calibration or clinical performance."
+          : ""}
         {anyNullFold
           ? " This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
           : ""}

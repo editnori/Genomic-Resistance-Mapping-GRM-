@@ -157,6 +157,12 @@ src/lib.rs fasta::tests::reads_fastq
 src/lib.rs fasta::tests::reads_multiline_fasta_and_gzip
 src/lib.rs fasta::tests::stats_report_n50_and_gc
 src/lib.rs fnv::tests::fnv1a_matches_published_values
+src/lib.rs intervals::tests::clopper_pearson_boundaries_have_closed_forms
+src/lib.rs intervals::tests::clopper_pearson_matches_scipy_beta_ppf
+src/lib.rs intervals::tests::clopper_pearson_tails_hold_alpha_over_two
+src/lib.rs intervals::tests::intervals_file_pins_the_report_and_its_counts
+src/lib.rs intervals::tests::intervals_file_refuses_counts_that_do_not_add_up
+src/lib.rs intervals::tests::write_covers_the_indexed_datasets_and_leaves_reports_untouched
 src/lib.rs kset::tests::a_file_shorter_than_the_header_is_named_in_the_error
 src/lib.rs kset::tests::dedup_respects_min_count
 src/lib.rs kset::tests::kset_round_trips_and_sketches

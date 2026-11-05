@@ -9,7 +9,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { CatalogRow, DatasetReport, EvalConfig, EvaluationAudit, Manifest, Research } from "../../data/schema";
 import { capitalize, distance, int, mgL, pct, plural, speciesShort } from "../../data/format";
-import { loadErrorText, useDataset, useResearch, type Resource } from "../../data/load";
+import { loadErrorText, useDataset, useIntervals, useResearch, type Resource } from "../../data/load";
+import { intervalsFor, type Intervals } from "../../data/intervals";
 import { splitAbsence, splitOf } from "../../data/derive/dataset";
 import { auditOf } from "../../data/derive/evaluation";
 import { minClassOf } from "../../data/derive/overview";
@@ -189,11 +190,11 @@ const MethodFold = ({ r, current }: { r: DatasetReport; current?: number }) => {
 /** The inspector's one column, shared by the header and the body. */
 const COLUMN = "mx-auto w-full max-w-[1200px] px-4 sm:px-8";
 
-const Body = ({ r, row, current, research }: { r: DatasetReport; row?: CatalogRow; current: number | undefined; research: Resource<Research> }) => (
+const Body = ({ r, row, current, research, intervals }: { r: DatasetReport; row?: CatalogRow; current: number | undefined; research: Resource<Research>; intervals: Resource<Intervals> }) => (
   <div className={`${COLUMN} space-y-8 pb-16 pt-6`}>
     <ProvisionalNote audit={auditOf(r, current)} />
     <div className="space-y-10">
-      <LearnerSection r={r} research={research} />
+      <LearnerSection r={r} research={research} intervals={intervalsFor(intervals.status === "ready" ? intervals.data : null, r)} />
       <ModelSection r={r} row={row} />
       <MechanismSection r={r} />
       <MicSection r={r} research={research} />
@@ -219,6 +220,7 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
   }, []);
   // Fetched beside the report; a missing or invalid file reads as no research.
   const research = useResearch();
+  const intervals = useIntervals(id);
   const row = manifest.datasets.find((d) => d.id === id);
   const title = row === undefined ? id : `${capitalize(row.antibiotic)} in ${row.species}`;
   // The report's own audit once loaded; the manifest row's copy before.
@@ -295,7 +297,7 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain focus:outline-none"
         >
           {report.status === "ready" ? (
-            <Body r={report.data} row={row} current={manifest.evaluation_revision} research={research} />
+            <Body r={report.data} row={row} current={manifest.evaluation_revision} research={research} intervals={intervals} />
           ) : (
             <div className={`${COLUMN} py-8`}>
               {report.status === "loading" ? (

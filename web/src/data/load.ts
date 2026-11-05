@@ -4,6 +4,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { Corpus, DatasetReport, Manifest, Research, SpeciesReport } from "./schema";
 import { ShapeError, parseCorpus, parseDataset, parseManifest, parseResearch, parseSpecies } from "./validate";
+import { parseIntervals, type Intervals } from "./intervals";
 
 export type LoadError =
   | { kind: "missing"; path: string }
@@ -110,6 +111,7 @@ export const PATHS = {
   species: (slug: string) => `/data/species/${encodeURIComponent(slug)}.json`,
   dataset: (id: string) => `/data/datasets/${encodeURIComponent(id)}.json`,
   research: "/data/research.json",
+  intervals: (id: string) => `/data/intervals/${encodeURIComponent(id)}.json`,
 } as const;
 
 export const useManifest = (): Resource<Manifest> => useResource(PATHS.manifest, parseManifest);
@@ -121,6 +123,9 @@ export const useDataset = (id: string | null): Resource<DatasetReport> =>
 /** Optional: a missing or invalid research.json is an error state of this
  *  resource only, which researchFor reads as no research. */
 export const useResearch = (): Resource<Research> => useResource(PATHS.research, parseResearch);
+/** Optional, like research.json: a missing or invalid intervals file reads
+ *  as no intervals (intervalsFor). */
+export const useIntervals = (id: string): Resource<Intervals> => useResource(PATHS.intervals(id), parseIntervals);
 
 /** One literal sentence for a load failure. */
 export const loadErrorText = (error: LoadError): string => {

@@ -13,6 +13,7 @@ pub mod dna;
 pub mod drugs;
 pub mod fasta;
 mod fnv;
+pub mod intervals;
 pub mod kset;
 pub mod layout;
 pub mod learn;
