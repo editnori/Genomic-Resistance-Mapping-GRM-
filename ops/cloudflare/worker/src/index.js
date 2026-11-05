@@ -117,6 +117,9 @@ function etagMatches(header, etag) {
 
 // serve.rs file_response for the object at `key`; `cache` is its Cache-Control.
 async function objectResponse(bucket, key, cache, request) {
+  // R2 keys are at most 1,024 bytes, so a longer one names nothing; asking R2
+  // for it would fail with 500 rather than answer as a missing file.
+  if (new TextEncoder().encode(key).length > 1024) return null;
   const head = request.method === 'HEAD';
   let rangeHeader = request.headers.get('Range');
   const ifRange = request.headers.get('If-Range');

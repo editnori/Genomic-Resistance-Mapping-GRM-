@@ -21,6 +21,8 @@ Beyond `grm serve`, every object response carries an `ETag` and honours `If-None
 
 Each request reads `state/active` once, so it is answered wholly from one pair. R2 is strongly consistent, so a switch takes effect for the next request everywhere.
 
+**Known limit, to fix before the next app switch.** A tab opened before a switch to a new app label keeps the old app in memory. Its lazy-loaded chunks under `/assets/` no longer exist in the new app, so they come back as `index.html` (200 `text/html`), and the Present page fails in that tab until it reloads; it can also read new data under the old index. Switching publications under the same app label is unaffected. The fix is for the Worker to serve `/assets/` misses from the `state/previous` app too.
+
 ## Bucket layout and guarantees
 
 | Key | Contents |
@@ -34,7 +36,7 @@ Each request reads `state/active` once, so it is answered wholly from one pair. 
 | `state/active`, `state/previous` | one JSON line each: the served pair, and the rollback target |
 | `state/history/TIME--LABEL--NAME` | one record per activation, never rewritten |
 
-- **A release is immutable once published.** `publish.sh` and `publish-app.sh` refuse a name whose claim or seal exists, so an interrupted upload leaves its claim and the retry takes a new name. Nothing in these scripts deletes or overwrites under `app/` or `pub/`. Two operators publishing the same new name at the same instant are not guarded against (Wrangler has no conditional write); run one operator at a time.
+- **A release is immutable once published.** `publish.sh` and `publish-app.sh` refuse a name whose claim or seal exists, so an interrupted upload leaves its claim and the retry takes a new name. Nothing in these scripts deletes or overwrites under `app/` or `pub/`. Two operators publishing the same new name at the same instant are not guarded against (Wrangler has no conditional write); run one operator at a time. The same holds for `activate.sh` and `rollback.sh`: two at once could each record the other's pair as `state/previous`.
 - **Only sealed, intact releases are activated.** `activate.sh` requires both seals, requires each claim to name its seal's digest, and reads back and hashes every object of both before it switches.
 - **Activation is atomic.** It writes `state/previous` (the old active pair), a history record, then `state/active`, each read back and compared. The Worker reads only `state/active`, one object, so it serves the old pair or the new one, never a mix. With `GRM_SITE_URL` set, `smoke.py` then checks the served site, and a failure restores both state objects byte for byte (exit 1).
 - **Rollback names the previous release.** `rollback.sh` activates the pair in `state/previous`, with every activation check, and swaps the two, so a second rollback switches forward again.
@@ -79,7 +81,7 @@ Create one API token in the dashboard (My Profile › API Tokens › Create Cust
 
 If `wrangler deploy` refuses the custom domain for want of a zone read, add Zone › Zone › Read on the same zone; nothing else should be needed, since `CLOUDFLARE_ACCOUNT_ID` is always set. For later releases only, a second token with Workers R2 Storage › Edit alone is enough; revoke the first once the site is live.
 
-**Passing it.** Main asks Layth for it through a private secret card with file delivery. The file must be mode 0600 and owned by the operator; `site-lib.sh` checks both and refuses anything else. If the delivered file is not 0600, copy it once with `umask 077; cat "$DELIVERED" >"$HOME/.grm-site-token"` and point `GRM_SITE_TOKEN_FILE` there. The scripts read the file into Wrangler's environment only, never onto a command line, into a log or to the terminal. Never run them under `set -x` or `bash -x`. When done: `shred -u "$GRM_SITE_TOKEN_FILE"` and revoke the token in the dashboard.
+**Passing it.** Main asks Layth for it through a private secret card with file delivery. The file must be mode 0600 and owned by the operator; `site-lib.sh` checks both and refuses anything else. If the delivered file is not 0600, copy it once with `umask 077; cat "$DELIVERED" >"$HOME/.grm-site-token"` and point `GRM_SITE_TOKEN_FILE` there. The scripts read the file into Wrangler's environment only, never onto a command line, into a log or to the terminal. `site-lib.sh` turns shell tracing off, so even `bash -x` doesn't print it. When done: `shred -u "$GRM_SITE_TOKEN_FILE"` and revoke the token in the dashboard.
 
 ### 2. Setup
 
@@ -96,12 +98,12 @@ bash $W/wrangler.sh r2 bucket create grm-site
 
 ### 3. The app
 
-Revision 9 was served and browser-checked (1,669 checks) with the app of `b2fd433` (`ui-r9-b2fd433`). Build it, or the app main picks, from a clean archive:
+Revision 9 goes live with main's app at `fd558ce2` (the decision of 5 Nov): its `web/` build is byte-identical to the one lane U-16 checked on revision 9 (1,669 checks), and REVIEW-HOST passed the current browser check through the Worker on revision 9 with it (1,694 checks). Build it from a clean archive:
 
 ```bash
-git archive b2fd433 web | tar -x -C /tmp/web-b2fd433 && (cd /tmp/web-b2fd433/web && npm ci && npm run build)
-bash $W/publish-app.sh /tmp/web-b2fd433/web/dist ui-r9-b2fd433 <full b2fd433 commit id>            # dry run
-bash $W/publish-app.sh /tmp/web-b2fd433/web/dist ui-r9-b2fd433 <full b2fd433 commit id> --apply
+git archive fd558ce262637c007d3a8224c3c6ef5bdb5cf11b web | tar -x -C /tmp/web-fd558ce2 && (cd /tmp/web-fd558ce2/web && npm ci && npm run build)
+bash $W/publish-app.sh /tmp/web-fd558ce2/web/dist ui-main-fd558ce2 fd558ce262637c007d3a8224c3c6ef5bdb5cf11b            # dry run
+bash $W/publish-app.sh /tmp/web-fd558ce2/web/dist ui-main-fd558ce2 fd558ce262637c007d3a8224c3c6ef5bdb5cf11b --apply
 ```
 
 ### 4. The publications
@@ -124,8 +126,8 @@ Each upload of about 1.1 GB, 300 objects, then reads every object back.
 Activate revision 8 first and then revision 9, so `state/previous` holds a real rollback target. The Worker is not deployed yet, so there is no served check here (leave `GRM_SITE_URL` unset):
 
 ```bash
-bash $W/activate.sh ui-r9-b2fd433 rev8-273-20261029 --apply
-bash $W/activate.sh ui-r9-b2fd433 rev9-275-20261030 --apply
+bash $W/activate.sh ui-main-fd558ce2 rev8-273-20261029 --apply
+bash $W/activate.sh ui-main-fd558ce2 rev9-275-20261030 --apply
 bash $W/status.sh                              # active rev9, previous rev8
 ```
 
@@ -140,7 +142,7 @@ Wrangler creates the DNS record and the certificate. `wrangler.toml` turns off `
 ### 6. Public check
 
 ```bash
-(cd /tmp/web-b2fd433/web/dist && find . -type f | LC_ALL=C sort | xargs sha256sum) >/tmp/app.sha256
+(cd /tmp/web-fd558ce2/web/dist && find . -type f | LC_ALL=C sort | xargs sha256sum) >/tmp/app.sha256
 python3 -I $W/smoke.py https://genomicresistance.com /tmp/app.sha256 /tmp/rev9/SOURCE.sha256 2 9 275 --sweep
 ```
 

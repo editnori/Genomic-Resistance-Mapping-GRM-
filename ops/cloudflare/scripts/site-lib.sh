@@ -32,6 +32,9 @@
 #                         switch, rolling back if the check fails
 #   GRM_SITE_JOBS         parallel object reads when verifying (default 8, local 4)
 
+# Tracing would print the token as wrangler's environment is set, so it stays off
+# even under bash -x.
+{ set +x; } 2>/dev/null
 set -euo pipefail
 trap ':' PIPE
 
