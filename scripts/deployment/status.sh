@@ -52,9 +52,7 @@ if (check_go "$label" "$pub") >/dev/null 2>&1; then
     fi
 else
     check_expect
-    count_from=GRM_EXPECT_DATASETS
-    [ -n "${GRM_EXPECT_DATASETS:-}" ] || count_from="the default, revision 7's count, since GRM_EXPECT_DATASETS is unset or empty"
-    say "the live pair has no valid approval; checking it against GRM_EXPECT_* (schema $EXPECT_SCHEMA, revision $EXPECT_REVISION, $EXPECT_DATASETS datasets from $count_from)"
+    say "the live pair has no valid approval; checking it against GRM_EXPECT_* (schema $EXPECT_SCHEMA, revision $EXPECT_REVISION, $EXPECT_DATASETS datasets from GRM_EXPECT_DATASETS)"
     APPROVED[$label--$pub]="$EXPECT_SCHEMA $EXPECT_REVISION $EXPECT_DATASETS"
 fi
 health "$label" "$pub" "$PORT"

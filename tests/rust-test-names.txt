@@ -103,6 +103,7 @@ src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason
 src/lib.rs analysis::tests::unsupported_assays_are_listed_with_their_reason_instead_of_a_panel
 src/lib.rs analysis::tests::write_lasso_scan_fixture_root [ignored]
 src/lib.rs annotate::tests::a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached
+src/lib.rs annotate::tests::the_cached_feature_order_does_not_choose_the_gene
 src/lib.rs bits::tests::set_algebra_and_counts
 src/lib.rs bvbrc::tests::parses_mixed_type_fields
 src/lib.rs catalog::tests::catalog_loads_both_accessions_and_trims_the_version
@@ -156,6 +157,12 @@ src/lib.rs fasta::tests::reads_fastq
 src/lib.rs fasta::tests::reads_multiline_fasta_and_gzip
 src/lib.rs fasta::tests::stats_report_n50_and_gc
 src/lib.rs fnv::tests::fnv1a_matches_published_values
+src/lib.rs intervals::tests::clopper_pearson_boundaries_have_closed_forms
+src/lib.rs intervals::tests::clopper_pearson_matches_scipy_beta_ppf
+src/lib.rs intervals::tests::clopper_pearson_tails_hold_alpha_over_two
+src/lib.rs intervals::tests::intervals_file_pins_the_report_and_its_counts
+src/lib.rs intervals::tests::intervals_file_refuses_counts_that_do_not_add_up
+src/lib.rs intervals::tests::write_covers_the_indexed_datasets_and_leaves_reports_untouched
 src/lib.rs kset::tests::a_file_shorter_than_the_header_is_named_in_the_error
 src/lib.rs kset::tests::dedup_respects_min_count
 src/lib.rs kset::tests::kset_round_trips_and_sketches
@@ -181,6 +188,8 @@ src/lib.rs learn::eval::tests::duplicate_groups_sit_whole_in_one_outer_fold_of_e
 src/lib.rs learn::eval::tests::evaluation_rejects_invalid_folds_and_emits_only_held_out_scores
 src/lib.rs learn::eval::tests::final_forest_importance_names_dataset_rows
 src/lib.rs learn::eval::tests::final_model_lasso_failures_name_the_final_fit
+src/lib.rs learn::eval::tests::final_models_tune_on_the_duplicate_groups
+src/lib.rs learn::eval::tests::final_tuning_keeps_each_duplicate_group_whole
 src/lib.rs learn::eval::tests::fitted_models_are_called_even_where_they_score_exactly_one_half
 src/lib.rs learn::eval::tests::forest_draws_follow_the_evaluation_seed_and_fold
 src/lib.rs learn::eval::tests::held_out_labels_cannot_change_any_training_fit

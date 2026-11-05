@@ -155,8 +155,9 @@ class Report(unittest.TestCase):
     def test_selection_candidates_and_budgets(self):
         r = self.report["runs"][0]
         cart = r["families"]["cart"]
-        self.assertEqual(cart["selected"]["trial_id"], 1)
-        self.assertEqual([c["trial_id"] for c in cart["candidate_set"]], [1])
+        self.assertEqual((cart["best"]["trial_id"], cart["selected"]["trial_id"]),
+                         (1, 0))
+        self.assertEqual([c["trial_id"] for c in cart["candidate_set"]], [0])
         self.assertEqual(cart["excluded"][0]["reason"],
                          "tree | split crashed\nat node 4")
         lasso = r["families"]["lasso"]
@@ -168,19 +169,19 @@ class Report(unittest.TestCase):
                       "cart 2, lasso 1", self.md)
         selected = [t for t in r["trials"] if t["selected"]]
         self.assertEqual({(t["family"], t["trial_id"]) for t in selected},
-                         {("cart", 1), ("lasso", 0)})
+                         {("cart", 0), ("lasso", 0)})
 
     def test_stability_across_runs(self):
-        # outer0 selects cart trial 1 (planned depth 7), outer1 the default.
+        # Both runs select the default (depth 0), though outer0's best is
+        # cart trial 1 (planned depth 7).
         cart = self.report["stability"]["families"]["cart"]
-        self.assertEqual((cart["selected_in"], cart["default_selected"]), (2, 1))
+        self.assertEqual((cart["selected_in"], cart["default_selected"]), (2, 2))
         self.assertEqual(cart["params"]["depth"]["value_counts"],
-                         [{"value": 0, "count": 1, "fraction": 0.5},
-                          {"value": 7, "count": 1, "fraction": 0.5}])
+                         [{"value": 0, "count": 2, "fraction": 1.0}])
         self.assertEqual(self.report["stability"]["families"]["lasso"]
                          ["default_selected"], 2)
         self.assertIn("## Stability across runs (2)", self.md)
-        self.assertIn("| depth | 2 | 2 | 0.5 | 0 | 3.5 | 7 | 0 |", self.md)
+        self.assertIn("| depth | 2 | 1 | 1 | 0 | 0 | 0 | 0 |", self.md)
 
     def test_scores_are_labelled_inner_tuning_never_test_performance(self):
         # Review F3: the labels change, the values do not.
@@ -194,7 +195,8 @@ class Report(unittest.TestCase):
         self.assertIn(f"Scores: {select.SCORE_LABEL}", lines)
         self.assertIn(f"Outer evaluation: {select.OUTER_EVALUATION}", lines)
         self.assertIn("| family | selected trial | complexity | default "
-                      "| inner-tuning mean | best trial | best inner-tuning mean "
+                      "| inner-tuning mean (selection-biased) | best trial "
+                      "| best inner-tuning mean "
                       "| best inner-tuning SE (descriptive) | candidate set |",
                       lines)
         self.assertIn("| complexity | default | inner-tuning mean "
@@ -206,8 +208,9 @@ class Report(unittest.TestCase):
         mean, _, se = select.fold_stats([0.80, 0.82])
         self.assertEqual((cart["selected"]["inner_tuning_mean"],
                           cart["best"]["inner_tuning_mean"],
-                          cart["best"]["inner_tuning_se"]), (mean, mean, se))
-        self.assertIn("| cart | 1 | 3 |  | 0.81 | 1 | 0.81 | 0.01 | 1 |",
+                          cart["best"]["inner_tuning_se"]),
+                         (select.fold_stats([0.70, 0.72])[0], mean, se))
+        self.assertIn("| cart | 0 | 1 | yes | 0.71 | 1 | 0.81 | 0.01 | 0 |",
                       self.md)
 
     def test_json_score_keys_say_inner_tuning(self):
@@ -229,10 +232,11 @@ class Report(unittest.TestCase):
         mean, sd, se = select.fold_stats([0.80, 0.82])
         self.assertEqual((row["inner_tuning_mean"], row["inner_tuning_sd"],
                           row["inner_tuning_se"]), (mean, sd, se))
-        self.assertEqual(cart["candidate_set"][0]["inner_tuning_mean"], mean)
+        default_mean = select.fold_stats([0.70, 0.72])[0]
+        self.assertEqual(cart["candidate_set"][0]["inner_tuning_mean"], default_mean)
         # select.py's own result keeps its keys; only the report renames.
         s = select.select_history(run("outer0")["trials"], protocol(), PLAN_A)
-        self.assertEqual(s["families"]["cart"]["selected"]["mean"], mean)
+        self.assertEqual(s["families"]["cart"]["selected"]["mean"], default_mean)
         # Stability's mean is of hyperparameter values, not a score.
         self.assertIn("mean", self.report["stability"]["families"]["cart"]
                       ["params"]["depth"]["numeric"])
@@ -255,10 +259,14 @@ class Report(unittest.TestCase):
         rep = report.build_report([r])
         md = report.render_markdown(rep)
         fams = rep["runs"][0]["families"]
-        self.assertEqual(fams["cart"]["selected"]["trial_id"], 1)
-        self.assertEqual(fams["lasso"]["status"], "no_feasible_trials")
+        self.assertEqual((fams["cart"]["best"]["trial_id"],
+                          fams["cart"]["selected"]["trial_id"]), (1, 0))
+        self.assertEqual((fams["lasso"]["best"], fams["lasso"]["selected"]["trial_id"]),
+                         (None, 0))
+        self.assertEqual([(w["code"], w["family"]) for w in rep["runs"][0]["warnings"]],
+                         [("default_not_feasible", "cart"),
+                          ("default_not_feasible", "lasso")])
         self.assertIn("Constraints: auc >= 0.75.", md)
-        self.assertIn("| lasso | none (no_feasible_trials) |", md)
         # In the excluded table and, with complexity and default, in the
         # all-trials table.
         self.assertIn("| cart | 0 | ok |  | constraint auc >= 0.75 not met "
@@ -313,7 +321,7 @@ class Report(unittest.TestCase):
         self.assertIn(f"Warnings:\n- no_production_knob: "
                       f"{r['warnings'][0]['message']}\n",
                       report.render_markdown(rep))
-        self.assertEqual({f: v["selected"]["trial_id"]
+        self.assertEqual({f: v["best"]["trial_id"]
                           for f, v in r["families"].items()},
                          {"cart": 1, "lasso": 0})
         # Today's protocols carry no warning.
@@ -322,8 +330,9 @@ class Report(unittest.TestCase):
 
     def test_report_is_strict_json(self):
         text = json.dumps(self.report, allow_nan=False)
-        # Schema 2 renamed the score keys (INNER_TUNING).
-        self.assertEqual(json.loads(text)["schema"], "grm-hyperopt-report/2")
+        # Schema 2 renamed the score keys (INNER_TUNING); schema 3 selects
+        # by the default-anchored rule.
+        self.assertEqual(json.loads(text)["schema"], "grm-hyperopt-report/3")
 
     def test_refusals_name_the_run(self):
         bad = run("outer1")
@@ -457,7 +466,7 @@ class Cli(unittest.TestCase):
         digest = hashlib.sha256(first).hexdigest()
         self.assertEqual((run["history_sha256"], run["history_file_sha256"]),
                          (digest, digest))
-        self.assertEqual(run["families"]["cart"]["selected"]["trial_id"], 1)
+        self.assertEqual(run["families"]["cart"]["best"]["trial_id"], 1)
 
     def test_refuses_histories_the_protocol_never_produced(self):
         # Review F2 and F8, through the CLI: an off-plan config with perfect

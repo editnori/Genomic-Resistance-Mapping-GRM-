@@ -7,6 +7,7 @@ import type { DatasetReport, LearnerResult } from "../../data/schema";
 import { int, LEARNER_NAME, learnerInSentence, pct } from "../../data/format";
 import { bestLearner } from "../../data/derive/dataset";
 import { LearnerSection } from "./LearnerSection";
+import { intervalKey } from "../../data/intervals";
 
 const manifest = parseManifest(fixtureFile("/data/index.json"));
 const report = parseDataset(fixtureFile(`/data/datasets/${manifest.datasets[0]!.id}.json`));
@@ -145,5 +146,37 @@ describe("no-call details in view", () => {
   it("states a pre-revision-7 report's null folds as text in the cell", () => {
     const r = withRows((l, scheme) => (scheme === "random" && l.learner === "gbt" ? { ...l, fold_complexity: [0, 0, ...l.fold_complexity.slice(2)] } : l));
     expect(rowCells(render(r), LEARNER_NAME.gbt)[4]).toBe("2 of 5");
+  });
+});
+
+describe("offline intervals (X2)", () => {
+  /** Every row the report scores, with an interval of its own counts. */
+  const ciRows = (r: DatasetReport) =>
+    new Map(
+      r.splits.flatMap((s) =>
+        s.learners.flatMap((l) =>
+          l.metrics === null
+            ? []
+            : [[intervalKey(s.scheme, l.learner), { vme: { x: l.metrics.fn, n: l.metrics.tp + l.metrics.fn, lo: 0.0123, hi: 0.0456 }, me: { x: l.metrics.fp, n: l.metrics.tn + l.metrics.fp, lo: 0.0211, hi: 0.0899 } }] as const],
+        ),
+      ),
+    );
+
+  it("shows each VME and ME with its 95% interval and the isolates it counts, and says what it is not", () => {
+    const html = renderToStaticMarkup(createElement(LearnerSection, { r: report, intervals: ciRows(report) }));
+    const best = bestLearner(report)!;
+    const m = report.splits.find((s) => s.scheme === "random")!.learners.find((l) => l.learner === best.learner)!.metrics!;
+    const cells = rowCells(html, LEARNER_NAME[best.learner]);
+    expect(cells[2]).toContain("95% interval 1.2%–4.6%");
+    expect(cells[3]).toContain("95% interval 2.1%–9.0%");
+    expect(html).toContain(`title="${int(m.fn)} of ${int(m.tp + m.fn)} resistant isolates called susceptible"`);
+    expect(html).toContain(`title="${int(m.fp)} of ${int(m.tn + m.fp)} susceptible isolates called resistant"`);
+    expect(html).toContain("95% Clopper-Pearson interval from this report");
+    expect(html).toContain("not calibration or clinical performance");
+  });
+
+  it("renders a report without intervals exactly as before", () => {
+    expect(renderToStaticMarkup(createElement(LearnerSection, { r: report, intervals: new Map() }))).toBe(render(report));
+    expect(render(report)).not.toContain("95% interval");
   });
 });

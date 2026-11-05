@@ -65,6 +65,7 @@ for x in s: x.bind(("127.0.0.1", 0))
 print(*[x.getsockname()[1] for x in s])')
 export GRM_DEPLOY_ROOT=$D GRM_PORT=$LP GRM_SKIP_BROWSER=1
 unset GRM_PLAYWRIGHT_CORE GRM_SOURCE_REPO GRM_TUNNEL_TOKEN_FILE GRM_EXPECT_SCHEMA GRM_EXPECT_REVISION GRM_EXPECT_DATASETS
+export GRM_EXPECT_REVISION=7  # publish, stage and approve-legacy have no default (R-D3)
 pass=0
 fail=0
 # Every guard against a hang is "timeout -k 5 N": a script that traps TERM
@@ -322,12 +323,12 @@ make_release rel1 1111111111111111111111111111111111111111
 make_release rel2 2222222222222222222222222222222222222222
 make_release rel3 3333333333333333333333333333333333333333
 expect 0 'published p237' "publish 237 datasets" -- \
-    bash "$S/publish.sh" "$T/r237" "$T/r237.sha256" p237 --apply
+    env GRM_EXPECT_DATASETS=237 bash "$S/publish.sh" "$T/r237" "$T/r237.sha256" p237 --apply
 expect 0 'published p275' "publish 275 datasets with GRM_EXPECT_DATASETS=275" -- \
     env GRM_EXPECT_DATASETS=275 bash "$S/publish.sh" "$T/r275" "$T/r275.sha256" p275 --apply
 
 # Stage both pairs; each approval records its own report and expectations.
-expect 0 'stage pass' "stage rel1 with p237" -- bash "$S/stage.sh" rel1 p237 "$SP" --apply
+expect 0 'stage pass' "stage rel1 with p237" -- env GRM_EXPECT_DATASETS=237 bash "$S/stage.sh" rel1 p237 "$SP" --apply
 expect 0 'stage pass' "stage rel2 with p275 (GRM_EXPECT_DATASETS=275)" -- \
     env GRM_EXPECT_DATASETS=275 bash "$S/stage.sh" rel2 p275 "$SP" --apply
 check "approval binds the report manifest and 275 datasets" -- \
@@ -1026,18 +1027,19 @@ check "status and smoke.sh leave no temporary files" -- test -z "$(ls -A "$T/tmp
 expect 0 'live health pass: rel1 with p237' "rollback 275 -> 237" -- bash "$S/rollback.sh" --apply
 check "rel1 with p237 serves" -- test "$(live)" = "rel1 p237"
 # status.sh checks a live pair without a valid approval against GRM_EXPECT_*,
-# and refuses another revision than 7 without a count (REVIEW-DEPLOY I3), as
-# check_expect does, rather than checking it against revision 7's 237.
+# whose revision and count have no default (R-D3): without either it refuses
+# (exit 5), as check_expect does, rather than checking revision 7's 237.
 mv "$D/go/rel1--p237" "$T/rel1--p237.keep"
-expect 0 'smoke-pass .*revision=7 datasets=237' "status checks a live pair without an approval against the GRM_EXPECT_* defaults" -- \
+expect 5 'GRM_EXPECT_REVISION is unset or empty' "status refuses to check a live pair without an approval when no GRM_EXPECT_* is set" -- \
     env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/status.sh"
-expect 0 '237 datasets from the default, revision 7.s count, since GRM_EXPECT_DATASETS is unset' \
-    "status says that the count it checks that pair against is the 237 default (U-23)" -- \
-    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/status.sh"
+expect 5 'GRM_EXPECT_DATASETS is unset or empty' "status refuses revision 7 without a count (no 237 default)" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/status.sh"
+expect 0 'smoke-pass .*revision=7 datasets=237' "status checks that pair against GRM_EXPECT_* when both are set" -- \
+    env -u GRM_EXPECT_SCHEMA GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=237 bash "$S/status.sh"
 expect 0 '237 datasets from GRM_EXPECT_DATASETS\)' \
-    "status names GRM_EXPECT_DATASETS as the count's source when it is set (REVIEW-DS4 I1)" -- \
-    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION GRM_EXPECT_DATASETS=237 bash "$S/status.sh"
-expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "status refuses to check that pair against revision 11 without a count" -- \
+    "status names GRM_EXPECT_DATASETS as the count's source (REVIEW-DS4 I1)" -- \
+    env -u GRM_EXPECT_SCHEMA GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=237 bash "$S/status.sh"
+expect 5 'GRM_EXPECT_DATASETS is unset or empty' "status refuses to check that pair against revision 11 without a count" -- \
     env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=11 bash "$S/status.sh"
 mv "$T/rel1--p237.keep" "$D/go/rel1--p237"
 # smoke.sh checks every served dataset's revision from revision 8 on (U-13),
@@ -2321,7 +2323,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((563 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((564 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

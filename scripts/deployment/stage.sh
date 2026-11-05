@@ -3,7 +3,9 @@
 # it for activate.sh when every check passes.
 # usage: stage.sh LABEL PUBLICATION STAGE_PORT [--apply]
 #   GRM_EXPECT_*         what the report must hold (see common.sh); the approval
-#                        records it for activation, rollback and restore
+#                        records it for activation, rollback and restore.
+#                        GRM_EXPECT_REVISION and GRM_EXPECT_DATASETS are
+#                        required (exit 5 without them)
 #   GRM_PLAYWRIGHT_CORE  playwright-core module directory for the browser check
 #                        (the release's browser-check.cjs, which its manifest
 #                        binds to its commit); its Chromium needs

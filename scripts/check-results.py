@@ -25,7 +25,9 @@ groups; its reports have revision 10's fields and meet the same rules.
 Every report in a root must have the same evaluation revision. A run stopped
 part-way leaves new reports beside old ones, and revision 8's and 9's are
 the same shape, so a root that mixes revisions is refused rather than
-checked as one release. A revision-11 root holds only revision-11 reports.
+checked as one release. A revision-12 root holds only revision-12 reports.
+Revision 12 changes only how the final models tune (on the duplicate
+groups), not the report's shape, so its reports meet revision 11's rules.
 
 A report may list kset_duplicates: the samples with identical kset digests,
 one ascending list of two or more sample indices per group, ordered by first
@@ -183,7 +185,7 @@ def main():
         truth = [sample["resistant"] for sample in samples]
         nr = sum(truth)
         ns = n - nr
-        assert audit["revision"] in (3, 4, 5, 6, 7, 8, 9, 10, 11) and audit["valid"] is True, ("revision", path)
+        assert audit["revision"] in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12) and audit["valid"] is True, ("revision", path)
         assert schema == (2 if args.reshaped or audit["revision"] >= 7 else 1), ("schema does not match the revision", path, schema)
         assert "not external or clinical validation" in audit["scope"], path
         if audit["revision"] >= 8:

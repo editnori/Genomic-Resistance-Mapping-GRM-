@@ -72,6 +72,7 @@ Every command takes `--data <directory>` (default `data`), and the output paths 
 | Evaluate | `grm learn --species <slug>` | `species/<slug>/results/<id>.json` |
 | Report | `grm report` | `report/` |
 | Research | `grm research --revision5-reports <dir> --out <file>` | the `--out` file |
+| Intervals | `grm intervals` | `report/intervals/<id>.json` |
 
 `--species` takes comma-separated slugs; `grm pipeline` and `grm fetch fasta` use every curated species without it. `grm learn --species <slug> --only meropenem` learns one antibiotic (`--only` also takes dataset ids), and `--force` recomputes reports even when their inputs have not changed.
 
@@ -134,6 +135,10 @@ Rerunning `grm curate` is a separate choice. Curation counts only reported calls
 ```
 
 It verifies the revision-5 reports against the snapshot hash list pinned in the source and records each input's hash. Each entry carries SHA-256 digests of the sample ids, labels, lineages, MICs, and held-out predictions its analysis read, and the dashboard shows its numbers only when the report on screen gives the same digests, because a later revision can keep a dataset id and change its genomes. Mismatched entries, missing entries, reports without an MIC model, and entries withheld because their MIC model read disk-diffusion zone diameters as MICs each show as their own state. Without `research.json`, the dashboard works as usual.
+
+## Intervals
+
+`grm intervals` writes `report/intervals/<id>.json` for every dataset `report/index.json` lists: for each learner row of each split, a two-sided 95% Clopper-Pearson (exact binomial) interval for VME, over the resistant isolates the row called (`fn` of `tp + fn`), and for ME, over the susceptible ones (`fp` of `tn + fp`). It is arithmetic on the counts the report already holds; it fits nothing and changes no report file, so a report built without it is byte for byte what it was. A zero denominator gives no interval. Each file records its report's SHA-256, evaluation revision and the counts it used, and the dashboard shows an interval under its VME or ME only where those counts equal the report's, so a file left from an earlier build shows nothing. Run it after `grm report` and before the report tree's manifest is written, so the publication ships the files. Without them, the dashboard works as before. The intervals describe sampling of these isolates under internal cross-validation; they are not calibration, clinical bounds or external validation. The method and reference values are those of the revision-7 offline run (`data/research/grm-all23-saved-intervals-20261027-kimi`, SciPy `beta.ppf`), which `src/intervals.rs`'s tests reproduce to 1e-12.
 
 [docs/research/genotype-to-phenotype.md](docs/research/genotype-to-phenotype.md) covers diagnostic and surveillance uses, the published evidence, and the validation a clinical claim would still need.
 

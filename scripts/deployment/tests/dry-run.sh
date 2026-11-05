@@ -293,11 +293,11 @@ expect 1 'evaluation.revision 10, expected 11: sp__b$' \
 expect 0 'dry-run: would start rel1 with pub-r11' \
     "restore accepts a revision-11 approval of a publication with every dataset at 11" -- bash "$S/restore.sh" rel1 pub-r11
 
-# The GRM_EXPECT_* defaults are the revision-7 publication's, and 237 is its
-# count, not a later revision's: publish.sh, stage.sh and approve-legacy.sh
-# refuse another revision without GRM_EXPECT_DATASETS, before they read
-# anything. A revision-11 root that happens to hold 237 reports (a stopped
-# run, say) would otherwise pass on revision 7's count.
+# GRM_EXPECT_REVISION and GRM_EXPECT_DATASETS have no default (R-D3):
+# publish.sh, stage.sh and approve-legacy.sh refuse with exit 5, before they
+# read anything, when either is unset or not a positive whole number. With
+# the old defaults, revision 7's, a revision-11 root that happened to hold 237
+# reports (a stopped run, say) passed on revision 7's count.
 r=$T/r11-237
 mkdir -p "$r/datasets"
 rows=''
@@ -309,36 +309,63 @@ printf '{"schema":2,"evaluation_revision":11,"datasets":[%s]}\n' "$rows" >"$r/in
 echo '{"corpus":1}' >"$r/corpus.json"
 rehash r11-237
 no_count() { env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=11 "$@"; }
-expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' \
+expect 5 'GRM_EXPECT_DATASETS is unset or empty' \
     "publish dry run refuses revision 11 without GRM_EXPECT_DATASETS, though the root holds 237 reports" -- \
     no_count bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-default
-expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "publish --apply refuses it too" -- \
+expect 5 'GRM_EXPECT_DATASETS is unset or empty' "publish --apply refuses it too" -- \
     no_count bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-default --apply
 expect 0 '' "the refused publish published nothing" -- \
     test ! -e "$D/published/pub-r11-default" -a ! -e "$D/published/pub-r11-default.partial"
 expect 0 'published pub-r11-237 files=239' "publish --apply accepts that root with GRM_EXPECT_DATASETS=237 set" -- \
     env GRM_EXPECT_DATASETS=237 GRM_EXPECT_REVISION=11 bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-237 --apply
-expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "stage refuses revision 11 without GRM_EXPECT_DATASETS" -- \
+expect 5 'GRM_EXPECT_DATASETS is unset or empty' "stage refuses revision 11 without GRM_EXPECT_DATASETS" -- \
     no_count env GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel2 pub-r11-237 "$STAGE_PORT"
 # stage.sh refuses the unset count before it reads anything (REVIEW-DEPLOY
 # L3): with a publication that does not exist, the count is still what it
 # reports, not the missing publication.
-expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' \
+expect 5 'GRM_EXPECT_DATASETS is unset or empty' \
     "stage refuses the unset count before it reads the release or the publication (a missing one here)" -- \
     no_count env GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel2 pub-missing "$STAGE_PORT"
 expect 0 'dry-run: would serve rel2 with pub-r11-237' "stage dry run accepts it with GRM_EXPECT_DATASETS=237 set" -- \
     env GRM_SKIP_BROWSER=1 GRM_EXPECT_DATASETS=237 GRM_EXPECT_REVISION=11 bash "$S/stage.sh" rel2 pub-r11-237 "$STAGE_PORT"
-expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "approve-legacy refuses revision 11 without GRM_EXPECT_DATASETS" -- \
+expect 5 'GRM_EXPECT_DATASETS is unset or empty' "approve-legacy refuses revision 11 without GRM_EXPECT_DATASETS" -- \
     no_count bash "$S/approve-legacy.sh" rel1 pub-r11-237
-expect 1 'index lists 2 datasets \(2 distinct\), expected 237' \
-    "with no GRM_EXPECT_* set, as in the revision-7 runbook, publish still checks revision 7 and 237 datasets" -- \
-    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-legacy
-# A runbook that names revision 7 explicitly, without a count, is the
-# revision-7 runbook too (REVIEW-DEPLOY L2): check_expect asks whether the
-# revision is 7, not whether GRM_EXPECT_REVISION is set.
-expect 1 'index lists 2 datasets \(2 distinct\), expected 237' \
-    "with GRM_EXPECT_REVISION=7 set and no count, publish is not refused and checks revision 7's 237 datasets" -- \
-    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-legacy
+# Revision 7, the old default, is no exception, nor is a count without a
+# revision; and each must be a positive whole number in ASCII digits.
+# refused SCRIPT ENV-ARGS...: a dry run of SCRIPT on pub1 under env ENV-ARGS
+refused() {
+    local script=$1
+    shift
+    case $script in
+        publish) env "$@" bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-refused ;;
+        stage) env "$@" GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel2 pub1 "$STAGE_PORT" ;;
+        approve-legacy) env "$@" bash "$S/approve-legacy.sh" rel1 pub1 ;;
+    esac
+}
+bad_values=(0 07 abc "$(printf '7\r')" "$(printf '\357\274\227')" 1000000000000000000)
+refused_before=$(snapshot)
+bad_names=(zero 'a leading zero' letters 'a trailing CR' 'a full-width digit' '19 digits')
+for script in publish stage approve-legacy; do
+    expect 5 'GRM_EXPECT_REVISION is unset or empty' "$script refuses with no GRM_EXPECT_* set (no revision-7 default)" -- \
+        refused "$script" -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS
+    expect 5 'GRM_EXPECT_DATASETS is unset or empty' "$script refuses GRM_EXPECT_REVISION=7 without a count (no 237 default)" -- \
+        refused "$script" -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7
+    expect 5 'GRM_EXPECT_REVISION is unset or empty' "$script refuses a count without a revision" -- \
+        refused "$script" -u GRM_EXPECT_REVISION GRM_EXPECT_DATASETS=2
+    expect 5 'GRM_EXPECT_REVISION is unset or empty' "$script refuses an empty GRM_EXPECT_REVISION" -- \
+        refused "$script" GRM_EXPECT_REVISION= GRM_EXPECT_DATASETS=2
+    for k in "${!bad_values[@]}"; do
+        expect 5 'GRM_EXPECT_REVISION must be a positive whole number' "$script refuses GRM_EXPECT_REVISION with ${bad_names[k]}" -- \
+            refused "$script" "GRM_EXPECT_REVISION=${bad_values[k]}" GRM_EXPECT_DATASETS=2
+    done
+    expect 5 'GRM_EXPECT_DATASETS must be a positive whole number' "$script refuses GRM_EXPECT_DATASETS=0" -- \
+        refused "$script" GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=0
+    expect 5 'GRM_EXPECT_DATASETS must be a positive whole number' "$script refuses GRM_EXPECT_DATASETS=-2" -- \
+        refused "$script" GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=-2
+    expect 5 'GRM_EXPECT_DATASETS must be a positive whole number' "$script refuses GRM_EXPECT_DATASETS=0275" -- \
+        refused "$script" GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=0275
+done
+expect 0 '' "the refused runs changed nothing under the root" -- test "$(snapshot)" = "$refused_before"
 expect 0 'GRM_EXPECT_\* is not used here' "restore, which checks the approval, is not refused for revision 11 without a count" -- \
     no_count bash "$S/restore.sh" rel1 pub1
 
@@ -844,7 +871,7 @@ expect 2 'invalid port 0641' "stage refuses a spare port with a leading zero" --
     bash "$S/stage.sh" rel1 pub1 0641
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=$((247 - skipped))  # less the root-only skip
+EXPECTED_ASSERTIONS=$((285 - skipped))  # less the root-only skip
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"

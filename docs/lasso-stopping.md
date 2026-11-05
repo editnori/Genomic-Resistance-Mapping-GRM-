@@ -113,9 +113,9 @@ An invalid report is written for review but is not a finished dataset. `grm lear
 
 ## Report schema and independent checker
 
-`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **11**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 to revision-11 output must contain the new evidence.
+`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **12**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 to revision-12 output must contain the new evidence.
 
-Revision 11 keeps this lasso and its evidence unchanged and adds no report field. It draws the random split's inner tuning on the kset duplicate groups ([duplicate-isolation.md](duplicate-isolation.md)), which can change the scores of a dataset that has a group. A revision-11 report meets the revision-8 rules below, and a same-fingerprint revision-10 report is stale against revision 11.
+Revision 11 keeps this lasso and its evidence unchanged and adds no report field. It draws the random split's inner tuning on the kset duplicate groups ([duplicate-isolation.md](duplicate-isolation.md)), which can change the scores of a dataset that has a group. A revision-11 report meets the revision-8 rules below, and a same-fingerprint revision-10 report is stale against revision 11. Revision 12 draws the final lasso's holdout on the same duplicate groups, adds no report field, and makes a same-fingerprint revision-11 report stale.
 
 Revision 10 keeps this lasso and its evidence unchanged. It adds the species identity check ([species-check.md](species-check.md)) and keeps k-mer-identical duplicates whole in one outer fold, listed in the new `kset_duplicates` field ([duplicate-isolation.md](duplicate-isolation.md)). A revision-10 report meets the revision-8 rules below, and a same-fingerprint revision-9 report is stale against revision 10.
 
@@ -391,7 +391,7 @@ nohup nice -n 10 python3 -I -B scan.py --input-root "$ROOT" --out "$SCAN/scan" -
 
 ## Deployment settings and downstream work
 
-Revision 9 (275 datasets over 23 species) was the published release from 2026-10-30 07:52 UTC until the Vast host was destroyed on 2026-10-31. `scripts/deployment/` still defaults to revision 7 and 237 datasets (`common.sh`, `smoke.sh`), so every staging or publishing step must set the expected values explicitly, as below.
+Revision 9 (275 datasets over 23 species) was the published release from 2026-10-30 07:52 UTC until the Vast host was destroyed on 2026-10-31. `publish.sh`, `stage.sh` and `approve-legacy.sh` require `GRM_EXPECT_REVISION` and `GRM_EXPECT_DATASETS` and refuse without them (exit 5); `smoke.sh` run directly still defaults to revision 7 and 237 datasets. Every staging or publishing step sets the expected values explicitly, as below.
 
 At a future, authorized revision-11 staging/publishing operation, the operator must explicitly set:
 

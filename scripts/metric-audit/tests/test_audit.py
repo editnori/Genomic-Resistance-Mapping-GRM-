@@ -128,6 +128,12 @@ class ConsistentRuns(Case):
         self.assertClean(rec)
         self.assertEqual((rec["revision"], rec["best"]["learner"]), (11, "rf"))
 
+    def test_a_revision12_run_with_an_isolated_pair_audits_clean(self):
+        rep, digests = fx.isolated_report(revision=12)
+        rec = self.run_audit(rep, fx.manifest(rep, "rf", evaluation_revision=12), revision=12, digests=digests)
+        self.assertClean(rec)
+        self.assertEqual((rec["revision"], rec["best"]["learner"]), (12, "rf"))
+
     def test_a_row_without_any_call_audits_clean_with_null_manifest_rates(self):
         rep = fx.make_report()
         empty_gbt(rep)

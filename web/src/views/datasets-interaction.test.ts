@@ -7,6 +7,7 @@ import { parseManifest } from "../data/validate";
 import type { Manifest } from "../data/schema";
 import { navigate, type Navigator } from "../app/router";
 import { DatasetsView } from "./DatasetsView";
+import { HOLD_MS, LIFT_CLICK_MS } from "../ui/useHold";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -184,6 +185,168 @@ describe("rule cells", () => {
     expect(fits.querySelector("button")).toBeNull();
     act(() => (fits as HTMLElement).click());
     expect(opened).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** A pointer event of TYPE from POINTER at (X, Y), as a browser sends it. */
+const press = (el: Element, type: string, pointerType: string, x = 10, y = 10) => {
+  const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y });
+  Object.defineProperty(e, "pointerType", { value: pointerType });
+  el.dispatchEvent(e);
+  return e;
+};
+/** A touch held MS milliseconds, then lifted, and the click a browser may
+ *  send after it. */
+const hold = (el: Element, ms = HOLD_MS + 100, pointerType = "touch") =>
+  act(() => {
+    press(el, "pointerdown", pointerType);
+    vi.advanceTimersByTime(ms);
+    press(el, "pointerup", pointerType);
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
+  });
+
+describe("rule cells on touch and hover (A34)", () => {
+  const base = manifest.datasets[0]!;
+  const long = "presence of Aminoglycoside N(6')-acetyltransferase (EC 2.3.1.82) => AAC(6')-Ib/AAC(6')-II";
+  beforeEach(() => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }));
+  afterEach(() => vi.useRealTimers());
+
+  it("open a cut-off rule with a touch hold as a tap does, and close it with another", () => {
+    clipping(true);
+    draw({ ...manifest, datasets: [{ ...base, scm_rules: [long] }] });
+    const whole = table().querySelector("tbody tr")!.lastElementChild!.querySelector("button")!;
+    // Held but not long enough: the lift's click is a tap, and opens it.
+    hold(whole, HOLD_MS - 100);
+    expect(whole.getAttribute("aria-expanded")).toBe("true");
+    hold(whole, HOLD_MS - 100);
+    expect(whole.getAttribute("aria-expanded")).toBe("false");
+    // A hold opens it once: the click after the lift does not undo it.
+    hold(whole);
+    expect(whole.getAttribute("aria-expanded")).toBe("true");
+    hold(whole);
+    expect(whole.getAttribute("aria-expanded")).toBe("false");
+    // A hold without a click after it opens it as well.
+    act(() => {
+      press(whole, "pointerdown", "touch");
+      vi.advanceTimersByTime(HOLD_MS);
+    });
+    expect(whole.getAttribute("aria-expanded")).toBe("true");
+    act(() => press(whole, "pointerup", "touch"));
+    // Then the keyboard still works: Enter's click (detail 0) is never dropped.
+    act(() => whole.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+    expect(whole.getAttribute("aria-expanded")).toBe("false");
+    expect(opened).not.toHaveBeenCalled();
+  });
+
+  it("swallow the click after a hold wherever it lands, so a rule that shrinks under the finger never opens its row", () => {
+    clipping(true);
+    draw({ ...manifest, datasets: [{ ...base, scm_rules: [long] }] });
+    const row = table().querySelector("tbody tr")!;
+    const whole = row.lastElementChild!.querySelector("button")!;
+    const other = row.children[1] as HTMLElement;
+    // Chromium sends the lift's click where the finger now is: on another cell.
+    act(() => {
+      press(whole, "pointerdown", "touch");
+      vi.advanceTimersByTime(HOLD_MS + 100);
+      press(whole, "pointerup", "touch");
+      other.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
+    });
+    expect(whole.getAttribute("aria-expanded")).toBe("true");
+    expect(opened).not.toHaveBeenCalled();
+    // A hold whose click never comes swallows nothing once the lift's window closes.
+    act(() => {
+      press(whole, "pointerdown", "touch");
+      vi.advanceTimersByTime(HOLD_MS + 100);
+      press(whole, "pointerup", "touch");
+      vi.advanceTimersByTime(LIFT_CLICK_MS + 1);
+    });
+    expect(whole.getAttribute("aria-expanded")).toBe("false");
+    act(() => other.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 })));
+    expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it("drop a hold that moves, is cancelled or comes from a mouse, and keep the browser's menu off a hold", () => {
+    clipping(true);
+    draw({ ...manifest, datasets: [{ ...base, scm_rules: [long] }] });
+    const whole = table().querySelector("tbody tr")!.lastElementChild!.querySelector("button")!;
+    act(() => {
+      press(whole, "pointerdown", "touch", 10, 10);
+      press(whole, "pointermove", "touch", 30, 10);
+      vi.advanceTimersByTime(HOLD_MS * 2);
+    });
+    expect(whole.getAttribute("aria-expanded")).toBe("false");
+    act(() => {
+      press(whole, "pointerdown", "touch");
+      press(whole, "pointercancel", "touch");
+      vi.advanceTimersByTime(HOLD_MS * 2);
+    });
+    expect(whole.getAttribute("aria-expanded")).toBe("false");
+    // A small wobble is still a hold.
+    act(() => {
+      press(whole, "pointerdown", "touch", 10, 10);
+      press(whole, "pointermove", "touch", 14, 13);
+      vi.advanceTimersByTime(HOLD_MS);
+    });
+    expect(whole.getAttribute("aria-expanded")).toBe("true");
+    let menu!: Event;
+    act(() => {
+      menu = press(whole, "contextmenu", "touch");
+      press(whole, "pointerup", "touch");
+    });
+    expect(menu.defaultPrevented).toBe(true);
+    // A held mouse button is a click, once, when it lifts.
+    hold(whole, HOLD_MS * 2, "mouse");
+    expect(whole.getAttribute("aria-expanded")).toBe("false");
+    act(() => {
+      press(whole, "pointerdown", "mouse");
+      vi.advanceTimersByTime(HOLD_MS * 2);
+    });
+    expect(whole.getAttribute("aria-expanded")).toBe("false");
+    act(() => press(whole, "pointerup", "mouse"));
+  });
+
+  it("open every rule with a touch hold on the first one, without opening the row", () => {
+    draw();
+    const more = table().querySelector<HTMLButtonElement>("button[aria-label^='Show all'][aria-label$='rules']")!;
+    const cell = more.closest("td")!;
+    const n = Number(/Show all (\d+) rules/.exec(more.getAttribute("aria-label")!)![1]);
+    hold(cell.querySelector("[data-row-ignore]")!);
+    expect(cell.querySelectorAll("li")).toHaveLength(n);
+    expect(more.getAttribute("aria-expanded")).toBe("true");
+    expect(opened).not.toHaveBeenCalled();
+  });
+
+  it("name a cut-off rule's whole text in a native tooltip, only while it is cut off", () => {
+    clipping(true);
+    draw({ ...manifest, datasets: [{ ...base, scm_rules: [long] }] });
+    const cell = table().querySelector("tbody tr")!.lastElementChild!;
+    const text = () => cell.querySelector("button > span")!;
+    expect(text().getAttribute("title")).toBe(long);
+    // Hovering is a resting pointer: nothing opens, and the tooltip is the
+    // browser's own, so no element is added.
+    const before = cell.innerHTML;
+    act(() => {
+      press(text(), "pointerover", "mouse");
+      press(text(), "pointermove", "mouse");
+      vi.advanceTimersByTime(HOLD_MS * 2);
+    });
+    expect(cell.innerHTML).toBe(before);
+    expect(document.querySelector("[role='tooltip']")).toBeNull();
+    // Shown whole, it needs no tooltip.
+    act(() => cell.querySelector("button")!.click());
+    expect(text().hasAttribute("title")).toBe(false);
+
+    // The first of several rules, cut off, names its own text; one that fits has none.
+    act(() => root.unmount());
+    root = createRoot(host);
+    draw({ ...manifest, datasets: [{ ...base, scm_rules: [long, "absence of blaTEM"] }] });
+    const first = table().querySelector("tbody tr [data-row-ignore] > span")!;
+    expect(first.getAttribute("title")).toBe(long);
+    clipping(false);
+    act(() => root.unmount());
+    root = createRoot(host);
+    draw({ ...manifest, datasets: [{ ...base, scm_rules: ["presence of blaKPC"] }] });
+    expect(table().querySelector("tbody tr")!.lastElementChild!.querySelector("[title]")).toBeNull();
   });
 });
 

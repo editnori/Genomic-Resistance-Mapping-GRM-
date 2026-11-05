@@ -1,12 +1,12 @@
-# Hyperparameter selection: why the one-SE rule can lose to a default, and what a rule must meet
+# Hyperparameter selection: why tuned settings can lose to a default, what a rule must meet, and the fixed default
 
 **What this covers.** This note covers selecting **learner hyperparameters** only: the per-family knobs in `scripts/hyperopt/protocol.py` (scm, cart, rf, gbt, lasso). It does not cover selecting the **input-data configuration**: genome and cohort count, which genomes are included, k-mer length, feature families, or the retained-feature budget. That selection is tracked separately as the primary open capability, and nothing here applies to it.
 
-**Status.** This is an explanation and a specification. It changes no setting, search space, protocol or `select.py`, and it adopts no rule. It answers finding F4 of the 2026-11-01 hyperparameter review: on one synthetic cohort, the one-standard-error rule with the complexity preference chose CART and GBT configurations that scored worse on untouched outer folds than production's defaults. `tests/hyperopt/test_selection_toy.py` encodes the criteria in section 4 on generic toy data. For each criterion it pins today's value and verdict, so where today's rule misses a bound, the test asserts the miss and its size.
+**Status.** `select.py` selects each family's **fixed default**: no tuned configuration replaces production's default (section 4, "Adopted: the fixed default"). Main decided this on 5 Nov 2026 under Layth's delegation of that day (DECISIONS F4, UD-8). The criteria A1 to A6 below were ratified as written, and the default-anchored rule was evaluated against them: keep the default unless the best inner mean beats the default's by more than γ = 0.04. It met A1 to A5 on the toy suite with the bounds as written. A6's paired outer comparison on the synthetic harness, with fresh cohort seeds, found a mean loss of 0.0099 against the default for SCM on the lineage split, above A2's 0.005 (SE 0.0074). DECISIONS F4 sets the fallback for that case: selection returns the fixed default. The one-standard-error rule with the complexity preference, which `select.py` held before, is described in sections 1 to 3. It answered finding F4 of the 2026-11-01 hyperparameter review: on one synthetic cohort it chose CART and GBT configurations that scored worse on untouched outer folds than production's defaults. `tests/hyperopt/test_selection_toy.py` encodes the criteria on generic toy data for all three rules: the fixed default, the default-anchored candidate and the one-SE baseline. It pins each value and verdict, and where a rule misses a bound, the test asserts the miss and its size. This note covers learner hyperparameters only and changes no search space, protocol or production setting.
 
-## 1. The rule today
+## 1. The rule before 5 Nov 2026: one SE plus complexity
 
-For each family and outer training fold, `select.py` scores each feasible trial *c* by the mean *m_c* and the standard error *ŝ_c* = SD(n−1)/√k of its *k* inner-fold scores (*k* = 3). The best trial *b* has the highest mean. The candidates are the trials with *m_c* ≥ *m_b* − *ŝ_b*. The rule then takes the candidate with the lowest reported complexity, then the default, then the lowest trial id. Complexity is whatever the objective reports: SCM rules, CART leaves, RF trees, GBT trees kept, lasso nonzero coefficients.
+For each family and outer training fold, `select.py` scored each feasible trial *c* by the mean *m_c* and the standard error *ŝ_c* = SD(n−1)/√k of its *k* inner-fold scores (*k* = 3). The best trial *b* had the highest mean. The candidates were the trials with *m_c* ≥ *m_b* − *ŝ_b*. The rule then took the candidate with the lowest reported complexity, then the default, then the lowest trial id. Complexity is whatever the objective reports: SCM rules, CART leaves, RF trees, GBT trees kept, lasso nonzero coefficients.
 
 Notation for section 3: trial *c*'s score on inner fold *j* is *x_cj* = *ν_c* + *f_j* + *e_cj*. Here *f_j* ~ N(0, τ²) is a fold effect that every trial shares, *e_cj* ~ N(0, σ²) is the trial's own noise, *s*² = τ² + σ², and ρ = τ²/*s*² is the shared share. *ν_c* is what the inner folds measure, and *μ_c* is the trial's true held-out score on an outer fold. They differ when the inner and outer training sets differ in size (section 3.6).
 
@@ -95,7 +95,7 @@ For two rules with equal expected performance, the observed difference *D* ~ N(0
 
 ## 4. Acceptance criteria
 
-These are for any future learner-hyperparameter selection rule. Fix the bounds before evaluating a candidate. They are proposals to ratify before use, set on the toy's scale: per-fold SD 0.045, so the SE of a 3-fold mean is 0.026. For an objective with a different per-fold SD, scale them in proportion.
+These hold for any learner-hyperparameter selection rule. Fix the bounds before evaluating a candidate. Main ratified them as written on 5 Nov 2026 (DECISIONS F4). They are set on the toy's scale: per-fold SD 0.045, so the SE of a 3-fold mean is 0.026. For an objective with a different per-fold SD, scale them in proportion.
 
 **The toy suite.** Every scenario has 32 configurations, 3 folds, configuration 0 as the default, Gaussian noise with *s* = 0.045 and ρ = 0.3, and *ν* = *μ*, unless stated otherwise. "Capacity" *h* runs from 2 to 40 over configurations 1 to 31, and the default sits at 16 unless noted. Each test uses 4,000 draws from a fixed seed.
 
@@ -125,7 +125,57 @@ These are for any future learner-hyperparameter selection rule. Fix the bounds b
 
   A retrospective comparison on outer folds already seen (section 3.7) is a hypothesis, not validation.
 
-**Today's rule on the toy** (4,000 draws; each test pins its value to within 3 Monte Carlo SEs and asserts the verdict):
+### Adopted: the fixed default
+
+For each family and outer training fold, `select.py` selects trial 0, the family default, whatever the inner scores. The history is still checked, refused or accepted as before (A1), every trial is still scored and listed, and the best feasible trial (ties to the default, then the lowest trial id) and `default_gain`, how far its mean beats the default's, are reported for the record only. A default that is not a feasible trial (failed, unconverged, off the history's folds or outside a constraint) is still the selection, and the family (`default_feasible: false`) and the run (`warnings`, code `default_not_feasible`) say so. A history with no trial 0 selects nothing (`no_default`). The report's schema is `grm-hyperopt-report/3`.
+
+The selected entry's inner mean is labelled a selection-biased tuning score (`select.SELECTED_SCORE_LABEL`; `SCORE_LABEL` says so too, and the report heads its column "inner-tuning mean (selection-biased)"). The score to report for a selection is its outer-fold score: the configuration refitted on the outer training fold and scored once on the outer test fold. That refit is still outside this package (`select.OUTER_EVALUATION`).
+
+**The fixed default on the toy** (the `A*` classes): A1 holds (6 tests: the signature, flat record order, Task B run order refused, an outer-score field refused, the pinned fold plan required, and every selection the default). A2's loss and A4's cost are 0 on every suite scenario. A5's outer-fold score has a bias within 0.0013 of zero on every scenario (the same outer draws as the candidate's, below). A3 is missed by design: the gain on `clear_winner` is 0 against a bound of 0.04. That is the price DECISIONS F4 set for a candidate that fails A6. `RuleCopy` checks the vectorised fixed-default rule against `select.select_history` on 175 flat histories and on 21 Task B histories written by `search.run_trial`.
+
+### Evaluated and not adopted: the default-anchored rule
+
+**The rule.** Among the feasible trials, keep the default unless the best inner mean *m_b* beats the default's *m_0* by more than γ; then take the best trial. The comparison is paired: every trial is scored on the same inner folds, so the shared fold effect cancels in *m_b* − *m_0* (section 3.3), and the SE plays no part. Complexity plays no part either. The candidates it treats as indistinguishable are the trials within γ of the best mean.
+
+**γ = 0.04.** On the 100,000-draw table of the review lane `grm-hpo-f4-20261102`, the rule met A2 and A3 on every suite scenario for γ = 0.03, 0.04 and 0.05: its `default_best` losses were 0.0040, 0.0025 and 0.0013 and its `clear_winner` gains 0.075, 0.072 and 0.067; at γ = 0.02 the `default_best` loss was 0.0060. γ = 0.04 sits mid-range. At the toy's noise it is about 1.3 paired SEs of a two-trial difference (0.031), and close to the winner's-curse margin the best of 32 equal trials has over an equal default (0.045, section 3.1).
+
+**On the toy** (the `Candidate*` classes; 4,000 draws, seed 20261102; each value pinned to within 3 Monte Carlo SEs, each verdict clearing its bound by at least six):
+
+| criterion | passes | fails |
+|---|---|---|
+| A1 | yes, as the fixed default (the rule reads only the inner means) | |
+| A2 (≤ 0.005) | `null` 0, `default_best` 0.00243, `underfit` −0.00130, `overfit` −0.01440, `unrelated_proxy` −0.00137, `shared_folds` −0.00044, `clear_winner` −0.07214 | |
+| A3 (≥ 0.04) | gain 0.07214 | |
+| A4 (≤ 0.002) | `null` 0, `default_best` −0.01418, `underfit` −0.00136, `overfit` 0.00011, `unrelated_proxy` −0.00134, `shared_folds` −0.00094, `clear_winner` −0.00511 | |
+| A5 (\|bias\| ≤ 0.01; the outer-fold score) | `null` 0.00073, `null_binomial` −0.00016, `default_best` −0.00009, `underfit` −0.00014, `overfit` 0.00128, `unrelated_proxy` 0.00045, `shared_folds` 0.00097, `clear_winner` −0.00078 | |
+
+The toy's outer-fold score is the selected configuration's true score plus independent noise with the per-fold SD, so its bias is zero up to Monte Carlo error (SE about 0.0007). The inner mean of the same selection overstates it by 0.03501 on `null`, which is why it may be shown only labelled. The rule kept the default in 42% of `null` draws, 79% of `default_best`, 50% of `underfit`, 90% of `shared_folds` and 9% of `clear_winner`.
+
+**A6: the paired outer comparison.** The lane `grm-method-20261105` ran it on 5 Nov 2026 with a design fixed before any run (its `NOTES.md`):
+
+- **Cohorts.** L's generator (`scripts/ablation/synthetic.py`) at seeds 900001 to 900010, which played no part in designing the rule. One override, `n_lineages` 12, gives the lineage split the 2 × 5 lineages evaluation requires. Each cohort has 400 genomes, 123 binary features (Count and Categorical columns left out) and 20 duplicate pairs.
+- **Splits.** Evaluation's own split plan, seed 42, 5 outer and 3 inner folds: random, with duplicate isolation and duplicate-grouped tuning; and lineage, with lineage tuning.
+- **Search and fits.** Per outer fold, Task B's protocol (32 trials per family, all five families) ran the search, scored by the real learners through a review adapter that links this tree's crate. The candidate's selection code (this lane's first F4 tree, γ = 0.04) picked the configuration. Then each arm, the fixed default and the rule's pick, was refitted once on the outer training fold and scored once on the outer test fold (16,000 trials, all ok).
+- **Loss.** BA(default) − BA(selected) per outer fold; a null fit is scored 0.5, which happened once (lineage GBT, default arm). The cohort is the unit: the mean of its 5 folds, then the mean over the 10 cohorts, with SE = SD/√10 and a 95% t interval.
+
+| scheme | family | cohorts | folds | default kept | folds differing | BA default | BA selected | loss vs default (mean of cohort means) | SE | 95% CI | <= 0.005 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| lineage | cart | 10 | 50 | 40 | 9 | 0.7285 | 0.7335 | -0.0050 | 0.0040 | [-0.0141, +0.0041] | yes |
+| lineage | gbt | 10 | 50 | 29 | 21 | 0.7593 | 0.7703 | -0.0110 | 0.0064 | [-0.0255, +0.0035] | yes |
+| lineage | lasso | 10 | 50 | 50 | 0 | 0.7616 | 0.7616 | +0.0000 | 0.0000 | [+0.0000, +0.0000] | yes |
+| lineage | rf | 10 | 50 | 35 | 15 | 0.7805 | 0.7840 | -0.0035 | 0.0028 | [-0.0097, +0.0027] | yes |
+| lineage | scm | 10 | 50 | 36 | 14 | 0.7223 | 0.7124 | +0.0099 | 0.0074 | [-0.0068, +0.0266] | NO |
+| random | cart | 10 | 50 | 44 | 4 | 0.7262 | 0.7277 | -0.0015 | 0.0029 | [-0.0080, +0.0050] | yes |
+| random | gbt | 10 | 50 | 33 | 16 | 0.8041 | 0.8044 | -0.0004 | 0.0027 | [-0.0065, +0.0057] | yes |
+| random | lasso | 10 | 50 | 50 | 0 | 0.8259 | 0.8259 | +0.0000 | 0.0000 | [+0.0000, +0.0000] | yes |
+| random | rf | 10 | 50 | 43 | 6 | 0.8172 | 0.8186 | -0.0014 | 0.0023 | [-0.0066, +0.0038] | yes |
+| random | scm | 10 | 50 | 40 | 5 | 0.7309 | 0.7292 | +0.0016 | 0.0012 | [-0.0011, +0.0044] | yes |
+
+The rule lost more than 0.005 to the default in one cell, SCM on the lineage split (+0.0099). The interval there includes zero, and a few folds carry the loss: +0.252 and +0.198 BA (cohorts 900004 and 900003), then +0.059 and +0.055. The pre-stated rule reads the mean, though, and the mean is over the bound, so the rule is not adopted. Lasso kept its default in all 100 folds; its only searched knob is `n_lambdas`. Receipts: `grm-method-20261105/logs/meth-a6/grm-logs/a6/` (`summary.json`, `summary.md`, `runs.tgz` with every history and selection, `outputs.sha256`).
+
+### The replaced rule, recorded as a baseline
+
+**The one-SE rule on the toy** (4,000 draws; the `Baseline*` classes, each value pinned to within 3 Monte Carlo SEs and its verdict asserted):
 
 | criterion | passes | fails |
 |---|---|---|
@@ -137,7 +187,7 @@ These are for any future learner-hyperparameter selection rule. Fix the bounds b
 
 Every verdict clears its bound by at least six Monte Carlo SEs. `RuleCopy` checks the vectorised rule the Monte Carlo uses against `select.select_history` on 175 flat histories and on 21 Task B histories written by `search.run_trial`.
 
-**Feasibility.** The criteria can be met together. On the 100,000-draw table, a default-anchored rule met A2 and A3 on every suite scenario for γ = 0.03, 0.04 and 0.05: keep the default unless the best inner mean beats the default's by more than γ. Its losses on `default_best` were 0.0040, 0.0025 and 0.0013, and its gains on `clear_winner` 0.075, 0.072 and 0.067. At γ = 0.02 the `default_best` loss was 0.0060. This rule is shown only to establish feasibility: it is not proposed, it would still need an unseen-data score for A5, and A6 has not been applied to it.
+The baseline classes test a vectorised copy of the replaced rule; `select.py` no longer holds it. A future rule replaces the fixed default only through the same steps: A1 to A5 here with the bounds as written, then A6 on fresh cohort seeds.
 
 ## 5. Reproduce
 
@@ -145,4 +195,4 @@ Every verdict clears its bound by at least six Monte Carlo SEs. `RuleCopy` check
 python3 -I -B -W error -m unittest discover -s tests/hyperopt -t . -p test_selection_toy.py -v
 ```
 
-This runs the 30 toy tests in about 2 s with numpy 1.26.4. All pass, and the run ends in a plain `OK`, as CI's last-line check requires: a test for a bound today's rule misses asserts the miss. The archive recomputation and the 100,000-draw tables come from the review lane `grm-hpo-f4-20261102` (`tools/repro_f4.py`, `tools/toy_sim.py`). They read the 2026-11-01 review's saved JSON and the toy problems above only.
+This runs the 59 toy tests in about 2 s with numpy 1.26.4. All pass, and the run ends in a plain `OK`, as CI's last-line check requires: a test for a bound a rule misses asserts the miss. A6's driver and adapter are review tools, kept with the lane's receipts (`grm-method-20261105/tools/a6/`), not in the repository. The archive recomputation and the 100,000-draw tables come from the review lane `grm-hpo-f4-20261102` (`tools/repro_f4.py`, `tools/toy_sim.py`). They read the 2026-11-01 review's saved JSON and the toy problems above only.

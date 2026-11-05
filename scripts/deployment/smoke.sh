@@ -38,8 +38,8 @@ done
 # (1@127.0.0.2:PORT), would send every request to another host.
 [[ $port =~ ^[123456789][0123456789]{0,4}$ ]] && ((port <= 65535)) ||
     { echo "FAIL PORT must be a port number, 1 to 65535 in ASCII digits with no leading zero, not $(printf %q "$port")"; exit 2; }
-# The count's source is check_expect's (common.sh): GRM_EXPECT_DATASETS, or
-# revision 7's 237. Say so when it is the default.
+# Run directly without GRM_EXPECT_DATASETS, the count is revision 7's 237.
+# Say so. (Every deployment script that calls it sets all three.)
 [ -n "${GRM_EXPECT_DATASETS:-}" ] || echo "note: GRM_EXPECT_DATASETS is unset or empty, so the count checked is the default, 237, revision 7's"
 
 check() {

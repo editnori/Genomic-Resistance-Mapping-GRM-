@@ -16,6 +16,15 @@
 //! many samples, the gradients on each side of either feature sum to zero:
 //! no tree lowers validation loss, early stopping keeps none, and the model
 //! is the 0.5 prior. Evaluation counts a model with no tree as a null fit.
+//!
+//! A model with no tree is a no-call, by design, and stays one: it makes no
+//! call for any sample rather than reporting the constant 0.5 prior as a
+//! prediction. Abstaining is the honest output of a fit that found nothing,
+//! and it matches selective calling. XGBoost always keeps at least one tree,
+//! so on such data it calls where GRM abstains; that difference is kept, not
+//! a defect (confirmed 5 Nov 2026, DECISIONS X1). The eval.rs tests
+//! `a_boosted_model_that_keeps_no_tree_is_a_null_fit_without_a_call` and
+//! `null_fits_make_no_call_while_fitted_half_scores_are_calls` pin it.
 
 use super::sample_indices;
 use crate::bits::{BitMatrix, Bits};
