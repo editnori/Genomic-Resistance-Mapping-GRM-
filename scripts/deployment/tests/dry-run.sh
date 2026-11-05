@@ -584,12 +584,14 @@ state rel2 pub1 | lines 1 4 >"$D/state/active"
 bad_state "cut short by a partial write" 'lacks report_manifest'
 # The same cut from a writer far larger than a pipe buffer: lines drains it, so
 # under pipefail the pipeline succeeds and every later assertion still runs;
-# head on the same input is killed by SIGPIPE (exit 141).
+# head on the same input is killed by SIGPIPE (exit 141). GitHub's runner starts
+# steps with SIGPIPE ignored, which a shell can't undo, so the writers got EPIPE
+# and sed exited 4; env --default-signal gives the control the default action.
 big_state() { state rel2 pub1; seq 1 400000 | sed 's/^/pad=/'; }
 big=$(big_state | lines 1 9)
 expect 0 '' "a drain-safe cut of a 2.7 MB pipeline succeeds under pipefail" -- test "$big" = "$(state rel2 pub1)"
 expect 141 '' "head on the same pipeline fails under pipefail with SIGPIPE (why lines is used)" -- \
-    bash -c 'set -o pipefail; seq 1 400000 | sed "s/^/pad=/" | head -n 9 >/dev/null'
+    env --default-signal=PIPE bash -c 'set -o pipefail; seq 1 400000 | sed "s/^/pad=/" | head -n 9 >/dev/null'
 big_state | lines 1 4 >"$D/state/active"
 bad_state "cut short from a large pipeline" 'lacks report_manifest'
 rm "$D/state/active"
