@@ -9,7 +9,9 @@
 // Filters button below 1440px, and the one result count; below 640px the
 // search takes its own row. From 1440px the filters are a rail in the same
 // grid. Search, filters, sort and Show all survive a trip away and Back.
-// The inspector holds every full value; a clipped rule opens in place.
+// The inspector holds every full value; a clipped rule opens in place, by
+// click, tap, keyboard or a touch hold, and names its whole text to a
+// resting pointer in a native tooltip.
 
 import { Fragment, useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
@@ -28,6 +30,7 @@ import { DataTable, type Column, type SortState } from "../ui/DataTable";
 import { FilterRail, FiltersButton, railGrid, RailCheck, RailChecks, RailControl, RailField, RailGroup, useRailState } from "../ui/FilterRail";
 import { FOCUS_RING, GhostButton, MeetsMark, VIEW_SHELL } from "../ui/primitives";
 import { useClipped } from "../ui/useClipped";
+import { HOLD_TARGET, useHold } from "../ui/useHold";
 import { useCountUp } from "../ui/useCountUp";
 import { byFamily, ClassGlyph, ClassKey, ClassName } from "../ui/drugClass";
 
@@ -147,13 +150,17 @@ const RULE_TOGGLE = `ui-control-target ui-target-24 inline-flex items-center jus
 /** The set covering machine's rules. The first rule shows on one line; when
  *  there are more, "+N" opens every rule in place, one per line, at the same
  *  width, and "Fewer" closes them from the same slot. A single rule that is
- *  cut off is itself the button that shows it whole. None of it opens the
- *  row. */
+ *  cut off is itself the button that shows it whole. On a touch screen a
+ *  hold on the rule does what a tap does. A rule cut off shows its whole
+ *  text in a native tooltip to a resting pointer, which moves nothing.
+ *  None of it opens the row. */
 const RuleCell = ({ rules }: { rules: readonly string[] }) => {
   const [open, setOpen] = useState(false);
   // Read only while the rule is cut to one line: shown whole it no longer
   // measures as clipped, and the button must stay to close it.
   const [textRef, clipped] = useClipped<HTMLSpanElement>(open);
+  const toggle = useHold(() => setOpen((o) => !o));
+  const show = useHold(() => setOpen(true));
   const s = ruleSummary(rules);
   if (s === null) {
     return (
@@ -163,7 +170,7 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
     );
   }
   const line = (
-    <span ref={textRef} className={open ? "block whitespace-normal break-words" : "block truncate"}>
+    <span ref={textRef} title={!open && clipped ? s.first : undefined} className={open ? "block whitespace-normal break-words" : "block truncate"}>
       {s.first}
     </span>
   );
@@ -172,8 +179,8 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
       <button
         type="button"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
-        className={`ui-control-target block w-full rounded-sm text-left transition-colors duration-fast ease-out hover:text-blue ${FOCUS_RING}`}
+        {...toggle}
+        className={`${HOLD_TARGET} ui-control-target block w-full rounded-sm text-left transition-colors duration-fast ease-out hover:text-blue ${FOCUS_RING}`}
       >
         {line}
       </button>
@@ -192,9 +199,9 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
           ))}
         </ol>
       ) : (
-        // A click on the first rule opens the list as well; the count is
-        // the way in by keyboard.
-        <span data-row-ignore="" className="min-w-0 cursor-pointer" onClick={() => setOpen(true)}>
+        // A click, tap or hold on the first rule opens the list as well;
+        // the count is the way in by keyboard.
+        <span data-row-ignore="" className={`${HOLD_TARGET} min-w-0 cursor-pointer`} {...show}>
           {line}
         </span>
       )}

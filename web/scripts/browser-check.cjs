@@ -373,6 +373,81 @@ async function longRuleCheck(page, tag, ways) {
   check(tag + ' long rule cut to one line opens whole in place by ' + ways.join(' and '), ok, { dataset: longRule.id, steps });
 }
 
+/** On a pointer device a cut-off rule names its whole text in a native
+ *  tooltip (its title) and a resting pointer changes nothing: no layout, no
+ *  element, no state (A34). Run after longRuleCheck, so that check's closed
+ *  and keyboard reads never need the pointer moved. */
+async function ruleTipCheck(page, tag) {
+  const name = tag + ' cut-off rule names its whole text in a native tooltip, and hover moves nothing';
+  if (longRule === undefined) { skipped.push({ check: name, reason: 'no lone rule of 80 characters or more in this tree' }); return; }
+  const text = page.getByRole('region', { name: 'Datasets', exact: true }).getByText(longRule.scm_rules[0], { exact: true });
+  const read = async () => { await settle(page); return text.evaluate(e => { const b = e.getBoundingClientRect(), r = e.closest('tr').getBoundingClientRect(); return { title: e.getAttribute('title'), clipped: e.scrollWidth > e.clientWidth + 1, expanded: e.closest('button')?.getAttribute('aria-expanded') ?? null, box: [b.x, b.y, b.width, b.height], row: [r.y, r.height], elements: document.getElementsByTagName('*').length, tips: document.querySelectorAll('[role="tooltip"]').length }; }, null, { timeout: 2000 }).catch(() => null); };
+  // Scrolled first, so the hover itself scrolls nothing.
+  await text.scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {});
+  const before = await read();
+  const hovered = await text.hover({ timeout: 2000 }).then(() => true, () => false);
+  const during = await read();
+  await page.mouse.move(0, 0);
+  const ok = before !== null && hovered && before.title === longRule.scm_rules[0] && before.clipped && before.expanded === 'false' && before.tips === 0 && JSON.stringify(before) === JSON.stringify(during);
+  check(name, ok, { dataset: longRule.id, before, during });
+}
+
+/** On a touch screen a hold does what a tap does (A34): a touch held 800 ms
+ *  on a cut-off rule opens it whole and a second closes it, a hold on the
+ *  first of several rules opens them all, and a hold that moves 40 px does
+ *  nothing. The touches go through CDP's Input.dispatchTouchEvent, as
+ *  playwright's tap does, with the hold between press and lift, at a point
+ *  that hits the target itself: at 390px the sticky Dataset column can lie
+ *  over the rule cell, and a touch there is a touch on the row. */
+async function holdCheck(page, context, tag) {
+  const cdp = await context.newCDPSession(page);
+  const hold = async (locator, ms, move = 0) => {
+    const point = await locator.evaluate(el => {
+      el.scrollIntoView({ block: 'center', inline: 'center' });
+      const r = el.getBoundingClientRect(), y = r.top + r.height / 2;
+      for (const x of [r.left + r.width / 2, r.left + 8, r.right - 8]) {
+        const hit = x >= 0 && x < innerWidth ? document.elementFromPoint(x, y) : null;
+        if (hit !== null && el.contains(hit)) return { x, y };
+      }
+      return null;
+    }, null, { timeout: 2000 }).catch(() => null);
+    if (point === null) return false;
+    const { x, y } = point;
+    await settle(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    if (move) { await page.waitForTimeout(50); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + move, y }] }); }
+    await page.waitForTimeout(ms);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await settle(page);
+    return true;
+  };
+  const region = page.getByRole('region', { name: 'Datasets', exact: true });
+  const search = page.getByRole('searchbox', { name: 'Search datasets' });
+  const name = tag + ' hold on a cut-off rule opens it whole, a second hold closes it, and a hold that moves does nothing';
+  if (longRule === undefined) skipped.push({ check: name, reason: 'no lone rule of 80 characters or more in this tree' });
+  else {
+    await search.fill(longRule.antibiotic + ' ' + longRule.species);
+    const text = region.getByText(longRule.scm_rules[0], { exact: true });
+    await text.waitFor({ timeout: 5000 }).catch(() => {});
+    const read = () => text.evaluate(e => ({ clipped: e.scrollWidth > e.clientWidth + 1, expanded: e.closest('button')?.getAttribute('aria-expanded') ?? null, dialog: document.querySelector('dialog[open]') !== null }), null, { timeout: 2000 }).catch(() => null);
+    const steps = [['closed', await read()]];
+    for (const [step, move] of [['hold open', 0], ['hold closed', 0], ['moved hold closed', 40]]) steps.push([step, (await hold(text, 800, move)) ? await read() : null]);
+    const ok = steps.every(([step, s]) => s !== null && !s.dialog && (step.endsWith('open') ? !s.clipped && s.expanded === 'true' : s.clipped && s.expanded === 'false'));
+    check(name, ok, { dataset: longRule.id, steps });
+  }
+  await search.fill('');
+  const more = region.locator('button[aria-label^="Show all"][aria-label$="rules"]').first();
+  await more.waitFor({ timeout: 5000 }).catch(() => {});
+  const want = Number(((await more.getAttribute('aria-label', { timeout: 2000 }).catch(() => '')) ?? '').match(/Show all (\d+) rules/)?.[1] ?? NaN);
+  // Pinned by key: once open, the row's toggle reads Fewer, and `more` moves on to the next row.
+  const key = await more.evaluate(e => e.closest('tr').getAttribute('data-row-key'), null, { timeout: 2000 }).catch(() => null);
+  const row = region.locator(`tr[data-row-key="${key}"]`);
+  const held = await hold(row.locator('[data-row-ignore]').first(), 800);
+  const opened = held ? await row.evaluate(r => ({ rules: r.querySelectorAll('ol li').length, expanded: r.querySelector('button[aria-expanded]')?.getAttribute('aria-expanded'), dialog: document.querySelector('dialog[open]') !== null }), null, { timeout: 2000 }).catch(() => null) : null;
+  check(tag + ' hold on the first of several rules opens them all in place', opened !== null && opened.rules === want && opened.expanded === 'true' && !opened.dialog, { want, opened });
+  if (opened?.expanded === 'true') await row.getByRole('button', { name: 'Fewer' }).tap({ timeout: 2000 }).catch(() => {});
+}
+
 async function interactions(page, tag, width) {
   await page.goto(BASE + '/datasets');
   const search = page.getByRole('searchbox', { name: 'Search datasets' });
@@ -571,6 +646,7 @@ async function interactions(page, tag, width) {
   await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   check(tag + ' inspector focus return', await rows.nth(1).evaluate(e => e === document.activeElement), await activeName(page));
   await longRuleCheck(page, tag, ['click', 'keyboard']);
+  await ruleTipCheck(page, tag);
 
   await page.goto(BASE + '/datasets?dataset=' + inspectId);
   await page.locator('#ds-model').waitFor();
@@ -961,6 +1037,7 @@ async function boundaries(browser) {
   const forcedMarks = await page.evaluate(() => [...document.querySelectorAll('.dataset-sub svg.class-glyph')].map(g => { const s = g.querySelector('circle, rect, path'); return { shape: g.getAttribute('data-shape'), paint: g.getAttribute('data-shape') === 'ring' ? getComputedStyle(s).stroke : getComputedStyle(s).fill }; }));
   check('forced colors: class marks share one system ink and keep distinct shapes', forcedMarks.length > 0 && new Set(forcedMarks.map(m => m.paint)).size === 1 && new Set(forcedMarks.map(m => m.shape)).size >= Math.min(2, new Set(manifest.datasets.map(d => d.drug_class)).size), forcedMarks.slice(0, 6));
   await longRuleCheck(page, 'touch 390', ['tap']);
+  await holdCheck(page, context, 'touch 390');
   await page.goto(BASE);
   await page.getByRole('button', { name: 'Present', exact: true }).click();
   const deck = page.getByRole('dialog', { name: 'GRM findings presentation' });
