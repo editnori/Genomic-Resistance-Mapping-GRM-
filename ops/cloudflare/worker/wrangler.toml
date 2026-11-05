@@ -1,0 +1,14 @@
+# The GRM site: one Worker in front of one R2 bucket (src/index.js). The
+# release scripts in ../scripts write the bucket; docs/static-hosting.md is
+# the runbook.
+name = "grm-site"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+# Served only on the custom domain, never on *.workers.dev or preview URLs.
+workers_dev = false
+preview_urls = false
+routes = [{ pattern = "genomicresistance.com", custom_domain = true }]
+
+[[r2_buckets]]
+binding = "SITE"
+bucket_name = "grm-site"
