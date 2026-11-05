@@ -71,13 +71,13 @@ class Case(unittest.TestCase):
         cls.fg.p.stdout.close()
 
     def run_audit(self, report, index=None, backup=DEFAULT, log_lines=None, revision=7, launch=LAUNCH,
-                  reshaped=False, published=True):
+                  reshaped=False, published=True, digests=None):
         if backup is DEFAULT:
             backup = fx.make_report(revision=6, forest_variant=1)
         if log_lines is None:
             log_lines = run_log(report)
         with tempfile.TemporaryDirectory() as tmp:
-            paths = fx.audit_root(tmp, report, index, backup, log_lines, published)
+            paths = fx.audit_root(tmp, report, index, backup, log_lines, published, digests)
             args = argparse.Namespace(root=paths["root"], revision=revision, reshaped=reshaped, foldgen=audit.FOLDGEN,
                                       backup=None if reshaped else paths["backup"],
                                       log=None if reshaped else paths["log"], launch=None if reshaped else launch)
@@ -115,6 +115,18 @@ class ConsistentRuns(Case):
         rec = self.run_audit(rep, fx.manifest(rep, "rf", evaluation_revision=9), revision=9)
         self.assertClean(rec)
         self.assertEqual((rec["revision"], rec["schema"], rec["best"]["learner"]), (9, 2, "rf"))
+
+    def test_a_revision10_run_with_an_isolated_pair_audits_clean(self):
+        rep, digests = fx.isolated_report(revision=10)
+        rec = self.run_audit(rep, fx.manifest(rep, "rf", evaluation_revision=10), revision=10, digests=digests)
+        self.assertClean(rec)
+        self.assertEqual((rec["revision"], rec["best"]["learner"]), (10, "rf"))
+
+    def test_a_revision11_run_with_an_isolated_pair_audits_clean(self):
+        rep, digests = fx.isolated_report(revision=11)
+        rec = self.run_audit(rep, fx.manifest(rep, "rf", evaluation_revision=11), revision=11, digests=digests)
+        self.assertClean(rec)
+        self.assertEqual((rec["revision"], rec["best"]["learner"]), (11, "rf"))
 
     def test_a_row_without_any_call_audits_clean_with_null_manifest_rates(self):
         rep = fx.make_report()
@@ -337,6 +349,47 @@ class TestFold(Case):
         rep = fx.make_report()
         rep["eval_config"]["seed"] = 43
         self.assertIssue(self.run_audit(rep), "random/test_fold", "lineage/test_fold")
+
+
+class KsetDuplicates(Case):
+    def setUp(self):
+        # Audit the fixture's revision-7 reports as an isolating revision.
+        saved = audit.DUPLICATE_ISOLATION_REVISION
+        audit.DUPLICATE_ISOLATION_REVISION = 7
+        self.addCleanup(setattr, audit, "DUPLICATE_ISOLATION_REVISION", saved)
+
+    def test_an_isolated_pair_audits_clean(self):
+        rep, digests = fx.isolated_report()
+        self.assertClean(self.run_audit(rep, digests=digests))
+
+    def test_a_listed_pair_left_across_two_folds(self):
+        rep, digests = fx.isolated_report()
+        b = rep["kset_duplicates"][0][1]
+        rep["splits"][0]["test_fold"][b] = fx.FOLDS["random"][b]
+        fx.rescore(rep)
+        self.assertIssue(self.run_audit(rep, digests=digests), "random/test_fold", '"positions": 1')
+
+    def test_a_tie_sent_to_the_higher_index_members_fold(self):
+        rep, digests = fx.isolated_report()
+        a, b = rep["kset_duplicates"][0]
+        folds = rep["splits"][0]["test_fold"]
+        folds[a] = folds[b] = fx.FOLDS["random"][b]
+        fx.rescore(rep)
+        self.assertIssue(self.run_audit(rep, digests=digests), "random/test_fold", '"positions": 2')
+
+    def test_a_listed_pair_whose_digests_differ(self):
+        rep, _ = fx.isolated_report()
+        self.assertIssue(self.run_audit(rep), "kset_duplicates differ")
+
+    def test_an_unlisted_pair_with_one_digest(self):
+        _, digests = fx.isolated_report()
+        self.assertIssue(self.run_audit(fx.make_report(), digests=digests), "kset_duplicates differ")
+
+    def test_reports_before_the_isolating_revision_list_no_pair(self):
+        audit.DUPLICATE_ISOLATION_REVISION = 8
+        rep, digests = fx.isolated_report()
+        self.assertClean(self.run_audit(fx.make_report(), digests=digests))
+        self.assertIssue(self.run_audit(rep, digests=digests), "kset_duplicates differ")
 
 
 class SchemaAndConfig(Case):

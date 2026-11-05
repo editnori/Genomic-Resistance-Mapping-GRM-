@@ -5,9 +5,9 @@
 //!                           cross-dataset panel summary, Kover benchmark
 //!   corpus.json             record-level distributions, drug-name resolution,
 //!                           inferred breakpoints
-//!   species/<slug>.json     genome map, dendrogram, resistance strings per
+//!   species/\<slug>.json    genome map, dendrogram, resistance strings per
 //!                           genome, cross-resistance pairs
-//!   datasets/<id>.json      the per-dataset report as `grm learn` wrote it
+//!   datasets/\<id>.json     the per-dataset report as `grm learn` wrote it
 
 use crate::bvbrc::{self, AmrRecord, GenomeRecord};
 use crate::curate::{Breakpoint, Call, DatasetSpec, Funnel, Phenotype};

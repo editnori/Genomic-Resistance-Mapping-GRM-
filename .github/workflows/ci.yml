@@ -1,0 +1,245 @@
+# The Rust, Python, web and deployment-toolkit checks, on synthetic and unit
+# fixtures only: no real data, network service, secret or deployment.
+# docs/ci.md lists each job's baseline and the checks that stay outside CI.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The toolchain every gate has been validated with; it overrides any default.
+  RUSTUP_TOOLCHAIN: 1.98.1
+  CARGO_INCREMENTAL: 0
+
+defaults:
+  run:
+    shell: bash
+
+# Actions are pinned to the commit of a release tag (docs/ci.md).
+jobs:
+  rust-lint:
+    name: Rust fmt and clippy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --component rustfmt,clippy --no-self-update
+          rustc --version | grep -F "rustc $RUSTUP_TOOLCHAIN "
+          grep -qw avx2 /proc/cpuinfo || { echo "::error::.cargo/config.toml builds for x86-64-v3, which needs AVX2"; exit 1; }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-lint-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '.cargo/config.toml') }}
+          restore-keys: cargo-lint-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+
+  rust-test:
+    name: Rust tests (release)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --no-self-update
+          rustc --version | grep -F "rustc $RUSTUP_TOOLCHAIN "
+          grep -qw avx2 /proc/cpuinfo || { echo "::error::.cargo/config.toml builds for x86-64-v3, which needs AVX2"; exit 1; }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-test-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '.cargo/config.toml') }}
+          restore-keys: cargo-test-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-
+      - run: cargo test --release --locked
+      # A test added, removed, renamed or ignored changes the list, and so does a
+      # module whose `pub mod` line is dropped, though the run above still passes.
+      - name: Compare the test names with tests/rust-test-names.txt
+        run: bash scripts/ci/rust-test-names.sh --check
+
+  rust-doc:
+    name: Rust docs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --no-self-update
+          rustc --version | grep -F "rustc $RUSTUP_TOOLCHAIN "
+          grep -qw avx2 /proc/cpuinfo || { echo "::error::.cargo/config.toml builds for x86-64-v3, which needs AVX2"; exit 1; }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-doc-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock', '.cargo/config.toml') }}
+          restore-keys: cargo-doc-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-
+      - run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked
+
+  metric-audit:
+    name: Metric audit and lasso scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --no-self-update
+          rustc --version | grep -F "rustc $RUSTUP_TOOLCHAIN "
+          grep -qw avx2 /proc/cpuinfo || { echo "::error::.cargo/config.toml builds for x86-64-v3, which needs AVX2"; exit 1; }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            scripts/metric-audit/foldgen/target/
+          key: cargo-foldgen-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('scripts/metric-audit/foldgen/Cargo.lock', '.cargo/config.toml') }}
+          restore-keys: cargo-foldgen-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-
+      - name: Build foldgen
+        working-directory: scripts/metric-audit/foldgen
+        run: cargo build --locked --release
+      - name: Check Python 3.12
+        run: python3 -I -c 'import sys; print(sys.executable, sys.version); assert sys.version_info[:2] == (3, 12)'
+      - name: Metric audit tests
+        run: |
+          for t in scripts/metric-audit/tests/test_check_results.py scripts/metric-audit/tests/test_audit.py scripts/metric-audit/tests/test_scripts.py; do
+            echo "::group::$t"
+            python3 -I -B -W error "$t" -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
+            echo "::endgroup::"
+            test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = OK || { echo "::error::$t skipped tests"; exit 1; }
+          done
+      # Its 4 RealBinary tests skip here; scripts/lasso-scan/smoke.sh runs them.
+      - name: Lasso scan tests
+        run: python3 -I -B -W error scripts/lasso-scan/test_scan.py -v
+
+  python:
+    name: Python ${{ matrix.suite }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: tests/hyperopt
+            top: .
+          # Discovered without -t ., as main's gate runs it.
+          - suite: scripts/sampling-audit/tests
+            top: ""
+          - suite: tests/ablation
+            top: .
+          - suite: tests/temporal
+            top: .
+          - suite: tests/multitask
+            top: .
+    env:
+      SUITE: ${{ matrix.suite }}
+      TOP: ${{ matrix.top }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install numpy 1.26.4
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends python3-numpy
+          python3 -I -c 'import sys, numpy; print(sys.executable, sys.version, "numpy", numpy.__version__); assert sys.version_info[:2] == (3, 12) and numpy.__version__ == "1.26.4"'
+      # env -i and -s keep out the runner's environment and user site-packages.
+      - name: PYTHONHASHSEED 0, 1 and 4242
+        run: |
+          for seed in 0 1 4242; do
+            echo "::group::PYTHONHASHSEED=$seed"
+            env -i PATH=/usr/bin:/bin HOME="$HOME" PYTHONHASHSEED="$seed" GRM_TASK_J_STATS="$PWD/scripts/ablation/stats.py" \
+              python3 -s -P -B -W error -m unittest discover -s "$SUITE" ${TOP:+-t "$TOP"} -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
+            echo "::endgroup::"
+            test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = OK || { echo "::error::tests skipped at PYTHONHASHSEED=$seed"; exit 1; }
+          done
+      - name: Isolated mode
+        run: |
+          GRM_TASK_J_STATS="$PWD/scripts/ablation/stats.py" \
+            python3 -I -B -W error -m unittest discover -s "$SUITE" ${TOP:+-t "$TOP"} -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
+          test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = OK || { echo "::error::tests skipped under -I"; exit 1; }
+      - name: Without GRM_TASK_J_STATS
+        if: matrix.suite == 'tests/ablation'
+        run: |
+          env -i PATH=/usr/bin:/bin HOME="$HOME" PYTHONHASHSEED=0 \
+            python3 -s -P -B -W error -m unittest discover -s tests/ablation -t . -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
+          test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = OK || { echo "::error::tests skipped without GRM_TASK_J_STATS"; exit 1; }
+      - name: Check the suites changed no tracked file
+        run: git diff --exit-code --stat
+
+  deployment:
+    name: Deployment toolkit (offline)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the suites' tools
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends psmisc curl
+          for t in git flock fuser curl setsid pgrep python3 cc; do
+            command -v "$t" > /dev/null || { echo "::error::$t not found"; exit 1; }
+          done
+      - run: bash scripts/deployment/tests/dry-run.sh
+      # Known to flake on small runners: docs/ci.md.
+      - run: bash scripts/deployment/tests/apply.sh
+
+  web:
+    name: Web typecheck, build and unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # The README asks for Node.js 22; vitest 5 needs 22.12 or newer.
+      NODE_VERSION: 22.23.4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Check Node
+        run: |
+          node --version
+          npm --version
+          test "$(node --version)" = "v$NODE_VERSION" || { echo "::error::node is $(node --version), not v$NODE_VERSION"; exit 1; }
+      - run: npm --prefix web ci --no-audit --no-fund
+      - run: npm --prefix web run typecheck
+      - run: npm --prefix web run build
+      # src/charts/realdata.test.ts skips: it needs GRM_REPORT_DIR, a published report.
+      - run: npm --prefix web test
+      - name: Check the build changed no tracked file
+        run: git diff --exit-code --stat

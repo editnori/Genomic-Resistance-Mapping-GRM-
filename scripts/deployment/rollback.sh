@@ -8,7 +8,9 @@
 # serve of exactly the pair state/active records, and it is not restarted if
 # the target fails (activate.sh --rollback). It needs a running managed
 # service; when nothing serves the port, start the wanted pair with
-# restore.sh LABEL PUBLICATION instead.
+# restore.sh LABEL PUBLICATION instead. state/previous is read here, before
+# deploy.lock; activate.sh --rollback checks it again under the lock and
+# refuses (exit 2) if an activation moved it meanwhile.
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/common.sh"
 parse_args "$@"

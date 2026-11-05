@@ -8,6 +8,9 @@
 #                        (the release's browser-check.cjs, which its manifest
 #                        binds to its commit); its Chromium needs
 #                        LD_LIBRARY_PATH and node on PATH
+#   GRM_CHROMIUM         Chromium executable the browser check launches, for a
+#                        release whose browser-check.cjs reads it; unset or
+#                        empty, playwright-core launches its own
 #   GRM_SKIP_BROWSER=1   approve on the HTTP checks alone; the approval says so
 # Receipts go to stage/LABEL--PUBLICATION--TIME.XXXXXX; approval to go/LABEL--PUBLICATION.
 # The candidate is stopped on every exit, interruption included; if it cannot
@@ -23,9 +26,11 @@ set -- ${ARGS[@]+"${ARGS[@]}"}
 label=$1
 pub=$2
 sport=$3
-[[ $sport =~ ^[0-9]+$ ]] && ((sport > 0 && sport < 65536)) || die "invalid port $sport" 2
+[[ $sport =~ ^[123456789][0123456789]{0,4}$ ]] && ((sport <= 65535)) ||
+    die "invalid port $sport: a port number, 1 to 65535 in ASCII digits with no leading zero" 2
 [ "$sport" != "$PORT" ] || die "$sport is the live port; stage on a spare one" 2
 need curl python3 sha256sum fuser flock setsid pgrep
+check_expect
 verify_release "$label"
 release_files=$VT_LISTED
 verify_publication "$pub" "$EXPECT_SCHEMA" "$EXPECT_REVISION" "$EXPECT_DATASETS"

@@ -1,6 +1,7 @@
 //! Genomic Resistance Mapping: from BV-BRC records and genome assemblies to
 //! interpretable antimicrobial-resistance models and a presentable report.
 
+pub mod ablate;
 pub mod analysis;
 pub mod annotate;
 pub mod bits;
@@ -22,3 +23,4 @@ pub mod report;
 pub mod research;
 pub mod serve;
 pub mod species;
+pub mod species_check;

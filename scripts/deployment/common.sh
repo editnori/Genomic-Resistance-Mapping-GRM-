@@ -7,12 +7,15 @@
 #   GRM_PORT             live loopback port (default 8641)
 #   GRM_EXPECT_SCHEMA    report index schema (default 2)
 #   GRM_EXPECT_REVISION  report evaluation revision (default 7)
-#   GRM_EXPECT_DATASETS  dataset report count (default 237)
+#   GRM_EXPECT_DATASETS  dataset report count (default 237; required when
+#                        GRM_EXPECT_REVISION is not 7)
 # GRM_EXPECT_* is what publish.sh, stage.sh and approve-legacy.sh require of a
-# report. The approval they lead to records those values, and activate.sh,
-# rollback.sh, restore.sh and status.sh check each pair against its own
-# approval, so a 275-dataset candidate and a 237-dataset rollback target need
-# no shared setting.
+# report. The defaults are the revision-7 publication's, kept for its legacy
+# runbook (docs/deployment.md); 237 is that release's count, so another
+# revision must name its own (check_expect). The approval they lead to records
+# those values, and activate.sh, rollback.sh, restore.sh and status.sh check
+# each pair against its own approval, so a 275-dataset candidate and a
+# 237-dataset rollback target need no shared setting.
 #
 # Layout under the root:
 #   published/NAME/{report/,SOURCE.sha256}       immutable report publications
@@ -58,6 +61,11 @@ EXPECT_DATASETS=${GRM_EXPECT_DATASETS:-237}
 for value in "$PORT" "$EXPECT_SCHEMA" "$EXPECT_REVISION" "$EXPECT_DATASETS"; do
     [[ $value =~ ^[0-9]+$ ]] || { echo "not a number: $value" >&2; exit 2; }
 done
+# The port as smoke.sh reads it: no leading zero, which grm and curl read as
+# decimal but bash arithmetic as octal, and nothing past 65535. Before this,
+# 08641 passed here and then failed every health check.
+[[ $PORT =~ ^[123456789][0123456789]{0,4}$ ]] && ((PORT <= 65535)) ||
+    { echo "GRM_PORT must be a port number, 1 to 65535 in ASCII digits with no leading zero, not $PORT" >&2; exit 2; }
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 source "$HERE/lib.sh"
 APPLY=0
@@ -132,7 +140,14 @@ verify_tree() {
 }
 
 # The report's index has schema $2, revision $3 and $4 datasets, and lists
-# exactly the dataset reports present.
+# exactly the dataset reports present. From revision 8 on, every dataset also
+# records revision $3 as its evaluation.revision, an integer, both in its
+# index row and in its own report; a missing or malformed one fails. grm
+# report stamps the index with its own revision but copies each dataset's
+# audit, so the index alone passes a root that still holds reports of an
+# earlier revision. Revision 7 and earlier keep the index checks only: the
+# revision-7 publication predates this rule, and activate.sh, rollback.sh and
+# restore.sh check it here again against its approval.
 check_report_index() {
     python3 -I - "$@" <<'PY' || die "report $1 does not match schema $2, revision $3, $4 datasets"
 import json, os, sys
@@ -151,6 +166,23 @@ if len(ids) != count or len(set(ids)) != count:
     problems.append(f"index lists {len(ids)} datasets ({len(set(ids))} distinct), expected {count}")
 if sorted(ids) != files:
     problems.append(f"index datasets differ from the {len(files)} files in datasets/")
+if revision >= 8:
+    stale = {}
+    audits = [("with index", d["id"], d) for d in index["datasets"]]
+    for name in files:
+        try:
+            with open(os.path.join(root, "datasets", name + ".json")) as f:
+                audits.append(("whose report has", name, json.load(f)))
+        except (OSError, ValueError):
+            stale.setdefault("datasets whose report is not readable JSON", []).append(name)
+    for where, name, record in audits:
+        audit = record.get("evaluation") if isinstance(record, dict) else None
+        found = audit.get("revision") if isinstance(audit, dict) else None
+        if type(found) is not int or found != revision:
+            got = "missing" if found is None else repr(found)
+            stale.setdefault(f"datasets {where} evaluation.revision {got}, expected {revision}", []).append(name)
+    for what, names in sorted(stale.items()):
+        problems.append(f"{what}: {', '.join(sorted(names))}")
 for problem in problems:
     print(problem, file=sys.stderr)
 sys.exit(1 if problems else 0)
@@ -340,12 +372,29 @@ note_expect_env() {
     fi
 }
 
+# publish.sh, stage.sh and approve-legacy.sh, before they read anything, and
+# status.sh, before it checks a live pair without a valid approval against
+# GRM_EXPECT_*: the default count, 237, is revision 7's, so a report of
+# another revision is never checked against it. Without this, a revision-11 root that happened to
+# hold 237 reports (a stopped run, say) would pass on revision 7's count.
+check_expect() {
+    [ "$EXPECT_REVISION" -eq 7 ] || [ -n "${GRM_EXPECT_DATASETS:-}" ] ||
+        die "GRM_EXPECT_REVISION=$EXPECT_REVISION needs GRM_EXPECT_DATASETS, that revision's report count: the default, 237, is revision 7's" 2
+}
+
 # Take the root lock on LOCK_FD, once per script. Every process a script forks
 # for the long term closes LOCK_FD, so none holds the lock after the script.
+# A short-lived child (a sleep, a health poll) of a script killed outright
+# holds it until that child exits: lock_root SECONDS waits up to SECONDS for
+# it (restore.sh); without SECONDS it refuses at once.
 lock_root() {
     ((LOCKED)) && return 0
     open_fd LOCK_FD "$D/deploy.lock" || die "$D/deploy.lock is a link, directory or special file" 2
-    flock -n "$LOCK_FD" || die "another deployment holds $D/deploy.lock" 2
+    if ! flock -n "$LOCK_FD"; then
+        [ "${1:-0}" -gt 0 ] || die "another deployment holds $D/deploy.lock" 2
+        say "$D/deploy.lock is held; waiting up to $1 s for it"
+        flock -w "$1" "$LOCK_FD" || die "another deployment holds $D/deploy.lock" 2
+    fi
     LOCKED=1
 }
 
@@ -722,12 +771,17 @@ wait_ready() {
 }
 
 # Byte and index checks of LABEL serving NAME on a port, against the schema,
-# revision and dataset count in APPROVED[LABEL--NAME].
+# revision and dataset count in APPROVED[LABEL--NAME]. smoke.sh allows 20 s a
+# request, so it does not inherit the deployment lock (LOCK_FD): a script
+# killed during the check leaves no long holder of the lock.
 health() {
     local s r n
     read -r s r n <<<"${APPROVED[$1--$2]:?no approval loaded for $1 with $2}"
-    GRM_EXPECT_SCHEMA=$s GRM_EXPECT_REVISION=$r GRM_EXPECT_DATASETS=$n \
-        bash "$HERE/smoke.sh" "$3" "$D/published/$2/report" "$D/release/$1/dist"
+    (
+        [ -z "$LOCK_FD" ] || exec {LOCK_FD}>&-
+        GRM_EXPECT_SCHEMA=$s GRM_EXPECT_REVISION=$r GRM_EXPECT_DATASETS=$n \
+            exec bash "$HERE/smoke.sh" "$3" "$D/published/$2/report" "$D/release/$1/dist"
+    )
 }
 
 # PID, and no other process, listens on the live port and serves LABEL with

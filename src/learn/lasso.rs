@@ -824,6 +824,36 @@ impl<'a> Wls<'a> {
         self.backward(&self.forward(&rhs))
     }
 
+    /// Where the solve steps along d from coefficients c, given the line
+    /// search's best point t and the change in the objective there: to t
+    /// when that change is below zero. Otherwise, to the first crossing
+    /// before t = 1 when every active coefficient keeps its fixed sign up to
+    /// it: each non-zero one has it already, and each entering one at zero
+    /// must move in the direction of its own. The objective then equals the
+    /// sign-fixed quadratic along d up to the first crossing, so it falls
+    /// all the way there. A coefficient within rounding of zero crosses so
+    /// early that the fall is below rounding and no step shows a change
+    /// below zero; stepping to the crossing anyway lets it leave. Without
+    /// that it blocks every step, and each entering column is blocked in
+    /// turn or the zero columns are checked at a point that is not
+    /// stationary. None when there is no such step.
+    fn step(&self, t: f64, change: f64, c: &[f64], d: &[f64], beta: &[f64]) -> Option<f64> {
+        if change < 0.0 {
+            return Some(t);
+        }
+        let signs_hold = self
+            .active
+            .iter()
+            .zip(&self.sign)
+            .zip(&d[1..])
+            .all(|((&k, &s), &dk)| beta[k] != 0.0 || dk * s > 0.0);
+        if signs_hold {
+            first_crossing(c, d)
+        } else {
+            None
+        }
+    }
+
     /// Feature-sign search from (b0, beta), in place. True when it stops at
     /// its optimality test; false at the iteration guard or where rounding
     /// leaves it no descent.
@@ -862,30 +892,7 @@ impl<'a> Wls<'a> {
             }
             let pen: Vec<f64> = self.active.iter().map(|&k| self.pen(k)).collect();
             let (t, change) = line_search(&c, &d, slope, curv, &pen);
-            // Every non-zero active coefficient has its fixed sign. When each
-            // entering one moves in the direction of its own, the objective
-            // equals the sign-fixed quadratic along d up to the first point
-            // where a non-zero coefficient reaches zero, so it falls all the
-            // way there. A coefficient within rounding of zero crosses so
-            // early that the fall is below rounding and no step shows a
-            // change below zero. Step to that crossing anyway, so that it
-            // leaves; otherwise it blocks every step, and each entering
-            // column is blocked in turn or the zero columns are checked at a
-            // point that is not stationary.
-            let with_signs = self
-                .active
-                .iter()
-                .zip(&self.sign)
-                .zip(&d[1..])
-                .all(|((&k, &s), &dk)| beta[k] != 0.0 || dk * s > 0.0);
-            let step = if change < 0.0 {
-                Some(t)
-            } else if with_signs {
-                first_crossing(&c, &d)
-            } else {
-                None
-            };
-            if let Some(t) = step {
+            if let Some(t) = self.step(t, change, &c, &d, beta) {
                 *b0 = c[0] + t * d[0];
                 for (i, &k) in self.active.iter().enumerate() {
                     let (ci, di) = (c[i + 1], d[i + 1]);
@@ -1437,6 +1444,49 @@ mod tests {
         let (t, dq) = line_search(&[0.3, 0.0], &[0.1, 2.0], -1.0, 1.0, &[0.2]);
         assert_eq!(t, 1.0);
         assert!((dq - (-1.0 + 0.5 + 0.4)).abs() < 1e-15);
+    }
+
+    #[test]
+    fn the_first_crossing_is_the_earliest_before_the_full_step() {
+        // The intercept would cross at 0.1 but is never penalized; the
+        // coefficients cross at 0.5, 0.25 and exactly 1 (the full step).
+        let c = [1.0, 2.0, 1.0, 2.0, -2.0];
+        let d = [-10.0, -4.0, -4.0, -2.0, 1.0];
+        assert_eq!(first_crossing(&c, &d), Some(0.25));
+        assert_eq!(first_crossing(&c[..2], &d[..2]), Some(0.5));
+        assert_eq!(first_crossing(&[0.0, 2.0, 0.0], &[-1.0, -2.0, 3.0]), None);
+    }
+
+    #[test]
+    fn a_hidden_fall_steps_to_the_first_crossing_only_while_every_sign_holds() {
+        // Column 0 is active at 0.5 and column 3 enters at zero, both with
+        // sign +. Column 0 crosses zero at t = 0.5 on each step below.
+        let (x, y) = union_panel();
+        let prob = Problem::new(&x, &y, &Bits::ones(x.cols), &[0, 1, 2, 3]);
+        let rep = representatives(&prob.columns);
+        let mut wls = Wls::new(&prob, &rep, 0.01, &vec![0.0; x.cols]).unwrap();
+        let beta = [0.5, 0.0, 0.0, 0.0];
+        assert!(wls.push(0, 1.0, PIVOT_TOL).is_ok() && wls.push(3, 1.0, PIVOT_TOL).is_ok());
+        let c = wls.coefficients(-0.5, &beta);
+        let step = |t, change, d: &[f64]| wls.step(t, change, &c, d, &beta);
+        // A step that lowers the objective is taken as the line search found
+        // it.
+        assert_eq!(step(0.75, -1e-3, &[0.0, -1.0, 0.2]), Some(0.75));
+        // One that does not, with the entering column moving the way of its
+        // sign: the first crossing.
+        assert_eq!(step(0.75, 0.0, &[0.0, -1.0, 0.2]), Some(0.5));
+        assert_eq!(step(0.75, 2e-18, &[0.0, -1.0, 0.2]), Some(0.5));
+        // The entering column moving against its sign, or not at all: the
+        // objective is not the sign-fixed quadratic, so no step.
+        assert_eq!(step(0.75, 0.0, &[0.0, -1.0, -0.2]), None);
+        assert_eq!(step(0.75, 0.0, &[0.0, -1.0, 0.0]), None);
+        // No crossing before the full step: none.
+        assert_eq!(step(0.75, 0.0, &[0.0, 1.0, 0.2]), None);
+        // With nothing entering the sign check is empty.
+        let mut wls = Wls::new(&prob, &rep, 0.01, &vec![0.0; x.cols]).unwrap();
+        assert!(wls.push(0, 1.0, PIVOT_TOL).is_ok());
+        let c = wls.coefficients(-0.5, &beta);
+        assert_eq!(wls.step(0.75, 0.0, &c, &[0.0, -4.0], &beta), Some(0.125));
     }
 
     #[test]
@@ -2246,10 +2296,6 @@ mod tests {
         assert_eq!(changed, 0);
     }
 
-    /// Under unequal IRLS weights an exactly dependent column's computed
-    /// pivot can round to a small positive number, so `PIVOT_TOL`, not exact
-    /// arithmetic, keeps it out of the factor. Checked for a disjoint union
-    /// and for the complement of an active column.
     /// A uniform draw in [lo, hi) from a 64-bit LCG state.
     fn uniform(state: &mut u64, lo: f64, hi: f64) -> f64 {
         *state = state
@@ -2258,6 +2304,10 @@ mod tests {
         lo + (hi - lo) * ((*state >> 11) as f64 / (1u64 << 53) as f64)
     }
 
+    /// Under unequal IRLS weights an exactly dependent column's computed
+    /// pivot can round to a small positive number, so `PIVOT_TOL`, not exact
+    /// arithmetic, keeps it out of the factor. Checked for a disjoint union
+    /// and for the complement of an active column.
     #[test]
     fn push_refuses_exactly_dependent_columns_under_unequal_weights() {
         let n = 60;
@@ -2646,12 +2696,19 @@ mod tests {
         let (x, y) = union_panel();
         let lambda = 0.01;
         let eta = vec![0.0; x.cols];
-        for (gain, taken) in [(1e-12, false), (0.05, true)] {
+        // In the last case column 1 starts one ulp above column 0, so the two
+        // reach zero a rounding apart; both still leave.
+        let ulp_above = f64::from_bits(0.5f64.to_bits() + 1);
+        for (gain, taken, b1) in [
+            (1e-12, false, 0.5),
+            (0.05, true, 0.5),
+            (0.05, true, ulp_above),
+        ] {
             let mut prob = Problem::new(&x, &y, &Bits::ones(x.cols), &[0, 1, 2, 3]);
             prob.sd[2] = prob.sd[0] + prob.sd[1] - gain;
             let rep = representatives(&prob.columns);
             let mut wls = Wls::new(&prob, &rep, lambda, &eta).unwrap();
-            let (mut b0, mut beta) = (-0.5, vec![0.5, 0.5, 0.0, 0.0]);
+            let (mut b0, mut beta) = (-0.5, vec![0.5, b1, 0.0, 0.0]);
             assert!(wls.push(0, 1.0, PIVOT_TOL).is_ok() && wls.push(1, 1.0, PIVOT_TOL).is_ok());
             let Err(dep) = wls.push(2, 1.0, PIVOT_TOL) else {
                 panic!("the union joined the factor");

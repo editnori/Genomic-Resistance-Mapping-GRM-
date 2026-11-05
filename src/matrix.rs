@@ -7,7 +7,7 @@
 //! carry it. Learners see patterns; annotation goes back to the k-mers.
 //!
 //! Files in a matrix directory:
-//!   matrix.json        summary and genome order (column i = genomes[i])
+//!   matrix.json        summary and genome order (column i = genomes\[i\])
 //!   patterns.bin       n_patterns rows of `words` little-endian u64
 //!   support.bin        u32 per pattern: genomes carrying it
 //!   kmer_offsets.bin   u64 per pattern + 1: slice bounds into kmers.bin
@@ -587,7 +587,7 @@ pub fn receipt_path(partial: &Path) -> PathBuf {
 }
 
 /// `path` with `suffix` appended to its file name, so that x.a and x.b keep
-/// distinct temporary names (`with_extension` would map both to x.<ext>).
+/// distinct temporary names (`with_extension` would map both to x.\<ext>).
 fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
     let mut name = path.as_os_str().to_owned();
     name.push(suffix);

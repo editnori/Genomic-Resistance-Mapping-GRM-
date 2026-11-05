@@ -41,10 +41,10 @@ Exact complements were not the cause. Fold 0's screened set has 10,397 exact com
 The fix is in the line search. Every non-zero active coefficient carries its fixed sign. When each entering column's step moves in the direction of its own sign, the objective along the sign-fixed step equals the sign-fixed quadratic up to the first crossing, and that quadratic falls all the way to its minimizer at t = 1. So the first crossing always lowers the objective in exact arithmetic. When no candidate step shows a change below zero but there is a crossing before t = 1, the solve now steps to the first crossing anyway, and that coefficient leaves. Three smaller rules come with it, as the admin ruled:
 
 - An exchange must strictly improve: its rate has to be below zero by more than `INNER_TOL` (1e-9 on the standardized scale), the margin a zero column needs to enter at all. An exact complement of an active column has a rate of exactly zero, so rounding alone never decides it.
-- Tied violators are ordered by lowest column, not by how the list was built.
+- Tied violators go to the lowest column. Revision 8 already ordered them so, through a stable sort of a list built in column order; the comparison now states it, so the order no longer rests on how the list is built.
 - Every active coefficient that reaches zero in an exchange, to rounding, leaves, ties included, so no coefficient stays active at zero or past it.
 
-On the fitting sets saved from the two stops, V. cholerae point 13 now converges in 3 IRLS steps at KKT 2.2e-9 and S. enterica point 19 in 3 steps at KKT 8.2e-8, with no solve stopping short. Over all 22 fits of the two datasets (660 points) the new step fired at 4 points and the margin refusal never fired. Every point whose path never reached a firing is bit-identical to revision 8, and so is every point of the 16 saved fixture panels, where nothing fired. Downstream of a firing point the objective moves by at most 6.3e-14 and fitted probabilities on the fitting samples by at most 1.6e-6. Held-out scores can move more, up to 0.098 at V. cholerae fold 0 points 17 to 29: there the optimum puts weight on columns that are exact complements on the fitting samples but differ outside them, any split of that weight is optimal, and revision 8's split depended on its history.
+On the fitting sets saved from the two stops, V. cholerae point 13 now converges in 3 IRLS steps at KKT 2.2e-9 and S. enterica point 19 in 3 steps at KKT 8.2e-8, with no solve stopping short. Over all 22 fits of the two datasets (660 points) the new step fired at 4 points and the margin refusal never fired. Every point whose path never reached a firing is bit-identical to revision 8, and so is every point of the 16 saved fixture panels, where nothing fired. Downstream of a firing point the objective moves by at most 6.3e-14 and fitted probabilities on the fitting samples by at most 1.6e-6. Held-out scores can move more, up to 0.098 at V. cholerae fold 0 points 17 to 29: there the optimum puts weight on columns that are exact complements on the fitting samples but differ outside them, any split of that weight is optimal, and revision 8's split depended on its history. Revision 9's split is deterministic, the same on every run and at any thread count, but not canonical: like revision 8's, it follows the path the solve takes, not a rule such as the collapse of exact copies.
 
 ### Convergence test
 
@@ -113,11 +113,15 @@ An invalid report is written for review but is not a finished dataset. `grm lear
 
 ## Report schema and independent checker
 
-`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **9**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 and revision-9 output must contain the new evidence.
+`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **11**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 to revision-11 output must contain the new evidence.
+
+Revision 11 keeps this lasso and its evidence unchanged and adds no report field. It draws the random split's inner tuning on the kset duplicate groups ([duplicate-isolation.md](duplicate-isolation.md)), which can change the scores of a dataset that has a group. A revision-11 report meets the revision-8 rules below, and a same-fingerprint revision-10 report is stale against revision 11.
+
+Revision 10 keeps this lasso and its evidence unchanged. It adds the species identity check ([species-check.md](species-check.md)) and keeps k-mer-identical duplicates whole in one outer fold, listed in the new `kset_duplicates` field ([duplicate-isolation.md](duplicate-isolation.md)). A revision-10 report meets the revision-8 rules below, and a same-fingerprint revision-9 report is stale against revision 10.
 
 Revision 9 changes only the lasso's active-set solve (above). It adds no report field and changes no field's meaning: `sweep_cap_hits` still counts IRLS steps whose solve stopped short, and the new step to a first crossing is part of an exact solve, not a short one. A revision-9 report meets the revision-8 rules below. The bump keeps revision-8 reports, whose lasso fits the old solve could leave unconverged where the new one converges, from being reused: a same-fingerprint revision-8 report is stale against revision 9.
 
-`EVALUATION_REVISION` stays 8 with the active-set solver. The revision exists to keep reports from different evaluation code apart: a saved report is stale when its revision differs, because `input_fingerprint` hashes inputs and settings, not code. No revision-8 report was ever produced, on Vast or locally: the only revision-8 run, the large-species scan, writes scan records, not reports, and it stopped on its first fit. So no saved report carries revision 8 from coordinate descent that a new run could wrongly reuse, and every revision-7 report is still stale against revision 8. The report schema, the solver-status record and the checker's rules are also unchanged. Bumping to 9 would only renumber a revision that was never released.
+The revision exists to keep reports from different evaluation code apart: a saved report is stale when its revision differs, because `input_fingerprint` hashes inputs and settings, not code. `EVALUATION_REVISION` stayed 8 when the active-set solver replaced coordinate descent, because no revision-8 report existed then: the only revision-8 run until that point, the large-species scan, wrote scan records, not reports, and stopped on its first fit. The 275-report revision-8 run that followed did write reports, so the revision-9 fix to the active-set solve bumps the revision, and a same-fingerprint revision-8 report is stale against revision 9.
 
 Each revision-8 lasso `LearnerResult` has `lasso_fits`, one record per outer fold. `FinalModels` has `models.lasso_fit` for the final fit. Each record has:
 
@@ -143,14 +147,15 @@ For a deliberate empty path, `path_points` and `path_unconverged` are zero and `
 
 `scripts/check-results.py` now:
 
-- accepts revisions 3 through 9 and rejects future revisions, applying the revision-8 lasso rules to revision 9;
+- accepts revisions 3 through 11 and rejects future revisions, applying the revision-8 lasso rules to revisions 9 to 11;
+- refuses a root whose reports have more than one evaluation revision, such as revision-8 reports left beside revision-9 ones by a run stopped part-way, so a revision-11 root must hold only revision-11 reports;
 - keeps the existing revision 3–7 schema, no-call, metric, split, and log semantics;
 - requires per-fold and final lasso status on every available revision-8 split, including reports whose lasso rows have null fits;
 - rejects missing fields, wrong types, negative or out-of-range counts and indices, a wrong number of fold records, a non-empty path with no selected point (or the reverse), inconsistent selected/refit presence, and a final model inconsistent with an empty-path record;
 - checks each fold's record against that fold's scores: a lasso fold is called exactly when its `fold_complexity` (the refit's weight count) is positive, and a fold whose record has no selected point has no calls; and
 - requires zero unconverged two-class lasso path points and true selected/final convergence before accepting `valid: true`.
 
-The checker tests cover a valid revision-8 report, a valid revision-9 report and the revision-8 rules applied to it, a valid empty-path final fit with a null model, a valid empty-path record on an uncalled fold, and future-revision rejection (revision 10). `metric-audit/audit.py` has no revision list: `--revision 9` audits a revision-9 run, and a test audits one clean.
+The checker tests cover a valid revision-8 report, a valid revision-9 report and the revision-8 rules applied to it, valid revision-10 and revision-11 reports with an isolated duplicate pair, a root mixing two revisions (10 with 11, 9 with 10, 8 with 9, 7 with 9, 7 with 8) beside one holding two revision-9 reports, a valid empty-path final fit with a null model, a valid empty-path record on an uncalled fold, and future-revision rejection (revision 12). `metric-audit/audit.py` has no revision list: `--revision 9` audits a revision-9 run, `--revision 10` a revision-10 one and `--revision 11` a revision-11 one, and tests audit all three clean.
 
 Negative cases cover missing, malformed and unconverged records; a saved model whose record has no refit; a dropped or extra fold record; a 30-point path with no selected point; an empty-path record on a called fold; a weight count that disagrees with the fold's calls; and a short `fold_complexity`.
 
@@ -166,11 +171,12 @@ A current-revision report whose `evaluation.valid` is not `true` is stale with r
 
 The saved cross-check panels are in `tests/data/lasso-stopping-fixtures.txt`. They preserve the 16 fixtures and candidate paths from the earlier cross-check, the best known objective at each point, and the 300-sweep trace. The tests no longer rerun the 300-sweep solver, which is gone; its saved trace and models stay as the record of what revision 7 did. Bit-exact checks (a refit or wrapper repeating a path) remain pinned to the Linux platform because `powf` and `exp` can differ by one ULP on other platforms.
 
-The lasso suite has 26 default tests and one ignored release test. All 91 saved points now run by default: the C. jejuni panels that once took 2.3 million sweeps take seconds unoptimized. In particular:
+The lasso suite has 28 default tests and one ignored release test. All 91 saved points now run by default: the C. jejuni panels that once took 2.3 million sweeps take seconds unoptimized. In particular:
 
 - Revision 9's two real fitting sets are committed fixtures: `tests/data/lasso-vibrio-fold0-fixture.txt` (57 samples, 4,000 screened columns) and `tests/data/lasso-salmonella-fold3-fixture.txt.gz` (867 samples, 4,000 columns, gzipped). `vibrio_cholerae_fold0_converges_at_every_point` and `salmonella_enterica_fold3_converges_at_every_point` require every point of each 30-point path converged with no short solve and an independently recomputed KKT residual at most 1e-6; both fail on revision 8 at the point that stopped it. `the_saved_real_paths_are_the_same_at_any_thread_count` runs both paths in rayon pools of 1 and 64 threads, the second twice, and requires the same models and statuses, bit for bit.
 - `a_coefficient_within_rounding_of_zero_does_not_stall_the_solve` builds the stalled state directly, a least-squares solve with column 0 at plus or minus 1e-200 and the rest of the active set past its optimum, with four kinds of partner for column 0: an exact complement, an exact copy (collapse turned off), two disjoint columns whose union it is, and near-copies differing from it in one and two samples. It checks that the state is the stalled one (no candidate step shows a fall, column 0 crosses first at t below 1e-100, the complement violates its condition and is dependent), then requires the solve to finish exactly at the brute-force optimum. Revision 8 fails all four.
-- `an_exchange_must_lower_the_objective_by_more_than_rounding` sets the standard deviations so that an exchange's rate is -1e-14 (refused, nothing changed) or -5e-4 (taken, with both coefficients that reach zero together leaving), and `violators_tie_to_the_lowest_column` orders 64 tied violations.
+- `a_hidden_fall_steps_to_the_first_crossing_only_while_every_sign_holds` tests the step decision directly: the line search's point when it lowers the objective; otherwise the first crossing, also while a column is entering in the direction of its sign; and no step when an entering column moves against its sign or not at all, or nothing crosses before t = 1. `the_first_crossing_is_the_earliest_before_the_full_step` pins the crossing itself, the intercept and a crossing at exactly t = 1 left out. No real or synthetic fit has reached a hidden fall while a column was entering, so this branch is tested only here.
+- `an_exchange_must_lower_the_objective_by_more_than_rounding` sets the standard deviations so that an exchange's rate is -1e-14 (refused, nothing changed) or -5e-4 (taken, with both coefficients that reach zero together leaving, also when they start one ulp apart), and `violators_tie_to_the_lowest_column` orders 64 tied violations.
 
 - `saved_panels_converge_and_agree_with_the_old_solver_where_it_settled` requires every two-class saved point to converge with an independently recomputed KKT residual at most 1e-6 and an objective within 1e-6 of the best known, no solve to stop short, and the raw one-class points to stay unconverged. At the 38 points where the 300-sweep solver settled without a cap, the two solutions must agree within 1e-9 in objective and 1e-4 in any fitted probability.
 - `campylobacter_failures_reach_the_reference_optimum` pins the three former C. jejuni failures: the saved 300-sweep models have KKT and excess objective above 1e-4, and the current solver converges there in 6, 6 and 5 IRLS steps with no short solve.
@@ -344,6 +350,8 @@ Each fit line it writes holds at most 30 tuning and 30 refit statuses and one we
 
 ### Inputs on Vast
 
+**The Vast host is gone.** This section and the launch procedure below name the Vast host, which was destroyed on 2026-10-31 along with its `/root/` input roots, so neither runs as written; they stay as the record of the planned launch. When the scan is rescheduled, the procedure must be redone for the new host before the scan runs, including everything that assumed Vast: the input roots and staging directory, the glibc 2.39 and `znver2` build, the 2026-10-28 free-space figure, and h, registered as 1 for the Vast host class.
+
 The revision-7 candidate root, `/root/grm-extra-species-analysis-20261027/data`, holds no matrices for the five scan species. They are in `/root/grm-revision7-preflight/data`. The candidate copied that root's counts, structures and reports for the 13 original species hash-equal, and its reports carry the same input fingerprints (M. tuberculosis delamanid: `275e461dec002050` in both). The scan reads that root.
 
 Its `catalog` is a symlink to `/root/grm/data/catalog`. If that catalog has changed since revision 7, loading fails or the fingerprints differ. The inputs-only check below catches either before any fit. It also catches a matrix the current code cannot load, since the matrix commits `7cc39ed` and `0df8eb9` came after revision 7.
@@ -352,7 +360,7 @@ Its `catalog` is a symlink to `/root/grm/data/catalog`. If that catalog has chan
 
 The launch needs separate user approval. Build the binary from a clean export of the frozen commit, on Ubuntu 24.04 with glibc 2.39 as on Vast, so nothing is compiled on Vast.
 
-`.cargo/config.toml` builds for the build machine's CPU (`target-cpu=native`), and revision 7 was built on Vast for its AMD EPYC 7K62, which LLVM calls `znver2`. So set `RUSTFLAGS` to build for that CPU instead. Rust does not contract or reorder floating-point operations for a target CPU, so the fits are the same; the timing is comparable with revision 7's.
+`.cargo/config.toml` then built for the build machine's CPU (`target-cpu=native`), and revision 7 was built on Vast for its AMD EPYC 7K62, which LLVM calls `znver2`. So set `RUSTFLAGS` to build for that CPU instead. Rust does not contract or reorder floating-point operations for a target CPU, so the fits are the same; the timing is comparable with revision 7's.
 
 Then stage the binary in a new directory on Vast, check the plan and inputs without fitting, and launch detached:
 
@@ -383,14 +391,16 @@ nohup nice -n 10 python3 -I -B scan.py --input-root "$ROOT" --out "$SCAN/scan" -
 
 ## Deployment settings and downstream work
 
-The current published release remains revision 7. `scripts/deployment/` retains its revision-7 defaults and 237-dataset published-release expectations; this lane deliberately did not edit it while its independent review is active.
+Revision 9 (275 datasets over 23 species) was the published release from 2026-10-30 07:52 UTC until the Vast host was destroyed on 2026-10-31. `scripts/deployment/` still defaults to revision 7 and 237 datasets (`common.sh`, `smoke.sh`), so every staging or publishing step must set the expected values explicitly, as below.
 
-At a future, authorized revision-9 staging/publishing operation, the operator must explicitly set:
+At a future, authorized revision-11 staging/publishing operation, the operator must explicitly set:
 
 ```bash
-GRM_EXPECT_REVISION=9
-GRM_EXPECT_DATASETS=275
+GRM_EXPECT_REVISION=11
+GRM_EXPECT_DATASETS=<reports in the revision-11 run>
 ```
+
+The revision-9 run wrote 275 reports. The species check reselects some cohorts, so take the revision-11 count from its run, not from this page.
 
 Those are operation-time requirements, not changes to the current defaults and not evidence that staging or publication has occurred.
 

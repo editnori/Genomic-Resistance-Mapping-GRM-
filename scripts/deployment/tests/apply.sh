@@ -529,6 +529,190 @@ check "state/active still names the stopped pair" -- test "$(field active label)
 expect 0 'restore health pass: rel1 with p237' "argument-free restore recovers after SIGKILL" -- \
     bash "$S/restore.sh" --apply
 
+# The health check (smoke.sh, 20 s a request) runs without deploy.lock's
+# descriptor, so a script killed during it leaves no long holder. A curl
+# wrapper records whether each request inherited one.
+mkdir "$T/fdbin"
+printf '#!/bin/sh\nif find /proc/$$/fd -lname %s | grep -q .; then h=held; else h=free; fi\necho "$h $*" >>%s\nexec %s "$@"\n' \
+    "$D/deploy.lock" "$T/curl.fds" "$(command -v curl)" >"$T/fdbin/curl"
+chmod +x "$T/fdbin/curl"
+expect 0 'live health pass: rel2 with p275' "activate rel2 with a curl that records the descriptors it inherits" -- \
+    env PATH="$T/fdbin:$PATH" bash "$S/activate.sh" rel2 p275 --apply
+check "no request of its health check (smoke.sh) held deploy.lock" -- \
+    eval 'grep -q "^free .*--max-time 20 " "$T/curl.fds" && ! grep -q "^held .*--max-time 20 " "$T/curl.fds"'
+expect 0 'live health pass: rel1 with p237' "rollback returns to rel1" -- bash "$S/rollback.sh" --apply
+# A lock still held after the wait is another deployment's: restore refuses
+# with the same message and exit code and starts nothing. Activation never
+# waits.
+hidden_lock "$D/deploy.lock"
+mark
+expect 2 'another deployment holds' "activation refuses at once while another process holds deploy.lock" -- \
+    bash "$S/activate.sh" rel2 p275 --apply
+kill_live
+expect 2 'another deployment holds' "with GRM_RESTORE_LOCK_WAIT=0 restore refuses at once" -- \
+    env GRM_RESTORE_LOCK_WAIT=0 bash "$S/restore.sh" --apply
+check "neither waited for the lock" -- eval '! logged "waiting up to"'
+lock_t0=$SECONDS
+expect 2 'another deployment holds' "restore refuses a lock still held after its 5 s wait" -- \
+    timeout -k 5 60 bash "$S/restore.sh" --apply
+check "it waited 5 s first and started nothing; state/active still names rel1" -- \
+    eval 'test "$((SECONDS - lock_t0))" -ge 5 && logged "waiting up to 5 s" && test -z "$(running rel1)$(listener "$LP")" -a ! -e "$D/serve-$LP.starting" -a "$(field active label)" = rel1'
+kill -KILL "$hidden"
+wait "$hidden" 2>/dev/null || true
+unlist "$hidden"
+expect 0 'restore health pass: rel1 with p237' "once that holder is gone, restore recovers" -- bash "$S/restore.sh" --apply
+# deploy.lock stays held after a script is killed outright until every
+# short-lived child it forked with the lock open exits, such as the sleep of
+# activation's health poll in the SIGKILL case above; restore waits for that,
+# up to GRM_RESTORE_LOCK_WAIT seconds (default 5). A sleep wrapper makes that
+# poll sleep 4 s here, and activation is killed in it.
+real_sleep=$(command -v sleep)
+mkdir "$T/slowbin"
+printf '#!/bin/sh\n[ "$1" != 0.25 ] || set -- 4\nexec %s "$@"\n' "$real_sleep" >"$T/slowbin/sleep"
+chmod +x "$T/slowbin/sleep"
+poll_sleep() { orphan=$(pgrep -P "$apid" -fx "$real_sleep 4"); }
+mark
+PATH="$T/slowbin:$PATH" GRM_STUB_FAIL=/rel2/ bash "$S/activate.sh" rel2 p275 --apply >"$T/act.out" 2>&1 &
+apid=$!
+orphan=''
+wait_for 15 logged "started rel2" && wait_for 15 poll_sleep || true
+check "activation reaches the sleep of its health poll" -- test -n "$orphan"
+kill -KILL "$apid" || true
+wait "$apid" 2>/dev/null || true
+check "after SIGKILL that orphaned sleep holds deploy.lock" -- \
+    eval 'locked "$D/deploy.lock" && test -n "$(find "/proc/$orphan/fd" -lname "$D/deploy.lock" 2>/dev/null)"'
+mark
+expect 0 'restore health pass: rel1 with p237' "restore waits for the orphaned sleep to free deploy.lock, then recovers" -- \
+    bash "$S/restore.sh" --apply
+check "restore said it was waiting for deploy.lock; rel1 is back" -- eval 'logged "waiting up to 5 s" && rel1_back'
+# An argument-free restore reads state/active before it holds deploy.lock. If
+# an activation commits another pair while restore waits for the lock, and
+# that pair then dies, restore must not start the older pair it read. Here a
+# hidden process holds the lock, the suite commits rel2 with p275 in its place
+# as activation would (the record common.sh write_state writes), and nothing
+# serves when the lock is freed.
+rel2_active() {
+    printf 'label=rel2\npublication=p275\ncommit=%s\nrelease_manifest=%s\nreport_manifest=%s\nschema=2\nrevision=7\ndatasets=275\nat=%s\n' \
+        "$(cat "$D/release/rel2/COMMIT")" "$(sha256sum <"$D/release/rel2/MANIFEST.sha256" | cut -d' ' -f1)" \
+        "$(sha256sum <"$D/published/p275/SOURCE.sha256" | cut -d' ' -f1)" "$(date -u +%FT%TZ)"
+}
+kill_live
+hidden_lock "$D/deploy.lock"
+mark
+(
+    wait_for 30 logged "waiting up to 60 s" && rel2_active >"$T/active.race" && mv -f "$T/active.race" "$D/state/active"
+    kill -KILL "$hidden"
+) &
+committer=$!
+expect 2 'state/active no longer records rel1 with p237' \
+    "a restore that read rel1 and waited for deploy.lock while rel2 was committed refuses once it holds the lock" -- \
+    timeout -k 5 120 env GRM_RESTORE_LOCK_WAIT=60 bash "$S/restore.sh" --apply
+wait "$committer" || true
+wait "$hidden" 2>/dev/null || true
+unlist "$hidden"
+check "rel2 was committed while restore waited, and restore started nothing and left state/active naming rel2" -- \
+    eval 'logged "waiting up to 60 s" && test "$(field active label)" = rel2 -a -z "$(running rel1)$(running rel2)$(listener "$LP")" -a ! -e "$D/serve-$LP.starting"'
+expect 0 'restore health pass: rel2 with p275' "the next argument-free restore starts rel2, which state/active names" -- \
+    bash "$S/restore.sh" --apply
+expect 0 'live health pass: rel1 with p237' "rollback returns to rel1" -- bash "$S/rollback.sh" --apply
+# The same re-check comes first in the interrupted-start branch
+# (REVIEW-DEPLOY L1). An activation killed after its state commit leaves rel2
+# serving, state/active naming it, no serve-PORT.pid record of it and a
+# journal whose script is gone. A restore that read rel1 and that journal,
+# and then waited for deploy.lock while rel2 was committed, must refuse
+# before it resolves the journal, which would stop the healthy rel2. Here
+# state/active holds rel1's record while restore reads it, and the suite puts
+# rel2's back while restore waits.
+cp "$D/state/active" "$T/active.rel1"
+at committed KILL bash "$S/activate.sh" rel2 p275 --apply
+committed_pid=$(listener "$LP")
+committed_start=$(start_of "${committed_pid:-0}")
+check "an activation killed after its state commit leaves rel2 serving, its journal and state/active naming rel2" -- \
+    eval 'test -n "$committed_pid" -a "$(live)" = "rel2 p275" -a -e "$D/serve-$LP.starting" -a "$(field active label)" = rel2'
+cp "$D/state/active" "$T/active.rel2"
+cp "$T/active.rel1" "$T/active.race" && mv -f "$T/active.race" "$D/state/active"
+hidden_lock "$D/deploy.lock"
+mark
+(
+    wait_for 30 logged "waiting up to 60 s" && cp "$T/active.rel2" "$T/active.race" && mv -f "$T/active.race" "$D/state/active"
+    kill -KILL "$hidden"
+) &
+committer=$!
+expect 2 'state/active no longer records rel1 with p237' \
+    "a restore that read rel1 and an interrupted start, then waited for deploy.lock while rel2 was committed, refuses before resolving it" -- \
+    timeout -k 5 120 env GRM_RESTORE_LOCK_WAIT=60 bash "$S/restore.sh" --apply
+wait "$committer" || true
+wait "$hidden" 2>/dev/null || true
+unlist "$hidden"
+check "the journal is kept and the committed rel2 still serves, the same process, with state/active naming it" -- \
+    eval 'test -e "$D/serve-$LP.starting" -a "$(listener "$LP")" = "$committed_pid" -a "$(start_of "$committed_pid")" = "$committed_start" -a "$(field active label)" = rel2'
+expect 0 'restore health pass: rel2 with p275' "the next argument-free restore resolves that start and restarts rel2" -- \
+    bash "$S/restore.sh" --apply
+expect 0 'live health pass: rel1 with p237' "rollback returns to rel1" -- bash "$S/rollback.sh" --apply
+# rollback.sh reads state/previous before deploy.lock (REVIEW-DEPLOY I1). An
+# activation that commits between that read and rollback's first look at the
+# live service moves state/previous; switching to the pair read would undo that
+# activation's record, which no serial order of the two gives. A fuser shim
+# pauses the rollback at its first listener lookup, after both of its reads of
+# state/previous (rel2 with p275), while the suite activates rel3 in place of
+# rel1. Resumed, the rollback must refuse under the lock, changing nothing.
+expect 0 'stage pass' "stage rel3 with p237 for the rollback race" -- \
+    env GRM_EXPECT_DATASETS=237 bash "$S/stage.sh" rel3 p237 "$SP" --apply
+cp "$D/state/previous" "$T/previous.rel2"
+mkdir "$T/pausebin"
+printf '#!/bin/sh\nif [ -n "${GRM_TEST_PAUSE:-}" ] && mkdir "$GRM_TEST_PAUSE.taken" 2>/dev/null; then\n    : >"$GRM_TEST_PAUSE.reached"\n    while [ ! -e "$GRM_TEST_PAUSE.go" ]; do sleep 0.1; done\nfi\nexec %s "$@"\n' \
+    "$(command -v fuser)" >"$T/pausebin/fuser"
+chmod +x "$T/pausebin/fuser"
+env PATH="$T/pausebin:$PATH" GRM_TEST_PAUSE="$T/rbpause" bash "$S/rollback.sh" --apply >"$T/rb.out" 2>&1 &
+rb=$!
+check "rollback read state/previous (rel2 with p275) and paused at its first listener lookup" -- \
+    eval 'wait_for 30 test -e "$T/rbpause.reached" && grep -q "rollback target from state/previous: rel2 with p275" "$T/rb.out"'
+expect 0 'live health pass: rel3 with p237' "meanwhile an activation switches rel1 to rel3 and commits it" -- \
+    bash "$S/activate.sh" rel3 p237 --apply
+: >"$T/rbpause.go"
+set +e
+wait "$rb"
+rc=$?
+set -e
+check "the resumed rollback refuses under the lock (exit 2): state/previous no longer records rel2 with p275" -- \
+    eval 'test "$rc" = 2 && grep -q "state/previous no longer records rel2 with p275" "$T/rb.out"'
+check "it changed nothing: rel3 serves, state/active names rel3 and state/previous rel1, and no rel2 runs" -- \
+    eval 'test "$(live)" = "rel3 p237" -a "$(field active label)" = rel3 -a "$(field previous label)" = rel1 -a -z "$(running rel2)" -a ! -e "$D/serve-$LP.starting"'
+expect 0 'live health pass: rel1 with p237' "activation returns to rel1" -- bash "$S/activate.sh" rel1 p237 --apply
+mv -f "$T/previous.rel2" "$D/state/previous"
+# The re-check must run under the lock, not just before it (REVIEW-DS2 L1;
+# REVIEW-DS's probe). lock_root opens deploy.lock and then runs flock, found
+# through PATH, before the lock is held. A flock shim holds the rollback
+# (target rel2) there, after any check placed before lock_root. Meanwhile an
+# activation of rel3 is killed right after it records rel1 in state/previous
+# and state/active, before it stops rel1: the live service is unchanged, so
+# only a state/previous check made under the lock sees the change.
+mkdir "$T/pausebin2"
+printf '#!/bin/sh\nif [ -n "${GRM_TEST_PAUSE:-}" ] && [ "$1" = -n ]; then\n    case $(readlink "/proc/$$/fd/$2" 2>/dev/null) in\n    */deploy.lock) if mkdir "$GRM_TEST_PAUSE.taken" 2>/dev/null; then : >"$GRM_TEST_PAUSE.reached"; while [ ! -e "$GRM_TEST_PAUSE.go" ]; do sleep 0.1; done; fi ;;\n    esac\nfi\nexec %s "$@"\n' \
+    "$(command -v flock)" >"$T/pausebin2/flock"
+chmod +x "$T/pausebin2/flock"
+cp "$D/state/previous" "$T/previous.k1"
+env PATH="$T/pausebin2:$PATH" GRM_TEST_PAUSE="$T/k1pause" bash "$S/rollback.sh" --apply >"$T/k1.out" 2>&1 &
+k1=$!
+check "a rollback to rel2 is held in lock_root's flock on deploy.lock, before the lock" -- \
+    eval 'wait_for 30 test -e "$T/k1pause.reached" && grep -q "rollback target from state/previous: rel2 with p275" "$T/k1.out"'
+at renamed:active KILL bash "$S/activate.sh" rel3 p237 --apply
+check "meanwhile an activation killed after its records leaves state/previous naming rel1, and rel1 still serves" -- \
+    eval 'test "$(field previous label)" = rel1 -a "$(live)" = "rel1 p237" -a ! -e "$D/serve-$LP.starting"'
+: >"$T/k1pause.go"
+set +e
+wait "$k1"
+k1rc=$?
+set -e
+check "once it holds the lock the rollback refuses (exit 2), and rel1 still serves" -- \
+    eval 'test "$k1rc" = 2 && grep -q "state/previous no longer records rel2 with p275" "$T/k1.out" && test "$(live)" = "rel1 p237"'
+[ "$k1rc" = 2 ] || sed 's/^/     rollback: /' "$T/k1.out"
+if [ "$(live)" != "rel1 p237" ]; then bash "$S/activate.sh" rel1 p237 --apply >/dev/null 2>&1 || true; fi
+mv -f "$T/previous.k1" "$D/state/previous"
+rm "$D/go/rel3--p237"
+check "state/previous records rel2 again, and rel3 has no approval" -- \
+    test "$(field previous label)" = rel2 -a ! -e "$D/go/rel3--p237"
+
 # Every step of a start can be interrupted. TERM (and INT, HUP) at any
 # checkpoint, including between the fork and the assignment of the PID, stops
 # the candidate, found by $! and its token, and restores rel1.
@@ -632,6 +816,8 @@ check "the killed activation's journal is kept until it is resolved" -- test -e 
 expect 0 'restore health pass: rel1 with p237' "restore then resolves that journal and restores rel1" -- bash "$S/restore.sh" --apply
 check "after the resumed child, rel1 is back" -- rel1_back
 preexec child-forked bash "$S/activate.sh" rel2 p275 --apply
+check "the child paused at the fork has already closed its deploy.lock descriptor" -- \
+    eval 'test -n "$kid" -a -r "/proc/$kid/fd" && test -z "$(find "/proc/$kid/fd" -lname "$D/deploy.lock" 2>/dev/null)"'
 preexec_resolved "activation killed with its child paused at the fork" 'restore health pass: rel1 with p237' \
     bash "$S/restore.sh" --apply
 check "after the child paused at the fork, rel1 is back" -- rel1_back
@@ -839,6 +1025,170 @@ expect 0 'smoke-pass .*datasets=275' "status checks the live pair against its ap
 check "status and smoke.sh leave no temporary files" -- test -z "$(ls -A "$T/tmp")"
 expect 0 'live health pass: rel1 with p237' "rollback 275 -> 237" -- bash "$S/rollback.sh" --apply
 check "rel1 with p237 serves" -- test "$(live)" = "rel1 p237"
+# status.sh checks a live pair without a valid approval against GRM_EXPECT_*,
+# and refuses another revision than 7 without a count (REVIEW-DEPLOY I3), as
+# check_expect does, rather than checking it against revision 7's 237.
+mv "$D/go/rel1--p237" "$T/rel1--p237.keep"
+expect 0 'smoke-pass .*revision=7 datasets=237' "status checks a live pair without an approval against the GRM_EXPECT_* defaults" -- \
+    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/status.sh"
+expect 0 '237 datasets from the default, revision 7.s count, since GRM_EXPECT_DATASETS is unset' \
+    "status says that the count it checks that pair against is the 237 default (U-23)" -- \
+    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/status.sh"
+expect 0 '237 datasets from GRM_EXPECT_DATASETS\)' \
+    "status names GRM_EXPECT_DATASETS as the count's source when it is set (REVIEW-DS4 I1)" -- \
+    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION GRM_EXPECT_DATASETS=237 bash "$S/status.sh"
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "status refuses to check that pair against revision 11 without a count" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=11 bash "$S/status.sh"
+mv "$T/rel1--p237.keep" "$D/go/rel1--p237"
+# smoke.sh checks every served dataset's revision from revision 8 on (U-13),
+# as check_report_index does for a publication: each index row and each served
+# datasets/ID.json records evaluation.revision. The stub serves a three-dataset
+# revision-8 report on the spare port.
+mkdir -p "$T/s8/report/datasets"
+python3 -I - "$T/s8/report" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+ids = ["sp__r1", "sp__r2", "sp__r3"]
+with open(os.path.join(root, "index.json"), "w") as f:
+    json.dump({"schema": 2, "evaluation_revision": 8, "datasets": [{"id": i, "evaluation": {"revision": 8}} for i in ids]}, f)
+with open(os.path.join(root, "corpus.json"), "w") as f:
+    json.dump({"corpus": 3}, f)
+for i in ids:
+    with open(os.path.join(root, "datasets", i + ".json"), "w") as f:
+        json.dump({"id": i, "evaluation": {"revision": 8}}, f)
+PY
+cp "$T/s8/report/index.json" "$T/s8.index"
+cp "$T/s8/report/datasets/sp__r2.json" "$T/s8.r2"
+"$T/grm-stub" --data "$T/s8" serve --app "$D/release/rel1/dist" --port "$SP" >/dev/null 2>&1 &
+s8=$!
+wait_for 10 eval '! port_free "$SP"' || true
+smoke8() { env GRM_EXPECT_SCHEMA=2 GRM_EXPECT_REVISION=8 GRM_EXPECT_DATASETS=3 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"; }
+expect 0 'smoke-pass port=[0-9]+ schema=2 revision=8 datasets=3' "smoke.sh passes a revision-8 report whose served datasets all record revision 8" -- smoke8
+printf '{"id": "sp__r2", "evaluation": {"revision": 7}}' >"$T/s8/report/datasets/sp__r2.json"
+expect 1 'served report has evaluation.revision 7, expected 8: sp__r2' "smoke.sh fails a served dataset report that records another revision" -- smoke8
+cp "$T/s8.r2" "$T/s8/report/datasets/sp__r2.json"
+sed 's/{"id": "sp__r3", "evaluation": {"revision": 8}}/{"id": "sp__r3"}/' "$T/s8.index" >"$T/s8/report/index.json"
+expect 1 'with index evaluation.revision missing, expected 8: sp__r3' "smoke.sh fails a served index row without the revision" -- smoke8
+cp "$T/s8.index" "$T/s8/report/index.json"
+# Every report and every row is checked, as an integer (REVIEW-DS2 L2 and
+# REVIEW-DS3 L-B, from their probes): the first and the last served reports,
+# the first index row, and a served report whose revision is the string "8".
+cp "$T/s8/report/datasets/sp__r3.json" "$T/s8.r3"
+printf '{"id": "sp__r3", "evaluation": {"revision": 7}}' >"$T/s8/report/datasets/sp__r3.json"
+expect 1 'served report has evaluation.revision 7, expected 8: sp__r3' "smoke.sh fails the last served dataset report recording another revision" -- smoke8
+cp "$T/s8.r3" "$T/s8/report/datasets/sp__r3.json"
+cp "$T/s8/report/datasets/sp__r1.json" "$T/s8.r1"
+printf '{"id": "sp__r1", "evaluation": {"revision": 7}}' >"$T/s8/report/datasets/sp__r1.json"
+expect 1 'served report has evaluation.revision 7, expected 8: sp__r1' "smoke.sh fails the first served dataset report recording another revision" -- smoke8
+cp "$T/s8.r1" "$T/s8/report/datasets/sp__r1.json"
+sed 's/{"id": "sp__r1", "evaluation": {"revision": 8}}/{"id": "sp__r1", "evaluation": {"revision": 7}}/' "$T/s8.index" >"$T/s8/report/index.json"
+expect 1 'with index evaluation.revision 7, expected 8: sp__r1' "smoke.sh fails the first index row recording another revision" -- smoke8
+cp "$T/s8.index" "$T/s8/report/index.json"
+printf '{"id": "sp__r2", "evaluation": {"revision": "8"}}' >"$T/s8/report/datasets/sp__r2.json"
+expect 1 'served report has evaluation.revision .8., expected 8: sp__r2' "smoke.sh fails a served report whose revision is the string 8" -- smoke8
+cp "$T/s8.r2" "$T/s8/report/datasets/sp__r2.json"
+# A served index that lists a dataset id twice fails (REVIEW-DS2 I5): the row
+# count alone matched.
+sed 's/{"id": "sp__r2", "evaluation": {"revision": 8}}/{"id": "sp__r1", "evaluation": {"revision": 8}}/' "$T/s8.index" >"$T/s8/report/index.json"
+expect 1 'index lists 3 datasets \(2 distinct\)' "smoke.sh fails a served index that lists a dataset id twice" -- smoke8
+cp "$T/s8.index" "$T/s8/report/index.json"
+# Every row is checked, at every revision (REVIEW-DS4 L2): a revision-7 index
+# whose last row repeats the first id fails too.
+python3 -I - "$T/s8/report/index.json" <<'PY'
+import json, sys
+rows = [{"id": i, "evaluation": {"revision": 7}} for i in ("sp__r1", "sp__r2", "sp__r1")]
+with open(sys.argv[1], "w") as f:
+    json.dump({"schema": 2, "evaluation_revision": 7, "datasets": rows}, f)
+PY
+expect 1 'index lists 3 datasets \(2 distinct\)' "smoke.sh fails a revision-7 index whose last row repeats the first id" -- \
+    env GRM_EXPECT_SCHEMA=2 GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=3 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
+cp "$T/s8.index" "$T/s8/report/index.json"
+expect 2 'GRM_EXPECT_REVISION=8 needs GRM_EXPECT_DATASETS' "smoke.sh run directly refuses revision 8 without a count (REVIEW-DEPLOY I3)" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=8 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
+expect 1 'FAIL served index.json' "with GRM_EXPECT_REVISION=7 set and no count, smoke.sh is not refused and checks revision 7's 237" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
+expect 1 'note: GRM_EXPECT_DATASETS is unset or empty, so the count checked is the default, 237' \
+    "run directly without a count, smoke.sh says that the count it checks is the 237 default (U-23)" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/smoke.sh" "$SP" "$T/s8/report" "$D/release/rel1/dist"
+# The output is captured first: in a pipe, grep -q exits at the note, smoke.sh
+# then dies of SIGPIPE, and under pipefail "!" turns that into a pass.
+no_note() { local out; out=$(smoke8 2>&1) || true; ! grep -q 'note: GRM_EXPECT_DATASETS' <<<"$out"; }
+check "with a count set, smoke.sh prints no such note" -- no_note
+kill -KILL "$s8" 2>/dev/null || true
+wait "$s8" 2>/dev/null || true
+check "the revision-8 stub is gone and the spare port free" -- wait_for 5 port_free "$SP"
+# smoke.sh refuses an expected value that is not a whole number in ASCII
+# digits (REVIEW-DS2 M1). Python's int() reads "10\r", "1_0" and full-width
+# 10 as 10, and bash's -ge does not, so these skipped the per-dataset check
+# and passed. The stub serves a revision-10 index whose every row and served
+# report record revision 7.
+mkdir -p "$T/s10/report/datasets"
+python3 -I - "$T/s10/report" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+ids = ["sp__t1", "sp__t2", "sp__t3"]
+with open(os.path.join(root, "index.json"), "w") as f:
+    json.dump({"schema": 2, "evaluation_revision": 10, "datasets": [{"id": i, "evaluation": {"revision": 7}} for i in ids]}, f)
+with open(os.path.join(root, "corpus.json"), "w") as f:
+    json.dump({"corpus": 3}, f)
+for i in ids:
+    with open(os.path.join(root, "datasets", i + ".json"), "w") as f:
+        json.dump({"id": i, "evaluation": {"revision": 7}}, f)
+PY
+"$T/grm-stub" --data "$T/s10" serve --app "$D/release/rel1/dist" --port "$SP" >/dev/null 2>&1 &
+s10=$!
+wait_for 10 eval '! port_free "$SP"' || true
+smoke10() { env GRM_EXPECT_SCHEMA=2 GRM_EXPECT_REVISION="$1" GRM_EXPECT_DATASETS=3 bash "$S/smoke.sh" "$SP" "$T/s10/report" "$D/release/rel1/dist"; }
+expect 1 'with index evaluation.revision 7, expected 10: sp__t1, sp__t2, sp__t3' \
+    "control: smoke.sh fails a revision-10 index whose rows and reports record revision 7" -- smoke10 10
+expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' \
+    "smoke.sh refuses GRM_EXPECT_REVISION=10 with a trailing CR (a CRLF env file)" -- smoke10 "$(printf '10\r')"
+expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' \
+    "smoke.sh refuses GRM_EXPECT_REVISION=1_0" -- smoke10 1_0
+expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' \
+    "smoke.sh refuses GRM_EXPECT_REVISION in full-width digits" -- smoke10 "$(printf '\357\274\221\357\274\220')"
+expect 2 'GRM_EXPECT_REVISION must be a whole number in ASCII digits, at most 18 of them' \
+    "smoke.sh refuses a 19-digit GRM_EXPECT_REVISION, 2^63, which bash's -ge cannot read (REVIEW-DS3 L-A)" -- smoke10 9223372036854775808
+kill -KILL "$s10" 2>/dev/null || true
+wait "$s10" 2>/dev/null || true
+check "the revision-10 stub is gone and the spare port free" -- wait_for 5 port_free "$SP"
+# Refusals come before any request. Nothing listens on the spare port now, so
+# a request would print "unreachable" and exit 1. early PORT PATTERN [ENV...]:
+# smoke.sh, with GRM_EXPECT_* unset but for ENV, exits 2 with PATTERN and
+# fetches nothing.
+early() {
+    local port=$1 pat=$2 out rc
+    shift 2
+    set +e
+    out=$(env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS "$@" \
+        bash "$S/smoke.sh" "$port" "$T/s10/report" "$D/release/rel1/dist" 2>&1)
+    rc=$?
+    set -e
+    if [ "$rc" = 2 ] && grep -q -- "$pat" <<<"$out" && ! grep -q 'unreachable\|^ok ' <<<"$out"; then return 0; fi
+    printf 'rc=%s\n%s\n' "$rc" "$out"
+    return 1
+}
+# smoke.sh refuses a PORT that is not a plain port number (REVIEW-DS2 I2): a
+# port with userinfo sent every request to another host.
+check "smoke.sh refuses a port with userinfo, 1@127.0.0.2:PORT, and fetches nothing" -- early "1@127.0.0.2:$SP" 'PORT must be a port number'
+check "smoke.sh refuses port 0 and fetches nothing" -- early 0 'PORT must be a port number'
+check "smoke.sh refuses port 65536 and fetches nothing" -- early 65536 'PORT must be a port number'
+check "smoke.sh refuses port 080, a leading zero, and fetches nothing" -- early 080 'PORT must be a port number'
+# GRM_EXPECT_SCHEMA and GRM_EXPECT_DATASETS must be ASCII digits too
+# (REVIEW-DS3 I-A), not just the revision.
+check "smoke.sh refuses GRM_EXPECT_SCHEMA=2 with a trailing CR and fetches nothing" -- \
+    early "$SP" 'GRM_EXPECT_SCHEMA must be a whole number in ASCII digits' "GRM_EXPECT_SCHEMA=$(printf '2\r')"
+check "smoke.sh refuses GRM_EXPECT_DATASETS in a full-width digit and fetches nothing" -- \
+    early "$SP" 'GRM_EXPECT_DATASETS must be a whole number in ASCII digits' GRM_EXPECT_REVISION=10 "GRM_EXPECT_DATASETS=$(printf '\357\274\223')"
+# Every other exit-2 refusal in smoke.sh comes before any request too
+# (REVIEW-DS3 I-B): the count refusal, a revision that is not ASCII digits,
+# and one of 19 digits.
+check "smoke.sh refuses revision 10 without a count and fetches nothing" -- \
+    early "$SP" 'GRM_EXPECT_REVISION=10 needs GRM_EXPECT_DATASETS' GRM_EXPECT_REVISION=10
+check "smoke.sh refuses GRM_EXPECT_REVISION=1_0 and fetches nothing" -- \
+    early "$SP" 'GRM_EXPECT_REVISION must be a whole number in ASCII digits' GRM_EXPECT_REVISION=1_0 GRM_EXPECT_DATASETS=3
+check "smoke.sh refuses a 19-digit GRM_EXPECT_REVISION and fetches nothing" -- \
+    early "$SP" 'at most 18 of them' GRM_EXPECT_REVISION=9223372036854775808 GRM_EXPECT_DATASETS=3
 expect 0 'live health pass: rel2 with p275' "rollback again switches forward to 275" -- bash "$S/rollback.sh" --apply
 kill -KILL "$(listener "$LP")"
 wait_for 5 port_free "$LP" || true
@@ -1971,7 +2321,7 @@ check "TERM then ends that supervisor and its next cloudflared" -- eval 'wait_fo
 [ -z "$kid" ] || kill -KILL "$kid" 2>/dev/null || true
 wait "$bg" 2>/dev/null || true
 
-EXPECTED_ASSERTIONS=$((497 - skipped))  # less the user and PID namespace cases where those are unavailable
+EXPECTED_ASSERTIONS=$((563 - skipped))  # less the user and PID namespace cases where those are unavailable
 if [ "$(id -u)" = 0 ]; then EXPECTED_ASSERTIONS=$((EXPECTED_ASSERTIONS - 2)); fi  # the unwritable state/ case is skipped
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))

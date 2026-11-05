@@ -8,6 +8,17 @@
 //! Their difference measures sensitivity to this split scheme; it does not
 //! identify a causal resistance mechanism.
 //!
+//! Both outer splits keep each k-mer-identical duplicate group (`duplicates`)
+//! whole in one test fold, so no held-out score in `splits` comes from a fit
+//! that trained on the genome's own copy. The random folds move each group
+//! by `isolate_groups`; the lineage folds hold them already, since identical
+//! genomes share a lineage. Inner tuning keeps each group whole too: the
+//! random split tunes on duplicate groups (`tuning_groups`), the lineage
+//! split on lineages. The MIC regression's own folds (`evaluate_mic`) and
+//! the final models' tuning are drawn as before and may split a group. A
+//! move can leave a random test fold without one class, and then the dataset
+//! fails like any invalid random split (docs/duplicate-isolation.md).
+//!
 //! Hyperparameters are chosen inside each training fold (inner folds follow
 //! the outer scheme), and feature screening sees only fitting samples.
 //! Each outer fit also chooses its candidate features from its own training
@@ -28,13 +39,15 @@ use super::lasso;
 use super::scm::{self, Kind, Rule};
 use super::tree::{self, ForestParams, TreeParams};
 use super::{
-    BinaryMetrics, NoCall, binary_metrics, fold_masks, grouped_folds, holdout, roc_curve, screen,
-    stratified_folds, training_candidates, training_folds, tuning_holdout, validate_folds,
+    BinaryMetrics, NoCall, binary_metrics, fold_masks, grouped_folds, holdout, isolate_groups,
+    roc_curve, screen, stratified_folds, training_candidates, training_folds, tuning_holdout,
+    validate_folds,
 };
 use crate::bits::{BitMatrix, Bits};
 use crate::curate::{Breakpoint, Call, Censor, Mic, infer_breakpoint};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::time::Instant;
 
 #[derive(Clone, Debug, Serialize)]
@@ -390,15 +403,21 @@ fn lasso_scores(m: Option<&lasso::LassoModel>, x: &BitMatrix) -> Option<Vec<f64>
     m.filter(|m| !m.coef.is_empty()).map(|m| m.predict_proba(x))
 }
 
+/// The share of training samples boosting holds out for early stopping.
+pub(crate) const GBT_HOLDOUT: f64 = 0.15;
+/// The share of training samples the lasso holds out to choose its penalty.
+pub(crate) const LASSO_HOLDOUT: f64 = 0.2;
+
 fn fit_gbt(
     x: &BitMatrix,
     y: &Bits,
     train: &Bits,
     groups: Option<&[u32]>,
+    unit: &str,
     cfg: &EvalConfig,
     seed: u64,
 ) -> Result<(Scored, gbt::Gbt)> {
-    let (fit_m, val) = tuning_holdout(train, y, groups, 0.15, seed)?;
+    let (fit_m, val) = tuning_holdout(train, y, groups, unit, GBT_HOLDOUT, seed)?;
     let feats = screen(x, y, &fit_m, cfg.screened_features);
     let m = gbt::fit(
         x,
@@ -481,7 +500,8 @@ fn fit_lasso_traced(
     trace: &mut LassoTrace,
     progress: &mut dyn FnMut(&str, &lasso::PointProgress),
 ) -> Result<(Scored, Option<lasso::LassoModel>)> {
-    let (fit_m, val) = tuning_holdout(train, y, groups, 0.2, seed)?;
+    let unit = tuning_unit(context.scheme);
+    let (fit_m, val) = tuning_holdout(train, y, groups, unit, LASSO_HOLDOUT, seed)?;
     let feats = screen(x, y, &fit_m, cfg.screened_features);
     let path =
         lasso::fit_path_with_status(x, y, &fit_m, &feats, cfg.lasso_lambdas, 400, &mut |p| {
@@ -601,7 +621,7 @@ fn fit_fold(
         "scm" => fit_scm(x, y, train, &inner(), cfg),
         "cart" => fit_cart(x, y, train, &inner(), cfg),
         "rf" => fit_rf(x, y, train, cfg, seed).0,
-        "gbt" => fit_gbt(x, y, train, groups, cfg, seed)?.0,
+        "gbt" => fit_gbt(x, y, train, groups, tuning_unit(context.scheme), cfg, seed)?.0,
         "lasso" => fit_lasso(x, y, train, groups, cfg, seed, context)?.0,
         _ => unreachable!(),
     })
@@ -764,19 +784,22 @@ pub fn conformal(truth: &[bool], scores: &[f64], alphas: &[f64], seed: u64) -> V
 }
 
 /// `min_support` is the per-fit candidate policy: a feature must be present
-/// in, and absent from, at least that many training samples.
+/// in, and absent from, at least that many training samples. `duplicates`
+/// lists the k-mer-identical groups `check_inputs` describes.
+#[allow(clippy::too_many_arguments)]
 pub fn evaluate(
     dataset: &str,
     x: &BitMatrix,
     y: &Bits,
     groups: &[u32],
+    duplicates: &[Vec<usize>],
     min_support: u32,
     mic: Option<MicInput>,
     cfg: &EvalConfig,
 ) -> Result<EvalOutput> {
     let started = Instant::now();
     let n = x.cols;
-    check_inputs(x, y, groups, min_support, cfg)?;
+    check_inputs(x, y, groups, duplicates, min_support, cfg)?;
     if let Some(m) = &mic {
         ensure!(m.mic.len() == n, "MIC dimensions differ");
     }
@@ -784,10 +807,10 @@ pub fn evaluate(
     let n_groups = count_groups(groups);
     let mut splits = Vec::new();
 
-    for (scheme, folds) in &outer_splits(y, groups, cfg) {
-        let tuning_groups = (*scheme == "lineage").then_some(groups);
+    for (scheme, folds) in &outer_splits(y, groups, duplicates, cfg) {
+        let tuning = tuning_groups(scheme, groups, duplicates);
         // A missing lineage estimate must not erase a valid random estimate.
-        match check_split_plan(scheme, folds, y, groups, n_groups, cfg) {
+        match check_split_plan(scheme, folds, y, tuning.as_deref(), n_groups, cfg) {
             Ok(()) => {}
             Err(error) if *scheme == "lineage" => {
                 splits.push(SplitResult {
@@ -813,7 +836,7 @@ pub fn evaluate(
                     &cx,
                     y,
                     &train,
-                    tuning_groups,
+                    tuning.as_deref(),
                     cfg,
                     LassoContext {
                         dataset,
@@ -854,11 +877,15 @@ pub fn evaluate(
     })
 }
 
-/// What `evaluate` requires of its inputs and settings.
+/// What `evaluate` requires of its inputs and settings. Each duplicate
+/// group lists two or more samples in ascending order, no sample is in two
+/// groups, and a group's samples share a lineage, so no lineage fold splits
+/// one.
 fn check_inputs(
     x: &BitMatrix,
     y: &Bits,
     groups: &[u32],
+    duplicates: &[Vec<usize>],
     min_support: u32,
     cfg: &EvalConfig,
 ) -> Result<()> {
@@ -867,6 +894,25 @@ fn check_inputs(
         n == y.len() && n == groups.len(),
         "evaluation dimensions differ"
     );
+    let mut grouped = Bits::zeros(n);
+    for group in duplicates {
+        ensure!(
+            group.len() >= 2 && group.windows(2).all(|w| w[0] < w[1]) && group[group.len() - 1] < n,
+            "a duplicate group needs two or more ascending sample indices below {n}: {group:?}"
+        );
+        for &i in group {
+            ensure!(
+                !grouped.contains(i),
+                "sample {i} is in two duplicate groups"
+            );
+            grouped.insert(i);
+            ensure!(
+                groups[i] == groups[group[0]],
+                "duplicate samples {} and {i} are in different lineages",
+                group[0]
+            );
+        }
+    }
     ensure!(min_support >= 1, "candidate features need min_support >= 1");
     ensure!(
         cfg.folds >= 2 && cfg.inner_folds >= 2,
@@ -889,26 +935,91 @@ fn count_groups(groups: &[u32]) -> usize {
         .len()
 }
 
-/// The outer partitions `evaluate` scores, in order.
-fn outer_splits(y: &Bits, groups: &[u32], cfg: &EvalConfig) -> [(&'static str, Vec<usize>); 2] {
+/// The outer partitions `evaluate` scores, in order. The random folds move
+/// each duplicate group whole into one fold; a dataset without duplicates
+/// keeps its stratified folds unchanged.
+fn outer_splits(
+    y: &Bits,
+    groups: &[u32],
+    duplicates: &[Vec<usize>],
+    cfg: &EvalConfig,
+) -> [(&'static str, Vec<usize>); 2] {
+    let random = stratified_folds(y, cfg.folds, cfg.seed);
     [
-        ("random", stratified_folds(y, cfg.folds, cfg.seed)),
+        ("random", isolate_groups(&random, duplicates, cfg.folds)),
         ("lineage", grouped_folds(y, groups, cfg.folds, cfg.seed)),
     ]
 }
 
+/// The groups that inner tuning (scm and cart's inner folds, boosting's and
+/// the lasso's holdouts) keeps whole inside each outer training set:
+/// - `lineage`: the lineage groups;
+/// - `random` without duplicate groups: none, so tuning stays stratified;
+/// - `random` with duplicate groups: each group takes its first member's
+///   index as its id and every other sample its own index, so a genome and
+///   its copy never sit on both sides of a tuning partition.
+///
+/// The first member, the lowest because `check_inputs` requires ascending
+/// groups, is part of the contract, not one choice among equals. Any
+/// member's index would keep groups whole, but ids set the order the groups
+/// are shuffled from, so another member would redraw every random tuning
+/// partition and change reported results. This function doesn't check the
+/// order itself.
+///
+/// The outer random folds hold each group whole, so a training set holds a
+/// group entirely or not at all, and ids are sample indices: no outer test
+/// sample changes a training sample's id or the order of training ids.
+///
+/// Groups move random tuning onto the grouped path, which redraws every
+/// sample's tuning partition, not only a duplicate's. Inner folds come from
+/// one shuffle of the groups instead of one per class; groups are placed
+/// largest first, so duplicate groups go before singletons, each into the
+/// fold that least raises the squared class imbalance. The singletons then
+/// even out each class across folds as stratification does. A holdout is
+/// the valid one of round(1 / fraction) grouped folds closest in size to the
+/// fraction, not that fraction of each class: boosting holds out about 1/7
+/// of training (not 15%), the lasso about 1/5.
+pub(crate) fn tuning_groups<'a>(
+    scheme: &str,
+    groups: &'a [u32],
+    duplicates: &[Vec<usize>],
+) -> Option<Cow<'a, [u32]>> {
+    if scheme == "lineage" {
+        return Some(Cow::Borrowed(groups));
+    }
+    if duplicates.is_empty() {
+        return None;
+    }
+    let mut ids: Vec<u32> = (0..groups.len() as u32).collect();
+    for members in duplicates {
+        for &i in members {
+            ids[i] = members[0] as u32;
+        }
+    }
+    Some(Cow::Owned(ids))
+}
+
+/// What tuning errors call one of `scheme`'s tuning groups. The lineage
+/// split keeps its revision-10 error text.
+pub(crate) fn tuning_unit(scheme: &str) -> &'static str {
+    if scheme == "lineage" {
+        "lineage"
+    } else {
+        "group"
+    }
+}
+
 /// Checks one split's complete nested partition plan before any model is
 /// fitted: its outer folds, each outer fold's inner folds, and both tuning
-/// holdouts.
+/// holdouts, drawn on `tuning` groups (`tuning_groups`).
 fn check_split_plan(
     scheme: &str,
     folds: &[usize],
     y: &Bits,
-    groups: &[u32],
+    tuning: Option<&[u32]>,
     n_groups: usize,
     cfg: &EvalConfig,
 ) -> Result<()> {
-    let tuning_groups = (scheme == "lineage").then_some(groups);
     if scheme == "lineage" {
         ensure!(
             n_groups >= cfg.folds * 2,
@@ -919,11 +1030,11 @@ fn check_split_plan(
         .with_context(|| format!("invalid {scheme} outer evaluation"))?;
     for (fi, (train, _)) in fold_masks(folds, cfg.folds).into_iter().enumerate() {
         let seed = fold_seed(cfg, fi);
-        let inner = training_folds(y, &train, tuning_groups, cfg.inner_folds, seed);
+        let inner = training_folds(y, &train, tuning, cfg.inner_folds, seed);
         validate_folds(y, &train, &inner, cfg.inner_folds)
             .with_context(|| format!("invalid {scheme} inner evaluation in outer fold {fi}"))?;
-        for fraction in [0.15, 0.2] {
-            tuning_holdout(&train, y, tuning_groups, fraction, seed)
+        for fraction in [GBT_HOLDOUT, LASSO_HOLDOUT] {
+            tuning_holdout(&train, y, tuning, tuning_unit(scheme), fraction, seed)
                 .with_context(|| format!("invalid {scheme} tuning holdout in outer fold {fi}"))?;
         }
     }
@@ -943,16 +1054,17 @@ pub fn lasso_only(
     x: &BitMatrix,
     y: &Bits,
     groups: &[u32],
+    duplicates: &[Vec<usize>],
     min_support: u32,
     cfg: &EvalConfig,
     observe: &mut dyn FnMut(&LassoOnlyEvent) -> Result<()>,
     progress: &mut dyn FnMut(&LassoProgress),
 ) -> Result<()> {
-    check_inputs(x, y, groups, min_support, cfg)?;
+    check_inputs(x, y, groups, duplicates, min_support, cfg)?;
     let n_groups = count_groups(groups);
-    for (scheme, folds) in &outer_splits(y, groups, cfg) {
-        let tuning_groups = (*scheme == "lineage").then_some(groups);
-        match check_split_plan(scheme, folds, y, groups, n_groups, cfg) {
+    for (scheme, folds) in &outer_splits(y, groups, duplicates, cfg) {
+        let tuning = tuning_groups(scheme, groups, duplicates);
+        match check_split_plan(scheme, folds, y, tuning.as_deref(), n_groups, cfg) {
             Ok(()) => {}
             Err(error) if *scheme == "lineage" => {
                 observe(&LassoOnlyEvent::Unavailable {
@@ -976,7 +1088,7 @@ pub fn lasso_only(
                     &cx,
                     y,
                     &train,
-                    tuning_groups,
+                    tuning.as_deref(),
                     cfg,
                     seed,
                     context,
@@ -1084,7 +1196,7 @@ fn final_models(
         &mut |_, _| {},
     )?;
     let (_, rf_importance) = fit_rf(x, y, &all, cfg, cfg.seed + 17);
-    let (_, gbt_model) = fit_gbt(x, y, &all, None, cfg, cfg.seed + 13)?;
+    let (_, gbt_model) = fit_gbt(x, y, &all, None, "group", cfg, cfg.seed + 13)?;
     Ok(FinalModels {
         scm: FinalScm {
             kind: model.kind,
@@ -1324,7 +1436,7 @@ mod tests {
         let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
         let mut cfg = small_config();
         cfg.folds = 1;
-        assert!(evaluate("fixture__fixturemycin", &x, &y, &groups, 3, None, &cfg).is_err());
+        assert!(evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).is_err());
         cfg.folds = 2;
         let mut duplicated = x.clone();
         duplicated.push_row(y.words());
@@ -1334,13 +1446,14 @@ mod tests {
                 &duplicated,
                 &y,
                 &groups,
+                &[],
                 3,
                 None,
                 &cfg
             )
             .is_err()
         );
-        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, 3, None, &cfg).unwrap();
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
         assert_eq!(out.splits.len(), 2);
         assert!(!out.finals.lasso_fit.as_ref().unwrap().has_unconverged());
         for split in out.splits {
@@ -1378,6 +1491,7 @@ mod tests {
             &x,
             &y,
             &groups,
+            &[],
             3,
             None,
             &small_config(),
@@ -1400,6 +1514,749 @@ mod tests {
         let encoded = serde_json::to_string(lineage).unwrap();
         let decoded: SplitResult = serde_json::from_str(&encoded).unwrap();
         assert_eq!(decoded.unavailable_reason, lineage.unavailable_reason);
+    }
+
+    /// A split's results with fit timings removed, as JSON bytes.
+    fn timeless(split: &SplitResult) -> Vec<u8> {
+        let mut v = serde_json::to_value(split).unwrap();
+        for learner in v["learners"].as_array_mut().unwrap() {
+            learner.as_object_mut().unwrap().remove("seconds");
+        }
+        serde_json::to_vec(&v).unwrap()
+    }
+
+    #[test]
+    fn duplicate_groups_sit_whole_in_one_outer_fold_of_every_split() {
+        // Lineages of four; samples 4j and 4j + 1 are copies, one R and
+        // one S. Every split copy pair is a tie, so it joins the fold of its
+        // lower-index member.
+        let n = 80;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        let duplicates: Vec<Vec<usize>> = (0..n / 4).map(|j| vec![4 * j, 4 * j + 1]).collect();
+        let mut cfg = small_config();
+        cfg.folds = 4;
+        let out = evaluate(
+            "fixture__fixturemycin",
+            &x,
+            &y,
+            &groups,
+            &duplicates,
+            3,
+            None,
+            &cfg,
+        )
+        .unwrap();
+        let base = stratified_folds(&y, cfg.folds, cfg.seed);
+        let random = &out.splits[0].test_fold;
+        assert_eq!(*random, isolate_groups(&base, &duplicates, cfg.folds));
+        let split_pairs: Vec<&Vec<usize>> = duplicates
+            .iter()
+            .filter(|g| base[g[0]] != base[g[1]])
+            .collect();
+        assert!(!split_pairs.is_empty());
+        for g in &split_pairs {
+            assert_eq!((random[g[0]], random[g[1]]), (base[g[0]], base[g[0]]));
+        }
+        assert!(split_pairs.iter().any(|g| base[g[0]] > base[g[1]]));
+        assert_eq!(
+            out.splits[1].test_fold,
+            grouped_folds(&y, &groups, cfg.folds, cfg.seed)
+        );
+        for split in &out.splits {
+            assert!(split.unavailable_reason.is_none());
+            assert!(
+                duplicates
+                    .iter()
+                    .all(|g| split.test_fold[g[0]] == split.test_fold[g[1]])
+            );
+        }
+    }
+
+    #[test]
+    fn duplicate_groups_already_whole_in_their_folds_change_only_random_tuning() {
+        let n = 80;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        x.push_row(Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0)).words());
+        let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        let cfg = small_config();
+        let base = stratified_folds(&y, cfg.folds, cfg.seed);
+        // Same-lineage pairs that stratified folds already keep together.
+        let duplicates: Vec<Vec<usize>> = (0..n / 4)
+            .flat_map(|j| [(4 * j, 4 * j + 2), (4 * j + 1, 4 * j + 3)])
+            .filter(|&(a, b)| base[a] == base[b])
+            .map(|(a, b)| vec![a, b])
+            .collect();
+        assert!(!duplicates.is_empty());
+        let plain = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
+        let grouped = evaluate(
+            "fixture__fixturemycin",
+            &x,
+            &y,
+            &groups,
+            &duplicates,
+            3,
+            None,
+            &cfg,
+        )
+        .unwrap();
+        assert_eq!(plain.splits[0].test_fold, base);
+        // No sample moves between outer folds. Random tuning now keeps the
+        // pairs whole, so only the random split's fits may change.
+        for (a, b) in plain.splits.iter().zip(&grouped.splits) {
+            assert_eq!(a.test_fold, b.test_fold);
+        }
+        assert_eq!(timeless(&plain.splits[1]), timeless(&grouped.splits[1]));
+        assert_eq!(
+            serde_json::to_vec(&plain.finals).unwrap(),
+            serde_json::to_vec(&grouped.finals).unwrap()
+        );
+    }
+
+    #[test]
+    fn a_move_that_empties_a_class_from_a_random_fold_fails_the_dataset() {
+        // Ten resistant genomes in 80, two per stratified fold. Each resistant
+        // genome of one fold is paired with a lower-index resistant genome in
+        // another fold, so every tie sends it there and the fold keeps none.
+        // A known limit: min_class >= folds no longer guarantees a valid
+        // random split once groups move.
+        let n = 80;
+        let y = Bits::from_indices(n, 0..10);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        x.push_row(Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0)).words());
+        let mut groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        let mut cfg = small_config();
+        cfg.folds = 5;
+        let base = stratified_folds(&y, cfg.folds, cfg.seed);
+        let duplicates = (0..cfg.folds)
+            .find_map(|t| {
+                let mut used = vec![];
+                let mut pairs = vec![];
+                for r in (0..10).filter(|&i| base[i] == t) {
+                    let p = (0..r).find(|&p| base[p] != t && !used.contains(&p))?;
+                    used.push(p);
+                    pairs.push(vec![p, r]);
+                }
+                Some(pairs)
+            })
+            .unwrap();
+        for g in &duplicates {
+            groups[g[1]] = groups[g[0]];
+        }
+        let plain = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg);
+        assert!(plain.is_ok(), "{:#}", plain.err().unwrap());
+        let error = evaluate(
+            "fixture__fixturemycin",
+            &x,
+            &y,
+            &groups,
+            &duplicates,
+            3,
+            None,
+            &cfg,
+        )
+        .err()
+        .unwrap();
+        assert!(
+            format!("{error:#}").contains("invalid random outer evaluation"),
+            "{error:#}"
+        );
+    }
+
+    #[test]
+    fn malformed_duplicate_groups_are_rejected_before_any_fit() {
+        let n = 40;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        let cases: [(Vec<Vec<usize>>, &str); 5] = [
+            (vec![vec![3]], "two or more"),
+            (vec![vec![2, 1]], "ascending"),
+            (vec![vec![38, 40]], "below 40"),
+            (
+                vec![vec![0, 1], vec![1, 2]],
+                "sample 1 is in two duplicate groups",
+            ),
+            (
+                vec![vec![2, 4]],
+                "duplicate samples 2 and 4 are in different lineages",
+            ),
+        ];
+        for (duplicates, expected) in cases {
+            let error = evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                &duplicates,
+                3,
+                None,
+                &small_config(),
+            )
+            .err()
+            .unwrap();
+            assert!(format!("{error:#}").contains(expected), "{error:#}");
+        }
+    }
+
+    /// 120 genomes in lineages of four, 48 resistant. Each feature row is a
+    /// bit of a genome id, so samples have identical columns exactly when
+    /// they share an id: ten same-lineage pairs and ten triples, some of
+    /// them with both labels.
+    fn duplicate_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        let n = 120;
+        let genome = |i: usize| match ((i / 4) % 3, i % 4) {
+            (0, 1) => i - 1,
+            (1, 2 | 3) => i / 4 * 4 + 1,
+            _ => i,
+        };
+        let mut x = BitMatrix::with_cols(n);
+        for bit in 0..7 {
+            x.push_row(
+                Bits::from_indices(n, (0..n).filter(|&i| (genome(i) >> bit) & 1 == 1)).words(),
+            );
+        }
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 5 < 2));
+        (x, y, (0..n).map(|i| (i / 4) as u32).collect())
+    }
+
+    /// The groups of samples whose columns of `x` are identical, as the
+    /// report's `kset_duplicates` lists them.
+    fn identical_columns(x: &BitMatrix) -> Vec<Vec<usize>> {
+        let mut by_column: std::collections::BTreeMap<Vec<bool>, Vec<usize>> = Default::default();
+        for i in 0..x.cols {
+            let column = (0..x.rows).map(|r| x.get(r, i)).collect();
+            by_column.entry(column).or_default().push(i);
+        }
+        let mut groups: Vec<Vec<usize>> = by_column.into_values().filter(|g| g.len() > 1).collect();
+        groups.sort();
+        groups
+    }
+
+    type InnerPlan = (Vec<usize>, Vec<(Bits, Bits)>);
+
+    /// One outer fold's tuning partitions, drawn as `check_split_plan` and
+    /// the fits draw them: scm and cart's inner folds, then the boosting and
+    /// lasso holdouts as (fit, validation).
+    fn inner_plan(
+        y: &Bits,
+        train: &Bits,
+        tuning: Option<&[u32]>,
+        cfg: &EvalConfig,
+        fold: usize,
+    ) -> InnerPlan {
+        let seed = fold_seed(cfg, fold);
+        let holdouts = [GBT_HOLDOUT, LASSO_HOLDOUT]
+            .map(|frac| tuning_holdout(train, y, tuning, "group", frac, seed).unwrap())
+            .to_vec();
+        (
+            training_folds(y, train, tuning, cfg.inner_folds, seed),
+            holdouts,
+        )
+    }
+
+    #[test]
+    fn random_tuning_keeps_each_duplicate_group_whole_inside_outer_training() {
+        // A group takes its lowest member's index, every other sample its own.
+        assert_eq!(
+            tuning_groups("random", &[7; 6], &[vec![1, 3], vec![2, 4, 5]]).as_deref(),
+            Some([0, 1, 2, 1, 2, 2].as_slice())
+        );
+        let (x, y, groups) = duplicate_fixture();
+        let duplicates = identical_columns(&x);
+        assert_eq!(duplicates.len(), 20);
+        let cfg = EvalConfig::default();
+        let [(_, random), (_, lineage)] = outer_splits(&y, &groups, &duplicates, &cfg);
+        // The outer folds are revision 10's.
+        let stratified = stratified_folds(&y, cfg.folds, cfg.seed);
+        assert_eq!(random, isolate_groups(&stratified, &duplicates, cfg.folds));
+        assert_eq!(lineage, grouped_folds(&y, &groups, cfg.folds, cfg.seed));
+        let tuning = tuning_groups("random", &groups, &duplicates);
+        check_split_plan("random", &random, &y, tuning.as_deref(), 30, &cfg).unwrap();
+        let mut split_without_groups = 0;
+        for (fi, (train, _)) in fold_masks(&random, cfg.folds).into_iter().enumerate() {
+            assert!(
+                duplicates
+                    .iter()
+                    .all(|g| g.iter().all(|&i| train.contains(i) == train.contains(g[0])))
+            );
+            let inside: Vec<&Vec<usize>> =
+                duplicates.iter().filter(|g| train.contains(g[0])).collect();
+            assert!(!inside.is_empty());
+            // Groups that straddle an inner fold or either holdout.
+            let straddling = |(inner, holdouts): &InnerPlan| {
+                inside
+                    .iter()
+                    .filter(|g| {
+                        g.iter().any(|&i| {
+                            inner[i] != inner[g[0]]
+                                || holdouts
+                                    .iter()
+                                    .any(|(_, val)| val.contains(i) != val.contains(g[0]))
+                        })
+                    })
+                    .count()
+            };
+            let plan = inner_plan(&y, &train, tuning.as_deref(), &cfg, fi);
+            assert_eq!(straddling(&plan), 0, "outer fold {fi}");
+            split_without_groups += straddling(&inner_plan(&y, &train, None, &cfg, fi));
+            // The grouped path stays as balanced as stratification: each
+            // class is within one sample of an even share of every inner
+            // fold and of each holdout's round(1 / frac) folds.
+            let (inner, holdouts) = &plan;
+            for class in [true, false] {
+                let members: Vec<usize> = train
+                    .iter_ones()
+                    .filter(|&i| y.contains(i) == class)
+                    .collect();
+                let count =
+                    |m: &dyn Fn(usize) -> bool| members.iter().filter(|&&i| m(i)).count() as f64;
+                let even = members.len() as f64 / cfg.inner_folds as f64;
+                for f in 0..cfg.inner_folds {
+                    assert!(
+                        (count(&|i| inner[i] == f) - even).abs() < 1.0,
+                        "outer fold {fi}"
+                    );
+                }
+                for ((_, val), frac) in holdouts.iter().zip([GBT_HOLDOUT, LASSO_HOLDOUT]) {
+                    let even = members.len() as f64 / (1.0 / frac).round();
+                    assert!(
+                        (count(&|i| val.contains(i)) - even).abs() < 1.0,
+                        "outer fold {fi}"
+                    );
+                }
+            }
+        }
+        // Revision 10's tuning split copies in this fixture.
+        assert!(split_without_groups > 0);
+    }
+
+    #[test]
+    fn outer_test_samples_cannot_change_inner_tuning() {
+        // Inner plans read labels, lineages and duplicate groups, which come
+        // from features. Reverse the outer test samples' labels among them
+        // and, separately, rotate their features and lineages, which moves
+        // their duplicate groups. No training sample's plan may change.
+        let (x, y, groups) = duplicate_fixture();
+        let n = x.cols;
+        let duplicates = identical_columns(&x);
+        let cfg = EvalConfig::default();
+        for (scheme, folds) in outer_splits(&y, &groups, &duplicates, &cfg) {
+            let tuning = tuning_groups(scheme, &groups, &duplicates);
+            for (fi, (train, test)) in fold_masks(&folds, cfg.folds).into_iter().enumerate() {
+                let t: Vec<usize> = test.iter_ones().collect();
+                let m = t.len();
+                let mut label_from: Vec<usize> = (0..n).collect();
+                let mut genome_from = label_from.clone();
+                for (j, &i) in t.iter().enumerate() {
+                    label_from[i] = t[m - 1 - j];
+                    genome_from[t[(j + 1) % m]] = i;
+                }
+                let y2 = Bits::from_indices(n, (0..n).filter(|&i| y.contains(label_from[i])));
+                let groups2: Vec<u32> = genome_from.iter().map(|&s| groups[s]).collect();
+                let mut x2 = BitMatrix::with_cols(n);
+                for r in 0..x.rows {
+                    x2.push_row(
+                        Bits::from_indices(n, (0..n).filter(|&i| x.get(r, genome_from[i]))).words(),
+                    );
+                }
+                let duplicates2 = identical_columns(&x2);
+                assert!(
+                    y2 != y && duplicates2 != duplicates,
+                    "{scheme} outer fold {fi}"
+                );
+                check_inputs(&x2, &y2, &groups2, &duplicates2, 1, &cfg).unwrap();
+                let tuning2 = tuning_groups(scheme, &groups2, &duplicates2);
+                assert_eq!(
+                    inner_plan(&y2, &train, tuning2.as_deref(), &cfg, fi),
+                    inner_plan(&y, &train, tuning.as_deref(), &cfg, fi),
+                    "{scheme} outer fold {fi}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn random_tuning_without_duplicates_is_revision_10s_stratified_tuning() {
+        let (_, y, groups) = duplicate_fixture();
+        let cfg = EvalConfig::default();
+        let tuning = tuning_groups("random", &groups, &[]);
+        assert!(tuning.is_none());
+        let [(_, random), _] = outer_splits(&y, &groups, &[], &cfg);
+        assert_eq!(random, stratified_folds(&y, cfg.folds, cfg.seed));
+        for (fi, (train, _)) in fold_masks(&random, cfg.folds).into_iter().enumerate() {
+            // Stratified inner folds over the training samples, and `holdout`.
+            let seed = fold_seed(&cfg, fi);
+            let members: Vec<usize> = train.iter_ones().collect();
+            let local_y = Bits::from_indices(
+                members.len(),
+                (0..members.len()).filter(|&j| y.contains(members[j])),
+            );
+            let mut inner = vec![usize::MAX; y.len()];
+            for (&i, f) in members
+                .iter()
+                .zip(stratified_folds(&local_y, cfg.inner_folds, seed))
+            {
+                inner[i] = f;
+            }
+            let holdouts = [GBT_HOLDOUT, LASSO_HOLDOUT].map(|frac| holdout(&train, &y, frac, seed));
+            assert_eq!(
+                inner_plan(&y, &train, tuning.as_deref(), &cfg, fi),
+                (inner, holdouts.to_vec())
+            );
+        }
+    }
+
+    #[test]
+    fn lineage_tuning_ignores_duplicate_groups() {
+        let (x, y, groups) = duplicate_fixture();
+        let duplicates = identical_columns(&x);
+        let cfg = EvalConfig::default();
+        for listed in [duplicates, vec![]] {
+            let tuning = tuning_groups("lineage", &groups, &listed);
+            assert_eq!(tuning.as_deref(), Some(groups.as_slice()));
+            let [_, (_, lineage)] = outer_splits(&y, &groups, &listed, &cfg);
+            assert_eq!(lineage, grouped_folds(&y, &groups, cfg.folds, cfg.seed));
+            check_split_plan("lineage", &lineage, &y, tuning.as_deref(), 30, &cfg).unwrap();
+        }
+    }
+
+    #[test]
+    fn random_tuning_that_cannot_keep_duplicates_whole_fails_before_any_fit() {
+        // Four resistant genomes in 80, two per stratified fold, and each
+        // fold's pair is one duplicate group. The outer folds stay valid,
+        // but every training set's resistant genomes are then one group, so
+        // no grouped inner fold split holds them on both sides. Stratified
+        // tuning, with no duplicates listed, splits the pair and passes.
+        let n = 80;
+        let y = Bits::from_indices(n, 0..4);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        x.push_row(Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0)).words());
+        let mut groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        let cfg = small_config();
+        let base = stratified_folds(&y, cfg.folds, cfg.seed);
+        let duplicates: Vec<Vec<usize>> = (0..cfg.folds)
+            .map(|f| (0..4).filter(|&i| base[i] == f).collect())
+            .collect();
+        for g in &duplicates {
+            groups[g[1]] = groups[g[0]];
+        }
+        assert_eq!(outer_splits(&y, &groups, &duplicates, &cfg)[0].1, base);
+        let dataset = "fixture__fixturemycin";
+        let plain = evaluate(dataset, &x, &y, &groups, &[], 3, None, &cfg);
+        assert!(plain.is_ok(), "{:#}", plain.err().unwrap());
+        let expected = "invalid random inner evaluation in outer fold 0";
+        let error = evaluate(dataset, &x, &y, &groups, &duplicates, 3, None, &cfg).unwrap_err();
+        assert!(format!("{error:#}").contains(expected), "{error:#}");
+        let mut events = Vec::new();
+        let error = lasso_only(
+            dataset,
+            &x,
+            &y,
+            &groups,
+            &duplicates,
+            3,
+            &cfg,
+            &mut |e| {
+                events.push(e.clone());
+                Ok(())
+            },
+            &mut |_| {},
+        )
+        .unwrap_err();
+        assert!(format!("{error:#}").contains(expected), "{error:#}");
+        assert!(events.is_empty(), "{events:?}");
+    }
+
+    #[test]
+    fn a_grouped_holdout_that_fails_after_its_inner_folds_pass_stops_the_plan() {
+        // Outer fold 0 tests two resistant and two susceptible genomes. It
+        // trains on susceptible groups of 100, a group of 98 resistant
+        // genomes and one susceptible, a group of one resistant and 97
+        // susceptible genomes, and three susceptible singletons. Two inner
+        // folds part the two resistant groups. A grouped holdout with one
+        // fold more than there are groups of 100 gives each of them a fold
+        // and puts both resistant groups in the last, where they add the
+        // least susceptible imbalance, so no fold leaves resistant genomes on
+        // both sides; with any other fold count here they part. Six groups
+        // of 100 fail boosting's seven folds alone, and four fail the
+        // lasso's five alone. A stratified holdout has no such problem. The
+        // groups serve as lineages and as duplicate groups alike, so each
+        // scheme fails in its own words.
+        for (big, failing) in [(6, GBT_HOLDOUT), (4, LASSO_HOLDOUT)] {
+            let mut units: Vec<(usize, usize)> = vec![(98, 1), (1, 97)];
+            units.extend(std::iter::repeat_n((0, 100), big));
+            let mut labels = vec![true, true, false, false];
+            let mut duplicates = Vec::new();
+            for (r, s) in units {
+                let start = labels.len();
+                labels.extend((0..r + s).map(|j| j < r));
+                duplicates.push((start..labels.len()).collect::<Vec<usize>>());
+            }
+            labels.extend([false; 3]);
+            let n = labels.len();
+            let y = Bits::from_indices(n, (0..n).filter(|&i| labels[i]));
+            let mut groups: Vec<u32> = (0..n as u32).collect();
+            for g in &duplicates {
+                for &i in g {
+                    groups[i] = g[0] as u32;
+                }
+            }
+            let folds: Vec<usize> = (0..n).map(|i| usize::from(i >= 4)).collect();
+            let cfg = small_config();
+            let (train, _) = fold_masks(&folds, cfg.folds).remove(0);
+            let seed = fold_seed(&cfg, 0);
+            for frac in [GBT_HOLDOUT, LASSO_HOLDOUT] {
+                assert!(tuning_holdout(&train, &y, None, "group", frac, seed).is_ok());
+            }
+            for (scheme, listed, reason) in [
+                ("random", duplicates, "no group tuning partition"),
+                // Revision 10's text, byte for byte.
+                ("lineage", vec![], "no lineage tuning partition"),
+            ] {
+                let tuning = tuning_groups(scheme, &groups, &listed);
+                let inner = training_folds(&y, &train, tuning.as_deref(), cfg.inner_folds, seed);
+                validate_folds(&y, &train, &inner, cfg.inner_folds).unwrap();
+                for frac in [GBT_HOLDOUT, LASSO_HOLDOUT] {
+                    let holdout =
+                        tuning_holdout(&train, &y, tuning.as_deref(), "group", frac, seed);
+                    assert_eq!(
+                        holdout.is_err(),
+                        frac == failing,
+                        "{big} groups of 100, {scheme}, holdout {frac}"
+                    );
+                }
+                let error = check_split_plan(
+                    scheme,
+                    &folds,
+                    &y,
+                    tuning.as_deref(),
+                    count_groups(&groups),
+                    &cfg,
+                )
+                .unwrap_err();
+                assert_eq!(
+                    format!("{error:#}"),
+                    format!(
+                        "invalid {scheme} tuning holdout in outer fold 0: \
+                         {reason} contains both classes"
+                    )
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn two_training_groups_are_enough_for_a_grouped_holdout() {
+        // I1: k is 2 here, and each lineage is one side with both classes.
+        let y = Bits::from_indices(8, [0, 4]);
+        let groups = [1u32, 1, 1, 1, 2, 2, 2, 2];
+        let (fit, val) = tuning_holdout(
+            &Bits::ones(8),
+            &y,
+            Some(&groups),
+            "lineage",
+            LASSO_HOLDOUT,
+            42,
+        )
+        .unwrap();
+        assert_eq!(fit.count() + val.count(), 8);
+        for side in [&fit, &val] {
+            let members: Vec<usize> = side.iter_ones().collect();
+            assert!(
+                members == [0, 1, 2, 3] || members == [4, 5, 6, 7],
+                "{members:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn tuning_holdout_names_lineages_in_revision_10s_words() {
+        // One training group. The lineage text is revision 10's, byte for
+        // byte; duplicate groups get their own word.
+        let y = Bits::from_indices(8, [0, 1]);
+        let one_group = [3u32; 8];
+        for (unit, text) in [
+            ("lineage", "tuning needs at least two training lineages"),
+            ("group", "tuning needs at least two training groups"),
+        ] {
+            let ids = Some(one_group.as_slice());
+            let error =
+                tuning_holdout(&Bits::ones(8), &y, ids, unit, LASSO_HOLDOUT, 42).unwrap_err();
+            assert_eq!(format!("{error:#}"), text);
+        }
+    }
+
+    #[test]
+    fn scm_cart_boosting_and_lasso_tune_on_the_splits_tuning_groups() {
+        // 160 genomes in lineages of four; every other lineage is four
+        // copies of one genome. A marker calls resistance, but seven copy
+        // groups carry it and are susceptible, each with a feature of its
+        // own, and eight rows spell each genome's id. A fit can learn a
+        // copy's label from its id or private feature only when tuning
+        // splits the copies. Each fit must equal one built here from inner
+        // folds and holdouts drawn on the split's tuning groups, and some fit
+        // of each learner must differ from one built without them, so a fit
+        // that drops the groups cannot pass.
+        let n = 160;
+        let copies = |i: usize| (i / 4).is_multiple_of(2);
+        let genome = |i: usize| if copies(i) { i / 4 * 4 } else { i };
+        let marker = |i: usize| copies(i) || i.is_multiple_of(2);
+        let mislabeled = |i: usize| copies(i) && (i / 4).is_multiple_of(6);
+        let y = Bits::from_indices(n, (0..n).filter(|&i| marker(i) && !mislabeled(i)));
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(Bits::from_indices(n, (0..n).filter(|&i| marker(i))).words());
+        for bit in 0..8 {
+            x.push_row(
+                Bits::from_indices(n, (0..n).filter(|&i| (genome(i) >> bit) & 1 == 1)).words(),
+            );
+        }
+        for lineage in (0..n / 4).step_by(6) {
+            x.push_row(Bits::from_indices(n, (0..n).filter(|&i| i / 4 == lineage)).words());
+        }
+        let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
+        let duplicates = identical_columns(&x);
+        assert_eq!(duplicates.len(), 20);
+        let cfg = EvalConfig::default();
+        let mut differs = [false; 4];
+        // The lasso must also differ on the random split itself, so a fit
+        // that drops the groups only there cannot pass.
+        let mut random_lasso_differs = false;
+        for (scheme, folds) in outer_splits(&y, &groups, &duplicates, &cfg) {
+            let tuning = tuning_groups(scheme, &groups, &duplicates);
+            check_split_plan(scheme, &folds, &y, tuning.as_deref(), 40, &cfg).unwrap();
+            for (fi, (train, _)) in fold_masks(&folds, cfg.folds).into_iter().enumerate() {
+                let (cx, _) = training_candidates(&x, &train, 3);
+                let seed = fold_seed(&cfg, fi);
+                let built = |ids: Option<&[u32]>| {
+                    let inner = training_folds(&y, &train, ids, cfg.inner_folds, seed);
+                    // The lasso's penalty is chosen on a holdout drawn here.
+                    let (fit, val) =
+                        tuning_holdout(&train, &y, ids, "group", LASSO_HOLDOUT, seed).unwrap();
+                    let feats = screen(&cx, &y, &fit, cfg.screened_features);
+                    let path = lasso::fit_path_with_status(
+                        &cx,
+                        &y,
+                        &fit,
+                        &feats,
+                        cfg.lasso_lambdas,
+                        400,
+                        &mut |_| {},
+                    );
+                    let penalized = fit_lasso_from_path(
+                        &cx,
+                        &y,
+                        &val,
+                        path,
+                        test_context(scheme, fi),
+                        |lambdas| {
+                            lasso::refit_path_with_status(
+                                &cx,
+                                &y,
+                                &train,
+                                &feats,
+                                lambdas,
+                                &mut |_| {},
+                            )
+                        },
+                    )
+                    .unwrap()
+                    .0;
+                    [
+                        fit_scm(&cx, &y, &train, &inner, &cfg),
+                        fit_cart(&cx, &y, &train, &inner, &cfg),
+                        fit_gbt(&cx, &y, &train, ids, "group", &cfg, seed)
+                            .unwrap()
+                            .0,
+                        penalized,
+                    ]
+                    .map(|s| (s.scores, s.complexity, s.lasso_fit))
+                };
+                let (grouped, plain) = (built(tuning.as_deref()), built(None));
+                for (li, learner) in ["scm", "cart", "gbt", "lasso"].into_iter().enumerate() {
+                    let context = test_context(scheme, fi);
+                    let fit = fit_fold(learner, &cx, &y, &train, tuning.as_deref(), &cfg, context)
+                        .unwrap();
+                    assert_eq!(
+                        (fit.scores, fit.complexity, fit.lasso_fit),
+                        grouped[li],
+                        "{learner} {scheme} outer fold {fi}"
+                    );
+                    differs[li] |= plain[li] != grouped[li];
+                }
+                random_lasso_differs |= scheme == "random" && plain[3] != grouped[3];
+            }
+        }
+        assert_eq!(differs, [true; 4]);
+        assert!(random_lasso_differs);
+    }
+
+    #[test]
+    fn isolating_duplicates_takes_away_the_calls_a_genome_borrows_from_its_copy() {
+        // The S. flexneri ciprofloxacin shape at small scale: 70 pairs of
+        // identical genomes, each pair its own lineage. A marker carries 25
+        // resistant pairs; 20 more are resistant without it and differ from
+        // the 25 susceptible pairs only by a 24-bit barcode they share with
+        // their copy. A copy in training lets the forest recall those 40
+        // genomes. Isolated, it has only the marker, so VME rises and
+        // balanced accuracy falls.
+        use rand::{Rng, SeedableRng};
+        let pairs = 70;
+        let n = 2 * pairs;
+        let resistant = |p: usize| p < 45;
+        let y = Bits::from_indices(n, (0..n).filter(|&i| resistant(i / 2)));
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(Bits::from_indices(n, (0..n).filter(|&i| i / 2 < 25)).words());
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(9);
+        for _ in 0..24 {
+            let on: Vec<usize> = (0..pairs).filter(|_| rng.random_bool(0.5)).collect();
+            x.push_row(Bits::from_indices(n, on.iter().flat_map(|&p| [2 * p, 2 * p + 1])).words());
+        }
+        let groups: Vec<u32> = (0..n).map(|i| (i / 2) as u32).collect();
+        let duplicates: Vec<Vec<usize>> = (0..pairs).map(|p| vec![2 * p, 2 * p + 1]).collect();
+        let cfg = EvalConfig {
+            folds: 5,
+            inner_folds: 3,
+            forest: ForestParams {
+                n_trees: 60,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 30,
+                ..Default::default()
+            },
+            lasso_lambdas: 5,
+            ..Default::default()
+        };
+        let rf = |duplicates: &[Vec<usize>]| {
+            let out = evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                duplicates,
+                3,
+                None,
+                &cfg,
+            )
+            .unwrap();
+            let random = &out.splits[0];
+            let rf = random.learners.iter().find(|l| l.learner == "rf").unwrap();
+            rf.metrics.clone().unwrap()
+        };
+        let (leaky, isolated) = (rf(&[]), rf(&duplicates));
+        assert!(
+            isolated.vme > leaky.vme + 0.1
+                && isolated.balanced_accuracy < leaky.balanced_accuracy - 0.05,
+            "leaky {leaky:?}, isolated {isolated:?}"
+        );
     }
 
     #[test]
@@ -1428,6 +2285,7 @@ mod tests {
                 &x,
                 &y,
                 &groups,
+                &[],
                 3,
                 None,
                 &small_config(),
@@ -1462,8 +2320,9 @@ mod tests {
         raw.push_row(Bits::from_indices(n, [1, 2, 3]).words());
         let (x, _) = training_candidates(&raw, &Bits::ones(n), 3);
         let groups: Vec<u32> = (0..n).map(|i| (i % 15) as u32).collect();
+        // Same-lineage pairs, so random tuning also runs on duplicate groups.
+        let pairs: Vec<Vec<usize>> = (0..15).step_by(3).map(|i| vec![i, i + 15]).collect();
         let cfg = small_config();
-        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, 3, None, &cfg).unwrap();
         let truth: Vec<bool> = (0..n).map(|i| y.contains(i)).collect();
         let metrics_on = |idx: &[usize], scores: &[f64], ranked: bool| {
             binary_metrics(
@@ -1473,70 +2332,88 @@ mod tests {
                 ranked,
             )
         };
-        for split in &out.splits {
-            assert!(split.unavailable_reason.is_none(), "{split:?}");
-            // The saved fold ids are the partition the split was scored on.
-            let folds = match split.scheme.as_str() {
-                "random" => stratified_folds(&y, cfg.folds, cfg.seed),
-                _ => grouped_folds(&y, &groups, cfg.folds, cfg.seed),
-            };
-            assert_eq!(split.test_fold, folds);
-            let tuning_groups = (split.scheme == "lineage").then_some(groups.as_slice());
-            for learner in &split.learners {
-                let called: Vec<usize> = (0..n).filter(|&i| !learner.scores[i].is_nan()).collect();
-                let ranked = learner.learner != "scm";
-                assert_eq!(
-                    learner.metrics,
-                    (!called.is_empty()).then(|| metrics_on(&called, &learner.scores, ranked))
-                );
-                let uncalled = |class: bool| {
-                    (0..n)
-                        .filter(|&i| learner.scores[i].is_nan() && truth[i] == class)
-                        .count()
+        for duplicates in [vec![], pairs] {
+            let out = evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                &duplicates,
+                3,
+                None,
+                &cfg,
+            )
+            .unwrap();
+            for split in &out.splits {
+                assert!(split.unavailable_reason.is_none(), "{split:?}");
+                // The saved fold ids are the partition the split was scored on.
+                let folds = match split.scheme.as_str() {
+                    "random" => isolate_groups(
+                        &stratified_folds(&y, cfg.folds, cfg.seed),
+                        &duplicates,
+                        cfg.folds,
+                    ),
+                    _ => grouped_folds(&y, &groups, cfg.folds, cfg.seed),
                 };
-                assert_eq!(
-                    learner.no_call,
-                    Some(NoCall {
-                        resistant: uncalled(true),
-                        susceptible: uncalled(false)
-                    })
-                );
-                for (f, (train, test)) in fold_masks(&split.test_fold, cfg.folds)
-                    .into_iter()
-                    .enumerate()
-                {
-                    // Rebuild the fold's fit from its training samples alone.
-                    let (cx, _) = training_candidates(&x, &train, 3);
-                    let refit = fit_fold(
-                        &learner.learner,
-                        &cx,
-                        &y,
-                        &train,
-                        tuning_groups,
-                        &cfg,
-                        test_context(&split.scheme, f),
-                    )
-                    .unwrap();
-                    assert_eq!(learner.fold_complexity[f], refit.complexity);
-                    let idx: Vec<usize> = test.iter_ones().collect();
-                    match &refit.scores {
-                        None => {
-                            assert!(idx.iter().all(|&i| learner.scores[i].is_nan()));
-                            assert!(learner.fold_balanced_accuracy[f].is_nan());
+                assert_eq!(split.test_fold, folds);
+                let tuning = tuning_groups(&split.scheme, &groups, &duplicates);
+                for learner in &split.learners {
+                    let called: Vec<usize> =
+                        (0..n).filter(|&i| !learner.scores[i].is_nan()).collect();
+                    let ranked = learner.learner != "scm";
+                    assert_eq!(
+                        learner.metrics,
+                        (!called.is_empty()).then(|| metrics_on(&called, &learner.scores, ranked))
+                    );
+                    let uncalled = |class: bool| {
+                        (0..n)
+                            .filter(|&i| learner.scores[i].is_nan() && truth[i] == class)
+                            .count()
+                    };
+                    assert_eq!(
+                        learner.no_call,
+                        Some(NoCall {
+                            resistant: uncalled(true),
+                            susceptible: uncalled(false)
+                        })
+                    );
+                    for (f, (train, test)) in fold_masks(&split.test_fold, cfg.folds)
+                        .into_iter()
+                        .enumerate()
+                    {
+                        // Rebuild the fold's fit from its training samples alone.
+                        let (cx, _) = training_candidates(&x, &train, 3);
+                        let refit = fit_fold(
+                            &learner.learner,
+                            &cx,
+                            &y,
+                            &train,
+                            tuning.as_deref(),
+                            &cfg,
+                            test_context(&split.scheme, f),
+                        )
+                        .unwrap();
+                        assert_eq!(learner.fold_complexity[f], refit.complexity);
+                        let idx: Vec<usize> = test.iter_ones().collect();
+                        match &refit.scores {
+                            None => {
+                                assert!(idx.iter().all(|&i| learner.scores[i].is_nan()));
+                                assert!(learner.fold_balanced_accuracy[f].is_nan());
+                            }
+                            Some(s) => {
+                                assert!(idx.iter().all(|&i| learner.scores[i] == s[i]));
+                                assert_eq!(
+                                    learner.fold_balanced_accuracy[f],
+                                    metrics_on(&idx, &learner.scores, false).balanced_accuracy
+                                );
+                            }
                         }
-                        Some(s) => {
-                            assert!(idx.iter().all(|&i| learner.scores[i] == s[i]));
-                            assert_eq!(
-                                learner.fold_balanced_accuracy[f],
-                                metrics_on(&idx, &learner.scores, false).balanced_accuracy
-                            );
+                        if learner.learner == "rf" {
+                            // The forest scores its own training samples apart
+                            // from the held-out fits whose scores were saved.
+                            let s = refit.scores.as_ref().unwrap();
+                            assert!(train.iter_ones().any(|i| s[i] != learner.scores[i]));
                         }
-                    }
-                    if learner.learner == "rf" {
-                        // The forest scores its own training samples apart
-                        // from the held-out fits whose scores were saved.
-                        let s = refit.scores.as_ref().unwrap();
-                        assert!(train.iter_ones().any(|i| s[i] != learner.scores[i]));
                     }
                 }
             }
@@ -1602,6 +2479,7 @@ mod tests {
             &BitMatrix::with_cols(n),
             &y,
             &groups,
+            &[],
             3,
             None,
             &cfg,
@@ -1751,10 +2629,10 @@ mod tests {
         let n = 80;
         let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
         let all = Bits::ones(n);
-        let (fit, val) = tuning_holdout(&all, &y, None, 0.15, 42).unwrap();
+        let (fit, val) = tuning_holdout(&all, &y, None, "group", 0.15, 42).unwrap();
         let mut x = BitMatrix::with_cols(n);
         x.push_row(fit.and(&y).or(&val.and_not(&y)).words());
-        let (scored, model) = fit_gbt(&x, &y, &all, None, &small_config(), 42).unwrap();
+        let (scored, model) = fit_gbt(&x, &y, &all, None, "group", &small_config(), 42).unwrap();
         assert!(model.trees.is_empty());
         assert!(scored.scores.is_none());
         assert_eq!(scored.complexity, 0.0);
@@ -1895,7 +2773,7 @@ mod tests {
         let n = 80;
         let y = Bits::from_indices(n, (0..n).filter(|i| i % 4 == 0));
         let all = Bits::ones(n);
-        let (fit, _) = tuning_holdout(&all, &y, None, 0.2, 42).unwrap();
+        let (fit, _) = tuning_holdout(&all, &y, None, "group", 0.2, 42).unwrap();
         let mut constant_on_fit = BitMatrix::with_cols(n);
         constant_on_fit.push_row(fit.words());
         for x in [BitMatrix::with_cols(n), constant_on_fit] {
@@ -1922,7 +2800,7 @@ mod tests {
         let y = Bits::from_indices(n, (0..n).filter(|i| i % 9 == 0));
         let all = Bits::ones(n);
         let cfg = small_config();
-        let (fit, val) = tuning_holdout(&all, &y, None, 0.2, 42).unwrap();
+        let (fit, val) = tuning_holdout(&all, &y, None, "group", 0.2, 42).unwrap();
         let mut x = BitMatrix::with_cols(n);
         x.push_row(fit.and(&y).or(&val.and_not(&y)).words());
         assert!(!lasso::fit_path(&x, &y, &fit, &[0], cfg.lasso_lambdas, 400).is_empty());
@@ -1942,7 +2820,7 @@ mod tests {
         let all = Bits::ones(n);
         let mut cfg = small_config();
         cfg.lasso_lambdas = 9;
-        let (fit, val) = tuning_holdout(&all, &y, None, 0.2, 42).unwrap();
+        let (fit, val) = tuning_holdout(&all, &y, None, "group", 0.2, 42).unwrap();
         let feats = screen(&x, &y, &fit, cfg.screened_features);
         let path = lasso::fit_path(&x, &y, &fit, &feats, cfg.lasso_lambdas, 400);
         let selected = path
@@ -2084,6 +2962,15 @@ mod tests {
 
     #[test]
     fn lasso_only_repeats_the_evaluator_lasso_fits() {
+        // Without duplicates, and with same-lineage pairs that put random
+        // tuning on duplicate groups.
+        let pairs: Vec<Vec<usize>> = (0..200).step_by(10).map(|i| vec![i, i + 1]).collect();
+        for duplicates in [vec![], pairs] {
+            lasso_only_repeats_the_evaluator_lasso_fits_with(&duplicates);
+        }
+    }
+
+    fn lasso_only_repeats_the_evaluator_lasso_fits_with(duplicates: &[Vec<usize>]) {
         // 200 samples in 40 lineages: two markers of resistance, noise, and
         // a resistant-only feature on three samples. At min_support 3 it is
         // a candidate on all samples but not in folds that hold one out.
@@ -2107,7 +2994,7 @@ mod tests {
         cfg.screened_features = 6;
         cfg.lasso_lambdas = 8;
         let dataset = "fixture__fixturemycin";
-        let out = evaluate(dataset, &x, &y, &groups, 3, None, &cfg).unwrap();
+        let out = evaluate(dataset, &x, &y, &groups, duplicates, 3, None, &cfg).unwrap();
         let mut events = Vec::new();
         let mut points = Vec::new();
         lasso_only(
@@ -2115,6 +3002,7 @@ mod tests {
             &x,
             &y,
             &groups,
+            duplicates,
             3,
             &cfg,
             &mut |e| {

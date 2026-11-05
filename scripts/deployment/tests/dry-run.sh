@@ -4,11 +4,15 @@
 # outlives its command, contacts Cloudflare or touches a real deployment: the
 # release's grm is a stub that records any run, the "live" port must have no
 # listener, and every script except publish.sh (into the temporary root) runs
-# without --apply. tests/apply.sh covers the --apply paths.
+# without --apply, but for stage.sh --apply runs that are refused before they
+# start anything. tests/apply.sh covers the --apply paths. It needs a git
+# checkout with a commit: the build cases archive HEAD (build-release.sh).
 # usage: bash scripts/deployment/tests/dry-run.sh
 set -euo pipefail
 S=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 REPO=$(cd -- "$S/../.." && pwd)
+git -C "$REPO" rev-parse -q --verify HEAD >/dev/null 2>&1 ||
+    { echo "FAIL tests/dry-run.sh needs a git checkout with a commit (the build cases archive HEAD); $REPO is not one"; exit 2; }
 . "$S/tests/tmproot.sh"
 T=$(make_test_root) || exit 2
 # Every assertion below must run: a command that fails under set -e or
@@ -175,6 +179,168 @@ expect 1 'evaluation_revision 7, expected 6' "publish refuses an unexpected revi
     env GRM_EXPECT_REVISION=6 bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-rev
 expect 2 'invalid name' "publish refuses a path-like name" -- \
     bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" ../escape
+
+# From revision 8, every dataset's own evaluation revision, in its index row
+# and in its report, must be the expected one too: grm report stamps the index
+# with its own revision, so a root left with reports of an earlier revision
+# passes the index alone. Revision 7 keeps the index checks only (the report
+# above records no per-dataset revision).
+audit_json() { [ "$1" = - ] || printf ',"evaluation":{"revision":%s}' "$1"; }
+rehash() { (cd "$T/$1" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) >"$T/$1.sha256"; }
+rev_report() {  # rev_report NAME REVISION A B [A-REPORT B-REPORT]: $T/NAME and its manifest, an index at REVISION whose rows give sp__a and sp__b revisions A and B (JSON, or - for none), as do their reports unless given apart
+    local r=$T/$1
+    rm -rf "$r"
+    mkdir -p "$r/datasets"
+    printf '{"schema":2,"evaluation_revision":%s,"datasets":[{"id":"sp__a"%s},{"id":"sp__b"%s}]}\n' \
+        "$2" "$(audit_json "$3")" "$(audit_json "$4")" >"$r/index.json"
+    echo '{"corpus":1}' >"$r/corpus.json"
+    printf '{"id":"sp__a"%s}\n' "$(audit_json "${5:-$3}")" >"$r/datasets/sp__a.json"
+    printf '{"id":"sp__b"%s}\n' "$(audit_json "${6:-$4}")" >"$r/datasets/sp__b.json"
+    rehash "$1"
+}
+rev_publish() {  # rev_publish REVISION NAME PUB [--apply]: publish $T/NAME as PUB, expecting REVISION
+    env GRM_EXPECT_REVISION="$1" bash "$S/publish.sh" "$T/$2" "$T/$2.sha256" "$3" "${@:4}"
+}
+rev_report r11 11 11 11
+rev_report r10 10 10 10
+rev_report mix-one 11 11 10          # one dataset left at 10, indexed as grm report does
+rev_report mix-all 11 10 10          # every dataset at 10, indexed by a revision-11 grm
+rev_report mix-report 11 11 11 11 10 # the index says 11 throughout; one report says 10
+rev_report mix-row 11 11 10 11 11
+rev_report no-audit 11 - -
+rev_report bad-audit 11 '"11"' 11.0
+rev_report not-json 11 11 11
+echo '{"id":"sp__b",' >"$T/not-json/datasets/sp__b.json"
+rehash not-json
+rev_report r8-no-audit 8 - -
+rev_report r7-mixed 7 7 6
+expect 0 'dry-run: would copy' "publish dry run accepts revision 11 with every dataset at 11" -- rev_publish 11 r11 pub-r11
+expect 0 'dry-run: would copy' "publish dry run accepts revision 10 with every dataset at 10" -- rev_publish 10 r10 pub-r10
+expect 1 'evaluation_revision 10, expected 11' "publish refuses revision 10 when 11 is expected" -- rev_publish 11 r10 pub-r10
+expect 1 'evaluation_revision 11, expected 10' "publish refuses revision 11 when 10 is expected" -- rev_publish 10 r11 pub-r11
+expect 1 'datasets with index evaluation.revision 10, expected 11: sp__b$' \
+    "publish dry run refuses a revision-11 index with one dataset at 10, naming it" -- rev_publish 11 mix-one pub-mix
+expect 1 'datasets whose report has evaluation.revision 10, expected 11: sp__a, sp__b$' \
+    "publish dry run refuses a revision-11 index over revision-10 datasets, naming them" -- rev_publish 11 mix-all pub-mix
+expect 1 'datasets whose report has evaluation.revision 10, expected 11: sp__b$' \
+    "publish --apply refuses a revision-11 index with one dataset at 10, naming it" -- rev_publish 11 mix-one pub-mix --apply
+expect 1 'datasets with index evaluation.revision 10, expected 11: sp__a, sp__b$' \
+    "publish --apply refuses a revision-11 index over revision-10 datasets, naming them" -- rev_publish 11 mix-all pub-mix --apply
+expect 0 '' "the refused publish --apply runs published nothing" -- \
+    test ! -e "$D/published/pub-mix" -a ! -e "$D/published/pub-mix.partial"
+expect 1 'datasets whose report has evaluation.revision 10, expected 11: sp__b$' \
+    "publish refuses a report at 10 under an index that says 11 throughout" -- rev_publish 11 mix-report pub-mix
+expect 1 'datasets with index evaluation.revision 10, expected 11: sp__b$' \
+    "publish refuses an index row at 10 over a report at 11" -- rev_publish 11 mix-row pub-mix
+expect 1 'datasets whose report has evaluation.revision missing, expected 11: sp__a, sp__b$' \
+    "publish refuses revision-11 datasets that record no revision" -- rev_publish 11 no-audit pub-mix
+expect 1 "datasets with index evaluation.revision '11', expected 11: sp__a\$" \
+    "publish refuses a dataset revision that is a string" -- rev_publish 11 bad-audit pub-mix
+expect 1 'datasets whose report has evaluation.revision 11.0, expected 11: sp__b$' \
+    "publish refuses a dataset revision that is not an integer" -- rev_publish 11 bad-audit pub-mix
+expect 1 'datasets whose report is not readable JSON: sp__b$' \
+    "publish refuses a dataset report that is not JSON" -- rev_publish 11 not-json pub-mix
+expect 1 'datasets with index evaluation.revision missing, expected 8: sp__a, sp__b$' \
+    "from revision 8, every dataset must record its revision" -- rev_publish 8 r8-no-audit pub-mix
+expect 0 'dry-run: would copy' "revision 7 keeps the index checks only" -- rev_publish 7 r7-mixed pub-mix
+expect 0 'published pub-r11 files=4' "publish --apply accepts revision 11 with every dataset at 11" -- \
+    rev_publish 11 r11 pub-r11 --apply
+expect 0 'published pub-r10 files=4' "publish --apply accepts revision 10 with every dataset at 10" -- \
+    rev_publish 10 r10 pub-r10 --apply
+# stage.sh checks the publication the same way; these are copied in by hand,
+# past publish.sh. Its --apply runs stop at the check, before anything starts.
+hand_publish() {  # hand_publish NAME PUB: $T/NAME as published/PUB
+    mkdir -p "$D/published/$2"
+    cp -a "$T/$1" "$D/published/$2/report"
+    cp "$T/$1.sha256" "$D/published/$2/SOURCE.sha256"
+}
+hand_publish mix-one pub-mix-one
+hand_publish mix-all pub-mix-all
+hand_publish mix-report pub-mix-report
+rev_stage() {  # rev_stage REVISION PUB [--apply]: stage rel2 with PUB on the spare port, expecting REVISION
+    env GRM_SKIP_BROWSER=1 GRM_EXPECT_REVISION="$1" bash "$S/stage.sh" rel2 "$2" "$STAGE_PORT" "${@:3}"
+}
+expect 1 'evaluation.revision 10, expected 11: sp__b$' \
+    "stage dry run refuses a revision-11 index with one dataset at 10, naming it" -- rev_stage 11 pub-mix-one
+expect 1 'evaluation.revision 10, expected 11: sp__b$' \
+    "stage --apply refuses a revision-11 index with one dataset at 10, naming it" -- rev_stage 11 pub-mix-one --apply
+expect 1 'evaluation.revision 10, expected 11: sp__a, sp__b$' \
+    "stage dry run refuses a revision-11 index over revision-10 datasets, naming them" -- rev_stage 11 pub-mix-all
+expect 1 'evaluation.revision 10, expected 11: sp__a, sp__b$' \
+    "stage --apply refuses a revision-11 index over revision-10 datasets, naming them" -- rev_stage 11 pub-mix-all --apply
+expect 1 'datasets whose report has evaluation.revision 10, expected 11: sp__b$' \
+    "stage --apply refuses a report at 10 under an index that says 11 throughout" -- rev_stage 11 pub-mix-report --apply
+expect 0 '' "the refused stage --apply runs started and approved nothing" -- \
+    test ! -e "$D/stage" -a ! -e "$D/spawn" -a ! -e "$D/serve-$STAGE_PORT.starting" -a ! -e "$D/go/rel2--pub-mix-one" -a ! -e "$D/go/rel2--pub-mix-all"
+expect 0 'dry-run: would serve rel2 with pub-r11' "stage dry run accepts revision 11 with every dataset at 11" -- rev_stage 11 pub-r11
+expect 0 'dry-run: would serve rel2 with pub-r10' "stage dry run accepts revision 10 with every dataset at 10" -- rev_stage 10 pub-r10
+expect 1 'evaluation_revision 10, expected 11' "stage refuses revision 10 when 11 is expected" -- rev_stage 11 pub-r10
+expect 1 'evaluation_revision 11, expected 10' "stage refuses revision 11 when 10 is expected" -- rev_stage 10 pub-r11
+# With --apply, a publication whose datasets all match passes the check and is
+# stopped at the next one, before anything starts: its approval path is a
+# directory here.
+mkdir "$D/go/rel2--pub-r11" "$D/go/rel2--pub-r10"
+expect 2 'rel2--pub-r11, serve-2.starting.* is a link, directory or special file' \
+    "stage --apply passes revision 11 with every dataset at 11" -- rev_stage 11 pub-r11 --apply
+expect 2 'rel2--pub-r10, serve-2.starting.* is a link, directory or special file' \
+    "stage --apply passes revision 10 with every dataset at 10" -- rev_stage 10 pub-r10 --apply
+rmdir "$D/go/rel2--pub-r11" "$D/go/rel2--pub-r10"
+# activate.sh, rollback.sh and restore.sh check it against the approval.
+approval rel1 pub-mix-one | sed 's/ revision=7 / revision=11 /' >"$D/go/rel1--pub-mix-one"
+approval rel1 pub-r11 | sed 's/ revision=7 / revision=11 /' >"$D/go/rel1--pub-r11"
+expect 1 'evaluation.revision 10, expected 11: sp__b$' \
+    "restore refuses a revision-11 approval of a publication with one dataset at 10" -- bash "$S/restore.sh" rel1 pub-mix-one
+expect 0 'dry-run: would start rel1 with pub-r11' \
+    "restore accepts a revision-11 approval of a publication with every dataset at 11" -- bash "$S/restore.sh" rel1 pub-r11
+
+# The GRM_EXPECT_* defaults are the revision-7 publication's, and 237 is its
+# count, not a later revision's: publish.sh, stage.sh and approve-legacy.sh
+# refuse another revision without GRM_EXPECT_DATASETS, before they read
+# anything. A revision-11 root that happens to hold 237 reports (a stopped
+# run, say) would otherwise pass on revision 7's count.
+r=$T/r11-237
+mkdir -p "$r/datasets"
+rows=''
+for i in $(seq -w 1 237); do
+    printf '{"id":"sp__d%s","evaluation":{"revision":11}}\n' "$i" >"$r/datasets/sp__d$i.json"
+    rows+="${rows:+,}{\"id\":\"sp__d$i\",\"evaluation\":{\"revision\":11}}"
+done
+printf '{"schema":2,"evaluation_revision":11,"datasets":[%s]}\n' "$rows" >"$r/index.json"
+echo '{"corpus":1}' >"$r/corpus.json"
+rehash r11-237
+no_count() { env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=11 "$@"; }
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' \
+    "publish dry run refuses revision 11 without GRM_EXPECT_DATASETS, though the root holds 237 reports" -- \
+    no_count bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-default
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "publish --apply refuses it too" -- \
+    no_count bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-default --apply
+expect 0 '' "the refused publish published nothing" -- \
+    test ! -e "$D/published/pub-r11-default" -a ! -e "$D/published/pub-r11-default.partial"
+expect 0 'published pub-r11-237 files=239' "publish --apply accepts that root with GRM_EXPECT_DATASETS=237 set" -- \
+    env GRM_EXPECT_DATASETS=237 GRM_EXPECT_REVISION=11 bash "$S/publish.sh" "$r" "$T/r11-237.sha256" pub-r11-237 --apply
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "stage refuses revision 11 without GRM_EXPECT_DATASETS" -- \
+    no_count env GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel2 pub-r11-237 "$STAGE_PORT"
+# stage.sh refuses the unset count before it reads anything (REVIEW-DEPLOY
+# L3): with a publication that does not exist, the count is still what it
+# reports, not the missing publication.
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' \
+    "stage refuses the unset count before it reads the release or the publication (a missing one here)" -- \
+    no_count env GRM_SKIP_BROWSER=1 bash "$S/stage.sh" rel2 pub-missing "$STAGE_PORT"
+expect 0 'dry-run: would serve rel2 with pub-r11-237' "stage dry run accepts it with GRM_EXPECT_DATASETS=237 set" -- \
+    env GRM_SKIP_BROWSER=1 GRM_EXPECT_DATASETS=237 GRM_EXPECT_REVISION=11 bash "$S/stage.sh" rel2 pub-r11-237 "$STAGE_PORT"
+expect 2 'GRM_EXPECT_REVISION=11 needs GRM_EXPECT_DATASETS' "approve-legacy refuses revision 11 without GRM_EXPECT_DATASETS" -- \
+    no_count bash "$S/approve-legacy.sh" rel1 pub-r11-237
+expect 1 'index lists 2 datasets \(2 distinct\), expected 237' \
+    "with no GRM_EXPECT_* set, as in the revision-7 runbook, publish still checks revision 7 and 237 datasets" -- \
+    env -u GRM_EXPECT_SCHEMA -u GRM_EXPECT_REVISION -u GRM_EXPECT_DATASETS bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-legacy
+# A runbook that names revision 7 explicitly, without a count, is the
+# revision-7 runbook too (REVIEW-DEPLOY L2): check_expect asks whether the
+# revision is 7, not whether GRM_EXPECT_REVISION is set.
+expect 1 'index lists 2 datasets \(2 distinct\), expected 237' \
+    "with GRM_EXPECT_REVISION=7 set and no count, publish is not refused and checks revision 7's 237 datasets" -- \
+    env -u GRM_EXPECT_DATASETS GRM_EXPECT_REVISION=7 bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-legacy
+expect 0 'GRM_EXPECT_\* is not used here' "restore, which checks the approval, is not refused for revision 11 without a count" -- \
+    no_count bash "$S/restore.sh" rel1 pub1
 
 # Damaged and malformed releases and publications.
 cp -a "$D/published/pub1" "$D/published/pub-bad"
@@ -418,12 +584,14 @@ state rel2 pub1 | lines 1 4 >"$D/state/active"
 bad_state "cut short by a partial write" 'lacks report_manifest'
 # The same cut from a writer far larger than a pipe buffer: lines drains it, so
 # under pipefail the pipeline succeeds and every later assertion still runs;
-# head on the same input is killed by SIGPIPE (exit 141).
+# head on the same input is killed by SIGPIPE (exit 141). GitHub's runner starts
+# steps with SIGPIPE ignored, which a shell can't undo, so the writers got EPIPE
+# and sed exited 4; env --default-signal gives the control the default action.
 big_state() { state rel2 pub1; seq 1 400000 | sed 's/^/pad=/'; }
 big=$(big_state | lines 1 9)
 expect 0 '' "a drain-safe cut of a 2.7 MB pipeline succeeds under pipefail" -- test "$big" = "$(state rel2 pub1)"
 expect 141 '' "head on the same pipeline fails under pipefail with SIGPIPE (why lines is used)" -- \
-    bash -c 'set -o pipefail; seq 1 400000 | sed "s/^/pad=/" | head -n 9 >/dev/null'
+    env --default-signal=PIPE bash -c 'set -o pipefail; seq 1 400000 | sed "s/^/pad=/" | head -n 9 >/dev/null'
 big_state | lines 1 4 >"$D/state/active"
 bad_state "cut short from a large pipeline" 'lacks report_manifest'
 rm "$D/state/active"
@@ -648,29 +816,35 @@ rc=$?
 cnt() { if [ -f "$2" ]; then grep -c -- "$1" "$2"; else echo 0; fi; }
 echo "exit=$rc rm_devnull=$(cnt ' /dev/null' "$dir/rm.log") active_tries=$(cat "$dir/active.count" 2>/dev/null || echo 0) fallback=$(cnt . "$dir/fallback.log") marker=$(cnt . "$dir/root/BOOT-FALLBACK") tmp_left=$(ls -A "$dir/tmp" | wc -l)"
 SH
-if [ -f "$BOOT_HOOK" ]; then
-    expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
-        "boot hook: with mktemp failing it never removes /dev/null, and falls back after a retry" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot1" fail fail
-    expect 0 '^exit=0 rm_devnull=0 active_tries=1 fallback=0 marker=0 tmp_left=0$' \
-        "boot hook: with mktemp failing and the active pair healthy it never removes /dev/null" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot2" fail pass
-    expect 0 '^exit=0 rm_devnull=0 active_tries=2 fallback=0 marker=0 tmp_left=0$' \
-        "boot hook: a transient failure of the active pair is retried once, with no fallback and no marker" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot3" ok once
-    expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
-        "boot hook: an active pair that fails twice falls back, writes BOOT-FALLBACK and removes its temporary file" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot4" ok fail
-    expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=0 tmp_left=0$' \
-        "boot hook: the dry run retries without waiting, falls back and writes no marker" -- \
-        timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot5" ok fail --dry-run
-else
-    echo "skip the boot hook cases ($BOOT_HOOK is not in this tree)"
-    skipped=$((skipped + 5))
-fi
+# The hook must be in the tree: both suites fail, rather than skip, when an
+# assertion cannot run (README.md, REVIEW-DS2 I4).
+expect 0 '' "the boot hook, ops/vast/boot-active.sh, is in this tree" -- test -f "$BOOT_HOOK"
+expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
+    "boot hook: with mktemp failing it never removes /dev/null, and falls back after a retry" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot1" fail fail
+expect 0 '^exit=0 rm_devnull=0 active_tries=1 fallback=0 marker=0 tmp_left=0$' \
+    "boot hook: with mktemp failing and the active pair healthy it never removes /dev/null" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot2" fail pass
+expect 0 '^exit=0 rm_devnull=0 active_tries=2 fallback=0 marker=0 tmp_left=0$' \
+    "boot hook: a transient failure of the active pair is retried once, with no fallback and no marker" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot3" ok once
+expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=2 tmp_left=0$' \
+    "boot hook: an active pair that fails twice falls back, writes BOOT-FALLBACK and removes its temporary file" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot4" ok fail
+expect 0 '^exit=3 rm_devnull=0 active_tries=2 fallback=1 marker=0 tmp_left=0$' \
+    "boot hook: the dry run retries without waiting, falls back and writes no marker" -- \
+    timeout -k 5 60 bash "$T/boot-hook.sh" "$BOOT_HOOK" "$T/boot5" ok fail --dry-run
+
+# The live port as smoke.sh reads it (REVIEW-DS4 L1): a leading zero, which
+# grm and curl read as decimal, passed the digits check and then failed every
+# health check. It is refused before anything runs, and so is such a stage port.
+expect 2 'GRM_PORT must be a port number' "publish refuses a GRM_PORT with a leading zero before reading anything" -- \
+    env GRM_PORT="0$LIVE_PORT" bash "$S/publish.sh" "$src" "$T/SOURCE.sha256" pub-port
+expect 2 'invalid port 0641' "stage refuses a spare port with a leading zero" -- \
+    bash "$S/stage.sh" rel1 pub1 0641
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=$((200 - skipped))  # less the root-only and missing-boot-hook skips
+EXPECTED_ASSERTIONS=$((247 - skipped))  # less the root-only skip
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"

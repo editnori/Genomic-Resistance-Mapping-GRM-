@@ -7,9 +7,12 @@
 # check, INT, TERM or HUP stops the candidate and restarts it.
 # usage: activate.sh LABEL PUBLICATION [--apply]
 #        activate.sh --rollback LABEL PUBLICATION [--apply]   (run by rollback.sh)
-# --rollback requires LABEL PUBLICATION to be state/previous. If the live pair
-# then fails its checks (a damaged current release, its executable deleted or
-# replaced, say), it is still replaced when it is identified by its recorded
+# --rollback requires LABEL PUBLICATION to be state/previous. rollback.sh reads
+# it before the lock, so once this script holds deploy.lock it checks that
+# state/previous still records that pair, and refuses (exit 2) if another
+# deployment changed it meanwhile. If the live pair then fails its checks
+# (a damaged current release, its executable deleted or replaced, say), it
+# is still replaced when it is identified by its recorded
 # start (common.sh recorded_service: serve-PORT.pid's PID, start time, token
 # and spawn marker) as exactly the pair state/active records; it is neither
 # recorded as a rollback target nor restarted, and a failure of the target
@@ -18,7 +21,8 @@
 # Exit codes: 0 switched (or dry run passed); 1 a check of either pair failed
 # before any change, or the switch failed or was interrupted and the previous
 # pair is serving again; 2 refused before any change (usage, the live service,
-# the lock, an unresolved interrupted start, or recording state); 3 the old
+# the lock, an unresolved interrupted start, state/previous changed under a
+# rollback, or recording state); 3 the old
 # service would not stop (it keeps serving); 4 restoring the previous pair also
 # failed, or was not attempted for a damaged pair: the site is down.
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -110,7 +114,14 @@ if ! ((APPLY)); then
 fi
 
 checked="$old_pid $old_start $old_label $old_pub $by_record"
+# A rollback's target came from state/previous, read before the lock. An
+# activation that committed since then moved it, and switching to the pair
+# read would undo that activation's record: no serial order of the two gives
+# that. Refuse instead; a rerun reads the new one.
 lock_root
+if ((rollback)) && ! state_is previous "$label" "$pub"; then
+    die "state/previous no longer records $label with $pub: another deployment changed it after rollback read it; nothing was changed, run rollback.sh again" 2
+fi
 no_pending_start "$PORT"
 check_live
 [ "$old_pid $old_start $old_label $old_pub $by_record" = "$checked" ] || die "the live service changed during the checks" 2

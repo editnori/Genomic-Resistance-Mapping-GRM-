@@ -263,6 +263,29 @@ pub fn grouped_folds(y: &Bits, groups: &[u32], k: usize, seed: u64) -> Vec<usize
     fold
 }
 
+/// Moves each of `groups` whole into one of `k` folds: the fold holding most
+/// of its members, a tie going to the fold of its lowest-index member among
+/// the tied folds. Every other sample keeps its fold. Groups are disjoint and
+/// list their members in ascending order. A tie broken by the lowest fold
+/// index would pile split pairs into fold 0; a member's own fold is spread
+/// evenly by the shuffle that assigned it.
+pub fn isolate_groups(folds: &[usize], groups: &[Vec<usize>], k: usize) -> Vec<usize> {
+    let mut isolated = folds.to_vec();
+    for members in groups {
+        let mut count = vec![0usize; k];
+        for &i in members {
+            count[folds[i]] += 1;
+        }
+        let top = count.iter().copied().max().unwrap_or(0);
+        if let Some(anchor) = members.iter().map(|&i| folds[i]).find(|&f| count[f] == top) {
+            for &i in members {
+                isolated[i] = anchor;
+            }
+        }
+    }
+    isolated
+}
+
 pub fn fold_masks(folds: &[usize], k: usize) -> Vec<(Bits, Bits)> {
     (0..k)
         .map(|f| {
@@ -327,11 +350,16 @@ pub fn validate_folds(y: &Bits, train: &Bits, folds: &[usize], k: usize) -> anyh
     Ok(())
 }
 
-/// Hold out whole lineages for tuning when the outer evaluation is grouped.
+/// Hold out whole groups for tuning when `groups` is given: lineages, or the
+/// random split's duplicate groups. The holdout is then the grouped fold, of
+/// round(1 / frac), closest to `frac` of `train` that keeps both classes on
+/// both sides. Without groups, it is `frac` of each class (`holdout`).
+/// Errors name a group by `unit`: "lineage", or "group" for duplicate groups.
 pub fn tuning_holdout(
     train: &Bits,
     y: &Bits,
     groups: Option<&[u32]>,
+    unit: &str,
     frac: f64,
     seed: u64,
 ) -> anyhow::Result<(Bits, Bits)> {
@@ -341,7 +369,7 @@ pub fn tuning_holdout(
             .map(|i| groups[i])
             .collect::<std::collections::BTreeSet<_>>()
             .len();
-        anyhow::ensure!(n_groups >= 2, "tuning needs at least two training lineages");
+        anyhow::ensure!(n_groups >= 2, "tuning needs at least two training {unit}s");
         let k = ((1.0 / frac).round() as usize).max(2).min(n_groups);
         let folds = training_folds(y, train, Some(groups), k, seed);
         fold_masks(&folds, k)
@@ -359,7 +387,7 @@ pub fn tuning_holdout(
                     .abs()
                     .total_cmp(&(b.1.count() as f64 - target).abs())
             })
-            .ok_or_else(|| anyhow::anyhow!("no lineage tuning partition contains both classes"))?
+            .ok_or_else(|| anyhow::anyhow!("no {unit} tuning partition contains both classes"))?
     } else {
         holdout(train, y, frac, seed)
     };
@@ -511,6 +539,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn isolated_groups_move_whole_to_their_majority_fold_and_tie_on_a_member_fold() {
+        let folds = [3, 1, 1, 2, 4, 0, 0, 2, 4];
+        let groups = [
+            // Two of three members sit in fold 1.
+            vec![0, 1, 2],
+            // Folds 2 and 0 tie, and the lowest-index member (3) is in fold
+            // 2. A lowest-fold-index rule would have picked fold 0.
+            vec![3, 5],
+            // Folds 4 and 2 tie and sample 4 is in fold 4.
+            vec![4, 7],
+        ];
+        // Samples 6 and 8 are in no group and keep their folds.
+        assert_eq!(
+            isolate_groups(&folds, &groups, 5),
+            [1, 1, 1, 2, 4, 2, 0, 4, 4]
+        );
+        assert_eq!(isolate_groups(&folds, &[], 5), folds);
+    }
+
+    #[test]
     fn a_large_single_class_group_does_not_exclude_the_other_class() {
         let y = Bits::from_indices(200, 0..100);
         let groups: Vec<u32> = (0..200)
@@ -552,7 +600,7 @@ mod tests {
         let y = Bits::from_indices(40, (0..40).filter(|i| i % 2 == 0));
         let groups: Vec<u32> = (0..40).map(|i| i / 4).collect();
         let train = Bits::from_indices(40, 0..32);
-        let (fit, val) = tuning_holdout(&train, &y, Some(&groups), 0.2, 42).unwrap();
+        let (fit, val) = tuning_holdout(&train, &y, Some(&groups), "lineage", 0.2, 42).unwrap();
         assert_eq!(fit.and(&val).count(), 0);
         assert_eq!(fit.count() + val.count(), train.count());
         assert_eq!(fit.and_not(&train).count() + val.and_not(&train).count(), 0);

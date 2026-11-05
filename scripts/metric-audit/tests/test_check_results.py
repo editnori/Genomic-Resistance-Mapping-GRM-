@@ -327,6 +327,34 @@ class TestFold(Case):
         self.fails(rep, "unavailable split")
 
 
+class KsetDuplicates(Case):
+    def test_an_isolated_pair_before_revision_10_fails_on_the_revision_gate(self):
+        # A well-formed isolated pair, so only the revision gate refuses it.
+        rep, _ = fx.isolated_report()
+        self.fails(rep, "kset_duplicates in a report before revision 10")
+
+    def test_a_pair_across_two_test_folds_fails(self):
+        rep, _ = fx.isolated_report()
+        b = rep["kset_duplicates"][0][1]
+        rep["splits"][0]["test_fold"][b] = fx.FOLDS["random"][b]
+        fx.rescore(rep)
+        self.fails(rep, "a kset duplicate group spans test folds")
+
+    def test_a_pair_across_two_lineages_fails(self):
+        rep = fx.make_report()
+        rep["kset_duplicates"] = [[0, 5]]
+        self.fails(rep, "a kset duplicate group spans lineages")
+
+    def test_malformed_groups_fail(self):
+        for groups, reason in [([], "malformed kset_duplicates"), ([[3]], "malformed kset_duplicates"),
+                               ([[2, 1]], "malformed kset_duplicates"), ([[0, 1], [1, 2]], "overlapping"),
+                               ([[5, 6], [0, 1]], "out of order"), ([[78, 80]], "out of range")]:
+            with self.subTest(groups=groups):
+                rep = fx.make_report()
+                rep["kset_duplicates"] = groups
+                self.fails(rep, reason)
+
+
 class SchemaAndRevision(Case):
     def test_revision7_in_schema1_fails(self):
         rep = fx.make_report()
@@ -367,10 +395,45 @@ class SchemaAndRevision(Case):
         fx.row(rep, "random", "lasso")["lasso_fits"][2]["path_unconverged"] = 1
         self.fails(rep, "unconverged two-class lasso fit")
 
-    def test_future_revision10_fails(self):
-        rep = revision8_report(revision=9)
-        rep["evaluation"]["revision"] = 10
+    def test_revision10_report_with_an_isolated_pair_passes(self):
+        rep, _ = fx.isolated_report(report=revision8_report(revision=10))
+        entry = self.passes(rep, [rf_line(rep)])
+        self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (10, 2, "rf"))
+
+    def test_revision11_report_with_an_isolated_pair_passes(self):
+        rep, _ = fx.isolated_report(report=revision8_report(revision=11))
+        entry = self.passes(rep, [rf_line(rep)])
+        self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (11, 2, "rf"))
+
+    def test_future_revision12_fails(self):
+        rep = revision8_report(revision=11)
+        rep["evaluation"]["revision"] = 12
         self.fails(rep, "'revision'")
+
+    def test_a_root_that_mixes_revisions_fails(self):
+        # Two valid reports of one species; only their revisions differ.
+        other = fx.SLUG + "__othermycin"
+
+        def run(first, second):
+            second = dict(second, id=other)
+            with tempfile.TemporaryDirectory() as tmp:
+                fx.write_json(os.path.join(tmp, "curated", "datasets.json"),
+                              [{"id": fx.ID, "species_slug": fx.SLUG}, {"id": other, "species_slug": fx.SLUG}])
+                for report in (first, second):
+                    fx.write_json(os.path.join(tmp, "species", fx.SLUG, "results", report["id"] + ".json"), report)
+                return fx.run_checker(tmp)
+
+        same = run(revision8_report(revision=9), revision8_report(revision=9))
+        self.assertEqual(same.returncode, 0, same.stderr[-1500:])
+        self.assertEqual(json.loads(same.stdout)["revisions"], [9])
+        for revisions in ((10, 11), (9, 10), (8, 9), (7, 9), (7, 8)):
+            with self.subTest(revisions=revisions):
+                mixed = run(*(revision8_report(revision=r) if r >= 8 else fx.make_report(revision=r) for r in revisions))
+                self.assertNotEqual(mixed.returncode, 0)
+                last = mixed.stderr.strip().splitlines()[-1]
+                self.assertTrue(last.startswith("AssertionError"), mixed.stderr[-1500:])
+                self.assertIn("root mixes evaluation revisions", last)
+                self.assertIn(str(list(revisions)), last)
 
 
 class LassoSolverStatus(Case):
