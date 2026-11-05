@@ -42,7 +42,10 @@ full genome (so every cohort genome) must have a species-check verdict, none may
 check's unchecked list, and each selection's species.json must report selected_unchecked 0 and
 its length. Each list must equal its CLEANED_* pin (hash and count); --derive-cleaned prints those
 pins from the bound inputs and writes nothing. FASTA come from the frozen manifest, or for a
-replacement from the bound manifest under RN_FASTA_STORE, each hash-checked. catalog, curated,
+replacement from the bound manifest under RN_FASTA_STORE, each hash-checked. On Boat (plan revision 7)
+a manifest path under a Vast store is read by its file name under BOAT_FASTA_STORE (located), the
+evidence files are the flat EVIDENCE_FILES under the data root's bindings/, and a cleaned run opens
+only its cohort genomes' frozen-manifest rows (the excluded genomes' FASTA are not pushed). catalog, curated,
 the BV-BRC records and cached annotations come from RN_INPUT_ROOT. No pilot roots are made: the
 section 4 pilot is not repeated. preparation.json records the exclusions, the borderline genomes
 per cohort, the replacements, and how the prefix differs from the frozen rows 1-2000;
@@ -110,8 +113,17 @@ except ImportError as _exc:
     print(f"prepare_execution_roots: STOP: cannot load cleaned_rerun: {_exc}", file=sys.stderr)
     sys.exit(2)
 
-EVIDENCE = Path("/root/grm-research/grm-research-mtb-4k-cohort-r2")
-CANDIDATE = Path("/root/grm-extra-species-analysis-20261027/data")
+# Plan revision 7 (Boat): the four cohort-r2 evidence files this script reads come in through push-data, flat under
+# the data root's bindings/ (push-data allows no deeper path there). EVIDENCE_FILES names each by the evidence root's
+# own path; verify_evidence.py checks them against the evidence's SHA256SUMS, pushed beside them.
+EVIDENCE = Path("/home/user/grm-data/bindings")
+EVIDENCE_FILES = {
+    "full": "mtb-cohort-r2-genomes-4000.txt",              # results/genomes-4000.txt
+    "prefix": "mtb-cohort-r2-frozen-candidate-2000.txt",   # proofs/frozen-candidate-2000.txt
+    "added": "mtb-cohort-r2-added-2000.txt",               # results/added-2000.txt
+    "fasta-manifest": "mtb-cohort-r2-fasta-manifest.tsv",  # results/fasta-manifest.tsv
+}
+CANDIDATE = Path("/root/grm-extra-species-analysis-20261027/data")  # revision 5's frozen candidate (--cohorts frozen only)
 SLUG = "mycobacterium_tuberculosis"
 MATCHED_SEED = "grm-mtb-4k-matched2k-20261028"
 PILOT = 256
@@ -125,11 +137,18 @@ EXPECTED = {
     # matched_selection of the frozen full list, measured read-only on Vast on 2026-10-28 and
     # frozen in report_contract.RULES, so a changed seed or selection is a stop here too.
     "matched2k": ("212a21a5d2574e0d62d379fccddb0839c4f44f5a7cd36e43a558dc2c0926c3d1", 2000),
+    # the frozen FASTA manifest (results/fasta-manifest.tsv), as the evidence's SHA256SUMS and validation.json bind it
+    "fasta-manifest": ("f042e20094a0fd9ded3b68cacd29524ba3c9f40c7cb1847cbe321b4b4af50c46", 4000),
 }
-ALLOWED_FASTA_PARENTS = {
+# Plan revision 7: one FASTA store on Boat, the pushed data root's fasta/. The bound manifests' canonical_source_path
+# values name where each file was on Vast; a path under one of VAST_FASTA_PARENTS is read as the same file name
+# directly under BOAT_FASTA_STORE (located), and its size and SHA-256 are checked there as before.
+BOAT_FASTA_STORE = Path("/home/user/grm-data/fasta")
+VAST_FASTA_PARENTS = {
     Path("/root/grm/data/fasta"),
     Path("/root/grm-research/grm-research-mtb-scaleup-r1/fasta"),
 }
+ALLOWED_FASTA_PARENTS = {BOAT_FASTA_STORE}
 BVBRC_RECORDS = ["genome_amr.jsonl", "genomes.jsonl"]
 # Cohorts that train and so may read or fetch annotations; the pilots never do.
 TRAINING = ["prefix", "added", "full", "matched2k"]
@@ -146,6 +165,12 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def located(canonical_source_path: str) -> Path:
+    """Where a manifest row's FASTA is read: a Vast store path maps to the same name under BOAT_FASTA_STORE."""
+    path = Path(canonical_source_path)
+    return BOAT_FASTA_STORE / path.name if path.parent in VAST_FASTA_PARENTS else path
 
 
 def free_bytes(path: Path) -> int:
@@ -286,7 +311,7 @@ def replacement_fasta(data: bytes, ids, store: Path):
         refuse(f"the replacement FASTA manifest covers {sorted(set(got))[:10]}, not exactly the replacements {sorted(ids)[:10]}")
     sources = {}
     for row in rows:
-        source = Path(row["canonical_source_path"])
+        source = located(row["canonical_source_path"])
         if (source.parent != store or source.name != row["genome_id"] + ".fna.gz" or not source.is_file()
                 or source.is_symlink() or source.resolve(strict=True) != source):
             refuse(f"replacement FASTA {source} is not a regular {row['genome_id']}.fna.gz directly under {store}")
@@ -654,9 +679,9 @@ def check_lane(data: Path):
 
 def frozen_cohorts():
     """The frozen lists from the cohort evidence, each checked against EXPECTED: ({name: ids}, {name: bytes})."""
-    full_bytes = (EVIDENCE / "results/genomes-4000.txt").read_bytes()
-    prefix_bytes = (EVIDENCE / "proofs/frozen-candidate-2000.txt").read_bytes()
-    added_bytes = (EVIDENCE / "results/added-2000.txt").read_bytes()
+    full_bytes = (EVIDENCE / EVIDENCE_FILES["full"]).read_bytes()
+    prefix_bytes = (EVIDENCE / EVIDENCE_FILES["prefix"]).read_bytes()
+    added_bytes = (EVIDENCE / EVIDENCE_FILES["added"]).read_bytes()
     lines = full_bytes.splitlines(keepends=True)
     assert len(lines) == 4000
     assert b"".join(lines[:2000]) == prefix_bytes
@@ -754,15 +779,21 @@ def main() -> int:
         candidate = Path(cleaned["input_root"])
         fasta_parents.add(Path(cleaned["fasta_store"]))
 
-    with (EVIDENCE / "results/fasta-manifest.tsv").open(newline="") as handle:
-        rows = list(csv.DictReader(handle, delimiter="\t"))
-    assert len(rows) == 4000
+    manifest_bytes = (EVIDENCE / EVIDENCE_FILES["fasta-manifest"]).read_bytes()
+    assert sha256_bytes(manifest_bytes) == EXPECTED["fasta-manifest"][0], "the frozen FASTA manifest differs from its pin"
+    rows = list(csv.DictReader(manifest_bytes.decode().splitlines(), delimiter="\t"))
+    assert len(rows) == EXPECTED["fasta-manifest"][1] == 4000
     assert [row["genome_id"] for row in rows] == frozen_full
+    # A cleaned run reads only its cohort genomes' FASTA; the frozen rows it excludes are not pushed to Boat, so only
+    # the rows of linked genomes are opened and hash-checked (plan revision 7). A frozen run checks all 4,000.
+    wanted = {g for ids in cohort_ids.values() for g in ids} if args.cohorts == "cleaned" else set(frozen_full)
     sources = {}
     for row in rows:
         assert row["read_hash_reproducible"] == "True"
         assert row["unchanged_since_resolution"] == "True"
-        source = Path(row["canonical_source_path"])
+        if row["genome_id"] not in wanted:
+            continue
+        source = located(row["canonical_source_path"])
         assert source.parent in ALLOWED_FASTA_PARENTS
         assert source.name == row["genome_id"] + ".fna.gz"
         assert source.is_file() and not source.is_symlink()

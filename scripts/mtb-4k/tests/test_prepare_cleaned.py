@@ -125,6 +125,31 @@ class Cleaned(unittest.TestCase):
   sc=Path(prep.rerun.VALUES["SPECIES_CHECK_PATH"]); sc.write_bytes(sc.read_bytes()+b" ")
   rc,out=self.main("--verify-frozen",run); self.assertEqual(rc,1); self.assertIn(str(sc),json.loads(out)["changed"])
 
+ def test_on_boat_every_fasta_is_read_by_name_from_the_one_store_and_excluded_rows_are_not_opened(self):
+  # Plan revision 7: the bound manifests name Vast paths; Boat has one store holding only the cohort genomes' FASTA.
+  saved=(prep.VAST_FASTA_PARENTS,prep.BOAT_FASTA_STORE)
+  boat=self.base/"boat-fasta"; boat.mkdir()
+  vast={Path(p) for p in prep.ALLOWED_FASTA_PARENTS}|{self.store}
+  for d in vast:
+   for p in d.iterdir():
+    if p.name[:-len(".fna.gz")] not in RULED: shutil.copy2(p,boat/p.name)
+  for d in vast: shutil.rmtree(d)  # nothing may read the Vast paths
+  try:
+   prep.VAST_FASTA_PARENTS,prep.BOAT_FASTA_STORE,prep.ALLOWED_FASTA_PARENTS=vast,boat,{boat}
+   prep.rerun.VALUES["RN_FASTA_STORE"]=str(boat)
+   run=self.base/"run"; rc,_=self.main(run,"--cohorts","cleaned"); self.assertEqual(rc,0)
+   frozen=json.loads((run/"frozen-inputs.json").read_text())
+   self.assertEqual(sorted(frozen["fasta"]),sorted(self.full))
+   self.assertEqual({Path(r["source"]).parent for r in frozen["fasta"].values()},{boat})
+   self.assertEqual(os.readlink(run/"cohorts/prefix/data/fasta"/f"{self.prefix[0]}.fna.gz"),str(boat/f"{self.prefix[0]}.fna.gz"))
+   self.assertEqual(self.main("--verify-frozen",run)[0],0)
+   self.assertEqual(self.main("--check-lane",run/"cohorts/full/data")[0],0)
+   # A cohort genome's FASTA missing from the store still stops, before anything is created.
+   shutil.rmtree(run); (boat/f"{self.full[2500]}.fna.gz").unlink()
+   with self.assertRaises(AssertionError): self.main(run,"--cohorts","cleaned")
+   self.assertFalse(os.path.lexists(run))
+  finally: prep.VAST_FASTA_PARENTS,prep.BOAT_FASTA_STORE=saved
+
  def test_a_borderline_genome_is_never_excluded(self):
   self.verdicts.update({g:"borderline" for g in self.prefix[:5]}); self.write_inputs()
   run=self.base/"run"; self.assertEqual(self.main(run,"--cohorts","cleaned")[0],0)

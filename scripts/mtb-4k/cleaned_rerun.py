@@ -77,7 +77,8 @@ TABLE = {
     "CLEANED_FULL_COUNT": ("count", "prepare", "its length"),
     "CLEANED_MATCHED2K_SHA256": ("sha256", "prepare", "SHA-256 of the cleaned matched2k list"),
     "CLEANED_MATCHED2K_COUNT": ("count", "prepare", "its length (the cleaned prefix's)"),
-    "RN_REFERENCE_ROOT": ("path", "reference", "revision N's MTB 2k candidate run root, holding data/species/mycobacterium_tuberculosis"),
+    "RN_REFERENCE_ROOT": ("path", "reference", "revision N's MTB 2k candidate: its g5 data root, holding species/mycobacterium_tuberculosis "
+                          "(plan revision 7)"),
 }
 
 VALUES = {

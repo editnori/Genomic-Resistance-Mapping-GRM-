@@ -34,8 +34,9 @@ PLAN = LANE / "4k-execution-plan.md"
 # Plan revision 6: the reference diff is diff_reference_prefix.py, and revision_n.py and cleaned_rerun.py gate the run.
 ENTRY = {"prepare_execution_roots.py", "fingerprint.py", "pilot_interrupt.py", "pilot_invalidation.py", "validate_matrix.py",
          "screen_duplicates.py", "write_run_manifest.py", "run_revision8_checks.py", "diff_reference_prefix.py", "compare_cohorts.py",
-         "metric-audit/audit.py", "revision_n.py", "cleaned_rerun.py"}
-EXTERNAL = {"/root/grm-research/grm-research-mtb-4k-cohort-r2/scripts/verify_evidence.py"}
+         "metric-audit/audit.py", "revision_n.py", "cleaned_rerun.py", "verify_evidence.py"}
+# Plan revision 7: verify_evidence.py runs from the reviewed checkout, so the plan runs no script from elsewhere.
+EXTERNAL = set()
 SIBLINGS = ("report_contract", "fingerprint", "prepare_execution_roots", "run_revision8_checks", "pilot_interrupt", "revision_n",
             "cleaned_rerun")
 # The wiring lane's guard runs as `python3 $GUARD`, read-only and as written; pilot_interrupt.py requires the launcher's

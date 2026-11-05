@@ -1,4 +1,38 @@
-# MTB matched 2k / added-2k / 4k execution plan: revision 6, cleaned cohorts
+# MTB matched 2k / added-2k / 4k execution plan: revision 7, cleaned cohorts on Boat
+
+Revision 7 (2026-11-05, lane MTB-PREP). Revision 6 (SHA-256 `b0e1ad7e…`, at `bc7b742`) moves to evaluation
+revision **N = 12** and to Boat sandboxes, under the GRM decisions of 5 Nov 2026 (`DECISIONS.md`: G1, PF-D2, PF-D7,
+PF-D8, D14 as corrected by I4 and M2, M3, and "MTB carry-over into X4"). What changes, and nothing else:
+
+- **Source.** `$WS` is the merge `mtb-r12/merge` of main `1767b862` (evaluation revision 12) with this branch at
+  `bc7b742`; `revision_n.py` and `cleaned_rerun.py` carry revision 12's values (section 2.1).
+- **Where it runs.** Four Boat boxes, X1–X4 (section 10), driven from the laptop by `drive.sh` with `run-mtb.conf`.
+  Inputs arrive only through `grm-boat.sh push-data`, pinned by a stage manifest derived from the run's master
+  manifest. Paths: `WS=/home/user/grm`, `RUN=/home/user/r11/mtb`, data root `/home/user/grm-data`, revision 12's g5
+  data root (box R7's) at `/home/user/grm-ref`.
+- **Gates.** `RUN_4K=YES` with cap 4,000 (G1). Resources: 45 GiB free disk and 7 GiB `MemAvailable` before every
+  section (PF-D7: peak 1.83 GB × 1.5 + 4 GiB), and the kit's process-group guard (`pg-run.sh`, `guard.sh`) pauses
+  below 31 GiB disk or 4 GiB memory, with no kill.
+- **Build.** The repo default, `.cargo/config.toml`'s `target-cpu=x86-64-v3`; no `target-cpu=native` anywhere. Each
+  box records its CPU model with the `grm` and `foldgen` SHA-256. X1 fixes the MTB source's reference binary; a later
+  X box with another binary stops (M3).
+- **Evidence.** push-data carries flat files only under `bindings/`, so the four cohort-r2 evidence files this plan
+  reads, and the evidence's `SHA256SUMS`, go in as `bindings/mtb-cohort-r2-*`. `verify_evidence.py` runs from the
+  reviewed checkout (`$P`) on those files. The evidence's own `scripts/verify_evidence.py` checks all 88 files of the
+  surviving laptop copy before the run, and its receipt is kept with the run.
+- **FASTA.** One store on Boat, the pushed `fasta/`. The bound manifests name Vast paths; preparation reads each by
+  file name under `/home/user/grm-data/fasta` (`located`) and checks its size and SHA-256 as before. A cleaned run
+  opens only its cohort genomes' FASTA; the two excluded frozen genomes' FASTA are not pushed.
+- **Checkout checks need git.** `grm-boat.sh push` sends the files of a clean worktree without `.git`, so
+  `revision_n.py verify-checkout` and the foldgen tree pin run on the laptop against that worktree before any box
+  (section 3).
+- **Reference.** `RN_REFERENCE_ROOT` is revision 12's g5 data root itself, so section 7b reads `$REF/species/...`,
+  not `$REF/data/species/...`, and the fold rebuild reads it through a one-link view.
+
+A new plan revision needs its own review: gate 1's `PLAN_VALIDATORS_REVIEW=APPROVED` for the commit that carries
+revision 7. Revision 6's text below stands except where revision 7 changes it.
+
+## Revision 6
 
 Revision 6 (2026-10-29, plan-r6 lane). Revision 5 (SHA-256 `2807de98…`) ran the frozen
 cohorts on revision 8 from `c70d678`. The matrix review then found two genomes in the frozen
@@ -102,12 +136,14 @@ since executed revision 5. No 8k stage is planned or permitted.
 
 ## 1. Gates
 
-**`RUN_4K=NO` until a lasso-final revision-8 commit exists and an
-independent review records its checker as approved (section 7, item 1).** No
-gate below overrides that. The gates add to it: `RUN_4K=YES` only when that
-holds and all of these hold; otherwise `RUN_4K=NO`.
+**`RUN_4K=YES`, cap 4,000 (G1, 5 Nov 2026), for this cleaned run on evaluation revision 12, after revision 12's
+g5 (box R7).** It replaces revision 6's `RUN_4K=NO` hold (a lasso-final commit and its approved checker). Every X
+box's `prepare` refuses unless `RUN_4K=YES`. The gates below still apply, read for revision 12 and Boat; any one
+that fails stops the run.
 
-1. **Reviews, by the gate lines that exist.** Both are required:
+1. **Reviews, by the gate lines that exist.** Both are required. For revision 7, `PLAN_VALIDATORS_REVIEW=APPROVED`
+   is needed for the commit that carries revision 7 (main starts that review), and `WIRING_REVIEW=APPROVED` for the
+   Rust of the merge `mtb-r12/merge`.
    - `WIRING_REVIEW=APPROVED`, from the wiring review lineage, for the Rust in
      the binary that runs. Its last line is the re-review of `79158f9`:
      `WIRING_REVIEW=CHANGES_REQUIRED`, for plan and script findings N1–N8,
@@ -127,24 +163,28 @@ holds and all of these hold; otherwise `RUN_4K=NO`.
    independently reviewed: `prepare_execution_roots.py`, `pilot_interrupt.py`,
    `pilot_invalidation.py`, `validate_matrix.py`, `screen_duplicates.py`,
    `report_contract.py`, `fingerprint.py`, `write_run_manifest.py`,
-   `run_revision8_checks.py`, `diff_revision7_prefix.py` and
-   `compare_cohorts.py`. Their tests: `GRM=<built grm> FOLDGEN=<built foldgen>
+   `run_revision8_checks.py`, `diff_revision7_prefix.py`,
+   `compare_cohorts.py`, and since revision 7 `verify_evidence.py`. Their tests: `GRM=<built grm> FOLDGEN=<built foldgen>
    python3 -I scripts/mtb-4k/tests/test_<name>.py` (the K review harnesses
    `test_k_review.py` and `test_k_review_r3.py` also take `--receipt OUT`;
    `test_k_review.py`'s frozen-evidence test runs only where that evidence
    is, on Vast). `test_entry_points.py` runs every `python3 -I` command of
    this plan as written, from another directory, with the Python that will
    run them (M1); run it on Vast too.
-4. **Resources, immediately before every stage.** At least 45 GiB free disk
-   and 64 GiB reclaim-aware available RAM. The process-group guard keeps its
-   31 GiB disk and 48 GiB RAM stop floors, above the 30/40 GiB global
-   reserves. Re-measure; never reuse an earlier reading. Root preparation
-   checks the same 45 GiB itself: it sums the annotation bytes it will copy
-   and refuses unless 45 GiB stay free afterwards (section 3).
-5. **Matrix review before structure; revision-8 gate before training.**
-   Structure needs a matrix-only review. Training and report generation need
-   the revision-8 gate in section 7 and a separate parent go-ahead. That
-   gate is the `RUN_4K=NO` hold stated above; nothing here relaxes it.
+4. **Resources, immediately before every section.** At least 45 GiB free disk
+   on `/home/user` and 7 GiB `MemAvailable` (PF-D7; revision 6 had 64 GiB). The
+   kit's process-group guard pauses the group (SIGSTOP, no kill) below 31 GiB
+   free disk or 4 GiB effective memory and resumes it above 35 GiB and 6 GiB
+   (PF-D7; revision 6's guard stopped at 48 GiB RAM). Re-measure; never reuse an
+   earlier reading. Root preparation checks the same 45 GiB itself: it sums the
+   annotation bytes it will copy and refuses unless 45 GiB stay free afterwards
+   (section 3).
+5. **Matrix checks before structure; revision-N gate before training.** On
+   Boat, X1 runs matrices, their validation and containment, the duplicate
+   screen and structure in one box (RUN-PLAN v4, approved with PORT v4): the
+   matrix-only review is those receipts, and any failure stops the box before
+   structure. Training and reports need section 7's revision-N gate; G1 is the
+   parent go-ahead.
 
 The 4,096-column cap is unchanged.
 
@@ -153,10 +193,12 @@ The 4,096-column cap is unchanged.
 Revision 6 binds every cohort input by hash. Values that do not exist yet are placeholders,
 filled by a reviewed commit and listed in section 2.1.
 
-- **Cohort evidence:** `/root/grm-research/grm-research-mtb-4k-cohort-r2`, as in revision 5. Its
-  frozen 4k list (`80faef89…`), prefix (`57af1c86…`), added (`a980d9e0…`) and FASTA manifest are
-  still verified at preparation: they are the comparison basis, and the source of every FASTA
-  the cleaned cohorts share with them.
+- **Cohort evidence:** the cohort-r2 evidence of revision 5 (`SHA256SUMS` `d58008c9…`). Its
+  frozen 4k list (`80faef89…`), prefix (`57af1c86…`), added (`a980d9e0…`) and FASTA manifest
+  (`f042e200…`, pinned in `prepare_execution_roots.EXPECTED` since revision 7) are still verified at
+  preparation: they are the comparison basis, and the source of every FASTA the cleaned cohorts
+  share with them. On Boat (revision 7) they are the data root's `bindings/mtb-cohort-r2-*` files,
+  with the evidence's `SHA256SUMS` beside them; `$MTB_EVIDENCE` is that folder.
 - **Post-fetch species check:** `species_check.json`, at `SPECIES_CHECK_PATH` with
   `SPECIES_CHECK_SHA256`. Its MTB `fail` genomes are the exclusions. They must include `1773.41701`
   and `1773.40949` and number `EXCLUSIONS_COUNT`. Its `borderline` genomes are recorded per cohort
@@ -205,8 +247,9 @@ filled by a reviewed commit and listed in section 2.1.
   `RN_FASTA_STORE`. Both are hash-checked at preparation and by every `--verify-frozen`. The
   preparation writes `$RUN/fasta-manifest.tsv` over every cohort genome for the duplicate screen.
 - **Reference (pending until it exists):** revision N's trained MTB 2k candidate under
-  `RN_REFERENCE_ROOT` (`data/species/mycobacterium_tuberculosis/{genomes.txt,matrix,results}`),
-  read only by section 7b.
+  `RN_REFERENCE_ROOT` (`species/mycobacterium_tuberculosis/{genomes.txt,matrix,results}`; revision 7:
+  the value is the g5 data root itself, box R7's `out/data`, pushed to `/home/user/grm-ref`), read
+  only by section 7b.
 
 | Cohort | Genomes | Role |
 |---|---|---|
@@ -261,43 +304,61 @@ values only for section 7b.
 | `@@RN_FASTA_MANIFEST_PATH@@`, `@@RN_FASTA_MANIFEST_SHA256@@` | `cleaned_rerun.py` | prepare | the FASTA manifest of the replacements, in the cohort evidence's columns |
 | `@@RN_FASTA_STORE@@` | `cleaned_rerun.py` | prepare | the directory of those FASTA |
 | `@@CLEANED_PREFIX_SHA256@@`, `@@CLEANED_PREFIX_COUNT@@`, and the same for `ADDED`, `FULL`, `MATCHED2K` | `cleaned_rerun.py` | prepare | the four cleaned lists, from `--derive-cleaned` |
-| `@@RN_REFERENCE_ROOT@@` | `cleaned_rerun.py` | reference | revision N's trained MTB 2k candidate root |
+| `@@RN_REFERENCE_ROOT@@` | `cleaned_rerun.py` | reference | revision N's trained MTB 2k candidate: its g5 data root (revision 7) |
 
 ## 3. Root setup (future, after gates 1–4)
 
-A fresh run root and a fresh checkout: nothing of the current run's `$RUN` is reused or written.
+A fresh run root in a fresh box: nothing of an earlier run's `$RUN` is reused or written. Revision 7 splits
+this section in two. The checkout checks need git, and the box's copy of the source has none, so they run on the
+laptop against the clean worktree `drive.sh` pushes (`SRC` in `run-mtb.conf`), before any box:
 
 ```bash
-export WS=/root/grm-research/grm-mtb-4k-cleaned-src    # a reviewed, clean checkout of the merge of revision N's commit with this branch
-export RUN=/root/grm-research/grm-mtb-4k-cleaned-r1    # new; never the current run's root
+export WS=/home/layth/review/grm-mtb-prep-r12-20261105/repo   # on the laptop: the clean worktree drive.sh pushes as SRC
+export P=$WS/scripts/mtb-4k
+python3 -I "$P/revision_n.py" verify-checkout "$WS" || exit 1       # clean, descends from RN_CHECKER_COMMIT, holds the pinned checker blobs
+# The committed foldgen; a revision-N merge that changes its tree stops here for review (I4).
+test "$(git -C "$WS" rev-parse HEAD:scripts/metric-audit/foldgen)" = dc8317faf778fd96f496cc0226515ca7b19d688d || exit 1
+export SOURCE=$(git -C "$WS" rev-parse HEAD)   # the one --expected-source-commit for every check (drive.sh's SOURCE_COMMIT)
+```
+
+Then in each X box, after `drive.sh` has pushed the source, the kit and the stage's data (section 10):
+
+```bash
+export WS=/home/user/grm                               # the pushed source: git ls-files of that worktree, no .git
+export W=/home/user/r11                                # the box's work folder (r11-box.sh)
+export RUN=$W/mtb                                      # new in every box
 export SLUG=mycobacterium_tuberculosis
 export P=$WS/scripts/mtb-4k
 export PROFILE=rN-cleaned                              # every report_contract CLI passes --profile "$PROFILE"
-# The wiring lane's process-group guard (31 GiB disk / 48 GiB RAM floors), used read-only.
-export GUARD=/root/grm-research/grm-mtb-4k-wiring-kimi-20261028/tools/resource_guard.py
+export MTB_EVIDENCE=/home/user/grm-data/bindings      # the flat cohort-r2 evidence files, pushed with the stage
+# The kit's process-group guard (pg-run.sh, guard.sh): pauses below 31 GiB disk or 4 GiB memory, never kills (PF-D7).
+export K=/home/user/port DISK_PAUSE_GIB=31 RAM_PAUSE_GIB=4 RUN_4K=YES
 
 set -o pipefail                                        # a failed sha256sum stops a `| tee` line too
+test "$RUN_4K" = YES || exit 1                         # G1
 test ! -e "$RUN" || exit 1
 python3 -I "$P/revision_n.py" status || exit 1                     # every revision-N value filled and well formed
 python3 -I "$P/cleaned_rerun.py" status --group prepare || exit 1   # every cohort input filled and well formed
-python3 -I "$P/revision_n.py" verify-checkout "$WS" || exit 1       # clean, descends from RN_CHECKER_COMMIT, holds the pinned checker blobs
 REVISION_N=$(python3 -I "$P/revision_n.py" get REVISION_N) || exit 1
 export REVISION_N
-python3 -I -c 'import os; p=os.statvfs("/root"); d=p.f_bavail*p.f_frsize; m={l.split(":",1)[0]:l.split(":",1)[1].strip() for l in open("/proc/meminfo")}; r=int(m["MemAvailable"].split()[0])*1024; print(d,r); assert d >= 45*1024**3 and r >= 64*1024**3' || exit 1
-python3 -I /root/grm-research/grm-research-mtb-4k-cohort-r2/scripts/verify_evidence.py --root /root/grm-research/grm-research-mtb-4k-cohort-r2 || exit 1
+python3 -I -c 'import os; p=os.statvfs("/home/user"); d=p.f_bavail*p.f_frsize; m={l.split(":",1)[0]:l.split(":",1)[1].strip() for l in open("/proc/meminfo")}; r=int(m["MemAvailable"].split()[0])*1024; print(d,r); assert d >= 45*1024**3 and r >= 7*1024**3' || exit 1
+python3 -I "$P/verify_evidence.py" --root "$MTB_EVIDENCE" || exit 1   # from the reviewed checkout, on the pushed files
 python3 -I "$P/prepare_execution_roots.py" "$RUN" --cohorts cleaned || exit 1   # derives the four lists and requires the CLEANED_* pins
 
-(cd "$WS" && CARGO_TARGET_DIR="$RUN/target" CARGO_BUILD_JOBS=16 RAYON_NUM_THREADS=16 cargo build --release --locked --offline) || exit 1
-export GRM="$RUN/target/release/grm"
+# The repo's default target (.cargo/config.toml: target-cpu=x86-64-v3); no target-cpu=native (M2, I4).
+(cd "$WS" && cargo build --release --locked -v) > "$W/logs/build.log" 2>&1 || exit 1
+export GRM="$WS/target/release/grm"
+grep -m1 "model name" /proc/cpuinfo | tee "$RUN/logs/cpu.txt" || exit 1
 sha256sum "$GRM" | tee "$RUN/logs/grm-binary.sha256" || exit 1
-# The committed foldgen; a revision-N merge that changes its tree stops here for review (I4).
-test "$(git -C "$WS" rev-parse HEAD:scripts/metric-audit/foldgen)" = dc8317faf778fd96f496cc0226515ca7b19d688d || exit 1
-(cd "$WS/scripts/metric-audit/foldgen" && CARGO_TARGET_DIR="$RUN/target-foldgen" cargo build --release --locked --offline) || exit 1
-export FOLDGEN="$RUN/target-foldgen/release/foldgen"
+(cd "$WS/scripts/metric-audit/foldgen" && cargo build --release --locked) || exit 1
+export FOLDGEN="$WS/scripts/metric-audit/foldgen/target/release/foldgen"
 sha256sum "$FOLDGEN" | tee "$RUN/logs/foldgen-binary.sha256" || exit 1
 export FOLDGEN_SHA256=$(cut -d' ' -f1 "$RUN/logs/foldgen-binary.sha256")
-export SOURCE=$(git -C "$WS" rev-parse HEAD)   # the one --expected-source-commit for every check
 ```
+
+The binary gate (M3): X1's `grm` SHA-256 becomes the MTB source's reference (`BINARY-REF-<commit>.sha` in the run
+folder); X2–X4 stop (exit 82) if theirs differs. Provenance is the source commit, the build log, the CPU line and
+the binary SHA-256.
 
 `prepare_execution_roots.py --cohorts cleaned` refuses before it creates anything when:
 
@@ -368,6 +429,16 @@ The current expansion of the rule is the transitive `crate::` closure of `src/ma
 - plus `src/main.rs`'s wiring, `src/lib.rs`, `Cargo.toml`, `Cargo.lock` and `.cargo/config.toml`.
 
 If the merge adds a `use` to any of these, the rule covers the new module too. A cleaned run root has no pilot cohorts.
+
+**Revision 7: the rule applied to `mtb-r12/merge`.** Against this branch at `bc7b742` (revision 10's build source,
+whose matrix code the pilot's conclusion was carried to), main's side of the merge changes, within the rule's set:
+`.cargo/config.toml` (`target-cpu=native` to `x86-64-v3`, main's `b32456e`); `src/lib.rs` (declares the new modules
+`ablate` and `intervals`, which no module of the closure uses); `src/main.rs` (the `intervals` command, not the
+`matrix` or `count` wiring); and `src/matrix.rs` (two doc-comment lines). The config change changes the machine code
+of every matrix module, so **by this rule the pilot is repeated before section 5, unless main rules otherwise**. It
+is an open question for main (MTB-PREP's report, Q1). Section 7b's `cmp` of X1's sparse prefix matrix with box R7's
+stock-built matrix of the same 2,000 genomes, both built for `x86-64-v3`, is the evidence the alternative would rest
+on; X4 runs it.
 The text and commands below are revision 5's, kept for the record.
 
 It is separate from the 2,000-genome prefix stage and uses its own two roots,
@@ -500,8 +571,8 @@ per-block preflight bound and its arithmetic are revision 5's, and the pilot mea
 for cohort in prefix added full matched2k; do
   D=$RUN/cohorts/$cohort/data
   python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
-  python3 "$GUARD" --log $RUN/logs/$cohort-matrix.log --resources $RUN/logs/$cohort-matrix-resources.json -- \
-    /usr/bin/time -v "$GRM" --data "$D" matrix --species $SLUG --min-support 2 --disk-sparse --block-width 128 || exit 1
+  # pg-run.sh: own session and process group under guard.sh, output to $W/logs/$cohort-matrix.log, time -v beside it
+  bash "$K/pg-run.sh" "$cohort-matrix" -- "$GRM" --data "$D" matrix --species $SLUG --min-support 2 --disk-sparse --block-width 128 || exit 1
   python3 -I "$P/validate_matrix.py" --matrix $D/species/$SLUG/matrix --counted $D/species/$SLUG/counted.json \
     --genomes $D/species/$SLUG/genomes.txt --fasta-dir $D/fasta --recount 16 --require-recount \
     --out $RUN/audit/$cohort-matrix-validation.json || exit 1
@@ -549,8 +620,7 @@ screen and its stop (`cross_cohort_exact > 0`) are revision 5's.
 
 ```bash
 for cohort in prefix added full matched2k; do
-  python3 "$GUARD" --log $RUN/logs/$cohort-structure.log --resources $RUN/logs/$cohort-structure-resources.json -- \
-    "$GRM" --data "$RUN/cohorts/$cohort/data" structure --species $SLUG || exit 1
+  bash "$K/pg-run.sh" "$cohort-structure" -- "$GRM" --data "$RUN/cohorts/$cohort/data" structure --species $SLUG || exit 1
 done
 ```
 
@@ -609,8 +679,8 @@ for cohort in prefix added full matched2k; do
   python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
   mkdir "$RUN/backups/$cohort"                       # pre-launch results: none in a new root
   LAUNCH=$(date -u +%Y-%m-%dT%H:%M:%SZ); echo "$LAUNCH" > "$RUN/logs/$cohort-learn.launch"
-  python3 "$GUARD" --log $RUN/logs/$cohort-learn.log --resources $RUN/logs/$cohort-learn-resources.json -- \
-    /usr/bin/time -v "$GRM" --data "$D" learn --species $SLUG || exit 1
+  RAYON_NUM_THREADS=16 bash "$K/pg-run.sh" "$cohort-learn" -- "$GRM" --data "$D" learn --species $SLUG || exit 1
+  cp "$W/logs/$cohort-learn.log" "$RUN/logs/$cohort-learn.log" || exit 1
   python3 -I "$P/prepare_execution_roots.py" --check-annotations "$D" || exit 1   # no live BV-BRC fetch during learn
   python3 -I "$P/prepare_execution_roots.py" --check-lane "$D" || exit 1
   "$GRM" --data "$D" report || exit 1                # dashboard data in this root only
@@ -647,11 +717,15 @@ it is staged on Vast, before or after sections 5–7 have finished; they never b
 they pass, every receipt and summary of this run carries `PENDING REFERENCE`, and no final result
 is stated. A failure is a stop for review, never something to skip.
 
+Revision 7: `RN_REFERENCE_ROOT` is revision 12's g5 data root itself (box R7's `out/data`, pushed by `drive.sh` to
+`/home/user/grm-ref`), so the paths below drop revision 6's `/data`; `audit.py --root` takes a folder holding
+`data/`, so the fold rebuild reads the reference through a one-link view. X4 runs this section.
+
 ```bash
 set -o pipefail
 REF=$(python3 -I "$P/cleaned_rerun.py" get RN_REFERENCE_ROOT) || exit 1     # unfilled: PENDING REFERENCE
 INPUT_ROOT=$(python3 -I "$P/cleaned_rerun.py" get RN_INPUT_ROOT) || exit 1
-R=$REF/data/species/$SLUG
+R=$REF/species/$SLUG
 sha256sum $R/genomes.txt $R/counted.json $R/structure.json $R/matrix/* $R/results/*.json | tee $RUN/audit/reference-sha256.txt || exit 1
 # The reference must be revision N's candidate for this very prefix, and its matrix the prefix's, byte for byte.
 cmp $RUN/cohorts/prefix/data/species/$SLUG/genomes.txt $R/genomes.txt || exit 1
@@ -660,14 +734,15 @@ for f in matrix.json patterns.bin support.bin kmer_offsets.bin kmers.bin; do
 done
 # fingerprint.py reproduces each reference report's input_fingerprint from revision N's matrix and the rerun's
 # inputs (RN_INPUT_ROOT's curated and catalog), in a link-only view outside both roots.
-python3 -I "$P/fingerprint.py" "$RUN/rN-view/data" --make-view --matrix-from "$REF/data" --inputs-from "$INPUT_ROOT" \
-  --reports-from "$REF/data" --check --expect-reports 22 --out "$RUN/audit/rN-fingerprints.json" || exit 1
-# The metric audit rebuilds every saved test_fold of the reference with this foldgen.
+python3 -I "$P/fingerprint.py" "$RUN/rN-view/data" --make-view --matrix-from "$REF" --inputs-from "$INPUT_ROOT" \
+  --reports-from "$REF" --check --expect-reports 22 --out "$RUN/audit/rN-fingerprints.json" || exit 1
+# The metric audit rebuilds every saved test_fold of the reference with this foldgen, through a one-link view.
+mkdir "$RUN/rN-ref-root" && ln -s "$REF" "$RUN/rN-ref-root/data" || exit 1
 python3 -I "$WS/scripts/metric-audit/audit.py" "$RUN/audit/rN-fold-rebuild.json" $SLUG --revision "$REVISION_N" \
-  --root "$REF" --reshaped --foldgen "$FOLDGEN" || exit 1
+  --root "$RUN/rN-ref-root" --reshaped --foldgen "$FOLDGEN" || exit 1
 python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rN-fold-rebuild.json" || exit 1
 # The prefix against the reference, every field (diff_reference_prefix.py).
-python3 -I "$P/diff_reference_prefix.py" --prefix $RUN/cohorts/prefix/data --reference "$REF/data" \
+python3 -I "$P/diff_reference_prefix.py" --prefix $RUN/cohorts/prefix/data --reference "$REF" \
   --out $RUN/audit/prefix-vs-reference.json || exit 1
 ```
 
@@ -895,3 +970,37 @@ steps run and pass.
 - This plan does not run `diff_revision7_prefix.py`: its prefix is a fresh selection, not the
   frozen revision-7 prefix. Since `8bb1a9b` that script takes `--profile rN` for a revision-9 rerun
   of the uncleaned cohorts (revision 5's section 7). Its field rules are unchanged.
+- Revision 7: Boat's disk and process behaviour (the overlay, signals to a paused group) were exercised by PORT's
+  synthetic dry run only, not on real MTB data.
+
+## 10. Boat execution: boxes X1–X4 (revision 7)
+
+One long-lived run root does not fit Boat: a box lives at most 6 h (PF-D6), and the learn alone is about 4.6 h on
+a fast host. So sections 3–8 run in four xlarge boxes, each a `drive.sh` call with `run-mtb.conf` and its row of
+`stages-mtb.tsv`. Each box starts only after box R7 (revision 12's g5) is `DONE`, runs section 3's box part first
+(`prepare` again: deterministic, the same inputs), and refuses to start while another of its stage runs.
+
+| Box | Sections | Plan sections | Fast h | Slow h |
+|---|---|---|---:|---:|
+| X1 | `prepare`, `matrix:prefix`, `matrix:added`, `matrix:full`, `matrix:matched2k`, `dupscreen`, `structure` | 3, 5, duplicate screen, 6 | 2.5 | 4.5 |
+| X2 | `prepare`, `restore`, `learn:prefix`, `learn:added` | 3, 7 | 2.6 | 4.7 |
+| X3 | `prepare`, `restore`, `learn:full` | 3, 7 | 1.9 | 3.3 |
+| X4 | `prepare`, `restore`, `learn:matched2k`, `compare`, `reference` | 3, 7, 8, 7b | 1.7 | 2.9 |
+
+X1 runs first and fixes the MTB source's reference binary; X2 and X3 may run together after it; X4 runs after
+both. What each box receives, every set through `grm-boat.sh push-data` and pinned by its own manifest:
+
+- **The stage's inputs** (`/home/user/grm-data`): the lines of the run's master manifest the stage reads, derived by
+  the kit's `stage-manifest.py` with `EXTRA_LISTS=bindings/full-genomes.txt`: the shared BV-BRC records, `curated/`,
+  `catalog/`, `species-check/`, every `bindings/` file, MTB's 2k `genomes.txt`, and the FASTA and cached annotation
+  of every genome in the 2k and the cap-4000 lists. The four boxes' stage manifests are the same list.
+- **The reference** (`/home/user/grm-ref`): box R7's pulled g5 data root, as `drive.sh` pins it (`REF_DIR`).
+- **The restore set** (`/home/user/grm-resume`, X2–X4): the earlier boxes' cohort `counted.json`, `structure.json`,
+  `matrix/` and `results/`, and their run receipts (`audit/*`, `cohorts/<c>/validation-manifest.json`), merged by
+  `drive.sh` from `RESTORE_DIRS` (two sources must agree on any file both hold). `restore` checks the set against its
+  manifest before it copies anything into `$RUN`.
+
+The kit's `mtb-box.sh` runs the sections. For revision 7 it must do what sections 3 and 7b say: run
+`verify_evidence.py` from `$P` (not from `$MTB_EVIDENCE`); leave `revision_n.py verify-checkout` and the foldgen tree
+pin to the laptop before the box, since the box's source has no `.git`; and run 7b's fold rebuild through the
+one-link view. Until it does, `prepare` stops in the box.

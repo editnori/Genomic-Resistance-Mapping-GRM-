@@ -47,13 +47,12 @@ def cohort(base: Path, ids=None):
         rows.append({"genome_id": gid, "size_bytes": len(b), "sha256": hashlib.sha256(b).hexdigest(),
                      "canonical_source_path": str(path), "read_hash_reproducible": "True",
                      "unchanged_since_resolution": "True"})
-    ev = base / "evidence"
-    (ev / "results").mkdir(parents=True)
-    (ev / "proofs").mkdir()
-    (ev / "results" / "genomes-4000.txt").write_text("".join(f"{g}\n" for g in ids))
-    (ev / "proofs" / "frozen-candidate-2000.txt").write_text("".join(f"{g}\n" for g in ids[:2000]))
-    (ev / "results" / "added-2000.txt").write_text("".join(f"{g}\n" for g in ids[2000:]))
-    with open(ev / "results" / "fasta-manifest.tsv", "w", newline="") as fh:
+    ev = base / "evidence"  # flat, as push-data carries the evidence files into bindings/ (plan revision 7)
+    ev.mkdir()
+    (ev / prep.EVIDENCE_FILES["full"]).write_text("".join(f"{g}\n" for g in ids))
+    (ev / prep.EVIDENCE_FILES["prefix"]).write_text("".join(f"{g}\n" for g in ids[:2000]))
+    (ev / prep.EVIDENCE_FILES["added"]).write_text("".join(f"{g}\n" for g in ids[2000:]))
+    with open(ev / prep.EVIDENCE_FILES["fasta-manifest"], "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0]), delimiter="\t")
         w.writeheader()
         w.writerows(rows)
@@ -76,10 +75,11 @@ class Prepare(unittest.TestCase):
         prep.EVIDENCE, prep.CANDIDATE = ev, c
         prep.ALLOWED_FASTA_PARENTS = set(stores)
         matched = "".join(f"{g}\n" for g in prep.matched_selection(ids)).encode()
-        prep.EXPECTED = {"full": (h(ev / "results/genomes-4000.txt"), 4000),
-                         "prefix": (h(ev / "proofs/frozen-candidate-2000.txt"), 2000),
-                         "added": (h(ev / "results/added-2000.txt"), 2000),
-                         "matched2k": (hashlib.sha256(matched).hexdigest(), 2000)}
+        prep.EXPECTED = {"full": (h(ev / prep.EVIDENCE_FILES["full"]), 4000),
+                         "prefix": (h(ev / prep.EVIDENCE_FILES["prefix"]), 2000),
+                         "added": (h(ev / prep.EVIDENCE_FILES["added"]), 2000),
+                         "matched2k": (hashlib.sha256(matched).hexdigest(), 2000),
+                         "fasta-manifest": (h(ev / prep.EVIDENCE_FILES["fasta-manifest"]), 4000)}
         return ids, stores, ev, c
 
     def main(self, *argv):
@@ -212,7 +212,7 @@ class Prepare(unittest.TestCase):
             self.assertEqual(self.main(run, "--cohorts", "frozen")[0], 0)
 
     def cohort_ids(self, name):
-        ids = (prep.EVIDENCE / "results/genomes-4000.txt").read_text().splitlines()
+        ids = (prep.EVIDENCE / prep.EVIDENCE_FILES["full"]).read_text().splitlines()
         return {"prefix": ids[:2000], "added": ids[2000:], "full": ids, "matched2k": prep.matched_selection(ids)}[name]
 
     def test_a_matched2k_selection_that_differs_from_its_frozen_list_stops(self):
@@ -223,6 +223,23 @@ class Prepare(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 self.main(base / "run", "--cohorts", "frozen")
             self.assertFalse(os.path.lexists(base / "run"))
+
+    def test_a_frozen_fasta_manifest_that_differs_from_its_pin_stops(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            _, _, ev, _ = self.redirect(base)
+            path = ev / prep.EVIDENCE_FILES["fasta-manifest"]
+            path.write_bytes(path.read_bytes().replace(b"\tTrue\t", b"\tTrue \t", 1))
+            with self.assertRaises(AssertionError):
+                self.main(base / "run", "--cohorts", "frozen")
+            self.assertFalse(os.path.lexists(base / "run"))
+
+    def test_a_vast_store_path_is_read_under_the_boat_store(self):
+        for vast in prep.VAST_FASTA_PARENTS:
+            self.assertEqual(prep.located(str(vast / "1773.4172.fna.gz")), prep.BOAT_FASTA_STORE / "1773.4172.fna.gz")
+        self.assertEqual(prep.located("/elsewhere/1773.4172.fna.gz"), Path("/elsewhere/1773.4172.fna.gz"))
+        self.assertEqual(self.saved[2], {Path("/home/user/grm-data/fasta")})
+        self.assertEqual(self.saved[3]["fasta-manifest"][0], "f042e20094a0fd9ded3b68cacd29524ba3c9f40c7cb1847cbe321b4b4af50c46")
 
     def test_the_frozen_matched2k_hash_is_the_contracts(self):
         sys.path.insert(0, str(HERE))
