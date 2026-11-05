@@ -618,7 +618,9 @@ async function interactions(page, tag, width) {
   // The outline must sit on its drug's own row. The map's label column
   // draws each drug's name in a row of its own (Structure.tsx), so the
   // outline's middle must be within 2 px of the chosen drug's label's
-  // middle, before the choice and after it; no height is assumed. The choice
+  // middle, before the choice and after it; no height is assumed. Between the
+  // two reads it must move as far as the label does, within 0.5 px, so an
+  // outline that steps rows at another pitch than the labels fails. The choice
   // reaches the outline through a state update and a transform transition,
   // so read after two frames, then each frame until two frames in a row
   // agree on a position on that row, for up to a second.
@@ -628,7 +630,7 @@ async function interactions(page, tag, width) {
       const l = o && [...(o.closest('#sp-structure') ?? document).querySelectorAll('span.whitespace-nowrap')].find(s => s.textContent === label && s.className.includes('leading-[16px]'));
       if (!o || !l) return null;
       const a = o.getBoundingClientRect(), b = l.getBoundingClientRect();
-      return { off: Math.round((a.top + a.bottom - b.top - b.bottom) * 50) / 100, outline: [a.top, a.height], label: [b.top, b.height] };
+      return { off: Math.round((a.top + a.bottom - b.top - b.bottom) * 50) / 100, outline: [a.top, a.height], labelBox: [b.top, b.height] };
     };
     const start = performance.now();
     let last = null;
@@ -645,7 +647,8 @@ async function interactions(page, tag, width) {
   await page.getByRole('option').nth(1).click();
   const now = await outlineOn(toLabel);
   const onRow = p => p.settled && Math.abs(p.off) <= 2;
-  check(tag + ' chosen drug outline moves to its row', fromLabel !== null && toLabel !== null && fromLabel !== toLabel && onRow(was) && onRow(now), { was, now });
+  check(tag + ' chosen drug outline moves to its row', fromLabel !== null && toLabel !== null && fromLabel !== toLabel && onRow(was) && onRow(now)
+    && Math.abs((now.outline[0] - was.outline[0]) - (now.labelBox[0] - was.labelBox[0])) <= 0.5, { was, now });
   await scrollTo(page, '#sp-cross');
   await shot(page, tag + '-cross-matrix');
   await shot(page, tag + '-cross-table');
