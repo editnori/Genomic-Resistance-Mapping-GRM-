@@ -9,10 +9,10 @@ Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are those of 
 | Job | Runs | Result |
 |---|---|---|
 | `rust-lint` | `cargo fmt --check`, then `cargo clippy --locked --all-targets -- -D warnings` | pass |
-| `rust-test` | `cargo test --release --locked`, then `bash scripts/ci/rust-test-names.sh --check` | 387 passed, 0 failed, 8 ignored; the 395 names match `tests/rust-test-names.txt` |
+| `rust-test` | `cargo test --release --locked`, then `bash scripts/ci/rust-test-names.sh --check` | 417 passed, 0 failed, 8 ignored; the 425 names match `tests/rust-test-names.txt` |
 | `rust-doc` | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked` | pass |
 | `metric-audit` | `cargo build --locked --release` in `scripts/metric-audit/foldgen`, then `python3 -I -B -W error <file> -v` for each test file | `test_check_results.py` 106, `test_audit.py` 98, `test_scripts.py` 3; `scripts/lasso-scan/test_scan.py` 26 with 4 skipped |
-| `python`, one job per suite | `python3 -s -P -B -W error -m unittest discover -s <suite> -t . -v` under `env -i` at `PYTHONHASHSEED` 0, 1 and 4242, then once with `-I` in place of `-s -P` | `tests/hyperopt` 322, `scripts/sampling-audit/tests` 34, `tests/ablation` 238, `tests/temporal` 163, `tests/multitask` 72 |
+| `python`, one job per suite | `python3 -s -P -B -W error -m unittest discover -s <suite> -t . -v` under `env -i` at `PYTHONHASHSEED` 0, 1 and 4242, then once with `-I` in place of `-s -P` | `tests/hyperopt` 322, `scripts/sampling-audit/tests` 34, `tests/ablation` 256, `tests/temporal` 163, `tests/multitask` 72 |
 | `deployment` | `bash scripts/deployment/tests/dry-run.sh`, then `bash scripts/deployment/tests/apply.sh` | 247 passed; 563 passed |
 | `web` | `npm --prefix web ci`, then `run typecheck`, `run build` and `test` (vitest), on Node 22.23.4 | 35 test files passed, 1 skipped; 280 tests passed, 2 skipped |
 
