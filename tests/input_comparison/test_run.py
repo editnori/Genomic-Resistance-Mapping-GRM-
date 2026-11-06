@@ -875,6 +875,34 @@ ids = [f"g{i:03d}" for i in range(50)]
                 null_study.report([tmp])
         self.assertIn("null study: arm grr-v1 is in no seed's summary.json (20 summaries)", str(e.exception))
 
+    def test_every_judged_arm_needs_20_seeds_not_any(self):
+        """REVIEW-INPUT17 L1 (mutants N3 and N4): with two calibration arms, one in 20 seeds and one in 19, the
+        calibration fails; in the null study, a planted arm in 19 seeds fails it as a cohort arm does."""
+        both = self.calibration_arms()
+        random_only, missing = self.null_unproduced("cohort-path")
+        twin = self.null_records("seed-twin", {})
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, both, self.null_records("cohort-path", {}) + twin, seeds=19)
+            self.null_seeds(tmp, both, random_only + twin, seeds=1, missing=missing, start=19)
+            r = null_study.report([tmp], calibration=True)
+        self.assertEqual((r["arms"]["seed-twin"]["seeds"], r["arms"]["cohort-path"]["seeds"]), (20, 19))
+        self.assertEqual((r["missing_arms"], r["thin_arms"], r["pass"]), ([], ["cohort-path"], False))
+        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
+        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
+                 for a in null_study.COHORT_ARMS]
+        cohort = [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
+        planted = {a: self.null_records(a, {l: "improves" for l in run.LEARNERS}) for a in null_study.PLANTED_ARMS}
+        short, gone = self.null_unproduced("k-p")
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, arms, cohort + [r for rows in planted.values() for r in rows], seeds=19)
+            self.null_seeds(tmp, arms, cohort + planted["k-h"] + planted["k-c-h-p"] + short, seeds=1, missing=gone,
+                            start=19)
+            r = null_study.report([tmp])
+        self.assertEqual((r["arms"]["k-p"]["seeds"], r["arms"]["k-h"]["seeds"], r["arms"]["grr-v1"]["seeds"]),
+                         (19, 20, 20))
+        self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
+        self.assertFalse(r["pass"])
+
     def test_null_study_passes_only_with_a_lineage_contrast_in_20_seeds_per_arm(self):
         """REVIEW-NULL16 L1 (its case R4): a calibration arm with lineage contrasts in 1 of 20 seeds, 95 not produced,
         passed on "improves 0/5" because the gate counted summary files. Now each arm needs 20 seeds that gave it a
