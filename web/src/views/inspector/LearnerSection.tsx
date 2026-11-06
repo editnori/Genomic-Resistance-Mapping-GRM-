@@ -73,10 +73,24 @@ const uncalledLines = (r: DatasetReport, rows: readonly (LearnerResult | undefin
 export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; research?: Resource<Research>; intervals?: RowIntervals }) => {
   const [scheme, setScheme] = useState<Scheme>("random");
   const frame = useRef<HTMLDivElement | null>(null);
+  const stripBox = useRef<HTMLDivElement | null>(null);
   // Wide, the strip takes what the number columns leave, within bounds; on
   // a phone it fits beside the learner names and the numbers scroll.
   const avail = useWidth(frame, 900);
-  const stripWidth = avail < 640 ? Math.max(120, avail - 210) : Math.max(STRIP_MIN, Math.min(560, avail - 640));
+  const wide = avail >= 640;
+  // Wide, the table lays the strip out itself: its column takes the width
+  // the number columns leave (they widen with intervals such as
+  // "92.6%–100.0%" under VME and ME, and keep to one line), and the strip
+  // draws at the width it gets. The strip sits in a box with no width of its
+  // own, so it never adds to the table's width and the table fits its frame
+  // from the first layout. Until the cell is measured the strip draws at the
+  // old 640 px allowance.
+  const cellWidth = useWidth(stripBox, avail - 640);
+  const stripWidth = wide ? Math.max(STRIP_MIN, Math.min(560, cellWidth)) : Math.max(120, avail - 210);
+  // Wide only: the strip's column (at least STRIP_MIN plus its px-2
+  // padding), and the box that fills its cell without sizing it.
+  const stripColumn = wide ? { width: "100%", minWidth: STRIP_MIN + 16 } : undefined;
+  const stripFill = wide ? { width: 0, minWidth: "100%" } : undefined;
   const random = splitOf(r, "random");
   const lineage = splitOf(r, "lineage");
   const best = bestLearner(r);
@@ -157,15 +171,17 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
       {outscoringNote === null ? null : <p className="type-note mb-3">{outscoringNote}</p>}
       <div ref={frame}>
       <ScrollFrame label="Learner comparison">
-        <table className="w-full border-collapse text-control">
+        <table className={`w-full border-collapse text-control ${wide ? "whitespace-nowrap" : ""}`}>
           <thead>
             <tr className="border-b border-hair text-left">
               <th scope="col" className="px-2 py-2 text-tiny font-medium text-blue">
                 Learner
               </th>
-              <th scope="col" className="px-2 py-1 text-tiny font-medium text-blue">
+              <th scope="col" className="px-2 py-1 text-tiny font-medium text-blue" style={stripColumn}>
                 <span className="sr-only">Balanced accuracy, </span>
-                <StripAxis x={x} width={stripWidth} />
+                <div ref={stripBox} style={stripFill}>
+                  <StripAxis x={x} width={stripWidth} />
+                </div>
               </th>
               {["Random", "Lineages held out", "VME", "ME", ...(extra === null ? [] : [extra]), "AUROC"].map((h) => (
                 <th key={h} scope="col" className="whitespace-nowrap px-2 py-2 text-right text-tiny font-medium text-blue">
@@ -189,7 +205,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
                     {isBest ? <span className="ml-2 text-tiny font-medium text-blue">Best</span> : null}
                   </th>
                   <td className="px-2 py-0.5">
-                    <div>
+                    <div style={stripFill}>
                       <LearnerStripRow
                         x={x}
                         width={stripWidth}
