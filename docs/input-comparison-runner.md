@@ -91,8 +91,8 @@ On the rerun after the rulings (Boat xlarge, 5 Nov 2026, seed 11) the test passe
 | K+C | same_plan | 2/200 = 1.0% | |
 | K+H, K+P, K+C+H+P | same_plan | 200/200 each | 0 |
 
-Main's ruling on this study (5 Nov 2026) withdrew the first criterion: with no k-mer signal, two different models still differ in expected log loss, so "`improves` at no more than 5%" can't hold for an arm that changes the model. The table is now context (ruling (a)): the cohort arms' no-signal `improves` rate, 15.5%, against the same-sample arms' 17.6%. The decision procedure's calibration is the next section.
-- **Same-sample arms do it too.** Arms with the default's exact samples and fold plans (k and budget) score `improves` at 17.6%, more often than the cohort arms. With no k-mer signal, two different models fitted to noise really do differ in log loss (how far they overfit, how well they calibrate), and the paired test finds those differences. "No k-mer signal" doesn't make log loss equal, so no pairing rule can bring a model-changing arm to the nominal rate here. Only K+C, which adds at most two columns and leaves the model nearly unchanged, is near it.
+Main's ruling on this study (5 Nov 2026) withdrew the first criterion: with no k-mer signal, two different models still differ in expected log loss, so "`improves` at no more than 5%" can't hold for an arm that changes the model. The table is now context (ruling (a)): the cohort arms' no-signal `improves` rate, 15.5%, against the same-sample arms' 17.6%. The decision procedure's calibration is the next section. **Superseded:** these rates are over both splits. On the lineage split alone, the only split that decides now, the order reverses (21.0% against 13.0%, a point estimate with overlapping intervals); see [After PR #69's Codex review](#after-pr-69s-codex-review-mains-rulings-6-nov-2026).
+- **Same-sample arms do it too.** Arms with the default's exact samples and fold plans (k and budget) score `improves` at 17.6%, more often than the cohort arms over both splits (not on the lineage split; see the pointer above). With no k-mer signal, two different models fitted to noise really do differ in log loss (how far they overfit, how well they calibrate), and the paired test finds those differences. "No k-mer signal" doesn't make log loss equal, so no pairing rule can bring a model-changing arm to the nominal rate here. Only K+C, which adds at most two columns and leaves the model nearly unchanged, is near it.
 - **The balance artefact is gone.** In the first build, `cap-1000` was `improves` for gbt, lasso and rf from the 65%-resistant test set. Under the balanced rule those learners are `worse` (rf 40 of 40), as expected for an arm trained on half the genomes at another prevalence and scored at the default's balance.
 - **Contrasts within a seed are correlated** (one cohort, one test set), so the per-contrast intervals are optimistic; every seed had at least one `improves` for cap-4000 and grr-v1.
 
@@ -365,22 +365,23 @@ Main revised the "full eligible pool" ruling: that pool can't be built on real d
 - **`repeats` above 1 with a cohort arm is refused.** A cohort arm's balanced subsample can differ by repeat, and `stats.pair_arms` refuses that ("covers different samples in different repeats"); reproduced. Both decided specs use `repeats` 1, so `load_spec` refuses such a spec up front.
 - **Tests:** `test_null_study_rates_count_decision_bearing_lineage_contrasts_only`, `test_null_study_calibration_sees_what_the_sentinel_masks` and `test_a_spec_with_repeats_and_a_cohort_arm_is_refused`.
 - **The rates, re-measured** from the stored per-seed summaries (`logs/round16/remeasure.json`).
-  - **Why they change:** the 20-seed null study and the calibration ran before random-split contrasts became descriptive and before the sentinel existed. Their old rates were over both splits, as both decided then, and no summary held a `descriptive` or `unreliable` row. The new rates are over the lineage split alone, the only split that decides now. Seeds 101–120; Clopper-Pearson 95% intervals.
+  - **Why they change:** the 20-seed null study and the calibration ran before random-split contrasts became descriptive and before the sentinel existed. Their old rates were over both splits, as both decided then, and no summary held a `descriptive` or `unreliable` row. The new rates are over the lineage split alone, the only split that decides now, with each lineage contrast decided as the code decides it now: family C holds the lineage split only, so Benjamini-Hochberg adjusts each seed's 55 lineage contrasts, not the 110 of both splits the stored decisions were adjusted over (REVIEW-NULL16 L3). Seeds 101–120; Clopper-Pearson 95% intervals.
 
   | Arm | Old, both splits | New, lineage only | `worse` old → new |
   |---|---|---|---|
   | cap-1000 | 13/200 = 6.5% | 6/100 = 6.0% [2.2, 12.6] | 133 → 65 |
   | cap-4000 | 45/200 = 22.5% | 33/100 = 33.0% [23.9, 43.1] | 40 → 10 |
-  | grr-v1 | 35/200 = 17.5% | 23/100 = 23.0% [15.2, 32.5] | 55 → 12 |
-  | cohort arms pooled | 93/600 = 15.5% | 62/300 = 20.7% | |
-  | k21, k25, budget-1000, budget-16000 pooled | 141/800 = 17.6% | 55/400 = 13.8% | |
+  | grr-v1 | 35/200 = 17.5% | 24/100 = 24.0% [16.0, 33.6] | 55 → 12 |
+  | cohort arms pooled | 93/600 = 15.5% | 63/300 = 21.0% [16.5, 26.1] | |
+  | k21, k25, budget-1000, budget-16000 pooled | 141/800 = 17.6% | 52/400 = 13.0% [9.9, 16.7] | |
   | K+C (now `k-c`) | 2/200 = 1.0% | 2/100 = 2.0% | 1 → 0 |
   | K+H, K+P, K+C+H+P | 200/200 each | 100/100 each | 0 |
   | calibration, seed twin (b2) | 4/200 = 2.0% improves, 6/200 = 3.0% worse | 1/100 = 1.0% improves, 0/100 worse | |
   | calibration, cohort path (b1) | 0/200 | 0/100 | |
 
-  - **One sentence above no longer holds:** on the lineage split, the cohort arms' no-signal `improves` rate (20.7%) is above the same-sample arms' (13.8%), not below it. The point stands that model-changing arms differ in log loss with no k-mer signal.
-  - **Calibration still passes,** with both arms at or below 5% on the lineage split. The sentinel fired on none of the 20 stored seeds.
+  - **Lineage-only Benjamini-Hochberg moves 4 of 1,100 decisions** (`logs/rebh17.json` in lane INPUT17's folder; J's own `stats.bh` reproduces all 2,200 stored `p_adj` over both splits first). k21 loses two `improves` (20 → 18), k25 one (19 → 18), and grr-v1 gains one (23 → 24). With the stored decisions the lineage figures were grr-v1 23/100, cohort pooled 62/300 = 20.7% and same-sample pooled 55/400 = 13.8%. No `worse` moves, and no calibration decision moves.
+  - **One sentence above no longer holds:** on the lineage split, the cohort arms' no-signal `improves` rate (21.0%) is above the same-sample arms' (13.0%), not below it. That is a point estimate, not a clear difference: the two Clopper-Pearson intervals overlap ([16.5, 26.1] and [9.9, 16.7]), and both are optimistic because contrasts within a seed are correlated; cap-1000 alone (6.0%) is below the same-sample pool. The point stands that model-changing arms differ in log loss with no k-mer signal.
+  - **Calibration still passes,** with both arms at or below 5% on the lineage split. The stored seeds predate the sentinel (no sentinel arm ran and no summary has an `unreliable` list), so they say nothing about how often it fires.
   - **The per-kind base rates in `spec.json`** (cap-down 14.0%, cap-up 16.0%, selection-swap 18.0%) didn't come from the null study. The re-keying twin counted them from J's lineage-split records, and they recompute unchanged.
   - **K's rule 9** now gives the seed twin's lineage figures (1.0% `improves`, 0.0% `worse`) beside the both-split ones.
 
@@ -405,6 +406,15 @@ Main ruled on all four questions from the first build: the class balance (the ba
   - `test_the_synthetic_flag_is_named_in_the_header` (K): the header for each value, and the schema refusals.
   - The e2e checks that its manifest records `passed`.
   - The other stub tests use RAWs that aren't synthetic roots, so they stand the check down and test what comes after it.
+- **Added after REVIEW-INTEG7B:** the refusal test also asserts that WORK holds no `inputs.json`, which pins the check before RAW is hashed (L1), and `test_the_manifest_records_whether_the_gate_ran` runs `run.main` past the manifest with the counting, arm and contrast steps stubbed: `not_required` for an ungated synthetic run, `passed` with the gate (L2).
+
+## After REVIEW-NULL16 (main's rulings, 6 Nov 2026)
+
+- **The null study needs 20 seeds with a lineage contrast per arm (L1).** `pass` counted summary files, so a calibration arm with lineage contrasts in 1 of 20 seeds (95 not produced) passed on "improves 0/5". Now every arm the study judges (each calibration arm; the cohort and planted arms of the null study) needs a lineage contrast in at least 20 seeds. `report` prints each arm's not-produced count and its seeds with a lineage contrast, and the total not produced.
+- **Old arm names (I3).** `report` reads the stored seeds' `K+C`, `K+H`, `K+P` and `K+C+H+P` as `k-c`, `k-h`, `k-p` and `k-c-h-p`, so it runs on them without a patch.
+- **The repeats refusal names the cohort-paired arms (I4).**
+- **The lineage-only figures** in the section above now use Benjamini-Hochberg over the lineage contrasts alone (L3), and say what the stored seeds can't show about the sentinel (L4).
+- **Tests:** `test_null_study_passes_only_with_a_lineage_contrast_in_20_seeds_per_arm` (the reviewer's 1-of-20 case, the 20/19 boundary, and a null study with one cohort arm in 19 seeds), `test_null_study_reads_summaries_written_before_the_mask` and `test_null_study_counts_a_contrast_not_produced_apart_and_refuses_an_arm_without_any` (L2: the reviewer's surviving mutants B2 and C1–C3), `test_null_study_reads_the_arm_names_from_before_the_rename`, and the arm names in `test_a_spec_with_repeats_and_a_cohort_arm_is_refused`.
 
 ## Cost
 
