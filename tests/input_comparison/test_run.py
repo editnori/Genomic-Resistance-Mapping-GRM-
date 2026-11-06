@@ -937,7 +937,12 @@ ids = [f"g{i:03d}" for i in range(50)]
         spec["repeats"] = 2
         with self.assertRaises(SystemExit) as e:
             run.load_spec(self.write(spec))
-        self.assertIn("repeats 2 with a cohort-paired arm", str(e.exception))
+        # REVIEW-NULL16 I4: the refusal names the arms.
+        self.assertIn("repeats 2 with a cohort-paired arm (cap-1000, cap-4000, grr-v1)", str(e.exception))
+        spec["arms"] = [{"name": "k-h", "blocks": ["K", "H"]}, {"name": "cap-4000", "cap": 4000}]
+        with self.assertRaises(SystemExit) as e:
+            run.load_spec(self.write(spec))
+        self.assertIn("repeats 2 with a cohort-paired arm (cap-4000):", str(e.exception))
         spec["arms"] = [{"name": "k-h", "blocks": ["K", "H"]}]
         run.load_spec(self.write(spec))
 
