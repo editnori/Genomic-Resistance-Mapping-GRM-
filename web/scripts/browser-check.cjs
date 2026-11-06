@@ -70,6 +70,24 @@ const longRule = manifest.datasets.find(d => d.scm_rules.length === 1 && d.scm_r
 // as its genus initial joined to the rest by a non-breaking space, so the
 // short form never ends a line ("Synthetic species C", "S. species C").
 const speciesNames = species => { const [genus, ...rest] = species.split(' '); return rest.length > 0 ? [species, genus.charAt(0) + '.\u00a0' + rest.join(' ')] : [species]; };
+// The dataset and error view whose interval text runs widest, in characters
+// as the learner table prints it (one decimal), from the tree's own
+// intervals/; null for a tree without them.
+const widestInterval = (() => {
+  const dir = path.join(FIXTURE, 'intervals');
+  if (!fs.existsSync(dir)) return null;
+  const text = ci => (ci ? (ci.lo * 100).toFixed(1) + '%–' + (ci.hi * 100).toFixed(1) + '%' : '');
+  let widest = null;
+  for (const name of fs.readdirSync(dir).sort()) {
+    const id = name.replace(/\.json$/, '');
+    if (!byId.has(id)) continue;
+    for (const s of JSON.parse(fs.readFileSync(path.join(dir, name))).splits) {
+      const chars = Math.max(0, ...s.learners.map(l => text(l.vme).length)) + Math.max(0, ...s.learners.map(l => text(l.me).length));
+      if (widest === null || chars > widest.chars) widest = { id, scheme: s.scheme, chars };
+    }
+  }
+  return widest;
+})();
 const inspectId = manifest.datasets.some(d => d.id === 'escherichia_coli__ceftriaxone') ? 'escherichia_coli__ceftriaxone' : manifest.datasets[0].id;
 const speciesSlug = manifest.species.find(s => s.slug === 'escherichia_coli' && s.genomes_analyzed > 0)?.slug ?? manifest.species.find(s => s.genomes_analyzed > 0).slug;
 const speciesName = manifest.species.find(s => s.slug === speciesSlug).species;
@@ -473,6 +491,25 @@ async function intervalCheck(page, tag) {
   const counts = shown?.map(e => (e.title.match(/^([\d,]+ of [\d,]+)/)?.[1] ?? '').replace(/,/g, ''));
   const ok = shown !== null && shown.length === want.length && want.length > 0 && JSON.stringify([...counts].sort()) === JSON.stringify([...want].sort()) && shown.every(e => /^95% interval \d+\.\d%–\d+\.\d%$/.test(e.text));
   check(name, ok, { want: want.length, shown: shown?.slice(0, 4) });
+}
+
+/** The learner table must fit its frame at desktop widths with the widest
+ *  interval text the tree holds, in the error view that prints it, not
+ *  only for the inspected dataset's default view. */
+async function widestIntervalFit(page, tag) {
+  const name = tag + ' learner table with the widest interval text fits without sideways scroll';
+  if (widestInterval === null) { skipped.push({ check: name, reason: 'no intervals/ in this tree' }); return; }
+  const ranges = '#ds-learners td span[title$="isolates called susceptible"], #ds-learners td span[title$="isolates called resistant"]';
+  await page.goto(BASE + '/datasets?dataset=' + widestInterval.id);
+  await page.locator('#ds-lineages [role="listbox"]').waitFor({ timeout: 10000 }).catch(() => {});
+  await page.locator(ranges).first().waitFor({ timeout: 5000 }).catch(() => {});
+  if (widestInterval.scheme === 'lineage') await page.getByRole('button', { name: 'Errors, lineages held out' }).click({ timeout: 2000 }).catch(() => {});
+  const frame = await page.locator('dialog [role="region"][aria-label="Learner comparison"]').evaluate(async (e, sel) => {
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return { scroll: e.scrollWidth, client: e.clientWidth, ranges: document.querySelectorAll(sel).length, pressed: document.querySelector('#ds-learners [role="group"][aria-label="Errors measured under"] [aria-pressed="true"]')?.textContent ?? null };
+  }, ranges, { timeout: 5000 }).catch(() => null);
+  const view = widestInterval.scheme === 'lineage' ? 'Errors, lineages held out' : 'Errors, random split';
+  check(name, frame !== null && frame.ranges > 0 && frame.pressed === view && frame.scroll <= frame.client + 1, { ...widestInterval, ...frame });
 }
 
 async function interactions(page, tag, width) {
@@ -1101,7 +1138,7 @@ async function boundaries(browser) {
         await page.goto(BASE);
         await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
         await present(page, tag, width, height);
-        if (width === 1280) { await interactions(page, tag, width); await context.close(); continue; }
+        if (width === 1280) { await interactions(page, tag, width); await widestIntervalFit(page, tag); await context.close(); continue; }
         for (const [route, title, key] of [['/', 'What GRM found', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/methods', 'Data & Methods', 'methods']]) {
           await page.goto(BASE + route);
           await page.getByRole('heading', { name: title, exact: true }).first().waitFor();
@@ -1122,6 +1159,7 @@ async function boundaries(browser) {
         await shot(page, tag + '-inspector');
         await intervalCheck(page, tag);
         await interactions(page, tag, width);
+        if (width >= 1280) await widestIntervalFit(page, tag);
         await states(browser, width, height, theme);
       } catch (error) { errors.push({ theme, width, message: error.stack }); }
       await context.close();
