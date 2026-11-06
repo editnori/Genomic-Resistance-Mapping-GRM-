@@ -909,6 +909,30 @@ ids = [f"g{i:03d}" for i in range(50)]
         self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
         self.assertFalse(r["pass"])
 
+    def test_the_calibration_judges_the_runner_s_sentinel_too(self):
+        """REVIEW-INPUT17B L1 (mutant N3e): the calibration judges every arm its summaries hold, the runner's sentinel
+        included, but no test held a sentinel. With both named arms in 20 seeds and the sentinel in 19, it fails and
+        names the sentinel; with the sentinel in 20 too, it passes."""
+        arms = run.load_spec(HERE / "calibration.json")[2]
+        self.assertEqual([a["name"] for a in arms], [*null_study.CALIBRATION_ARMS, run.SENTINEL["name"]])
+        named = [r for a in null_study.CALIBRATION_ARMS for r in self.null_records(a, {})]
+        random_only, missing = self.null_unproduced(run.SENTINEL["name"])
+        for produced, passes in ((19, False), (20, True)):
+            with tempfile.TemporaryDirectory() as tmp:
+                self.null_seeds(tmp, arms, named + self.null_records(run.SENTINEL["name"], {}), seeds=produced)
+                self.null_seeds(tmp, arms, named + random_only, seeds=20 - produced, missing=missing, start=produced)
+                r = null_study.report([tmp], calibration=True)
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    null_study.main(["report", tmp, "--calibration"])
+            self.assertEqual([r["arms"][a]["seeds"] for a in null_study.CALIBRATION_ARMS], [20, 20])
+            self.assertEqual((r["arms"][run.SENTINEL["name"]]["seeds"], r["missing_arms"], r["pass"]),
+                             (produced, [], passes))
+            self.assertEqual(r["thin_arms"], [] if passes else [run.SENTINEL["name"]])
+            self.assertIn("calibration: seeds 20; pass True" if passes else
+                          "calibration: seeds 20; pass False (arm sentinel-seed-twin has a lineage contrast in 19 "
+                          "seeds, under 20)", out.getvalue())
+
     def test_a_seed_is_the_one_its_cohort_json_records(self):
         """REVIEW-INPUT17B L2 (its cases B1-B3): seeds were keyed by folder name, so 10 seeds passed as 20 beside
         `seed-0101` copies, `.bak` copies or copies renamed to seeds 111-120. Now a seed is cohort.json's: its copies
