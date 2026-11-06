@@ -775,12 +775,63 @@ ids = [f"g{i:03d}" for i in range(50)]
                             "decision": lineage.get(learner, "inconclusive") if split == "lineage" else "inconclusive"})
         return out
 
-    def null_seeds(self, top, arms, contrasts, unreliable=(), seeds=20):
-        for s in range(seeds):
+    def null_seeds(self, top, arms, contrasts, unreliable=(), seeds=20, missing=None, start=0):
+        for s in range(start, start + seeds):
             d = Path(top) / f"seed-{s}"
             d.mkdir(parents=True)
-            summary = {"arms": run.summarize(SPEC, arms, contrasts, {}, list(unreliable)), "unreliable": list(unreliable)}
+            summary = {"arms": run.summarize(SPEC, arms, contrasts, missing or {}, list(unreliable)),
+                       "unreliable": list(unreliable)}
             (d / "summary.json").write_text(json.dumps(summary))
+
+    def null_unproduced(self, arm):
+        """One arm's records with every lineage contrast not produced: the random-split rows, and the lineage ids
+        with a reason, as run.contrasts() gives them to summarize()."""
+        rows = self.null_records(arm, {})
+        missing = {x["id"]: "the gbt holdout lacks a class" for x in rows if x["split"] == "lineage"}
+        return [x for x in rows if x["split"] == "random"], missing
+
+    def test_null_study_passes_only_with_a_lineage_contrast_in_20_seeds_per_arm(self):
+        """REVIEW-NULL16 L1 (its case R4): a calibration arm with lineage contrasts in 1 of 20 seeds, 95 not produced,
+        passed on "improves 0/5" because the gate counted summary files. Now each arm needs 20 seeds that gave it a
+        lineage contrast, and the not-produced count is printed."""
+        twin = [{"name": "seed-twin", "factor": "calibration", "pairing": "same_plan"}]
+        random_only, missing = self.null_unproduced("seed-twin")
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, twin, self.null_records("seed-twin", {}), seeds=1)
+            self.null_seeds(tmp, twin, random_only, seeds=19, missing=missing, start=1)
+            r = null_study.report([tmp], calibration=True)
+            a = r["arms"]["seed-twin"]
+            self.assertEqual((r["seeds"], a["seeds"], a["contrasts"], a["not_produced"], a["improves"]),
+                             (20, 1, 5, 95, 0))
+            self.assertFalse(r["pass"])
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                null_study.main(["report", tmp, "--calibration"])
+            self.assertIn("not produced 95; seeds with a lineage contrast 1/20", out.getvalue())
+            self.assertIn("lineage contrasts not produced: 95", out.getvalue())
+            self.assertIn("calibration: seeds 20; pass False", out.getvalue())
+        # 25 summaries: 20 seeds with the arm's lineage contrasts pass, 19 don't.
+        for produced, passes in ((20, True), (19, False)):
+            with tempfile.TemporaryDirectory() as tmp:
+                self.null_seeds(tmp, twin, self.null_records("seed-twin", {}), seeds=produced)
+                self.null_seeds(tmp, twin, random_only, seeds=25 - produced, missing=missing, start=produced)
+                r = null_study.report([tmp], calibration=True)
+            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (25, produced, passes))
+        # The null study: one cohort arm short of 20 such seeds fails it, all else passing.
+        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
+        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
+                 for a in null_study.COHORT_ARMS]
+        planted = [r for a in null_study.PLANTED_ARMS for r in self.null_records(a, {l: "improves" for l in run.LEARNERS})]
+        full = planted + [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
+        short, gone = self.null_unproduced("grr-v1")
+        thin = planted + [r for a in null_study.COHORT_ARMS[:-1] for r in self.null_records(a, {})] + short
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, arms, full, seeds=19)
+            self.null_seeds(tmp, arms, thin, seeds=1, missing=gone, start=19)
+            r = null_study.report([tmp])
+        self.assertEqual((r["arms"]["grr-v1"]["seeds"], r["arms"]["grr-v1"]["not_produced"]), (19, 5))
+        self.assertEqual(r["arms"]["cap-1000"]["seeds"], 20)
+        self.assertFalse(r["pass"])
 
     def test_null_study_rates_count_decision_bearing_lineage_contrasts_only(self):
         """PR #69's review (null_study.py:144): today's summaries mark random-split rows descriptive; they must not
