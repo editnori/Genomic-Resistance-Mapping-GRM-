@@ -5,13 +5,18 @@
 carriage of a blaKPC family K cannot see, so every arm that changes only the K model has no
 signal to find), runs the decided comparison on it (run.py, spec.json) and keeps each seed's
 summary.json and J contrasts; the data roots are deleted after each seed. `report` pools the
-kept seeds: per arm, the share of its family C contrasts (5 learners x 2 splits per seed) that
-are `improves`, with a Clopper-Pearson 95% interval, and the share of seeds with any
-`improves`. Contrasts within a seed are correlated (one cohort, one test set), so the
-per-contrast interval is optimistic; the per-seed share is the conservative unit.
+kept seeds over the decision-bearing contrasts only: the lineage split's (5 learners per seed),
+as J decided them (summary.json `raw_decisions`, before K's sentinel mask; a summary written
+before the mask existed has only `decisions`, which are then J's). Random-split contrasts are
+descriptive since main's ruling after the calibration study and never enter a rate; a contrast
+not produced is counted apart. Per arm: the share of its lineage contrasts that are `improves`,
+with a Clopper-Pearson 95% interval, and the share of seeds with any `improves`. Contrasts
+within a seed are correlated (one cohort, one test set), so the per-contrast interval is
+optimistic; the per-seed share is the conservative unit. Each seed's sentinel firings (K's
+`unreliable` list) are reported apart (PR #69's review).
 
 Every arm also gets cluster-robust rates with the seed as the cluster: each seed's share of
-`improves` (and of `worse`) over its 10 contrasts, averaged over seeds, with a 95% Student t
+`improves` (and of `worse`) over its lineage contrasts, averaged over seeds, with a 95% Student t
 interval on the per-seed shares (seeds are independent). `--spec calibration.json` runs the
 calibration arms, which are exchangeable with the default: there every `improves` or `worse`
 is a false positive, and the procedure passes when each arm's mean per-seed rate of each is at
@@ -130,24 +135,50 @@ def per_seed(shares):
     return {"mean": mean, "ci95": [mean - half, mean + half], "seeds": s}
 
 
+def lineage_decisions(arm):
+    """One arm's decision-bearing contrasts in one seed's summary.json: the lineage split's, as J decided them
+    (`raw_decisions` where present, so K's sentinel mask hides nothing), and how many were not produced."""
+    raw = arm.get("raw_decisions", {})
+    made, missing = [], 0
+    for key, shown in arm["decisions"].items():
+        if key.rsplit(":", 1)[-1] != "lineage":
+            continue
+        if shown.startswith("not produced"):
+            missing += 1
+        else:
+            made.append(raw.get(key, shown))
+    return made, missing
+
+
 def report(dirs, calibration=False):
     summaries = sorted(p for d in dirs for p in Path(d).glob("seed-*/summary.json"))
     arms = {}
+    firings = {"seeds_with_a_firing": 0, "firings": 0, "learners": {}}
     for path in summaries:
-        for arm, s in json.loads(path.read_text())["arms"].items():
+        summary = json.loads(path.read_text())
+        fired = summary.get("unreliable", [])
+        firings["seeds_with_a_firing"] += bool(fired)
+        firings["firings"] += len(fired)
+        for u in fired:
+            firings["learners"][u["learner"]] = firings["learners"].get(u["learner"], 0) + 1
+        for arm, s in summary["arms"].items():
             a = arms.setdefault(arm, {"contrasts": 0, "improves": 0, "worse": 0, "seeds": 0,
                                       "seeds_any_improves": 0, "not_produced": 0,
                                       "_improves": [], "_worse": []})
-            decisions = list(s["decisions"].values())
+            decisions, missing = lineage_decisions(s)
+            a["not_produced"] += missing
+            if not decisions:
+                continue
             a["_improves"].append(decisions.count("improves") / len(decisions))
             a["_worse"].append(decisions.count("worse") / len(decisions))
             a["contrasts"] += len(decisions)
             a["improves"] += decisions.count("improves")
             a["worse"] += decisions.count("worse")
-            a["not_produced"] += sum(d.startswith("not produced") for d in decisions)
             a["seeds"] += 1
             a["seeds_any_improves"] += "improves" in decisions
-    for a in arms.values():
+    for name, a in arms.items():
+        if not a["contrasts"]:
+            raise SystemExit(f"arm {name}: no lineage contrast was produced in any seed")
         a["per_seed_improves"] = per_seed(a.pop("_improves"))
         a["per_seed_worse"] = per_seed(a.pop("_worse"))
         a["improves_rate"] = a["improves"] / a["contrasts"]
@@ -157,14 +188,14 @@ def report(dirs, calibration=False):
         ok = all(a["per_seed_improves"]["mean"] <= ALPHA and a["per_seed_worse"]["mean"] <= ALPHA
                  for a in arms.values())
         return {"seeds": len(summaries), "nominal_alpha": ALPHA, "cluster": "seed", "arms": arms,
-                "pass": len(summaries) >= 20 and ok}
+                "split": "lineage", "sentinel_firings": firings, "pass": len(summaries) >= 20 and ok}
     cohort = {k: sum(arms[a][k] for a in COHORT_ARMS) for k in ("contrasts", "improves", "worse", "seeds",
                                                                   "seeds_any_improves")}
     cohort["improves_rate"] = cohort["improves"] / cohort["contrasts"]
     cohort["improves_ci95"] = clopper_pearson(cohort["improves"], cohort["contrasts"])
     planted = {a: arms[a]["improves"] / arms[a]["contrasts"] for a in PLANTED_ARMS}
     return {"seeds": len(summaries), "nominal_alpha": ALPHA, "arms": arms, "cohort_arms_pooled": cohort,
-            "planted_improves_share": planted,
+            "planted_improves_share": planted, "split": "lineage", "sentinel_firings": firings,
             "pass": (len(summaries) >= 20 and cohort["improves_rate"] <= ALPHA
                      and all(arms[a]["improves_rate"] <= ALPHA for a in COHORT_ARMS)
                      and all(v == 1.0 for v in planted.values()))}
@@ -199,6 +230,9 @@ def main(argv):
     for name, x in sorted(result["arms"].items()):
         print(f"{name:<14} per-seed improves {fmt(x['per_seed_improves'])}  worse {fmt(x['per_seed_worse'])}  "
               f"(contrasts: improves {x['improves']}/{x['contrasts']}, worse {x['worse']})")
+    f = result["sentinel_firings"]
+    print(f"lineage split only, as J decided; the sentinel fired {f['firings']} times in {f['seeds_with_a_firing']} of "
+          f"{result['seeds']} seeds {f['learners'] or ''}")
     if a.calibration:
         print(f"calibration: seeds {result['seeds']}; pass {result['pass']}")
         return
