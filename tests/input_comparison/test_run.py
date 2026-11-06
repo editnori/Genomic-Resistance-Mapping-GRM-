@@ -387,6 +387,8 @@ ids = [f"g{i:03d}" for i in range(50)]
                     self.assertIn("is not a synthetic root", str(code), (kwargs, flags))
                     self.assertIn(message, str(code), (kwargs, flags))
                     self.assertFalse((Path(tmp) / "work" / "roots").exists(), (kwargs, flags))
+                    # REVIEW-INTEG7B L1: the check comes before RAW is hashed (check_inputs writes inputs.json).
+                    self.assertFalse((Path(tmp) / "work" / run.INPUTS).exists(), (kwargs, flags))
             # A spec without "synthetic" isn't checked here; it needs its gate instead.
             spec = self.stub_spec(tmp)
             plain = json.loads(spec.read_text())
@@ -424,6 +426,37 @@ ids = [f"g{i:03d}" for i in range(50)]
             self.assertNotIn("NOT REQUIRED", err.getvalue())
         # A real spec's line names no synthetic flag.
         self.assertTrue(run.gate_line(gate, {}).endswith("equal revision 12's"))
+
+    def test_the_manifest_records_whether_the_gate_ran(self):
+        """REVIEW-INTEG7B L2: an ungated synthetic run's manifest records revision12_gate "not_required" and a gated
+        one "passed". run.main runs past the manifest with the counting, arm and contrast steps stubbed, and stops
+        at K's report."""
+        def manifest_after(tmp, spec=None):
+            pool = Path(tmp) / "structure.json"
+            pool.write_text(json.dumps({"genomes": [f"g{i:03d}" for i in range(50)], "lineages": {"n_clusters": 1}}))
+            with mock.patch.object(run.Runner, "check_synthetic", SYNTHETIC_CHECK), \
+                    mock.patch.object(run.Runner, "check_disk", lambda *a: None), \
+                    mock.patch.object(run.Runner, "pool", lambda *a: pool), \
+                    mock.patch.object(run.Runner, "root", lambda *a: None), \
+                    mock.patch.object(run.Runner, "arm", lambda *a: None), \
+                    mock.patch.object(run, "contrasts", lambda *a: ([], [], {})), \
+                    mock.patch.object(run, "manifest", lambda *a: {}), \
+                    mock.patch.object(run.k_report, "build_report", side_effect=SystemExit("stopped after the manifest")), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                code, _ = self.main(tmp, "--free-disk-bytes", str(10 ** 15), spec=spec)
+            self.assertEqual(code, "stopped after the manifest")
+            m = json.loads((Path(tmp) / "work" / "k" / "manifest.json").read_text())
+            return m["synthetic"], m["revision12_gate"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self.stub_grm(tmp)
+            self.synthetic_raw(tmp)
+            self.assertEqual(manifest_after(tmp), (True, "not_required"))
+            root = next(r for r in (Path(tmp) / "work" / "roots").iterdir()
+                        if json.loads((r / "curated.json").read_text())["arm"] == "default")
+            gate = {"genome_order": {SPEC["species"]: json.loads((root / "curated.json").read_text())["drawn_order_sha256"]},
+                    "datasets_json_sha256": run.datasets_view(root / "curated" / "datasets.json")}
+            self.assertEqual(manifest_after(tmp, self.stub_spec(tmp, revision12_gate=gate)), (True, "passed"))
 
     def test_the_gate_s_datasets_view_drops_only_selection_records(self):
         """REVIEW-INPUT8 M1: this tree's curate adds `selection` to every dataset; the view serializes the rest as
@@ -775,12 +808,171 @@ ids = [f"g{i:03d}" for i in range(50)]
                             "decision": lineage.get(learner, "inconclusive") if split == "lineage" else "inconclusive"})
         return out
 
-    def null_seeds(self, top, arms, contrasts, unreliable=(), seeds=20):
-        for s in range(seeds):
+    def null_seeds(self, top, arms, contrasts, unreliable=(), seeds=20, missing=None, start=0):
+        for s in range(start, start + seeds):
             d = Path(top) / f"seed-{s}"
             d.mkdir(parents=True)
-            summary = {"arms": run.summarize(SPEC, arms, contrasts, {}, list(unreliable)), "unreliable": list(unreliable)}
+            summary = {"arms": run.summarize(SPEC, arms, contrasts, missing or {}, list(unreliable)),
+                       "unreliable": list(unreliable)}
             (d / "summary.json").write_text(json.dumps(summary))
+
+    def null_unproduced(self, arm):
+        """One arm's records with every lineage contrast not produced: the random-split rows, and the lineage ids
+        with a reason, as run.contrasts() gives them to summarize()."""
+        rows = self.null_records(arm, {})
+        missing = {x["id"]: "the gbt holdout lacks a class" for x in rows if x["split"] == "lineage"}
+        return [x for x in rows if x["split"] == "random"], missing
+
+    def calibration_arms(self):
+        """calibration.json's arms as summarize() takes them."""
+        return [{"name": a["name"], "factor": "calibration", "pairing": a["pairing"]}
+                for a in run.load_spec(HERE / "calibration.json")[2] if not a.get("sentinel")]
+
+    def test_the_calibration_judges_every_arm_its_spec_names(self):
+        """REVIEW-INPUT17 M1: the gate judged only the arms it found, so an empty folder printed "seeds 0; pass True"
+        and a calibration arm absent from every seed passed. Now cohort-path and seed-twin are judged by name; no
+        seeds or a missing arm fails and is named, a mistyped folder is refused, and the null study names a missing
+        arm instead of raising KeyError."""
+        self.assertEqual(null_study.CALIBRATION_ARMS, ("cohort-path", "seed-twin"))
+        self.assertEqual([a["name"] for a in self.calibration_arms()], list(null_study.CALIBRATION_ARMS))
+        with tempfile.TemporaryDirectory() as tmp:
+            r = null_study.report([tmp], calibration=True)
+            self.assertEqual((r["seeds"], r["missing_arms"], r["pass"]), (0, ["cohort-path", "seed-twin"], False))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                null_study.main(["report", tmp, "--calibration"])
+            self.assertIn(f"calibration: seeds 0; pass False (no seed summaries in {tmp}; arm cohort-path is in no "
+                          "seed; arm seed-twin is in no seed)", out.getvalue())
+            # A mistyped folder is refused, in both studies.
+            for flags in ([], ["--calibration"]):
+                with self.assertRaises(SystemExit) as e:
+                    null_study.main(["report", str(Path(tmp) / "seeds-typo"), *flags])
+                self.assertEqual(str(e.exception), f"{Path(tmp) / 'seeds-typo'}: no such folder")
+            # Empty, the null study names the arms it can't find.
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([tmp])
+            self.assertIn("null study: arm cap-1000, cap-4000, grr-v1, k-h, k-p, k-c-h-p is in no seed's summary.json "
+                          "(0 summaries)", str(e.exception))
+        # seed-twin absent from all 20 seeds; cohort-path clean in each.
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, self.calibration_arms()[:1], self.null_records("cohort-path", {}))
+            r = null_study.report([tmp], calibration=True)
+            self.assertEqual((r["arms"]["cohort-path"]["seeds"], r["missing_arms"], r["pass"]),
+                             (20, ["seed-twin"], False))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                null_study.main(["report", tmp, "--calibration"])
+            self.assertIn("calibration: seeds 20; pass False (arm seed-twin is in no seed)", out.getvalue())
+        # The null study with grr-v1 in no seed.
+        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
+        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
+                 for a in null_study.COHORT_ARMS[:-1]]
+        con = [r for a in null_study.PLANTED_ARMS for r in self.null_records(a, {l: "improves" for l in run.LEARNERS})]
+        con += [r for a in null_study.COHORT_ARMS[:-1] for r in self.null_records(a, {})]
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, arms, con)
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([tmp])
+        self.assertIn("null study: arm grr-v1 is in no seed's summary.json (20 summaries)", str(e.exception))
+
+    def test_every_judged_arm_needs_20_seeds_not_any(self):
+        """REVIEW-INPUT17 L1 (mutants N3 and N4): with two calibration arms, one in 20 seeds and one in 19, the
+        calibration fails; in the null study, a planted arm in 19 seeds fails it as a cohort arm does."""
+        both = self.calibration_arms()
+        random_only, missing = self.null_unproduced("cohort-path")
+        twin = self.null_records("seed-twin", {})
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, both, self.null_records("cohort-path", {}) + twin, seeds=19)
+            self.null_seeds(tmp, both, random_only + twin, seeds=1, missing=missing, start=19)
+            r = null_study.report([tmp], calibration=True)
+        self.assertEqual((r["arms"]["seed-twin"]["seeds"], r["arms"]["cohort-path"]["seeds"]), (20, 19))
+        self.assertEqual((r["missing_arms"], r["thin_arms"], r["pass"]), ([], ["cohort-path"], False))
+        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
+        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
+                 for a in null_study.COHORT_ARMS]
+        cohort = [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
+        planted = {a: self.null_records(a, {l: "improves" for l in run.LEARNERS}) for a in null_study.PLANTED_ARMS}
+        short, gone = self.null_unproduced("k-p")
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, arms, cohort + [r for rows in planted.values() for r in rows], seeds=19)
+            self.null_seeds(tmp, arms, cohort + planted["k-h"] + planted["k-c-h-p"] + short, seeds=1, missing=gone,
+                            start=19)
+            r = null_study.report([tmp])
+        self.assertEqual((r["arms"]["k-p"]["seeds"], r["arms"]["k-h"]["seeds"], r["arms"]["grr-v1"]["seeds"]),
+                         (19, 20, 20))
+        self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
+        self.assertFalse(r["pass"])
+
+    def test_a_seed_counts_once_however_many_folders_hold_it(self):
+        """REVIEW-INPUT17 L2: the same 10-seed folder given twice, or two folders holding the same seeds, counted 20
+        seeds and passed. Byte-identical summaries of one seed now count once; different ones are refused."""
+        both = self.calibration_arms()
+        con = self.null_records("cohort-path", {}) + self.null_records("seed-twin", {})
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a", Path(tmp) / "b"
+            self.null_seeds(a, both, con, seeds=10)
+            self.null_seeds(b, both, con, seeds=10)
+            for dirs in ([a, a], [a, b]):
+                r = null_study.report(dirs, calibration=True)
+                self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["thin_arms"], r["pass"]),
+                                 (10, 10, ["cohort-path", "seed-twin"], False), dirs)
+            # Seeds 10-19 in a third folder make 20 distinct seeds.
+            c = Path(tmp) / "c"
+            self.null_seeds(c, both, con, seeds=10, start=10)
+            r = null_study.report([a, b, c], calibration=True)
+            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (20, 20, True))
+            # The same seed with other content is refused, naming both files.
+            (b / "seed-3" / "summary.json").write_text(json.dumps({"arms": {}}))
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([a, b], calibration=True)
+            self.assertEqual(str(e.exception), f"seed seed-3 has two different summaries: {a / 'seed-3' / 'summary.json'} "
+                                               f"and {b / 'seed-3' / 'summary.json'}")
+
+    def test_null_study_passes_only_with_a_lineage_contrast_in_20_seeds_per_arm(self):
+        """REVIEW-NULL16 L1 (its case R4): a calibration arm with lineage contrasts in 1 of 20 seeds, 95 not produced,
+        passed on "improves 0/5" because the gate counted summary files. Now each arm needs 20 seeds that gave it a
+        lineage contrast, and the not-produced count is printed."""
+        twin = [{"name": "seed-twin", "factor": "calibration", "pairing": "same_plan"}]
+        random_only, missing = self.null_unproduced("seed-twin")
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, twin, self.null_records("seed-twin", {}), seeds=1)
+            self.null_seeds(tmp, twin, random_only, seeds=19, missing=missing, start=1)
+            r = null_study.report([tmp], calibration=True)
+            a = r["arms"]["seed-twin"]
+            self.assertEqual((r["seeds"], a["seeds"], a["contrasts"], a["not_produced"], a["improves"]),
+                             (20, 1, 5, 95, 0))
+            self.assertFalse(r["pass"])
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                null_study.main(["report", tmp, "--calibration"])
+            self.assertIn("not produced 95; seeds with a lineage contrast 1/20", out.getvalue())
+            self.assertIn("lineage contrasts not produced: 95", out.getvalue())
+            self.assertIn("calibration: seeds 20; pass False", out.getvalue())
+        # 25 summaries of both calibration arms: 20 seeds with seed-twin's lineage contrasts pass, 19 don't.
+        both = self.calibration_arms()
+        path = [r for r in self.null_records("cohort-path", {})]
+        for produced, passes in ((20, True), (19, False)):
+            with tempfile.TemporaryDirectory() as tmp:
+                self.null_seeds(tmp, both, path + self.null_records("seed-twin", {}), seeds=produced)
+                self.null_seeds(tmp, both, path + random_only, seeds=25 - produced, missing=missing, start=produced)
+                r = null_study.report([tmp], calibration=True)
+            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (25, produced, passes))
+            self.assertEqual(r["thin_arms"], [] if passes else ["seed-twin"])
+        # The null study: one cohort arm short of 20 such seeds fails it, all else passing.
+        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
+        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
+                 for a in null_study.COHORT_ARMS]
+        planted = [r for a in null_study.PLANTED_ARMS for r in self.null_records(a, {l: "improves" for l in run.LEARNERS})]
+        full = planted + [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
+        short, gone = self.null_unproduced("grr-v1")
+        thin = planted + [r for a in null_study.COHORT_ARMS[:-1] for r in self.null_records(a, {})] + short
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, arms, full, seeds=19)
+            self.null_seeds(tmp, arms, thin, seeds=1, missing=gone, start=19)
+            r = null_study.report([tmp])
+        self.assertEqual((r["arms"]["grr-v1"]["seeds"], r["arms"]["grr-v1"]["not_produced"]), (19, 5))
+        self.assertEqual(r["arms"]["cap-1000"]["seeds"], 20)
+        self.assertFalse(r["pass"])
 
     def test_null_study_rates_count_decision_bearing_lineage_contrasts_only(self):
         """PR #69's review (null_study.py:144): today's summaries mark random-split rows descriptive; they must not
@@ -821,6 +1013,63 @@ ids = [f"g{i:03d}" for i in range(50)]
         self.assertFalse(r["pass"])
         self.assertEqual(r["sentinel_firings"], {"seeds_with_a_firing": 20, "firings": 40, "learners": {"gbt": 20, "rf": 20}})
 
+    def test_null_study_reads_summaries_written_before_the_mask(self):
+        """REVIEW-NULL16 L2 (mutant B2): the stored seeds' summaries have no raw_decisions, and both splits in
+        decisions as J decided them; the study takes the lineage rows from decisions."""
+        decisions = {f"ds:{l}:{split}": "improves" if l == "gbt" or split == "random" else "inconclusive"
+                     for l in run.LEARNERS for split in ("lineage", "random")}
+        with tempfile.TemporaryDirectory() as tmp:
+            for s in range(20):
+                (Path(tmp) / f"seed-{s}").mkdir()
+                (Path(tmp) / f"seed-{s}" / "summary.json").write_text(json.dumps({"arms": {"seed-twin": {
+                    "factor": "calibration", "pairing": "same_plan", "decisions": decisions}}}))
+            r = null_study.report([tmp], calibration=True)
+        a = r["arms"]["seed-twin"]
+        self.assertEqual((a["improves"], a["contrasts"], a["seeds"]), (20, 100, 20))
+        self.assertAlmostEqual(a["per_seed_improves"]["mean"], 0.2)
+        self.assertEqual(r["sentinel_firings"], {"seeds_with_a_firing": 0, "firings": 0, "learners": {}})
+
+    def test_null_study_reads_the_arm_names_from_before_the_rename(self):
+        """REVIEW-NULL16 I3: the stored null seeds name the block arms K+C, K+H, K+P and K+C+H+P (before round 12);
+        `report` reads them under today's names instead of raising KeyError: 'k-h'."""
+        def decisions(value):
+            return {f"ds:{l}:{split}": value for l in run.LEARNERS for split in ("lineage", "random")}
+
+        old = {"K+C": "inconclusive", "K+H": "improves", "K+P": "improves", "K+C+H+P": "improves",
+               **{a: "inconclusive" for a in null_study.COHORT_ARMS}}
+        with tempfile.TemporaryDirectory() as tmp:
+            for s in range(20):
+                (Path(tmp) / f"seed-{s}").mkdir()
+                (Path(tmp) / f"seed-{s}" / "summary.json").write_text(json.dumps({"arms": {
+                    arm: {"factor": "blocks", "pairing": "same_plan", "decisions": decisions(v)}
+                    for arm, v in old.items()}}))
+            r = null_study.report([tmp])
+        self.assertEqual(sorted(r["arms"]), sorted(["k-c", *null_study.PLANTED_ARMS, *null_study.COHORT_ARMS]))
+        self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
+        self.assertEqual((r["arms"]["k-c"]["contrasts"], r["arms"]["k-c"]["improves"]), (100, 0))
+        self.assertTrue(r["pass"])
+
+    def test_null_study_counts_a_contrast_not_produced_apart_and_refuses_an_arm_without_any(self):
+        """REVIEW-NULL16 L2 (mutants C1-C3): a lineage contrast not produced is counted apart, never as a decision in
+        a denominator; an arm with no lineage contrast in any seed is refused."""
+        twin = [{"name": "seed-twin", "factor": "calibration", "pairing": "same_plan"}]
+        rows = self.null_records("seed-twin", {"gbt": "improves"})
+        gap = {x["id"]: "outer fold 2 lacks a class" for x in rows if x["split"] == "lineage" and x["learner"] == "rf"}
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, twin, [x for x in rows if x["id"] not in gap], missing=gap)
+            shown = json.loads((Path(tmp) / "seed-0" / "summary.json").read_text())["arms"]["seed-twin"]["decisions"]
+            self.assertTrue(shown["ds:rf:lineage"].startswith("not produced"))
+            r = null_study.report([tmp], calibration=True)
+        a = r["arms"]["seed-twin"]
+        self.assertEqual((a["contrasts"], a["improves"], a["not_produced"], a["seeds"]), (80, 20, 20, 20))
+        self.assertAlmostEqual(a["per_seed_improves"]["mean"], 0.25)
+        random_only, missing = self.null_unproduced("seed-twin")
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, twin, random_only, missing=missing)
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([tmp], calibration=True)
+        self.assertEqual(str(e.exception), "arm seed-twin: no lineage contrast was produced in any seed")
+
     def test_a_spec_with_repeats_and_a_cohort_arm_is_refused(self):
         """PR #69's review (stats.py:300): with repeats > 1 a cohort arm's subsample can differ by repeat, which J
         can't pair; no decided spec uses repeats > 1, so such a spec is refused up front."""
@@ -829,7 +1078,12 @@ ids = [f"g{i:03d}" for i in range(50)]
         spec["repeats"] = 2
         with self.assertRaises(SystemExit) as e:
             run.load_spec(self.write(spec))
-        self.assertIn("repeats 2 with a cohort-paired arm", str(e.exception))
+        # REVIEW-NULL16 I4: the refusal names the arms.
+        self.assertIn("repeats 2 with a cohort-paired arm (cap-1000, cap-4000, grr-v1)", str(e.exception))
+        spec["arms"] = [{"name": "k-h", "blocks": ["K", "H"]}, {"name": "cap-4000", "cap": 4000}]
+        with self.assertRaises(SystemExit) as e:
+            run.load_spec(self.write(spec))
+        self.assertIn("repeats 2 with a cohort-paired arm (cap-4000):", str(e.exception))
         spec["arms"] = [{"name": "k-h", "blocks": ["K", "H"]}]
         run.load_spec(self.write(spec))
 

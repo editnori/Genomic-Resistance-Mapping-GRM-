@@ -180,10 +180,11 @@ def load_spec(path):
         arms.append({**default, **arm, "factor": factor, "pairing": PAIRING[factor]})
         if factor == "cohort":
             arms[-1]["kind"] = cohort_kind(default, arms[-1])
-    if spec.get("repeats", 1) != 1 and any(a["pairing"] == "common_outer_test_set_balanced" for a in arms):
-        raise SystemExit(f"{path}: repeats {spec['repeats']} with a cohort-paired arm: a cohort arm's balanced subsample "
-                         "can differ by repeat, and J pairs one sample set per arm across repeats; every decided spec "
-                         "uses repeats 1 (PR #69's review)")
+    cohort_paired = [a["name"] for a in arms if a["pairing"] == "common_outer_test_set_balanced"]
+    if spec.get("repeats", 1) != 1 and cohort_paired:
+        raise SystemExit(f"{path}: repeats {spec['repeats']} with a cohort-paired arm ({', '.join(cohort_paired)}): a "
+                         "cohort arm's balanced subsample can differ by repeat, and J pairs one sample set per arm "
+                         "across repeats; every decided spec uses repeats 1 (PR #69's review)")
     unknown = set(spec.get("base_rates", {})) - set(COHORT_KINDS)
     if unknown:
         raise SystemExit(f"{path}: base_rates for {sorted(unknown)}; the kinds are {list(COHORT_KINDS)}")

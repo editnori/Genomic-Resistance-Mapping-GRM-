@@ -9,18 +9,24 @@ kept seeds over the decision-bearing contrasts only: the lineage split's (5 lear
 as J decided them (summary.json `raw_decisions`, before K's sentinel mask; a summary written
 before the mask existed has only `decisions`, which are then J's). Random-split contrasts are
 descriptive since main's ruling after the calibration study and never enter a rate; a contrast
-not produced is counted apart. Per arm: the share of its lineage contrasts that are `improves`,
-with a Clopper-Pearson 95% interval, and the share of seeds with any `improves`. Contrasts
-within a seed are correlated (one cohort, one test set), so the per-contrast interval is
-optimistic; the per-seed share is the conservative unit. Each seed's sentinel firings (K's
-`unreliable` list) are reported apart (PR #69's review).
+not produced is counted apart and printed. Per arm: the share of its lineage contrasts that are
+`improves`, with a Clopper-Pearson 95% interval, and the share of seeds with any `improves`.
+Contrasts within a seed are correlated (one cohort, one test set), so the per-contrast interval
+is optimistic; the per-seed share is the conservative unit. Each seed's sentinel firings (K's
+`unreliable` list) are reported apart (PR #69's review). Summaries written before the round-12
+arm rename (`K+C`, `K+H`, `K+P`, `K+C+H+P`) are read under today's names.
 
 Every arm also gets cluster-robust rates with the seed as the cluster: each seed's share of
 `improves` (and of `worse`) over its lineage contrasts, averaged over seeds, with a 95% Student t
 interval on the per-seed shares (seeds are independent). `--spec calibration.json` runs the
 calibration arms, which are exchangeable with the default: there every `improves` or `worse`
 is a false positive, and the procedure passes when each arm's mean per-seed rate of each is at
-most 5% (main's ruling on the null study, 5 Nov 2026).
+most 5% (main's ruling on the null study, 5 Nov 2026). Either study passes only when every arm
+it judges had a lineage contrast in at least 20 seeds (REVIEW-NULL16 L1): a seed that gave an
+arm none doesn't count toward that arm, however many summaries there are. The calibration judges
+every arm calibration.json names, plus any other arm its summaries hold (the runner's sentinel);
+a named arm absent from every seed, or no seeds at all, fails it and the report names the arm
+(REVIEW-INPUT17 M1). The null study refuses when one of its judged arms is absent.
 
 usage: python3 -B null_study.py run --seeds 101-110 --out DIR --grm GRM [--spec SPEC] [--jobs N] [--parallel P]
        python3 -B null_study.py report DIR [DIR ...] [--json OUT] [--calibration]
@@ -38,7 +44,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 COHORT_ARMS = ("cap-1000", "cap-4000", "grr-v1")
 PLANTED_ARMS = ("k-h", "k-p", "k-c-h-p")
+# The block arms' names before the round-12 rename; the stored null-study seeds (5 Nov 2026) use them.
+RENAMED = {"K+C": "k-c", "K+H": "k-h", "K+P": "k-p", "K+C+H+P": "k-c-h-p"}
 ALPHA = 0.05
+MIN_SEEDS = 20
+CALIBRATION_ARMS = tuple(a["name"] for a in json.loads((HERE / "calibration.json").read_text())["arms"])
 
 
 def seeds(text):
@@ -151,7 +161,17 @@ def lineage_decisions(arm):
 
 
 def report(dirs, calibration=False):
-    summaries = sorted(p for d in dirs for p in Path(d).glob("seed-*/summary.json"))
+    for d in dirs:
+        if not Path(d).is_dir():
+            raise SystemExit(f"{d}: no such folder")
+    # One summary per seed (REVIEW-INPUT17 L2): a folder given twice, or a seed in two folders, counts once when the
+    # files are byte-identical and is refused when they differ.
+    seen = {}
+    for path in sorted(p for d in dirs for p in Path(d).glob("seed-*/summary.json")):
+        first = seen.setdefault(path.parent.name, path)
+        if first is not path and first.read_bytes() != path.read_bytes():
+            raise SystemExit(f"seed {path.parent.name} has two different summaries: {first} and {path}")
+    summaries = sorted(seen.values())
     arms = {}
     firings = {"seeds_with_a_firing": 0, "firings": 0, "learners": {}}
     for path in summaries:
@@ -162,7 +182,7 @@ def report(dirs, calibration=False):
         for u in fired:
             firings["learners"][u["learner"]] = firings["learners"].get(u["learner"], 0) + 1
         for arm, s in summary["arms"].items():
-            a = arms.setdefault(arm, {"contrasts": 0, "improves": 0, "worse": 0, "seeds": 0,
+            a = arms.setdefault(RENAMED.get(arm, arm), {"contrasts": 0, "improves": 0, "worse": 0, "seeds": 0,
                                       "seeds_any_improves": 0, "not_produced": 0,
                                       "_improves": [], "_worse": []})
             decisions, missing = lineage_decisions(s)
@@ -187,8 +207,16 @@ def report(dirs, calibration=False):
     if calibration:
         ok = all(a["per_seed_improves"]["mean"] <= ALPHA and a["per_seed_worse"]["mean"] <= ALPHA
                  for a in arms.values())
+        missing = [n for n in CALIBRATION_ARMS if n not in arms]
+        thin = sorted(n for n, a in arms.items() if a["seeds"] < MIN_SEEDS)
         return {"seeds": len(summaries), "nominal_alpha": ALPHA, "cluster": "seed", "arms": arms,
-                "split": "lineage", "sentinel_firings": firings, "pass": len(summaries) >= 20 and ok}
+                "split": "lineage", "sentinel_firings": firings, "min_seeds": MIN_SEEDS,
+                "named_arms": list(CALIBRATION_ARMS), "missing_arms": missing, "thin_arms": thin,
+                "pass": bool(summaries) and not missing and not thin and ok}
+    absent = [n for n in COHORT_ARMS + PLANTED_ARMS if n not in arms]
+    if absent:
+        raise SystemExit(f"null study: arm {', '.join(absent)} is in no seed's summary.json "
+                         f"({len(summaries)} summaries); the study judges {', '.join(COHORT_ARMS + PLANTED_ARMS)}")
     cohort = {k: sum(arms[a][k] for a in COHORT_ARMS) for k in ("contrasts", "improves", "worse", "seeds",
                                                                   "seeds_any_improves")}
     cohort["improves_rate"] = cohort["improves"] / cohort["contrasts"]
@@ -196,7 +224,9 @@ def report(dirs, calibration=False):
     planted = {a: arms[a]["improves"] / arms[a]["contrasts"] for a in PLANTED_ARMS}
     return {"seeds": len(summaries), "nominal_alpha": ALPHA, "arms": arms, "cohort_arms_pooled": cohort,
             "planted_improves_share": planted, "split": "lineage", "sentinel_firings": firings,
-            "pass": (len(summaries) >= 20 and cohort["improves_rate"] <= ALPHA
+            "min_seeds": MIN_SEEDS,
+            "pass": (all(arms[a]["seeds"] >= MIN_SEEDS for a in COHORT_ARMS + PLANTED_ARMS)
+                     and cohort["improves_rate"] <= ALPHA
                      and all(arms[a]["improves_rate"] <= ALPHA for a in COHORT_ARMS)
                      and all(v == 1.0 for v in planted.values()))}
 
@@ -229,12 +259,19 @@ def main(argv):
     fmt = lambda r: f"{r['mean']:.3f} [{r['ci95'][0]:.3f}, {r['ci95'][1]:.3f}]" if r["ci95"] else f"{r['mean']:.3f}"
     for name, x in sorted(result["arms"].items()):
         print(f"{name:<14} per-seed improves {fmt(x['per_seed_improves'])}  worse {fmt(x['per_seed_worse'])}  "
-              f"(contrasts: improves {x['improves']}/{x['contrasts']}, worse {x['worse']})")
+              f"(contrasts: improves {x['improves']}/{x['contrasts']}, worse {x['worse']}; not produced "
+              f"{x['not_produced']}; seeds with a lineage contrast {x['seeds']}/{result['seeds']})")
     f = result["sentinel_firings"]
     print(f"lineage split only, as J decided; the sentinel fired {f['firings']} times in {f['seeds_with_a_firing']} of "
           f"{result['seeds']} seeds {f['learners'] or ''}")
+    print(f"lineage contrasts not produced: {sum(x['not_produced'] for x in result['arms'].values())}; "
+          f"pass needs every judged arm in at least {result['min_seeds']} seeds")
     if a.calibration:
-        print(f"calibration: seeds {result['seeds']}; pass {result['pass']}")
+        why = ([f"no seed summaries in {', '.join(a.dirs)}"] * (not result["seeds"])
+               + [f"arm {n} is in no seed" for n in result["missing_arms"]]
+               + [f"arm {n} has a lineage contrast in {result['arms'][n]['seeds']} seeds, under {result['min_seeds']}"
+                  for n in result["thin_arms"]])
+        print(f"calibration: seeds {result['seeds']}; pass {result['pass']}" + (f" ({'; '.join(why)})" if why else ""))
         return
     for name in COHORT_ARMS + PLANTED_ARMS:
         x = result["arms"][name]
