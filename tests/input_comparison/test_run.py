@@ -888,6 +888,26 @@ ids = [f"g{i:03d}" for i in range(50)]
         self.assertAlmostEqual(a["per_seed_improves"]["mean"], 0.2)
         self.assertEqual(r["sentinel_firings"], {"seeds_with_a_firing": 0, "firings": 0, "learners": {}})
 
+    def test_null_study_reads_the_arm_names_from_before_the_rename(self):
+        """REVIEW-NULL16 I3: the stored null seeds name the block arms K+C, K+H, K+P and K+C+H+P (before round 12);
+        `report` reads them under today's names instead of raising KeyError: 'k-h'."""
+        def decisions(value):
+            return {f"ds:{l}:{split}": value for l in run.LEARNERS for split in ("lineage", "random")}
+
+        old = {"K+C": "inconclusive", "K+H": "improves", "K+P": "improves", "K+C+H+P": "improves",
+               **{a: "inconclusive" for a in null_study.COHORT_ARMS}}
+        with tempfile.TemporaryDirectory() as tmp:
+            for s in range(20):
+                (Path(tmp) / f"seed-{s}").mkdir()
+                (Path(tmp) / f"seed-{s}" / "summary.json").write_text(json.dumps({"arms": {
+                    arm: {"factor": "blocks", "pairing": "same_plan", "decisions": decisions(v)}
+                    for arm, v in old.items()}}))
+            r = null_study.report([tmp])
+        self.assertEqual(sorted(r["arms"]), sorted(["k-c", *null_study.PLANTED_ARMS, *null_study.COHORT_ARMS]))
+        self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
+        self.assertEqual((r["arms"]["k-c"]["contrasts"], r["arms"]["k-c"]["improves"]), (100, 0))
+        self.assertTrue(r["pass"])
+
     def test_null_study_counts_a_contrast_not_produced_apart_and_refuses_an_arm_without_any(self):
         """REVIEW-NULL16 L2 (mutants C1-C3): a lineage contrast not produced is counted apart, never as a decision in
         a denominator; an arm with no lineage contrast in any seed is refused."""

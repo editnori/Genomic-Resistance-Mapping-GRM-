@@ -13,7 +13,8 @@ not produced is counted apart and printed. Per arm: the share of its lineage con
 `improves`, with a Clopper-Pearson 95% interval, and the share of seeds with any `improves`.
 Contrasts within a seed are correlated (one cohort, one test set), so the per-contrast interval
 is optimistic; the per-seed share is the conservative unit. Each seed's sentinel firings (K's
-`unreliable` list) are reported apart (PR #69's review).
+`unreliable` list) are reported apart (PR #69's review). Summaries written before the round-12
+arm rename (`K+C`, `K+H`, `K+P`, `K+C+H+P`) are read under today's names.
 
 Every arm also gets cluster-robust rates with the seed as the cluster: each seed's share of
 `improves` (and of `worse`) over its lineage contrasts, averaged over seeds, with a 95% Student t
@@ -40,6 +41,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 COHORT_ARMS = ("cap-1000", "cap-4000", "grr-v1")
 PLANTED_ARMS = ("k-h", "k-p", "k-c-h-p")
+# The block arms' names before the round-12 rename; the stored null-study seeds (5 Nov 2026) use them.
+RENAMED = {"K+C": "k-c", "K+H": "k-h", "K+P": "k-p", "K+C+H+P": "k-c-h-p"}
 ALPHA = 0.05
 MIN_SEEDS = 20
 
@@ -165,7 +168,7 @@ def report(dirs, calibration=False):
         for u in fired:
             firings["learners"][u["learner"]] = firings["learners"].get(u["learner"], 0) + 1
         for arm, s in summary["arms"].items():
-            a = arms.setdefault(arm, {"contrasts": 0, "improves": 0, "worse": 0, "seeds": 0,
+            a = arms.setdefault(RENAMED.get(arm, arm), {"contrasts": 0, "improves": 0, "worse": 0, "seeds": 0,
                                       "seeds_any_improves": 0, "not_produced": 0,
                                       "_improves": [], "_worse": []})
             decisions, missing = lineage_decisions(s)
