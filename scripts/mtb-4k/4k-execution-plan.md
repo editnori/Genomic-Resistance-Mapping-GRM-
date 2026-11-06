@@ -159,9 +159,11 @@ that fails stops the run.
      `ffa43a9` and revision 4's follow-up commit `5d2c24d` each have it for
      the section-4 pilot only (2026-10-28). Revision 5's commit needs its
      own, from a re-check, before any stage that runs revision-5 commands.
-2. **Pilot.** The parent authorizes the small frozen biological pilot
-   (section 4), and every pilot acceptance check passes before the prefix
-   stage.
+2. **No pilot repeat; the prefix gate instead** (main's Q1 ruling, 5 Nov).
+   Section 4's pilot is not repeated. X1 stops right after `matrix:prefix`
+   unless the prefix `genomes.txt` and its five matrix files are
+   byte-identical to box R7's revision-12 g5 matrix of the same genomes
+   (section 5's prefix gate).
 3. **Validators reviewed.** Every script in this directory is
    independently reviewed: `prepare_execution_roots.py`, `pilot_interrupt.py`,
    `pilot_invalidation.py`, `validate_matrix.py`, `screen_duplicates.py`,
@@ -761,7 +763,10 @@ mkdir -p "$RUN/rN-ref-root/data" && ln -s "$REF/species" "$RUN/rN-ref-root/data/
 ln -s "$REF/report" "$RUN/rN-ref-root/data/report" && ln -s "$INPUT_ROOT/curated" "$RUN/rN-ref-root/data/curated" || exit 1
 python3 -I "$WS/scripts/metric-audit/audit.py" "$RUN/audit/rN-fold-rebuild.json" $SLUG --revision "$REVISION_N" \
   --root "$RUN/rN-ref-root" --reshaped --foldgen "$FOLDGEN" || exit 1
-python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rN-fold-rebuild.json" || exit 1
+# One audit record per reference report, no test_fold issue, and no error (M1, REVIEW-MTB12): audit.py records a
+# report it could not audit, or a foldgen that answered nothing, as an error and still exits 0.
+N=$(ls "$REF/species/$SLUG/results/"*.json | wc -l); test "$N" -eq 22 || exit 1
+python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); rs=r["records"]; bad=[i for x in rs for i in x.get("issues",[]) if "test_fold" in i["where"]]; err=[x for x in rs if "error" in x]+r["summary"]["errors"]; print(len(rs),len(bad),len(err)); assert len(rs)==int(sys.argv[2]) and not bad and not err' "$RUN/audit/rN-fold-rebuild.json" "$N" || exit 1
 # The prefix against the reference, every field (diff_reference_prefix.py).
 python3 -I "$P/diff_reference_prefix.py" --prefix $RUN/cohorts/prefix/data --reference "$REF" \
   --out $RUN/audit/prefix-vs-reference.json || exit 1

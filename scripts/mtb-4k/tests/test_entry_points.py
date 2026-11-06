@@ -173,14 +173,23 @@ class EntryPoints(unittest.TestCase):
             run, cwd = Path(tmp) / "run", Path(tmp) / "planted"
             (run / "audit").mkdir(parents=True)
             cwd.mkdir()
-            (cwd / "json.py").write_text('def load(f): return {"records": [{}] * 22}\n')
+            (cwd / "json.py").write_text('def load(f): return {"records": [{}] * 22, "summary": {"errors": []}}\n')
             audit = run / "audit" / "rN-fold-rebuild.json"
-            for issues, want in (([{"where": "splits[0].test_fold", "message": "differs"}], 1), ([], 0)):
-                with self.subTest(failed=bool(issues)):
-                    audit.write_text(json.dumps({"records": [{"issues": issues}] * 22}))
-                    p = subprocess.run(["bash", "-c", line], cwd=cwd, env={**os.environ, "RUN": str(run)}, capture_output=True, text=True)
+            issue = {"issues": [{"where": "splits[0].test_fold", "message": "differs"}]}
+            error = {"file": "x.json", "error": "KeyError('splits')"}
+            # M1 (REVIEW-MTB12): an error record or a summary error stops it too, and so does a count other than N
+            cases = {"clean": ([{"issues": []}] * 22, [], "22", 0, ["22", "0", "0"]),
+                     "test_fold issue": ([issue] * 22, [], "22", 1, ["22", "22", "0"]),
+                     "error records": ([error] * 22, [], "22", 1, ["22", "0", "22"]),
+                     "one error record": ([error] + [{"issues": []}] * 21, [], "22", 1, ["22", "0", "1"]),
+                     "summary error": ([{"issues": []}] * 22, [error], "22", 1, ["22", "0", "1"]),
+                     "count is not N": ([{"issues": []}] * 21, [], "22", 1, ["21", "0", "0"])}
+            for name, (records, errors, n, want, out) in cases.items():
+                with self.subTest(case=name):
+                    audit.write_text(json.dumps({"records": records, "summary": {"errors": errors}}))
+                    p = subprocess.run(["bash", "-c", line], cwd=cwd, env={**os.environ, "RUN": str(run), "N": n}, capture_output=True, text=True)
                     self.assertEqual(p.returncode, want, p.stderr)
-                    self.assertEqual(p.stdout.split(), ["22", "22" if issues else "0"])
+                    self.assertEqual(p.stdout.split(), out)
 
     def test_each_entry_point_loads_its_own_siblings_under_minus_I_from_another_directory(self):
         for rel in sorted(ENTRY):
