@@ -111,6 +111,7 @@ def good_contrast(**over):
         "unit": "cluster", "n_units": 64, "few_clusters": False, "p": 0.004, "p_adj": 0.012,
         "adjust": "bh", "margin": 0.02, "decision": "improves", "claim_level": "predictive_increment",
         "undefined_resamples": 0, "undefined_reason": None, "interval_label": "95% lineage-cluster jackknife-t CI",
+        "pairing": "same_plan", "auroc_delta": 0.012, "auroc_ci": [-0.004, 0.028],
     }
     if "id" in over:
         dataset, _, rest = over["id"].partition("/")
@@ -121,6 +122,8 @@ def good_contrast(**over):
     if isinstance(over.get("family"), str) and "adjust" not in over:
         rec["adjust"] = schema.FAMILY_ADJUST.get(over["family"], rec["adjust"])
     rec.update(over)
+    if rec["endpoint"] != "log_loss" and "auroc_delta" not in over:  # J carries it beside log_loss only
+        rec.update(auroc_delta=None, auroc_ci=None)
     rec.setdefault("id", f"{rec['dataset']}/" + key(*(rec[k] for k in ("family", "baseline", "treatment",
                                                                        "endpoint", "learner", "split"))))
     return {k: rec[k] for k in ["id", *[k for k in rec if k != "id"]]}
@@ -230,6 +233,8 @@ CONTRAST_BAD = {
     "decision": [None, "better", "no_value", "", "inconclusive", "worse", "equivalent"],
     "claim_level": [None, "causal", "", "Predictive_increment", "association_stable", "causal_supported"],
     "undefined_resamples": NOT_INT0 + [1], "undefined_reason": ["", 3, []], "interval_label": NOT_TEXT,
+    "pairing": NOT_TEXT + ["nearest", "Same_plan", "same plan"],
+    "auroc_delta": NOT_NUM, "auroc_ci": [[], [0.1], [0.2, 0.1], "x", [0.02, 0.03]],
 }
 POOLED_BAD = {
     "contrast": NOT_TEXT + ["A C", "A/C", "A-C", key("A", endpoint="log_loss"), key("A", endpoint="r2`ll"),
@@ -308,8 +313,9 @@ class FieldCases(unittest.TestCase):
         self.assertEqual(set(good_contrast()), {
             "id", "family", "baseline", "treatment", "learner", "split", "endpoint", "estimate", "ci",
             "ci_tost", "ci_method", "unit", "n_units", "few_clusters", "p", "p_adj", "adjust", "margin",
-            "decision", "claim_level", "undefined_resamples", "undefined_reason", "interval_label", "dataset"})
-        self.assertEqual(len(good_contrast()), 24)
+            "decision", "claim_level", "undefined_resamples", "undefined_reason", "interval_label", "dataset",
+            "pairing", "auroc_delta", "auroc_ci"})
+        self.assertEqual(len(good_contrast()), 27)
 
     def test_pooled_has_exactly_the_contract_fields(self):
         self.assertEqual(set(good_pooled()), {
@@ -563,6 +569,7 @@ class EquivalenceWithdrawnCases(unittest.TestCase):
         self.assertEqual(schema.PRIMARY_POOLED_ENDPOINT, st.POOLED_ENDPOINT)
         self.assertEqual(schema.ALPHA, st.ALPHA)
         self.assertEqual(set(good_contrast()), set(st.RECORD_KEYS))
+        self.assertEqual(schema.PAIRINGS, st.PAIRINGS)
         self.assertEqual(set(good_pooled()), set(st.POOLED_KEYS))
         self.assertEqual(set(good_prediction()), set(st.FIELDS))
         key = st.contrast_key("C", "lr", "lineage", "base", "base+C", "log_loss")
@@ -1127,6 +1134,63 @@ class ClaimLevelCases(unittest.TestCase):
         self.assertEqual(rec, before)
         out["evidence_refs"].append("y")
         self.assertEqual(rec, before)
+
+
+def paired_manifest(rule="common_outer_test_set_balanced", own=(H1, H2), reference="K"):
+    """good_manifest() plus an arm `cap` on ecoli__amp's lasso lineage run, paired to `reference`."""
+    m = good_manifest()
+    m["runs"].append(good_run(id="r-cap", arm="cap", predictions="predictions/r-cap.jsonl", pairing={
+        "rule": rule, "reference_arm": reference, "arm_plan_sha256": None if own is None else list(own)}))
+    return m
+
+
+class PairingCases(unittest.TestCase):
+    """DECISIONS V-1's pairing rules on runs, contrasts and prediction rows."""
+
+    def test_a_paired_run_names_its_rule_reference_and_own_plans(self):
+        schema.validate_manifest(paired_manifest())
+        schema.validate_manifest(paired_manifest(rule="k31_groups", own=None))
+        schema.validate_manifest(paired_manifest(rule="common_outer_test_set"))  # older records
+        for m, field in ((paired_manifest(own=None), "arm_plan_sha256"),
+                         (paired_manifest(rule="common_outer_test_set", own=None), "arm_plan_sha256"),
+                         (paired_manifest(rule="k31_groups"), "arm_plan_sha256"),
+                         (paired_manifest(own=(H1,)), "arm_plan_sha256"),
+                         (paired_manifest(reference="cap"), "reference_arm"),
+                         (paired_manifest(reference="nobody"), "reference_arm"),
+                         (paired_manifest(rule="nearest"), "rule")):
+            with self.assertRaises(SchemaError, msg=field) as e:
+                schema.validate_manifest(m)
+            self.assertIn(field, str(e.exception))
+
+    def test_an_auroc_delta_sits_only_beside_a_log_loss_decision(self):
+        schema.validate_contrast(good_contrast(auroc_delta=None, auroc_ci=None))
+        for over in ({"auroc_ci": None}, {"auroc_delta": None}, {"auroc_delta": 0.05},
+                     {"id": "ecoli__amp/" + key(family="D", endpoint="auroc")}):
+            with self.assertRaises(SchemaError, msg=over):
+                schema.validate_contrast(good_contrast(**over))
+
+    def test_a_contrast_names_one_of_the_rules(self):
+        schema.validate_contrast(good_contrast(pairing="k31_groups"))
+        for bad in (None, "", "nearest", 1):
+            with self.assertRaises(SchemaError):
+                schema.validate_contrast(good_contrast(pairing=bad))
+        rec = good_contrast()
+        del rec["pairing"]
+        with self.assertRaises(SchemaError):
+            schema.validate_contrast(rec)
+
+    def test_paired_rows_cover_the_reference_samples_or_a_subset(self):
+        base = [good_prediction(sample_id=s, repeat=r, fold_plan_sha256=LINEAGE_PLANS[r])
+                for s in ("a", "b") for r in (0, 1)]
+        cap = [dict(row, arm="cap") for row in base if row["sample_id"] == "a"]
+        schema.validate_predictions(base + cap, paired_manifest())
+        with self.assertRaises(SchemaError) as e:
+            schema.validate_predictions(base + cap, paired_manifest(rule="k31_groups", own=None))
+        self.assertIn("needs the same samples", str(e.exception))
+        extra = [dict(row, sample_id="c", cluster="L2") for row in cap]
+        with self.assertRaises(SchemaError) as e:
+            schema.validate_predictions(base + cap + extra, paired_manifest())
+        self.assertIn("a subset of them", str(e.exception))
 
 
 if __name__ == "__main__":

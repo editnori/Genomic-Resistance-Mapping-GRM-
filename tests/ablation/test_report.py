@@ -266,7 +266,7 @@ class BuildCases(unittest.TestCase):
             build(**parts)
 
     def test_attempts(self):
-        self.assertEqual(self.report["attempts"], {"runs": 21, "ok": 19, "unavailable": 2})
+        self.assertEqual(self.report["attempts"], {"runs": 21, "ok": 19, "unavailable": 2, "identical_cohort": 0})
         self.assertIn("21 runs attempted: 19 ok, 2 unavailable.", self.md)
 
     def test_unavailable_runs_and_blocks_are_reported(self):
@@ -664,6 +664,138 @@ class PredictionFileCases(unittest.TestCase):
         bad["predictions_sha256"] = {"x": "zz"}
         with self.assertRaisesRegex(SchemaError, "predictions_sha256.x: must match"):
             rp.validate_report(bad)
+
+
+class SentinelAndRandomSplitCases(unittest.TestCase):
+    """Main's ruling after the calibration study: random-split contrasts are descriptive, and a sentinel
+    arm (the learner-seed twin) that is not inconclusive marks its learner and species unreliable."""
+
+    def with_sentinel(self, arms):
+        m = good_inputs()[0]
+        m["sentinel_arms"] = arms
+        return build(manifest=m)
+
+    def test_a_sentinel_decision_flags_every_decision_of_that_learner_and_species(self):
+        # K+C stands in for the twin: its lineage-split lasso contrast on ecoli__amp is improves.
+        report = self.with_sentinel(["K+C"])
+        (u,) = [x for x in report["unreliable"] if x["species"] == "Escherichia coli"]
+        self.assertEqual((u["species"], u["learner"], u["sentinel"]), ("Escherichia coli", "lasso", FWD_A))
+        self.assertEqual(u["reason"], "the sentinel contrast is improves")
+        for ident in (FWD_A, FWD_C, RAND_A):
+            self.assertIn(ident, u["contrasts"])
+        self.assertNotIn(RAND_K, u["contrasts"])  # another species
+        # kpneu__amp's sentinel lineage contrast was not produced, which also flags; mtb__inh's is
+        # inconclusive (D_MTB), which doesn't.
+        flagged = {(x["species"], x["learner"]) for x in report["unreliable"]}
+        self.assertEqual(flagged, {("Escherichia coli", "lasso"), ("Klebsiella pneumoniae", "lasso")})
+        md = rp.render_markdown(report)
+        self.assertIn("## Unreliable learners", md)
+        self.assertIn(rp.UNRELIABLE_SENTENCE, md)
+        self.assertTrue(line_for(md, FWD_C).endswith("Unreliable (rule 10)."))
+        self.assertTrue(line_for(md, RAND_K).endswith("Unreliable (rule 10)."))
+        self.assertFalse(line_for(md, D_MTB).endswith("Unreliable (rule 10)."))
+        self.assertEqual(rp.validate_report(json.loads(rp.dumps(report)))["unreliable"], report["unreliable"])
+
+    def test_no_sentinel_flags_nothing_and_a_missing_sentinel_contrast_flags_its_learner(self):
+        self.assertEqual(build()["unreliable"], [])
+        self.assertNotIn("## Unreliable learners", rp.render_markdown(build()))
+        # K is the treatment of kpneu__amp's planned lineage contrast, which was not produced.
+        (u,) = self.with_sentinel(["K"])["unreliable"]
+        self.assertEqual((u["species"], u["learner"]), ("Klebsiella pneumoniae", "lasso"))
+        self.assertTrue(u["reason"].startswith("the sentinel contrast was not produced: "), u["reason"])
+
+    def test_a_sentinel_arm_must_have_runs(self):
+        with self.assertRaises(SchemaError) as e:
+            self.with_sentinel(["no-such-arm"])
+        self.assertIn("sentinel_arms", str(e.exception))
+
+    def test_random_split_contrasts_are_printed_as_descriptive(self):
+        md = rp.render_markdown(build())
+        block = md.split("### Random split: descriptive only")[1]
+        self.assertIn(rp.RANDOM_SPLIT_SENTENCE, block)
+        for ident in (RAND_A, RAND_K):
+            self.assertIn(f"`{ident}`", block)
+        rules = md.split(rp.RULES_HEADING)[1]
+        for phrase in ("Random-split contrasts are descriptive only", "9 of 20", "0 of 40", "2.0% improves",
+                       "marked unreliable"):
+            self.assertIn(phrase, rules)
+
+
+class BaseRateCases(unittest.TestCase):
+    def test_a_base_rate_prints_beside_each_contrast_of_its_arm(self):
+        m = good_inputs()[0]
+        m["base_rates"] = [{"arm": "K+C", "rate": 0.3, "ci95": [0.2, 0.4], "seeds": 5, "source": "fixture twin"}]
+        md = rp.render_markdown(build(manifest=m))
+        self.assertIn("No-signal base rate for this arm type: 30.0% of lineage-split contrasts non-inconclusive "
+                      "(95% interval [20.0, 40.0]%) over 5 seeds (fixture twin).", line_for(md, FWD_C))
+        self.assertNotIn("base rate", line_for(md, LOBO_C))
+        m["base_rates"].append(dict(m["base_rates"][0]))
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+
+    def test_the_synthetic_flag_is_named_in_the_header(self):
+        m = good_inputs()[0]
+        self.assertNotIn("Synthetic run", rp.render_markdown(build(manifest=m)))
+        m["synthetic"] = True
+        self.assertIn("- Synthetic run: yes. The spec says it is synthetic, so the revision-12 gate a real run needs was "
+                      "not required.", rp.render_markdown(build(manifest=m)))
+        m["synthetic"] = False
+        self.assertIn("- Synthetic run: no. The revision-12 gate held.", rp.render_markdown(build(manifest=m)))
+        m["synthetic"] = "yes"
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+
+    def test_the_species_pool_is_named_in_the_header(self):
+        m = good_inputs()[0]
+        m["species_pool"] = {"genomes": 2010, "arms": ["default", "cap-1000"], "structure_sha256": "a" * 64}
+        md = rp.render_markdown(build(manifest=m))
+        self.assertIn("- Species pool: the union of the cohorts of this run's 2 arms (2010 genomes; structure "
+                      f"sha256 `{'a' * 64}`). Lineages and the fold keys of units outside the default depend on "
+                      "this union, so adding an arm means rerunning the whole comparison.", md)
+        m["species_pool"]["structure_sha256"] = "not hex"
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+
+    def test_a_kind_without_a_measured_rate_prints_not_measured(self):
+        m = good_inputs()[0]
+        m["base_rates"] = [{"arm": "K+C", "kind": "cap-down", "rate": None, "ci95": None, "seeds": None,
+                            "source": "not measured"}]
+        md = rp.render_markdown(build(manifest=m))
+        self.assertIn("No-signal base rate for this arm type (cap-down): not measured.", line_for(md, FWD_C))
+        m["base_rates"][0]["kind"] = "cap-up"
+        m["base_rates"][0].update(rate=0.25, ci95=[0.1, 0.4], seeds=5, source="twin")
+        md = rp.render_markdown(build(manifest=m))
+        self.assertIn("No-signal base rate for this arm type (cap-up): 25.0% of lineage-split", line_for(md, FWD_C))
+        for bad in ({"rate": None, "seeds": 5}, {"rate": 0.2, "seeds": None}, {"rate": None, "ci95": [0.0, 0.1]}):
+            m["base_rates"][0].update(rate=None, ci95=None, seeds=None)
+            m["base_rates"][0].update(bad)
+            with self.assertRaises(SchemaError, msg=str(bad)):
+                build(manifest=m)
+
+
+class RuleReferenceCases(unittest.TestCase):
+    """REVIEW-INPUT L2: the rendered reading rules are numbered 1 to n in order, and every "rule N" in
+    the summary points at the rule that says it."""
+
+    def test_rules_are_in_order_and_every_reference_resolves(self):
+        m = good_inputs()[0]
+        m["sentinel_arms"] = ["K+C"]
+        m["runs"].append(fx.good_run(id="r-same", arm="same-set", status="identical_cohort",
+                                     reason="identical_cohort: the fixture's genome set", metrics={},
+                                     fit_count=0, seconds=0, predictions=None))
+        md = rp.render_markdown(build(manifest=m))
+        rules = md.split(rp.RULES_HEADING)[1]
+        numbers = [int(x) for x in re.findall(r"^(\d+)\. ", rules, re.M)]
+        self.assertEqual(numbers, list(range(1, len(numbers) + 1)))
+        text = {n: t for n, t in re.findall(r"^(\d+)\. (.*)$", rules, re.M)}
+        want = {"10": "sentinel", "11": "identical cohort"}
+        refs = re.findall(r"rule (\d+)", md.split(rp.RULES_HEADING)[0])
+        self.assertEqual(set(refs), set(want))
+        for n in refs:
+            self.assertIn(want[n], text[n])
+        self.assertIn("Identical cohorts, not run (rule 11):", md)
+        self.assertIn("rf and gbt", text["10"])
+        self.assertIn("only between arms with equal genome sets", text["10"])
 
 
 class WordingCases(unittest.TestCase):
@@ -1089,7 +1221,7 @@ class RoundTripCases(unittest.TestCase):
         report = json.loads(rp.dumps(self.report))
         report["manifest"]["runs"] = [u for u in report["manifest"]["runs"] if u["id"] != "r-plasmid"]
         report["unavailable_runs"] = [u for u in report["unavailable_runs"] if u["id"] != "r-plasmid"]
-        report["attempts"] = {"runs": 20, "ok": 19, "unavailable": 1}
+        report["attempts"] = {"runs": 20, "ok": 19, "unavailable": 1, "identical_cohort": 0}
         report["inputs_sha256"]["manifest"] = schema.sha256(report["manifest"])
         rp.validate_report(report)
         self.assertNotEqual(report["inputs_sha256"]["manifest"], schema.sha256(good_manifest()))

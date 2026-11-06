@@ -206,6 +206,96 @@ class PairingTests(unittest.TestCase):
         self.assertAlmostEqual(me["estimate"], (1 - int(paired.treat_call[j])) / n_s)
 
 
+class PairingRuleTests(unittest.TestCase):
+    """The pairing rules of DECISIONS V-1, and the pairings they still refuse."""
+
+    @staticmethod
+    def pair(rows, pairing):
+        return stats.pair_arms(rows, dataset="ds", learner="lr", split="lineage", baseline="base",
+                               treatment="treat", pairing=pairing)
+
+    def test_every_record_names_its_rule(self):
+        for pairing in ("same_plan", "k31_groups"):
+            paired = self.pair(make_rows(), pairing)
+            record, = stats.compare(paired, family="C", endpoints=["log_loss"], margins=MARGINS, development=())
+            self.assertEqual(record["pairing"], pairing)
+            out, = stats.finalize([record], [record["id"]])
+            self.assertEqual(tuple(out), stats.RECORD_KEYS)
+            self.assertEqual(out["pairing"], pairing)
+
+    def test_a_log_loss_record_carries_a_descriptive_auroc_delta(self):
+        paired = self.pair(make_rows(), "same_plan")
+        ll, auc = stats.compare(paired, family="D", endpoints=["log_loss", "auroc"], margins=MARGINS,
+                                development=())
+        want = stats.auroc(paired.y, paired.treat) - stats.auroc(paired.y, paired.base)
+        self.assertAlmostEqual(ll["auroc_delta"], want)
+        self.assertEqual(ll["auroc_delta"], auc["estimate"])
+        self.assertEqual(ll["auroc_ci"], auc["ci"])
+        self.assertIsNone(auc["auroc_delta"])
+        self.assertIsNone(auc["auroc_ci"])
+        out = stats.finalize([ll, auc], [ll["id"], auc["id"]])
+        self.assertEqual(out[0]["decision"], "inconclusive")
+
+    def test_k31_groups_is_refused_on_other_samples_or_plans(self):
+        rows = [r for r in make_rows() if not (r["arm"] == "treat" and r["sample_id"] == "s0-0")]
+        with self.assertRaises(stats.PairingError) as e:
+            self.pair(rows, "k31_groups")
+        self.assertEqual(e.exception.check, "samples")
+        rows = make_rows()
+        for r in rows:
+            if r["arm"] == "treat":
+                r["fold_plan_sha256"] = "k21-plan"
+        with self.assertRaises(stats.PairingError) as e:
+            self.pair(rows, "k31_groups")
+        self.assertEqual(e.exception.check, "fold_plan")
+
+    def test_common_outer_test_set_restricts_the_baseline_to_the_treatments_samples(self):
+        rows = make_rows()
+        # The treatment's cohort lacks cluster c5; the baseline's no-call rows score their
+        # full training folds' prevalence, which the paired rows cannot recompute.
+        rows = [r for r in rows if not (r["arm"] == "treat" and r["sample_id"].startswith("s5-"))]
+        for r in rows:
+            if r["arm"] == "base" and r["sample_id"] == "s0-1":
+                r.update(score=0.31, called=False)
+        with self.assertRaises(stats.PairingError):
+            self.pair(rows, "same_plan")
+        paired = self.pair(rows, "common_outer_test_set_balanced")
+        self.assertEqual(len(paired.sample_ids), 20)
+        self.assertNotIn("c5", paired.clusters)
+        record, = stats.compare(paired, family="C", endpoints=["log_loss"], margins=MARGINS, development=())
+        self.assertEqual((record["pairing"], record["n_units"]), ("common_outer_test_set_balanced", 5))
+        # The unbalanced rule stays for older records, with the same checks.
+        old = self.pair(rows, "common_outer_test_set")
+        self.assertEqual((old.sample_ids, old.pairing), (paired.sample_ids, "common_outer_test_set"))
+
+    def test_common_outer_test_set_still_refuses_what_it_cannot_pair(self):
+        rows = make_rows()
+        extra = dict(next(r for r in rows if r["arm"] == "treat"), sample_id="only-in-treat")
+        with self.assertRaises(stats.PairingError) as e:
+            self.pair(rows + [dict(extra, repeat=r, fold_plan_sha256=f"plan{r}") for r in (0, 1)],
+                      "common_outer_test_set_balanced")
+        self.assertEqual(e.exception.check, "samples")
+        # A common sample keeps the baseline's fold, cluster and label, under the baseline's plan.
+        for field, value, check, only in (("fold", 2, "fold", "s0-0"), ("cluster", "c9", "cluster", "s0-0"),
+                                          ("y", 1, "y", "s0-0"), ("fold_plan_sha256", "own-plan", "fold_plan", None)):
+            rows = make_rows()
+            for r in rows:
+                if r["arm"] == "treat" and only in (None, r["sample_id"]):
+                    r[field] = value
+            with self.assertRaises(stats.PairingError, msg=field) as e:
+                self.pair(rows, "common_outer_test_set_balanced")
+            self.assertEqual(e.exception.check, check)
+        rows = make_rows()
+        for r in rows:
+            if r["arm"] == "treat" and r["sample_id"] == "s0-0":
+                r.update(score=0.2, called=True)
+        with self.assertRaises(stats.PairingError) as e:
+            self.pair(rows, "common_outer_test_set_balanced")
+        self.assertEqual(e.exception.check, "called")
+        with self.assertRaises(ValueError):
+            self.pair(make_rows(), "nearest_neighbour")
+
+
 class EndpointTests(unittest.TestCase):
     def test_rank_metrics_match_pairwise_definitions_with_ties(self):
         y = np.array([1, 0, 1, 1, 0, 0, 1, 0])
