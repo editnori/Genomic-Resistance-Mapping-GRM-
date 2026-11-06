@@ -140,7 +140,11 @@ bash $W/wrangler.sh deploy                     # Worker grm-site, custom domain 
 
 Wrangler creates the DNS record and the certificate. `wrangler.toml` turns off `workers.dev` and preview URLs, so the Worker answers only on the domain.
 
-Every hostname on this account must have a Cloudflare Access application, or Cloudflare answers 403 "error code: 1050" for it. Keep the existing application for `genomicresistance.com` (Bypass, Include Everyone). Before any other hostname serves (`www`, if it should), create one for it in Zero Trust › Access › Applications: a self-hosted application for that hostname with one policy, action Bypass, Include Everyone.
+Every hostname on this account must have a Cloudflare Access application, or Cloudflare answers 403 "error code: 1050" for it. Keep the existing application for `genomicresistance.com` (Bypass, Include Everyone).
+
+`wrangler.toml` routes only the apex, `genomicresistance.com`, so no other hostname serves the site today. A new hostname (`www`, if it should serve) needs both of these before it is announced:
+- **A route to the Worker.** Add it to `routes` in `ops/cloudflare/worker/wrangler.toml`, for example `{ pattern = "www.genomicresistance.com", custom_domain = true }`, and run `wrangler.sh deploy` again. Wrangler creates that hostname's DNS record and certificate, as it did for the apex.
+- **Its own Access application.** In Zero Trust › Access › Applications, create a self-hosted application for that hostname with one policy: action Bypass, Include Everyone. The apex's application doesn't cover it.
 
 ### 6. Public check
 
