@@ -164,7 +164,14 @@ def report(dirs, calibration=False):
     for d in dirs:
         if not Path(d).is_dir():
             raise SystemExit(f"{d}: no such folder")
-    summaries = sorted(p for d in dirs for p in Path(d).glob("seed-*/summary.json"))
+    # One summary per seed (REVIEW-INPUT17 L2): a folder given twice, or a seed in two folders, counts once when the
+    # files are byte-identical and is refused when they differ.
+    seen = {}
+    for path in sorted(p for d in dirs for p in Path(d).glob("seed-*/summary.json")):
+        first = seen.setdefault(path.parent.name, path)
+        if first is not path and first.read_bytes() != path.read_bytes():
+            raise SystemExit(f"seed {path.parent.name} has two different summaries: {first} and {path}")
+    summaries = sorted(seen.values())
     arms = {}
     firings = {"seeds_with_a_firing": 0, "firings": 0, "learners": {}}
     for path in summaries:

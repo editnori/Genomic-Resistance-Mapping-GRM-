@@ -903,6 +903,31 @@ ids = [f"g{i:03d}" for i in range(50)]
         self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
         self.assertFalse(r["pass"])
 
+    def test_a_seed_counts_once_however_many_folders_hold_it(self):
+        """REVIEW-INPUT17 L2: the same 10-seed folder given twice, or two folders holding the same seeds, counted 20
+        seeds and passed. Byte-identical summaries of one seed now count once; different ones are refused."""
+        both = self.calibration_arms()
+        con = self.null_records("cohort-path", {}) + self.null_records("seed-twin", {})
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a", Path(tmp) / "b"
+            self.null_seeds(a, both, con, seeds=10)
+            self.null_seeds(b, both, con, seeds=10)
+            for dirs in ([a, a], [a, b]):
+                r = null_study.report(dirs, calibration=True)
+                self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["thin_arms"], r["pass"]),
+                                 (10, 10, ["cohort-path", "seed-twin"], False), dirs)
+            # Seeds 10-19 in a third folder make 20 distinct seeds.
+            c = Path(tmp) / "c"
+            self.null_seeds(c, both, con, seeds=10, start=10)
+            r = null_study.report([a, b, c], calibration=True)
+            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (20, 20, True))
+            # The same seed with other content is refused, naming both files.
+            (b / "seed-3" / "summary.json").write_text(json.dumps({"arms": {}}))
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([a, b], calibration=True)
+            self.assertEqual(str(e.exception), f"seed seed-3 has two different summaries: {a / 'seed-3' / 'summary.json'} "
+                                               f"and {b / 'seed-3' / 'summary.json'}")
+
     def test_null_study_passes_only_with_a_lineage_contrast_in_20_seeds_per_arm(self):
         """REVIEW-NULL16 L1 (its case R4): a calibration arm with lineage contrasts in 1 of 20 seeds, 95 not produced,
         passed on "improves 0/5" because the gate counted summary files. Now each arm needs 20 seeds that gave it a
