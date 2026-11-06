@@ -362,6 +362,20 @@ A log-loss `improves` can come from better calibration or less overfitting, not 
 
 Main ruled on all four questions from the first build: the class balance (the balanced rule above), lineage leakage (the lineage drop), groups (MLST) and block screens (kept, ruling 4). After the null study, main restated the proof as the calibration above. One question is open: J's fold dependence for boosting on the random split ([Calibration](#calibration-of-the-decision-procedure-ruling-b)). The synthetic phenotype carries no k-mer signal, so the arms that change only the K model (k, budget) compare models fitted to noise. Their occasional `improves` or `worse` is a real log-loss difference between two such models, not a planted truth.
 
+## After REVIEW-INTEG7 (main's rulings, 6 Nov 2026)
+
+- **"synthetic": true needs a synthetic RAW (L2).** `check_synthetic` runs right after the curate-input check, before RAW is hashed or any root curates, in `--estimate-only` too. It refuses unless RAW's `truth.json` has synthetic_root.py's format (`grm-input-comparison-synthetic`) and lists exactly the genome ids of RAW's `bvbrc/genomes.jsonl`.
+  - **Why this marker.** The format string alone could arrive in a copied file. Tying it to RAW's own genome list means the marker describes this data root, and a real root's BV-BRC metadata can't match a generator's list by accident. A dedicated flag file would be weaker still: it carries nothing about the data.
+  - A synthetic spec that also carries a gate still runs the gate.
+- **The gate decision on stderr.** At the start of every run, before anything is counted, run.py prints `revision-12 gate: PASSED: …` (what it compared, and "the spec also says synthetic; the gate ran" when it does) or `revision-12 gate: NOT REQUIRED: …` for a synthetic spec with no gate.
+- **K records it.** The manifest's optional `revision12_gate` is `passed` or `not_required`, and the schema refuses `not_required` unless `synthetic` is true. The report header says which: "Synthetic run: yes. The spec also carries a revision-12 gate, and it passed.", "Synthetic run: yes, on a synthetic data root. The spec carries no revision-12 gate, so none ran; a real run needs it." or "Synthetic run: no. The revision-12 gate passed." A manifest without the field (written before this ruling) keeps the old wording and says it doesn't record whether a gate ran.
+- **Tests.**
+  - `test_a_synthetic_spec_refuses_a_raw_that_is_not_a_synthetic_root`: no `truth.json`, another format, a marker from another synthetic root, and one genome short, in both modes, with no root curated.
+  - `test_the_gate_decision_is_printed_on_stderr`: both lines.
+  - `test_the_synthetic_flag_is_named_in_the_header` (K): the header for each value, and the schema refusals.
+  - The e2e checks that its manifest records `passed`.
+  - The other stub tests use RAWs that aren't synthetic roots, so they stand the check down and test what comes after it.
+
 ## Cost
 
 An arm costs a curate plus count, structure and matrix for each new data root (cap, selection and k arms; blocks and budget arms reuse the default root), and one `grm arm` per arm and dataset: two splits × five outer folds × five learners, with no final models, MIC regression or annotation. On the synthetic tree (2,000 genomes of 23 kb, about 30,000 K patterns, one dataset, Boat xlarge, three arms at a time) a root took 1 to 5 s and an arm 7 to 50 s; the whole comparison took 176 s. Real genomes are about 200 times longer and real matrices hold far more patterns, so these numbers don't scale to a real species; a real arm costs about what `grm learn`'s cross-validation costs for that dataset, plus a count, structure and matrix of the species for each cap, selection or k arm. H-1 sizes the real panel.

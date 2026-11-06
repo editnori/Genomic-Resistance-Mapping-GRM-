@@ -17,6 +17,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = ROOT / "scripts" / "input-comparison"
@@ -37,9 +38,18 @@ SPEC = json.loads((HERE / "spec.json").read_text())
 SYNTHETIC_GATE = {"genome_order": {
                       "salmonella_enterica": "2299eda73ef338aa2bcd312c58d948f651e3dea9503d3185ba8a3271ce1a87af"},
                   "datasets_json_sha256": "fa73a6223da0f58abc9a8c098b67747ee48889211e5b3504c85417eb13250260"}
+SYNTHETIC_CHECK = run.Runner.check_synthetic
 
 
 class SpecTests(unittest.TestCase):
+    def setUp(self):
+        # The stub RAWs below are not synthetic_root.py's, so their synthetic stub specs would stop at the
+        # synthetic-root check. These tests are about the steps after it; the check runs for real in
+        # test_a_synthetic_spec_refuses_a_raw_that_is_not_a_synthetic_root and the e2e.
+        patcher = mock.patch.object(run.Runner, "check_synthetic", lambda runner: None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def write(self, spec):
         f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
         json.dump(spec, f)
@@ -344,6 +354,75 @@ ids = [f"g{i:03d}" for i in range(50)]
                     self.assertIn("a real run is never ungated", str(code), (flags, synthetic))
             code, out = self.main(tmp, "--free-disk-bytes", str(10 ** 15), "--estimate-only")
             self.assertEqual((code, json.loads(out)["revision12_gate"]), (0, None))
+
+    def synthetic_raw(self, tmp, ids=None, fmt=run.SYNTHETIC_FORMAT, truth=True):
+        """A stub RAW whose bvbrc/genomes.jsonl holds the stub's 50 genomes, with a truth.json of format `fmt`
+        listing `ids` (those 50 by default), or none."""
+        raw = Path(tmp) / "raw"
+        held = [f"g{i:03d}" for i in range(50)]
+        (raw / "bvbrc").mkdir(parents=True, exist_ok=True)
+        (raw / "bvbrc" / "genomes.jsonl").write_text("".join(json.dumps({"genome_id": g}) + "\n" for g in held))
+        marker = raw / "truth.json"
+        if truth:
+            marker.write_text(json.dumps({"format": fmt, "genomes": [{"genome_id": g} for g in (ids or held)]}))
+        elif marker.exists():
+            marker.unlink()
+
+    def test_a_synthetic_spec_refuses_a_raw_that_is_not_a_synthetic_root(self):
+        """REVIEW-INTEG7 L2: "synthetic": true runs only on a RAW whose truth.json is synthetic_root.py's and lists
+        exactly RAW's genomes; otherwise it refuses in both modes, before any root is curated."""
+        with mock.patch.object(run.Runner, "check_synthetic", SYNTHETIC_CHECK), tempfile.TemporaryDirectory() as tmp:
+            self.stub_grm(tmp)
+            cases = (({"truth": False}, "no readable truth.json"),
+                     ({"fmt": "grm-ablation-synthetic"}, f"truth.json's format is not {run.SYNTHETIC_FORMAT}"),
+                     # A marker copied from another synthetic root: right format, other genomes.
+                     ({"ids": [f"x{i:03d}" for i in range(50)]},
+                      "truth.json lists 50 genomes and bvbrc/genomes.jsonl holds 50, 100 of them in only one"),
+                     ({"ids": [f"g{i:03d}" for i in range(49)]}, "1 of them in only one"))
+            for kwargs, message in cases:
+                self.synthetic_raw(tmp, **kwargs)
+                for flags in (("--free-disk-bytes", "1000"), ("--free-disk-bytes", str(10 ** 15), "--estimate-only")):
+                    code, _ = self.main(tmp, *flags)
+                    self.assertIn("is not a synthetic root", str(code), (kwargs, flags))
+                    self.assertIn(message, str(code), (kwargs, flags))
+                    self.assertFalse((Path(tmp) / "work" / "roots").exists(), (kwargs, flags))
+            # A spec without "synthetic" isn't checked here; it needs its gate instead.
+            spec = self.stub_spec(tmp)
+            plain = json.loads(spec.read_text())
+            plain.pop("synthetic")
+            spec.write_text(json.dumps(plain))
+            self.assertIn("a real run is never ungated", str(self.main(tmp, "--free-disk-bytes", "1000", spec=spec)[0]))
+            self.synthetic_raw(tmp)
+            code, out = self.main(tmp, "--free-disk-bytes", str(10 ** 15), "--estimate-only")
+            self.assertEqual((code, json.loads(out)["revision12_gate"]), (0, None))
+
+    def test_the_gate_decision_is_printed_on_stderr(self):
+        """REVIEW-INTEG7 L2: the run says at its start, on stderr, whether the gate passed or wasn't required."""
+        with mock.patch.object(run.Runner, "check_synthetic", SYNTHETIC_CHECK), tempfile.TemporaryDirectory() as tmp:
+            self.stub_grm(tmp)
+            self.synthetic_raw(tmp)
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                code, _ = self.main(tmp, "--free-disk-bytes", str(10 ** 15), "--estimate-only")
+            self.assertEqual(code, 0)
+            self.assertIn("revision-12 gate: NOT REQUIRED: the spec says \"synthetic\": true and RAW is a synthetic "
+                          "root (truth.json); this run is ungated", err.getvalue())
+            root = next(r for r in (Path(tmp) / "work" / "roots").iterdir()
+                        if json.loads((r / "curated.json").read_text())["arm"] == "default")
+            slug = SPEC["species"]
+            gate = {"genome_order": {slug: json.loads((root / "curated.json").read_text())["drawn_order_sha256"]},
+                    "datasets_json_sha256": run.datasets_view(root / "curated" / "datasets.json")}
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                code, _ = self.main(tmp, "--free-disk-bytes", str(10 ** 15), "--estimate-only",
+                                    spec=self.stub_spec(tmp, revision12_gate=gate))
+            self.assertEqual(code, 0)
+            self.assertIn(f"revision-12 gate: PASSED: the default's genome order for {slug} and its datasets.json "
+                          f"view {gate['datasets_json_sha256']} equal revision 12's (the spec also says synthetic; "
+                          "the gate ran)", err.getvalue())
+            self.assertNotIn("NOT REQUIRED", err.getvalue())
+        # A real spec's line names no synthetic flag.
+        self.assertTrue(run.gate_line(gate, {}).endswith("equal revision 12's"))
 
     def test_the_gate_s_datasets_view_drops_only_selection_records(self):
         """REVIEW-INPUT8 M1: this tree's curate adds `selection` to every dataset; the view serializes the rest as
@@ -860,6 +939,8 @@ class EndToEndTests(unittest.TestCase):
         self.assertIn(f"- Species pool: the union of the cohorts of this run's {len(groups['arms'])} arms", md)
         # REVIEW-INPUT9 L1: the e2e's spec says synthetic, and K records it.
         self.assertIs(manifest["synthetic"], True)
+        # REVIEW-INTEG7 L2: the spec carried the pinned gate too, and K records that it passed.
+        self.assertEqual(manifest["revision12_gate"], "passed")
         self.assertIn("- Synthetic run: yes.", md)
         self.assertIn("adding an arm means rerunning the whole comparison", md)
 

@@ -821,6 +821,20 @@ def _feature_claim(f):
     return text
 
 
+def _synthetic_line(m):
+    """The header's synthetic line, saying what the revision-12 gate did (main's ruling on REVIEW-INTEG7 L2)."""
+    gate = m.get("revision12_gate")
+    if not m["synthetic"]:
+        return "- Synthetic run: no. The revision-12 gate passed."
+    if gate == "passed":
+        return "- Synthetic run: yes. The spec also carries a revision-12 gate, and it passed."
+    if gate == "not_required":
+        return ("- Synthetic run: yes, on a synthetic data root. The spec carries no revision-12 gate, so none ran; "
+                "a real run needs it.")
+    return ("- Synthetic run: yes. The spec says it is synthetic, so the revision-12 gate a real run needs was not "
+            "required; this manifest doesn't record whether one ran.")
+
+
 def render_markdown(report):
     m = report["manifest"]
     datasets = {d["id"]: d for d in m["datasets"]}
@@ -838,9 +852,7 @@ def render_markdown(report):
         f"- Protocol sha256: `{m['protocol_sha256']}`",
         f"- Source commit: `{m['source_commit']}`",
         f"- Binary sha256: `{m['binary_sha256']}`",
-        *([("- Synthetic run: yes. The spec says it is synthetic, so the revision-12 gate a real run needs was not "
-            "required." if m["synthetic"] else "- Synthetic run: no. The revision-12 gate held.")]
-          if "synthetic" in m else []),
+        *([_synthetic_line(m)] if "synthetic" in m else []),
         *([f"- Species pool: the union of the cohorts of this run's {len(m['species_pool']['arms'])} arms "
            f"({m['species_pool']['genomes']} genomes; structure sha256 `{m['species_pool']['structure_sha256']}`). "
            "Lineages and the fold keys of units outside the default depend on this union, so adding an arm "

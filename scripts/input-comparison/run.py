@@ -105,6 +105,18 @@ def datasets_view(path):
     return sha256_bytes(json.dumps(entries, indent=2, ensure_ascii=False).encode())
 
 
+def gate_line(gate, spec):
+    """The revision-12 gate's decision as the run prints it on stderr at the start, before anything is counted
+    (main's ruling on REVIEW-INTEG7 L2): passed, with what it compared, or not required on a synthetic RAW."""
+    if gate is None:
+        return ("revision-12 gate: NOT REQUIRED: the spec says \"synthetic\": true and RAW is a synthetic root "
+                "(truth.json); this run is ungated")
+    species = ", ".join(sorted(gate["genome_order"]))
+    return (f"revision-12 gate: PASSED: the default's genome order for {species} and its datasets.json view "
+            f"{gate['datasets_json_sha256']} equal revision 12's"
+            + (" (the spec also says synthetic; the gate ran)" if spec.get("synthetic") is True else ""))
+
+
 def disk_bytes(path):
     """The disk a folder's files take, in allocated blocks as df counts them; links are not followed."""
     return sum(p.lstat().st_blocks * 512 for p in Path(path).rglob("*") if p.is_file() and not p.is_symlink())
@@ -188,6 +200,8 @@ POOL_BUDGET = {"default_kset_bytes": 27.5 * 2 ** 20, "max_disk_share": 0.8, "roo
 INPUTS = "inputs.json"
 # The RAW folders a data root links; species-check/ only when RAW has one.
 RAW_PARTS = ("bvbrc", "fasta", "catalog", "species-check")
+# synthetic_root.py's truth.json format: the marker a "synthetic": true spec needs in RAW (REVIEW-INTEG7 L2).
+SYNTHETIC_FORMAT = "grm-input-comparison-synthetic"
 # Arm and dataset names become path components under WORK (REVIEW-INPUT7 L2).
 NAME = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 # A cohort arm's kind, for its measured no-signal base rate (main's ruling on REVIEW-INPUT3 I-c).
@@ -265,6 +279,33 @@ class Runner:
         if self.curate_inputs.get("sigdrug_vocabulary") and self.vocabulary is None:
             raise SystemExit("the spec curates with GRM's SigDrug vocabulary copy: pass --sigdrug-vocabulary DIR (the "
                              "copy revision 12's S0 used)")
+
+    def check_synthetic(self):
+        """A spec that says "synthetic": true runs only on a synthetic RAW (main's ruling on REVIEW-INTEG7 L2): RAW's
+        truth.json must be synthetic_root.py's (its format) and list exactly the genomes of RAW's bvbrc/genomes.jsonl.
+        The format alone could sit in a copied file; the genome list ties the marker to this RAW's own data, which
+        a real root's BV-BRC metadata can't match by accident."""
+        if self.spec.get("synthetic") is not True:
+            return
+
+        def refuse(why):
+            raise SystemExit(f'the spec says "synthetic": true, but RAW {self.raw} is not a synthetic root: {why}. A '
+                             'real run is never ungated: drop "synthetic" and give the spec its revision12_gate')
+        try:
+            truth = json.loads((self.raw / "truth.json").read_text())
+        except (OSError, ValueError) as e:
+            refuse(f"no readable truth.json ({e.__class__.__name__})")
+        if not isinstance(truth, dict) or truth.get("format") != SYNTHETIC_FORMAT:
+            refuse(f"truth.json's format is not {SYNTHETIC_FORMAT}")
+        try:
+            listed = {g["genome_id"] for g in truth["genomes"]}
+            with open(self.raw / "bvbrc" / "genomes.jsonl", encoding="utf-8") as f:
+                held = {json.loads(line)["genome_id"] for line in f if line.strip()}
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            refuse(f"truth.json's genomes can't be checked against bvbrc/genomes.jsonl ({e.__class__.__name__})")
+        if not listed or listed != held:
+            refuse(f"truth.json lists {len(listed)} genomes and bvbrc/genomes.jsonl holds {len(held)}, "
+                   f"{len(listed ^ held)} of them in only one")
 
     def check_revision12(self):
         """The H-1 gate (main's rulings on REVIEW-INPUT7 to REVIEW-INPUT9): before anything is counted or learned,
@@ -786,6 +827,7 @@ def main(argv):
     runner.default = default
     runner.all_arms = [default, *arms]
     runner.check_curate_inputs()
+    runner.check_synthetic()
     runner.check_inputs()
     floor = spec.get("panel_floor", {}).get("min_eligible_genomes", 0)
     eligible = len(runner.eligible(default))
@@ -793,6 +835,7 @@ def main(argv):
         raise SystemExit(f"{spec['species']}: {eligible} eligible genomes, below the panel floor of {floor} "
                          "(spec panel_floor): cap-4000 and grr-v1 would not change the genome set")
     gate = runner.check_revision12()
+    print(gate_line(gate, spec), file=sys.stderr)
     if a.estimate_only:
         # Before any box: the gate, then the box's free disk (--free-disk-bytes, not this machine's).
         disk = runner.plan_disk([default, *arms], a.free_disk_bytes, measure=a.free_disk_bytes is None)
@@ -833,6 +876,7 @@ def main(argv):
         (work / "j" / f"{name}.json").write_text(json.dumps(value, indent=1, sort_keys=True))
     m = manifest(spec, default, arms, work, runner.grm, a.source_commit, runner.seconds)
     m["synthetic"] = spec.get("synthetic") is True
+    m["revision12_gate"] = "not_required" if gate is None else "passed"
     m["species_pool"] = {"genomes": species_groups["genomes"], "arms": species_groups["arms"],
                          "structure_sha256": species_groups["sha256"]}
     (work / "k").mkdir(exist_ok=True)

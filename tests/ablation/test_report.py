@@ -738,9 +738,23 @@ class BaseRateCases(unittest.TestCase):
         self.assertNotIn("Synthetic run", rp.render_markdown(build(manifest=m)))
         m["synthetic"] = True
         self.assertIn("- Synthetic run: yes. The spec says it is synthetic, so the revision-12 gate a real run needs was "
-                      "not required.", rp.render_markdown(build(manifest=m)))
+                      "not required; this manifest doesn't record whether one ran.", rp.render_markdown(build(manifest=m)))
+        # REVIEW-INTEG7 L2: a synthetic spec that also carried the gate says it ran and passed.
+        m["revision12_gate"] = "passed"
+        self.assertIn("- Synthetic run: yes. The spec also carries a revision-12 gate, and it passed.",
+                      rp.render_markdown(build(manifest=m)))
+        m["revision12_gate"] = "not_required"
+        self.assertIn("- Synthetic run: yes, on a synthetic data root. The spec carries no revision-12 gate, so none "
+                      "ran; a real run needs it.", rp.render_markdown(build(manifest=m)))
         m["synthetic"] = False
-        self.assertIn("- Synthetic run: no. The revision-12 gate held.", rp.render_markdown(build(manifest=m)))
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+        m["revision12_gate"] = "passed"
+        self.assertIn("- Synthetic run: no. The revision-12 gate passed.", rp.render_markdown(build(manifest=m)))
+        m["revision12_gate"] = "skipped"
+        with self.assertRaises(SchemaError):
+            build(manifest=m)
+        m["revision12_gate"] = "passed"
         m["synthetic"] = "yes"
         with self.assertRaises(SchemaError):
             build(manifest=m)

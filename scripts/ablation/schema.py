@@ -489,6 +489,8 @@ SENTINEL_SPLIT = "lineage"
 
 
 def _manifest_after(c, path, m):
+    if m.get("revision12_gate") == "not_required" and m.get("synthetic") is not True:
+        c.fail(f"{path}.revision12_gate", "only a synthetic run can skip the revision-12 gate")
     arms = {u["arm"] for u in m["runs"]}
     for i, arm in enumerate(m.get("sentinel_arms", [])):
         if arm not in arms:
@@ -514,6 +516,9 @@ MANIFEST = record({
     # The input comparison's spec said "synthetic": true, so it ran without the revision-12 gate a real run needs
     # (main's ruling on REVIEW-INPUT9 L1).
     "synthetic": boolean,
+    # What the revision-12 gate did: "passed", or "not_required" when a synthetic spec on a synthetic RAW carried
+    # none (main's ruling on REVIEW-INTEG7 L2). A real run can only have passed it.
+    "revision12_gate": enum(("passed", "not_required")),
     # A measured no-signal decision rate printed beside each contrast of the arm (main's rulings on
     # REVIEW-INPUT2 and REVIEW-INPUT3 I-c: the rate of the arm's kind, or null when that kind has none).
     # The input comparison's species pool: the union of the run's arms' cohorts, which its lineages and the
