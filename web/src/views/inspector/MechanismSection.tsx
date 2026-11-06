@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { DatasetReport, GroupRow, PanelResult } from "../../data/schema";
 import { int, pct, plural } from "../../data/format";
 import { BARS } from "../../data/metrics";
@@ -7,10 +8,27 @@ import { PanelDesigner } from "./PanelDesigner";
 import { DataTable, type Column } from "../../ui/DataTable";
 import { BarPill, PanelState, ScrollFrame, Section } from "../../ui/primitives";
 
+/** A class list such as "lincosamide/oxazolidinone/phenicol" that may break
+ *  after each "/", so it wraps in its cell rather than widen the table. */
+const SlashBreaks = ({ text }: { text: string }) => (
+  <>
+    {text.split("/").map((part, i) =>
+      i === 0 ? (
+        part
+      ) : (
+        <Fragment key={i}>
+          /<wbr />
+          {part}
+        </Fragment>
+      ),
+    )}
+  </>
+);
+
 const groupColumns: Column<GroupRow>[] = [
   { id: "group", header: "Gene group", sortValue: (g) => g.group, firstDir: "asc", cell: (g) => g.group },
-  { id: "class", header: "Class", sortValue: (g) => g.class, firstDir: "asc", cell: (g) => <span className="text-muted-text">{g.class.toLowerCase()}</span> },
-  { id: "subclass", header: "Subclass", sortValue: (g) => g.subclass, firstDir: "asc", cell: (g) => <span className="whitespace-normal break-words text-muted-text">{g.subclass.toLowerCase()}</span> },
+  { id: "class", header: "Class", sortValue: (g) => g.class, firstDir: "asc", cell: (g) => <span className="text-muted-text"><SlashBreaks text={g.class.toLowerCase()} /></span> },
+  { id: "subclass", header: "Subclass", sortValue: (g) => g.subclass, firstDir: "asc", cell: (g) => <span className="whitespace-normal break-words text-muted-text"><SlashBreaks text={g.subclass.toLowerCase()} /></span> },
   { id: "r", header: "Resistant carriers", align: "right", sortValue: (g) => g.n_resistant, cell: (g) => int(g.n_resistant) },
   { id: "s", header: "Susceptible carriers", align: "right", sortValue: (g) => g.n_susceptible, cell: (g) => int(g.n_susceptible) },
   {
