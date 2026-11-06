@@ -88,6 +88,27 @@ const widestInterval = (() => {
   }
   return widest;
 })();
+// From the tree's own datasets/: the dataset whose decision tree, at the
+// inspector's default three levels, has the most leaf columns, and the one
+// whose catalog gene groups hold the longest class or subclass list (one
+// slash-joined run, such as "lincosamide/oxazolidinone/..."); null when no
+// dataset has one.
+const widestPanels = (() => {
+  let tree = null, catalog = null;
+  for (const d of manifest.datasets) {
+    const file = path.join(FIXTURE, 'datasets', d.id + '.json');
+    if (!fs.existsSync(file)) continue;
+    const r = JSON.parse(fs.readFileSync(file));
+    const nodes = r.models?.cart?.nodes ?? [], depth = Math.min(3, r.models?.cart_depth ?? 0);
+    let columns = 0;
+    const visit = i => { const n = nodes[i]; if (n === undefined) return; if (n.split === null || n.depth >= depth) { columns += 1; return; } visit(n.split.absent); visit(n.split.present); };
+    if (nodes.length > 0) visit(0);
+    if (columns > 0 && (tree === null || columns > tree.columns)) tree = { id: d.id, columns };
+    const chars = Math.max(0, ...(r.catalog?.groups ?? []).map(g => Math.max(g.class.length, g.subclass.length)));
+    if (chars > 0 && (catalog === null || chars > catalog.chars)) catalog = { id: d.id, chars, groups: r.catalog.groups.length };
+  }
+  return { tree, catalog };
+})();
 const inspectId = manifest.datasets.some(d => d.id === 'escherichia_coli__ceftriaxone') ? 'escherichia_coli__ceftriaxone' : manifest.datasets[0].id;
 const speciesSlug = manifest.species.find(s => s.slug === 'escherichia_coli' && s.genomes_analyzed > 0)?.slug ?? manifest.species.find(s => s.genomes_analyzed > 0).slug;
 const speciesName = manifest.species.find(s => s.slug === speciesSlug).species;
@@ -510,6 +531,81 @@ async function widestIntervalFit(page, tag) {
   }, ranges, { timeout: 5000 }).catch(() => null);
   const view = widestInterval.scheme === 'lineage' ? 'Errors, lineages held out' : 'Errors, random split';
   check(name, frame !== null && frame.ranges > 0 && frame.pressed === view && frame.scroll <= frame.client + 1, { ...widestInterval, ...frame });
+}
+
+/** At desktop widths each learner strip, axis included, ends inside its
+ *  cell's content box once the table settles, in both error views, and its
+ *  marks inside the cell. The cell clips a strip that is briefly too wide,
+ *  so this reads the svg's own box, not what is painted. Read on the
+ *  widest-interval dataset, whose lineage view narrows the strip most. */
+async function stripFit(page, tag) {
+  const id = widestInterval?.id ?? inspectId;
+  await page.goto(BASE + '/datasets?dataset=' + id);
+  await page.locator('#ds-learners table svg').first().waitFor({ timeout: 10000 }).catch(() => {});
+  for (const view of ['Errors, random split', 'Errors, lineages held out']) {
+    const name = tag + ' learner strips end inside their cells, ' + view;
+    const button = page.locator('#ds-learners [role="group"][aria-label="Errors measured under"]').getByRole('button', { name: view, exact: true });
+    if (await button.count() === 0) { skipped.push({ check: name, reason: id + ' has no "' + view + '" button' }); continue; }
+    await button.click({ timeout: 2000 }).catch(() => {});
+    const read = await page.locator('#ds-learners').evaluate(async s => {
+      const measure = () => {
+        const cells = [...s.querySelectorAll('table tr > :nth-child(2)')].filter(c => c.querySelector('svg') !== null);
+        let over = -Infinity, marksOut = 0;
+        for (const cell of cells) {
+          const b = cell.getBoundingClientRect(), st = getComputedStyle(cell);
+          const left = b.left + parseFloat(st.paddingLeft) + parseFloat(st.borderLeftWidth), right = b.right - parseFloat(st.paddingRight) - parseFloat(st.borderRightWidth);
+          for (const svg of cell.querySelectorAll('svg')) { const r = svg.getBoundingClientRect(); over = Math.max(over, r.right - right, left - r.left); }
+          for (const m of cell.querySelectorAll('svg circle, svg line, svg text')) { const r = m.getBoundingClientRect(); if (r.left < b.left - 0.5 || r.right > b.right + 0.5) marksOut += 1; }
+        }
+        return { cells: cells.length, over: Math.round(over * 10) / 10, marksOut };
+      };
+      // Up to a second for the cell's observer to fire and the strip to redraw.
+      const t0 = performance.now();
+      let m = measure();
+      while (m.over > 1 && performance.now() - t0 < 1000) { await new Promise(r => requestAnimationFrame(r)); m = measure(); }
+      return { ...m, waited: Math.round(performance.now() - t0), pressed: s.querySelector('[role="group"][aria-label="Errors measured under"] [aria-pressed="true"]')?.textContent ?? null };
+    }, null, { timeout: 5000 }).catch(() => null);
+    check(name, read !== null && read.cells > 1 && read.pressed === view && read.over <= 1 && read.marksOut === 0, { id, ...read });
+  }
+}
+
+/** The widest default decision tree and the longest catalog class list the
+ *  tree holds, every catalog row shown. At desktop widths each fits its
+ *  frame with no sideways scroll; on a phone it may scroll inside its frame,
+ *  but never the page, and its far edge scrolls into view. Every node of the
+ *  tree keeps its text inside its box. */
+async function panelFit(page, tag, width) {
+  const desktop = width >= 1280;
+  for (const [key, pick, label] of [['decision tree', widestPanels.tree, 'Decision tree'], ['catalog gene groups', widestPanels.catalog, 'Catalog gene groups']]) {
+    const name = tag + ' widest ' + key + (desktop ? ' fits without sideways scroll' : ' scrolls inside its frame, not the page');
+    if (pick === null) { skipped.push({ check: name, reason: 'no dataset in this tree has ' + key }); continue; }
+    await page.goto(BASE + '/datasets?dataset=' + pick.id);
+    const region = page.locator('dialog [role="region"][aria-label="' + label + '"]');
+    await region.waitFor({ timeout: 10000 }).catch(() => {});
+    if (key === 'catalog gene groups') {
+      const more = region.locator('xpath=ancestor::div[contains(@class, "scroll-frame")]/following-sibling::div//button');
+      if (await more.count() > 0) await more.first().click({ timeout: 2000 }).catch(() => {});
+    }
+    await region.scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {});
+    const read = await region.evaluate(async e => {
+      const frames = n => new Promise(r => { const step = k => (k === 0 ? r() : requestAnimationFrame(() => step(k - 1))); step(n); });
+      await frames(2);
+      const content = e.querySelector('table, svg');
+      const out = { scroll: e.scrollWidth, client: e.clientWidth, page: document.documentElement.scrollWidth - innerWidth, rows: e.querySelectorAll('tbody tr').length, svg: Number(e.querySelector('svg')?.getAttribute('width') ?? 0) };
+      e.scrollLeft = e.scrollWidth;
+      await frames(1);
+      out.reach = Math.round((content.getBoundingClientRect().right - e.getBoundingClientRect().right) * 10) / 10;
+      out.labelsOut = [...e.querySelectorAll('svg g.cursor-pointer')].filter(g => { const box = g.querySelector('rect').getBoundingClientRect(); return [...g.querySelectorAll('text')].some(t => { const r = t.getBoundingClientRect(); return r.left < box.left - 0.5 || r.right > box.right + 0.5; }); }).length;
+      e.scrollLeft = 0;
+      return out;
+    }, null, { timeout: 5000 }).catch(() => null);
+    // The pick is the one on screen: the tree at its column count (at least
+    // 140 px each), every catalog row.
+    const shown = read !== null && (key === 'decision tree' ? read.svg >= pick.columns * 140 + 8 : read.rows === pick.groups);
+    const fits = read !== null && (desktop ? read.scroll <= read.client + 1 : read.page <= 1 && read.reach <= 1);
+    check(name, shown && fits, { ...pick, ...read });
+    if (key === 'decision tree') check(tag + ' widest decision tree keeps each label inside its node', read !== null && read.labelsOut === 0, { id: pick.id, labelsOut: read?.labelsOut });
+  }
 }
 
 async function interactions(page, tag, width) {
@@ -1138,7 +1234,7 @@ async function boundaries(browser) {
         await page.goto(BASE);
         await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
         await present(page, tag, width, height);
-        if (width === 1280) { await interactions(page, tag, width); await widestIntervalFit(page, tag); await context.close(); continue; }
+        if (width === 1280) { await interactions(page, tag, width); await widestIntervalFit(page, tag); await stripFit(page, tag); await panelFit(page, tag, width); await context.close(); continue; }
         for (const [route, title, key] of [['/', 'What GRM found', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/methods', 'Data & Methods', 'methods']]) {
           await page.goto(BASE + route);
           await page.getByRole('heading', { name: title, exact: true }).first().waitFor();
@@ -1159,7 +1255,8 @@ async function boundaries(browser) {
         await shot(page, tag + '-inspector');
         await intervalCheck(page, tag);
         await interactions(page, tag, width);
-        if (width >= 1280) await widestIntervalFit(page, tag);
+        if (width >= 1280) { await widestIntervalFit(page, tag); await stripFit(page, tag); }
+        await panelFit(page, tag, width);
         await states(browser, width, height, theme);
       } catch (error) { errors.push({ theme, width, message: error.stack }); }
       await context.close();

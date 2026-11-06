@@ -91,6 +91,12 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
   // padding), and the box that fills its cell without sizing it.
   const stripColumn = wide ? { width: "100%", minWidth: STRIP_MIN + 16 } : undefined;
   const stripFill = wide ? { width: 0, minWidth: "100%" } : undefined;
+  // Wide only: when the cell narrows (the lineage view's wider intervals),
+  // the strip keeps its old width until the observer reads the cell again.
+  // The cell clips it meanwhile, so it never paints over the next column;
+  // settled, the strip ends inside the cell's content box and the clip cuts
+  // nothing.
+  const stripClip = wide ? "overflow-hidden" : "";
   const random = splitOf(r, "random");
   const lineage = splitOf(r, "lineage");
   const best = bestLearner(r);
@@ -177,7 +183,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
               <th scope="col" className="px-2 py-2 text-tiny font-medium text-blue">
                 Learner
               </th>
-              <th scope="col" className="px-2 py-1 text-tiny font-medium text-blue" style={stripColumn}>
+              <th scope="col" className={`px-2 py-1 text-tiny font-medium text-blue ${stripClip}`} style={stripColumn}>
                 <span className="sr-only">Balanced accuracy, </span>
                 <div ref={stripBox} style={stripFill}>
                   <StripAxis x={x} width={stripWidth} />
@@ -204,7 +210,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
                     {LEARNER_NAME[l]}
                     {isBest ? <span className="ml-2 text-tiny font-medium text-blue">Best</span> : null}
                   </th>
-                  <td className="px-2 py-0.5">
+                  <td className={`px-2 py-0.5 ${stripClip}`}>
                     <div style={stripFill}>
                       <LearnerStripRow
                         x={x}
