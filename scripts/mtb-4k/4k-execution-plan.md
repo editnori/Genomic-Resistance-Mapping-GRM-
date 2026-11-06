@@ -27,7 +27,7 @@ PF-D8, D14 as corrected by I4 and M2, M3, and "MTB carry-over into X4"). What ch
   `revision_n.py verify-checkout` and the foldgen tree pin run on the laptop against that worktree before any box
   (section 3).
 - **Reference.** `RN_REFERENCE_ROOT` is revision 12's g5 data root itself, so section 7b reads `$REF/species/...`,
-  not `$REF/data/species/...`, and the fold rebuild reads it through a one-link view.
+  not `$REF/data/species/...`, and the fold rebuild reads it through a link view.
 - **Prefix gate instead of the pilot (main's Q1 ruling).** The build-target change would repeat section 4's pilot;
   instead X1 stops right after `matrix:prefix` unless the prefix matrix equals box R7's g5 matrix of the same 2,000
   genomes byte for byte (section 5).
@@ -737,7 +737,9 @@ is stated. A failure is a stop for review, never something to skip.
 
 Revision 7: `RN_REFERENCE_ROOT` is revision 12's g5 data root itself (box R7's `out/data`, pushed by `drive.sh` to
 `/home/user/grm-ref`), so the paths below drop revision 6's `/data`; `audit.py --root` takes a folder holding
-`data/`, so the fold rebuild reads the reference through a one-link view. X4 runs this section.
+`data/` and reads `data/species`, `data/report` (`index.json`, `datasets/`) and `data/curated/datasets.json`, so the
+fold rebuild reads them through a link view: the reference's `species/` and `report/` (`drive.sh` pushes both) and
+the input root's `curated/`, the curation box R7 learned from. X4 runs this section.
 
 ```bash
 set -o pipefail
@@ -754,8 +756,9 @@ done
 # inputs (RN_INPUT_ROOT's curated and catalog), in a link-only view outside both roots.
 python3 -I "$P/fingerprint.py" "$RUN/rN-view/data" --make-view --matrix-from "$REF" --inputs-from "$INPUT_ROOT" \
   --reports-from "$REF" --check --expect-reports 22 --out "$RUN/audit/rN-fingerprints.json" || exit 1
-# The metric audit rebuilds every saved test_fold of the reference with this foldgen, through a one-link view.
-mkdir "$RUN/rN-ref-root" && ln -s "$REF" "$RUN/rN-ref-root/data" || exit 1
+# The metric audit rebuilds every saved test_fold of the reference with this foldgen, through a link view.
+mkdir -p "$RUN/rN-ref-root/data" && ln -s "$REF/species" "$RUN/rN-ref-root/data/species" || exit 1
+ln -s "$REF/report" "$RUN/rN-ref-root/data/report" && ln -s "$INPUT_ROOT/curated" "$RUN/rN-ref-root/data/curated" || exit 1
 python3 -I "$WS/scripts/metric-audit/audit.py" "$RUN/audit/rN-fold-rebuild.json" $SLUG --revision "$REVISION_N" \
   --root "$RUN/rN-ref-root" --reshaped --foldgen "$FOLDGEN" || exit 1
 python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); bad=[i for x in r["records"] for i in x.get("issues",[]) if "test_fold" in i["where"]]; print(len(r["records"]),len(bad)); assert len(r["records"])==22 and not bad' "$RUN/audit/rN-fold-rebuild.json" || exit 1
@@ -1027,4 +1030,5 @@ rulings of 5 Nov on MTB-PREP's K1–K3 and Q1):
   on either failing. The box no longer runs them: its source has no `.git`.
 - **Q1:** X1 stops right after `matrix:prefix` unless the prefix matrix equals the g5 reference (section 5's prefix
   gate); X4's section 7b repeats the same `cmp`.
-- **K3:** `reference` runs 7b's fold rebuild through the one-link view, with the `-c` check.
+- **K3:** `reference` runs 7b's fold rebuild through the link view, with the `-c` check; the reference set `drive.sh`
+  pushes carries `report/index.json` and `report/datasets/*.json` for it.
