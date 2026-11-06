@@ -419,6 +419,18 @@ Main ruled on all four questions from the first build: the class balance (the ba
   - **M1:** the first version of the gate judged only the arms it found, so an empty or mistyped folder printed `seeds 0; pass True` and a calibration arm absent from every seed passed. Now no seeds, a named arm in no seed, or any arm under 20 seeds fails the calibration, and the report names the arm. A folder that doesn't exist is refused, and the null study names a missing arm instead of raising `KeyError`.
   - **L1:** tests with two calibration arms, one of them thin, and with a planted arm thinned.
   - **L2:** seeds are counted, not files. Summaries are keyed by seed folder: a folder given twice, or the same seed in two folders, counts once when the files are byte-identical and is refused, naming both, when they differ.
+- **After REVIEW-INPUT17B (main's rulings, 6 Nov 2026).**
+  - **L1:** `test_the_calibration_judges_the_runner_s_sentinel_too` runs `calibration.json`'s arms with the sentinel. A sentinel in 19 of 20 seeds fails the calibration, and the report names it.
+  - **L2:** a seed is the one its `cohort.json` records (`one_seed` writes it beside `summary.json`), not its folder's name. So `seed-0101` and `seed-101.bak` beside `seed-101`, or a copy of seeds 101–110 renamed 111–120, count as the 10 seeds they are.
+    - Copies of one seed count once when their summaries are byte-identical. When they differ, they are refused, naming both.
+    - A summary whose `cohort.json` is missing or unreadable, has no `seed`, or has a seed that isn't an integer is refused.
+    - Each of the 40 stored seeds (`cal1`, `cal2`, `nullA`, `nullB`) records the seed its folder names, so their reports are unchanged.
+  - **Tests:** `test_a_seed_is_the_one_its_cohort_json_records` covers the reviewer's three cases, a 20-seed control, a differing copy and each unreadable seed. The test helpers now write `cohort.json` as `one_seed` does.
+- **A multi-block fold matrix (REVIEW-TL1 I4).** A K-only arm can't show a leak in `assemble`'s cross-block coalescing, because `block_candidates` has already merged K's own training twins. `ablate::arm::tests::a_c_and_k_fold_matrix_collapses_cross_block_twins_on_training_samples_only` runs `run_arm`'s fold matrix on a C block and a K block.
+  - Their twin columns agree on the training samples and differ on the outer test samples, and C has no row for one test sample.
+  - It checks that the twins collapse into one column, with C's value where C has a row and K's where C has none.
+  - It also checks that no change to the test samples changes the matrix's training rows: none of their bits set, all of them set, the twins' test bits swapped, or a C row for every sample.
+  - A collapse keyed on every sample fails it, and so does assembling on every sample, ignoring availability, or letting K overwrite C.
   - **Tests:** `test_the_calibration_judges_every_arm_its_spec_names`, `test_every_judged_arm_needs_20_seeds_not_any` and `test_a_seed_counts_once_however_many_folders_hold_it`.
 
 ## Cost
