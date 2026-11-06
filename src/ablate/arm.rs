@@ -788,6 +788,128 @@ mod tests {
         );
     }
 
+    /// A presence block `id` with rows for `rows` (indices into `samples`):
+    /// one always-assessable column per name, present on the samples given.
+    fn presence(
+        id: &str,
+        samples: &[String],
+        rows: &[usize],
+        cols: &[(&str, Vec<usize>)],
+    ) -> RawBlock {
+        let n = rows.len();
+        RawBlock {
+            spec: blocks::def(id).unwrap().spec(Provenance {
+                version: "fixture".into(),
+                source_sha256: "0".repeat(64),
+                catalog_date: None,
+            }),
+            sample_ids: rows.iter().map(|&i| samples[i].clone()).collect(),
+            names: cols
+                .iter()
+                .map(|(name, _)| format!("{id}:{name}"))
+                .collect(),
+            cols: cols
+                .iter()
+                .map(|(_, on)| RawColumn::Binary {
+                    present: Bits::from_indices(n, (0..n).filter(|&j| on.contains(&rows[j]))),
+                    assessable: Bits::ones(n),
+                })
+                .collect(),
+        }
+    }
+
+    /// REVIEW-TL1 I4: a K-only arm can't show a leak in `assemble`'s
+    /// cross-block coalescing, because `block_candidates` has already merged
+    /// K's own training twins. Here a C column and a K column agree on every
+    /// training sample (0..18) and differ on the outer test samples, and C
+    /// has no row for test sample 23. `run_arm`'s fold matrix must collapse
+    /// them on their training rows alone into one column that takes C's
+    /// value where C has a row and K's at 23, and no change to the test
+    /// samples (their bits, or which of them C has rows for) may change its
+    /// training rows. A collapse keyed on every sample keeps the twins apart
+    /// here and merges them once the test bits agree, so it fails both.
+    #[test]
+    fn a_c_and_k_fold_matrix_collapses_cross_block_twins_on_training_samples_only() {
+        let samples: Vec<String> = (0..24).map(|i| format!("g{i}")).collect();
+        let train = Bits::from_indices(24, 0..18);
+        let ecfg = EncodeConfig { min_support: 3 };
+        let all: Vec<usize> = (0..24).collect();
+        let test: Vec<usize> = (18..24).collect();
+        let on = |training: std::ops::Range<usize>, tested: &[usize]| -> Vec<usize> {
+            training.chain(tested.iter().copied()).collect()
+        };
+        // Test bits of C:twin, C:solo, K:twin and K:other; C's rows.
+        let toy = |t: [&[usize]; 4], c_rows: &[usize]| {
+            let c = presence(
+                "C",
+                &samples,
+                c_rows,
+                &[("twin", on(0..6, t[0])), ("solo", on(6..12, t[1]))],
+            );
+            let k = presence(
+                "K",
+                &samples,
+                &all,
+                &[("twin", on(0..6, t[2])), ("other", on(12..18, t[3]))],
+            );
+            (c, k)
+        };
+        let fold =
+            |(c, k): &(RawBlock, RawBlock)| fold_matrix(&[c, k], &samples, &train, &ecfg).unwrap();
+        let rows =
+            |x: &crate::bits::BitMatrix| (0..x.rows).map(|r| x.row(r).to_vec()).collect::<Vec<_>>();
+        let training = |x: &crate::bits::BitMatrix| {
+            (0..x.rows)
+                .map(|r| train.and_slice(x.row(r)).words().to_vec())
+                .collect::<Vec<_>>()
+        };
+        let no_23: Vec<usize> = (0..23).collect();
+        let clean = toy([&[18, 19], &[20], &[20, 21, 23], &[22]], &no_23);
+
+        // The toy can show a leak: each block keeps its twin as a candidate,
+        // and the twins differ on test samples, so only a collapse on the
+        // training rows makes 3 columns of the 4 candidates.
+        let candidates: Vec<usize> = [&clean.0, &clean.1]
+            .iter()
+            .map(|raw| {
+                let enc = encode::fit_encoder(raw, &samples, &train, &ecfg).unwrap();
+                let x = encode::transform(&enc, raw, &samples).unwrap();
+                encode::block_candidates(&x, &train, &ecfg).x.rows
+            })
+            .collect();
+        assert_eq!(candidates, [2, 2]);
+        let got = fold(&clean);
+        let bits = |on: Vec<usize>| Bits::from_indices(24, on).words().to_vec();
+        assert_eq!(
+            rows(&got),
+            [
+                bits(on(0..6, &[18, 19, 23])),
+                bits(on(6..12, &[20])),
+                bits(on(12..18, &[22])),
+            ],
+            "C:twin and K:twin collapse to C's value where C has a row and K's at 23"
+        );
+
+        for (what, changed) in [
+            ("no test bits", toy([&[], &[], &[], &[]], &no_23)),
+            ("every test bit", toy([&test, &test, &test, &test], &no_23)),
+            (
+                "the twins' test bits swapped",
+                toy([&[20, 21, 23], &[20], &[18, 19], &[22]], &no_23),
+            ),
+            (
+                "C with a row for every sample",
+                toy([&[18, 19], &[20], &[20, 21, 23], &[22]], &all),
+            ),
+        ] {
+            assert_eq!(
+                training(&fold(&changed)),
+                training(&got),
+                "{what} changed the training rows"
+            );
+        }
+    }
+
     /// `run_arm` scores a cohort plan with its held-out genomes out of every
     /// fold's training (the reviewer's M17), and with the arm's learner seed.
     #[test]

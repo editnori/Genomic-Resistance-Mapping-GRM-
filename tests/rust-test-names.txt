@@ -2,6 +2,7 @@
 doc src/ablate/blocks.rs - ablate::blocks::admit
 doc src/ablate/plan.rs - ablate::plan::GroupIds
 doc src/ablate/plan.rs - ablate::plan::GroupIds
+src/lib.rs ablate::arm::tests::a_c_and_k_fold_matrix_collapses_cross_block_twins_on_training_samples_only
 src/lib.rs ablate::arm::tests::a_cohort_plan_keeps_its_held_out_genomes_in_run_arm
 src/lib.rs ablate::arm::tests::the_fold_matrix_reads_only_the_training_samples
 src/lib.rs ablate::blocks::tests::a_probe_no_call_is_not_assessable
