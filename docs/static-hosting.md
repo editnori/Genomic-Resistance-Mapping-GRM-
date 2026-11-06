@@ -140,6 +140,8 @@ bash $W/wrangler.sh deploy                     # Worker grm-site, custom domain 
 
 Wrangler creates the DNS record and the certificate. `wrangler.toml` turns off `workers.dev` and preview URLs, so the Worker answers only on the domain.
 
+Every hostname on this account must have a Cloudflare Access application, or Cloudflare answers 403 "error code: 1050" for it. Keep the existing application for `genomicresistance.com` (Bypass, Include Everyone). Before any other hostname serves (`www`, if it should), create one for it in Zero Trust › Access › Applications: a self-hosted application for that hostname with one policy, action Bypass, Include Everyone.
+
 ### 6. Public check
 
 ```bash
@@ -161,7 +163,7 @@ With `GRM_SITE_URL` set, a rollback that fails its own served check restores rev
 ### 8. Retire the tunnel
 
 - Zero Trust › Networks › Tunnels: delete the Vast-era tunnel. Its connector died with Vast, and deleting the tunnel invalidates its token.
-- Zero Trust › Access › Applications: delete the bypass application that existed for the tunnel, if nothing else uses it.
+- Zero Trust › Access › Applications: **keep** the application for `genomicresistance.com` (action Bypass, Include Everyone). It is not the tunnel's: every hostname on this account must have an Access application, and without one Cloudflare answers 403 "error code: 1050" for the whole site. Delete nothing here.
 - DNS: confirm no record still points at `*.cfargotunnel.com`.
 - Revoke the setup token and `shred -u` its file.
 
