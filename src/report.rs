@@ -290,21 +290,26 @@ fn rule_text(report: &Value) -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// What a missing Kover file tells `grm report`'s user, who can pass `--kover`.
+pub const REPORT_KOVER_REMEDY: &str = "run grm from the source folder, which holds \
+     reference/kover-summary.json, or give `grm report --kover` the file's path";
+
+/// What it tells `grm pipeline`'s, which reads only the default path.
+pub const PIPELINE_KOVER_REMEDY: &str = "run `grm pipeline` from the source folder, which holds \
+     reference/kover-summary.json; pipeline reads the Kover file only from there";
+
 /// The historical Kover rows `index.json` shows beside each dataset, keyed by
 /// species and canonical antibiotic. A file that is missing or doesn't parse
 /// is an error: the default path is relative to the working folder, and
 /// reading nothing would drop every dataset's `kover` field without a word.
-pub fn kover_benchmark(path: &Path) -> Result<HashMap<(String, String), KoverRow>> {
+/// `remedy` is what a missing file tells the user to do.
+pub fn kover_benchmark(path: &Path, remedy: &str) -> Result<HashMap<(String, String), KoverRow>> {
     let shown = match std::path::absolute(path) {
         Ok(abs) if abs != path => format!("{} ({})", path.display(), abs.display()),
         _ => path.display().to_string(),
     };
-    let bytes = std::fs::read(path).with_context(|| {
-        format!(
-            "read the Kover comparison {shown}: run grm from the source folder, which holds \
-             reference/kover-summary.json, or give `grm report --kover` the file's path"
-        )
-    })?;
+    let bytes = std::fs::read(path)
+        .with_context(|| format!("read the Kover comparison {shown}: {remedy}"))?;
     let rows: Vec<Value> = serde_json::from_slice(&bytes)
         .with_context(|| format!("parse the Kover comparison {shown}"))?;
     let vocab = drugs::Vocabulary::default();
@@ -523,7 +528,7 @@ fn top_counts<'a>(items: impl Iterator<Item = &'a str>, k: usize) -> Vec<(String
 
 /// Builds every dashboard file under `<data>/report/` and returns its path.
 pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf> {
-    let kover = kover_benchmark(legacy_kover)?;
+    let kover = kover_benchmark(legacy_kover, REPORT_KOVER_REMEDY)?;
     let out_dir = layout.root.join("report");
     std::fs::create_dir_all(out_dir.join("datasets"))?;
     // `prune` removes every file this build did not publish, including one a

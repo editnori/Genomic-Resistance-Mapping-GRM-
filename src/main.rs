@@ -297,9 +297,7 @@ fn run(cli: Cli) -> Result<()> {
             allow_missing_catalog,
         } => {
             require_catalog(&layout, k, allow_missing_catalog)?;
-            // Each species ends in `grm report`, which refuses without the
-            // Kover comparison; refuse before counting anything instead.
-            grm::report::kover_benchmark(std::path::Path::new(KOVER_RESULTS))?;
+            require_kover(std::path::Path::new(KOVER_RESULTS))?;
             let slugs = if species.is_empty() {
                 curated_species(&layout)?
             } else {
@@ -469,6 +467,13 @@ fn require_catalog(layout: &Layout, k: usize, allow_missing_catalog: bool) -> Re
         )?;
     }
     Ok(())
+}
+
+/// Stops `grm pipeline` before it counts anything when the Kover comparison
+/// at `path` doesn't load: each species ends in `grm report`, which would
+/// refuse only after the learning.
+fn require_kover(path: &std::path::Path) -> Result<()> {
+    grm::report::kover_benchmark(path, grm::report::PIPELINE_KOVER_REMEDY).map(|_| ())
 }
 
 fn count_with(layout: &Layout, slug: &str, k: usize, catalog: Option<&Catalog>) -> Result<()> {
@@ -1660,6 +1665,25 @@ mod tests {
             );
             require_catalog(&layout, PIPELINE_K, true).unwrap();
         }
+    }
+
+    #[test]
+    fn pipeline_refuses_a_missing_kover_file_with_its_own_remedy() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("reference/kover-summary.json");
+        let err = format!("{:#}", require_kover(&missing).unwrap_err());
+        assert!(err.contains(missing.to_str().unwrap()), "{err}");
+        assert!(
+            err.contains("run `grm pipeline` from the source folder"),
+            "{err}"
+        );
+        // pipeline has no --kover, so its message must not offer one.
+        assert!(!err.contains("--kover"), "{err}");
+        std::fs::create_dir_all(missing.parent().unwrap()).unwrap();
+        std::fs::write(&missing, b"[]").unwrap();
+        require_kover(&missing).unwrap();
+        // The source folder's file loads, as `cargo test` runs from there.
+        require_kover(std::path::Path::new(KOVER_RESULTS)).unwrap();
     }
 
     #[test]
