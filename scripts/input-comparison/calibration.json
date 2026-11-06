@@ -1,0 +1,21 @@
+{
+  "format": "grm-input-comparison-spec",
+  "version": 1,
+  "decisions": "Calibration of the decision procedure (main's ruling on the null study, 5 Nov 2026): arms exchangeable with the default, so every improves or worse is a false positive",
+  "panel_floor": {"min_eligible_genomes": 2001, "reason": "main's ruling on REVIEW-INPUT M1: an H-1 species needs more than 2,000 eligible genomes, so cap-4000 and grr-v1 change the genome set"},
+  "pool_budget": {"default_kset_bytes": 28835840, "max_disk_share": 0.8, "root_overhead_share": 0.10, "arm_output_share": 0.05, "work_files_bytes": 67108864, "reason": "main's rulings on REVIEW-INPUT4 to REVIEW-INPUT7 (M1, L4): before anything is counted, refuse a comparison whose still-unwritten ksets (the pool and every data root), matrices (10% of a root's ksets), arm outputs (5% of the roots' ksets), the pool's curated/ copy (measured) and WORK-level files (64 MiB) would take more than 80% of the free disk. The per-genome size is the mean of the species' own counted ksets in RAW, else 27.5 MiB (REVIEW-INPUT4's Salmonella estimate). The kset size, the 10%, the 5% and the 64 MiB are stated figures until H-1 measures real per-species ksets and matrices"},
+  "curate_inputs": {"species_check": true, "sigdrug_vocabulary": false, "reason": "the calibration study runs on synthetic roots; they link RAW's species check, and the decision procedure it calibrates doesn't depend on the vocabulary"},
+  "synthetic": true,
+  "species": "salmonella_enterica",
+  "datasets": [{"id": "salmonella_enterica__meropenem", "partition": "confirmatory"}],
+  "default": {"cap": 2000, "min_class": 25, "selection": "legacy", "k": 31, "blocks": ["K"], "screened_features": 4000},
+  "arms": [
+    {"name": "cohort-path", "calibration": "cohort_path", "balance_seed": 7},
+    {"name": "seed-twin", "calibration": "learner_seed", "learner_seed": 1001}
+  ],
+  "learners": ["scm", "cart", "rf", "gbt", "lasso"],
+  "splits": ["random", "lineage"],
+  "repeats": 1,
+  "margin": {"log_loss": 0.02},
+  "seed": 0
+}

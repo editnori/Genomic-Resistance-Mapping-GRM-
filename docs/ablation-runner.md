@@ -1,6 +1,8 @@
 # What an ablation arm runner must do
 
-No code in the tree runs ablation arms yet. The parts exist: G's fold plans (`src/ablate/plan.rs`), H's blocks (`blocks.rs`; 4 of 6 blocks available: N and X have adapter types but no source), I's encoders (`encode.rs`) and F's group-sampling plan (`src/curate.rs`), each tested on its own. The order they run in and the samples each one sees are the caller's job, and a mistake in either gives a wrong result with no error. This page lists what the runner owes, and what the curation code that calls `plan_group_sampling` owes.
+`grm arm` (`src/ablate/arm.rs`, `run_arm`) runs one arm of one dataset in the order below, and `scripts/input-comparison/run.py` drives the full-pipeline input comparison's arms through it ([input-comparison-runner.md](input-comparison-runner.md)). It is proved on synthetic data only. The parts it composes are G's fold plans (`src/ablate/plan.rs`, now with `cohort_plan` for an arm with another cohort), H's blocks (`blocks.rs`; 4 of 6 blocks available: N and X have adapter types but no source), I's encoders (`encode.rs`), F's group-sampling plan (`src/curate.rs`, reached by `grm curate --selection group-round-robin-v1`) and the learners on a supplied plan (`src/learn/planned.rs`). The order they run in and the samples each one sees are the caller's job, and a mistake in either gives a wrong result with no error. This page lists what the runner owes, and what the curation code that calls `plan_group_sampling` owes.
+
+Where `grm arm` departs from the list: step 4's `screen_block` isn't called. The learners' own chi-square screen (`learn::screen`, at the arm's `screened_features`) runs on each fit's own fitting samples over the assembled matrix, which keeps §16's rule (labels choose columns only on the fit's rows), and scm and cart, which don't screen, see every candidate as they do in `evaluate`. A separate block screen would make a budget arm change two settings at once. Main ruled that this satisfies contract §16 ([input-comparison-runner.md](input-comparison-runner.md#block-screens-ruling-4)).
 
 Section numbers are those of the GRM ablation data contract v1.14 (main orchestration ruling, 2026-10-31, sha256 `2300fbdbf920f847518a3f1628843826360f709b170c551f38db50d1f13deb76`). Where this page or the code disagrees with the contract, the contract wins.
 
@@ -24,7 +26,7 @@ So the order on each fit is `block_candidates` (once per outer fold, on the oute
 
 ## Inputs and outputs
 
-No runner function exists, so it has no signature yet. The data at its edges is set by types that exist. Line numbers are at commit `b90be1ca`.
+`run_arm` takes a data root, a species, a dataset and an `ArmConfig` (blocks, `EvalConfig`, repeats, pairing rule, the reference arm's output) and writes its rows, runs, plans and `arm.json`. The data at its edges is set by the types below. Line numbers are at commit `b90be1ca`.
 
 **In:**
 - one `FoldPlan` per (dataset, split, repeat), from `plan::fold_plan` (`src/ablate/plan.rs:388`), that passes `FoldPlan::verify` (`plan.rs:360`). A plan that can't be scored (`is_available`, `plan.rs:262`) has its `unavailable_reason`, and K's run manifest records such a run as `unavailable` with that reason ([ablation-report.md](ablation-report.md#run-manifest)).
@@ -33,7 +35,7 @@ No runner function exists, so it has no signature yet. The data at its edges is 
 
 **Out:** contract §4 prediction rows, one per (dataset, arm, learner, split, repeat, sample_id), with J's field names (`scripts/ablation/stats.py:150-151`) and K's `PREDICTION` record (`scripts/ablation/schema.py:310-314`). A row's `fold` is the sample's outer test fold in the plan, and its `fold_plan_sha256` is the plan's `sha256`, the same across arms and learners. A no-call row has `called` false and scores the training prevalence.
 
-The learner side doesn't fit this yet. `learn::eval::evaluate` (`eval.rs:790`) takes no `FoldPlan`: it draws its own outer folds (`eval.rs:941-952`) and returns an `EvalOutput` (`eval.rs:308`) with no §4 rows. `fit_fold` (`eval.rs:608`), which fits one learner on one outer fold, is private.
+The learner side is `learn::planned::evaluate_plan`: it takes a plan view (from a `FoldPlan` or a `CohortPlan`) and a callback giving each outer fold's matrix, takes every inner fold and holdout from the plan, and draws none. With G's repeat-0 plan of `EvalConfig::default()` and `training_candidates`' matrix it gives `evaluate`'s split results bit for bit (test `the_default_plan_reproduces_evaluate`). `learn::eval::evaluate` itself is unchanged. `grm arm` turns its result into §4 rows.
 
 ## Group sampling: one species per call
 

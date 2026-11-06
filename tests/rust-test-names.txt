@@ -2,6 +2,8 @@
 doc src/ablate/blocks.rs - ablate::blocks::admit
 doc src/ablate/plan.rs - ablate::plan::GroupIds
 doc src/ablate/plan.rs - ablate::plan::GroupIds
+src/lib.rs ablate::arm::tests::a_cohort_plan_keeps_its_held_out_genomes_in_run_arm
+src/lib.rs ablate::arm::tests::the_fold_matrix_reads_only_the_training_samples
 src/lib.rs ablate::blocks::tests::a_probe_no_call_is_not_assessable
 src/lib.rs ablate::blocks::tests::admission_checks_rows_and_shape
 src/lib.rs ablate::blocks::tests::building_takes_no_labels
@@ -46,10 +48,13 @@ src/lib.rs ablate::encode::tests::thermometer_cutpoints_are_training_quartiles_a
 src/lib.rs ablate::encode::tests::twins_with_different_availability_collapse_and_the_learner_reads_the_observed_value
 src/lib.rs ablate::encode::tests::unavailable_counts_take_the_training_median_and_unseen_levels_are_not_assessable
 src/lib.rs ablate::encode::tests::where_twins_both_observe_a_sample_the_higher_priority_value_wins
+src/lib.rs ablate::plan::tests::a_cohort_arm_keeps_shared_folds_when_it_drops_or_adds_a_unit_minimum
 src/lib.rs ablate::plan::tests::a_fold_missing_a_class_leaves_the_split_unavailable
+src/lib.rs ablate::plan::tests::a_keyed_lineage_plan_with_fewer_than_twice_k_lineages_is_refused
 src/lib.rs ablate::plan::tests::a_tuning_holdout_failure_reads_as_check_split_plan_words_it
 src/lib.rs ablate::plan::tests::check_structure_refuses_fewer_than_two_outer_or_inner_folds
 src/lib.rs ablate::plan::tests::group_ids_reject_malformed_groups
+src/lib.rs ablate::plan::tests::keyed_tuning_refuses_an_inner_fold_or_holdout_side_without_a_class
 src/lib.rs ablate::plan::tests::no_duplicate_or_lineage_group_crosses_any_partition
 src/lib.rs ablate::plan::tests::outer_test_labels_cannot_change_the_inner_plans
 src/lib.rs ablate::plan::tests::pipeline_learner_costs_follow_the_tuning_loops
@@ -60,8 +65,10 @@ src/lib.rs ablate::plan::tests::plan_files_with_unknown_keys_are_refused
 src/lib.rs ablate::plan::tests::repeat_zero_inner_plans_follow_the_pipeline_where_its_policy_is_unchanged
 src/lib.rs ablate::plan::tests::repeat_zero_reproduces_the_pipeline_outer_folds
 src/lib.rs ablate::plan::tests::repeats_differ_and_are_deterministic
+src/lib.rs ablate::plan::tests::the_balanced_subsample_keeps_its_shared_genomes_when_the_arm_grows
 src/lib.rs ablate::plan::tests::the_hash_bytes_match_python_json_dumps
 src/lib.rs ablate::plan::tests::the_hash_is_stable_and_changes_with_any_input
+src/lib.rs ablate::plan::tests::the_species_grouping_refuses_a_genome_outside_the_pool
 src/lib.rs ablate::plan::tests::too_few_lineages_leave_the_lineage_split_unavailable
 src/lib.rs ablate::plan::tests::tuning_groups_and_holdout_shares_are_task_a_s
 src/lib.rs ablate::plan::tests::tuning_groups_give_composite_ids_only_to_random_splits_with_duplicates
@@ -249,6 +256,13 @@ src/lib.rs learn::lasso::tests::the_line_search_stops_where_a_coefficient_reache
 src/lib.rs learn::lasso::tests::the_saved_real_paths_are_the_same_at_any_thread_count
 src/lib.rs learn::lasso::tests::vibrio_cholerae_fold0_converges_at_every_point
 src/lib.rs learn::lasso::tests::violators_tie_to_the_lowest_column
+src/lib.rs learn::planned::tests::a_cohort_arm_never_trains_on_a_copy_of_a_scored_genome
+src/lib.rs learn::planned::tests::a_cohort_arm_never_trains_on_a_test_lineage_on_the_lineage_split
+src/lib.rs learn::planned::tests::a_cohort_plan_scores_a_class_balanced_common_set_and_trains_on_the_rest
+src/lib.rs learn::planned::tests::a_keyed_plan_is_refused_when_a_fold_lacks_a_class
+src/lib.rs learn::planned::tests::keyed_folds_do_not_depend_on_the_other_genomes
+src/lib.rs learn::planned::tests::the_calibration_arms_are_exchangeable_with_the_default
+src/lib.rs learn::planned::tests::the_default_plan_reproduces_evaluate
 src/lib.rs learn::scm::tests::conjunction_finds_two_required_features
 src/lib.rs learn::scm::tests::disjunction_finds_alternative_mechanisms
 src/lib.rs learn::scm::tests::fit_ignores_samples_outside_train
@@ -319,7 +333,9 @@ src/lib.rs probes::tests::verified_sources_resolve_on_their_records
 src/lib.rs report::tests::a_build_waits_until_the_running_build_finishes
 src/lib.rs report::tests::a_learner_that_called_no_isolate_has_null_rates_in_the_index
 src/lib.rs report::tests::a_missing_lineage_learner_row_is_not_full_coverage
+src/lib.rs report::tests::a_missing_or_malformed_kover_comparison_refuses_before_writing
 src/lib.rs report::tests::a_rebuild_removes_files_for_datasets_and_species_it_no_longer_publishes
+src/lib.rs report::tests::index_rows_carry_the_kover_row_for_their_species_and_antibiotic
 src/lib.rs report::tests::iso_dates_match_known_days
 src/lib.rs report::tests::manifest_k_is_the_one_k_every_report_records
 src/lib.rs report::tests::manifest_rows_carry_probe_no_calls_and_unsupported_assays
@@ -392,12 +408,18 @@ src/main.rs tests::counting_and_building_the_matrix_by_hand_leave_an_old_structu
 src/main.rs tests::counting_stops_when_the_catalog_does_not_load_unless_allowed
 src/main.rs tests::counts_from_before_kset_digests_are_redone_and_keep_structure_and_matrix
 src/main.rs tests::curate_checks_the_class_minimum_before_reading_input
+src/main.rs tests::curate_draws_round_robin_across_mlst_groups_and_records_the_plan
+src/main.rs tests::curate_records_the_legacy_rule_and_its_cap_without_changing_its_choice
 src/main.rs tests::data_written_before_kset_digests_is_recounted_and_rebuilt
 src/main.rs tests::direct_learn_refuses_added_removed_and_reordered_genome_selections
 src/main.rs tests::learn_refuses_a_structure_and_matrix_built_from_other_ksets
+src/main.rs tests::pipeline_and_learn_take_a_k_and_a_retained_feature_budget
+src/main.rs tests::pipeline_refuses_a_missing_kover_file_with_its_own_remedy
 src/main.rs tests::required_catalog_rejects_incomplete_inputs_unless_allowed
+src/main.rs tests::selection_flags_are_refused_where_they_do_not_apply
 src/main.rs tests::species_check_and_curate_reach_a_fixed_point
 src/main.rs tests::stages_built_by_hand_at_another_k_or_min_support_are_rebuilt
+src/main.rs tests::the_pipeline_counts_and_builds_at_the_k_it_is_given
 tests/ablation_composition.rs a_toy_k_arm_composes_the_plan_blocks_encoder_and_boosting
 tests/foldmask_extended.rs extended_foldmask_smoke
 tests/foldmask_extended.rs extended_foldmask_vectors [ignored]

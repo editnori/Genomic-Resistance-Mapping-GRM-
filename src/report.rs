@@ -290,15 +290,31 @@ fn rule_text(report: &Value) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn kover_benchmark(path: &Path) -> HashMap<(String, String), KoverRow> {
-    let Ok(bytes) = std::fs::read(path) else {
-        return HashMap::new();
+/// What a missing Kover file tells `grm report`'s user, who can pass `--kover`.
+pub const REPORT_KOVER_REMEDY: &str = "run grm from the source folder, which holds \
+     reference/kover-summary.json, or give `grm report --kover` the file's path";
+
+/// What it tells `grm pipeline`'s, which reads only the default path.
+pub const PIPELINE_KOVER_REMEDY: &str = "run `grm pipeline` from the source folder, which holds \
+     reference/kover-summary.json; pipeline reads the Kover file only from there";
+
+/// The historical Kover rows `index.json` shows beside each dataset, keyed by
+/// species and canonical antibiotic. A file that is missing or doesn't parse
+/// is an error: the default path is relative to the working folder, and
+/// reading nothing would drop every dataset's `kover` field without a word.
+/// `remedy` is what a missing file tells the user to do.
+pub fn kover_benchmark(path: &Path, remedy: &str) -> Result<HashMap<(String, String), KoverRow>> {
+    let shown = match std::path::absolute(path) {
+        Ok(abs) if abs != path => format!("{} ({})", path.display(), abs.display()),
+        _ => path.display().to_string(),
     };
-    let Ok(rows) = serde_json::from_slice::<Vec<Value>>(&bytes) else {
-        return HashMap::new();
-    };
+    let bytes = std::fs::read(path)
+        .with_context(|| format!("read the Kover comparison {shown}: {remedy}"))?;
+    let rows: Vec<Value> = serde_json::from_slice(&bytes)
+        .with_context(|| format!("parse the Kover comparison {shown}"))?;
     let vocab = drugs::Vocabulary::default();
-    rows.iter()
+    Ok(rows
+        .iter()
         .filter_map(|r| {
             let species = r["species"].as_str()?.to_string();
             let drug = drugs::resolve(r["antibiotic"].as_str()?, &vocab);
@@ -319,7 +335,7 @@ fn kover_benchmark(path: &Path) -> HashMap<(String, String), KoverRow> {
                 )
             })
         })
-        .collect()
+        .collect())
 }
 
 #[derive(Serialize)]
@@ -512,6 +528,7 @@ fn top_counts<'a>(items: impl Iterator<Item = &'a str>, k: usize) -> Vec<(String
 
 /// Builds every dashboard file under `<data>/report/` and returns its path.
 pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf> {
+    let kover = kover_benchmark(legacy_kover, REPORT_KOVER_REMEDY)?;
     let out_dir = layout.root.join("report");
     std::fs::create_dir_all(out_dir.join("datasets"))?;
     // `prune` removes every file this build did not publish, including one a
@@ -533,7 +550,6 @@ pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf>
         .map(|g| (g.genome_id.as_str(), g))
         .collect();
     let records: Vec<AmrRecord> = bvbrc::read_jsonl(&layout.amr())?;
-    let kover = kover_benchmark(legacy_kover);
     let amrfinder_version = std::fs::read_to_string(layout.catalog_dir().join("version.txt"))
         .unwrap_or_default()
         .trim()
@@ -882,8 +898,11 @@ mod tests {
     }
 
     /// Curated E. coli datasets for `reports`' antibiotics, each with its
-    /// report saved, and empty record files.
+    /// report saved, empty record files, and a Kover comparison with no rows
+    /// at `<root>/kover.json`.
     fn write_reports(layout: &Layout, reports: &[(&str, Value)]) {
+        std::fs::create_dir_all(&layout.root).unwrap();
+        std::fs::write(layout.root.join("kover.json"), b"[]").unwrap();
         let species = "Escherichia coli";
         let slug = crate::curate::slug(species);
         let specs: Vec<DatasetSpec> = reports
@@ -901,6 +920,7 @@ mod tests {
                 n_labels_from_mic: 0,
                 breakpoint: None,
                 min_class: 3,
+                selection: None,
             })
             .collect();
         std::fs::create_dir_all(layout.curated()).unwrap();
@@ -930,6 +950,71 @@ mod tests {
             )
             .unwrap();
         }
+    }
+
+    #[test]
+    fn index_rows_carry_the_kover_row_for_their_species_and_antibiotic() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let report = || serde_json::json!({"counts": {"samples": 7, "resistant": 3}});
+        write_reports(&layout, &[("meropenem", report()), ("imipenem", report())]);
+        let kover = dir.path().join("kover.json");
+        std::fs::write(
+            &kover,
+            br#"[{"species":"Escherichia coli","antibiotic":"Meropenem","sensitivity":0.8,
+                 "specificity":0.6,"n_rules":2.0,"ds_n_examples":40.0}]"#,
+        )
+        .unwrap();
+        let out = build(&layout, &kover).unwrap();
+        let index: Value =
+            serde_json::from_slice(&std::fs::read(out.join("index.json")).unwrap()).unwrap();
+        let row = |id: &str| {
+            index["datasets"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|d| d["id"] == id)
+                .unwrap()
+                .clone()
+        };
+        let meropenem = row("escherichia_coli__meropenem");
+        assert_eq!(meropenem["kover"]["sensitivity"], 0.8);
+        assert_eq!(meropenem["kover"]["balanced_accuracy"], 0.7);
+        assert_eq!(meropenem["kover"]["n_examples"], 40.0);
+        assert!(row("escherichia_coli__imipenem")["kover"].is_null());
+    }
+
+    #[test]
+    fn a_missing_or_malformed_kover_comparison_refuses_before_writing() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let report = serde_json::json!({"counts": {"samples": 7, "resistant": 3}});
+        write_reports(&layout, &[("meropenem", report)]);
+        let kover = dir.path().join("kover.json");
+        std::fs::remove_file(&kover).unwrap();
+        // Run from a folder without reference/, the default path is missing:
+        // the build names the path it expected and leaves no report behind.
+        let err = format!("{:#}", build(&layout, &kover).unwrap_err());
+        assert!(err.contains(kover.to_str().unwrap()), "{err}");
+        assert!(err.contains("reference/kover-summary.json"), "{err}");
+        assert!(err.contains("--kover"), "{err}");
+        assert!(!layout.root.join("report").exists());
+
+        std::fs::write(&kover, b"{not json").unwrap();
+        let err = format!("{:#}", build(&layout, &kover).unwrap_err());
+        assert!(err.contains("parse the Kover comparison"), "{err}");
+        assert!(err.contains(kover.to_str().unwrap()), "{err}");
+        assert!(!layout.root.join("report").exists());
+
+        // A relative path is shown as given and resolved against the
+        // working folder.
+        let relative = Path::new("no-such-folder-grm-test/kover-summary.json");
+        let err = format!("{:#}", build(&layout, relative).unwrap_err());
+        let abs = std::path::absolute(relative).unwrap();
+        assert!(
+            err.contains(&format!("{} ({})", relative.display(), abs.display())),
+            "{err}"
+        );
     }
 
     #[test]

@@ -1,0 +1,31 @@
+{
+  "format": "grm-input-comparison-spec",
+  "version": 1,
+  "decisions": "DECISIONS V-1 and the rulings after lane INPUT (main, under Layth's 5 Nov 2026 delegation): one factor at a time against the default, 11 arms plus the default; cohort arms pair by common_outer_test_set_balanced; the group draw groups genomes by BV-BRC MLST sequence type; the selection seed 1 and the log-loss margin 0.02 (descriptive only, it decides nothing) are decided values",
+  "panel_floor": {"min_eligible_genomes": 2001, "reason": "main's ruling on REVIEW-INPUT M1: an H-1 species needs more than 2,000 eligible genomes, so cap-4000 and grr-v1 change the genome set"},
+  "base_rates": {"cap-down": {"rate": 0.14, "ci95": [0.0, 0.2916], "seeds": 10, "source": "re-keying near twin (synthetic, 2,020 genomes, pool = all 2,020; REVIEW-INPUT5 got identical rates with the arms' union as pool; default = pool minus 5 lineage minima and 10 others; the twin drops 5 genomes, 2 of them their lineage's lowest default id), seeds 301-310, lineage split; 95% t interval over seeds, lower bound clamped at 0; measured on 5-genome changes; its relation to larger cohort changes is unmeasured"}, "cap-up": {"rate": 0.16, "ci95": [0.0472, 0.2728], "seeds": 10, "source": "re-keying near twin (synthetic, 2,020 genomes, pool = all 2,020; REVIEW-INPUT5 got identical rates with the arms' union as pool; default = pool minus 5 lineage minima and 10 others; the twin adds 5 genomes, 2 of them below their lineage's lowest default id), seeds 301-310, lineage split; 95% t interval over seeds; measured on 5-genome changes; its relation to larger cohort changes is unmeasured"}, "selection-swap": {"rate": 0.18, "ci95": [0.0087, 0.3513], "seeds": 10, "source": "re-keying near twin (synthetic, 2,020 genomes, pool = all 2,020; REVIEW-INPUT5 got identical rates with the arms' union as pool; default = pool minus 5 lineage minima and 10 others; the twin drops 5 and adds 5 genomes, 2 of them each way at a lineage's lowest default id), seeds 301-310, lineage split; 95% t interval over seeds; measured on 5-genome changes; its relation to larger cohort changes is unmeasured"}},
+  "pool_budget": {"default_kset_bytes": 28835840, "max_disk_share": 0.8, "root_overhead_share": 0.10, "arm_output_share": 0.05, "work_files_bytes": 67108864, "reason": "main's rulings on REVIEW-INPUT4 to REVIEW-INPUT7 (M1, L4): before anything is counted, refuse a comparison whose still-unwritten ksets (the pool and every data root), matrices (10% of a root's ksets), arm outputs (5% of the roots' ksets), the pool's curated/ copy (measured) and WORK-level files (64 MiB) would take more than 80% of the free disk. The per-genome size is the mean of the species' own counted ksets in RAW, else 27.5 MiB (REVIEW-INPUT4's Salmonella estimate). The kset size, the 10%, the 5% and the 64 MiB are stated figures until H-1 measures real per-species ksets and matrices"},
+  "curate_inputs": {"species_check": true, "sigdrug_vocabulary": true, "reason": "main's ruling on REVIEW-INPUT7 M1: every root curates as revision 12's S0 did, with RAW's species-check/ linked and GRM's SigDrug vocabulary copy (the one S0 used, from grm-r9-curate/vocabulary) passed to grm curate"},
+  "revision12_gate": {"genome_order": {"salmonella_enterica": "5864bd5d9a7cb6662127386e7218d608e43febffc45a5a0b15e4c24fbf6e4a8c", "mycobacterium_tuberculosis": "b104d8bd7ffaa2d0dc3032fe30ca0c0b32670a7099a02bcd49860e5c77f59a64", "staphylococcus_aureus": "3269d7b9d182e65e77d47709d928659183380545dcbf5b9d5d42ee4ed8042c56", "neisseria_gonorrhoeae": "03985e841ff3f9a931c98d9881ee99b0ae1891470e2b8235d4dd471b42279c3b"}, "datasets_json_sha256": "5519c61d281a685b58b33e1870f7b4186911394773224295ec81c26c8d0096a8", "reason": "main's rulings on REVIEW-INPUT7 to REVIEW-INPUT9: before anything is counted or learned, and in --estimate-only, the default arm must be revision 12's cohort. genome_order holds, for each H-1 panel species, the sha256 of the master root's species/<slug>/genomes.txt (/home/layth/review/grm-r12-run-20261105/data-root); the panel is main's ruling after INPUT round 14 (DECISIONS H-1: the default selection capped at 2,000 and more than 2,000 genomes eligible; a revision-12 pipeline stage under one xlarge-hour; block C species first): Salmonella R10 0.856 h, MTB R7 0.584 h, S. aureus R3 0.959 h, N. gonorrhoeae (block C; stage R1, 0.646 h for 13 species). A. baumannii is out (its default selects 1,702 of 2,482), and K. pneumoniae R9 1.698 h and E. coli R8 1.351 h are over the hour. datasets_json_sha256 is the master root's curated/datasets.json, matched with each entry's selection record removed"},
+  "species": "salmonella_enterica",
+  "datasets": [{"id": "salmonella_enterica__meropenem", "partition": "confirmatory"}],
+  "default": {"cap": 2000, "min_class": 25, "selection": "legacy", "k": 31, "blocks": ["K"], "screened_features": 4000},
+  "arms": [
+    {"name": "cap-1000", "cap": 1000},
+    {"name": "cap-4000", "cap": 4000},
+    {"name": "grr-v1", "selection": "group-round-robin-v1", "selection_seed": 1},
+    {"name": "k21", "k": 21},
+    {"name": "k25", "k": 25},
+    {"name": "k-c", "blocks": ["K", "C"]},
+    {"name": "k-h", "blocks": ["K", "H"]},
+    {"name": "k-p", "blocks": ["K", "P"]},
+    {"name": "k-c-h-p", "blocks": ["K", "C", "H", "P"]},
+    {"name": "budget-1000", "screened_features": 1000},
+    {"name": "budget-16000", "screened_features": 16000}
+  ],
+  "learners": ["scm", "cart", "rf", "gbt", "lasso"],
+  "splits": ["random", "lineage"],
+  "repeats": 1,
+  "margin": {"log_loss": 0.02},
+  "seed": 0
+}

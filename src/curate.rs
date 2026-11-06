@@ -255,7 +255,46 @@ pub struct DatasetSpec {
     /// gate applies again after download.
     #[serde(default = "unrecorded_min_class")]
     pub min_class: usize,
+    /// How the species' genomes were chosen. Missing on datasets curated
+    /// before it was recorded, which all used the legacy rule.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection: Option<Selection>,
 }
+
+/// Names `select_genomes`, the label-weighted ranking, as a selection rule.
+pub const LEGACY_SELECTION: &str = "legacy";
+
+/// The rule, cap and seed that chose a species' genomes. `grm curate`
+/// records it in qc.json (without `input_sha256`, which is per species), on
+/// each dataset in datasets.json, and `grm learn` copies a dataset's into
+/// its report.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Selection {
+    /// `LEGACY_SELECTION` or `GROUP_SAMPLING_DESIGN`.
+    pub rule: String,
+    pub cap: usize,
+    /// The group draw's seed; None for the legacy rule, which draws nothing.
+    pub seed: Option<u64>,
+    /// The group draw's always-included stratum; None for the legacy rule.
+    pub always_included: Option<AlwaysIncluded>,
+    /// The group plan's `input_sha256` over the species' eligible genomes
+    /// and their groups; None for the legacy rule and in qc.json.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_sha256: Option<String>,
+    /// Where the group draw's groups come from (`MLST_GROUP_SOURCE`); None
+    /// for the legacy rule.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group_source: Option<String>,
+    /// The species' eligible genomes without a sequence type, each its own
+    /// singleton group; None for the legacy rule and in qc.json.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub singletons: Option<usize>,
+}
+
+/// The group draw's group source: each genome's `mlst` field in the BV-BRC
+/// genome records (`bvbrc/genomes.jsonl`), the rulings after lane INPUT. A
+/// genome without one is its own singleton group.
+pub const MLST_GROUP_SOURCE: &str = "bvbrc-genome-mlst";
 
 /// Curated files and dataset reports written before `min_class` was recorded
 /// do not say which `--min-class` curation used, but `grm learn` gated every
@@ -557,6 +596,7 @@ pub fn curate(
                     .get(&(species.clone(), antibiotic.clone()))
                     .copied(),
                 min_class: cfg.min_class,
+                selection: None,
                 species,
                 species_slug,
                 antibiotic,
@@ -667,6 +707,33 @@ pub fn select_genomes(
         .into_iter()
         .take(cap)
         .map(|(_, id)| id.to_string())
+        .collect()
+}
+
+/// The genomes `select_genomes` ranks for `species`, in id order: those with
+/// an unconflicted reported R or S call on one of the species' dataset
+/// drugs. They are the eligible genomes of a group-stratified plan, so both
+/// rules choose from the same set.
+pub fn labeled_genomes(
+    phenotypes: &[Phenotype],
+    datasets: &[DatasetSpec],
+    species: &str,
+) -> Vec<String> {
+    let targets: BTreeSet<&str> = datasets
+        .iter()
+        .filter(|d| d.species == species)
+        .map(|d| d.antibiotic.as_str())
+        .collect();
+    phenotypes
+        .iter()
+        .filter(|p| {
+            p.species == species
+                && targets.contains(p.antibiotic.as_str())
+                && p.reported_label().is_some()
+        })
+        .map(|p| p.genome_id.clone())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
         .collect()
 }
 
@@ -1336,6 +1403,7 @@ mod tests {
             n_labels_from_mic: 10,
             breakpoint: None,
             min_class: 1,
+            selection: None,
         }];
         assert_eq!(select_genomes(&ph, &ds, "A b", 2), vec!["z-r", "s0"]);
         let all = select_genomes(&ph, &ds, "A b", 100);
@@ -1381,6 +1449,7 @@ mod tests {
             n_labels_from_mic: 0,
             breakpoint: None,
             min_class: 1,
+            selection: None,
         }
     }
 

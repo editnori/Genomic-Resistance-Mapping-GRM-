@@ -3,6 +3,29 @@
 A contrast compares a baseline arm and a treatment arm of one (dataset,
 learner, split) on the same samples, fold plans, labels and lineage clusters.
 Each sample's score is its mean out-of-fold probability across repeats.
+
+Pairing rules (PAIRINGS; DECISIONS V-1 for the input comparison), named in
+every contrast record's `pairing`:
+    same_plan              the same samples and the same fold plan in every repeat
+    k31_groups             the same, for a treatment counted at another k whose
+                           fold plan was drawn on the baseline's k = 31 lineages and
+                           duplicate groups, so it is the baseline's plan
+    common_outer_test_set_balanced
+                           a treatment with another cohort (cap or selection rule),
+                           scored on a class-balanced subsample of the baseline's
+                           outer test folds restricted to the genomes both cohorts
+                           hold (the subsample matches each baseline fold's class
+                           balance; `grm arm` draws it): its samples are a subset of
+                           the baseline's, each with the baseline's fold, label and
+                           cluster under the baseline's fold plan, and the baseline
+                           is restricted to them. Both arms trained on other samples
+                           too, so a no-call row's score, its own training
+                           prevalence, is not recomputed from the paired rows.
+    common_outer_test_set  the same pairing without the balanced subsample, kept so
+                           records written before the rulings after lane INPUT still
+                           validate; the input-comparison runner no longer uses it.
+Any other pairing, such as two arms with different samples under same_plan, is
+refused with PairingError.
 Every estimate is oriented so that a positive value favours the treatment:
 
     log_loss           LL_base - LL_treat, probabilities clipped to [1e-4, 1 - 1e-4]
@@ -102,6 +125,13 @@ Contrast record, keys in RECORD_KEYS order (contract section 1):
     undefined_reason     None, or why the contrast is undefined
     interval_label       INTERVAL_LABEL
     dataset              the id prefix
+    pairing              the pairing rule pair_arms() checked, one of PAIRINGS
+    auroc_delta, auroc_ci
+                         on a log_loss record, treat - base AUROC and its 95% cluster
+                         jackknife-t interval, descriptive only (no p, no decision); None
+                         when undefined or on another endpoint. A log-loss improves can come
+                         from calibration or overfitting; the AUROC delta shows whether
+                         discrimination moved with it
 
 Pooled record, keys in POOLED_KEYS order (contract section 2):
 
@@ -157,7 +187,10 @@ CLASS_NAMES = {0: "susceptible (y=0)", 1: "resistant (y=1)"}
 DECISIONS = ("improves", "worse", "inconclusive")
 RECORD_KEYS = ("id", "family", "baseline", "treatment", "learner", "split", "endpoint", "estimate", "ci",
                "ci_tost", "ci_method", "unit", "n_units", "few_clusters", "p", "p_adj", "adjust", "margin",
-               "decision", "claim_level", "undefined_resamples", "undefined_reason", "interval_label", "dataset")
+               "decision", "claim_level", "undefined_resamples", "undefined_reason", "interval_label", "dataset",
+               "pairing", "auroc_delta", "auroc_ci")
+PAIRINGS = ("same_plan", "k31_groups", "common_outer_test_set_balanced", "common_outer_test_set")
+SUBSET_PAIRINGS = ("common_outer_test_set_balanced", "common_outer_test_set")
 POOLED_KEYS = ("contrast", "family", "unit", "n_units", "n_datasets", "n_excluded", "excluded", "estimate", "ci",
                "ci_tost", "p", "p_adj", "adjust", "margin", "decision", "interval_label")
 DATASET_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]*")
@@ -194,6 +227,7 @@ class PairedArms:
     n_repeats: int
     base_call: np.ndarray = None  # R call: called in at least half the repeats; pair_arms sets it
     treat_call: np.ndarray = None
+    pairing: str = "same_plan"    # the rule pair_arms checked, one of PAIRINGS
 
     def __post_init__(self):
         # Arrays built without rows hold only model scores, where called is score >= 0.5.
@@ -223,19 +257,28 @@ def _layout(arm, table):
 
 
 def _check_called(row, prevalence):
-    """called = score >= 0.5, or false on a no-call row, whose score is its training prevalence."""
+    """called = score >= 0.5, or false on a no-call row, whose score is its training prevalence.
+    With prevalence None (SUBSET_PAIRINGS) a no-call row's score is not checked."""
     called, score = row["called"], float(row["score"])
     if type(called) is not bool:
         raise PairingError("called", f"sample {row['sample_id']!r} has called {called!r}; expected true or false")
+    if prevalence is None:
+        if called and score < 0.5:
+            raise PairingError("called", f"sample {row['sample_id']!r} repeat {row['repeat']!r} is called with "
+                                         f"score {score}")
+        return
     if called != (score >= 0.5) and (called or abs(score - prevalence) > CALL_TOLERANCE):
         raise PairingError("called", f"sample {row['sample_id']!r} repeat {row['repeat']!r} has called={called} "
                                      f"with score {score}; a no-call row scores its training prevalence {prevalence}")
 
 
-def pair_arms(rows, *, dataset, learner, split, baseline, treatment):
-    """Validate the paired plan and return per-sample arrays; raise PairingError otherwise."""
+def pair_arms(rows, *, dataset, learner, split, baseline, treatment, pairing="same_plan"):
+    """Validate the paired plan under `pairing` (one of PAIRINGS) and return per-sample
+    arrays; raise PairingError otherwise."""
     if baseline == treatment:
         raise ValueError("baseline and treatment are the same arm")
+    if pairing not in PAIRINGS:
+        raise ValueError(f"unknown pairing {pairing!r}; expected one of {PAIRINGS}")
     tables = {baseline: {}, treatment: {}}
     for row in rows:
         missing = [field for field in FIELDS if field not in row]
@@ -254,6 +297,12 @@ def pair_arms(rows, *, dataset, learner, split, baseline, treatment):
         table[key] = row
 
     (base_plans, base_samples), (treat_plans, treat_samples) = (_layout(arm, tables[arm]) for arm in (baseline, treatment))
+    if pairing in SUBSET_PAIRINGS:
+        if not treat_samples <= base_samples:
+            raise PairingError("samples", f"{len(treat_samples - base_samples)} samples only in {treatment!r}; "
+                                          f"{pairing} scores the treatment on the baseline's test genomes")
+        tables[baseline] = {key: row for key, row in tables[baseline].items() if key[1] in treat_samples}
+        base_samples = treat_samples
     if base_samples != treat_samples:
         raise PairingError("samples", f"{len(base_samples - treat_samples)} samples only in {baseline!r}, "
                                       f"{len(treat_samples - base_samples)} only in {treatment!r}")
@@ -291,7 +340,7 @@ def pair_arms(rows, *, dataset, learner, split, baseline, treatment):
             prevalence[held] = y[~held].mean()
         for table in tables.values():
             for i, sample in enumerate(sample_ids):
-                _check_called(table[(repeat, sample)], prevalence[i])
+                _check_called(table[(repeat, sample)], None if pairing in SUBSET_PAIRINGS else prevalence[i])
         null += prevalence
         base += [float(tables[baseline][(repeat, sample)]["score"]) for sample in sample_ids]
         treat += [float(tables[treatment][(repeat, sample)]["score"]) for sample in sample_ids]
@@ -303,7 +352,8 @@ def pair_arms(rows, *, dataset, learner, split, baseline, treatment):
                       sample_ids=sample_ids, y=y, cluster_index=np.array([position[c] for c in cluster_ids]),
                       clusters=clusters, base=base / len(repeats), treat=treat / len(repeats),
                       null=null / len(repeats), n_repeats=len(repeats),
-                      base_call=2 * base_called >= len(repeats), treat_call=2 * treat_called >= len(repeats))
+                      base_call=2 * base_called >= len(repeats), treat_call=2 * treat_called >= len(repeats),
+                      pairing=pairing)
 
 
 def sample_log_loss(y, p):
@@ -566,6 +616,12 @@ def compare(paired, *, family, endpoints, margins, development, n_flips=20000, s
         _margin(margins.get(endpoint), endpoint)
     k = len(paired.clusters)
     loo = leave_one_out(paired, endpoints) if k >= 2 else {endpoint: np.full(k, np.nan) for endpoint in endpoints}
+    auroc_delta = auroc_ci = None
+    if PRIMARY in endpoints:
+        delta, why = endpoint_delta("auroc", paired.y, paired.base, paired.treat, paired.null)
+        replicates = leave_one_out(paired, ["auroc"])["auroc"] if k >= 2 else np.array([])
+        if why is None and k >= 2 and np.all(np.isfinite(replicates)):
+            auroc_delta, auroc_ci = float(delta), jackknife_t(delta, replicates, CI_LEVEL)
     records = []
     for i, endpoint in enumerate(endpoints):
         estimate, reason = endpoint_delta(endpoint, paired.y, paired.base, paired.treat, paired.null,
@@ -592,7 +648,9 @@ def compare(paired, *, family, endpoints, margins, development, n_flips=20000, s
             "unit": "cluster", "n_units": k, "few_clusters": k < FEW_CLUSTERS, "p": p, "p_adj": None,
             "adjust": FAMILIES[family], "margin": float(margins[endpoint]), "decision": None,
             "claim_level": CLAIM_LEVEL, "undefined_resamples": undefined, "undefined_reason": reason,
-            "interval_label": INTERVAL_LABEL, "dataset": paired.dataset, "_pending": True,
+            "interval_label": INTERVAL_LABEL, "dataset": paired.dataset, "pairing": paired.pairing,
+            "auroc_delta": auroc_delta if endpoint == PRIMARY else None,
+            "auroc_ci": auroc_ci if endpoint == PRIMARY else None, "_pending": True,
         })
     return records
 
