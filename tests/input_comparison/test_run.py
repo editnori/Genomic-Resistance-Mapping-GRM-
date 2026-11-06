@@ -872,6 +872,43 @@ ids = [f"g{i:03d}" for i in range(50)]
         self.assertFalse(r["pass"])
         self.assertEqual(r["sentinel_firings"], {"seeds_with_a_firing": 20, "firings": 40, "learners": {"gbt": 20, "rf": 20}})
 
+    def test_null_study_reads_summaries_written_before_the_mask(self):
+        """REVIEW-NULL16 L2 (mutant B2): the stored seeds' summaries have no raw_decisions, and both splits in
+        decisions as J decided them; the study takes the lineage rows from decisions."""
+        decisions = {f"ds:{l}:{split}": "improves" if l == "gbt" or split == "random" else "inconclusive"
+                     for l in run.LEARNERS for split in ("lineage", "random")}
+        with tempfile.TemporaryDirectory() as tmp:
+            for s in range(20):
+                (Path(tmp) / f"seed-{s}").mkdir()
+                (Path(tmp) / f"seed-{s}" / "summary.json").write_text(json.dumps({"arms": {"seed-twin": {
+                    "factor": "calibration", "pairing": "same_plan", "decisions": decisions}}}))
+            r = null_study.report([tmp], calibration=True)
+        a = r["arms"]["seed-twin"]
+        self.assertEqual((a["improves"], a["contrasts"], a["seeds"]), (20, 100, 20))
+        self.assertAlmostEqual(a["per_seed_improves"]["mean"], 0.2)
+        self.assertEqual(r["sentinel_firings"], {"seeds_with_a_firing": 0, "firings": 0, "learners": {}})
+
+    def test_null_study_counts_a_contrast_not_produced_apart_and_refuses_an_arm_without_any(self):
+        """REVIEW-NULL16 L2 (mutants C1-C3): a lineage contrast not produced is counted apart, never as a decision in
+        a denominator; an arm with no lineage contrast in any seed is refused."""
+        twin = [{"name": "seed-twin", "factor": "calibration", "pairing": "same_plan"}]
+        rows = self.null_records("seed-twin", {"gbt": "improves"})
+        gap = {x["id"]: "outer fold 2 lacks a class" for x in rows if x["split"] == "lineage" and x["learner"] == "rf"}
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, twin, [x for x in rows if x["id"] not in gap], missing=gap)
+            shown = json.loads((Path(tmp) / "seed-0" / "summary.json").read_text())["arms"]["seed-twin"]["decisions"]
+            self.assertTrue(shown["ds:rf:lineage"].startswith("not produced"))
+            r = null_study.report([tmp], calibration=True)
+        a = r["arms"]["seed-twin"]
+        self.assertEqual((a["contrasts"], a["improves"], a["not_produced"], a["seeds"]), (80, 20, 20, 20))
+        self.assertAlmostEqual(a["per_seed_improves"]["mean"], 0.25)
+        random_only, missing = self.null_unproduced("seed-twin")
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, twin, random_only, missing=missing)
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([tmp], calibration=True)
+        self.assertEqual(str(e.exception), "arm seed-twin: no lineage contrast was produced in any seed")
+
     def test_a_spec_with_repeats_and_a_cohort_arm_is_refused(self):
         """PR #69's review (stats.py:300): with repeats > 1 a cohort arm's subsample can differ by repeat, which J
         can't pair; no decided spec uses repeats > 1, so such a spec is refused up front."""
