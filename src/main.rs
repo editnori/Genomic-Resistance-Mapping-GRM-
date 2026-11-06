@@ -196,7 +196,8 @@ enum Command {
     },
     /// Build the dashboard data under <data>/report.
     Report {
-        /// Published Kover results to compare against.
+        /// Published Kover results to compare against. The default is
+        /// relative to the working folder; a missing file is an error.
         #[arg(long, default_value = KOVER_RESULTS)]
         kover: PathBuf,
     },
@@ -296,6 +297,9 @@ fn run(cli: Cli) -> Result<()> {
             allow_missing_catalog,
         } => {
             require_catalog(&layout, k, allow_missing_catalog)?;
+            // Each species ends in `grm report`, which refuses without the
+            // Kover comparison; refuse before counting anything instead.
+            grm::report::kover_benchmark(std::path::Path::new(KOVER_RESULTS))?;
             let slugs = if species.is_empty() {
                 curated_species(&layout)?
             } else {
