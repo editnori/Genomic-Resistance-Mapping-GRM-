@@ -823,6 +823,58 @@ ids = [f"g{i:03d}" for i in range(50)]
         missing = {x["id"]: "the gbt holdout lacks a class" for x in rows if x["split"] == "lineage"}
         return [x for x in rows if x["split"] == "random"], missing
 
+    def calibration_arms(self):
+        """calibration.json's arms as summarize() takes them."""
+        return [{"name": a["name"], "factor": "calibration", "pairing": a["pairing"]}
+                for a in run.load_spec(HERE / "calibration.json")[2] if not a.get("sentinel")]
+
+    def test_the_calibration_judges_every_arm_its_spec_names(self):
+        """REVIEW-INPUT17 M1: the gate judged only the arms it found, so an empty folder printed "seeds 0; pass True"
+        and a calibration arm absent from every seed passed. Now cohort-path and seed-twin are judged by name; no
+        seeds or a missing arm fails and is named, a mistyped folder is refused, and the null study names a missing
+        arm instead of raising KeyError."""
+        self.assertEqual(null_study.CALIBRATION_ARMS, ("cohort-path", "seed-twin"))
+        self.assertEqual([a["name"] for a in self.calibration_arms()], list(null_study.CALIBRATION_ARMS))
+        with tempfile.TemporaryDirectory() as tmp:
+            r = null_study.report([tmp], calibration=True)
+            self.assertEqual((r["seeds"], r["missing_arms"], r["pass"]), (0, ["cohort-path", "seed-twin"], False))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                null_study.main(["report", tmp, "--calibration"])
+            self.assertIn(f"calibration: seeds 0; pass False (no seed summaries in {tmp}; arm cohort-path is in no "
+                          "seed; arm seed-twin is in no seed)", out.getvalue())
+            # A mistyped folder is refused, in both studies.
+            for flags in ([], ["--calibration"]):
+                with self.assertRaises(SystemExit) as e:
+                    null_study.main(["report", str(Path(tmp) / "seeds-typo"), *flags])
+                self.assertEqual(str(e.exception), f"{Path(tmp) / 'seeds-typo'}: no such folder")
+            # Empty, the null study names the arms it can't find.
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([tmp])
+            self.assertIn("null study: arm cap-1000, cap-4000, grr-v1, k-h, k-p, k-c-h-p is in no seed's summary.json "
+                          "(0 summaries)", str(e.exception))
+        # seed-twin absent from all 20 seeds; cohort-path clean in each.
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, self.calibration_arms()[:1], self.null_records("cohort-path", {}))
+            r = null_study.report([tmp], calibration=True)
+            self.assertEqual((r["arms"]["cohort-path"]["seeds"], r["missing_arms"], r["pass"]),
+                             (20, ["seed-twin"], False))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                null_study.main(["report", tmp, "--calibration"])
+            self.assertIn("calibration: seeds 20; pass False (arm seed-twin is in no seed)", out.getvalue())
+        # The null study with grr-v1 in no seed.
+        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
+        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
+                 for a in null_study.COHORT_ARMS[:-1]]
+        con = [r for a in null_study.PLANTED_ARMS for r in self.null_records(a, {l: "improves" for l in run.LEARNERS})]
+        con += [r for a in null_study.COHORT_ARMS[:-1] for r in self.null_records(a, {})]
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, arms, con)
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([tmp])
+        self.assertIn("null study: arm grr-v1 is in no seed's summary.json (20 summaries)", str(e.exception))
+
     def test_null_study_passes_only_with_a_lineage_contrast_in_20_seeds_per_arm(self):
         """REVIEW-NULL16 L1 (its case R4): a calibration arm with lineage contrasts in 1 of 20 seeds, 95 not produced,
         passed on "improves 0/5" because the gate counted summary files. Now each arm needs 20 seeds that gave it a
@@ -843,13 +895,16 @@ ids = [f"g{i:03d}" for i in range(50)]
             self.assertIn("not produced 95; seeds with a lineage contrast 1/20", out.getvalue())
             self.assertIn("lineage contrasts not produced: 95", out.getvalue())
             self.assertIn("calibration: seeds 20; pass False", out.getvalue())
-        # 25 summaries: 20 seeds with the arm's lineage contrasts pass, 19 don't.
+        # 25 summaries of both calibration arms: 20 seeds with seed-twin's lineage contrasts pass, 19 don't.
+        both = self.calibration_arms()
+        path = [r for r in self.null_records("cohort-path", {})]
         for produced, passes in ((20, True), (19, False)):
             with tempfile.TemporaryDirectory() as tmp:
-                self.null_seeds(tmp, twin, self.null_records("seed-twin", {}), seeds=produced)
-                self.null_seeds(tmp, twin, random_only, seeds=25 - produced, missing=missing, start=produced)
+                self.null_seeds(tmp, both, path + self.null_records("seed-twin", {}), seeds=produced)
+                self.null_seeds(tmp, both, path + random_only, seeds=25 - produced, missing=missing, start=produced)
                 r = null_study.report([tmp], calibration=True)
             self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (25, produced, passes))
+            self.assertEqual(r["thin_arms"], [] if passes else ["seed-twin"])
         # The null study: one cohort arm short of 20 such seeds fails it, all else passing.
         arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
         arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}

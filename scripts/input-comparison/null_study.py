@@ -23,7 +23,10 @@ calibration arms, which are exchangeable with the default: there every `improves
 is a false positive, and the procedure passes when each arm's mean per-seed rate of each is at
 most 5% (main's ruling on the null study, 5 Nov 2026). Either study passes only when every arm
 it judges had a lineage contrast in at least 20 seeds (REVIEW-NULL16 L1): a seed that gave an
-arm none doesn't count toward that arm, however many summaries there are.
+arm none doesn't count toward that arm, however many summaries there are. The calibration judges
+every arm calibration.json names, plus any other arm its summaries hold (the runner's sentinel);
+a named arm absent from every seed, or no seeds at all, fails it and the report names the arm
+(REVIEW-INPUT17 M1). The null study refuses when one of its judged arms is absent.
 
 usage: python3 -B null_study.py run --seeds 101-110 --out DIR --grm GRM [--spec SPEC] [--jobs N] [--parallel P]
        python3 -B null_study.py report DIR [DIR ...] [--json OUT] [--calibration]
@@ -45,6 +48,7 @@ PLANTED_ARMS = ("k-h", "k-p", "k-c-h-p")
 RENAMED = {"K+C": "k-c", "K+H": "k-h", "K+P": "k-p", "K+C+H+P": "k-c-h-p"}
 ALPHA = 0.05
 MIN_SEEDS = 20
+CALIBRATION_ARMS = tuple(a["name"] for a in json.loads((HERE / "calibration.json").read_text())["arms"])
 
 
 def seeds(text):
@@ -157,6 +161,9 @@ def lineage_decisions(arm):
 
 
 def report(dirs, calibration=False):
+    for d in dirs:
+        if not Path(d).is_dir():
+            raise SystemExit(f"{d}: no such folder")
     summaries = sorted(p for d in dirs for p in Path(d).glob("seed-*/summary.json"))
     arms = {}
     firings = {"seeds_with_a_firing": 0, "firings": 0, "learners": {}}
@@ -193,9 +200,16 @@ def report(dirs, calibration=False):
     if calibration:
         ok = all(a["per_seed_improves"]["mean"] <= ALPHA and a["per_seed_worse"]["mean"] <= ALPHA
                  for a in arms.values())
+        missing = [n for n in CALIBRATION_ARMS if n not in arms]
+        thin = sorted(n for n, a in arms.items() if a["seeds"] < MIN_SEEDS)
         return {"seeds": len(summaries), "nominal_alpha": ALPHA, "cluster": "seed", "arms": arms,
                 "split": "lineage", "sentinel_firings": firings, "min_seeds": MIN_SEEDS,
-                "pass": all(a["seeds"] >= MIN_SEEDS for a in arms.values()) and ok}
+                "named_arms": list(CALIBRATION_ARMS), "missing_arms": missing, "thin_arms": thin,
+                "pass": bool(summaries) and not missing and not thin and ok}
+    absent = [n for n in COHORT_ARMS + PLANTED_ARMS if n not in arms]
+    if absent:
+        raise SystemExit(f"null study: arm {', '.join(absent)} is in no seed's summary.json "
+                         f"({len(summaries)} summaries); the study judges {', '.join(COHORT_ARMS + PLANTED_ARMS)}")
     cohort = {k: sum(arms[a][k] for a in COHORT_ARMS) for k in ("contrasts", "improves", "worse", "seeds",
                                                                   "seeds_any_improves")}
     cohort["improves_rate"] = cohort["improves"] / cohort["contrasts"]
@@ -246,7 +260,11 @@ def main(argv):
     print(f"lineage contrasts not produced: {sum(x['not_produced'] for x in result['arms'].values())}; "
           f"pass needs every judged arm in at least {result['min_seeds']} seeds")
     if a.calibration:
-        print(f"calibration: seeds {result['seeds']}; pass {result['pass']}")
+        why = ([f"no seed summaries in {', '.join(a.dirs)}"] * (not result["seeds"])
+               + [f"arm {n} is in no seed" for n in result["missing_arms"]]
+               + [f"arm {n} has a lineage contrast in {result['arms'][n]['seeds']} seeds, under {result['min_seeds']}"
+                  for n in result["thin_arms"]])
+        print(f"calibration: seeds {result['seeds']}; pass {result['pass']}" + (f" ({'; '.join(why)})" if why else ""))
         return
     for name in COHORT_ARMS + PLANTED_ARMS:
         x = result["arms"][name]
