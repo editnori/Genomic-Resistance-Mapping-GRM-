@@ -808,10 +808,16 @@ ids = [f"g{i:03d}" for i in range(50)]
                             "decision": lineage.get(learner, "inconclusive") if split == "lineage" else "inconclusive"})
         return out
 
+    def seed_folder(self, top, s):
+        """An empty seed folder with the cohort.json null_study.one_seed writes."""
+        d = Path(top) / f"seed-{s}"
+        d.mkdir(parents=True)
+        (d / "cohort.json").write_text(json.dumps({"seed": s, "genomes": 3000, "resistant": 600}))
+        return d
+
     def null_seeds(self, top, arms, contrasts, unreliable=(), seeds=20, missing=None, start=0):
         for s in range(start, start + seeds):
-            d = Path(top) / f"seed-{s}"
-            d.mkdir(parents=True)
+            d = self.seed_folder(top, s)
             summary = {"arms": run.summarize(SPEC, arms, contrasts, missing or {}, list(unreliable)),
                        "unreliable": list(unreliable)}
             (d / "summary.json").write_text(json.dumps(summary))
@@ -903,6 +909,52 @@ ids = [f"g{i:03d}" for i in range(50)]
         self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
         self.assertFalse(r["pass"])
 
+    def test_a_seed_is_the_one_its_cohort_json_records(self):
+        """REVIEW-INPUT17B L2 (its cases B1-B3): seeds were keyed by folder name, so 10 seeds passed as 20 beside
+        `seed-0101` copies, `.bak` copies or copies renamed to seeds 111-120. Now a seed is cohort.json's: its copies
+        count once when their summaries are byte-identical and are refused, naming both, when they differ; a summary
+        whose seed can't be read is refused."""
+        both = self.calibration_arms()
+        con = self.null_records("cohort-path", {}) + self.null_records("seed-twin", {})
+        with tempfile.TemporaryDirectory() as tmp:
+            a = Path(tmp) / "a"
+            self.null_seeds(a, both, con, seeds=10, start=101)
+            # B1 and B2: seed-0101 and seed-101.bak beside seed-101.
+            for copy in ("seed-0101", "seed-101.bak"):
+                shutil.copytree(a / "seed-101", a / copy)
+            # B3: seeds 101-110 copied under the names of seeds 111-120.
+            renamed = Path(tmp) / "renamed"
+            for s in range(101, 111):
+                shutil.copytree(a / f"seed-{s}", renamed / f"seed-{s + 10}")
+            for dirs in ([a], [a, renamed], [renamed]):
+                r = null_study.report(dirs, calibration=True)
+                self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["thin_arms"], r["pass"]),
+                                 (10, 10, ["cohort-path", "seed-twin"], False), dirs)
+            # The control: ten more seeds of their own make 20, and pass.
+            self.null_seeds(a, both, con, seeds=10, start=111)
+            r = null_study.report([a, renamed], calibration=True)
+            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (20, 20, True))
+            # A copy under another name with other content is refused, naming both files.
+            (a / "seed-0101" / "summary.json").write_text(json.dumps({"arms": {}}))
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([a], calibration=True)
+            self.assertEqual(str(e.exception), f"seed 101 has two different summaries: {a / 'seed-0101' / 'summary.json'}"
+                                               f" and {a / 'seed-101' / 'summary.json'}")
+            shutil.rmtree(a / "seed-0101")
+            # A summary whose seed can't be read is refused, in both studies.
+            cohort = a / "seed-105" / "cohort.json"
+            for text, why in (("", "JSONDecodeError"), ("[105]", "TypeError"), ('{"genomes": 3000}', "KeyError"),
+                              ('{"seed": "105"}', "'105', not an integer"), ('{"seed": true}', "True, not an integer"),
+                              ('{"seed": 105.0}', "105.0, not an integer"), (None, "FileNotFoundError")):
+                cohort.unlink(missing_ok=True)
+                if text is not None:
+                    cohort.write_text(text)
+                for flags in ([], ["--calibration"]):
+                    with self.assertRaises(SystemExit) as e:
+                        null_study.main(["report", str(a), *flags])
+                    self.assertTrue(str(e.exception).startswith(f"{a / 'seed-105' / 'summary.json'}: "), e.exception)
+                    self.assertIn(why, str(e.exception))
+
     def test_a_seed_counts_once_however_many_folders_hold_it(self):
         """REVIEW-INPUT17 L2: the same 10-seed folder given twice, or two folders holding the same seeds, counted 20
         seeds and passed. Byte-identical summaries of one seed now count once; different ones are refused."""
@@ -925,7 +977,7 @@ ids = [f"g{i:03d}" for i in range(50)]
             (b / "seed-3" / "summary.json").write_text(json.dumps({"arms": {}}))
             with self.assertRaises(SystemExit) as e:
                 null_study.report([a, b], calibration=True)
-            self.assertEqual(str(e.exception), f"seed seed-3 has two different summaries: {a / 'seed-3' / 'summary.json'} "
+            self.assertEqual(str(e.exception), f"seed 3 has two different summaries: {a / 'seed-3' / 'summary.json'} "
                                                f"and {b / 'seed-3' / 'summary.json'}")
 
     def test_null_study_passes_only_with_a_lineage_contrast_in_20_seeds_per_arm(self):
@@ -1020,8 +1072,7 @@ ids = [f"g{i:03d}" for i in range(50)]
                      for l in run.LEARNERS for split in ("lineage", "random")}
         with tempfile.TemporaryDirectory() as tmp:
             for s in range(20):
-                (Path(tmp) / f"seed-{s}").mkdir()
-                (Path(tmp) / f"seed-{s}" / "summary.json").write_text(json.dumps({"arms": {"seed-twin": {
+                (self.seed_folder(tmp, s) / "summary.json").write_text(json.dumps({"arms": {"seed-twin": {
                     "factor": "calibration", "pairing": "same_plan", "decisions": decisions}}}))
             r = null_study.report([tmp], calibration=True)
         a = r["arms"]["seed-twin"]
@@ -1039,8 +1090,7 @@ ids = [f"g{i:03d}" for i in range(50)]
                **{a: "inconclusive" for a in null_study.COHORT_ARMS}}
         with tempfile.TemporaryDirectory() as tmp:
             for s in range(20):
-                (Path(tmp) / f"seed-{s}").mkdir()
-                (Path(tmp) / f"seed-{s}" / "summary.json").write_text(json.dumps({"arms": {
+                (self.seed_folder(tmp, s) / "summary.json").write_text(json.dumps({"arms": {
                     arm: {"factor": "blocks", "pairing": "same_plan", "decisions": decisions(v)}
                     for arm, v in old.items()}}))
             r = null_study.report([tmp])
