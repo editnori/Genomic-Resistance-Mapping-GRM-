@@ -387,6 +387,8 @@ ids = [f"g{i:03d}" for i in range(50)]
                     self.assertIn("is not a synthetic root", str(code), (kwargs, flags))
                     self.assertIn(message, str(code), (kwargs, flags))
                     self.assertFalse((Path(tmp) / "work" / "roots").exists(), (kwargs, flags))
+                    # REVIEW-INTEG7B L1: the check comes before RAW is hashed (check_inputs writes inputs.json).
+                    self.assertFalse((Path(tmp) / "work" / run.INPUTS).exists(), (kwargs, flags))
             # A spec without "synthetic" isn't checked here; it needs its gate instead.
             spec = self.stub_spec(tmp)
             plain = json.loads(spec.read_text())
@@ -424,6 +426,37 @@ ids = [f"g{i:03d}" for i in range(50)]
             self.assertNotIn("NOT REQUIRED", err.getvalue())
         # A real spec's line names no synthetic flag.
         self.assertTrue(run.gate_line(gate, {}).endswith("equal revision 12's"))
+
+    def test_the_manifest_records_whether_the_gate_ran(self):
+        """REVIEW-INTEG7B L2: an ungated synthetic run's manifest records revision12_gate "not_required" and a gated
+        one "passed". run.main runs past the manifest with the counting, arm and contrast steps stubbed, and stops
+        at K's report."""
+        def manifest_after(tmp, spec=None):
+            pool = Path(tmp) / "structure.json"
+            pool.write_text(json.dumps({"genomes": [f"g{i:03d}" for i in range(50)], "lineages": {"n_clusters": 1}}))
+            with mock.patch.object(run.Runner, "check_synthetic", SYNTHETIC_CHECK), \
+                    mock.patch.object(run.Runner, "check_disk", lambda *a: None), \
+                    mock.patch.object(run.Runner, "pool", lambda *a: pool), \
+                    mock.patch.object(run.Runner, "root", lambda *a: None), \
+                    mock.patch.object(run.Runner, "arm", lambda *a: None), \
+                    mock.patch.object(run, "contrasts", lambda *a: ([], [], {})), \
+                    mock.patch.object(run, "manifest", lambda *a: {}), \
+                    mock.patch.object(run.k_report, "build_report", side_effect=SystemExit("stopped after the manifest")), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                code, _ = self.main(tmp, "--free-disk-bytes", str(10 ** 15), spec=spec)
+            self.assertEqual(code, "stopped after the manifest")
+            m = json.loads((Path(tmp) / "work" / "k" / "manifest.json").read_text())
+            return m["synthetic"], m["revision12_gate"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self.stub_grm(tmp)
+            self.synthetic_raw(tmp)
+            self.assertEqual(manifest_after(tmp), (True, "not_required"))
+            root = next(r for r in (Path(tmp) / "work" / "roots").iterdir()
+                        if json.loads((r / "curated.json").read_text())["arm"] == "default")
+            gate = {"genome_order": {SPEC["species"]: json.loads((root / "curated.json").read_text())["drawn_order_sha256"]},
+                    "datasets_json_sha256": run.datasets_view(root / "curated" / "datasets.json")}
+            self.assertEqual(manifest_after(tmp, self.stub_spec(tmp, revision12_gate=gate)), (True, "passed"))
 
     def test_the_gate_s_datasets_view_drops_only_selection_records(self):
         """REVIEW-INPUT8 M1: this tree's curate adds `selection` to every dataset; the view serializes the rest as
