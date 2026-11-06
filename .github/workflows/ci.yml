@@ -160,9 +160,15 @@ jobs:
             top: .
           - suite: tests/multitask
             top: .
+          # Its 22 end-to-end tests need a release grm (GRM_INPUT_E2E_BINARY) and skip here; Boat runs them.
+          - suite: tests/input_comparison
+            top: .
+            ok: OK (skipped=22)
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
+      # unittest's last line; a skip outside a suite's stated ones fails the job.
+      OK_LINE: ${{ matrix.ok || 'OK' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -180,13 +186,13 @@ jobs:
             env -i PATH=/usr/bin:/bin HOME="$HOME" PYTHONHASHSEED="$seed" GRM_TASK_J_STATS="$PWD/scripts/ablation/stats.py" \
               python3 -s -P -B -W error -m unittest discover -s "$SUITE" ${TOP:+-t "$TOP"} -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
             echo "::endgroup::"
-            test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = OK || { echo "::error::tests skipped at PYTHONHASHSEED=$seed"; exit 1; }
+            test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = "$OK_LINE" || { echo "::error::tests skipped at PYTHONHASHSEED=$seed"; exit 1; }
           done
       - name: Isolated mode
         run: |
           GRM_TASK_J_STATS="$PWD/scripts/ablation/stats.py" \
             python3 -I -B -W error -m unittest discover -s "$SUITE" ${TOP:+-t "$TOP"} -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
-          test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = OK || { echo "::error::tests skipped under -I"; exit 1; }
+          test "$(tail -n 1 "$RUNNER_TEMP/unittest.log")" = "$OK_LINE" || { echo "::error::tests skipped under -I"; exit 1; }
       - name: Without GRM_TASK_J_STATS
         if: matrix.suite == 'tests/ablation'
         run: |
@@ -241,5 +247,11 @@ jobs:
       - run: npm --prefix web run build
       # src/charts/realdata.test.ts skips: it needs GRM_REPORT_DIR, a published report.
       - run: npm --prefix web test
+      # The Worker's plain-Node tests: a stub bucket, no Miniflare and no packages. release.sh,
+      # routes.py and ranges.py need Miniflare and grm serve, and run on Boat.
+      - name: Worker tests
+        run: |
+          node ops/cloudflare/tests/previous-assets.mjs
+          node ops/cloudflare/tests/long-key.mjs
       - name: Check the build changed no tracked file
         run: git diff --exit-code --stat

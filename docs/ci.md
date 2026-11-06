@@ -4,19 +4,19 @@
 
 ## Jobs
 
-Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are those of the commit that last changed them (evaluation revision 11).
+Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are this tree's, measured on Boat with the same commands (evaluation revision 12).
 
 | Job | Runs | Result |
 |---|---|---|
 | `rust-lint` | `cargo fmt --check`, then `cargo clippy --locked --all-targets -- -D warnings` | pass |
-| `rust-test` | `cargo test --release --locked`, then `bash scripts/ci/rust-test-names.sh --check` | 417 passed, 0 failed, 8 ignored; the 425 names match `tests/rust-test-names.txt` |
+| `rust-test` | `cargo test --release --locked`, then `bash scripts/ci/rust-test-names.sh --check` | 418 passed, 0 failed, 8 ignored; the 426 names match `tests/rust-test-names.txt` |
 | `rust-doc` | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked` | pass |
-| `metric-audit` | `cargo build --locked --release` in `scripts/metric-audit/foldgen`, then `python3 -I -B -W error <file> -v` for each test file | `test_check_results.py` 106, `test_audit.py` 98, `test_scripts.py` 3; `scripts/lasso-scan/test_scan.py` 26 with 4 skipped |
-| `python`, one job per suite | `python3 -s -P -B -W error -m unittest discover -s <suite> -t . -v` under `env -i` at `PYTHONHASHSEED` 0, 1 and 4242, then once with `-I` in place of `-s -P` | `tests/hyperopt` 322, `scripts/sampling-audit/tests` 34, `tests/ablation` 256, `tests/temporal` 163, `tests/multitask` 72 |
-| `deployment` | `bash scripts/deployment/tests/dry-run.sh`, then `bash scripts/deployment/tests/apply.sh` | 247 passed; 563 passed |
-| `web` | `npm --prefix web ci`, then `run typecheck`, `run build` and `test` (vitest), on Node 22.23.4 | 35 test files passed, 1 skipped; 280 tests passed, 2 skipped |
+| `metric-audit` | `cargo build --locked --release` in `scripts/metric-audit/foldgen`, then `python3 -I -B -W error <file> -v` for each test file | `test_check_results.py` 107, `test_audit.py` 99, `test_scripts.py` 3; `scripts/lasso-scan/test_scan.py` 26 with 4 skipped |
+| `python`, one job per suite | `python3 -s -P -B -W error -m unittest discover -s <suite> -t . -v` under `env -i` at `PYTHONHASHSEED` 0, 1 and 4242, then once with `-I` in place of `-s -P` | `tests/hyperopt` 351, `scripts/sampling-audit/tests` 34, `tests/ablation` 256, `tests/temporal` 163, `tests/multitask` 72, `tests/input_comparison` 54 with 22 skipped |
+| `deployment` | `bash scripts/deployment/tests/dry-run.sh`, then `bash scripts/deployment/tests/apply.sh` | 285 passed; 564 passed |
+| `web` | `npm --prefix web ci`, then `run typecheck`, `run build` and `test` (vitest), on Node 22.23.4; then `node ops/cloudflare/tests/previous-assets.mjs` and `long-key.mjs` | 36 test files passed, 1 skipped; 290 tests passed, 2 skipped; Worker tests 22/22 and 5/5 |
 
-The `python` jobs discover `scripts/sampling-audit/tests` without `-t .` and set `GRM_TASK_J_STATS` to the tree's `scripts/ablation/stats.py`. The `tests/ablation` job also runs once without it, at `PYTHONHASHSEED=0`, so `test_schema.py` finds that file by itself. A unittest run fails if any test is skipped, except `test_scan.py`, whose 4 `RealBinary` tests need the binary and fixture root that `scripts/lasso-scan/smoke.sh` builds. A `python` job also fails if its suite changed a tracked file.
+The `python` jobs discover `scripts/sampling-audit/tests` without `-t .` and set `GRM_TASK_J_STATS` to the tree's `scripts/ablation/stats.py`. The `tests/ablation` job also runs once without it, at `PYTHONHASHSEED=0`, so `test_schema.py` finds that file by itself. A unittest run fails if any test is skipped, except `test_scan.py`, whose 4 `RealBinary` tests need the binary and fixture root that `scripts/lasso-scan/smoke.sh` builds, and `tests/input_comparison`, whose 22 end-to-end tests need a release `grm` (`GRM_INPUT_E2E_BINARY`). That job requires exactly `OK (skipped=22)` (the matrix's `ok`), so any other skip still fails it. The end-to-end comparison takes about 3 minutes on a release build and runs on Boat. A `python` job also fails if its suite changed a tracked file.
 
 The deployment suites run offline, in temporary roots, with loopback ports only. They need a git checkout (`build-release.sh` archives `HEAD`), `flock`, `fuser` (psmisc), `curl`, `setsid`, `pgrep`, `python3` and `cc`; the job installs psmisc and curl and checks for each tool. `apply.sh` takes about 4 to 20 minutes, and the job's timeout is 45.
 
@@ -34,7 +34,7 @@ When a change adds, removes, renames, ignores or un-ignores a test on purpose, r
 
 ## Web app
 
-The `web` job runs the scripts in `web/package.json`: `npm ci` from `web/package-lock.json`, then `typecheck` (`tsc -b`), `build` (`tsc -b && vite build`) and `test` (`vitest run`). It fails if they changed a tracked file. `src/charts/realdata.test.ts` skips, because it reads a published report from `GRM_REPORT_DIR`, which CI doesn't set; that file and its 2 tests are the skipped ones.
+The `web` job runs the scripts in `web/package.json`: `npm ci` from `web/package-lock.json`, then `typecheck` (`tsc -b`), `build` (`tsc -b && vite build`) and `test` (`vitest run`). It fails if they changed a tracked file. `src/charts/realdata.test.ts` skips, because it reads a published report from `GRM_REPORT_DIR`, which CI doesn't set; that file and its 2 tests are the skipped ones. The job then runs the Worker's two plain-Node tests, `ops/cloudflare/tests/previous-assets.mjs` and `long-key.mjs`, which import `ops/cloudflare/worker/src/index.js` against a stub bucket and need no package. `release.sh`, `routes.py` and `ranges.py` need Miniflare and `grm serve`, so they stay outside CI (docs/static-hosting.md, Checks).
 
 `NODE_VERSION` pins Node 22.23.4, and the job checks `node --version` after the install. The README asks for Node.js 22, vitest 5 needs 22.12 or newer, and 22.23.4 is the newest 22.x release (2026-10-20). `actions/setup-node` v7.1.0 installs it, pinned at `949feb2413d6458794dcd2491c4babbbce0c15c1`, and caches npm's download cache, keyed by the lock file. The commit came from `git ls-remote` of `actions/setup-node` on 2026-11-02, the same way as the other two actions below.
 
@@ -50,7 +50,7 @@ Python is the runner's system Python 3.12 with Ubuntu 24.04's `python3-numpy`, w
 
 ## Not in CI
 
-The web app's browser check, `web/scripts/browser-check.cjs`, is outside this workflow: it needs Chromium and a report tree. Checks that need real data stay out too, because ordinary CI doesn't hold that data and must not be given it:
+The web app's browser check, `web/scripts/browser-check.cjs`, is outside this workflow: it needs Chromium and a report tree. So are the input comparison's end-to-end run (`tests/input_comparison` with `GRM_INPUT_E2E_BINARY`, a release build and about 3 minutes) and the Worker's `release.sh`, `routes.py` and `ranges.py` (Miniflare and `grm serve`); they run on Boat. Checks that need real data stay out too, because ordinary CI doesn't hold that data and must not be given it:
 
 - the feature-block registry's catalog name check, which runs `proxy_kind` over every gene group in the pinned AMRFinderPlus catalog, so that no real name trips the deny-list and drops the P block;
 - `scripts/check-results.py` and `scripts/metric-audit/audit.py` on saved reports in `data/`;
