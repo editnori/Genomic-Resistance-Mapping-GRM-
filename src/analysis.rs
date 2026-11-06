@@ -7,7 +7,7 @@ use crate::annotate::{self, FeatureNote};
 use crate::bits::{BitMatrix, Bits};
 use crate::bvbrc::{self, Client, GenomeRecord};
 use crate::catalog::{self, Catalog, FamilyHit};
-use crate::curate::{Breakpoint, Call, Censor, DatasetSpec, Mic, Phenotype};
+use crate::curate::{Breakpoint, Call, Censor, DatasetSpec, Mic, Phenotype, Selection};
 use crate::dna::KmerSpace;
 use crate::fnv::Fnv;
 use crate::layout::{Layout, remove_if_present};
@@ -197,6 +197,10 @@ pub struct DatasetReport {
     pub antibiotic: String,
     pub drug_class: String,
     pub breakpoint: Option<Breakpoint>,
+    /// How the species' genomes were chosen, from the curated dataset. Left
+    /// out when curation recorded none, so such a report is unchanged.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selection: Option<Selection>,
     pub counts: Counts,
     pub lineage_threshold: f32,
     pub catalog_groups: Vec<String>,
@@ -732,6 +736,7 @@ pub fn analyze_dataset(
         antibiotic: spec.antibiotic.clone(),
         drug_class: spec.drug_class.clone(),
         breakpoint: spec.breakpoint,
+        selection: spec.selection.clone(),
         counts: Counts {
             samples: n,
             resistant: n_r,
@@ -805,6 +810,41 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
         ds,
         groups,
         duplicates,
+    }))
+}
+
+/// One dataset's cohort as `analyze_dataset` evaluates it, for an arm of an
+/// input comparison (`ablate::arm`).
+pub struct ArmInputs {
+    /// Each sample's genome id, in cohort order.
+    pub sample_ids: Vec<String>,
+    /// Each sample's species-matrix column.
+    pub columns: Vec<usize>,
+    /// Reported resistant.
+    pub y: Bits,
+    /// The dataset's per-fit support floor.
+    pub min_support: u32,
+    /// The dataset's K projection, which `evaluate` reads.
+    pub x: BitMatrix,
+    pub lineage: Vec<u32>,
+    /// The k-mer-identical duplicate groups (`kset_duplicates`).
+    pub duplicates: Vec<Vec<usize>>,
+}
+
+/// `eval_inputs` for an arm; None when a class falls short of the dataset's
+/// class minimum.
+pub fn arm_inputs(input: &SpeciesInputs, spec: &DatasetSpec) -> Result<Option<ArmInputs>> {
+    let Some(e) = eval_inputs(input, spec)? else {
+        return Ok(None);
+    };
+    Ok(Some(ArmInputs {
+        sample_ids: e.cohort.rows.iter().map(|p| p.genome_id.clone()).collect(),
+        columns: e.cohort.columns.clone(),
+        y: e.ds.y.clone(),
+        min_support: e.min_support,
+        x: e.ds.x,
+        lineage: e.groups,
+        duplicates: e.duplicates,
     }))
 }
 
@@ -1991,6 +2031,7 @@ mod tests {
                 n: 60,
             }),
             min_class: 25,
+            selection: None,
         }
     }
 

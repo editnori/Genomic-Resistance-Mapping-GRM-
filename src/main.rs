@@ -8,7 +8,7 @@ use grm::dna::{MAX_K, MIN_K};
 use grm::drugs;
 use grm::layout::{Layout, ensure_parent};
 use serde::Serialize;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -44,6 +44,20 @@ enum Command {
         /// Without it, names resolve through GRM's vocabulary alone.
         #[arg(long, env = "GRM_SIGDRUG_VOCABULARY")]
         sigdrug_vocabulary: Option<PathBuf>,
+        /// How genomes are chosen up to the cap: `legacy`, the label-weighted
+        /// ranking of `curate::select_genomes`, or `group-round-robin-v1`,
+        /// the label-free group draw of `curate::plan_group_sampling` with
+        /// each genome's BV-BRC MLST sequence type as its group (a genome
+        /// without one is its own singleton group).
+        #[arg(long, value_enum, default_value_t = SelectionRule::Legacy)]
+        selection: SelectionRule,
+        /// Seed of the group draw; required with `group-round-robin-v1`.
+        #[arg(long)]
+        selection_seed: Option<u64>,
+        /// The always-included stratum for `group-round-robin-v1`, a JSON
+        /// object {genome_ids, reason, label_dependent}; none when omitted.
+        #[arg(long)]
+        stratum: Option<PathBuf>,
     },
     /// Compare each curated species' selected genomes with the species'
     /// reference genome (Mash distance and GC) and record the genomes whose
@@ -101,6 +115,10 @@ enum Command {
         /// Rerun datasets that already have a report.
         #[arg(long)]
         force: bool,
+        /// Retained-feature budget: chi-square-screened features per fit
+        /// (`EvalConfig::screened_features`).
+        #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
+        screened_features: usize,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -110,6 +128,17 @@ enum Command {
         species: Vec<String>,
         #[arg(long, default_value_t = 8)]
         workers: usize,
+        /// k-mer length to count, cluster and learn at. Stages built at
+        /// another k are recounted and rebuilt at this one.
+        #[arg(
+            long,
+            default_value_t = PIPELINE_K,
+            value_parser = RangedU64ValueParser::<usize>::new().range(MIN_K as u64..=MAX_K as u64)
+        )]
+        k: usize,
+        /// Retained-feature budget (see `grm learn`).
+        #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
+        screened_features: usize,
         /// Delete each species' ksets after its datasets are learned, to cap
         /// disk use at one species' ksets (re-creatable with `grm count`).
         #[arg(long)]
@@ -118,6 +147,52 @@ enum Command {
         /// does not load, instead of stopping (see `grm count`).
         #[arg(long)]
         allow_missing_catalog: bool,
+    },
+    /// Score one arm of an input comparison on one dataset: its feature
+    /// blocks, encoded and assembled per outer fold, and every learner on the
+    /// reference arm's fold plans (`grm::ablate::arm`). Writes contract §4
+    /// prediction rows, run records and plans under --out. The species must
+    /// be counted and built (count, structure, matrix) in the data root.
+    Arm {
+        #[arg(long)]
+        species: String,
+        #[arg(long)]
+        dataset: String,
+        /// The arm's name in prediction rows and contrasts.
+        #[arg(long)]
+        arm: String,
+        /// Feature blocks: K, C, H, P (N and X have no source).
+        #[arg(long, value_delimiter = ',', default_value = "K")]
+        blocks: Vec<String>,
+        /// Retained-feature budget (see `grm learn`).
+        #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
+        screened_features: usize,
+        #[arg(long, default_value_t = 1, value_parser = RangedU64ValueParser::<u32>::new().range(1..=100))]
+        repeats: u32,
+        /// How this arm pairs with the reference arm.
+        #[arg(long, value_enum, default_value_t = PairingArg::SamePlan)]
+        pairing: PairingArg,
+        /// The reference arm's --out folder; omit for the reference itself.
+        #[arg(long)]
+        reference: Option<PathBuf>,
+        /// A cohort arm's balanced-subsample seed (default: the reference
+        /// plan's repeat seed).
+        #[arg(long)]
+        balance_seed: Option<u64>,
+        /// Seed the learners' own draws with this instead of the plan's
+        /// repeat seed, every partition unchanged (the calibration twin).
+        #[arg(long)]
+        learner_seed: Option<u64>,
+        /// Write training.jsonl: each outer fold's training genome ids.
+        #[arg(long)]
+        trace_training: bool,
+        /// The species grouping every arm splits on: the structure.json of
+        /// one `grm structure` over the species' eligible pool (a cohort arm
+        /// needs it).
+        #[arg(long)]
+        groups: Option<PathBuf>,
+        #[arg(long)]
+        out: PathBuf,
     },
     /// Build the dashboard data under <data>/report.
     Report {
@@ -181,7 +256,13 @@ fn run(cli: Cli) -> Result<()> {
             cap,
             min_class,
             sigdrug_vocabulary,
-        } => run_curate(&layout, cap, min_class, sigdrug_vocabulary),
+            selection,
+            selection_seed,
+            stratum,
+        } => {
+            let rule = selection_rule(selection, selection_seed, stratum)?;
+            run_curate_with(&layout, cap, min_class, sigdrug_vocabulary, &rule)
+        }
         Command::SpeciesCheck { sketch_only, reset } => species_check(&layout, sketch_only, reset),
         Command::Count {
             species,
@@ -202,16 +283,19 @@ fn run(cli: Cli) -> Result<()> {
             species,
             only,
             force,
+            screened_features,
         } => species
             .iter()
-            .try_for_each(|s| learn(&layout, s, &only, force)),
+            .try_for_each(|s| learn(&layout, s, &only, force, screened_features)),
         Command::Pipeline {
             species,
             workers,
+            k,
+            screened_features,
             drop_ksets,
             allow_missing_catalog,
         } => {
-            require_catalog(&layout, PIPELINE_K, allow_missing_catalog)?;
+            require_catalog(&layout, k, allow_missing_catalog)?;
             let slugs = if species.is_empty() {
                 curated_species(&layout)?
             } else {
@@ -227,15 +311,15 @@ fn run(cli: Cli) -> Result<()> {
                         workers,
                     },
                 )?;
-                count_to_matrix(&layout, slug)?;
-                if let Err(e) = learn(&layout, slug, &[], false) {
+                count_to_matrix(&layout, slug, k)?;
+                if let Err(e) = learn(&layout, slug, &[], false, screened_features) {
                     if !e.is::<grm::probes::KsetsUnreadable>() {
                         return Err(e);
                     }
                     eprintln!("{slug}: recounting ksets: {e:#}");
-                    count(&layout, slug, PIPELINE_K)?;
-                    count_to_matrix(&layout, slug)?;
-                    learn(&layout, slug, &[], false)?;
+                    count(&layout, slug, k)?;
+                    count_to_matrix(&layout, slug, k)?;
+                    learn(&layout, slug, &[], false, screened_features)?;
                 }
                 if drop_ksets {
                     let dir = layout.kset_dir(slug);
@@ -247,6 +331,46 @@ fn run(cli: Cli) -> Result<()> {
                 // Publish completed species while the remaining species run.
                 report(&layout, &PathBuf::from(KOVER_RESULTS))?;
             }
+            Ok(())
+        }
+        Command::Arm {
+            species,
+            dataset,
+            arm,
+            blocks,
+            screened_features,
+            repeats,
+            pairing,
+            reference,
+            balance_seed,
+            learner_seed,
+            trace_training,
+            groups,
+            out,
+        } => {
+            let cfg = grm::ablate::arm::ArmConfig {
+                arm,
+                blocks,
+                eval: grm::learn::eval::EvalConfig {
+                    screened_features,
+                    ..Default::default()
+                },
+                repeats,
+                pairing: pairing.into(),
+                reference,
+                balance_seed,
+                learner_seed,
+                trace_training,
+                groups,
+            };
+            let started = std::time::Instant::now();
+            grm::ablate::arm::run_arm(&layout, &species, &dataset, &cfg, &out)?;
+            eprintln!(
+                "{dataset}: arm {} scored in {:.0}s; written to {}",
+                cfg.arm,
+                started.elapsed().as_secs_f64(),
+                out.display()
+            );
             Ok(())
         }
         Command::Report { kover } => report(&layout, &kover),
@@ -265,25 +389,21 @@ fn run(cli: Cli) -> Result<()> {
 
 const KOVER_RESULTS: &str = "reference/kover-summary.json";
 
-/// k for `grm pipeline`, and the `grm count` default.
+/// The `grm pipeline --k` and `grm count` default.
 const PIPELINE_K: usize = 31;
 
 /// min_support for `grm pipeline`, and the `grm matrix` default.
 const PIPELINE_MIN_SUPPORT: u32 = 2;
 
-/// Count, structure, and matrix, each rerun only when `stale_stages` finds
-/// its output out of date.
-fn count_to_matrix(layout: &Layout, slug: &str) -> Result<()> {
-    let catalog = load_catalog(layout, PIPELINE_K);
-    let stale_stages = || {
-        grm::species::stale_stages(
-            layout,
-            slug,
-            catalog.as_ref(),
-            PIPELINE_K,
-            PIPELINE_MIN_SUPPORT,
-        )
-    };
+/// The `--screened-features` default: `EvalConfig::default()`'s budget.
+const DEFAULT_SCREENED_FEATURES: usize = 4000;
+
+/// Count, structure, and matrix at `k`, each rerun only when `stale_stages`
+/// finds its output out of date.
+fn count_to_matrix(layout: &Layout, slug: &str, k: usize) -> Result<()> {
+    let catalog = load_catalog(layout, k);
+    let stale_stages =
+        || grm::species::stale_stages(layout, slug, catalog.as_ref(), k, PIPELINE_MIN_SUPPORT);
     // Count reruns whenever any stage is stale (see `stale_stages`).
     if !stale_stages().count {
         eprintln!(
@@ -291,7 +411,7 @@ fn count_to_matrix(layout: &Layout, slug: &str) -> Result<()> {
         );
         return Ok(());
     }
-    count_with(layout, slug, PIPELINE_K, catalog.as_ref())?;
+    count_with(layout, slug, k, catalog.as_ref())?;
     // `stale_stages` takes a genome whose count failed as left out on
     // purpose, so stages built now would leave it out of every later run. A
     // failed count, such as a kset write on a full disk, stops here instead:
@@ -390,9 +510,18 @@ fn matrix(layout: &Layout, slug: &str, min_support: u32) -> Result<()> {
     Ok(())
 }
 
-fn learn(layout: &Layout, slug: &str, only: &[String], force: bool) -> Result<()> {
+fn learn(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    screened_features: usize,
+) -> Result<()> {
     grm::species::ensure_selection_counted(layout, slug)?;
-    let cfg = grm::learn::eval::EvalConfig::default();
+    let cfg = grm::learn::eval::EvalConfig {
+        screened_features,
+        ..Default::default()
+    };
     let written = grm::analysis::analyze_species(layout, slug, only, force, &cfg)?;
     eprintln!("{slug}: {} dataset reports written", written.len());
     Ok(())
@@ -515,11 +644,171 @@ struct DrugNameRow<'a> {
     resolution: &'a drugs::Resolution,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum PairingArg {
+    #[value(name = "same_plan")]
+    SamePlan,
+    #[value(name = "k31_groups")]
+    K31Groups,
+    #[value(name = "common_outer_test_set_balanced")]
+    CommonOuterTestSetBalanced,
+}
+
+impl From<PairingArg> for grm::ablate::arm::Pairing {
+    fn from(p: PairingArg) -> Self {
+        match p {
+            PairingArg::SamePlan => Self::SamePlan,
+            PairingArg::K31Groups => Self::K31Groups,
+            PairingArg::CommonOuterTestSetBalanced => Self::CommonOuterTestSetBalanced,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum SelectionRule {
+    /// `curate::select_genomes`.
+    Legacy,
+    /// `curate::plan_group_sampling` (`curate::GROUP_SAMPLING_DESIGN`).
+    #[value(name = "group-round-robin-v1")]
+    GroupRoundRobinV1,
+}
+
+/// A selection rule with its inputs, checked before curation reads anything.
+enum Selector {
+    Legacy,
+    /// The group draw; each genome's group is its BV-BRC MLST sequence type
+    /// (`group_of_mlst`).
+    Groups {
+        seed: u64,
+        stratum: curate::AlwaysIncluded,
+    },
+}
+
+fn selection_rule(
+    rule: SelectionRule,
+    seed: Option<u64>,
+    stratum: Option<PathBuf>,
+) -> Result<Selector> {
+    match rule {
+        SelectionRule::Legacy => {
+            anyhow::ensure!(
+                seed.is_none() && stratum.is_none(),
+                "--selection-seed and --stratum apply only to --selection group-round-robin-v1"
+            );
+            Ok(Selector::Legacy)
+        }
+        SelectionRule::GroupRoundRobinV1 => {
+            let seed = seed.context("--selection group-round-robin-v1 needs --selection-seed")?;
+            let stratum = match stratum {
+                Some(p) => serde_json::from_slice(
+                    &std::fs::read(&p).with_context(|| format!("read {}", p.display()))?,
+                )
+                .with_context(|| format!("parse the stratum {}", p.display()))?,
+                None => curate::AlwaysIncluded::default(),
+            };
+            Ok(Selector::Groups { seed, stratum })
+        }
+    }
+}
+
+/// A genome's group for the group draw: `mlst:<sequence type>` from its
+/// BV-BRC genome record, or `singleton:<genome id>` when the record has no
+/// sequence type, so every genome has a group (the rulings after lane INPUT).
+fn group_of_mlst(genome_id: &str, mlst: Option<&str>) -> (String, bool) {
+    match mlst.map(str::trim).filter(|m| !m.is_empty()) {
+        Some(st) => (format!("mlst:{st}"), false),
+        None => (format!("singleton:{genome_id}"), true),
+    }
+}
+
+/// The genomes `selector` chooses for `species` at `cap`, in the order
+/// genomes.txt keeps, with the record of how. A group draw also returns its
+/// plan, which `run_curate_with` saves beside genomes.txt. `mlst` maps a
+/// genome to its BV-BRC MLST field.
+fn select_species(
+    curated: &curate::Curated,
+    species: &str,
+    cap: usize,
+    selector: &Selector,
+    mlst: &HashMap<&str, &str>,
+) -> Result<(
+    Vec<String>,
+    curate::Selection,
+    Option<curate::GroupSamplingPlan>,
+)> {
+    match selector {
+        Selector::Legacy => Ok((
+            curate::select_genomes(&curated.phenotypes, &curated.datasets, species, cap),
+            curate::Selection {
+                rule: curate::LEGACY_SELECTION.to_string(),
+                cap,
+                seed: None,
+                always_included: None,
+                input_sha256: None,
+                group_source: None,
+                singletons: None,
+            },
+            None,
+        )),
+        Selector::Groups { seed, stratum } => {
+            let ids = curate::labeled_genomes(&curated.phenotypes, &curated.datasets, species);
+            let mut singletons = 0;
+            let eligible: Vec<curate::EligibleGenome> = ids
+                .iter()
+                .map(|id| {
+                    let (group_id, single) = group_of_mlst(id, mlst.get(id.as_str()).copied());
+                    singletons += single as usize;
+                    curate::EligibleGenome {
+                        genome_id: id.clone(),
+                        group_id,
+                        always_included: None,
+                    }
+                })
+                .collect();
+            // One plan per species (`plan_group_sampling`), with the part of
+            // the stratum that is this species'.
+            let own: BTreeSet<&str> = ids.iter().map(String::as_str).collect();
+            let always = curate::AlwaysIncluded {
+                genome_ids: stratum
+                    .genome_ids
+                    .iter()
+                    .filter(|id| own.contains(id.as_str()))
+                    .cloned()
+                    .collect(),
+                ..stratum.clone()
+            };
+            let plan = curate::plan_group_sampling(&eligible, &always, cap, *seed)
+                .with_context(|| format!("{species}: group-stratified selection"))?;
+            let selection = curate::Selection {
+                rule: plan.design.clone(),
+                cap,
+                seed: Some(*seed),
+                always_included: Some(plan.always_included.clone()),
+                input_sha256: Some(plan.input_sha256.clone()),
+                group_source: Some(curate::MLST_GROUP_SOURCE.to_string()),
+                singletons: Some(singletons),
+            };
+            Ok((plan.selected.clone(), selection, Some(plan)))
+        }
+    }
+}
+
+#[cfg(test)]
 fn run_curate(
     layout: &Layout,
     cap: usize,
     min_class: usize,
     sigdrug: Option<PathBuf>,
+) -> Result<()> {
+    run_curate_with(layout, cap, min_class, sigdrug, &Selector::Legacy)
+}
+
+fn run_curate_with(
+    layout: &Layout,
+    cap: usize,
+    min_class: usize,
+    sigdrug: Option<PathBuf>,
+    selector: &Selector,
 ) -> Result<()> {
     // `grm learn` gates each dataset at this minimum; below the outer fold
     // count, a random-split fold lacks a class and `grm learn` stops with an
@@ -533,6 +822,10 @@ fn run_curate(
     );
     let records: Vec<AmrRecord> = bvbrc::read_jsonl(&layout.amr())?;
     let genomes: Vec<GenomeRecord> = bvbrc::read_jsonl(&layout.genomes())?;
+    let mlst: HashMap<&str, &str> = genomes
+        .iter()
+        .filter_map(|g| Some((g.genome_id.as_str(), g.mlst.as_deref()?)))
+        .collect();
     let cfg = QcConfig {
         min_class,
         ..Default::default()
@@ -558,7 +851,7 @@ fn run_curate(
         None
     };
     let wrong_species = check.as_ref().map(|c| c.failures()).unwrap_or_default();
-    let curated = curate::curate(&records, &genomes, &cfg, &wrong_species, &mut resolver)?;
+    let mut curated = curate::curate(&records, &genomes, &cfg, &wrong_species, &mut resolver)?;
 
     let dir = layout.curated();
     std::fs::create_dir_all(&dir)?;
@@ -592,24 +885,53 @@ fn run_curate(
     }
     w.flush()?;
     std::fs::write(
-        dir.join("datasets.json"),
-        serde_json::to_vec_pretty(&curated.datasets)?,
-    )?;
-    std::fs::write(
         dir.join("funnel.json"),
         serde_json::to_vec_pretty(&curated.funnel)?,
     )?;
+    /// qc.json's first element: the QC settings and the selection rule.
+    #[derive(Serialize)]
+    struct QcRecord<'a> {
+        #[serde(flatten)]
+        qc: &'a QcConfig,
+        selection: curate::Selection,
+    }
+    let (seed, always_included, group_source) = match selector {
+        Selector::Legacy => (None, None, None),
+        Selector::Groups { seed, stratum } => (
+            Some(*seed),
+            Some(stratum.clone()),
+            Some(curate::MLST_GROUP_SOURCE.to_string()),
+        ),
+    };
+    let rule = match selector {
+        Selector::Legacy => curate::LEGACY_SELECTION,
+        Selector::Groups { .. } => curate::GROUP_SAMPLING_DESIGN,
+    };
+    let record = QcRecord {
+        qc: &cfg,
+        selection: curate::Selection {
+            rule: rule.to_string(),
+            cap,
+            seed,
+            always_included,
+            input_sha256: None,
+            group_source,
+            singletons: None,
+        },
+    };
     std::fs::write(
         dir.join("qc.json"),
-        serde_json::to_vec_pretty(&(&cfg, &curated.qc_failures))?,
+        serde_json::to_vec_pretty(&(&record, &curated.qc_failures))?,
     )?;
 
-    let mut by_species: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut by_species: BTreeMap<String, usize> = BTreeMap::new();
     for d in &curated.datasets {
-        *by_species.entry(&d.species).or_default() += 1;
+        *by_species.entry(d.species.clone()).or_default() += 1;
     }
     let mut selections = Vec::new();
+    let mut stratum_used: BTreeSet<String> = BTreeSet::new();
     for (species, n_datasets) in by_species {
+        let species = species.as_str();
         let slug = curate::slug(species);
         let labeled = curated
             .phenotypes
@@ -618,7 +940,22 @@ fn run_curate(
             .map(|p| &p.genome_id)
             .collect::<BTreeSet<_>>()
             .len();
-        let ids = curate::select_genomes(&curated.phenotypes, &curated.datasets, species, cap);
+        let (ids, selection, plan) = select_species(&curated, species, cap, selector, &mlst)?;
+        if let Some(a) = &selection.always_included {
+            stratum_used.extend(a.genome_ids.iter().cloned());
+        }
+        let plan_path = layout.species_dir(&slug).join("selection.json");
+        match &plan {
+            Some(plan) => {
+                ensure_parent(&plan_path)?;
+                std::fs::write(&plan_path, serde_json::to_vec_pretty(plan)?)?;
+            }
+            None if plan_path.exists() => std::fs::remove_file(&plan_path)?,
+            None => {}
+        }
+        for d in curated.datasets.iter_mut().filter(|d| d.species == species) {
+            d.selection = Some(selection.clone());
+        }
         let selected_unchecked = check.as_ref().map(|c| {
             let checked: BTreeSet<&str> = c
                 .genomes
@@ -642,6 +979,23 @@ fn run_curate(
             selected_unchecked,
         });
     }
+    if let Selector::Groups { stratum, .. } = selector {
+        let unused: Vec<&String> = stratum
+            .genome_ids
+            .iter()
+            .filter(|id| !stratum_used.contains(*id))
+            .collect();
+        anyhow::ensure!(
+            unused.is_empty(),
+            "{} always-included genomes are eligible in no curated species, first {}",
+            unused.len(),
+            unused.first().map_or("", |s| s.as_str())
+        );
+    }
+    std::fs::write(
+        dir.join("datasets.json"),
+        serde_json::to_vec_pretty(&curated.datasets)?,
+    )?;
     selections.sort_by_key(|a| std::cmp::Reverse(a.labeled_genomes));
     std::fs::write(
         dir.join("species.json"),
@@ -952,7 +1306,7 @@ mod tests {
     fn a_new_catalog_redoes_gene_calls_and_keeps_structure_and_matrix() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         mark_stages(&layout);
         set_catalog_version(&layout, "v2");
         // `grm learn` alone refuses the old calls; the pipeline recounts first.
@@ -961,7 +1315,7 @@ mod tests {
             refusal.contains("has gene calls from catalog v1|group-calls-v2"),
             "{refusal}"
         );
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         assert_eq!(learn_refusal(&layout), None);
         let counted = grm::species::load_counted(&layout, SLUG).unwrap();
         for g in &counted.genomes {
@@ -981,10 +1335,13 @@ mod tests {
         ] {
             let dir = tempfile::tempdir().unwrap();
             let layout = fixture(dir.path());
-            count_to_matrix(&layout, SLUG).unwrap();
+            count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
             download(&layout, "g4");
             write_genome_list(&layout, selection);
-            let err = format!("{:#}", learn(&layout, SLUG, &[], false).unwrap_err());
+            let err = format!(
+                "{:#}",
+                learn(&layout, SLUG, &[], false, DEFAULT_SCREENED_FEATURES).unwrap_err()
+            );
             assert!(
                 err.contains("genomes.txt adds, removes, or reorders"),
                 "{err}"
@@ -1004,11 +1361,11 @@ mod tests {
         ] {
             let dir = tempfile::tempdir().unwrap();
             let layout = fixture(dir.path());
-            count_to_matrix(&layout, SLUG).unwrap();
+            count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
             mark_stages(&layout);
             download(&layout, "g4");
             write_genome_list(&layout, selection);
-            count_to_matrix(&layout, SLUG).unwrap();
+            count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
             assert_eq!(still_marked(&layout), (false, false), "{selection:?}");
             let m = FeatureMatrix::load(&layout.matrix_dir(SLUG)).unwrap();
             assert_eq!(m.summary.genomes, selection);
@@ -1020,18 +1377,18 @@ mod tests {
     fn a_selected_genome_is_counted_once_its_fasta_is_downloaded() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         mark_stages(&layout);
         // `grm count` leaves out a genome without a FASTA file, so selecting
         // g4 before its download changes nothing, the counts included.
         let counted_json = layout.species_dir(SLUG).join("counted.json");
         let counts = std::fs::read(&counted_json).unwrap();
         write_genome_list(&layout, &["g0", "g1", "g2", "g3", "g4"]);
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         assert_eq!(std::fs::read(&counted_json).unwrap(), counts);
         assert_eq!(still_marked(&layout), (true, true));
         download(&layout, "g4");
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         assert_eq!(still_marked(&layout), (false, false));
         let m = FeatureMatrix::load(&layout.matrix_dir(SLUG)).unwrap();
         assert_eq!(m.summary.genomes, ["g0", "g1", "g2", "g3", "g4"]);
@@ -1045,7 +1402,10 @@ mod tests {
         // that write, as a full disk would.
         let part = layout.kset_dir(SLUG).join("g1.kset.part");
         std::fs::create_dir_all(&part).unwrap();
-        let err = format!("{:#}", count_to_matrix(&layout, SLUG).unwrap_err());
+        let err = format!(
+            "{:#}",
+            count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap_err()
+        );
         assert!(
             err.contains("fixture: 1 of 4 selected genomes failed to count, first g1:"),
             "{err}"
@@ -1053,7 +1413,7 @@ mod tests {
         assert!(!layout.species_dir(SLUG).join("structure.json").exists());
         assert!(!layout.matrix_dir(SLUG).join("matrix.json").exists());
         std::fs::remove_dir(&part).unwrap();
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let m = FeatureMatrix::load(&layout.matrix_dir(SLUG)).unwrap();
         assert_eq!(m.summary.genomes, ["g0", "g1", "g2", "g3"]);
         assert_eq!(learn_refusal(&layout), None);
@@ -1063,12 +1423,12 @@ mod tests {
     fn a_count_at_another_k_is_redone_and_rebuilds_only_stages_built_at_that_k() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         mark_stages(&layout);
         // `grm count --k 21` alone: the recount at k = 31 writes again the
         // ksets that structure and matrix were built from.
         count(&layout, SLUG, 21).unwrap();
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         assert_eq!(
             grm::species::load_counted(&layout, SLUG).unwrap().k,
             PIPELINE_K
@@ -1080,7 +1440,7 @@ mod tests {
         matrix(&layout, SLUG, 2).unwrap();
         count(&layout, SLUG, PIPELINE_K).unwrap();
         mark_stages(&layout);
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         assert_eq!(still_marked(&layout), (false, false));
         let m = FeatureMatrix::load(&layout.matrix_dir(SLUG)).unwrap();
         assert_eq!(m.summary.k, PIPELINE_K);
@@ -1097,14 +1457,14 @@ mod tests {
         structure(&layout, SLUG).unwrap();
         matrix(&layout, SLUG, 2).unwrap();
         mark_stages(&layout);
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let counted = grm::species::load_counted(&layout, SLUG).unwrap();
         assert_eq!(counted.k, PIPELINE_K);
         assert_eq!(still_marked(&layout), (false, false));
         // `grm matrix --min-support 1` keeps k-mers the pipeline's matrix drops.
         matrix(&layout, SLUG, 1).unwrap();
         mark_stages(&layout);
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         assert_eq!(still_marked(&layout), (true, false));
         let m = FeatureMatrix::load(&layout.matrix_dir(SLUG)).unwrap();
         assert_eq!((m.summary.k, m.summary.min_support), (PIPELINE_K, 2));
@@ -1115,7 +1475,7 @@ mod tests {
     fn a_failed_matrix_resave_is_rebuilt_on_the_next_run() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let mx = layout.matrix_dir(SLUG);
         let built = FeatureMatrix::load(&mx).unwrap();
         // The re-save rewrites three binaries, then cannot create kmers.bin.
@@ -1123,7 +1483,7 @@ mod tests {
         std::fs::create_dir(mx.join("kmers.bin")).unwrap();
         assert!(grm::species::build_matrix(&layout, SLUG, 2).is_err());
         std::fs::remove_dir(mx.join("kmers.bin")).unwrap();
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let rebuilt = FeatureMatrix::load(&mx).unwrap();
         assert_eq!(rebuilt.kmers, built.kmers);
         assert_eq!(rebuilt.summary.genomes, built.summary.genomes);
@@ -1133,14 +1493,14 @@ mod tests {
     fn counts_from_before_kset_digests_are_redone_and_keep_structure_and_matrix() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let counted_with_digests = counted_digests(&layout);
         assert!(counted_with_digests.iter().all(Option::is_some));
         mark_stages(&layout);
         drop_ksets_and_digests(&layout);
         let refusal = learn_refusal(&layout).unwrap();
         assert!(refusal.contains("no kset digest for g0"), "{refusal}");
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         assert_eq!(counted_digests(&layout), counted_with_digests);
         assert_eq!(still_marked(&layout), (true, true));
         assert_eq!(learn_refusal(&layout), None);
@@ -1153,7 +1513,7 @@ mod tests {
         for drop_ksets in [false, true] {
             let dir = tempfile::tempdir().unwrap();
             let layout = fixture(dir.path());
-            count_to_matrix(&layout, SLUG).unwrap();
+            count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
             let counted_with_digests = counted_digests(&layout);
             mark_stages(&layout);
             written_before_kset_digests(&layout);
@@ -1164,7 +1524,7 @@ mod tests {
                 learn_refusal(&layout).unwrap(),
                 "counted.json records no kset digest for g0 (it predates them); rerun `grm count --species fixture`"
             );
-            count_to_matrix(&layout, SLUG).unwrap();
+            count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
             let state = format!("drop_ksets = {drop_ksets}");
             assert_eq!(counted_digests(&layout), counted_with_digests, "{state}");
             assert_eq!(still_marked(&layout), (false, false), "{state}");
@@ -1176,7 +1536,7 @@ mod tests {
     fn a_structure_from_before_kset_digests_is_rebuilt_beside_a_current_matrix() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         mark_stages(&layout);
         let structure_json = layout.species_dir(SLUG).join("structure.json");
         remove_fields(&structure_json, &["k", "kset_digests"]);
@@ -1184,7 +1544,7 @@ mod tests {
             learn_refusal(&layout).unwrap(),
             "structure.json records no kset digests (it predates them); rerun `grm structure`"
         );
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         assert_eq!(still_marked(&layout), (false, true));
         assert_eq!(learn_refusal(&layout), None);
     }
@@ -1193,7 +1553,7 @@ mod tests {
     fn counting_and_building_the_matrix_by_hand_leave_an_old_structure_refused() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         written_before_kset_digests(&layout);
         // `grm count` and `grm matrix`, without `grm structure`.
         count(&layout, SLUG, PIPELINE_K).unwrap();
@@ -1210,7 +1570,7 @@ mod tests {
     fn learn_refuses_a_structure_and_matrix_built_from_other_ksets() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let mut counted = grm::species::load_counted(&layout, SLUG).unwrap();
         counted.genomes[0].kset_digest = Some("changed kset".into());
         std::fs::write(
@@ -1231,14 +1591,14 @@ mod tests {
     fn changed_ksets_rebuild_structure_and_matrix() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         mark_stages(&layout);
         let fasta = bvbrc::fasta_path(&layout.fasta_dir(), "g0");
         let mut sequence = std::fs::read_to_string(&fasta).unwrap();
         sequence.push('A');
         std::fs::write(fasta, sequence).unwrap();
         drop_ksets_and_digests(&layout);
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         assert_eq!(still_marked(&layout), (false, false));
         let counted = grm::species::load_counted(&layout, SLUG).unwrap();
         let matrix = FeatureMatrix::load(&layout.matrix_dir(SLUG)).unwrap();
@@ -1255,14 +1615,17 @@ mod tests {
     fn a_catalog_that_no_longer_loads_stops_learning_and_recounting() {
         let dir = tempfile::tempdir().unwrap();
         let layout = fixture(dir.path());
-        count_to_matrix(&layout, SLUG).unwrap();
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         std::fs::remove_dir_all(layout.catalog_dir()).unwrap();
         let refusal = learn_refusal(&layout).unwrap();
         assert!(refusal.contains("which no longer loads"), "{refusal}");
         // A recount, due here for counts from before kset digests, would
         // record no gene calls in place of the ones counted.json holds.
         drop_ksets_and_digests(&layout);
-        let err = format!("{:#}", count_to_matrix(&layout, SLUG).unwrap_err());
+        let err = format!(
+            "{:#}",
+            count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap_err()
+        );
         assert!(err.contains("would drop the gene calls"), "{err}");
         let counted = grm::species::load_counted(&layout, SLUG).unwrap();
         let genes: Vec<usize> = counted.genomes.iter().map(|g| g.genes.len()).collect();
@@ -1444,6 +1807,197 @@ mod tests {
         assert_eq!(passes[2], passes[1]);
         let check = grm::species_check::read(&layout.species_check()).unwrap();
         assert_eq!(check.species[0].checked, 53);
+    }
+
+    #[test]
+    fn pipeline_and_learn_take_a_k_and_a_retained_feature_budget() {
+        assert_eq!(
+            DEFAULT_SCREENED_FEATURES,
+            grm::learn::eval::EvalConfig::default().screened_features
+        );
+        let parse = |args: &[&str]| Cli::try_parse_from([&["grm", "pipeline"][..], args].concat());
+        let Command::Pipeline {
+            k,
+            screened_features,
+            ..
+        } = parse(&[]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (k, screened_features),
+            (PIPELINE_K, DEFAULT_SCREENED_FEATURES)
+        );
+        let Command::Pipeline {
+            k,
+            screened_features,
+            ..
+        } = parse(&["--k", "21", "--screened-features", "16000"])
+            .unwrap()
+            .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((k, screened_features), (21, 16000));
+        for bad in [&["--k", "33"][..], &["--screened-features", "0"][..]] {
+            assert!(parse(bad).is_err(), "{bad:?}");
+        }
+        let learn = Cli::try_parse_from([
+            "grm",
+            "learn",
+            "--species",
+            "s",
+            "--screened-features",
+            "1000",
+        ]);
+        let Command::Learn {
+            screened_features, ..
+        } = learn.unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(screened_features, 1000);
+    }
+
+    /// The pipeline's stages follow `--k`: counts, structure and matrix built
+    /// at 31 are rebuilt at 21, and each records 21.
+    #[test]
+    fn the_pipeline_counts_and_builds_at_the_k_it_is_given() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
+        count_to_matrix(&layout, SLUG, 21).unwrap();
+        assert_eq!(learn_refusal(&layout), None);
+        let (input, _) = grm::analysis::load_inputs(&layout, SLUG).unwrap();
+        assert_eq!((input.structure.k, input.matrix.summary.k), (21, 21));
+        let counted = grm::species::load_counted(&layout, SLUG).unwrap();
+        assert_eq!(counted.k, 21);
+    }
+
+    fn curated_json(layout: &Layout, file: &str) -> serde_json::Value {
+        serde_json::from_slice(&std::fs::read(layout.curated().join(file)).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn curate_records_the_legacy_rule_and_its_cap_without_changing_its_choice() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        species_check_fixture(dir.path());
+        let folds = grm::learn::eval::EvalConfig::default().folds;
+        run_curate(&layout, 40, folds, None).unwrap();
+        let selected =
+            read_lines(&layout.species_dir("escherichia_coli").join("genomes.txt")).unwrap();
+        let phenotypes: Vec<curate::Phenotype> =
+            bvbrc::read_jsonl(&layout.curated().join("phenotypes.jsonl")).unwrap();
+        let datasets: Vec<curate::DatasetSpec> =
+            serde_json::from_value(curated_json(&layout, "datasets.json")).unwrap();
+        assert_eq!(
+            selected,
+            curate::select_genomes(&phenotypes, &datasets, "Escherichia coli", 40)
+        );
+        let want = serde_json::json!({
+            "rule": "legacy", "cap": 40, "seed": null, "always_included": null,
+        });
+        assert_eq!(curated_json(&layout, "qc.json")[0]["selection"], want);
+        assert_eq!(curated_json(&layout, "qc.json")[0]["min_class"], folds);
+        for d in curated_json(&layout, "datasets.json").as_array().unwrap() {
+            assert_eq!(d["selection"], want);
+        }
+        assert!(
+            !layout
+                .species_dir("escherichia_coli")
+                .join("selection.json")
+                .exists()
+        );
+    }
+
+    #[test]
+    fn curate_draws_round_robin_across_mlst_groups_and_records_the_plan() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        species_check_fixture(dir.path());
+        let folds = grm::learn::eval::EvalConfig::default().folds;
+        // Give the genome records a BV-BRC MLST field: six sequence types, and
+        // none on every fifth genome, which then is its own singleton group.
+        let records: Vec<serde_json::Value> = bvbrc::read_jsonl(&layout.genomes()).unwrap();
+        let mut text = String::new();
+        let mut without = BTreeSet::new();
+        for (i, mut g) in records.into_iter().enumerate() {
+            if i % 5 == 0 {
+                without.insert(g["genome_id"].as_str().unwrap().to_string());
+            } else {
+                g["mlst"] = format!("MLST.Escherichia_coli_1.{}", i % 6).into();
+            }
+            text += &format!("{g}\n");
+        }
+        std::fs::write(layout.genomes(), text).unwrap();
+        let stratum = dir.path().join("stratum.json");
+        let pinned = without.iter().next().unwrap().clone();
+        std::fs::write(
+            &stratum,
+            serde_json::json!({"genome_ids": [pinned], "reason": "fixture", "label_dependent": false})
+                .to_string(),
+        )
+        .unwrap();
+        let rule =
+            selection_rule(SelectionRule::GroupRoundRobinV1, Some(7), Some(stratum)).unwrap();
+        run_curate_with(&layout, 30, folds, None, &rule).unwrap();
+        let species_dir = layout.species_dir("escherichia_coli");
+        let plan: curate::GroupSamplingPlan =
+            serde_json::from_slice(&std::fs::read(species_dir.join("selection.json")).unwrap())
+                .unwrap();
+        let selected = read_lines(&species_dir.join("genomes.txt")).unwrap();
+        assert_eq!(selected, plan.selected);
+        assert_eq!(selected.len(), 30);
+        assert_eq!(selected[0], pinned);
+        // Every eligible genome has a group: its sequence type, or itself.
+        assert_eq!(plan.inclusion.len(), 60);
+        for g in &plan.inclusion {
+            let want = if without.contains(&g.genome_id) {
+                format!("singleton:{}", g.genome_id)
+            } else {
+                assert!(g.group_id.starts_with("mlst:MLST.Escherichia_coli_1."));
+                g.group_id.clone()
+            };
+            assert_eq!(g.group_id, want);
+        }
+        let qc = &curated_json(&layout, "qc.json")[0]["selection"];
+        assert_eq!(qc["rule"], curate::GROUP_SAMPLING_DESIGN);
+        assert_eq!(qc["group_source"], curate::MLST_GROUP_SOURCE);
+        assert_eq!(
+            (qc["cap"].clone(), qc["seed"].clone()),
+            (30.into(), 7.into())
+        );
+        assert!(qc.get("input_sha256").is_none() && qc.get("singletons").is_none());
+        for d in curated_json(&layout, "datasets.json").as_array().unwrap() {
+            let s = &d["selection"];
+            assert_eq!(s["input_sha256"], plan.input_sha256.as_str());
+            assert_eq!(s["group_source"], curate::MLST_GROUP_SOURCE);
+            assert_eq!(s["singletons"], without.len());
+            assert_eq!(s["always_included"]["genome_ids"][0], pinned.as_str());
+        }
+        // A legacy run afterwards drops the stale plan and names no group source.
+        run_curate(&layout, 30, folds, None).unwrap();
+        assert!(!species_dir.join("selection.json").exists());
+        let qc = &curated_json(&layout, "qc.json")[0]["selection"];
+        assert!(qc.get("group_source").is_none());
+    }
+
+    #[test]
+    fn selection_flags_are_refused_where_they_do_not_apply() {
+        let legacy = |seed, stratum| selection_rule(SelectionRule::Legacy, seed, stratum);
+        assert!(legacy(Some(1), None).is_err());
+        assert!(legacy(None, Some(PathBuf::from("s.json"))).is_err());
+        let err = selection_rule(SelectionRule::GroupRoundRobinV1, None, None)
+            .err()
+            .unwrap()
+            .to_string();
+        assert!(err.contains("--selection-seed"), "{err}");
+        assert!(selection_rule(SelectionRule::GroupRoundRobinV1, Some(1), None).is_ok());
+        let parsed = Cli::try_parse_from(["grm", "curate", "--selection", "group-round-robin-v1"]);
+        assert!(parsed.is_ok());
+        assert!(Cli::try_parse_from(["grm", "curate", "--selection", "random"]).is_err());
+        assert!(Cli::try_parse_from(["grm", "curate", "--groups", "g.tsv"]).is_err());
     }
 
     /// `--reset` drops the recorded references and verdicts, not the

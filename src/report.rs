@@ -901,6 +901,7 @@ mod tests {
                 n_labels_from_mic: 0,
                 breakpoint: None,
                 min_class: 3,
+                selection: None,
             })
             .collect();
         std::fs::create_dir_all(layout.curated()).unwrap();

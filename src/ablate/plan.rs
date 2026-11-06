@@ -24,7 +24,7 @@ use crate::learn::{
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::Write as _;
 
 /// The fraction of outer-training samples boosting holds out to stop early:
@@ -276,8 +276,8 @@ impl FoldPlan {
     ///   samples of `f`.
     pub fn check_structure(&self) -> Result<()> {
         ensure!(
-            self.format == PLAN_FORMAT,
-            "fold plan format {:?} is not {PLAN_FORMAT}",
+            self.format == PLAN_FORMAT || self.format == KEYED_PLAN_FORMAT,
+            "fold plan format {:?} is not {PLAN_FORMAT} or {KEYED_PLAN_FORMAT}",
             self.format
         );
         ensure!(
@@ -417,6 +417,721 @@ pub fn fold_plan(
         };
     let mut plan = FoldPlan {
         format: PLAN_FORMAT.to_string(),
+        scheme,
+        repeat,
+        k,
+        inner_k,
+        seed,
+        repeat_seed: drawn,
+        outer,
+        inner,
+        holdouts,
+        unavailable_reason,
+        sha256: String::new(),
+    };
+    plan.sha256 = plan.compute_sha256()?;
+    Ok(plan)
+}
+
+/// The `format` of every cohort plan.
+pub const COHORT_PLAN_FORMAT: &str = "grm-cohort-plan-v4";
+
+/// The plan of an arm whose cohort differs from the reference arm's, such
+/// as another cap or selection rule (DECISIONS V-1 and the rulings after
+/// lane INPUT: the `common_outer_test_set_balanced` pairing).
+///
+/// Per outer fold f, the arm is scored on a class-balanced subsample of the
+/// genomes in both cohorts that the reference tests in f: every class keeps
+/// as many genomes as it can while the subsample's resistant-to-susceptible
+/// ratio matches the reference's whole test fold f (`reference_test_classes`),
+/// so a cohort that the selection rule tilted towards one class is scored on
+/// the population the reference represents. The subsample is drawn by a
+/// ChaCha8 shuffle of each class, in sample order, seeded `balance_seed(
+/// balance_seed, f)` (`balance_seed` is the reference's repeat seed) and
+/// ranked by `keyed_hash(genome id, that seed, "balance")`, so the draw is keyed on genome
+/// identity.
+///
+/// In fold f the arm trains on its own cohort minus `held_out[f]` and minus
+/// the scored genomes: `held_out[f]` holds the common genomes the reference
+/// tests in f that the subsample left out (`balance_dropped[f]` of them),
+/// and, on the lineage split, every genome only the arm has whose lineage
+/// (the arm's own k = 31 lineages) is a lineage of fold f's scored genomes
+/// (`lineage_dropped[f]`), and, on every split, every other genome of a
+/// scored genome's k-mer duplicate group (`duplicate_dropped[f]`), so no exact
+/// copy of a scored genome trains in its fold. A common genome the subsample leaves out is never
+/// scored (`outer` None), and a genome only the arm has trains in every other
+/// fold. Inner folds and both tuning holdouts are keyed (`keyed_tuning`),
+/// seeded `fold_seed(repeat_seed, f)`, on unit keys taken through the
+/// reference (`SpeciesGroups::unit_keys`). The arm's lineages and duplicate
+/// groups are the species grouping's, not its own. So a genome both cohorts
+/// hold has the reference arm's inner folds and holdouts in every outer fold
+/// whose training samples it is in, whichever other genomes the arm holds.
+/// Which genomes it trains beside, and so its scores, still change.
+///
+/// `sha256` covers every other key (`canonical_json`, as for `FoldPlan`),
+/// and `reference_sha256` names the reference plan, so the arm's prediction
+/// rows carry the reference plan's hash (their `fold` is the reference's)
+/// while its run records this plan's.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CohortPlan {
+    /// `COHORT_PLAN_FORMAT`.
+    pub format: String,
+    /// The reference `FoldPlan`'s `sha256`.
+    pub reference_sha256: String,
+    pub scheme: Scheme,
+    pub repeat: u32,
+    pub k: usize,
+    pub inner_k: usize,
+    pub seed: u64,
+    pub repeat_seed: u64,
+    /// The seed of the class-balanced subsample: the reference's repeat seed
+    /// unless `cohort_plan` was given another.
+    pub balance_seed: u64,
+    /// Per outer fold, the reference's whole test fold as [resistant,
+    /// susceptible] counts: the balance the subsample matches.
+    pub reference_test_classes: Vec<[usize; 2]>,
+    /// Each sample's outer test fold: the fold that scores it, or None for a
+    /// genome that is never scored.
+    pub outer: Vec<Option<usize>>,
+    /// Per outer fold, the samples that neither train nor are scored there,
+    /// ascending.
+    pub held_out: Vec<Vec<usize>>,
+    /// Per outer fold, the common test genomes the balanced subsample left out.
+    pub balance_dropped: Vec<usize>,
+    /// Per outer fold, the arm-only genomes dropped from training for sharing
+    /// a lineage with a scored genome (lineage split only; 0 on random).
+    pub lineage_dropped: Vec<usize>,
+    /// Per outer fold, the genomes dropped from training for being in the
+    /// k-mer duplicate group of a scored genome (every split).
+    pub duplicate_dropped: Vec<usize>,
+    /// As `FoldPlan::inner`: per outer fold, each training sample's inner
+    /// fold.
+    pub inner: Vec<Vec<Option<usize>>>,
+    pub holdouts: Vec<TuningHoldouts>,
+    pub unavailable_reason: Option<String>,
+    pub sha256: String,
+}
+
+/// The seed of outer fold `fold`'s class-balanced subsample: the first eight
+/// bytes, big-endian, of the SHA-256 of `grm-cohort-balance:{seed}:{fold}`.
+pub fn balance_seed(seed: u64, fold: usize) -> u64 {
+    let tag = format!("grm-cohort-balance:{seed}:{fold}");
+    let digest = ring::digest::digest(&ring::digest::SHA256, tag.as_bytes());
+    let mut head = [0u8; 8];
+    head.copy_from_slice(&digest.as_ref()[..8]);
+    u64::from_be_bytes(head)
+}
+
+impl CohortPlan {
+    /// Outer fold `f`'s training samples: every sample neither scored in `f`
+    /// nor held out of it.
+    pub fn train(&self, f: usize) -> Bits {
+        let n = self.outer.len();
+        let mut train = Bits::from_indices(n, (0..n).filter(|&i| self.outer[i] != Some(f)));
+        for &i in self.held_out.get(f).map(Vec::as_slice).unwrap_or(&[]) {
+            train.remove(i);
+        }
+        train
+    }
+
+    /// Fails unless `sha256` matches the rest of the plan and its shape is
+    /// the one `cohort_plan` writes.
+    pub fn verify(&self) -> Result<()> {
+        ensure!(
+            self.format == COHORT_PLAN_FORMAT,
+            "cohort plan format {:?} is not {COHORT_PLAN_FORMAT}",
+            self.format
+        );
+        ensure!(
+            self.repeat_seed == repeat_seed(self.seed, self.repeat),
+            "cohort plan repeat_seed does not follow from its seed and repeat"
+        );
+        ensure!(
+            self.outer.iter().flatten().all(|&f| f < self.k),
+            "cohort plan has an outer fold outside 0..{}",
+            self.k
+        );
+        let n = self.outer.len();
+        ensure!(
+            self.held_out.len() == self.k
+                && self.balance_dropped.len() == self.k
+                && self.lineage_dropped.len() == self.k
+                && self.duplicate_dropped.len() == self.k
+                && self.reference_test_classes.len() == self.k,
+            "cohort plan needs one held-out list, drop count and reference balance per outer fold"
+        );
+        for (f, held) in self.held_out.iter().enumerate() {
+            ensure!(
+                held.windows(2).all(|w| w[0] < w[1])
+                    && held.iter().all(|&i| i < n && self.outer[i] != Some(f))
+                    && held.len()
+                        == self.balance_dropped[f]
+                            + self.lineage_dropped[f]
+                            + self.duplicate_dropped[f],
+                "outer fold {f}'s held-out samples are not ascending unscored samples matching its drop counts"
+            );
+        }
+        if self.unavailable_reason.is_none() {
+            ensure!(
+                self.inner.len() == self.k && self.holdouts.len() == self.k,
+                "available cohort plan needs {} inner plans and holdout pairs",
+                self.k
+            );
+            for (f, inner) in self.inner.iter().enumerate() {
+                let train = self.train(f);
+                ensure!(
+                    inner.len() == n
+                        && inner
+                            .iter()
+                            .enumerate()
+                            .all(|(i, fold)| fold.is_some() == train.contains(i)),
+                    "outer fold {f}'s inner plan does not match its training samples"
+                );
+            }
+        }
+        let mut value = serde_json::to_value(self)?;
+        if let Value::Object(map) = &mut value {
+            map.remove("sha256");
+        }
+        ensure!(
+            sha256_hex(canonical_json(&value)?.as_bytes()) == self.sha256,
+            "cohort plan sha256 does not match its contents"
+        );
+        Ok(())
+    }
+}
+
+/// How many resistant and susceptible genomes a class-balanced subsample of
+/// `have` = [resistant, susceptible] keeps to match `want`'s ratio: as many as
+/// possible, the scarcer class (relative to `want`) kept whole.
+fn balanced_counts(have: [usize; 2], want: [usize; 2]) -> [usize; 2] {
+    let ([r, s], [wr, ws]) = (have, want);
+    if wr == 0 || ws == 0 {
+        return [if wr == 0 { 0 } else { r }, if ws == 0 { 0 } else { s }];
+    }
+    if (r as u128) * (ws as u128) <= (s as u128) * (wr as u128) {
+        // Resistant genomes are the scarcer: keep all, match the susceptible.
+        let keep_s = ((r as f64) * (ws as f64) / (wr as f64)).round() as usize;
+        [r, keep_s.min(s)]
+    } else {
+        let keep_r = ((s as f64) * (wr as f64) / (ws as f64)).round() as usize;
+        [keep_r.min(r), s]
+    }
+}
+
+/// The cohort plan of an arm with samples `ids` and labels `y`, against the
+/// available `reference` plan over `reference_ids` with labels
+/// `reference_y`, both grouped by the species grouping `species` (which
+/// must hold every genome of both); `subsample_seed` replaces the
+/// reference's repeat seed as the subsample's `balance_seed`. A plan that
+/// cannot be scored, because some outer fold's scored genomes or its
+/// training samples lack a class, or an inner or holdout partition does, is
+/// returned with its reason, as `fold_plan` does.
+pub fn cohort_plan(
+    reference: &FoldPlan,
+    reference_ids: &[String],
+    reference_y: &Bits,
+    ids: &[String],
+    y: &Bits,
+    species: &SpeciesGroups,
+    subsample_seed: Option<u64>,
+) -> Result<CohortPlan> {
+    reference.verify()?;
+    ensure!(
+        reference.is_available(),
+        "the reference plan cannot be scored: {}",
+        reference.unavailable_reason.as_deref().unwrap_or("")
+    );
+    ensure!(
+        reference_ids.len() == reference.outer.len() && reference_y.len() == reference.outer.len(),
+        "{} reference ids and {} labels for a plan over {} samples",
+        reference_ids.len(),
+        reference_y.len(),
+        reference.outer.len()
+    );
+    let n = ids.len();
+    ensure!(
+        n == y.len(),
+        "cohort plan dimensions differ: {n} ids, {} labels",
+        y.len()
+    );
+    let groups = &species.groups(ids)?;
+    let units = species.unit_keys(reference_ids, ids, reference.scheme)?;
+    let fold_of: HashMap<&str, usize> = reference_ids
+        .iter()
+        .map(String::as_str)
+        .zip(reference.outer.iter().copied())
+        .collect();
+    ensure!(
+        fold_of.len() == reference_ids.len(),
+        "a reference id appears twice"
+    );
+    let common: Vec<Option<usize>> = ids
+        .iter()
+        .map(|id| fold_of.get(id.as_str()).copied())
+        .collect();
+    let (k, inner_k, drawn) = (reference.k, reference.inner_k, reference.repeat_seed);
+    let subsample = subsample_seed.unwrap_or(drawn);
+    let reference_test_classes: Vec<[usize; 2]> = (0..k)
+        .map(|f| {
+            let test = (0..reference.outer.len()).filter(|&j| reference.outer[j] == f);
+            let r = test.clone().filter(|&j| reference_y.contains(j)).count();
+            [r, test.count() - r]
+        })
+        .collect();
+
+    let mut outer = vec![None; n];
+    let mut held_out = vec![Vec::new(); k];
+    let mut balance_dropped = vec![0; k];
+    for f in 0..k {
+        let class = |resistant: bool| -> Vec<usize> {
+            (0..n)
+                .filter(|&i| common[i] == Some(f) && y.contains(i) == resistant)
+                .collect()
+        };
+        let (mut r, mut s) = (class(true), class(false));
+        let [keep_r, keep_s] = balanced_counts([r.len(), s.len()], reference_test_classes[f]);
+        // Keyed on genome id, so a genome's place in the draw doesn't depend on
+        // which other genomes the arm holds.
+        let rank = balance_seed(subsample, f);
+        r.sort_by_key(|&i| (keyed_hash(&ids[i], rank, "balance"), i));
+        s.sort_by_key(|&i| (keyed_hash(&ids[i], rank, "balance"), i));
+        for &i in r[..keep_r].iter().chain(&s[..keep_s]) {
+            outer[i] = Some(f);
+        }
+        held_out[f].extend(r[keep_r..].iter().chain(&s[keep_s..]));
+        balance_dropped[f] = held_out[f].len();
+    }
+    let mut lineage_dropped = vec![0; k];
+    if reference.scheme == Scheme::Lineage {
+        for f in 0..k {
+            let scored: BTreeSet<u32> = (0..n)
+                .filter(|&i| outer[i] == Some(f))
+                .map(|i| groups.lineage[i])
+                .collect();
+            let leaking: Vec<usize> = (0..n)
+                .filter(|&i| common[i].is_none() && scored.contains(&groups.lineage[i]))
+                .collect();
+            lineage_dropped[f] = leaking.len();
+            held_out[f].extend(leaking);
+        }
+    }
+    // An exact copy of a scored genome never trains in its fold, on any split
+    // (G's fold plans keep a duplicate group in one fold; a cohort arm's own
+    // genomes need this).
+    let mut duplicate_dropped = vec![0; k];
+    for f in 0..k {
+        let held: BTreeSet<usize> = held_out[f].iter().copied().collect();
+        let copies: BTreeSet<usize> = groups
+            .duplicate
+            .iter()
+            .filter(|group| group.iter().any(|&i| outer[i] == Some(f)))
+            .flat_map(|group| group.iter().copied())
+            .filter(|&i| outer[i] != Some(f) && !held.contains(&i))
+            .collect();
+        duplicate_dropped[f] = copies.len();
+        held_out[f].extend(copies);
+    }
+    for held in &mut held_out {
+        held.sort_unstable();
+    }
+
+    let mut plan = CohortPlan {
+        format: COHORT_PLAN_FORMAT.to_string(),
+        reference_sha256: reference.sha256.clone(),
+        scheme: reference.scheme,
+        repeat: reference.repeat,
+        k,
+        inner_k,
+        seed: reference.seed,
+        repeat_seed: drawn,
+        balance_seed: subsample,
+        reference_test_classes,
+        outer,
+        held_out,
+        balance_dropped,
+        lineage_dropped,
+        duplicate_dropped,
+        inner: vec![],
+        holdouts: vec![],
+        unavailable_reason: None,
+        sha256: String::new(),
+    };
+    let nested = || -> Result<NestedPlan> {
+        let (mut inner, mut holdouts) = (Vec::with_capacity(k), Vec::with_capacity(k));
+        for f in 0..k {
+            let test = Bits::from_indices(n, (0..n).filter(|&i| plan.outer[i] == Some(f)));
+            let train = plan.train(f);
+            for (side, mask) in [("scored test", &test), ("training", &train)] {
+                let pos = mask.and(y).count();
+                ensure!(
+                    pos > 0 && pos < mask.count(),
+                    "outer fold {f}'s {side} samples lack one or both classes"
+                );
+            }
+            let (folds, held) = keyed_tuning(
+                &units,
+                y,
+                &train,
+                inner_k,
+                fold_seed(drawn, f),
+                plan.scheme,
+                f,
+            )?;
+            inner.push(folds);
+            holdouts.push(held);
+        }
+        Ok((inner, holdouts))
+    };
+    match nested() {
+        Ok((inner, holdouts)) => {
+            plan.inner = inner;
+            plan.holdouts = holdouts;
+        }
+        Err(error) => plan.unavailable_reason = Some(format!("{error:#}")),
+    }
+    let mut value = serde_json::to_value(&plan)?;
+    if let Value::Object(map) = &mut value {
+        map.remove("sha256");
+    }
+    plan.sha256 = sha256_hex(canonical_json(&value)?.as_bytes());
+    Ok(plan)
+}
+
+/// The `format` of a keyed fold plan (`keyed_fold_plan`).
+pub const KEYED_PLAN_FORMAT: &str = "grm-fold-plan-keyed-v1";
+
+/// A genome-keyed draw: the first eight bytes, big-endian, of the SHA-256 of
+/// the ASCII text `grm-keyed:{purpose}:{seed}:{key}`. It depends on the key,
+/// the seed and the purpose alone, never on which other genomes are drawn.
+pub fn keyed_hash(key: &str, seed: u64, purpose: &str) -> u64 {
+    let tag = format!("grm-keyed:{purpose}:{seed}:{key}");
+    let digest = ring::digest::digest(&ring::digest::SHA256, tag.as_bytes());
+    let mut head = [0u8; 8];
+    head.copy_from_slice(&digest.as_ref()[..8]);
+    u64::from_be_bytes(head)
+}
+
+/// Each sample's draw unit under `scheme`, by key: on the lineage split its
+/// lineage, keyed by the lowest genome id of it in `ids`; on the random split
+/// its k-mer duplicate group, keyed by the group's lowest genome id in `ids`,
+/// or the genome's own id when it has no duplicate. A unit moves whole. The
+/// keys depend on `ids`: a cohort that gains or loses a unit's lowest id
+/// re-keys the unit, which is why a cohort arm keys its units through the
+/// reference (`SpeciesGroups::unit_keys`). For the reference itself, grouped
+/// by `SpeciesGroups::groups`, the two give the same keys.
+pub fn unit_keys(ids: &[String], groups: &GroupIds, scheme: Scheme) -> Vec<String> {
+    let mut key: Vec<String> = ids.to_vec();
+    match scheme {
+        Scheme::Lineage => {
+            let mut lowest: HashMap<u32, &str> = HashMap::new();
+            for (i, id) in ids.iter().enumerate() {
+                let e = lowest.entry(groups.lineage[i]).or_insert(id.as_str());
+                if id.as_str() < *e {
+                    *e = id.as_str();
+                }
+            }
+            for (i, k) in key.iter_mut().enumerate() {
+                *k = lowest[&groups.lineage[i]].to_string();
+            }
+        }
+        Scheme::Random => {
+            for group in &groups.duplicate {
+                let low = group
+                    .iter()
+                    .map(|&i| ids[i].as_str())
+                    .min()
+                    .unwrap_or_default()
+                    .to_string();
+                for &i in group {
+                    key[i] = low.clone();
+                }
+            }
+        }
+    }
+    key
+}
+
+/// The k = 31 grouping every arm of one input comparison shares (main's
+/// rulings on REVIEW-INPUT3 N2 and REVIEW-INPUT4 M1): each genome of the
+/// species pool, the union of the comparison's arms' cohorts, with its
+/// lineage and its kset digest, as one `grm structure` over that pool gave
+/// them, before any `grm arm`. An arm's lineages and duplicate
+/// groups are this grouping restricted to its genomes (`groups`), so two
+/// arms never disagree on whether two genomes share a lineage or are
+/// copies; a genome outside the pool is refused.
+#[derive(Clone, Debug)]
+pub struct SpeciesGroups {
+    ids: Vec<String>,
+    lineage: Vec<u32>,
+    digest: Vec<String>,
+    at: HashMap<String, usize>,
+}
+
+impl SpeciesGroups {
+    /// Fails unless `ids` are distinct, every genome has a lineage and a
+    /// digest, and genomes with one digest share a lineage.
+    pub fn new(ids: Vec<String>, lineage: Vec<u32>, digest: Vec<String>) -> Result<Self> {
+        ensure!(
+            ids.len() == lineage.len() && ids.len() == digest.len(),
+            "the species grouping has {} genomes, {} lineages and {} kset digests",
+            ids.len(),
+            lineage.len(),
+            digest.len()
+        );
+        let mut at = HashMap::with_capacity(ids.len());
+        let mut lineage_of: HashMap<&str, u32> = HashMap::new();
+        for (i, id) in ids.iter().enumerate() {
+            ensure!(
+                at.insert(id.clone(), i).is_none(),
+                "genome {id} appears twice in the species grouping"
+            );
+            ensure!(!digest[i].is_empty(), "genome {id} has no kset digest");
+            let l = *lineage_of.entry(digest[i].as_str()).or_insert(lineage[i]);
+            ensure!(
+                l == lineage[i],
+                "genome {id} has another genome's kset digest but not its lineage"
+            );
+        }
+        Ok(SpeciesGroups {
+            ids,
+            lineage,
+            digest,
+            at,
+        })
+    }
+
+    fn index(&self, ids: &[String]) -> Result<Vec<usize>> {
+        ids.iter()
+            .map(|id| {
+                self.at
+                    .get(id)
+                    .copied()
+                    .with_context(|| format!("genome {id} is not in the species grouping"))
+            })
+            .collect()
+    }
+
+    /// `ids`' group ids: each genome's lineage in the grouping, and as
+    /// duplicate groups the genomes of `ids` that share a kset digest.
+    pub fn groups(&self, ids: &[String]) -> Result<GroupIds> {
+        let at = self.index(ids)?;
+        let mut by_digest: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
+        for (i, &p) in at.iter().enumerate() {
+            by_digest
+                .entry(self.digest[p].as_str())
+                .or_default()
+                .push(i);
+        }
+        let mut duplicate: Vec<Vec<usize>> =
+            by_digest.into_values().filter(|g| g.len() >= 2).collect();
+        duplicate.sort_unstable();
+        GroupIds::new(
+            at.iter().map(|&p| self.lineage[p]).collect(),
+            duplicate,
+            None,
+        )
+    }
+
+    /// Each of `ids`' draw units under `scheme` (its lineage, or its kset
+    /// digest's genomes), keyed by the unit's lowest genome id in the
+    /// reference cohort `reference_ids`, or, for a unit the reference doesn't
+    /// hold, by its lowest genome id in the pool. A key so depends on the
+    /// unit, the reference cohort and the pool alone, never on which other
+    /// genomes `ids` holds. The pool is the union of the run's arms, so an
+    /// arm-only unit's key can change when an arm is added to the run.
+    pub fn unit_keys(
+        &self,
+        reference_ids: &[String],
+        ids: &[String],
+        scheme: Scheme,
+    ) -> Result<Vec<String>> {
+        let unit = |p: usize| match scheme {
+            Scheme::Lineage => format!("lineage:{}", self.lineage[p]),
+            Scheme::Random => format!("digest:{}", self.digest[p]),
+        };
+        let lowest = |members: &mut dyn Iterator<Item = usize>| {
+            let mut low: HashMap<String, &str> = HashMap::new();
+            for p in members {
+                let e = low.entry(unit(p)).or_insert(self.ids[p].as_str());
+                if self.ids[p].as_str() < *e {
+                    *e = self.ids[p].as_str();
+                }
+            }
+            low
+        };
+        let in_reference = lowest(&mut self.index(reference_ids)?.into_iter());
+        let in_pool = lowest(&mut (0..self.ids.len()));
+        Ok(self
+            .index(ids)?
+            .into_iter()
+            .map(|p| {
+                let u = unit(p);
+                in_reference.get(&u).unwrap_or(&in_pool[&u]).to_string()
+            })
+            .collect())
+    }
+
+    /// A grouping of the union of `cohorts` (genome ids with their group
+    /// ids), for tests: one lineage label space, and genomes in one
+    /// duplicate group of any cohort share a digest.
+    #[cfg(test)]
+    pub(crate) fn of_cohorts(cohorts: &[(&[String], &GroupIds)]) -> SpeciesGroups {
+        let mut root: BTreeMap<String, String> = BTreeMap::new();
+        let mut lineage: BTreeMap<String, u32> = BTreeMap::new();
+        fn find(root: &BTreeMap<String, String>, id: &str) -> String {
+            let mut id = id.to_string();
+            while root[&id] != id {
+                id = root[&id].clone();
+            }
+            id
+        }
+        for (ids, groups) in cohorts {
+            for (i, id) in ids.iter().enumerate() {
+                root.entry(id.clone()).or_insert_with(|| id.clone());
+                lineage.insert(id.clone(), groups.lineage()[i]);
+            }
+            for group in groups.duplicate() {
+                for &i in &group[1..] {
+                    let (a, b) = (find(&root, &ids[group[0]]), find(&root, &ids[i]));
+                    if a != b {
+                        let (low, high) = if a < b { (a, b) } else { (b, a) };
+                        root.insert(high, low);
+                    }
+                }
+            }
+        }
+        let ids: Vec<String> = root.keys().cloned().collect();
+        let digest = ids.iter().map(|id| find(&root, id)).collect();
+        let lineage = ids.iter().map(|id| lineage[id]).collect();
+        SpeciesGroups::new(ids, lineage, digest).unwrap()
+    }
+}
+
+/// One outer fold's keyed inner folds and tuning holdouts over its `train`
+/// samples: a unit's inner fold is `keyed_hash(unit, seed, "inner") %
+/// inner_k`; it is in boosting's early-stopping holdout when
+/// `keyed_hash(unit, seed, "gbt") % 7 == 0` (round(1 / 0.15)) and in the
+/// lasso's when `keyed_hash(unit, seed, "lasso") % 5 == 0` (round(1 / 0.2)).
+/// Every inner fold's training and validation samples, and both sides of
+/// both holdouts, must hold both classes, or the outer fold is refused.
+fn keyed_tuning(
+    units: &[String],
+    y: &Bits,
+    train: &Bits,
+    inner_k: usize,
+    seed: u64,
+    scheme: Scheme,
+    fi: usize,
+) -> Result<(Vec<Option<usize>>, TuningHoldouts)> {
+    let n = y.len();
+    let folds: Vec<usize> = (0..n)
+        .map(|i| {
+            if train.contains(i) {
+                (keyed_hash(&units[i], seed, "inner") % inner_k as u64) as usize
+            } else {
+                usize::MAX
+            }
+        })
+        .collect();
+    validate_folds(y, train, &folds, inner_k)
+        .with_context(|| format!("invalid {scheme} inner evaluation in outer fold {fi}"))?;
+    let holdout = |purpose: &str, frac: f64| -> Result<Vec<usize>> {
+        let m = ((1.0 / frac).round() as u64).max(2);
+        let val = Bits::from_indices(
+            n,
+            train
+                .iter_ones()
+                .filter(|&i| keyed_hash(&units[i], seed, purpose).is_multiple_of(m)),
+        );
+        let fit = train.and_not(&val);
+        for mask in [&fit, &val] {
+            let pos = mask.and(y).count();
+            ensure!(
+                pos > 0 && pos < mask.count(),
+                "invalid {scheme} tuning holdout in outer fold {fi}: the {purpose} holdout lacks one or both classes on one side"
+            );
+        }
+        Ok(val.iter_ones().collect())
+    };
+    let held = TuningHoldouts {
+        gbt: holdout("gbt", GBT_HOLDOUT)?,
+        lasso: holdout("lasso", LASSO_HOLDOUT)?,
+    };
+    let inner = (0..n)
+        .map(|i| train.contains(i).then_some(folds[i]))
+        .collect();
+    Ok((inner, held))
+}
+
+/// The input comparison's fold plan: G's `FoldPlan` shape, with every
+/// partition keyed on genome identity instead of drawn over sample
+/// indices (main's ruling on REVIEW-INPUT2 N1). A unit (`unit_keys`) goes to
+/// outer fold `keyed_hash(unit, repeat_seed, "outer") % k`, and each outer
+/// fold's inner folds and holdouts follow `keyed_tuning` seeded
+/// `fold_seed(repeat_seed, f)`. A genome's folds depend on its unit's key
+/// and on no genome's position. With `groups` from `SpeciesGroups::groups`,
+/// a unit's key is its lowest genome id in `ids`, so another cohort keeps a
+/// shared genome's folds as long as it holds that genome's unit's lowest id
+/// (a cohort arm keys through the reference instead: `cohort_plan`). Folds
+/// are balanced only approximately:
+/// the plan is refused (`unavailable_reason`) unless the lineage split has
+/// at least 2k lineages, every outer fold's test and training samples hold
+/// both classes, and every inner fold and holdout passes `keyed_tuning`.
+#[allow(clippy::too_many_arguments)]
+pub fn keyed_fold_plan(
+    ids: &[String],
+    y: &Bits,
+    groups: &GroupIds,
+    scheme: Scheme,
+    k: usize,
+    inner_k: usize,
+    seed: u64,
+    repeat: u32,
+) -> Result<FoldPlan> {
+    ensure!(
+        ids.len() == y.len() && ids.len() == groups.len(),
+        "keyed fold plan dimensions differ: {} ids, {} labels, {} samples with group ids",
+        ids.len(),
+        y.len(),
+        groups.len()
+    );
+    ensure!(
+        k >= 2 && inner_k >= 2,
+        "cross-validation needs at least two folds"
+    );
+    let drawn = repeat_seed(seed, repeat);
+    let units = unit_keys(ids, groups, scheme);
+    let outer: Vec<usize> = units
+        .iter()
+        .map(|u| (keyed_hash(u, drawn, "outer") % k as u64) as usize)
+        .collect();
+    let nested = || -> Result<NestedPlan> {
+        if scheme == Scheme::Lineage {
+            let n_groups = groups.lineage.iter().collect::<BTreeSet<_>>().len();
+            ensure!(
+                n_groups >= k * 2,
+                "fewer than twice as many lineages as requested folds"
+            );
+        }
+        validate_folds(y, &Bits::ones(y.len()), &outer, k)
+            .with_context(|| format!("invalid {scheme} outer evaluation"))?;
+        let (mut inner, mut holdouts) = (Vec::with_capacity(k), Vec::with_capacity(k));
+        for (fi, (train, _)) in fold_masks(&outer, k).into_iter().enumerate() {
+            let (folds, held) =
+                keyed_tuning(&units, y, &train, inner_k, fold_seed(drawn, fi), scheme, fi)?;
+            inner.push(folds);
+            holdouts.push(held);
+        }
+        Ok((inner, holdouts))
+    };
+    let (inner, holdouts, unavailable_reason) = match nested() {
+        Ok((inner, holdouts)) => (inner, holdouts, None),
+        Err(error) => (vec![], vec![], Some(format!("{error:#}"))),
+    };
+    let mut plan = FoldPlan {
+        format: KEYED_PLAN_FORMAT.to_string(),
         scheme,
         repeat,
         k,
@@ -833,6 +1548,278 @@ fn unique_names<'a>(what: &str, names: impl Iterator<Item = &'a str>) -> Result<
 mod tests {
     use super::Scheme::{Lineage, Random};
     use super::*;
+
+    /// The re-key case of REVIEW-INPUT3 N2: 640 genomes `g0000`.. in 80
+    /// lineages of 8 (a third resistant in each), `g0001` and `g0002` one
+    /// duplicate group, `g0010` and `a-dup` another; the pool adds `a00`..`a09`
+    /// (ids below every `g`) to lineages 10 to 19.
+    fn rekey_pool() -> (Vec<String>, Bits, SpeciesGroups) {
+        let n = 640;
+        let mut ids: Vec<String> = (0..n).map(|i| format!("g{i:04}")).collect();
+        let mut lineage: Vec<u32> = (0..n as u32).map(|i| i / 8).collect();
+        let mut digest: Vec<String> = ids.clone();
+        digest[2] = digest[1].clone();
+        for l in 0..10u32 {
+            ids.push(format!("a{l:02}"));
+            lineage.push(10 + l);
+            digest.push(format!("a{l:02}"));
+        }
+        ids.push("a-dup".into());
+        lineage.push(lineage[10]);
+        digest.push(digest[10].clone());
+        let reference: Vec<String> = ids[..n].to_vec();
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        (
+            reference,
+            y,
+            SpeciesGroups::new(ids, lineage, digest).unwrap(),
+        )
+    }
+
+    /// A cohort arm that drops the lowest-id genome of lineages 0 to 4 and of
+    /// the duplicate group {g0001, g0002}, and adds genomes below the lowest
+    /// id of lineages 10 to 19 and of g0010's group, keeps every shared
+    /// genome's inner fold and holdout memberships, on both splits and three
+    /// seeds (main's ruling on REVIEW-INPUT3 N2). Keyed on the arm's own
+    /// lowest ids (`unit_keys`), the same arm re-keys those units.
+    #[test]
+    fn a_cohort_arm_keeps_shared_folds_when_it_drops_or_adds_a_unit_minimum() {
+        let (ref_ids, ref_y, species) = rekey_pool();
+        let n = ref_ids.len();
+        let dropped: Vec<usize> = (0..5).map(|l| l * 8).chain([1]).collect();
+        let kept: Vec<usize> = (0..n).filter(|i| !dropped.contains(i)).collect();
+        let added: Vec<String> = (0..10)
+            .map(|l| format!("a{l:02}"))
+            .chain(["a-dup".to_string()])
+            .collect();
+        let mut arm_ids: Vec<String> = kept.iter().map(|&i| ref_ids[i].clone()).collect();
+        arm_ids.extend(added.iter().cloned());
+        let order = {
+            let mut o: Vec<usize> = (0..arm_ids.len()).collect();
+            o.sort_by(|&a, &b| arm_ids[a].cmp(&arm_ids[b]));
+            o
+        };
+        let arm_ids: Vec<String> = order.iter().map(|&a| arm_ids[a].clone()).collect();
+        let resistant = |id: &str| match ref_ids.iter().position(|r| r == id) {
+            Some(i) => ref_y.contains(i),
+            None => id.ends_with('0') || id.ends_with('5'),
+        };
+        let arm_y = Bits::from_indices(
+            arm_ids.len(),
+            (0..arm_ids.len()).filter(|&a| resistant(&arm_ids[a])),
+        );
+        let ref_groups = species.groups(&ref_ids).unwrap();
+        let arm_groups = species.groups(&arm_ids).unwrap();
+        let at: HashMap<&str, usize> = ref_ids
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (s.as_str(), i))
+            .collect();
+        for scheme in [Lineage, Random] {
+            // The case does re-key under the arm's own lowest ids.
+            let own = unit_keys(&arm_ids, &arm_groups, scheme);
+            let through = species.unit_keys(&ref_ids, &arm_ids, scheme).unwrap();
+            let ref_keys = unit_keys(&ref_ids, &ref_groups, scheme);
+            let rekeyed = (0..arm_ids.len())
+                .filter(|&a| at.contains_key(arm_ids[a].as_str()))
+                .filter(|&a| own[a] != ref_keys[at[arm_ids[a].as_str()]])
+                .count();
+            assert!(rekeyed >= 2, "{scheme}: {rekeyed} shared genomes re-keyed");
+            for (a, id) in arm_ids.iter().enumerate() {
+                if let Some(&i) = at.get(id.as_str()) {
+                    assert_eq!(through[a], ref_keys[i], "{scheme} {id}");
+                }
+            }
+            for seed in [1, 2, 3] {
+                let r =
+                    keyed_fold_plan(&ref_ids, &ref_y, &ref_groups, scheme, 5, 3, seed, 0).unwrap();
+                assert!(
+                    r.is_available(),
+                    "{scheme} seed {seed}: {:?}",
+                    r.unavailable_reason
+                );
+                let c =
+                    cohort_plan(&r, &ref_ids, &ref_y, &arm_ids, &arm_y, &species, None).unwrap();
+                assert!(
+                    c.unavailable_reason.is_none(),
+                    "{scheme} seed {seed}: {:?}",
+                    c.unavailable_reason
+                );
+                let mut compared = 0;
+                for f in 0..5 {
+                    let train = c.train(f);
+                    for (a, id) in arm_ids.iter().enumerate() {
+                        let Some(&i) = at.get(id.as_str()) else {
+                            continue;
+                        };
+                        if let Some(o) = c.outer[a] {
+                            assert_eq!(o, r.outer[i], "{scheme} seed {seed} {id}");
+                        }
+                        if r.outer[i] == f {
+                            continue;
+                        }
+                        assert!(train.contains(a), "{scheme} seed {seed} {id} trains in {f}");
+                        assert_eq!(
+                            c.inner[f][a], r.inner[f][i],
+                            "{scheme} seed {seed} inner {id} in {f}"
+                        );
+                        for (ca, ra) in [
+                            (&c.holdouts[f].gbt, &r.holdouts[f].gbt),
+                            (&c.holdouts[f].lasso, &r.holdouts[f].lasso),
+                        ] {
+                            assert_eq!(
+                                ca.binary_search(&a).is_ok(),
+                                ra.binary_search(&i).is_ok(),
+                                "{scheme} seed {seed} holdout {id} in {f}"
+                            );
+                        }
+                        compared += 1;
+                    }
+                }
+                assert_eq!(compared, (n - dropped.len()) * 4, "{scheme} seed {seed}");
+            }
+        }
+    }
+
+    /// A genome missing from the species grouping is refused, and so is a
+    /// reference genome: an arm can't be grouped or keyed off the pool.
+    #[test]
+    fn the_species_grouping_refuses_a_genome_outside_the_pool() {
+        let (ref_ids, _, species) = rekey_pool();
+        let mut ids = ref_ids[..5].to_vec();
+        ids.push("z-outside".into());
+        let why = format!("{:#}", species.groups(&ids).unwrap_err());
+        assert!(
+            why.contains("z-outside is not in the species grouping"),
+            "{why}"
+        );
+        assert!(species.unit_keys(&ids, &ref_ids, Lineage).is_err());
+        let dup = SpeciesGroups::new(
+            vec!["a".into(), "b".into()],
+            vec![0, 1],
+            vec!["d".into(), "d".into()],
+        );
+        assert!(dup.is_err(), "copies in two lineages");
+    }
+
+    /// The keyed plan's refusals, one per branch (REVIEW-INPUT3 L2).
+    #[test]
+    fn a_keyed_lineage_plan_with_fewer_than_twice_k_lineages_is_refused() {
+        let n = 180;
+        let ids: Vec<String> = (0..n).map(|i| format!("g{i:03}")).collect();
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        let groups = GroupIds::new((0..n as u32).map(|i| i % 9).collect(), vec![], None).unwrap();
+        let p = keyed_fold_plan(&ids, &y, &groups, Lineage, 5, 3, 42, 0).unwrap();
+        let why = p
+            .unavailable_reason
+            .clone()
+            .expect("9 lineages for 5 folds");
+        assert!(
+            why.contains("fewer than twice as many lineages as requested folds"),
+            "{why}"
+        );
+        p.verify().unwrap();
+    }
+
+    #[test]
+    fn keyed_tuning_refuses_an_inner_fold_or_holdout_side_without_a_class() {
+        let n = 300;
+        let units: Vec<String> = (0..n).map(|i| format!("g{i:03}")).collect();
+        let train = Bits::ones(n);
+        let seed = 7;
+        let hash = |i: usize, purpose: &str| keyed_hash(&units[i], seed, purpose);
+        let tune = |y: &Bits| keyed_tuning(&units, y, &train, 3, seed, Random, 0);
+        // Every genome of inner fold 0 susceptible.
+        let y = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| hash(i, "inner") % 3 != 0 && i % 2 == 0),
+        );
+        let why = format!("{:#}", tune(&y).unwrap_err());
+        assert!(
+            why.contains("invalid random inner evaluation in outer fold 0"),
+            "{why}"
+        );
+        // Every genome of the boosting holdout susceptible, the inner folds fine.
+        let y = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| !hash(i, "gbt").is_multiple_of(7) && i % 2 == 0),
+        );
+        let why = format!("{:#}", tune(&y).unwrap_err());
+        assert!(
+            why.contains("the gbt holdout lacks one or both classes"),
+            "{why}"
+        );
+        // The same for the lasso's, with boosting's holdout holding both.
+        let y = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| !hash(i, "lasso").is_multiple_of(5) && i % 2 == 0),
+        );
+        let why = format!("{:#}", tune(&y).unwrap_err());
+        assert!(
+            why.contains("the lasso holdout lacks one or both classes"),
+            "{why}"
+        );
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        assert!(tune(&y).is_ok());
+    }
+
+    /// The cohort plan's class-balanced subsample is keyed on genome id
+    /// (REVIEW-INPUT3 L3): an arm with 30 more genomes of its own, all sorting
+    /// before the shared ones, scores the same shared genomes in every fold.
+    #[test]
+    fn the_balanced_subsample_keeps_its_shared_genomes_when_the_arm_grows() {
+        let n = 400;
+        let ref_ids: Vec<String> = (0..n).map(|i| format!("g{i:03}")).collect();
+        let ref_y = Bits::from_indices(n, (0..n).filter(|i| i % 4 == 0));
+        let extra: Vec<String> = (0..30).map(|j| format!("a{j:02}")).collect();
+        let mut pool_ids = extra.clone();
+        pool_ids.extend(ref_ids.iter().cloned());
+        let species = SpeciesGroups::new(
+            pool_ids.clone(),
+            (0..pool_ids.len() as u32).collect(),
+            pool_ids.clone(),
+        )
+        .unwrap();
+        let r = keyed_fold_plan(
+            &ref_ids,
+            &ref_y,
+            &species.groups(&ref_ids).unwrap(),
+            Random,
+            5,
+            3,
+            42,
+            0,
+        )
+        .unwrap();
+        // Every resistant genome, every third susceptible: the resistant ones
+        // are cut to the reference's ratio.
+        let small: Vec<String> = (0..n)
+            .filter(|&i| ref_y.contains(i) || i % 3 == 0)
+            .map(|i| ref_ids[i].clone())
+            .collect();
+        let mut big = extra.clone();
+        big.extend(small.iter().cloned());
+        let y_of = |ids: &[String]| {
+            Bits::from_indices(
+                ids.len(),
+                (0..ids.len()).filter(|&a| {
+                    ids[a].starts_with('a')
+                        || ref_y.contains(ref_ids.binary_search(&ids[a]).unwrap())
+                }),
+            )
+        };
+        let a = cohort_plan(&r, &ref_ids, &ref_y, &small, &y_of(&small), &species, None).unwrap();
+        let b = cohort_plan(&r, &ref_ids, &ref_y, &big, &y_of(&big), &species, None).unwrap();
+        assert!(
+            a.balance_dropped.iter().all(|&d| d > 0),
+            "{:?}",
+            a.balance_dropped
+        );
+        assert_eq!(a.balance_dropped, b.balance_dropped);
+        for (j, id) in small.iter().enumerate() {
+            assert_eq!(a.outer[j], b.outer[j + extra.len()], "{id}");
+        }
+    }
     use crate::bits::BitMatrix;
     use crate::learn::eval::{EvalConfig, evaluate};
 

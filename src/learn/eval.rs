@@ -320,14 +320,20 @@ pub struct MicInput<'a> {
     pub breakpoint: Option<Breakpoint>,
 }
 
-struct Scored {
+pub(crate) struct Scored {
     /// A score for every sample, or None for a null fit, which makes no call.
-    scores: Option<Vec<f64>>,
-    complexity: f64,
-    lasso_fit: Option<LassoFitAudit>,
+    pub(crate) scores: Option<Vec<f64>>,
+    pub(crate) complexity: f64,
+    pub(crate) lasso_fit: Option<LassoFitAudit>,
 }
 
-fn fit_scm(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalConfig) -> Scored {
+pub(crate) fn fit_scm(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    inner: &[usize],
+    cfg: &EvalConfig,
+) -> Scored {
     let c = scm::select(x, y, train, cfg.scm_max_rules, inner, cfg.inner_folds);
     let m = scm::fit(x, y, train, c.kind, c.p, c.n_rules, false);
     let pred = m.predict(x);
@@ -338,7 +344,13 @@ fn fit_scm(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalCon
     }
 }
 
-fn fit_cart(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalConfig) -> Scored {
+pub(crate) fn fit_cart(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    inner: &[usize],
+    cfg: &EvalConfig,
+) -> Scored {
     let (depth, _) = tree::select_depth(x, y, train, inner, cfg.inner_folds, cfg.cart_max_depth);
     let t = tree::fit_tree(
         x,
@@ -362,7 +374,7 @@ fn fit_cart(x: &BitMatrix, y: &Bits, train: &Bits, inner: &[usize], cfg: &EvalCo
 /// The forest fits on the same number of chi-square-screened features as
 /// boosting and the lasso, screened on its training samples. Its trees name
 /// positions in that screen, so importance is returned keyed by rows of `x`.
-fn fit_rf(
+pub(crate) fn fit_rf(
     x: &BitMatrix,
     y: &Bits,
     train: &Bits,
@@ -393,7 +405,7 @@ fn fit_rf(
 /// Scores from a boosted model, or None when early stopping kept no tree:
 /// that model is the 0.5 prior, a null fit. A model with trees is scored
 /// even where it gives exactly 0.5.
-fn gbt_scores(m: &gbt::Gbt, x: &BitMatrix) -> Option<Vec<f64>> {
+pub(crate) fn gbt_scores(m: &gbt::Gbt, x: &BitMatrix) -> Option<Vec<f64>> {
     (!m.trees.is_empty()).then(|| m.predict_proba(x))
 }
 
@@ -439,10 +451,10 @@ fn fit_gbt(
 }
 
 #[derive(Clone, Copy, Debug)]
-struct LassoContext<'a> {
-    dataset: &'a str,
-    scheme: &'a str,
-    outer_fold: Option<usize>,
+pub(crate) struct LassoContext<'a> {
+    pub(crate) dataset: &'a str,
+    pub(crate) scheme: &'a str,
+    pub(crate) outer_fold: Option<usize>,
 }
 
 impl LassoContext<'_> {
@@ -520,7 +532,7 @@ fn fit_lasso_traced(
 
 /// Select and refit one already-solved path. Keeping this separate lets the
 /// negative tests inject capped statuses without changing solver limits.
-fn fit_lasso_from_path(
+pub(crate) fn fit_lasso_from_path(
     x: &BitMatrix,
     y: &Bits,
     val: &Bits,
@@ -633,7 +645,7 @@ fn fit_fold(
 /// on it. A null fit leaves its fold uncalled: those scores stay NaN, the
 /// fold's balanced accuracy is NaN, and every metric covers called samples.
 /// When every fit is null there are no metrics and no ROC points.
-fn pool_folds(
+pub(crate) fn pool_folds(
     learner: &str,
     truth: &[bool],
     test_fold: &[usize],

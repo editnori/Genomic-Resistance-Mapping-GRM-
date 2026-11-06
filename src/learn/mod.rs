@@ -8,6 +8,7 @@
 pub mod eval;
 pub mod gbt;
 pub mod lasso;
+pub mod planned;
 pub mod scm;
 pub mod tree;
 
