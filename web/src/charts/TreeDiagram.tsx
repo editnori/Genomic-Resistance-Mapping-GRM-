@@ -4,30 +4,45 @@
 // MarkListbox gives the keyboard path: arrows walk the nodes top down, and
 // click, tap or Enter pins a node's counts and split.
 
+import { useRef } from "react";
 import type { FeatureCard, TreeNode } from "../data/schema";
 import { int, pct } from "../data/format";
 import { featureLabel, featurePlace } from "../data/derive/dataset";
 import { treeLayout } from "../data/derive/layout";
-import { MarkListbox, type ListMark } from "./kit";
+import { MarkListbox, useWidth, type ListMark } from "./kit";
 import { ScrollFrame } from "../ui/primitives";
 
-const NODE_W = 136;
 const NODE_H = 50;
-const COL = 150;
 const ROW = 92;
+// A column is 150 px where the frame has room, and narrows to 140 so the
+// three-level view's eight leaves (1,128 px) fit the inspector's 1,136 px
+// frame. Below that the tree scrolls inside its frame, as do deeper views.
+const COL_MAX = 150;
+const COL_MIN = 140;
+const NODE_W_MAX = 136;
+// At least 8 px between neighbouring nodes.
+const NODE_GAP = 8;
+// 19 characters of a split's label fit a 136 px node; fewer fit a narrower one.
+const CHARS_PER_PX = 19 / NODE_W_MAX;
 
-const clip = (s: string, n = 19) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
 export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNode[]; depth: number; features: Map<number, FeatureCard> }) => {
+  const frame = useRef<HTMLDivElement | null>(null);
+  const avail = useWidth(frame, 0);
   const laid = treeLayout(nodes, depth);
   const maxDepth = Math.max(0, ...laid.nodes.map((n) => n.depth));
-  const width = Math.max(laid.columns, 1) * COL + 8;
+  const columns = Math.max(laid.columns, 1);
+  const col = Math.max(COL_MIN, Math.min(COL_MAX, Math.floor((avail - 8) / columns)));
+  const nodeW = Math.min(NODE_W_MAX, col - NODE_GAP);
+  const chars = Math.floor(nodeW * CHARS_PER_PX);
+  const width = columns * col + 8;
   const height = (maxDepth + 1) * ROW + 8;
-  const pos = new Map(laid.nodes.map((n) => [n.id, { x: 4 + n.x * COL + (COL - NODE_W) / 2, y: 4 + n.depth * ROW }]));
+  const pos = new Map(laid.nodes.map((n) => [n.id, { x: 4 + n.x * col + (col - nodeW) / 2, y: 4 + n.depth * ROW }]));
 
   const label = (n: TreeNode): string => {
     if (n.split === null || n.depth >= depth) return n.value >= 0.5 ? "Calls resistant" : "Calls susceptible";
-    return clip(featureLabel(features.get(n.split.feature), n.split.feature));
+    return clip(featureLabel(features.get(n.split.feature), n.split.feature), chars);
   };
 
   // One mark per node, top down, at the node's top right corner.
@@ -35,7 +50,7 @@ export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNo
     const p = pos.get(h.id)!;
     return {
       key: String(h.id),
-      x: p.x + NODE_W - 14,
+      x: p.x + nodeW - 14,
       y: p.y,
       tip: () => [
         {
@@ -50,10 +65,11 @@ export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNo
   const hit = (px: number, py: number) =>
     laid.nodes.findIndex((h) => {
       const p = pos.get(h.id)!;
-      return px >= p.x && px <= p.x + NODE_W && py >= p.y && py <= p.y + NODE_H;
+      return px >= p.x && px <= p.x + nodeW && py >= p.y && py <= p.y + NODE_H;
     });
 
   return (
+    <div ref={frame}>
     <ScrollFrame label="Decision tree">
       <MarkListbox label={`Decision tree with ${laid.nodes.length} nodes shown. Arrow keys move between nodes; click or Enter to pin details.`} marks={marks} width={width} hit={hit}>
         <svg width={width} height={height} aria-hidden="true" className="block">
@@ -61,9 +77,9 @@ export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNo
             if (n.parent === null) return null;
             const p = pos.get(n.parent)!;
             const c = pos.get(n.id)!;
-            const x1 = p.x + NODE_W / 2;
+            const x1 = p.x + nodeW / 2;
             const y1 = p.y + NODE_H;
-            const x2 = c.x + NODE_W / 2;
+            const x2 = c.x + nodeW / 2;
             const y2 = c.y;
             const my = (y1 + y2) / 2;
             return (
@@ -78,13 +94,13 @@ export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNo
           {laid.nodes.map((n) => {
             const { x, y } = pos.get(n.id)!;
             const rShare = n.node.n === 0 ? 0 : n.node.n_resistant / n.node.n;
-            const barW = NODE_W - 20;
+            const barW = nodeW - 20;
             const rW = Math.max(0, barW * rShare - (rShare > 0 && rShare < 1 ? 1 : 0));
             const sW = Math.max(0, barW - rW - (rShare > 0 && rShare < 1 ? 2 : 0));
             const leaf = n.node.split === null || n.folded;
             return (
               <g key={n.id} className="cursor-pointer">
-                <rect x={x} y={y} width={NODE_W} height={NODE_H} rx={8} fill="rgb(var(--paper-pure))" stroke="var(--hair)" strokeWidth={1} />
+                <rect x={x} y={y} width={nodeW} height={NODE_H} rx={8} fill="rgb(var(--paper-pure))" stroke="var(--hair)" strokeWidth={1} />
                 <text x={x + 10} y={y + 17} className={`text-[13px] ${leaf ? "fill-[rgb(var(--muted-text))]" : "fill-[rgb(var(--ink))] font-semibold"}`}>
                   {label(n.node)}
                 </text>
@@ -99,5 +115,6 @@ export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNo
         </svg>
       </MarkListbox>
     </ScrollFrame>
+    </div>
   );
 };
