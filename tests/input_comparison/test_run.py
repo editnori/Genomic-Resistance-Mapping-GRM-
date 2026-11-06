@@ -32,6 +32,7 @@ def load(name):
 
 
 run = load("run")
+null_study = load("null_study")
 SPEC = json.loads((HERE / "spec.json").read_text())
 # The synthetic e2e default's revision-12-gate values (synthetic_root.py defaults, the default curated with the
 # species check and the vocabulary), from the real grm: tools/synthpins.py in the lane folder.
@@ -761,6 +762,76 @@ ids = [f"g{i:03d}" for i in range(50)]
                  "reason": "outer fold 2 lacks a class"},
                 {"dataset": ds, "arm": "default", "plan": "lineage-0.json",
                  "reason": "the gbt holdout lacks a class"}])
+
+    def null_records(self, arm, lineage):
+        """J records of one arm in one seed: lineage contrasts with the given decisions (else inconclusive), and
+        random-split contrasts in family D."""
+        out = []
+        for learner in run.LEARNERS:
+            for split in ("lineage", "random"):
+                family = "C" if split == "lineage" else "D"
+                out.append({"id": f"ds/{family}:{learner}:{split}:default->{arm}:log_loss", "dataset": "ds",
+                            "treatment": arm, "learner": learner, "split": split, "family": family,
+                            "decision": lineage.get(learner, "inconclusive") if split == "lineage" else "inconclusive"})
+        return out
+
+    def null_seeds(self, top, arms, contrasts, unreliable=(), seeds=20):
+        for s in range(seeds):
+            d = Path(top) / f"seed-{s}"
+            d.mkdir(parents=True)
+            summary = {"arms": run.summarize(SPEC, arms, contrasts, {}, list(unreliable)), "unreliable": list(unreliable)}
+            (d / "summary.json").write_text(json.dumps(summary))
+
+    def test_null_study_rates_count_decision_bearing_lineage_contrasts_only(self):
+        """PR #69's review (null_study.py:144): today's summaries mark random-split rows descriptive; they must not
+        enter a rate, so a planted arm improving on every lineage contrast scores 1.0 and the study can pass, and a
+        calibration arm's lineage false-positive rate isn't halved."""
+        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
+        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
+                 for a in null_study.COHORT_ARMS]
+        contrasts = [r for a in null_study.PLANTED_ARMS for r in self.null_records(a, {l: "improves" for l in run.LEARNERS})]
+        contrasts += [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, arms, contrasts)
+            r = null_study.report([tmp])
+        self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
+        self.assertTrue(r["pass"])
+        self.assertEqual(r["arms"]["k-h"]["contrasts"], 5 * 20)
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, [{"name": "seed-twin", "factor": "calibration", "pairing": "same_plan"}],
+                            self.null_records("seed-twin", {"gbt": "improves"}))
+            r = null_study.report([tmp], calibration=True)
+        self.assertAlmostEqual(r["arms"]["seed-twin"]["per_seed_improves"]["mean"], 0.2)
+        self.assertFalse(r["pass"])
+
+    def test_null_study_calibration_sees_what_the_sentinel_masks(self):
+        """PR #69's review (null_study.py:143, P1): a sentinel firing on every seed turns its learners' rows
+        unreliable; calibration counts J's decisions, fails, and reports the firings."""
+        sentinel = [{"name": "sentinel-seed-twin", "factor": "calibration", "pairing": "same_plan", "sentinel": True}]
+        con = self.null_records("sentinel-seed-twin", {"gbt": "improves", "rf": "worse"})
+        unreliable = [{"species": "Salmonella enterica", "learner": l, "sentinel": "sentinel-seed-twin", "reason": "fired",
+                       "contrasts": [x["id"] for x in con if x["learner"] == l]} for l in ("gbt", "rf")]
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, sentinel, con, unreliable)
+            masked = json.loads((Path(tmp) / "seed-0" / "summary.json").read_text())["arms"]["sentinel-seed-twin"]
+            self.assertEqual(masked["decisions"]["ds:gbt:lineage"], "unreliable")
+            r = null_study.report([tmp], calibration=True)
+        a = r["arms"]["sentinel-seed-twin"]
+        self.assertEqual((a["improves"], a["worse"], a["contrasts"]), (20, 20, 100))
+        self.assertFalse(r["pass"])
+        self.assertEqual(r["sentinel_firings"], {"seeds_with_a_firing": 20, "firings": 40, "learners": {"gbt": 20, "rf": 20}})
+
+    def test_a_spec_with_repeats_and_a_cohort_arm_is_refused(self):
+        """PR #69's review (stats.py:300): with repeats > 1 a cohort arm's subsample can differ by repeat, which J
+        can't pair; no decided spec uses repeats > 1, so such a spec is refused up front."""
+        self.assertEqual((SPEC["repeats"], json.loads((HERE / "calibration.json").read_text())["repeats"]), (1, 1))
+        spec = copy.deepcopy(SPEC)
+        spec["repeats"] = 2
+        with self.assertRaises(SystemExit) as e:
+            run.load_spec(self.write(spec))
+        self.assertIn("repeats 2 with a cohort-paired arm", str(e.exception))
+        spec["arms"] = [{"name": "k-h", "blocks": ["K", "H"]}]
+        run.load_spec(self.write(spec))
 
     def test_summary_keeps_unreliable_and_descriptive_rows_out_of_its_decisions(self):
         """REVIEW-INPUT M14: summary.json's override of flagged contrasts."""

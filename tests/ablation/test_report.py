@@ -716,7 +716,7 @@ class SentinelAndRandomSplitCases(unittest.TestCase):
         for ident in (RAND_A, RAND_K):
             self.assertIn(f"`{ident}`", block)
         rules = md.split(rp.RULES_HEADING)[1]
-        for phrase in ("Random-split contrasts are descriptive only", "9 of 20", "0 of 40", "2.0% improves",
+        for phrase in ("Random-split contrasts are descriptive only", "9 of 20", "0 of 40", "1.0% improves",
                        "marked unreliable"):
             self.assertIn(phrase, rules)
 

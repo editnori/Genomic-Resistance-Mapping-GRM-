@@ -88,8 +88,8 @@ descriptive only and decides nothing.
 9. Random-split contrasts are descriptive only (family D, no p, no direction). With five outer folds a \
 fold-aware test cannot reach p < 0.05, and the cluster-level test is anti-conservative on this split: in GRM's \
 calibration over 20 seeds, a learner-seed twin of the default was non-inconclusive for gbt in 9 of 20 on the \
-random split, against 1 of 20 for gbt and 0 of 40 for rf on the lineage split (2.0% improves and 3.0% worse \
-over all its contrasts). Decisions come from the lineage split only.
+random split, against 1 of 20 for gbt and 0 of 40 for rf on the lineage split (1.0% improves and 0.0% worse \
+over its lineage contrasts; 2.0% and 3.0% over both splits). Decisions come from the lineage split only.
 10. A sentinel arm, the learner-seed twin of the default, is exchangeable with it. When its lineage-split \
 contrast for a learner is anything but inconclusive, or was not produced, every decision of that learner on \
 that species is marked unreliable: kept and listed, but left out of every summary of decisions. The sentinel \

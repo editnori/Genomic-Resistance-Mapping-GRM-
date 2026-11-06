@@ -126,7 +126,7 @@ Receipts: `logs/calibration-20seeds.json` and each seed's `summary.json` and `co
 
 ## Which split decides, and the sentinel (main's ruling after the calibration study)
 
-The calibration above (seed twin over 20 seeds: 2.0% `improves` and 3.0% `worse` overall; gbt on the random split non-inconclusive in 9 of 20; gbt on the lineage split 1 of 20; rf 0 of 40) led main to three rules, which the runner and K now apply.
+The calibration above (seed twin over 20 seeds: 2.0% `improves` and 3.0% `worse` over both splits, 1.0% and 0.0% over the lineage split alone; gbt on the random split non-inconclusive in 9 of 20; gbt on the lineage split 1 of 20; rf 0 of 40) led main to three rules, which the runner and K now apply.
 
 1. **The random split is descriptive only.** `run.py` plans every random-split contrast in family D, the contract's family with no p and no direction. J still computes the estimate, its interval and the AUROC delta. K prints these contrasts in their own block, "Random split: descriptive only", with the reason: with five outer folds a fold-aware test can't reach p < 0.05, and the cluster-level test is anti-conservative on this split. Using family D, rather than a new `descriptive` decision value, keeps K's closed decision set, J's `decide` and the BH families unchanged. Family D's fixed `inconclusive` is never printed as a test result: the block says it decides nothing, and summary.json shows these rows as `descriptive`.
 2. **Decisions come from the lineage split only.** It is the only family C split, so BH adjusts over the lineage contrasts alone.
@@ -353,6 +353,36 @@ Main revised the "full eligible pool" ruling: that pool can't be built on real d
   - **N. gonorrhoeae's own time** is at most its stage's total, 0.646 h for 13 species.
   - **S. pneumoniae** can't be shown to finish under the hour, because its stage's 1.538 h includes P. aeruginosa.
 - **The gate:** `genome_order` names `neisseria_gonorrhoeae` = `03985e841ff3f9a931c98d9881ee99b0ae1891470e2b8235d4dd471b42279c3b` (master `species/neisseria_gonorrhoeae/genomes.txt`, 2,000 lines) in place of A. baumannii's.
+
+## After PR #69's Codex review (main's rulings, 6 Nov 2026)
+
+- **The null study counts decision-bearing lineage contrasts only.** `null_study.py report` read every row of `summary.json` `decisions`. Since main's ruling after the calibration study, the random split's rows read `descriptive`, so they sat in every denominator.
+  - **Reproduced** (`logs/round16/repro-before.json` in the lane folder): a planted arm improving on all its lineage contrasts scored 0.5, so the study could never pass, and a true lineage false-positive rate of 0.2 read 0.1.
+  - **Now:** rates and acceptance use the lineage split's contrasts. A contrast not produced is counted apart.
+- **Calibration sees what the sentinel masks (P1).** K marks a learner's rows `unreliable` when the sentinel fires, and the study counted those as neither `improves` nor `worse`.
+  - **Reproduced:** a sentinel firing on every seed passed calibration with 0 false positives.
+  - **Now:** the study reads J's own decisions (`raw_decisions`; a summary written before the mask has only `decisions`, which are then J's), and reports the sentinel's firings apart (`sentinel_firings`). The same case now fails, with 40 firings in 20 seeds.
+- **`repeats` above 1 with a cohort arm is refused.** A cohort arm's balanced subsample can differ by repeat, and `stats.pair_arms` refuses that ("covers different samples in different repeats"); reproduced. Both decided specs use `repeats` 1, so `load_spec` refuses such a spec up front.
+- **Tests:** `test_null_study_rates_count_decision_bearing_lineage_contrasts_only`, `test_null_study_calibration_sees_what_the_sentinel_masks` and `test_a_spec_with_repeats_and_a_cohort_arm_is_refused`.
+- **The rates, re-measured** from the stored per-seed summaries (`logs/round16/remeasure.json`).
+  - **Why they change:** the 20-seed null study and the calibration ran before random-split contrasts became descriptive and before the sentinel existed. Their old rates were over both splits, as both decided then, and no summary held a `descriptive` or `unreliable` row. The new rates are over the lineage split alone, the only split that decides now. Seeds 101–120; Clopper-Pearson 95% intervals.
+
+  | Arm | Old, both splits | New, lineage only | `worse` old → new |
+  |---|---|---|---|
+  | cap-1000 | 13/200 = 6.5% | 6/100 = 6.0% [2.2, 12.6] | 133 → 65 |
+  | cap-4000 | 45/200 = 22.5% | 33/100 = 33.0% [23.9, 43.1] | 40 → 10 |
+  | grr-v1 | 35/200 = 17.5% | 23/100 = 23.0% [15.2, 32.5] | 55 → 12 |
+  | cohort arms pooled | 93/600 = 15.5% | 62/300 = 20.7% | |
+  | k21, k25, budget-1000, budget-16000 pooled | 141/800 = 17.6% | 55/400 = 13.8% | |
+  | K+C (now `k-c`) | 2/200 = 1.0% | 2/100 = 2.0% | 1 → 0 |
+  | K+H, K+P, K+C+H+P | 200/200 each | 100/100 each | 0 |
+  | calibration, seed twin (b2) | 4/200 = 2.0% improves, 6/200 = 3.0% worse | 1/100 = 1.0% improves, 0/100 worse | |
+  | calibration, cohort path (b1) | 0/200 | 0/100 | |
+
+  - **One sentence above no longer holds:** on the lineage split, the cohort arms' no-signal `improves` rate (20.7%) is above the same-sample arms' (13.8%), not below it. The point stands that model-changing arms differ in log loss with no k-mer signal.
+  - **Calibration still passes,** with both arms at or below 5% on the lineage split. The sentinel fired on none of the 20 stored seeds.
+  - **The per-kind base rates in `spec.json`** (cap-down 14.0%, cap-up 16.0%, selection-swap 18.0%) didn't come from the null study. The re-keying twin counted them from J's lineage-split records, and they recompute unchanged.
+  - **K's rule 9** now gives the seed twin's lineage figures (1.0% `improves`, 0.0% `worse`) beside the both-split ones.
 
 ## Log loss and discrimination
 
