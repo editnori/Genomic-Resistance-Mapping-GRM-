@@ -318,7 +318,8 @@ this section in two. The checkout checks need git, and the box's copy of the sou
 laptop against the clean worktree `drive.sh` pushes (`SRC` in `run-mtb.conf`), before any box:
 
 ```bash
-export WS=/home/layth/review/grm-mtb-prep-r12-20261105/repo   # on the laptop: the clean worktree drive.sh pushes as SRC
+export WS=/home/layth/review/grm-mtb-src-r12-20261106   # on the laptop: the frozen, read-only clone drive.sh pushes as SRC
+test "$(git -C "$WS" rev-parse HEAD)" = "$SRC_COMMIT" || exit 1   # the reviewed commit (run-mtb.conf; drive.sh refuses otherwise, L1)
 export P=$WS/scripts/mtb-4k
 python3 -I "$P/revision_n.py" verify-checkout "$WS" || exit 1       # clean, descends from RN_CHECKER_COMMIT, holds the pinned checker blobs
 # The committed foldgen; a revision-N merge that changes its tree stops here for review (I4).
