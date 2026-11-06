@@ -364,7 +364,7 @@ Main revised the "full eligible pool" ruling: that pool can't be built on real d
   - **Now:** the study reads J's own decisions (`raw_decisions`; a summary written before the mask has only `decisions`, which are then J's), and reports the sentinel's firings apart (`sentinel_firings`). The same case now fails, with 40 firings in 20 seeds.
 - **`repeats` above 1 with a cohort arm is refused.** A cohort arm's balanced subsample can differ by repeat, and `stats.pair_arms` refuses that ("covers different samples in different repeats"); reproduced. Both decided specs use `repeats` 1, so `load_spec` refuses such a spec up front.
 - **Tests:** `test_null_study_rates_count_decision_bearing_lineage_contrasts_only`, `test_null_study_calibration_sees_what_the_sentinel_masks` and `test_a_spec_with_repeats_and_a_cohort_arm_is_refused`.
-- **The rates, re-measured** from the stored per-seed summaries (`logs/round16/remeasure.json`).
+- **The rates, re-measured** from the stored per-seed summaries. The old column is `logs/round16/remeasure.json` in the lane folder. The new column is lane INPUT17's recomputation, `tools/rebh17.py` → `logs/rebh17.json` (lineage-only Benjamini-Hochberg, below); `remeasure.json`'s lineage figures keep the stored decisions.
   - **Why they change:** the 20-seed null study and the calibration ran before random-split contrasts became descriptive and before the sentinel existed. Their old rates were over both splits, as both decided then, and no summary held a `descriptive` or `unreliable` row. The new rates are over the lineage split alone, the only split that decides now, with each lineage contrast decided as the code decides it now: family C holds the lineage split only, so Benjamini-Hochberg adjusts each seed's 55 lineage contrasts, not the 110 of both splits the stored decisions were adjusted over (REVIEW-NULL16 L3). Seeds 101–120; Clopper-Pearson 95% intervals.
 
   | Arm | Old, both splits | New, lineage only | `worse` old → new |
@@ -410,11 +410,16 @@ Main ruled on all four questions from the first build: the class balance (the ba
 
 ## After REVIEW-NULL16 (main's rulings, 6 Nov 2026)
 
-- **The null study needs 20 seeds with a lineage contrast per arm (L1).** `pass` counted summary files, so a calibration arm with lineage contrasts in 1 of 20 seeds (95 not produced) passed on "improves 0/5". Now every arm the study judges (each calibration arm; the cohort and planted arms of the null study) needs a lineage contrast in at least 20 seeds. `report` prints each arm's not-produced count and its seeds with a lineage contrast, and the total not produced.
+- **The null study needs 20 seeds with a lineage contrast per arm (L1).** `pass` counted summary files, so a calibration arm with lineage contrasts in 1 of 20 seeds (95 not produced) passed on "improves 0/5". Now every arm the study judges needs a lineage contrast in at least 20 seeds. The calibration judges the arms `calibration.json` names (`cohort-path`, `seed-twin`) and any other arm its summaries hold (the runner's sentinel); the null study judges the cohort and planted arms. `report` prints each arm's not-produced count and its seeds with a lineage contrast, and the total not produced.
 - **Old arm names (I3).** `report` reads the stored seeds' `K+C`, `K+H`, `K+P` and `K+C+H+P` as `k-c`, `k-h`, `k-p` and `k-c-h-p`, so it runs on them without a patch.
 - **The repeats refusal names the cohort-paired arms (I4).**
 - **The lineage-only figures** in the section above now use Benjamini-Hochberg over the lineage contrasts alone (L3), and say what the stored seeds can't show about the sentinel (L4).
 - **Tests:** `test_null_study_passes_only_with_a_lineage_contrast_in_20_seeds_per_arm` (the reviewer's 1-of-20 case, the 20/19 boundary, and a null study with one cohort arm in 19 seeds), `test_null_study_reads_summaries_written_before_the_mask` and `test_null_study_counts_a_contrast_not_produced_apart_and_refuses_an_arm_without_any` (L2: the reviewer's surviving mutants B2 and C1–C3), `test_null_study_reads_the_arm_names_from_before_the_rename`, and the arm names in `test_a_spec_with_repeats_and_a_cohort_arm_is_refused`.
+- **After REVIEW-INPUT17 (main's rulings, 6 Nov 2026).**
+  - **M1:** the first version of the gate judged only the arms it found, so an empty or mistyped folder printed `seeds 0; pass True` and a calibration arm absent from every seed passed. Now no seeds, a named arm in no seed, or any arm under 20 seeds fails the calibration, and the report names the arm. A folder that doesn't exist is refused, and the null study names a missing arm instead of raising `KeyError`.
+  - **L1:** tests with two calibration arms, one of them thin, and with a planted arm thinned.
+  - **L2:** seeds are counted, not files. Summaries are keyed by seed folder: a folder given twice, or the same seed in two folders, counts once when the files are byte-identical and is refused, naming both, when they differ.
+  - **Tests:** `test_the_calibration_judges_every_arm_its_spec_names`, `test_every_judged_arm_needs_20_seeds_not_any` and `test_a_seed_counts_once_however_many_folders_hold_it`.
 
 ## Cost
 
