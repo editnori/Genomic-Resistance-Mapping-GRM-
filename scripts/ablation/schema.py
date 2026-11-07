@@ -38,9 +38,10 @@ POOLED_FAMILIES = ("A", "B", "D")
 PRIMARY_CONTRAST_ENDPOINT = "log_loss"
 PRIMARY_POOLED_ENDPOINT = "r2_ll"
 # Contract section 12: ci_method is exactly one of these; "none" only on an undefined record.
-# repeat_fold_corrected_t is the input comparison's corrected resampled t over (repeat, outer fold) units
+# repeat_fold_t and repeat_fold_corrected_t are the input comparison's paired t and corrected resampled t over
+# (repeat, outer fold) units, by learner
 # (stats.compare_units; main's rulings after VERIFY-H1STATS and after its first calibration failed).
-CI_METHODS = ("cluster_jackknife_t", "repeat_fold_corrected_t", "none")
+CI_METHODS = ("cluster_jackknife_t", "repeat_fold_t", "repeat_fold_corrected_t", "none")
 # That test's unit, a (repeat, outer fold) refit: few_clusters is about clusters, so it is false there.
 REPEAT_FOLD_UNIT = "repeat_fold"
 # Contract section 13: few_clusters is n_units < FEW_CLUSTERS; the exact sign-flip test cannot give

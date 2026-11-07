@@ -877,7 +877,7 @@ class UnitTTests(unittest.TestCase):
                  - stats.sample_log_loss(np.array([t["y"]]), np.array([t["score"]])))[0]
             by_unit.setdefault((b["repeat"], b["fold"]), []).append(d)
         means = np.array([np.mean(v) for v in by_unit.values()])
-        record, = stats.compare_units(paired, family="C", margins=MARGINS, development=())
+        record, = stats.compare_units(paired, family="C", margins=MARGINS, development=(), test=stats.UNIT_CORRECTED_T)
         np.testing.assert_array_equal(paired.unit_ratio, np.full(15, 8 / 32))
         se = math.sqrt((1 / 15 + 0.25) * means.var(ddof=1))
         self.assertAlmostEqual(record["estimate"], means.mean(), places=12)
@@ -888,7 +888,7 @@ class UnitTTests(unittest.TestCase):
                                                        means.mean() + 1.7613101358 * se], rtol=0, atol=1e-9)
         self.assertEqual((record["unit"], record["n_units"], record["ci_method"], record["few_clusters"]),
                          ("repeat_fold", 15, "repeat_fold_corrected_t", False))
-        self.assertEqual(record["interval_label"], stats.UNIT_INTERVAL_LABEL)
+        self.assertEqual(record["interval_label"], stats.UNIT_INTERVAL_LABELS[stats.UNIT_CORRECTED_T])
         out, = stats.finalize([record], [record["id"]])
         self.assertEqual(out["decision"], "improves")
 
@@ -912,7 +912,7 @@ class UnitTTests(unittest.TestCase):
         for r in rows:
             r["score"] = scores[(r["repeat"], r["sample_id"])]
             r["called"] = r["score"] >= 0.5
-        record, = stats.compare_units(pair_units(rows), family="C", margins=MARGINS, development=())
+        record, = stats.compare_units(pair_units(rows), family="C", margins=MARGINS, development=(), test=stats.UNIT_CORRECTED_T)
         self.assertEqual((record["estimate"], record["ci"], record["p"]), (0.0, [0.0, 0.0], 1.0))
         self.assertEqual((record["auroc_delta"], record["auroc_ci"]), (0.0, [0.0, 0.0]))
         self.assertEqual(stats.finalize([record], [record["id"]])[0]["decision"], "inconclusive")
@@ -925,7 +925,7 @@ class UnitTTests(unittest.TestCase):
         with self.assertRaises(stats.PairingError):
             pair_units(rows)
         record, = stats.compare_units(pair_units(unit_rows(repeats=1, gap=0.1)), family="D", margins=MARGINS,
-                                      development=())
+                                      development=(), test=stats.UNIT_CORRECTED_T)
         self.assertEqual((record["n_units"], record["p"]), (5, None))
         self.assertIsNotNone(record["ci"])
         out, = stats.finalize([record], [record["id"]])
@@ -933,7 +933,7 @@ class UnitTTests(unittest.TestCase):
 
     def test_the_auroc_delta_is_the_unit_mean_with_its_t_interval(self):
         paired = pair_units(unit_rows(gap=0.1, shift=0.05, seed=5))
-        record, = stats.compare_units(paired, family="C", margins=MARGINS, development=())
+        record, = stats.compare_units(paired, family="C", margins=MARGINS, development=(), test=stats.UNIT_CORRECTED_T)
         deltas = []
         for u in range(15):
             here = paired.unit_index == u
@@ -943,6 +943,29 @@ class UnitTTests(unittest.TestCase):
         np.testing.assert_allclose(record["auroc_ci"], ci)
         half = 2.1447866879 * math.sqrt((1 / 15 + 0.25) * np.var(deltas, ddof=1))
         np.testing.assert_allclose(record["auroc_ci"], [mean - half, mean + half], rtol=0, atol=1e-9)
+
+    def test_each_learner_is_decided_by_its_assigned_test(self):
+        """Main's ruling after round 2's calibration (pre-registered): scm, cart and rf by the paired t over the unit
+        means (SE = s / sqrt(J)), gbt and the lasso by the corrected t; the record names its test, and its label."""
+        self.assertEqual(stats.LEARNER_TESTS, {"scm": "repeat_fold_t", "cart": "repeat_fold_t", "rf": "repeat_fold_t",
+                                               "gbt": "repeat_fold_corrected_t", "lasso": "repeat_fold_corrected_t"})
+        paired = pair_units(unit_rows(gap=0.05, shift=0.02, seed=3))
+        plain, = stats.compare_units(paired, family="C", margins=MARGINS, development=(), test=stats.UNIT_T)
+        corrected, = stats.compare_units(paired, family="C", margins=MARGINS, development=(), test=stats.UNIT_CORRECTED_T)
+        delta = stats.sample_log_loss(paired.y, paired.base) - stats.sample_log_loss(paired.y, paired.treat)
+        means = np.bincount(paired.unit_index, weights=delta) / np.bincount(paired.unit_index)
+        se = means.std(ddof=1) / math.sqrt(15)
+        np.testing.assert_allclose(plain["ci"], [means.mean() - 2.1447866879 * se, means.mean() + 2.1447866879 * se],
+                                   rtol=0, atol=1e-9)
+        self.assertAlmostEqual((corrected["ci"][1] - corrected["estimate"]) / (plain["ci"][1] - plain["estimate"]),
+                               math.sqrt((1 / 15 + 0.25) / (1 / 15)), places=9)
+        self.assertEqual((plain["ci_method"], corrected["ci_method"]), ("repeat_fold_t", "repeat_fold_corrected_t"))
+        self.assertEqual(plain["interval_label"], stats.UNIT_INTERVAL_LABELS[stats.UNIT_T])
+        self.assertNotEqual(plain["interval_label"], corrected["interval_label"])
+        with self.assertRaises(ValueError):
+            stats.compare_units(paired, family="C", margins=MARGINS, development=(), test="repeat_fold")
+        with self.assertRaises(TypeError):
+            stats.compare_units(paired, family="C", margins=MARGINS, development=())
 
     def test_the_correction_widens_the_interval_and_raises_p(self):
         """Nadeau and Bengio's correction against the plain t on the same units: the SE grows by
@@ -1000,7 +1023,7 @@ class UnitTTests(unittest.TestCase):
         self.assertEqual(stats.balanced_counts([3, 4], [4, 4]), [3, 3])
         self.assertEqual(stats.balanced_counts([10, 2], [4, 4]), [2, 2])
         self.assertEqual(stats.balanced_counts([5, 9], [2, 3]), [5, 8])  # 7.5 rounds up, as grm's f64::round
-        record, = stats.compare_units(paired, family="C", margins=MARGINS, development=())
+        record, = stats.compare_units(paired, family="C", margins=MARGINS, development=(), test=stats.UNIT_CORRECTED_T)
         self.assertEqual(record["pairing"], "common_outer_test_set_balanced")
 
     def test_j_refuses_a_cohort_arm_not_scored_on_the_balanced_full_test_set(self):
@@ -1113,9 +1136,9 @@ class UnitTTests(unittest.TestCase):
 class KSchemaTests(unittest.TestCase):
     def test_unit_t_and_sentinel_records_validate_with_k(self):
         record, = stats.compare_units(pair_units(unit_rows(gap=0.05, shift=0.01)), family="C", margins=MARGINS,
-                                      development=())
+                                      development=(), test=stats.UNIT_CORRECTED_T)
         twin = dict(record, id=record["id"].replace("->treat", "->twin"), treatment="twin")
-        random, = stats.compare_units(pair_units(unit_rows(repeats=1)), family="D", margins=MARGINS, development=())
+        random, = stats.compare_units(pair_units(unit_rows(repeats=1)), family="D", margins=MARGINS, development=(), test=stats.UNIT_CORRECTED_T)
         random = dict(random, id=random["id"].replace(":lineage:", ":random:"), split="random")
         out = stats.finalize([record, twin, random], [record["id"], twin["id"], random["id"]], unadjusted=[twin["id"]])
         for r in out:

@@ -36,7 +36,8 @@ a Clopper-Pearson 95% interval. A row whose every contrast is exactly zero is ze
 (the twin doesn't reach that learner) and is reported, not judged. Every other row passes with at
 least 100 contrasts, improves + worse at most 5% and the interval's upper bound at most 11%; every
 learner needs a judged row; and every planted arm (k-h, k-p, k-c-h-p) must be `improves` for every
-learner on every seed, as the run decided it (BH over the run's lineage contrasts). A seed whose
+learner on at least 95% of seeds, as the run decided it (BH over the run's lineage contrasts; main's ruling
+after round 2's calibration). Every record must carry its learner's test (stats.LEARNER_TESTS). A seed whose
 run made no lineage decision (run.py's exit 3) keeps its summary, is listed and counts toward no
 row; a seed counts once however many folders hold it (REVIEW-INPUT17 L2).
 
@@ -78,8 +79,9 @@ LEARNERS = ("scm", "cart", "rf", "gbt", "lasso")
 MIN_CONTRASTS = 100
 MAX_RATE = 0.05
 MAX_UPPER = 0.11
-# The power curve's detection bar.
+# The power curve's detection bar, and the planted arms' (main's ruling after round 2's calibration).
 DETECTED = 0.8
+PLANTED_BAR = 0.95
 NO_DECISIONS_EXIT = 3
 
 
@@ -130,7 +132,7 @@ def one_seed(seed, out, grm, jobs, spec=HERE / "spec.json", visible=1.0):
     truth = json.loads((raw / "truth.json").read_text())
     (work / "cohort.json").write_text(json.dumps({"seed": seed, "genomes": len(truth["genomes"]),
                                                   "resistant": sum(g["resistant"] for g in truth["genomes"]),
-                                                  "visible": truth["config"].get("visible", 1.0)}))
+                                                  "visible": truth.get("config", {}).get("visible", 1.0)}))
     shutil.copy(run / "j" / "contrasts.json", work / "contrasts.json")
     shutil.copy(run / "summary.json", work / "summary.json.part")
     os.replace(work / "summary.json.part", work / "summary.json")
@@ -325,6 +327,9 @@ def calibrate(summaries):
                 continue
             if TWINS[arm] != "cohort path" and x["adjust"] != "none":
                 raise SystemExit(f"{seed}: {x['id']} was adjusted ({x['adjust']}); a sentinel is judged on its own p")
+            if x["estimate"] is not None and x["ci_method"] != stats.LEARNER_TESTS[learner]:
+                raise SystemExit(f"{seed}: {x['id']} was decided by {x['ci_method']}, not {learner}'s "
+                                 f"{stats.LEARNER_TESTS[learner]}")
             row["contrasts"] += 1
             row["zero"] += x["estimate"] == 0 and x["ci"] == [0.0, 0.0]
             # J's own rule on the contrast's own p, as H-1 judges a sentinel (the cohort path's record is BH's).
@@ -353,7 +358,11 @@ def calibrate(summaries):
     judged = {r["learner"] for r in out_rows.values() if r["judged"]}
     unjudged = [learner for learner in LEARNERS if learner not in judged]
     failed = sorted(name for name, r in out_rows.items() if not r["pass"])
-    missed = sorted(f"{r['arm']}:{r['learner']}" for r in planted.values() if r["missed"])
+    for r in planted.values():
+        r["share"] = r["improves"] / r["seeds"] if r["seeds"] else None
+        r["ci95"] = clopper_pearson(r["improves"], r["seeds"]) if r["seeds"] else None
+        r["pass"] = r["share"] is not None and r["share"] >= PLANTED_BAR
+    missed = sorted(f"{r['arm']}:{r['learner']}" for r in planted.values() if not r["pass"])
     seeds = len(summaries) - len(no_decision)
     return {"seeds": len(summaries), "seeds_with_decisions": seeds, "no_decision_seeds": no_decision,
             "absent_arms": absent, "split": "lineage", "test": "repeat_fold_corrected_t",
@@ -427,7 +436,7 @@ def print_calibration(result):
            + [f"absent {a}" for a in result["absent_arms"]]
            + [f"{l} has no judged row" for l in result["unjudged_learners"]]
            + [f"row {n} fails" for n in result["failed_rows"]]
-           + [f"planted {n} missed a seed" for n in result["planted_missed"]])
+           + [f"planted {n} improves on under {PLANTED_BAR:.0%} of seeds" for n in result["planted_missed"]])
     print(f"calibration: seeds {result['seeds']} ({result['seeds_with_decisions']} with decisions; no decision: "
           f"{', '.join(result['no_decision_seeds']) or 'none'}); pass {result['pass']}"
           + (f" ({'; '.join(why)})" if why else ""))

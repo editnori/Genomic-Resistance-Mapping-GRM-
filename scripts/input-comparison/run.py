@@ -26,8 +26,9 @@ by main's ruling 5 after VERIFY-H1STATS; stage2.py picks them).
 
 The test (main's rulings after VERIFY-H1STATS): `grm arm` scores the spec's "repeats" keyed
 lineage plans (3 for H-1) and one random plan. J pairs each arm with the default per repeat and
-decides each lineage contrast by a paired t over its (repeat, outer fold) unit means (df 14 at 3
-repeats and 5 folds; stats.compare_units). Random-split contrasts are planned in family D: an
+decides each lineage contrast by a t over its (repeat, outer fold) unit means, df 14 at 3 repeats
+and 5 folds, by learner (stats.LEARNER_TESTS): the paired t for scm, cart and rf, Nadeau and
+Bengio's corrected t for gbt and the lasso (stats.compare_units). Random-split contrasts are planned in family D: an
 estimate, interval and AUROC delta, no p and no direction. A dataset with no decision-bearing
 lineage contrast (every one not produced or undefined) fails the run: summary.json names it under
 `no_decision_datasets` and the run exits 3 after writing its report.
@@ -1009,7 +1010,7 @@ def pending_contrasts(spec, arms, work):
                         missing[pid] = f"pairing refused: {e}"
                         continue
                     records += stats.compare_units(paired, family=key.split(":")[0], margins=margins,
-                                                   development=development)
+                                                   development=development, test=stats.LEARNER_TESTS[learner])
     return records, planned, missing, unadjusted
 
 

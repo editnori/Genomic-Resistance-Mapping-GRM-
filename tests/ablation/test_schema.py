@@ -371,7 +371,7 @@ class NullShapeCases(unittest.TestCase):
     def test_ci_method_is_an_exact_token(self):
         """Sections 10 and 12 (closes L3): equality against exactly cluster_jackknife_t, the input comparison's
         repeat_fold_corrected_t (main's rulings after VERIFY-H1STATS and the failed calibration) and none."""
-        self.assertEqual(schema.CI_METHODS, ("cluster_jackknife_t", "repeat_fold_corrected_t", "none"))
+        self.assertEqual(schema.CI_METHODS, ("cluster_jackknife_t", "repeat_fold_t", "repeat_fold_corrected_t", "none"))
         for method in schema.CI_METHODS:
             schema.validate_contrast(good_contrast(**{**UNDEFINED, "ci_method": method}))
         schema.validate_contrast(good_contrast(ci_method="cluster_jackknife_t"))

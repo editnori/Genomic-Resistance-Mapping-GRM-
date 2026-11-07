@@ -111,8 +111,10 @@ so its unit is the (repeat, outer fold) refit instead. Each arm scores R keyed
 lineage repeats; per repeat J pairs the arms under the rule above (a cohort
 arm's balanced subsample may differ by repeat), and each unit's value is the
 mean log-loss delta over its paired test samples. With R = 3 and 5 folds the
-15 unit means give the corrected resampled t of Nadeau and Bengio (main's
-ruling after the first calibration failed): SE = sqrt((1/J + rho) s^2), where s^2
+15 unit means give a t by learner (LEARNER_TESTS, main's ruling after round
+2's calibration): scm, cart and rf the paired t over the unit means (ci_method
+"repeat_fold_t", SE = s / sqrt(J)); gbt and the lasso the corrected resampled
+t of Nadeau and Bengio (main's ruling after the first calibration failed): SE = sqrt((1/J + rho) s^2), where s^2
 is the units' sample variance and rho the mean over units of n_test / n_train
 (the genomes paired in the unit over the baseline's training genomes in that
 repeat and fold), df J - 1 = 14; p two-sided from Student's t, ci and ci_tost
@@ -203,12 +205,20 @@ CONFIRMATORY = ("A", "B", "C")
 PRIMARY = "log_loss"
 POOLED_ENDPOINT = "r2_ll"
 JACKKNIFE = "cluster_jackknife_t"
-UNIT_T = "repeat_fold_corrected_t"
+UNIT_T = "repeat_fold_t"
+UNIT_CORRECTED_T = "repeat_fold_corrected_t"
 UNIT = "repeat_fold"
-CI_METHODS = (JACKKNIFE, UNIT_T, "none")
-UNIT_INTERVAL_LABEL = ("conditional on this cohort; each unit is one (repeat, outer fold) refit, and the interval "
-                       "is Nadeau and Bengio's corrected resampled t, which carries refit variability and the overlap "
-                       "of training sets across units; not external validation")
+CI_METHODS = (JACKKNIFE, UNIT_T, UNIT_CORRECTED_T, "none")
+# The input comparison's test per learner (main's ruling after round 2's calibration, 7 Nov 2026, pre-registered in
+# docs/input-comparison-runner.md): the fold-mean t held size for scm, cart and rf with full power; the corrected t
+# holds it for gbt and the lasso, whose fold-mean rows failed. The choice rests only on synthetic null calibration.
+LEARNER_TESTS = {"scm": UNIT_T, "cart": UNIT_T, "rf": UNIT_T, "gbt": UNIT_CORRECTED_T, "lasso": UNIT_CORRECTED_T}
+UNIT_INTERVAL_LABELS = {
+    UNIT_T: ("conditional on this cohort; each unit is one (repeat, outer fold) refit, and the interval is the paired t "
+             "over the unit means, which carries refit variability across units; not external validation"),
+    UNIT_CORRECTED_T: ("conditional on this cohort; each unit is one (repeat, outer fold) refit, and the interval is "
+                       "Nadeau and Bengio's corrected resampled t, which carries refit variability and the overlap of "
+                       "training sets across units; not external validation")}
 FIELDS = ("dataset", "arm", "learner", "split", "repeat", "sample_id", "y", "fold", "score", "called",
           "cluster", "fold_plan_sha256")
 # Classes each endpoint needs: 1 resistant, 0 susceptible.
@@ -855,9 +865,13 @@ def unit_t(values, ratio=0.0):
             p)
 
 
-def compare_units(paired, *, family, margins, development):
-    """One pending log_loss record of the (repeat, fold) corrected resampled t (family C decides, D is
-    descriptive), with the AUROC delta's unit interval; pass it with its family's planned ids to finalize()."""
+def compare_units(paired, *, family, margins, development, test):
+    """One pending log_loss record over the (repeat, fold) units (family C decides, D is descriptive), by `test`:
+    UNIT_T, the paired t over the unit means, or UNIT_CORRECTED_T, Nadeau and Bengio's corrected resampled t
+    (LEARNER_TESTS gives the input comparison's choice per learner); the AUROC delta's unit interval uses the same
+    test. Pass the record with its family's planned ids to finalize()."""
+    if test not in UNIT_INTERVAL_LABELS:
+        raise ValueError(f"test {test!r} is not one of {sorted(UNIT_INTERVAL_LABELS)}")
     if family not in CONTRAST_FAMILIES:
         raise ValueError(f"per-dataset contrasts are family C or D, not {family!r}; A and B hold pooled records")
     if not DATASET_ID.fullmatch(str(paired.dataset)):
@@ -868,7 +882,7 @@ def compare_units(paired, *, family, margins, development):
     counts = np.bincount(paired.unit_index, minlength=j)
     delta = sample_log_loss(paired.y, paired.base) - sample_log_loss(paired.y, paired.treat)
     means = np.bincount(paired.unit_index, weights=delta, minlength=j) / counts
-    rho = float(np.mean(paired.unit_ratio))
+    rho = float(np.mean(paired.unit_ratio)) if test == UNIT_CORRECTED_T else 0.0
     estimate = ci = tost = p = auroc_delta = auroc_ci = None
     reason = "one unit: a t interval needs at least 2" if j < 2 else None
     if reason is None:
@@ -895,10 +909,10 @@ def compare_units(paired, *, family, margins, development):
     return [{
         "id": f"{paired.dataset}/{key}", "family": family, "baseline": paired.baseline,
         "treatment": paired.treatment, "learner": paired.learner, "split": paired.split, "endpoint": PRIMARY,
-        "estimate": estimate, "ci": ci, "ci_tost": tost, "ci_method": UNIT_T if reason is None else "none",
+        "estimate": estimate, "ci": ci, "ci_tost": tost, "ci_method": test if reason is None else "none",
         "unit": UNIT, "n_units": j, "few_clusters": False, "p": p if family != "D" else None, "p_adj": None,
         "adjust": FAMILIES[family], "margin": margin, "decision": None, "claim_level": CLAIM_LEVEL,
-        "undefined_resamples": 0, "undefined_reason": reason, "interval_label": UNIT_INTERVAL_LABEL,
+        "undefined_resamples": 0, "undefined_reason": reason, "interval_label": UNIT_INTERVAL_LABELS[test],
         "dataset": paired.dataset, "pairing": paired.pairing, "auroc_delta": auroc_delta, "auroc_ci": auroc_ci,
         "_pending": True,
     }]

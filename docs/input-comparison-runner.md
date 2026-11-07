@@ -6,6 +6,35 @@ Layth specified a full-pipeline comparison over the input data: genome and cohor
 
 [input-configuration.md](input-configuration.md) traces each input as the code has it now.
 
+## The decision method H-1 uses: a test per learner (pre-registered, round 3, 7 Nov 2026)
+
+Main's ruling "STATSFIX round 2 calibration, and the per-learner test". This section was committed before any round-3 calibration run, and it replaces the test of every section below.
+
+**The unit.** Unit u is one (repeat r, outer fold f) of the lineage split's 3 keyed repeats and 5 outer folds, so J = 15 units, slots and replacement draws as in the sections below.
+- m_u is the mean, over the genomes paired in u, of log loss(default) − log loss(arm), with probabilities clipped to [1e-4, 1 − 1e-4].
+- m̄ = (1/J) Σ_u m_u and s² = Σ_u (m_u − m̄)² / (J − 1).
+
+**The test by learner** (`stats.LEARNER_TESTS`):
+
+| Learner | Test | SE | `ci_method` |
+|---|---|---|---|
+| scm, cart, rf | paired t over the unit means | √(s² / J) | `repeat_fold_t` |
+| gbt, lasso | Nadeau and Bengio's corrected resampled t | √((1/J + ρ) · s²) | `repeat_fold_corrected_t` |
+
+- **ρ** = (1/J) Σ_u n_test(u) / n_train(u). Here n_test(u) is the genomes paired in u, and n_train(u) is the default's genomes in repeat r outside fold f.
+- **Statistic and intervals.** Both tests use t = m̄ / SE with df = J − 1 = 14. p is two-sided from Student's t(14). The 95% interval is m̄ ± t(0.975, 14) · SE and the 90% interval is m̄ ± t(0.95, 14) · SE.
+- **The AUROC delta** takes the same test over the units' AUROC deltas.
+- **The random split** stays descriptive, with the same test at J = 5 and df = 4.
+- **Decisions are unchanged:** `improves` or `worse` needs the 95% interval off zero and p_adj < 0.05. BH runs over the run's non-sentinel lineage contrasts, and each sentinel is judged on its own p.
+- **Why this split.** It rests only on synthetic null calibration. The paired t held size for scm, cart and rf with full power (round 1). For gbt and the lasso its rows failed, while the corrected t held their size (round 2).
+
+**Fresh-seed confirmation.** It uses H-1's exact decision code above.
+- **Seeds.** Calibration seeds 9401 to 9500, then reserve seeds 9501 upward, at most 20, while a judged row has fewer than 100 contrasts. The ruling named seeds 9301 to 9400 as never used, but round 2's power curve used 9301 to 9320, so the confirmation starts at 9401 to keep its condition that no seed was used before.
+- **Size.** Every judged (twin, learner) row needs at least 100 contrasts, and a rate (improves + worse) of at most 5% with a Clopper-Pearson upper bound of at most 11%. Each direction is reported.
+- **Power.** The 1× planted arms (k-h, k-p and k-c-h-p) must be `improves` on at least 95% of seeds for every learner, as the run decided them.
+- **Power curve.** k-h and k-p on seeds 9601 to 9620, at visible shares 0.125, 0.25, 0.5 and 1. For each learner, the minimum detectable effect is the smallest share detected on at least 80% of seeds, with the mean log-loss gain at that share.
+- **A learner that fails either bar** is reported, and H-1 treats it as exploratory: its decisions are reported but left out of the answer. Nothing is tuned further.
+
 ## The decision method (main's rulings after VERIFY-H1STATS, 7 Nov 2026)
 
 REVIEW-ICODE-PY's H1 and VERIFY-H1STATS showed that the lineage-cluster test was anti-conservative: one pair of fitted models scores every lineage of an outer fold, so a fold-level shift moves all of that fold's clusters together, and gbt's learner-seed twin rejected in 26 to 46% of seeds. The method below replaces it. H-1 runs it only after its calibration passes, and [the first calibration](#the-calibrations-results-7-nov-2026) failed for gbt and the lasso. The null-study and calibration figures in the sections after this one came from the old test and are **superseded**.

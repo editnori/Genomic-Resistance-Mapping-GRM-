@@ -1248,6 +1248,7 @@ ids = [f"g{i:03d}" for i in range(50)]
                 ci, p = self.HIT[kind]
                 records.append({"id": f"ds/C:{learner}:lineage:default->{arm}:log_loss", "treatment": arm,
                                 "learner": learner, "split": "lineage", "family": "C",
+                                "ci_method": null_study.stats.LEARNER_TESTS[learner],
                                 "estimate": 0.0 if kind == "zero" else sum(ci) / 2, "ci": ci, "p": p,
                                 "p_adj": p if arm != "cohort-path" else min(1.0, p * 20),
                                 "adjust": adjust if arm != "cohort-path" else "bh",
@@ -1336,14 +1337,31 @@ ids = [f"g{i:03d}" for i in range(50)]
             r = null_study.report([tmp], calibration=True)
         self.assertEqual((r["unjudged_learners"], r["pass"]), (["scm"], False))
 
-    def test_a_planted_miss_on_one_seed_fails_the_calibration(self):
+    def test_a_planted_arm_needs_95_percent_of_seeds(self):
+        """Main's ruling after round 2's calibration: the 1x planted arms must improve on at least 95% of seeds per
+        learner. 95 of 100 passes; 94 fails, naming the arm and learner; a record by another learner's test is
+        refused."""
+        for misses, passes in ((5, True), (6, False)):
+            with tempfile.TemporaryDirectory() as tmp:
+                self.cal_seeds(tmp, n=100 - misses)
+                for i in range(misses):
+                    self.cal_seed(tmp, 100 - misses + i, missed=[("k-p", "cart")])
+                r = null_study.report([tmp], calibration=True)
+            row = r["planted"]["k-p:cart"]
+            self.assertEqual((row["improves"], row["pass"], r["pass"]), (100 - misses, passes, passes), misses)
+            self.assertEqual(r["planted_missed"], [] if passes else ["k-p:cart"])
+            self.assertEqual(r["planted"]["k-h:cart"]["improves"], 100)
         with tempfile.TemporaryDirectory() as tmp:
-            self.cal_seeds(tmp, n=99)
-            self.cal_seed(tmp, 99, missed=[("k-p", "cart")])
-            r = null_study.report([tmp], calibration=True)
-        self.assertEqual((r["planted_missed"], r["planted"]["k-p:cart"]["missed"], r["pass"]),
-                         (["k-p:cart"], ["seed-99"], False))
-        self.assertEqual(r["planted"]["k-h:cart"]["improves"], 100)
+            self.cal_seeds(tmp, n=3)
+            path = Path(tmp) / "seed-1" / "contrasts.json"
+            records = json.loads(path.read_text())
+            for x in records:
+                if x["learner"] == "gbt" and x["treatment"] == "sentinel-seed-twin":
+                    x["ci_method"] = "repeat_fold_t"
+            path.write_text(json.dumps(records))
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([tmp], calibration=True)
+            self.assertIn("was decided by repeat_fold_t, not gbt's repeat_fold_corrected_t", str(e.exception))
 
     def test_a_seed_without_lineage_decisions_is_listed_and_counts_toward_no_row(self):
         """Ruling 2 (M3): run.py exits 3 on such a seed; the seed keeps its summary, which names it."""
@@ -1556,7 +1574,7 @@ ids = [f"g{i:03d}" for i in range(50)]
                 self.assertEqual((x["family"], x["p"], x["decision"], x["n_units"]), ("D", None, "inconclusive", 5))
             else:
                 self.assertEqual((x["family"], x["unit"], x["n_units"], x["ci_method"]),
-                                 ("C", "repeat_fold", 15, "repeat_fold_corrected_t"))
+                                 ("C", "repeat_fold", 15, null_study.stats.LEARNER_TESTS[x["learner"]]))
                 self.assertEqual(x["adjust"], "none" if x["treatment"].startswith("sentinel-") else "bh")
         decided = {(x["treatment"], x["learner"]): x["decision"] for x in records if x["split"] == "lineage"}
         self.assertEqual({d for (arm, _), d in decided.items() if arm == "k-h"}, {"improves"})
@@ -1781,7 +1799,8 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(moved, 3)
         for x in self.report["contrasts"]:
             if x["split"] == "lineage" and x["estimate"] is not None:
-                self.assertEqual((x["unit"], x["n_units"], x["ci_method"]), ("repeat_fold", 15, "repeat_fold_corrected_t"))
+                self.assertEqual((x["unit"], x["n_units"], x["ci_method"]),
+                                 ("repeat_fold", 15, null_study.stats.LEARNER_TESTS[x["learner"]]), x["id"])
                 self.assertEqual(x["adjust"], "none" if x["treatment"].startswith("sentinel-") else "bh", x["id"])
         self.assertEqual(self.summary["no_decision_datasets"], [])
         self.assertGreater(self.summary["decisions_made"][ds], 0)
