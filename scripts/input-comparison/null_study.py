@@ -28,14 +28,17 @@ every arm calibration.json names, plus any other arm its summaries hold (the run
 a named arm absent from every seed, or no seeds at all, fails it and the report names the arm
 (REVIEW-INPUT17 M1). The null study refuses when one of its judged arms is absent. A seed is the one its
 cohort.json records, whatever its folder is called, and counts once (REVIEW-INPUT17B L2): its copies must be
-byte-identical, and a summary without a readable seed is refused.
+byte-identical, and a summary without a readable seed is refused. A summary recorded under two seeds is
+refused (REVIEW-INPUT18 F1). `run` writes each seed's summary.json last, so a seed killed before it reruns.
 
 usage: python3 -B null_study.py run --seeds 101-110 --out DIR --grm GRM [--spec SPEC] [--jobs N] [--parallel P]
        python3 -B null_study.py report DIR [DIR ...] [--json OUT] [--calibration]
 """
 import argparse
 import json
+import hashlib
 import math
+import os
 import shutil
 import subprocess
 import sys
@@ -91,11 +94,14 @@ def one_seed(seed, out, grm, jobs, spec=HERE / "spec.json"):
         subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(path), "--raw", str(raw),
                         "--work", str(run), "--grm", grm, "--source-commit", "0" * 40, "--jobs", str(jobs),
                         *vocabulary], check=True, stdout=log, stderr=subprocess.STDOUT)
-    shutil.copy(run / "summary.json", work / "summary.json")
-    shutil.copy(run / "j" / "contrasts.json", work / "contrasts.json")
+    # summary.json last and whole (REVIEW-INPUT18 L2): a rerun skips a folder with one, so a seed killed before it
+    # landed reruns, and one that has it also has the cohort.json that names its seed.
     truth = json.loads((raw / "truth.json").read_text())
     (work / "cohort.json").write_text(json.dumps({"seed": seed, "genomes": len(truth["genomes"]),
                                                   "resistant": sum(g["resistant"] for g in truth["genomes"])}))
+    shutil.copy(run / "j" / "contrasts.json", work / "contrasts.json")
+    shutil.copy(run / "summary.json", work / "summary.json.part")
+    os.replace(work / "summary.json.part", work / "summary.json")
     for d in (raw, run):
         shutil.rmtree(d)
     return seed, time.monotonic() - started
@@ -181,13 +187,17 @@ def report(dirs, calibration=False):
             raise SystemExit(f"{d}: no such folder")
     # One summary per seed (REVIEW-INPUT17 L2), keyed by the seed cohort.json records, not the folder's name
     # (REVIEW-INPUT17B L2): a folder given twice, a seed in two folders or a copy under another name counts once when
-    # the summaries are byte-identical and is refused when they differ.
-    seen = {}
+    # the summaries are byte-identical and is refused when they differ. One summary under two seeds is refused too
+    # (REVIEW-INPUT18 F1): every run records its own `seconds`, so only a copy with an edited cohort.json matches.
+    seen, digests = {}, {}
     for path in sorted(p for d in dirs for p in Path(d).glob("seed-*/summary.json")):
         seed = seed_of(path)
         first = seen.setdefault(seed, path)
         if first is not path and first.read_bytes() != path.read_bytes():
             raise SystemExit(f"seed {seed} has two different summaries: {first} and {path}")
+        other, at = digests.setdefault(hashlib.sha256(path.read_bytes()).digest(), (seed, path))
+        if other != seed:
+            raise SystemExit(f"seeds {other} and {seed} have byte-identical summaries: {at} and {path}")
     summaries = sorted(seen.values())
     arms = {}
     firings = {"seeds_with_a_firing": 0, "firings": 0, "learners": {}}

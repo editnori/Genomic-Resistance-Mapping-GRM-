@@ -816,10 +816,11 @@ ids = [f"g{i:03d}" for i in range(50)]
         return d
 
     def null_seeds(self, top, arms, contrasts, unreliable=(), seeds=20, missing=None, start=0):
+        """Seed folders start..start+seeds-1, each summary with its own `seconds`, as every real run's has."""
         for s in range(start, start + seeds):
             d = self.seed_folder(top, s)
             summary = {"arms": run.summarize(SPEC, arms, contrasts, missing or {}, list(unreliable)),
-                       "unreliable": list(unreliable)}
+                       "unreliable": list(unreliable), "seconds": s + 0.5}
             (d / "summary.json").write_text(json.dumps(summary))
 
     def null_unproduced(self, arm):
@@ -932,6 +933,25 @@ ids = [f"g{i:03d}" for i in range(50)]
             self.assertIn("calibration: seeds 20; pass True" if passes else
                           "calibration: seeds 20; pass False (arm sentinel-seed-twin has a lineage contrast in 19 "
                           "seeds, under 20)", out.getvalue())
+        # REVIEW-INPUT18 L3 (mutant V2): the sentinel's rates are judged as the named arms' are. In all 20 seeds, a
+        # sentinel that improves, or worsens, on every lineage contrast fails the calibration.
+        for decision in ("improves", "worse"):
+            with tempfile.TemporaryDirectory() as tmp:
+                self.null_seeds(tmp, arms, named + self.null_records(run.SENTINEL["name"],
+                                                                     {l: decision for l in run.LEARNERS}))
+                r = null_study.report([tmp], calibration=True)
+            self.assertEqual((r["missing_arms"], r["thin_arms"], r["pass"]), ([], [], False), decision)
+            self.assertEqual(r["arms"][run.SENTINEL["name"]][decision], 100)
+        # REVIEW-INPUT18 L3 (mutant V6): every arm found is checked for 20 seeds, the first included: cohort-path in
+        # 19 seeds fails beside a full seed-twin and sentinel.
+        short, gone = self.null_unproduced("cohort-path")
+        rest = [r for a in ("seed-twin", run.SENTINEL["name"]) for r in self.null_records(a, {})]
+        with tempfile.TemporaryDirectory() as tmp:
+            self.null_seeds(tmp, arms, self.null_records("cohort-path", {}) + rest, seeds=19)
+            self.null_seeds(tmp, arms, short + rest, seeds=1, missing=gone, start=19)
+            r = null_study.report([tmp], calibration=True)
+        self.assertEqual(list(r["arms"])[0], "cohort-path")
+        self.assertEqual((r["thin_arms"], r["pass"]), (["cohort-path"], False))
 
     def test_a_seed_is_the_one_its_cohort_json_records(self):
         """REVIEW-INPUT17B L2 (its cases B1-B3): seeds were keyed by folder name, so 10 seeds passed as 20 beside
@@ -964,7 +984,33 @@ ids = [f"g{i:03d}" for i in range(50)]
                 null_study.report([a], calibration=True)
             self.assertEqual(str(e.exception), f"seed 101 has two different summaries: {a / 'seed-0101' / 'summary.json'}"
                                                f" and {a / 'seed-101' / 'summary.json'}")
+            # REVIEW-INPUT18 L3 (mutant W4): a copy of the same length is compared byte for byte, as two runs of one
+            # seed that differ only in `seconds` would be.
+            first = (a / "seed-101" / "summary.json").read_text()
+            same_length = first.replace('"seconds": 101.5', '"seconds": 102.5')
+            self.assertEqual((len(same_length), same_length != first), (len(first), True))
+            (a / "seed-0101" / "summary.json").write_text(same_length)
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([a], calibration=True)
+            self.assertIn("seed 101 has two different summaries", str(e.exception))
             shutil.rmtree(a / "seed-0101")
+            # REVIEW-INPUT18 F1: a copy whose cohort.json names another seed is refused, naming both files, whether the
+            # seed is new to the study (the reviewer's F1 recorded copies of 101-110 as 111-120) or negative (-5, their
+            # N1).
+            for s, folder in ((130, "seed-130"), (-5, "seed-x")):
+                forged = Path(tmp) / f"forged{s}"
+                shutil.copytree(a / "seed-101", forged / folder)
+                (forged / folder / "cohort.json").write_text(json.dumps({"seed": s, "genomes": 3000, "resistant": 600}))
+                with self.assertRaises(SystemExit) as e:
+                    null_study.report([a, forged], calibration=True)
+                self.assertEqual(str(e.exception), f"seeds 101 and {s} have byte-identical summaries: "
+                                                   f"{a / 'seed-101' / 'summary.json'} and {forged / folder / 'summary.json'}")
+            # REVIEW-INPUT18 L3 (mutant W7): seeds 100 apart are two seeds; 101-110 and 201-210 make 20, and pass.
+            hundred = Path(tmp) / "hundred"
+            self.null_seeds(hundred, both, con, seeds=10, start=101)
+            self.null_seeds(hundred, both, con, seeds=10, start=201)
+            r = null_study.report([hundred], calibration=True)
+            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (20, 20, True))
             # A summary whose seed can't be read is refused, in both studies.
             cohort = a / "seed-105" / "cohort.json"
             for text, why in (("", "JSONDecodeError"), ("[105]", "TypeError"), ('{"genomes": 3000}', "KeyError"),
@@ -978,6 +1024,65 @@ ids = [f"g{i:03d}" for i in range(50)]
                         null_study.main(["report", str(a), *flags])
                     self.assertTrue(str(e.exception).startswith(f"{a / 'seed-105' / 'summary.json'}: "), e.exception)
                     self.assertIn(why, str(e.exception))
+
+    def test_a_seed_killed_between_its_writes_reruns(self):
+        """REVIEW-INPUT18 L2: one_seed wrote summary.json before cohort.json, and a rerun skips a folder with a
+        summary, so a seed killed between the two was never rerun and report refused it. Killed after each of its
+        writes in turn, a seed with a summary always has its cohort.json, and a rerun leaves one seed report reads.
+        synthetic_root.py and run.py are stood in for, writing a truth.json, a summary and contrasts."""
+        summary = {"arms": run.summarize(SPEC, self.calibration_arms(), self.null_records("cohort-path", {})
+                                         + self.null_records("seed-twin", {}), {}, []), "unreliable": [], "seconds": 1.5}
+
+        def stand_in(cmd, **_):
+            if Path(cmd[2]).name == "synthetic_root.py":
+                Path(cmd[3]).mkdir(parents=True)
+                (Path(cmd[3]) / "truth.json").write_bytes(b'{"genomes": [{"resistant": true}, {"resistant": false}]}')
+            else:
+                work = Path(cmd[cmd.index("--work") + 1])
+                (work / "j").mkdir(parents=True)
+                (work / "summary.json").write_bytes(json.dumps(summary).encode())
+                (work / "j" / "contrasts.json").write_bytes(b"[]")
+            return subprocess.CompletedProcess(cmd, 0)
+
+        class Killed(BaseException):
+            pass
+
+        writes = []
+
+        def killing(real, at, target):
+            """`real`, which writes the path in its argument `target`, raising Killed after the at-th write."""
+            def write(*args, **kwargs):
+                out = real(*args, **kwargs)
+                writes.append(str(args[target]))
+                if len(writes) == at:
+                    raise Killed
+                return out
+            return write
+
+        def one_seed(out, at=0):
+            writes.clear()
+            with mock.patch.object(null_study.subprocess, "run", stand_in), \
+                    mock.patch.object(null_study.shutil, "copy", killing(shutil.copy, at, 1)), \
+                    mock.patch.object(null_study.os, "replace", killing(os.replace, at, 1)), \
+                    mock.patch.object(Path, "write_text", killing(Path.write_text, at, 0)):
+                return null_study.one_seed(7, out, "grm", 1)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            one_seed(Path(tmp) / "clean")
+            done = len(writes)
+            self.assertGreaterEqual(done, 4, writes)
+            self.assertEqual(writes[-1], str(Path(tmp) / "clean" / "seed-7" / "summary.json"), writes)
+            for at in range(1, done + 1):
+                out = Path(tmp) / f"killed-{at}"
+                with self.assertRaises(Killed):
+                    one_seed(out, at)
+                seed = out / "seed-7"
+                if (seed / "summary.json").exists():
+                    self.assertEqual(json.loads((seed / "cohort.json").read_text())["seed"], 7, at)
+                one_seed(out)
+                r = null_study.report([out], calibration=True)
+                self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"]), (1, 1), at)
+                self.assertEqual((seed / "summary.json").read_bytes(), json.dumps(summary).encode(), at)
 
     def test_a_seed_counts_once_however_many_folders_hold_it(self):
         """REVIEW-INPUT17 L2: the same 10-seed folder given twice, or two folders holding the same seeds, counted 20
@@ -1097,7 +1202,7 @@ ids = [f"g{i:03d}" for i in range(50)]
         with tempfile.TemporaryDirectory() as tmp:
             for s in range(20):
                 (self.seed_folder(tmp, s) / "summary.json").write_text(json.dumps({"arms": {"seed-twin": {
-                    "factor": "calibration", "pairing": "same_plan", "decisions": decisions}}}))
+                    "factor": "calibration", "pairing": "same_plan", "decisions": decisions}}, "seconds": s}))
             r = null_study.report([tmp], calibration=True)
         a = r["arms"]["seed-twin"]
         self.assertEqual((a["improves"], a["contrasts"], a["seeds"]), (20, 100, 20))
@@ -1116,7 +1221,7 @@ ids = [f"g{i:03d}" for i in range(50)]
             for s in range(20):
                 (self.seed_folder(tmp, s) / "summary.json").write_text(json.dumps({"arms": {
                     arm: {"factor": "blocks", "pairing": "same_plan", "decisions": decisions(v)}
-                    for arm, v in old.items()}}))
+                    for arm, v in old.items()}, "seconds": s}))
             r = null_study.report([tmp])
         self.assertEqual(sorted(r["arms"]), sorted(["k-c", *null_study.PLANTED_ARMS, *null_study.COHORT_ARMS]))
         self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
