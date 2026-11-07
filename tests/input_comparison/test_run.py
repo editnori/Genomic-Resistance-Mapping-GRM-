@@ -35,11 +35,52 @@ run = load("run")
 null_study = load("null_study")
 SPEC = json.loads((HERE / "spec.json").read_text())
 # The synthetic e2e default's revision-12-gate values (synthetic_root.py defaults, the default curated with the
-# species check and the vocabulary), from the real grm: tools/synthpins.py in the lane folder.
-SYNTHETIC_GATE = {"genome_order": {
+# species check and the vocabulary), from the real grm: tools/synthpins.py in lane H1CODE's folder. The recorded
+# order and view are the order gate's former pins.
+SYNTHETIC_GATE = {"genome_set": {
+                      "salmonella_enterica": "0e2a8a3cfd059fbf20f245849950c59426bbec004d64454d5443ee6dbff69aa8"},
+                  "datasets": {"salmonella_enterica": {
+                      "salmonella_enterica__meropenem": "8641b7e64d7a8a5037ab1bec50446310e0f818f6cf2c66f827d07200850a5c8e"}},
+                  "recorded": {"genome_order": {
                       "salmonella_enterica": "2299eda73ef338aa2bcd312c58d948f651e3dea9503d3185ba8a3271ce1a87af"},
-                  "datasets_json_sha256": "fa73a6223da0f58abc9a8c098b67747ee48889211e5b3504c85417eb13250260"}
+                      "datasets_json_sha256": "fa73a6223da0f58abc9a8c098b67747ee48889211e5b3504c85417eb13250260"}}
 SYNTHETIC_CHECK = run.Runner.check_synthetic
+
+
+def default_root(work):
+    """The default arm's data root in a WORK."""
+    return next(r for r in (Path(work) / "roots").iterdir()
+                if json.loads((r / "curated.json").read_text())["arm"] == "default")
+
+
+def gate_of(root, slugs):
+    """A revision12_gate pinned to a curated default root's own substance (main's ruling after H1DATA), with its drawn
+    order and datasets.json view as the recorded values."""
+    order = {slug: run.file_sha256(root / "species" / slug / "genomes.txt") for slug in slugs}
+    if SPEC["species"] in slugs:
+        order[SPEC["species"]] = json.loads((root / "curated.json").read_text())["drawn_order_sha256"]
+    return {**run.substance(root, slugs),
+            "recorded": {"genome_order": order, "datasets_json_sha256": run.datasets_view(root / "curated" / "datasets.json")}}
+
+
+def timeless(work):
+    """A finished comparison's J records, K manifest and report without what only timing changes: each run's
+    seconds and compute.actual_seconds in the manifest (also inside the report), the report's sha256 of that
+    manifest, and the Markdown's seconds and input-hash lines."""
+    def strip(m):
+        for u in m["runs"]:
+            u.pop("seconds")
+        m["compute"].pop("actual_seconds")
+        return m
+
+    work = Path(work)
+    report = json.loads((work / "report" / "ablation-report.json").read_text())
+    strip(report["manifest"])
+    report["inputs_sha256"].pop("manifest")
+    md = [line for line in (work / "report" / "ablation-report.md").read_text().splitlines()
+          if not line.startswith(("- Actual seconds:", "- Input sha256"))]
+    return {"j": {n: (work / "j" / f"{n}.json").read_bytes() for n in ("contrasts", "planned", "missing")},
+            "manifest": strip(json.loads((work / "k" / "manifest.json").read_text())), "report": report, "md": md}
 
 
 class SpecTests(unittest.TestCase):
@@ -242,10 +283,11 @@ cap = int(argv[argv.index("--cap") + 1])
 (root / "curate-env.json").write_text(json.dumps({"GRM_SIGDRUG_VOCABULARY": os.environ.get("GRM_SIGDRUG_VOCABULARY")}))
 ids = [f"g{i:03d}" for i in range(50)]
 (root / "curated").mkdir(parents=True, exist_ok=True)
-(root / "curated" / "datasets.json").write_text(json.dumps([{"species_slug": "salmonella_enterica",
-                                                              "antibiotic": "meropenem"}]))
+(root / "curated" / "datasets.json").write_text(json.dumps([{"id": "salmonella_enterica__meropenem",
+    "species": "Salmonella enterica", "species_slug": "salmonella_enterica", "antibiotic": "meropenem"}]))
 (root / "curated" / "phenotypes.jsonl").write_text("".join(json.dumps({
-    "genome_id": g, "antibiotic": "meropenem", "reported": "R" if i % 3 else "S"}) + "\\n" for i, g in enumerate(ids)))
+    "genome_id": g, "species": "Salmonella enterica", "antibiotic": "meropenem", "reported": "R" if i % 3 else "S"})
+    + "\\n" for i, g in enumerate(ids)))
 # grm curate's provenance side file, which run.py drops from every root.
 (root / "curated" / "provenance.jsonl").write_text("".join(json.dumps({
     "genome_id": g, "antibiotic": "meropenem", "pmids": ["1"]}) + "\\n" for g in ids))
@@ -297,50 +339,52 @@ ids = [f"g{i:03d}" for i in range(50)]
             self.assertFalse((Path(tmp) / "work" / "counted.txt").exists())
 
     def test_the_revision12_gate_refuses_another_default_cohort(self):
-        """REVIEW-INPUT7 and REVIEW-INPUT8 M1: before anything is counted, the default's drawn genome order and its
-        datasets.json without selection records must be revision 12's; --estimate-only checks it too (L1)."""
+        """Main's ruling after H1DATA (replacing the order gate of REVIEW-INPUT7 to REVIEW-INPUT9): before anything
+        is counted, and in --estimate-only too (L1), the default's sorted genome set and every pinned dataset's spec
+        and selected phenotype rows must be revision 12's."""
         with tempfile.TemporaryDirectory() as tmp:
             self.stub_grm(tmp)
             self.main(tmp, "--free-disk-bytes", "1000")
-            root = next(r for r in (Path(tmp) / "work" / "roots").iterdir()
-                        if json.loads((r / "curated.json").read_text())["arm"] == "default")
-            slug = SPEC["species"]
-            order = json.loads((root / "curated.json").read_text())["drawn_order_sha256"]
-            view = run.datasets_view(root / "curated" / "datasets.json")
-            ours = {"genome_order": {slug: order}, "datasets_json_sha256": view}
+            root = default_root(Path(tmp) / "work")
+            slug, ds = SPEC["species"], "salmonella_enterica__meropenem"
+            ours = gate_of(root, [slug])
+            genomes, data = ours["genome_set"][slug], ours["datasets"][slug][ds]
 
             def late(h):
                 # The right value with only its last hex digit changed (REVIEW-INPUT9 L2, g13).
                 return h[:-1] + ("0" if h[-1] != "0" else "1")
 
             for wrong, message in (
-                    ({**ours, "genome_order": {slug: late(order)}},
-                     f"the default arm's genome order for {slug} is {order}, not revision 12's {late(order)}"),
-                    ({**ours, "datasets_json_sha256": late(view)},
-                     f"the default arm's datasets.json is {view}, not revision 12's {late(view)}")):
+                    ({**ours, "genome_set": {slug: late(genomes)}},
+                     f"the default arm's genome set for {slug} is {genomes}, not revision 12's {late(genomes)}"),
+                    ({**ours, "datasets": {slug: {ds: late(data)}}},
+                     f"the default arm's dataset {ds} is {data}, not revision 12's {late(data)}"),
+                    ({**ours, "datasets": {slug: {ds: data, f"{slug}__other": data}}},
+                     f"the default arm has no dataset {slug}__other, which revision 12 has")):
                 for flags in (("--free-disk-bytes", "1000"), ("--free-disk-bytes", str(10 ** 15), "--estimate-only")):
                     code, _ = self.main(tmp, *flags, spec=self.stub_spec(tmp, revision12_gate=wrong))
                     self.assertIn(message, str(code))
-            # The run's species must be named; every named species is compared with its own root file.
-            code, _ = self.main(tmp, "--free-disk-bytes", "1000",
-                                spec=self.stub_spec(tmp, revision12_gate={**ours, "genome_order": {"other_sp": order}}))
-            self.assertIn(f"names no genome order for {slug}", str(code))
+            # The run's species must be named; every named species needs its root file and pinned datasets.
             code, _ = self.main(tmp, "--free-disk-bytes", "1000", spec=self.stub_spec(
-                tmp, revision12_gate={**ours, "genome_order": {slug: order, "other_sp": order}}))
+                tmp, revision12_gate={**ours, "genome_set": {"other_sp": genomes}}))
+            self.assertIn(f"names no genome set for {slug}", str(code))
+            code, _ = self.main(tmp, "--free-disk-bytes", "1000", spec=self.stub_spec(
+                tmp, revision12_gate={**ours, "genome_set": {slug: genomes, "other_sp": genomes}}))
             self.assertIn("has no species/other_sp/genomes.txt", str(code))
             (root / "species" / "other_sp").mkdir()
             (root / "species" / "other_sp" / "genomes.txt").write_text("x1\nx2\n")
-            other = run.sha256_bytes(b"x1\nx2\n")
             code, _ = self.main(tmp, "--free-disk-bytes", "1000", spec=self.stub_spec(
-                tmp, revision12_gate={**ours, "genome_order": {slug: order, "other_sp": late(other)}}))
-            self.assertIn(f"genome order for other_sp is {other}, not revision 12's {late(other)}", str(code))
+                tmp, revision12_gate={**ours, "genome_set": {slug: genomes, "other_sp": genomes}}))
+            self.assertIn("pins no dataset of other_sp", str(code))
             self.assertFalse((Path(tmp) / "work" / "counted.txt").exists())
-            ours = {**ours, "genome_order": {slug: order, "other_sp": other}}
             code, _ = self.main(tmp, "--free-disk-bytes", "1000", spec=self.stub_spec(tmp, revision12_gate=ours))
             self.assertIn("the comparison still has to write about", str(code))
             code, out = self.main(tmp, "--free-disk-bytes", str(10 ** 15), "--estimate-only",
                                   spec=self.stub_spec(tmp, revision12_gate=ours))
-            self.assertEqual((code, json.loads(out)["revision12_gate"]), (0, ours))
+            record = {"genome_set": ours["genome_set"], "datasets": ours["datasets"],
+                      "recorded": {**ours["recorded"], "as_the_spec_records": True}}
+            self.assertEqual((code, json.loads(out)["revision12_gate"]), (0, record))
+            self.assertEqual(json.loads((Path(tmp) / "work" / "revision12-gate.json").read_text()), record)
 
     def test_a_real_run_without_the_gate_refuses(self):
         """REVIEW-INPUT9 L1: no revision12_gate passes only when the spec says "synthetic": true."""
@@ -413,22 +457,21 @@ ids = [f"g{i:03d}" for i in range(50)]
             self.assertEqual(code, 0)
             self.assertIn("revision-12 gate: NOT REQUIRED: the spec says \"synthetic\": true and RAW is a synthetic "
                           "root (truth.json); this run is ungated", err.getvalue())
-            root = next(r for r in (Path(tmp) / "work" / "roots").iterdir()
-                        if json.loads((r / "curated.json").read_text())["arm"] == "default")
             slug = SPEC["species"]
-            gate = {"genome_order": {slug: json.loads((root / "curated.json").read_text())["drawn_order_sha256"]},
-                    "datasets_json_sha256": run.datasets_view(root / "curated" / "datasets.json")}
+            gate = gate_of(default_root(Path(tmp) / "work"), [slug])
             err = io.StringIO()
             with contextlib.redirect_stderr(err):
                 code, _ = self.main(tmp, "--free-disk-bytes", str(10 ** 15), "--estimate-only",
                                     spec=self.stub_spec(tmp, revision12_gate=gate))
             self.assertEqual(code, 0)
-            self.assertIn(f"revision-12 gate: PASSED: the default's genome order for {slug} and its datasets.json "
-                          f"view {gate['datasets_json_sha256']} equal revision 12's (the spec also says synthetic; "
-                          "the gate ran)", err.getvalue())
+            self.assertIn(f"revision-12 gate: PASSED: the default's genome sets for {slug} and the spec and selected "
+                          "genomes' phenotype rows of their 1 datasets equal revision 12's; recorded, not gated: the "
+                          "drawn order and the datasets.json view, as the spec records them (the spec also says "
+                          "synthetic; the gate ran)", err.getvalue())
             self.assertNotIn("NOT REQUIRED", err.getvalue())
-        # A real spec's line names no synthetic flag.
-        self.assertTrue(run.gate_line(gate, {}).endswith("equal revision 12's"))
+        # A real spec's line names no synthetic flag; a recorded value unlike the spec's is said, not refused.
+        record = {**gate, "recorded": {"as_the_spec_records": False}}
+        self.assertTrue(run.gate_line(record, {}).endswith("NOT as the spec records them (see the gate record)"))
 
     def test_the_manifest_records_whether_the_gate_ran(self):
         """REVIEW-INTEG7B L2: an ungated synthetic run's manifest records revision12_gate "not_required" and a gated
@@ -455,10 +498,7 @@ ids = [f"g{i:03d}" for i in range(50)]
             self.stub_grm(tmp)
             self.synthetic_raw(tmp)
             self.assertEqual(manifest_after(tmp), (True, "not_required"))
-            root = next(r for r in (Path(tmp) / "work" / "roots").iterdir()
-                        if json.loads((r / "curated.json").read_text())["arm"] == "default")
-            gate = {"genome_order": {SPEC["species"]: json.loads((root / "curated.json").read_text())["drawn_order_sha256"]},
-                    "datasets_json_sha256": run.datasets_view(root / "curated" / "datasets.json")}
+            gate = gate_of(default_root(Path(tmp) / "work"), [SPEC["species"]])
             self.assertEqual(manifest_after(tmp, self.stub_spec(tmp, revision12_gate=gate)), (True, "passed"))
 
     def test_the_gate_s_datasets_view_drops_only_selection_records(self):
@@ -1521,7 +1561,10 @@ class EndToEndTests(unittest.TestCase):
         per = sum(p.stat().st_size for p in ksets) / len(ksets)
         budget = SPEC["pool_budget"]
         root_ksets = sum(r["genomes"] for r in disk["roots"].values()) * per
-        estimate = (disk["genomes"] * per + root_ksets * (1 + budget["root_overhead_share"])
+        # The k31 roots share the pool's ksets (G1): only the k21 and k25 roots write their own.
+        pending = sum(r["pending"] for r in disk["roots"].values()) * per
+        self.assertEqual({r["k"] for r in disk["roots"].values() if r["pending"]}, {21, 25})
+        estimate = (disk["genomes"] * per + pending + root_ksets * budget["root_overhead_share"]
                     + root_ksets * budget["arm_output_share"] + disk["pool_curated_bytes"] + budget["work_files_bytes"])
         # The whole WORK: roots, pool, arm outputs, logs, j/, k/ and the report (RAW is outside it).
         measured = used(self.work)
@@ -1532,8 +1575,9 @@ class EndToEndTests(unittest.TestCase):
                   "arm_output_estimate": round(root_ksets * budget["arm_output_share"]),
                   "ratio_estimate_to_measured": estimate / measured,
                   "roots": {n: {"measured": used(roots[n] / "species"), "genomes": disk["roots"][n]["genomes"],
-                                "estimate": round(disk["roots"][n]["genomes"] * per
-                                                  * (1 + budget["root_overhead_share"]))} for n in sorted(counted)}}
+                                "shared": disk["roots"][n]["shared"],
+                                "estimate": round((disk["roots"][n]["pending"] + disk["roots"][n]["genomes"]
+                                                   * budget["root_overhead_share"]) * per)} for n in sorted(counted)}}
         (self.work / "disk-measured.json").write_text(json.dumps(report, indent=1, sort_keys=True))
         self.assertLessEqual(measured, estimate, report)
         self.assertLessEqual(estimate, 1.5 * measured, report)
@@ -1568,24 +1612,94 @@ class EndToEndTests(unittest.TestCase):
         finally:
             shutil.rmtree(copy_, ignore_errors=True)
 
-    def test_every_root_counts_its_own_ksets(self):
-        """REVIEW-INPUT5 M1(b), as measured: grm count reuses a kset only from its own root's kset folder, so a
-        genome in the pool and in the default root has two kset files, neither a link to the other."""
+    def test_the_k31_roots_share_the_pool_s_ksets_and_count_none_anew(self):
+        """H-1 gap G1 on REVIEW-INPUT5 M1(b): grm count reuses a kset only from its own root's kset folder, so the
+        k31 roots get the pool's ksets as hard links, and copies of their sidecars, before their count. After it,
+        every kset of every k31 root is still the pool's file and every sidecar holds the pool's bytes (a recount
+        writes a new kset): 0 counted anew. The k21 and k25 roots count their own."""
         roots = {r.name: r for r in (self.work / "roots").iterdir()}
         pool = next(r for n, r in roots.items() if n.startswith("pool-"))
-        default = self.default_root()
-        g = (default / "species" / "salmonella_enterica" / "genomes.txt").read_text().split()[0]
-        a, b = (r / "species" / "salmonella_enterica" / "ksets" / f"{g}.kset" for r in (pool, default))
-        self.assertFalse(a.is_symlink() or b.is_symlink())
-        self.assertNotEqual(os.stat(a).st_ino, os.stat(b).st_ino)
-        self.assertEqual(a.read_bytes(), b.read_bytes())
+        pool_ksets = pool / "species" / "salmonella_enterica" / "ksets"
+        k31 = 0
+        for name, root in roots.items():
+            if root is pool or not (root / "built.json").exists():
+                continue
+            ids = (root / "species" / "salmonella_enterica" / "genomes.txt").read_text().split()
+            shared = json.loads((root / run.SHARED).read_text())
+            mine = root / "species" / "salmonella_enterica" / "ksets"
+            if name.endswith("-k31"):
+                k31 += 1
+                self.assertEqual(shared, {"genomes": len(ids), "shared": len(ids), "own": 0, "linked_now": len(ids),
+                                          "pool": pool.name}, name)
+                for g in ids:
+                    for ext in ("kset", "json"):
+                        self.assertFalse((mine / f"{g}.{ext}").is_symlink())
+                    # The kset is the pool's file; its sidecar a byte-equal copy (REVIEW-H1CODE L1).
+                    self.assertTrue(os.path.samefile(mine / f"{g}.kset", pool_ksets / f"{g}.kset"), (name, g))
+                    self.assertFalse(os.path.samefile(mine / f"{g}.json", pool_ksets / f"{g}.json"), (name, g))
+                    self.assertEqual((mine / f"{g}.json").read_bytes(), (pool_ksets / f"{g}.json").read_bytes())
+            else:
+                self.assertEqual((shared["shared"], shared["own"]), (0, len(ids)), name)
+                g = ids[0]
+                self.assertNotEqual(os.stat(mine / f"{g}.kset").st_ino, os.stat(pool_ksets / f"{g}.kset").st_ino)
+        self.assertEqual(k31, 4)  # the default's, cap-1000's, cap-4000's and grr-v1's
+
+    def test_sharing_changes_no_output(self):
+        """G1's identity: the same comparison with --no-share-ksets (every root counts its own) gives byte-identical
+        predictions, plans and J records, and the same K manifest and report after timings."""
+        other = self.out / "work-noshare"
+        shutil.rmtree(other, ignore_errors=True)
+        subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(self.out / "spec-e2e.json"), "--raw",
+                        str(self.out / "raw"), "--work", str(other), "--grm", os.environ["GRM_INPUT_E2E_BINARY"],
+                        "--source-commit", os.environ.get("GRM_INPUT_E2E_COMMIT", "0" * 40), "--jobs",
+                        os.environ.get("GRM_INPUT_E2E_JOBS", "3"), "--trace-training", "--sigdrug-vocabulary",
+                        str(self.out / "raw" / "vocabulary"), "--no-share-ksets"], check=True, capture_output=True)
+        self.assertEqual(timeless(other), timeless(self.work))
+        files = sorted(str(p.relative_to(self.work)) for p in (self.work / "arms").rglob("*")
+                       if p.is_file() and (p.name in ("predictions.jsonl", "training.jsonl") or p.parent.name == "plans"))
+        self.assertGreater(len(files), 13 * 2)
+        for name in files:
+            self.assertEqual((other / name).read_bytes(), (self.work / name).read_bytes(), name)
+        for root in (other / "roots").iterdir():
+            if (root / run.SHARED).exists():
+                self.assertEqual(json.loads((root / run.SHARED).read_text())["shared"], 0, root.name)
+        self.assertLess(run.disk_bytes(self.work / "roots"), run.disk_bytes(other / "roots"))
+
+    def test_a_reused_work_resumes_every_finished_arm_and_reruns_a_damaged_one(self):
+        """G6 through the real grm: the finished e2e WORK (a copy, ksets linked) run again skips every arm but the
+        one whose predictions were damaged, and gives the same J and K after timings."""
+        copy_ = self.out / "work-resume"
+        shutil.rmtree(copy_, ignore_errors=True)
+        shutil.copytree(self.work, copy_, symlinks=True, copy_function=lambda s, d: (
+            os.link(s, d) if Path(s).parent.name == "ksets" else shutil.copy2(s, d)))
+        damaged = copy_ / "arms" / "budget-1000" / "salmonella_enterica__meropenem" / "predictions.jsonl"
+        damaged.write_text(damaged.read_text()[:-200])
+        p = subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(self.out / "spec-e2e.json"), "--raw",
+                            str(self.out / "raw"), "--work", str(copy_), "--grm", os.environ["GRM_INPUT_E2E_BINARY"],
+                            "--source-commit", os.environ.get("GRM_INPUT_E2E_COMMIT", "0" * 40), "--trace-training",
+                            "--sigdrug-vocabulary", str(self.out / "raw" / "vocabulary")],
+                           capture_output=True, text=True)
+        try:
+            self.assertEqual(p.returncode, 0, p.stderr[-2000:])
+            summary = json.loads((copy_ / "summary.json").read_text())
+            self.assertEqual(len(summary["resumed_arms"]), 12)
+            self.assertNotIn("budget-1000/salmonella_enterica__meropenem", summary["resumed_arms"])
+            self.assertEqual(damaged.read_bytes(), (self.work / damaged.relative_to(copy_)).read_bytes())
+            self.assertEqual(timeless(copy_), timeless(self.work))
+            twice = [log.name for log in (copy_ / "logs").glob("arm-*.log")
+                     if log.read_text().count(" arm --species ") > 1]
+            self.assertEqual(twice, ["arm-budget-1000-salmonella_enterica__meropenem.log"])
+        finally:
+            shutil.rmtree(copy_, ignore_errors=True)
 
     def test_the_gate_held_the_pinned_synthetic_values(self):
-        """REVIEW-INPUT8 M1: the e2e ran with the gate on, so its default matched both pins through the real binary."""
+        """REVIEW-INPUT8 M1 and main's ruling after H1DATA: the e2e ran with the gate on, so its default matched the
+        pinned substance through the real binary, and the recorded order and view are the ones pinned beside it."""
         root = self.default_root()
-        self.assertEqual(json.loads((root / "curated.json").read_text())["drawn_order_sha256"],
-                         SYNTHETIC_GATE["genome_order"]["salmonella_enterica"])
-        self.assertEqual(run.datasets_view(root / "curated" / "datasets.json"), SYNTHETIC_GATE["datasets_json_sha256"])
+        self.assertEqual(gate_of(root, ["salmonella_enterica"]), SYNTHETIC_GATE)
+        record = json.loads((self.work / "revision12-gate.json").read_text())
+        self.assertEqual(record["recorded"]["as_the_spec_records"], True)
+        self.assertEqual(json.loads((self.work / "summary.json").read_text())["revision12_gate"], record)
         entries = json.loads((root / "curated" / "datasets.json").read_text())
         self.assertTrue(all("selection" in e for e in entries))
 
