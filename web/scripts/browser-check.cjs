@@ -567,6 +567,28 @@ async function stripFit(page, tag) {
     }, null, { timeout: 5000 }).catch(() => null);
     check(name, read !== null && read.cells > 1 && read.pressed === view && read.over <= 1 && read.marksOut === 0, { id, ...read });
   }
+  // Paint: every strip pushed 64 px right, as a strip still drawn for a wider
+  // cell would be, carries its marks past the cell's edge; the Random
+  // column's pixels must not change, because the cell clips them.
+  const name = tag + ' a learner strip pushed past its cell paints nothing over Random';
+  await page.locator('#ds-learners table').scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {});
+  const box = await page.evaluate(() => {
+    const cells = [...document.querySelectorAll('#ds-learners table tr > :nth-child(3)')].map(c => c.getBoundingClientRect());
+    if (cells.length === 0) return null;
+    const x = Math.min(...cells.map(r => r.left)), y = Math.min(...cells.map(r => r.top));
+    return { x: x + scrollX, y: y + scrollY, width: Math.max(...cells.map(r => r.right)) - x, height: Math.max(...cells.map(r => r.bottom)) - y };
+  });
+  if (box === null) { check(name, false, 'no Random column'); return; }
+  const before = await page.screenshot({ clip: box });
+  const moved = await page.evaluate(async () => {
+    const svgs = [...document.querySelectorAll('#ds-learners table tr > :nth-child(2) svg')];
+    for (const s of svgs) s.style.transform = 'translateX(64px)';
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return svgs.filter(s => { const cell = s.closest('th, td').getBoundingClientRect(); return [...s.querySelectorAll('line, circle')].some(m => m.getBoundingClientRect().right > cell.right + 1); }).length;
+  });
+  const after = await page.screenshot({ clip: box });
+  await page.evaluate(() => { for (const s of document.querySelectorAll('#ds-learners table tr > :nth-child(2) svg')) s.style.transform = ''; });
+  check(name, moved > 1 && before.equals(after), { id, stripsPastEdge: moved, randomUnchanged: before.equals(after) });
 }
 
 /** The widest default decision tree and the longest catalog class list the
