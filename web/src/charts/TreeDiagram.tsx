@@ -31,6 +31,10 @@ const CHARS_PER_PX = 19 / NODE_W_MAX;
 const SPLIT_CLASS = "text-[13px] fill-[rgb(var(--ink))] font-semibold";
 const LEAF_CLASS = "text-[13px] fill-[rgb(var(--muted-text))]";
 const COUNT_CLASS = "fill-[rgb(var(--muted-text))] text-[11.5px] tabular-nums";
+// The faces those classes draw with, asked for by weight and size; and how
+// long to wait for them before measuring in the font that renders instead.
+const FACES = ["600 13px", "400 13px", "400 11.5px"];
+const FONT_WAIT = 3000;
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
@@ -84,11 +88,25 @@ export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNo
   // node's tooltip and its listbox option keep the label in full.
   const [fonts, setFonts] = useState(0);
   const [fitted, setFitted] = useState<ReadonlyMap<string, string>>(new Map());
+  // Inter is a web font: a line measured before it loads was measured in the
+  // fallback, so every finished load measures again. `ready` alone can miss
+  // a load that starts after the effect runs, so the label faces are also
+  // asked for outright; whether they arrive or FONT_WAIT runs out first, the
+  // lines are measured again in whatever font then renders, Inter or not.
   useEffect(() => {
+    const set = document.fonts;
+    if (set === undefined) return undefined;
     let live = true;
-    void document.fonts?.ready.then(() => live && setFonts((f) => f + 1));
+    const again = () => live && setFonts((f) => f + 1);
+    set.addEventListener("loadingdone", again);
+    void set.ready.then(again);
+    const family = frame.current === null ? '"Inter Variable"' : getComputedStyle(frame.current).fontFamily;
+    void Promise.all(FACES.map((face) => set.load(`${face} ${family}`).catch(() => []))).then(again);
+    const wait = window.setTimeout(again, FONT_WAIT);
     return () => {
       live = false;
+      set.removeEventListener("loadingdone", again);
+      window.clearTimeout(wait);
     };
   }, []);
   const lines = laid.nodes.flatMap((h) => [labelLine(h.node), countLine(h.node)]);
