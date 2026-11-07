@@ -311,6 +311,15 @@ fn fold_view<'a>(p: &'a ArmPlan, cfg: &ArmConfig) -> PlanView<'a> {
     view
 }
 
+#[cfg(test)]
+thread_local! {
+    /// In test builds, the `train` mask of every `fold_matrix` call on this
+    /// thread, in call order, so a test can check what `run_arm` handed each
+    /// fold (REVIEW-INPUT18 M1).
+    static FOLD_MATRIX_TRAIN: std::cell::RefCell<Vec<Bits>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
 /// One outer fold's arm matrix over every sample: each block's encoder is
 /// fitted on the fold's `train` samples, the block is transformed, filtered on
 /// `train` (`block_candidates`), and the blocks are joined on `train`.
@@ -320,6 +329,8 @@ fn fold_matrix(
     train: &Bits,
     ecfg: &EncodeConfig,
 ) -> Result<crate::bits::BitMatrix> {
+    #[cfg(test)]
+    FOLD_MATRIX_TRAIN.with(|seen| seen.borrow_mut().push(train.clone()));
     let mut candidates = Vec::with_capacity(raws.len());
     for raw in raws {
         let enc = encode::fit_encoder(raw, samples, train, ecfg)?;
@@ -576,7 +587,26 @@ pub fn run_arm(
             unavailable: unavailable.clone(),
         },
     )?;
+    let raws: Vec<&blocks::RawBlock> = admitted.iter().map(|b| b.raw()).collect();
+    score_arm(dataset, &a, species.as_ref(), raws, &unavailable, cfg, out)
+}
 
+/// `run_arm`'s scoring, after it has loaded the data root and admitted the
+/// blocks: every split and repeat's plan (`arm_plan`), then each outer fold's
+/// matrix of `raws` on that fold's training samples (`fold_matrix`) and the
+/// learners. Writes `predictions.jsonl`, `runs.json` and the plans under
+/// `out`. A split is unavailable when any block in `unavailable` is.
+fn score_arm(
+    dataset: &str,
+    a: &ArmInputs,
+    species: Option<&SpeciesGroups>,
+    raws: Vec<&blocks::RawBlock>,
+    unavailable: &[(String, String)],
+    cfg: &ArmConfig,
+    out: &Path,
+) -> Result<()> {
+    let plans_dir = out.join("plans");
+    std::fs::create_dir_all(&plans_dir)?;
     let ecfg = EncodeConfig {
         min_support: a.min_support,
     };
@@ -599,13 +629,12 @@ pub fn run_arm(
             .map(|(id, why)| format!("block {id} is unavailable: {why}"));
         let started = Instant::now();
         for repeat in 0..cfg.repeats {
-            let p = arm_plan(cfg, &a, species.as_ref(), scheme, repeat, &plans_dir)?;
+            let p = arm_plan(cfg, a, species, scheme, repeat, &plans_dir)?;
             if reason.is_some() {
                 results.push((p, None));
                 continue;
             }
             let view = fold_view(&p, cfg);
-            let raws: Vec<&blocks::RawBlock> = admitted.iter().map(|b| b.raw()).collect();
             let split =
                 planned::evaluate_plan(dataset, &a.y, &view, &cfg.eval, &mut |f, train| {
                     if let Some(t) = trace.as_mut() {
@@ -786,6 +815,245 @@ mod tests {
             rows(&build(&all, &train)),
             "encoder fitted on every sample"
         );
+    }
+
+    /// A presence block `id` with rows for `rows` (indices into `samples`):
+    /// one always-assessable column per name, present on the samples given.
+    fn presence(
+        id: &str,
+        samples: &[String],
+        rows: &[usize],
+        cols: &[(&str, Vec<usize>)],
+    ) -> RawBlock {
+        let n = rows.len();
+        RawBlock {
+            spec: blocks::def(id).unwrap().spec(Provenance {
+                version: "fixture".into(),
+                source_sha256: "0".repeat(64),
+                catalog_date: None,
+            }),
+            sample_ids: rows.iter().map(|&i| samples[i].clone()).collect(),
+            names: cols
+                .iter()
+                .map(|(name, _)| format!("{id}:{name}"))
+                .collect(),
+            cols: cols
+                .iter()
+                .map(|(_, on)| RawColumn::Binary {
+                    present: Bits::from_indices(n, (0..n).filter(|&j| on.contains(&rows[j]))),
+                    assessable: Bits::ones(n),
+                })
+                .collect(),
+        }
+    }
+
+    /// REVIEW-TL1 I4: a K-only arm can't show a leak in `assemble`'s
+    /// cross-block coalescing, because `block_candidates` has already merged
+    /// K's own training twins. Here a C column and a K column agree on every
+    /// training sample (0..18) and differ on the outer test samples, and C
+    /// has no row for test sample 23. `run_arm`'s fold matrix must collapse
+    /// them on their training rows alone into one column that takes C's
+    /// value where C has a row and K's at 23, and no change to the test
+    /// samples (their bits, or which of them C has rows for) may change its
+    /// training rows. A collapse keyed on every sample keeps the twins apart
+    /// here and merges them once the test bits agree, so it fails both.
+    #[test]
+    fn a_c_and_k_fold_matrix_collapses_cross_block_twins_on_training_samples_only() {
+        let samples: Vec<String> = (0..24).map(|i| format!("g{i}")).collect();
+        let train = Bits::from_indices(24, 0..18);
+        let ecfg = EncodeConfig { min_support: 3 };
+        let all: Vec<usize> = (0..24).collect();
+        let test: Vec<usize> = (18..24).collect();
+        let on = |training: std::ops::Range<usize>, tested: &[usize]| -> Vec<usize> {
+            training.chain(tested.iter().copied()).collect()
+        };
+        // Test bits of C:twin, C:solo, K:twin and K:other; C's rows.
+        let toy = |t: [&[usize]; 4], c_rows: &[usize]| {
+            let c = presence(
+                "C",
+                &samples,
+                c_rows,
+                &[("twin", on(0..6, t[0])), ("solo", on(6..12, t[1]))],
+            );
+            let k = presence(
+                "K",
+                &samples,
+                &all,
+                &[("twin", on(0..6, t[2])), ("other", on(12..18, t[3]))],
+            );
+            (c, k)
+        };
+        let fold =
+            |(c, k): &(RawBlock, RawBlock)| fold_matrix(&[c, k], &samples, &train, &ecfg).unwrap();
+        let rows =
+            |x: &crate::bits::BitMatrix| (0..x.rows).map(|r| x.row(r).to_vec()).collect::<Vec<_>>();
+        let training = |x: &crate::bits::BitMatrix| {
+            (0..x.rows)
+                .map(|r| train.and_slice(x.row(r)).words().to_vec())
+                .collect::<Vec<_>>()
+        };
+        let no_23: Vec<usize> = (0..23).collect();
+        let clean = toy([&[18, 19], &[20], &[20, 21, 23], &[22]], &no_23);
+
+        // The toy can show a leak: each block keeps its twin as a candidate,
+        // and the twins differ on test samples, so only a collapse on the
+        // training rows makes 3 columns of the 4 candidates.
+        let candidates: Vec<usize> = [&clean.0, &clean.1]
+            .iter()
+            .map(|raw| {
+                let enc = encode::fit_encoder(raw, &samples, &train, &ecfg).unwrap();
+                let x = encode::transform(&enc, raw, &samples).unwrap();
+                encode::block_candidates(&x, &train, &ecfg).x.rows
+            })
+            .collect();
+        assert_eq!(candidates, [2, 2]);
+        let got = fold(&clean);
+        let bits = |on: Vec<usize>| Bits::from_indices(24, on).words().to_vec();
+        assert_eq!(
+            rows(&got),
+            [
+                bits(on(0..6, &[18, 19, 23])),
+                bits(on(6..12, &[20])),
+                bits(on(12..18, &[22])),
+            ],
+            "C:twin and K:twin collapse to C's value where C has a row and K's at 23"
+        );
+
+        for (what, changed) in [
+            ("no test bits", toy([&[], &[], &[], &[]], &no_23)),
+            ("every test bit", toy([&test, &test, &test, &test], &no_23)),
+            (
+                "the twins' test bits swapped",
+                toy([&[20, 21, 23], &[20], &[18, 19], &[22]], &no_23),
+            ),
+            (
+                "C with a row for every sample",
+                toy([&[18, 19], &[20], &[20, 21, 23], &[22]], &all),
+            ),
+        ] {
+            assert_eq!(
+                training(&fold(&changed)),
+                training(&got),
+                "{what} changed the training rows"
+            );
+        }
+    }
+
+    /// REVIEW-INPUT18 M1: the test above calls `fold_matrix` itself, so a leak
+    /// where `run_arm` hands it anything but the fold's training samples (every
+    /// sample, say) passed every test. This runs `run_arm`'s scoring on a C+K
+    /// arm and checks the `train` of every fold matrix it builds: one per
+    /// outer fold of each split, in order, each the plan's training samples
+    /// for that fold. The toy can show such a leak: K's twin columns are C's
+    /// with one sample flipped, so in some fold of each split a matrix on
+    /// every sample keeps twins that the fold's own matrix collapses.
+    #[test]
+    fn run_arm_hands_each_c_and_k_fold_matrix_only_its_training_samples() {
+        use rand::{Rng, SeedableRng};
+        let n = 60;
+        let samples: Vec<String> = (0..n).map(|i| format!("g{i:02}")).collect();
+        let every: Vec<usize> = (0..n).collect();
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(18);
+        let mut draw = || -> Vec<usize> { (0..n).filter(|_| rng.random_bool(0.4)).collect() };
+        let c: Vec<Vec<usize>> = (0..8).map(|_| draw()).collect();
+        // Each twin differs from its C column on one sample, 7 apart.
+        let mut k: Vec<Vec<usize>> = c
+            .iter()
+            .enumerate()
+            .map(|(i, on)| {
+                let s = (7 * i + 3) % n;
+                let mut on: Vec<usize> = on.iter().copied().filter(|&x| x != s).collect();
+                if !c[i].contains(&s) {
+                    on.push(s);
+                }
+                on
+            })
+            .collect();
+        k.extend((0..4).map(|_| draw()));
+        let names: Vec<String> = (0..k.len()).map(|i| format!("f{i}")).collect();
+        let block = |id: &str, cols: &[Vec<usize>]| {
+            let cols: Vec<(&str, Vec<usize>)> = names
+                .iter()
+                .zip(cols)
+                .map(|(name, on)| (name.as_str(), on.clone()))
+                .collect();
+            presence(id, &samples, &every, &cols)
+        };
+        let (cb, kb) = (block("C", &c), block("K", &k));
+        let raws = vec![&cb, &kb];
+        let a = ArmInputs {
+            sample_ids: samples.clone(),
+            columns: every.clone(),
+            y: Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0)),
+            min_support: 3,
+            x: crate::bits::BitMatrix::with_cols(n),
+            lineage: (0..n as u32).map(|i| i / 3).collect(),
+            duplicates: vec![],
+        };
+        let cfg = ArmConfig {
+            arm: "k-c".into(),
+            blocks: vec!["K".into(), "C".into()],
+            eval: EvalConfig::default(),
+            repeats: 1,
+            pairing: Pairing::SamePlan,
+            reference: None,
+            balance_seed: None,
+            learner_seed: None,
+            trace_training: false,
+            groups: None,
+        };
+        let dir = tempfile::tempdir().unwrap();
+        FOLD_MATRIX_TRAIN.with(|seen| seen.borrow_mut().clear());
+        score_arm("ds", &a, None, raws.clone(), &[], &cfg, dir.path()).unwrap();
+        let got = FOLD_MATRIX_TRAIN.with(|seen| seen.take());
+
+        let ecfg = EncodeConfig { min_support: 3 };
+        let all = Bits::ones(n);
+        let mut want = Vec::new();
+        for scheme in SCHEMES {
+            let path = dir
+                .path()
+                .join("plans")
+                .join(format!("{}.json", plan_name(scheme, 0)));
+            let file: PlanFile = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+            let p = ArmPlan {
+                fold: Some(file.plan),
+                cohort: None,
+                rows_sha256: String::new(),
+                arm_sha256: None,
+                cluster: vec![],
+            };
+            let view = fold_view(&p, &cfg);
+            assert!(view.unavailable_reason.is_none(), "{scheme}: no plan");
+            let mut shows = false;
+            for f in 0..view.k {
+                let train = view.train(f);
+                assert!(
+                    train.count() > 0 && (train.count() as usize) < n,
+                    "{scheme} fold {f}"
+                );
+                let rows = |mask: &Bits| fold_matrix(&raws, &samples, mask, &ecfg).unwrap().rows;
+                shows |= rows(&train) < rows(&all);
+                want.push(train);
+            }
+            assert!(
+                shows,
+                "{scheme}: no fold where a matrix on every sample differs"
+            );
+        }
+        assert_eq!(got.len(), want.len(), "fold matrices built");
+        for (i, (g, w)) in got.iter().zip(&want).enumerate() {
+            assert!(
+                g == w,
+                "fold matrix {i} got {} samples, not the fold's {} training samples",
+                g.count(),
+                w.count()
+            );
+        }
+        let runs: Vec<serde_json::Value> =
+            serde_json::from_slice(&std::fs::read(dir.path().join("runs.json")).unwrap()).unwrap();
+        assert_eq!(runs.len(), 2 * crate::learn::eval::LEARNERS.len());
+        assert!(runs.iter().all(|r| r["status"] == "ok"), "{runs:?}");
     }
 
     /// `run_arm` scores a cohort plan with its held-out genomes out of every
