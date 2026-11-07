@@ -1259,7 +1259,8 @@ ids = [f"g{i:03d}" for i in range(50)]
         for arm in null_study.PLANTED_ARMS:
             for learner in run.LEARNERS:
                 records.append({"id": f"ds/C:{learner}:lineage:default->{arm}:log_loss", "treatment": arm,
-                                "learner": learner, "split": "lineage", "family": "C", "estimate": 0.3,
+                                "learner": learner, "split": "lineage", "family": "C",
+                                "ci_method": null_study.stats.LEARNER_TESTS[learner], "estimate": 0.3,
                                 "ci": [0.2, 0.4], "p": 1e-6, "p_adj": 1e-5, "adjust": "bh",
                                 "decision": "inconclusive" if (arm, learner) in missed else "improves"})
         d = self.seed_folder(top, seed)
@@ -1323,20 +1324,88 @@ ids = [f"g{i:03d}" for i in range(50)]
                     name for name, x in r["rows"].items() if x["judged"] and (name == "sentinel-tuning-twin:cart"
                                                                              or n < null_study.MIN_CONTRASTS)))
 
-    def test_the_cohort_path_is_judged_on_its_own_p_not_bhs(self):
-        """The calibration's bar is on raw p for every twin: 6 cohort-path contrasts at p = 0.01 that BH left
-        inconclusive still fail its row."""
+    def test_a_cohort_path_contrast_must_be_zero_and_counts_on_its_own_p(self):
+        """The cohort path is zero by construction for every learner, so 6 nonzero cohort-path contrasts fail its
+        row; its counts are on raw p for every twin, so the 6 at p = 0.01 that BH left inconclusive count as
+        improves."""
         with tempfile.TemporaryDirectory() as tmp:
             self.cal_seeds(tmp, hits={("cohort-path", "rf", "improves"): 6})
             r = null_study.report([tmp], calibration=True)
         row = r["rows"]["cohort-path:rf"]
-        self.assertEqual((row["improves"], row["judged"], row["pass"], r["pass"]), (6, True, False, False))
+        self.assertEqual((row["improves"], row["judged"], row["pass"], r["pass"]), (6, False, False, False))
+        self.assertEqual(r["failed_rows"], ["cohort-path:rf"])
 
     def test_a_learner_the_twins_never_reach_fails_the_calibration(self):
+        """REVIEW-STATSFIX-R3 L1: a judged row whose every contrast is exactly zero (the retuned twin stopped
+        reaching scm) fails; it is not taken for a row zero by construction."""
         with tempfile.TemporaryDirectory() as tmp:
             self.cal_seeds(tmp, hits={("sentinel-tuning-twin", "scm", "zero"): 100})
             r = null_study.report([tmp], calibration=True)
-        self.assertEqual((r["unjudged_learners"], r["pass"]), (["scm"], False))
+        row = r["rows"]["sentinel-tuning-twin:scm"]
+        self.assertEqual((row["contrasts"], row["zero"], row["zero_by_construction"], row["judged"], row["pass"]),
+                         (100, 100, False, True, False))
+        self.assertEqual((r["failed_rows"], r["unjudged_learners"], r["pass"]),
+                         (["sentinel-tuning-twin:scm"], [], False))
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp, hits={("sentinel-tuning-twin", "scm", "zero"): 99})
+            r = null_study.report([tmp], calibration=True)
+        self.assertTrue(r["rows"]["sentinel-tuning-twin:scm"]["pass"] and r["pass"], r["failed_rows"])
+
+    def test_the_zero_rows_are_named_and_every_other_row_is_judged(self):
+        """REVIEW-STATSFIX-R3 L1: the rows zero by construction are ruling 6's nine, named, not found in the data.
+        A judged row missing on every seed fails, so does a zero row with one nonzero contrast, and an undefined
+        contrast counts toward no row's 100."""
+        self.assertEqual(sorted(null_study.ZERO_ROWS), sorted(
+            [("cohort-path", learner) for learner in run.LEARNERS]
+            + [("sentinel-seed-twin", "scm"), ("sentinel-seed-twin", "cart"), ("sentinel-seed-twin", "lasso"),
+               ("sentinel-tuning-twin", "rf")]))
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp)
+            r = null_study.report([tmp], calibration=True)
+        self.assertEqual(sorted(name for name, x in r["rows"].items() if x["judged"]), [
+            "sentinel-seed-twin:gbt", "sentinel-seed-twin:rf", "sentinel-tuning-twin:cart", "sentinel-tuning-twin:gbt",
+            "sentinel-tuning-twin:lasso", "sentinel-tuning-twin:scm"])
+        self.assertTrue(r["pass"], r["failed_rows"])
+        self.assertEqual(r["test"], null_study.stats.LEARNER_TESTS)
+
+        def rewrite(tmp, keep, change=None):
+            for path in Path(tmp).glob("seed-*/contrasts.json"):
+                records = [x for x in json.loads(path.read_text()) if keep(x)]
+                for x in records:
+                    if change:
+                        change(path, x)
+                path.write_text(json.dumps(records))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp)
+            rewrite(tmp, lambda x: (x["treatment"], x["learner"]) != ("sentinel-tuning-twin", "gbt"))
+            r = null_study.report([tmp], calibration=True)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                null_study.main(["report", tmp, "--calibration"])
+        row = r["rows"]["sentinel-tuning-twin:gbt"]
+        self.assertEqual((row["contrasts"], row["not_produced"], row["judged"], row["pass"]), (0, 100, True, False))
+        self.assertEqual((r["failed_rows"], r["unjudged_learners"], r["pass"]), (["sentinel-tuning-twin:gbt"], [], False))
+        self.assertIn(f"{'sentinel-tuning-twin:gbt':<28} no contrasts (not produced 100); FAIL", out.getvalue())
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp, hits={("sentinel-seed-twin", "scm", "inconclusive"): 1})
+            r = null_study.report([tmp], calibration=True)
+        row = r["rows"]["sentinel-seed-twin:scm"]
+        self.assertEqual((row["contrasts"], row["zero"], row["judged"], row["pass"]), (100, 99, False, False))
+        self.assertEqual((r["failed_rows"], r["pass"]), (["sentinel-seed-twin:scm"], False))
+
+        def undefine(path, x):
+            if path.parent.name == "seed-0" and (x["treatment"], x["learner"]) == ("sentinel-seed-twin", "rf"):
+                x.update(estimate=None, ci=None, p=None, p_adj=None, ci_method="none", decision="inconclusive")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp)
+            rewrite(tmp, lambda x: True, undefine)
+            r = null_study.report([tmp], calibration=True)
+        row = r["rows"]["sentinel-seed-twin:rf"]
+        self.assertEqual((row["contrasts"], row["undefined"], row["pass"]), (99, 1, False))
+        self.assertEqual((r["failed_rows"], r["pass"]), (["sentinel-seed-twin:rf"], False))
 
     def test_a_planted_arm_needs_95_percent_of_seeds(self):
         """Main's ruling after round 2's calibration: the 1x planted arms must improve on at least 95% of seeds per
@@ -1363,6 +1432,21 @@ ids = [f"g{i:03d}" for i in range(50)]
             with self.assertRaises(SystemExit) as e:
                 null_study.report([tmp], calibration=True)
             self.assertIn("was decided by repeat_fold_t, not gbt's repeat_fold_corrected_t", str(e.exception))
+        # REVIEW-STATSFIX-R3 L2: a planted record by another learner's test is refused too.
+        for arm, learner, label, test in (("k-h", "gbt", "repeat_fold_t", "repeat_fold_corrected_t"),
+                                          ("k-c-h-p", "cart", "repeat_fold_corrected_t", "repeat_fold_t")):
+            with self.subTest(arm=arm, learner=learner), tempfile.TemporaryDirectory() as tmp:
+                self.cal_seeds(tmp, n=3)
+                path = Path(tmp) / "seed-2" / "contrasts.json"
+                records = json.loads(path.read_text())
+                for x in records:
+                    if (x["treatment"], x["learner"]) == (arm, learner):
+                        x["ci_method"] = label
+                path.write_text(json.dumps(records))
+                with self.assertRaises(SystemExit) as e:
+                    null_study.report([tmp], calibration=True)
+                self.assertIn(f"ds/C:{learner}:lineage:default->{arm}:log_loss was decided by {label}, not "
+                              f"{learner}'s {test}", str(e.exception))
 
     def test_a_seed_without_lineage_decisions_is_listed_and_counts_toward_no_row(self):
         """Ruling 2 (M3): run.py exits 3 on such a seed; the seed keeps its summary, which names it."""

@@ -137,9 +137,10 @@ Contrast record, keys in RECORD_KEYS order (contract section 1):
     learner, split       as in the input rows
     endpoint             one of ENDPOINTS; "log_loss" in family C
     estimate             float, or None when undefined
-    ci, ci_tost          [lo, hi] 95% and 90% jackknife-t intervals, or None
-    ci_method            one of CI_METHODS: "cluster_jackknife_t" (compare()), "repeat_fold_corrected_t"
-                         (compare_units()), or "none" when undefined
+    ci, ci_tost          [lo, hi] 95% and 90% intervals by ci_method's test, or None
+    ci_method            one of CI_METHODS: "cluster_jackknife_t" (compare()), "repeat_fold_t" or
+                         "repeat_fold_corrected_t" (compare_units(), by LEARNER_TESTS in the input
+                         comparison), or "none" when undefined
     unit, n_units        "cluster", clusters; or "repeat_fold", (repeat, outer fold) units
     few_clusters         n_units < 20 on unit "cluster", false on "repeat_fold" (a flag for readers)
     p                    two-sided randomisation p (compare()) or t p (compare_units()) in family C;
@@ -156,8 +157,8 @@ Contrast record, keys in RECORD_KEYS order (contract section 1):
     dataset              the id prefix
     pairing              the pairing rule pair_arms() checked, one of PAIRINGS
     auroc_delta, auroc_ci
-                         on a log_loss record, treat - base AUROC and its 95% cluster
-                         jackknife-t interval, descriptive only (no p, no decision); None
+                         on a log_loss record, treat - base AUROC and its 95% interval by
+                         the record's ci_method test, descriptive only (no p, no decision); None
                          when undefined or on another endpoint. A log-loss improves can come
                          from calibration or overfitting; the AUROC delta shows whether
                          discrimination moved with it

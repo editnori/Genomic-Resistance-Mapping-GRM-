@@ -1,7 +1,7 @@
 {
   "format": "grm-input-comparison-spec",
   "version": 1,
-  "decisions": "The power curve (main's ruling after the first calibration failed): k-h and k-p against the default on roots whose planted blaKPC contig is visible in a share of carriers (synthetic_root.py --visible), so each learner's minimum detectable effect is the smallest share detected on at least 80% of seeds. 3 keyed lineage repeats and the corrected t, as H-1 runs",
+  "decisions": "The power curve (main's ruling after the first calibration failed): k-h and k-p against the default on roots whose planted blaKPC contig is visible in a share of carriers (synthetic_root.py --visible), so each learner's minimum detectable effect is the smallest share detected on at least 80% of seeds. 3 keyed lineage repeats and each learner's test (stats.LEARNER_TESTS), as H-1 runs",
   "panel_floor": {
     "min_eligible_genomes": 2001,
     "reason": "main's ruling on REVIEW-INPUT M1: an H-1 species needs more than 2,000 eligible genomes, so cap-4000 and grr-v1 change the genome set"

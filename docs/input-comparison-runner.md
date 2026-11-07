@@ -571,7 +571,7 @@ Main revised the "full eligible pool" ruling: that pool can't be built on real d
 
 ## Log loss and discrimination
 
-A log-loss `improves` can come from better calibration or less overfitting, not only from better discrimination. Every log-loss contrast record therefore carries J's AUROC delta (treatment minus baseline) and its 95% cluster jackknife-t interval (`auroc_delta`, `auroc_ci`). K prints them beside the decision as descriptive only; they decide nothing. K's reading rule 8 says the same in every report, including H-1's.
+A log-loss `improves` can come from better calibration or less overfitting, not only from better discrimination. Every log-loss contrast record therefore carries J's AUROC delta (treatment minus baseline) and its 95% interval by the record's own test (`auroc_delta`, `auroc_ci`): the learner's unit test in the input comparison, the cluster jackknife-t elsewhere. K prints them beside the decision as descriptive only; they decide nothing. K's reading rule 8 says the same in every report, including H-1's.
 
 ## Open questions
 

@@ -32,12 +32,14 @@ at 3 lineage repeats. Its twins are exchangeable with the default, so every deci
 false positive: the runner's two sentinels (the learner-seed twin and the retuned twin), judged
 on their own p as H-1 judges them, and the cohort-path arm. Each (twin, learner) row counts its
 lineage contrasts, one per seed (seeds are independent), with improves and worse apart, each with
-a Clopper-Pearson 95% interval. A row whose every contrast is exactly zero is zero by construction
-(the twin doesn't reach that learner) and is reported, not judged. Every other row passes with at
-least 100 contrasts, improves + worse at most 5% and the interval's upper bound at most 11%; every
-learner needs a judged row; and every planted arm (k-h, k-p, k-c-h-p) must be `improves` for every
+a Clopper-Pearson 95% interval. The rows zero by construction are named, not found in the data (ZERO_ROWS,
+REVIEW-STATSFIX-R3 L1): the twin doesn't reach that learner, so the row is reported, not judged, and fails on any
+nonzero contrast. Every other row is judged and passes with at least 100 defined contrasts, not all exactly zero,
+improves + worse at most 5% and the interval's upper bound at most 11%; an undefined contrast counts toward no row.
+Every learner needs a judged row, and every planted arm (k-h, k-p, k-c-h-p) must be `improves` for every
 learner on at least 95% of seeds, as the run decided it (BH over the run's lineage contrasts; main's ruling
-after round 2's calibration). Every record must carry its learner's test (stats.LEARNER_TESTS). A seed whose
+after round 2's calibration). Every record, twin or planted, must carry its learner's test (stats.LEARNER_TESTS;
+REVIEW-STATSFIX-R3 L2). A seed whose
 run made no lineage decision (run.py's exit 3) keeps its summary, is listed and counts toward no
 row; a seed counts once however many folders hold it (REVIEW-INPUT17 L2).
 
@@ -76,6 +78,11 @@ MIN_SEEDS = 20
 TWINS = {"sentinel-seed-twin": "learner-seed twin", "sentinel-tuning-twin": "retuned twin",
          "cohort-path": "cohort path"}
 LEARNERS = ("scm", "cart", "rf", "gbt", "lasso")
+# The rows zero by construction (docs/input-comparison-runner.md, ruling 6): the cohort path reproduces the default
+# for every learner, the learner-seed twin reaches only rf and gbt, and the retuned twin draws nothing rf uses.
+ZERO_ROWS = frozenset([("cohort-path", learner) for learner in LEARNERS]
+                      + [("sentinel-seed-twin", learner) for learner in ("scm", "cart", "lasso")]
+                      + [("sentinel-tuning-twin", "rf")])
 MIN_CONTRASTS = 100
 MAX_RATE = 0.05
 MAX_UPPER = 0.11
@@ -298,10 +305,17 @@ def report(dirs, calibration=False, power=False):
                      and all(v == 1.0 for v in planted.values()))}
 
 
+def learner_test(seed, x, learner):
+    """Stop on a defined record decided by another test than its learner's (stats.LEARNER_TESTS)."""
+    if x["estimate"] is not None and x["ci_method"] != stats.LEARNER_TESTS[learner]:
+        raise SystemExit(f"{seed}: {x['id']} was decided by {x['ci_method']}, not {learner}'s "
+                         f"{stats.LEARNER_TESTS[learner]}")
+
+
 def calibrate(summaries):
     """The calibration H-1 must pass (module docstring), from each seed's contrasts.json and summary.json."""
     rows = {(arm, learner): {"twin": TWINS[arm], "arm": arm, "learner": learner, "contrasts": 0, "improves": 0,
-                             "worse": 0, "zero": 0, "not_produced": 0}
+                             "worse": 0, "zero": 0, "not_produced": 0, "undefined": 0}
             for arm in TWINS for learner in LEARNERS}
     planted = {(arm, learner): {"arm": arm, "learner": learner, "seeds": 0, "improves": 0, "missed": []}
                for arm in PLANTED_ARMS for learner in LEARNERS}
@@ -327,9 +341,10 @@ def calibrate(summaries):
                 continue
             if TWINS[arm] != "cohort path" and x["adjust"] != "none":
                 raise SystemExit(f"{seed}: {x['id']} was adjusted ({x['adjust']}); a sentinel is judged on its own p")
-            if x["estimate"] is not None and x["ci_method"] != stats.LEARNER_TESTS[learner]:
-                raise SystemExit(f"{seed}: {x['id']} was decided by {x['ci_method']}, not {learner}'s "
-                                 f"{stats.LEARNER_TESTS[learner]}")
+            learner_test(seed, x, learner)
+            if x["estimate"] is None:
+                row["undefined"] += 1
+                continue
             row["contrasts"] += 1
             row["zero"] += x["estimate"] == 0 and x["ci"] == [0.0, 0.0]
             # J's own rule on the contrast's own p, as H-1 judges a sentinel (the cohort path's record is BH's).
@@ -338,6 +353,8 @@ def calibrate(summaries):
                 row[decision] += 1
         for (arm, learner), row in planted.items():
             x = lineage.get((arm, learner))
+            if x is not None:
+                learner_test(seed, x, learner)
             row["seeds"] += 1
             if x is not None and x["decision"] == "improves":
                 row["improves"] += 1
@@ -346,13 +363,15 @@ def calibrate(summaries):
     out_rows = {}
     for (arm, learner), row in rows.items():
         n, hits = row["contrasts"], row["improves"] + row["worse"]
-        row["zero_by_construction"] = n > 0 and row["zero"] == n
+        row["zero_by_construction"] = (arm, learner) in ZERO_ROWS
         row["rate"] = hits / n if n else None
         row["ci95"] = clopper_pearson(hits, n) if n else None
         row["directions"] = {d: {"rate": row[d] / n if n else None, "ci95": clopper_pearson(row[d], n) if n else None}
                              for d in ("improves", "worse")}
-        row["judged"] = n > 0 and not row["zero_by_construction"]
-        row["pass"] = (not row["judged"] or n >= MIN_CONTRASTS and row["rate"] <= MAX_RATE
+        row["judged"] = not row["zero_by_construction"]
+        # A zero row fails on any nonzero contrast; a judged row whose every contrast is zero never saw its twin.
+        row["pass"] = (row["zero"] == n if not row["judged"] else
+                       n >= MIN_CONTRASTS and row["zero"] < n and row["rate"] <= MAX_RATE
                        and row["ci95"][1] <= MAX_UPPER)
         out_rows[f"{arm}:{learner}"] = row
     judged = {r["learner"] for r in out_rows.values() if r["judged"]}
@@ -365,7 +384,7 @@ def calibrate(summaries):
     missed = sorted(f"{r['arm']}:{r['learner']}" for r in planted.values() if not r["pass"])
     seeds = len(summaries) - len(no_decision)
     return {"seeds": len(summaries), "seeds_with_decisions": seeds, "no_decision_seeds": no_decision,
-            "absent_arms": absent, "split": "lineage", "test": "repeat_fold_corrected_t",
+            "absent_arms": absent, "split": "lineage", "test": dict(stats.LEARNER_TESTS),
             "bars": {"min_contrasts": MIN_CONTRASTS, "max_rate": MAX_RATE, "max_upper": MAX_UPPER},
             "rows": out_rows, "planted": {f"{r['arm']}:{r['learner']}": r for r in planted.values()},
             "unjudged_learners": unjudged, "failed_rows": failed, "planted_missed": missed,
@@ -422,13 +441,15 @@ def print_power(result):
 
 def print_calibration(result):
     for name, r in result["rows"].items():
+        undefined = f"; undefined {r['undefined']}" if r["undefined"] else ""
         if not r["contrasts"]:
-            print(f"{name:<28} no contrasts (not produced {r['not_produced']})")
+            print(f"{name:<28} no contrasts (not produced {r['not_produced']}{undefined})" + "; FAIL" * (not r["pass"]))
             continue
         lo, hi = r["ci95"]
-        state = "zero by construction" if r["zero_by_construction"] else ("pass" if r["pass"] else "FAIL")
+        state = ("zero by construction" if r["zero_by_construction"] and r["pass"] else
+                 "pass" if r["pass"] else "FAIL")
         print(f"{name:<28} {r['improves'] + r['worse']:>3}/{r['contrasts']:<3} = {r['rate']:.3f} [{lo:.3f}, {hi:.3f}]  "
-              f"improves {r['improves']}, worse {r['worse']}; not produced {r['not_produced']}; {state}")
+              f"improves {r['improves']}, worse {r['worse']}; not produced {r['not_produced']}{undefined}; {state}")
     for name, r in result["planted"].items():
         print(f"planted {name:<20} improves {r['improves']}/{r['seeds']}" +
               (f"; missed {', '.join(r['missed'])}" if r["missed"] else ""))
