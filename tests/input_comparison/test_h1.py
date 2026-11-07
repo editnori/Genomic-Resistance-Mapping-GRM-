@@ -501,6 +501,28 @@ class ResumeTests(Stub):
         self.assertEqual(self.run_arms()[0], ["cap-10"])
         self.assertTrue((out / run.RESUME).exists())
 
+    def test_a_linked_arm_folder_or_arm_parent_refuses_the_run(self):
+        """REVIEW-H1CODE-B L-a: a dataset folder, or its arm folder, that is a link to another arm's folder inside
+        arms/ is refused before anything is resumed or written through it."""
+        self.run_arms()
+        default = self.out("default")
+        before = {p.name: p.read_bytes() for p in default.iterdir() if p.is_file()}
+        shutil.rmtree(self.out("cap-10"))
+        self.out("cap-10").symlink_to(default, target_is_directory=True)
+        with self.assertRaises(SystemExit) as e:
+            self.run_arms()
+        self.assertIn(f"{self.out('cap-10')} is a symlink", str(e.exception))
+        self.assertEqual({p.name: p.read_bytes() for p in default.iterdir() if p.is_file()}, before)
+        self.out("cap-10").unlink()
+        arm = self.out("cap-10").parent
+        shutil.rmtree(arm)
+        (arm.parent / "elsewhere").mkdir()
+        arm.symlink_to(arm.parent / "elsewhere", target_is_directory=True)
+        with self.assertRaises(SystemExit) as e:
+            self.run_arms()
+        self.assertIn(f"{arm} is a symlink", str(e.exception))
+        self.assertEqual(list((arm.parent / "elsewhere").iterdir()), [])
+
     def test_a_linked_output_is_never_resumed(self):
         self.run_arms()
         out = self.out("cap-10")
@@ -708,6 +730,24 @@ class CombineRefusalTests(unittest.TestCase):
             self.arm_outputs(a, [self.A])
             self.arm_outputs(b, [self.B], **{flag: True})
             self.assertIn("the parts' arms ran with different --trace-training / --run-identical-cohorts",
+                          self.reaches_the_report(a, b), flag)
+        # REVIEW-H1CODE-B L-a: the dataset folder, or its arm folder, a link to a valid copy of the same output.
+        for level in ("dataset", "arm"):
+            shutil.rmtree(a / "arms")
+            self.arm_outputs(a, [self.A])
+            folder = cap if level == "dataset" else cap.parent
+            shutil.move(folder, self.tmp / f"moved-{level}")
+            folder.symlink_to(self.tmp / f"moved-{level}", target_is_directory=True)
+            self.assertIn(f"part {a}: arm cap-1000 on {self.A}: {folder} is a symlink", self.reaches_the_report(a, b),
+                          level)
+        # REVIEW-H1CODE-B L-b: a record without a flag refuses, naming the file.
+        for flag in ("trace_training", "run_identical_cohorts"):
+            shutil.rmtree(a / "arms")
+            self.arm_outputs(a, [self.A])
+            record = json.loads((cap / run.RESUME).read_text())
+            del record[flag]
+            (cap / run.RESUME).write_text(run.canonical(record))
+            self.assertIn(f"part {a}: arm cap-1000 on {self.A}: {cap / run.RESUME} records no {flag}",
                           self.reaches_the_report(a, b), flag)
         # The same flags in both parts pass.
         shutil.rmtree(a / "arms")

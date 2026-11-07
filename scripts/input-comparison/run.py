@@ -894,7 +894,11 @@ class Runner:
     def complete(self, out, record):
         """Whether a reused WORK may skip this arm on this dataset: its resume.json holds the same record, its
         outputs include runs.json, predictions.jsonl and arm.json, the folder holds exactly the files it lists, none
-        a symlink, and each still has its sha256."""
+        a symlink, and each still has its sha256. A linked arm folder, arm parent or arms/ folder refuses the run
+        (REVIEW-H1CODE-B L-a): skipping would take another folder's output, and rerunning would write through it."""
+        linked = linked_arm_folder(self.work, out)
+        if linked:
+            raise SystemExit(f"{linked} is a symlink; an arm's output folder, its arm folder and arms/ must be WORK's own")
         try:
             was = json.loads((out / RESUME).read_text())
             outputs = was.pop("outputs")
@@ -1268,12 +1272,21 @@ def check_parts(spec_path, spec, parts, master_path):
                              f"manifest {master_path} with that sha256, e.g. {', '.join(outside[:5])}")
 
 
+def linked_arm_folder(work, out):
+    """The first of WORK/arms, the arm folder and the arm's dataset folder `out` that is a symlink, else None."""
+    return next((p for p in (Path(work) / "arms", Path(out).parent, Path(out)) if p.is_symlink()), None)
+
+
 def verify_arm_output(part, src, arm, dataset):
-    """A part's arm output as `combine` takes it (REVIEW-H1CODE L2): its resume.json names this arm and dataset, was
-    made from the part's inputs.json and spec, lists runs.json, predictions.jsonl and arm.json, and the folder holds
-    exactly the files it lists, none a symlink, each with its recorded sha256. Returns the record."""
+    """A part's arm output as `combine` takes it (REVIEW-H1CODE L2): no folder on its path from the part's arms/ is a
+    symlink (REVIEW-H1CODE-B L-a); its resume.json names this arm and dataset, was made from the part's inputs.json
+    and spec, records both run flags, lists runs.json, predictions.jsonl and arm.json, and the folder holds exactly
+    the files it lists, none a symlink, each with its recorded sha256. Returns the record."""
     def refuse(why):
         raise SystemExit(f"part {part['work']}: arm {arm} on {dataset}: {why}")
+    linked = linked_arm_folder(part["work"], src)
+    if linked:
+        refuse(f"{linked} is a symlink")
     try:
         rec = json.loads((src / RESUME).read_text())
         outputs = rec["outputs"]
@@ -1287,6 +1300,10 @@ def verify_arm_output(part, src, arm, dataset):
         refuse(f"{RESUME} was not made from the part's {INPUTS}")
     if rec.get("spec_sha256") != part["manifest"].get("protocol_sha256"):
         refuse(f"{RESUME} was not made from the part's spec")
+    # REVIEW-H1CODE-B L-b: combine compares the flags across parts, so a record without them refuses here.
+    unflagged = [k for k in ("trace_training", "run_identical_cohorts") if not isinstance(rec.get(k), bool)]
+    if unflagged:
+        refuse(f"{src / RESUME} records no {' or '.join(unflagged)}")
     if not ARM_OUTPUTS <= set(outputs):
         refuse(f"{RESUME} lists no {', '.join(sorted(ARM_OUTPUTS - set(outputs)))}")
     if any(p.is_symlink() for p in src.rglob("*")):
