@@ -569,7 +569,9 @@ async function stripFit(page, tag) {
   }
   // Paint: every strip pushed 64 px right, as a strip still drawn for a wider
   // cell would be, carries its marks past the cell's edge; the Random
-  // column's pixels must not change, because the cell clips them.
+  // column's pixels must not change, because the cell clips them. The push
+  // is a margin, a layout change: a transform painted but, in about one read
+  // in six, left the marks' boxes where they were.
   const name = tag + ' a learner strip pushed past its cell paints nothing over Random';
   await page.locator('#ds-learners table').scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {});
   const box = await page.evaluate(() => {
@@ -582,12 +584,12 @@ async function stripFit(page, tag) {
   const before = await page.screenshot({ clip: box });
   const moved = await page.evaluate(async () => {
     const svgs = [...document.querySelectorAll('#ds-learners table tr > :nth-child(2) svg')];
-    for (const s of svgs) s.style.transform = 'translateX(64px)';
+    for (const s of svgs) s.style.marginLeft = '64px';
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     return svgs.filter(s => { const cell = s.closest('th, td').getBoundingClientRect(); return [...s.querySelectorAll('line, circle')].some(m => m.getBoundingClientRect().right > cell.right + 1); }).length;
   });
   const after = await page.screenshot({ clip: box });
-  await page.evaluate(() => { for (const s of document.querySelectorAll('#ds-learners table tr > :nth-child(2) svg')) s.style.transform = ''; });
+  await page.evaluate(() => { for (const s of document.querySelectorAll('#ds-learners table tr > :nth-child(2) svg')) s.style.marginLeft = ''; });
   check(name, moved > 1 && before.equals(after), { id, stripsPastEdge: moved, randomUnchanged: before.equals(after) });
 }
 
