@@ -2006,7 +2006,8 @@ class EndToEndTests(unittest.TestCase):
         try:
             self.assertEqual(p.returncode, 0, p.stderr[-2000:])
             summary = json.loads((copy_ / "summary.json").read_text())
-            self.assertEqual(len(summary["resumed_arms"]), 12)
+            # The default, 11 arms and the runner's two sentinels, less the damaged arm.
+            self.assertEqual(len(summary["resumed_arms"]), 13)
             self.assertNotIn("budget-1000/salmonella_enterica__meropenem", summary["resumed_arms"])
             self.assertEqual(damaged.read_bytes(), (self.work / damaged.relative_to(copy_)).read_bytes())
             self.assertEqual(timeless(copy_), timeless(self.work))
