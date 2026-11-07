@@ -7,6 +7,7 @@ usage: python3 -B -m unittest discover -s tests/input_comparison -t .
 import argparse
 import contextlib
 import copy
+import gzip
 import importlib.util
 import io
 import json
@@ -33,6 +34,7 @@ def load(name):
 
 run = load("run")
 null_study = load("null_study")
+stage2 = load("stage2")
 SPEC = json.loads((HERE / "spec.json").read_text())
 # The synthetic e2e default's revision-12-gate values (synthetic_root.py defaults, the default curated with the
 # species check and the vocabulary), from the real grm: tools/synthpins.py in lane H1CODE's folder. The recorded
@@ -99,11 +101,16 @@ class SpecTests(unittest.TestCase):
         self.addCleanup(os.unlink, f.name)
         return f.name
 
-    def test_the_decided_spec_has_eleven_one_factor_arms_and_the_sentinel(self):
+    def test_the_decided_spec_has_eleven_one_factor_arms_and_two_sentinels(self):
         _, default, arms = run.load_spec(HERE / "spec.json")
-        *arms, sentinel = arms
-        self.assertEqual((sentinel["name"], sentinel["learner_seed"], sentinel["pairing"], sentinel["sentinel"]),
-                         ("sentinel-seed-twin", 1001, "same_plan", True))
+        *arms, seed_twin, tuning_twin = arms
+        self.assertEqual((seed_twin["name"], seed_twin["learner_seed"], seed_twin["pairing"], seed_twin["sentinel"],
+                          seed_twin["judges"]), ("sentinel-seed-twin", 1001, "same_plan", True, ["rf", "gbt"]))
+        self.assertEqual((tuning_twin["name"], tuning_twin["tuning_seed"], tuning_twin["pairing"],
+                          tuning_twin["sentinel"], tuning_twin["judges"]),
+                         ("sentinel-tuning-twin", 1002, "same_plan", True, ["scm", "cart", "lasso"]))
+        # Every learner has exactly one sentinel (main's ruling 3 after VERIFY-H1STATS).
+        self.assertEqual(sorted(seed_twin["judges"] + tuning_twin["judges"]), sorted(run.LEARNERS))
         self.assertEqual(len(arms), 11)
         self.assertEqual((default["cap"], default["selection"], default["k"], default["blocks"],
                           default["screened_features"], default["min_class"]),
@@ -111,10 +118,10 @@ class SpecTests(unittest.TestCase):
         by_factor = {}
         for a in arms:
             by_factor.setdefault(a["factor"], []).append(a["name"])
-        self.assertEqual(by_factor, {"cohort": ["cap-1000", "cap-4000", "grr-v1"], "k": ["k21", "k25"],
+        self.assertEqual(by_factor, {"cap": ["cap-1000", "cap-4000"], "selection": ["grr-v1"], "k": ["k21", "k25"],
                                      "blocks": ["k-c", "k-h", "k-p", "k-c-h-p"],
                                      "budget": ["budget-1000", "budget-16000"]})
-        self.assertEqual({a["name"]: a["pairing"] for a in arms if a["factor"] in ("cohort", "k")},
+        self.assertEqual({a["name"]: a["pairing"] for a in arms if run.own_root(a)},
                          {"cap-1000": "common_outer_test_set_balanced", "cap-4000": "common_outer_test_set_balanced",
                           "grr-v1": "common_outer_test_set_balanced", "k21": "k31_groups", "k25": "k31_groups"})
         self.assertTrue(all(a["pairing"] == "same_plan" for a in arms if a["factor"] in ("blocks", "budget")))
@@ -122,26 +129,56 @@ class SpecTests(unittest.TestCase):
         self.assertEqual(blocks, {"K", "C", "H", "P"})
 
     def test_an_arm_must_change_exactly_one_input(self):
+        """REVIEW-ICODE-PY L2: cap and selection are two inputs, so an arm changing both is refused."""
         for arm in ({"name": "same"}, {"name": "same-cap", "cap": 2000},
-                    {"name": "two", "cap": 1000, "k": 21}, {"name": "odd", "min_class": 10}):
+                    {"name": "two", "cap": 1000, "k": 21}, {"name": "odd", "min_class": 10},
+                    {"name": "cap-and-rule", "cap": 1000, "selection": "group-round-robin-v1", "selection_seed": 1},
+                    {"name": "blocks-and-budget", "blocks": ["K", "H"], "screened_features": 16000}):
             spec = copy.deepcopy(SPEC)
             spec["arms"] = [arm]
-            with self.assertRaises(SystemExit, msg=arm["name"]):
+            with self.assertRaises(SystemExit, msg=arm["name"]) as e:
                 run.load_spec(self.write(spec))
+            if arm["name"] in ("cap-and-rule", "blocks-and-budget"):
+                self.assertIn(f"arm {arm['name']} changes ", str(e.exception))
+                self.assertIn("each arm changes one input of the default (cap and selection are two)",
+                              str(e.exception))
         spec = copy.deepcopy(SPEC)
         spec["arms"].append(dict(spec["arms"][0]))
         with self.assertRaises(SystemExit):
             run.load_spec(self.write(spec))
+
+    def test_a_stage_2_spec_takes_blocks_plus_one_other_input(self):
+        """D3 as amended by main's ruling 5 after VERIFY-H1STATS (VERIFY's M2: load_spec refused the combined arm): a
+        stage-2 spec's arm may change the blocks and one other input, paired by that input's rule; never two
+        non-block inputs, so never k with a cohort change, and never cap with selection."""
+        spec = copy.deepcopy(SPEC)
+        spec["stage"] = 2
+        spec["arms"] = [{"name": "kh-budget", "blocks": ["K", "H"], "screened_features": 16000},
+                        {"name": "kh-cap", "blocks": ["K", "H"], "cap": 4000},
+                        {"name": "kh-k21", "blocks": ["K", "H"], "k": 21},
+                        {"name": "budget", "screened_features": 1000}]
+        _, _, arms = run.load_spec(self.write(spec))
+        got = {a["name"]: (a["factors"], a["pairing"], a.get("kind")) for a in arms if not a.get("sentinel")}
+        self.assertEqual(got, {"kh-budget": (["blocks", "budget"], "same_plan", None),
+                               "kh-cap": (["blocks", "cap"], "common_outer_test_set_balanced", "cap-up"),
+                               "kh-k21": (["blocks", "k"], "k31_groups", None),
+                               "budget": (["budget"], "same_plan", None)})
+        for arm in ({"name": "k-cap", "k": 21, "cap": 4000}, {"name": "cap-rule", "cap": 1000, "selection":
+                     "group-round-robin-v1", "selection_seed": 1}, {"name": "three", "blocks": ["K", "H"],
+                                                                    "cap": 4000, "k": 21}):
+            spec["arms"] = [arm]
+            with self.assertRaises(SystemExit, msg=arm["name"]):
+                run.load_spec(self.write(spec))
 
     def test_the_spec_sets_the_h1_panel_floor(self):
         self.assertEqual(SPEC["panel_floor"]["min_eligible_genomes"], 2001)
 
     def test_each_cohort_arm_carries_its_kind_and_that_kind_s_base_rate(self):
         _, default, arms = run.load_spec(HERE / "spec.json")
-        kinds = {a["name"]: a["kind"] for a in arms if a["factor"] == "cohort"}
+        kinds = {a["name"]: a["kind"] for a in arms if run.changes_cohort(a)}
         self.assertEqual(kinds, {"cap-1000": "cap-down", "cap-4000": "cap-up", "grr-v1": "selection-swap"})
         spec = {"base_rates": {"cap-up": {"rate": 0.1, "ci95": [0.0, 0.2], "seeds": 5, "source": "twin"}}}
-        cohort = {a["name"]: a for a in arms if a["factor"] == "cohort"}
+        cohort = {a["name"]: a for a in arms if run.changes_cohort(a)}
         self.assertEqual(run.base_rate(spec, cohort["cap-4000"]),
                          {"arm": "cap-4000", "kind": "cap-up", "rate": 0.1, "ci95": [0.0, 0.2], "seeds": 5,
                           "source": "twin"})
@@ -436,10 +473,21 @@ ids = [f"g{i:03d}" for i in range(50)]
                     self.assertFalse((Path(tmp) / "work" / "roots").exists(), (kwargs, flags))
                     # REVIEW-INTEG7B L1: the check comes before RAW is hashed (check_inputs writes inputs.json).
                     self.assertFalse((Path(tmp) / "work" / run.INPUTS).exists(), (kwargs, flags))
-            # A spec without "synthetic" isn't checked here; it needs its gate instead.
+            # REVIEW-ICODE-PY L3: a spec without "synthetic" refuses a RAW that holds truth.json, gate or no gate,
+            # before anything is hashed or curated, so a synthetic run is never recorded as real.
             spec = self.stub_spec(tmp)
             plain = json.loads(spec.read_text())
             plain.pop("synthetic")
+            for gate in (None, dict(SYNTHETIC_GATE)):
+                if gate:
+                    plain["revision12_gate"] = gate
+                spec.write_text(json.dumps(plain))
+                for flags in (("--free-disk-bytes", "1000"), ("--free-disk-bytes", str(10 ** 15), "--estimate-only")):
+                    code = str(self.main(tmp, *flags, spec=spec)[0])
+                    self.assertIn("holds truth.json, a synthetic root's marker", code, (gate, flags))
+                    self.assertFalse((Path(tmp) / "work" / run.INPUTS).exists(), (gate, flags))
+            (Path(tmp) / "raw" / "truth.json").unlink()
+            plain.pop("revision12_gate")
             spec.write_text(json.dumps(plain))
             self.assertIn("a real run is never ungated", str(self.main(tmp, "--free-disk-bytes", "1000", spec=spec)[0]))
             self.synthetic_raw(tmp)
@@ -593,7 +641,7 @@ ids = [f"g{i:03d}" for i in range(50)]
             out.mkdir(parents=True)
             (out / "plans").symlink_to(target, target_is_directory=True)
             with self.assertRaises(SystemExit) as e:
-                r.arm({**r.default, "name": "cap-10", "factor": "cohort"}, ds)
+                r.arm({**r.default, "name": "cap-10", "factor": "cap", "factors": ["cap"]}, ds)
             self.assertIn("is a symlink", str(e.exception))
             self.assertTrue((target / "lineage-1.json").exists())
 
@@ -605,7 +653,8 @@ ids = [f"g{i:03d}" for i in range(50)]
             r = self.runner(tmp)
             r.grm = str(Path(tmp) / "grm")
             r.default = {**r.default, "cap": 20}
-            arm = {**r.default, "name": "grr-v1", "factor": "cohort", "selection": "group-round-robin-v1",
+            arm = {**r.default, "name": "grr-v1", "factor": "selection", "factors": ["selection"],
+                   "selection": "group-round-robin-v1",
                    "selection_seed": 1, "pairing": "common_outer_test_set_balanced"}
             plans = Path(tmp) / "work" / "arms" / "grr-v1" / ds / "plans"
             plans.mkdir(parents=True)
@@ -749,10 +798,10 @@ ids = [f"g{i:03d}" for i in range(50)]
         with tempfile.TemporaryDirectory() as tmp:
             code, disk = self.estimate(tmp, "--free-disk-bytes", "1000")
         self.assertEqual((code, disk["free_bytes"], disk["ok"]), (1, 1000, False))
-        # 30 pool genomes, and the default's (20, shared with the sentinel), cap-10's, cap-30's and k21's roots.
+        # 30 pool genomes, and the default's (20, shared with both sentinels), cap-10's, cap-30's and k21's roots.
         self.assertEqual(disk["pool_bytes"], round(30 * per))
         self.assertEqual({r["genomes"] for r in disk["roots"].values()}, {20, 10, 30})
-        self.assertEqual(sorted(len(r["arms"]) for r in disk["roots"].values()), [1, 1, 1, 2])
+        self.assertEqual(sorted(len(r["arms"]) for r in disk["roots"].values()), [1, 1, 1, 3])
         self.assertEqual(disk["kset_bytes"], round(30 * per) + sum(r["bytes"] for r in disk["roots"].values())
                          + disk["arm_output_bytes"] + disk["pool_curated_bytes"] + disk["work_files_bytes"])
         self.assertGreater(disk["pool_curated_bytes"], 0)
@@ -926,174 +975,87 @@ ids = [f"g{i:03d}" for i in range(50)]
         missing = {x["id"]: "the gbt holdout lacks a class" for x in rows if x["split"] == "lineage"}
         return [x for x in rows if x["split"] == "random"], missing
 
-    def calibration_arms(self):
-        """calibration.json's arms as summarize() takes them."""
-        return [{"name": a["name"], "factor": "calibration", "pairing": a["pairing"]}
-                for a in run.load_spec(HERE / "calibration.json")[2] if not a.get("sentinel")]
+    def null_study_arms(self, cohort=null_study.COHORT_ARMS):
+        return ([{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
+                + [{"name": a, "factor": "cap", "pairing": "common_outer_test_set_balanced"} for a in cohort])
 
-    def test_the_calibration_judges_every_arm_its_spec_names(self):
-        """REVIEW-INPUT17 M1: the gate judged only the arms it found, so an empty folder printed "seeds 0; pass True"
-        and a calibration arm absent from every seed passed. Now cohort-path and seed-twin are judged by name; no
-        seeds or a missing arm fails and is named, a mistyped folder is refused, and the null study names a missing
-        arm instead of raising KeyError."""
-        self.assertEqual(null_study.CALIBRATION_ARMS, ("cohort-path", "seed-twin"))
-        self.assertEqual([a["name"] for a in self.calibration_arms()], list(null_study.CALIBRATION_ARMS))
+    def planted_records(self, arms=null_study.PLANTED_ARMS):
+        return [r for a in arms for r in self.null_records(a, {l: "improves" for l in run.LEARNERS})]
+
+    def test_the_null_study_names_an_arm_it_cannot_find(self):
+        """REVIEW-INPUT17 M1: the null study names a missing arm instead of raising KeyError; a mistyped folder is
+        refused in both reports."""
         with tempfile.TemporaryDirectory() as tmp:
-            r = null_study.report([tmp], calibration=True)
-            self.assertEqual((r["seeds"], r["missing_arms"], r["pass"]), (0, ["cohort-path", "seed-twin"], False))
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out):
-                null_study.main(["report", tmp, "--calibration"])
-            self.assertIn(f"calibration: seeds 0; pass False (no seed summaries in {tmp}; arm cohort-path is in no "
-                          "seed; arm seed-twin is in no seed)", out.getvalue())
-            # A mistyped folder is refused, in both studies.
             for flags in ([], ["--calibration"]):
                 with self.assertRaises(SystemExit) as e:
                     null_study.main(["report", str(Path(tmp) / "seeds-typo"), *flags])
                 self.assertEqual(str(e.exception), f"{Path(tmp) / 'seeds-typo'}: no such folder")
-            # Empty, the null study names the arms it can't find.
             with self.assertRaises(SystemExit) as e:
                 null_study.report([tmp])
             self.assertIn("null study: arm cap-1000, cap-4000, grr-v1, k-h, k-p, k-c-h-p is in no seed's summary.json "
                           "(0 summaries)", str(e.exception))
-        # seed-twin absent from all 20 seeds; cohort-path clean in each.
+        con = self.planted_records() + [r for a in null_study.COHORT_ARMS[:-1] for r in self.null_records(a, {})]
         with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, self.calibration_arms()[:1], self.null_records("cohort-path", {}))
-            r = null_study.report([tmp], calibration=True)
-            self.assertEqual((r["arms"]["cohort-path"]["seeds"], r["missing_arms"], r["pass"]),
-                             (20, ["seed-twin"], False))
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out):
-                null_study.main(["report", tmp, "--calibration"])
-            self.assertIn("calibration: seeds 20; pass False (arm seed-twin is in no seed)", out.getvalue())
-        # The null study with grr-v1 in no seed.
-        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
-        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
-                 for a in null_study.COHORT_ARMS[:-1]]
-        con = [r for a in null_study.PLANTED_ARMS for r in self.null_records(a, {l: "improves" for l in run.LEARNERS})]
-        con += [r for a in null_study.COHORT_ARMS[:-1] for r in self.null_records(a, {})]
-        with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, arms, con)
+            self.null_seeds(tmp, self.null_study_arms(null_study.COHORT_ARMS[:-1]), con)
             with self.assertRaises(SystemExit) as e:
                 null_study.report([tmp])
         self.assertIn("null study: arm grr-v1 is in no seed's summary.json (20 summaries)", str(e.exception))
 
-    def test_every_judged_arm_needs_20_seeds_not_any(self):
-        """REVIEW-INPUT17 L1 (mutants N3 and N4): with two calibration arms, one in 20 seeds and one in 19, the
-        calibration fails; in the null study, a planted arm in 19 seeds fails it as a cohort arm does."""
-        both = self.calibration_arms()
-        random_only, missing = self.null_unproduced("cohort-path")
-        twin = self.null_records("seed-twin", {})
-        with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, both, self.null_records("cohort-path", {}) + twin, seeds=19)
-            self.null_seeds(tmp, both, random_only + twin, seeds=1, missing=missing, start=19)
-            r = null_study.report([tmp], calibration=True)
-        self.assertEqual((r["arms"]["seed-twin"]["seeds"], r["arms"]["cohort-path"]["seeds"]), (20, 19))
-        self.assertEqual((r["missing_arms"], r["thin_arms"], r["pass"]), ([], ["cohort-path"], False))
-        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
-        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
-                 for a in null_study.COHORT_ARMS]
+    def test_a_planted_arm_in_19_seeds_fails_the_null_study(self):
+        """REVIEW-INPUT17 L1 (mutants N3 and N4): every judged arm needs 20 seeds, not any."""
         cohort = [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
         planted = {a: self.null_records(a, {l: "improves" for l in run.LEARNERS}) for a in null_study.PLANTED_ARMS}
         short, gone = self.null_unproduced("k-p")
         with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, arms, cohort + [r for rows in planted.values() for r in rows], seeds=19)
-            self.null_seeds(tmp, arms, cohort + planted["k-h"] + planted["k-c-h-p"] + short, seeds=1, missing=gone,
-                            start=19)
+            self.null_seeds(tmp, self.null_study_arms(), cohort + [r for rows in planted.values() for r in rows],
+                            seeds=19)
+            self.null_seeds(tmp, self.null_study_arms(), cohort + planted["k-h"] + planted["k-c-h-p"] + short, seeds=1,
+                            missing=gone, start=19)
             r = null_study.report([tmp])
         self.assertEqual((r["arms"]["k-p"]["seeds"], r["arms"]["k-h"]["seeds"], r["arms"]["grr-v1"]["seeds"]),
                          (19, 20, 20))
         self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
         self.assertFalse(r["pass"])
 
-    def test_the_calibration_judges_the_runner_s_sentinel_too(self):
-        """REVIEW-INPUT17B L1 (mutant N3e): the calibration judges every arm its summaries hold, the runner's sentinel
-        included, but no test held a sentinel. With both named arms in 20 seeds and the sentinel in 19, it fails and
-        names the sentinel; with the sentinel in 20 too, it passes."""
-        arms = run.load_spec(HERE / "calibration.json")[2]
-        self.assertEqual([a["name"] for a in arms], [*null_study.CALIBRATION_ARMS, run.SENTINEL["name"]])
-        named = [r for a in null_study.CALIBRATION_ARMS for r in self.null_records(a, {})]
-        random_only, missing = self.null_unproduced(run.SENTINEL["name"])
-        for produced, passes in ((19, False), (20, True)):
-            with tempfile.TemporaryDirectory() as tmp:
-                self.null_seeds(tmp, arms, named + self.null_records(run.SENTINEL["name"], {}), seeds=produced)
-                self.null_seeds(tmp, arms, named + random_only, seeds=20 - produced, missing=missing, start=produced)
-                r = null_study.report([tmp], calibration=True)
-                out = io.StringIO()
-                with contextlib.redirect_stdout(out):
-                    null_study.main(["report", tmp, "--calibration"])
-            self.assertEqual([r["arms"][a]["seeds"] for a in null_study.CALIBRATION_ARMS], [20, 20])
-            self.assertEqual((r["arms"][run.SENTINEL["name"]]["seeds"], r["missing_arms"], r["pass"]),
-                             (produced, [], passes))
-            self.assertEqual(r["thin_arms"], [] if passes else [run.SENTINEL["name"]])
-            self.assertIn("calibration: seeds 20; pass True" if passes else
-                          "calibration: seeds 20; pass False (arm sentinel-seed-twin has a lineage contrast in 19 "
-                          "seeds, under 20)", out.getvalue())
-        # REVIEW-INPUT18 L3 (mutant V2): the sentinel's rates are judged as the named arms' are. In all 20 seeds, a
-        # sentinel that improves, or worsens, on every lineage contrast fails the calibration.
-        for decision in ("improves", "worse"):
-            with tempfile.TemporaryDirectory() as tmp:
-                self.null_seeds(tmp, arms, named + self.null_records(run.SENTINEL["name"],
-                                                                     {l: decision for l in run.LEARNERS}))
-                r = null_study.report([tmp], calibration=True)
-            self.assertEqual((r["missing_arms"], r["thin_arms"], r["pass"]), ([], [], False), decision)
-            self.assertEqual(r["arms"][run.SENTINEL["name"]][decision], 100)
-        # REVIEW-INPUT18 L3 (mutant V6): every arm found is checked for 20 seeds, the first included: cohort-path in
-        # 19 seeds fails beside a full seed-twin and sentinel.
-        short, gone = self.null_unproduced("cohort-path")
-        rest = [r for a in ("seed-twin", run.SENTINEL["name"]) for r in self.null_records(a, {})]
-        with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, arms, self.null_records("cohort-path", {}) + rest, seeds=19)
-            self.null_seeds(tmp, arms, short + rest, seeds=1, missing=gone, start=19)
-            r = null_study.report([tmp], calibration=True)
-        self.assertEqual(list(r["arms"])[0], "cohort-path")
-        self.assertEqual((r["thin_arms"], r["pass"]), (["cohort-path"], False))
-
     def test_a_seed_is_the_one_its_cohort_json_records(self):
-        """REVIEW-INPUT17B L2 (its cases B1-B3): seeds were keyed by folder name, so 10 seeds passed as 20 beside
-        `seed-0101` copies, `.bak` copies or copies renamed to seeds 111-120. Now a seed is cohort.json's: its copies
-        count once when their summaries are byte-identical and are refused, naming both, when they differ; a summary
-        whose seed can't be read is refused."""
-        both = self.calibration_arms()
-        con = self.null_records("cohort-path", {}) + self.null_records("seed-twin", {})
+        """REVIEW-INPUT17B L2 (its cases B1-B3), ported to the calibration H-1 must pass: a seed is cohort.json's, not
+        its folder's, so copies under other names (`seed-0101`, `.bak`, seeds renamed 100 up) count once when their
+        summaries are byte-identical and are refused, naming both, when they differ; a summary under two seeds is
+        refused (REVIEW-INPUT18 F1); a summary whose seed can't be read is refused."""
         with tempfile.TemporaryDirectory() as tmp:
             a = Path(tmp) / "a"
-            self.null_seeds(a, both, con, seeds=10, start=101)
-            # B1 and B2: seed-0101 and seed-101.bak beside seed-101.
+            self.cal_seeds(a, n=99, start=101)
             for copy in ("seed-0101", "seed-101.bak"):
                 shutil.copytree(a / "seed-101", a / copy)
-            # B3: seeds 101-110 copied under the names of seeds 111-120.
             renamed = Path(tmp) / "renamed"
-            for s in range(101, 111):
-                shutil.copytree(a / f"seed-{s}", renamed / f"seed-{s + 10}")
+            for s in range(101, 200):
+                shutil.copytree(a / f"seed-{s}", renamed / f"seed-{s + 100}")
             for dirs in ([a], [a, renamed], [renamed]):
                 r = null_study.report(dirs, calibration=True)
-                self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["thin_arms"], r["pass"]),
-                                 (10, 10, ["cohort-path", "seed-twin"], False), dirs)
-            # The control: ten more seeds of their own make 20, and pass.
-            self.null_seeds(a, both, con, seeds=10, start=111)
+                self.assertEqual((r["seeds"], r["rows"]["sentinel-seed-twin:rf"]["contrasts"], r["pass"]),
+                                 (99, 99, False), dirs)
+                self.assertIn("sentinel-seed-twin:rf", r["failed_rows"])
+            # The control: one more seed of its own makes 100, and passes.
+            self.cal_seed(a, 200)
             r = null_study.report([a, renamed], calibration=True)
-            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (20, 20, True))
+            self.assertEqual((r["seeds"], r["rows"]["sentinel-seed-twin:rf"]["contrasts"], r["pass"]), (100, 100, True))
             # A copy under another name with other content is refused, naming both files.
             (a / "seed-0101" / "summary.json").write_text(json.dumps({"arms": {}}))
             with self.assertRaises(SystemExit) as e:
                 null_study.report([a], calibration=True)
             self.assertEqual(str(e.exception), f"seed 101 has two different summaries: {a / 'seed-0101' / 'summary.json'}"
                                                f" and {a / 'seed-101' / 'summary.json'}")
-            # REVIEW-INPUT18 L3 (mutant W4): a copy of the same length is compared byte for byte, as two runs of one
-            # seed that differ only in `seconds` would be.
+            # REVIEW-INPUT18 L3 (mutant W4): a copy of the same length is compared byte for byte.
             first = (a / "seed-101" / "summary.json").read_text()
-            same_length = first.replace('"seconds": 101.5', '"seconds": 102.5')
+            same_length = first.replace('"seconds": 101', '"seconds": 102')
             self.assertEqual((len(same_length), same_length != first), (len(first), True))
             (a / "seed-0101" / "summary.json").write_text(same_length)
             with self.assertRaises(SystemExit) as e:
                 null_study.report([a], calibration=True)
             self.assertIn("seed 101 has two different summaries", str(e.exception))
             shutil.rmtree(a / "seed-0101")
-            # REVIEW-INPUT18 F1: a copy whose cohort.json names another seed is refused, naming both files, whether the
-            # seed is new to the study (the reviewer's F1 recorded copies of 101-110 as 111-120) or negative (-5, their
-            # N1).
-            for s, folder in ((130, "seed-130"), (-5, "seed-x")):
+            # REVIEW-INPUT18 F1: a copy whose cohort.json names another seed is refused, naming both files.
+            for s, folder in ((300, "seed-300"), (-5, "seed-x")):
                 forged = Path(tmp) / f"forged{s}"
                 shutil.copytree(a / "seed-101", forged / folder)
                 (forged / folder / "cohort.json").write_text(json.dumps({"seed": s, "genomes": 3000, "resistant": 600}))
@@ -1101,12 +1063,12 @@ ids = [f"g{i:03d}" for i in range(50)]
                     null_study.report([a, forged], calibration=True)
                 self.assertEqual(str(e.exception), f"seeds 101 and {s} have byte-identical summaries: "
                                                    f"{a / 'seed-101' / 'summary.json'} and {forged / folder / 'summary.json'}")
-            # REVIEW-INPUT18 L3 (mutant W7): seeds 100 apart are two seeds; 101-110 and 201-210 make 20, and pass.
+            # REVIEW-INPUT18 L3 (mutant W7): seeds 100 apart are two seeds.
             hundred = Path(tmp) / "hundred"
-            self.null_seeds(hundred, both, con, seeds=10, start=101)
-            self.null_seeds(hundred, both, con, seeds=10, start=201)
+            self.cal_seeds(hundred, n=50, start=101)
+            self.cal_seeds(hundred, n=50, start=201)
             r = null_study.report([hundred], calibration=True)
-            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (20, 20, True))
+            self.assertEqual((r["seeds"], r["pass"]), (100, True))
             # A summary whose seed can't be read is refused, in both studies.
             cohort = a / "seed-105" / "cohort.json"
             for text, why in (("", "JSONDecodeError"), ("[105]", "TypeError"), ('{"genomes": 3000}', "KeyError"),
@@ -1126,8 +1088,9 @@ ids = [f"g{i:03d}" for i in range(50)]
         summary, so a seed killed between the two was never rerun and report refused it. Killed after each of its
         writes in turn, a seed with a summary always has its cohort.json, and a rerun leaves one seed report reads.
         synthetic_root.py and run.py are stood in for, writing a truth.json, a summary and contrasts."""
-        summary = {"arms": run.summarize(SPEC, self.calibration_arms(), self.null_records("cohort-path", {})
-                                         + self.null_records("seed-twin", {}), {}, []), "unreliable": [], "seconds": 1.5}
+        twins = [{"name": a, "factor": "calibration", "pairing": "same_plan"} for a in null_study.TWINS]
+        summary = {"arms": run.summarize(SPEC, twins, [r for a in null_study.TWINS for r in self.null_records(a, {})],
+                                         {}, []), "unreliable": [], "seconds": 1.5}
 
         def stand_in(cmd, **_):
             if Path(cmd[2]).name == "synthetic_root.py":
@@ -1177,132 +1140,55 @@ ids = [f"g{i:03d}" for i in range(50)]
                     self.assertEqual(json.loads((seed / "cohort.json").read_text())["seed"], 7, at)
                 one_seed(out)
                 r = null_study.report([out], calibration=True)
-                self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"]), (1, 1), at)
+                self.assertEqual((r["seeds"], r["seeds_with_decisions"]), (1, 1), at)
                 self.assertEqual((seed / "summary.json").read_bytes(), json.dumps(summary).encode(), at)
 
-    def test_a_seed_counts_once_however_many_folders_hold_it(self):
-        """REVIEW-INPUT17 L2: the same 10-seed folder given twice, or two folders holding the same seeds, counted 20
-        seeds and passed. Byte-identical summaries of one seed now count once; different ones are refused."""
-        both = self.calibration_arms()
-        con = self.null_records("cohort-path", {}) + self.null_records("seed-twin", {})
-        with tempfile.TemporaryDirectory() as tmp:
-            a, b = Path(tmp) / "a", Path(tmp) / "b"
-            self.null_seeds(a, both, con, seeds=10)
-            self.null_seeds(b, both, con, seeds=10)
-            for dirs in ([a, a], [a, b]):
-                r = null_study.report(dirs, calibration=True)
-                self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["thin_arms"], r["pass"]),
-                                 (10, 10, ["cohort-path", "seed-twin"], False), dirs)
-            # Seeds 10-19 in a third folder make 20 distinct seeds.
-            c = Path(tmp) / "c"
-            self.null_seeds(c, both, con, seeds=10, start=10)
-            r = null_study.report([a, b, c], calibration=True)
-            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (20, 20, True))
-            # The same seed with other content is refused, naming both files.
-            (b / "seed-3" / "summary.json").write_text(json.dumps({"arms": {}}))
-            with self.assertRaises(SystemExit) as e:
-                null_study.report([a, b], calibration=True)
-            self.assertEqual(str(e.exception), f"seed 3 has two different summaries: {a / 'seed-3' / 'summary.json'} "
-                                               f"and {b / 'seed-3' / 'summary.json'}")
-
     def test_null_study_passes_only_with_a_lineage_contrast_in_20_seeds_per_arm(self):
-        """REVIEW-NULL16 L1 (its case R4): a calibration arm with lineage contrasts in 1 of 20 seeds, 95 not produced,
-        passed on "improves 0/5" because the gate counted summary files. Now each arm needs 20 seeds that gave it a
-        lineage contrast, and the not-produced count is printed."""
-        twin = [{"name": "seed-twin", "factor": "calibration", "pairing": "same_plan"}]
-        random_only, missing = self.null_unproduced("seed-twin")
+        """REVIEW-NULL16 L1: one cohort arm short of 20 seeds with a lineage contrast fails the null study, and its
+        lineage contrasts not produced are counted apart."""
+        full = self.planted_records() + [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
+        short, gone = self.null_unproduced("grr-v1")
+        thin = self.planted_records() + [r for a in null_study.COHORT_ARMS[:-1] for r in self.null_records(a, {})]
         with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, twin, self.null_records("seed-twin", {}), seeds=1)
-            self.null_seeds(tmp, twin, random_only, seeds=19, missing=missing, start=1)
-            r = null_study.report([tmp], calibration=True)
-            a = r["arms"]["seed-twin"]
-            self.assertEqual((r["seeds"], a["seeds"], a["contrasts"], a["not_produced"], a["improves"]),
-                             (20, 1, 5, 95, 0))
-            self.assertFalse(r["pass"])
+            self.null_seeds(tmp, self.null_study_arms(), full, seeds=19)
+            self.null_seeds(tmp, self.null_study_arms(), thin + short, seeds=1, missing=gone, start=19)
+            r = null_study.report([tmp])
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
-                null_study.main(["report", tmp, "--calibration"])
-            self.assertIn("not produced 95; seeds with a lineage contrast 1/20", out.getvalue())
-            self.assertIn("lineage contrasts not produced: 95", out.getvalue())
-            self.assertIn("calibration: seeds 20; pass False", out.getvalue())
-        # 25 summaries of both calibration arms: 20 seeds with seed-twin's lineage contrasts pass, 19 don't.
-        both = self.calibration_arms()
-        path = [r for r in self.null_records("cohort-path", {})]
-        for produced, passes in ((20, True), (19, False)):
-            with tempfile.TemporaryDirectory() as tmp:
-                self.null_seeds(tmp, both, path + self.null_records("seed-twin", {}), seeds=produced)
-                self.null_seeds(tmp, both, path + random_only, seeds=25 - produced, missing=missing, start=produced)
-                r = null_study.report([tmp], calibration=True)
-            self.assertEqual((r["seeds"], r["arms"]["seed-twin"]["seeds"], r["pass"]), (25, produced, passes))
-            self.assertEqual(r["thin_arms"], [] if passes else ["seed-twin"])
-        # The null study: one cohort arm short of 20 such seeds fails it, all else passing.
-        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
-        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
-                 for a in null_study.COHORT_ARMS]
-        planted = [r for a in null_study.PLANTED_ARMS for r in self.null_records(a, {l: "improves" for l in run.LEARNERS})]
-        full = planted + [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
-        short, gone = self.null_unproduced("grr-v1")
-        thin = planted + [r for a in null_study.COHORT_ARMS[:-1] for r in self.null_records(a, {})] + short
-        with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, arms, full, seeds=19)
-            self.null_seeds(tmp, arms, thin, seeds=1, missing=gone, start=19)
-            r = null_study.report([tmp])
+                null_study.main(["report", tmp])
         self.assertEqual((r["arms"]["grr-v1"]["seeds"], r["arms"]["grr-v1"]["not_produced"]), (19, 5))
         self.assertEqual(r["arms"]["cap-1000"]["seeds"], 20)
         self.assertFalse(r["pass"])
+        self.assertIn("lineage contrasts not produced: 5", out.getvalue())
 
     def test_null_study_rates_count_decision_bearing_lineage_contrasts_only(self):
-        """PR #69's review (null_study.py:144): today's summaries mark random-split rows descriptive; they must not
-        enter a rate, so a planted arm improving on every lineage contrast scores 1.0 and the study can pass, and a
-        calibration arm's lineage false-positive rate isn't halved."""
-        arms = [{"name": a, "factor": "blocks", "pairing": "same_plan"} for a in null_study.PLANTED_ARMS]
-        arms += [{"name": a, "factor": "cohort", "pairing": "common_outer_test_set_balanced"}
-                 for a in null_study.COHORT_ARMS]
-        contrasts = [r for a in null_study.PLANTED_ARMS for r in self.null_records(a, {l: "improves" for l in run.LEARNERS})]
-        contrasts += [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
+        """PR #69's review (null_study.py:144): random-split rows are descriptive and never enter a rate, so a
+        planted arm improving on every lineage contrast scores 1.0 and the study can pass."""
+        contrasts = self.planted_records() + [r for a in null_study.COHORT_ARMS for r in self.null_records(a, {})]
         with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, arms, contrasts)
+            self.null_seeds(tmp, self.null_study_arms(), contrasts)
             r = null_study.report([tmp])
         self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
         self.assertTrue(r["pass"])
         self.assertEqual(r["arms"]["k-h"]["contrasts"], 5 * 20)
-        with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, [{"name": "seed-twin", "factor": "calibration", "pairing": "same_plan"}],
-                            self.null_records("seed-twin", {"gbt": "improves"}))
-            r = null_study.report([tmp], calibration=True)
-        self.assertAlmostEqual(r["arms"]["seed-twin"]["per_seed_improves"]["mean"], 0.2)
-        self.assertFalse(r["pass"])
-
-    def test_null_study_calibration_sees_what_the_sentinel_masks(self):
-        """PR #69's review (null_study.py:143, P1): a sentinel firing on every seed turns its learners' rows
-        unreliable; calibration counts J's decisions, fails, and reports the firings."""
-        sentinel = [{"name": "sentinel-seed-twin", "factor": "calibration", "pairing": "same_plan", "sentinel": True}]
-        con = self.null_records("sentinel-seed-twin", {"gbt": "improves", "rf": "worse"})
-        unreliable = [{"species": "Salmonella enterica", "learner": l, "sentinel": "sentinel-seed-twin", "reason": "fired",
-                       "contrasts": [x["id"] for x in con if x["learner"] == l]} for l in ("gbt", "rf")]
-        with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, sentinel, con, unreliable)
-            masked = json.loads((Path(tmp) / "seed-0" / "summary.json").read_text())["arms"]["sentinel-seed-twin"]
-            self.assertEqual(masked["decisions"]["ds:gbt:lineage"], "unreliable")
-            r = null_study.report([tmp], calibration=True)
-        a = r["arms"]["sentinel-seed-twin"]
-        self.assertEqual((a["improves"], a["worse"], a["contrasts"]), (20, 20, 100))
-        self.assertFalse(r["pass"])
-        self.assertEqual(r["sentinel_firings"], {"seeds_with_a_firing": 20, "firings": 40, "learners": {"gbt": 20, "rf": 20}})
 
     def test_null_study_reads_summaries_written_before_the_mask(self):
         """REVIEW-NULL16 L2 (mutant B2): the stored seeds' summaries have no raw_decisions, and both splits in
         decisions as J decided them; the study takes the lineage rows from decisions."""
-        decisions = {f"ds:{l}:{split}": "improves" if l == "gbt" or split == "random" else "inconclusive"
-                     for l in run.LEARNERS for split in ("lineage", "random")}
+        def decisions(lineage):
+            return {f"ds:{l}:{split}": lineage if split == "lineage" else "improves"
+                    for l in run.LEARNERS for split in ("lineage", "random")}
+
+        arms = {**{a: decisions("improves") for a in null_study.PLANTED_ARMS},
+                **{a: decisions("inconclusive") for a in null_study.COHORT_ARMS}}
         with tempfile.TemporaryDirectory() as tmp:
             for s in range(20):
-                (self.seed_folder(tmp, s) / "summary.json").write_text(json.dumps({"arms": {"seed-twin": {
-                    "factor": "calibration", "pairing": "same_plan", "decisions": decisions}}, "seconds": s}))
-            r = null_study.report([tmp], calibration=True)
-        a = r["arms"]["seed-twin"]
-        self.assertEqual((a["improves"], a["contrasts"], a["seeds"]), (20, 100, 20))
-        self.assertAlmostEqual(a["per_seed_improves"]["mean"], 0.2)
+                (self.seed_folder(tmp, s) / "summary.json").write_text(json.dumps({"arms": {
+                    a: {"factor": "blocks", "pairing": "same_plan", "decisions": d} for a, d in arms.items()},
+                    "seconds": s}))
+            r = null_study.report([tmp])
+        self.assertEqual((r["arms"]["cap-1000"]["improves"], r["arms"]["cap-1000"]["contrasts"]), (0, 100))
+        self.assertEqual(r["planted_improves_share"], {a: 1.0 for a in null_study.PLANTED_ARMS})
         self.assertEqual(r["sentinel_firings"], {"seeds_with_a_firing": 0, "firings": 0, "learners": {}})
 
     def test_null_study_reads_the_arm_names_from_before_the_rename(self):
@@ -1327,40 +1213,256 @@ ids = [f"g{i:03d}" for i in range(50)]
     def test_null_study_counts_a_contrast_not_produced_apart_and_refuses_an_arm_without_any(self):
         """REVIEW-NULL16 L2 (mutants C1-C3): a lineage contrast not produced is counted apart, never as a decision in
         a denominator; an arm with no lineage contrast in any seed is refused."""
-        twin = [{"name": "seed-twin", "factor": "calibration", "pairing": "same_plan"}]
-        rows = self.null_records("seed-twin", {"gbt": "improves"})
+        rows = self.null_records("cap-1000", {"gbt": "improves"})
         gap = {x["id"]: "outer fold 2 lacks a class" for x in rows if x["split"] == "lineage" and x["learner"] == "rf"}
+        rest = self.planted_records() + [r for a in null_study.COHORT_ARMS[1:] for r in self.null_records(a, {})]
         with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, twin, [x for x in rows if x["id"] not in gap], missing=gap)
-            shown = json.loads((Path(tmp) / "seed-0" / "summary.json").read_text())["arms"]["seed-twin"]["decisions"]
-            self.assertTrue(shown["ds:rf:lineage"].startswith("not produced"))
-            r = null_study.report([tmp], calibration=True)
-        a = r["arms"]["seed-twin"]
+            self.null_seeds(tmp, self.null_study_arms(), rest + [x for x in rows if x["id"] not in gap], missing=gap)
+            r = null_study.report([tmp])
+        a = r["arms"]["cap-1000"]
         self.assertEqual((a["contrasts"], a["improves"], a["not_produced"], a["seeds"]), (80, 20, 20, 20))
         self.assertAlmostEqual(a["per_seed_improves"]["mean"], 0.25)
-        random_only, missing = self.null_unproduced("seed-twin")
+        random_only, missing = self.null_unproduced("cap-1000")
         with tempfile.TemporaryDirectory() as tmp:
-            self.null_seeds(tmp, twin, random_only, missing=missing)
+            self.null_seeds(tmp, self.null_study_arms(), rest + random_only, missing=missing)
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([tmp])
+        self.assertEqual(str(e.exception), "arm cap-1000: no lineage contrast was produced in any seed")
+
+    # The calibration H-1 must pass (main's ruling 6 after VERIFY-H1STATS).
+    HIT = {"improves": ([0.01, 0.03], 0.01), "worse": ([-0.03, -0.01], 0.01),
+           "inconclusive": ([-0.01, 0.02], 0.4), "zero": ([0.0, 0.0], 1.0)}
+
+    def cal_seed(self, top, seed, hits=None, missed=(), no_decision=False, adjust="none"):
+        """One calibration seed's summary.json and contrasts.json: every twin's lineage contrast per learner is
+        inconclusive, but for `hits` {(arm, learner): improves | worse | zero}; the deterministic learners' seed
+        twin and rf's retuned twin are zero, as the twins reach them; every planted contrast improves, but for
+        `missed` (arm, learner) pairs."""
+        hits = dict(hits or {})
+        records = []
+        for arm in null_study.TWINS:
+            for learner in run.LEARNERS:
+                zero = (arm == "cohort-path" or arm == "sentinel-seed-twin" and learner in ("scm", "cart", "lasso")
+                        or arm == "sentinel-tuning-twin" and learner == "rf")
+                kind = hits.get((arm, learner), "zero" if zero else "inconclusive")
+                ci, p = self.HIT[kind]
+                records.append({"id": f"ds/C:{learner}:lineage:default->{arm}:log_loss", "treatment": arm,
+                                "learner": learner, "split": "lineage", "family": "C",
+                                "estimate": 0.0 if kind == "zero" else sum(ci) / 2, "ci": ci, "p": p,
+                                "p_adj": p if arm != "cohort-path" else min(1.0, p * 20),
+                                "adjust": adjust if arm != "cohort-path" else "bh",
+                                # The cohort path's record is BH's, which a raw p of 0.01 doesn't pass.
+                                "decision": "inconclusive" if kind in ("zero", "inconclusive")
+                                or arm == "cohort-path" else kind})
+        for arm in null_study.PLANTED_ARMS:
+            for learner in run.LEARNERS:
+                records.append({"id": f"ds/C:{learner}:lineage:default->{arm}:log_loss", "treatment": arm,
+                                "learner": learner, "split": "lineage", "family": "C", "estimate": 0.3,
+                                "ci": [0.2, 0.4], "p": 1e-6, "p_adj": 1e-5, "adjust": "bh",
+                                "decision": "inconclusive" if (arm, learner) in missed else "improves"})
+        d = self.seed_folder(top, seed)
+        arms = {a: {"decisions": {}} for a in list(null_study.TWINS) + list(null_study.PLANTED_ARMS)}
+        (d / "summary.json").write_text(json.dumps({"arms": arms, "no_decision_datasets": ["ds"] if no_decision else [],
+                                                    "seconds": seed}))
+        (d / "contrasts.json").write_text(json.dumps(records))
+
+    def cal_seeds(self, top, n=100, hits=None, start=0, **kw):
+        """n seeds; `hits` maps (arm, learner, direction) to how many of them carry that decision, the directions of
+        one (arm, learner) on consecutive seeds from the first."""
+        plan = [{} for _ in range(n)]
+        used = {}
+        for (arm, learner, direction), count in (hits or {}).items():
+            first = used.get((arm, learner), 0)
+            for i in range(first, first + count):
+                plan[i][(arm, learner)] = direction
+            used[(arm, learner)] = first + count
+        for i, here in enumerate(plan):
+            self.cal_seed(top, start + i, here, **kw)
+
+    def test_the_calibration_judges_each_twin_and_learner_on_its_own_p(self):
+        """Ruling 6: per (twin, learner), at least 100 contrasts with improves + worse at most 5% and the
+        Clopper-Pearson upper bound at most 11%, each direction reported; a row zero by construction is reported
+        and not judged; the planted arms improve for every learner on every seed."""
+        hits = {("sentinel-seed-twin", "gbt", "improves"): 2, ("sentinel-seed-twin", "gbt", "worse"): 2,
+                ("sentinel-tuning-twin", "lasso", "worse"): 4, ("sentinel-tuning-twin", "gbt", "improves"): 1}
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp, hits=hits)
+            r = null_study.report([tmp], calibration=True)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                null_study.main(["report", tmp, "--calibration"])
+        gbt = r["rows"]["sentinel-seed-twin:gbt"]
+        self.assertEqual((gbt["contrasts"], gbt["improves"], gbt["worse"], gbt["rate"]), (100, 2, 2, 0.04))
+        self.assertAlmostEqual(gbt["ci95"][1], 0.0993, places=4)
+        self.assertEqual(gbt["directions"]["worse"]["rate"], 0.02)
+        self.assertTrue(gbt["judged"] and gbt["pass"])
+        self.assertTrue(r["rows"]["sentinel-seed-twin:scm"]["zero_by_construction"])
+        self.assertFalse(r["rows"]["sentinel-seed-twin:scm"]["judged"])
+        self.assertTrue(r["rows"]["cohort-path:rf"]["zero_by_construction"])
+        self.assertEqual(r["unjudged_learners"], [])
+        self.assertTrue(r["pass"], r["failed_rows"])
+        self.assertIn("sentinel-seed-twin:gbt", out.getvalue())
+        self.assertIn("calibration: seeds 100 (100 with decisions; no decision: none); pass True", out.getvalue())
+
+    def test_the_calibration_bars(self):
+        """REVIEW-ICODE-PY L6 (mutants N1 and N5) and ruling 6's bars: 6 of 100 fails (rate over 5%); 5 of 100 fails on
+        its upper bound (11.3%); 5 of 120 passes; worse alone fails; 99 contrasts fail however clean."""
+        for n, count, direction, passes in ((100, 6, "worse", False), (100, 5, "improves", False),
+                                            (120, 5, "worse", True), (100, 7, "worse", False),
+                                            (100, 4, "worse", True), (99, 0, "worse", False),
+                                            # 6% with an upper bound of 8.8%: only the 5% bar fails it (N1).
+                                            (400, 24, "improves", False)):
+            with self.subTest(n=n, count=count, direction=direction), tempfile.TemporaryDirectory() as tmp:
+                self.cal_seeds(tmp, n=n, hits={("sentinel-tuning-twin", "cart", direction): count})
+                r = null_study.report([tmp], calibration=True)
+                row = r["rows"]["sentinel-tuning-twin:cart"]
+                self.assertEqual((row["pass"], r["pass"]), (passes, passes), row)
+                self.assertEqual(r["failed_rows"], [] if passes else sorted(
+                    name for name, x in r["rows"].items() if x["judged"] and (name == "sentinel-tuning-twin:cart"
+                                                                             or n < null_study.MIN_CONTRASTS)))
+
+    def test_the_cohort_path_is_judged_on_its_own_p_not_bhs(self):
+        """The calibration's bar is on raw p for every twin: 6 cohort-path contrasts at p = 0.01 that BH left
+        inconclusive still fail its row."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp, hits={("cohort-path", "rf", "improves"): 6})
+            r = null_study.report([tmp], calibration=True)
+        row = r["rows"]["cohort-path:rf"]
+        self.assertEqual((row["improves"], row["judged"], row["pass"], r["pass"]), (6, True, False, False))
+
+    def test_a_learner_the_twins_never_reach_fails_the_calibration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp, hits={("sentinel-tuning-twin", "scm", "zero"): 100})
+            r = null_study.report([tmp], calibration=True)
+        self.assertEqual((r["unjudged_learners"], r["pass"]), (["scm"], False))
+
+    def test_a_planted_miss_on_one_seed_fails_the_calibration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp, n=99)
+            self.cal_seed(tmp, 99, missed=[("k-p", "cart")])
+            r = null_study.report([tmp], calibration=True)
+        self.assertEqual((r["planted_missed"], r["planted"]["k-p:cart"]["missed"], r["pass"]),
+                         (["k-p:cart"], ["seed-99"], False))
+        self.assertEqual(r["planted"]["k-h:cart"]["improves"], 100)
+
+    def test_a_seed_without_lineage_decisions_is_listed_and_counts_toward_no_row(self):
+        """Ruling 2 (M3): run.py exits 3 on such a seed; the seed keeps its summary, which names it."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp, n=100)
+            self.cal_seed(tmp, 100, hits={("sentinel-seed-twin", "rf"): "worse"}, no_decision=True)
+            r = null_study.report([tmp], calibration=True)
+        self.assertEqual((r["seeds"], r["seeds_with_decisions"], r["no_decision_seeds"]), (101, 100, ["seed-100"]))
+        self.assertEqual(r["rows"]["sentinel-seed-twin:rf"]["contrasts"], 100)
+        self.assertTrue(r["pass"])
+
+    def test_a_calibration_seed_counts_once_and_needs_its_sentinels_unadjusted(self):
+        """REVIEW-INPUT17 L2: one seed in two folders counts once, two different copies are refused; an empty
+        folder fails; a sentinel adjusted by BH is refused."""
+        with tempfile.TemporaryDirectory() as tmp:
+            r = null_study.report([tmp], calibration=True)
+            self.assertEqual((r["seeds"], r["pass"]), (0, False))
+            a, b = Path(tmp) / "a", Path(tmp) / "b"
+            self.cal_seeds(a, n=100)
+            self.cal_seeds(b, n=100)
+            r = null_study.report([a, b], calibration=True)
+            self.assertEqual((r["seeds"], r["rows"]["sentinel-seed-twin:rf"]["contrasts"], r["pass"]), (100, 100, True))
+            (b / "seed-3" / "summary.json").write_text(json.dumps({"arms": {}}))
+            with self.assertRaises(SystemExit) as e:
+                null_study.report([a, b], calibration=True)
+            self.assertIn("seed 3 has two different summaries", str(e.exception))
+        with tempfile.TemporaryDirectory() as tmp:
+            self.cal_seeds(tmp, n=2, adjust="bh")
             with self.assertRaises(SystemExit) as e:
                 null_study.report([tmp], calibration=True)
-        self.assertEqual(str(e.exception), "arm seed-twin: no lineage contrast was produced in any seed")
+            self.assertIn("a sentinel is judged on its own p", str(e.exception))
 
-    def test_a_spec_with_repeats_and_a_cohort_arm_is_refused(self):
-        """PR #69's review (stats.py:300): with repeats > 1 a cohort arm's subsample can differ by repeat, which J
-        can't pair; no decided spec uses repeats > 1, so such a spec is refused up front."""
-        self.assertEqual((SPEC["repeats"], json.loads((HERE / "calibration.json").read_text())["repeats"]), (1, 1))
-        spec = copy.deepcopy(SPEC)
-        spec["repeats"] = 2
-        with self.assertRaises(SystemExit) as e:
-            run.load_spec(self.write(spec))
-        # REVIEW-NULL16 I4: the refusal names the arms.
-        self.assertIn("repeats 2 with a cohort-paired arm (cap-1000, cap-4000, grr-v1)", str(e.exception))
-        spec["arms"] = [{"name": "k-h", "blocks": ["K", "H"]}, {"name": "cap-4000", "cap": 4000}]
-        with self.assertRaises(SystemExit) as e:
-            run.load_spec(self.write(spec))
-        self.assertIn("repeats 2 with a cohort-paired arm (cap-4000):", str(e.exception))
-        spec["arms"] = [{"name": "k-h", "blocks": ["K", "H"]}]
-        run.load_spec(self.write(spec))
+    def test_the_visible_share_grades_the_planted_effect_and_1_changes_nothing(self):
+        """The power curve's sizes (round 2, pre-registered): --visible V writes a carrier's blaKPC contig with
+        probability V and keeps every label; V = 1 is byte-identical to the default root."""
+        root = HERE / "synthetic_root.py"
+        with tempfile.TemporaryDirectory() as tmp:
+            def make(name, *flags):
+                subprocess.run([sys.executable, "-I", "-B", str(root), str(Path(tmp) / name), "--genomes", "200",
+                                "--seed", "5", *flags], check=True, capture_output=True)
+                return Path(tmp) / name
+
+            a, b, c = make("a"), make("b", "--visible", "1"), make("c", "--visible", "0.5")
+            files = sorted(p.relative_to(a) for p in a.rglob("*") if p.is_file())
+            self.assertEqual(files, sorted(p.relative_to(b) for p in b.rglob("*") if p.is_file()))
+            for f in files:
+                self.assertEqual((a / f).read_bytes(), (b / f).read_bytes(), f)
+            truth = {g["genome_id"]: g for g in json.loads((c / "truth.json").read_text())["genomes"]}
+            plain = {g["genome_id"]: g for g in json.loads((a / "truth.json").read_text())["genomes"]}
+            self.assertEqual({k: g["resistant"] for k, g in truth.items()}, {k: g["resistant"] for k, g in plain.items()})
+            carriers = [g for g in truth.values() if g["allele"] is not None]
+            hidden = [g for g in carriers if g["hidden"]]
+            self.assertTrue(0 < len(hidden) < len(carriers))
+            for g in carriers:
+                with gzip.open(c / "fasta" / f"{g['genome_id']}.fna.gz", "rt") as f:
+                    self.assertEqual(f.read().count(">"), 2 if g["hidden"] else 3, g["genome_id"])
+                if g["duplicate_of"]:
+                    self.assertEqual(g["hidden"], truth[g["duplicate_of"]]["hidden"])
+            for bad in ("0", "1.5"):
+                p = subprocess.run([sys.executable, "-I", "-B", str(root), str(Path(tmp) / f"x{bad}"), "--visible", bad],
+                                   capture_output=True, text=True)
+                self.assertNotEqual(p.returncode, 0)
+                self.assertIn("is not in (0, 1]", p.stderr)
+
+    def test_power_json_runs_the_two_planted_blocks_at_three_repeats(self):
+        _, default, arms = run.load_spec(HERE / "power.json")
+        self.assertEqual([(a["name"], a["blocks"]) for a in arms if not a.get("sentinel")],
+                         [("k-h", ["K", "H"]), ("k-p", ["K", "P"])])
+        self.assertEqual(json.loads((HERE / "power.json").read_text())["repeats"], 3)
+        self.assertEqual(null_study.POWER_ARMS, ("k-h", "k-p"))
+
+    def power_seed(self, top, seed, visible, improving):
+        """One power seed: k-h and k-p lineage contrasts, `improves` for the learners in `improving`."""
+        d = Path(top) / f"seed-{seed}"
+        d.mkdir(parents=True)
+        records = [{"treatment": arm, "learner": l, "split": "lineage", "family": "C", "estimate": 0.1 * visible,
+                    "decision": "improves" if l in improving else "inconclusive"}
+                   for arm in null_study.POWER_ARMS for l in run.LEARNERS]
+        (d / "contrasts.json").write_text(json.dumps(records))
+        (d / "summary.json").write_text(json.dumps({"arms": {a: {} for a in null_study.POWER_ARMS},
+                                                    "seconds": seed + visible}))
+        (d / "cohort.json").write_text(json.dumps({"seed": seed, "visible": visible}))
+
+    def test_the_power_curve_reports_the_smallest_size_detected_on_80_percent_of_seeds(self):
+        """Round 2's power curve: per arm, learner and size the detected share; the minimum detectable effect is
+        the smallest size at or over 80% (here rf at 0.25: 16 of 20; gbt only at 1, 15 of 20 at 0.5 falling
+        short; cart never)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            for v, share in ((0.125, {"rf": 10}), (0.25, {"rf": 16, "gbt": 4}), (0.5, {"rf": 20, "gbt": 15}),
+                             (1.0, {"rf": 20, "gbt": 20, "scm": 20, "lasso": 20})):
+                for i in range(20):
+                    self.power_seed(Path(tmp) / str(v), 9301 + i, v, {l for l, n in share.items() if i < n})
+            r = null_study.report([Path(tmp) / v for v in ("0.125", "0.25", "0.5", "1.0")], power=True)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                null_study.main(["report", *(str(Path(tmp) / v) for v in ("0.125", "0.25", "0.5", "1.0")), "--power"])
+        self.assertEqual(r["sizes"], [0.125, 0.25, 0.5, 1.0])
+        m = r["minimum_detectable"]
+        self.assertEqual((m["k-h:rf"]["visible"], m["k-h:rf"]["share"]), (0.25, 0.8))
+        self.assertEqual(m["k-h:gbt"]["visible"], 1.0)
+        self.assertAlmostEqual(m["k-h:gbt"]["mean_estimate"], 0.1)
+        self.assertIsNone(m["k-p:cart"])
+        self.assertIn("minimum detectable k-p:cart: above every tested size", out.getvalue())
+        with self.assertRaises(SystemExit):
+            null_study.main(["report", tmp, "--power", "--calibration"])
+
+    def test_repeats_with_a_cohort_arm_load_and_bad_repeats_are_refused(self):
+        """Ruling 1 reverses PR #69's refusal (run.py:184): cohort arms pair per repeat, so the decided spec and the
+        calibration run 3 lineage repeats with their cohort arms."""
+        self.assertEqual((SPEC["repeats"], json.loads((HERE / "calibration.json").read_text())["repeats"]), (3, 3))
+        _, _, arms = run.load_spec(HERE / "spec.json")
+        self.assertIn("cap-1000", [a["name"] for a in arms])
+        for bad in (0, 2.0, "3", True):
+            spec = copy.deepcopy(SPEC)
+            spec["repeats"] = bad
+            with self.assertRaises(SystemExit, msg=bad) as e:
+                run.load_spec(self.write(spec))
+            self.assertIn("is not a positive integer", str(e.exception))
+        self.assertEqual((run.split_repeats(SPEC, "lineage"), run.split_repeats(SPEC, "random")), (3, 1))
 
     def test_summary_keeps_unreliable_and_descriptive_rows_out_of_its_decisions(self):
         """REVIEW-INPUT M14: summary.json's override of flagged contrasts."""
@@ -1380,21 +1482,192 @@ ids = [f"g{i:03d}" for i in range(50)]
         quiet = run.summarize(SPEC, [arm], rows, {}, [])["k-h"]
         self.assertTrue(quiet["any_improves"])
 
-    def test_the_calibration_arms_change_no_input(self):
+    def test_the_calibration_arms_change_no_input_and_the_planted_arms_only_blocks(self):
         _, default, arms = run.load_spec(HERE / "calibration.json")
         self.assertEqual([(a["name"], a["factor"], a["pairing"]) for a in arms],
                          [("cohort-path", "calibration", "common_outer_test_set_balanced"),
-                          ("seed-twin", "calibration", "same_plan"),
-                          ("sentinel-seed-twin", "calibration", "same_plan")])
+                          ("k-h", "blocks", "same_plan"), ("k-p", "blocks", "same_plan"),
+                          ("k-c-h-p", "blocks", "same_plan"),
+                          ("sentinel-seed-twin", "calibration", "same_plan"),
+                          ("sentinel-tuning-twin", "calibration", "same_plan")])
+        self.assertEqual(set(null_study.TWINS), {a["name"] for a in arms if a["factor"] == "calibration"})
+        self.assertEqual(null_study.PLANTED_ARMS, tuple(a["name"] for a in arms if a["factor"] == "blocks"))
         for a in arms:
             self.assertEqual(run.root_key(a), run.root_key(default))
-            self.assertEqual((a["blocks"], a["screened_features"], a["k"]), (["K"], 4000, 31))
+            self.assertEqual((a["screened_features"], a["k"]), (4000, 31))
+            if a["factor"] == "calibration":
+                self.assertEqual(a["blocks"], ["K"])
         for bad in ({"name": "x", "calibration": "cohort_path"}, {"name": "x", "calibration": "other", "seed": 1},
-                    {"name": "x", "calibration": "learner_seed", "learner_seed": 1, "cap": 1000}):
+                    {"name": "x", "calibration": "learner_seed", "learner_seed": 1, "cap": 1000},
+                    {"name": "x", "calibration": "tuning_seed", "tuning_seed": "7"}):
             spec = copy.deepcopy(SPEC)
             spec["arms"] = [bad]
             with self.assertRaises(SystemExit, msg=bad):
                 run.load_spec(self.write(spec))
+
+    def stub_work(self, tmp, arms, refuse_lineage=False, pairing_error=None):
+        """WORK/arms/<arm>/ds/{runs.json,predictions.jsonl} as `grm arm` writes them, for run.contrasts(): every
+        arm scores 40 genomes (20 lineages of 2, one of each class) in 5 folds per repeat, 3 lineage repeats and 1
+        random; k-h's scores move towards the label. refuse_lineage makes the default's lineage runs unavailable;
+        pairing_error moves one of that arm's rows to another fold."""
+        work = Path(tmp)
+        for name in ["default"] + [a["name"] for a in arms]:
+            out = work / "arms" / name / "ds"
+            out.mkdir(parents=True)
+            rows, runs = [], []
+            for split, repeats in (("random", 1), ("lineage", 3)):
+                for learner in run.LEARNERS:
+                    down = refuse_lineage and name == "default" and split == "lineage"
+                    runs.append({"arm": name, "learner": learner, "split": split, "status":
+                                 "unavailable" if down else "ok", "reason": "the gbt holdout lacks a class" if down
+                                 else None})
+                    for r in range(repeats):
+                        for i in range(40):
+                            y, fold = i % 2, (i // 2 + r) % 5
+                            score = 0.5 + 0.1 * (y - 0.5) + 0.01 * ((i * 7 + r) % 5)
+                            if name == "k-h":
+                                score += 0.2 * (y - 0.5) + 0.01 * ((i + r * 3) % 4)
+                            if name == pairing_error and i == 0 and r == 0:
+                                fold = (fold + 1) % 5
+                            rows.append({"dataset": "ds", "arm": name, "learner": learner, "split": split,
+                                         "repeat": r, "sample_id": f"g{i:02d}", "y": y, "fold": fold,
+                                         "score": score, "called": score >= 0.5, "cluster": i // 2,
+                                         "fold_plan_sha256": f"{split}{r}" * 8})
+            (out / "runs.json").write_text(json.dumps(runs))
+            (out / "predictions.jsonl").write_text("".join(json.dumps(x) + "\n" for x in rows))
+        return work
+
+    def stub_arms(self):
+        spec = {**SPEC, "arms": [{"name": "k-h", "blocks": ["K", "H"]}], "datasets": [{"id": "ds",
+                                                                                       "partition": "confirmatory"}]}
+        _, _, arms = run.load_spec(self.write(spec))
+        return spec, arms
+
+    def test_contrasts_decide_on_the_lineage_unit_t_and_describe_the_random_split(self):
+        """REVIEW-ICODE-PY L6 (R1 survived every CI suite): through run.contrasts, random-split contrasts are family
+        D (no p, no decision) and lineage ones family C by the (repeat, fold) unit t over 15 units; the sentinels'
+        are judged on their own p, outside BH."""
+        spec, arms = self.stub_arms()
+        with tempfile.TemporaryDirectory() as tmp:
+            records, planned, missing = run.contrasts(spec, arms, self.stub_work(tmp, arms))
+        self.assertEqual((len(planned), missing), (3 * 5 * 2, {}))
+        for x in records:
+            if x["split"] == "random":
+                self.assertEqual((x["family"], x["p"], x["decision"], x["n_units"]), ("D", None, "inconclusive", 5))
+            else:
+                self.assertEqual((x["family"], x["unit"], x["n_units"], x["ci_method"]),
+                                 ("C", "repeat_fold", 15, "repeat_fold_corrected_t"))
+                self.assertEqual(x["adjust"], "none" if x["treatment"].startswith("sentinel-") else "bh")
+        decided = {(x["treatment"], x["learner"]): x["decision"] for x in records if x["split"] == "lineage"}
+        self.assertEqual({d for (arm, _), d in decided.items() if arm == "k-h"}, {"improves"})
+        self.assertEqual({d for (arm, _), d in decided.items() if arm != "k-h"}, {"inconclusive"})
+        self.assertEqual(run.decisions_made(spec, arms, records), {"ds": 5})
+
+    def test_a_refused_pairing_reaches_missing_through_contrasts(self):
+        """REVIEW-ICODE-PY L6 (mutant R14): J's PairingError on one arm becomes that contrast's not-produced reason;
+        the rest of the run is still decided."""
+        spec, arms = self.stub_arms()
+        with tempfile.TemporaryDirectory() as tmp:
+            records, planned, missing = run.contrasts(spec, arms, self.stub_work(tmp, arms, pairing_error="k-h"))
+        self.assertEqual(sorted(missing), sorted(p for p in planned if "->k-h:" in p))
+        self.assertTrue(all(reason.startswith("pairing refused: fold:") for reason in missing.values()))
+        self.assertEqual(len(records), len(planned) - len(missing))
+
+    def test_a_dataset_without_a_lineage_decision_fails_the_run(self):
+        """Ruling 2 after VERIFY-H1STATS (REVIEW-ICODE-PY M3): with the default's lineage plan refused every lineage
+        contrast is not produced; decisions_made is 0, the summary names the dataset, and the run exits 3."""
+        spec, arms = self.stub_arms()
+        with tempfile.TemporaryDirectory() as tmp:
+            records, planned, missing = run.contrasts(spec, arms, self.stub_work(tmp, arms, refuse_lineage=True))
+        made = run.decisions_made(spec, arms, records)
+        self.assertEqual(made, {"ds": 0})
+        self.assertEqual(len(missing), 3 * 5)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as e:
+            run.check_decisions({"no_decision_datasets": ["ds"]})
+        self.assertEqual(e.exception.code, run.NO_DECISIONS_EXIT)
+        self.assertIn("FAILED: no decision-bearing lineage contrast for ds", err.getvalue())
+        run.check_decisions({"no_decision_datasets": []})
+        # Sentinel contrasts don't count as decisions.
+        self.assertEqual(run.decisions_made(spec, arms, [x for x in records if x["treatment"].startswith("sentinel")]),
+                         {"ds": 0})
+
+
+class Stage2Tests(unittest.TestCase):
+    """D3 as amended by main's ruling 5 after VERIFY-H1STATS: the entry rule and the stage-2 arms."""
+
+    def record(self, arm, learner, decision="inconclusive", ci=(-0.01, 0.01), auroc_ci=(-0.01, 0.01), estimate=None):
+        return {"dataset": "ds", "treatment": arm, "learner": learner, "split": "lineage", "family": "C",
+                "decision": decision, "ci": list(ci), "auroc_ci": None if auroc_ci is None else list(auroc_ci),
+                "estimate": sum(ci) / 2 if estimate is None else estimate}
+
+    def report(self, records, unreliable=()):
+        return {"manifest": {"datasets": [{"id": "ds", "species": "S"}]}, "contrasts": records,
+                "unreliable": [{"species": "S", "learner": l} for l in unreliable]}
+
+    def test_entry_needs_the_margin_and_a_positive_auroc_interval_on_a_reliable_learner_and_no_worse(self):
+        good = dict(decision="improves", ci=(0.025, 0.06), auroc_ci=(0.002, 0.02))
+        cases = (
+            ([self.record("a", "rf", **good)], (), True),
+            ([self.record("a", "rf", "improves", (0.01, 0.06), (0.002, 0.02))], (), False),  # inside the margin
+            ([self.record("a", "rf", "improves", (0.025, 0.06), (-0.001, 0.02))], (), False),  # AUROC may be 0
+            ([self.record("a", "rf", "improves", (0.025, 0.06), None)], (), False),  # AUROC undefined
+            ([self.record("a", "rf", **good), self.record("a", "gbt", "worse", (-0.06, -0.025))], (), False),
+            ([self.record("a", "rf", **good), self.record("a", "gbt", "worse", (-0.06, -0.025))], ("gbt",), True),
+            ([self.record("a", "rf", **good)], ("rf",), False),  # only an unreliable learner clears
+        )
+        for records, unreliable, enters in cases:
+            r = self.report(records, unreliable)
+            ok, why = stage2.entry("a", "ds", r["contrasts"], r["unreliable"], {"ds": "S"}, 0.02)
+            self.assertEqual(ok, enters, (records, unreliable, why))
+
+    def stage1(self, arms):
+        spec = copy.deepcopy(SPEC)
+        spec["datasets"] = [{"id": "ds", "partition": "confirmatory"}]
+        spec["arms"] = arms
+        return self.stage1_write(spec), spec
+
+    def test_stage2_arms_take_the_block_union_and_one_winner_per_input(self):
+        arms = [{"name": "k-h", "blocks": ["K", "H"]}, {"name": "k-p", "blocks": ["K", "P"]},
+                {"name": "k-c", "blocks": ["K", "C"]}, {"name": "cap-1000", "cap": 1000},
+                {"name": "cap-4000", "cap": 4000}, {"name": "budget-1000", "screened_features": 1000},
+                {"name": "budget-16000", "screened_features": 16000}, {"name": "k21", "k": 21}]
+        path, spec = self.stage1(arms)
+
+        def enters(arm, estimate):
+            return self.record(arm, "rf", "improves", (0.025, 0.06), (0.002, 0.02), estimate=estimate)
+
+        # k-c doesn't enter; both caps enter, cap-4000 with the larger gain; both budgets tie on gain, so the one
+        # nearer the default's 4000 wins (budget-1000, 3000 away, against 12000); k21 needs the k add-on.
+        records = [enters("k-h", 0.04), enters("k-p", 0.03), self.record("k-c", "rf"), enters("cap-1000", 0.03),
+                   enters("cap-4000", 0.05), enters("budget-1000", 0.04), enters("budget-16000", 0.04),
+                   enters("k21", 0.04)]
+        out = stage2.stage2_arms(path, self.report(records))["ds"]
+        self.assertEqual(out["entered"], ["k-h", "k-p", "cap-1000", "cap-4000", "budget-1000", "budget-16000"])
+        self.assertIn("k joins only when the k add-on ran", out["entries"]["k21"])
+        self.assertEqual(out["arms"], [{"name": "s2-blocks", "blocks": ["K", "H", "P"]},
+                                       {"name": "s2-cap-4000", "blocks": ["K", "H", "P"], "cap": 4000},
+                                       {"name": "s2-budget-1000", "blocks": ["K", "H", "P"],
+                                        "screened_features": 1000}])
+        with_k = stage2.stage2_arms(path, self.report(records), k_addon=True)["ds"]["arms"]
+        self.assertIn({"name": "s2-k21", "blocks": ["K", "H", "P"], "k": 21}, with_k)
+        # A stage-2 spec of these arms loads, each with the other input's pairing.
+        s2 = {**spec, "stage": 2, "arms": with_k}
+        _, _, loaded = run.load_spec(self.stage1_write(s2))
+        self.assertEqual({a["name"]: a["pairing"] for a in loaded if not a.get("sentinel")},
+                         {"s2-blocks": "same_plan", "s2-cap-4000": "common_outer_test_set_balanced",
+                          "s2-budget-1000": "same_plan", "s2-k21": "k31_groups"})
+        # Equal gain and distance: the smaller budget wins.
+        self.assertEqual(stage2.winner("budget", [(0.04, {"name": "b", "screened_features": 6000}),
+                                                  (0.04, {"name": "a", "screened_features": 2000})],
+                                       {"screened_features": 4000})["name"], "a")
+
+    def stage1_write(self, spec):
+        f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump(spec, f)
+        f.close()
+        self.addCleanup(os.unlink, f.name)
+        return f.name
 
 
 @unittest.skipUnless(os.environ.get("GRM_INPUT_E2E_BINARY"), "set GRM_INPUT_E2E_BINARY to a grm release binary")
@@ -1445,7 +1718,7 @@ class EndToEndTests(unittest.TestCase):
 
     def test_every_planned_contrast_is_produced(self):
         counts = self.report["contrast_counts"]
-        self.assertEqual(counts["planned"], 12 * 5 * 2)  # 11 arms and the sentinel
+        self.assertEqual(counts["planned"], 13 * 5 * 2)  # 11 arms and the two sentinels
         self.assertEqual(counts["not_produced"], 0, self.report["not_produced"])
         self.assertTrue((self.work / "report" / "ablation-report.md").exists())
 
@@ -1472,14 +1745,46 @@ class EndToEndTests(unittest.TestCase):
                 self.assertIsNotNone(x["estimate"], x["id"])
             else:
                 self.assertEqual(x["family"], "C", x["id"])
-        self.assertEqual(self.report["manifest"]["sentinel_arms"], ["sentinel-seed-twin"])
+        m = self.report["manifest"]
+        self.assertEqual(m["sentinel_arms"], ["sentinel-seed-twin", "sentinel-tuning-twin"])
+        self.assertEqual(m["sentinel_learners"], {"sentinel-seed-twin": ["rf", "gbt"],
+                                                  "sentinel-tuning-twin": ["scm", "cart", "lasso"]})
         flagged = {(u["learner"]) for u in self.report["unreliable"]}
-        sentinel = self.summary["arms"]["sentinel-seed-twin"]["raw_decisions"]
-        for learner in ("scm", "cart", "rf", "gbt", "lasso"):
-            quiet = sentinel[f"salmonella_enterica__meropenem:{learner}:lineage"] == "inconclusive"
-            self.assertEqual(learner in flagged, not quiet, learner)
+        for arm, learners in m["sentinel_learners"].items():
+            sentinel = self.summary["arms"][arm]["raw_decisions"]
+            for learner in learners:
+                quiet = sentinel[f"salmonella_enterica__meropenem:{learner}:lineage"] == "inconclusive"
+                self.assertEqual(learner in flagged, not quiet, learner)
         self.assertIn("### Random split: descriptive only",
                       (self.work / "report" / "ablation-report.md").read_text())
+
+    def test_the_lineage_split_repeats_three_times_and_each_twin_draws_per_repeat(self):
+        """Main's rulings 1 to 3 after VERIFY-H1STATS through the real grm: 3 keyed lineage repeats and 1 random;
+        every lineage contrast is the (repeat, fold) unit t over 15 units; the retuned twin keeps the default's outer
+        folds and redraws its inner folds in every repeat; the sentinels sit outside BH."""
+        ds = "salmonella_enterica__meropenem"
+        default = self.work / "arms" / "default" / ds
+        runs = {(u["learner"], u["split"]): u for u in json.loads((default / "runs.json").read_text())}
+        self.assertEqual({(u["split"], u["repeats"], len(u["fold_plan_sha256"])) for u in runs.values()},
+                         {("random", 1, 1), ("lineage", 3, 3)})
+        draws = {d["split"]: d for d in json.loads((default / "repeats.json").read_text())}
+        self.assertEqual((len(draws["lineage"]["drawn"]), draws["random"]["drawn"]), (3, [0]))
+        self.assertLessEqual(len(draws["lineage"]["refused"]), 2)
+        twin = self.work / "arms" / "sentinel-tuning-twin" / ds / "plans"
+        moved = 0
+        for slot in range(3):
+            base = json.loads((default / "plans" / f"lineage-{slot}.json").read_text())["plan"]
+            retuned = json.loads((twin / f"lineage-{slot}.retuned.json").read_text())
+            self.assertEqual((retuned["tuning_seed"], retuned["plan"]["outer"], retuned["plan"]["repeat"]),
+                             (1002, base["outer"], base["repeat"]))
+            moved += retuned["plan"]["inner"] != base["inner"]
+        self.assertEqual(moved, 3)
+        for x in self.report["contrasts"]:
+            if x["split"] == "lineage" and x["estimate"] is not None:
+                self.assertEqual((x["unit"], x["n_units"], x["ci_method"]), ("repeat_fold", 15, "repeat_fold_corrected_t"))
+                self.assertEqual(x["adjust"], "none" if x["treatment"].startswith("sentinel-") else "bh", x["id"])
+        self.assertEqual(self.summary["no_decision_datasets"], [])
+        self.assertGreater(self.summary["decisions_made"][ds], 0)
 
     def default_root(self):
         (root,) = [r for r in (self.work / "roots").iterdir()
@@ -1820,8 +2125,9 @@ class EndToEndTests(unittest.TestCase):
         plans = self.work / "arms" / "default" / ds / "plans"
         rows = [json.loads(l) for l in (self.work / "arms" / "default" / ds / "predictions.jsonl").read_text()
                 .splitlines() if l.strip()]
-        for split in ("random", "lineage"):
-            pf = json.loads((plans / f"{split}-0.json").read_text())
+        # Every slot's plan: the random split's one and each lineage repeat's (its keyed repeat may be a replacement).
+        for split, slot in [("random", 0)] + [("lineage", r) for r in range(SPEC["repeats"])]:
+            pf = json.loads((plans / f"{split}-{slot}.json").read_text())
             ids, plan = pf["sample_ids"], pf["plan"]
             self.assertEqual(plan["format"], "grm-fold-plan-keyed-v1")
             unit = list(ids)
@@ -1837,7 +2143,7 @@ class EndToEndTests(unittest.TestCase):
                         unit[i] = low
             outer = [keyed(u, plan["repeat_seed"], "outer") % plan["k"] for u in unit]
             self.assertEqual(outer, plan["outer"], split)
-            folds = {r["sample_id"]: r["fold"] for r in rows if r["split"] == split}
+            folds = {r["sample_id"]: r["fold"] for r in rows if r["split"] == split and r["repeat"] == slot}
             self.assertEqual(folds, dict(zip(ids, outer)), split)
             for f in range(plan["k"]):
                 seed = (plan["repeat_seed"] + 101 * f) % 2 ** 64
@@ -1897,7 +2203,8 @@ class EndToEndTests(unittest.TestCase):
             out = Path(tmp) / "arm"
             groups = json.loads((self.work / "species-groups.json").read_text())["structure"]
             subprocess.run([args.grm, "--data", str(root), "arm", "--species", "salmonella_enterica", "--dataset", ds,
-                            "--arm", "default", "--blocks", "K", "--groups", groups, "--out", str(out)],
+                            "--arm", "default", "--blocks", "K", "--repeats", str(SPEC["repeats"]), "--groups", groups,
+                            "--out", str(out)],
                            check=True, capture_output=True)
             mine = self.work / "arms" / "default" / ds
             self.assertEqual((out / "predictions.jsonl").read_bytes(), (mine / "predictions.jsonl").read_bytes())

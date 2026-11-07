@@ -1148,6 +1148,79 @@ pub fn keyed_fold_plan(
     Ok(plan)
 }
 
+/// The input comparison's retuned twin of a keyed plan (main's ruling 3
+/// after VERIFY-H1STATS): `reference`'s outer folds as they are, with every
+/// outer fold's inner folds and both tuning holdouts drawn again by
+/// `keyed_tuning`, seeded `fold_seed(repeat_seed(tuning_seed, repeat), f)`
+/// in place of `fold_seed(reference.repeat_seed, f)`, on the same unit keys
+/// (`unit_keys(ids, groups, scheme)`, as `keyed_fold_plan` drew them). Draw
+/// `draw` > 0 is a replacement for a refused draw: it seeds from
+/// `repeat_seed(repeat_seed(tuning_seed, repeat), draw)`, which is the first
+/// form at draw 0 (main's ruling after the first calibration failed). The
+/// reference's own draw is the case `tuning_seed == reference.seed`, so the
+/// twin is another draw of the same procedure: exchangeable with the
+/// reference, it changes only what scm and cart tune on, the lasso's
+/// penalty holdout and gbt's stopping holdout. A draw that `keyed_tuning`
+/// refuses is returned with its reason, as `keyed_fold_plan` does.
+pub fn retuned_plan(
+    reference: &FoldPlan,
+    ids: &[String],
+    y: &Bits,
+    groups: &GroupIds,
+    tuning_seed: u64,
+    draw: u32,
+) -> Result<FoldPlan> {
+    reference.verify()?;
+    ensure!(
+        reference.is_available(),
+        "the reference plan cannot be scored: {}",
+        reference.unavailable_reason.as_deref().unwrap_or("")
+    );
+    let n = reference.outer.len();
+    ensure!(
+        ids.len() == n && y.len() == n && groups.len() == n,
+        "retuned plan dimensions differ: {} ids, {} labels, {} samples with group ids, a plan over {n}",
+        ids.len(),
+        y.len(),
+        groups.len()
+    );
+    let units = unit_keys(ids, groups, reference.scheme);
+    let drawn = repeat_seed(repeat_seed(tuning_seed, reference.repeat), draw);
+    let nested = || -> Result<NestedPlan> {
+        let (mut inner, mut holdouts) = (Vec::new(), Vec::new());
+        for (fi, (train, _)) in fold_masks(&reference.outer, reference.k)
+            .into_iter()
+            .enumerate()
+        {
+            let (folds, held) = keyed_tuning(
+                &units,
+                y,
+                &train,
+                reference.inner_k,
+                fold_seed(drawn, fi),
+                reference.scheme,
+                fi,
+            )?;
+            inner.push(folds);
+            holdouts.push(held);
+        }
+        Ok((inner, holdouts))
+    };
+    let (inner, holdouts, unavailable_reason) = match nested() {
+        Ok((inner, holdouts)) => (inner, holdouts, None),
+        Err(error) => (vec![], vec![], Some(format!("{error:#}"))),
+    };
+    let mut plan = FoldPlan {
+        inner,
+        holdouts,
+        unavailable_reason,
+        sha256: String::new(),
+        ..reference.clone()
+    };
+    plan.sha256 = plan.compute_sha256()?;
+    Ok(plan)
+}
+
 type NestedPlan = (Vec<Vec<Option<usize>>>, Vec<TuningHoldouts>);
 
 /// The inner folds and tuning holdouts of every outer fold, after the checks
@@ -1719,6 +1792,56 @@ mod tests {
             "{why}"
         );
         p.verify().unwrap();
+    }
+
+    /// The retuned twin keeps every outer fold and redraws only inner folds
+    /// and holdouts; at the reference's own seed it is the reference, so it
+    /// is another draw of one procedure (main's ruling 3 after VERIFY-H1STATS).
+    #[test]
+    fn a_retuned_plan_keeps_the_outer_folds_and_redraws_tuning() {
+        let n = 400;
+        let ids: Vec<String> = (0..n).map(|i| format!("g{i:03}")).collect();
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let groups = GroupIds::new((0..n as u32).map(|i| i / 10).collect(), vec![], None).unwrap();
+        let cases = [(Lineage, 0), (Lineage, 2), (Random, 0)];
+        let available = |seed: u64| {
+            cases.iter().all(|&(scheme, repeat)| {
+                let r = keyed_fold_plan(&ids, &y, &groups, scheme, 5, 3, seed, repeat).unwrap();
+                r.is_available()
+                    && retuned_plan(&r, &ids, &y, &groups, 1002, 0)
+                        .unwrap()
+                        .is_available()
+            })
+        };
+        let seed = (0..500u64)
+            .find(|&s| available(s))
+            .expect("a seed whose plans and twins are all available");
+        for (scheme, repeat) in cases {
+            let r = keyed_fold_plan(&ids, &y, &groups, scheme, 5, 3, seed, repeat).unwrap();
+            let same = retuned_plan(&r, &ids, &y, &groups, seed, 0).unwrap();
+            assert_eq!(
+                same, r,
+                "{scheme} repeat {repeat}: the reference's own seed"
+            );
+            let t = retuned_plan(&r, &ids, &y, &groups, 1002, 0).unwrap();
+            t.verify().unwrap();
+            assert!(t.is_available(), "{:?}", t.unavailable_reason);
+            assert_eq!(
+                (&t.outer, t.repeat, t.repeat_seed),
+                (&r.outer, r.repeat, r.repeat_seed)
+            );
+            assert_ne!(t.inner, r.inner, "{scheme} repeat {repeat}");
+            assert_ne!(t.holdouts, r.holdouts, "{scheme} repeat {repeat}");
+            assert_ne!(t.sha256, r.sha256);
+            // A replacement draw is another keyed draw of the same outer folds.
+            let again = retuned_plan(&r, &ids, &y, &groups, 1002, 1).unwrap();
+            assert_eq!(again.outer, r.outer);
+            assert_ne!(again.inner, t.inner, "{scheme} repeat {repeat}: draw 1");
+        }
+        // A refused reference has nothing to retune.
+        let few = GroupIds::new((0..n as u32).map(|i| i % 9).collect(), vec![], None).unwrap();
+        let refused = keyed_fold_plan(&ids, &y, &few, Lineage, 5, 3, 42, 0).unwrap();
+        assert!(retuned_plan(&refused, &ids, &y, &few, 1002, 0).is_err());
     }
 
     #[test]

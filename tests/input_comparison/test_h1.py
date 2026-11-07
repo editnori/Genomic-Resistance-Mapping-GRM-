@@ -811,7 +811,7 @@ class H1SpecTests(unittest.TestCase):
             _, default, arms = self.load(name)
             self.assertEqual(default["k"], 31)
             self.assertFalse([a["name"] for a in arms if a["factor"] == "k"], name)
-            self.assertEqual(arms[-1]["name"], run.SENTINEL["name"])
+            self.assertEqual([a["name"] for a in arms if a.get("sentinel")], [x["name"] for x in run.SENTINELS])
             for d in s["datasets"]:
                 self.assertEqual(d["partition"], "confirmatory", (name, d))
                 self.assertTrue(d["id"].startswith(s["species"] + "__"), (name, d))
@@ -868,8 +868,8 @@ class H1SpecTests(unittest.TestCase):
                                                    "partition": "confirmatory"}]))
         _, _, arms = self.load("pilot.json")
         self.assertEqual([(a["name"], a["factor"]) for a in arms],
-                         [("grr-v1", "cohort"), ("k-c-h-p", "blocks"), ("budget-16000", "budget"),
-                          ("sentinel-seed-twin", "calibration")])
+                         [("grr-v1", "selection"), ("k-c-h-p", "blocks"), ("budget-16000", "budget"),
+                          ("sentinel-seed-twin", "calibration"), ("sentinel-tuning-twin", "calibration")])
         full = self.specs()["h1-salmonella_enterica.json"]
         self.assertEqual(s["pool_budget"], full["pool_budget"])
 
@@ -984,7 +984,8 @@ class CombineEndToEndTests(unittest.TestCase):
 
     def test_both_datasets_are_decided_and_each_part_ran_one(self):
         report = json.loads((self.combined / "report" / "ablation-report.json").read_text())
-        self.assertEqual(report["contrast_counts"]["planned"], 2 * 3 * 5 * 2)  # 2 datasets, 2 arms and the sentinel
+        # 2 datasets, 2 arms and the two sentinels.
+        self.assertEqual(report["contrast_counts"]["planned"], 2 * 4 * 5 * 2)
         self.assertEqual(report["contrast_counts"]["not_produced"], 0, report["not_produced"])
         for work, d in zip(self.works, self.DATASETS):
             self.assertEqual(sorted(p.name for p in (work / "arms" / "default").iterdir()), [d])

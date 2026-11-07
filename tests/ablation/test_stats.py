@@ -6,6 +6,7 @@ repo's copy once K is merged, else the file named by GRM_TASK_K_SCHEMA.
 import importlib.util
 import itertools
 import json
+import math
 import os
 import sys
 import types
@@ -833,7 +834,294 @@ def k_cases():
 
 
 @unittest.skipIf(K_SCHEMA is None, "Task K's schema.py not found; set GRM_TASK_K_SCHEMA to its path")
+def unit_rows(repeats=3, folds=5, per_fold=8, seed=0, gap=0.0, shift=0.0):
+    """Two arms on `repeats` plans: per repeat, samples 2c and 2c + 1 (one of each class, cluster c) share outer
+    fold (c + repeat) % folds. The treatment moves scores towards y by gap plus a per-(repeat, fold) shift."""
+    rng = np.random.default_rng(seed)
+    n = folds * per_fold
+    rows = []
+    for r in range(repeats):
+        moves = rng.normal(0, shift, folds) if shift else np.zeros(folds)
+        for i in range(n):
+            y, fold = i % 2, (i // 2 + r) % folds
+            base = float(np.clip(0.5 + 0.2 * (y - 0.5) + rng.normal(0, 0.1), 0.01, 0.99))
+            treat = float(np.clip(base + (gap + moves[fold]) * (y - 0.5), 0.01, 0.99))
+            for arm, score in (("base", base), ("treat", treat)):
+                rows.append({"dataset": "ds", "arm": arm, "learner": "lr", "split": "lineage", "repeat": r,
+                             "sample_id": f"s{i:03d}", "y": y, "fold": fold, "score": score,
+                             "called": score >= 0.5, "fold_plan_sha256": f"plan{r}", "cluster": f"c{i // 2}"})
+    return rows
+
+
+def pair_units(rows, pairing="same_plan"):
+    return stats.pair_units(rows, dataset="ds", learner="lr", split="lineage", baseline="base", treatment="treat",
+                            pairing=pairing)
+
+
+class UnitTTests(unittest.TestCase):
+    """The input comparison's test (main's rulings 1 to 4 after VERIFY-H1STATS): a paired t over the
+    (repeat, outer fold) unit means, cohort arms paired per repeat, sentinels outside BH and one BH family
+    over several contrast sets."""
+
+    def test_the_unit_t_is_the_corrected_resampled_t_over_repeat_fold_means(self):
+        """The pre-registered test (docs, round 2): SE = sqrt((1/J + rho) s^2), rho the mean of each unit's
+        n_test / n_train, df J - 1 = 14. Here every unit pairs 8 genomes and its fold trains on the repeat's
+        other 32, so rho = 0.25."""
+        rows = unit_rows(gap=0.05, shift=0.02, seed=3)
+        paired = pair_units(rows)
+        self.assertEqual(len(paired.units), 15)
+        # Each unit's mean log-loss delta, from the rows alone.
+        by_unit = {}
+        for b, t in zip((r for r in rows if r["arm"] == "base"), (r for r in rows if r["arm"] == "treat")):
+            d = (stats.sample_log_loss(np.array([b["y"]]), np.array([b["score"]]))
+                 - stats.sample_log_loss(np.array([t["y"]]), np.array([t["score"]])))[0]
+            by_unit.setdefault((b["repeat"], b["fold"]), []).append(d)
+        means = np.array([np.mean(v) for v in by_unit.values()])
+        record, = stats.compare_units(paired, family="C", margins=MARGINS, development=())
+        np.testing.assert_array_equal(paired.unit_ratio, np.full(15, 8 / 32))
+        se = math.sqrt((1 / 15 + 0.25) * means.var(ddof=1))
+        self.assertAlmostEqual(record["estimate"], means.mean(), places=12)
+        # Student t at df 14 from published tables: 2.1447866879 (0.975) and 1.7613101358 (0.95).
+        np.testing.assert_allclose(record["ci"], [means.mean() - 2.1447866879 * se, means.mean() + 2.1447866879 * se],
+                                   rtol=0, atol=1e-9)
+        np.testing.assert_allclose(record["ci_tost"], [means.mean() - 1.7613101358 * se,
+                                                       means.mean() + 1.7613101358 * se], rtol=0, atol=1e-9)
+        self.assertEqual((record["unit"], record["n_units"], record["ci_method"], record["few_clusters"]),
+                         ("repeat_fold", 15, "repeat_fold_corrected_t", False))
+        self.assertEqual(record["interval_label"], stats.UNIT_INTERVAL_LABEL)
+        out, = stats.finalize([record], [record["id"]])
+        self.assertEqual(out["decision"], "improves")
+
+    def test_the_unit_t_p_is_students(self):
+        # Unit values whose t is the 0.975 quantile at df 14 give p = 0.05; at the 0.995 quantile, 0.01.
+        for q, want in ((2.1447866879, 0.05), (2.9768427343, 0.01)):
+            base = np.array([1.0, -1.0] * 7 + [0.0])
+            se = base.std(ddof=1) / math.sqrt(15)
+            mean, ci, tost, p = stats.unit_t(base + q * se)
+            self.assertAlmostEqual(p, want, places=8)
+            # At p = 0.05 the 95% interval ends at zero.
+            self.assertAlmostEqual(ci[0], 0.0 if want == 0.05 else (q - 2.1447866879) * se, places=9)
+        self.assertEqual(stats.unit_t(np.zeros(15)), (0.0, [0.0, 0.0], [0.0, 0.0], 1.0))
+        self.assertIsNone(stats.unit_t(np.full(15, 0.1)))
+        with self.assertRaises(ValueError):
+            stats.unit_t([0.1])
+
+    def test_a_twin_with_identical_scores_is_inconclusive_at_p_one(self):
+        rows = unit_rows()
+        scores = {(r["repeat"], r["sample_id"]): r["score"] for r in rows if r["arm"] == "base"}
+        for r in rows:
+            r["score"] = scores[(r["repeat"], r["sample_id"])]
+            r["called"] = r["score"] >= 0.5
+        record, = stats.compare_units(pair_units(rows), family="C", margins=MARGINS, development=())
+        self.assertEqual((record["estimate"], record["ci"], record["p"]), (0.0, [0.0, 0.0], 1.0))
+        self.assertEqual((record["auroc_delta"], record["auroc_ci"]), (0.0, [0.0, 0.0]))
+        self.assertEqual(stats.finalize([record], [record["id"]])[0]["decision"], "inconclusive")
+
+    def test_one_unit_is_undefined_and_family_d_carries_no_p(self):
+        rows = [r for r in unit_rows(repeats=1) if r["fold"] == 0]
+        for r in rows:
+            r["fold"] = 0
+        # One fold leaves no training samples, which the pairing refuses.
+        with self.assertRaises(stats.PairingError):
+            pair_units(rows)
+        record, = stats.compare_units(pair_units(unit_rows(repeats=1, gap=0.1)), family="D", margins=MARGINS,
+                                      development=())
+        self.assertEqual((record["n_units"], record["p"]), (5, None))
+        self.assertIsNotNone(record["ci"])
+        out, = stats.finalize([record], [record["id"]])
+        self.assertEqual((out["decision"], out["adjust"]), ("inconclusive", "none"))
+
+    def test_the_auroc_delta_is_the_unit_mean_with_its_t_interval(self):
+        paired = pair_units(unit_rows(gap=0.1, shift=0.05, seed=5))
+        record, = stats.compare_units(paired, family="C", margins=MARGINS, development=())
+        deltas = []
+        for u in range(15):
+            here = paired.unit_index == u
+            deltas.append(stats.auroc(paired.y[here], paired.treat[here]) - stats.auroc(paired.y[here], paired.base[here]))
+        mean, ci, _, _ = stats.unit_t(deltas, 0.25)
+        self.assertAlmostEqual(record["auroc_delta"], mean)
+        np.testing.assert_allclose(record["auroc_ci"], ci)
+        half = 2.1447866879 * math.sqrt((1 / 15 + 0.25) * np.var(deltas, ddof=1))
+        np.testing.assert_allclose(record["auroc_ci"], [mean - half, mean + half], rtol=0, atol=1e-9)
+
+    def test_the_correction_widens_the_interval_and_raises_p(self):
+        """Nadeau and Bengio's correction against the plain t on the same units: the SE grows by
+        sqrt((1/J + rho) / (1/J)), the t falls by the same factor, and p comes from t(14) at the smaller t."""
+        v = np.array([0.03, 0.01, 0.02, 0.04, 0.0, 0.025, 0.015, 0.035, 0.005, 0.02, 0.03, 0.01, 0.02, 0.04, 0.0])
+        plain, corrected = stats.unit_t(v), stats.unit_t(v, 0.25)
+        factor = math.sqrt((1 / 15 + 0.25) / (1 / 15))
+        self.assertAlmostEqual((corrected[1][1] - corrected[0]) / (plain[1][1] - plain[0]), factor, places=12)
+        t = v.mean() / math.sqrt((1 / 15 + 0.25) * v.var(ddof=1))
+        self.assertAlmostEqual(corrected[3], 1 - stats._t_central(t, 14), places=12)
+        self.assertGreater(corrected[3], plain[3])
+        for bad in (-0.1, float("nan"), float("inf")):
+            with self.assertRaises(ValueError):
+                stats.unit_t(v, bad)
+
+    def test_rho_counts_the_baseline_s_training_genomes_not_the_paired_ones(self):
+        """Under the balanced pairing a unit pairs the treatment's subsample but trains on the baseline's whole
+        repeat set outside the fold: 6 paired genomes over 32 training ones."""
+        rows = unit_rows()
+
+        def kept(x):
+            ranked = sorted(r["sample_id"] for r in rows if r["arm"] == "base" and r["repeat"] == x["repeat"]
+                            and r["fold"] == x["fold"] and r["y"] == x["y"])
+            return x["sample_id"] != ranked[0]
+
+        cohort = [x for x in rows if x["arm"] == "base" or kept(x)]
+        paired = pair_units(cohort, "common_outer_test_set_balanced")
+        np.testing.assert_array_equal(paired.unit_ratio, np.full(15, 6 / 32))
+
+    def test_cohort_arms_pair_per_repeat_on_a_balanced_subsample(self):
+        rows = unit_rows(gap=0.03)
+
+        # Per repeat, the treatment keeps 3 of each fold's 4 resistant and 3 of its 4 susceptible genomes, a
+        # different 3 in each repeat (balanced_counts([3, 4], [4, 4]) is [3, 3]).
+        def kept(x):
+            ranked = sorted(r["sample_id"] for r in rows if r["arm"] == "base" and r["repeat"] == x["repeat"]
+                            and r["fold"] == x["fold"] and r["y"] == x["y"])
+            return x["sample_id"] != ranked[x["repeat"] % 4]
+
+        cohort = [x for x in rows if x["arm"] == "base" or kept(x)]
+        paired = pair_units(cohort, "common_outer_test_set_balanced")
+        self.assertEqual((len(paired.units), len(paired.y)), (15, 3 * 5 * 6))
+        scored = {r: frozenset(x["sample_id"] for x in cohort if x["arm"] == "treat" and x["repeat"] == r)
+                  for r in range(3)}
+        self.assertEqual(len(set(scored.values())), 3)
+        with self.assertRaises(stats.PairingError) as e:
+            pair_units(cohort, "same_plan")
+        self.assertEqual(e.exception.check, "samples")
+        # A genome only the treatment scores, in one repeat, is refused.
+        extra = dict(next(x for x in cohort if x["arm"] == "treat" and x["repeat"] == 1), sample_id="only-treat")
+        with self.assertRaises(stats.PairingError) as e:
+            pair_units(cohort + [extra], "common_outer_test_set_balanced")
+        self.assertEqual(e.exception.check, "samples")
+        self.assertIn("repeat 1: 1 samples only in 'treat'", str(e.exception))
+        self.assertEqual(stats.balanced_counts([3, 4], [4, 4]), [3, 3])
+        self.assertEqual(stats.balanced_counts([10, 2], [4, 4]), [2, 2])
+        self.assertEqual(stats.balanced_counts([5, 9], [2, 3]), [5, 8])  # 7.5 rounds up, as grm's f64::round
+        record, = stats.compare_units(paired, family="C", margins=MARGINS, development=())
+        self.assertEqual(record["pairing"], "common_outer_test_set_balanced")
+
+    def test_j_refuses_a_cohort_arm_not_scored_on_the_balanced_full_test_set(self):
+        """REVIEW-ICODE-PY L1: an arm scored on resistant genomes only (attack A1), on 2 of the 5 folds of a repeat
+        (A2), or off the fold's class balance is refused."""
+        rows = unit_rows()
+        attacks = {
+            "resistant only": lambda x: x["y"] == 1,
+            "two folds": lambda x: x["repeat"] != 1 or x["fold"] in (0, 1),
+            "unbalanced": lambda x: not (x["fold"] == 2 and x["y"] == 0 and x["sample_id"] < "s010"),
+        }
+        for name, keep in attacks.items():
+            cohort = [x for x in rows if x["arm"] == "base" or keep(x)]
+            with self.subTest(attack=name), self.assertRaises(stats.PairingError) as e:
+                pair_units(cohort, "common_outer_test_set_balanced")
+            self.assertEqual(e.exception.check, "balance", name)
+            # The unbalanced pairing kept for older records doesn't check balance.
+            if name != "resistant only":
+                pair_units(cohort, "common_outer_test_set")
+
+    def test_pairing_per_repeat_refuses_what_it_cannot_pair(self):
+        def edited(change):
+            rows = unit_rows()
+            change(rows)
+            return rows
+
+        def drop_in_repeat_1(rows):
+            rows[:] = [r for r in rows if not (r["repeat"] == 1 and r["sample_id"] == "s000")]
+
+        cases = {
+            "samples": drop_in_repeat_1,  # same_plan covers the same samples in every repeat
+            "fold_plan": lambda rows: [r.update(fold_plan_sha256="other") for r in rows
+                                       if r["arm"] == "treat" and r["repeat"] == 2],
+            "fold": lambda rows: [r.update(fold=(r["fold"] + 1) % 5) for r in rows
+                                  if r["arm"] == "treat" and r["sample_id"] == "s004" and r["repeat"] == 0],
+            "cluster": lambda rows: [r.update(cluster="c99") for r in rows
+                                     if r["arm"] == "treat" and r["sample_id"] == "s004" and r["repeat"] == 2],
+            "y": lambda rows: [r.update(y=1 - r["y"]) for r in rows if r["sample_id"] == "s004" and r["repeat"] == 2],
+            "duplicate": lambda rows: rows.append(dict(rows[0])),
+        }
+        for check, change in cases.items():
+            with self.subTest(check=check), self.assertRaises(stats.PairingError) as e:
+                pair_units(edited(change))
+            self.assertEqual(e.exception.check, check)
+        # A repeat only one arm has is a plan mismatch.
+        rows = [r for r in unit_rows() if not (r["arm"] == "treat" and r["repeat"] == 2)]
+        with self.assertRaises(stats.PairingError) as e:
+            pair_units(rows)
+        self.assertEqual(e.exception.check, "fold_plan")
+
+    def test_pair_arms_refuses_repeats_over_different_samples(self):
+        """REVIEW-ICODE-PY L6 (mutant J12): a same_plan arm whose repeats cover different samples is refused
+        with the samples check, not a KeyError."""
+        rows = [r for r in make_rows(repeats=2) if not (r["repeat"] == 1 and r["sample_id"] == "s0-0")]
+        with self.assertRaises(stats.PairingError) as e:
+            pair(rows)
+        self.assertEqual(e.exception.check, "samples")
+        self.assertIn("different samples in different repeats", str(e.exception))
+
+    def test_an_all_zero_sign_flip_is_p_one(self):
+        """REVIEW-ICODE-PY L6 (mutant J6): a pattern tied with the observed sum counts, so zero-by-construction
+        cluster sums give p = 1, exactly and by Monte Carlo."""
+        self.assertEqual(stats.sign_flip_p(np.zeros(6)), (1.0, "exact"))
+        self.assertEqual(stats.sign_flip_p(np.zeros(25), n_flips=500)[0], 1.0)
+        self.assertEqual(stats.sign_flip_p(np.array([1.0, 1.0]))[0], 0.5)
+
+    def test_a_sentinel_is_judged_on_its_own_p_outside_bh(self):
+        """Main's ruling 3 after VERIFY-H1STATS (VERIFY's M1 case): in a quiet family of 60, p = 0.001 gives
+        p_adj 0.06 under BH; judged on its own p it is decided, and the other 59 are adjusted without it."""
+        quiet = [fake_contrast("C", f"d{i:02d}", 0.5) for i in range(59)]
+        sentinel = fake_contrast("C", "sentinel", 0.001)
+        planned = ids(quiet) + [sentinel["id"]]
+        bh_all = stats.finalize(quiet + [sentinel], planned)
+        self.assertAlmostEqual(bh_all[-1]["p_adj"], 0.06)
+        self.assertEqual(bh_all[-1]["decision"], "inconclusive")
+        out = stats.finalize(quiet + [sentinel], planned, unadjusted=[sentinel["id"]])
+        self.assertEqual((out[-1]["p_adj"], out[-1]["adjust"], out[-1]["decision"]), (0.001, "none", "improves"))
+        self.assertTrue(all(r["p_adj"] == 0.5 and r["adjust"] == "bh" for r in out[:-1]))
+        # The family is the others alone: with 0.01 and 0.02 beside the sentinel, BH over the two gives 0.02 each;
+        # counting the sentinel's 0.001 as a third hypothesis would give the first 0.015.
+        pair_ = [fake_contrast("C", "e1", 0.01), fake_contrast("C", "e2", 0.02)]
+        out = stats.finalize(pair_ + [sentinel], ids(pair_) + [sentinel["id"]], unadjusted=[sentinel["id"]])
+        self.assertEqual([r["p_adj"] for r in out], [0.02, 0.02, 0.001])
+        # A missing sentinel stays out of the family too.
+        out = stats.finalize(quiet, planned, {sentinel["id"]: "not produced"}, unadjusted=[sentinel["id"]])
+        self.assertTrue(all(r["p_adj"] == 0.5 for r in out))
+        descriptive = fake_contrast("D", "x", None)
+        for bad in (descriptive["id"], "ds/C:lr:lineage:base->unplanned:log_loss"):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "unadjusted ids must be planned family C"):
+                stats.finalize(quiet + [sentinel, descriptive], planned + [descriptive["id"]], unadjusted=[bad])
+        with self.assertRaises(TypeError):
+            stats.finalize(quiet + [sentinel], planned, unadjusted=sentinel["id"])
+
+    def test_bh_over_several_contrast_sets_is_one_family(self):
+        """Main's ruling 4 after VERIFY-H1STATS: one BH family across a run's species, as combine calls it."""
+        a = [fake_contrast("C", f"a{i}", p) for i, p in enumerate((0.001, 0.01, 0.2))]
+        b = [fake_contrast("C", f"b{i}", p) for i, p in enumerate((0.004, 0.5))]
+        missing_b = {"bx/C:lr:lineage:base->treat:log_loss": "pairing refused"}
+        sets = [(a, ids(a), {}), (b, ids(b) + list(missing_b), missing_b)]
+        out_a, out_b = stats.finalize_sets(sets)
+        joint = stats.finalize(a + b, ids(a) + ids(b) + list(missing_b), missing_b)
+        self.assertEqual(out_a + out_b, joint)
+        self.assertNotEqual([r["p_adj"] for r in out_a], [r["p_adj"] for r in stats.finalize(a, ids(a))])
+        with self.assertRaises(ValueError):
+            stats.finalize_sets([(a, ids(a), {}), (a, ids(a), {})])
+        with self.assertRaises(ValueError):
+            stats.finalize_sets([([], list(missing_b), missing_b), ([], list(missing_b), missing_b)])
+
+
 class KSchemaTests(unittest.TestCase):
+    def test_unit_t_and_sentinel_records_validate_with_k(self):
+        record, = stats.compare_units(pair_units(unit_rows(gap=0.05, shift=0.01)), family="C", margins=MARGINS,
+                                      development=())
+        twin = dict(record, id=record["id"].replace("->treat", "->twin"), treatment="twin")
+        random, = stats.compare_units(pair_units(unit_rows(repeats=1)), family="D", margins=MARGINS, development=())
+        random = dict(random, id=random["id"].replace(":lineage:", ":random:"), split="random")
+        out = stats.finalize([record, twin, random], [record["id"], twin["id"], random["id"]], unadjusted=[twin["id"]])
+        for r in out:
+            with self.subTest(record=r["id"]):
+                K_SCHEMA.validate_contrast(json.loads(json.dumps(r, allow_nan=False)))
+
     def test_finalize_output_validates_with_k(self):
         records = k_cases()
         self.assertEqual({r["decision"] for r in records}, set(stats.DECISIONS))

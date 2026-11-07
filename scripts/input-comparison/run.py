@@ -19,11 +19,18 @@ Pairing follows from the factor an arm changes:
     cap, selection   common_outer_test_set_balanced (another cohort)
     k                k31_groups (the default cohort, the default's k = 31 plans)
     blocks, budget   same_plan
-An arm that changes no factor, or more than one, is refused.
+An arm that changes no factor, or more than one, is refused; cap and selection (with its seed and
+stratum) are two factors (REVIEW-ICODE-PY L2). A spec that says "stage": 2 may also hold
+two-factor arms, blocks plus one other factor, paired by the other factor's rule (D3 as amended
+by main's ruling 5 after VERIFY-H1STATS; stage2.py picks them).
 
-Decisions come from the lineage split only. Random-split contrasts are planned in family D:
-J gives their estimate, interval and AUROC delta but no p and no direction, and K prints them
-as descriptive (main's ruling after the calibration study, 5 Nov 2026).
+The test (main's rulings after VERIFY-H1STATS): `grm arm` scores the spec's "repeats" keyed
+lineage plans (3 for H-1) and one random plan. J pairs each arm with the default per repeat and
+decides each lineage contrast by a paired t over its (repeat, outer fold) unit means (df 14 at 3
+repeats and 5 folds; stats.compare_units). Random-split contrasts are planned in family D: an
+estimate, interval and AUROC delta, no p and no direction. A dataset with no decision-bearing
+lineage contrast (every one not produced or undefined) fails the run: summary.json names it under
+`no_decision_datasets` and the run exits 3 after writing its report.
 
 Every data root puts its genomes in canonical order (sorted by genome id) after `grm curate` and
 before count, structure, matrix, fold plans and evaluation (REVIEW-INPUT M1), so two arms with the
@@ -34,19 +41,28 @@ for the order-twin proof only). The spec's `panel_floor` sets the eligible genom
 needs (more than 2,000, so cap-4000 and grr-v1 change the set); the runner refuses a species
 below it unless `--below-panel-floor` is given (synthetic studies only).
 
-Every spec run gets a sentinel arm, `sentinel-seed-twin`: the default's learner-seed twin
-(learner seed 1001), which is exchangeable with the default. The manifest names it in
-`sentinel_arms`. When its lineage-split contrast for a learner is anything but
-inconclusive, or isn't produced, K marks every decision of that learner on the species
-unreliable. summary.json then shows those decisions as "unreliable" (the decision itself is in
-`raw_decisions`) and leaves them out of `any_improves` and `any_worse`.
+Every spec run gets two sentinel arms, each exchangeable with the default: `sentinel-seed-twin`,
+the default's learner-seed twin (learner seed 1001), judges rf and gbt, the learners that draw
+from it; `sentinel-tuning-twin`, the retuned twin (tuning seed 1002: every outer fold's inner folds
+and tuning holdouts drawn again), judges scm, cart and the lasso, whose only draws those are
+(main's ruling 3 after VERIFY-H1STATS). The manifest names them in `sentinel_arms` and the
+learners each judges in `sentinel_learners`. A sentinel's family C contrasts are judged on their
+own p, outside the BH family (`sentinel_adjust` none). When its lineage-split contrast for a learner
+it judges is anything but inconclusive, or isn't produced, K marks every decision of that learner
+on the species unreliable. summary.json then shows those decisions as "unreliable" (the decision
+itself is in `raw_decisions`) and leaves them out of `any_improves` and `any_worse`.
+
+BH (main's ruling 4 after VERIFY-H1STATS): one family over every non-sentinel lineage contrast of
+the run's species. A panel of species is one family across all of them: `pending_contrasts` gives
+each run's records unadjusted, and stats.finalize_sets adjusts several runs' sets together.
 
 Calibration arms (calibration.json) change no input: they are the default made
 to look like an arm, so a decision on one is a false positive of the decision
 procedure. An arm with "calibration": "cohort_path" sends the default's inputs
 through the cohort-arm path (common_outer_test_set_balanced, with its own
 "balance_seed"); "calibration": "learner_seed" is a same_plan twin of the
-default whose learners draw from another "learner_seed".
+default whose learners draw from another "learner_seed"; "calibration": "tuning_seed" is
+the retuned twin with another "tuning_seed". Each such seed is keyed by repeat in `grm arm`.
 
 Kset sharing (H-1 gap G1): every genome of a root counted at the pool's k is a pool genome, so its kset is the
 pool's, byte for byte. After the pool is counted, each such root gets a hard link to the pool's finished kset and
@@ -99,17 +115,37 @@ sys.path.insert(0, str(ROOT))
 from scripts.ablation import report as k_report  # noqa: E402  K
 from scripts.ablation import schema as k_schema  # noqa: E402
 
-FACTORS = {"cohort": ("cap", "selection", "selection_seed", "stratum"), "k": ("k",),
+FACTORS = {"cap": ("cap",), "selection": ("selection", "selection_seed", "stratum"), "k": ("k",),
            "blocks": ("blocks",), "budget": ("screened_features",)}
-PAIRING = {"cohort": "common_outer_test_set_balanced", "k": "k31_groups", "blocks": "same_plan",
-           "budget": "same_plan"}
+PAIRING = {"cap": "common_outer_test_set_balanced", "selection": "common_outer_test_set_balanced",
+           "k": "k31_groups", "blocks": "same_plan", "budget": "same_plan"}
+# The factors that change an arm's cohort, and those that give it its own data root.
+COHORT_FACTORS = ("cap", "selection")
+ROOT_FACTORS = ("cap", "selection", "k")
 DEFAULT_ARM = "default"
-SENTINEL = {"name": "sentinel-seed-twin", "calibration": "learner_seed", "learner_seed": 1001}
+LEARNERS = ("scm", "cart", "rf", "gbt", "lasso")
+# Main's ruling 3 after VERIFY-H1STATS: each learner has one sentinel, the twin that reaches its own draws.
+SENTINELS = ({"name": "sentinel-seed-twin", "calibration": "learner_seed", "learner_seed": 1001,
+              "judges": ["rf", "gbt"]},
+             {"name": "sentinel-tuning-twin", "calibration": "tuning_seed", "tuning_seed": 1002,
+              "judges": ["scm", "cart", "lasso"]})
 # Calibration arm kind -> (its seed key, its pairing rule).
 CALIBRATION = {"cohort_path": ("balance_seed", "common_outer_test_set_balanced"),
-               "learner_seed": ("learner_seed", "same_plan")}
-LEARNERS = ("scm", "cart", "rf", "gbt", "lasso")
+               "learner_seed": ("learner_seed", "same_plan"), "tuning_seed": ("tuning_seed", "same_plan")}
 SPLITS = ("random", "lineage")
+# The exit code of a run with a dataset that has no decision-bearing lineage contrast (ruling 2, M3).
+NO_DECISIONS_EXIT = 3
+
+
+def changes_cohort(arm):
+    """True for an arm whose own cohort differs from the default's: it changes the cap or the selection."""
+    return any(f in COHORT_FACTORS for f in arm.get("factors", ()))
+
+
+def own_root(arm):
+    """True for an arm with its own data root (another cohort or k); blocks, budget and calibration arms
+    score on the default's."""
+    return any(f in ROOT_FACTORS for f in arm.get("factors", ()))
 
 
 def child_env():
@@ -242,32 +278,34 @@ def load_spec(path):
                     or type(arm[seed_key]) is not int:
                 raise SystemExit(f"{path}: calibration arm {name} must be {{name, calibration, <seed>}} with "
                                  f"calibration one of {sorted(CALIBRATION)} and an integer seed")
-            arms.append({**default, **arm, "factor": "calibration", "pairing": CALIBRATION[kind][1]})
+            arms.append({**default, **arm, "factor": "calibration", "factors": [], "pairing": CALIBRATION[kind][1]})
             continue
         changes = {k for k in arm if k != "name"}
         unknown = changes - {k for keys in FACTORS.values() for k in keys}
         if unknown:
             raise SystemExit(f"{path}: arm {name} sets unknown inputs {sorted(unknown)}")
-        changed = {f for f, keys in FACTORS.items() if any(k in arm and arm[k] != default.get(k) for k in keys)}
-        if len(changed) != 1:
-            raise SystemExit(f"{path}: arm {name} changes {sorted(changed) or 'nothing'}; each arm changes one input "
-                             "of the default")
-        factor = changed.pop()
-        arms.append({**default, **arm, "factor": factor, "pairing": PAIRING[factor]})
-        if factor == "cohort":
+        changed = sorted(f for f, keys in FACTORS.items() if any(k in arm and arm[k] != default.get(k) for k in keys))
+        stage2 = spec.get("stage") == 2 and len(changed) == 2 and "blocks" in changed
+        if len(changed) != 1 and not stage2:
+            raise SystemExit(f"{path}: arm {name} changes {changed or 'nothing'}; each arm changes one input of the "
+                             "default (cap and selection are two), or, in a stage-2 spec, the blocks and one other")
+        other = [f for f in changed if f != "blocks"] or changed
+        arms.append({**default, **arm, "factor": "+".join(changed), "factors": changed,
+                     "pairing": PAIRING[other[0]]})
+        if changes_cohort(arms[-1]):
             arms[-1]["kind"] = cohort_kind(default, arms[-1])
-    cohort_paired = [a["name"] for a in arms if a["pairing"] == "common_outer_test_set_balanced"]
-    if spec.get("repeats", 1) != 1 and cohort_paired:
-        raise SystemExit(f"{path}: repeats {spec['repeats']} with a cohort-paired arm ({', '.join(cohort_paired)}): a "
-                         "cohort arm's balanced subsample can differ by repeat, and J pairs one sample set per arm "
-                         "across repeats; every decided spec uses repeats 1 (PR #69's review)")
+    repeats = spec.get("repeats", 1)
+    if type(repeats) is not int or repeats < 1:
+        raise SystemExit(f"{path}: repeats {repeats!r} is not a positive integer")
     unknown = set(spec.get("base_rates", {})) - set(COHORT_KINDS)
     if unknown:
         raise SystemExit(f"{path}: base_rates for {sorted(unknown)}; the kinds are {list(COHORT_KINDS)}")
-    if SENTINEL["name"] in names:
-        raise SystemExit(f"{path}: the arm name {SENTINEL['name']} is the runner's sentinel")
-    arms.append({**default, **SENTINEL, "factor": "calibration", "pairing": "same_plan", "sentinel": True})
-    return spec, {**default, "name": DEFAULT_ARM, "factor": None, "pairing": "same_plan"}, arms
+    for sentinel in SENTINELS:
+        if sentinel["name"] in names:
+            raise SystemExit(f"{path}: the arm name {sentinel['name']} is the runner's sentinel")
+        arms.append({**default, **sentinel, "factor": "calibration", "factors": [], "pairing": "same_plan",
+                     "sentinel": True})
+    return spec, {**default, "name": DEFAULT_ARM, "factor": None, "factors": [], "pairing": "same_plan"}, arms
 
 
 # The comparison's disk check (main's rulings on REVIEW-INPUT4 to REVIEW-INPUT6 M1) when the spec states none: a
@@ -384,6 +422,10 @@ class Runner:
         The format alone could sit in a copied file; the genome list ties the marker to this RAW's own data, which
         a real root's BV-BRC metadata can't match by accident."""
         if self.spec.get("synthetic") is not True:
+            # REVIEW-ICODE-PY L3: a synthetic RAW can't run under a real-looking spec and be recorded as real.
+            if (self.raw / "truth.json").exists():
+                raise SystemExit(f"RAW {self.raw} holds truth.json, a synthetic root's marker, and the spec doesn't "
+                                 'say "synthetic": true; a synthetic run says so, and a real RAW holds no truth.json')
             return
 
         def refuse(why):
@@ -550,7 +592,7 @@ class Runner:
         shares the pool's ksets (G1) writes none of those (`shared`). Curates them; counts nothing."""
         out = {}
         for arm in arms:
-            if (arm["factor"] == "cohort" and not self.run_identical
+            if (changes_cohort(arm) and not self.run_identical
                     and self.genome_set(arm) == self.genome_set(self.default)):
                 continue
             key, _ = root_key(arm)
@@ -818,7 +860,7 @@ class Runner:
         reason = (f"identical_cohort: arm {arm['name']} selects the default's genome set ({n} genomes); "
                   "with canonical genome order it would give the default's predictions, so it is not run")
         runs = [{"dataset": dataset, "arm": arm["name"], "blocks": arm["blocks"], "learner": learner,
-                 "split": split, "repeats": self.spec.get("repeats", 1), "fold_plan_sha256": None,
+                 "split": split, "repeats": split_repeats(self.spec, split), "fold_plan_sha256": None,
                  "status": "identical_cohort", "reason": reason, "metrics": {}, "fit_count": 0, "seconds": 0.0,
                  "predictions": None, "pairing": arm["pairing"], "arm_plan_sha256": None, "cohort_drops": None}
                 for split in SPLITS for learner in LEARNERS]
@@ -845,7 +887,7 @@ class Runner:
         if plans.exists():
             shutil.rmtree(plans)
         out.mkdir(parents=True, exist_ok=True)
-        if (arm["factor"] == "cohort" and not run_identical
+        if (changes_cohort(arm) and not run_identical
                 and self.genome_set(arm) == self.genome_set(self.default)):
             self.identical(arm, dataset, out)
             self.finished(out, record)
@@ -856,7 +898,7 @@ class Runner:
                 "--repeats", str(self.spec.get("repeats", 1)), "--pairing", arm["pairing"], "--out", str(out)]
         if arm["name"] != DEFAULT_ARM:
             argv += ["--reference", str(self.work / "arms" / DEFAULT_ARM / dataset)]
-        for key in ("balance_seed", "learner_seed"):
+        for key in ("balance_seed", "learner_seed", "tuning_seed"):
             if key in arm:
                 argv += [f"--{key.replace('_', '-')}", str(arm[key])]
         if self.trace:
@@ -911,16 +953,30 @@ class Runner:
         return all(file_sha256(out / name) == h for name, h in outputs.items())
 
 
+def split_repeats(spec, split):
+    """The repeats `grm arm` scores on a split: the spec's on the lineage split, one on the random split."""
+    return spec.get("repeats", 1) if split == "lineage" else 1
+
+
 def read_rows(path):
     with open(path, encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
 
 def contrasts(spec, arms, work):
-    """J: one family C log_loss contrast per (dataset, arm, learner, split) against the default."""
+    """J: one family C log_loss contrast per (dataset, arm, learner, split) against the default, finalized with
+    BH over this run's lineage contrasts and the sentinels judged on their own p."""
+    records, planned, missing, unadjusted = pending_contrasts(spec, arms, work)
+    return stats.finalize(records, planned, missing, unadjusted), planned, missing
+
+
+def pending_contrasts(spec, arms, work):
+    """J's records before adjustment, by the (repeat, fold) unit t (stats.compare_units): (records, planned ids,
+    missing ids with reasons, the sentinels' planned ids), for contrasts() or, over several runs,
+    stats.finalize_sets."""
     margins = {"log_loss": spec["margin"]["log_loss"]}
     development = [d["id"] for d in spec["datasets"] if d["partition"] == "development"]
-    records, planned, missing = [], [], {}
+    records, planned, missing, unadjusted = [], [], {}, []
     for d in spec["datasets"]:
         ds = d["id"]
         runs = {}
@@ -938,22 +994,34 @@ def contrasts(spec, arms, work):
                                              DEFAULT_ARM, arm["name"], "log_loss")
                     pid = f"{ds}/{key}"
                     planned.append(pid)
+                    if arm.get("sentinel") and decides:
+                        unadjusted.append(pid)
                     down = [runs[(a, learner, split)] for a in (DEFAULT_ARM, arm["name"])
                             if runs[(a, learner, split)]["status"] != "ok"]
                     if down:
                         missing[pid] = f"arm {down[0]['arm']} has no {learner} {split} result: {down[0]['reason']}"
                         continue
                     try:
-                        paired = stats.pair_arms(rows, dataset=ds, learner=learner, split=split,
-                                                 baseline=DEFAULT_ARM, treatment=arm["name"],
-                                                 pairing=arm["pairing"])
+                        paired = stats.pair_units(rows, dataset=ds, learner=learner, split=split,
+                                                  baseline=DEFAULT_ARM, treatment=arm["name"],
+                                                  pairing=arm["pairing"])
                     except stats.PairingError as e:
                         missing[pid] = f"pairing refused: {e}"
                         continue
-                    records += stats.compare(paired, family=key.split(":")[0], endpoints=["log_loss"],
-                                             margins=margins, development=development,
-                                             seed=spec.get("seed", 0))
-    return stats.finalize(records, planned, missing), planned, missing
+                    records += stats.compare_units(paired, family=key.split(":")[0], margins=margins,
+                                                   development=development)
+    return records, planned, missing, unadjusted
+
+
+def decisions_made(spec, arms, records):
+    """Per dataset, its decision-bearing lineage contrasts: non-sentinel family C records with a p. A dataset
+    with none answers nothing, so the run fails on it (main's ruling 2 after VERIFY-H1STATS, REVIEW-ICODE-PY M3)."""
+    sentinels = {a["name"] for a in arms if a.get("sentinel")}
+    out = {d["id"]: 0 for d in spec["datasets"] if d["partition"] == "confirmatory"}
+    for x in records:
+        if x["family"] == "C" and x["p"] is not None and x["treatment"] not in sentinels and x["dataset"] in out:
+            out[x["dataset"]] += 1
+    return out
 
 
 def manifest(spec, default, arms, work, binary_sha256, source_commit, seconds):
@@ -972,7 +1040,7 @@ def manifest(spec, default, arms, work, binary_sha256, source_commit, seconds):
             # One spec per block id: the default root's. A k or cohort arm's own K spec (another k
             # or cohort) is in its arm.json.
             for b in a["blocks"]:
-                if arm["factor"] in (None, "blocks", "budget"):
+                if not own_root(arm):
                     blocks.setdefault(b["id"], b)
             for bid, reason in a["unavailable"]:
                 blocks.setdefault(bid, {"id": bid, "kind": {"C": "CuratedExact", "H": "Hierarchical",
@@ -1004,7 +1072,9 @@ def manifest(spec, default, arms, work, binary_sha256, source_commit, seconds):
         "compute": {"planned_fit_units": sum(u["fit_count"] for u in runs),
                     "actual_seconds": round(sum(seconds.values()), 3), "tiers_completed": ["full"]},
         "sentinel_arms": [a["name"] for a in arms if a.get("sentinel")],
-        "base_rates": [base_rate(spec, a) for a in arms if a["factor"] == "cohort"],
+        "sentinel_learners": {a["name"]: a["judges"] for a in arms if a.get("sentinel")},
+        "sentinel_adjust": "none",
+        "base_rates": [base_rate(spec, a) for a in arms if changes_cohort(a)],
     }
 
 
@@ -1129,7 +1199,7 @@ def main(argv):
         runner.arm(default, ds)
     # Roots are built one at a time (count uses every core); arms then run in parallel.
     for arm in arms:
-        if arm["factor"] != "cohort" or a.run_identical_cohorts \
+        if not changes_cohort(arm) or a.run_identical_cohorts \
                 or runner.genome_set(arm) != runner.genome_set(default):
             runner.root(arm)
     with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as pool:
@@ -1162,10 +1232,12 @@ def report_run(spec, default, arms, work, binary_sha256, source_commit, seconds,
     (work / "k" / "manifest.json").write_text(json.dumps(m, indent=1, sort_keys=True))
     report = k_report.build_report(m, records, [], [], planned, [], not_produced=missing,
                                    out_dir=str(work / "report"), prediction_root=str(work))
+    made = decisions_made(spec, arms, records)
     datasets = [d["id"] for d in spec["datasets"]]
     return {"contrast_counts": report["contrast_counts"], "unreliable": report["unreliable"],
             "identical_cohorts": sorted({u["arm"] for u in report["identical_cohorts"]}),
             "refused_plans": refused_plans(work, datasets, [DEFAULT_ARM, *(a["name"] for a in arms)]),
+            "decisions_made": made, "no_decision_datasets": sorted(ds for ds, n in made.items() if n == 0),
             "arms": summarize(spec, arms, records, missing, report["unreliable"])}
 
 
@@ -1177,6 +1249,17 @@ def write_summary(work, summary):
             counts[v.split(":")[0]] = counts.get(v.split(":")[0], 0) + 1
         print(f"{name:<14} {s['factor']:<7} {s['pairing']:<22} {counts}")
     print(f"refused plans: {len(summary['refused_plans'])}; report: {work / 'report'}; {summary['seconds']} s")
+    check_decisions(summary)
+
+
+def check_decisions(summary):
+    """Fails the run, after its summary and report are written, when a dataset made no lineage decision: its
+    answer would otherwise read as "no measured difference" (REVIEW-ICODE-PY M3)."""
+    if summary["no_decision_datasets"]:
+        print(f"FAILED: no decision-bearing lineage contrast for {', '.join(summary['no_decision_datasets'])}: every "
+              "one was not produced or undefined (summary.json no_decision_datasets, refused_plans); this run "
+              "answers nothing for them", file=sys.stderr)
+        raise SystemExit(NO_DECISIONS_EXIT)
 
 
 def read_part(work):

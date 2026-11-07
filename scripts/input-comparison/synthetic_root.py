@@ -28,8 +28,13 @@ With --second-drug the root also holds a Salmonella enterica x ciprofloxacin dat
 end-to-end test): every genome gets a ciprofloxacin record, resistant when it carries the QRDR substitution, with
 the same share of labels flipped from a separate random stream. Without it the root is byte for byte the same.
 
+`--visible V` grades the planted effect for the power curve (main's ruling after the first calibration
+failed): each blaKPC carrier stays resistant, but its allele contig is written only with probability V,
+drawn from its own random stream, so H and P see a share V of the resistance. At V = 1, the default, the
+root is byte-identical to one written without the option.
+
 usage: python3 -I -B synthetic_root.py OUT_DIR [--genomes N] [--clades N] [--resistant F]
-           [--alleles N] [--seed N] [--second-drug]
+           [--alleles N] [--seed N] [--second-drug] [--visible V]
 """
 import argparse
 import gzip
@@ -79,6 +84,8 @@ def generate(out, cfg, seed):
     alleles = [b"ATG" + bases(rng, cfg["allele_length"] - 3) for _ in range(cfg["alleles"])]
     genomes, amr, meta = [], [], []
     no_mlst = random.Random(f"mlst:{seed}")
+    visible = cfg.get("visible", 1.0)
+    shown = random.Random(f"visible:{seed}")
     for i in range(cfg["genomes"]):
         gid = f"{TAXON}.{100000 + i}"
         previous = genomes[-1] if genomes else None
@@ -94,12 +101,18 @@ def generate(out, cfg, seed):
                  "allele": rng.randrange(cfg["alleles"]) if carrier else None,
                  "flipped": rng.random() < cfg["flip"]}
         genomes.append(g)
+    if visible < 1:
+        # Each carrier's contig is shown with probability `visible`; a copy shows what its original shows.
+        for g in genomes:
+            hide = (g["allele"] is not None and shown.random() >= visible) if g["duplicate_of"] is None else None
+            g["hidden"] = hide if hide is not None else next(o["hidden"] for o in genomes
+                                                             if o["genome_id"] == g["duplicate_of"])
     for g in genomes:
         gyra = bytearray(GYRA.encode())
         if g["qrdr_mutant"]:
             gyra[QRDR_BASE] = b"T"[0] if gyra[QRDR_BASE] != b"T"[0] else b"G"[0]
         contigs = [g["chromosome"], gyra.decode()]
-        if g["allele"] is not None:
+        if g["allele"] is not None and not g.get("hidden"):
             contigs.append(alleles[g["allele"]].decode())
         fasta = "".join(f">{g['genome_id']}.con.{j + 1:04d}\n{seq}\n" for j, seq in enumerate(contigs))
         write_gz(os.path.join(out, "fasta", f"{g['genome_id']}.fna.gz"), fasta)
@@ -148,9 +161,12 @@ def generate(out, cfg, seed):
                               "per-fit support floor, while H and P call the family",
                     "null": "QRDR substitutions (block C) are drawn independently of the phenotype"},
         "genomes": [{k: g[k] for k in ("genome_id", "clade", "duplicate_of", "qrdr_mutant", "allele",
-                                       "flipped", "resistant", "mlst", "resistant_second") if k in g}
+                                       "flipped", "resistant", "mlst", "resistant_second", "hidden") if k in g}
                     for g in genomes],
     }
+    if visible < 1:
+        truth["planted"]["visible"] = (f"a share {visible} of carriers show their blaKPC contig; the rest are "
+                                       "resistant with nothing any block sees")
     curate_inputs(out, genomes)
     truth["curate_inputs"] = {"species_check_fails": [FAILED_GENOME(genomes)],
                               "misspelled": [g["genome_id"] for i, g in enumerate(genomes) if i % 150 == 7],
@@ -214,12 +230,18 @@ def main(argv):
     p.add_argument("--resistant", type=float, default=DEFAULTS["resistant"])
     p.add_argument("--seed", type=int, default=11)
     p.add_argument("--second-drug", action="store_true", help=f"add a {SECOND_DRUG} dataset (QRDR carriers resistant)")
+    p.add_argument("--visible", type=float, default=1.0,
+                   help="the share of blaKPC carriers whose allele contig is written (the power curve's size)")
     a = p.parse_args(argv)
+    if not 0 < a.visible <= 1:
+        sys.exit(f"--visible {a.visible} is not in (0, 1]")
     if os.path.exists(a.out) and os.listdir(a.out):
         sys.exit(f"{a.out} is not empty")
     cfg = dict(DEFAULTS, genomes=a.genomes, clades=a.clades, alleles=a.alleles, resistant=a.resistant)
     if a.second_drug:
         cfg["second_drug"] = SECOND_DRUG
+    if a.visible < 1:
+        cfg["visible"] = a.visible
     truth = generate(a.out, cfg, a.seed)
     n_r = sum(g["resistant"] for g in truth["genomes"])
     print(f"{len(truth['genomes'])} genomes ({n_r} resistant) in {cfg['clades']} clades written to {a.out}")

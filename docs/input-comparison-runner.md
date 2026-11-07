@@ -6,6 +6,117 @@ Layth specified a full-pipeline comparison over the input data: genome and cohor
 
 [input-configuration.md](input-configuration.md) traces each input as the code has it now.
 
+## The decision method (main's rulings after VERIFY-H1STATS, 7 Nov 2026)
+
+REVIEW-ICODE-PY's H1 and VERIFY-H1STATS showed that the lineage-cluster test was anti-conservative: one pair of fitted models scores every lineage of an outer fold, so a fold-level shift moves all of that fold's clusters together, and gbt's learner-seed twin rejected in 26 to 46% of seeds. The method below replaces it. H-1 runs it only after its calibration passes, and [the first calibration](#the-calibrations-results-7-nov-2026) failed for gbt and the lasso. The null-study and calibration figures in the sections after this one came from the old test and are **superseded**.
+
+1. **The test.** `grm arm` scores the spec's `repeats` keyed lineage plans (`spec.json` says 3) and one random plan. J pairs each arm with the default per repeat (`stats.pair_units`) and gives each (repeat, outer fold) unit the mean log-loss delta of its paired test genomes. The decision is a paired t over the 15 unit means, df 14 (`stats.compare_units`, `ci_method` `repeat_fold_t`, unit `repeat_fold`): `improves` or `worse` needs the 95% t interval off zero and p_adj < 0.05, as before. The AUROC delta is the mean of the units' AUROC deltas with its 95% t interval. The random split runs once and stays descriptive (family D: estimate and interval over its 5 units, no p).
+2. **Seeds keyed by repeat.** Each repeat's plan is keyed (`plan::repeat_seed(seed, repeat)`). A twin's seed `s` (learner, balance or tuning) acts as `repeat_seed(s, repeat)` in each repeat, so a twin draws anew in every repeat as the default does; at repeat 0 it is `s`, as before.
+3. **Cohort arms pair per repeat.** A cohort arm's balanced subsample can differ by repeat, so J pairs it with the default's rows of the same repeat. The refusal of repeats > 1 with a cohort arm (PR #69's review) is gone. Under `common_outer_test_set_balanced`, J also checks the subsample is the balanced draw of the default's whole test fold: every default fold of every repeat is scored, with both classes, in counts `grm arm`'s `balanced_counts` gives (REVIEW-ICODE-PY L1).
+4. **A refused repeat.** When the default's lineage draw for a repeat is refused, `grm arm` draws the next keyed repeat past the slots (3, then 4), at most 2 replacements per dataset. Each refused draw is kept as `plans/refused-lineage-<repeat>.json` (summary.json's `refused_plans` lists it) and `repeats.json` lists every slot's keyed repeat. With fewer than 3 valid repeats after that, every lineage run of the arm is unavailable with that reason, and its contrasts are not produced. **A dataset with no decision-bearing lineage contrast fails the run:** summary.json gives `decisions_made` per dataset and names it in `no_decision_datasets`, and `run.py` exits 3 after writing its report (REVIEW-ICODE-PY M3).
+5. **Sentinels.** Every run adds two arms exchangeable with the default. `sentinel-seed-twin` (learner seed 1001) judges rf and gbt, the learners its seed reaches. `sentinel-tuning-twin` (tuning seed 1002) judges scm, cart and the lasso: it keeps the default's outer folds and draws every outer fold's inner folds and both tuning holdouts again (`plan::retuned_plan`). Those draws are the only randomness those learners have. The default's own draw is the same procedure at its own seed (Rust test `a_retuned_plan_keeps_the_outer_folds_and_redraws_tuning`), so the twin is exchangeable with it. VERIFY-H1STATS listed a bootstrap or subsample of each training fold as other options; both train on other data than the default, so they aren't exchangeable with it and would flag real differences. The manifest records `sentinel_learners`. A sentinel's family C contrast is judged on its own p, outside BH (`adjust` none, `p_adj` = p; the manifest's `sentinel_adjust`), so its sensitivity no longer depends on the other arms (VERIFY's M1). When it isn't `inconclusive` for a learner it judges, or isn't produced, K marks that learner's decisions on the species unreliable.
+6. **BH's family.** One family over every non-sentinel lineage contrast of the run's species (REVIEW-ICODE-PY L4). For H-1's panel the family is every lineage contrast of every species run: `run.pending_contrasts` gives each run's records before adjustment, and `stats.finalize_sets` adjusts several runs' sets as one family, for `run.py combine`. K recomputes BH over the planned non-sentinel family C ids.
+7. **Inputs.** Cap and selection are two inputs, so an arm changing both is refused (REVIEW-ICODE-PY L2). A RAW holding `truth.json` (a synthetic root's marker) refuses to run unless the spec says `"synthetic": true`, so a synthetic run can't be recorded as real (L3).
+8. **Stage 2's entry, D3 as amended (ruling 5).** `scripts/input-comparison/stage2.py`: a stage-1 setting enters on a dataset when at least one reliable learner is `improves` on the lineage unit t with its log-loss interval's lower end above the 0.02 margin and its AUROC-delta interval above 0, and no reliable learner is `worse`. Blocks that enter combine by union; of two entering values of one other input, the larger mean log-loss gain wins, then the value nearer the default, then the smaller budget; k joins only after the k add-on. A spec that says `"stage": 2` may hold an arm changing the blocks and one other input, paired by that input's rule (never two inputs besides the blocks, so never k with a cohort change). Stage 2 itself runs later and is exploratory.
+
+### The calibration H-1 must pass (ruling 6)
+
+Pre-registered here before the run. `null_study.py run --spec calibration.json` with H-1's exact decision code (the unit t at 3 repeats, the sentinels on their own p, BH over the run's other lineage contrasts) on synthetic seeds 9101 to 9200. `calibration.json`'s arms: `cohort-path` (balance seed 7) and the planted `k-h`, `k-p` and `k-c-h-p`; the runner adds both sentinels. `null_study.py report --calibration` then judges:
+- **Rows.** One row per twin (learner-seed twin, retuned twin, cohort path) and learner, counting that twin's lineage contrast once per seed, so a row's contrasts are independent. `improves` and `worse` are counted apart, each with a Clopper-Pearson 95% interval. A row whose every contrast is exactly zero is zero by construction (the twin doesn't reach that learner: the learner-seed twin for scm, cart and the lasso, the retuned twin for rf, the cohort path for all) and is reported, not judged.
+- **Bar.** Every judged row needs at least 100 contrasts, improves + worse at most 5%, and the interval's upper bound at most 11%. Every learner needs a judged row.
+- **Power.** Every planted arm is `improves` for every learner on every seed, as the run decided it.
+- **Refused plans.** A seed whose run made no lineage decision (exit 3) keeps its summary, is listed, and counts toward no row. If any judged row ends with fewer than 100 contrasts, reserve seeds 9201 upward run in order, at most 20, until every row has 100; every seed run is reported.
+
+### The calibration's results (7 Nov 2026)
+
+**It fails, so H-1 can't run on this method as it stands.** Boat xlarge `bx_wybets94` (9950X), grm `b9c532d8…` built at `2cfa4278`, seeds 9101 to 9200 and then reserve seeds 9201 to 9207. The reserve was needed because the retuned twin went unproduced on 7 seeds, so its rows reached 100 contrasts only at seed 9207. All 107 seeds made lineage decisions. Rows are the sentinels on their own p, improves + worse, with Clopper-Pearson 95% intervals:
+
+| Twin | Learner | Hits / contrasts | Rate [95% CI] | improves, worse | Result |
+|---|---|---|---|---|---|
+| learner-seed | rf | 3/107 | 2.8% [0.6, 8.0] | 0, 3 | pass |
+| learner-seed | gbt | 9/107 | **8.4% [3.9, 15.4]** | 6, 3 | **fail** |
+| learner-seed | scm, cart, lasso | 0/107 | zero by construction | – | not judged |
+| retuned | scm | 2/100 | 2.0% [0.2, 7.0] | 1, 1 | pass |
+| retuned | cart | 0/100 | 0.0% [0.0, 3.6] | 0, 0 | pass |
+| retuned | gbt | 2/100 | 2.0% [0.2, 7.0] | 1, 1 | pass |
+| retuned | lasso | 9/100 | **9.0% [4.2, 16.4]** | 7, 2 | **fail** |
+| retuned | rf | 0/100 | zero by construction | – | not judged |
+| cohort path | all five | 0/107 | zero by construction | – | not judged |
+
+- **Power.** k-h, k-p and k-c-h-p were `improves` for every learner on all 107 seeds (BH over each run's lineage contrasts).
+- **Not produced.** The retuned twin's redrawn tuning partitions were refused on 7 of 107 seeds: on 6 the gbt holdout lacked a class (outer fold 0, 1 or 3, two seeds each), and on 1 an inner fold did. On real data such a seed would flag scm, cart and the lasso unreliable on the species.
+- **The two failing rows** are both learners whose fits move with a holdout draw: gbt's trees on the learner seed, the lasso's penalty on its holdout. Their hits mostly have p between 0.02 and 0.05. That pattern points to a test somewhat anti-conservative for those learners rather than to a few extreme seeds; VERIFY-H1STATS measured gbt at 6.2% [2.5, 12.5] at R = 3 and attributed the creep to units that share samples across repeats.
+- **Receipts.** `logs/cal-box/grm-logs/cal/calibration.json` and `calibration.txt`, every seed's `summary.json` and `contrasts.json` in `cal-seeds.tgz`, and a laptop recomputation from those files that equals the box's report (`logs/calibration-local.json`). All in the STATSFIX lane folder.
+
+### Round 2, pre-registered before any rerun (main's ruling "STATSFIX calibration fails", 7 Nov 2026)
+
+This section fixes the test, the retuned twin's draws, the power curve and the rerun before any of them run. Where it differs from the sections above, it replaces them.
+
+**The test: the corrected resampled t (Nadeau and Bengio), for every learner.**
+- **Units.** Unit u is one (repeat r, outer fold f) of the lineage split's 3 keyed repeats and 5 outer folds, so J = 15 units, with the slots of the replacement rule above.
+- **Unit value.** m_u is the mean, over the genomes paired in u, of log loss(default) − log loss(arm), with probabilities clipped to [1e-4, 1 − 1e-4].
+- **Size ratio.** n_test(u) is the number of genomes paired in u. n_train(u) is the number of the default's genomes in repeat r outside fold f, its training samples in that fold. ρ = (1/J) Σ_u n_test(u) / n_train(u), which is about 0.25 for the default's own folds.
+- **Statistic.** m̄ = (1/J) Σ_u m_u and s² = Σ_u (m_u − m̄)² / (J − 1). SE = √((1/J + ρ) · s²), t = m̄ / SE, df = J − 1 = 14.
+- **p and intervals.** p is two-sided from Student's t with 14 df. The 95% interval is m̄ ± t(0.975, 14) · SE and the 90% interval is m̄ ± t(0.95, 14) · SE.
+- **Decisions** are unchanged: `improves` or `worse` needs the 95% interval off zero and p_adj < 0.05, BH over the run's non-sentinel lineage contrasts, and a sentinel on its own p.
+- **AUROC delta.** Its interval uses the same SE formula over the units' AUROC deltas.
+- **Random split.** It stays descriptive and uses the same formula with J = 5 and df = 4.
+- **Degenerate units.** Unit means equal to rounding give p = 1 when they are all zero; otherwise the contrast is undefined.
+- **Record.** `ci_method` is `repeat_fold_corrected_t` and the unit is `repeat_fold`.
+
+**The retuned twin's replacement draws.** When a slot's retuned tuning partitions are refused, `grm arm` draws them again from `repeat_seed(repeat_seed(tuning seed, keyed repeat), d)` for d = 1, then 2; d = 0 is today's draw. That allows at most 2 replacements per split, each refused draw kept as `plans/refused-<split>-<slot>-tuning-<d>.retuned.json` and listed in `repeats.json`. Past that, the twin's split is unavailable with the reason.
+
+**The power curve.** The 2× size in the ruling's example can't be built: the planted effect already explains every resistant genome, since resistance is carriage of a blaKPC allele that H and P call. So the sizes are shares of the resistant genomes whose blaKPC allele is visible:
+- **Visible shares.** v = 0.125, 0.25, 0.5 and 1 (1 is today's planted effect). `synthetic_root.py --visible v` keeps each carrier resistant but writes its allele contig only with probability v, drawn from its own random stream. At v = 1 the root is byte-identical to today's.
+- **Arms and seeds.** For each v, `power.json` runs `k-h` and `k-p` against the default on seeds 9301 to 9320, with 3 repeats and the corrected t. The runner's sentinels run too.
+- **Detection.** A learner detects arm a at size v on a seed when a's lineage contrast is `improves` in that run.
+- **Minimum detectable effect.** For each learner and arm, the smallest v detected on at least 80% of the seeds, with its observed share and Clopper-Pearson interval. If no tested size reaches 80%, it is reported as above 1×. This is the minimum detectable effect that H-1's "no measured difference" is stated against, as a visible share and as the mean log-loss gain the arms showed at that size.
+
+**The rerun.** The calibration reruns as pre-registered above:
+- seeds 9101 to 9200, then reserve seeds 9201 upward while a judged row has fewer than 100 contrasts, at most 20;
+- the same bar: at least 100 contrasts, rate at most 5% and upper bound at most 11% per judged row, each direction reported;
+- the planted arms `improves` for every learner on every seed.
+
+If any row still fails, the lane stops and reports, and nothing is tuned further.
+
+### Round 2's results (7 Nov 2026)
+
+**The rerun fails on power, so H-1 still can't run.** The false-positive rate is now controlled, but cart misses the planted arms on 33 of 100 seeds. Per the ruling, nothing was tuned after this.
+
+**Setup.** Boat xlarge `bx_y9r6ck25` (9950X), grm `13ef526a…` built at `c7ee4225`, seeds 9101 to 9200. No reserve seed was needed: the retuned twin was produced on all 100.
+
+**False positives.** Rows are the sentinels on their own p, improves + worse, with Clopper-Pearson 95% intervals:
+
+| Twin | Learner | Hits / contrasts | Rate [95% CI] | Result |
+|---|---|---|---|---|
+| learner-seed | rf | 0/100 | 0.0% [0.0, 3.6] | pass |
+| learner-seed | gbt | 0/100 | 0.0% [0.0, 3.6] | pass |
+| retuned | scm | 0/100 | 0.0% [0.0, 3.6] | pass |
+| retuned | cart | 0/100 | 0.0% [0.0, 3.6] | pass |
+| retuned | gbt | 0/100 | 0.0% [0.0, 3.6] | pass |
+| retuned | lasso | 0/100 | 0.0% [0.0, 3.6] | pass |
+| zero by construction | (as in round 1) | 0/100 | – | not judged |
+
+Every judged row is 0 of 100 in both directions. The corrected t holds its size with room to spare and may be conservative.
+
+**Planted arms (fails).** k-h, k-p and k-c-h-p are `improves` on all 100 seeds for scm, rf, gbt and the lasso, but for cart on only 67 of 100, with the same 33 seeds missed by all three arms. On a missed seed, cart's contrast typically has its interval off zero and p just under 0.05, but p_adj over 0.05 after BH (seed 9104: estimate 1.39, 95% interval [0.012, 2.76], p 0.048, p_adj 0.064). So the miss comes from the corrected t's wider SE (×2.18 at ρ = 0.25) combined with BH, not from missing signal. On this root the three planted arms give identical contrasts: H and P each add one column calling the same blaKPC family, so they are one test, not three.
+
+**Power curve** (`bx_txpqa8m9`, seeds 9301 to 9320 at each size, the corrected t). The minimum detectable effect is the smallest visible share detected on at least 80% of seeds:
+
+| Learner | 0.125 | 0.25 | 0.5 | 1 | Minimum detectable (share; mean log-loss gain there) |
+|---|---|---|---|---|---|
+| scm | 4/20 | 9/20 | 19/20 | 20/20 | 0.5; 2.95 |
+| cart | 0/20 | 1/20 | 3/20 | 16/20 | 1 (exactly 80%); 1.67 |
+| rf | 0/20 | 0/20 | 5/20 | 20/20 | 1; 0.075 |
+| gbt | 0/20 | 0/20 | 11/20 | 20/20 | 1; 0.47 |
+| lasso | 0/20 | 11/20 | 20/20 | 20/20 | 0.5; 0.16 |
+
+k-p gives the same table. So under the corrected t, rf, gbt and cart detect the planted family reliably only when every carrier shows it; at half visibility they mostly don't. For rf, a mean log-loss gain of about 0.012 (half visibility) was detected on only 5 of 20 seeds, and only the full effect, about 0.075, reached 80%. Both are on the scale of stage 2's 0.02 margin, so a gain near that margin would usually read as no measured difference for rf.
+
+**Receipts.** In the STATSFIX lane folder:
+- `logs/r2/cal-box/grm-logs/cal/` (`calibration.json`, `calibration.txt`, `cal-seeds.tgz`);
+- `logs/r2/gates-box/grm-logs/gates/` (`power.json`, `power.txt`, `power-seeds.tgz`).
+
 ## The decided arms (V-1)
 
 One factor at a time against the default; 11 arms plus the default. `scripts/input-comparison/spec.json` holds them, and `run.py` refuses an arm that changes no input or more than one.
@@ -44,7 +155,7 @@ Every row of every arm carries the default plan's `fold_plan_sha256` and the def
    - For each split (random, lineage), repeat and outer fold, it runs `fit_encoder` and `transform` on the fold's training samples, `block_candidates` there, `assemble` on the same mask, and every learner through `learn::planned::evaluate_plan` with the plan's inner folds and holdouts. Each arm is scored once per outer fold.
    - The default arm runs first and writes the fold plans the others read (`plans/<split>-<repeat>.json`: sample ids, labels, the species grouping's clusters and duplicate groups, and the keyed `FoldPlan`).
 4. **Rows.** `grm arm` writes contract §4 rows (`predictions.jsonl`): `fold` from the plan, `called` = score ≥ 0.5, and a no-call row scoring its outer fold's training prevalence with `called` false. It also writes `runs.json` (K's run record without its id, plus a cohort arm's drop counts) and `arm.json` (the arm's k, sample count, support floor, eval config, selection record, block specs and unavailable blocks).
-5. **J.** For each dataset, arm, learner and split, `stats.pair_arms(..., pairing=rule)` and `stats.compare(family="C", endpoints=["log_loss"])`, then one `stats.finalize` (BH over all planned family C contrasts). A pairing J refuses, or an arm with no result, is not produced, with its reason.
+5. **J.** For each dataset, arm, learner and split, `stats.pair_units(..., pairing=rule)` and `stats.compare_units` (family C on the lineage split, D on the random split), then one `stats.finalize`: BH over every planned non-sentinel family C contrast, the sentinels on their own p ([the decision method](#the-decision-method-mains-rulings-after-verify-h1stats-7-nov-2026)). A pairing J refuses, or an arm with no result, is not produced, with its reason.
 6. **K.** `run.py` builds the run manifest (each paired run with `pairing`: rule, reference arm `default`, and its own plan hashes) and calls `report.build_report` with the prediction root, which writes `WORK/report/ablation-report.json` and `.md`. `WORK/summary.json` lists each arm's decision per learner and split.
 
 ## Groups for the group draw
@@ -66,9 +177,10 @@ H's K block declares a screen cap equal to the default budget, and `docs/ablatio
 - 2% of labels flipped.
 
 `GRM_INPUT_E2E_BINARY=target/release/grm python3 -B -m unittest discover -s tests/input_comparison -t .` generates the root, runs `run.py` on `spec.json` and requires:
-- all 120 planned contrasts produced (11 arms and the sentinel);
+- all 130 planned contrasts produced (11 arms and the two sentinels);
 - the lasso's decision `improves` on the lineage split for `k-h`, `k-p` and `k-c-h-p`, and every random-split contrast descriptive (family D, an estimate but no p);
-- the sentinel present in the manifest, and a learner flagged unreliable exactly when the sentinel's lineage-split contrast for it isn't `inconclusive`;
+- 3 lineage repeats and 1 random in every run, every lineage contrast on 15 (repeat, fold) units, the retuned twin keeping the default's outer folds and drawing other inner folds in each repeat, and the sentinels outside BH;
+- both sentinels present in the manifest, and a learner flagged unreliable exactly when the lineage-split contrast of the sentinel that judges it isn't `inconclusive`;
 - no `improves` anywhere for `k-c`;
 - every contrast naming its arm's rule;
 - the report reloading against its prediction files.
@@ -78,6 +190,8 @@ Without the variable only the spec tests run.
 On the rerun after the rulings (Boat xlarge, 5 Nov 2026, seed 11) the test passed 7/7. All 110 contrasts were produced; `K+H`, `K+P` and `K+C+H+P` were `improves` for every learner on both splits, and `K+C` had no `improves`.
 
 ## The null study for the cohort arms
+
+**Superseded (7 Nov 2026):** every figure in this section and the next two came from the lineage-cluster test, which [the decision method](#the-decision-method-mains-rulings-after-verify-h1stats-7-nov-2026) replaced. They aren't H-1's calibration and no longer describe what the runner decides; they are kept as the record of what was measured. The cohort kinds' base rates in `spec.json` were measured the same way.
 
 `scripts/input-comparison/null_study.py` runs the whole decided comparison once per cohort seed and pools the decisions. Each seed's data root has the planted H and P effect and no k-mer signal. Over 20 seeds (101 to 120, Boat xlarge, 5 Nov 2026), each arm had 200 family C contrasts (5 learners × 2 splits × 20). Shares of `improves`, with Clopper-Pearson 95% intervals:
 
@@ -100,7 +214,9 @@ Receipts: `logs/null-study-20seeds.json` and each seed's `summary.json` and `con
 
 ## Calibration of the decision procedure (ruling (b))
 
-`scripts/input-comparison/calibration.json` defines two arms that are exchangeable with the default, so every `improves` or `worse` on them is a false positive:
+**Superseded (7 Nov 2026)** by [the calibration H-1 must pass](#the-calibration-h-1-must-pass-ruling-6): this one judged BH-adjusted decisions averaged over all five learners, which hid gbt's rate (REVIEW-ICODE-PY H1). `calibration.json` now holds the new calibration's arms.
+
+The calibration of 5 Nov defined two arms that are exchangeable with the default, so every `improves` or `worse` on them is a false positive:
 - **(b1) `cohort-path`**: the default's inputs sent through the cohort-arm path. Its cohort is the default's, under `common_outer_test_set_balanced`, with its own subsample seed (`grm arm --balance-seed 7`).
 - **(b2) `seed-twin`**: a `same_plan` twin of the default whose forest and boosting draw from another seed (`grm arm --learner-seed 1001`, `PlanView::learner_seed`). Every partition is unchanged.
 
@@ -125,6 +241,8 @@ Both are at or below 5%, so the procedure passes as ruled. Two caveats belong wi
 Receipts: `logs/calibration-20seeds.json` and each seed's `summary.json` and `contrasts.json` (`logs/cal1/cal`, `logs/cal2/cal`).
 
 ## Which split decides, and the sentinel (main's ruling after the calibration study)
+
+**Superseded in part (7 Nov 2026):** the random split stays descriptive and the lineage split decides, but the test, the sentinels and BH's family are now [the decision method](#the-decision-method-mains-rulings-after-verify-h1stats-7-nov-2026)'s.
 
 The calibration above (seed twin over 20 seeds: 2.0% `improves` and 3.0% `worse` over both splits, 1.0% and 0.0% over the lineage split alone; gbt on the random split non-inconclusive in 9 of 20; gbt on the lineage split 1 of 20; rf 0 of 40) led main to three rules, which the runner and K now apply.
 

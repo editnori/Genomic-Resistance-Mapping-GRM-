@@ -183,6 +183,10 @@ enum Command {
         /// repeat seed, every partition unchanged (the calibration twin).
         #[arg(long)]
         learner_seed: Option<u64>,
+        /// Score the reference's outer folds with inner folds and tuning
+        /// holdouts drawn from this seed (the retuned twin; same_plan only).
+        #[arg(long)]
+        tuning_seed: Option<u64>,
         /// Write training.jsonl: each outer fold's training genome ids.
         #[arg(long)]
         trace_training: bool,
@@ -360,6 +364,7 @@ fn run(cli: Cli) -> Result<()> {
             reference,
             balance_seed,
             learner_seed,
+            tuning_seed,
             trace_training,
             groups,
             out,
@@ -376,6 +381,7 @@ fn run(cli: Cli) -> Result<()> {
                 reference,
                 balance_seed,
                 learner_seed,
+                tuning_seed,
                 trace_training,
                 groups,
             };

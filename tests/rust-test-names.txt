@@ -3,7 +3,10 @@ doc src/ablate/blocks.rs - ablate::blocks::admit
 doc src/ablate/plan.rs - ablate::plan::GroupIds
 doc src/ablate/plan.rs - ablate::plan::GroupIds
 src/lib.rs ablate::arm::tests::a_c_and_k_fold_matrix_collapses_cross_block_twins_on_training_samples_only
+src/lib.rs ablate::arm::tests::a_cohort_arm_s_balance_seed_is_keyed_by_repeat
 src/lib.rs ablate::arm::tests::a_cohort_plan_keeps_its_held_out_genomes_in_run_arm
+src/lib.rs ablate::arm::tests::a_refused_lineage_repeat_is_replaced_by_the_next_keyed_draw_at_most_twice
+src/lib.rs ablate::arm::tests::a_refused_retuned_draw_is_replaced_at_most_twice_per_split
 src/lib.rs ablate::arm::tests::run_arm_hands_each_c_and_k_fold_matrix_only_its_training_samples
 src/lib.rs ablate::arm::tests::the_fold_matrix_reads_only_the_training_samples
 src/lib.rs ablate::blocks::tests::a_probe_no_call_is_not_assessable
@@ -56,6 +59,7 @@ src/lib.rs ablate::encode::tests::where_twins_both_observe_a_sample_the_higher_p
 src/lib.rs ablate::plan::tests::a_cohort_arm_keeps_shared_folds_when_it_drops_or_adds_a_unit_minimum
 src/lib.rs ablate::plan::tests::a_fold_missing_a_class_leaves_the_split_unavailable
 src/lib.rs ablate::plan::tests::a_keyed_lineage_plan_with_fewer_than_twice_k_lineages_is_refused
+src/lib.rs ablate::plan::tests::a_retuned_plan_keeps_the_outer_folds_and_redraws_tuning
 src/lib.rs ablate::plan::tests::a_tuning_holdout_failure_reads_as_check_split_plan_words_it
 src/lib.rs ablate::plan::tests::check_structure_refuses_fewer_than_two_outer_or_inner_folds
 src/lib.rs ablate::plan::tests::group_ids_reject_malformed_groups

@@ -18,21 +18,36 @@ arm rename (`K+C`, `K+H`, `K+P`, `K+C+H+P`) are read under today's names.
 
 Every arm also gets cluster-robust rates with the seed as the cluster: each seed's share of
 `improves` (and of `worse`) over its lineage contrasts, averaged over seeds, with a 95% Student t
-interval on the per-seed shares (seeds are independent). `--spec calibration.json` runs the
-calibration arms, which are exchangeable with the default: there every `improves` or `worse`
-is a false positive, and the procedure passes when each arm's mean per-seed rate of each is at
-most 5% (main's ruling on the null study, 5 Nov 2026). Either study passes only when every arm
-it judges had a lineage contrast in at least 20 seeds (REVIEW-NULL16 L1): a seed that gave an
-arm none doesn't count toward that arm, however many summaries there are. The calibration judges
-every arm calibration.json names, plus any other arm its summaries hold (the runner's sentinel);
-a named arm absent from every seed, or no seeds at all, fails it and the report names the arm
-(REVIEW-INPUT17 M1). The null study refuses when one of its judged arms is absent. A seed is the one its
-cohort.json records, whatever its folder is called, and counts once (REVIEW-INPUT17B L2): its copies must be
-byte-identical, and a summary without a readable seed is refused. A summary recorded under two seeds is
-refused (REVIEW-INPUT18 F1). `run` writes each seed's summary.json last, so a seed killed before it reruns.
+interval on the per-seed shares (seeds are independent). The null study passes only when every arm
+it judges had a lineage contrast in at least 20 seeds (REVIEW-NULL16 L1), and refuses when one of
+its judged arms is absent. Its figures before 7 Nov 2026 came from the cluster test and are
+superseded (docs/input-comparison-runner.md).
+A seed is the one its cohort.json records, whatever its folder is called, and counts once (REVIEW-INPUT17B L2): its
+copies must be byte-identical, and a summary without a readable seed is refused. A summary recorded under two seeds
+is refused (REVIEW-INPUT18 F1). `run` writes each seed's summary.json last, so a seed killed before it reruns.
+
+`report --calibration` is the calibration H-1 must pass (main's ruling 6 after VERIFY-H1STATS), on
+seeds run with `--spec calibration.json` and H-1's exact decision code: the (repeat, fold) unit t
+at 3 lineage repeats. Its twins are exchangeable with the default, so every decision on one is a
+false positive: the runner's two sentinels (the learner-seed twin and the retuned twin), judged
+on their own p as H-1 judges them, and the cohort-path arm. Each (twin, learner) row counts its
+lineage contrasts, one per seed (seeds are independent), with improves and worse apart, each with
+a Clopper-Pearson 95% interval. A row whose every contrast is exactly zero is zero by construction
+(the twin doesn't reach that learner) and is reported, not judged. Every other row passes with at
+least 100 contrasts, improves + worse at most 5% and the interval's upper bound at most 11%; every
+learner needs a judged row; and every planted arm (k-h, k-p, k-c-h-p) must be `improves` for every
+learner on every seed, as the run decided it (BH over the run's lineage contrasts). A seed whose
+run made no lineage decision (run.py's exit 3) keeps its summary, is listed and counts toward no
+row; a seed counts once however many folders hold it (REVIEW-INPUT17 L2).
+
+`report --power` is the power curve (pre-registered in docs/input-comparison-runner.md, round 2), on seeds
+run with `--spec power.json --visible V` for each size V: per arm, learner and V, the share of seeds whose
+lineage contrast is `improves` (Clopper-Pearson 95%) and the mean estimate, and per arm and learner the
+minimum detectable effect, the smallest V detected on at least 80% of seeds (None: above every tested V).
 
 usage: python3 -B null_study.py run --seeds 101-110 --out DIR --grm GRM [--spec SPEC] [--jobs N] [--parallel P]
-       python3 -B null_study.py report DIR [DIR ...] [--json OUT] [--calibration]
+                                    [--visible V]
+       python3 -B null_study.py report DIR [DIR ...] [--json OUT] [--calibration | --power]
 """
 import argparse
 import json
@@ -47,13 +62,25 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[1] / "scripts" / "ablation"))
+import stats  # noqa: E402  J, for its decision rule
 COHORT_ARMS = ("cap-1000", "cap-4000", "grr-v1")
 PLANTED_ARMS = ("k-h", "k-p", "k-c-h-p")
+POWER_ARMS = ("k-h", "k-p")
 # The block arms' names before the round-12 rename; the stored null-study seeds (5 Nov 2026) use them.
 RENAMED = {"K+C": "k-c", "K+H": "k-h", "K+P": "k-p", "K+C+H+P": "k-c-h-p"}
 ALPHA = 0.05
 MIN_SEEDS = 20
-CALIBRATION_ARMS = tuple(a["name"] for a in json.loads((HERE / "calibration.json").read_text())["arms"])
+# The calibration (main's ruling 6 after VERIFY-H1STATS): its twins, by arm, and its bars.
+TWINS = {"sentinel-seed-twin": "learner-seed twin", "sentinel-tuning-twin": "retuned twin",
+         "cohort-path": "cohort path"}
+LEARNERS = ("scm", "cart", "rf", "gbt", "lasso")
+MIN_CONTRASTS = 100
+MAX_RATE = 0.05
+MAX_UPPER = 0.11
+# The power curve's detection bar.
+DETECTED = 0.8
+NO_DECISIONS_EXIT = 3
 
 
 def seeds(text):
@@ -76,7 +103,7 @@ def synthetic_spec(spec, out):
     return path, s
 
 
-def one_seed(seed, out, grm, jobs, spec=HERE / "spec.json"):
+def one_seed(seed, out, grm, jobs, spec=HERE / "spec.json", visible=1.0):
     work = out / f"seed-{seed}"
     if (work / "summary.json").exists():
         return seed, 0.0
@@ -86,19 +113,24 @@ def one_seed(seed, out, grm, jobs, spec=HERE / "spec.json"):
         shutil.rmtree(work)
     work.mkdir(parents=True)
     with open(work / "log.txt", "wb") as log:
-        subprocess.run([sys.executable, "-B", str(HERE / "synthetic_root.py"), str(raw), "--seed", str(seed)],
+        subprocess.run([sys.executable, "-B", str(HERE / "synthetic_root.py"), str(raw), "--seed", str(seed),
+                        *(["--visible", str(visible)] if visible != 1 else [])],
                        check=True, stdout=log, stderr=subprocess.STDOUT)
         path, s = synthetic_spec(spec, work)
         vocabulary = (["--sigdrug-vocabulary", str(raw / "vocabulary")]
                       if s.get("curate_inputs", {}).get("sigdrug_vocabulary") else [])
-        subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(path), "--raw", str(raw),
-                        "--work", str(run), "--grm", grm, "--source-commit", "0" * 40, "--jobs", str(jobs),
-                        *vocabulary], check=True, stdout=log, stderr=subprocess.STDOUT)
+        rc = subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(path), "--raw", str(raw),
+                             "--work", str(run), "--grm", grm, "--source-commit", "0" * 40, "--jobs", str(jobs),
+                             *vocabulary], stdout=log, stderr=subprocess.STDOUT).returncode
+    # A run with a dataset that made no lineage decision exits 3 after writing its summary; the seed keeps it.
+    if rc not in (0, NO_DECISIONS_EXIT):
+        raise subprocess.CalledProcessError(rc, "run.py")
     # summary.json last and whole (REVIEW-INPUT18 L2): a rerun skips a folder with one, so a seed killed before it
     # landed reruns, and one that has it also has the cohort.json that names its seed.
     truth = json.loads((raw / "truth.json").read_text())
     (work / "cohort.json").write_text(json.dumps({"seed": seed, "genomes": len(truth["genomes"]),
-                                                  "resistant": sum(g["resistant"] for g in truth["genomes"])}))
+                                                  "resistant": sum(g["resistant"] for g in truth["genomes"]),
+                                                  "visible": truth["config"].get("visible", 1.0)}))
     shutil.copy(run / "j" / "contrasts.json", work / "contrasts.json")
     shutil.copy(run / "summary.json", work / "summary.json.part")
     os.replace(work / "summary.json.part", work / "summary.json")
@@ -181,7 +213,16 @@ def seed_of(summary):
     return seed
 
 
-def report(dirs, calibration=False):
+
+def visible_of(seed_dir):
+    """The visible share a seed's root was written with (cohort.json), 1 when it records none."""
+    try:
+        return json.loads((seed_dir / "cohort.json").read_text()).get("visible", 1.0)
+    except OSError:
+        return 1.0
+
+
+def report(dirs, calibration=False, power=False):
     for d in dirs:
         if not Path(d).is_dir():
             raise SystemExit(f"{d}: no such folder")
@@ -192,13 +233,19 @@ def report(dirs, calibration=False):
     seen, digests = {}, {}
     for path in sorted(p for d in dirs for p in Path(d).glob("seed-*/summary.json")):
         seed = seed_of(path)
-        first = seen.setdefault(seed, path)
+        # A seed is its cohort.json's seed and its root's visible share: the power curve runs one seed at
+        # several shares.
+        first = seen.setdefault((seed, visible_of(path.parent)), path)
         if first is not path and first.read_bytes() != path.read_bytes():
             raise SystemExit(f"seed {seed} has two different summaries: {first} and {path}")
         other, at = digests.setdefault(hashlib.sha256(path.read_bytes()).digest(), (seed, path))
         if other != seed:
             raise SystemExit(f"seeds {other} and {seed} have byte-identical summaries: {at} and {path}")
     summaries = sorted(seen.values())
+    if calibration:
+        return calibrate(summaries)
+    if power:
+        return power_curve(summaries)
     arms = {}
     firings = {"seeds_with_a_firing": 0, "firings": 0, "learners": {}}
     for path in summaries:
@@ -231,15 +278,6 @@ def report(dirs, calibration=False):
         a["improves_rate"] = a["improves"] / a["contrasts"]
         a["improves_ci95"] = clopper_pearson(a["improves"], a["contrasts"])
         a["seed_any_improves_ci95"] = clopper_pearson(a["seeds_any_improves"], a["seeds"])
-    if calibration:
-        ok = all(a["per_seed_improves"]["mean"] <= ALPHA and a["per_seed_worse"]["mean"] <= ALPHA
-                 for a in arms.values())
-        missing = [n for n in CALIBRATION_ARMS if n not in arms]
-        thin = sorted(n for n, a in arms.items() if a["seeds"] < MIN_SEEDS)
-        return {"seeds": len(summaries), "nominal_alpha": ALPHA, "cluster": "seed", "arms": arms,
-                "split": "lineage", "sentinel_firings": firings, "min_seeds": MIN_SEEDS,
-                "named_arms": list(CALIBRATION_ARMS), "missing_arms": missing, "thin_arms": thin,
-                "pass": bool(summaries) and not missing and not thin and ok}
     absent = [n for n in COHORT_ARMS + PLANTED_ARMS if n not in arms]
     if absent:
         raise SystemExit(f"null study: arm {', '.join(absent)} is in no seed's summary.json "
@@ -258,6 +296,143 @@ def report(dirs, calibration=False):
                      and all(v == 1.0 for v in planted.values()))}
 
 
+def calibrate(summaries):
+    """The calibration H-1 must pass (module docstring), from each seed's contrasts.json and summary.json."""
+    rows = {(arm, learner): {"twin": TWINS[arm], "arm": arm, "learner": learner, "contrasts": 0, "improves": 0,
+                             "worse": 0, "zero": 0, "not_produced": 0}
+            for arm in TWINS for learner in LEARNERS}
+    planted = {(arm, learner): {"arm": arm, "learner": learner, "seeds": 0, "improves": 0, "missed": []}
+               for arm in PLANTED_ARMS for learner in LEARNERS}
+    no_decision, absent = [], []
+    for path in summaries:
+        seed = path.parent.name
+        summary = json.loads(path.read_text())
+        if summary.get("no_decision_datasets"):
+            no_decision.append(seed)
+            continue
+        try:
+            records = json.loads((path.parent / "contrasts.json").read_text())
+        except (OSError, ValueError) as e:
+            raise SystemExit(f"{seed}: no readable contrasts.json beside its summary ({e.__class__.__name__})")
+        lineage = {(x["treatment"], x["learner"]): x for x in records if x["split"] == "lineage" and x["family"] == "C"}
+        for arm in list(TWINS) + list(PLANTED_ARMS):
+            if arm not in summary["arms"]:
+                absent.append(f"{seed}: {arm}")
+        for (arm, learner), row in rows.items():
+            x = lineage.get((arm, learner))
+            if x is None:
+                row["not_produced"] += arm in summary["arms"]
+                continue
+            if TWINS[arm] != "cohort path" and x["adjust"] != "none":
+                raise SystemExit(f"{seed}: {x['id']} was adjusted ({x['adjust']}); a sentinel is judged on its own p")
+            row["contrasts"] += 1
+            row["zero"] += x["estimate"] == 0 and x["ci"] == [0.0, 0.0]
+            # J's own rule on the contrast's own p, as H-1 judges a sentinel (the cohort path's record is BH's).
+            decision = stats.decide(x["ci"], x["p"])
+            if decision != "inconclusive":
+                row[decision] += 1
+        for (arm, learner), row in planted.items():
+            x = lineage.get((arm, learner))
+            row["seeds"] += 1
+            if x is not None and x["decision"] == "improves":
+                row["improves"] += 1
+            else:
+                row["missed"].append(seed)
+    out_rows = {}
+    for (arm, learner), row in rows.items():
+        n, hits = row["contrasts"], row["improves"] + row["worse"]
+        row["zero_by_construction"] = n > 0 and row["zero"] == n
+        row["rate"] = hits / n if n else None
+        row["ci95"] = clopper_pearson(hits, n) if n else None
+        row["directions"] = {d: {"rate": row[d] / n if n else None, "ci95": clopper_pearson(row[d], n) if n else None}
+                             for d in ("improves", "worse")}
+        row["judged"] = n > 0 and not row["zero_by_construction"]
+        row["pass"] = (not row["judged"] or n >= MIN_CONTRASTS and row["rate"] <= MAX_RATE
+                       and row["ci95"][1] <= MAX_UPPER)
+        out_rows[f"{arm}:{learner}"] = row
+    judged = {r["learner"] for r in out_rows.values() if r["judged"]}
+    unjudged = [learner for learner in LEARNERS if learner not in judged]
+    failed = sorted(name for name, r in out_rows.items() if not r["pass"])
+    missed = sorted(f"{r['arm']}:{r['learner']}" for r in planted.values() if r["missed"])
+    seeds = len(summaries) - len(no_decision)
+    return {"seeds": len(summaries), "seeds_with_decisions": seeds, "no_decision_seeds": no_decision,
+            "absent_arms": absent, "split": "lineage", "test": "repeat_fold_corrected_t",
+            "bars": {"min_contrasts": MIN_CONTRASTS, "max_rate": MAX_RATE, "max_upper": MAX_UPPER},
+            "rows": out_rows, "planted": {f"{r['arm']}:{r['learner']}": r for r in planted.values()},
+            "unjudged_learners": unjudged, "failed_rows": failed, "planted_missed": missed,
+            "pass": bool(seeds) and not absent and not unjudged and not failed and not missed}
+
+
+def power_curve(summaries):
+    """The power curve (module docstring) from each seed's cohort.json, contrasts.json and summary.json."""
+    cells = {}
+    for path in summaries:
+        seed = path.parent.name
+        visible = json.loads((path.parent / "cohort.json").read_text()).get("visible", 1.0)
+        summary = json.loads(path.read_text())
+        records = json.loads((path.parent / "contrasts.json").read_text())
+        lineage = {(x["treatment"], x["learner"]): x for x in records if x["split"] == "lineage" and x["family"] == "C"}
+        for arm in POWER_ARMS:
+            if arm not in summary["arms"]:
+                raise SystemExit(f"{seed}: no arm {arm} in its summary.json")
+            for learner in LEARNERS:
+                c = cells.setdefault((arm, learner, visible), {"arm": arm, "learner": learner, "visible": visible,
+                                                                 "seeds": 0, "improves": 0, "estimates": []})
+                x = lineage.get((arm, learner))
+                c["seeds"] += 1
+                c["improves"] += x is not None and x["decision"] == "improves"
+                if x is not None and x["estimate"] is not None:
+                    c["estimates"].append(x["estimate"])
+    out = []
+    for c in sorted(cells.values(), key=lambda c: (c["arm"], LEARNERS.index(c["learner"]), c["visible"])):
+        estimates = c.pop("estimates")
+        out.append({**c, "share": c["improves"] / c["seeds"], "ci95": clopper_pearson(c["improves"], c["seeds"]),
+                    "mean_estimate": sum(estimates) / len(estimates) if estimates else None})
+    mde = {}
+    for arm in POWER_ARMS:
+        for learner in LEARNERS:
+            rows = [c for c in out if c["arm"] == arm and c["learner"] == learner]
+            hit = [c for c in rows if c["share"] >= DETECTED]
+            mde[f"{arm}:{learner}"] = ({"visible": hit[0]["visible"], "share": hit[0]["share"], "ci95": hit[0]["ci95"],
+                                        "mean_estimate": hit[0]["mean_estimate"]} if hit else None)
+    return {"seeds": len(summaries), "sizes": sorted({c["visible"] for c in out}), "bar": DETECTED, "cells": out,
+            "minimum_detectable": mde}
+
+
+def print_power(result):
+    for c in result["cells"]:
+        lo, hi = c["ci95"]
+        mean = "n/a" if c["mean_estimate"] is None else f"{c['mean_estimate']:.4f}"
+        print(f"{c['arm']:<5} {c['learner']:<6} visible {c['visible']:<6} improves {c['improves']:>2}/{c['seeds']:<2} = "
+              f"{c['share']:.2f} [{lo:.2f}, {hi:.2f}]  mean log-loss gain {mean}")
+    for key, m in result["minimum_detectable"].items():
+        print(f"minimum detectable {key}: " + (f"visible {m['visible']} ({m['share']:.2f}, mean gain "
+                                               f"{m['mean_estimate']:.4f})" if m else
+                                               f"above every tested size {result['sizes']}"))
+
+
+def print_calibration(result):
+    for name, r in result["rows"].items():
+        if not r["contrasts"]:
+            print(f"{name:<28} no contrasts (not produced {r['not_produced']})")
+            continue
+        lo, hi = r["ci95"]
+        state = "zero by construction" if r["zero_by_construction"] else ("pass" if r["pass"] else "FAIL")
+        print(f"{name:<28} {r['improves'] + r['worse']:>3}/{r['contrasts']:<3} = {r['rate']:.3f} [{lo:.3f}, {hi:.3f}]  "
+              f"improves {r['improves']}, worse {r['worse']}; not produced {r['not_produced']}; {state}")
+    for name, r in result["planted"].items():
+        print(f"planted {name:<20} improves {r['improves']}/{r['seeds']}" +
+              (f"; missed {', '.join(r['missed'])}" if r["missed"] else ""))
+    why = ([f"no seed made a lineage decision"] * (not result["seeds_with_decisions"])
+           + [f"absent {a}" for a in result["absent_arms"]]
+           + [f"{l} has no judged row" for l in result["unjudged_learners"]]
+           + [f"row {n} fails" for n in result["failed_rows"]]
+           + [f"planted {n} missed a seed" for n in result["planted_missed"]])
+    print(f"calibration: seeds {result['seeds']} ({result['seeds_with_decisions']} with decisions; no decision: "
+          f"{', '.join(result['no_decision_seeds']) or 'none'}); pass {result['pass']}"
+          + (f" ({'; '.join(why)})" if why else ""))
+
+
 def main(argv):
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -268,21 +443,32 @@ def main(argv):
     r.add_argument("--jobs", type=int, default=3)
     r.add_argument("--parallel", type=int, default=1)
     r.add_argument("--spec", default=str(HERE / "spec.json"))
+    r.add_argument("--visible", type=float, default=1.0, help="synthetic_root.py --visible, for the power curve")
     q = sub.add_parser("report")
     q.add_argument("dirs", nargs="+")
     q.add_argument("--json")
     q.add_argument("--calibration", action="store_true")
+    q.add_argument("--power", action="store_true")
     a = p.parse_args(argv)
     if a.cmd == "run":
         out = Path(a.out)
         out.mkdir(parents=True, exist_ok=True)
         with ThreadPoolExecutor(max_workers=a.parallel) as pool:
-            for seed, seconds in pool.map(lambda s: one_seed(s, out, a.grm, a.jobs, a.spec), seeds(a.seeds)):
+            for seed, seconds in pool.map(lambda s: one_seed(s, out, a.grm, a.jobs, a.spec, a.visible),
+                                          seeds(a.seeds)):
                 print(f"seed {seed}: {seconds:.0f} s", flush=True)
         return
-    result = report(a.dirs, a.calibration)
+    if a.calibration and a.power:
+        raise SystemExit("report takes --calibration or --power, not both")
+    result = report(a.dirs, a.calibration, a.power)
     if a.json:
         Path(a.json).write_text(json.dumps(result, indent=1, sort_keys=True))
+    if a.calibration:
+        print_calibration(result)
+        return
+    if a.power:
+        print_power(result)
+        return
     fmt = lambda r: f"{r['mean']:.3f} [{r['ci95'][0]:.3f}, {r['ci95'][1]:.3f}]" if r["ci95"] else f"{r['mean']:.3f}"
     for name, x in sorted(result["arms"].items()):
         print(f"{name:<14} per-seed improves {fmt(x['per_seed_improves'])}  worse {fmt(x['per_seed_worse'])}  "
@@ -293,13 +479,6 @@ def main(argv):
           f"{result['seeds']} seeds {f['learners'] or ''}")
     print(f"lineage contrasts not produced: {sum(x['not_produced'] for x in result['arms'].values())}; "
           f"pass needs every judged arm in at least {result['min_seeds']} seeds")
-    if a.calibration:
-        why = ([f"no seed summaries in {', '.join(a.dirs)}"] * (not result["seeds"])
-               + [f"arm {n} is in no seed" for n in result["missing_arms"]]
-               + [f"arm {n} has a lineage contrast in {result['arms'][n]['seeds']} seeds, under {result['min_seeds']}"
-                  for n in result["thin_arms"]])
-        print(f"calibration: seeds {result['seeds']}; pass {result['pass']}" + (f" ({'; '.join(why)})" if why else ""))
-        return
     for name in COHORT_ARMS + PLANTED_ARMS:
         x = result["arms"][name]
         lo, hi = x["improves_ci95"]
