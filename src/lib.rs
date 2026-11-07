@@ -20,6 +20,7 @@ pub mod learn;
 pub mod matrix;
 pub mod panels;
 pub mod probes;
+pub mod provenance;
 pub mod report;
 pub mod research;
 pub mod serve;

@@ -825,7 +825,7 @@ fn prune(dir: &Path, keep: &BTreeSet<String>) -> Result<()> {
     Ok(())
 }
 
-fn now_iso() -> String {
+pub(crate) fn now_iso() -> String {
     iso_from_secs(
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

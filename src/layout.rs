@@ -20,6 +20,16 @@ impl Layout {
         self.root.join("bvbrc/genomes.jsonl")
     }
 
+    /// `grm fetch genome-dates`: each selected genome's BV-BRC dates, and the
+    /// manifest that pins them.
+    pub fn genome_dates(&self) -> PathBuf {
+        self.root.join("bvbrc/genome_dates.jsonl")
+    }
+
+    pub fn genome_dates_manifest(&self) -> PathBuf {
+        self.root.join("bvbrc/genome_dates.manifest.json")
+    }
+
     pub fn fasta_dir(&self) -> PathBuf {
         self.root.join("fasta")
     }

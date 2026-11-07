@@ -124,6 +124,23 @@ contigs,contig_n50,gc_content,checkm_completeness,checkm_contamination,isolation
 collection_year,host_name,isolation_source,mlst,cgmlst_hc5,cgmlst_hc20,cgmlst_hc100,sequencing_platform,\
 assembly_method,biosample_accession,assembly_accession";
 
+/// When BV-BRC added a genome and when its assembly was completed, as BV-BRC
+/// wrote them. `grm fetch genome-dates` keeps these in their own file
+/// (`bvbrc/genome_dates.jsonl`), so `genomes.jsonl` and `GENOME_FIELDS` stay
+/// as pinned. They are provenance for `grm provenance` only: both are source
+/// proxies (`ablate::blocks::proxy_kind`), never predictors.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct GenomeDate {
+    #[serde(deserialize_with = "text")]
+    pub genome_id: String,
+    #[serde(default, deserialize_with = "opt_text")]
+    pub date_inserted: Option<String>,
+    #[serde(default, deserialize_with = "opt_text")]
+    pub completion_date: Option<String>,
+}
+
+pub const GENOME_DATE_FIELDS: &str = "genome_id,date_inserted,completion_date";
+
 /// A CDS from the PATRIC annotation of one genome.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Feature {
@@ -273,6 +290,21 @@ impl Client {
         drop(w);
         std::fs::rename(&part, out)?;
         Ok(total)
+    }
+
+    /// The `GenomeDate` rows BV-BRC returns for `ids`, in POST batches, in
+    /// the order it returns them. A genome it has no record for has no row.
+    pub fn fetch_genome_dates(&self, ids: &[String]) -> Result<Vec<GenomeDate>> {
+        let mut rows = Vec::with_capacity(ids.len());
+        for batch in ids.chunks(1000) {
+            let query = format!(
+                "in(genome_id,({}))&select({GENOME_DATE_FIELDS})&limit({PAGE})",
+                batch.join(",")
+            );
+            rows.extend(self.post_rql::<GenomeDate>("genome", &query)?);
+            eprintln!("  genome dates: {} / {}", rows.len(), ids.len());
+        }
+        Ok(rows)
     }
 
     /// Downloads one assembly as gzipped FASTA. Returns the number of
@@ -440,5 +472,23 @@ mod tests {
         assert_eq!(r.measurement_value, None);
         assert_eq!(r.testing_standard_year.as_deref(), Some("2021"));
         assert_eq!(r.pmid.as_deref(), Some("26686880;1"));
+    }
+
+    #[test]
+    fn genome_dates_keep_only_their_three_fields() {
+        let r: GenomeDate = serde_json::from_str(
+            r#"{"genome_id":562.1,"date_inserted":"2014-12-08T22:10:02.394Z",
+                "completion_date":"","genome_name":"Escherichia coli"}"#,
+        )
+        .unwrap();
+        assert_eq!(r.genome_id, "562.1");
+        assert_eq!(r.date_inserted.as_deref(), Some("2014-12-08T22:10:02.394Z"));
+        assert_eq!(r.completion_date, None);
+        assert_eq!(
+            serde_json::to_string(&r).unwrap(),
+            r#"{"genome_id":"562.1","date_inserted":"2014-12-08T22:10:02.394Z","completion_date":null}"#
+        );
+        // The genome record and its field list are untouched.
+        assert!(!GENOME_FIELDS.contains("date_inserted") && !GENOME_FIELDS.contains("completion"));
     }
 }

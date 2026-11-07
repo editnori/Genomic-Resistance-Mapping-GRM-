@@ -234,6 +234,56 @@ impl Phenotype {
     }
 }
 
+/// Where one genome x antibiotic pair's records came from, over the same
+/// records its `Phenotype` consolidates. `grm curate` writes one per
+/// phenotype to curated/provenance.jsonl, a side file that only `grm
+/// provenance` reads; no fingerprint, block or learner reads it.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct PairProvenance {
+    pub genome_id: String,
+    pub antibiotic: String,
+    /// As in `Phenotype`.
+    pub methods: Vec<String>,
+    pub standards: Vec<String>,
+    pub n_records: u32,
+    pub mic_spread: u32,
+    /// The earliest and latest BV-BRC `date_inserted` of the records, as
+    /// BV-BRC wrote it (ordered by `timestamp_key`); None when none has one.
+    pub date_inserted_first: Option<String>,
+    pub date_inserted_last: Option<String>,
+    /// Each record's `testing_standard_year`, `pmid` and `source`, as sets;
+    /// a value fetch joined from a list (`a;b`) counts as each part.
+    pub testing_standard_years: Vec<String>,
+    pub pmids: Vec<String>,
+    pub sources: Vec<String>,
+}
+
+/// Orders BV-BRC timestamps (`2024-03-14T20:07:35.399Z`, and without a
+/// fraction, `2022-05-20T16:20:13Z`) by time: the whole seconds as text,
+/// then the fraction in nanoseconds. Plain text order would put `13.5Z`
+/// before `13Z`.
+fn timestamp_key(stamp: &str) -> (&str, u32) {
+    let (secs, fraction) = stamp
+        .split_once('.')
+        .unwrap_or((stamp.trim_end_matches('Z'), ""));
+    let digits: String = fraction
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .take(9)
+        .collect();
+    (secs, format!("{digits:0<9}").parse().unwrap_or(0))
+}
+
+/// The parts of a value fetch may have joined from a list (`bvbrc::value_text`).
+fn parts(value: &Option<String>) -> impl Iterator<Item = String> + '_ {
+    value
+        .iter()
+        .flat_map(|v| v.split(';'))
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .map(String::from)
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DatasetSpec {
     pub id: String,
@@ -324,6 +374,8 @@ pub struct Funnel {
 
 pub struct Curated {
     pub phenotypes: Vec<Phenotype>,
+    /// One per phenotype, in the same order.
+    pub provenance: Vec<PairProvenance>,
     pub datasets: Vec<DatasetSpec>,
     pub funnel: Funnel,
     pub qc_failures: HashMap<String, String>,
@@ -455,6 +507,11 @@ pub fn curate(
         methods: BTreeSet<String>,
         standards: BTreeSet<String>,
         n: u32,
+        first: Option<String>,
+        last: Option<String>,
+        years: BTreeSet<String>,
+        pmids: BTreeSet<String>,
+        sources: BTreeSet<String>,
     }
     let mut pairs: BTreeMap<(String, String), Acc> = BTreeMap::new();
     for r in records {
@@ -491,9 +548,21 @@ pub fn curate(
         acc.methods.extend(r.laboratory_typing_method.clone());
         acc.standards
             .extend(r.testing_standard.clone().map(|s| s.to_uppercase()));
+        if let Some(at) = &r.date_inserted {
+            let key = timestamp_key(at);
+            if acc.first.as_deref().is_none_or(|f| key < timestamp_key(f)) {
+                acc.first = Some(at.clone());
+            }
+            if acc.last.as_deref().is_none_or(|l| key > timestamp_key(l)) {
+                acc.last = Some(at.clone());
+            }
+        }
+        acc.years.extend(parts(&r.testing_standard_year));
+        acc.pmids.extend(parts(&r.pmid));
+        acc.sources.extend(parts(&r.source));
     }
 
-    let mut phenotypes: Vec<Phenotype> = pairs
+    let (mut phenotypes, provenance): (Vec<Phenotype>, Vec<PairProvenance>) = pairs
         .into_iter()
         .map(|((genome_id, antibiotic), acc)| {
             let conflict = acc.calls.contains(&Call::R) && acc.calls.contains(&Call::S);
@@ -507,7 +576,20 @@ pub fn curate(
                 acc.calls.iter().next().copied()
             };
             let (mic, mic_spread) = consolidate_mics(&acc.mics);
-            Phenotype {
+            let provenance = PairProvenance {
+                genome_id: genome_id.clone(),
+                antibiotic: antibiotic.clone(),
+                methods: acc.methods.into_iter().collect(),
+                standards: acc.standards.into_iter().collect(),
+                n_records: acc.n,
+                mic_spread,
+                date_inserted_first: acc.first,
+                date_inserted_last: acc.last,
+                testing_standard_years: acc.years.into_iter().collect(),
+                pmids: acc.pmids.into_iter().collect(),
+                sources: acc.sources.into_iter().collect(),
+            };
+            let phenotype = Phenotype {
                 species: passing[genome_id.as_str()].clone(),
                 genome_id,
                 antibiotic,
@@ -517,12 +599,13 @@ pub fn curate(
                 mic_spread,
                 label: reported,
                 label_from_mic: false,
-                methods: acc.methods.into_iter().collect(),
-                standards: acc.standards.into_iter().collect(),
+                methods: provenance.methods.clone(),
+                standards: provenance.standards.clone(),
                 n_records: acc.n,
-            }
+            };
+            (phenotype, provenance)
         })
-        .collect();
+        .unzip();
 
     // Empirical breakpoints per species and drug.
     let mut both: HashMap<(String, String), Vec<(Mic, Call)>> = HashMap::new();
@@ -606,6 +689,7 @@ pub fn curate(
 
     Ok(Curated {
         phenotypes,
+        provenance,
         datasets,
         funnel,
         qc_failures,
@@ -1178,6 +1262,91 @@ mod tests {
             &mut Resolver::new(Default::default()),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn pair_provenance_covers_the_records_the_phenotype_consolidates() {
+        let (mut records, genomes) = reported_and_inferred(2, 2, 0);
+        let at =
+            |stamp: &str, pmid: Option<&str>, source: Option<&str>, year: Option<&str>| AmrRecord {
+                genome_id: "562.0".into(),
+                antibiotic: "meropenem".into(),
+                resistant_phenotype: Some("Resistant".into()),
+                testing_standard: Some("clsi".into()),
+                testing_standard_year: year.map(Into::into),
+                pmid: pmid.map(Into::into),
+                source: source.map(Into::into),
+                date_inserted: Some(stamp.into()),
+                ..Default::default()
+            };
+        records.extend([
+            at(
+                "2022-05-20T16:20:13.5Z",
+                Some("26686880;1"),
+                None,
+                Some("2018"),
+            ),
+            at("2022-05-20T16:20:13Z", Some("1"), Some("publication"), None),
+            at("2019-01-01T00:00:00.001Z", None, None, Some("2021")),
+            // No call and no MIC: curate sets it aside, so its date is not the pair's.
+            AmrRecord {
+                genome_id: "562.0".into(),
+                antibiotic: "meropenem".into(),
+                date_inserted: Some("2001-01-01T00:00:00Z".into()),
+                ..Default::default()
+            },
+        ]);
+        let curated = curate_at(&(records, genomes), 1);
+        assert_eq!(curated.provenance.len(), curated.phenotypes.len());
+        for (p, row) in curated.phenotypes.iter().zip(&curated.provenance) {
+            assert_eq!(
+                (&p.genome_id, &p.antibiotic),
+                (&row.genome_id, &row.antibiotic)
+            );
+            assert_eq!((&p.methods, &p.standards), (&row.methods, &row.standards));
+            assert_eq!((p.n_records, p.mic_spread), (row.n_records, row.mic_spread));
+        }
+        let row = &curated.provenance[0];
+        assert_eq!(row.genome_id, "562.0");
+        // The first fixture record plus the three above.
+        assert_eq!(row.n_records, 4);
+        assert_eq!(row.standards, ["CLSI"]);
+        assert_eq!(
+            row.date_inserted_first.as_deref(),
+            Some("2019-01-01T00:00:00.001Z")
+        );
+        // Half a second after 13Z, though "13.5Z" < "13Z" as text.
+        assert_eq!(
+            row.date_inserted_last.as_deref(),
+            Some("2022-05-20T16:20:13.5Z")
+        );
+        assert_eq!(row.testing_standard_years, ["2018", "2021"]);
+        assert_eq!(row.pmids, ["1", "26686880"]);
+        assert_eq!(row.sources, ["publication"]);
+        // A pair with no dated record has no first or last date.
+        let plain = &curated.provenance[1];
+        assert_eq!(plain.date_inserted_first, None);
+        assert!(plain.pmids.is_empty() && plain.sources.is_empty());
+    }
+
+    #[test]
+    fn timestamps_order_by_time() {
+        let mut stamps = [
+            "2022-05-20T16:20:13.5Z",
+            "2022-05-20T16:20:13Z",
+            "2022-05-20T16:20:13.05Z",
+            "2021-12-31T23:59:59.999Z",
+        ];
+        stamps.sort_by_key(|s| timestamp_key(s));
+        assert_eq!(
+            stamps,
+            [
+                "2021-12-31T23:59:59.999Z",
+                "2022-05-20T16:20:13Z",
+                "2022-05-20T16:20:13.05Z",
+                "2022-05-20T16:20:13.5Z",
+            ]
+        );
     }
 
     #[test]

@@ -1851,6 +1851,95 @@ mod tests {
         }
     }
 
+    /// A block whose columns are named for the provenance side files' fields.
+    /// No adapter reads those files, so this one exists only in tests: it
+    /// asks whether `admit` would refuse such a block if one did.
+    struct SideFileSource {
+        spec: BlockSpec,
+        names: Vec<String>,
+    }
+
+    impl sealed::Adapter for SideFileSource {}
+
+    impl BlockSource for SideFileSource {
+        fn spec(&self) -> &BlockSpec {
+            &self.spec
+        }
+
+        fn build(&self, sample_ids: &[String]) -> Result<RawBlock> {
+            let n = sample_ids.len();
+            let cols = self
+                .names
+                .iter()
+                .map(|_| RawColumn::binary(&vec![false; n], &vec![true; n]))
+                .collect::<Result<_>>()?;
+            Ok(RawBlock {
+                spec: self.spec.clone(),
+                sample_ids: sample_ids.to_vec(),
+                names: self.names.clone(),
+                cols,
+            })
+        }
+    }
+
+    #[test]
+    fn admit_refuses_a_block_of_the_provenance_side_file_fields() {
+        // Every field of bvbrc/genome_dates.jsonl and curated/provenance.jsonl
+        // but the row keys (`report/provenance/<id>.json` carries the same).
+        let mut fields: Vec<String> = [
+            serde_json::to_value(crate::bvbrc::GenomeDate::default()).unwrap(),
+            serde_json::to_value(crate::curate::PairProvenance::default()).unwrap(),
+        ]
+        .iter()
+        .flat_map(|row| row.as_object().unwrap().keys().cloned())
+        .filter(|k| k != "genome_id" && k != "antibiotic")
+        .collect();
+        fields.sort();
+        // Dates and years: source proxies, each refused by name alone.
+        let proxies = [
+            "completion_date",
+            "date_inserted",
+            "date_inserted_first",
+            "date_inserted_last",
+            "testing_standard_years",
+        ];
+        // Record and measurement details the name check does not catch.
+        // Nothing reads them into a block: no adapter reads the side files,
+        // and only this module's adapters can be admitted.
+        let unnamed = [
+            "methods",
+            "mic_spread",
+            "n_records",
+            "pmids",
+            "sources",
+            "standards",
+        ];
+        let mut classified: Vec<&str> = proxies.iter().chain(&unnamed).copied().collect();
+        classified.sort();
+        assert_eq!(fields, classified, "classify each new side-file field here");
+
+        let samples = ids(&["g0", "g1"]);
+        let source = |names: &[&str]| SideFileSource {
+            spec: probe_source().spec().clone(),
+            names: names.iter().map(|n| format!("C:{n}")).collect(),
+        };
+        let all: Vec<&str> = fields.iter().map(String::as_str).collect();
+        let err = admit(&source(&all), &samples).err().unwrap();
+        assert!(format!("{err:#}").contains("named diagnostic"), "{err:#}");
+        for name in proxies {
+            let err = admit(&source(&[name]), &samples).err().unwrap();
+            assert!(format!("{err:#}").contains("named diagnostic"), "{err:#}");
+            // As the block's version, too.
+            let mut versioned = source(&[]);
+            versioned.spec.version = name.to_string();
+            let err = admit(&versioned, &samples).err().unwrap();
+            assert!(format!("{err:#}").contains("named diagnostic"), "{err:#}");
+        }
+        for name in unnamed {
+            assert!(admit(&source(&[name]), &samples).is_ok(), "{name}");
+        }
+    }
+
     #[test]
     fn the_deny_list_passes_genotype_names() {
         let mut names: Vec<String> = [
