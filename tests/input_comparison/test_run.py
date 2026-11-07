@@ -12,6 +12,7 @@ import importlib.util
 import io
 import json
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -1425,6 +1426,25 @@ ids = [f"g{i:03d}" for i in range(50)]
                                    capture_output=True, text=True)
                 self.assertNotEqual(p.returncode, 0)
                 self.assertIn("is not in (0, 1]", p.stderr)
+
+    def test_the_hidden_carriers_are_the_visible_streams_draws(self):
+        """STATSFIX round 3 (PW-4): a carrier's contig is hidden when its draw from random.Random("visible:<seed>")
+        is at or above V, one draw per carrier that isn't a copy, in genome order; a copy hides what its original
+        hides. The power curve's roots (seeds 9301 to 9320 in round 2, 9601 to 9620 in round 3) are these draws.
+        Drawing visibility from the main stream instead keeps every label and contig count consistent, so the
+        test above passes, but it hides other carriers."""
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "root"
+            subprocess.run([sys.executable, "-I", "-B", str(HERE / "synthetic_root.py"), str(out), "--genomes", "200",
+                            "--seed", "9601", "--visible", "0.25"], check=True, capture_output=True)
+            genomes = json.loads((out / "truth.json").read_text())["genomes"]
+        stream, expected = random.Random("visible:9601"), {}
+        for g in genomes:
+            expected[g["genome_id"]] = (expected[g["duplicate_of"]] if g["duplicate_of"]
+                                        else g["allele"] is not None and stream.random() >= 0.25)
+        self.assertEqual({g["genome_id"]: g["hidden"] for g in genomes}, expected)
+        self.assertTrue(any(g["duplicate_of"] for g in genomes))
+        self.assertTrue(0 < sum(expected.values()) < sum(g["allele"] is not None for g in genomes))
 
     def test_power_json_runs_the_two_planted_blocks_at_three_repeats(self):
         _, default, arms = run.load_spec(HERE / "power.json")
