@@ -75,6 +75,13 @@ describe("catalog gene groups", () => {
     expect(html).toContain("Counts for the rule says whether the gene");
     expect(html).not.toContain('role="tooltip"');
   });
+
+  it("lets a long class list break after each slash, keeping its text", () => {
+    const group = { ...report.catalog!.groups[0]!, class: "LINCOSAMIDE/OXAZOLIDINONE/PHENICOL", subclass: "CHLORAMPHENICOL/STREPTOGRAMIN B" };
+    const html = render({ ...report, catalog: { ...report.catalog!, groups: [group] } });
+    expect(html).toContain("lincosamide/<wbr/>oxazolidinone/<wbr/>phenicol");
+    expect(html).toContain("chloramphenicol/<wbr/>streptogramin b");
+  });
 });
 
 describe("catalog baseline wording", () => {
