@@ -647,7 +647,8 @@ class CombineRefusalTests(unittest.TestCase):
             (self.tmp / "spec.json").write_text(json.dumps(self.spec))
             with self.assertRaises(SystemExit, msg=value) as e:
                 run.load_spec(self.tmp / "spec.json")
-            self.assertIn("is not a sha256: pin the data root's manifest", str(e.exception))
+            self.assertIn(f"data_root.manifest_sha256 is {value!r}, not a sha256: pin the data root's manifest",
+                          str(e.exception))
 
     def arm_outputs(self, work, datasets, damaged=None, **record):
         """A finished arm folder with its resume.json, for every arm of the spec on `datasets`, as a run writes them;
