@@ -72,6 +72,21 @@ gbt still needs every carrier to show the family. At a quarter, its mean gain of
 
 **Receipts.** `grm-collect/statsfix-r3` on the Boat controller holds `reports/r1/` (the calibration and power reports) and `boxes/<box>/` (every seed's files), with `SHA256SUMS`.
 
+### After REVIEW-STATSFIX-R3 (7 Nov 2026)
+
+REVIEW-STATSFIX-R3 approved round 3 with three Lows, and none of them changes its results.
+
+- **L1.** `calibrate()` found the zero rows in the data. So a judged row with no contrast on any seed passed, and so did a row that should vary but came out all zero. It now names the nine zero rows the calibration's rule lists (`ZERO_ROWS`) and judges every other row:
+  - A zero row fails on any nonzero contrast.
+  - A judged row fails when every contrast is exactly zero.
+  - An undefined contrast counts toward no row's 100, and each row reports its `undefined` count.
+- **L2.** A planted record must carry its learner's test, as a twin's record already did.
+- **L3.** The calibration report's `test` field gives `stats.LEARNER_TESTS`. Both specs, `stats.py` and this doc's AUROC section no longer name one test, an every-seed bar or the cluster jackknife for it.
+
+Rerun over round 3's 540 receipt files, the fixed `null_study.py report` gives byte-identical `calibration.txt`, `power.json` and `power.txt`. `calibration.json` differs only in its `test` field and the 15 rows' new `undefined` counts, all 0. The calibration still passes, with no failed row and no missed planted arm.
+
+The four tests for these fixes fail on round 3's `null_study.py`, and seven mutants of the new checks are each caught by the test they name.
+
 ## The decision method (main's rulings after VERIFY-H1STATS, 7 Nov 2026)
 
 REVIEW-ICODE-PY's H1 and VERIFY-H1STATS showed that the lineage-cluster test was anti-conservative: one pair of fitted models scores every lineage of an outer fold, so a fold-level shift moves all of that fold's clusters together, and gbt's learner-seed twin rejected in 26 to 46% of seeds. The method below replaces it. H-1 runs it only after its calibration passes, and [the first calibration](#the-calibrations-results-7-nov-2026) failed for gbt and the lasso. The null-study and calibration figures in the sections after this one came from the old test and are **superseded**.
