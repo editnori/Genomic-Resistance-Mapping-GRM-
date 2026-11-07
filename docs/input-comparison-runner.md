@@ -35,6 +35,43 @@ Main's ruling "STATSFIX round 2 calibration, and the per-learner test". This sec
 - **Power curve.** k-h and k-p on seeds 9601 to 9620, at visible shares 0.125, 0.25, 0.5 and 1. For each learner, the minimum detectable effect is the smallest share detected on at least 80% of seeds, with the mean log-loss gain at that share.
 - **A learner that fails either bar** is reported, and H-1 treats it as exploratory: its decisions are reported but left out of the answer. Nothing is tuned further.
 
+### Round 3's results (7 Nov 2026)
+
+**Round 3 passes, so H-1 may decide with all five learners.** Every judged sentinel row meets the size bar on 100 new seeds, and every learner calls the three planted arms `improves` on all 100. No reserve seed was needed, and nothing was tuned after the first seed ran.
+
+**Setup.** The runs used commit f7fc489, whose run code is the pre-registration's (db7ab2b). Nine Boat xlarge boxes with 16 vCPUs each built grm `cc19f66a…` from the same `git archive` at the same path. Calibration seeds 9401 to 9500 ran 20 per box on `bx_da8n6ht5` (EPYC 4585PX), `bx_j85dctp5`, `bx_ckuk23uz`, `bx_z9xu2u2u` and `bx_t2jnk9j8` (9950X). Power seeds 9601 to 9620 ran 5 per box on `bx_vrkfcpn8` (EPYC 4585PX), `bx_7t68uwtt` (EPYC 9455), `bx_37cmxyae` (9700X) and `bx_8ne8d6w4` (9950X).
+
+**False positives.** Rows are the sentinels on their own p, with Clopper-Pearson 95% intervals:
+
+| Twin | Learner | Test | Hits / contrasts | Rate [95% CI] | Improves | Worse | Result |
+|---|---|---|---|---|---|---|---|
+| learner-seed | rf | paired t | 2/100 | 2.0% [0.2, 7.0] | 1 | 1 | pass |
+| learner-seed | gbt | corrected t | 0/100 | 0.0% [0.0, 3.6] | 0 | 0 | pass |
+| retuned | scm | paired t | 2/100 | 2.0% [0.2, 7.0] | 1 | 1 | pass |
+| retuned | cart | paired t | 4/100 | 4.0% [1.1, 9.9] | 4 | 0 | pass |
+| retuned | gbt | corrected t | 0/100 | 0.0% [0.0, 3.6] | 0 | 0 | pass |
+| retuned | lasso | corrected t | 0/100 | 0.0% [0.0, 3.6] | 0 | 0 | pass |
+
+Retuned cart comes closest to the bar: 4 of 100, all `improves`, with an upper bound of 9.9% against 11%. The other rows are zero by construction and not judged.
+
+**Planted arms (pass).** k-h, k-p and k-c-h-p are `improves` on 100 of 100 seeds for every learner, against the 95% bar. In round 2, cart missed 33 of 100 under the corrected t. Under the paired t it misses none.
+
+**Power curve.** The minimum detectable effect is the smallest visible share detected on at least 80% of seeds. k-p gives the same table:
+
+| Learner | 0.125 | 0.25 | 0.5 | 1 | Minimum detectable (share, mean log-loss gain) |
+|---|---|---|---|---|---|
+| scm | 20/20 | 20/20 | 20/20 | 20/20 | 0.125, 1.86 |
+| cart | 16/20 | 20/20 | 20/20 | 20/20 | 0.125, 1.04 |
+| rf | 0/20 | 4/20 | 17/20 | 20/20 | 0.5, 0.012 |
+| gbt | 0/20 | 0/20 | 10/20 | 20/20 | 1, 0.47 |
+| lasso | 1/20 | 12/20 | 19/20 | 20/20 | 0.5, 0.16 |
+
+gbt still needs every carrier to show the family. At a quarter, its mean gain of 0.018 was detected on 0 of 20 seeds. So a gbt gain near stage 2's 0.02 margin would usually read as no measured difference.
+
+**H-1's learners.** All five pass both pre-registered bars, so none is exploratory. The power curve is not a bar.
+
+**Receipts.** `grm-collect/statsfix-r3` on the Boat controller holds `reports/r1/` (the calibration and power reports) and `boxes/<box>/` (every seed's files), with `SHA256SUMS`.
+
 ## The decision method (main's rulings after VERIFY-H1STATS, 7 Nov 2026)
 
 REVIEW-ICODE-PY's H1 and VERIFY-H1STATS showed that the lineage-cluster test was anti-conservative: one pair of fitted models scores every lineage of an outer fold, so a fold-level shift moves all of that fold's clusters together, and gbt's learner-seed twin rejected in 26 to 46% of seeds. The method below replaces it. H-1 runs it only after its calibration passes, and [the first calibration](#the-calibrations-results-7-nov-2026) failed for gbt and the lasso. The null-study and calibration figures in the sections after this one came from the old test and are **superseded**.
