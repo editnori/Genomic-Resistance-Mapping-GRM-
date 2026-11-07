@@ -34,6 +34,11 @@ const COUNT_CLASS = "fill-[rgb(var(--muted-text))] text-[11.5px] tabular-nums";
 // The faces those classes draw with, asked for by weight and size; and how
 // long to wait for them before measuring in the font that renders instead.
 const FACES = ["600 13px", "400 13px", "400 11.5px"];
+// One hidden probe per class, its class fixed: Chromium's getComputedTextLength
+// can still use the old font size just after a probe's class changes, so a
+// single probe switched between classes measured labels at the count line's
+// 11.5 px and count lines at the label's 13 px.
+const PROBE_CLASSES = [SPLIT_CLASS, LEAF_CLASS, COUNT_CLASS];
 const FONT_WAIT = 3000;
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -64,7 +69,7 @@ const fitLine = (l: Line, room: number, width: (cls: string, s: string) => numbe
 
 export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNode[]; depth: number; features: Map<number, FeatureCard> }) => {
   const frame = useRef<HTMLDivElement | null>(null);
-  const probe = useRef<SVGTextElement | null>(null);
+  const probes = useRef<SVGSVGElement | null>(null);
   const avail = useWidth(frame, 0);
   const laid = treeLayout(nodes, depth);
   const maxDepth = Math.max(0, ...laid.nodes.map((n) => n.depth));
@@ -112,10 +117,12 @@ export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNo
   const lines = laid.nodes.flatMap((h) => [labelLine(h.node), countLine(h.node)]);
   const linesKey = `${room}|${fonts}|${lines.map(lineKey).join("\u0001")}`;
   useLayoutEffect(() => {
-    const t = probe.current;
-    if (t === null) return;
+    const svg = probes.current;
+    if (svg === null) return;
+    const byClass = new Map([...svg.querySelectorAll("text")].map((t) => [t.getAttribute("class") ?? "", t]));
     const width = (cls: string, s: string) => {
-      t.setAttribute("class", cls);
+      const t = byClass.get(cls);
+      if (t === undefined) return 0;
       t.textContent = s;
       return t.getComputedTextLength();
     };
@@ -157,8 +164,10 @@ export const TreeDiagram = ({ nodes, depth, features }: { nodes: readonly TreeNo
 
   return (
     <div ref={frame} className="relative">
-    <svg aria-hidden="true" width={0} height={0} className="pointer-events-none absolute overflow-hidden" style={{ visibility: "hidden" }}>
-      <text ref={probe} />
+    <svg ref={probes} aria-hidden="true" width={0} height={0} className="pointer-events-none absolute overflow-hidden" style={{ visibility: "hidden" }}>
+      {PROBE_CLASSES.map((cls) => (
+        <text key={cls} className={cls} />
+      ))}
     </svg>
     <ScrollFrame label="Decision tree">
       <MarkListbox label={`Decision tree with ${laid.nodes.length} nodes shown. Arrow keys move between nodes; click or Enter to pin details.`} marks={marks} width={width} hit={hit}>
