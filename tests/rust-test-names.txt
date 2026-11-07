@@ -9,6 +9,7 @@ src/lib.rs ablate::arm::tests::the_fold_matrix_reads_only_the_training_samples
 src/lib.rs ablate::blocks::tests::a_probe_no_call_is_not_assessable
 src/lib.rs ablate::blocks::tests::admission_checks_rows_and_shape
 src/lib.rs ablate::blocks::tests::admit_refuses_a_block_of_the_provenance_side_file_fields
+src/lib.rs ablate::blocks::tests::admit_refuses_record_fields_by_exact_name_only
 src/lib.rs ablate::blocks::tests::building_takes_no_labels
 src/lib.rs ablate::blocks::tests::check_block_refuses_backticks_and_empty_names
 src/lib.rs ablate::blocks::tests::columns_build_from_plain_values
@@ -25,6 +26,7 @@ src/lib.rs ablate::blocks::tests::the_deny_list_passes_genotype_names
 src/lib.rs ablate::blocks::tests::the_deny_list_refuses_each_source_proxy
 src/lib.rs ablate::blocks::tests::the_deny_list_refuses_lookalike_run_together_and_value_names
 src/lib.rs ablate::blocks::tests::the_k_screen_cap_is_the_evaluations_screened_features
+src/lib.rs ablate::blocks::tests::the_real_catalog_s_gene_groups_pass_the_deny_list [ignored]
 src/lib.rs ablate::blocks::tests::the_registry_lists_six_blocks_in_collapse_order
 src/lib.rs ablate::blocks::tests::word_only_terms_and_camel_case_words_are_refused
 src/lib.rs ablate::encode::tests::a_block_unavailable_indicator_observes_every_sample

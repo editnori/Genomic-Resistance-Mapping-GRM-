@@ -246,6 +246,9 @@ ids = [f"g{i:03d}" for i in range(50)]
                                                               "antibiotic": "meropenem"}]))
 (root / "curated" / "phenotypes.jsonl").write_text("".join(json.dumps({
     "genome_id": g, "antibiotic": "meropenem", "reported": "R" if i % 3 else "S"}) + "\\n" for i, g in enumerate(ids)))
+# grm curate's provenance side file, which run.py drops from every root.
+(root / "curated" / "provenance.jsonl").write_text("".join(json.dumps({
+    "genome_id": g, "antibiotic": "meropenem", "pmids": ["1"]}) + "\\n" for g in ids))
 (root / "species" / "salmonella_enterica").mkdir(parents=True, exist_ok=True)
 (root / "species" / "salmonella_enterica" / "genomes.txt").write_text("\\n".join(ids[:cap]) + "\\n")
 """
@@ -753,6 +756,59 @@ ids = [f"g{i:03d}" for i in range(50)]
             out = r.arm(arm, ds)
             self.assertEqual(json.loads((out / "seen.json").read_text()), {"plans_present": False})
             self.assertFalse(plans.exists())
+
+    def test_curate_s_provenance_file_leaves_every_root_and_is_never_copied_or_sized(self):
+        """PROV round 2: grm curate's curated/provenance.jsonl (about 310 MB on the real root, which no arm reads)
+        leaves each root once it curates; a root curated before that rule still has one, and the pool neither
+        copies it nor counts it in the disk estimate."""
+        with tempfile.TemporaryDirectory() as tmp:
+            self.estimate(tmp, "--free-disk-bytes", str(10 ** 15))
+            curated = sorted((Path(tmp) / "work" / "roots").glob("*/curated"))
+            self.assertEqual(len(curated), 4)
+            for c in curated:
+                self.assertTrue((c / "phenotypes.jsonl").exists(), c)
+                self.assertFalse((c / "provenance.jsonl").exists(), c)
+            r = self.runner(tmp, spec=json.loads(self.stub_spec(tmp).read_text()))
+            r.grm = str(Path(tmp) / "grm")
+            default = r.curated(r.default) / "curated"
+            size = run.disk_bytes(default)
+            (default / "provenance.jsonl").write_bytes(b"x" * 1_000_000)
+            union = ["g000", "g001"]
+            self.assertEqual(r.pool_curated(union), size)
+            (Path(tmp) / "raw" / "fasta").mkdir(parents=True, exist_ok=True)
+            for g in union:
+                (Path(tmp) / "raw" / "fasta" / f"{g}.fna.gz").write_bytes(b"")
+            r.union = lambda arms: union
+
+            def call(name, root, *argv):
+                if argv[0] == "structure":
+                    path = root / "species" / r.slug / "structure.json"
+                    path.write_text(json.dumps({"genomes": union, "k": r.default["k"]}))
+            r.call = call
+            pool = r.pool([r.default]).parents[2] / "curated"
+            self.assertEqual(sorted(p.name for p in pool.iterdir()),
+                             sorted(p.name for p in default.iterdir() if p.name != "provenance.jsonl"))
+
+    def test_the_genome_dates_side_files_stay_out_of_raw_s_input_manifest(self):
+        """PROV round 2: `grm fetch genome-dates` writing into RAW's bvbrc/ doesn't change RAW's input manifest,
+        so a WORK made before the fetch is still reused; any other new file under bvbrc/ still refuses."""
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = Path(tmp) / "raw"
+            (raw / "bvbrc").mkdir(parents=True)
+            (raw / "bvbrc" / "genomes.jsonl").write_text("one")
+            flags = ("--free-disk-bytes", str(10 ** 15))
+            self.assertEqual(self.estimate(tmp, *flags)[0], 0)
+            was = json.loads((Path(tmp) / "work" / "inputs.json").read_text())
+            self.assertEqual(was["raw_files"], 1)
+            self.assertEqual(run.RAW_SIDE_FILES, ("bvbrc/genome_dates.jsonl", "bvbrc/genome_dates.manifest.json"))
+            for name in run.RAW_SIDE_FILES:
+                (raw / name).write_text("{}")
+            self.assertEqual(self.estimate(tmp, *flags)[0], 0)
+            self.assertEqual(json.loads((Path(tmp) / "work" / "inputs.json").read_text()), was)
+            (raw / "bvbrc" / "genome_dates.jsonl.bak").write_text("{}")
+            with self.assertRaises(AssertionError) as e:
+                self.estimate(tmp, *flags)
+            self.assertIn("another raw_manifest_sha256", str(e.exception))
 
     def test_the_pool_is_the_arms_union_not_the_eligible_set(self):
         """REVIEW-INPUT5 L2: 50 genomes are eligible, the arms select 30 (Me)."""

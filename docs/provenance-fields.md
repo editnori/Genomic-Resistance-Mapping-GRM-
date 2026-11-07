@@ -85,11 +85,11 @@ The code is `src/provenance.rs`, `curate::PairProvenance` and `bvbrc::GenomeDate
 | `completion_date` (genome) | BV-BRC `genome` | `genome_dates.jsonl` `completion_date` | `report/provenance`, per sample | refused (date) |
 | `date_inserted` (AST record) | `genome_amr.jsonl` | `date_inserted_first`, `date_inserted_last`: the earliest and latest over the pair's records | `report/provenance`, per sample | refused (insertion date) |
 | `testing_standard_year` | `genome_amr.jsonl` | `testing_standard_years`, a set | `report/provenance`, per sample | refused (year) |
-| `pmid` | `genome_amr.jsonl` | `pmids`, a set, a list split at `;` | `report/provenance`, per sample | not caught |
-| `source` | `genome_amr.jsonl` | `sources`, a set | `report/provenance`, per sample | not caught |
-| `laboratory_typing_method` | `genome_amr.jsonl` | `methods`, as in `phenotypes.jsonl` | `report/provenance`, per sample | not caught |
-| `testing_standard` | `genome_amr.jsonl` | `standards`, as in `phenotypes.jsonl` | `report/provenance`, per sample | not caught |
-| `n_records`, `mic_spread` | `grm curate` | as in `phenotypes.jsonl` | `report/provenance`, per sample | not caught |
+| `pmid` | `genome_amr.jsonl` | `pmids`, a set, a list split at `;` | `report/provenance`, per sample | refused (record field) |
+| `source` | `genome_amr.jsonl` | `sources`, a set | `report/provenance`, per sample | refused (record field) |
+| `laboratory_typing_method` | `genome_amr.jsonl` | `methods`, as in `phenotypes.jsonl` | `report/provenance`, per sample | refused (record field) |
+| `testing_standard` | `genome_amr.jsonl` | `standards`, as in `phenotypes.jsonl` | `report/provenance`, per sample | refused (record field) |
+| `n_records`, `mic_spread` | `grm curate` | as in `phenotypes.jsonl` | `report/provenance`, per sample | refused (record field) |
 | `vendor`, `isolation_source`, `measurement_unit`, `laboratory_typing_platform` | raw files | none | raw file only, as before | |
 
 A pair's row covers the records its phenotype consolidates: the records `grm curate` sets aside (an unresolved drug name, a genome that fails QC, a record with neither a call nor an MIC) are in neither. The record dates are ordered by time, the whole seconds and then the fraction, since BV-BRC writes some without milliseconds and `13.5Z` sorts before `13Z` as text. They stay as BV-BRC wrote them.
@@ -98,7 +98,20 @@ A sample whose genome has no row in the dates file has `genome_dates` null, and 
 
 ### The proxy check
 
-`ablate::blocks::admit` refuses a block with any of the dates or years as a column, block id or version name; `admit_refuses_a_block_of_the_provenance_side_file_fields` asserts it for every side-file field, and asserts which ones the name check does not catch. Those six (`pmids`, `sources`, `methods`, `standards`, `n_records`, `mic_spread`) are kept out of every block the same way every other non-genotype field is: no adapter reads the side files, and `admit` accepts only this module's adapters. The test fails when a side file gains a field until the field is classified there.
+`ablate::blocks::admit` refuses a block with any side-file field as a column, block id or version name. The dates and years match the date rules. `pmid`, `pmids`, `source`, `sources`, `methods`, `standards`, `n_records` and `mic_spread` are an AST record's study and lab-method fields (`RECORD_FIELDS`, kind "study or lab-method field of an AST record"). They are refused only as a whole name, or as the part after a block prefix (`C:pmid`), ignoring case, so a genotype name that merely contains one, such as `P:resource`, still passes.
+
+- `admit_refuses_a_block_of_the_provenance_side_file_fields` names each side-file field with the rule that refuses it, so the test fails when a side file gains a field until the field has a rule.
+- `admit_refuses_record_fields_by_exact_name_only` checks each record field as a column and as a version, and genotype-shaped names that carry one inside a longer name.
+- `the_real_catalog_s_gene_groups_pass_the_deny_list` (ignored; it needs the catalog in `GRM_CATALOG_DIR`) runs the deny-list over every gene group of a real AMRFinderPlus catalog and every panel name. No name in catalog 2026-08-07.1 contains "source".
+
+Neither side file reaches a block in any case: no adapter reads them, and `admit` accepts only this module's adapters.
+
+### Kept out of copies and hashes
+
+Nothing that ships or hashes data picks up a side file by accident:
+- `grm learn`, `grm report` and every input fingerprint read named curated files only, never `curated/provenance.jsonl` or the genome dates.
+- The release and publish scripts (`scripts/deployment/`, `ops/cloudflare/`) handle report trees and never read `curated/`. `report/provenance/` is not part of a publication: build a release tree without it.
+- `scripts/input-comparison/run.py` removes `curated/provenance.jsonl` from each data root right after it curates (about 310 MB per root on the real root, and no arm reads it). The species pool never copies it, and the disk estimate never counts it. RAW's input manifest leaves out `bvbrc/genome_dates.jsonl` and its manifest, so fetching the dates into RAW doesn't refuse a WORK made before.
 
 ## H's proxy refusal stays in force
 

@@ -52,7 +52,7 @@ Python is the runner's system Python 3.12 with Ubuntu 24.04's `python3-numpy`, w
 
 The web app's browser check, `web/scripts/browser-check.cjs`, is outside this workflow: it needs Chromium and a report tree. So are the input comparison's end-to-end run (`tests/input_comparison` with `GRM_INPUT_E2E_BINARY`, a release build and about 3 minutes) and the Worker's `release.sh`, `routes.py` and `ranges.py` (Miniflare and `grm serve`); they run on Boat. Checks that need real data stay out too, because ordinary CI doesn't hold that data and must not be given it:
 
-- the feature-block registry's catalog name check, which runs `proxy_kind` over every gene group in the pinned AMRFinderPlus catalog, so that no real name trips the deny-list and drops the P block;
+- the feature-block registry's catalog name check, which runs `proxy_kind` over every gene group in the pinned AMRFinderPlus catalog, so that no real name trips the deny-list and drops the P block: the ignored test `ablate::blocks::tests::the_real_catalog_s_gene_groups_pass_the_deny_list`, run with `GRM_CATALOG_DIR` set to a `grm fetch catalog` folder;
 - `scripts/check-results.py` and `scripts/metric-audit/audit.py` on saved reports in `data/`;
 - the web suite's `src/charts/realdata.test.ts`, which reads a published report from `GRM_REPORT_DIR` and skips without it;
 - the ignored test `learn::lasso::tests::mtb_delamanid_fold0_reaches_the_certified_optima`, which reads a local diagnosis folder;
