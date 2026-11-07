@@ -546,7 +546,9 @@ class CombineEndToEndTests(unittest.TestCase):
         spec.pop("revision12_gate")
         spec["synthetic"] = True
         spec["pool_budget"]["default_kset_bytes"] = 2 ** 20
-        spec["arms"] = [{"name": "cap-600", "cap": 600}, {"name": "k-h", "blocks": ["K", "H"]}]
+        # Block C's salmonella_qrdr assay calls on both drugs' genomes; H has no ciprofloxacin panel, so k-h's
+        # ciprofloxacin contrasts would not be produced.
+        spec["arms"] = [{"name": "cap-600", "cap": 600}, {"name": "k-c", "blocks": ["K", "C"]}]
         spec["datasets"] = [{"id": d, "partition": "confirmatory"} for d in cls.DATASETS]
         cls.spec = cls.out / "spec.json"
         cls.spec.write_text(json.dumps(spec, indent=1))
