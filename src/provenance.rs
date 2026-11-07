@@ -389,7 +389,8 @@ pub fn write(layout: &Layout) -> Result<usize> {
 }
 
 /// Checks every provenance file against the reports and inputs as they are
-/// now: one per indexed dataset and no other, each pinned to its report's
+/// now: one per indexed dataset and no other, each with its report naming
+/// that dataset, each pinned to its report's
 /// current SHA-256 and evaluation revision and to the inputs' SHA-256, with
 /// the content those give. Returns how many it checked, or fails naming
 /// each that does not hold.
@@ -410,6 +411,13 @@ pub fn check(layout: &Layout) -> Result<usize> {
             serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))?;
         let expected = for_report(&report, &inputs)?;
         let before = problems.len();
+        // As `write` refuses: the report and its file belong to this id, not
+        // another dataset's copied under its name.
+        for (what, dataset) in [("report", &expected["dataset"]), ("file", &file["dataset"])] {
+            if dataset != id.as_str() {
+                problems.push(format!("{id}: the {what} records the dataset {dataset}"));
+            }
+        }
         for pin in [
             "report_sha256",
             "evaluation_revision",
@@ -664,6 +672,48 @@ mod tests {
             err.contains("sp__meropenem: no ") && err.contains("other__x.json: not"),
             "{err}"
         );
+    }
+
+    #[test]
+    fn check_fails_when_one_dataset_s_report_and_file_sit_under_another_id() {
+        // REVIEW-PROV L1: copy X's report and side file over Y's. Each still
+        // pins its own bytes, so only the id comparison catches it.
+        let (_temp, layout) = root();
+        let report = layout.root.join("report");
+        let mut other: Value = serde_json::from_slice(&report_json(12)).unwrap();
+        other["id"] = json!("sp__other");
+        std::fs::write(
+            report.join("datasets/sp__other.json"),
+            serde_json::to_vec(&other).unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            report.join("index.json"),
+            br#"{"datasets":[{"id":"sp__meropenem"},{"id":"sp__other"}]}"#,
+        )
+        .unwrap();
+        fetch(&layout, vec![date("g1", None)]).unwrap();
+        assert_eq!(write(&layout).unwrap(), 2);
+        assert_eq!(check(&layout).unwrap(), 2);
+        for dir in ["datasets", "provenance"] {
+            std::fs::copy(
+                report.join(format!("{dir}/sp__meropenem.json")),
+                report.join(format!("{dir}/sp__other.json")),
+            )
+            .unwrap();
+        }
+        let err = format!("{:#}", check(&layout).unwrap_err());
+        assert!(
+            err.contains("sp__other: the report records the dataset \"sp__meropenem\""),
+            "{err}"
+        );
+        assert!(
+            err.contains("sp__other: the file records the dataset \"sp__meropenem\""),
+            "{err}"
+        );
+        // `write` refuses the same tree.
+        let err = format!("{:#}", write(&layout).unwrap_err());
+        assert!(err.contains("records the id"), "{err}");
     }
 
     #[test]

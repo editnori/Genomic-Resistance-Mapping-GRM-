@@ -108,9 +108,10 @@ Neither side file reaches a block in any case: no adapter reads them, and `admit
 
 ### Kept out of copies and hashes
 
-Nothing that ships or hashes data picks up a side file by accident:
+What reads, ships or hashes data, and where the side files stay out:
 - `grm learn`, `grm report` and every input fingerprint read named curated files only, never `curated/provenance.jsonl` or the genome dates.
-- The release and publish scripts (`scripts/deployment/`, `ops/cloudflare/`) handle report trees and never read `curated/`. `report/provenance/` is not part of a publication: build a release tree without it.
+- The release and publish scripts (`scripts/deployment/`, `ops/cloudflare/`) never read `curated/`, but they publish exactly what a tree's `SOURCE.sha256` lists. `report/provenance/` is not part of a publication, so a release `SOURCE.sha256` must leave it out, even when `grm provenance` ran in the same root (listing all of `report/`, as for the intervals, would take it in).
+- The box kit's `stage-manifest.py` (outside this repo) stages every `curated/*` line of a master manifest, so it sends `curated/provenance.jsonl` to a box until main installs the version that skips it (`stage-manifest.py.next`, sha256 `68cf7b4c…`, from lane PROV). A push-data manifest built by hand must leave out `curated/provenance.jsonl` and `bvbrc/genome_dates*`: the runner's allowlist accepts any `curated/*.jsonl` line.
 - `scripts/input-comparison/run.py` removes `curated/provenance.jsonl` from each data root right after it curates (about 310 MB per root on the real root, and no arm reads it). The species pool never copies it, and the disk estimate never counts it. RAW's input manifest leaves out `bvbrc/genome_dates.jsonl` and its manifest, so fetching the dates into RAW doesn't refuse a WORK made before.
 
 ## H's proxy refusal stays in force
