@@ -311,6 +311,15 @@ fn fold_view<'a>(p: &'a ArmPlan, cfg: &ArmConfig) -> PlanView<'a> {
     view
 }
 
+#[cfg(test)]
+thread_local! {
+    /// In test builds, the `train` mask of every `fold_matrix` call on this
+    /// thread, in call order, so a test can check what `run_arm` handed each
+    /// fold (REVIEW-INPUT18 M1).
+    static FOLD_MATRIX_TRAIN: std::cell::RefCell<Vec<Bits>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
 /// One outer fold's arm matrix over every sample: each block's encoder is
 /// fitted on the fold's `train` samples, the block is transformed, filtered on
 /// `train` (`block_candidates`), and the blocks are joined on `train`.
@@ -320,6 +329,8 @@ fn fold_matrix(
     train: &Bits,
     ecfg: &EncodeConfig,
 ) -> Result<crate::bits::BitMatrix> {
+    #[cfg(test)]
+    FOLD_MATRIX_TRAIN.with(|seen| seen.borrow_mut().push(train.clone()));
     let mut candidates = Vec::with_capacity(raws.len());
     for raw in raws {
         let enc = encode::fit_encoder(raw, samples, train, ecfg)?;
@@ -576,7 +587,26 @@ pub fn run_arm(
             unavailable: unavailable.clone(),
         },
     )?;
+    let raws: Vec<&blocks::RawBlock> = admitted.iter().map(|b| b.raw()).collect();
+    score_arm(dataset, &a, species.as_ref(), raws, &unavailable, cfg, out)
+}
 
+/// `run_arm`'s scoring, after it has loaded the data root and admitted the
+/// blocks: every split and repeat's plan (`arm_plan`), then each outer fold's
+/// matrix of `raws` on that fold's training samples (`fold_matrix`) and the
+/// learners. Writes `predictions.jsonl`, `runs.json` and the plans under
+/// `out`. A split is unavailable when any block in `unavailable` is.
+fn score_arm(
+    dataset: &str,
+    a: &ArmInputs,
+    species: Option<&SpeciesGroups>,
+    raws: Vec<&blocks::RawBlock>,
+    unavailable: &[(String, String)],
+    cfg: &ArmConfig,
+    out: &Path,
+) -> Result<()> {
+    let plans_dir = out.join("plans");
+    std::fs::create_dir_all(&plans_dir)?;
     let ecfg = EncodeConfig {
         min_support: a.min_support,
     };
@@ -599,13 +629,12 @@ pub fn run_arm(
             .map(|(id, why)| format!("block {id} is unavailable: {why}"));
         let started = Instant::now();
         for repeat in 0..cfg.repeats {
-            let p = arm_plan(cfg, &a, species.as_ref(), scheme, repeat, &plans_dir)?;
+            let p = arm_plan(cfg, a, species, scheme, repeat, &plans_dir)?;
             if reason.is_some() {
                 results.push((p, None));
                 continue;
             }
             let view = fold_view(&p, cfg);
-            let raws: Vec<&blocks::RawBlock> = admitted.iter().map(|b| b.raw()).collect();
             let split =
                 planned::evaluate_plan(dataset, &a.y, &view, &cfg.eval, &mut |f, train| {
                     if let Some(t) = trace.as_mut() {
@@ -908,6 +937,123 @@ mod tests {
                 "{what} changed the training rows"
             );
         }
+    }
+
+    /// REVIEW-INPUT18 M1: the test above calls `fold_matrix` itself, so a leak
+    /// where `run_arm` hands it anything but the fold's training samples (every
+    /// sample, say) passed every test. This runs `run_arm`'s scoring on a C+K
+    /// arm and checks the `train` of every fold matrix it builds: one per
+    /// outer fold of each split, in order, each the plan's training samples
+    /// for that fold. The toy can show such a leak: K's twin columns are C's
+    /// with one sample flipped, so in some fold of each split a matrix on
+    /// every sample keeps twins that the fold's own matrix collapses.
+    #[test]
+    fn run_arm_hands_each_c_and_k_fold_matrix_only_its_training_samples() {
+        use rand::{Rng, SeedableRng};
+        let n = 60;
+        let samples: Vec<String> = (0..n).map(|i| format!("g{i:02}")).collect();
+        let every: Vec<usize> = (0..n).collect();
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(18);
+        let mut draw = || -> Vec<usize> { (0..n).filter(|_| rng.random_bool(0.4)).collect() };
+        let c: Vec<Vec<usize>> = (0..8).map(|_| draw()).collect();
+        // Each twin differs from its C column on one sample, 7 apart.
+        let mut k: Vec<Vec<usize>> = c
+            .iter()
+            .enumerate()
+            .map(|(i, on)| {
+                let s = (7 * i + 3) % n;
+                let mut on: Vec<usize> = on.iter().copied().filter(|&x| x != s).collect();
+                if !c[i].contains(&s) {
+                    on.push(s);
+                }
+                on
+            })
+            .collect();
+        k.extend((0..4).map(|_| draw()));
+        let names: Vec<String> = (0..k.len()).map(|i| format!("f{i}")).collect();
+        let block = |id: &str, cols: &[Vec<usize>]| {
+            let cols: Vec<(&str, Vec<usize>)> = names
+                .iter()
+                .zip(cols)
+                .map(|(name, on)| (name.as_str(), on.clone()))
+                .collect();
+            presence(id, &samples, &every, &cols)
+        };
+        let (cb, kb) = (block("C", &c), block("K", &k));
+        let raws = vec![&cb, &kb];
+        let a = ArmInputs {
+            sample_ids: samples.clone(),
+            columns: every.clone(),
+            y: Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0)),
+            min_support: 3,
+            x: crate::bits::BitMatrix::with_cols(n),
+            lineage: (0..n as u32).map(|i| i / 3).collect(),
+            duplicates: vec![],
+        };
+        let cfg = ArmConfig {
+            arm: "k-c".into(),
+            blocks: vec!["K".into(), "C".into()],
+            eval: EvalConfig::default(),
+            repeats: 1,
+            pairing: Pairing::SamePlan,
+            reference: None,
+            balance_seed: None,
+            learner_seed: None,
+            trace_training: false,
+            groups: None,
+        };
+        let dir = tempfile::tempdir().unwrap();
+        FOLD_MATRIX_TRAIN.with(|seen| seen.borrow_mut().clear());
+        score_arm("ds", &a, None, raws.clone(), &[], &cfg, dir.path()).unwrap();
+        let got = FOLD_MATRIX_TRAIN.with(|seen| seen.take());
+
+        let ecfg = EncodeConfig { min_support: 3 };
+        let all = Bits::ones(n);
+        let mut want = Vec::new();
+        for scheme in SCHEMES {
+            let path = dir
+                .path()
+                .join("plans")
+                .join(format!("{}.json", plan_name(scheme, 0)));
+            let file: PlanFile = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+            let p = ArmPlan {
+                fold: Some(file.plan),
+                cohort: None,
+                rows_sha256: String::new(),
+                arm_sha256: None,
+                cluster: vec![],
+            };
+            let view = fold_view(&p, &cfg);
+            assert!(view.unavailable_reason.is_none(), "{scheme}: no plan");
+            let mut shows = false;
+            for f in 0..view.k {
+                let train = view.train(f);
+                assert!(
+                    train.count() > 0 && (train.count() as usize) < n,
+                    "{scheme} fold {f}"
+                );
+                let rows = |mask: &Bits| fold_matrix(&raws, &samples, mask, &ecfg).unwrap().rows;
+                shows |= rows(&train) < rows(&all);
+                want.push(train);
+            }
+            assert!(
+                shows,
+                "{scheme}: no fold where a matrix on every sample differs"
+            );
+        }
+        assert_eq!(got.len(), want.len(), "fold matrices built");
+        for (i, (g, w)) in got.iter().zip(&want).enumerate() {
+            assert!(
+                g == w,
+                "fold matrix {i} got {} samples, not the fold's {} training samples",
+                g.count(),
+                w.count()
+            );
+        }
+        let runs: Vec<serde_json::Value> =
+            serde_json::from_slice(&std::fs::read(dir.path().join("runs.json")).unwrap()).unwrap();
+        assert_eq!(runs.len(), 2 * crate::learn::eval::LEARNERS.len());
+        assert!(runs.iter().all(|r| r["status"] == "ok"), "{runs:?}");
     }
 
     /// `run_arm` scores a cohort plan with its held-out genomes out of every
