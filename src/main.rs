@@ -206,6 +206,16 @@ enum Command {
     /// that index.json lists, each pinned to its report's SHA-256 and counts.
     /// No report file changes.
     Intervals,
+    /// Write each indexed dataset report's provenance under
+    /// <data>/report/provenance/: its samples' BV-BRC dates (`grm fetch
+    /// genome-dates`) and record details (curated/provenance.jsonl), pinned to
+    /// the report's SHA-256 and evaluation revision. No report file changes.
+    Provenance {
+        /// Write nothing; fail unless every provenance file's pins match the
+        /// report and the inputs as they are now.
+        #[arg(long)]
+        check: bool,
+    },
     /// Write the dashboard's research file: the revision-5 MIC baseline and
     /// selective-calling results under <data>/research, each with a guard on
     /// the revision-5 cohort it describes.
@@ -235,6 +245,10 @@ enum Fetch {
     Genomes,
     /// The NCBI AMRFinderPlus reference gene catalog.
     Catalog,
+    /// BV-BRC's date_inserted and completion_date for every genome in
+    /// species/*/genomes.txt, into bvbrc/genome_dates.jsonl with a manifest
+    /// that pins it. genomes.jsonl is not changed.
+    GenomeDates,
     /// Assemblies for the genomes `curate` selected.
     Fasta {
         /// Species slugs (from curated/species.json); all when omitted.
@@ -379,6 +393,16 @@ fn run(cli: Cli) -> Result<()> {
         Command::Intervals => {
             let n = grm::intervals::write(&layout.root.join("report"))?;
             eprintln!("intervals written for {n} dataset reports");
+            Ok(())
+        }
+        Command::Provenance { check: false } => {
+            let n = grm::provenance::write(&layout)?;
+            eprintln!("provenance written for {n} dataset reports");
+            Ok(())
+        }
+        Command::Provenance { check: true } => {
+            let n = grm::provenance::check(&layout)?;
+            eprintln!("provenance pins match for {n} dataset reports");
             Ok(())
         }
         Command::Research {
@@ -603,6 +627,26 @@ fn fetch(layout: &Layout, what: Fetch) -> Result<()> {
             eprintln!(
                 "catalog version {}",
                 std::fs::read_to_string(dir.join("version.txt"))?.trim()
+            );
+        }
+        Fetch::GenomeDates => {
+            let lists = grm::provenance::genome_lists(layout)?;
+            let ids: Vec<String> = lists
+                .iter()
+                .flat_map(|l| l.ids.iter().cloned())
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            let rows = client.fetch_genome_dates(&ids)?;
+            let manifest = grm::provenance::write_genome_dates(layout, &lists, &ids, rows)?;
+            eprintln!(
+                "wrote dates for {} of {} genomes to {} ({} missing, {} without date_inserted); manifest {}",
+                manifest.returned,
+                manifest.requested,
+                layout.genome_dates().display(),
+                manifest.missing.len(),
+                manifest.without_date_inserted,
+                layout.genome_dates_manifest().display()
             );
         }
         Fetch::Fasta { species, workers } => {
@@ -890,6 +934,13 @@ fn run_curate_with(
     let mut w = std::io::BufWriter::new(std::fs::File::create(dir.join("phenotypes.jsonl"))?);
     for p in &curated.phenotypes {
         serde_json::to_writer(&mut w, p)?;
+        w.write_all(b"\n")?;
+    }
+    w.flush()?;
+    // A side file for `grm provenance`; every other curated file is as before.
+    let mut w = std::io::BufWriter::new(std::fs::File::create(dir.join("provenance.jsonl"))?);
+    for row in &curated.provenance {
+        serde_json::to_writer(&mut w, row)?;
         w.write_all(b"\n")?;
     }
     w.flush()?;

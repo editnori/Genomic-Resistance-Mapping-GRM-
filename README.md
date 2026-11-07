@@ -73,6 +73,7 @@ Every command takes `--data <directory>` (default `data`), and the output paths 
 | Report | `grm report` | `report/` |
 | Research | `grm research --revision5-reports <dir> --out <file>` | the `--out` file |
 | Intervals | `grm intervals` | `report/intervals/<id>.json` |
+| Provenance | `grm fetch genome-dates`, then `grm provenance` | `bvbrc/genome_dates.jsonl` and its manifest, `report/provenance/<id>.json` |
 
 `--species` takes comma-separated slugs; `grm pipeline` and `grm fetch fasta` use every curated species without it. `grm learn --species <slug> --only meropenem` learns one antibiotic (`--only` also takes dataset ids), and `--force` recomputes reports even when their inputs have not changed.
 
@@ -139,6 +140,10 @@ It verifies the revision-5 reports against the snapshot hash list pinned in the 
 ## Intervals
 
 `grm intervals` writes `report/intervals/<id>.json` for every dataset `report/index.json` lists: for each learner row of each split, a two-sided 95% Clopper-Pearson (exact binomial) interval for VME, over the resistant isolates the row called (`fn` of `tp + fn`), and for ME, over the susceptible ones (`fp` of `tn + fp`). It is arithmetic on the counts the report already holds; it fits nothing and changes no report file, so a report built without it is byte for byte what it was. A zero denominator gives no interval. Each file records its report's SHA-256, evaluation revision and the counts it used, and the dashboard shows an interval under its VME or ME only where those counts equal the report's, so a file left from an earlier build shows nothing. Run it after `grm report` and before the report tree's manifest is written, so the publication ships the files. Without them, the dashboard works as before. The intervals describe sampling of these isolates under internal cross-validation; they are not calibration, clinical bounds or external validation. The method and reference values are those of the revision-7 offline run (`data/research/grm-all23-saved-intervals-20261027-kimi`, SciPy `beta.ppf`), which `src/intervals.rs`'s tests reproduce to 1e-12.
+
+## Provenance
+
+`grm fetch genome-dates` fetches BV-BRC's `date_inserted` and `completion_date` for every genome in `species/*/genomes.txt` into `bvbrc/genome_dates.jsonl`, with `bvbrc/genome_dates.manifest.json` pinning it (the lists asked for, the genomes BV-BRC returned no record for, and the file's SHA-256). `grm curate` writes `curated/provenance.jsonl`, each genome and drug pair's record details: methods, standards, record count, MIC spread, the earliest and latest record `date_inserted`, and the sets of testing-standard years, PMIDs and sources. `grm provenance` then writes `report/provenance/<id>.json` for every dataset `report/index.json` lists, pinned to its report's SHA-256 and evaluation revision and to both inputs' SHA-256, and `grm provenance --check` fails when any pin no longer holds. None of it changes a report, a curated file `grm curate` wrote before, an input fingerprint or a learner's input; the dates are source proxies and never predictors. [docs/provenance-fields.md](docs/provenance-fields.md) lists what each field reaches. The dashboard doesn't read these files, and they aren't part of a publication yet: build a report tree bound for release without `report/provenance/`.
 
 [docs/research/genotype-to-phenotype.md](docs/research/genotype-to-phenotype.md) covers diagnostic and surveillance uses, the published evidence, and the validation a clinical claim would still need.
 

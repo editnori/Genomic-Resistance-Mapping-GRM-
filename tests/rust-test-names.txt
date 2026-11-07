@@ -8,6 +8,8 @@ src/lib.rs ablate::arm::tests::run_arm_hands_each_c_and_k_fold_matrix_only_its_t
 src/lib.rs ablate::arm::tests::the_fold_matrix_reads_only_the_training_samples
 src/lib.rs ablate::blocks::tests::a_probe_no_call_is_not_assessable
 src/lib.rs ablate::blocks::tests::admission_checks_rows_and_shape
+src/lib.rs ablate::blocks::tests::admit_refuses_a_block_of_the_provenance_side_file_fields
+src/lib.rs ablate::blocks::tests::admit_refuses_record_fields_by_exact_name_only
 src/lib.rs ablate::blocks::tests::building_takes_no_labels
 src/lib.rs ablate::blocks::tests::check_block_refuses_backticks_and_empty_names
 src/lib.rs ablate::blocks::tests::columns_build_from_plain_values
@@ -24,6 +26,7 @@ src/lib.rs ablate::blocks::tests::the_deny_list_passes_genotype_names
 src/lib.rs ablate::blocks::tests::the_deny_list_refuses_each_source_proxy
 src/lib.rs ablate::blocks::tests::the_deny_list_refuses_lookalike_run_together_and_value_names
 src/lib.rs ablate::blocks::tests::the_k_screen_cap_is_the_evaluations_screened_features
+src/lib.rs ablate::blocks::tests::the_real_catalog_s_gene_groups_pass_the_deny_list [ignored]
 src/lib.rs ablate::blocks::tests::the_registry_lists_six_blocks_in_collapse_order
 src/lib.rs ablate::blocks::tests::word_only_terms_and_camel_case_words_are_refused
 src/lib.rs ablate::encode::tests::a_block_unavailable_indicator_observes_every_sample
@@ -114,6 +117,7 @@ src/lib.rs analysis::tests::write_lasso_scan_fixture_root [ignored]
 src/lib.rs annotate::tests::a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached
 src/lib.rs annotate::tests::the_cached_feature_order_does_not_choose_the_gene
 src/lib.rs bits::tests::set_algebra_and_counts
+src/lib.rs bvbrc::tests::genome_dates_keep_only_their_three_fields
 src/lib.rs bvbrc::tests::parses_mixed_type_fields
 src/lib.rs catalog::tests::catalog_loads_both_accessions_and_trims_the_version
 src/lib.rs catalog::tests::catalog_requires_a_nonblank_version
@@ -144,6 +148,7 @@ src/lib.rs curate::tests::inclusion_probabilities_match_an_exhaustive_enumeratio
 src/lib.rs curate::tests::legacy_selection_reads_only_the_requested_species
 src/lib.rs curate::tests::legacy_selection_writes_the_same_genomes_txt_bytes
 src/lib.rs curate::tests::mic_inferred_labels_do_not_admit_a_dataset
+src/lib.rs curate::tests::pair_provenance_covers_the_records_the_phenotype_consolidates
 src/lib.rs curate::tests::parses_mics_and_rejects_zone_diameters
 src/lib.rs curate::tests::permuting_labels_moves_legacy_selection_but_not_the_group_plan
 src/lib.rs curate::tests::selection_prefers_rare_reported_class_carriers
@@ -153,6 +158,7 @@ src/lib.rs curate::tests::target_drugs_come_from_the_requested_species_datasets_
 src/lib.rs curate::tests::the_always_included_stratum_is_always_selected_and_recorded
 src/lib.rs curate::tests::the_recorded_generator_matches_cargo_lock
 src/lib.rs curate::tests::the_species_check_exclusion_comes_before_the_no_species_qc
+src/lib.rs curate::tests::timestamps_order_by_time
 src/lib.rs curate::tests::zone_diameters_do_not_become_mic_labels
 src/lib.rs dna::tests::canonical_matches_a_naive_reference_on_both_strands
 src/lib.rs dna::tests::canonical_matches_both_strands
@@ -332,6 +338,12 @@ src/lib.rs probes::tests::probed_codons_map_to_record_coordinates_on_either_stra
 src/lib.rs probes::tests::sources_must_encode_their_wild_type_residues
 src/lib.rs probes::tests::sources_must_extend_a_k_mer_past_both_ends_of_the_probed_codons
 src/lib.rs probes::tests::verified_sources_resolve_on_their_records
+src/lib.rs provenance::tests::check_fails_when_a_report_or_input_changes_after_the_pin
+src/lib.rs provenance::tests::check_fails_when_one_dataset_s_report_and_file_sit_under_another_id
+src/lib.rs provenance::tests::genome_dates_are_sorted_and_pinned_with_what_was_missing
+src/lib.rs provenance::tests::genome_dates_refuse_rows_not_asked_for_and_repeats
+src/lib.rs provenance::tests::provenance_files_pin_the_report_and_leave_it_unchanged
+src/lib.rs provenance::tests::provenance_needs_both_inputs
 src/lib.rs report::tests::a_build_waits_until_the_running_build_finishes
 src/lib.rs report::tests::a_learner_that_called_no_isolate_has_null_rates_in_the_index
 src/lib.rs report::tests::a_missing_lineage_learner_row_is_not_full_coverage

@@ -117,9 +117,11 @@ def gate_line(gate, spec):
             + (" (the spec also says synthetic; the gate ran)" if spec.get("synthetic") is True else ""))
 
 
-def disk_bytes(path):
-    """The disk a folder's files take, in allocated blocks as df counts them; links are not followed."""
-    return sum(p.lstat().st_blocks * 512 for p in Path(path).rglob("*") if p.is_file() and not p.is_symlink())
+def disk_bytes(path, skip=()):
+    """The disk a folder's files take, in allocated blocks as df counts them; links are not followed, and files
+    named in `skip` are left out."""
+    return sum(p.lstat().st_blocks * 512 for p in Path(path).rglob("*")
+               if p.is_file() and not p.is_symlink() and p.name not in skip)
 
 
 def file_sha256(path):
@@ -205,6 +207,11 @@ POOL_BUDGET = {"default_kset_bytes": 27.5 * 2 ** 20, "max_disk_share": 0.8, "roo
 INPUTS = "inputs.json"
 # The RAW folders a data root links; species-check/ only when RAW has one.
 RAW_PARTS = ("bvbrc", "fasta", "catalog", "species-check")
+# Provenance side files (docs/provenance-fields.md) that no arm reads: `grm fetch genome-dates`' in RAW, left out of
+# its input manifest, and `grm curate`'s, removed from each root after it curates and never copied or sized. Curate's
+# is about 310 MB on the real root, once per data root.
+RAW_SIDE_FILES = ("bvbrc/genome_dates.jsonl", "bvbrc/genome_dates.manifest.json")
+CURATED_SIDE_FILES = ("provenance.jsonl",)
 # synthetic_root.py's truth.json format: the marker a "synthetic": true spec needs in RAW (REVIEW-INTEG7 L2).
 SYNTHETIC_FORMAT = "grm-input-comparison-synthetic"
 # Arm and dataset names become path components under WORK (REVIEW-INPUT7 L2).
@@ -370,6 +377,8 @@ class Runner:
             if arm.get("stratum"):
                 curate += ["--stratum", str(self.raw / arm["stratum"])]
         self.call(f"root-{root.name}", root, *curate)
+        for name in CURATED_SIDE_FILES:
+            (root / "curated" / name).unlink(missing_ok=True)
         drawn = self.canonicalize(root)
         (root / "curated.json").write_text(canonical({"arm": arm["name"], "drawn_order_sha256": drawn}))
         return root
@@ -487,7 +496,7 @@ class Runner:
         """The pool's copy of the default's curated/ still to make, in disk blocks; 0 once the pool has it."""
         if (self.pool_root(union) / "curated").exists():
             return 0
-        return disk_bytes(self.curated(self.default) / "curated")
+        return disk_bytes(self.curated(self.default) / "curated", CURATED_SIDE_FILES)
 
     def check_disk(self, arms, free=None):
         """Before anything is counted, on every run: refuses when what is still to be written passes the disk
@@ -503,7 +512,8 @@ class Runner:
 
     def check_inputs(self):
         """Ties WORK to its inputs: the sha256 of RAW's input manifest (every file under bvbrc/, fasta/, catalog/
-        and species-check/, and each arm's stratum file, with its sha256 and size; RAW is walked without following
+        and species-check/ but RAW_SIDE_FILES, and each arm's stratum file, with its sha256 and size; RAW is walked
+        without following
         links and a symlink in it is refused), of the grm binary subprocess runs, and of the SigDrug vocabulary.
         A fresh WORK records them in inputs.json; a reused WORK whose inputs changed, or that has roots but no
         record, is refused."""
@@ -526,6 +536,8 @@ class Runner:
                     dirs.sort()
                     for name in sorted(files):
                         p = Path(here) / name
+                        if top == self.raw and p.relative_to(top).as_posix() in RAW_SIDE_FILES:
+                            continue
                         lines.append(f"{file_sha256(p)}  {p.stat().st_size}  {p.relative_to(top)}")
             return lines
 
@@ -575,7 +587,8 @@ class Runner:
             (root / "species" / self.slug).mkdir(parents=True, exist_ok=True)
             self.link_raw(root)
             if not (root / "curated").exists():
-                shutil.copytree(self.curated(self.default) / "curated", root / "curated")
+                shutil.copytree(self.curated(self.default) / "curated", root / "curated",
+                                ignore=shutil.ignore_patterns(*CURATED_SIDE_FILES))
             self.genomes_txt(root).write_text("\n".join(union) + "\n", encoding="utf-8")
             (root / "curated.json").write_text(canonical({"arm": "species-pool", "genomes": len(union)}))
             name = f"root-{root.name}"

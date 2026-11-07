@@ -22,7 +22,9 @@
 //! assembly QC say where a genome came from, not what it carries, and a model
 //! can learn resistance prevalence from them. `proxy_kind` names them, and
 //! `admit` refuses any block whose id, version or column names match one.
-//! They can only ever be reported as a named diagnostic.
+//! They can only ever be reported as a named diagnostic. So are an AST
+//! record's study and lab-method fields (`RECORD_FIELDS`), matched as whole
+//! names only.
 //!
 //! Splitting groups. Task G's `GroupIds`, and any other group id, decide which
 //! genomes are held out together, so they must never also be a predictor.
@@ -541,10 +543,11 @@ pub enum ProxyKind {
     InsertionDate,
     SequencingPlatform,
     AssemblyQc,
+    RecordField,
 }
 
 impl ProxyKind {
-    pub const ALL: [ProxyKind; 10] = [
+    pub const ALL: [ProxyKind; 11] = [
         ProxyKind::Lineage,
         ProxyKind::Cluster,
         ProxyKind::BioProject,
@@ -555,6 +558,7 @@ impl ProxyKind {
         ProxyKind::InsertionDate,
         ProxyKind::SequencingPlatform,
         ProxyKind::AssemblyQc,
+        ProxyKind::RecordField,
     ];
 
     pub fn label(self) -> &'static str {
@@ -569,6 +573,7 @@ impl ProxyKind {
             ProxyKind::InsertionDate => "insertion date",
             ProxyKind::SequencingPlatform => "sequencing platform",
             ProxyKind::AssemblyQc => "assembly QC",
+            ProxyKind::RecordField => "study or lab-method field of an AST record",
         }
     }
 }
@@ -748,7 +753,34 @@ pub fn proxy_kind(name: &str) -> Option<ProxyKind> {
                 || r.accessions.iter().any(|p| accession(p))
         })
         .map(|r| r.kind)
+        .or_else(|| record_field(name))
         .or_else(|| value_kind(name))
+}
+
+/// The study and lab-method fields of an AST record and its curation
+/// (`curate::PairProvenance`): a PMID or submitting source names the study,
+/// and the methods, standards, record count and MIC spread describe how it
+/// was measured. They are refused as whole names only (`record_field`), so a
+/// genotype name that contains one, such as `P:resource`, still passes.
+pub const RECORD_FIELDS: [&str; 8] = [
+    "pmid",
+    "pmids",
+    "source",
+    "sources",
+    "methods",
+    "standards",
+    "n_records",
+    "mic_spread",
+];
+
+/// `RecordField` when a name's last `:` part, the column after its block
+/// prefix, is exactly one of `RECORD_FIELDS`, ignoring ASCII case.
+fn record_field(name: &str) -> Option<ProxyKind> {
+    let last = name.rsplit(':').next().unwrap_or(name).trim();
+    RECORD_FIELDS
+        .iter()
+        .any(|f| last.eq_ignore_ascii_case(f))
+        .then_some(ProxyKind::RecordField)
 }
 
 /// The proxy a name's last `:` part is a value of, when that part is only a
@@ -1787,6 +1819,19 @@ mod tests {
             ),
             (Study, &["study", "Study Title", "SRP012345"]),
             (
+                RecordField,
+                &[
+                    "pmid",
+                    "PMIDs",
+                    "source",
+                    "Sources",
+                    "methods",
+                    "standards",
+                    "n_records",
+                    "mic_spread",
+                ],
+            ),
+            (
                 Submitter,
                 &[
                     "submitter",
@@ -1851,6 +1896,167 @@ mod tests {
         }
     }
 
+    /// A block whose columns are named for the provenance side files' fields.
+    /// No adapter reads those files, so this one exists only in tests: it
+    /// asks whether `admit` would refuse such a block if one did.
+    struct SideFileSource {
+        spec: BlockSpec,
+        names: Vec<String>,
+    }
+
+    impl sealed::Adapter for SideFileSource {}
+
+    impl BlockSource for SideFileSource {
+        fn spec(&self) -> &BlockSpec {
+            &self.spec
+        }
+
+        fn build(&self, sample_ids: &[String]) -> Result<RawBlock> {
+            let n = sample_ids.len();
+            let cols = self
+                .names
+                .iter()
+                .map(|_| RawColumn::binary(&vec![false; n], &vec![true; n]))
+                .collect::<Result<_>>()?;
+            Ok(RawBlock {
+                spec: self.spec.clone(),
+                sample_ids: sample_ids.to_vec(),
+                names: self.names.clone(),
+                cols,
+            })
+        }
+    }
+
+    #[test]
+    fn admit_refuses_a_block_of_the_provenance_side_file_fields() {
+        // Every field of bvbrc/genome_dates.jsonl and curated/provenance.jsonl
+        // but the row keys (`report/provenance/<id>.json` carries the same).
+        let mut fields: Vec<String> = [
+            serde_json::to_value(crate::bvbrc::GenomeDate::default()).unwrap(),
+            serde_json::to_value(crate::curate::PairProvenance::default()).unwrap(),
+        ]
+        .iter()
+        .flat_map(|row| row.as_object().unwrap().keys().cloned())
+        .filter(|k| k != "genome_id" && k != "antibiotic")
+        .collect();
+        fields.sort();
+        // Each field and the proxy that refuses it: the dates and years by
+        // the date rules, the record and measurement details by
+        // `RECORD_FIELDS`. A new side-file field fails here until it has a
+        // rule and a line.
+        use ProxyKind::*;
+        let refused = [
+            ("completion_date", CollectionDate),
+            ("date_inserted", InsertionDate),
+            ("date_inserted_first", InsertionDate),
+            ("date_inserted_last", InsertionDate),
+            ("methods", RecordField),
+            ("mic_spread", RecordField),
+            ("n_records", RecordField),
+            ("pmids", RecordField),
+            ("sources", RecordField),
+            ("standards", RecordField),
+            ("testing_standard_years", CollectionDate),
+        ];
+        let listed: Vec<&str> = refused.iter().map(|r| r.0).collect();
+        assert_eq!(
+            fields, listed,
+            "give each new side-file field a rule and a line here"
+        );
+
+        let samples = ids(&["g0", "g1"]);
+        let all: Vec<&str> = fields.iter().map(String::as_str).collect();
+        let err = admit(&side_file_source(&all), &samples).err().unwrap();
+        assert!(format!("{err:#}").contains("named diagnostic"), "{err:#}");
+        for (name, kind) in refused {
+            assert_eq!(proxy_kind(name), Some(kind), "{name}");
+            assert_refused(name, &samples);
+        }
+    }
+
+    /// A block with one `C:` column per name.
+    fn side_file_source(names: &[&str]) -> SideFileSource {
+        SideFileSource {
+            spec: probe_source().spec().clone(),
+            names: names.iter().map(|n| format!("C:{n}")).collect(),
+        }
+    }
+
+    /// `admit` refuses `name` as a column and as the block's version.
+    fn assert_refused(name: &str, samples: &[String]) {
+        let err = admit(&side_file_source(&[name]), samples).err().unwrap();
+        assert!(
+            format!("{err:#}").contains("named diagnostic"),
+            "{name}: {err:#}"
+        );
+        let mut versioned = side_file_source(&[]);
+        versioned.spec.version = name.to_string();
+        let err = admit(&versioned, samples).err().unwrap();
+        assert!(
+            format!("{err:#}").contains("named diagnostic"),
+            "{name}: {err:#}"
+        );
+    }
+
+    #[test]
+    fn admit_refuses_record_fields_by_exact_name_only() {
+        let samples = ids(&["g0", "g1"]);
+        for field in RECORD_FIELDS {
+            assert_refused(field, &samples);
+            assert_refused(&field.to_ascii_uppercase(), &samples);
+        }
+        // No name in the pinned AMRFinderPlus catalog (2026-08-07.1) or the
+        // probe and panel registries contains "source" or another record
+        // field, so these genotype-shaped names carry them inside a longer
+        // name: none is the whole column, and `admit` accepts each.
+        let inside = [
+            "resource",
+            "sourceA-1",
+            "blaSOURCE-2",
+            "carbapenemase/source",
+            "aac(6')-Ib source variant",
+            "pmid1",
+            "n_records2",
+            "mic_spread-like",
+            "tet(methods)",
+        ];
+        for name in inside {
+            assert_eq!(proxy_kind(&format!("P:{name}")), None, "{name}");
+            assert!(
+                admit(&side_file_source(&[name]), &samples).is_ok(),
+                "{name}"
+            );
+        }
+    }
+
+    /// The deny-list against every P column the real catalog gives (each
+    /// gene group) and every H column, as docs/ci.md's catalog name check:
+    /// GRM_CATALOG_DIR names a folder of `grm fetch catalog`'s three files.
+    #[test]
+    #[ignore = "needs the AMRFinderPlus catalog in GRM_CATALOG_DIR"]
+    fn the_real_catalog_s_gene_groups_pass_the_deny_list() {
+        let dir = std::env::var("GRM_CATALOG_DIR").expect("set GRM_CATALOG_DIR");
+        let cat = Catalog::load(Path::new(&dir), &KmerSpace::new(31)).unwrap();
+        let groups: BTreeSet<&str> = cat.genes.iter().map(|g| g.group.as_str()).collect();
+        assert!(groups.len() > 1000, "{} groups", groups.len());
+        let mut names: Vec<String> = groups.iter().map(|g| format!("P:{g}")).collect();
+        for p in panels::PANELS {
+            names.push(format!("H:{}", p.id));
+            names.extend(p.targets.iter().map(|t| format!("H:{}/{t}", p.id)));
+        }
+        let refused: Vec<(&String, ProxyKind)> = names
+            .iter()
+            .filter_map(|n| proxy_kind(n).map(|k| (n, k)))
+            .collect();
+        assert!(refused.is_empty(), "{} refused: {refused:?}", refused.len());
+        eprintln!(
+            "catalog {}: {} gene groups and the panels' {} names pass the deny-list",
+            cat.version,
+            groups.len(),
+            names.len() - groups.len()
+        );
+    }
+
     #[test]
     fn the_deny_list_passes_genotype_names() {
         let mut names: Vec<String> = [
@@ -1859,6 +2065,8 @@ mod tests {
             "P:aac(6')-Ib-cr",
             "P:tet(M)",
             "IS26 insertion sequence",
+            "P:resource",
+            "P:sourceA-1",
         ]
         .map(String::from)
         .to_vec();
