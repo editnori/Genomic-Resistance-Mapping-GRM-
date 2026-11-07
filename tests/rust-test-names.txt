@@ -339,6 +339,7 @@ src/lib.rs probes::tests::sources_must_encode_their_wild_type_residues
 src/lib.rs probes::tests::sources_must_extend_a_k_mer_past_both_ends_of_the_probed_codons
 src/lib.rs probes::tests::verified_sources_resolve_on_their_records
 src/lib.rs provenance::tests::check_fails_when_a_report_or_input_changes_after_the_pin
+src/lib.rs provenance::tests::check_fails_when_one_dataset_s_report_and_file_sit_under_another_id
 src/lib.rs provenance::tests::genome_dates_are_sorted_and_pinned_with_what_was_missing
 src/lib.rs provenance::tests::genome_dates_refuse_rows_not_asked_for_and_repeats
 src/lib.rs provenance::tests::provenance_files_pin_the_report_and_leave_it_unchanged
