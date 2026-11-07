@@ -24,8 +24,12 @@ The cohort is one Salmonella enterica x meropenem dataset:
   planted effect);
 - a small share of labels is flipped.
 
+With --second-drug the root also holds a Salmonella enterica x ciprofloxacin dataset (for `run.py combine`'s
+end-to-end test): every genome gets a ciprofloxacin record, resistant when it carries the QRDR substitution, with
+the same share of labels flipped from a separate random stream. Without it the root is byte for byte the same.
+
 usage: python3 -I -B synthetic_root.py OUT_DIR [--genomes N] [--clades N] [--resistant F]
-           [--alleles N] [--seed N]
+           [--alleles N] [--seed N] [--second-drug]
 """
 import argparse
 import gzip
@@ -36,6 +40,7 @@ import sys
 
 SPECIES = "Salmonella enterica"
 DRUG = "meropenem"
+SECOND_DRUG = "ciprofloxacin"
 TAXON = "28901"
 # H's salmonella_qrdr wild type (src/probes.rs, SALMONELLA_GYRA): codons 83-87 are probed.
 GYRA = ("ATGAGCGACCTTGCGAGAGAAATTACACCGGTCAACATTGAGGAGGAGCTGAAGAGCTCCTATCTGGATTATGCGATGTCGGTCATTGTTGGCCGTGCGC"
@@ -112,6 +117,13 @@ def generate(out, cfg, seed):
             record["mlst"] = g["mlst"]
         meta.append(record)
         g["resistant"] = resistant
+    if cfg.get("second_drug"):
+        flips = random.Random(f"second:{seed}")
+        for g in genomes:
+            g["resistant_second"] = g["qrdr_mutant"] != (flips.random() < cfg["flip"])
+            amr.append({"genome_id": g["genome_id"], "antibiotic": cfg["second_drug"],
+                        "resistant_phenotype": "Resistant" if g["resistant_second"] else "Susceptible",
+                        "laboratory_typing_method": "Broth dilution"})
     with open(os.path.join(out, "bvbrc/genome_amr.jsonl"), "w", encoding="ascii") as f:
         f.writelines(json.dumps(r, sort_keys=True) + "\n" for r in amr)
     with open(os.path.join(out, "bvbrc/genomes.jsonl"), "w", encoding="ascii") as f:
@@ -136,7 +148,8 @@ def generate(out, cfg, seed):
                               "per-fit support floor, while H and P call the family",
                     "null": "QRDR substitutions (block C) are drawn independently of the phenotype"},
         "genomes": [{k: g[k] for k in ("genome_id", "clade", "duplicate_of", "qrdr_mutant", "allele",
-                                       "flipped", "resistant", "mlst")} for g in genomes],
+                                       "flipped", "resistant", "mlst", "resistant_second") if k in g}
+                    for g in genomes],
     }
     curate_inputs(out, genomes)
     truth["curate_inputs"] = {"species_check_fails": [FAILED_GENOME(genomes)],
@@ -200,10 +213,13 @@ def main(argv):
         p.add_argument(f"--{key}", type=int, default=DEFAULTS[key])
     p.add_argument("--resistant", type=float, default=DEFAULTS["resistant"])
     p.add_argument("--seed", type=int, default=11)
+    p.add_argument("--second-drug", action="store_true", help=f"add a {SECOND_DRUG} dataset (QRDR carriers resistant)")
     a = p.parse_args(argv)
     if os.path.exists(a.out) and os.listdir(a.out):
         sys.exit(f"{a.out} is not empty")
     cfg = dict(DEFAULTS, genomes=a.genomes, clades=a.clades, alleles=a.alleles, resistant=a.resistant)
+    if a.second_drug:
+        cfg["second_drug"] = SECOND_DRUG
     truth = generate(a.out, cfg, a.seed)
     n_r = sum(g["resistant"] for g in truth["genomes"])
     print(f"{len(truth['genomes'])} genomes ({n_r} resistant) in {cfg['clades']} clades written to {a.out}")

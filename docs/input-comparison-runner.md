@@ -38,7 +38,7 @@ Every row of every arm carries the default plan's `fold_plan_sha256` and the def
 `python3 -B scripts/input-comparison/run.py SPEC --raw RAW --work WORK --grm GRM --source-commit SHA [--jobs N]`
 
 1. **The species pool.** `run.py` curates every arm's root first. The pool is the union of their curated cohorts (genomes.txt), counted at the default's k and structured once in its own root (`roots/pool-<hash>`), before any `grm arm`. Its `structure.json` (lineages and kset digests) is the one grouping the default and the cohort arms split on (`grm arm --groups`); the other arms take the default's plans. `run.py` refuses, before counting, a genome of the union without a FASTA (naming it) and a pool whose kset estimate exceeds the disk share (below); after `grm structure`, it refuses a pool that doesn't hold exactly the union, or that was counted at another k. The grouping is recorded in `WORK/species-groups.json`, `summary.json` and the manifest's `species_pool`, and K's report header names it.
-2. **Data roots.** One per distinct (cohort, k): the default root, one per cap or selection arm, and one per k arm. Each links `RAW/bvbrc`, `RAW/fasta` and `RAW/catalog`, then runs `grm curate --cap --min-class --selection [--selection-seed --stratum]`, `grm count --k`, `grm structure` and `grm matrix`. Blocks and budget arms reuse the default root.
+2. **Data roots.** One per distinct (cohort, k): the default root, one per cap or selection arm, and one per k arm. Each links `RAW/bvbrc`, `RAW/fasta` and `RAW/catalog`, then runs `grm curate --cap --min-class --selection [--selection-seed --stratum]`, `grm count --k`, `grm structure` and `grm matrix`. Blocks and budget arms reuse the default root. A root counted at the pool's k takes the pool's ksets as hard links before its count ([H-1 support](#h-1-support-h1code-7-nov-2026)).
 3. **Arms.** `grm arm` (`src/ablate/arm.rs`, `run_arm`) scores one arm of one dataset.
    - It admits the arm's blocks through H's adapters: `KmerSource`, `ProbeSource::from_ksets`, `PanelSource::new` over the counted gene calls, and `PresenceSource::new` over the ksets.
    - For each split (random, lineage), repeat and outer fold, it runs `fit_encoder` and `transform` on the fold's training samples, `block_candidates` there, `assemble` on the same mask, and every learner through `learn::planned::evaluate_plan` with the plan's inner folds and holdouts. Each arm is scored once per outer fold.
@@ -242,7 +242,7 @@ Main revised the "full eligible pool" ruling: that pool can't be built on real d
 - **Where it runs.**
   - **Before any box:** `run.py SPEC --raw RAW --work WORK --grm GRM --source-commit SHA --estimate-only --free-disk-bytes N` curates every arm, prints the estimate (pool, each root, total) against N, the box's free disk, and exits 1 when it doesn't fit. With `--free-disk-bytes`, this machine's disk is not read.
   - **On the box:** the same check runs before the pool is counted. It takes the smaller of `--free-disk-bytes` (when given) and WORK's measured free space (I2), and writes `WORK/disk-estimate.json`.
-- **Ksets are counted once per root (M1(b), as measured).** `grm count` reuses a kset only when the same root's own kset folder already holds it for the same genome and k with a matching sidecar (`species::count_one`). Every comparison root has its own kset folder, so a genome in the pool and in three arm roots is counted four times, and the estimate counts it four times. No counting behaviour changed. Test: `test_every_root_counts_its_own_ksets` (e2e: the pool's and the default's kset of one genome are two files with the same bytes).
+- **Ksets are counted once per root (M1(b), as measured).** `grm count` reuses a kset only when the same root's own kset folder already holds it for the same genome and k with a matching sidecar (`species::count_one`). Every comparison root has its own kset folder, so a genome in the pool and in three arm roots is counted four times, and the estimate counts it four times. No counting behaviour changed. Test: `test_every_root_counts_its_own_ksets` (e2e: the pool's and the default's kset of one genome are two files with the same bytes). **Superseded for k31 roots** by kset sharing ([H-1 support](#h-1-support-h1code-7-nov-2026)); `--no-share-ksets` keeps this behaviour for the identity proof.
 - **What it means for the spec's species.** For Salmonella at 27.5 MiB per kset, the spec's roots are 13,000 genome-ksets: default 2,000, cap-1000, cap-4000 4,000, grr-v1 2,000, k21 2,000 and k25 2,000. They come to 366.6 GiB with the margin. With the pool's 4,000–6,000 genomes (107.4–161.1 GiB), the total is 474.0–527.7 GiB, against 207.4 GiB (80% of an xlarge's 259.3 GiB). So the comparison refuses on one xlarge. Splitting a comparison across boxes is not this round; H-1's sizing plans it. Test: `test_a_salmonella_sized_comparison_refuses_on_one_xlarge`.
 - **The e2e's kset size.** At the spec's 27.5 MiB, the e2e's own comparison (a 3,000-genome pool and 12,000 genome-ksets in its six roots) needs about 419 GiB, so it refuses on an xlarge before any count. On the first round-10 gates run it did exactly that. The e2e runs a copy of the spec stating 1 MiB per kset (`spec-e2e.json` in its output folder), an upper bound for its 23 kb genomes.
 - **Measured against the estimate.** `test_the_disk_estimate_covers_every_root_the_run_counted` takes the e2e's own per-genome size (the mean of its pool's ksets). It requires the estimate to name exactly the roots the run counted, to be at least the disk the run used, and to be within 1.5 times it. It writes `WORK/disk-measured.json`. The lane report gives the figures.
@@ -441,6 +441,74 @@ Main ruled on all four questions from the first build: the class balance (the ba
     - It checks that `fold_matrix` is called once per outer fold of each split, each time with exactly that fold's training samples from the plan, and that every run is scored.
     - It also checks that the toy can show the leak: in some fold of each split, a matrix on every sample keeps twins that the fold's own matrix collapses.
     - `run_arm` passing every sample, or the test samples, to `fold_matrix` fails it.
+
+## H-1 support (H1CODE, 7 Nov 2026)
+
+H1PLAN (`grm-h1plan-20261106`) found that only N. gonorrhoeae fits one xlarge and that Salmonella's 25 datasets don't fit one TTL. Main's rulings after H1PLAN (D1–D6) gave lane H1CODE gaps G1, G2(a), G6 and G10. This section describes them as built.
+
+### Kset sharing (G1)
+
+Every k31 root's genomes are pool genomes counted at the pool's k, so their ksets are the pool's, byte for byte (`test_every_root_counts_its_own_ksets` measured it).
+- **Linking.** After the pool is counted, `Runner.root` hard-links the pool's finished kset and sidecar (`<id>.kset`, `<id>.json`) of each of a k31 root's genomes into the root's kset folder, then runs `grm count`. `species::count_one` reuses a kset whose k matches and whose sidecar has the same catalog version and a digest, so the root counts nothing. A genome the root already holds a kset or sidecar for keeps its own. A link that fails stops the run.
+- **Checked after the count.** `grm count` writes a new kset through a `.part` file and rename, and removes the sidecar before it writes a new one. So a recount leaves a file that is no longer the pool's. After the count, every linked kset and sidecar must still be the pool's inode, or the run stops. The root's `shared.json` records `genomes`, `shared` (ksets that are the pool's file), `own` and `linked_now`.
+- **k21 and k25 roots** count their own, as before.
+- **Disk.** `counted_roots` gives each root `shared`, the pending genomes whose kset it will link, and leaves those out of `pending`. They are every union genome while the pool is still to be counted (the pool's pending ksets count them), else the pool's finished ksets. The matrix margin (10%) and arm outputs (5%) are still taken on all of a root's genomes. `disk_bytes` counts a file with several hard links in the folder once.
+- **`--no-share-ksets`** counts every root's own ksets, as before G1. It exists for the identity proof only.
+- **Tests.** `test_the_k31_roots_share_the_pool_s_ksets_and_count_none_anew` (e2e: the 4 k31 roots' every kset and sidecar is the pool's inode after the count, `own` 0; k21 and k25 hold their own) and `test_sharing_changes_no_output` (e2e: the whole comparison again with `--no-share-ksets`; predictions, plans and training traces byte-identical, J's records byte-identical, K's manifest and report equal after timings, and the shared WORK's roots smaller on disk). The measured-against-estimate test now takes the k31 roots' ksets as shared: estimate = pool + pending ksets (k21, k25) + 10% of all roots' ksets + 5% of them + the pool's `curated/` + 64 MiB, still measured ≤ estimate ≤ 1.5 × measured. Unit tests in `test_h1.py` (`KsetSharingTests`) cover the links, a kept own kset, a refused recount, `--no-share-ksets` and the disk check with and without the pool counted.
+- **What it does for H-1** (H1PLAN's figures with G1, no k arms): Salmonella 183.5 GB, MTB 182.7, S. aureus 94.6, N. gonorrhoeae 77.7 and the pilot 120.6, each under its box's limit of 214–219 GB.
+
+### `run.py combine` (G2(a))
+
+`python3 -B run.py combine SPEC --work-from WORK [--work-from WORK ...] --master-manifest FILE --out DIR`
+
+Splitting a species by arms would change its union and so its grouping. Splitting by datasets keeps the union, the grouping and each dataset's default arm, and `combine` then puts the parts back together.
+- **What a run now keeps for it:** `WORK/spec.json` (the spec as canonical JSON, so its sha256 is K's `protocol_sha256`) and `WORK/raw-manifest.txt` (the RAW file list `inputs.json` hashes).
+- **Refusals,** before any arm output is read:
+  - a part's spec differs from SPEC in anything but `datasets` (naming the keys), or K's manifest wasn't made from it;
+  - a part lists a dataset SPEC doesn't (or with another partition), a dataset is in two parts, or a dataset of SPEC is in none;
+  - the parts differ in the species pool (`species-groups.json` without its structure path, so two boxes' WORK paths may differ), the grm binary or the vocabulary (`inputs.json`), the source commit, `synthetic` or the gate (K's manifest), or eligible genomes and the panel floor;
+  - K's `binary_sha256` isn't the grm the part's `inputs.json` hashed;
+  - a part's `raw-manifest.txt` isn't the manifest `inputs.json` hashed, or any of its RAW files is missing from the master manifest (sha256sum lines) with that sha256;
+  - `--out` is not new or empty, or a part lacks an arm's output on one of its datasets.
+- **Output.** It copies each part's `arms/<arm>/<dataset>/`, then runs J and K as a run does (`report_run`): one `stats.finalize`, so one BH family per species over every part's lineage contrasts; K's manifest and report with SPEC's `protocol_sha256`; and `summary.json`. `combine.json` and `summary.json`'s `combine` record the master manifest and its sha256, and each part's WORK, spec sha256, datasets, RAW manifest sha256 and species grouping sha256. K's manifest is a closed schema, so the part hashes are not in it.
+- **Timings.** J's records are byte-identical to the unsplit run's. K's manifest and report differ only in timings: each run's `seconds`, `compute.actual_seconds`, the report's sha256 of the manifest (`inputs_sha256.manifest`), and the Markdown's seconds and input-hash lines. `tests/input_comparison/test_run.py` `timeless` is that comparison.
+- **Tests.** `CombineEndToEndTests` (e2e): `synthetic_root.py --second-drug` adds a ciprofloxacin dataset (QRDR carriers resistant, flips from their own stream; the default root is byte for byte the same without it, `test_the_second_drug_adds_its_records_and_changes_nothing_else`). A comparison over both datasets (1,200 genomes, cap-600 and k-h and the sentinel) runs whole and as two one-dataset parts. Combining the parts equals the whole run after timings, its predictions and summary decisions included. Combining the whole run alone gives its own J and K (H1-PLAN §7 acceptance 11). `CombineRefusalTests` checks every refusal on fabricated parts.
+- **Not built:** `--reference-from` (G2(b)), which only the k add-on needs.
+
+### Resume (G6)
+
+A reused WORK skips an arm on a dataset when its `resume.json` still matches. That file is written after the arm finished and holds:
+- the sha256 of `inputs.json`, of the spec (canonical) and of the species grouping;
+- the reference plans (the default arm's `plans/*.json` for that dataset, which is all `grm arm --reference` reads; none for the default itself);
+- `--trace-training` and `--run-identical-cohorts`;
+- every output file with its sha256.
+
+The folder must hold exactly the files listed, `runs.json`, `predictions.jsonl` and `arm.json` among them, none a symlink, each with its sha256. Anything else reruns the arm, after `resume.json` is removed and `plans/` cleared. Roots (`built.json`), the pool (`structure.json`) and curation were already reused. J and K always rerun. `summary.json` lists the resumed outputs (`resumed_arms`), and stderr names them. A WORK whose RAW, grm or vocabulary changed is still refused as a whole.
+- **Tests.** `ResumeTests` (stub grm): a finished arm resumes; a changed spec, `--trace-training`, grouping, `inputs.json` or reference plans reruns it; a damaged, missing, extra or linked output, or a missing or unreadable `resume.json`, reruns it. `test_a_reused_work_resumes_every_finished_arm_and_reruns_a_damaged_one` (e2e): the finished WORK, copied, with one arm's predictions truncated, reruns that arm only (12 of 13 resumed) and gives the same J and K after timings.
+
+### The FASTA check in `--estimate-only`
+
+`--estimate-only` now also reports the union's genomes without a FASTA in RAW (`union_without_fasta`, the first 20 in `union_without_fasta_examples`) and says on stderr that the run would refuse at the pool. This is the same check as the pool's refusal. The exit code is still the disk's: H-1's gate before any box needs both rc 0 and `union_without_fasta` 0 (H1-PLAN §5).
+
+### The H-1 specs (G10)
+
+`scripts/input-comparison/h1/` holds the specs H-1 runs. Each is `spec.json` with only these changed:
+- `decisions`: the H-1 rulings;
+- `species`;
+- `datasets`: revision 12's reported datasets, all confirmatory;
+- `arms`: k21 and k25 dropped (M-2 after REGAUDIT);
+- `pool_budget.default_kset_bytes`, with its source in `pool_budget.reason` (D2): revision 12's stage kset total ÷ 2,000, rounded up.
+
+| File | Species | Datasets | Arms | kset bytes per genome (stage) |
+|---|---|---:|---|---:|
+| `pilot.json` | Salmonella | 1: `salmonella_enterica__ciprofloxacin` (D1) | grr-v1, k-c-h-p, budget-16000 | 29,147,870 (R10) |
+| `h1-salmonella_enterica.json` | Salmonella | 25 | 9 | 29,147,870 (R10) |
+| `h1-salmonella_enterica-part1.json`, `-part2.json` | Salmonella | 13 and 12 (SAL-1, SAL-2: alternate ranks of revision 12's per-dataset time) | 9 | 29,147,870 |
+| `h1-mycobacterium_tuberculosis.json` | MTB | 22 | 9 | 25,881,860 (R7) |
+| `h1-staphylococcus_aureus.json` | S. aureus | 18 | 9 | 16,812,689 (R3) |
+| `h1-neisseria_gonorrhoeae.json` | N. gonorrhoeae | 7 | 9 | 12,750,902 (R1) |
+
+The nine stage-1 arms are cap-1000, cap-4000, grr-v1, k-c, k-h, k-p, k-c-h-p, budget-1000 and budget-16000, and `run.py` adds the sentinel. The Salmonella parts equal the full spec but for `datasets`, so `combine` takes them. The gate, panel floor, base rates, curate inputs, learners, splits, repeats, margin and seed are `spec.json`'s. The k add-on's specs are not here: they run only if Layth lifts register §13 G2. `H1SpecTests` checks all of this. The lane report has each spec's `--estimate-only` on the master root.
 
 ## Cost
 

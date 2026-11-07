@@ -42,6 +42,26 @@ SYNTHETIC_GATE = {"genome_order": {
 SYNTHETIC_CHECK = run.Runner.check_synthetic
 
 
+def timeless(work):
+    """A finished comparison's J records, K manifest and report without what only timing changes: each run's
+    seconds and compute.actual_seconds in the manifest (also inside the report), the report's sha256 of that
+    manifest, and the Markdown's seconds and input-hash lines."""
+    def strip(m):
+        for u in m["runs"]:
+            u.pop("seconds")
+        m["compute"].pop("actual_seconds")
+        return m
+
+    work = Path(work)
+    report = json.loads((work / "report" / "ablation-report.json").read_text())
+    strip(report["manifest"])
+    report["inputs_sha256"].pop("manifest")
+    md = [line for line in (work / "report" / "ablation-report.md").read_text().splitlines()
+          if not line.startswith(("- Actual seconds:", "- Input sha256"))]
+    return {"j": {n: (work / "j" / f"{n}.json").read_bytes() for n in ("contrasts", "planned", "missing")},
+            "manifest": strip(json.loads((work / "k" / "manifest.json").read_text())), "report": report, "md": md}
+
+
 class SpecTests(unittest.TestCase):
     def setUp(self):
         # The stub RAWs below are not synthetic_root.py's, so their synthetic stub specs would stop at the
@@ -1521,7 +1541,10 @@ class EndToEndTests(unittest.TestCase):
         per = sum(p.stat().st_size for p in ksets) / len(ksets)
         budget = SPEC["pool_budget"]
         root_ksets = sum(r["genomes"] for r in disk["roots"].values()) * per
-        estimate = (disk["genomes"] * per + root_ksets * (1 + budget["root_overhead_share"])
+        # The k31 roots share the pool's ksets (G1): only the k21 and k25 roots write their own.
+        pending = sum(r["pending"] for r in disk["roots"].values()) * per
+        self.assertEqual({r["k"] for r in disk["roots"].values() if r["pending"]}, {21, 25})
+        estimate = (disk["genomes"] * per + pending + root_ksets * budget["root_overhead_share"]
                     + root_ksets * budget["arm_output_share"] + disk["pool_curated_bytes"] + budget["work_files_bytes"])
         # The whole WORK: roots, pool, arm outputs, logs, j/, k/ and the report (RAW is outside it).
         measured = used(self.work)
@@ -1532,8 +1555,9 @@ class EndToEndTests(unittest.TestCase):
                   "arm_output_estimate": round(root_ksets * budget["arm_output_share"]),
                   "ratio_estimate_to_measured": estimate / measured,
                   "roots": {n: {"measured": used(roots[n] / "species"), "genomes": disk["roots"][n]["genomes"],
-                                "estimate": round(disk["roots"][n]["genomes"] * per
-                                                  * (1 + budget["root_overhead_share"]))} for n in sorted(counted)}}
+                                "shared": disk["roots"][n]["shared"],
+                                "estimate": round((disk["roots"][n]["pending"] + disk["roots"][n]["genomes"]
+                                                   * budget["root_overhead_share"]) * per)} for n in sorted(counted)}}
         (self.work / "disk-measured.json").write_text(json.dumps(report, indent=1, sort_keys=True))
         self.assertLessEqual(measured, estimate, report)
         self.assertLessEqual(estimate, 1.5 * measured, report)
@@ -1568,17 +1592,82 @@ class EndToEndTests(unittest.TestCase):
         finally:
             shutil.rmtree(copy_, ignore_errors=True)
 
-    def test_every_root_counts_its_own_ksets(self):
-        """REVIEW-INPUT5 M1(b), as measured: grm count reuses a kset only from its own root's kset folder, so a
-        genome in the pool and in the default root has two kset files, neither a link to the other."""
+    def test_the_k31_roots_share_the_pool_s_ksets_and_count_none_anew(self):
+        """H-1 gap G1 on REVIEW-INPUT5 M1(b): grm count reuses a kset only from its own root's kset folder, so the
+        k31 roots get the pool's ksets as hard links before their count. After it, every kset and sidecar of every
+        k31 root is still the pool's file (a recount writes a new one): 0 counted anew. The k21 and k25 roots
+        count their own."""
         roots = {r.name: r for r in (self.work / "roots").iterdir()}
         pool = next(r for n, r in roots.items() if n.startswith("pool-"))
-        default = self.default_root()
-        g = (default / "species" / "salmonella_enterica" / "genomes.txt").read_text().split()[0]
-        a, b = (r / "species" / "salmonella_enterica" / "ksets" / f"{g}.kset" for r in (pool, default))
-        self.assertFalse(a.is_symlink() or b.is_symlink())
-        self.assertNotEqual(os.stat(a).st_ino, os.stat(b).st_ino)
-        self.assertEqual(a.read_bytes(), b.read_bytes())
+        pool_ksets = pool / "species" / "salmonella_enterica" / "ksets"
+        k31 = 0
+        for name, root in roots.items():
+            if root is pool or not (root / "built.json").exists():
+                continue
+            ids = (root / "species" / "salmonella_enterica" / "genomes.txt").read_text().split()
+            shared = json.loads((root / run.SHARED).read_text())
+            mine = root / "species" / "salmonella_enterica" / "ksets"
+            if name.endswith("-k31"):
+                k31 += 1
+                self.assertEqual(shared, {"genomes": len(ids), "shared": len(ids), "own": 0, "linked_now": len(ids),
+                                          "pool": pool.name}, name)
+                for g in ids:
+                    for ext in ("kset", "json"):
+                        self.assertFalse((mine / f"{g}.{ext}").is_symlink())
+                        self.assertTrue(os.path.samefile(mine / f"{g}.{ext}", pool_ksets / f"{g}.{ext}"), (name, g))
+            else:
+                self.assertEqual((shared["shared"], shared["own"]), (0, len(ids)), name)
+                g = ids[0]
+                self.assertNotEqual(os.stat(mine / f"{g}.kset").st_ino, os.stat(pool_ksets / f"{g}.kset").st_ino)
+        self.assertEqual(k31, 4)  # the default's, cap-1000's, cap-4000's and grr-v1's
+
+    def test_sharing_changes_no_output(self):
+        """G1's identity: the same comparison with --no-share-ksets (every root counts its own) gives byte-identical
+        predictions, plans and J records, and the same K manifest and report after timings."""
+        other = self.out / "work-noshare"
+        shutil.rmtree(other, ignore_errors=True)
+        subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(self.out / "spec-e2e.json"), "--raw",
+                        str(self.out / "raw"), "--work", str(other), "--grm", os.environ["GRM_INPUT_E2E_BINARY"],
+                        "--source-commit", os.environ.get("GRM_INPUT_E2E_COMMIT", "0" * 40), "--jobs",
+                        os.environ.get("GRM_INPUT_E2E_JOBS", "3"), "--trace-training", "--sigdrug-vocabulary",
+                        str(self.out / "raw" / "vocabulary"), "--no-share-ksets"], check=True, capture_output=True)
+        self.assertEqual(timeless(other), timeless(self.work))
+        files = sorted(str(p.relative_to(self.work)) for p in (self.work / "arms").rglob("*")
+                       if p.is_file() and (p.name in ("predictions.jsonl", "training.jsonl") or p.parent.name == "plans"))
+        self.assertGreater(len(files), 13 * 2)
+        for name in files:
+            self.assertEqual((other / name).read_bytes(), (self.work / name).read_bytes(), name)
+        for root in (other / "roots").iterdir():
+            if (root / run.SHARED).exists():
+                self.assertEqual(json.loads((root / run.SHARED).read_text())["shared"], 0, root.name)
+        self.assertLess(run.disk_bytes(self.work / "roots"), run.disk_bytes(other / "roots"))
+
+    def test_a_reused_work_resumes_every_finished_arm_and_reruns_a_damaged_one(self):
+        """G6 through the real grm: the finished e2e WORK (a copy, ksets linked) run again skips every arm but the
+        one whose predictions were damaged, and gives the same J and K after timings."""
+        copy_ = self.out / "work-resume"
+        shutil.rmtree(copy_, ignore_errors=True)
+        shutil.copytree(self.work, copy_, symlinks=True, copy_function=lambda s, d: (
+            os.link(s, d) if Path(s).parent.name == "ksets" else shutil.copy2(s, d)))
+        damaged = copy_ / "arms" / "budget-1000" / "salmonella_enterica__meropenem" / "predictions.jsonl"
+        damaged.write_text(damaged.read_text()[:-200])
+        p = subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(self.out / "spec-e2e.json"), "--raw",
+                            str(self.out / "raw"), "--work", str(copy_), "--grm", os.environ["GRM_INPUT_E2E_BINARY"],
+                            "--source-commit", os.environ.get("GRM_INPUT_E2E_COMMIT", "0" * 40), "--trace-training",
+                            "--sigdrug-vocabulary", str(self.out / "raw" / "vocabulary")],
+                           capture_output=True, text=True)
+        try:
+            self.assertEqual(p.returncode, 0, p.stderr[-2000:])
+            summary = json.loads((copy_ / "summary.json").read_text())
+            self.assertEqual(len(summary["resumed_arms"]), 12)
+            self.assertNotIn("budget-1000/salmonella_enterica__meropenem", summary["resumed_arms"])
+            self.assertEqual(damaged.read_bytes(), (self.work / damaged.relative_to(copy_)).read_bytes())
+            self.assertEqual(timeless(copy_), timeless(self.work))
+            twice = [log.name for log in (copy_ / "logs").glob("arm-*.log")
+                     if log.read_text().count(" arm --species ") > 1]
+            self.assertEqual(twice, ["arm-budget-1000-salmonella_enterica__meropenem.log"])
+        finally:
+            shutil.rmtree(copy_, ignore_errors=True)
 
     def test_the_gate_held_the_pinned_synthetic_values(self):
         """REVIEW-INPUT8 M1: the e2e ran with the gate on, so its default matched both pins through the real binary."""
