@@ -30,12 +30,14 @@ D2 = {"salmonella_enterica": 29147870, "mycobacterium_tuberculosis": 25881860, "
       "neisseria_gonorrhoeae": 12750902}
 
 # base.SpecTests' stub grm with two changes: `grm arm` writes a complete arm output (its one plan tagged with
-# STUB_PLAN_TAG) and records each call in WORK/arm-calls.txt; with STUB_RECOUNT set, `grm count` replaces every kset
-# already in the root, as a recount would.
+# STUB_PLAN_TAG; with STUB_ARM_FAILS set it fails before writing it) and records each call in WORK/arm-calls.txt;
+# with STUB_RECOUNT set, `grm count` replaces every kset already in the root, as a recount would.
 STUB_GRM = base.SpecTests.STUB_GRM.replace(
     """    (out / "seen.json").write_text(json.dumps({"plans_present": (out / "plans").exists()}))
     sys.exit(0)""",
     """    (out / "seen.json").write_text(json.dumps({"plans_present": (out / "plans").exists()}))
+    if os.environ.get("STUB_ARM_FAILS"):
+        sys.exit(5)
     (out / "plans").mkdir(exist_ok=True)
     (out / "plans" / "lineage-0.json").write_text(json.dumps({"tag": os.environ.get("STUB_PLAN_TAG", "")}))
     (out / "runs.json").write_text("[]")
@@ -282,6 +284,22 @@ class ResumeTests(Stub):
         (out / "runs.json").unlink()
         (out / run.RESUME).write_text(run.canonical(record))
         self.assertEqual(self.run_arms()[0], ["cap-10"])
+
+    def test_only_a_finished_arm_has_a_record(self):
+        """A rerun removes the old resume.json first, so an arm whose rerun failed has none until it finishes."""
+        self.run_arms()
+        out = self.out("cap-10")
+        (out / "predictions.jsonl").write_text("{}\n")
+        os.environ["STUB_ARM_FAILS"] = "1"
+        try:
+            with self.assertRaises(RuntimeError):
+                self.run_arms()
+        finally:
+            del os.environ["STUB_ARM_FAILS"]
+        self.assertFalse((out / run.RESUME).exists())
+        self.assertTrue((self.out("default") / run.RESUME).exists())
+        self.assertEqual(self.run_arms()[0], ["cap-10"])
+        self.assertTrue((out / run.RESUME).exists())
 
     def test_a_linked_output_is_never_resumed(self):
         self.run_arms()

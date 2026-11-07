@@ -484,7 +484,7 @@ A reused WORK skips an arm on a dataset when its `resume.json` still matches. Th
 - every output file with its sha256.
 
 The folder must hold exactly the files listed, `runs.json`, `predictions.jsonl` and `arm.json` among them, none a symlink, each with its sha256. Anything else reruns the arm, after `resume.json` is removed and `plans/` cleared. Roots (`built.json`), the pool (`structure.json`) and curation were already reused. J and K always rerun. `summary.json` lists the resumed outputs (`resumed_arms`), and stderr names them. A WORK whose RAW, grm or vocabulary changed is still refused as a whole.
-- **Tests.** `ResumeTests` (stub grm): a finished arm resumes; a changed spec, `--trace-training`, grouping, `inputs.json` or reference plans reruns it; a damaged, missing, extra or linked output, or a missing or unreadable `resume.json`, reruns it. `test_a_reused_work_resumes_every_finished_arm_and_reruns_a_damaged_one` (e2e): the finished WORK, copied, with one arm's predictions truncated, reruns that arm only (12 of 13 resumed) and gives the same J and K after timings.
+- **Tests.** `ResumeTests` (stub grm): a finished arm resumes; a changed spec, `--trace-training`, grouping, `inputs.json` or reference plans reruns it; a damaged, missing, extra or linked output, or a missing or unreadable `resume.json`, reruns it; a rerun whose `grm arm` fails leaves no `resume.json`. `test_a_reused_work_resumes_every_finished_arm_and_reruns_a_damaged_one` (e2e): the finished WORK, copied, with one arm's predictions truncated, reruns that arm only (12 of 13 resumed) and gives the same J and K after timings.
 
 ### The FASTA check in `--estimate-only`
 
