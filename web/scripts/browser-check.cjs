@@ -626,7 +626,20 @@ async function panelFit(page, tag, width) {
     const shown = read !== null && (key === 'decision tree' ? read.svg >= pick.columns * 140 + 8 : read.rows === pick.groups);
     const fits = read !== null && (desktop ? read.scroll <= read.client + 1 : read.page <= 1 && read.reach <= 1);
     check(name, shown && fits, { ...pick, ...read });
-    if (key === 'decision tree') check(tag + ' widest decision tree keeps each label inside its node', read !== null && read.labelsOut === 0, { id: pick.id, labelsOut: read?.labelsOut });
+    if (key !== 'decision tree') continue;
+    // Read again once the fonts settle and the tree has measured again: every
+    // label still inside its node, and no leaf ("Calls resistant", "Calls
+    // susceptible", which fit any node in Inter) cut short.
+    const settled = await region.evaluate(async e => {
+      await document.fonts.ready;
+      await new Promise(r => setTimeout(r, 250));
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const nodes = [...e.querySelectorAll('svg g.cursor-pointer')];
+      const labelsOut = nodes.filter(g => { const box = g.querySelector('rect').getBoundingClientRect(); return [...g.querySelectorAll('text')].some(t => { const r = t.getBoundingClientRect(); return r.left < box.left - 0.5 || r.right > box.right + 0.5; }); }).length;
+      const leavesCut = nodes.filter(g => /^Calls .*…$/.test(g.querySelector('text')?.textContent ?? '')).length;
+      return { labelsOut, leavesCut, fonts: document.fonts.status };
+    }, null, { timeout: 5000 }).catch(() => null);
+    check(tag + ' widest decision tree keeps each label inside its node', read !== null && read.labelsOut === 0 && settled !== null && settled.labelsOut === 0 && settled.leavesCut === 0, { id: pick.id, labelsOut: read?.labelsOut, settled });
   }
 }
 
