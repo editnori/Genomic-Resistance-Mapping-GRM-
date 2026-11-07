@@ -490,6 +490,22 @@ The folder must hold exactly the files listed, `runs.json`, `predictions.jsonl` 
 
 `--estimate-only` now also reports the union's genomes without a FASTA in RAW (`union_without_fasta`, the first 20 in `union_without_fasta_examples`) and says on stderr that the run would refuse at the pool. This is the same check as the pool's refusal. The exit code is still the disk's: H-1's gate before any box needs both rc 0 and `union_without_fasta` 0 (H1-PLAN §5).
 
+### The revision-12 gate tests substance (main's ruling after H1DATA)
+
+H-1's species check of the newly fetched genomes fails 16 Salmonella Typhi. Revision 12's Salmonella default keeps the same 2,000 genomes, but its legacy score reweights. So 456 genomes change position (drawn order `c60015cf…`, not `5864bd5d…`), and the `datasets.json` view moves (`2a64c19c…`, not `5519c61d…`), because 9 datasets' eligible-pool counts change. The order gate of REVIEW-INPUT8 would refuse every H-1 spec on that. Main ruled that the gate tests substance instead.
+- **What it compares.** `run.substance(root, slugs)`, the rule of H1DATA's `tools/substantive_check.py`, for each species `genome_set` names (the run's own must be one):
+  - `genome_set[<slug>]`: the sha256 of the default's `species/<slug>/genomes.txt` sorted, one id per line;
+  - `datasets[<slug>][<id>]`: for each dataset revision 12 has, the sha256 of the canonical JSON of {its `datasets.json` entry without `n_resistant`, `n_susceptible`, `n_intermediate` and `selection`; the `curated/phenotypes.jsonl` row of every selected genome for its antibiotic}. The whole row fixes the learned label (`Phenotype::reported_label`) and what curate recorded with it.
+
+  The default must give every pinned value and hold every pinned dataset. A species without pinned datasets refuses. Datasets revision 12 lacks are listed (`datasets_not_pinned`), not refused, as in H1DATA's checker.
+- **What it records and doesn't gate:** the drawn order (the run's own species from `curated.json`, the others from their untouched `genomes.txt`) and the `datasets.json` view. Each is compared with the spec's `recorded` values, and stderr says whether they are as recorded. The gate's record goes to `WORK/revision12-gate.json`, `summary.json`'s `revision12_gate` and `--estimate-only`'s output. K's manifest keeps `revision12_gate: passed`, since K's manifest schema is closed.
+- **The pins.** `spec.json`'s gate holds revision 12's values for the four panel species (73 datasets: 25, 22, 19 and 7), computed from its master root with `run.substance` (lane H1CODE's `tools/pin_gate.py`). It also holds the sha256 of each source file (`reference`) and revision 12's own order and view as `recorded`. The H-1 specs carry the same pins, and record `c60015cf…` and `2a64c19c…` as "revision 12's cohort with the H-1 species check".
+- **Checked on real data.** A default curated from the master root with its own species check, and one with H1DATA's staged `species_check.json`, both pass, by `run.substance` against the pins and by H1DATA's checker. The second records `c60015cf` and `2a64c19c`.
+- **Tests.**
+  - `SubstanceGateTests` (stub curate): revision 12 itself passes as recorded; the same set in another order passes and is recorded as not as the spec records it; one genome swapped refuses; one selected label changed refuses; changed eligible-pool counts and an unselected genome's row decide nothing.
+  - `test_the_revision12_gate_refuses_another_default_cohort`: a one-digit change of either pin, a missing pinned dataset, an unnamed own species, a missing `genomes.txt` and a species without pinned datasets, in both modes.
+  - The e2e pins the synthetic default's substance (`SYNTHETIC_GATE`, from the real binary), and checks the gate record in WORK and `summary.json`.
+
 ### The H-1 specs (G10)
 
 `scripts/input-comparison/h1/` holds the specs H-1 runs. Each is `spec.json` with only these changed:
@@ -508,7 +524,7 @@ The folder must hold exactly the files listed, `runs.json`, `predictions.jsonl` 
 | `h1-staphylococcus_aureus.json` | S. aureus | 18 | 9 | 16,812,689 (R3) |
 | `h1-neisseria_gonorrhoeae.json` | N. gonorrhoeae | 7 | 9 | 12,750,902 (R1) |
 
-The nine stage-1 arms are cap-1000, cap-4000, grr-v1, k-c, k-h, k-p, k-c-h-p, budget-1000 and budget-16000, and `run.py` adds the sentinel. The Salmonella parts equal the full spec but for `datasets`, so `combine` takes them. The gate, panel floor, base rates, curate inputs, learners, splits, repeats, margin and seed are `spec.json`'s. The k add-on's specs are not here: they run only if Layth lifts register §13 G2. `H1SpecTests` checks all of this. The lane report has each spec's `--estimate-only` on the master root.
+The nine stage-1 arms are cap-1000, cap-4000, grr-v1, k-c, k-h, k-p, k-c-h-p, budget-1000 and budget-16000, and `run.py` adds the sentinel. The Salmonella parts equal the full spec but for `datasets`, so `combine` takes them. The gate's pins, panel floor, base rates, curate inputs, learners, splits, repeats, margin and seed are `spec.json`'s; only the gate's `recorded` values are H-1's (above). The k add-on's specs are not here: they run only if Layth lifts register §13 G2. `H1SpecTests` checks all of this. The lane report has each spec's `--estimate-only` on the master root.
 
 ## Cost
 

@@ -126,15 +126,58 @@ def datasets_view(path):
     return sha256_bytes(json.dumps(entries, indent=2, ensure_ascii=False).encode())
 
 
+# A dataset's eligible-pool counts, which the species check moves without changing what the default learns (main's
+# ruling after H1DATA): left out of the gate's dataset spec, as `selection` is.
+COUNT_FIELDS = ("n_resistant", "n_susceptible", "n_intermediate")
+
+
+def substance(root, slugs):
+    """What the revision-12 gate compares of a curated root (main's ruling after H1DATA, the rule of H1DATA's
+    tools/substantive_check.py), for each species in `slugs`:
+    - `genome_set`: the sha256 of its species/<slug>/genomes.txt sorted, one id per line (a duplicate id changes it);
+    - `datasets`: for each of its datasets in curated/datasets.json, the sha256 of the canonical JSON of
+      {"spec": the entry without COUNT_FIELDS and `selection`, "rows": the curated/phenotypes.jsonl row of every
+      selected genome for the dataset's antibiotic, by genome id}. The whole row fixes the learned label
+      (`Phenotype::reported_label`: reported call, conflict, label_from_mic) and the rest of what curate recorded.
+    Revision 12's values come from its master root through this same function."""
+    root = Path(root)
+    entries = [d for d in json.loads((root / "curated" / "datasets.json").read_text(encoding="utf-8"))
+               if d["species_slug"] in slugs]
+    ids = {slug: sorted(line.strip() for line in (root / "species" / slug / "genomes.txt")
+                        .read_text(encoding="utf-8").splitlines() if line.strip()) for slug in slugs}
+    names = {d["species_slug"]: d["species"] for d in entries}
+    want = {(names[slug], g) for slug in slugs if slug in names for g in ids[slug]}
+    rows = {}
+    with open(root / "curated" / "phenotypes.jsonl", encoding="utf-8") as f:
+        for line in f:
+            p = json.loads(line)
+            if (p["species"], p["genome_id"]) in want:
+                key = (p["genome_id"], p["antibiotic"])
+                if key in rows:
+                    raise SystemExit(f"{root}: two phenotype rows for genome {key[0]} and {key[1]}")
+                rows[key] = p
+    out = {"genome_set": {slug: sha256_bytes("".join(g + "\n" for g in ids[slug]).encode()) for slug in slugs},
+           "datasets": {slug: {} for slug in slugs}}
+    for d in entries:
+        spec = {k: v for k, v in d.items() if k not in COUNT_FIELDS + ("selection",)}
+        selected = [rows[(g, d["antibiotic"])] for g in ids[d["species_slug"]] if (g, d["antibiotic"]) in rows]
+        out["datasets"][d["species_slug"]][d["id"]] = sha256_bytes(canonical({"spec": spec, "rows": selected}).encode())
+    return out
+
+
 def gate_line(gate, spec):
     """The revision-12 gate's decision as the run prints it on stderr at the start, before anything is counted
     (main's ruling on REVIEW-INTEG7 L2): passed, with what it compared, or not required on a synthetic RAW."""
     if gate is None:
         return ("revision-12 gate: NOT REQUIRED: the spec says \"synthetic\": true and RAW is a synthetic root "
                 "(truth.json); this run is ungated")
-    species = ", ".join(sorted(gate["genome_order"]))
-    return (f"revision-12 gate: PASSED: the default's genome order for {species} and its datasets.json view "
-            f"{gate['datasets_json_sha256']} equal revision 12's"
+    species = ", ".join(sorted(gate["genome_set"]))
+    n = sum(len(v) for v in gate["datasets"].values())
+    recorded = ("as the spec records them" if gate["recorded"]["as_the_spec_records"]
+                else "NOT as the spec records them (see the gate record)")
+    return (f"revision-12 gate: PASSED: the default's genome sets for {species} and the spec and selected genomes' "
+            f"phenotype rows of their {n} datasets equal revision 12's; recorded, not gated: the drawn order and the "
+            f"datasets.json view, {recorded}"
             + (" (the spec also says synthetic; the gate ran)" if spec.get("synthetic") is True else ""))
 
 
@@ -357,42 +400,57 @@ class Runner:
                    f"{len(listed ^ held)} of them in only one")
 
     def check_revision12(self):
-        """The H-1 gate (main's rulings on REVIEW-INPUT7 to REVIEW-INPUT9): before anything is counted or learned,
-        and in --estimate-only, the default arm must be revision 12's cohort. A spec without the gate refuses unless
-        it says "synthetic": true. With it, two things must match:
-        - `genome_order`: for every species it names, the default root's genome order as curate drew it (the run's
-          own species from curated.json `drawn_order_sha256`, the others from their untouched species/<slug>/
-          genomes.txt) equals revision 12's species/<slug>/genomes.txt; the run's own species must be named;
-        - its datasets.json with each entry's `selection` record removed (`datasets_view`), which this tree's curate
-          adds and revision 12's didn't."""
+        """The H-1 gate: before anything is counted or learned, and in --estimate-only, the default arm must be
+        revision 12's cohort in substance (main's ruling after H1DATA, replacing the order gate of REVIEW-INPUT7 to
+        REVIEW-INPUT9). A spec without the gate refuses unless it says "synthetic": true. With it, for every species
+        `genome_set` names (the run's own species must be one), `substance` of the default root must give:
+        - its `genome_set` value: revision 12's genomes, as a sorted set;
+        - for each dataset `datasets[<slug>]` pins, that dataset, with the same `datasets` value: the same spec
+          outside the eligible-pool counts and the same phenotype row for every selected genome.
+        The drawn order (the run's own species from curated.json `drawn_order_sha256`, the others from their
+        untouched species/<slug>/genomes.txt) and the datasets.json view (`datasets_view`) are recorded beside the
+        spec's `recorded` values, and decide nothing. Returns the record."""
         gate = self.spec.get("revision12_gate")
         if not gate:
             if self.spec.get("synthetic") is True:
                 return None
             raise SystemExit('the spec has no revision12_gate and doesn\'t say "synthetic": true; a real run is never '
                              "ungated")
-        order = gate.get("genome_order") or {}
-        if self.slug not in order:
-            raise SystemExit(f"the revision12_gate names no genome order for {self.slug} (it names "
-                             f"{sorted(order) or 'none'}): add the master root's species/{self.slug}/genomes.txt sha256")
+        sets, pinned = gate.get("genome_set") or {}, gate.get("datasets") or {}
+        if self.slug not in sets:
+            raise SystemExit(f"the revision12_gate names no genome set for {self.slug} (it names "
+                             f"{sorted(sets) or 'none'}): add the sha256 of revision 12's species/{self.slug}/"
+                             "genomes.txt sorted, from run.substance")
         root = self.curated(self.default)
-        got = {"genome_order": {}, "datasets_json_sha256": datasets_view(root / "curated" / "datasets.json")}
-        for slug, want in sorted(order.items()):
-            if slug == self.slug:
-                have = json.loads((root / "curated.json").read_text())["drawn_order_sha256"]
-            else:
-                path = root / "species" / slug / "genomes.txt"
-                if not path.is_file():
-                    raise SystemExit(f"the default root has no species/{slug}/genomes.txt for the gate to compare")
-                have = file_sha256(path)
-            got["genome_order"][slug] = have
-            if have != want:
-                raise SystemExit(f"the default arm's genome order for {slug} is {have}, not revision 12's {want}: this "
-                                 "RAW or curate isn't revision 12's, so no arm runs")
-        if got["datasets_json_sha256"] != gate["datasets_json_sha256"]:
-            raise SystemExit(f"the default arm's datasets.json is {got['datasets_json_sha256']}, not revision 12's "
-                             f"{gate['datasets_json_sha256']}: this RAW or curate isn't revision 12's, so no arm runs")
-        return got
+        for slug in sorted(sets):
+            if not (root / "species" / slug / "genomes.txt").is_file():
+                raise SystemExit(f"the default root has no species/{slug}/genomes.txt for the gate to compare")
+            if not pinned.get(slug):
+                raise SystemExit(f"the revision12_gate pins no dataset of {slug}")
+        have = substance(root, sorted(sets))
+        for slug, want in sorted(sets.items()):
+            if have["genome_set"][slug] != want:
+                raise SystemExit(f"the default arm's genome set for {slug} is {have['genome_set'][slug]}, not "
+                                 f"revision 12's {want}: this RAW or curate isn't revision 12's, so no arm runs")
+        for slug in sorted(sets):
+            for ds, want in sorted(pinned[slug].items()):
+                got = have["datasets"][slug].get(ds)
+                if got is None:
+                    raise SystemExit(f"the default arm has no dataset {ds}, which revision 12 has, so no arm runs")
+                if got != want:
+                    raise SystemExit(f"the default arm's dataset {ds} is {got}, not revision 12's {want}: its spec "
+                                     "(outside the eligible-pool counts) or a selected genome's phenotype row differs, "
+                                     "so no arm runs")
+        order = {slug: (json.loads((root / "curated.json").read_text())["drawn_order_sha256"] if slug == self.slug
+                        else file_sha256(root / "species" / slug / "genomes.txt")) for slug in sorted(sets)}
+        recorded = {"genome_order": order, "datasets_json_sha256": datasets_view(root / "curated" / "datasets.json")}
+        spec_recorded = gate.get("recorded") or {}
+        recorded["as_the_spec_records"] = all(spec_recorded.get(k) == v for k, v in recorded.items())
+        return {"genome_set": {slug: have["genome_set"][slug] for slug in sorted(sets)},
+                "datasets": {slug: {ds: have["datasets"][slug][ds] for ds in sorted(pinned[slug])} for slug in sorted(sets)},
+                "datasets_not_pinned": sorted(ds for slug in sets for ds in have["datasets"][slug]
+                                              if ds not in pinned[slug]),
+                "recorded": recorded}
 
     def genomes_txt(self, root):
         return root / "species" / self.slug / "genomes.txt"
@@ -1009,6 +1067,8 @@ def main(argv):
                          "(spec panel_floor): cap-4000 and grr-v1 would not change the genome set")
     gate = runner.check_revision12()
     print(gate_line(gate, spec), file=sys.stderr)
+    # The gate's record, drawn order and datasets.json view included (K's manifest, a closed record, keeps "passed").
+    (work / "revision12-gate.json").write_text(json.dumps(gate, indent=1, sort_keys=True))
     if a.estimate_only:
         # Before any box: the gate, then the box's free disk (--free-disk-bytes, not this machine's), and the union's
         # FASTAs, which the pool refuses without (it reports them; the exit code is the disk's).
@@ -1061,7 +1121,7 @@ def main(argv):
                          meta)
     summary.update({"seconds": round(time.monotonic() - started, 1), "stage_seconds": runner.seconds,
                     "eligible_genomes": eligible, "panel_floor": floor, "species_groups": species_groups,
-                    "stale_arm_folders": stale, "resumed_arms": sorted(runner.resumed)})
+                    "stale_arm_folders": stale, "resumed_arms": sorted(runner.resumed), "revision12_gate": gate})
     write_summary(work, summary)
 
 
@@ -1221,7 +1281,8 @@ def combine(argv):
     summary.update({"seconds": round(sum(p["summary"].get("seconds", 0) for p in parts), 1), "stage_seconds": {},
                     "eligible_genomes": first["summary"]["eligible_genomes"],
                     "panel_floor": first["summary"]["panel_floor"], "species_groups": first["groups"],
-                    "stale_arm_folders": [], "resumed_arms": [], "combine": record})
+                    "stale_arm_folders": [], "resumed_arms": [], "combine": record,
+                    "revision12_gate": first["summary"].get("revision12_gate")})
     write_summary(out, summary)
 
 

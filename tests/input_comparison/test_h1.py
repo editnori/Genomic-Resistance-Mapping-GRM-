@@ -51,7 +51,19 @@ STUB_GRM = base.SpecTests.STUB_GRM.replace(
         for kset in list((root / "species" / "salmonella_enterica" / "ksets").glob("*.kset")):
             (kset.parent / "new.part").write_bytes(kset.read_bytes())
             os.replace(kset.parent / "new.part", kset)
-    sys.exit(3 if os.environ.get("STUB_COUNT_FAILS") else 0)""")
+    sys.exit(3 if os.environ.get("STUB_COUNT_FAILS") else 0)""").replace(
+    """"reported": "R" if i % 3 else "S"})""",
+    """"reported": ("S" if os.environ.get("STUB_FLIP") and g == "g001" else "R") if i % 3 else
+    ("R" if os.environ.get("STUB_UNSELECTED") and g == "g048" else "S")})""").replace(
+    """"antibiotic": "meropenem"}]))""",
+    """"antibiotic": "meropenem", **({"n_resistant": 7} if os.environ.get("STUB_COUNTS") else {})}]))""").replace(
+    """(root / "species" / "salmonella_enterica" / "genomes.txt").write_text("\\n".join(ids[:cap]) + "\\n")""",
+    """drawn = ids[:cap][::-1] if os.environ.get("STUB_ORDER") else ids[:cap]
+if os.environ.get("STUB_SWAP"):
+    drawn = drawn[1:] + [ids[-1]]
+(root / "species" / "salmonella_enterica" / "genomes.txt").write_text("\\n".join(drawn) + "\\n")""")
+# What the substance gate tests switch on (main's ruling after H1DATA); each must reach the stub.
+GATE_HOOKS = ("STUB_FLIP", "STUB_UNSELECTED", "STUB_COUNTS", "STUB_ORDER", "STUB_SWAP")
 
 
 class Stub(unittest.TestCase):
@@ -201,6 +213,74 @@ class KsetSharingTests(Stub):
         shutil.rmtree(self.tmp / "work")
         disk = self.estimate()
         self.assertEqual((disk["union_without_fasta"], disk["union_without_fasta_examples"]), (1, ["g029"]))
+
+
+class SubstanceGateTests(Stub):
+    """Main's ruling after H1DATA: the revision-12 gate passes a default with revision 12's genome set and, per
+    dataset, its spec outside the eligible-pool counts and its selected genomes' phenotype rows, whatever order curate
+    drew; a swapped genome or a changed selected label refuses. Revision 12 here is the stub's plain curate."""
+
+    def setUp(self):
+        super().setUp()
+        for hook in GATE_HOOKS:
+            self.assertEqual(STUB_GRM.count(hook), 1, hook)
+        self.estimate()
+        self.pins = base.gate_of(base.default_root(self.tmp / "work"), [SPEC["species"]])
+        self.addCleanup(lambda: [os.environ.pop(h, None) for h in GATE_HOOKS])
+
+    def gated(self, hook=None):
+        """--estimate-only on a fresh WORK with revision 12's pins, curate changed by `hook`; (exit code, stderr,
+        stdout)."""
+        shutil.rmtree(self.tmp / "work")
+        if hook:
+            os.environ[hook] = "1"
+        out, err = io.StringIO(), io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as e:
+                run.main([str(self.spec_path(revision12_gate=self.pins)), "--raw", str(self.tmp / "raw"), "--work",
+                          str(self.tmp / "work"), "--grm", str(self.grm), "--source-commit", "0" * 40,
+                          "--below-panel-floor", "--estimate-only", "--free-disk-bytes", str(10 ** 15)])
+        finally:
+            os.environ.pop(hook or "", None)
+        return e.exception.code, err.getvalue(), out.getvalue()
+
+    def test_revision_12_itself_passes_as_recorded(self):
+        code, err, out = self.gated()
+        self.assertEqual(code, 0)
+        self.assertIn("revision-12 gate: PASSED", err)
+        self.assertTrue(json.loads(out)["revision12_gate"]["recorded"]["as_the_spec_records"])
+
+    def test_the_same_set_in_another_order_passes_and_the_order_is_recorded(self):
+        code, err, out = self.gated("STUB_ORDER")
+        self.assertEqual(code, 0, err)
+        record = json.loads(out)["revision12_gate"]
+        self.assertEqual(record["genome_set"], self.pins["genome_set"])
+        self.assertNotEqual(record["recorded"]["genome_order"], self.pins["recorded"]["genome_order"])
+        self.assertFalse(record["recorded"]["as_the_spec_records"])
+        self.assertIn("NOT as the spec records them", err)
+
+    def test_one_genome_swapped_refuses(self):
+        code, _, _ = self.gated("STUB_SWAP")
+        self.assertIn("the default arm's genome set for salmonella_enterica is", str(code))
+        self.assertFalse((self.tmp / "work" / "revision12-gate.json").exists())
+
+    def test_one_selected_label_changed_refuses(self):
+        code, _, _ = self.gated("STUB_FLIP")
+        self.assertIn("the default arm's dataset salmonella_enterica__meropenem is", str(code))
+        self.assertIn("a selected genome's phenotype row differs", str(code))
+
+    def test_eligible_counts_and_an_unselected_genome_s_row_decide_nothing(self):
+        code, err, _ = self.gated("STUB_COUNTS")
+        self.assertEqual(code, 0, err)
+        root = base.default_root(self.tmp / "work")
+        self.assertNotEqual(run.datasets_view(root / "curated" / "datasets.json"),
+                            self.pins["recorded"]["datasets_json_sha256"])
+        code, err, _ = self.gated("STUB_UNSELECTED")
+        self.assertEqual(code, 0, err)
+        root = base.default_root(self.tmp / "work")
+        rows = [json.loads(line) for line in (root / "curated" / "phenotypes.jsonl").read_text().splitlines()]
+        self.assertEqual([r["reported"] for r in rows if r["genome_id"] == "g048"], ["R"])
+        self.assertNotIn("g048", root.joinpath("species", "salmonella_enterica", "genomes.txt").read_text().split())
 
 
 class ResumeTests(Stub):
@@ -448,7 +528,7 @@ class H1SpecTests(unittest.TestCase):
     def test_each_spec_changes_only_its_species_datasets_kset_size_and_arms(self):
         for name, s in self.specs().items():
             self.assertEqual(set(s), set(SPEC), name)
-            for key in set(SPEC) - {"decisions", "species", "datasets", "pool_budget", "arms"}:
+            for key in set(SPEC) - {"decisions", "species", "datasets", "pool_budget", "arms", "revision12_gate"}:
                 self.assertEqual(s[key], SPEC[key], (name, key))
             self.assertEqual({k: v for k, v in s["pool_budget"].items() if k not in ("default_kset_bytes", "reason")},
                              {k: v for k, v in SPEC["pool_budget"].items()
@@ -466,6 +546,30 @@ class H1SpecTests(unittest.TestCase):
             for d in s["datasets"]:
                 self.assertEqual(d["partition"], "confirmatory", (name, d))
                 self.assertTrue(d["id"].startswith(s["species"] + "__"), (name, d))
+
+    def test_each_spec_gates_on_revision_12_and_records_the_h1_species_check(self):
+        """Main's ruling after H1DATA: the pins are revision 12's (spec.json's, from its master root); the recorded
+        order and view are revision 12's cohort with the H-1 species check (Salmonella c60015cf, view 2a64c19c)."""
+        gate = SPEC["revision12_gate"]
+        self.assertEqual(sorted(gate["genome_set"]), sorted(D2))
+        self.assertEqual({s: len(v) for s, v in gate["datasets"].items()},
+                         {"salmonella_enterica": 25, "mycobacterium_tuberculosis": 22, "staphylococcus_aureus": 19,
+                          "neisseria_gonorrhoeae": 7})
+        self.assertEqual(gate["recorded"]["genome_order"]["salmonella_enterica"][:8], "5864bd5d")
+        self.assertEqual(gate["recorded"]["datasets_json_sha256"][:8], "5519c61d")
+        self.assertEqual(gate["reference"]["root"], "/home/layth/review/grm-r12-run-20261105/data-root")
+        self.assertEqual(sorted(gate["reference"]["files"]), sorted(
+            ["curated/datasets.json", "curated/phenotypes.jsonl", *(f"species/{s}/genomes.txt" for s in D2)]))
+        for name, s in self.specs().items():
+            g = s["revision12_gate"]
+            self.assertEqual({k: v for k, v in g.items() if k != "recorded"},
+                             {k: v for k, v in gate.items() if k != "recorded"}, name)
+            self.assertEqual(g["recorded"]["genome_order"],
+                             {**gate["recorded"]["genome_order"], "salmonella_enterica":
+                              "c60015cf9e8d69d4e3189be0830dd6ac40b96351974d76c8c4b83bf1e6fdd805"}, name)
+            self.assertEqual(g["recorded"]["datasets_json_sha256"],
+                             "2a64c19ca796e013897235047c83e0760276ddb1927bd167c556ff8d1ac48af2", name)
+            self.assertIn("revision 12's cohort with the H-1 species check", g["recorded"]["note"], name)
 
     def test_stage_1_runs_spec_json_s_arms_without_k21_and_k25(self):
         want = [a for a in SPEC["arms"] if a["name"] not in ("k21", "k25")]
