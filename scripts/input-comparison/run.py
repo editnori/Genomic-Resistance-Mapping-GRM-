@@ -64,7 +64,8 @@ Anything else reruns the arm.
 a WORK whose spec equals the full spec but for its datasets. The parts' datasets must be disjoint and cover the
 full spec's, the parts must share the species pool, the grm binary, the vocabulary and the source commit, and every
 RAW file each part hashed must be in the pinned master manifest. J's family C is then one BH family per species
-over every part's lineage contrasts.
+over every part's lineage contrasts. Each copied arm output must match its part's resume.json, and
+the spec's data_root.manifest_sha256 pins the master manifest.
 
 usage: python3 -B run.py SPEC --raw RAW_ROOT --work WORK --grm GRM_BINARY --source-commit SHA
            [--jobs N] [--estimate-only] [--free-disk-bytes N] [--below-panel-floor] [--trace-training]
@@ -213,6 +214,11 @@ def load_spec(path):
     spec = json.loads(Path(path).read_text(encoding="utf-8"))
     if spec.get("format") != "grm-input-comparison-spec" or spec.get("version") != 1:
         raise SystemExit(f"{path}: not a grm-input-comparison-spec version 1")
+    if "data_root" in spec:
+        pinned = (spec["data_root"] or {}).get("manifest_sha256")
+        if not isinstance(pinned, str) or not re.fullmatch(r"[0-9a-f]{64}", pinned):
+            raise SystemExit(f"{path}: data_root.manifest_sha256 is {pinned!r}, not a sha256: pin the data root's "
+                             "manifest (main's ruling after REVIEW-H1DATA)")
     default = spec["default"]
     datasets = [d["id"] for d in spec["datasets"]]
     if len(set(datasets)) != len(datasets):
@@ -406,7 +412,8 @@ class Runner:
         `genome_set` names (the run's own species must be one), `substance` of the default root must give:
         - its `genome_set` value: revision 12's genomes, as a sorted set;
         - for each dataset `datasets[<slug>]` pins, that dataset, with the same `datasets` value: the same spec
-          outside the eligible-pool counts and the same phenotype row for every selected genome.
+          outside the eligible-pool counts and the same phenotype row for every selected genome;
+        - no dataset of those species that the gate doesn't pin.
         The drawn order (the run's own species from curated.json `drawn_order_sha256`, the others from their
         untouched species/<slug>/genomes.txt) and the datasets.json view (`datasets_view`) are recorded beside the
         spec's `recorded` values, and decide nothing. Returns the record."""
@@ -441,6 +448,12 @@ class Runner:
                     raise SystemExit(f"the default arm's dataset {ds} is {got}, not revision 12's {want}: its spec "
                                      "(outside the eligible-pool counts) or a selected genome's phenotype row differs, "
                                      "so no arm runs")
+            # An extra dataset would be learned and reported though revision 12 has none (main's ruling after
+            # REVIEW-H1DATA, L1).
+            extra = sorted(set(have["datasets"][slug]) - set(pinned[slug]))
+            if extra:
+                raise SystemExit(f"the default arm has {len(extra)} dataset(s) of {slug} that revision 12 hasn't: "
+                                 f"{', '.join(extra)}, so no arm runs")
         order = {slug: (json.loads((root / "curated.json").read_text())["drawn_order_sha256"] if slug == self.slug
                         else file_sha256(root / "species" / slug / "genomes.txt")) for slug in sorted(sets)}
         recorded = {"genome_order": order, "datasets_json_sha256": datasets_view(root / "curated" / "datasets.json")}
@@ -448,8 +461,6 @@ class Runner:
         recorded["as_the_spec_records"] = all(spec_recorded.get(k) == v for k, v in recorded.items())
         return {"genome_set": {slug: have["genome_set"][slug] for slug in sorted(sets)},
                 "datasets": {slug: {ds: have["datasets"][slug][ds] for ds in sorted(pinned[slug])} for slug in sorted(sets)},
-                "datasets_not_pinned": sorted(ds for slug in sets for ds in have["datasets"][slug]
-                                              if ds not in pinned[slug]),
                 "recorded": recorded}
 
     def genomes_txt(self, root):
@@ -555,9 +566,12 @@ class Runner:
         return out
 
     def share_ksets(self, root):
-        """Hard-links the pool's finished kset and sidecar of every genome of a root counted at the pool's k into the
-        root's kset folder, where `grm count` reuses them (G1). A genome the root already has a kset or sidecar for
-        keeps its own. Returns the genomes linked."""
+        """Gives every genome of a root counted at the pool's k the pool's finished kset as a hard link and its
+        sidecar as a copy, in the root's kset folder, where `grm count` reuses them (G1). `grm count` writes a kset
+        only to a .part file it renames, which replaces the link, but it rewrites a reused sidecar in place (when its
+        catalog version differs or it has no kset digest), so a linked sidecar would carry that write into the pool
+        (REVIEW-H1CODE L1): the sidecar, a few kilobytes, is copied. A genome the root already has a kset or sidecar
+        for keeps its own. Returns the genomes shared."""
         mine, pool = self.kset_dir(root), self.pool_ksets
         mine.mkdir(parents=True, exist_ok=True)
         have = self.finished_ksets(pool.parents[2])
@@ -565,31 +579,37 @@ class Runner:
         for g in sorted(set(self.genomes_txt(root).read_text(encoding="utf-8").split()) & have):
             if any(os.path.lexists(mine / f"{g}.{ext}") for ext in ("kset", "json")):
                 continue
-            for ext in ("kset", "json"):
-                try:
-                    os.link(pool / f"{g}.{ext}", mine / f"{g}.{ext}")
-                except OSError as e:
-                    raise SystemExit(f"can't link the pool's {g}.{ext} into root {root.name} ({e}); the disk check "
-                                     "counted it once") from None
+            try:
+                os.link(pool / f"{g}.kset", mine / f"{g}.kset")
+                shutil.copyfile(pool / f"{g}.json", mine / f"{g}.json")
+            except OSError as e:
+                raise SystemExit(f"can't share the pool's kset of {g} with root {root.name} ({e}); the disk check "
+                                 "counted it once") from None
             linked.append(g)
         return linked
 
     def record_shared(self, root, linked):
-        """After `grm count`: every kset and sidecar linked from the pool must still be the pool's file (a recount
-        writes a new kset and sidecar, so a surviving link means the genome was not counted again). Writes the
-        root's shared.json: its genomes, how many ksets are the pool's, and how many it counted itself."""
+        """After `grm count`: every shared kset must still be the pool's file, and its sidecar copy must still hold
+        the pool's bytes. A recount writes a new kset and sidecar, and a sidecar rewritten for another catalog means
+        the root counted otherwise than the pool, so either refuses. Writes the root's shared.json: its genomes, how
+        many ksets are the pool's, and how many it counted itself."""
         mine, pool = self.kset_dir(root), self.pool_ksets
 
-        def same(g, ext):
-            a, b = mine / f"{g}.{ext}", pool / f"{g}.{ext}"
+        def same_kset(g):
+            a, b = mine / f"{g}.kset", pool / f"{g}.kset"
             return a.exists() and b.exists() and os.path.samefile(a, b)
 
-        recounted = [g for g in linked if not (same(g, "kset") and same(g, "json"))]
-        if recounted:
-            raise SystemExit(f"root {root.name}: grm count rewrote {len(recounted)} of the {len(linked)} ksets linked "
-                             f"from the species pool (e.g. {recounted[0]}), which the disk check counted once")
+        def same_sidecar(g):
+            a, b = mine / f"{g}.json", pool / f"{g}.json"
+            return a.is_file() and b.is_file() and a.read_bytes() == b.read_bytes()
+
+        rewritten = [g for g in linked if not (same_kset(g) and same_sidecar(g))]
+        if rewritten:
+            raise SystemExit(f"root {root.name}: grm count rewrote the kset or sidecar of {len(rewritten)} of the "
+                             f"{len(linked)} genomes shared with the species pool (e.g. {rewritten[0]}), which the "
+                             "disk check counted once")
         ids = self.genomes_txt(root).read_text(encoding="utf-8").split()
-        shared = sum(same(g, "kset") for g in ids)
+        shared = sum(same_kset(g) for g in ids)
         (root / SHARED).write_text(canonical({"genomes": len(ids), "shared": shared, "own": len(ids) - shared,
                                               "linked_now": len(linked), "pool": pool.parents[2].name}))
 
@@ -1232,12 +1252,52 @@ def check_parts(spec_path, spec, parts, master_path):
     for p in parts:
         if p["manifest"].get("binary_sha256") != p["inputs"].get("grm_sha256"):
             raise SystemExit(f"part {p['work']}: K's binary_sha256 is not the grm its {INPUTS} hashed")
+    # The one pinned master manifest (REVIEW-H1CODE L6): the spec names its sha256 in data_root.
+    pinned = (spec.get("data_root") or {}).get("manifest_sha256")
+    if pinned is None:
+        raise SystemExit(f"{spec_path} pins no data_root.manifest_sha256, so combine can't tell which master manifest "
+                         "the parts must come from")
+    if file_sha256(master_path) != pinned:
+        raise SystemExit(f"master manifest {master_path} is {file_sha256(master_path)}, not the {pinned} "
+                         f"{spec_path} pins")
     master = read_master(master_path)
     for p in parts:
         outside = [name for digest, _, name in p["raw"] if master.get(name) != digest]
         if outside:
             raise SystemExit(f"part {p['work']}: {len(outside)} of its {len(p['raw'])} RAW files are not in the master "
                              f"manifest {master_path} with that sha256, e.g. {', '.join(outside[:5])}")
+
+
+def verify_arm_output(part, src, arm, dataset):
+    """A part's arm output as `combine` takes it (REVIEW-H1CODE L2): its resume.json names this arm and dataset, was
+    made from the part's inputs.json and spec, lists runs.json, predictions.jsonl and arm.json, and the folder holds
+    exactly the files it lists, none a symlink, each with its recorded sha256. Returns the record."""
+    def refuse(why):
+        raise SystemExit(f"part {part['work']}: arm {arm} on {dataset}: {why}")
+    try:
+        rec = json.loads((src / RESUME).read_text())
+        outputs = rec["outputs"]
+    except (OSError, ValueError, KeyError, TypeError):
+        refuse(f"no readable {RESUME} with its outputs")
+    if not isinstance(rec, dict) or not isinstance(outputs, dict):
+        refuse(f"{RESUME} is not a resume record")
+    if (rec.get("arm"), rec.get("dataset")) != (arm, dataset):
+        refuse(f"{RESUME} is the record of {rec.get('arm')}/{rec.get('dataset')}")
+    if rec.get("inputs_sha256") != file_sha256(part["work"] / INPUTS):
+        refuse(f"{RESUME} was not made from the part's {INPUTS}")
+    if rec.get("spec_sha256") != part["manifest"].get("protocol_sha256"):
+        refuse(f"{RESUME} was not made from the part's spec")
+    if not ARM_OUTPUTS <= set(outputs):
+        refuse(f"{RESUME} lists no {', '.join(sorted(ARM_OUTPUTS - set(outputs)))}")
+    if any(p.is_symlink() for p in src.rglob("*")):
+        refuse("its folder holds a symlink")
+    files = Runner.output_files(src)
+    if files != set(outputs):
+        refuse(f"its files differ from {RESUME}'s list: {', '.join(sorted(files ^ set(outputs)))}")
+    changed = sorted(n for n, h in outputs.items() if file_sha256(src / n) != h)
+    if changed:
+        refuse(f"{', '.join(changed)} changed after the arm finished")
+    return rec
 
 
 def combine(argv):
@@ -1257,13 +1317,22 @@ def combine(argv):
     parts = [read_part(Path(w)) for w in a.work_from]
     check_parts(a.spec, spec, parts, a.master_manifest)
     names = [DEFAULT_ARM, *(arm["name"] for arm in arms)]
+    flags = {}
     for part in parts:
         for d in part["spec"]["datasets"]:
             for name in names:
                 src = part["work"] / "arms" / name / d["id"]
                 if not (src / "runs.json").is_file():
                     raise SystemExit(f"part {part['work']} has no output of arm {name} on {d['id']}")
-                shutil.copytree(src, out / "arms" / name / d["id"], symlinks=True)
+                rec = verify_arm_output(part, src, name, d["id"])
+                flags.setdefault((rec["trace_training"], rec["run_identical_cohorts"]), f"{part['work']}: {name}/{d['id']}")
+    if len(flags) > 1:
+        raise SystemExit("the parts' arms ran with different --trace-training / --run-identical-cohorts: "
+                         + "; ".join(f"{where} ran with {list(f)}" for f, where in sorted(flags.items())))
+    for part in parts:
+        for d in part["spec"]["datasets"]:
+            for name in names:
+                shutil.copytree(part["work"] / "arms" / name / d["id"], out / "arms" / name / d["id"], symlinks=True)
     first = parts[0]
     seconds = {"parts": sum(p["manifest"]["compute"]["actual_seconds"] for p in parts)}
     meta = {k: first["manifest"][k] for k in ("synthetic", "revision12_gate", "species_pool") if k in first["manifest"]}

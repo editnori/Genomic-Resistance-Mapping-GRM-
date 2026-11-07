@@ -381,7 +381,7 @@ ids = [f"g{i:03d}" for i in range(50)]
             self.assertIn("the comparison still has to write about", str(code))
             code, out = self.main(tmp, "--free-disk-bytes", str(10 ** 15), "--estimate-only",
                                   spec=self.stub_spec(tmp, revision12_gate=ours))
-            record = {"genome_set": ours["genome_set"], "datasets": ours["datasets"], "datasets_not_pinned": [],
+            record = {"genome_set": ours["genome_set"], "datasets": ours["datasets"],
                       "recorded": {**ours["recorded"], "as_the_spec_records": True}}
             self.assertEqual((code, json.loads(out)["revision12_gate"]), (0, record))
             self.assertEqual(json.loads((Path(tmp) / "work" / "revision12-gate.json").read_text()), record)
@@ -1614,9 +1614,9 @@ class EndToEndTests(unittest.TestCase):
 
     def test_the_k31_roots_share_the_pool_s_ksets_and_count_none_anew(self):
         """H-1 gap G1 on REVIEW-INPUT5 M1(b): grm count reuses a kset only from its own root's kset folder, so the
-        k31 roots get the pool's ksets as hard links before their count. After it, every kset and sidecar of every
-        k31 root is still the pool's file (a recount writes a new one): 0 counted anew. The k21 and k25 roots
-        count their own."""
+        k31 roots get the pool's ksets as hard links, and copies of their sidecars, before their count. After it,
+        every kset of every k31 root is still the pool's file and every sidecar holds the pool's bytes (a recount
+        writes a new kset): 0 counted anew. The k21 and k25 roots count their own."""
         roots = {r.name: r for r in (self.work / "roots").iterdir()}
         pool = next(r for n, r in roots.items() if n.startswith("pool-"))
         pool_ksets = pool / "species" / "salmonella_enterica" / "ksets"
@@ -1634,7 +1634,10 @@ class EndToEndTests(unittest.TestCase):
                 for g in ids:
                     for ext in ("kset", "json"):
                         self.assertFalse((mine / f"{g}.{ext}").is_symlink())
-                        self.assertTrue(os.path.samefile(mine / f"{g}.{ext}", pool_ksets / f"{g}.{ext}"), (name, g))
+                    # The kset is the pool's file; its sidecar a byte-equal copy (REVIEW-H1CODE L1).
+                    self.assertTrue(os.path.samefile(mine / f"{g}.kset", pool_ksets / f"{g}.kset"), (name, g))
+                    self.assertFalse(os.path.samefile(mine / f"{g}.json", pool_ksets / f"{g}.json"), (name, g))
+                    self.assertEqual((mine / f"{g}.json").read_bytes(), (pool_ksets / f"{g}.json").read_bytes())
             else:
                 self.assertEqual((shared["shared"], shared["own"]), (0, len(ids)), name)
                 g = ids[0]

@@ -157,7 +157,7 @@
         "staphylococcus_aureus": "3269d7b9d182e65e77d47709d928659183380545dcbf5b9d5d42ee4ed8042c56"
       },
       "datasets_json_sha256": "2a64c19ca796e013897235047c83e0760276ddb1927bd167c556ff8d1ac48af2",
-      "note": "revision 12's cohort with the H-1 species check (DECISIONS, after H1DATA; staged species_check.json 4af81f94e76ec86822b669e2341ac937c8ed3065021e72d089ffab8940631e70): the same genome sets, with Salmonella's drawn order c60015cf and the datasets.json view 2a64c19c (H1DATA REPORT 7c1b2650); MTB, S. aureus and N. gonorrhoeae as revision 12"
+      "note": "revision 12's cohort with the H-1 species check (DECISIONS, after H1DATA; the H-1 data root's species_check.json c2e7c389779e6aa009800a9d327a3b036a14a01153429c62b51cdd7b66c942ef, H1DATA round 2's final stage): the same genome sets, with Salmonella's drawn order c60015cf and the datasets.json view 2a64c19c (H1DATA REPORT 7c1b2650); MTB, S. aureus and N. gonorrhoeae as revision 12"
     },
     "reason": "main's ruling after H1DATA (option (a)), replacing the order gate of REVIEW-INPUT7 to REVIEW-INPUT9: before anything is counted or learned, and in --estimate-only, the default arm must be revision 12's cohort in substance. genome_set: for each H-1 panel species, the sha256 of revision 12's species/<slug>/genomes.txt sorted, one id per line. datasets: for each dataset of those species, the sha256 of the canonical JSON of its datasets.json entry without the eligible-pool counts (n_resistant, n_susceptible, n_intermediate) and selection, with the curated/phenotypes.jsonl row of every selected genome for its antibiotic (run.substance, the rule of H1DATA's tools/substantive_check.py). reference: the master root (/home/layth/review/grm-r12-run-20261105/data-root) files they were computed from, by sha256. recorded: the drawn order of each species and the datasets.json view without selection records, recorded beside the run's and deciding nothing. The panel is main's ruling after INPUT round 14 (DECISIONS H-1: the default selection capped at 2,000 and more than 2,000 genomes eligible; a revision-12 pipeline stage under one xlarge-hour; block C species first): Salmonella, MTB, S. aureus and N. gonorrhoeae"
   },
@@ -294,5 +294,11 @@
   "margin": {
     "log_loss": 0.02
   },
-  "seed": 0
+  "seed": 0,
+  "data_root": {
+    "path": "/home/layth/review/grm-h1-data-root-20261107",
+    "manifest": "/home/layth/review/grm-h1data-20261107/stage/MASTER-MANIFEST-h1.sha256",
+    "manifest_sha256": "7dd00779bc4b538b325d947137c525afb4e723ca494bd14b607a8730b7902887",
+    "reason": "main's ruling after REVIEW-H1DATA: H-1 runs from its own data root, built from hard links to the revision-12 master root's files plus H1DATA's 9,394 FASTAs and species_check.json c2e7c389, read only (61,272 files); the master root stays untouched. Pass it, or a box's copy pushed from this manifest, as --raw; every root and the pool write only under --work. run.py combine refuses a master manifest other than manifest_sha256"
+  }
 }

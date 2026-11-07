@@ -47,7 +47,13 @@ STUB_GRM = base.SpecTests.STUB_GRM.replace(
         f.write(argv[argv.index("--arm") + 1] + "\\n")
     sys.exit(0)""").replace(
     """    sys.exit(3 if os.environ.get("STUB_COUNT_FAILS") else 0)""",
-    """    if argv[0] == "count" and os.environ.get("STUB_RECOUNT"):
+    """    if argv[0] == "count" and os.environ.get("STUB_INPLACE"):
+        # As species.rs's reuse branch rewrites a sidecar whose catalog version differs: in place, same inode.
+        for side in list((root / "species" / "salmonella_enterica" / "ksets").glob("*.json")):
+            with open(side, "r+") as f:
+                f.write(json.dumps({"rewritten_in_place_by": root.name}))
+                f.truncate()
+    if argv[0] == "count" and os.environ.get("STUB_RECOUNT"):
         for kset in list((root / "species" / "salmonella_enterica" / "ksets").glob("*.kset")):
             (kset.parent / "new.part").write_bytes(kset.read_bytes())
             os.replace(kset.parent / "new.part", kset)
@@ -61,9 +67,31 @@ STUB_GRM = base.SpecTests.STUB_GRM.replace(
     """drawn = ids[:cap][::-1] if os.environ.get("STUB_ORDER") else ids[:cap]
 if os.environ.get("STUB_SWAP"):
     drawn = drawn[1:] + [ids[-1]]
-(root / "species" / "salmonella_enterica" / "genomes.txt").write_text("\\n".join(drawn) + "\\n")""")
+(root / "species" / "salmonella_enterica" / "genomes.txt").write_text("\\n".join(drawn) + "\\n")""").replace(
+    """(root / "species" / "salmonella_enterica" / "genomes.txt").write_text("\\n".join(drawn) + "\\n")""",
+    """(root / "species" / "salmonella_enterica" / "genomes.txt").write_text("\\n".join(drawn) + "\\n")
+datasets = json.loads((root / "curated" / "datasets.json").read_text())
+if os.environ.get("STUB_EXTRA"):
+    datasets.append({"id": "salmonella_enterica__extra", "species": "Salmonella enterica",
+                     "species_slug": "salmonella_enterica", "antibiotic": "extra"})
+if os.environ.get("STUB_OTHER"):
+    # A second panel species: 12 eligible genomes o000..o011, the first 8 selected (o001..o008 with
+    # STUB_OTHER_SWAP), one dataset; STUB_OTHER_FLIP changes selected genome o002's label.
+    other = [f"o{i:03d}" for i in range(12)]
+    (root / "species" / "other_sp").mkdir(parents=True, exist_ok=True)
+    picked = other[1:9] if os.environ.get("STUB_OTHER_SWAP") else other[:8]
+    (root / "species" / "other_sp" / "genomes.txt").write_text("\\n".join(picked) + "\\n")
+    datasets.append({"id": "other_sp__drug", "species": "Other sp", "species_slug": "other_sp", "antibiotic": "drug"})
+    with open(root / "curated" / "phenotypes.jsonl", "a") as f:
+        for i, g in enumerate(other):
+            call = "R" if i % 2 else "S"
+            if os.environ.get("STUB_OTHER_FLIP") and g == "o002":
+                call = "R"
+            f.write(json.dumps({"genome_id": g, "species": "Other sp", "antibiotic": "drug", "reported": call}) + "\\n")
+(root / "curated" / "datasets.json").write_text(json.dumps(datasets))""")
 # What the substance gate tests switch on (main's ruling after H1DATA); each must reach the stub.
-GATE_HOOKS = ("STUB_FLIP", "STUB_UNSELECTED", "STUB_COUNTS", "STUB_ORDER", "STUB_SWAP")
+GATE_HOOKS = ("STUB_FLIP", "STUB_UNSELECTED", "STUB_COUNTS", "STUB_ORDER", "STUB_SWAP", "STUB_EXTRA", "STUB_OTHER",
+              "STUB_OTHER_SWAP", "STUB_OTHER_FLIP")
 
 
 class Stub(unittest.TestCase):
@@ -144,8 +172,10 @@ class KsetSharingTests(Stub):
         ids = r.genomes_txt(default).read_text().split()
         self.assertEqual(len(ids), 20)
         for g in ids:
-            for ext in ("kset", "json"):
-                self.assertTrue(os.path.samefile(mine / f"{g}.{ext}", pool / f"{g}.{ext}"), (g, ext))
+            # The kset is the pool's file; the sidecar a copy of the pool's (REVIEW-H1CODE L1).
+            self.assertTrue(os.path.samefile(mine / f"{g}.kset", pool / f"{g}.kset"), g)
+            self.assertFalse(os.path.samefile(mine / f"{g}.json", pool / f"{g}.json"), g)
+            self.assertEqual((mine / f"{g}.json").read_bytes(), (pool / f"{g}.json").read_bytes(), g)
         self.assertEqual(json.loads((default / run.SHARED).read_text()),
                          {"genomes": 20, "shared": 20, "own": 0, "linked_now": 20, "pool": pool.parents[2].name})
         self.assertTrue((default / "built.json").exists())
@@ -179,7 +209,25 @@ class KsetSharingTests(Stub):
                 r.root(r.default)
         finally:
             del os.environ["STUB_RECOUNT"]
-        self.assertIn("grm count rewrote 20 of the 20 ksets linked from the species pool", str(e.exception))
+        self.assertIn("grm count rewrote the kset or sidecar of 20 of the 20 genomes shared with the species pool",
+                      str(e.exception))
+        self.assertFalse((r.curated(r.default) / "built.json").exists())
+
+    def test_a_sidecar_rewritten_in_place_is_refused_and_never_reaches_the_pool(self):
+        """REVIEW-H1CODE L1 (and R4): species.rs rewrites a reused sidecar in place when its catalog version differs.
+        The root holds a copy, so the write stays in the root, and the changed copy refuses the root."""
+        self.estimate()
+        r = self.runner()
+        pool = self.fake_pool(r, [f"g{i:03d}" for i in range(30)])
+        before = {p.name: p.read_bytes() for p in pool.iterdir()}
+        os.environ["STUB_INPLACE"] = "1"
+        try:
+            with self.assertRaises(SystemExit) as e:
+                r.root(r.default)
+        finally:
+            del os.environ["STUB_INPLACE"]
+        self.assertIn("grm count rewrote the kset or sidecar of 20 of the 20 genomes shared", str(e.exception))
+        self.assertEqual({p.name: p.read_bytes() for p in pool.iterdir()}, before)
         self.assertFalse((r.curated(r.default) / "built.json").exists())
 
     def test_the_disk_check_counts_a_shared_kset_once(self):
@@ -215,18 +263,21 @@ class KsetSharingTests(Stub):
         self.assertEqual((disk["union_without_fasta"], disk["union_without_fasta_examples"]), (1, ["g029"]))
 
 
-class SubstanceGateTests(Stub):
-    """Main's ruling after H1DATA: the revision-12 gate passes a default with revision 12's genome set and, per
-    dataset, its spec outside the eligible-pool counts and its selected genomes' phenotype rows, whatever order curate
-    drew; a swapped genome or a changed selected label refuses. Revision 12 here is the stub's plain curate."""
+class GateCase(Stub):
+    """The revision-12 gate on the stub: revision 12 is the stub's plain curate (with BASE_HOOKS set), pinned for
+    SLUGS; `gated` reruns --estimate-only on a fresh WORK with one hook more."""
+    BASE_HOOKS = ()
+    SLUGS = (SPEC["species"],)
 
     def setUp(self):
         super().setUp()
         for hook in GATE_HOOKS:
-            self.assertEqual(STUB_GRM.count(hook), 1, hook)
-        self.estimate()
-        self.pins = base.gate_of(base.default_root(self.tmp / "work"), [SPEC["species"]])
+            self.assertEqual(STUB_GRM.count(f'"{hook}"'), 1, hook)
         self.addCleanup(lambda: [os.environ.pop(h, None) for h in GATE_HOOKS])
+        for hook in self.BASE_HOOKS:
+            os.environ[hook] = "1"
+        self.estimate()
+        self.pins = base.gate_of(base.default_root(self.tmp / "work"), list(self.SLUGS))
 
     def gated(self, hook=None):
         """--estimate-only on a fresh WORK with revision 12's pins, curate changed by `hook`; (exit code, stderr,
@@ -243,6 +294,50 @@ class SubstanceGateTests(Stub):
         finally:
             os.environ.pop(hook or "", None)
         return e.exception.code, err.getvalue(), out.getvalue()
+
+
+class MultiSpeciesGateTests(GateCase):
+    """REVIEW-H1CODE M1: in a run for the stub's Salmonella, the gate checks the other pinned panel species too: a
+    changed genome set or a changed selected label of other_sp refuses."""
+    BASE_HOOKS = ("STUB_OTHER",)
+    SLUGS = (SPEC["species"], "other_sp")
+
+    def test_both_species_as_pinned_pass(self):
+        self.assertEqual(sorted(self.pins["genome_set"]), sorted(self.SLUGS))
+        self.assertEqual(sorted(self.pins["datasets"]["other_sp"]), ["other_sp__drug"])
+        code, err, out = self.gated()
+        self.assertEqual(code, 0, err)
+        self.assertIn("the default's genome sets for other_sp, salmonella_enterica", err)
+
+    def test_another_species_genome_set_changed_refuses(self):
+        code, _, _ = self.gated("STUB_OTHER_SWAP")
+        self.assertIn("the default arm's genome set for other_sp is", str(code))
+
+    def test_another_species_selected_label_changed_refuses(self):
+        code, _, _ = self.gated("STUB_OTHER_FLIP")
+        self.assertIn("the default arm's dataset other_sp__drug is", str(code))
+        self.assertIn("a selected genome's phenotype row differs", str(code))
+
+
+class SubstanceGateTests(GateCase):
+    """Main's ruling after H1DATA: the revision-12 gate passes a default with revision 12's genome set and, per
+    dataset, its spec outside the eligible-pool counts and its selected genomes' phenotype rows, whatever order curate
+    drew; a swapped genome, a changed selected label or an extra dataset refuses (the last by main's ruling after
+    REVIEW-H1DATA)."""
+
+    def test_an_extra_dataset_refuses(self):
+        code, _, _ = self.gated("STUB_EXTRA")
+        self.assertIn("the default arm has 1 dataset(s) of salmonella_enterica that revision 12 hasn't: "
+                      "salmonella_enterica__extra", str(code))
+
+    def test_a_duplicate_phenotype_row_refuses(self):
+        """REVIEW-H1CODE L5 (R5): two rows for one genome and drug can't be told apart, so substance refuses."""
+        root = base.default_root(self.tmp / "work")
+        rows = root / "curated" / "phenotypes.jsonl"
+        rows.write_text(rows.read_text() + rows.read_text().splitlines()[0] + "\n")
+        with self.assertRaises(SystemExit) as e:
+            run.substance(root, [SPEC["species"]])
+        self.assertIn("two phenotype rows for genome g000 and meropenem", str(e.exception))
 
     def test_revision_12_itself_passes_as_recorded(self):
         code, err, out = self.gated()
@@ -321,8 +416,9 @@ class ResumeTests(Stub):
         r.groups = self.groups
         calls = self.tmp / "work" / "arm-calls.txt"
         before = calls.read_text().split() if calls.exists() else []
-        r.arm(r.default, DS)
-        r.arm(r.arms["cap-10"], DS)
+        identical = "--run-identical-cohorts" in flags
+        r.arm(r.default, DS, identical)
+        r.arm(r.arms["cap-10"], DS, identical)
         after = calls.read_text().split()
         return after[len(before):], r
 
@@ -348,6 +444,10 @@ class ResumeTests(Stub):
         self.assertEqual(self.run_arms(spec=spec)[0], ["default", "cap-10"], "spec")
         self.assertEqual(self.run_arms()[0], ["default", "cap-10"], "spec back")
         self.assertEqual(self.run_arms("--trace-training")[0], ["default", "cap-10"], "trace")
+        self.assertEqual(self.run_arms()[0], ["default", "cap-10"])
+        # REVIEW-H1CODE L5 (R3): --run-identical-cohorts changes what an identical cohort writes, so it reruns too.
+        self.assertEqual(self.run_arms("--run-identical-cohorts")[0], ["default", "cap-10"], "identical cohorts")
+        self.assertTrue(json.loads((self.out("cap-10") / run.RESUME).read_text())["run_identical_cohorts"])
         self.assertEqual(self.run_arms()[0], ["default", "cap-10"])
         self.groups.write_text(json.dumps({"genomes": ["g000"], "k": 31}))
         self.assertEqual(self.run_arms()[0], ["default", "cap-10"], "grouping")
@@ -444,11 +544,17 @@ class CombineRefusalTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.tmp = Path(tmp.name)
-        self.spec = {**copy.deepcopy(SPEC), "datasets": [{"id": self.A, "partition": "confirmatory"},
-                                                         {"id": self.B, "partition": "confirmatory"}]}
-        (self.tmp / "spec.json").write_text(json.dumps(self.spec))
         self.master = self.tmp / "MASTER.sha256"
         self.master.write_text(f"{'a' * 64}  bvbrc/genomes.jsonl\n{'b' * 64}  ./fasta/g1.fna.gz\n{'0' * 64}  other\n")
+        self.spec = {**copy.deepcopy(SPEC), "datasets": [{"id": self.A, "partition": "confirmatory"},
+                                                         {"id": self.B, "partition": "confirmatory"}]}
+        self.pin()
+
+    def pin(self):
+        """Pins the master manifest file as it is now in the spec (REVIEW-H1CODE L6) and writes spec.json."""
+        self.spec["data_root"] = {"path": str(self.tmp), "manifest": self.master.name,
+                                  "manifest_sha256": run.file_sha256(self.master)}
+        (self.tmp / "spec.json").write_text(json.dumps(self.spec))
 
     def combine(self, *works, out=None):
         argv = ["combine", str(self.tmp / "spec.json"), "--master-manifest", str(self.master),
@@ -519,7 +625,95 @@ class CombineRefusalTests(unittest.TestCase):
         self.assertEqual(self.combine(a, b), f"part {b}: raw-manifest.txt is not the RAW manifest its inputs.json "
                                              "hashed")
         self.master.write_text("not a manifest\n")
-        self.assertIn("line 1: not a sha256sum line", self.combine(a, self.part("c", [self.B])))
+        self.pin()
+        self.assertIn("line 1: not a sha256sum line", self.combine(self.part("a2", [self.A]), self.part("c", [self.B])))
+
+    def test_the_master_manifest_must_be_the_one_the_spec_pins(self):
+        """REVIEW-H1CODE L6: any other file given as --master-manifest refuses, even one holding every RAW line."""
+        a, b = self.part("a", [self.A]), self.part("b", [self.B])
+        pinned = run.file_sha256(self.master)
+        self.master.write_text(self.master.read_text() + f"{'1' * 64}  extra\n")
+        self.assertEqual(self.combine(a, b), f"master manifest {self.master} is {run.file_sha256(self.master)}, not "
+                                             f"the {pinned} {self.tmp / 'spec.json'} pins")
+        del self.spec["data_root"]
+        (self.tmp / "spec.json").write_text(json.dumps(self.spec))
+        a, b = self.part("a-nopin", [self.A]), self.part("b-nopin", [self.B])
+        self.assertIn("pins no data_root.manifest_sha256", self.combine(a, b))
+
+    def test_a_spec_with_an_unpinned_data_root_never_loads(self):
+        """Main's ruling after REVIEW-H1DATA: data_root.manifest_sha256 must be a sha256."""
+        for value in ("PLACEHOLDER", None, "7dd00779", "A" * 64):
+            self.spec["data_root"]["manifest_sha256"] = value
+            (self.tmp / "spec.json").write_text(json.dumps(self.spec))
+            with self.assertRaises(SystemExit, msg=value) as e:
+                run.load_spec(self.tmp / "spec.json")
+            self.assertIn("is not a sha256: pin the data root's manifest", str(e.exception))
+
+    def arm_outputs(self, work, datasets, damaged=None, **record):
+        """A finished arm folder with its resume.json, for every arm of the spec on `datasets`, as a run writes them;
+        `record` overrides the record's fields; `damaged` = (arm, dataset) truncates its predictions afterwards."""
+        _, _, arms = run.load_spec(self.tmp / "spec.json")
+        manifest = json.loads((Path(work) / "k" / "manifest.json").read_text())
+        for name in [run.DEFAULT_ARM, *(a["name"] for a in arms)]:
+            for ds in datasets:
+                out = Path(work) / "arms" / name / ds
+                out.mkdir(parents=True)
+                for f, text in (("runs.json", "[]"), ("arm.json", "{}"), ("predictions.jsonl", '{"p": 0.5}\n')):
+                    (out / f).write_text(text)
+                outputs = {f: run.file_sha256(out / f) for f in ("arm.json", "predictions.jsonl", "runs.json")}
+                (out / run.RESUME).write_text(run.canonical({
+                    "arm": name, "dataset": ds, "inputs_sha256": run.file_sha256(Path(work) / run.INPUTS),
+                    "spec_sha256": manifest["protocol_sha256"], "trace_training": False,
+                    "run_identical_cohorts": False, **record, "outputs": outputs}))
+                if damaged == (name, ds):
+                    (out / "predictions.jsonl").write_text("")
+
+    def reaches_the_report(self, *works):
+        def report_run(*args):
+            raise SystemExit("REPORT REACHED")
+        with mock.patch.object(run, "report_run", report_run):
+            return self.combine(*works)
+
+    def test_combine_takes_only_arm_outputs_its_parts_recorded(self):
+        """REVIEW-H1CODE L2: each copied arm folder must match its part's resume.json, and the parts' arms must share
+        --trace-training and --run-identical-cohorts. Clean parts reach the report."""
+        a, b = self.part("a", [self.A]), self.part("b", [self.B])
+        self.arm_outputs(a, [self.A])
+        self.arm_outputs(b, [self.B])
+        self.assertEqual(self.reaches_the_report(a, b), "REPORT REACHED")
+        cap = a / "arms" / "cap-1000" / self.A
+        refusals = (
+            ("predictions.jsonl", lambda: (cap / "predictions.jsonl").write_text(""),
+             "predictions.jsonl changed after the arm finished"),
+            ("extra file", lambda: (cap / "extra.json").write_text("{}"), "its files differ from resume.json's list: extra.json"),
+            ("missing record", lambda: (cap / run.RESUME).unlink(), "no readable resume.json"),
+            ("link", lambda: (cap / "plans").symlink_to(self.tmp, target_is_directory=True), "its folder holds a symlink"))
+        for label, damage, message in refusals:
+            shutil.rmtree(a / "arms")
+            self.arm_outputs(a, [self.A])
+            damage()
+            code = self.reaches_the_report(a, b)
+            self.assertIn(f"part {a}: arm cap-1000 on {self.A}: {message}", code, label)
+        for label, record, message in (
+                ("other arm", {"arm": "k-h"}, "resume.json is the record of k-h/"),
+                ("other inputs", {"inputs_sha256": "0" * 64}, "was not made from the part's inputs.json"),
+                ("other spec", {"spec_sha256": "0" * 64}, "was not made from the part's spec")):
+            shutil.rmtree(a / "arms")
+            self.arm_outputs(a, [self.A], **record)
+            self.assertIn(message, self.reaches_the_report(a, b), label)
+        for flag in ("run_identical_cohorts", "trace_training"):
+            shutil.rmtree(a / "arms")
+            shutil.rmtree(b / "arms")
+            self.arm_outputs(a, [self.A])
+            self.arm_outputs(b, [self.B], **{flag: True})
+            self.assertIn("the parts' arms ran with different --trace-training / --run-identical-cohorts",
+                          self.reaches_the_report(a, b), flag)
+        # The same flags in both parts pass.
+        shutil.rmtree(a / "arms")
+        shutil.rmtree(b / "arms")
+        self.arm_outputs(a, [self.A], run_identical_cohorts=True)
+        self.arm_outputs(b, [self.B], run_identical_cohorts=True)
+        self.assertEqual(self.reaches_the_report(a, b), "REPORT REACHED")
 
     def test_out_must_be_new_or_empty_and_parts_finished(self):
         a, b = self.part("a", [self.A]), self.part("b", [self.B])
@@ -540,6 +734,20 @@ class H1SpecTests(unittest.TestCase):
     def specs(self):
         return {p.name: json.loads(p.read_text()) for p in sorted(self.H1.glob("*.json"))}
 
+    def load(self, name):
+        return run.load_spec(self.H1 / name)
+
+    def test_each_spec_names_the_h1_data_root_and_pins_its_manifest(self):
+        """Main's ruling after REVIEW-H1DATA: H-1 runs from its own read-only data root, and combine pins its
+        manifest, MASTER-MANIFEST-h1.sha256, final at 7dd00779."""
+        for name, s in self.specs().items():
+            self.assertEqual({k: v for k, v in s["data_root"].items() if k != "reason"},
+                             {"path": "/home/layth/review/grm-h1-data-root-20261107",
+                              "manifest": "/home/layth/review/grm-h1data-20261107/stage/MASTER-MANIFEST-h1.sha256",
+                              "manifest_sha256": "7dd00779bc4b538b325d947137c525afb4e723ca494bd14b607a8730b7902887"},
+                             name)
+            self.load(name)
+
     def test_the_folder_holds_the_pilot_the_four_species_and_the_salmonella_parts(self):
         self.assertEqual(sorted(self.specs()), sorted(
             ["pilot.json", "h1-salmonella_enterica-part1.json", "h1-salmonella_enterica-part2.json",
@@ -547,7 +755,7 @@ class H1SpecTests(unittest.TestCase):
 
     def test_each_spec_changes_only_its_species_datasets_kset_size_and_arms(self):
         for name, s in self.specs().items():
-            self.assertEqual(set(s), set(SPEC), name)
+            self.assertEqual(set(s), set(SPEC) | {"data_root"}, name)
             for key in set(SPEC) - {"decisions", "species", "datasets", "pool_budget", "arms", "revision12_gate"}:
                 self.assertEqual(s[key], SPEC[key], (name, key))
             self.assertEqual({k: v for k, v in s["pool_budget"].items() if k not in ("default_kset_bytes", "reason")},
@@ -559,7 +767,7 @@ class H1SpecTests(unittest.TestCase):
             self.assertNotIn("synthetic", s, name)
             for arm in s["arms"]:
                 self.assertIn(arm, SPEC["arms"], name)
-            _, default, arms = run.load_spec(self.H1 / name)
+            _, default, arms = self.load(name)
             self.assertEqual(default["k"], 31)
             self.assertFalse([a["name"] for a in arms if a["factor"] == "k"], name)
             self.assertEqual(arms[-1]["name"], run.SENTINEL["name"])
@@ -590,6 +798,9 @@ class H1SpecTests(unittest.TestCase):
             self.assertEqual(g["recorded"]["datasets_json_sha256"],
                              "2a64c19ca796e013897235047c83e0760276ddb1927bd167c556ff8d1ac48af2", name)
             self.assertIn("revision 12's cohort with the H-1 species check", g["recorded"]["note"], name)
+            # REVIEW-H1CODE L3: the final staged species check, not round 1's.
+            self.assertIn("c2e7c389779e6aa009800a9d327a3b036a14a01153429c62b51cdd7b66c942ef", g["recorded"]["note"], name)
+            self.assertNotIn("4af81f94", g["recorded"]["note"], name)
 
     def test_stage_1_runs_spec_json_s_arms_without_k21_and_k25(self):
         want = [a for a in SPEC["arms"] if a["name"] not in ("k21", "k25")]
@@ -614,7 +825,7 @@ class H1SpecTests(unittest.TestCase):
         self.assertEqual((s["species"], s["datasets"]),
                          ("salmonella_enterica", [{"id": "salmonella_enterica__ciprofloxacin",
                                                    "partition": "confirmatory"}]))
-        _, _, arms = run.load_spec(self.H1 / "pilot.json")
+        _, _, arms = self.load("pilot.json")
         self.assertEqual([(a["name"], a["factor"]) for a in arms],
                          [("grr-v1", "cohort"), ("k-c-h-p", "blocks"), ("budget-16000", "budget"),
                           ("sentinel-seed-twin", "calibration")])
@@ -692,6 +903,10 @@ class CombineEndToEndTests(unittest.TestCase):
         # ciprofloxacin contrasts would not be produced.
         spec["arms"] = [{"name": "cap-600", "cap": 600}, {"name": "k-c", "blocks": ["K", "C"]}]
         spec["datasets"] = [{"id": d, "partition": "confirmatory"} for d in cls.DATASETS]
+        # The parts' RAW is this root, and combine takes only the master manifest the spec pins (REVIEW-H1CODE L6).
+        cls.master = master_manifest(cls.raw, cls.out / "MASTER.sha256")
+        spec["data_root"] = {"path": str(cls.raw), "manifest": str(cls.master),
+                             "manifest_sha256": run.file_sha256(cls.master)}
         cls.spec = cls.out / "spec.json"
         cls.spec.write_text(json.dumps(spec, indent=1))
         cls.parts = []
@@ -701,7 +916,6 @@ class CombineEndToEndTests(unittest.TestCase):
             cls.parts.append(path)
         cls.whole = cls.run_spec(cls.spec, "whole")
         cls.works = [cls.run_spec(p, p.stem) for p in cls.parts]
-        cls.master = master_manifest(cls.raw, cls.out / "MASTER.sha256")
         cls.combined = cls.out / "combined"
         cls.combine(cls.combined, *cls.works)
 
