@@ -92,22 +92,32 @@ const widestInterval = (() => {
 // inspector's default three levels, has the most leaf columns, and the one
 // whose catalog gene groups hold the longest class or subclass list (one
 // slash-joined run, such as "lincosamide/oxazolidinone/..."); null when no
-// dataset has one.
+// dataset has one. Also the trees whose labels the label check reads: the
+// widest, then those with the most default-view split labels longer than 18
+// characters (the app's own words for a feature: catalog family, else gene,
+// else product), then the most splits, by id; LABEL_TREES in all.
+const LABEL_TREES = 6;
 const widestPanels = (() => {
   let tree = null, catalog = null;
+  const ranked = [];
   for (const d of manifest.datasets) {
     const file = path.join(FIXTURE, 'datasets', d.id + '.json');
     if (!fs.existsSync(file)) continue;
     const r = JSON.parse(fs.readFileSync(file));
     const nodes = r.models?.cart?.nodes ?? [], depth = Math.min(3, r.models?.cart_depth ?? 0);
-    let columns = 0;
-    const visit = i => { const n = nodes[i]; if (n === undefined) return; if (n.split === null || n.depth >= depth) { columns += 1; return; } visit(n.split.absent); visit(n.split.present); };
+    const cards = new Map((r.features ?? []).map(f => [f.feature, f]));
+    const words = i => { const c = cards.get(i); return c?.catalog_families?.[0] ?? c?.locus?.gene ?? c?.locus?.product ?? 'k-mer feature ' + i; };
+    let columns = 0, splits = 0, long = 0;
+    const visit = i => { const n = nodes[i]; if (n === undefined) return; if (n.split === null || n.depth >= depth) { columns += 1; return; } splits += 1; if (words(n.split.feature).length > 18) long += 1; visit(n.split.absent); visit(n.split.present); };
     if (nodes.length > 0) visit(0);
     if (columns > 0 && (tree === null || columns > tree.columns)) tree = { id: d.id, columns };
+    if (splits > 0) ranked.push({ id: d.id, long, splits });
     const chars = Math.max(0, ...(r.catalog?.groups ?? []).map(g => Math.max(g.class.length, g.subclass.length)));
     if (chars > 0 && (catalog === null || chars > catalog.chars)) catalog = { id: d.id, chars, groups: r.catalog.groups.length };
   }
-  return { tree, catalog };
+  ranked.sort((a, b) => b.long - a.long || b.splits - a.splits || (a.id < b.id ? -1 : 1));
+  const labels = tree === null ? [] : [tree.id, ...ranked.map(x => x.id).filter(id => id !== tree.id)].slice(0, LABEL_TREES);
+  return { tree, catalog, labels };
 })();
 const inspectId = manifest.datasets.some(d => d.id === 'escherichia_coli__ceftriaxone') ? 'escherichia_coli__ceftriaxone' : manifest.datasets[0].id;
 const speciesSlug = manifest.species.find(s => s.slug === 'escherichia_coli' && s.genomes_analyzed > 0)?.slug ?? manifest.species.find(s => s.genomes_analyzed > 0).slug;
@@ -597,7 +607,7 @@ async function stripFit(page, tag) {
  *  tree holds, every catalog row shown. At desktop widths each fits its
  *  frame with no sideways scroll; on a phone it may scroll inside its frame,
  *  but never the page, and its far edge scrolls into view. Every node of the
- *  tree keeps its text inside its box. */
+ *  tree keeps its text inside the 10 px inset its layout reserves. */
 async function panelFit(page, tag, width) {
   const desktop = width >= 1280;
   for (const [key, pick, label] of [['decision tree', widestPanels.tree, 'Decision tree'], ['catalog gene groups', widestPanels.catalog, 'Catalog gene groups']]) {
@@ -619,7 +629,7 @@ async function panelFit(page, tag, width) {
       e.scrollLeft = e.scrollWidth;
       await frames(1);
       out.reach = Math.round((content.getBoundingClientRect().right - e.getBoundingClientRect().right) * 10) / 10;
-      out.labelsOut = [...e.querySelectorAll('svg g.cursor-pointer')].filter(g => { const box = g.querySelector('rect').getBoundingClientRect(); return [...g.querySelectorAll('text')].some(t => { const r = t.getBoundingClientRect(); return r.left < box.left - 0.5 || r.right > box.right + 0.5; }); }).length;
+      out.labelsOut = [...e.querySelectorAll('svg g.cursor-pointer')].filter(g => { const box = g.querySelector('rect').getBoundingClientRect(); return [...g.querySelectorAll('text')].some(t => { const r = t.getBoundingClientRect(); return r.left < box.left - 0.5 || r.right > box.right - 10 + 0.5; }); }).length;
       e.scrollLeft = 0;
       return out;
     }, null, { timeout: 5000 }).catch(() => null);
@@ -637,12 +647,75 @@ async function panelFit(page, tag, width) {
       await new Promise(r => setTimeout(r, 250));
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       const nodes = [...e.querySelectorAll('svg g.cursor-pointer')];
-      const labelsOut = nodes.filter(g => { const box = g.querySelector('rect').getBoundingClientRect(); return [...g.querySelectorAll('text')].some(t => { const r = t.getBoundingClientRect(); return r.left < box.left - 0.5 || r.right > box.right + 0.5; }); }).length;
+      const labelsOut = nodes.filter(g => { const box = g.querySelector('rect').getBoundingClientRect(); return [...g.querySelectorAll('text')].some(t => { const r = t.getBoundingClientRect(); return r.left < box.left - 0.5 || r.right > box.right - 10 + 0.5; }); }).length;
       const leavesCut = nodes.filter(g => /^Calls .*…$/.test(g.querySelector('text')?.textContent ?? '')).length;
       return { labelsOut, leavesCut, fonts: document.fonts.status };
     }, null, { timeout: 5000 }).catch(() => null);
-    check(tag + ' widest decision tree keeps each label inside its node', read !== null && read.labelsOut === 0 && settled !== null && settled.labelsOut === 0 && settled.leavesCut === 0, { id: pick.id, labelsOut: read?.labelsOut, settled });
+    check(tag + ' widest decision tree keeps each label inside its node\'s text inset', read !== null && read.labelsOut === 0 && settled !== null && settled.labelsOut === 0 && settled.leavesCut === 0, { id: pick.id, labelsOut: read?.labelsOut, settled });
   }
+  await labelFit(page, tag);
+}
+
+/** The decision tree's labels in widestPanels.labels, once the fonts settle:
+ *  every line ends inside its node's 10 px text inset, and a line is cut
+ *  (…) or a count line shortened (no "isolates") only when its full text,
+ *  measured in a copy of the drawn line, is wider than that room. A split's
+ *  full label is read from the tree's own listbox option. */
+async function labelFit(page, tag) {
+  const name = tag + ' decision tree labels fit their nodes, cut only when the full text does not fit';
+  if (widestPanels.labels.length === 0) { skipped.push({ check: name, reason: 'no dataset in this tree has a decision tree' }); return; }
+  const trees = [];
+  for (const id of widestPanels.labels) {
+    await page.goto(BASE + '/datasets?dataset=' + id);
+    const region = page.locator('dialog [role="region"][aria-label="Decision tree"]');
+    await region.waitFor({ timeout: 10000 }).catch(() => {});
+    await region.scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {});
+    await region.evaluate(async () => { await document.fonts.ready; await new Promise(r => setTimeout(r, 250)); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }, null, { timeout: 5000 }).catch(() => {});
+    // Every node's option, by the keyboard path, in the nodes' order.
+    const listbox = region.locator('[role="listbox"]');
+    const nodes = await region.evaluate(e => e.querySelectorAll('svg g.cursor-pointer').length).catch(() => 0);
+    const options = [];
+    if (await listbox.count() > 0) {
+      await listbox.focus().catch(() => {});
+      for (let i = 0; i < nodes; i++) {
+        await page.keyboard.press(i === 0 ? 'Home' : 'ArrowRight');
+        options.push(await listbox.evaluate(e => e.querySelector('[role="option"]')?.textContent ?? null).catch(() => null));
+      }
+      await page.keyboard.press('Escape');
+      await listbox.evaluate(e => e.blur()).catch(() => {});
+    }
+    const read = await region.evaluate((e, options) => {
+      const bad = [];
+      let lines = 0, cut = 0;
+      [...e.querySelectorAll('svg g.cursor-pointer')].forEach((g, i) => {
+        const box = g.querySelector('rect').getBoundingClientRect(), room = box.width - 20;
+        [...g.querySelectorAll('text')].forEach((t, j) => {
+          lines += 1;
+          const r = t.getBoundingClientRect(), text = t.textContent;
+          if (r.left < box.left - 0.5 || r.right > box.right - 10 + 0.5) bad.push({ node: i, text, past: Math.round((r.right - box.right + 10) * 10) / 10 });
+          const short = j === 1 && !text.includes(' isolates · ');
+          if (!text.endsWith('…') && !short) return;
+          cut += 1;
+          let full = null;
+          if (j === 1) full = text.replace(' · ', ' isolates · ');
+          else if (/^Calls r/.test(text)) full = 'Calls resistant';
+          else if (/^Calls s/.test(text)) full = 'Calls susceptible';
+          else full = /^Split on (.*), [\d,]+ training isolates, /.exec(options[i] ?? '')?.[1] ?? null;
+          if (full === null) { bad.push({ node: i, text, full: 'unknown' }); return; }
+          const copy = t.cloneNode(false);
+          copy.textContent = full;
+          t.parentNode.appendChild(copy);
+          const w = copy.getComputedTextLength();
+          copy.remove();
+          if (w + 0.5 <= room) bad.push({ node: i, text, full, fullWidth: Math.round(w * 10) / 10, room });
+        });
+      });
+      return { lines, cut, bad };
+    }, options, { timeout: 5000 }).catch(() => null);
+    trees.push({ id, nodes, options: options.filter(o => o !== null).length, ...(read ?? { lines: 0, cut: 0, bad: [{ error: 'unread' }] }) });
+  }
+  const ok = trees.every(t => t.lines > 0 && t.options === t.nodes && t.bad.length === 0);
+  check(name, ok, trees.map(t => ({ id: t.id, lines: t.lines, cut: t.cut, options: t.options, nodes: t.nodes, bad: t.bad.length, first: t.bad.slice(0, 3) })));
 }
 
 async function interactions(page, tag, width) {
