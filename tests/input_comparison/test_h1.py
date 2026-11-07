@@ -259,6 +259,26 @@ class SubstanceGateTests(Stub):
         self.assertFalse(record["recorded"]["as_the_spec_records"])
         self.assertIn("NOT as the spec records them", err)
 
+    def test_substance_compares_a_species_as_a_sorted_set(self):
+        """Another panel species' genomes.txt keeps its drawn order in the default root (only the run's own species is
+        rewritten sorted), and revision 12's pins come from drawn-order files too, so the set is sorted first; a
+        duplicate id still changes it."""
+        def root(name, genomes):
+            r = self.tmp / name
+            (r / "curated").mkdir(parents=True)
+            (r / "species" / "other_sp").mkdir(parents=True)
+            (r / "species" / "other_sp" / "genomes.txt").write_text("".join(g + "\n" for g in genomes))
+            (r / "curated" / "datasets.json").write_text(json.dumps([{"id": "other_sp__drug", "species": "Other sp",
+                                                                      "species_slug": "other_sp", "antibiotic": "drug"}]))
+            (r / "curated" / "phenotypes.jsonl").write_text("".join(json.dumps(
+                {"genome_id": g, "species": "Other sp", "antibiotic": "drug", "reported": "R"}) + "\n" for g in set(genomes)))
+            return run.substance(r, ["other_sp"])
+
+        drawn, other, doubled = root("a", ["x2", "x1", "x3"]), root("b", ["x1", "x3", "x2"]), root("c", ["x1", "x2", "x2", "x3"])
+        self.assertEqual(drawn, other)
+        self.assertEqual(drawn["genome_set"]["other_sp"], run.sha256_bytes(b"x1\nx2\nx3\n"))
+        self.assertNotEqual(doubled["genome_set"], drawn["genome_set"])
+
     def test_one_genome_swapped_refuses(self):
         code, _, _ = self.gated("STUB_SWAP")
         self.assertIn("the default arm's genome set for salmonella_enterica is", str(code))

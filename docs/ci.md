@@ -12,7 +12,7 @@ Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are this tree
 | `rust-test` | `cargo test --release --locked`, then `bash scripts/ci/rust-test-names.sh --check` | 431 passed, 0 failed, 9 ignored; the 440 names match `tests/rust-test-names.txt` |
 | `rust-doc` | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked` | pass |
 | `metric-audit` | `cargo build --locked --release` in `scripts/metric-audit/foldgen`, then `python3 -I -B -W error <file> -v` for each test file | `test_check_results.py` 107, `test_audit.py` 99, `test_scripts.py` 3; `scripts/lasso-scan/test_scan.py` 26 with 4 skipped |
-| `python`, one job per suite | `python3 -s -P -B -W error -m unittest discover -s <suite> -t . -v` under `env -i` at `PYTHONHASHSEED` 0, 1 and 4242, then once with `-I` in place of `-s -P` | `tests/hyperopt` 351, `scripts/sampling-audit/tests` 34, `tests/ablation` 256, `tests/temporal` 163, `tests/multitask` 72, `tests/input_comparison` 104 with 27 skipped |
+| `python`, one job per suite | `python3 -s -P -B -W error -m unittest discover -s <suite> -t . -v` under `env -i` at `PYTHONHASHSEED` 0, 1 and 4242, then once with `-I` in place of `-s -P` | `tests/hyperopt` 351, `scripts/sampling-audit/tests` 34, `tests/ablation` 256, `tests/temporal` 163, `tests/multitask` 72, `tests/input_comparison` 105 with 27 skipped |
 | `deployment` | `bash scripts/deployment/tests/dry-run.sh`, then `bash scripts/deployment/tests/apply.sh` | 285 passed; 564 passed |
 | `web` | `npm --prefix web ci`, then `run typecheck`, `run build` and `test` (vitest), on Node 22.23.4; then `node ops/cloudflare/tests/previous-assets.mjs` and `long-key.mjs` | 36 test files passed, 1 skipped; 290 tests passed, 2 skipped; Worker tests 22/22 and 5/5 |
 
