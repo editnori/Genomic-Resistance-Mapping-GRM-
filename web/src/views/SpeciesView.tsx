@@ -61,19 +61,19 @@ export const drugResult = (s: SpeciesReport, drug: number): string => {
 };
 
 /** One coverage statement from the manifest, and the two facts that change
- *  how every count on the page reads. The count with unconflicted reported
- *  R/S calls, the pool the analysis draws from, is not in the manifest, so
- *  the statement never offers the any-label count as that pool. Profiles,
- *  cross-resistance and the corpus call counts come from each phenotype's
- *  consolidated label in src/report.rs, MIC-inferred labels included; drop
- *  that sentence when they use reported calls only. */
+ *  how every count on the page reads. The count with a reported R or S
+ *  call and no conflicting call, the pool the analysis draws from, is not
+ *  in the manifest, so the statement never offers the any-label count as
+ *  that pool. Profiles, cross-resistance and the corpus call counts come
+ *  from each phenotype's consolidated label in src/report.rs, MIC-inferred
+ *  labels included; drop that sentence when they use reported calls only. */
 const Coverage = ({ row }: { row: SpeciesRow }) => (
   <div className="mt-5 space-y-1">
     <p className="text-body text-ink">
       {`${int(row.genomes_analyzed)} genomes analyzed (${int(row.genomes_labeled)} carry any label, including MIC-inferred calls); ${int(row.datasets_reported)} of ${int(row.datasets_curated)} curated datasets have a report.`}
     </p>
     <p className="type-note max-w-[60rem]">
-      Analysis genomes are selected per species, up to a cap, from those with unconflicted reported R/S calls; QC and assembly availability can reduce a cohort. Profiles, cross-resistance and call counts on this page include labels inferred from MIC, which dataset reports leave out.
+      The analyzed genomes are a selection, up to a cap per species, of genomes with a reported R or S call and no conflicting call. Genomes that failed quality control or had no DNA sequence file are left out. Profiles, cross-resistance and call counts on this page include labels inferred from MIC, which dataset reports leave out.
     </p>
   </div>
 );

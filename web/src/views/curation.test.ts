@@ -27,7 +27,7 @@ const views = (m: Manifest) => ({
 describe("class minimum wording", () => {
   it("states the minimum the reports record in Overview, Methods, and the corpus slide", () => {
     const { overview, methods, slide } = views(at(10));
-    const rule = "A report needs 10 resistant and 10 susceptible selected genomes with unconflicted reported R/S calls.";
+    const rule = "A report needs 10 resistant and 10 susceptible selected genomes with a reported call and no conflicting call.";
     expect(overview).toContain(rule);
     expect(methods).toContain(`A dataset is one species and one antibiotic. ${rule}`);
     expect(slide).toContain(rule);
@@ -36,7 +36,7 @@ describe("class minimum wording", () => {
 
   it("reads rows without a minimum as the old learn gate of 25", () => {
     const { overview, methods, slide } = views(revision6);
-    const rule = "A report needs 25 resistant and 25 susceptible selected genomes with unconflicted reported R/S calls.";
+    const rule = "A report needs 25 resistant and 25 susceptible selected genomes with a reported call and no conflicting call.";
     expect(overview).toContain(rule);
     expect(methods).toContain(`A dataset is one species and one antibiotic. ${rule}`);
     expect(slide).toContain(rule);

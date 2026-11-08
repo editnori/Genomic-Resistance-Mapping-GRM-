@@ -193,7 +193,7 @@ export const cohortLead = (m: Manifest): string => {
 /** What a report needs, in one sentence: the class minimum every report
  *  records, or each minimum with its report count when they differ. */
 export const minimumSentence = (c: ClassMinimum): string => {
-  const genomes = "selected genomes with unconflicted reported R/S calls";
+  const genomes = "selected genomes with a reported call and no conflicting call";
   if (c.kind === "value") return `A report needs ${int(c.value)} resistant and ${int(c.value)} susceptible ${genomes}.`;
   if (c.kind === "unavailable") return `A report needs enough resistant and susceptible ${genomes}; no report records the minimum yet.`;
   return `A report needs enough resistant and susceptible ${genomes}: ${listWords(c.reports.map(([minimum, n]) => `at least ${int(minimum)} of each in ${plural(n, "report")}`))}.`;

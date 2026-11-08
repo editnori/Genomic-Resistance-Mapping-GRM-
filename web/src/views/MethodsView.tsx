@@ -193,7 +193,7 @@ const Labels = ({ manifest }: { manifest: Manifest }) => {
         levels that double each time (0.5, 1, 2, 4 mg/L), and each level is one dilution step.
       </P>
       <Detail>
-        Every learner trains and is scored on genomes with an unconflicted reported resistant (R) or susceptible (S) lab call for the drug, and the known-gene rules, panels, and MIC
+        Every learner trains and is scored on genomes with a reported resistant (R) or susceptible (S) lab call for the drug and no conflicting call, and the known-gene rules, panels, and MIC
         regression are scored on the same genomes. A genome and antibiotic pair with both an R and an S call is a conflict and gets no label; a pair with only intermediate calls is never
         an R or S label.
       </Detail>

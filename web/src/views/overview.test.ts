@@ -76,7 +76,7 @@ describe("report leads with revision 7's numbers", () => {
     const m = rev7Shape();
     expect(cohortLead(m)).toBe("237 datasets have a report. They cover 13 species and use 21,889 genomes, chosen from 119,072 genomes that passed quality control (QC).");
     expect(coverageNote(m)).toBe(
-      "In this run, selection is capped at 2,000 genomes per species when more are eligible. Some datasets have fewer because genomes failed QC or had no FASTA file, the file that holds the DNA sequence. A report needs 25 resistant and 25 susceptible selected genomes with unconflicted reported R/S calls. Two datasets in these species passed curation but have no report. Another 10 species (38 datasets that passed curation) were not analyzed. Their FASTA files are stored apart from the data this run read.",
+      "In this run, selection is capped at 2,000 genomes per species when more are eligible. Some datasets have fewer because genomes failed QC or had no FASTA file, the file that holds the DNA sequence. A report needs 25 resistant and 25 susceptible selected genomes with a reported call and no conflicting call. Two datasets in these species passed curation but have no report. Another 10 species (38 datasets that passed curation) were not analyzed. Their FASTA files are stored apart from the data this run read.",
     );
   });
 
