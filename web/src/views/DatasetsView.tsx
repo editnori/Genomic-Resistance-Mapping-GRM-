@@ -16,7 +16,7 @@
 import { Fragment, useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
 import type { CatalogRow, Learner, LearnerLite, Manifest } from "../data/schema";
-import { capitalize, datasetTitle, hasEverydayName, int, LEARNER_LABEL, LEARNER_NAME, pct, speciesName, speciesOption, speciesShort } from "../data/format";
+import { capitalize, hasEverydayName, int, LEARNER_LABEL, LEARNER_NAME, pct, speciesName, speciesOption, speciesShort } from "../data/format";
 import { applyAxes, countBy, memberTest, rowsWithout, type Axis } from "../data/facets";
 import { BARS, verdictOf } from "../data/metrics";
 import { BEST_LEARNER_WORDS, NO_BEST_LEARNER, ruleSummary, splitReasonShort } from "../data/derive/dataset";
@@ -126,11 +126,10 @@ const Two = ({ top, below }: { top: ReactNode; below: ReactNode }) => (
   </span>
 );
 
-/** A dataset's title, which may break after a "/" in a drug pair rather
- *  than be cut. */
-const DatasetName = ({ row }: { row: CatalogRow }) => (
+/** A drug name that may break after its "/" rather than be cut. */
+const DrugName = ({ name }: { name: string }) => (
   <>
-    {datasetTitle(row)
+    {capitalize(name)
       .split("/")
       .map((part, i) =>
         i === 0 ? (
@@ -222,28 +221,24 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     id: "dataset",
     header: "Dataset",
     width: DATASET_WIDTHS.dataset,
-    tip: [{ term: "Dataset", text: "One species of bacteria tested against one antibiotic. The line beneath gives the scientific name where the title uses an everyday one, and the drug class." }],
+    tip: [{ term: "Dataset", text: "One species of bacteria tested against one antibiotic. The antibiotic is the title, and the line beneath names the species and the drug class." }],
     sortValue: (r) => `${r.antibiotic} ${r.species}`,
     firstDir: "asc",
     cell: (r) => (
       <span className="block">
         <span className="flex items-baseline gap-x-2">
           <span className="min-w-0">
-            <DatasetName row={r} />
+            <DrugName name={r.antibiotic} />
           </span>
           {markProvisional && !auditOf(r, current).valid ? <strong className="shrink-0 text-tiny font-semibold text-coral-text">Provisional</strong> : null}
         </span>
-        {/* The scientific name, where the title gives an everyday one, and
-            the class wrap to two lines at most; the class, last, is what an
-            ellipsis cuts, and the separator stays with the species. */}
+        {/* Species and class wrap to two lines at most; the class, last, is
+            what an ellipsis cuts, and the separator stays with the species.
+            An everyday name is no binomial, so it isn't set in italics. */}
         <span className="dataset-sub text-tiny font-normal text-muted-text">
-          {hasEverydayName(r.species) ? (
-            <>
-              <span className="whitespace-nowrap">
-                <i>{speciesShort(r.species)}</i> ·
-              </span>{" "}
-            </>
-          ) : null}
+          <span className="whitespace-nowrap">
+            {hasEverydayName(r.species) ? speciesName(r.species) : <i>{speciesShort(r.species)}</i>} ·
+          </span>{" "}
           <ClassName drugClass={r.drug_class} />
         </span>
       </span>

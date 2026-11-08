@@ -361,7 +361,7 @@ describe("dataset search", () => {
     const search = host.querySelector<HTMLInputElement>("input[type='search']")!;
     act(() => type(search, "gonorrhea"));
     expect(live()).toBe("1 of 2 datasets");
-    expect(table().querySelector("tbody tr")!.textContent).toContain("Gonorrhea vs\u00a0ceftriaxone");
+    expect(table().querySelector("tbody tr")!.textContent).toContain("CeftriaxoneGonorrhea ·");
     act(() => type(search, "ceftriaxone klebsiella pneumoniae"));
     expect(live()).toBe("1 of 2 datasets");
   });

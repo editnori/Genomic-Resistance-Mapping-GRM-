@@ -285,7 +285,7 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
             ? "No set covering machine rule in this report."
             : `The set covering machine reaches ${pct(pick.ba)} balanced accuracy for ${datasetTitle(pick.row)} on random splits${lineage === null ? "" : `, ${pct(lineage)} with lineages held out`}.`,
         caption:
-          "The set covering machine (SCM) is the learner that writes its call as short yes-or-no rules. The bars show how many resistant and susceptible isolates carry the first rule's k-mers. A rule marks k-mers that separate the calls in these isolates; they can travel with the cause on a plasmid or in a lineage without being the cause.",
+          "This learner writes short yes-or-no rules. The bars count isolates carrying the first rule's k-mers, by lab call. A k-mer can travel with the cause, on a plasmid or in a lineage, without being it.",
         fixed: ({ page, pages }) => <RuleFigure manifest={manifest} page={page} pages={pages} />,
         continues: true,
       },
