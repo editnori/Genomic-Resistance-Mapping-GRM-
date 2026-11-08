@@ -102,7 +102,7 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
   const { ahead, within, behind } = summary.regions;
   const axisTitle = (
     <p className="pt-1 text-center text-tiny text-muted-text" style={{ width }}>
-      Best learner with lineages held out, balanced accuracy (%)
+      Best learner with lineages held out, balanced accuracy (%). Higher is better on both axes.
     </p>
   );
   const legend = (
