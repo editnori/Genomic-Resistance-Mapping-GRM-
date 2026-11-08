@@ -7,7 +7,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { CatalogRow } from "../data/schema";
-import { capitalize, int, pct, speciesShort } from "../data/format";
+import { datasetTitle, int, pct } from "../data/format";
 import { CATALOG_CUTOFF, catalogDiff, catalogSummary, uniformCall, type UniformCall } from "../data/derive/overview";
 import { AxisX, AxisY, HALO, LABEL_CLASS, linear, MarkListbox, RefLineH, ticks, useSvgId, useWidth, type ListMark } from "./kit";
 
@@ -84,7 +84,7 @@ export const CatalogScatter = ({ rows, height, onOpen }: { rows: readonly Catalo
         call,
         tip: () => [
           {
-            term: `${capitalize(r.antibiotic)}, ${speciesShort(r.species)}`,
+            term: datasetTitle(r),
             text: `Catalog rule ${pct(c.balanced_accuracy)}, learner ${pct(r.best_lineage)} with lineages held out: ${d >= 0 ? "ahead by" : "behind by"} ${Math.abs(d * 100).toFixed(1)} points.`,
           },
           {

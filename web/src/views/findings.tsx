@@ -7,7 +7,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import type { CatalogRow, Manifest } from "../data/schema";
-import { capitalize, dateText, int, listWords, pct, plural, points, speciesShort } from "../data/format";
+import { datasetTitle, dateText, int, listWords, pct, plural, points } from "../data/format";
 import {
   CATALOG_CUTOFF,
   catalogSummary,
@@ -439,8 +439,6 @@ const UNPAIRED_WORDS: Record<string, { clause: string; label: string }> = {
   none: { clause: "no reason is recorded", label: "No reason recorded" },
 };
 
-const datasetName = (r: { antibiotic: string; species: string }): string => `${capitalize(r.antibiotic)} in ${speciesShort(r.species)}`;
-
 /** The datasets with a random-split result but no lineage-held-out one,
  *  counted by why, each name opening its report. */
 const UnpairedNote = ({ rows, nav }: { rows: readonly CatalogRow[]; nav?: Navigator }) => {
@@ -467,10 +465,10 @@ const UnpairedNote = ({ rows, nav }: { rows: readonly CatalogRow[]; nav?: Naviga
             <span key={r.id}>
               {i > 0 ? ", " : null}
               {nav === undefined ? (
-                datasetName(r)
+                datasetTitle(r)
               ) : (
                 <a href={routeHref({ ...nav.route, dataset: r.id })} onClick={inApp(() => nav.openDataset(r.id))} className={LINK}>
-                  {datasetName(r)}
+                  {datasetTitle(r)}
                 </a>
               )}
             </span>
@@ -638,7 +636,7 @@ export const PanelFigure = ({
       x: x(v.panel),
       y: plotTop + i * rowH + rowH / 2,
       tip: () => [
-        { term: `${capitalize(r.antibiotic)}, ${speciesShort(r.species)}`, text: `Targets found in ${int(r.caught)} of ${int(r.calledResistant)} resistant isolates with a panel call (${pct(v.panel)}); the learner calls ${int(r.modelCaught)} of ${int(r.modelResistant)} resistant (${pct(v.model)}).` },
+        { term: datasetTitle(r), text: `Targets found in ${int(r.caught)} of ${int(r.calledResistant)} resistant isolates with a panel call (${pct(v.panel)}); the learner calls ${int(r.modelCaught)} of ${int(r.modelResistant)} resistant (${pct(v.model)}).` },
         ...(r.noCallResistant + r.noCallSusceptible > 0 ? [{ source: `No probe call: ${int(r.noCallResistant)} resistant, ${int(r.noCallSusceptible)} susceptible.` }] : []),
       ],
     };
@@ -655,7 +653,7 @@ export const PanelFigure = ({
           <g key={r.dataset} data-dataset={measuring ? undefined : r.dataset}>
             <line x1={labelW + 10} x2={width - 20} y1={cy} y2={cy} stroke="var(--chart-grid)" />
             <text x={labelW} y={cy + 4} textAnchor="end" className={LABEL_CLASS}>
-              {`${capitalize(r.antibiotic)}, ${speciesShort(r.species)}`}
+              {datasetTitle(r)}
             </text>
             <line x1={x(v.panel)} x2={x(v.model)} y1={cy} y2={cy} stroke="var(--chart-axis)" strokeWidth={2} />
             <circle cx={x(v.model)} cy={cy} r={4.5} fill="rgb(var(--paper-pure))" stroke="var(--chart-mark)" strokeWidth={2} />

@@ -10,7 +10,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { Corpus, Manifest } from "../data/schema";
-import { capitalize, int, pct, plural, speciesShort } from "../data/format";
+import { datasetTitle, int, pct, plural } from "../data/format";
 import { BARS, barWords } from "../data/metrics";
 import { loadErrorText, useCorpus } from "../data/load";
 import { manifestAudit, nullFitWords } from "../data/derive/evaluation";
@@ -452,7 +452,7 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
             {unsupported.map((a) => (
               <li key={a.panel} className="border-t border-hair pt-3">
                 <p className="text-control font-semibold text-ink">{a.name}</p>
-                <p className="text-note text-muted-text">{a.datasets.map((d) => `${capitalize(d.antibiotic)} in ${speciesShort(d.species)}`).join(", ")}</p>
+                <p className="text-note text-muted-text">{a.datasets.map(datasetTitle).join(", ")}</p>
                 <p className="prose-measure mt-1 text-note text-ink">{notScored(a.reason)}</p>
               </li>
             ))}

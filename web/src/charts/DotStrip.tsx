@@ -8,7 +8,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { CatalogRow } from "../data/schema";
-import { capitalize, pct, speciesShort } from "../data/format";
+import { datasetTitle, pct } from "../data/format";
 import { largestGaps } from "../data/derive/overview";
 import { REFERENCE_BARS } from "../data/metrics";
 import type { TipLine } from "../ui/HoverTip";
@@ -186,8 +186,6 @@ export const DotStrip = ({
   );
 };
 
-const datasetName = (r: CatalogRow): string => `${capitalize(r.antibiotic)}, ${speciesShort(r.species)}`;
-
 /** Per paired dataset, random-split minus lineage-held-out balanced
  *  accuracy of the best learner, in points. */
 export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]; height?: number; onOpen?(id: string): void }) => {
@@ -202,7 +200,7 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
       data={paired.map((r) => ({
         id: r.id,
         value: r.best_random! - r.best_lineage!,
-        tip: [{ term: datasetName(r), text: `${((r.best_random! - r.best_lineage!) * 100).toFixed(1)} points: ${pct(r.best_random)} random, ${pct(r.best_lineage)} lineages held out.` }],
+        tip: [{ term: datasetTitle(r), text: `${((r.best_random! - r.best_lineage!) * 100).toFixed(1)} points: ${pct(r.best_random)} random, ${pct(r.best_lineage)} lineages held out.` }],
       }))}
       domain={[lo, hi]}
       format={(v) => (v * 100).toFixed(0)}
@@ -215,7 +213,7 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
         { key: "below", label: `${gaps.length - above} ≤5 points`, short: `${gaps.length - above} ≤5`, at: 0.05, anchor: "end" },
         { key: "above", label: `${above} >5 points`, short: `${above} >5`, at: 0.05, anchor: "start" },
       ]}
-      named={largestGaps(paired, 3).map(({ row }) => ({ id: row.id, lines: [datasetName(row), `${pct(row.best_random)} to ${pct(row.best_lineage)}`] }))}
+      named={largestGaps(paired, 3).map(({ row }) => ({ id: row.id, lines: [datasetTitle(row), `${pct(row.best_random)} to ${pct(row.best_lineage)}`] }))}
       height={height}
       onOpen={onOpen}
     />
@@ -236,7 +234,7 @@ export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
       data={scored.map((r) => ({
         id: r.id,
         value: r.mic_essential_agreement!,
-        tip: [{ term: datasetName(r), text: `${pct(r.mic_essential_agreement)} of exact MICs predicted within one doubling dilution.` }],
+        tip: [{ term: datasetTitle(r), text: `${pct(r.mic_essential_agreement)} of exact MICs predicted within one doubling dilution.` }],
       }))}
       domain={[lo, 1]}
       format={(v) => `${Math.round(v * 100)}`}
@@ -246,7 +244,7 @@ export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
         { key: "below", label: `${values.length - atOrAbove} <90%`, at: REFERENCE_BARS.mic, anchor: "end" },
         { key: "above", label: `${atOrAbove} ≥90%`, at: REFERENCE_BARS.mic, anchor: "start" },
       ]}
-      named={lowest === undefined ? [] : [{ id: lowest.id, lines: [datasetName(lowest), pct(lowest.mic_essential_agreement)] }]}
+      named={lowest === undefined ? [] : [{ id: lowest.id, lines: [datasetTitle(lowest), pct(lowest.mic_essential_agreement)] }]}
       height={height}
       onOpen={onOpen}
     />

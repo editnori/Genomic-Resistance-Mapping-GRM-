@@ -70,6 +70,11 @@ const longRule = manifest.datasets.find(d => d.scm_rules.length === 1 && d.scm_r
 // as its genus initial joined to the rest by a non-breaking space, so the
 // short form never ends a line ("Synthetic species C", "S. species C").
 const speciesNames = species => { const [genus, ...rest] = species.split(' '); return rest.length > 0 ? [species, genus.charAt(0) + '.\u00a0' + rest.join(' ')] : [species]; };
+// A dataset as the app titles it (datasetTitle in format.ts): the species'
+// everyday name where it has one, else its short name, then "vs" held to
+// the drug by a non-breaking space ("S. species C vs ceftriaxone").
+const EVERYDAY = new Map([['Mycobacterium tuberculosis', 'TB'], ['Neisseria gonorrhoeae', 'Gonorrhea'], ['Salmonella enterica', 'Salmonella'], ['Staphylococcus aureus', 'Staph'], ['Streptococcus pneumoniae', 'Pneumococcus']]);
+const datasetTitle = d => (EVERYDAY.get(d.species) ?? speciesNames(d.species).at(-1)) + ' vs\u00a0' + d.antibiotic;
 // The dataset and error view whose interval text runs widest, in characters
 // as the learner table prints it (one decimal), from the tree's own
 // intervals/; null for a tree without them.
@@ -1018,13 +1023,12 @@ async function interactions(page, tag, width) {
   check(tag + ' top bar stays in view after scrolling Methods', await page.evaluate(() => document.querySelector('header').getBoundingClientRect().top >= -1 && document.scrollingElement.scrollTop === 0), null);
   // Assays the report could not score: one entry each in Methods, or no such
   // part when there are none. An entry's lines are its name, its datasets
-  // ("<Drug> in <species>", comma-separated, each matched exactly) and its
+  // ("<species> vs <drug>", comma-separated, each matched exactly) and its
   // reason.
   const unscored = manifest.unsupported_panels ?? [];
   const unscoredPart = await page.evaluate(() => { const p = document.getElementById('m-unsupported'); return p ? [...p.querySelectorAll('li')].map(li => [...li.querySelectorAll('p')].map(x => x.textContent)) : null; });
-  const datasetNamed = (u, text) => speciesNames(u.species).some(s => text.toLowerCase() === (u.antibiotic + ' in ' + s).toLowerCase());
   check(tag + ' assays not scored listed in Methods', unscored.length === 0 ? unscoredPart === null
-    : unscoredPart !== null && unscoredPart.length === new Set(unscored.map(u => u.panel)).size && unscored.every(u => unscoredPart.some(([name = '', sets = '', ...rest]) => name === u.name && sets.split(', ').some(t => datasetNamed(u, t)) && rest.join(' ').includes('Not scored.') && rest.join(' ').toLowerCase().includes(u.reason.toLowerCase()))), { unscored: unscored.map(u => [u.panel, u.dataset]), part: unscoredPart });
+    : unscoredPart !== null && unscoredPart.length === new Set(unscored.map(u => u.panel)).size && unscored.every(u => unscoredPart.some(([name = '', sets = '', ...rest]) => name === u.name && sets.split(', ').includes(datasetTitle(u)) && rest.join(' ').includes('Not scored.') && rest.join(' ').toLowerCase().includes(u.reason.toLowerCase()))), { unscored: unscored.map(u => [u.panel, u.dataset]), part: unscoredPart });
   if (unscoredPart !== null) { await scrollTo(page, '#m-unsupported'); await shot(page, tag + '-unscored'); }
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();

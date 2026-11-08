@@ -9,7 +9,7 @@
 import type { ReactNode } from "react";
 import { Check, X } from "lucide-react";
 import type { CatalogRow, LearnerLite, Manifest } from "../data/schema";
-import { capitalize, int, pct, speciesShort } from "../data/format";
+import { datasetTitle, int, pct } from "../data/format";
 import { BARS, barLabel } from "../data/metrics";
 import { routeHref, type Navigator } from "../app/router";
 import { FOCUS_RING } from "../ui/primitives";
@@ -51,17 +51,11 @@ export const primerExample = (m: Manifest): PrimerExample | null => {
   );
 };
 
-/** "Ceftriaxone in E. coli". */
-export const exampleName = (row: CatalogRow): string => `${capitalize(row.antibiotic)} in ${speciesShort(row.species)}`;
-
-/** "ceftriaxone in E. coli", for mid-sentence. */
-export const exampleNameInline = (row: CatalogRow): string => `${row.antibiotic} in ${speciesShort(row.species)}`;
-
 /** The lineage split's very major errors as one sentence: which learner,
  *  which drug and species, and that resistant genomes were called
  *  susceptible. */
 export const missedSentence = (ex: PrimerExample): string =>
-  `With lineages held out, the best learner for ${exampleNameInline(ex.row)} called ${perHundred(ex).missed} of every 100 resistant genomes susceptible.`;
+  `With lineages held out, the best learner for ${datasetTitle(ex.row)} called ${perHundred(ex).missed} of every 100 resistant genomes susceptible.`;
 
 /** Per 100, rounded: how many resistant genomes were called susceptible and
  *  how many susceptible genomes were called resistant, on the lineage split. */
@@ -95,7 +89,7 @@ const CompositionFigure = ({ row }: { row: CatalogRow }) => {
   const r = row.n === 0 ? 0 : row.n_resistant / row.n;
   return (
     <figure data-primer-figure="dataset" className="m-0 w-full max-w-[26rem]">
-      <p className={FIG_NOTE}>{exampleName(row)}</p>
+      <p className={FIG_NOTE}>{datasetTitle(row)}</p>
       <div className="mt-1.5 flex h-4 w-full gap-0.5" aria-hidden="true">
         <span className="h-full rounded-l-sm" style={{ width: `${r * 100}%`, background: "var(--series-r)" }} />
         <span className="h-full rounded-r-sm" style={{ width: `${(1 - r) * 100}%`, background: "var(--series-s)" }} />
@@ -212,7 +206,7 @@ const SplitFigure = ({ ex }: { ex: PrimerExample | null }) => (
       <span className="inline-flex items-center gap-1.5">
         <span aria-hidden="true" className="block size-2.5 rounded-[2px] border border-ink/40" /> Trained on
       </span>
-      <span>Groups are lineages{ex === null ? "" : `; scores are ${exampleNameInline(ex.row)}`}</span>
+      <span>Groups are lineages{ex === null ? "" : `; scores are from ${datasetTitle(ex.row)}`}</span>
     </figcaption>
   </figure>
 );
@@ -291,7 +285,7 @@ const ScopeFigure = () => (
 
 /** The five steps, with the example's numbers where the report has one. */
 export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExample(m)): PrimerStep[] => {
-  const name = ex === null ? null : exampleName(ex.row);
+  const name = ex === null ? null : datasetTitle(ex.row);
   const rule = ex?.row.scm_rules[0];
   const h = ex === null ? null : perHundred(ex);
   return [
@@ -377,7 +371,7 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
         <>
           {h === null || ex === null ? null : (
             <p className="mb-2">
-              With lineages held out, the best learner for {exampleNameInline(ex.row)} called {h.caught} of every 100 resistant genomes resistant and {h.cleared} of every 100
+              With lineages held out, the best learner for {datasetTitle(ex.row)} called {h.caught} of every 100 resistant genomes resistant and {h.cleared} of every 100
               susceptible genomes susceptible.
             </p>
           )}
@@ -444,7 +438,7 @@ export const PrimerSection = ({ manifest, nav, firstFinding }: { manifest: Manif
             {" "}
             The examples come from one dataset&apos;s report,{" "}
             <a href={routeHref({ ...nav.route, dataset: ex.row.id })} onClick={inApp(() => nav.openDataset(ex.row.id))} className={LINK}>
-              {exampleName(ex.row)}
+              {datasetTitle(ex.row)}
             </a>
             .
           </>
