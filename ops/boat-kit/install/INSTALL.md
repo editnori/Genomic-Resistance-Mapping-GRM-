@@ -1,6 +1,6 @@
 # KIT10 install
 
-install-kit10.sh installs KIT9's and KIT10's changes on the laptop in one run. KIT10's drive.sh.next and grm-boat.sh.next already hold KIT9's changes, with REVIEW-KIT9's fixes and without KIT9's beacon and grm-memread.exe (main's ruling of 7 Nov), so KIT9's own drive.sh.next and grm-boat.sh.next don't get installed. This is round 2's set, with REVIEW-KIT10's fixes. It replaces round 1's set, which was never installed.
+install-kit10.sh installs KIT9's and KIT10's changes on the laptop in one run. KIT10's drive.sh.next and grm-boat.sh.next already hold KIT9's changes, with REVIEW-KIT9's fixes and without KIT9's beacon and grm-memread.exe (main's ruling of 7 Nov), so KIT9's own drive.sh.next and grm-boat.sh.next don't get installed. This is round 3's set: round 2's, with REVIEW-KIT10's fixes, and REVIEW-KIT10-R2's fix to this install and its rollback. Rounds 1 and 2 were never installed.
 
 ## Files
 
@@ -58,23 +58,26 @@ Step 2 puts each file in through a temp file beside its target. The temp file ta
 
 Each file it replaces is kept in pre-kit10/ in this handback dir. That dir sits outside the kit repo on purpose. The runner's push sends `git ls-files -co --exclude-standard`, untracked files included, so a backup inside the kit would go to every box.
 
-If anything in step 2 fails, the script rolls back what it changed and prints why. It removes the temp file, puts each replaced file back from pre-kit10/ through a temp file and `mv`, and removes each new file it made. It then checks every live hash. When all of them match, it removes pre-kit10/ and says "ROLLED BACK", so a rerun starts clean. If one doesn't match, it says "ROLLBACK INCOMPLETE" and keeps pre-kit10/ for the rollback below.
+If anything in step 2 fails, the script rolls back what it changed and prints why. So does an INT, TERM or HUP, which a Ctrl-C or a closed terminal sends, and the rollback ignores them while it runs.
+
+The rollback removes the temp file, puts each replaced file back from pre-kit10/ through a temp file and `mv`, and removes each new file it made. It then checks every live hash. When all of them match, it removes pre-kit10/ and says "ROLLED BACK", so a rerun starts clean. If one doesn't match, it says "ROLLBACK INCOMPLETE" and keeps pre-kit10/ for the rollback below.
 
 The last line is "KIT10 installed: 8 files, syntax ok". The kit repo then shows three changed files (mtb-box.sh, r11-box.sh and stage-manifest.py) and three untracked ones (chain-lib.sh, h1-box.sh and h1-manifest.py). A box push sends all six.
 
-To put the live files back after an install, run this from the handback dir. Unlike the install, it copies over each live file in place, so run it only when no drive.sh, grm-boat.sh or chain is running. It checks the live hashes and removes pre-kit10/ only when they all match, so the install can run again:
+To put the live files back after an install, run this from the handback dir. Unlike the install, it copies over each live file in place, so run it only when no drive.sh, grm-boat.sh or chain is running. It removes any `.kit10-*` temp file the install left, checks the live hashes, and removes pre-kit10/ only when they all match, so the install can run again:
 
     D=/home/layth/review/grm-port-r11-20261105 R=/home/layth/review/grm-boat-runner-20261031 P=$PWD/pre-kit10
     cp -p $P/drive.sh $D/drive/drive.sh; cp -p $P/grm-boat.sh $R/grm-boat.sh
     for f in mtb-box.sh r11-box.sh stage-manifest.py; do cp -p $P/$f $D/kit/$f; done
     rm -f $D/kit/chain-lib.sh $D/kit/h1-box.sh $D/kit/h1-manifest.py
+    rm -f $D/drive/drive.sh.kit10-* $R/grm-boat.sh.kit10-* $D/kit/*.kit10-*
     printf '%s\n' "db62192168156fc773c46fe101c188e3cfa2192312cb46d356a72a81f2d860f7  $D/drive/drive.sh" \
       "45fb0c9ff27c7a851f13c5bcbfaa1c99388a47d61f7511ce409ba69ae05c3cd2  $R/grm-boat.sh" \
       "0a42c769c633435f7e1200522bfd2aaec53b61843935d225d56f0a8b4f850361  $D/kit/mtb-box.sh" \
       "4920a98e6066fe5b39778c293ebb43f74a7a74244065e1be6795e474100f8d56  $D/kit/r11-box.sh" \
       "36a9be604d0cc23c515f498a46ff5d1492ea5c6b8f01774cd842d542daf99699  $D/kit/stage-manifest.py" | sha256sum -c --strict && rm -rf $P
 
-tests/test-install-kit10.sh runs the script and this rollback on a fake tree with the live hashes and modes. logs/run6 has its run on Boat. It covers:
+tests/test-install-kit10.sh runs the script and this rollback on a fake tree with the live hashes and modes. logs/run6 has round 2's run on Boat, and NOTES-KIT10-r3.md has round 3's run. It covers:
 
 - a clean install
 - this rollback, and an install after it
@@ -85,6 +88,8 @@ tests/test-install-kit10.sh runs the script and this rollback on a fake tree wit
 - a failure after the first file is in
 - a failure after mktemp
 - a failed move of the last file
+- an INT, TERM or HUP in step 2, and a TERM just after a move
+- this rollback with a temp file left beside a target
 - the running-script check
 
 tests/test-restore-v7.sh.next and tests/test-side-re.sh.next replace main's copies of those tests. Those copies aren't in the harness, so this install leaves them out.

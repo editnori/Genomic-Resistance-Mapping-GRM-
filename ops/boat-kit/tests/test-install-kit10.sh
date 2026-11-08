@@ -4,7 +4,8 @@
 # any failure. I1-I6 are round 1's probe/test-install.sh cases (clean install, INSTALL.md's rollback, install after
 # it, second run, drifted live file, changed handback file). I7-I12 are REVIEW-KIT10 L4: its cases A (I1), B (a
 # read-only target dir, I7) and C (a step after mktemp fails, I9), a failure after the first file is in (I8), a
-# failed move of the last file (I10), and the running-script check (I11, I12).
+# failed move of the last file (I10), and the running-script check (I11, I12). Round 3: I14-I18 are REVIEW-KIT10-R2
+# L1, a signal in step 2 and INSTALL.md's rollback with a temp file left.
 # usage: test-install-kit10.sh WORK HANDBACK LIVE
 #   HANDBACK: a dir with install-kit10.sh, INSTALL.md and next/; LIVE: work/k10 (live/drive.sh, live/grm-boat.sh and
 #   PORT's kit under port/kit, the copies the install's live hashes name)
@@ -97,6 +98,44 @@ reset; bash "$WK/run/drive.sh" & dp=$!; sleep 0.3; inst i11; rc=$?; kill "$dp" 2
 res I11-running-drive-stops-the-install "1,yes,1" "$rc,$(yn same),$(grep -c 'a drive, runner or chain is running' "$WK/out.i11")" ""
 reset; python3 -I -c 'import time; time.sleep(30)' "$WK/run/drive.sh" & pp=$!; sleep 0.3; inst i12; rc=$?; kill "$pp" 2> /dev/null; wait "$pp" 2> /dev/null
 res I12-a-command-naming-drive-sh-does-not-stop-it 0 "$rc" "$(grep -m1 STOP "$WK/out.i12" | cut -c1-100)"
+# I14-I17 (REVIEW-KIT10-R2 L1): a signal in step 2. A shim holds h1-box.sh's temp file for 3 s, in its chmod (I14 to
+# I16) or just after its mv (I17), and drops a flag; then the signal goes in. The install has to roll back: rc 1, the
+# tree as before, no pre-kit10/ and no temp file. INT goes to the install's process group, as a terminal sends it.
+# Job control (set -m) gives the install its own group and keeps a background job from ignoring INT.
+hshim() { # NAME CMD PATTERN pre|post: a CMD shim that, for an argument matching PATTERN, drops $WK/NAME.flag and
+  # sleeps 3 s, before (pre) or after (post) it runs the real CMD
+  local real; real=$(command -v "$2"); mkdir -p "$WK/$1"
+  if [ "$4" = pre ]; then
+    printf '#!/usr/bin/env bash\nfor a in "$@"; do case "$a" in %s) echo $$ > %q; sleep 3;; esac; done\nexec %s "$@"\n' "$3" "$WK/$1.flag" "$real"
+  else
+    printf '#!/usr/bin/env bash\n%s "$@"; rc=$?\nfor a in "$@"; do case "$a" in %s) echo $$ > %q; sleep 3;; esac; done\nexit $rc\n' "$real" "$3" "$WK/$1.flag"
+  fi > "$WK/$1/$2"; chmod +x "$WK/$1/$2"; }
+sig() { # OUT SIGNAL SHIM: the install in the background with the shim; SIGNAL once the flag is there; then wait for
+  # the install and the shim, and give the install's rc
+  local s=$2 d=$WK/$3 pid rc i
+  rm -f "$d.flag"
+  set -m
+  (cd "$HB" && KIT10_D=$F/port KIT10_R=$F/runner PATH=$d:$PG:$PATH exec bash install-kit10.sh) > "$WK/out.$1" 2>&1 &
+  pid=$!
+  set +m
+  for i in $(seq 100); do [ -s "$d.flag" ] && break; sleep 0.1; done
+  if [ "$s" = INT ]; then kill -INT -- -"$pid"; else kill -"$s" "$pid"; fi
+  wait "$pid" 2> /dev/null; rc=$?
+  while [ -s "$d.flag" ] && kill -0 "$(cat "$d.flag")" 2> /dev/null; do sleep 0.1; done
+  return $rc; }
+hshim sh14 chmod '*h1-box.sh.kit10-*' pre; hshim sh17 mv '*h1-box.sh.kit10-*' post
+for c in "I14 TERM sh14 term" "I15 HUP sh14 hup" "I16 INT sh14 int-to-the-group"; do
+  set -- $c; reset; sig "$1" "$2" "$3"; rc=$?
+  res "$1-$4-in-step-2-rolls-back" "1,yes,no,0,1" "$rc,$(yn same),$(yn test -e "$HB/pre-kit10"),$(temps),$(grep -c '^STOP: interrupted by a signal' "$WK/out.$1")" "$(last "$1")"
+done
+inst i16b; rc=$?
+res I16b-rerun-after-an-interrupted-install 0 "$rc" "$(last i16b)"
+reset; sig I17 TERM sh17; rc=$?
+res I17-term-just-after-a-move-rolls-that-file-back "1,yes,no,0,1" "$rc,$(yn same),$(yn test -e "$HB/pre-kit10"),$(temps),$(grep -c '^STOP: interrupted by a signal' "$WK/out.I17")" "$(last I17)"
+# I18: INSTALL.md's rollback after an install that left temp files beside two targets
+reset; inst i18; cp "$F/port/kit/h1-box.sh" "$F/port/kit/h1-box.sh.kit10-AbC123"; cp "$F/runner/grm-boat.sh" "$F/runner/grm-boat.sh.kit10-XyZ789"
+(cd "$HB" && bash "$WK/rollback.sh") > "$WK/out.i18" 2>&1; rc=$?
+res I18-install-md-rollback-removes-left-temp-files "0,yes,0" "$rc,$(yn same),$(temps)" "$(last i18)"
 reset; rm -rf "$HB/pre-kit10"
 res I13-fake-tree-put-back yes "$(yn same)" ""
 echo "FAILS $FAILS"

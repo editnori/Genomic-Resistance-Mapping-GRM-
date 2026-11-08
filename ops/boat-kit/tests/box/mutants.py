@@ -4,7 +4,8 @@ only when the test exits non-zero and that id's line says DIFFERS; a mutant whos
 WRONG-ID, not killed. JOBS at a time, at most half the vCPUs; the install mutants run after the rest, one at a time,
 since install-kit10.sh refuses while any bash runs drive.sh, which the drive mutants' tests do. Writes one line per
 mutant and a summary to OUT, and exits 1 unless every mutant is killed. KIT10_MUT_KINDS (a comma list of kinds, as
-runner,h1box) runs only those, for a check on the controller; the chain sets none.
+runner,h1box) runs only those, for a check on the controller; the chain sets none. KIT10 round 3 (REVIEW-KIT10-R2 L1)
+adds three install mutants, one of them on INSTALL.md's rollback (kind installmd).
 usage: python3 -I -B mutants.py HARNESS WORK OUT [JOBS]"""
 import concurrent.futures as cf
 import os
@@ -104,12 +105,19 @@ M = [
     ("I-pre-kit10-kept", "install", '    rm -rf "$P"\n', '', "I8-step-2-failure-rolls-back"),
     ("I-pgrep-any-mention", "install", "if pgrep -af '^(/[^ ]*/)?bash( -[A-Za-z]+)* ([^ ]*/)?(drive|grm-boat|chain-tests)\\.sh( |$)'; then",
      "if pgrep -af 'drive\\.sh|grm-boat\\.sh|chain-tests\\.sh'; then", "I12-a-command-naming-drive-sh-does-not-stop-it"),
+    # install-kit10.sh and INSTALL.md, REVIEW-KIT10-R2 L1 (test-install-kit10.sh)
+    ("I-no-signal-trap", "install", 'trap \'stop2 "interrupted by a signal"\' INT TERM HUP\n', '', "I14-term-in-step-2-rolls-back"),
+    ("I-listed-after-the-mv", "install", '  IN+=("$src|$dst|$old|$new|$ref")\n  mv "$t" "$dst" || stop2 "could not move $t to $dst"\n  t=""\n',
+     '  mv "$t" "$dst" || stop2 "could not move $t to $dst"\n  t=""; IN+=("$src|$dst|$old|$new|$ref")\n', "I17-term-just-after-a-move-rolls-that-file-back"),
+    ("I-md-keeps-temp-files", "installmd", '    rm -f $D/drive/drive.sh.kit10-* $R/grm-boat.sh.kit10-* $D/kit/*.kit10-*\n', '',
+     "I18-install-md-rollback-removes-left-temp-files"),
 ]
 KINDS = [k for k in os.environ.get("KIT10_MUT_KINDS", "").split(",") if k]
 if KINDS:
     M = [m for m in M if m[1] in KINDS]
 FILE = {"runner": "grm-boat.sh", "chain": "kit/chain-lib.sh", "h1box": "kit/h1-box.sh", "r11": "kit/r11-box.sh",
-        "h1man": "kit/h1-manifest.py", "drive": "drive.sh", "drivel2": "drive.sh", "install": "handback/install-kit10.sh"}
+        "h1man": "kit/h1-manifest.py", "drive": "drive.sh", "drivel2": "drive.sh", "install": "handback/install-kit10.sh",
+        "installmd": "handback/INSTALL.md"}
 
 
 def verdict(out, want):
@@ -133,7 +141,7 @@ def one(m):
     shutil.copytree(KIT, kit)
     runner, drive, hb = os.path.join(d, "grm-boat.sh"), os.path.join(d, "drive.sh"), os.path.join(d, "handback")
     shutil.copy2(RUNNER, runner); shutil.copy2(DRIVE, drive)
-    if kind == "install":
+    if kind in ("install", "installmd"):
         shutil.copytree(HBK, hb)
     target = os.path.join(d, FILE[kind])
     t = open(target).read()
@@ -147,7 +155,8 @@ def one(m):
            "h1man": ["bash", T + "/test-drive-h1.sh", d + "/w", DRIVE, kit, DRAFTS],
            "drive": ["bash", T + "/test-drive-h1.sh", d + "/w", drive, KIT, DRAFTS],
            "drivel2": ["bash", T + "/test-drive-l2-kit10.sh", d + "/w", drive],
-           "install": ["bash", T + "/test-install-kit10.sh", d + "/w", hb, H]}[kind]
+           "install": ["bash", T + "/test-install-kit10.sh", d + "/w", hb, H],
+           "installmd": ["bash", T + "/test-install-kit10.sh", d + "/w", hb, H]}[kind]
     t0 = time.time()
     p = subprocess.run(cmd, capture_output=True, text=True)
     open(os.path.join(d, "test.out"), "w").write(p.stdout + p.stderr)
@@ -163,11 +172,11 @@ os.makedirs(WK, exist_ok=True)
 print("mutants %d, jobs %d (vCPUs %s)" % (len(M), JOBS, os.cpu_count()), flush=True)
 res = []
 with cf.ThreadPoolExecutor(JOBS) as ex:
-    for r in ex.map(one, [m for m in M if m[1] != "install"]):
+    for r in ex.map(one, [m for m in M if m[1] not in ("install", "installmd")]):
         res.append(r)
         print("%s %s %ss want %s | %s" % r, flush=True)
 for m in M:
-    if m[1] == "install":
+    if m[1] in ("install", "installmd"):
         r = one(m)
         res.append(r)
         print("%s %s %ss want %s | %s" % r, flush=True)

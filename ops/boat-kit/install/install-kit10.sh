@@ -10,6 +10,9 @@
 # comes back from pre-kit10/ through a temp file and mv, every new file already in goes, and the live hashes are
 # checked; pre-kit10/ is removed only when all of them match. The running-script check matches only bash running
 # drive.sh, grm-boat.sh or chain-tests.sh, not any command line that names one.
+# KIT10 round 3 (REVIEW-KIT10-R2 L1): an INT, TERM or HUP in step 2 (Ctrl-C, a closed terminal) rolls back too, and the
+# rollback ignores them while it runs. Each file goes on the rollback list before its mv, so a signal that lands just
+# after a mv still undoes that file.
 # usage: bash install-kit10.sh
 set -u
 D=${KIT10_D:-/home/layth/review/grm-port-r11-20261105} R=${KIT10_R:-/home/layth/review/grm-boat-runner-20261031}
@@ -59,6 +62,7 @@ syntax $(cut -d'|' -f1 <<< "$L") || { echo "STOP: a new file fails its syntax ch
 # 2. install; any failure from here rolls back what step 2 changed
 t="" IN=()   # the temp file in flight; the entries whose target step 2 has replaced or made
 rollback() {
+  trap '' INT TERM HUP
   local i src dst old new ref b r ok=1
   [ -n "$t" ] && rm -f "$t"
   for (( i = ${#IN[@]} - 1; i >= 0; i-- )); do
@@ -82,13 +86,15 @@ rollback() {
   exit 1
 }
 stop2() { echo "STOP: $*"; rollback; }
+trap 'stop2 "interrupted by a signal"' INT TERM HUP
 mkdir "$P" || { echo "STOP: could not make $P"; exit 1; }
 while IFS='|' read -r src dst old new ref; do
   if [ "$old" != new ]; then cp -p "$dst" "$P/${dst##*/}" || stop2 "could not keep $dst"; fi
   t=$(mktemp "$dst.kit10-XXXXXX") || { t=""; stop2 "could not make a temp file beside $dst"; }
   cat "$src" > "$t" && chmod --reference="$ref" "$t" || stop2 "could not write $t"
+  IN+=("$src|$dst|$old|$new|$ref")
   mv "$t" "$dst" || stop2 "could not move $t to $dst"
-  t=""; IN+=("$src|$dst|$old|$new|$ref")
+  t=""
   [ "$(h "$dst")" = "$new" ] || stop2 "$dst doesn't hash to $new after the move"
   echo "installed $dst $new $(stat -c %A "$dst")"
 done <<< "$L"

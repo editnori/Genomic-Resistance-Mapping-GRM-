@@ -3,7 +3,8 @@
 # chain-lib.sh (the chain exits 1 when any step fails). Round 2 (REVIEW-KIT10 L5): a control passes only when its test
 # fails with exactly the DIFFERS ids pinned here, so a control that fails for some other reason doesn't count. The
 # restore step and its live-v8 control are skipped this round, since no restore set goes to Boat; mtb-box.sh is checked
-# byte-equal to the file run 5's restore receipts cover instead.
+# byte-equal to the file run 5's restore receipts cover instead. Round 3 (REVIEW-KIT10-R2 L1): the install test gains
+# I14-I18, so round 1's install control pins them too, and install-r2-control runs the test on round 2's install.
 set -u
 H=/home/user/k10 V=/var/tmp/k10
 CHAIN_LOG=/home/user/k10-logs/chain
@@ -36,12 +37,19 @@ K9_DRIVE_L2="L1-stale-gone-from-copy2 L1-copy2-is-out L2-no-done-mark-without-ou
  L4-gone-box-not-86"
 R1_INSTALL="I2-install-md-rollback-restores-and-checks I3-install-after-the-rollback
  I7-read-only-target-dir-stops-before-any-change I8-step-2-failure-rolls-back I8b-rerun-after-the-rollback
- I9-failure-after-mktemp-leaves-no-temp I10-last-move-fails-all-seven-undone I12-a-command-naming-drive-sh-does-not-stop-it"
+ I9-failure-after-mktemp-leaves-no-temp I10-last-move-fails-all-seven-undone I12-a-command-naming-drive-sh-does-not-stop-it
+ I14-term-in-step-2-rolls-back I15-hup-in-step-2-rolls-back I16-int-to-the-group-in-step-2-rolls-back
+ I16b-rerun-after-an-interrupted-install I17-term-just-after-a-move-rolls-that-file-back
+ I18-install-md-rollback-removes-left-temp-files"
+R2_INSTALL="I14-term-in-step-2-rolls-back I15-hup-in-step-2-rolls-back I16-int-to-the-group-in-step-2-rolls-back
+ I16b-rerun-after-an-interrupted-install I17-term-just-after-a-move-rolls-that-file-back
+ I18-install-md-rollback-removes-left-temp-files"
 info() { uname -a; nproc; free -g | head -n 2; grep -m1 'model name' /proc/cpuinfo; df -h /home/user | tail -n 1; python3 -V; rsync --version | head -n 1; ls -l /usr/bin/time; id; grep -E '^(SigIgn|CapAmb)' /proc/$$/status; }
 syntax() {
   local f n=0
   for f in cand/grm-boat.sh cand/drive.sh kit/*.sh tests/*.sh tests/*.next box/*.sh handback/install-kit10.sh \
-           handback/next/*.next handback/next/kit/*.sh.next drafts/run-h1.conf r1/cand/*.sh r1/kit/*.sh r1/handback/install-kit10.sh; do
+           handback/next/*.next handback/next/kit/*.sh.next drafts/run-h1.conf r1/cand/*.sh r1/kit/*.sh r1/handback/install-kit10.sh \
+           r2/handback/install-kit10.sh; do
     bash -n "$f" || { echo "FAIL $f"; return 1; }; n=$((n + 1))
   done
   for f in kit/*.py box/*.py handback/next/kit/*.py.next r1/kit/*.py; do
@@ -94,6 +102,7 @@ step drive-l2-kit9-control control "$K9_DRIVE_L2" bash tests/test-drive-l2-kit10
 step stub-regress bash tests/stub-regress-kit10.sh "$V/regress" cand/drive.sh
 step install bash tests/test-install-kit10.sh "$V/install" handback "$H"
 step install-r1-control control "$R1_INSTALL" bash tests/test-install-kit10.sh "$V/install-r1" r1/handback "$H"
+step install-r2-control control "$R2_INSTALL" bash tests/test-install-kit10.sh "$V/install-r2" r2/handback "$H"
 step prov bash -c 'cd prov && python3 -I -B -m unittest discover -s . -p test_stage_manifest.py -k test_the_provenance_file_is_never_staged_and_nothing_else_changes -k test_without_the_file_both_agree_and_refusals_are_unchanged -v && cmp stage-manifest.py.next ../kit/stage-manifest.py && echo "kit stage-manifest.py is PROV next"'
 step mutants python3 -I -B box/mutants.py "$H" "$V/mut" /home/user/k10-logs/mutants.txt $(( $(nproc) / 2 ))
 step g1-p8-noise noise
