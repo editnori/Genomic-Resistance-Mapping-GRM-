@@ -758,7 +758,7 @@ async function interactions(page, tag, width) {
   } else {
     await page.getByRole('button', { name: 'Filters', exact: true }).click();
   }
-  await page.getByRole('checkbox', { name: /^Has MIC regression/ }).click();
+  await page.getByRole('checkbox', { name: /^Has MIC prediction/ }).click();
   await shot(page, tag + '-filters');
   const band = await page.locator('[data-view-options-panel] footer').textContent();
   check(tag + ' rail band: the filter count and Clear once a filter is set', band === '1 filterClear', band);
