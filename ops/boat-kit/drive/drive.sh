@@ -64,6 +64,14 @@
 #   The three push-data calls become grm-boat.sh stage-local calls from those folders on the box, to the same --dest
 #   paths, so only the manifests cross. DATA_ROOT and VOCAB_ROOT aren't needed. A combine box is unchanged: its
 #   parts are pulled records, pushed from here.
+# KIT12, a k add-on box (kind addon, KIND=h1; G2(b), run.py --reference-from): column 10 names its one main part, a
+#   run box (pilot, s1, s2 or conf) of the same stage table. It is a run box in every step (the binary gate, the
+#   metadata, vocabulary and FASTA sets, union, verify, the run and its checkpoints), and it waits for the main part's
+#   DONE and pulled WORK (79). Its H1-FLAGS must be the main part's, byte for byte (2, no box), since run.py refuses a
+#   reference that ran with other flags. The main part's records go as a one-part combine set (h1-manifest.py combine,
+#   pinned here before any box) through push-data to /home/user/grm-combine, after the vocabulary; stage.env names
+#   the part (H1_REFERENCE) and the set's pin (H1_REFERENCE_SHA256). The add-on box is a part of the combine box
+#   beside its main part.
 # Exit: 0 stage done; 82 binary gate mismatch (the run stops); 74 TTL checkpoint; 83 TTL reached with nothing
 # finished (rerun with TTL_OVERRIDE_S); 78 budget; 79 order; 80 slow host; 81 the stage stopped
 # (pipeline, gate or validation failure: see the pulled run/status); 2 usage; others from grm-boat.sh.
@@ -125,10 +133,20 @@ ph=$(grep -o '@@[A-Za-z0-9_-]*@@' <<< "$row" | sort -u | paste -sd' ')
 IFS=$'\t' read -r _ GATES TYPE EST_FAST EST_SLOW SLOW_OK NEEDS SPECIES TTL_H PARTS _ <<< "$row"
 H1ROLE=""
 if [ "$KIND" = h1 ]; then
-  case "$GATES" in pilot|s1|s2|conf) H1ROLE=run;; combine) H1ROLE=combine;; *) die 2 "stage $BOX: kind $GATES is not pilot, s1, s2, conf or combine";; esac
+  case "$GATES" in pilot|s1|s2|conf) H1ROLE=run;; addon) H1ROLE=addon;; combine) H1ROLE=combine;; *) die 2 "stage $BOX: kind $GATES is not pilot, s1, s2, conf, addon or combine";; esac
   [ -f "$SRC/$SPECIES" ] || die 2 "stage $BOX: no spec $SPECIES in $SRC"
   [[ "${TTL_H:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die 2 "stage $BOX: no TTL hours in column 9"
   if [ "$H1ROLE" = combine ] && { [ -z "${PARTS:-}" ] || [ "$PARTS" = - ]; }; then die 2 "stage $BOX: a combine row names no parts"; fi
+  if [ "$H1ROLE" = addon ]; then
+    # KIT12: one main part, a run box of this table (run.py refuses a reference that is itself an add-on)
+    [[ "${PARTS:-}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || die 2 "stage $BOX: an addon row names its one main part in column 10, not ${PARTS:-nothing}"
+    mk=$(awk -F'\t' -v b="$PARTS" '$1 == b {print $2}' "$STAGES")
+    case "$mk" in
+      pilot|s1|s2|conf) ;;
+      "") die 2 "stage $BOX: its main part $PARTS is not a box of $STAGES";;
+      *) die 2 "stage $BOX: its main part $PARTS is of kind $mk, not a run box";;
+    esac
+  fi
   vneed="VOCAB_ROOT VOCAB_MANIFEST_SHA256"; [ $SNAPDATA = 1 ] && vneed="VOCAB_MANIFEST VOCAB_MANIFEST_SHA256"
   for v in $vneed; do case "${!v:-}" in ""|*@@*) die 2 "$v is unset or a placeholder";; esac; done
   [ -n "${GRM_SCP_FLOOR_MBPS:-}" ] && export GRM_SCP_FLOOR_MBPS
@@ -162,7 +180,7 @@ if [ "$KIND" = mtb ]; then
   MTB_REF_BOX=${MTB_REF_BOX:-X1}
   [ "$BOX" != "$MTB_REF_BOX" ] && [ ! -e "$REFK.sha" ] && die 79 "the MTB reference box $MTB_REF_BOX has not fixed source $C's binary yet"
 fi
-if [ "$KIND" = h1 ] && [ "$H1ROLE" = run ]; then
+if [ "$KIND" = h1 ] && [ "$H1ROLE" != combine ]; then
   [ -n "$REF_BOX" ] || die 2 "KIND=h1 needs REF_BOX (the pilot box, P1)"
   [ "$BOX" != "$REF_BOX" ] && [ ! -e "$REFK.sha" ] && die 79 "the H-1 reference box $REF_BOX has not fixed source $C's binary yet"
 fi
@@ -205,7 +223,7 @@ if [ "$KIND" = h1 ]; then
   [ -z "$st" ] || die 2 "$SRC is not a clean worktree"
   # H-1: the metadata set (from the master), GRM's vocabulary set (pinned), or a combine box's parts; each manifest
   # pinned in NOTES.md before anything is pushed. The FASTA set follows the box's union (step 6).
-  if [ "$H1ROLE" = run ]; then
+  if [ "$H1ROLE" != combine ]; then
     python3 -I "$KIT/h1-manifest.py" meta "$MASTER_MANIFEST" > "$SD/INPUT-MANIFEST.sha256" || die 2 "metadata manifest: $(tail -n 1 "$SD/INPUT-MANIFEST.sha256")"
     if [ $SNAPDATA = 1 ]; then
       # KIT11: the files are on the snapshot; the manifest is the run file's, copied once and pinned
@@ -219,6 +237,21 @@ if [ "$KIND" = h1 ]; then
     [ "$VSHA" = "$VOCAB_MANIFEST_SHA256" ] || die 2 "the vocabulary manifest from $VFROM hashes to $VSHA, not the pinned $VOCAB_MANIFEST_SHA256"
     say "vocabulary manifest pinned: $SD/VOCAB-MANIFEST.sha256 sha256 $VSHA, $(wc -l < "$SD/VOCAB-MANIFEST.sha256") files, from $VFROM"
     printf 'H1_TRACE=%s H1_EXTRA=%s\n' "$H1T" "${H1_EXTRA:-}" > "$SD/H1-FLAGS"   # DC1: what a combine checks
+    if [ "$H1ROLE" = addon ]; then
+      # KIT12: the main part's pulled WORK records, as a one-part combine set, pinned before any box
+      MP=$RUN_DIR/stages/$PARTS
+      [ -e "$MP/DONE" ] && [ -d "$MP/out/h1work" ] || die 79 "main part $PARTS has no finished, pulled WORK"
+      mf=$MP/H1-FLAGS
+      { [ -f "$mf" ] && [ "$(wc -l < "$mf")" = 1 ] && grep -qxE 'H1_TRACE=[01] H1_EXTRA=[^ ]*' "$mf"; } ||
+        die 2 "main part $PARTS records no H-1 flags (a missing, empty or malformed H1-FLAGS)"
+      cmp -s "$mf" "$SD/H1-FLAGS" ||
+        die 2 "this add-on's H-1 flags ($(cat "$SD/H1-FLAGS")) are not main part $PARTS's ($(cat "$mf")), which run.py --reference-from refuses"
+      rm -rf "$SD/ref-in"; H1REF=$(tr 'A-Z' 'a-z' <<< "$PARTS")
+      python3 -I "$KIT/h1-manifest.py" combine "$SD/ref-in" "$MASTER_MANIFEST" "$MASTER_SHA256" "$H1REF=$MP/out/h1work" > "$SD/REF-MANIFEST.sha256" ||
+        die 2 "main part $PARTS's records: $(tail -n 1 "$SD/REF-MANIFEST.sha256")"
+      RSHA=$(sha256sum "$SD/REF-MANIFEST.sha256" | cut -d' ' -f1)
+      say "main part $PARTS's records pinned: $SD/REF-MANIFEST.sha256 sha256 $RSHA, $(wc -l < "$SD/REF-MANIFEST.sha256") files"
+    fi
   else
     pargs=()
     for p in ${PARTS//,/ }; do
@@ -503,9 +536,11 @@ H1_TRACE=$H1T
 H1_JOBS=${H1_JOBS:-2}
 H1_EXTRA=${H1_EXTRA:-}
 H1_PARTS=${H1PARTS:-}
-H1_META_SHA256=$([ "$H1ROLE" = run ] && echo "$MSHA")
+H1_META_SHA256=$([ "$H1ROLE" != combine ] && echo "$MSHA")
 H1_VOCAB_SHA256=${VSHA:-}
-H1_COMBINE_SHA256=$([ "$H1ROLE" = combine ] && echo "$MSHA")"
+H1_COMBINE_SHA256=$([ "$H1ROLE" = combine ] && echo "$MSHA")
+H1_REFERENCE=${H1REF:-}
+H1_REFERENCE_SHA256=${RSHA:-}"
 fi
 "$R" run "$ID" --log stage-env --cwd /home/user -- "mkdir -p /home/user/r11 && printf '%s\n' $(printf %q "$ENV") > /home/user/r11/stage.env" > /dev/null ||
   bail 86 "could not write stage.env"
@@ -607,6 +642,11 @@ if [ "$KIND" = h1 ]; then
       bail $? "$PDWHAT of the metadata refused or failed: $(tail -n 1 "$SD/push-data.out")"
     h1data "${VOCAB_ROOT:-}" "${VOCAB_SNAPSHOT_DIR:-}" --manifest "$SD/VOCAB-MANIFEST.sha256" --manifest-sha256 "$VSHA" --dest /home/user/grm-vocab > "$SD/push-vocab.out" 2>&1 ||
       bail $? "$PDWHAT of the vocabulary refused or failed: $(tail -n 1 "$SD/push-vocab.out")"
+    if [ "$H1ROLE" = addon ]; then
+      # KIT12: run records go through push-data in either data mode (stage-local refuses them)
+      waited "$R" push-data "$ID" "$SD/ref-in" --manifest "$SD/REF-MANIFEST.sha256" --manifest-sha256 "$RSHA" --dest /home/user/grm-combine > "$SD/push-ref.out" 2>&1 ||
+        bail $? "push-data of main part $PARTS's records refused or failed: $(tail -n 1 "$SD/push-ref.out")"
+    fi
     h1run union union || bail 81 "union failed: $(grep '^STOP' "$SD/union.out" | tail -n 1)"
     rm -rf "$SD/union"
     "$R" pull "$ID" /home/user/r11/receipts/h1 "$SD/union" > /dev/null || bail 86 "union pull failed"

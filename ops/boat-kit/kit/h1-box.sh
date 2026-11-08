@@ -2,9 +2,12 @@
 # H-1 on one Boat box (G5): the input comparison's run.py, driven by the laptop's drive.sh (KIND=h1) through
 # grm-boat.sh run. r11-box.sh keeps host (build, speed check, CPU and binary sha256s), start, status and stop, and
 # hands KIND=h1's verify and stage to this script. Settings come from W/stage.env: SPEC (the spec, relative to the
-# pushed source), H1_ROLE (run|combine), H1_TRACE (1: --trace-training), H1_JOBS, H1_PARTS (combine: the part
+# pushed source), H1_ROLE (run|addon|combine), H1_TRACE (1: --trace-training), H1_JOBS, H1_PARTS (combine: the part
 # folders under /home/user/grm-combine/parts, comma list, in --work-from order), H1_EXTRA (only --below-panel-floor,
 # only for a spec that says "synthetic": true), SOURCE_COMMIT.
+# KIT12, H1_ROLE=addon (G2(b)): a run box whose union, verify and run pass run.py --reference-from the main part's
+# pulled WORK, /home/user/grm-combine/parts/$H1_REFERENCE/h1work; that set must match its manifest, pinned in stage.env
+# as H1_REFERENCE_SHA256, and hold that one part. Its checkpoints are a run's.
 #   prep      python3-numpy (J needs it), recorded with its version
 #   union     the spec's genome union, from run.py --estimate-only on RAW0 (the pushed metadata, no FASTA): every
 #             root's genomes.txt, which must count what the estimate reports as union_without_fasta; written to
@@ -47,12 +50,25 @@ if [ -n "${H1_EXTRA:-}" ]; then
   EXTRA=(--below-panel-floor)
 fi
 TRACE=(); [ "${H1_TRACE:-0}" = 1 ] && TRACE=(--trace-training)
+# KIT12: an add-on reads its main part's WORK (--reference-from); run.py checks it before anything is counted
+REFARG=() REFW=""
+if [ "${H1_ROLE:-run}" = addon ]; then
+  [[ "${H1_REFERENCE:-}" =~ ^[a-z0-9][a-z0-9._-]*$ ]] || RC=2 fail "an add-on needs H1_REFERENCE, its main part's name: ${H1_REFERENCE:-unset}"
+  REFW=$CI/parts/$H1_REFERENCE/h1work; REFARG=(--reference-from "$REFW")
+fi
 checkset() { # DIR: the pushed set matches its manifest, and its manifest is the one the laptop pinned in stage.env
   local d=$1 want=$2
   [ -f "$d/.grm-input-manifest.sha256" ] || RC=2 fail "$d has no manifest"
   [ "$(sha256sum "$d/.grm-input-manifest.sha256" | cut -d' ' -f1)" = "$want" ] || RC=2 fail "$d's manifest is not the pinned $want"
   (cd "$d" && sha256sum -c --strict --quiet .grm-input-manifest.sha256) || RC=2 fail "sha256sum -c failed in $d"
   echo "$(date -u +%FT%TZ) $d manifest $want lines=$(wc -l < "$d/.grm-input-manifest.sha256") rc=0" >> "$R/manifest-check.txt"
+}
+# refset: an add-on's pushed main-part set matches its pinned manifest and holds that one part's WORK
+refset() {
+  [ -z "$REFW" ] && return 0
+  checkset "$CI" "${H1_REFERENCE_SHA256:-}"
+  [ "$(find "$CI/parts" -mindepth 1 -maxdepth 1 -printf '%f\n' 2> /dev/null)" = "$H1_REFERENCE" ] || RC=2 fail "$CI/parts holds more or other than the main part $H1_REFERENCE"
+  [ -d "$REFW" ] && [ -f "$REFW/summary.json" ] || RC=2 fail "no finished WORK of the main part at $REFW"
 }
 # lnset SRC DST: DST gets hard links of SRC's files (not its manifest), so RAW is a plain tree on the same disk
 lnset() { (cd "$1" && find . -type f ! -name .grm-input-manifest.sha256 -printf '%P\n') | while IFS= read -r f; do
@@ -91,14 +107,14 @@ cmd_prep() {
 
 cmd_union() {
   local n u
-  checkset "$META" "$H1_META_SHA256"; checkset "$VOC" "$H1_VOCAB_SHA256"
+  checkset "$META" "$H1_META_SHA256"; checkset "$VOC" "$H1_VOCAB_SHA256"; refset
   [ "$(find "$VOC" -mindepth 1 -maxdepth 1 ! -name .grm-input-manifest.sha256 -printf '%f\n')" = vocabulary ] || RC=2 fail "$VOC holds more than vocabulary/"
   [ -e "$RAW0" ] && chmod -R u+w "$RAW0"
   rm -rf "$RAW0" "$HB/h1union"; mkdir -p "$RAW0"
   lnset "$META" "$RAW0" || RC=2 fail "could not link the metadata into $RAW0"
   marker "$RAW0"
   chmod -R a-w "$RAW0"
-  runpy --raw "$RAW0" --work "$HB/h1union" "${EXTRA[@]}" --estimate-only --free-disk-bytes 1000000000000000 \
+  runpy --raw "$RAW0" --work "$HB/h1union" "${EXTRA[@]}" "${REFARG[@]}" --estimate-only --free-disk-bytes 1000000000000000 \
     > "$R/union-estimate.json" 2> "$R/union-estimate.err" || RC=4 fail "run.py --estimate-only on the metadata failed: $(tail -n 2 "$R/union-estimate.err" | tr '\n' ' ')"
   find "$HB/h1union/roots" -path '*/species/*/genomes.txt' -type f -exec cat {} + | tr -s ' \t\r' '\n' | grep . | LC_ALL=C sort -u > "$R/union.txt"
   n=$(wc -l < "$R/union.txt")
@@ -109,7 +125,7 @@ cmd_union() {
 
 cmd_verify() {
   local free use n
-  checkset "$META" "$H1_META_SHA256"; checkset "$VOC" "$H1_VOCAB_SHA256"; checkset "$FA" "$H1_FASTA_SHA256"
+  checkset "$META" "$H1_META_SHA256"; checkset "$VOC" "$H1_VOCAB_SHA256"; checkset "$FA" "$H1_FASTA_SHA256"; refset
   [ "$(cut -c67- "$FA/.grm-input-manifest.sha256" | sed -n 's#^fasta/\(.*\)\.fna\.gz$#\1#p' | LC_ALL=C sort)" = "$(cat "$R/union.txt")" ] ||
     RC=2 fail "the FASTA set is not exactly the union's FASTAs"
   [ -z "$(cut -c67- "$FA/.grm-input-manifest.sha256" | grep -v '^fasta/')" ] || RC=2 fail "the FASTA set holds more than fasta/"
@@ -124,7 +140,7 @@ cmd_verify() {
   free=$(df -B1 --output=avail "$HB" | tail -n 1 | tr -d ' ')
   use=$(usable "$free") || exit $?
   rm -rf "$HB/h1est"
-  runpy --raw "$RAW" --work "$HB/h1est" "${EXTRA[@]}" --estimate-only --free-disk-bytes "$use" \
+  runpy --raw "$RAW" --work "$HB/h1est" "${EXTRA[@]}" "${REFARG[@]}" --estimate-only --free-disk-bytes "$use" \
     > "$R/estimate.json" 2> "$R/estimate.err" || RC=4 fail "run.py --estimate-only refused at $use B usable ($free B free): $(tail -n 2 "$R/estimate.err" | tr '\n' ' ')"
   python3 -I - "$R/estimate.json" << 'EOF' || RC=4 fail "the estimate does not pass"
 import json, sys
@@ -142,14 +158,15 @@ EOF
 cmd_run() {
   local free use
   [ -d "$RAW" ] && [ ! -w "$RAW" ] || RC=2 fail "RAW is missing or writable; run verify first"
+  refset
   free=$(df -B1 --output=avail "$HB" | tail -n 1 | tr -d ' ')
   use=$(usable "$free") || exit $?
   echo "$free" > "$R/free-at-start.txt"; echo "$use" > "$R/usable-at-start.txt"
-  log "h1 run: spec $SPEC jobs ${H1_JOBS:-2} trace ${H1_TRACE:-0} free $free usable $use"
+  log "h1 run: spec $SPEC jobs ${H1_JOBS:-2} trace ${H1_TRACE:-0} free $free usable $use${REFW:+ reference $REFW}"
   # pg-run.sh: its own process group under guard.sh (disk and RAM pauses), output to logs/h1-run.log
   DATA=$WORK bash "$K/pg-run.sh" h1-run -- python3 -B "$RUNPY" "$SPECF" --raw "$RAW" --work "$WORK" --grm "$GRM" \
     --source-commit "$SOURCE_COMMIT" --sigdrug-vocabulary "$VOC/vocabulary" --jobs "${H1_JOBS:-2}" --free-disk-bytes "$use" \
-    "${TRACE[@]}" "${EXTRA[@]}"
+    "${TRACE[@]}" "${EXTRA[@]}" "${REFARG[@]}"
   local rc=$?
   [ $rc = 0 ] || RC=1 fail "run.py exited $rc (logs/h1-run.log: $(tail -n 2 "$W/logs/h1-run.log" | tr '\n' ' '))"
   cmd_measure

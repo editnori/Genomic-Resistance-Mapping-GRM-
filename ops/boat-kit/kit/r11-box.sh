@@ -17,8 +17,9 @@
 #   status   print one line: running|done|stopped ... and the last status text
 #   stop     SIGTERM the stage's process groups (the TTL-near checkpoint)
 # KIND=h1 (KIT10, G5): host is the same; verify and the stage are h1-box.sh's (verify, then run or combine by
-# H1_ROLE), whose other steps (prep, union, ckpt) the drive calls directly. status reports "paused" while the H-1
-# stage's guard holds its group stopped (gates/h1-<role>.tripped ends in a pause; REVIEW-KIT10 L3).
+# H1_ROLE; KIT12's addon role runs h1-box.sh run), whose other steps (prep, union, ckpt) the drive calls directly.
+# status reports "paused" while the H-1 stage's guard holds its group stopped (gates/h1-<run|combine>.tripped ends in
+# a pause; REVIEW-KIT10 L3).
 # The stage, in order of SPECIES (comma list): one `scripts/run-pipeline.sh --species S` per species (PREFLIGHT
 # section 2 item 2), each after the RAM gate (effective memory >= RAM_NEED_GIB, 13.5, PF-D7) and the disk gate
 # (DISK_PAUSE_GIB + the species' kset estimate x 1.05 + 1 GiB), under guard.sh; then the species is validated
@@ -33,6 +34,8 @@
 set -u -o pipefail
 W=${W:-/home/user/r11}
 set -a; . "$W/stage.env"; set +a
+# KIT12: an H-1 add-on box's stage is h1-box.sh run, so its guard's pause file is h1-run's
+H1CMD=${H1_ROLE:-run}; [ "$H1CMD" = addon ] && H1CMD=run
 KIND=${KIND:-r11}
 K=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 S=${SRC:-/home/user/grm} DATA=${DATA:-/home/user/grm-data}
@@ -201,8 +204,9 @@ run_stage() {
   local sp list=() done_before="" s tag lg pg start guard rc need waited t0 launch
   status "running stage=$STAGE"
   if [ "$KIND" = h1 ]; then
-    case "${H1_ROLE:-run}" in run|combine) ;; *) RC=2 fail "H1_ROLE is ${H1_ROLE}, not run or combine";; esac
-    bash "$K/h1-box.sh" "${H1_ROLE:-run}" >> "$W/logs/h1-stage.log" 2>&1 || RC=1 fail "H-1 ${H1_ROLE:-run} failed: $(grep '^STOP' "$W/logs/h1-stage.log" | tail -n 1)"
+    # KIT12: an add-on box runs h1-box.sh run (with --reference-from)
+    case "${H1_ROLE:-run}" in run|addon|combine) ;; *) RC=2 fail "H1_ROLE is ${H1_ROLE}, not run, addon or combine";; esac
+    bash "$K/h1-box.sh" "$H1CMD" >> "$W/logs/h1-stage.log" 2>&1 || RC=1 fail "H-1 ${H1_ROLE:-run} failed: $(grep '^STOP' "$W/logs/h1-stage.log" | tail -n 1)"
     date -u +%FT%TZ > "$W/done"; status "done stage=$STAGE: H-1 ${H1_ROLE:-run} of $SPEC"; return
   fi
   if [ "$KIND" = mtb ]; then
@@ -272,7 +276,7 @@ case "${1:-}" in
     st=$(cat "$W/status" 2> /dev/null || echo "none")
     # REVIEW-KIT10 L3: an H-1 stage whose guard.sh stopped its group (the last line of gates/h1-<role>.tripped is a
     # pause) reports paused with the guard's reading, so the drive stops with that reason
-    gp=""; [ "$KIND" = h1 ] && gp=$(tail -n 1 "$W/gates/h1-${H1_ROLE:-run}.tripped" 2> /dev/null | grep '^paused ')
+    gp=""; [ "$KIND" = h1 ] && gp=$(tail -n 1 "$W/gates/h1-$H1CMD.tripped" 2> /dev/null | grep '^paused ')
     if [ -e "$W/done" ]; then echo "STATE done | $st"
     elif [ -s "$W/stage.pid" ] && kill -0 "$(cat "$W/stage.pid")" 2> /dev/null; then
       if [ -n "$gp" ]; then

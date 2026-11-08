@@ -145,7 +145,7 @@ res D1-verify-goes-to-h1-box "0,1,1" "$rc,$(grep -c '^verified: ' "$H/rb.out"),$
 rb start; s=$(poll)
 res D2-start-runs-h1-box-run-to-done "done,1,yes" "$(awk '{print $2}' <<< "$s"),$(grep -v -- '--estimate-only' "$H/args" | grep -c -- '--work '),$(yn grep -q 'H-1 run of scripts/input-comparison/h1/real.json' "$H/r11/status")" "$(cut -c1-90 <<< "$s")"
 set_ d3; h1env; sed -i 's/^H1_ROLE=.*/H1_ROLE=other/' "$H/r11/stage.env"; hb union; rb start; s=$(poll)
-res D3-bad-role-stops "stopped,1,0" "$(awk '{print $2}' <<< "$s"),$(grep -c 'H1_ROLE is other, not run or combine' "$H/r11/status"),$(grep -vc -- '--estimate-only' "$H/args")" "$(cut -c1-90 <<< "$s")"
+res D3-bad-role-stops "stopped,1,0" "$(awk '{print $2}' <<< "$s"),$(grep -c 'H1_ROLE is other, not run, addon or combine' "$H/r11/status"),$(grep -vc -- '--estimate-only' "$H/args")" "$(cut -c1-90 <<< "$s")"
 set_ d4; h1env; setsid sleep 60 & sp=$!; echo "$sp" > "$H/r11/stage.pid"; mkdir -p "$H/r11/gates"
 echo "paused 2026-11-07T12:00:00Z disk_free=1073741824 eff_mem=99999999999" > "$H/r11/gates/h1-run.tripped"
 s=$(bash "$KIT/r11-box.sh" status)
