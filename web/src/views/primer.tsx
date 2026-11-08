@@ -327,8 +327,8 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
         <>
           <p>
             GRM cuts every genome into overlapping 31-letter pieces of DNA (k-mers). Pieces found in exactly the same genomes merge into one feature, a yes-or-no column. A
-            learner is a model that learns which columns separate resistant from susceptible genomes, and GRM trains five kinds on every dataset. It also scores a known-gene
-            rule, which needs no training: it calls a genome resistant when it carries a gene listed for the drug in the AMRFinderPlus catalog of known resistance genes.
+            learner is a model that learns which columns separate resistant from susceptible genomes, and GRM trains five kinds. It also scores a known-gene rule, which
+            needs no training: it calls a genome resistant when it carries a gene listed for the drug in the AMRFinderPlus catalog of known resistance genes.
           </p>
           {ex === null ? null : (
             <p className="mt-2">
@@ -359,7 +359,7 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
           <p className="mt-2">
             The score is balanced accuracy: the average of the share of resistant genomes called resistant (sensitivity) and the share of susceptible genomes called
             susceptible (specificity). 50% is no better than a coin toss, and 100% gets every call right. A gap between two scores is counted in points: 90% to 85% is 5
-            points. Each dataset&apos;s best learner is the one with the highest random-split score, and the findings below use it.
+            points. Each dataset&apos;s best learner is the one with the highest random-split score among those that call every isolate, and the findings below use it.
           </p>
         </>
       ),
@@ -442,7 +442,7 @@ export const PrimerSection = ({ manifest, nav, firstFinding }: { manifest: Manif
         {ex === null ? null : (
           <>
             {" "}
-            Each step reads from one dataset&apos;s report,{" "}
+            The examples come from one dataset&apos;s report,{" "}
             <a href={routeHref({ ...nav.route, dataset: ex.row.id })} onClick={inApp(() => nav.openDataset(ex.row.id))} className={LINK}>
               {exampleName(ex.row)}
             </a>
