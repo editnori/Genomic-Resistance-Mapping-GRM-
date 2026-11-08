@@ -31,6 +31,7 @@ import { AxisX, LABEL_CLASS, linear, MarkListbox, PlacedText, placeLabels, RefLi
 import { GapSwarm, MicStrip } from "../charts/DotStrip";
 import { CatalogScatter } from "../charts/CatalogScatter";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
+import { AUDIT_READING } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
 export type FindingId = "corpus" | "lineage" | "catalog" | "panels" | "mic";
@@ -158,7 +159,7 @@ export const AuditReasons = ({ manifest }: { manifest: Manifest }) => {
         {audit.invalid === audit.total
           ? "No dataset evaluation in this report passes the evaluation audit."
           : `${int(audit.invalid)} of ${int(audit.total)} dataset evaluations do not pass the evaluation audit; the rest are internal cross-validation only.`}{" "}
-        The numbers describe agreement with lab calls on these sampled isolates; they do not validate a diagnostic test.
+        {AUDIT_READING}
       </p>
       <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-muted-text">
         {audit.reasons.map((r) => (

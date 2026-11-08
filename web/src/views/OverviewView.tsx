@@ -12,6 +12,7 @@ import { int, plural } from "../data/format";
 import type { Navigator } from "../app/router";
 import { ViewHeader } from "../ui/ViewHeader";
 import { FOCUS_RING, PanelState, VIEW_SHELL } from "../ui/primitives";
+import { AUDIT_READING } from "../ui/EvaluationNotice";
 import { PrimerSection } from "./primer";
 import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding } from "./findings";
 
@@ -95,8 +96,8 @@ const Limits = ({ n, manifest, nav }: { n: number; manifest: Manifest; nav: Navi
             : "The genomes are a selection, reduced where genomes failed QC or had no FASTA file."}
         </li>
         <li>
-          No external, prospective, or clinical validation has been done: no test on another lab&apos;s genomes, on newly collected isolates or in a clinical study. The
-          numbers describe agreement with reported lab calls on these isolates, not how a diagnostic test would perform.
+          No external, prospective, or clinical validation has been done: no test on another lab&apos;s genomes, on newly collected isolates or in a clinical study.{" "}
+          {AUDIT_READING}
         </li>
       </ul>
       <p className="mt-3 text-control">

@@ -19,6 +19,7 @@ import { ModalDialog } from "../../ui/ModalDialog";
 import { Disclosure, FactRows, FOCUS_RING, GhostButton, PanelState } from "../../ui/primitives";
 import { takeLaunch } from "../../ui/launch";
 import { ClassName } from "../../ui/drugClass";
+import { AUDIT_READING } from "../../ui/EvaluationNotice";
 import { LearnerSection } from "./LearnerSection";
 import { ModelSection } from "./ModelSection";
 import { MechanismSection } from "./MechanismSection";
@@ -60,8 +61,6 @@ const useCurrentSection = (scroller: RefObject<HTMLDivElement | null>, ready: bo
   return current;
 };
 
-const READING = "The numbers describe agreement with lab calls on these sampled isolates; they do not validate a diagnostic test.";
-
 /** The dataset's audit in the header, in plain words: its scope when it
  *  passes, a bold state when it does not; the body lists the reasons. */
 const AuditWords = ({ audit }: { audit: EvaluationAudit }) =>
@@ -81,7 +80,7 @@ const ProvisionalNote = ({ audit }: { audit: EvaluationAudit }) =>
         {audit.revision === 0
           ? "This report predates the evaluation audit, so its metrics are unaudited."
           : `This dataset's evaluation (audit revision ${audit.revision}) does not pass the current evaluation audit.`}{" "}
-        {READING}
+        {AUDIT_READING}
       </p>
       {audit.reasons.length === 0 ? null : (
         <ul className="type-note mt-1.5 list-disc space-y-0.5 pl-5">
