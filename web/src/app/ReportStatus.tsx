@@ -23,9 +23,9 @@ export const StatusItems = ({ items }: { items: readonly ReactNode[] }) => (
 export const catalogWords = (m: Manifest): string => `Known-gene catalog: AMRFinderPlus ${m.amrfinder_version === "" ? "version not recorded" : m.amrfinder_version}`;
 
 /** The one quiet status line, in plain words: when the report was built,
- *  the catalog version it used, and the audit's scope ("Internal
- *  cross-validation only", or bold "Provisional metrics"), which links to
- *  the Overview's limits; then view facts. */
+ *  the catalog version it used, and the audit's scope (AUDIT_SCOPE, or
+ *  bold "Provisional metrics"), which links to the Overview's limits; then
+ *  view facts. */
 export const ReportStatus = ({ manifest, children }: { manifest: Manifest; children?: ReactNode }) => {
   const audit = manifestAudit(manifest);
   const items: ReactNode[] = [`Report built ${dateText(manifest.generated_at)}`, catalogWords(manifest)];

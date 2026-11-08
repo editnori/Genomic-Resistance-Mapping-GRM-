@@ -23,6 +23,7 @@ import { GrmMark } from "../app/Mark";
 import { ModalDialog } from "../ui/ModalDialog";
 import { Dropdown } from "../ui/Dropdown";
 import { ACTION_BUTTON, type Fit, type SlidePart } from "../ui/primitives";
+import { AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { FINDINGS, type PagedFit } from "../views/findings";
 import { Reveal, useSlideTimeline, type SlideTimeline } from "./motion";
 import { RuleFigure, ruleDataset, ruleLineageScore } from "./figures";
@@ -91,7 +92,7 @@ const TitleSlide = ({ manifest, timeline }: { manifest: Manifest; timeline: Slid
           {audit.total === 0 ? null : (
             <>
               <span aria-hidden="true">·</span>
-              {audit.invalid > 0 ? <strong className="font-semibold text-coral-text">Provisional metrics</strong> : <span>Internal cross-validation only</span>}
+              {audit.invalid > 0 ? <strong className="font-semibold text-coral-text">Provisional metrics</strong> : <span>{AUDIT_SCOPE}</span>}
             </>
           )}
         </p>

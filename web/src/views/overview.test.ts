@@ -173,7 +173,7 @@ describe("What GRM found", () => {
       "6 Limits",
     ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
-    expect(scope?.textContent).toBe("Internal cross-validation only");
+    expect(scope?.textContent).toBe("Tested within one public database only");
     // No chip, no hover wall, no Method and coverage fold.
     expect(host.querySelector('header [tabindex="0"]')).toBeNull();
     expect(host.querySelector('[role="tooltip"]')).toBeNull();

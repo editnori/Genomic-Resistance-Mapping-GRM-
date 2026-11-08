@@ -31,7 +31,7 @@ import { AxisX, LABEL_CLASS, linear, MarkListbox, PlacedText, placeLabels, RefLi
 import { GapSwarm, MicStrip } from "../charts/DotStrip";
 import { CatalogScatter } from "../charts/CatalogScatter";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
-import { AUDIT_READING } from "../ui/EvaluationNotice";
+import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
 export type FindingId = "corpus" | "lineage" | "catalog" | "panels" | "mic";
@@ -140,7 +140,7 @@ export const ReportLine = ({ manifest, scope }: { manifest: Manifest; scope?: Re
       {audit.total === 0 ? null : (
         <>
           {" "}
-          <Sep /> {audit.invalid > 0 ? <strong className="font-semibold text-coral-text">Provisional metrics</strong> : (scope ?? <span>Internal cross-validation only</span>)}
+          <Sep /> {audit.invalid > 0 ? <strong className="font-semibold text-coral-text">Provisional metrics</strong> : (scope ?? <span>{AUDIT_SCOPE}</span>)}
         </>
       )}
     </>
@@ -158,7 +158,7 @@ export const AuditReasons = ({ manifest }: { manifest: Manifest }) => {
         <strong className="font-semibold">Provisional metrics.</strong>{" "}
         {audit.invalid === audit.total
           ? "No dataset evaluation in this report passes the evaluation audit."
-          : `${int(audit.invalid)} of ${int(audit.total)} dataset evaluations do not pass the evaluation audit; the rest are internal cross-validation only.`}{" "}
+          : `${int(audit.invalid)} of ${int(audit.total)} dataset evaluations do not pass the evaluation audit; the rest pass it.`}{" "}
         {AUDIT_READING}
       </p>
       <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-muted-text">

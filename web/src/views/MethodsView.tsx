@@ -18,6 +18,7 @@ import { classMinimum } from "../data/derive/overview";
 import { notScored } from "../data/derive/tests";
 import { FOCUS_RING, PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitives";
 import { ViewHeader } from "../ui/ViewHeader";
+import { AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { YearColumns } from "../charts/YearColumns";
 import { minimumSentence, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK } from "./findings";
 
@@ -555,7 +556,7 @@ export const MethodsView = ({ manifest }: { manifest: Manifest }) => {
                 }}
                 className={STATUS_LINK}
               >
-                Internal cross-validation only
+                {AUDIT_SCOPE}
               </a>
             }
           />

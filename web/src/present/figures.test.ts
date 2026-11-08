@@ -157,7 +157,7 @@ it("states the report's scope on the title slide as plain words, with no chip to
   document.body.innerHTML = "";
   const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
   const again = await open(passing);
-  expect(again.dialog.querySelector("main section")?.textContent).toContain("Internal cross-validation only");
+  expect(again.dialog.querySelector("main section")?.textContent).toContain("Tested within one public database only");
 });
 
 it("shows the rule's sequence inline, never in a second dialog", async () => {

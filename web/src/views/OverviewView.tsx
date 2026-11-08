@@ -12,7 +12,7 @@ import { int, plural } from "../data/format";
 import type { Navigator } from "../app/router";
 import { ViewHeader } from "../ui/ViewHeader";
 import { FOCUS_RING, PanelState, VIEW_SHELL } from "../ui/primitives";
-import { AUDIT_READING } from "../ui/EvaluationNotice";
+import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PrimerSection } from "./primer";
 import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding } from "./findings";
 
@@ -137,7 +137,7 @@ export const OverviewView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
                 }}
                 className={STATUS_LINK}
               >
-                Internal cross-validation only
+                {AUDIT_SCOPE}
               </a>
             }
           />

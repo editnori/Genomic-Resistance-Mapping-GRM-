@@ -19,7 +19,7 @@ import { ModalDialog } from "../../ui/ModalDialog";
 import { Disclosure, FactRows, FOCUS_RING, GhostButton, PanelState } from "../../ui/primitives";
 import { takeLaunch } from "../../ui/launch";
 import { ClassName } from "../../ui/drugClass";
-import { AUDIT_READING } from "../../ui/EvaluationNotice";
+import { AUDIT_READING, AUDIT_SCOPE } from "../../ui/EvaluationNotice";
 import { LearnerSection } from "./LearnerSection";
 import { ModelSection } from "./ModelSection";
 import { MechanismSection } from "./MechanismSection";
@@ -65,7 +65,7 @@ const useCurrentSection = (scroller: RefObject<HTMLDivElement | null>, ready: bo
  *  passes, a bold state when it does not; the body lists the reasons. */
 const AuditWords = ({ audit }: { audit: EvaluationAudit }) =>
   audit.valid ? (
-    <span>Internal cross-validation only</span>
+    <span>{AUDIT_SCOPE}</span>
   ) : (
     <strong className="font-semibold text-coral-text">{audit.revision === 0 ? "Unaudited, provisional" : "Provisional metrics"}</strong>
   );

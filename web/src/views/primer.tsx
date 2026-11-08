@@ -13,6 +13,7 @@ import { datasetTitle, int, pct } from "../data/format";
 import { BARS, barLabel } from "../data/metrics";
 import { routeHref, type Navigator } from "../app/router";
 import { FOCUS_RING } from "../ui/primitives";
+import { AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { inApp, LINK, showSection } from "./findings";
 
 /** The report the primer reads from: the best random-split learner's scores
@@ -397,7 +398,7 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
         </p>
       ),
       figure: <ScopeFigure />,
-      caption: "Internal cross-validation only: both test splits come from the same BV-BRC records.",
+      caption: `${AUDIT_SCOPE}: both test splits come from the same BV-BRC records.`,
     },
   ];
 };

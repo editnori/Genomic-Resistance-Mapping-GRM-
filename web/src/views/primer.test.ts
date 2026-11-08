@@ -131,7 +131,8 @@ describe("the primer's example report", () => {
   it("claims no more than internal cross-validation and labels its drawings", () => {
     const steps = primerSteps(base);
     const all = steps.map((s) => `${s.lead} ${s.caption} ${text(s.body)} ${text(s.figure)}`).join(" ");
-    expect(all).toContain("Internal cross-validation only");
+    expect(all).toContain("Every number is internal cross-validation");
+    expect(all).toContain("Tested within one public database only: both test splits come from the same BV-BRC records.");
     expect(all).toContain("No external, prospective or clinical validation has been done");
     expect(all).toContain("Choosing a treatment for a patient");
     expect(text(steps[1]!.figure)).toContain("Drawing, not data");

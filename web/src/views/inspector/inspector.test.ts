@@ -60,7 +60,7 @@ describe("dataset inspector audit", () => {
 
     expect(text).toContain("does not pass the current evaluation audit");
     expect(text).toContain("current revision is 7");
-    expect(text).not.toContain("Internal cross-validation only");
+    expect(text).not.toContain("Tested within one public database only");
   });
 });
 
@@ -75,7 +75,7 @@ describe("dataset inspector in plain words", () => {
     const d = copy(0);
     await mount(d.id, served(0, { evaluation: passing }), { ...manifest, evaluation_revision: 7, datasets: [{ ...d, evaluation: passing }] });
     const header = document.querySelector("header p")!;
-    expect(header.textContent).toContain("Internal cross-validation only");
+    expect(header.textContent).toContain("Tested within one public database only");
     expect(header.querySelector('[tabindex="0"]')).toBeNull();
     expect(document.querySelector('[role="note"]')).toBeNull();
   });
