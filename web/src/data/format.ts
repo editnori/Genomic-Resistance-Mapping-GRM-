@@ -29,6 +29,37 @@ export const speciesShort = (species: string): string => {
   return genus !== undefined && rest.length > 0 ? `${genus.charAt(0)}. ${rest.join(" ")}` : species;
 };
 
+/** Everyday names for species a general reader knows by another name, keyed
+ *  by the scientific name. Only names in wide everyday use; every other
+ *  species keeps its short scientific name, which for E. coli is already
+ *  the everyday one. */
+const EVERYDAY_NAME: ReadonlyMap<string, string> = new Map([
+  ["Mycobacterium tuberculosis", "TB"],
+  ["Neisseria gonorrhoeae", "Gonorrhea"],
+  ["Salmonella enterica", "Salmonella"],
+  ["Staphylococcus aureus", "Staph"],
+  ["Streptococcus pneumoniae", "Pneumococcus"],
+]);
+
+/** A species by the name a general reader knows: "Staph", "TB"; the short
+ *  scientific name ("K. pneumoniae", "E. coli") for any other species. */
+export const speciesName = (species: string): string => EVERYDAY_NAME.get(species) ?? speciesShort(species);
+
+/** Whether speciesName gives an everyday name, so a view that shows both
+ *  names never prints the same one twice. */
+export const hasEverydayName = (species: string): boolean => EVERYDAY_NAME.has(species);
+
+/** A species in a list of species: the scientific name, then the everyday
+ *  one where there is one: "Staphylococcus aureus (Staph)". */
+export const speciesOption = (species: string): string => (hasEverydayName(species) ? `${species} (${speciesName(species)})` : species);
+
+/** A dataset, one species tested against one antibiotic, as a title:
+ *  "Salmonella vs ciprofloxacin", "K. pneumoniae vs meropenem". A
+ *  non-breaking space keeps "vs" with the drug, so a wrapped title reads
+ *  "K. pneumoniae" over "vs meropenem". Ids, URLs and sort keys keep the
+ *  scientific name. */
+export const datasetTitle = (d: { species: string; antibiotic: string }): string => `${speciesName(d.species)} vs ${d.antibiotic}`;
+
 /** Sentence-case a lowercase drug name for a title or table cell. */
 export const capitalize = (s: string): string => (s === "" ? s : s.charAt(0).toUpperCase() + s.slice(1));
 

@@ -9,7 +9,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import type { Manifest, SpeciesReport, SpeciesRow } from "../data/schema";
-import { capitalize, distance, int, pct } from "../data/format";
+import { capitalize, distance, int, pct, speciesOption } from "../data/format";
 import { loadErrorText, useCorpus, useSpecies } from "../data/load";
 import { BEST_LEARNER_WORDS, NO_BEST_LEARNER } from "../data/derive/dataset";
 import { useKeptState, type Navigator } from "../app/router";
@@ -137,11 +137,12 @@ const SpeciesBody = ({
       </div>
 
       {s.genomes.length === 0 ? (
-        <PanelState kind="empty" title="This species file lists no genomes" />
+        <PanelState kind="empty" title="The file for this species lists no genomes" />
       ) : (
         <FigureBlock
           id="sp-structure"
           title="Lineages and resistance profiles"
+          question="The tree on top joins lineages by how closely related they are, and each row below is one drug. Read along a row to see which lineages carry resistance to that drug."
           actions={
             <Segmented<StructureView>
               ariaLabel="Show population structure as"
@@ -175,6 +176,7 @@ const SpeciesBody = ({
       <FigureBlock
         id="sp-cross"
         title="Cross-resistance"
+        question="Whether genomes resistant to one drug tend to be resistant to another. Phi runs from −1 to 1: above 0 the two resistances go together, and near 0 they are unrelated."
         result={
           summary.total === 0
             ? undefined
@@ -197,7 +199,11 @@ const SpeciesBody = ({
         caption={null}
       />
 
-      <Section id="sp-datasets" title="Antibiotic datasets">
+      <Section
+        id="sp-datasets"
+        title="Antibiotic datasets"
+        question="One row per dataset: this species tested against one antibiotic. Random and Lineage are the best learner's balanced accuracy, as on the Datasets page."
+      >
         <DataTable
           label={`${s.species} datasets`}
           rows={datasets}
@@ -212,12 +218,19 @@ const SpeciesBody = ({
             {
               id: "random",
               header: "Random",
-              tip: [{ term: "Random split", text: `Balanced accuracy on random splits of ${BEST_LEARNER_WORDS}.` }],
+              tip: [{ term: "Random split", text: `Balanced accuracy, the average of the share of resistant and the share of susceptible genomes called right, on test genomes picked at random; for ${BEST_LEARNER_WORDS}.` }],
               align: "right",
               sortValue: (d) => d.best_random,
               cell: (d) => (d.best_random === null ? NO_BEST_LEARNER : pct(d.best_random)),
             },
-            { id: "lineage", header: "Lineage", align: "right", sortValue: (d) => d.best_lineage, cell: (d) => pct(d.best_lineage) },
+            {
+              id: "lineage",
+              header: "Lineage",
+              tip: [{ term: "Lineages held out", text: "The same learner tested on whole lineages, groups of closely related genomes, that it never saw in training." }],
+              align: "right",
+              sortValue: (d) => d.best_lineage,
+              cell: (d) => pct(d.best_lineage),
+            },
           ]}
           empty={<p className="type-note">No dataset for this species has a report.</p>}
         />
@@ -245,12 +258,12 @@ export const SpeciesView = ({ manifest, nav }: { manifest: Manifest; nav: Naviga
 
   return (
     <div className={`${VIEW_SHELL} pb-16 pt-8`}>
-      <ViewHeader title={report === null ? "Species" : report.species} purpose="How genomes cluster into lineages, and how resistance follows them." status={<ReportStatus manifest={manifest} />} />
+      <ViewHeader title={report === null ? "Species" : report.species} purpose="A lineage is a group of closely related genomes, like one branch of a family tree. This page shows how one species' genomes fall into lineages, and how resistance follows them." status={<ReportStatus manifest={manifest} />} />
       <div className="mt-6 flex min-h-10 flex-wrap items-center gap-x-6 gap-y-3">
         <Field label="Species">
           <Dropdown
             ariaLabel="Species"
-            options={manifest.species.map((s) => ({ id: s.slug, label: s.species, disabled: s.genomes_analyzed === 0 }))}
+            options={manifest.species.map((s) => ({ id: s.slug, label: speciesOption(s.species), disabled: s.genomes_analyzed === 0 }))}
             mode={{ kind: "one", value: slug ?? "", onSelect: (v) => nav.go({ view: "species", species: v }) }}
           />
         </Field>
@@ -267,15 +280,15 @@ export const SpeciesView = ({ manifest, nav }: { manifest: Manifest; nav: Naviga
       {row !== undefined && row.genomes_analyzed > 0 ? <Coverage row={row} /> : null}
       {slug === null ? (
         <div className="mt-8">
-          <PanelState kind="empty" title="No species has a structure file yet" message="Species files appear once `grm structure` and `grm report` have run." />
+          <PanelState kind="empty" title="No species has a lineage map yet" message="A lineage map appears once the `grm structure` and `grm report` steps have run." />
         </div>
       ) : species.status === "loading" ? (
         <div className="mt-8">
-          <PanelState kind="loading" title="Loading the species file" />
+          <PanelState kind="loading" title="Loading the lineage map for this species" />
         </div>
       ) : species.status === "error" ? (
         <div className="mt-8">
-          <PanelState kind="error" title="This species file could not be read" message={loadErrorText(species.error)} />
+          <PanelState kind="error" title="The lineage map for this species could not be read" message={loadErrorText(species.error)} />
         </div>
       ) : report !== null && ui !== null ? (
         <SpeciesBody s={report} manifest={manifest} nav={nav} order={order} drug={drug} ui={ui} update={update} />

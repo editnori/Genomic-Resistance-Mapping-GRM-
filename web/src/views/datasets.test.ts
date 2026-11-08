@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { fixtureFile } from "../dev/fixtures/files";
 import { parseManifest } from "../data/validate";
 import type { Manifest } from "../data/schema";
-import { LEARNER_LABEL, pct, speciesShort } from "../data/format";
+import { datasetTitle, LEARNER_LABEL, pct, speciesShort } from "../data/format";
 import { BARS, barWords, verdictOf } from "../data/metrics";
 import { CATALOG_CUTOFF, catalogSummary, splitSummary } from "../data/derive/overview";
 import type { Navigator } from "../app/router";
@@ -120,11 +120,21 @@ describe("dataset catalog", () => {
     }
   });
 
-  it("keeps the species whole with its separator and lets a combination drug break after its slash", () => {
-    const base = manifest.datasets[0]!;
-    const cell = firstRowHtml(render([{ ...base, antibiotic: "sulfamethoxazole/trimethoprim" }]))[0]!;
-    expect(visible(cell)).toContain(`Sulfamethoxazole/trimethoprim${speciesShort(base.species)} · ${base.drug_class}`);
+  it("names the dataset by its title and lets a combination drug break after its slash", () => {
+    const base = { ...manifest.datasets[0]!, species: "Klebsiella pneumoniae", antibiotic: "sulfamethoxazole/trimethoprim" };
+    const cell = firstRowHtml(render([base]))[0]!;
+    // No everyday name: the title carries the short scientific name, so the
+    // line beneath gives the class alone.
+    expect(visible(cell)).toBe(`${datasetTitle(base)}${base.drug_class}`);
+    expect(visible(cell)).toContain("K.\u00a0pneumoniae vs\u00a0sulfamethoxazole/trimethoprim");
     expect(cell).toContain("/<wbr/>trimethoprim");
+    expect(cell).not.toContain("<i>");
+  });
+
+  it("keeps the scientific name whole with its separator under an everyday title", () => {
+    const base = { ...manifest.datasets[0]!, species: "Staphylococcus aureus", antibiotic: "oxacillin" };
+    const cell = firstRowHtml(render([base]))[0]!;
+    expect(visible(cell)).toBe(`Staph vs\u00a0oxacillin${speciesShort(base.species)} · ${base.drug_class}`);
     // The separator closes the species' unbreakable run, so no line starts with it.
     expect(cell).toContain(`<i>${speciesShort(base.species)}</i> ·</span>`);
   });

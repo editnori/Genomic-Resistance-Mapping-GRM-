@@ -758,7 +758,7 @@ async function interactions(page, tag, width) {
   } else {
     await page.getByRole('button', { name: 'Filters', exact: true }).click();
   }
-  await page.getByRole('checkbox', { name: /^Has MIC regression/ }).click();
+  await page.getByRole('checkbox', { name: /^Has MIC prediction/ }).click();
   await shot(page, tag + '-filters');
   const band = await page.locator('[data-view-options-panel] footer').textContent();
   check(tag + ' rail band: the filter count and Clear once a filter is set', band === '1 filterClear', band);
@@ -959,7 +959,7 @@ async function interactions(page, tag, width) {
   await headerCheck(page, tag + ' species', speciesName);
   await edgeCheck(page, tag + ' species', '[data-view-scroll] h1');
   const purpose = await page.evaluate(() => document.querySelector('[data-view-scroll] header h1 + p')?.textContent);
-  check(tag + ' species purpose line', purpose === 'How genomes cluster into lineages, and how resistance follows them.', purpose);
+  check(tag + ' species purpose line', purpose === "A lineage is a group of closely related genomes, like one branch of a family tree. This page shows how one species' genomes fall into lineages, and how resistance follows them.", purpose);
   const drug = page.getByRole('combobox', { name: /^Map drug/ });
   // The outline must sit on its drug's own row. The map's label column
   // draws each drug's name in a row of its own (Structure.tsx), so the

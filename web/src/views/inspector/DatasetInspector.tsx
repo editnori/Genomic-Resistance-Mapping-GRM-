@@ -8,7 +8,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { CatalogRow, DatasetReport, EvalConfig, EvaluationAudit, Manifest, Research } from "../../data/schema";
-import { capitalize, distance, int, mgL, pct, plural, speciesShort } from "../../data/format";
+import { datasetTitle, distance, int, mgL, pct, plural, speciesName } from "../../data/format";
 import { loadErrorText, useDataset, useIntervals, useResearch, type Resource } from "../../data/load";
 import { intervalsFor, type Intervals } from "../../data/intervals";
 import { splitAbsence, splitOf } from "../../data/derive/dataset";
@@ -222,7 +222,7 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
   const research = useResearch();
   const intervals = useIntervals(id);
   const row = manifest.datasets.find((d) => d.id === id);
-  const title = row === undefined ? id : `${capitalize(row.antibiotic)} in ${row.species}`;
+  const title = row === undefined ? id : datasetTitle(row);
   // The report's own audit once loaded; the manifest row's copy before.
   const audit = report.status === "ready" ? auditOf(report.data, manifest.evaluation_revision) : row === undefined ? null : auditOf(row, manifest.evaluation_revision);
   return (
@@ -234,12 +234,16 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
       >
         <header className="shrink-0 border-b border-hair pb-2.5 pt-3">
           <div className={`${COLUMN} flex flex-wrap items-start justify-between gap-x-6 gap-y-2`}>
-          <div className="min-w-0">
+          {/* The title block shrinks and its status line wraps, so the
+              buttons keep the title's line wherever both fit. */}
+          <div className="min-w-0 flex-1 basis-80">
             <h2 id="inspector-title" className="text-headline font-semibold tracking-tight text-ink">
               {title}
             </h2>
             {row !== undefined ? (
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-note text-muted-text">
+                <i>{row.species}</i>
+                <span aria-hidden="true">·</span>
                 {audit !== null ? (
                   <>
                     <AuditWords audit={audit} />
@@ -256,7 +260,7 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
           <div className="flex items-center gap-2">
             {row !== undefined ? (
               <GhostButton onClick={() => nav.go({ view: "species", species: row.species_slug })}>
-                {speciesShort(row.species)} structure
+                {speciesName(row.species)} lineages
               </GhostButton>
             ) : null}
             <GhostButton onClick={nav.closeDataset}>Close</GhostButton>

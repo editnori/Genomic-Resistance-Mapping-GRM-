@@ -52,11 +52,13 @@ const MarkerList = ({ title, markers, chosen, onToggle }: { title: string; marke
           <li key={m.key}>
             <label className={`flex cursor-pointer items-start gap-3 rounded-md px-1 py-1.5 transition-colors duration-fast ease-out hover:bg-surface-subtle has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue`}>
               <input type="checkbox" checked={chosen.has(m.key)} onChange={() => onToggle(m.key)} className="mt-1 h-4 w-4 shrink-0 accent-[rgb(var(--blue))]" />
-              <span className="min-w-0 flex-1">
+              {/* The name and the R·S count share a baseline: the count's
+                  smaller type would otherwise sit high beside the name. */}
+              <span className="min-w-0 flex-1 self-baseline">
                 <span className="block text-control font-medium text-ink">{m.label}</span>
                 {m.detail !== null ? <span className="block text-tiny text-muted-text">{m.detail}</span> : null}
               </span>
-              <span className="shrink-0 text-right text-tiny tabular-nums text-muted-text">
+              <span className="shrink-0 self-baseline text-right text-tiny tabular-nums text-muted-text">
                 {int(m.r)} R · {int(m.s)} S
               </span>
             </label>
@@ -121,7 +123,10 @@ export const PanelDesigner = ({ r }: { r: DatasetReport }) => {
   return (
     <div id="ds-designer" className="mt-8 scroll-mt-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h3 className="text-body font-semibold text-ink">Marker designer</h3>
+        <div className="min-w-0 flex-1 basis-60">
+          <h3 className="text-body font-semibold text-ink">Marker designer</h3>
+          <p className="mt-0.5 text-note text-muted-text">Build a test from the markers below, pieces of DNA or known genes, and see how many isolates it would call right.</p>
+        </div>
         <Segmented<"any" | "all">
           ariaLabel="Call resistant when"
           options={[{ id: "any", label: "Any marker present" }, { id: "all", label: "All markers present" }]}
