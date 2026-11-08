@@ -129,7 +129,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
         : "No learner result is recorded for this dataset."
       : `${LEARNER_NAME[best.learner]} scores ${pct(best.metrics.balanced_accuracy)} on random splits${
           bestLineage === undefined ? "" : ` and ${pct(baOf(bestLineage))} with lineages held out`
-        }${catalogBa === null ? "." : `; the catalog alone scores ${pct(catalogBa)}.`}`;
+        }${catalogBa === null ? "." : `; the known-gene catalog alone scores ${pct(catalogBa)}.`}`;
 
   // Higher random-split scores that lose to the best learner because they
   // leave isolates uncalled. The note sits outside the error toggle, so it
