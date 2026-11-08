@@ -661,21 +661,43 @@ Every k31 root's genomes are pool genomes counted at the pool's k, so their kset
 
 `python3 -B run.py combine SPEC --work-from WORK [--work-from WORK ...] --master-manifest FILE --out DIR`
 
-Splitting a species by arms would change its union and so its grouping. Splitting by datasets keeps the union, the grouping and each dataset's default arm, and `combine` then puts the parts back together.
+Splitting a species by arms would change its union and so its grouping, except for k arms, whose cohort is the default's. Splitting by datasets keeps the union, the grouping and each dataset's default arm. So a part holds some of SPEC's datasets and every arm, or every arm but the k arms, which a k add-on part runs (G2(b), below). `combine` then puts the parts back together.
 - **What a run now keeps for it:** `WORK/spec.json` (the spec as canonical JSON, so its sha256 is K's `protocol_sha256`) and `WORK/raw-manifest.txt` (the RAW file list `inputs.json` hashes).
 - **The pinned master manifest (REVIEW-H1CODE L6).** SPEC's `data_root.manifest_sha256` names it; `--master-manifest` must hash to it, and a spec without it refuses. `load_spec` refuses a `data_root` whose `manifest_sha256` isn't a sha256.
 - **Refusals,** before any arm output is read:
-  - a part's spec differs from SPEC in anything but `datasets` (naming the keys), or K's manifest wasn't made from it;
-  - a part lists a dataset SPEC doesn't (or with another partition), a dataset is in two parts, or a dataset of SPEC is in none;
-  - the parts differ in the species pool (`species-groups.json` without its structure path, so two boxes' WORK paths may differ), the grm binary or the vocabulary (`inputs.json`), the source commit, `synthetic` or the gate (K's manifest), or eligible genomes and the panel floor;
+  - a part's spec differs from SPEC in anything but `datasets` and `arms` (naming the keys), or K's manifest wasn't made from it;
+  - a part's arms aren't SPEC's arms in SPEC's order, as SPEC states them, with only k arms left out; a k add-on part (it has `reference.json`) holds anything but k arms as SPEC states them;
+  - a part lists a dataset SPEC doesn't (or with another partition), a dataset is in two main parts, or a dataset of SPEC is in none;
+  - an arm on a dataset is in two parts, or an arm of SPEC on a dataset is in none;
+  - a k add-on part takes its datasets from more than one main part, or its `reference.json` names another run than the main part that holds them;
+  - the parts differ in the species pool (`species-groups.json` without its structure path, so two boxes' WORK paths may differ, and without its arm list, since a main part that leaves out the k arms lists fewer arms over the same union), the grm binary or the vocabulary (`inputs.json`), the source commit, `synthetic` or the gate (K's manifest), or eligible genomes and the panel floor;
   - K's `binary_sha256` isn't the grm the part's `inputs.json` hashed;
   - a part's `raw-manifest.txt` isn't the manifest `inputs.json` hashed, or any of its RAW files is missing from the master manifest (sha256sum lines) with that sha256;
   - `--out` is not new or empty, or a part lacks an arm's output on one of its datasets.
 - **Each arm output is checked before it is copied (REVIEW-H1CODE L2)** against its part's `resume.json`: no folder on its path from the part's `arms/` (`arms/`, `arms/<arm>`, `arms/<arm>/<dataset>`) is a symlink (REVIEW-H1CODE-B L-a); the record names that arm and dataset, was made from the part's `inputs.json` and spec, records both run flags (a record without them refuses, naming the file: L-b), lists `runs.json`, `predictions.jsonl` and `arm.json`, and the folder holds exactly the files it lists, none a symlink, each with its recorded sha256. Every arm of every part must have run with the same `--trace-training` and `--run-identical-cohorts`.
 - **Output.** It copies each part's `arms/<arm>/<dataset>/`, then runs J and K as a run does (`report_run`): one `stats.finalize`, so one BH family per species over every part's lineage contrasts; K's manifest and report with SPEC's `protocol_sha256`; and `summary.json`. `combine.json` and `summary.json`'s `combine` record the master manifest and its sha256, and each part's WORK, spec sha256, datasets, RAW manifest sha256 and species grouping sha256. K's manifest is a closed schema, so the part hashes are not in it.
 - **Timings.** J's records are byte-identical to the unsplit run's. K's manifest and report differ only in timings: each run's `seconds`, `compute.actual_seconds`, the report's sha256 of the manifest (`inputs_sha256.manifest`), and the Markdown's seconds and input-hash lines. `tests/input_comparison/test_run.py` `timeless` is that comparison.
-- **Tests.** `CombineEndToEndTests` (e2e): `synthetic_root.py --second-drug` adds a ciprofloxacin dataset (QRDR carriers resistant, flips from their own stream; the default root is byte for byte the same without it, `test_the_second_drug_adds_its_records_and_changes_nothing_else`). A comparison over both datasets (1,200 genomes, cap-600 and k-c and the sentinel; H has no ciprofloxacin panel, so k-h would not be produced there) runs whole and as two one-dataset parts. Combining the parts equals the whole run after timings, its predictions and summary decisions included. Combining the whole run alone gives its own J and K (H1-PLAN §7 acceptance 11). `CombineRefusalTests` checks every refusal on fabricated parts, the master-manifest pin and the arm-output checks (a truncated predictions file, an extra file, a missing record, a link, a record of another arm, other inputs or another spec, and mixed flags) among them.
-- **Not built:** `--reference-from` (G2(b)), which only the k add-on needs.
+- **Tests.** `CombineEndToEndTests` (e2e): `synthetic_root.py --second-drug` adds a ciprofloxacin dataset (QRDR carriers resistant, flips from their own stream; the default root is byte for byte the same without it, `test_the_second_drug_adds_its_records_and_changes_nothing_else`). A comparison over both datasets (1,200 genomes, cap-600, k-c and k21 and the sentinels; H has no ciprofloxacin panel, so k-h would not be produced there) runs whole and as one-dataset parts, one of them with a k add-on (G2(b), below). Combining the parts equals the whole run after timings, its predictions and summary decisions included. Combining the whole run alone gives its own J and K (H1-PLAN §7 acceptance 11). `CombineRefusalTests` checks every refusal on fabricated parts, the master-manifest pin and the arm-output checks (a truncated predictions file, an extra file, a missing record, a link, a record of another arm, other inputs or another spec, and mixed flags) among them.
+
+### The k add-on (`--reference-from`, G2(b))
+
+`python3 -B run.py SPEC --raw RAW --work WORK --grm GRM --source-commit SHA --reference-from MAIN [...]`
+
+Layth lifted register §13 G2 on 8 Nov 2026, so H-1 runs k21 and k25. A k arm's cohort is the default's, so it changes neither the union nor the grouping, and it is scored on the default arm's plans (`k31_groups`). So its runs can go on boxes of their own: a main part runs every arm but the k arms, and a k add-on runs only k arms against the main part's finished WORK, MAIN.
+- **Checks, before anything is counted.** SPEC must hold k arms only, and each k arm's cohort must be the default's. MAIN must be a finished run, read as `combine` reads a part, and not an add-on itself. Then:
+  - its spec may differ from SPEC only in `arms` and `datasets`, and K's manifest must have been made from it;
+  - it ran each of SPEC's datasets with the same partition and none of SPEC's k arms;
+  - it ran the same grm binary and vocabulary, source commit, `synthetic` flag, gate outcome, eligible genomes and panel floor;
+  - every RAW file of this run is in its `raw-manifest.txt` with that size and sha256.
+- **Copies.** For each dataset, the default arm's and both sentinels' outputs. Each is checked against MAIN's `resume.json` as `combine` checks an arm output, must have run with this run's flags, and is copied whole, `resume.json` too, then compared file for file. A linked destination refuses. The add-on writes `WORK/reference.json` (MAIN, the sha256s of its spec and `inputs.json`, the grouping and each copy's `resume.json` sha256), takes MAIN's `species-groups.json` as its own, and records MAIN's grouping sha256 in each k arm's `resume.json`. `summary.json`'s `reference_from` is `reference.json`.
+- **Runs.** No species pool, no default arm and no sentinel: only the k arms' roots, counted at their own k, and the k arms. The disk check counts only those roots (`pool_bytes` 0). A rerun copies the default and sentinels again and resumes a finished k arm. With `--estimate-only`, `--reference-from` plans the k roots alone and MAIN is not read.
+- **In `combine`.** An add-on part's k arms must have been scored on the main part's default plans (their `resume.json` `reference_plans`), and its default and sentinel copies must equal the main part's byte for byte. `combine` takes the k arms from the add-on and every other arm from the main part. `combine.json` records each part's arms and, for an add-on, the main part it ran against.
+- **Tests.**
+  - `ReferenceTests` (stub grm): an add-on takes the default and sentinels and runs only k21, with one `grm arm` call, count, structure and matrix at k 21 only, and no pool root. A rerun resumes k21 on a fresh copy, and `--estimate-only` plans the k21 root alone.
+  - `ReferenceTests`' refusals: 20 references that differ each refuse before anything is counted. They are a cohort arm or no arm in SPEC, another margin, another partition, k21 already run, another grm, vocabulary, binary, commit, `synthetic` flag, gate, eligible count or floor, a K manifest not made from the spec, a RAW file MAIN didn't hash, other run flags, a reference that is itself an add-on, a damaged default, a missing sentinel and an unfinished run. A linked copy destination refuses too, with nothing written through it.
+  - `CombineRefusalTests`: two main parts without k21 and k25 and three add-ons (k21 and k25 on one, one each on the other) reach the report in either order, and missing add-ons leave named gaps.
+  - `CombineRefusalTests`' refusals: an arm in two parts, an add-on with a cohort arm or a restated, repeated or empty k arm list, an add-on over two main parts, a `reference.json` naming another run or no record, another pool, a changed, missing or linked copy, other reference plans and a damaged k arm. A main part that leaves out, reorders, restates or adds a non-k arm refuses too.
+  - `CombineEndToEndTests` (e2e) now runs cap-600, k-c and k21: part1 runs every arm on meropenem, part2 every arm but k21 on ciprofloxacin, and `part2-k21`, a k add-on against part2, runs k21 there. Combining the three equals the whole run after timings. The add-on counted no pool, its copies equal part2's, and its k21 predictions are the whole run's byte for byte.
 
 ### Resume (G6)
 
@@ -715,21 +737,29 @@ H-1's species check of the newly fetched genomes fails 16 Salmonella Typhi. Revi
 - `decisions`: the H-1 rulings;
 - `species`;
 - `datasets`: revision 12's reported datasets, all confirmatory;
-- `arms`: k21 and k25 dropped (M-2 after REGAUDIT);
+- `arms`: all of `spec.json`'s in the species specs (Layth lifted register §13 G2 on 8 Nov 2026), every arm but k21 and k25 in a main part, one k arm in a k add-on part;
 - `pool_budget.default_kset_bytes`, with its source in `pool_budget.reason` (D2): revision 12's stage kset total ÷ 2,000, rounded up;
 - `revision12_gate.recorded`: H-1's drawn order and view (above), with the H-1 root's species check `c2e7c389…` named in its note;
 - `data_root` (main's ruling after REVIEW-H1DATA): the H-1 data root `/home/layth/review/grm-h1-data-root-20261107/` (hard links to the master root's files plus H1DATA's 9,394 FASTAs and species check, read only; the master root stays untouched) and its manifest, H1DATA's `MASTER-MANIFEST-h1.sha256`, pinned at `7dd00779…` for `combine`. The run takes it, or a box's copy pushed from that manifest, as `--raw`; it writes only under `--work`.
 
 | File | Species | Datasets | Arms | kset bytes per genome (stage) |
 |---|---|---:|---|---:|
-| `pilot.json` | Salmonella | 1: `salmonella_enterica__ciprofloxacin` (D1) | grr-v1, k-c-h-p, budget-16000 | 29,147,870 (R10) |
-| `h1-salmonella_enterica.json` | Salmonella | 25 | 9 | 29,147,870 (R10) |
+| `pilot.json` | Salmonella | 1: `salmonella_enterica__ciprofloxacin` (D1) | grr-v1, k21, k-c-h-p, budget-16000 | 29,147,870 (R10) |
+| `h1-salmonella_enterica.json` | Salmonella | 25 | 11 | 29,147,870 (R10) |
 | `h1-salmonella_enterica-part1.json`, `-part2.json` | Salmonella | 13 and 12 (SAL-1, SAL-2: alternate ranks of revision 12's per-dataset time) | 9 | 29,147,870 |
-| `h1-mycobacterium_tuberculosis.json` | MTB | 22 | 9 | 25,881,860 (R7) |
-| `h1-staphylococcus_aureus.json` | S. aureus | 18 | 9 | 16,812,689 (R3) |
-| `h1-neisseria_gonorrhoeae.json` | N. gonorrhoeae | 7 | 9 | 12,750,902 (R1) |
+| `h1-salmonella_enterica-part1-k21.json`, `-part1-k25.json`, `-part2-k21.json`, `-part2-k25.json` | Salmonella | part1's 13 or part2's 12 | 1 | 29,147,870 |
+| `h1-mycobacterium_tuberculosis.json` | MTB | 22 | 11 | 25,881,860 (R7) |
+| `h1-mycobacterium_tuberculosis-part1.json`, `-part1-k21.json`, `-part1-k25.json` | MTB | 22 | 9, 1 and 1 | 25,881,860 |
+| `h1-staphylococcus_aureus.json` | S. aureus | 18 | 11 | 16,812,689 (R3) |
+| `h1-staphylococcus_aureus-part1.json`, `-part1-k21.json`, `-part1-k25.json` | S. aureus | 18 | 9, 1 and 1 | 16,812,689 |
+| `h1-neisseria_gonorrhoeae.json` | N. gonorrhoeae | 7 | 11 | 12,750,902 (R1) |
+| `h1-neisseria_gonorrhoeae-part1.json`, `-part1-k21.json`, `-part1-k25.json` | N. gonorrhoeae | 7 | 9, 1 and 1 | 12,750,902 |
 
-The nine stage-1 arms are cap-1000, cap-4000, grr-v1, k-c, k-h, k-p, k-c-h-p, budget-1000 and budget-16000, and `run.py` adds the sentinel. The Salmonella parts equal the full spec but for `datasets`, so `combine` takes them. The gate's pins, panel floor, base rates, curate inputs, learners, splits, repeats, margin and seed are `spec.json`'s; only the gate's `recorded` values are H-1's (above). The k add-on's specs are not here: they run only if Layth lifts register §13 G2. `H1SpecTests` checks all of this. The lane report has each spec's `--estimate-only` on the master root.
+The 11 stage-1 arms are cap-1000, cap-4000, grr-v1, k21, k25, k-c, k-h, k-p, k-c-h-p, budget-1000 and budget-16000, and `run.py` adds the sentinels.
+
+A species runs as its main parts, each with the nine arms that aren't k arms, and a k21 and a k25 add-on part per main part, each run with `--reference-from` that main part's WORK. `combine` of a species' full spec takes them all. Every part equals its species spec but for `datasets` and `arms`. The pilot runs k21 in its own run, with no add-on part, so it times a k21 root on real data.
+
+The gate's pins, panel floor, base rates, curate inputs, learners, splits, repeats, margin and seed are `spec.json`'s; only the gate's `recorded` values are H-1's (above). `H1SpecTests` checks all of this, and feeds each species' parts to `combine`'s checks as finished parts. The lane report has each spec's `--estimate-only` on the master root.
 
 ## Cost
 

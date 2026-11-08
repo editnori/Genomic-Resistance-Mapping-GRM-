@@ -1,0 +1,257 @@
+{
+  "format": "grm-input-comparison-spec",
+  "version": 1,
+  "decisions": "DECISIONS V-1 and H-1 and the rulings after lane INPUT and after H1PLAN (main, under Layth's 5 Nov 2026 delegation): one factor at a time against the default; k21 and k25 run, since Layth lifted register section 13 G2 on 8 Nov 2026 and asked that no arm be skipped (ruling M-2 after REGAUDIT had held it until then); each runs as a k add-on part (G2(b), run.py --reference-from) against the main part that holds its datasets and leaves the k arms out; cohort arms pair by common_outer_test_set_balanced; the group draw groups genomes by BV-BRC MLST sequence type; the selection seed 1 and the log-loss margin 0.02 (descriptive only, it decides nothing) are decided values",
+  "panel_floor": {
+    "min_eligible_genomes": 2001,
+    "reason": "main's ruling on REVIEW-INPUT M1: an H-1 species needs more than 2,000 eligible genomes, so cap-4000 and grr-v1 change the genome set"
+  },
+  "base_rates": {
+    "cap-down": {
+      "rate": 0.14,
+      "ci95": [
+        0.0,
+        0.2916
+      ],
+      "seeds": 10,
+      "source": "re-keying near twin (synthetic, 2,020 genomes, pool = all 2,020; REVIEW-INPUT5 got identical rates with the arms' union as pool; default = pool minus 5 lineage minima and 10 others; the twin drops 5 genomes, 2 of them their lineage's lowest default id), seeds 301-310, lineage split; 95% t interval over seeds, lower bound clamped at 0; measured on 5-genome changes; its relation to larger cohort changes is unmeasured"
+    },
+    "cap-up": {
+      "rate": 0.16,
+      "ci95": [
+        0.0472,
+        0.2728
+      ],
+      "seeds": 10,
+      "source": "re-keying near twin (synthetic, 2,020 genomes, pool = all 2,020; REVIEW-INPUT5 got identical rates with the arms' union as pool; default = pool minus 5 lineage minima and 10 others; the twin adds 5 genomes, 2 of them below their lineage's lowest default id), seeds 301-310, lineage split; 95% t interval over seeds; measured on 5-genome changes; its relation to larger cohort changes is unmeasured"
+    },
+    "selection-swap": {
+      "rate": 0.18,
+      "ci95": [
+        0.0087,
+        0.3513
+      ],
+      "seeds": 10,
+      "source": "re-keying near twin (synthetic, 2,020 genomes, pool = all 2,020; REVIEW-INPUT5 got identical rates with the arms' union as pool; default = pool minus 5 lineage minima and 10 others; the twin drops 5 and adds 5 genomes, 2 of them each way at a lineage's lowest default id), seeds 301-310, lineage split; 95% t interval over seeds; measured on 5-genome changes; its relation to larger cohort changes is unmeasured"
+    }
+  },
+  "pool_budget": {
+    "default_kset_bytes": 29147870,
+    "max_disk_share": 0.8,
+    "root_overhead_share": 0.1,
+    "arm_output_share": 0.05,
+    "work_files_bytes": 67108864,
+    "reason": "main's rulings on REVIEW-INPUT4 to REVIEW-INPUT7 (M1, L4): before anything is counted, refuse a comparison whose still-unwritten ksets (the pool and every data root), matrices (10% of a root's ksets), arm outputs (5% of the roots' ksets), the pool's curated/ copy (measured) and WORK-level files (64 MiB) would take more than 80% of the free disk. The per-genome size is the mean of the species' own counted ksets in RAW, else 27.5 MiB (REVIEW-INPUT4's Salmonella estimate). The kset size, the 10%, the 5% and the 64 MiB are stated figures until H-1 measures real per-species ksets and matrices. H-1 (DECISIONS D2 after H1PLAN): default_kset_bytes is revision 12's measured kset size for salmonella_enterica, 29,147,870 B per genome: stage R10's kset total of 58,295,739,196 B (its guard's max_ksets) over its 2,000 genomes, rounded up"
+  },
+  "curate_inputs": {
+    "species_check": true,
+    "sigdrug_vocabulary": true,
+    "reason": "main's ruling on REVIEW-INPUT7 M1: every root curates as revision 12's S0 did, with RAW's species-check/ linked and GRM's SigDrug vocabulary copy (the one S0 used, from grm-r9-curate/vocabulary) passed to grm curate"
+  },
+  "revision12_gate": {
+    "genome_set": {
+      "mycobacterium_tuberculosis": "ec0587d1bc19b30be781bdb60030e1db4b71689b395954445badcbb6f1fc91b8",
+      "neisseria_gonorrhoeae": "5f84c518dfd2df31a32cb5fcbf69cbcce829d5157d72bc2c34f65a074c4854ab",
+      "salmonella_enterica": "26ff23b93fdaaee2e079787e702ac116e7d7b72344f8b417ecfd8bdbc66c8c17",
+      "staphylococcus_aureus": "e76e7295671758dda9da248ac71181299fe6bc2346ae46cb47e5f989eddaaae7"
+    },
+    "datasets": {
+      "mycobacterium_tuberculosis": {
+        "mycobacterium_tuberculosis__amikacin": "f8ced6b2da0f9b46c881315442c92937030cd35c77f8b3542a6fddc9dba8397b",
+        "mycobacterium_tuberculosis__amoxicillin": "b7ecb478d5a368c770ee5c32a1f1868dfaa171c129b9fdfd7f3d2e7bf1f32998",
+        "mycobacterium_tuberculosis__capreomycin": "f87eee9799be35f786aa538f43da0da9169052059d1a1c7a82524f5f32989ca7",
+        "mycobacterium_tuberculosis__ciprofloxacin": "b7810d098fb45cd32a5152475f5ed0235d63a1a7ec86bfc8f108d7971b318dc8",
+        "mycobacterium_tuberculosis__clofazimine": "0e63e2ec86399eb3a662b9d5caf27cbbb17285e3854a30093b013517fd81d350",
+        "mycobacterium_tuberculosis__cycloserine": "dd51a50243e3f36c90cef6dd381eaa5185756c7c412bd464b4430e6002c0d67b",
+        "mycobacterium_tuberculosis__delamanid": "e2bac42b2fa50bfcbf77a2fcb411e67ab21c6b4fe63089c74f79de477a733655",
+        "mycobacterium_tuberculosis__ethambutol": "f0ae3b71ec726efbcc5f198bcc717ca98edcd42addb20dfd6e5204324fccb901",
+        "mycobacterium_tuberculosis__ethionamide": "e6eac7741ab413d090fa7f8d8828b6799bcddc4ae9a64860d3aa3fe50ba6b1ee",
+        "mycobacterium_tuberculosis__isoniazid": "03f8cda65b4038cbf2d8bc2df18d3c591b9e938d11642abad6f9f4934e503665",
+        "mycobacterium_tuberculosis__kanamycin": "d897864c35273cdef278ce69730fec3cb4b8231cc05f165f93b63c10af4cb115",
+        "mycobacterium_tuberculosis__levofloxacin": "f414a7978741011464d27e381bb3703dc4c3db69ddcf2a84c14ff617668b43e1",
+        "mycobacterium_tuberculosis__linezolid": "29dc86f28fe690616dee0b53a1e7eca8ffda2b8929f89af3d0b62b3c8150096d",
+        "mycobacterium_tuberculosis__moxifloxacin": "68b6ea03e4e41703f69c641c593e1999fba259badd93ae32c9a1678131cdc3b6",
+        "mycobacterium_tuberculosis__nicotinamide": "b87b398d7fb0c6d1825e15273c0e351e1fa6530a21b1bc236b679c7cae0bef58",
+        "mycobacterium_tuberculosis__ofloxacin": "7b22baab32ed9faf6c0424e43fc5179afad64871c2187113a0fe8c1c4b4875bc",
+        "mycobacterium_tuberculosis__para_aminosalicylic_acid": "faa457767fea8ddcf33512bb6a5a580674fb3b48c1ee880ed194e3dd4f4472e1",
+        "mycobacterium_tuberculosis__prothionamide": "7d19ceac5c8f9590b362a70563a871059a84747f2f7ebb63e27719b428d7707a",
+        "mycobacterium_tuberculosis__pyrazinamide": "3f5525963ed156fc67d22e5df4bcbfa6f7fc035b436d655135df55054e566820",
+        "mycobacterium_tuberculosis__rifabutin": "d2007762a80b0cc6536b622273e9eecc8c450e47b837fecb46b65acf04a5b796",
+        "mycobacterium_tuberculosis__rifampin": "7367ecaa6e378c5509890ed5884c12fd2c4585f29cf44b07ab8e413df46c6e7e",
+        "mycobacterium_tuberculosis__streptomycin": "53e712e0891bf77dcf2d54df415f3b42d23b19e528a93b31b513f5bd0ea0d64c"
+      },
+      "neisseria_gonorrhoeae": {
+        "neisseria_gonorrhoeae__azithromycin": "03a146222fa4c09d237b20819ae1e9e7842fee02f43c12908cee7fcf0a7957dd",
+        "neisseria_gonorrhoeae__cefixime": "13a136003a25a954bee069e46268710862f934f2ac6611bb2b71adb7a03e3d46",
+        "neisseria_gonorrhoeae__ceftriaxone": "18f7d7c07b3042eb7866b2956f93cacd4ad4188990ffee326b234150c59a887a",
+        "neisseria_gonorrhoeae__ciprofloxacin": "e95e2a8bae91fae73af4e9868bc668abcd4c898c3080154a5df261eca7fc0d92",
+        "neisseria_gonorrhoeae__erythromycin": "4313a6e796ffb0813b964974ea5577543ee1d265ac6c049d676c21b6f5af8429",
+        "neisseria_gonorrhoeae__penicillin": "a52b86480fe5503e2ed7741f572786d38dfb422d829658c2cdb2537aa5b1fc62",
+        "neisseria_gonorrhoeae__tetracycline": "f7623746e298d0a2dbd3e5c0b5b9b045ba1a9c5c8e39c1c95fc3827d097543c4"
+      },
+      "salmonella_enterica": {
+        "salmonella_enterica__amoxicillin_clavulanate": "18c713a81218836105cf7d30f82c81dbe96236075f674e9a88f7fa693d79d1a9",
+        "salmonella_enterica__ampicillin": "f77d87510e87fb9ac5d3b6497fdd760a59399fb92f2a8c6f2a2b43e771a85724",
+        "salmonella_enterica__ampicillin_sulbactam": "7da7e9931a4ef6e24b58acd18bdeacc132f3c64682f40ad53c078c8df4da5c20",
+        "salmonella_enterica__azithromycin": "1a32eea348a855d82d601b01fbe8461d3940ab7f27908aa00c964dad4e01dcc8",
+        "salmonella_enterica__cefazolin": "b178759ce81779f85cc1e648a09eeda0ea1216d626bc14ff345164f138a40083",
+        "salmonella_enterica__cefotaxime": "162046fde473369e86a137f6a9c734ca3cb58c04d930f063b1e0b448480cafaa",
+        "salmonella_enterica__cefoxitin": "02c4b844d9c2f13b5aa1259070a37f54a0e66c022e657f530cc1d82aa3356505",
+        "salmonella_enterica__ceftazidime": "94bb6cc96d3568b359d8b213ce357ea7b7deb770ce6d0eeaccfd7d87b59ed512",
+        "salmonella_enterica__ceftiofur": "159bafec4d91221a51fbb9e0c77b06b7f6726f45e0fb26868638955fb8a9d508",
+        "salmonella_enterica__ceftriaxone": "dea5821393d474fccb86f2c8e36101e61537738dc7dcbd923c2ede06e748c93e",
+        "salmonella_enterica__chloramphenicol": "dda5633b09dd57a9fc9602ea14560446da0b983c2b016a2dcf88e89261882963",
+        "salmonella_enterica__ciprofloxacin": "d96774c4f6740dd58d9370b0e9935f41344141555876d8c66dc4e54cf5d703b2",
+        "salmonella_enterica__gentamicin": "eca628e7f1c2efdb4b34971a87a92da72a46dc6ee2635ef61feea0857dc830f0",
+        "salmonella_enterica__kanamycin": "39c1a2d15d762ef3852c07b4c300b35f65af71e99a16b2865d785b6b103e0302",
+        "salmonella_enterica__nalidixic_acid": "777eacfba7f1661dec9d69c13fb0d75a7c0a50e000dff0b2a3c22196f327acff",
+        "salmonella_enterica__pefloxacin": "01d743bc92c2c0d2cd895c36d949d85a3ce21dac77203f15b4fced81c9c24c3a",
+        "salmonella_enterica__spectinomycin": "7274d236a16d9b929695468cdbdfcb0850c055de825f0b65ea5c6ab4931bad62",
+        "salmonella_enterica__streptomycin": "4c7e8a7d1b4b0ab3fa2315564657ea3d26cd48b18cd2028ba0b7bb503a8f19e7",
+        "salmonella_enterica__sulfamethoxazole": "43d0fa218a2e6e55cd397582f2edad5786c5c863ae34dd045394c42aa212233b",
+        "salmonella_enterica__sulfamethoxazole_trimethoprim": "dab4cf791351545c75aea0034ad34cdc2c8e45e6ebb2a447ea54efff5d221faf",
+        "salmonella_enterica__sulfathiazole": "aa9412c59f048b7ad16cfeb8c45ba90d46612fe3a40cf0d6d2d8bb459b94a6e2",
+        "salmonella_enterica__sulfisoxazole": "38d31a1428d5e87a2346fce248530b5db327ee04dce0202cc3a7a68290991507",
+        "salmonella_enterica__temocillin": "db3ee933917e3c6bb8c3923e0d11898adf1a300abf4a5946401c3d3de1b9147a",
+        "salmonella_enterica__tetracycline": "da06174f0654880ef43e67d4da2136a88e5ce6b718b6d910a0fbe1b18ef73f52",
+        "salmonella_enterica__trimethoprim": "419bf314e35024b96c25347b7973d2534e3e91a395d367dc0f7b7c98e9254d7e"
+      },
+      "staphylococcus_aureus": {
+        "staphylococcus_aureus__cefoxitin": "30295762fe3f58fc2791bccf6203598df74d29a4849853b6eaeabacad9345b58",
+        "staphylococcus_aureus__ceftaroline": "4a4b7e4db19cc25676d6df7dbb7788eda78a18f0427467e224a3f57788566230",
+        "staphylococcus_aureus__chloramphenicol": "0082e7e7a43fb199d81bc40fb2e5bfdfff99d5a60d4ad23430f6e4cfb1faab3a",
+        "staphylococcus_aureus__ciprofloxacin": "b647ba23e87b4580f8b575d78890e43e5a82011a90dd0e25fcb6cc79641fb08b",
+        "staphylococcus_aureus__clindamycin": "39e96435697e02952dcd596d9a163eb21679ad5e0d18f7e34c6eec150c2bb2e1",
+        "staphylococcus_aureus__daptomycin": "2158108a2b94435230ef80b4c99bf741ed2a06b672d903a31deeffff68a1993b",
+        "staphylococcus_aureus__erythromycin": "ad10f9638ed1bb1f9282ed511626ce57c3660ac3f0dbfef24d59b496a57509ce",
+        "staphylococcus_aureus__fusidic_acid": "fae93649f3f4c119bf2d18603360fc17534f784804e3a4383ca94e87d8fea04b",
+        "staphylococcus_aureus__gentamicin": "fd94d9d2446a8bffc51f947ff711f3350901f9ac2900d856b57d6927533653ed",
+        "staphylococcus_aureus__levofloxacin": "1b72848a42ab9a0f5ebce0447272cb8e761f18637fedfd6c62446ea066bb3209",
+        "staphylococcus_aureus__methicillin": "923e8fcff675581b73fd4f4717df69c41f2e3ce7fa37e140cb7e888a49e23c6a",
+        "staphylococcus_aureus__moxifloxacin": "a6f87e80b270d8854ec5ba3b49f33c7be23bdbee7474d5af7711633629c92441",
+        "staphylococcus_aureus__mupirocin": "2fec6a5e813a4e2205adcc4feceed6ed3e97c3319ed9aad8519bfa3e3b82c692",
+        "staphylococcus_aureus__oxacillin": "079213fa0952625f1657861f390f97adf103f9807097226aff5be30ab62317e2",
+        "staphylococcus_aureus__penicillin": "042835cd958bf2f5305ac234f389f620bc4caeb0f78a411c6a8a7b4439d7b90c",
+        "staphylococcus_aureus__rifampin": "9d35af3666e8615f6dbc7f606dfa4839fdc900fc9846cf76aacd0cbd627d61f9",
+        "staphylococcus_aureus__sulfamethoxazole_trimethoprim": "6782514b711ba061ec99d00d077eea8d4a4603f2b8570a2d2f9bc0caf96869d3",
+        "staphylococcus_aureus__tetracycline": "1ff924bb0db0a2d66de24e566dc671160fdaf95018b5302ce5f4e25eb8d06eb2",
+        "staphylococcus_aureus__vancomycin": "083a44afb4d4640ed56378c38dc612255fdbad5d36ee229d96f0d2d689153f4a"
+      }
+    },
+    "reference": {
+      "files": {
+        "curated/datasets.json": "5519c61d281a685b58b33e1870f7b4186911394773224295ec81c26c8d0096a8",
+        "curated/phenotypes.jsonl": "c56481f99d037ebcc44a2cafe585a20460c872317350167af49ae3678c18415d",
+        "species/mycobacterium_tuberculosis/genomes.txt": "b104d8bd7ffaa2d0dc3032fe30ca0c0b32670a7099a02bcd49860e5c77f59a64",
+        "species/neisseria_gonorrhoeae/genomes.txt": "03985e841ff3f9a931c98d9881ee99b0ae1891470e2b8235d4dd471b42279c3b",
+        "species/salmonella_enterica/genomes.txt": "5864bd5d9a7cb6662127386e7218d608e43febffc45a5a0b15e4c24fbf6e4a8c",
+        "species/staphylococcus_aureus/genomes.txt": "3269d7b9d182e65e77d47709d928659183380545dcbf5b9d5d42ee4ed8042c56"
+      },
+      "root": "/home/layth/review/grm-r12-run-20261105/data-root"
+    },
+    "recorded": {
+      "genome_order": {
+        "mycobacterium_tuberculosis": "b104d8bd7ffaa2d0dc3032fe30ca0c0b32670a7099a02bcd49860e5c77f59a64",
+        "neisseria_gonorrhoeae": "03985e841ff3f9a931c98d9881ee99b0ae1891470e2b8235d4dd471b42279c3b",
+        "salmonella_enterica": "c60015cf9e8d69d4e3189be0830dd6ac40b96351974d76c8c4b83bf1e6fdd805",
+        "staphylococcus_aureus": "3269d7b9d182e65e77d47709d928659183380545dcbf5b9d5d42ee4ed8042c56"
+      },
+      "datasets_json_sha256": "2a64c19ca796e013897235047c83e0760276ddb1927bd167c556ff8d1ac48af2",
+      "note": "revision 12's cohort with the H-1 species check (DECISIONS, after H1DATA; the H-1 data root's species_check.json c2e7c389779e6aa009800a9d327a3b036a14a01153429c62b51cdd7b66c942ef, H1DATA round 2's final stage): the same genome sets, with Salmonella's drawn order c60015cf and the datasets.json view 2a64c19c (H1DATA REPORT 7c1b2650); MTB, S. aureus and N. gonorrhoeae as revision 12"
+    },
+    "reason": "main's ruling after H1DATA (option (a)), replacing the order gate of REVIEW-INPUT7 to REVIEW-INPUT9: before anything is counted or learned, and in --estimate-only, the default arm must be revision 12's cohort in substance. genome_set: for each H-1 panel species, the sha256 of revision 12's species/<slug>/genomes.txt sorted, one id per line. datasets: for each dataset of those species, the sha256 of the canonical JSON of its datasets.json entry without the eligible-pool counts (n_resistant, n_susceptible, n_intermediate) and selection, with the curated/phenotypes.jsonl row of every selected genome for its antibiotic (run.substance, the rule of H1DATA's tools/substantive_check.py). reference: the master root (/home/layth/review/grm-r12-run-20261105/data-root) files they were computed from, by sha256. recorded: the drawn order of each species and the datasets.json view without selection records, recorded beside the run's and deciding nothing. The panel is main's ruling after INPUT round 14 (DECISIONS H-1: the default selection capped at 2,000 and more than 2,000 genomes eligible; a revision-12 pipeline stage under one xlarge-hour; block C species first): Salmonella, MTB, S. aureus and N. gonorrhoeae"
+  },
+  "species": "salmonella_enterica",
+  "datasets": [
+    {
+      "id": "salmonella_enterica__amoxicillin_clavulanate",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__ampicillin",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__azithromycin",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__cefazolin",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__cefoxitin",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__ceftazidime",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__chloramphenicol",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__gentamicin",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__kanamycin",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__pefloxacin",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__streptomycin",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__sulfisoxazole",
+      "partition": "confirmatory"
+    },
+    {
+      "id": "salmonella_enterica__temocillin",
+      "partition": "confirmatory"
+    }
+  ],
+  "default": {
+    "cap": 2000,
+    "min_class": 25,
+    "selection": "legacy",
+    "k": 31,
+    "blocks": [
+      "K"
+    ],
+    "screened_features": 4000
+  },
+  "arms": [
+    {
+      "name": "k21",
+      "k": 21
+    }
+  ],
+  "learners": [
+    "scm",
+    "cart",
+    "rf",
+    "gbt",
+    "lasso"
+  ],
+  "splits": [
+    "random",
+    "lineage"
+  ],
+  "repeats": 3,
+  "margin": {
+    "log_loss": 0.02
+  },
+  "seed": 0,
+  "data_root": {
+    "path": "/home/layth/review/grm-h1-data-root-20261107",
+    "manifest": "/home/layth/review/grm-h1data-20261107/stage/MASTER-MANIFEST-h1.sha256",
+    "manifest_sha256": "7dd00779bc4b538b325d947137c525afb4e723ca494bd14b607a8730b7902887",
+    "reason": "main's ruling after REVIEW-H1DATA: H-1 runs from its own data root, built from hard links to the revision-12 master root's files plus H1DATA's 9,394 FASTAs and species_check.json c2e7c389, read only (61,272 files); the master root stays untouched. Pass it, or a box's copy pushed from this manifest, as --raw; every root and the pool write only under --work. run.py combine refuses a master manifest other than manifest_sha256"
+  }
+}

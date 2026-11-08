@@ -84,9 +84,19 @@ RAW file each part hashed must be in the pinned master manifest. J's family C is
 over every part's lineage contrasts. Each copied arm output must match its part's resume.json, and
 the spec's data_root.manifest_sha256 pins the master manifest.
 
+The k add-on (G2(b), Layth's ruling of 8 Nov 2026 lifting register §13 G2): a k21 or k25 root is the default
+cohort counted again at its own k, so it shares no kset with the pool, and on one box beside the stage-1 roots it
+would pass the disk share. A k arm reads only the default arm's plans (`grm arm --reference`, k31_groups) and takes
+no grouping, so `--reference-from WORK` runs a spec of k arms alone on another box: WORK is a finished run of the
+same spec but its arms and datasets (or that run's part as `combine` takes it). Its default arm and both sentinels
+are checked against their resume.json and copied in, never run again, and the species grouping is WORK's; the
+add-on counts only its k roots, with no species pool. The add-on must hold WORK's grm, vocabulary, source commit,
+gate and eligible genomes, and RAW files WORK hashed. `combine` then takes it as a part of the full spec beside the
+part it took the default from: a part may leave out k arms, which a k add-on part runs.
+
 usage: python3 -B run.py SPEC --raw RAW_ROOT --work WORK --grm GRM_BINARY --source-commit SHA
            [--jobs N] [--estimate-only] [--free-disk-bytes N] [--below-panel-floor] [--trace-training]
-           [--no-share-ksets]
+           [--no-share-ksets] [--reference-from WORK]
        python3 -B run.py combine SPEC --work-from WORK [--work-from WORK ...] --master-manifest FILE --out DIR
 
 Writes WORK/roots/<root>/ (data roots), WORK/arms/<arm>/<dataset>/ (`grm arm`
@@ -325,6 +335,8 @@ RAW_MANIFEST = "raw-manifest.txt"
 # Per arm and dataset: what its outputs were made from (G6); per data root: its ksets shared with the pool (G1).
 RESUME = "resume.json"
 SHARED = "shared.json"
+# A k add-on's record of the run it took its default arm and sentinels from (G2(b)); `combine` reads it.
+REFERENCE = "reference.json"
 ARM_OUTPUTS = {"runs.json", "predictions.jsonl", "arm.json"}
 # The RAW folders a data root links; species-check/ only when RAW has one.
 RAW_PARTS = ("bvbrc", "fasta", "catalog", "species-check")
@@ -384,6 +396,10 @@ class Runner:
         # The pool's kset folder, once `pool` has it counted; arms skipped by resume.
         self.pool_ksets = None
         self.resumed = []
+        # The k add-on (G2(b)): the run whose default arm, sentinels and grouping this one takes, and that grouping's
+        # sha256 (its structure.json is not here).
+        self.reference = getattr(args, "reference_from", None)
+        self.groups_sha256 = None
 
     def call(self, name, root, *argv):
         started = time.monotonic()
@@ -707,8 +723,13 @@ class Runner:
                 "max_disk_share": share, "ok": need <= share * free}
 
     def plan_disk(self, arms, free=None, measure=True):
-        """`disk_check` over this run: the arms' union, the pool's pending ksets and every data root."""
+        """`disk_check` over this run: the arms' union, the pool's pending ksets and every data root. A k add-on
+        (G2(b)) has no species pool and runs neither the default arm nor the sentinels, so only its k arms' own roots
+        count."""
         union = self.union(arms)
+        if self.reference:
+            return self.disk_check(union, free, self.counted_roots([a for a in arms if a["factor"] == "k"]), measure,
+                                   0, 0)
         return self.disk_check(union, free, self.counted_roots(arms), measure, self.pool_pending(union),
                                self.pool_curated(union))
 
@@ -920,7 +941,7 @@ class Runner:
         ref = self.work / "arms" / DEFAULT_ARM / dataset / "plans"
         return {"arm": arm["name"], "dataset": dataset, "inputs_sha256": sha(self.work / INPUTS),
                 "spec_sha256": sha256_bytes(canonical(self.spec).encode()),
-                "groups_sha256": sha(getattr(self, "groups", None)),
+                "groups_sha256": self.groups_sha256 or sha(getattr(self, "groups", None)),
                 "reference_plans": {} if arm["name"] == DEFAULT_ARM
                 else {p.name: file_sha256(p) for p in sorted(ref.glob("*.json"))},
                 "trace_training": bool(self.trace), "run_identical_cohorts": bool(run_identical)}
@@ -1146,12 +1167,22 @@ def main(argv):
                         "smaller of it and WORK's volume is used")
     p.add_argument("--no-share-ksets", action="store_true",
                    help="count every root's own ksets instead of linking the pool's (the G1 identity proof only)")
+    p.add_argument("--reference-from", metavar="WORK",
+                   help="the k add-on (G2(b)): a finished run of this spec but its arms and datasets, whose default "
+                        "arm, sentinels and grouping this run takes; SPEC holds k arms only. With --estimate-only, "
+                        "WORK is not read")
     a = p.parse_args(argv)
     spec, default, arms = load_spec(a.spec)
     work = Path(a.work)
     runner = Runner(a, spec)
     runner.default = default
     runner.all_arms = [default, *arms]
+    if a.reference_from:
+        own = [arm for arm in arms if not arm.get("sentinel")]
+        if not own or any(arm["factor"] != "k" for arm in own):
+            raise SystemExit("--reference-from runs k arms only (the k add-on, G2(b)); this spec's arms change "
+                             + (", ".join(f"{arm['name']}: {arm['factor']}" for arm in own if arm["factor"] != "k")
+                                or "nothing: it has none"))
     runner.check_curate_inputs()
     runner.check_synthetic()
     runner.check_inputs()
@@ -1177,6 +1208,7 @@ def main(argv):
             print(f"{len(missing)} of the union's {len(union)} genomes have no FASTA in RAW: the run would refuse at "
                   f"the species pool (e.g. {', '.join(missing[:5])})", file=sys.stderr)
         raise SystemExit(0 if disk["ok"] else 1)
+    ref = check_reference(runner, a, spec, default, arms, gate, eligible, floor) if a.reference_from else None
     names = {DEFAULT_ARM, *(arm["name"] for arm in arms)}
     stale = sorted(p.name for p in (work / "arms").glob("*") if p.is_dir() and p.name not in names)
     if stale:
@@ -1184,27 +1216,33 @@ def main(argv):
     started = time.monotonic()
     (work / SPEC_COPY).write_text(canonical(spec))
     runner.check_disk([default, *arms], a.free_disk_bytes)
-    runner.groups = runner.pool([default, *arms])
-    grouping = json.loads(runner.groups.read_text())
-    for arm in [default, *arms]:
-        outside = runner.genome_set(arm) - set(grouping["genomes"])
-        if outside:
-            raise SystemExit(f"arm {arm['name']} holds {len(outside)} genomes outside the species pool, "
-                             f"e.g. {sorted(outside)[0]}")
-    species_groups = {"structure": str(runner.groups), "sha256": sha256_bytes(runner.groups.read_bytes()),
-                      "genomes": len(grouping["genomes"]), "lineages": grouping["lineages"]["n_clusters"],
-                      "arms": [arm["name"] for arm in [default, *arms]]}
-    (work / "species-groups.json").write_text(canonical(species_groups))
     datasets = [d["id"] for d in spec["datasets"]]
-    for ds in datasets:
-        runner.arm(default, ds)
+    if ref is None:
+        runner.groups = runner.pool([default, *arms])
+        grouping = json.loads(runner.groups.read_text())
+        for arm in [default, *arms]:
+            outside = runner.genome_set(arm) - set(grouping["genomes"])
+            if outside:
+                raise SystemExit(f"arm {arm['name']} holds {len(outside)} genomes outside the species pool, "
+                                 f"e.g. {sorted(outside)[0]}")
+        species_groups = {"structure": str(runner.groups), "sha256": sha256_bytes(runner.groups.read_bytes()),
+                          "genomes": len(grouping["genomes"]), "lineages": grouping["lineages"]["n_clusters"],
+                          "arms": [arm["name"] for arm in [default, *arms]]}
+    else:
+        species_groups = take_reference(runner, ref, datasets)
+    (work / "species-groups.json").write_text(canonical(species_groups))
+    # A k add-on took the default arm and both sentinels from its reference run; it runs only its k arms.
+    ran = [arm for arm in arms if ref is None or not arm.get("sentinel")]
+    if ref is None:
+        for ds in datasets:
+            runner.arm(default, ds)
     # Roots are built one at a time (count uses every core); arms then run in parallel.
-    for arm in arms:
+    for arm in ran:
         if not changes_cohort(arm) or a.run_identical_cohorts \
                 or runner.genome_set(arm) != runner.genome_set(default):
             runner.root(arm)
     with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as pool:
-        for f in [pool.submit(runner.arm, arm, ds, a.run_identical_cohorts) for arm in arms for ds in datasets]:
+        for f in [pool.submit(runner.arm, arm, ds, a.run_identical_cohorts) for arm in ran for ds in datasets]:
             f.result()
     if runner.resumed:
         print(f"resumed {len(runner.resumed)} arm outputs from this WORK: {', '.join(sorted(runner.resumed))}",
@@ -1217,7 +1255,115 @@ def main(argv):
     summary.update({"seconds": round(time.monotonic() - started, 1), "stage_seconds": runner.seconds,
                     "eligible_genomes": eligible, "panel_floor": floor, "species_groups": species_groups,
                     "stale_arm_folders": stale, "resumed_arms": sorted(runner.resumed), "revision12_gate": gate})
+    if ref is not None:
+        summary["reference_from"] = json.loads((work / REFERENCE).read_text())
     write_summary(work, summary)
+
+
+def check_reference(runner, args, spec, default, arms, gate, eligible, floor):
+    """The k add-on's checks of its reference run (G2(b)), before anything is counted: WORK is a finished run of this
+    spec but its arms and datasets (its K manifest made from its spec.json), not itself an add-on, that ran each of
+    this spec's datasets with the same partition and none of its k arms. It ran the same grm and vocabulary at the
+    same source commit, with the same synthetic flag, gate outcome, eligible genomes and panel floor, and every RAW
+    file of this run is one it hashed, with that size and sha256. Each k arm's cohort is the default's, so the
+    union, and so the grouping, are the reference run's. Returns its part record (`read_part`)."""
+    where = f"--reference-from {args.reference_from}"
+    ref = read_part(Path(args.reference_from))
+    if (ref["work"] / REFERENCE).exists() or ref["summary"].get("reference_from") is not None:
+        raise SystemExit(f"{where} is itself a k add-on; take the default arm from the run that ran it")
+    s = ref["spec"]
+
+    def rest(x):
+        return {k: v for k, v in x.items() if k not in ("arms", "datasets")}
+    if not isinstance(s, dict) or canonical(rest(s)) != canonical(rest(spec)):
+        differ = sorted(k for k in set(s) | set(spec) if k not in ("arms", "datasets") and s.get(k) != spec.get(k)) \
+            if isinstance(s, dict) else ["everything"]
+        raise SystemExit(f"{where}: its spec differs from {args.spec} in {', '.join(differ)}, not only in its arms and "
+                         "datasets")
+    if ref["manifest"].get("protocol_sha256") != sha256_bytes(canonical(s).encode()):
+        raise SystemExit(f"{where}: K's manifest was not made from its {SPEC_COPY}")
+    theirs = {d.get("id"): d for d in s.get("datasets", [])}
+    unrun = [d["id"] for d in spec["datasets"] if theirs.get(d["id"]) != d]
+    if unrun:
+        raise SystemExit(f"{where} did not run {', '.join(unrun)} with this spec's partition")
+    again = sorted({arm["name"] for arm in arms if not arm.get("sentinel")} & {x.get("name") for x in s.get("arms", [])})
+    if again:
+        raise SystemExit(f"{where} already ran {', '.join(again)}")
+    mine = json.loads((runner.work / INPUTS).read_text())
+    for key, label in (("grm_sha256", "grm binary"), ("vocabulary_sha256", "vocabulary")):
+        if ref["inputs"].get(key) != mine.get(key):
+            raise SystemExit(f"{where} ran another {label}: {INPUTS} {key} {ref['inputs'].get(key)}, this run's "
+                             f"{mine.get(key)}")
+    if ref["manifest"].get("binary_sha256") != ref["inputs"].get("grm_sha256"):
+        raise SystemExit(f"{where}: K's binary_sha256 is not the grm its {INPUTS} hashed")
+    hashed = {tuple(x) for x in ref["raw"]}
+    lines = [line.split("  ", 2) for line in (runner.work / RAW_MANIFEST).read_text(encoding="utf-8").split("\n")
+             if line]
+    extra = [x[-1] for x in lines if tuple(x) not in hashed]
+    if extra:
+        raise SystemExit(f"{where}: {len(extra)} of this run's {len(lines)} RAW files are not in its {RAW_MANIFEST} "
+                         f"with that size and sha256, e.g. {', '.join(extra[:5])}")
+    if ref["manifest"].get("source_commit") != args.source_commit:
+        raise SystemExit(f"{where} ran source commit {ref['manifest'].get('source_commit')}, not "
+                         f"{args.source_commit}")
+    want = [spec.get("synthetic") is True, "not_required" if gate is None else "passed"]
+    if [ref["manifest"].get("synthetic"), ref["manifest"].get("revision12_gate")] != want:
+        raise SystemExit(f"{where}: K's manifest records synthetic {ref['manifest'].get('synthetic')} and gate "
+                         f"{ref['manifest'].get('revision12_gate')}, this run {want[0]} and {want[1]}")
+    if [ref["summary"].get("eligible_genomes"), ref["summary"].get("panel_floor")] != [eligible, floor]:
+        raise SystemExit(f"{where} counted {ref['summary'].get('eligible_genomes')} eligible genomes against a floor "
+                         f"of {ref['summary'].get('panel_floor')}, this run {eligible} against {floor}")
+    for arm in arms:
+        if not arm.get("sentinel") and runner.genome_set(arm) != runner.genome_set(default):
+            raise SystemExit(f"arm {arm['name']}'s cohort is not the default's, so it would change the union the "
+                             f"grouping of {where} was made from")
+    return ref
+
+
+def same_folder(a, b):
+    """Whether two arm folders hold the same files, byte for byte, with no symlink in either."""
+    def files(top):
+        if any(p.is_symlink() for p in top.rglob("*")):
+            return None
+        return {str(p.relative_to(top)): file_sha256(p) for p in top.rglob("*") if p.is_file()}
+    x = files(a)
+    return x is not None and x == files(b)
+
+
+def take_reference(runner, ref, datasets):
+    """The k add-on's copy of its reference run (G2(b)): for each dataset, the default arm's and both sentinels'
+    outputs, each checked against the reference run's resume.json as `combine` checks a part's, made with this run's
+    --trace-training and --run-identical-cohorts, and copied in whole, resume.json too, replacing any earlier copy.
+    Writes WORK/reference.json (the run, its spec and inputs.json sha256s, the grouping and each copy's resume.json
+    sha256) and returns the reference run's grouping, which this run's k arms record in their own resume.json."""
+    work = runner.work
+    taken = {}
+    for ds in datasets:
+        for name in (DEFAULT_ARM, *(s["name"] for s in SENTINELS)):
+            src, dst = ref["work"] / "arms" / name / ds, work / "arms" / name / ds
+            if not (src / "runs.json").is_file():
+                raise SystemExit(f"--reference-from {ref['work']} has no output of arm {name} on {ds}")
+            rec = verify_arm_output(ref, src, name, ds)
+            if (rec["trace_training"], rec["run_identical_cohorts"]) != (bool(runner.trace), bool(runner.run_identical)):
+                raise SystemExit(f"--reference-from {ref['work']}: arm {name} on {ds} ran with --trace-training "
+                                 f"{rec['trace_training']} and --run-identical-cohorts {rec['run_identical_cohorts']}; "
+                                 "this run must use the same")
+            linked = linked_arm_folder(work, dst)
+            if linked:
+                raise SystemExit(f"{linked} is a symlink; an arm's output folder, its arm folder and arms/ must be "
+                                 "WORK's own")
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst, symlinks=True)
+            if not same_folder(src, dst):
+                raise SystemExit(f"the copy of arm {name} on {ds} from {ref['work']} differs from it, or one of them "
+                                 "holds a link")
+            taken[f"{name}/{ds}"] = file_sha256(dst / RESUME)
+    record = {"work": str(ref["work"].resolve()), "spec_sha256": ref["manifest"]["protocol_sha256"],
+              "inputs_sha256": file_sha256(ref["work"] / INPUTS), "species_groups": ref["groups"], "taken": taken}
+    (work / REFERENCE).write_text(canonical(record))
+    runner.groups_sha256 = ref["groups"].get("sha256")
+    return dict(ref["groups"])
 
 
 def report_run(spec, default, arms, work, binary_sha256, source_commit, seconds, meta):
@@ -1281,6 +1427,10 @@ def read_part(work):
     if sha256_bytes(text) != part["inputs"].get("raw_manifest_sha256"):
         raise SystemExit(f"part {work}: {RAW_MANIFEST} is not the RAW manifest its {INPUTS} hashed")
     part["raw"] = [line.split("  ", 2) for line in text.decode("utf-8").split("\n") if line]
+    # A k add-on (G2(b)) keeps the record of the run it took its default arm from; a run of its own has none.
+    part["reference"] = load(REFERENCE) if (work / REFERENCE).exists() else None
+    if part["reference"] is not None and not isinstance(part["reference"], dict):
+        raise SystemExit(f"part {work}: {REFERENCE} is not a reference record")
     return part
 
 
@@ -1297,39 +1447,84 @@ def read_master(path):
     return out
 
 
-def check_parts(spec_path, spec, parts, master_path):
-    """The refusals of `combine` (G2): see the module docstring."""
-    def without_datasets(s):
-        return {k: v for k, v in s.items() if k != "datasets"}
+def check_parts(spec_path, spec, arms, parts, master_path):
+    """The refusals of `combine` (G2): see the module docstring. A part ran SPEC with only its datasets, and may leave
+    out k arms; a k add-on part (G2(b), its reference.json) ran only k arms of SPEC on datasets of one other part,
+    whose default arm and sentinels it took. Every arm of SPEC on every dataset is in exactly one part. Returns, for
+    each add-on part's work, the part it took its default arm from."""
+    def rest(s):
+        return {k: v for k, v in s.items() if k not in ("datasets", "arms")}
 
     entries = {d["id"]: d for d in spec["datasets"]}
+    stated = {x["name"]: x for x in spec["arms"]}
+    k_arms = {x["name"] for x in arms if x["factor"] == "k"}
     owner = {}
     for part in parts:
         s = part["spec"]
-        if not isinstance(s, dict) or canonical(without_datasets(s)) != canonical(without_datasets(spec)):
-            differ = sorted(k for k in set(s) | set(spec) if k != "datasets" and s.get(k) != spec.get(k)) \
+        if not isinstance(s, dict) or canonical(rest(s)) != canonical(rest(spec)):
+            differ = sorted(k for k in set(s) | set(spec) if k not in ("datasets", "arms") and s.get(k) != spec.get(k)) \
                 if isinstance(s, dict) else ["everything"]
             raise SystemExit(f"part {part['work']}: its spec differs from {spec_path} in {', '.join(differ)}, not only "
                              "in its datasets")
+        names = [x.get("name") if isinstance(x, dict) else x for x in s.get("arms", [])]
+        if part["reference"] is None:
+            # SPEC's arms in SPEC's order, but for k arms a k add-on part runs
+            if s.get("arms") != [x for x in spec["arms"] if x["name"] in names] or set(stated) - set(names) - k_arms:
+                raise SystemExit(f"part {part['work']}: its spec differs from {spec_path} in arms, not only in its "
+                                 "datasets (a part may leave out only k arms, which a k add-on part runs)")
+        elif not names or len(set(names)) != len(names) or set(names) - k_arms \
+                or any(stated.get(n) != x for n, x in zip(names, s.get("arms", []))):
+            raise SystemExit(f"part {part['work']}: a k add-on part (--reference-from) holds only k arms of {spec_path} "
+                             f"as it states them, not {', '.join(map(str, names)) or 'none'}")
         if part["manifest"].get("protocol_sha256") != sha256_bytes(canonical(s).encode()):
             raise SystemExit(f"part {part['work']}: K's manifest was not made from its {SPEC_COPY}")
         for d in s.get("datasets", []):
             if entries.get(d.get("id")) != d:
                 raise SystemExit(f"part {part['work']}: dataset {d.get('id')} with partition {d.get('partition')} is "
                                  f"not in {spec_path}")
-            if d["id"] in owner:
-                raise SystemExit(f"dataset {d['id']} is in two parts: {owner[d['id']]} and {part['work']}")
-            owner[d["id"]] = part["work"]
+            if part["reference"] is None:
+                if d["id"] in owner:
+                    raise SystemExit(f"dataset {d['id']} is in two parts: {owner[d['id']]['work']} and {part['work']}")
+                owner[d["id"]] = part
     left = [ds for ds in entries if ds not in owner]
     if left:
         raise SystemExit(f"no part holds {', '.join(left)} of {spec_path}")
+    held = {}
+    for part in parts:
+        for d in part["spec"]["datasets"]:
+            for x in part["spec"]["arms"]:
+                if (x["name"], d["id"]) in held:
+                    raise SystemExit(f"arm {x['name']} on {d['id']} is in two parts: {held[x['name'], d['id']]} and "
+                                     f"{part['work']}")
+                held[x["name"], d["id"]] = part["work"]
+    gaps = [f"{n} on {ds}" for ds in entries for n in stated if (n, ds) not in held]
+    if gaps:
+        raise SystemExit(f"no part holds arm {', '.join(gaps[:5])}{' and more' if len(gaps) > 5 else ''} of "
+                         f"{spec_path}")
+    mains = {}
+    for part in parts:
+        ref = part["reference"]
+        if ref is None:
+            continue
+        took = {id(owner[d["id"]]): owner[d["id"]] for d in part["spec"]["datasets"]}
+        if len(took) != 1:
+            raise SystemExit(f"part {part['work']}: a k add-on part takes its datasets from one run, not "
+                             f"{len(took) or 'none'}")
+        main = next(iter(took.values()))
+        if (ref.get("spec_sha256"), ref.get("inputs_sha256")) != (main["manifest"].get("protocol_sha256"),
+                                                                  file_sha256(main["work"] / INPUTS)):
+            raise SystemExit(f"part {part['work']}: its {REFERENCE} names another run than {main['work']}, the part "
+                             "that holds its datasets")
+        mains[part["work"]] = main
 
     def same(label, get):
         if len({canonical(get(p)) for p in parts}) != 1:
             raise SystemExit(f"the parts differ in {label}: "
                              + "; ".join(f"{p['work']}: {get(p)}" for p in parts))
-    same("the species pool (species-groups.json but its structure path)",
-         lambda p: {k: v for k, v in p["groups"].items() if k != "structure"})
+    # The arm list is each run's own: a main part that leaves out the k arms lists fewer arms over the same union, and
+    # an add-on keeps its main part's. The grouping's sha256, genomes and lineages are the pool.
+    same("the species pool (species-groups.json but its structure path and arm list)",
+         lambda p: {k: v for k, v in p["groups"].items() if k not in ("structure", "arms")})
     same("the grm binary (inputs.json grm_sha256)", lambda p: p["inputs"].get("grm_sha256"))
     same("the vocabulary (inputs.json vocabulary_sha256)", lambda p: p["inputs"].get("vocabulary_sha256"))
     same("the source commit (K's manifest)", lambda p: p["manifest"].get("source_commit"))
@@ -1354,6 +1549,7 @@ def check_parts(spec_path, spec, parts, master_path):
         if outside:
             raise SystemExit(f"part {p['work']}: {len(outside)} of its {len(p['raw'])} RAW files are not in the master "
                              f"manifest {master_path} with that sha256, e.g. {', '.join(outside[:5])}")
+    return mains
 
 
 def linked_arm_folder(work, out):
@@ -1416,41 +1612,70 @@ def combine(argv):
     if out.exists() and (not out.is_dir() or any(out.iterdir())):
         raise SystemExit(f"--out {out} is not an empty folder")
     parts = [read_part(Path(w)) for w in a.work_from]
-    check_parts(a.spec, spec, parts, a.master_manifest)
-    names = [DEFAULT_ARM, *(arm["name"] for arm in arms)]
+    mains = check_parts(a.spec, spec, arms, parts, a.master_manifest)
+    sentinels = [s["name"] for s in SENTINELS]
+
+    def own(part):
+        """The arm outputs combine takes from a part: a k add-on part's k arms, or all a part ran."""
+        names = [x["name"] for x in part["spec"]["arms"]]
+        return names if part["reference"] is not None else [DEFAULT_ARM, *names, *sentinels]
+
+    def plans(folder):
+        return {p.name: file_sha256(p) for p in sorted((folder / "plans").glob("*.json"))}
     flags = {}
     for part in parts:
         for d in part["spec"]["datasets"]:
-            for name in names:
+            for name in own(part):
                 src = part["work"] / "arms" / name / d["id"]
                 if not (src / "runs.json").is_file():
                     raise SystemExit(f"part {part['work']} has no output of arm {name} on {d['id']}")
                 rec = verify_arm_output(part, src, name, d["id"])
                 flags.setdefault((rec["trace_training"], rec["run_identical_cohorts"]), f"{part['work']}: {name}/{d['id']}")
+                main = mains.get(part["work"])
+                if main is not None and rec.get("reference_plans") != plans(main["work"] / "arms" / DEFAULT_ARM / d["id"]):
+                    raise SystemExit(f"part {part['work']}: arm {name} on {d['id']} was scored on other reference plans "
+                                     f"than the default arm of {main['work']}")
+            if part["work"] in mains:
+                # G2(b): the add-on's default arm and sentinels are the copies it ran against, byte for byte its main's
+                for name in (DEFAULT_ARM, *sentinels):
+                    mine, theirs = part["work"] / "arms" / name / d["id"], mains[part["work"]]["work"] / "arms" / name / d["id"]
+                    if linked_arm_folder(part["work"], mine) or not same_folder(mine, theirs):
+                        raise SystemExit(f"part {part['work']}: arm {name} on {d['id']} is not the copy of "
+                                         f"{mains[part['work']]['work']}'s it ran against")
     if len(flags) > 1:
         raise SystemExit("the parts' arms ran with different --trace-training / --run-identical-cohorts: "
                          + "; ".join(f"{where} ran with {list(f)}" for f, where in sorted(flags.items())))
     for part in parts:
         for d in part["spec"]["datasets"]:
-            for name in names:
+            for name in own(part):
                 shutil.copytree(part["work"] / "arms" / name / d["id"], out / "arms" / name / d["id"], symlinks=True)
     first = parts[0]
     seconds = {"parts": sum(p["manifest"]["compute"]["actual_seconds"] for p in parts)}
     meta = {k: first["manifest"][k] for k in ("synthetic", "revision12_gate", "species_pool") if k in first["manifest"]}
+    # The pool every part shares was made over the union of SPEC's arms: a part leaves out only k arms, whose cohort
+    # is the default's. So its arm list is SPEC's, as one run of SPEC writes it.
+    pool_arms = [DEFAULT_ARM, *(arm["name"] for arm in arms)]
+    if "species_pool" in meta:
+        meta["species_pool"] = {**meta["species_pool"], "arms": pool_arms}
     record = {"spec_sha256": sha256_bytes(canonical(spec).encode()),
               "master_manifest": str(Path(a.master_manifest).resolve()),
               "master_manifest_sha256": file_sha256(a.master_manifest),
               "grm_sha256": first["inputs"]["grm_sha256"], "source_commit": first["manifest"]["source_commit"],
               "parts": [{"work": str(p["work"].resolve()), "spec_sha256": p["manifest"]["protocol_sha256"],
-                         "datasets": [d["id"] for d in p["spec"]["datasets"]],
+                         "datasets": [d["id"] for d in p["spec"]["datasets"]], "arms": own(p),
                          "raw_manifest_sha256": p["inputs"]["raw_manifest_sha256"],
-                         "species_groups_sha256": p["groups"]["sha256"]} for p in parts]}
+                         "species_groups_sha256": p["groups"]["sha256"],
+                         "reference": None if p["reference"] is None else
+                         {"work": str(mains[p["work"]]["work"].resolve()), **{k: p["reference"].get(k) for k in
+                                                                             ("spec_sha256", "inputs_sha256")}}}
+                        for p in parts]}
     summary = report_run(spec, default, arms, out, first["manifest"]["binary_sha256"], record["source_commit"],
                          seconds, meta)
     (out / "combine.json").write_text(json.dumps(record, indent=1, sort_keys=True))
     summary.update({"seconds": round(sum(p["summary"].get("seconds", 0) for p in parts), 1), "stage_seconds": {},
                     "eligible_genomes": first["summary"]["eligible_genomes"],
-                    "panel_floor": first["summary"]["panel_floor"], "species_groups": first["groups"],
+                    "panel_floor": first["summary"]["panel_floor"],
+                    "species_groups": {**first["groups"], "arms": pool_arms},
                     "stale_arm_folders": [], "resumed_arms": [], "combine": record,
                     "revision12_gate": first["summary"].get("revision12_gate")})
     write_summary(out, summary)
