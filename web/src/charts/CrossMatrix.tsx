@@ -73,7 +73,9 @@ const CrossMatrix = ({
   const n = names.length;
   const label = Math.max(96, ...names.map(labelWidth)) + 10;
   const span = n === 0 ? 0 : pos(n - 1) + CELL;
-  const top = 8;
+  // The first row of a lower triangle holds no cell and no label, so the
+  // drawing starts at the second row instead of under an empty band.
+  const top = 8 - (n > 1 ? pos(1) : 0);
   const bottom = top + span;
   const width = label + span + 24;
   const height = bottom + Math.ceil(Math.max(0, ...names.map(labelWidth)) * 0.82) + 20;
@@ -245,7 +247,10 @@ const CrossMatrix = ({
           ) : null}
         </ChartFrame>
       </ScrollFrame>
-      <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-control text-ink" aria-label="Phi steps">
+      <p className="prose-measure mt-3 text-note text-muted-text">
+        Phi runs from −1 to 1. Above 0, genomes resistant to one drug tend to be resistant to the other; below 0, they tend to be susceptible to it.
+      </p>
+      <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-control text-ink" aria-label="Phi steps">
         {STEPS.map((s, i) => (
           <li key={s.key} className="inline-flex items-center gap-1.5">
             <span aria-hidden="true" className="inline-block h-3 w-4 rounded-sm [forced-color-adjust:none]" style={{ background: s.fill }} />

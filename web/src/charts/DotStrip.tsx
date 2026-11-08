@@ -206,7 +206,7 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
       }))}
       domain={[lo, hi]}
       format={(v) => (v * 100).toFixed(0)}
-      axisTitle="Points of balanced accuracy lost with lineages held out (random minus lineage)"
+      axisTitle="Balanced accuracy lost when whole lineages are held out, in percentage points (random split minus lineage split). Further left is a smaller drop; below 0, the lineage split scored higher."
       refs={[
         { key: "bar", value: 0.05, anchor: "end" },
         { key: "zero", value: 0, label: "No change", anchor: "end", solid: true },
@@ -240,7 +240,7 @@ export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
       }))}
       domain={[lo, 1]}
       format={(v) => `${Math.round(v * 100)}`}
-      axisTitle="Essential agreement: exact MICs predicted within one doubling dilution (%)"
+      axisTitle="Essential agreement: share of exact MICs predicted within one doubling dilution (%). Higher is better."
       refs={[{ key: "bar", value: REFERENCE_BARS.mic, anchor: "start" }]}
       regions={[
         { key: "below", label: `${values.length - atOrAbove} <90%`, at: REFERENCE_BARS.mic, anchor: "end" },

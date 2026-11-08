@@ -762,6 +762,10 @@ async function interactions(page, tag, width) {
   await shot(page, tag + '-filters');
   const band = await page.locator('[data-view-options-panel] footer').textContent();
   check(tag + ' rail band: the filter count and Clear once a filter is set', band === '1 filterClear', band);
+  const bandEdge = await page.evaluate(() => { const panel = document.querySelector('[data-view-options-panel]'); return { clear: panel.querySelector('footer button')?.getBoundingClientRect().right, field: panel.querySelector('.filter-field-control [role="combobox"]')?.getBoundingClientRect().right }; });
+  check(tag + ' rail band: Clear ends on the right edge of the controls', bandEdge.clear !== undefined && bandEdge.field !== undefined && Math.abs(bandEdge.clear - bandEdge.field) <= 1, bandEdge);
+  const groupGaps = await page.evaluate(() => [...document.querySelectorAll('[data-view-options-panel] .filter-rail-body > * + *')].map(e => getComputedStyle(e).marginTop));
+  check(tag + ' rail groups share one spacing', groupGaps.length > 0 && new Set(groupGaps).size === 1, groupGaps);
   if (!inline) {
     await page.keyboard.press('Escape');
     await page.locator('aside[data-view-options-mode="sheet"]').waitFor({ state: 'detached' });

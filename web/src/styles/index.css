@@ -280,6 +280,14 @@
     scrollbar-gutter: stable;
   }
 
+  /* The band under the groups keeps the same gutter, so Clear ends on the
+     right edge of the controls above it. */
+  [data-view-options-panel] footer {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+  }
+
   .filter-rail-body > * + * {
     margin-top: 1.25rem;
   }
@@ -328,9 +336,11 @@
   }
 
   /* A checkbox group is a fieldset: no frame of its own, its legend set like
-     every other group label. */
+     every other group label. Its top margin is the rail's group spacing, as
+     for every other group. */
   fieldset.filter-group {
-    margin: 0;
+    margin-inline: 0;
+    margin-bottom: 0;
     padding-right: 0;
     padding-bottom: 0;
     padding-left: 0;
