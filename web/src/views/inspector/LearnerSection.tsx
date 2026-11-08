@@ -153,6 +153,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
     <Section
       id="ds-learners"
       title="Learner comparison"
+      question="Each row is one learner, a kind of model that calls resistance from the genome. Further right scores higher: a filled dot is the random split, a ring the test on lineages it never saw."
       answer={answer}
       right={
         lineage !== undefined ? (
@@ -269,7 +270,8 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
       </ScrollFrame>
       </div>
       <p className="type-note mt-3">
-        Balanced accuracy over pooled out-of-fold predictions; faint dots are the {random?.folds ?? 5} single folds.
+        Balanced accuracy over pooled out-of-fold predictions; faint dots are the {random?.folds ?? 5} single folds. AUROC is how well the scores rank resistant isolates above
+        susceptible ones, from 0.5 for chance to 1 for a perfect ranking.
         {lineage !== undefined
           ? ` With lineages held out, each of the ${lineage.n_groups} lineages goes whole to one fold.`
           : ` No lineage-held-out result: ${splitAbsence(r, "lineage") ?? ""}`}

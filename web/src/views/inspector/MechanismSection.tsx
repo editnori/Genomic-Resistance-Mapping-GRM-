@@ -114,6 +114,7 @@ export const MechanismSection = ({ r }: { r: DatasetReport }) => {
     <Section
       id="ds-mechanisms"
       title="Genes and panels"
+      question="These tests skip the learners and look only for known resistance genes: the catalog rule checks every known gene for the drug, and each simulated PCR panel checks the few a lab assay targets. Sensitivity is the share of resistant isolates a test flags; specificity is the share of susceptible isolates it leaves unflagged."
       answer={
         cat === null
           ? `The catalog has no acquired-gene rule for ${r.antibiotic}.`

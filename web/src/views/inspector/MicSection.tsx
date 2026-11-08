@@ -14,6 +14,7 @@ export const MicSection = ({ r, research }: { r: DatasetReport; research: Resour
     <Section
       id="ds-mic"
       title="MIC prediction"
+      question="The MIC is the lowest dose of the drug, in mg/L, that stops the bacteria growing; labs test doses in doubling steps. Here a model predicts the MIC from the genome and is scored against the lab's measured value."
       answer={
         mic === null
           ? undefined

@@ -72,6 +72,7 @@ export const ModelSection = ({ r, row }: { r: DatasetReport; row?: CatalogRow })
     <Section
       id="ds-model"
       title="The interpretable model"
+      question="The set covering machine and the decision tree are the two learners a person can read. Each rule or split asks whether a genome carries one piece of DNA."
       answer={
         scm.rules.length === 0
           ? "The set covering machine found no rule that beats calling every isolate one way."
