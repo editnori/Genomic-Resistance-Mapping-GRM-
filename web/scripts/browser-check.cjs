@@ -1072,7 +1072,7 @@ async function states(browser, width, height, theme) {
   const gate = new Promise(resolve => release = resolve);
   await page.route('**/data/index.json', async route => { await gate; await route.continue(); });
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-  await page.getByText('Loading the report manifest', { exact: true }).waitFor();
+  await page.getByText('Loading the report', { exact: true }).waitFor();
   check(tag + ' loading aria-busy', await page.locator('[aria-busy="true"]').count() === 1, null);
   check(tag + ' loading runs the mark loop in the panel and the top bar', await page.locator('svg.grm-mark[data-motion="loop"]').count() === 2, await page.locator('svg.grm-mark').evaluateAll(es => es.map(e => e.getAttribute('data-motion'))));
   await shot(page, tag + '-loading'); release();
@@ -1188,7 +1188,7 @@ async function present(page, tag, width, height) {
     }
     check(tag + ' slide ' + (slide + 1) + ' figure above caption', m.contentBottom <= m.caption.y - 8 && (m.fit === null || m.fit.scrollHeight <= m.fit.height + 1), { contentBottom: m.contentBottom, caption: m.caption, fit: m.fit });
     check(tag + ' slide ' + (slide + 1) + ' labels inside', m.textOutside.length === 0, m.textOutside);
-    const finding = title.includes('Unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('MIC prediction') ? 4 : 0;
+    const finding = title.includes('unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('(MIC)') ? 4 : 0;
     // A paged panel figure draws its share of the rows on each page; the
     // pages together must draw every lead-panel dataset once.
     const paged = /\((\d+) of (\d+)\)/.exec(labels[slide] ?? '');
@@ -1197,7 +1197,7 @@ async function present(page, tag, width, height) {
     const count = [0, expected.paired.length, expected.catalog.length, panelShown, expected.mic.length][finding] ?? 0;
     if (finding > 0) check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title, page: paged?.[0] ?? null });
     await referenceChecks(page, tag, finding, panelSeen, paged !== null);
-    if (title === 'Data') {
+    if (title === 'Genomes and lab calls') {
       const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);

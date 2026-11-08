@@ -58,11 +58,11 @@ describe("MIC-inferred labels", () => {
   it("leaves them out of the reported pairs in Overview, Methods, and on the corpus slide", () => {
     expect(f.pairs_labeled_from_mic).toBeGreaterThan(0);
     const { overview, methods } = views(manifest);
-    expect(overview).toContain(`reported R/S genome–antibiotic pairs, from ${int(f.records)} BV-BRC records`);
+    expect(overview).toContain(`genome and antibiotic pairs with a reported R or S call, from ${int(f.records)} BV-BRC records`);
     expect(overview).toContain(`>${int(f.pairs_reported)}<`);
     expect(methods).toContain(`${int(f.pairs)} pairs = ${int(f.pairs_reported)} reported + ${int(f.pairs_labeled_from_mic)} from MIC`);
     const slide = renderToStaticMarkup(createElement(CorpusFigure, { manifest }));
-    expect(slide).toContain("Reported R/S genome–antibiotic pairs");
+    expect(slide).toContain("Genome and antibiotic pairs with a reported R or S call");
     expect(slide).toContain(`>${int(f.pairs_reported)}<`);
     for (const text of [overview, slide]) expect(text).not.toContain(`>${int(f.pairs_reported + f.pairs_labeled_from_mic)}<`);
   });

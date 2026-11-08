@@ -305,8 +305,9 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
       body: (
         <>
           <p>
-            A lab grows the bacterium next to the antibiotic. If the drug stops it growing, the lab reports it susceptible (S); if it keeps growing, resistant (R). A dataset
-            is every selected genome of one species with a reported R or S call for one antibiotic, and each dataset has one report.
+            A lab grows an isolate, a sample of one bacterium, next to the antibiotic. If the drug stops it growing, the lab reports it susceptible (S); if it keeps growing,
+            resistant (R). BV-BRC, a public database, holds the genomes of many isolates with these calls. A dataset is every selected genome of one species with a reported R
+            or S call for one antibiotic, and each dataset has one report.
           </p>
           {ex === null ? null : (
             <p className="mt-2">
@@ -326,18 +327,20 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
         <>
           <p>
             GRM cuts every genome into overlapping 31-letter pieces of DNA (k-mers). Pieces found in exactly the same genomes merge into one feature, a yes-or-no column. A
-            model learns which columns separate resistant from susceptible genomes.
+            learner is a model that learns which columns separate resistant from susceptible genomes, and GRM trains five kinds. It also scores a known-gene rule, which
+            needs no training: it calls a genome resistant when it carries a gene listed for the drug in the AMRFinderPlus catalog of known resistance genes.
           </p>
           {ex === null ? null : (
             <p className="mt-2">
               {name} has {int(ex.row.features)} features.
-              {rule === undefined ? "" : ` The set covering machine's first rule is “${rule}”.`}
+              {rule === undefined ? "" : ` One learner, the set covering machine (SCM), writes short yes-or-no rules; its first rule here is “${rule}”.`}
             </p>
           )}
         </>
       ),
       figure: <FeatureFigure />,
-      caption: "A feature can travel with the cause of resistance, on the same plasmid or in the same lineage, without being the cause.",
+      caption:
+        "A feature can sit next to the cause of resistance without being the cause: on the same plasmid, a small loop of DNA that bacteria pass to each other, or in the same family of related genomes.",
     },
     {
       id: "primer-splits",
@@ -349,13 +352,14 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
       body: (
         <>
           <p>
-            Every score comes from genomes the model never trained on. A random split hides a random fifth of the genomes, so most hidden genomes still have close relatives
-            (the same lineage) in training. The lineage split hides whole lineages, so no hidden genome has a close relative in training. The drop between the two shows how
-            much a model relies on recognising relatives.
+            Every score comes from genomes the learner never trained on. Genomes from closely related strains form a lineage, one family of near-identical genomes. A random
+            split hides a random fifth of the genomes, so most hidden genomes still have close relatives in training. The lineage split hides whole lineages, so no hidden
+            genome has a close relative in training. The drop between the two shows how much a learner relies on recognising relatives.
           </p>
           <p className="mt-2">
             The score is balanced accuracy: the average of the share of resistant genomes called resistant (sensitivity) and the share of susceptible genomes called
-            susceptible (specificity). 50% is no better than a coin toss.
+            susceptible (specificity). 50% is no better than a coin toss, and 100% gets every call right. A gap between two scores is counted in points: 90% to 85% is 5
+            points. Each dataset&apos;s best learner is the one with the highest random-split score among those that call every isolate, and the findings below use it.
           </p>
         </>
       ),
@@ -379,7 +383,7 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
           )}
           <p>
             A resistant genome called susceptible is a very major error (VME): in use, it would mean giving a drug that fails. A susceptible genome called resistant is a
-            major error (ME): it would mean giving a broader drug than needed. Susceptibility test devices are held to a VME of {barLabel(BARS.vme)} and an ME of{" "}
+            major error (ME): it would mean giving a broader drug than needed. Lab devices that test susceptibility are held to a VME of {barLabel(BARS.vme)} and an ME of{" "}
             {barLabel(BARS.me)}; the Datasets table marks each value against those bars.
           </p>
         </>
@@ -393,8 +397,9 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
       lead: "These are research results on public data, not a validated test.",
       body: (
         <p>
-          Every number is internal cross-validation on genomes and lab calls from one public database. No external, prospective or clinical validation has been done, and a
-          marked feature shows association, not cause.
+          Every number is internal cross-validation: learners train on part of one public database&apos;s genomes and lab calls and are scored on the rest. No external,
+          prospective or clinical validation has been done, so no other lab, new isolates or clinical study has tested them. A feature a learner picks is linked to resistance in
+          these genomes. That link alone does not show the feature causes it.
         </p>
       ),
       figure: <ScopeFigure />,
@@ -433,11 +438,11 @@ export const PrimerSection = ({ manifest, nav, firstFinding }: { manifest: Manif
         </a>
       </div>
       <p className="prose-measure mt-2 text-body text-ink">
-        Five steps, no background needed.
+        Five short steps explain the words the findings use.
         {ex === null ? null : (
           <>
             {" "}
-            The example is one real report,{" "}
+            The examples come from one dataset&apos;s report,{" "}
             <a href={routeHref({ ...nav.route, dataset: ex.row.id })} onClick={inApp(() => nav.openDataset(ex.row.id))} className={LINK}>
               {exampleName(ex.row)}
             </a>

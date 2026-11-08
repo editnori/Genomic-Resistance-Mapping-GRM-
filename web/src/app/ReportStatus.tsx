@@ -18,16 +18,17 @@ export const StatusItems = ({ items }: { items: readonly ReactNode[] }) => (
   </>
 );
 
+/** The status line's catalog fact: which list of known resistance genes
+ *  the report used, by name and version. */
+export const catalogWords = (m: Manifest): string => `Known-gene catalog: AMRFinderPlus ${m.amrfinder_version === "" ? "version not recorded" : m.amrfinder_version}`;
+
 /** The one quiet status line, in plain words: when the report was built,
  *  the catalog version it used, and the audit's scope ("Internal
  *  cross-validation only", or bold "Provisional metrics"), which links to
  *  the Overview's limits; then view facts. */
 export const ReportStatus = ({ manifest, children }: { manifest: Manifest; children?: ReactNode }) => {
   const audit = manifestAudit(manifest);
-  const items: ReactNode[] = [
-    `Report built ${dateText(manifest.generated_at)}`,
-    `AMRFinderPlus ${manifest.amrfinder_version === "" ? "version not recorded" : manifest.amrfinder_version}`,
-  ];
+  const items: ReactNode[] = [`Report built ${dateText(manifest.generated_at)}`, catalogWords(manifest)];
   if (audit.total > 0) items.push(<AuditStatus audit={audit} href={LIMITS_HREF} />);
   if (children !== undefined) items.push(children);
   return <StatusItems items={items} />;

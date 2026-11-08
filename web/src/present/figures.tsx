@@ -53,7 +53,7 @@ export const RuleFigure = ({ manifest, page = 0, pages }: { manifest: Manifest; 
       </p>
       {card.catalog_families.length === 0 ? null : (
         <p className="mt-2 text-note text-muted-text">
-          Catalog {card.catalog_families.length === 1 ? "family" : "families"} {card.catalog_families.join(", ")}
+          Known-gene catalog {card.catalog_families.length === 1 ? "family" : "families"} {card.catalog_families.join(", ")}
         </p>
       )}
       <p className="mt-2 text-note text-ink">{featurePlace(card) ?? "Not placed on a reference assembly."}</p>
@@ -62,7 +62,7 @@ export const RuleFigure = ({ manifest, page = 0, pages }: { manifest: Manifest; 
   const sequence =
     context === "" ? null : (
       <div className="mt-3">
-        <p className="text-note text-muted-text">The contig around the rule&apos;s k-mers; the k-mers are in capitals.</p>
+        <p className="text-note text-muted-text">The contig, a stretch of assembled DNA, around the rule&apos;s k-mers; the k-mers are in capitals.</p>
         <Seq context={context} className="mt-1" />
       </div>
     );
