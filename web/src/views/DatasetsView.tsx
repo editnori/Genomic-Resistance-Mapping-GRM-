@@ -383,7 +383,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     tip: [
       {
         term: "MIC essential agreement",
-        text: "The MIC is the lowest drug dose that stops growth. Share of isolates with an exact MIC whose predicted MIC is within one doubling dilution; a model needs at least 100 with an MIC, 50 exact.",
+        text: "The MIC is the lowest drug level that stops growth. Share of isolates with an exact MIC whose predicted MIC is within one doubling dilution; a model needs at least 100 with an MIC, 50 exact.",
       },
     ],
     align: "right",
