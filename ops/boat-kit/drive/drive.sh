@@ -57,6 +57,13 @@
 #   flags each run box recorded) differ or are missing, empty or malformed (2, no box; DC1), gets each part's pulled WORK records and a copy
 #   of the master manifest (h1-manifest.py combine, one push-data) and runs run.py combine on the box. NEEDS may be
 #   a comma list. GRM_SCP_FLOOR_MBPS comes from the run file (H-1: 5).
+# KIT11, an H-1 run box's data from a snapshot (DATA_SNAPSHOT_DIR set, KIND=h1 only): TEMPLATE must be the
+#   grm-tmpl-* data snapshot, which holds the master root at DATA_SNAPSHOT_DIR and GRM's vocabulary copy at
+#   VOCAB_SNAPSHOT_DIR. The manifests are made and pinned here as before: the metadata and FASTA sets from
+#   MASTER_MANIFEST, and the vocabulary set copied from VOCAB_MANIFEST, which must hash to VOCAB_MANIFEST_SHA256.
+#   The three push-data calls become grm-boat.sh stage-local calls from those folders on the box, to the same --dest
+#   paths, so only the manifests cross. DATA_ROOT and VOCAB_ROOT aren't needed. A combine box is unchanged: its
+#   parts are pulled records, pushed from here.
 # Exit: 0 stage done; 82 binary gate mismatch (the run stops); 74 TTL checkpoint; 83 TTL reached with nothing
 # finished (rerun with TTL_OVERRIDE_S); 78 budget; 79 order; 80 slow host; 81 the stage stopped
 # (pipeline, gate or validation failure: see the pulled run/status); 2 usage; others from grm-boat.sh.
@@ -75,9 +82,21 @@ SRC_REV=$(sed -n 's/^pub const EVALUATION_REVISION: u32 = \([0-9][0-9]*\);$/\1/p
 [ -z "${REVISION:-}" ] && REVISION=$SRC_REV
 [ "$REVISION" = "$SRC_REV" ] || { echo "drive: REVISION=$REVISION but the source says $SRC_REV" >&2; exit 2; }
 [[ "${MASTER_SHA256:-}" =~ ^[0-9a-f]{64}$ ]] || { echo "drive: MASTER_SHA256 is not a sha256: ${MASTER_SHA256:-unset}" >&2; exit 2; }
-for v in RUNNER NOTES RUN_DIR STAGES KIND SRC KIT KIT_REPO DATA_ROOT MASTER_MANIFEST LANE_PREFIX RAM_NEED_GIB; do
+# KIT11: with DATA_SNAPSHOT_DIR (H-1 only) the data is on the box's snapshot, so DATA_ROOT isn't needed
+SNAPDATA=0 PDWHAT=push-data; [ -n "${DATA_SNAPSHOT_DIR:-}" ] && SNAPDATA=1 PDWHAT=stage-local
+need="RUNNER NOTES RUN_DIR STAGES KIND SRC KIT KIT_REPO MASTER_MANIFEST LANE_PREFIX RAM_NEED_GIB"
+[ $SNAPDATA = 1 ] || need="$need DATA_ROOT"
+for v in $need; do
   case "${!v:-}" in ""|*@@*) echo "drive: $v is unset or a placeholder" >&2; exit 2;; esac
 done
+if [ $SNAPDATA = 1 ]; then
+  [ "$KIND" = h1 ] || { echo "drive: DATA_SNAPSHOT_DIR is for KIND=h1 only" >&2; exit 2; }
+  case "${TEMPLATE:-}" in grm-tmpl-*) ;; *) echo "drive: DATA_SNAPSHOT_DIR needs TEMPLATE, the grm-tmpl-* data snapshot" >&2; exit 2;; esac
+  for v in DATA_SNAPSHOT_DIR VOCAB_SNAPSHOT_DIR; do
+    [[ "${!v:-}" =~ ^/home/user(/[A-Za-z0-9._-]+)+$ ]] || { echo "drive: $v must be a box folder under /home/user: ${!v:-unset}" >&2; exit 2; }
+  done
+  [ -f "${VOCAB_MANIFEST:-}" ] || { echo "drive: DATA_SNAPSHOT_DIR needs VOCAB_MANIFEST, the vocabulary manifest file" >&2; exit 2; }
+fi
 # I-g: SRC must be the top of a git worktree with a commit, and clean (a plain archive extract has no commit key)
 [ "$(git -C "$SRC" rev-parse --show-toplevel 2> /dev/null)" = "$(readlink -f "$SRC")" ] &&
   [[ "$(git -C "$SRC" rev-parse HEAD 2> /dev/null)" =~ ^[0-9a-f]{40}$ ]] || { echo "drive: $SRC is not a git worktree with a commit" >&2; exit 2; }
@@ -110,7 +129,8 @@ if [ "$KIND" = h1 ]; then
   [ -f "$SRC/$SPECIES" ] || die 2 "stage $BOX: no spec $SPECIES in $SRC"
   [[ "${TTL_H:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die 2 "stage $BOX: no TTL hours in column 9"
   if [ "$H1ROLE" = combine ] && { [ -z "${PARTS:-}" ] || [ "$PARTS" = - ]; }; then die 2 "stage $BOX: a combine row names no parts"; fi
-  for v in VOCAB_ROOT VOCAB_MANIFEST_SHA256; do case "${!v:-}" in ""|*@@*) die 2 "$v is unset or a placeholder";; esac; done
+  vneed="VOCAB_ROOT VOCAB_MANIFEST_SHA256"; [ $SNAPDATA = 1 ] && vneed="VOCAB_MANIFEST VOCAB_MANIFEST_SHA256"
+  for v in $vneed; do case "${!v:-}" in ""|*@@*) die 2 "$v is unset or a placeholder";; esac; done
   [ -n "${GRM_SCP_FLOOR_MBPS:-}" ] && export GRM_SCP_FLOOR_MBPS
   H1T=$([[ ",${H1_TRACE_BOXES:-}," == *",$BOX,"* ]] && echo 1 || echo 0)
 fi
@@ -187,10 +207,17 @@ if [ "$KIND" = h1 ]; then
   # pinned in NOTES.md before anything is pushed. The FASTA set follows the box's union (step 6).
   if [ "$H1ROLE" = run ]; then
     python3 -I "$KIT/h1-manifest.py" meta "$MASTER_MANIFEST" > "$SD/INPUT-MANIFEST.sha256" || die 2 "metadata manifest: $(tail -n 1 "$SD/INPUT-MANIFEST.sha256")"
-    python3 -I "$KIT/h1-manifest.py" vocab "$VOCAB_ROOT" > "$SD/VOCAB-MANIFEST.sha256" || die 2 "vocabulary manifest: $(tail -n 1 "$SD/VOCAB-MANIFEST.sha256")"
+    if [ $SNAPDATA = 1 ]; then
+      # KIT11: the files are on the snapshot; the manifest is the run file's, copied once and pinned
+      cp -- "$VOCAB_MANIFEST" "$SD/VOCAB-MANIFEST.sha256" || die 2 "could not copy $VOCAB_MANIFEST"
+      VFROM="$VOCAB_MANIFEST (the files at $VOCAB_SNAPSHOT_DIR in $TEMPLATE)"
+    else
+      python3 -I "$KIT/h1-manifest.py" vocab "$VOCAB_ROOT" > "$SD/VOCAB-MANIFEST.sha256" || die 2 "vocabulary manifest: $(tail -n 1 "$SD/VOCAB-MANIFEST.sha256")"
+      VFROM=$VOCAB_ROOT
+    fi
     VSHA=$(sha256sum "$SD/VOCAB-MANIFEST.sha256" | cut -d' ' -f1)
-    [ "$VSHA" = "$VOCAB_MANIFEST_SHA256" ] || die 2 "the vocabulary in $VOCAB_ROOT hashes to manifest $VSHA, not the pinned $VOCAB_MANIFEST_SHA256"
-    say "vocabulary manifest pinned: $SD/VOCAB-MANIFEST.sha256 sha256 $VSHA, $(wc -l < "$SD/VOCAB-MANIFEST.sha256") files, from $VOCAB_ROOT"
+    [ "$VSHA" = "$VOCAB_MANIFEST_SHA256" ] || die 2 "the vocabulary manifest from $VFROM hashes to $VSHA, not the pinned $VOCAB_MANIFEST_SHA256"
+    say "vocabulary manifest pinned: $SD/VOCAB-MANIFEST.sha256 sha256 $VSHA, $(wc -l < "$SD/VOCAB-MANIFEST.sha256") files, from $VFROM"
     printf 'H1_TRACE=%s H1_EXTRA=%s\n' "$H1T" "${H1_EXTRA:-}" > "$SD/H1-FLAGS"   # DC1: what a combine checks
   else
     pargs=()
@@ -565,15 +592,21 @@ fi
 # ---- 6. data
 if [ "$KIND" = h1 ]; then
   h1run() { local l=$1; shift; waited "$R" run "$ID" --log "$l" --cwd /home/user -- bash /home/user/port/h1-box.sh "$@" > "$SD/$l.out" 2>&1; }
+  # h1data LOCAL BOXDIR ARGS...: one H-1 set onto the box, sent from LOCAL here (push-data) or, with a data snapshot
+  # (KIT11), linked on the box from BOXDIR (stage-local); the same manifest, pin and --dest either way
+  h1data() {
+    local here=$1 there=$2; shift 2
+    if [ $SNAPDATA = 1 ]; then waited "$R" stage-local "$ID" --from "$there" "$@"; else waited "$R" push-data "$ID" "$here" "$@"; fi
+  }
   if [ "$H1ROLE" = combine ]; then
     waited "$R" push-data "$ID" "$SD/combine-in" --manifest "$SD/INPUT-MANIFEST.sha256" --manifest-sha256 "$MSHA" --dest /home/user/grm-combine > "$SD/push-data.out" 2>&1 ||
       bail $? "push-data of the parts refused or failed: $(tail -n 1 "$SD/push-data.out")"
   else
     # one upload at a time: metadata, vocabulary, then (after the union is read back) the FASTAs
-    waited "$R" push-data "$ID" "$DATA_ROOT" --manifest "$SD/INPUT-MANIFEST.sha256" --manifest-sha256 "$MSHA" --dest /home/user/grm-meta > "$SD/push-data.out" 2>&1 ||
-      bail $? "push-data of the metadata refused or failed: $(tail -n 1 "$SD/push-data.out")"
-    waited "$R" push-data "$ID" "$VOCAB_ROOT" --manifest "$SD/VOCAB-MANIFEST.sha256" --manifest-sha256 "$VSHA" --dest /home/user/grm-vocab > "$SD/push-vocab.out" 2>&1 ||
-      bail $? "push-data of the vocabulary refused or failed: $(tail -n 1 "$SD/push-vocab.out")"
+    h1data "${DATA_ROOT:-}" "${DATA_SNAPSHOT_DIR:-}" --manifest "$SD/INPUT-MANIFEST.sha256" --manifest-sha256 "$MSHA" --dest /home/user/grm-meta > "$SD/push-data.out" 2>&1 ||
+      bail $? "$PDWHAT of the metadata refused or failed: $(tail -n 1 "$SD/push-data.out")"
+    h1data "${VOCAB_ROOT:-}" "${VOCAB_SNAPSHOT_DIR:-}" --manifest "$SD/VOCAB-MANIFEST.sha256" --manifest-sha256 "$VSHA" --dest /home/user/grm-vocab > "$SD/push-vocab.out" 2>&1 ||
+      bail $? "$PDWHAT of the vocabulary refused or failed: $(tail -n 1 "$SD/push-vocab.out")"
     h1run union union || bail 81 "union failed: $(grep '^STOP' "$SD/union.out" | tail -n 1)"
     rm -rf "$SD/union"
     "$R" pull "$ID" /home/user/r11/receipts/h1 "$SD/union" > /dev/null || bail 86 "union pull failed"
@@ -583,8 +616,8 @@ if [ "$KIND" = h1 ]; then
     FSHA=$(sha256sum "$SD/FASTA-MANIFEST.sha256" | cut -d' ' -f1)
     say "union: $(wc -l < "$U") genomes (union.txt $(sha256sum "$U" | cut -d' ' -f1)); FASTA manifest pinned: $SD/FASTA-MANIFEST.sha256 sha256 $FSHA, $(wc -l < "$SD/FASTA-MANIFEST.sha256") files, from master $MASTER_SHA256"
     "$R" run "$ID" --log fasta-pin --cwd /home/user -- "printf 'H1_FASTA_SHA256=%s\n' $FSHA >> /home/user/r11/stage.env" > /dev/null || bail 86 "could not pin the FASTA set in stage.env"
-    waited "$R" push-data "$ID" "$DATA_ROOT" --manifest "$SD/FASTA-MANIFEST.sha256" --manifest-sha256 "$FSHA" --dest /home/user/grm-fasta > "$SD/push-fasta.out" 2>&1 ||
-      bail $? "push-data of the FASTAs refused or failed: $(tail -n 1 "$SD/push-fasta.out")"
+    h1data "${DATA_ROOT:-}" "${DATA_SNAPSHOT_DIR:-}" --manifest "$SD/FASTA-MANIFEST.sha256" --manifest-sha256 "$FSHA" --dest /home/user/grm-fasta > "$SD/push-fasta.out" 2>&1 ||
+      bail $? "$PDWHAT of the FASTAs refused or failed: $(tail -n 1 "$SD/push-fasta.out")"
   fi
 else
 waited "$R" push-data "$ID" "$DATA_ROOT" --manifest "$SD/INPUT-MANIFEST.sha256" --manifest-sha256 "$MSHA" > "$SD/push-data.out" 2>&1 ||

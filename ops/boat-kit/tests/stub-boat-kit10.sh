@@ -11,6 +11,7 @@
 #   STUB_ARCHIVE_BACK=1     extend moves archiveAfter back an hour (a misbehaving API)
 #   STUB_ARCHIVE_SAME=1     extend returns ok and leaves archiveAfter as it was (REVIEW-KIT10 L2)
 #   STUB_ARCHIVE_SHORT=s    extend returns ok and sets archiveAfter s seconds short of the asked end (L2)
+#   STUB_SCP_TAMPER=1       KIT11: scp adds a byte to what it copied (a file changed on the way)
 c=$1; shift; [ "${1:-}" = --no-update ] && shift
 R=${STUB_ROOT:?}
 echo "$c $*" >> "$R/boat-calls.log"
@@ -41,7 +42,7 @@ with open(s, "rb") as f, open(d, "wb") as o:
         if not b: break
         o.write(b); o.flush(); time.sleep(1)' "$s" "$d" "$STUB_SCP_RATE"
     fi
-    cp "$s" "$d";;
+    cp "$s" "$d" || exit 1; [ -n "${STUB_SCP_TAMPER:-}" ] && echo x >> "$d"; exit 0;;
   exec)
     det=0; st=""
     while [ $# -gt 0 ] && [ "$1" != -- ]; do case "$1" in --detach) det=1;; --status) st=$2; shift;; esac; shift; done

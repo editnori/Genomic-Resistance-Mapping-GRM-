@@ -6,6 +6,8 @@
 # extend prints "END <now + ttl - SR_EXTEND_SHORT>" as grm-boat.sh extend does, or no END with SR_EXTEND_NOEND=1;
 # SR_STATUS=paused answers as r11-box.sh does when an H-1 stage's guard holds it stopped; SR_RUNNING_POLLS=n answers
 # running for n status polls, then SR_STATUS.
+# KIT11: stage-local logs like push-data (its manifest as $SR_LOG.sl-<dest>, its --from as $SR_LOG.slfrom-<dest>);
+# SR_STAGELOCAL_FAIL=meta|vocab|fasta makes that one exit 97.
 L=${SR_LOG:?}; echo "$* | floor=${GRM_SCP_FLOOR_MBPS:-unset}" >> "$L"
 [ "$1" = --notes ] && shift 2
 c=$1; shift
@@ -20,6 +22,10 @@ case "$c" in
     d=""; m=""; while [ $# -gt 0 ]; do case "$1" in --dest) d=$2; shift;; --manifest) m=$2; shift;; esac; shift; done
     cp "$m" "$SR_LOG.pd-${d##*/}"
     case "${SR_PUSHDATA_FAIL:-}:$d" in meta:*grm-meta|vocab:*grm-vocab|fasta:*grm-fasta|combine:*grm-combine) exit 97;; esac; exit 0;;
+  stage-local)
+    d=""; m=""; f=""; while [ $# -gt 0 ]; do case "$1" in --dest) d=$2; shift;; --manifest) m=$2; shift;; --from) f=$2; shift;; esac; shift; done
+    cp "$m" "$SR_LOG.sl-${d##*/}"; echo "$f" > "$SR_LOG.slfrom-${d##*/}"
+    case "${SR_STAGELOCAL_FAIL:-}:$d" in meta:*grm-meta|vocab:*grm-vocab|fasta:*grm-fasta) exit 97;; esac; exit 0;;
   extend) ttl=""; while [ $# -gt 0 ]; do [ "$1" = --ttl ] && ttl=$2; shift; done
     echo "extended (stub)"; [ -n "${SR_EXTEND_NOEND:-}" ] || echo "END $(( $(date +%s) + ttl - ${SR_EXTEND_SHORT:-0} ))"; exit 0;;
   close) sed -i "/^$1 /d" "$SR_LIVE"; echo "closed $1" >> "$SR_CLOSED"; exit 0;;
