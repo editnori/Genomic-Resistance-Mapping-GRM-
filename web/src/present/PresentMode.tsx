@@ -85,6 +85,7 @@ const TitleSlide = ({ manifest, timeline }: { manifest: Manifest; timeline: Slid
       </Reveal>
       <Reveal at={2} timeline={timeline}>
         <p className="type-headline">What GRM found</p>
+        <p className="type-body mt-1">How well does a bacterium&apos;s genome predict whether a lab finds it resistant or susceptible to an antibiotic?</p>
         <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-note text-muted-text">
           <span>Report built {dateText(manifest.generated_at)}</span>
           {audit.total === 0 ? null : (
@@ -277,13 +278,13 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
       {
         kind: "figure",
         id: "rule",
-        title: "One interpretable rule",
+        title: "One rule a person can read",
         result:
           pick === null
             ? "No set covering machine rule in this report."
             : `The set covering machine reaches ${pct(pick.ba)} balanced accuracy for ${pick.row.antibiotic} in ${speciesShort(pick.row.species)} on random splits${lineage === null ? "" : `, ${pct(lineage)} with lineages held out`}.`,
         caption:
-          "Carriage of the first rule's k-mers, by lab call. A rule marks k-mers that separate the calls in these isolates; they can travel with the cause on a plasmid or in a lineage rather than be the cause.",
+          "The set covering machine (SCM) is the learner that writes its call as short yes-or-no rules. The bars show how many resistant and susceptible isolates carry the first rule's k-mers. A rule marks k-mers that separate the calls in these isolates; they can travel with the cause on a plasmid or in a lineage without being the cause.",
         fixed: ({ page, pages }) => <RuleFigure manifest={manifest} page={page} pages={pages} />,
         continues: true,
       },

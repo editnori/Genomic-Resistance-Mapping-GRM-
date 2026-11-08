@@ -26,6 +26,7 @@ import { leadPanel, panelsWithoutBest, pool, share, type PanelRowJoined } from "
 import { BEST_LEARNER_WORDS, splitReasonShort } from "../data/derive/dataset";
 import { manifestAudit } from "../data/derive/evaluation";
 import { routeHref, type Navigator } from "../app/router";
+import { catalogWords } from "../app/ReportStatus";
 import { AxisX, LABEL_CLASS, linear, MarkListbox, PlacedText, placeLabels, RefLine, ticks, useWidth, type ListMark } from "../charts/kit";
 import { GapSwarm, MicStrip } from "../charts/DotStrip";
 import { CatalogScatter } from "../charts/CatalogScatter";
@@ -134,8 +135,7 @@ export const ReportLine = ({ manifest, scope }: { manifest: Manifest; scope?: Re
   const audit = manifestAudit(manifest);
   return (
     <>
-      <span>Report built {dateText(manifest.generated_at)}</span> <Sep />{" "}
-      <span>AMRFinderPlus catalog {manifest.amrfinder_version === "" ? "version not recorded" : manifest.amrfinder_version}</span>
+      <span>Report built {dateText(manifest.generated_at)}</span> <Sep /> <span>{catalogWords(manifest)}</span>
       {audit.total === 0 ? null : (
         <>
           {" "}
@@ -181,12 +181,12 @@ export const spelled = (n: number, one: string, many = `${one}s`): string => `${
 /** A count inside a sentence, spelled out up to ten: "four because". */
 const spelledLower = (n: number): string => (WORDS[n] ?? int(n)).toLowerCase();
 
-/** "237 reports cover 13 species and use 21,889 genomes selected from
- *  119,072 QC-passing genomes." */
+/** "237 datasets have a report. They cover 13 species and use 21,889
+ *  genomes, chosen from 119,072 genomes that passed quality control (QC)." */
 export const cohortLead = (m: Manifest): string => {
   const reports = m.datasets.length;
   const one = reports === 1;
-  return `${plural(reports, "report")} ${one ? "covers" : "cover"} ${plural(speciesCount(m), "species", "species")} and ${one ? "uses" : "use"} ${int(sum(m.species.map((s) => s.genomes_analyzed)))} genomes selected from ${int(m.funnel.genomes_passing_qc)} QC-passing genomes.`;
+  return `${plural(reports, "dataset")} ${one ? "has" : "have"} a report. ${one ? "It covers" : "They cover"} ${plural(speciesCount(m), "species", "species")} and ${one ? "uses" : "use"} ${int(sum(m.species.map((s) => s.genomes_analyzed)))} genomes, chosen from ${int(m.funnel.genomes_passing_qc)} genomes that passed quality control (QC).`;
 };
 
 /** What a report needs, in one sentence: the class minimum every report
@@ -215,16 +215,16 @@ export const coverageNote = (m: Manifest): string => {
   const unreported = sum(analyzed.map((s) => Math.max(0, s.datasets_curated - s.datasets_reported)));
   const { cap, capped } = selectionCap(m);
   const selection = capped
-    ? `In this run, selection is capped at ${int(cap)} genomes per species when more are eligible, and QC and FASTA availability reduce some cohorts further.`
-    : "In this run, QC and FASTA availability decide which labeled genomes are selected.";
+    ? `In this run, selection is capped at ${int(cap)} genomes per species when more are eligible. Some datasets have fewer because genomes failed QC or had no FASTA file, the file that holds the DNA sequence.`
+    : "In this run, every labeled genome that passed QC and has a FASTA file, the file that holds the DNA sequence, is selected.";
   const missing =
     unreported === 0
-      ? "Every curated dataset in these species has a report."
-      : `${spelled(unreported, "curated dataset")} in these species ${unreported === 1 ? "has" : "have"} no report.`;
+      ? "Every dataset in these species that passed curation has a report."
+      : `${spelled(unreported, "dataset")} in these species passed curation but ${unreported === 1 ? "has" : "have"} no report.`;
   const outside =
     waiting.length === 0
       ? ""
-      : ` Another ${plural(waiting.length, "species", "species")} (${plural(sum(waiting.map((s) => s.datasets_curated)), "curated dataset")}) ${waiting.length === 1 ? "was" : "were"} not analyzed; ${waiting.length === 1 ? "its" : "their"} FASTA files are staged separately, not in the pipeline's data root.`;
+      : ` Another ${plural(waiting.length, "species", "species")} (${plural(sum(waiting.map((s) => s.datasets_curated)), "dataset")} that passed curation) ${waiting.length === 1 ? "was" : "were"} not analyzed. ${waiting.length === 1 ? "Its" : "Their"} FASTA files are stored apart from the data this run read.`;
   return `${selection} ${minimumSentence(classMinimum(m.datasets))} ${missing}${outside}`;
 };
 
@@ -235,23 +235,25 @@ export const lineageLead = (s: SplitSummary): string => {
   const verb = s.medianLineage <= s.medianRandom ? "lowers" : "raises";
   const lose = s.nLargeGap === 1 ? "loses" : "lose";
   const median = s.medianGap >= 0 ? `the median loss is ${points(s.medianGap)}` : `the median dataset gains ${points(-s.medianGap)}`;
-  return `Holding out whole lineages ${verb} median balanced accuracy from ${pct(s.medianRandom)} to ${pct(s.medianLineage)}. ${int(s.nLargeGap)} of ${plural(s.nLineage, "dataset")} ${lose} more than 5 points; ${median}.`;
+  return `A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out ${verb} median balanced accuracy from ${pct(s.medianRandom)} on a random split to ${pct(s.medianLineage)}. ${int(s.nLargeGap)} of ${plural(s.nLineage, "dataset")} ${lose} more than 5 points; ${median}.`;
 };
 
-/** The catalog lead: within the cutoff or ahead, split into ahead and
- *  within, then the rest, which trail by more than the cutoff. */
+/** The catalog lead: what the rule is, then within the cutoff or ahead,
+ *  split into ahead and within, then the rest, which trail by more than the
+ *  cutoff. */
 export const catalogLead = (c: CatalogSummary): string => {
   if (c.nCompared === 0) return "No dataset has both a known-gene rule and a lineage-held-out result yet.";
   const cut = Math.round(CATALOG_CUTOFF * 100);
   const { ahead, within, behind } = c.regions;
-  return `GRM's known-gene rules are within ${cut} points or ahead on ${int(c.within.get(CATALOG_CUTOFF) ?? 0)} of ${plural(c.nCompared, "dataset")}: ${int(ahead)} ahead by more than ${cut} and ${int(within)} within ${cut}. They trail by more than ${cut} on the other ${int(behind)}.`;
+  return `A known-gene rule needs no training: it calls a genome resistant when it carries a known resistance gene for the drug. Against the best learner with lineages held out, these rules are within ${cut} points or ahead on ${int(c.within.get(CATALOG_CUTOFF) ?? 0)} of ${plural(c.nCompared, "dataset")}: ${int(ahead)} ahead by more than ${cut} and ${int(within)} within ${cut}. They trail by more than ${cut} on the other ${int(behind)}.`;
 };
 
-/** The MIC lead: datasets at the 90% bar, then the median dataset. */
+/** The MIC lead: what an MIC is, then datasets at the 90% bar, then the
+ *  median dataset. */
 export const micLead = (s: MicSummary): string =>
   s.n === 0
     ? "No dataset had enough MIC values for MIC regression."
-    : `For ${int(s.nAbove90)} of ${plural(s.n, "dataset")}, at least 90% of exact MICs are predicted within one doubling dilution (essential agreement). The median dataset reaches ${pct(s.median)}.`;
+    : `The MIC (minimum inhibitory concentration) is the lowest drug level, in mg/L, that stops the bacterium growing. Labs test levels that double at each step, and a predicted MIC within one step of the measured one counts as essential agreement. For ${int(s.nAbove90)} of ${plural(s.n, "dataset")}, at least 90% of exact MICs are predicted within one doubling dilution. The median dataset reaches ${pct(s.median)}.`;
 
 // ---- data ------------------------------------------------------------------------
 
@@ -260,10 +262,10 @@ export const micLead = (s: MicSummary): string =>
 export const CorpusFigure = ({ manifest, large = false }: { manifest: Manifest; large?: boolean }) => {
   const f = manifest.funnel;
   const stages = [
-    { value: f.pairs_reported, unit: "Reported R/S genome–antibiotic pairs" },
-    { value: f.genomes_passing_qc, unit: "Genomes passed QC" },
+    { value: f.pairs_reported, unit: "Genome and antibiotic pairs with a reported R or S call" },
+    { value: f.genomes_passing_qc, unit: "Genomes that passed QC" },
     { value: sum(manifest.species.map((s) => s.genomes_analyzed)), unit: "Genomes analyzed" },
-    { value: manifest.datasets.length, unit: manifest.datasets.length === 1 ? "Report" : "Reports" },
+    { value: manifest.datasets.length, unit: manifest.datasets.length === 1 ? "Dataset with a report" : "Datasets with a report" },
   ];
   return (
     <ol className={`grid grid-cols-2 gap-x-6 md:grid-cols-4 ${large ? "gap-y-8" : "gap-y-5"}`}>
@@ -351,8 +353,8 @@ const SpeciesCounts = ({ manifest, nav, id }: { manifest: Manifest; nav: Navigat
         </table>
       </ScrollFrame>
       <p className="type-note mt-2">
-        A genome with any label has a curated label for at least one drug, including labels inferred from an MIC. A report&apos;s cohort is smaller: the selected genomes with an
-        unconflicted reported R or S call for its drug.
+        A genome with any label has an R or S label for at least one drug, including labels worked out from an MIC. A report&apos;s cohort, the genomes it scores, is smaller:
+        the selected genomes with a reported R or S call and no conflicting call for its drug.
       </p>
     </div>
   );
@@ -373,8 +375,8 @@ const CorpusTiles = ({ manifest, nav }: { manifest: Manifest; nav: Navigator }) 
     </a>
   );
   const tiles: { value: number; unit: string; action: ReactNode }[] = [
-    { value: f.pairs_reported, unit: `reported R/S genome–antibiotic pairs, from ${int(f.records)} BV-BRC records`, action: methods("See pair curation", "m-funnel") },
-    { value: f.genomes_passing_qc, unit: "genomes passed QC", action: methods("See QC outcomes", "m-funnel") },
+    { value: f.pairs_reported, unit: `genome and antibiotic pairs with a reported R or S call, from ${int(f.records)} BV-BRC records`, action: methods("See pair curation", "m-funnel") },
+    { value: f.genomes_passing_qc, unit: "genomes that passed QC", action: methods("See QC outcomes", "m-funnel") },
     {
       value: analyzed,
       unit: "genomes analyzed",
@@ -387,7 +389,7 @@ const CorpusTiles = ({ manifest, nav }: { manifest: Manifest; nav: Navigator }) 
     },
     {
       value: manifest.datasets.length,
-      unit: manifest.datasets.length === 1 ? "report" : "reports",
+      unit: manifest.datasets.length === 1 ? "dataset with a report" : "datasets with a report",
       action: (
         <a href={routeHref({ view: "datasets", species: null, dataset: null })} onClick={inApp(() => nav.go({ view: "datasets", species: null }))} className={ACTION}>
           Browse all report datasets
@@ -416,7 +418,7 @@ export const corpusFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const { cap, capped } = selectionCap(m);
   return {
     id: "corpus",
-    title: "Data",
+    title: "Genomes and lab calls",
     result: m.datasets.length === 0 ? `No dataset has a report yet; ${plural(curated, "dataset")} passed curation.` : cohortLead(m),
     figure: opts.page && opts.nav !== undefined ? <CorpusTiles manifest={m} nav={opts.nav} /> : <CorpusFigure manifest={m} large={!opts.page} />,
     caption: opts.page
@@ -431,7 +433,7 @@ export const corpusFinding = (m: Manifest, opts: FindingOptions): Finding => {
 /** Why a dataset has no lineage-held-out result, in words a reader can use;
  *  the pipeline's own sentence stays in its report. */
 const UNPAIRED_WORDS: Record<string, { clause: string; label: string }> = {
-  "Fold lacks a class": { clause: "a held-out fold would hold only one class", label: "A fold with one class" },
+  "Fold lacks a class": { clause: "a held-out test group (fold) would hold only resistant or only susceptible genomes", label: "A fold with only one call" },
   "Too few lineages": { clause: "there are too few lineages", label: "Too few lineages" },
   Unavailable: { clause: "the split could not run", label: "Split could not run" },
   none: { clause: "no reason is recorded", label: "No reason recorded" },
@@ -455,7 +457,7 @@ const UnpairedNote = ({ rows, nav }: { rows: readonly CatalogRow[]; nav?: Naviga
   return (
     <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
       <p>
-        {spelled(unpaired.length, "dataset")} {unpaired.length === 1 ? "has" : "have"} no paired lineage result and {unpaired.length === 1 ? "is" : "are"} left out of these medians
+        {spelled(unpaired.length, "dataset")} {unpaired.length === 1 ? "has" : "have"} no score with lineages held out and {unpaired.length === 1 ? "is" : "are"} left out of these medians
         {entries.length === 1 ? `, because ${words(entries[0]![0]).clause}` : `: ${listWords(clauses)}`}.
       </p>
       {entries.map(([k, g]) => (
@@ -485,12 +487,12 @@ export const lineageFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const none = s.nLineage === 0 || s.medianGap === null;
   return {
     id: "lineage",
-    title: "Unseen lineages",
+    title: "Scores on unseen lineages",
     result: opts.page || none ? lineageLead(s) : `${int(s.nLargeGap)} of ${plural(s.nLineage, "dataset")} lose more than 5 points of balanced accuracy when whole lineages are held out.`,
     figure: (fit: PagedFit) => <GapSwarm rows={rows} height={fit.height} onOpen={opts.nav?.openDataset} />,
     caption: none
       ? "The lineage split holds out whole lineages, so no test genome has a near-identical relative in training."
-      : `Each dot is one dataset: balanced accuracy, the mean of sensitivity and specificity, on random splits minus balanced accuracy with whole lineages held out, for ${BEST_LEARNER_WORDS}.${
+      : `Each dot is one dataset: its balanced accuracy on random splits minus its balanced accuracy with whole lineages held out, for ${BEST_LEARNER_WORDS}. Balanced accuracy is the mean of sensitivity and specificity, and a dot further right lost more.${
           opts.page ? "" : ` Medians: ${pct(s.medianRandom)} random, ${pct(s.medianLineage)} lineage, ${((s.medianGap ?? 0) * 100).toFixed(1)} points lost.`
         }`,
     note: opts.page ? (
@@ -518,16 +520,16 @@ export const catalogFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const noBest = rows.filter((r) => r.catalog !== null && r.best_learner === null).length;
   return {
     id: "catalog",
-    title: "Known-gene rules",
+    title: "Known-gene rules against learners",
     result:
-      opts.page || c.nCompared === 0 ? catalogLead(c) : `Known-gene rules are within ${cut} points or ahead on ${int(c.within.get(CATALOG_CUTOFF) ?? 0)} of ${plural(c.nCompared, "dataset")}.`,
+      opts.page || c.nCompared === 0 ? catalogLead(c) : `Known-gene rules are within ${cut} points or ahead of the best learner on ${int(c.within.get(CATALOG_CUTOFF) ?? 0)} of ${plural(c.nCompared, "dataset")}.`,
     // On the page the plot may grow past its default size where the unit has room.
     figure: (fit: PagedFit) => <CatalogScatter rows={rows} height={fit.height ?? (opts.page ? 640 : undefined)} onOpen={opts.nav?.openDataset} />,
     // A slide says the same in fewer lines, so a phone's plot keeps the size
     // its 12px labels need.
     caption: opts.page
-      ? "GRM detects acquired AMRFinderPlus genes with its own k-mer matching and applies its own drug rules; it does not run the AMRFinderPlus program or test point mutations, so mutational resistance counts against a rule. Each mark is one dataset: the rule's balanced accuracy, which needs no training, against the best learner's with whole lineages held out."
-      : "GRM's own k-mer matching finds acquired AMRFinderPlus genes for its own drug rules; it does not run AMRFinderPlus or test point mutations. One mark per dataset.",
+      ? "Each mark is one dataset: the known-gene rule's balanced accuracy, which needs no training, against the best learner's with whole lineages held out. GRM finds the catalog's acquired genes, genes a bacterium can pick up from other bacteria, with its own k-mer matching and applies its own drug rules. It does not run the AMRFinderPlus program or test point mutations, small changes in the bacterium's own genes, so resistance that comes from such a change counts against a rule."
+      : "One mark per dataset. GRM's own k-mer matching finds the catalog's acquired genes for its own drug rules; it does not run AMRFinderPlus or test point mutations.",
     note: opts.page ? (
       <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
         {noRule + unpaired + noBest > 0 ? (
@@ -542,7 +544,7 @@ export const catalogFinding = (m: Manifest, opts: FindingOptions): Finding => {
         ) : null}
         {ruled > 0 ? (
           <p>
-            By drug class, the median dataset&apos;s rule is within {cut} points of the learner in {int(matching)} of {plural(ruled, "class", "classes")} with a rule
+            By drug class, a group of antibiotics that work the same way, the median dataset&apos;s rule is within {cut} points of the best learner in {int(matching)} of {plural(ruled, "class", "classes")} with a rule
             {noRuleClasses > 0 ? `; ${plural(noRuleClasses, "class", "classes")} ${noRuleClasses === 1 ? "has" : "have"} no acquired-gene rule` : ""}.
           </p>
         ) : null}
@@ -701,13 +703,16 @@ export const PanelFigure = ({
   );
 };
 
+/** What a PCR panel is, ahead of the page's numbers. */
+const PANEL_INTRO = "A PCR panel is a lab test that looks for a fixed list of resistance targets in a sample's DNA. GRM simulates it on each genome and sets it beside the best learner.";
+
 export const panelsFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const lead = leadPanel(m);
   const evidence = opts.page ? { label: "All panel results", body: <PanelEvidence manifest={m} onOpen={opts.nav?.openDataset} /> } : undefined;
   if (lead === null) {
     return {
       id: "panels",
-      title: "PCR panel",
+      title: "Simulated PCR panel",
       result: "No simulated PCR panel targets an analyzed drug yet.",
       figure: null,
       caption: "Panels cover carbapenems, extended-spectrum cephalosporins, methicillin, vancomycin, and colistin.",
@@ -719,12 +724,13 @@ export const panelsFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const same = p.calledResistant === p.modelResistant;
   const found = pct(share(p.caught, p.calledResistant));
   const called = pct(share(p.modelCaught, p.modelResistant));
+  const shares = `${lead.name} targets are found in ${found} of ${int(p.calledResistant)} resistant isolates${same ? "" : " with a panel call"}${opts.page ? ` across ${plural(p.datasets, "dataset")}` : ""}; the best learner calls ${called} of ${same ? "them" : int(p.modelResistant)} resistant.`;
   return {
     id: "panels",
-    title: "PCR panel",
-    result: `${lead.name} targets are found in ${found} of ${int(p.calledResistant)} resistant isolates${same ? "" : " with a panel call"}${opts.page ? ` across ${plural(p.datasets, "dataset")}` : ""}; the best learner calls ${called} of ${same ? "them" : int(p.modelResistant)} resistant.`,
+    title: "Simulated PCR panel",
+    result: opts.page ? `${PANEL_INTRO} ${shares}` : shares,
     figure: (fit: PagedFit) => <PanelFigure rows={lead.rows} height={fit.height} onOpen={opts.nav?.openDataset} page={fit.page} pages={fit.pages} onPages={fit.onPages} />,
-    caption: `Each row is one of ${int(p.datasets)} datasets. Panel targets are found in assembled genomes by k-mer containment, in silico; the learner is ${BEST_LEARNER_WORDS}.${
+    caption: `Each row is one of ${int(p.datasets)} datasets, and the two lines count every row together. Panel targets are found in assembled genomes by k-mer containment, in silico, meaning by computer with no lab test; the learner is ${BEST_LEARNER_WORDS}.${
       p.noCallResistant > 0 ? ` ${plural(p.noCallResistant, "resistant isolate")} with no probe call ${p.noCallResistant === 1 ? "is" : "are"} left out of the panel share only.` : ""
     }${noBestWords(panelsWithoutBest(m), " with a simulated panel")}`,
     span: "unit",
@@ -741,10 +747,10 @@ export const micFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const without = rows.length - s.n;
   return {
     id: "mic",
-    title: "MIC prediction",
+    title: "Predicting the drug level that stops growth (MIC)",
     result: opts.page || s.n === 0 ? micLead(s) : `For ${int(s.nAbove90)} of ${plural(s.n, "dataset")}, at least 90% of exact MICs are predicted within one doubling dilution.`,
     figure: s.n === 0 ? null : (fit: PagedFit) => <MicStrip rows={rows} height={fit.height} onOpen={opts.nav?.openDataset} />,
-    caption: `Each dot is one dataset: the share of its exact MICs predicted within one doubling dilution, out of fold. An exact MIC is a single measured value, not a bound such as “≤0.25”. 90% is the essential-agreement bar used for susceptibility test devices.${
+    caption: `Each dot is one dataset: the share of its exact MICs predicted within one doubling dilution by a model that never trained on that genome (out of fold). An exact MIC is a single measured value, not a bound such as “≤0.25”. 90% is the essential-agreement bar used for lab test devices.${
       opts.page ? "" : ` Median ${pct(s.median)}.`
     }`,
     note:

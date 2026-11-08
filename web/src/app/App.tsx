@@ -241,9 +241,9 @@ export const App = () => {
             ) : (
               <div className={`${VIEW_SHELL} py-10`}>
                 {manifest.status === "loading" ? (
-                  <PanelState kind="loading" title="Loading the report manifest" />
+                  <PanelState kind="loading" title="Loading the report" />
                 ) : (
-                  <PanelState kind="error" title="The report manifest could not be read" message={loadErrorText(manifest.error)} />
+                  <PanelState kind="error" title="The report could not be read" message={loadErrorText(manifest.error)} />
                 )}
               </div>
             )}
