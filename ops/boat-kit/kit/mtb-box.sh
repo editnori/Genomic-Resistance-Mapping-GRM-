@@ -90,25 +90,48 @@ EOF
   sha256sum "$GRM" "$FOLDGEN" > "$RUN/logs/binaries.sha256"
 }
 sec_restore() { # an earlier box's cohort counted/structure/matrix, checked against its receipt before use
-  local src=/home/user/grm-resume
+  local src=/home/user/grm-resume sums r n want bad
+  sums=$src/$MTB_RESTORE_SUMS
   (cd "$src" && sha256sum -c --strict --quiet "$MTB_RESTORE_SUMS") || stop "restore set differs from $MTB_RESTORE_SUMS"
+  # in_set PREFIX: the restore manifest's lines for files under PREFIX (a path in the set). restored PREFIX: each of
+  # them is at the same path under $RUN with the same bytes, so a short or failed copy, or a file $RUN already held
+  # that cp -n kept, stops here and not at compare (L3, REVIEW-RESTORE7)
+  in_set() { awk -v p="$1" 'substr($0, 67, length(p)) == p' "$sums"; }
+  restored() {
+    local l; l=$(in_set "$1"); [ -n "$l" ] || return 0
+    bad=$(cd "$RUN" && sha256sum -c --strict --quiet <<< "$l" 2>&1) || stop "restore: $1 in $RUN is not the restore set's: $(head -n 1 <<< "$bad")"
+  }
   for c in $cohorts; do
     [ -d "$src/cohorts/$c" ] || continue
-    cp -a "$src/cohorts/$c/data/species/$SLUG/." "$RUN/cohorts/$c/data/species/$SLUG/"
+    cp -a "$src/cohorts/$c/data/species/$SLUG/." "$RUN/cohorts/$c/data/species/$SLUG/" || stop "restore: copying cohort $c's species outputs failed"
     slog "restored $c: $(ls "$RUN/cohorts/$c/data/species/$SLUG" | paste -sd' ')"
-    [ -f "$src/cohorts/$c/validation-manifest.json" ] && cp -a "$src/cohorts/$c/validation-manifest.json" "$RUN/cohorts/$c/"
-    # X4: compare_cohorts reads each cohort's report tree (the validation manifest hashes its index), which X2
-    # and X3 built; it arrives under data/report/ and must land beside the cohort's species outputs
-    if [ -d "$src/cohorts/$c/data/report" ]; then
-      mkdir -p "$RUN/cohorts/$c/data/report" && cp -a "$src/cohorts/$c/data/report/." "$RUN/cohorts/$c/data/report/"
-      slog "restored $c report: $(find "$RUN/cohorts/$c/data/report" -type f | wc -l) files"
+    if [ -f "$src/cohorts/$c/validation-manifest.json" ]; then
+      cp -a "$src/cohorts/$c/validation-manifest.json" "$RUN/cohorts/$c/" || stop "restore: copying cohort $c's validation manifest failed"
     fi
-    if [ -f "$RUN/cohorts/$c/validation-manifest.json" ] && [ ! -f "$RUN/cohorts/$c/data/report/index.json" ]; then
-      stop "restore: cohort $c has a validation manifest but no data/report/index.json"
+    # X4: compare_cohorts reads each cohort's report tree (the validation manifest hashes its index), which X2
+    # and X3 built; it arrives under data/report/ and must land beside the cohort's species outputs. The restored
+    # tree replaces whatever $RUN held there, a stale file or a link, and is never merged into it (L2, REVIEW-RESTORE7)
+    r=$RUN/cohorts/$c/data/report
+    if [ -d "$src/cohorts/$c/data/report" ]; then
+      rm -rf "$r" && mkdir -p "$r" && cp -a "$src/cohorts/$c/data/report/." "$r/" || stop "restore: copying cohort $c's report failed"
+      n=$(find "$r" -type f | wc -l) want=$(in_set "cohorts/$c/data/report/" | wc -l)
+      [ "$n" = "$want" ] || stop "restore: cohort $c's report holds $n files, the restore set lists $want"
+      slog "restored $c report: $n files"
+    fi
+    restored "cohorts/$c/"
+    if [ -f "$RUN/cohorts/$c/validation-manifest.json" ]; then
+      [ -f "$r/index.json" ] || stop "restore: cohort $c has a validation manifest but no data/report/index.json"
+      # the index's bytes, not only its presence: the one the cohort's validation manifest pins as an input
+      python3 -I -c 'import hashlib, json, sys
+pins = [e.get("sha256") for e in json.load(open(sys.argv[1])).get("inputs", []) if e.get("path") == "data/report/index.json"]
+have = hashlib.sha256(open(sys.argv[2], "rb").read()).hexdigest()
+sys.exit(0 if pins == [have] else 1)' "$RUN/cohorts/$c/validation-manifest.json" "$r/index.json" ||
+        stop "restore: cohort $c's data/report/index.json is not the one its validation manifest pins"
     fi
   done
   if [ -d "$src/audit" ]; then
-    mkdir -p "$RUN/audit"; cp -an "$src/audit/." "$RUN/audit/"
+    mkdir -p "$RUN/audit"; cp -an "$src/audit/." "$RUN/audit/" || stop "restore: copying audit/ failed"
+    restored audit/
     slog "restored run receipts: $(ls "$src/audit" | paste -sd' ')"
   fi
 }
@@ -221,7 +244,9 @@ sec_learn() {
     (cd "$D/bvbrc/features" && ls | wc -l) | grep -qx "$(wc -l < "$D/species/$SLUG/genomes.txt")" || stop "features changed in $c"
     skip "check-annotations (count only), check-lane $c"
   fi
-  "$GRM" --data "$D" report > "$W/logs/$c-report.log" 2>&1 || stop "report $c"
+  # M1 (REVIEW-INTEG7): grm report reads reference/kover-summary.json from the working folder and refuses without
+  # it, so it runs from the checkout, as scripts/run-pipeline.sh does
+  (cd "$WS" && "$GRM" --data "$D" report) > "$W/logs/$c-report.log" 2>&1 || stop "report $c"
   if real; then
     python3 -I "$P/prepare_execution_roots.py" --verify-frozen "$RUN" || stop "verify-frozen"
     python3 -I "$P/write_run_manifest.py" "$C" --cohort $c --source-commit "$SOURCE_COMMIT" --binary "$GRM" \

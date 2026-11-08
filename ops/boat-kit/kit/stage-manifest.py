@@ -1,6 +1,7 @@
 """Derive one stage's input manifest from the run's master manifest (lane DATA's, pinned by MASTER_SHA256): every
 line the stage reads, in the master's own bytes, so each line's hash is the master's. Taken: the shared inputs
-(bvbrc/genome_amr.jsonl, bvbrc/genomes.jsonl, curated/*, catalog/*, species-check/*), and for each species named,
+(bvbrc/genome_amr.jsonl, bvbrc/genomes.jsonl, curated/* but grm curate's provenance side file, catalog/*,
+species-check/*), and for each species named,
 species/<slug>/genomes.txt, then fasta/<id>.fna.gz and bvbrc/features/<id>.json for each id in it (read from
 DATA_ROOT, whose genomes.txt must hash as the master says). With CANARY=1 (the name is kept; it now feeds the
 per-stage revision-9 diff report, not a gate), CANARY_PREFIX's index.json and the named species' reports under it.
@@ -16,6 +17,9 @@ root, master, species, prefix, canary = sys.argv[1], sys.argv[2], sys.argv[3], s
 # EXTRA (optional 6th argument): comma list of further genome lists in the master, such as MTB's
 # bindings/full-genomes.txt, whose ids' FASTA and annotations the stage also reads
 extra = [x for x in (sys.argv[6] if len(sys.argv) > 6 else "").split(",") if x]
+# grm curate's provenance side file (GRM docs/provenance-fields.md, about 310 MB on the real root): no stage reads
+# it, so a master manifest that lists it never sends it to a box.
+SIDE_FILES = ("curated/provenance.jsonl",)
 lines = {}
 for line in open(master, encoding="utf-8").read().splitlines():
     lines[line[66:]] = line
@@ -30,6 +34,8 @@ def take(p):
 
 
 for p in sorted(lines):
+    if p in SIDE_FILES:
+        continue
     if p in ("bvbrc/genome_amr.jsonl", "bvbrc/genomes.jsonl") or p.split("/")[0] in ("curated", "catalog", "species-check") \
             or (extra and p.split("/")[0] == "bindings"):
         out.append(lines[p])

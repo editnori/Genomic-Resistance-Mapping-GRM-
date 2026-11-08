@@ -27,12 +27,33 @@
 #       /home/user/grm-logs/NAME.log (rc in NAME.rc, /usr/bin/time -v in NAME.time); polls --status until it exits,
 #       prints the log tail and returns the command's exit code. DIR must exist (push creates the default); a cd
 #       failure logs the directory and bootstrap action, returns 86 and does not run the command.
+#       KIT10: GRM's own SigDrug vocabulary copy (D6) is a class of its own: vocabulary/<name>.tsv, top level only,
+#       allowed only as all 13 of grm-r9-curate/vocabulary's files with their pinned sha256 (VOCAB below); any other
+#       name or bytes refuse, and a file with one of those 13 names anywhere else refuses too (REVIEW-KIT10 M1). Only
+#       with --dest /home/user/grm-combine: H-1 run outputs as parts/<part>/h1work/... (a pulled WORK minus ksets and
+#       matrices, h1-manifest.py combine's layout) and one MASTER-MANIFEST*.sha256 copy at the top are run receipts:
+#       text, at most 64 MiB each. Any other destination refuses both.
 #   grm-boat.sh [--notes PATH] pull <id> <remote-path> <local-dir>
 #       tar on the sandbox, boat scp back, sha256 on both sides, extract into local-dir
+#   grm-boat.sh [--notes PATH] extend <id> --ttl SECONDS
+#       sets the box's remaining lifetime to SECONDS from now (boat extend --ttl: it sets, it does not add), only when
+#       that ends the box later than its current archiveAfter; a shorter one refuses (2) and changes nothing. Reads
+#       archiveAfter before and after; never passes --no-auto-stop. The new archiveAfter must be at least now +
+#       SECONDS - 120 s, now taken before the call, or the exit is 86 (REVIEW-KIT10 L2: an extend that changed
+#       nothing or less than asked). The last line is "END <epoch seconds>", the box's new end, for the caller.
 #   grm-boat.sh [--notes PATH] snapshot <id> <grm-tmpl-name>      save a grm-tmpl-* sandbox as a named template
 #   grm-boat.sh close <id> <notes.md>
 #       boat usage appended to the notes, boat delete --yes, then boat info must answer 404
 #   grm-boat.sh preflight      the laptop memory check, the plan floor and the live grm- count; creates nothing
+# Every boat scp (push, push-data, pull) runs under a progress floor: once its first byte reaches the destination
+# (within GRM_SCP_START, default GRM_SCP_WINDOW, seconds), the destination must grow GRM_SCP_FLOOR_MBPS (2) MB/s over
+# each GRM_SCP_WINDOW (300) s, or by all that is left; a size that can't be read GRM_SCP_BLIND (3) times in a row is a
+# stall too. A stalled copy is killed and tried again, GRM_SCP_TRIES (2) tries in all; push's tries are bounded at
+# GRM_PUSH_TIMEOUT (600) s plus 1 s per MB. Each push, push-data and pull stages its tars in its own folder
+# (stage-<lane>/call-<what>-XXXXXXXX) and removes only that folder (the lane folder stays), so calls in one lane can
+# run side by side. The
+# Windows memory comes from PowerShell's CIM read through WSL interop; an unreadable read is read once more after
+# GRM_MEM_RETRY_SECS (5) s before memcheck fails with 76.
 # NOTES.md comes from --notes or GRM_NOTES (close takes it as its argument). Only ids this script created are used
 # (state in ~/.local/state/grm-boat/created; GRM_BOAT_ADOPT=1 accepts a grm-* sandbox made by hand).
 # Exit codes: run returns the command's own; 97 the data guard or push-data refused (nothing sent); 86 a Boat step or working-directory
@@ -70,6 +91,78 @@ bt() { local c=$1; shift; timeout -k 10 "$BT" "$BOAT" "$c" --no-update "$@" < /d
 bt_retry() { local t out; for t in 1 2 3; do out=$(bt "$@" 2>&1) && { printf '%s\n' "$out"; return 0; }; sleep 5; done; printf '%s\n' "$out"; return 1; }
 oneline() { printf %s "$1" | tr -s '\r\n\t' '   ' | cut -c1-"${2:-240}"; }
 sha() { sha256sum "$1" | cut -d' ' -f1; }
+
+# The progress floor on every boat scp (KIT9: X2's and X4's uploads crawled for hours at 0.6 and 0.18 MB/s where good
+# paths gave 14-18 MB/s, and R7's source scp sat silent for 20 min). The copy runs in the background and its
+# destination file is measured every SCP_WIN s: it must have grown by SCP_FLOOR_MBPS MB/s over the window, or by all
+# that was left to send when that is less. Otherwise the copy is killed, the partial file removed and the copy tried
+# again, SCP_TRIES times in all. KIT10 (REVIEW-KIT9 L3): the first window starts at the destination's first byte, so
+# boat scp's start-up (measured past 30 s under laptop load) isn't counted against the rate; until that byte the size
+# is read every SCP_POLL0 s, and a copy with no byte after SCP_START s is a stall. (L6) A size that can't be read
+# SCP_BLIND times in a row is a stall too, so a failing stat no longer leaves only the per-try timeout.
+SCP_FLOOR_MBPS=${GRM_SCP_FLOOR_MBPS:-2} SCP_WIN=${GRM_SCP_WINDOW:-300} SCP_TRIES=${GRM_SCP_TRIES:-2}
+SCP_START=${GRM_SCP_START:-$SCP_WIN} SCP_BLIND=${GRM_SCP_BLIND:-3}
+SCP_POLL0=$(( SCP_WIN < 30 ? SCP_WIN : 30 ))
+# a floor of 0 turns the whole floor off (start-up bound and unreadable sizes too); each try's timeout still holds
+SCP_ON=$(awk -v r="$SCP_FLOOR_MBPS" 'BEGIN { print (r > 0) ? 1 : 0 }')
+kill_tree() { local c; for c in $(pgrep -P "$2" 2> /dev/null); do kill_tree "$1" "$c"; done; kill "-$1" "$2" 2> /dev/null; }
+# dest_size up|down PATH: the size of the copy's destination file, on the sandbox (up) or here (down); 0 before it exists
+dest_size() {
+  if [ "$1" = up ]; then rexec "$ID" 30 "stat -c %s $2 2> /dev/null || echo 0" 2> /dev/null | tr -d '\r' | tail -n 1
+  else stat -c %s "$2" 2> /dev/null || echo 0; fi
+}
+# scp_once up|down DIR TOTAL TIMEOUT DEST_PATH SRC DST: one boat scp from DIR under the floor; sets SCP_OUT and, when the
+# floor stopped it, SCP_WHY (rc 125); otherwise boat's rc
+scp_once() {
+  local way=$1 dir=$2 total=$3 to=$4 path=$5 src=$6 dst=$7 o pid rc t0 tw s s0=0 need started=0 blind=0 gap
+  o=$(mktemp "${TMPDIR:-/tmp}/grm-scp.XXXXXXXX")
+  ( cd "$dir" && BT=$to bt scp "$src" "$dst" ) > "$o" 2>&1 & pid=$!
+  t0=$(date +%s) tw=$t0
+  while kill -0 "$pid" 2> /dev/null; do
+    sleep 1
+    [ "$SCP_ON" = 1 ] || continue
+    gap=$SCP_WIN; [ $started = 1 ] || gap=$SCP_POLL0
+    [ $(( $(date +%s) - tw )) -ge "$gap" ] && kill -0 "$pid" 2> /dev/null || continue
+    s=$(dest_size "$way" "$path"); SCP_WHY=""
+    if ! [[ "$s" =~ ^[0-9]+$ ]]; then
+      blind=$((blind + 1))
+      [ $blind -ge "$SCP_BLIND" ] && SCP_WHY="progress floor: the destination's size could not be read $blind times in a row"
+    elif [ $started = 0 ]; then
+      blind=0
+      if [ "$s" -gt 0 ]; then started=1 s0=$s
+      elif [ $(( $(date +%s) - t0 )) -ge "$SCP_START" ]; then SCP_WHY="progress floor: no byte reached the destination in $SCP_START s"; fi
+    else
+      blind=0
+      need=$(awk -v r="$SCP_FLOOR_MBPS" -v w="$SCP_WIN" -v t="$total" -v a="$s0" 'BEGIN { n = r * 1e6 * w; l = t - a; printf "%d", (l < n ? l : n) }')
+      [ $((s - s0)) -lt "$need" ] &&
+        SCP_WHY="progress floor: the destination grew $((s - s0)) B in the last $SCP_WIN s, under the $need B needed ($SCP_FLOOR_MBPS MB/s, or what was left); $s of $total B there"
+      s0=$s
+    fi
+    if [ -n "$SCP_WHY" ]; then
+      kill_tree TERM "$pid"; wait "$pid" 2> /dev/null
+      SCP_OUT=$(cat "$o"); rm -f "$o"; return 125
+    fi
+    tw=$(date +%s)
+  done
+  wait "$pid"; rc=$?
+  SCP_OUT=$(cat "$o"); rm -f "$o"
+  return $rc
+}
+# scp_floor STEP up|down DIR TOTAL TIMEOUT DEST_PATH SRC DST: scp_once up to SCP_TRIES times, removing the partial
+# destination after each failed try; rc 0, or the last try's rc with SCP_WHY saying why
+scp_floor() {
+  local step=$1 t rc=1; shift
+  for t in $(seq 1 "$SCP_TRIES"); do
+    SCP_WHY=""; scp_once "$@"; rc=$?
+    [ $rc = 125 ] || SCP_WHY=""
+    [ $rc = 0 ] && return 0
+    [ -n "$SCP_WHY" ] || SCP_WHY="boat scp rc $rc: $(oneline "$SCP_OUT")"
+    note "$ID" "$step" "try $t of $SCP_TRIES failed" "$SCP_WHY"
+    echo "grm-boat: $step: scp try $t of $SCP_TRIES failed: $SCP_WHY" >&2
+    if [ "$1" = up ]; then rexec "$ID" 60 "rm -f $5" > /dev/null 2>&1; else rm -f "$5"; fi
+  done
+  return $rc
+}
 
 # binfo ID -> "state name snapshots archiveAfter"; rc 3 when Boat no longer knows the sandbox (404), and on any
 # failure the error text instead (also left in INFO_ERR)
@@ -113,12 +206,29 @@ cap_wait() {
 # host_guard: before every new sandbox, decision 433's laptop check (Windows free physical memory and commit charge)
 # and the user rule's floor on VM-hours left (boat limits --all: creditBalanceHours, the plan's remainder plus the
 # prepaid pack; planIncluded.vmHoursRemaining if the account reports no credit balance); sets HOSTMSG
+# win_mem: the laptop's memory as "free commit" in M, from PowerShell's CIM read through WSL interop, with
+# -InputFormat None; sets MEMSRC and adds a failed read (rc, seconds, stderr) to MEMERR. The empty reads (R1, R5, R7,
+# X4 try 5, DEPS) were interop launches stalling under laptop load, not detaching (KIT9); host_guard reads once more.
+# KIT9's beacon and grm-memread.exe are gone: main ruled the always-on reader out (7 Nov), and REVIEW-KIT9's L4 and L5
+# were in those two paths.
+win_mem() {
+  local e t0 rc
+  M="" MEMSRC=powershell
+  e=$(mktemp "${TMPDIR:-/tmp}/grm-mem.XXXXXXXX"); t0=$(date +%s)
+  M=$(timeout -k 5 "${GRM_MEM_TIMEOUT:-60}" "$PWSH" -NoProfile -NonInteractive -InputFormat None -Command '$o = Get-CimInstance Win32_OperatingSystem; "{0:F2} {1:F2}" -f ($o.FreePhysicalMemory / 1MB), (($o.TotalVirtualMemorySize - $o.FreeVirtualMemory) / 1MB)' < /dev/null 2> "$e" | tr -d '\r'); rc=$?
+  MEMERR="$MEMERR $MEMSRC rc $rc after $(( $(date +%s) - t0 )) s$([ -s "$e" ] && printf ': %s' "$(oneline "$(cat "$e")" 100)");"
+  rm -f "$e"
+}
 host_guard() {
-  local m free commit lim vmh
-  m=$(timeout -k 5 60 "$PWSH" -NoProfile -NonInteractive -Command '$o = Get-CimInstance Win32_OperatingSystem; "{0:F2} {1:F2}" -f ($o.FreePhysicalMemory / 1MB), (($o.TotalVirtualMemorySize - $o.FreeVirtualMemory) / 1MB)' < /dev/null 2> /dev/null | tr -d '\r')
-  read -r free commit <<< "$m"
+  local free commit lim vmh M MEMSRC MEMERR=""
+  win_mem; read -r free commit <<< "$M"
+  # one more read when the first gave nothing usable
+  if ! [[ "$free" =~ ^[0-9]+(\.[0-9]+)?$ && "$commit" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    echo "grm-boat: memcheck: the Windows memory read gave '$(oneline "$M" 80)' ($MEMERR); reading once more in ${GRM_MEM_RETRY_SECS:-5} s" >&2
+    sleep "${GRM_MEM_RETRY_SECS:-5}"; win_mem; read -r free commit <<< "$M"
+  fi
   [[ "$free" =~ ^[0-9]+(\.[0-9]+)?$ && "$commit" =~ ^[0-9]+(\.[0-9]+)?$ ]] \
-    || fail $MEM_RC - memcheck "could not read Windows memory ($(oneline "$m" 80))"
+    || fail $MEM_RC - memcheck "could not read Windows memory, twice ($(oneline "$M" 80)):$MEMERR"
   awk -v f="$free" -v c="$commit" -v mf="$MIN_FREE_GB" -v mc="$MAX_COMMIT_GB" 'BEGIN { exit !(f >= mf && c <= mc) }' \
     || fail $MEM_RC - memcheck "Windows free $free GB (needs $MIN_FREE_GB or more), commit $commit GB (needs $MAX_COMMIT_GB or less)"
   lim=$(bt_retry limits --all --json) || fail $ROUTE_RC - plan "boat limits failed: $(oneline "$lim")"
@@ -129,7 +239,7 @@ print(c if isinstance(c, (int, float)) and not isinstance(c, bool) else l["planI
   [[ "$vmh" =~ ^[0-9]+(\.[0-9]+)?$ ]] || fail $ROUTE_RC - plan "no creditBalanceHours or planIncluded.vmHoursRemaining in boat limits"
   awk -v v="$vmh" -v m="$MIN_PLAN_VMH" 'BEGIN { exit !(v >= m) }' \
     || fail $PLAN_RC - plan "the plan and pack have $vmh VM-hours left, under $MIN_PLAN_VMH: start no new box and tell the user"
-  HOSTMSG="host: free $free GB, commit $commit GB; plan $vmh VM-h left"
+  HOSTMSG="host: free $free GB, commit $commit GB ($MEMSRC); plan $vmh VM-h left"
 }
 # own ID: refuse any sandbox this script did not create or whose name is not grm-*; sets ID NAME LANE SNAP
 own() {
@@ -160,7 +270,15 @@ if d.get("stdoutTruncated") or d.get("stderrTruncated"): print("[boat exec outpu
 if d.get("timedOut"): print("[boat exec timed out]")
 e = d.get("exitCode"); sys.exit(e if isinstance(e, int) else 1)' "$rc"
 }
-stage_dir() { STAGE=$(wslpath -u "$STAGE_WIN")/stage-$LANE; mkdir -p "$STAGE"; }
+# stage_dir WHAT: this call's own staging folder, stage-<lane>/call-WHAT-XXXXXXXX (KIT10: parallel push, push-data
+# and pull calls in one lane each removed the whole stage-<lane>, deleting each other's tars; UI6 lost a box to it).
+# A call removes only its own folder. The lane folder stays, even when empty (REVIEW-KIT10 L1: a call that removed
+# it when empty raced a call that had just made it, whose mktemp then failed with 86).
+stage_dir() {
+  local base; base=$(wslpath -u "$STAGE_WIN")/stage-$LANE
+  mkdir -p "$base" && STAGE=$(mktemp -d "$base/call-$1-XXXXXXXX") || fail $ROUTE_RC "$ID" "$1" "could not make a staging folder under $base"
+}
+unstage() { rm -rf "$STAGE"; return 0; }
 
 # ---------------------------------------------------------------- new
 cmd_new() {
@@ -260,7 +378,7 @@ for p in filter(None, paths):
 EOF
 }
 cmd_push() {
-  local wt="" tmp=0 code=0 dest=$RDIR list tracked bad n lsha rsha out rc ts tarw rtar
+  local wt="" tmp=0 code=0 dest=$RDIR list tracked bad n lsha rsha out rc ts tarw rtar size
   [ $# -ge 2 ] || usage
   own "$1"; shift
   while [ $# -gt 0 ]; do case "$1" in
@@ -273,9 +391,9 @@ cmd_push() {
   [[ "$dest" =~ ^/(home/user|tmp)(/[A-Za-z0-9._-]+)+$ ]] || fail 2 "$ID" push "--dest must be a folder under /home/user or /tmp"
   case "$wt" in //*|\\\\*|*wsl.localhost*|*wsl\$*) fail 2 "$ID" push "give the worktree as a WSL path, not \\\\wsl.localhost";; esac
   wt=$(git -C "$wt" rev-parse --show-toplevel 2> /dev/null) || fail 2 "$ID" push "$wt is not a git worktree"
-  stage_dir; ts=$(date -u +%Y%m%dT%H%M%SZ)
+  stage_dir push; ts=$(date -u +%Y%m%dT%H%M%SZ)
   list=$STAGE/files-$ts.lst tracked=$STAGE/tracked-$ts.lst
-  trap 'rm -rf "$STAGE"' EXIT
+  trap unstage EXIT
   git -C "$wt" ls-files -z > "$tracked"
   if [ $code = 1 ]; then
     [ -z "$(git -C "$wt" status --porcelain --untracked-files=no)" ] || fail 2 "$ID" push "--code-only needs a clean worktree"
@@ -302,8 +420,11 @@ sys.stdout.buffer.write(b"\0".join(keep) + b"\0")' "$tmp" > "$list.all"
   tar -C "$wt" --null -T "$list" -cf "$STAGE/push-$ts.tar" || fail $ROUTE_RC "$ID" push "local tar failed"
   lsha=$(sha "$STAGE/push-$ts.tar")
   # boat scp can't read \\wsl.localhost paths, and C:\ reads as a host "C": copy from the staging dir by bare name
-  tarw=push-$ts.tar rtar=/tmp/grm-push-$ts.tar
-  out=$(cd "$STAGE" && BT=1200 bt scp "$tarw" "$ID:$rtar" 2>&1) || fail $ROUTE_RC "$ID" push "boat scp failed: $(oneline "$out")"
+  tarw=push-$ts.tar rtar=/tmp/grm-push-$ts-${STAGE##*-}.tar
+  # under the progress floor, each try bounded at 600 s plus 1 s per MB (source pushes take under a minute)
+  size=$(stat -c %s "$STAGE/$tarw")
+  scp_floor push up "$STAGE" "$size" "$(( ${GRM_PUSH_TIMEOUT:-600} + size / 1000000 ))" "$rtar" "$tarw" "$ID:$rtar" ||
+    fail $ROUTE_RC "$ID" push "boat scp failed after $SCP_TRIES tries: $SCP_WHY"
   out=$(rexec "$ID" 600 "set -e
 rsha=\$(sha256sum $rtar | cut -d' ' -f1); echo \"RSHA \$rsha\"
 [ \"\$rsha\" = $lsha ] || { rm -f $rtar; exit 3; }
@@ -311,7 +432,7 @@ mkdir -p $dest && tar -xf $rtar -C $dest && rm -f $rtar
 echo \"FILES \$(find $dest -path $dest/target -prune -o -type f -print | wc -l)\"" 2>&1); rc=$?
   rsha=$(sed -n 's/^RSHA //p' <<< "$out" | tr -d '\r')
   [ $rc = 0 ] || fail $ROUTE_RC "$ID" push "remote check or extract failed (rc $rc), tar sha256 local $lsha remote ${rsha:-?}: $(oneline "$out")"
-  rm -rf "$STAGE"; trap - EXIT
+  unstage; trap - EXIT
   note "$ID" "push $(basename "$wt")@$(git -C "$wt" rev-parse --short HEAD)$([ $code = 1 ] && echo ' code-only')$([ $tmp = 1 ] && echo ' with .tmp')" ok \
     "$n files -> $dest; tar sha256 local $lsha remote $rsha; staging removed"
   echo "pushed $n files, tar sha256 $lsha (both sides)"
@@ -332,7 +453,8 @@ echo \"FILES \$(find $dest -path $dest/target -prune -o -type f -print | wc -l)\
 pd_tool() {
   python3 -I - "$@" << 'EOF'
 import hashlib, io, os, re, stat, sys, tarfile
-_, d, man, pin, out = sys.argv
+_, d, man, pin, out, dest = sys.argv
+combine_dest = dest == "/home/user/grm-combine"
 problems = []
 def done():
     for x in problems: print(x)
@@ -353,10 +475,40 @@ classes = [
 # GRM's own run outputs a later stage reads (main's ruling, 5 Nov): text only, at most 64 MiB each
 receipts = [r"(audit|receipts|tables)/[A-Za-z0-9][A-Za-z0-9._-]*\.(json|jsonl|tsv|txt|sha256)",
             r"cohorts/[a-z0-9]+/validation-manifest\.json"]
+# KIT10, for a combine box only (REVIEW-KIT10 M1): each part's H-1 WORK as the drive pulls it (no ksets, no
+# matrices) at parts/<part>/h1work/..., and one master manifest copy at the top (run.py combine --master-manifest);
+# both exactly as h1-manifest.py combine lays them out, and only when --dest is /home/user/grm-combine
+h1name = r"[A-Za-z0-9][A-Za-z0-9._-]*"
+combine_cls = [r"parts/%s/h1work/(%s/){0,5}%s\.(json|jsonl|tsv|txt|md)" % (seg, h1name, h1name),
+               r"MASTER-MANIFEST[A-Za-z0-9._-]*\.sha256"]
+# GRM's own SigDrug vocabulary copy (DECISIONS D6 after H1PLAN, G11): grm-r9-curate/vocabulary, the 13 files S0
+# curated with, each by name and sha256. Only these bytes pass, all 13 together, at the manifest's top level; no
+# other SigDrug file goes anywhere, and a file named like one of the 13 is refused outside vocabulary/ whatever its
+# folder or bytes (REVIEW-KIT10 M1; the name is compared in lower case). run.py never writes these into WORK: it
+# passes the folder to grm curate and hashes it into inputs.json.
+VOCAB = {
+    "brand_generic_folds.tsv": "aedc2dc08822e9b64ea0d79f8cc89a92ff85e3d49cea6a715b23fa4529b3adb2",
+    "brand_name_spelling_folds.tsv": "386913c38180ab5b7f655c2f085e878ab500f4840258b8648dc687fa5df33e42",
+    "closed_set_review.tsv": "9b3ec5f27f2c2eb276f44cd7edf0b2977a4d5038b41ec2dc1b8528e018554ae2",
+    "display_format_rules.tsv": "6706687535aeb1e8e07bb1bd3653f54bc457ebcd1a351eb569f11c3275271701",
+    "drug_name_typo_folds.tsv": "bf493bfb68a0be32367fbb472967d88b81ae1b9e6bdbb0169a9cd455730862cc",
+    "form_phrases.tsv": "9ea047092bd9d8f66375ed95ae4f059d8b1c4504940c7bf925d85b0bc99c1563",
+    "ingredient_abbrev_folds.tsv": "c2db390939b18960ecea6bd897a4c31ecfdc76eae45b4d7ae4957b7bb9dc4629",
+    "preferred_base_names.tsv": "010ba562fcf046bc19d7027ca8a42a259d0df65b601950c65625c4061268244f",
+    "preferred_ingredients.tsv": "7bb87736adfc645dde05b026e7e7a6ca43826df0f49d6657e19051be268de430",
+    "release_phrases.tsv": "685d5793fafe184fc7f13ad997c253ad7e72e26c00312e38b2f11ebe0d39364e",
+    "route_phrases.tsv": "c55eb5998d1e85f0fc71a9f1b85b812ac23e0580d3edc9eaf84cfb2c72b67732",
+    "salt_base_ingredients.tsv": "757703c80fdf19a88e06b41535448dbe39f11b4cdff5196025e36990ab6d3e85",
+    "strength_grammar_review.tsv": "eceabc8d8a741d77a76ca5c8ef753e2cafd509aec22adda0f8e77fa0b7102175",
+}
 pre = r"(%s/){0,3}" % seg
 allow = re.compile(pre + "(%s)" % "|".join("(?:%s)" % c for c in classes + receipts))
 data_only = re.compile(pre + "(%s)" % "|".join("(?:%s)" % c for c in classes))
-receipt = re.compile(pre + "(%s)" % "|".join("(?:%s)" % c for c in receipts))
+receipt_any = re.compile(pre + "(%s)" % "|".join("(?:%s)" % c for c in receipts))
+combine = re.compile("(%s)" % "|".join("(?:%s)" % c for c in combine_cls))   # no prefix: the root's own layout
+def allowed(p): return bool(allow.fullmatch(p) or (combine_dest and combine.fullmatch(p)))
+def is_receipt(p):
+    return bool((receipt_any.fullmatch(p) or (combine_dest and combine.fullmatch(p))) and not data_only.fullmatch(p))
 RECEIPT_MAX = 64 * 1024 * 1024
 # the account rules' names, wherever they appear in a segment (I4), plus env and key files
 deny = re.compile(r"sealed|held-?out|ks30|ks50|vumc|aua2027|gold-review|clinical|private|secret|credential|ksd|sigdrug"
@@ -385,12 +537,23 @@ for n, line in enumerate(lines, 1):
         problems.append("line %d: not a plain relative path: %s" % (n, p)); continue
     if p in want:
         problems.append("line %d: listed twice: %s" % (n, p)); continue
+    if parts[0] == "vocabulary":
+        if len(parts) != 2 or VOCAB.get(parts[1]) != h:
+            problems.append("line %d: vocabulary/ holds only GRM's 13 pinned files, by name and sha256: %s" % (n, p)); continue
+        want[p] = h; order.append(p); continue
+    if parts[-1].lower() in VOCAB:
+        problems.append("line %d: %s is a SigDrug vocabulary name; it goes only as vocabulary/%s with its pinned bytes: %s" % (
+            n, parts[-1], parts[-1].lower(), p)); continue
     bad = [x for x in parts if deny.search(x)]
     if bad:
         problems.append("line %d: refused segment %r: %s" % (n, bad[0], p)); continue
-    if not allow.fullmatch(p) or p == "INPUT-MANIFEST.sha256":
-        problems.append("line %d: not in a public GRM data class: %s" % (n, p)); continue
+    if not allowed(p) or p == "INPUT-MANIFEST.sha256":
+        problems.append("line %d: not in a public GRM data class%s: %s" % (
+            n, "" if combine_dest or not combine.fullmatch(p) else " (H-1 parts and a master manifest go only to /home/user/grm-combine)", p)); continue
     want[p] = h; order.append(p)
+vocab = sorted(p[len("vocabulary/"):] for p in want if p.startswith("vocabulary/"))
+if vocab and vocab != sorted(VOCAB):
+    problems.append("the vocabulary goes whole or not at all: %d of its 13 files listed" % len(vocab))
 if problems: done()
 # build: each file read once, from a descriptor opened without following any symlink
 def open_nofollow(rel):
@@ -412,7 +575,7 @@ with tarfile.open(out, "w", format=tarfile.GNU_FORMAT) as t:
             st = os.fstat(f.fileno())
             if not stat.S_ISREG(st.st_mode):
                 problems.append("%s: not a regular file" % p); continue
-            if receipt.fullmatch(p) and not data_only.fullmatch(p) and st.st_size > RECEIPT_MAX:
+            if is_receipt(p) and st.st_size > RECEIPT_MAX:
                 problems.append("%s: a run receipt over 64 MiB" % p); continue
             ti = tarfile.TarInfo(p); ti.size = st.st_size; ti.mode = 0o644; ti.mtime = 0; ti.type = tarfile.REGTYPE
             t.addfile(ti, f)
@@ -439,9 +602,9 @@ with os.fdopen(tfd, "rb") as raw_tar:
       f = t.extractfile(mem); h = hashlib.sha256(); size = 0; head = b""
       for chunk in iter(lambda: f.read(1 << 20), b""):
           h.update(chunk); size += len(chunk)
-          if receipt.fullmatch(mem.name) and not data_only.fullmatch(mem.name): head += chunk
+          if is_receipt(mem.name): head += chunk
       seen[mem.name] = h.hexdigest(); nbytes += size
-      if mem.name != "INPUT-MANIFEST.sha256" and receipt.fullmatch(mem.name) and not data_only.fullmatch(mem.name):
+      if mem.name != "INPUT-MANIFEST.sha256" and is_receipt(mem.name):
           try: head.decode("utf-8")
           except UnicodeDecodeError: problems.append("%s: a run receipt that is not UTF-8 text" % mem.name)
   while hr.read(1 << 20): pass          # the end-of-archive blocks and padding: hashed too
@@ -484,7 +647,7 @@ expd=$(cut -c67- "$d/.grm-input-manifest.sha256" | awk -F/ "{p=\"\"; for (i = 1;
 (cd "$d" && sha256sum -c --strict --quiet .grm-input-manifest.sha256) || bye "sha256sum -c failed in the box" 6
 echo "CHECKED $c"'
 cmd_push_data() {
-  local dir="" man="" want="" dest=/home/user/grm-data out rc n bytes lsha vsha rsha ts tarw rtar avail last priv
+  local dir="" man="" want="" dest=/home/user/grm-data out rc n bytes lsha vsha rsha ts tarw rtar avail last priv size
   [ $# -ge 2 ] || usage
   own "$1"; shift
   while [ $# -gt 0 ]; do case "$1" in
@@ -502,15 +665,15 @@ cmd_push_data() {
   [ -d "$dir" ] && [ -f "$man" ] || fail 2 "$ID" push-data "$dir is not a directory or $man is not a file"
   dir=$(readlink -f "$dir")
   case "${dir,,}" in */ksd*|*sigdrug*) fail $GUARD_RC "$ID" push-data "$dir belongs to another project; nothing sent";; esac
-  stage_dir; ts=$(date -u +%Y%m%dT%H%M%SZ)
+  stage_dir push-data; ts=$(date -u +%Y%m%dT%H%M%SZ)
   # N1: the tar is built and verified in a private folder only this user can enter; the Windows staging folder only
   # ever holds a copy made from one hashed stream
   priv=$(umask 077; mktemp -d "${TMPDIR:-/tmp}/grm-push-data.XXXXXXXX") || fail $ROUTE_RC "$ID" push-data "mktemp -d failed"
   chmod 700 "$priv"
-  trap 'rm -rf "$STAGE" "$priv"' EXIT
+  trap 'unstage; rm -rf "$priv"' EXIT
   # the manifest is copied once; only the copy is read from here on
   cp -- "$man" "$priv/manifest.sha256" || fail $ROUTE_RC "$ID" push-data "could not copy the manifest"
-  out=$(pd_tool "$dir" "$priv/manifest.sha256" "$want" "$priv/data.tar" 2>&1); rc=$?
+  out=$(pd_tool "$dir" "$priv/manifest.sha256" "$want" "$priv/data.tar" "$dest" 2>&1); rc=$?
   last=$(tail -n 1 <<< "$out")
   if [ $rc != 0 ] || [[ ! "$last" =~ ^OK\ [0-9]+\ [0-9]+\ [0-9a-f]{64}$ ]]; then
     printf '%s\n' "$out" | head -n 40 >&2
@@ -525,10 +688,11 @@ cmd_push_data() {
   lsha=$(tee "$STAGE/data-$ts.tar" < "$priv/data.tar" | sha256sum | cut -d' ' -f1)
   [ "$lsha" = "$vsha" ] || fail $GUARD_RC "$ID" push-data "the tar changed after it was verified (copied $lsha, verified $vsha); nothing sent"
   rm -f "$priv/data.tar"
-  tarw=data-$ts.tar rtar=/tmp/grm-data-$ts.tar
-  # at least 1 MB/s through WSL interop and the Boat API, on top of the usual 1200 s
-  out=$(cd "$STAGE" && BT=$((1200 + bytes / 1000000)) bt scp "$tarw" "$ID:$rtar" 2>&1) || {
-    rexec "$ID" 60 "rm -f $rtar" > /dev/null 2>&1; fail $ROUTE_RC "$ID" push-data "boat scp failed: $(oneline "$out")"; }
+  tarw=data-$ts.tar rtar=/tmp/grm-data-$ts-${STAGE##*-}.tar
+  # each try: at least 1 MB/s through WSL interop and the Boat API, on top of the usual 1200 s, and the progress floor
+  size=$(stat -c %s "$STAGE/$tarw")
+  scp_floor push-data up "$STAGE" "$size" "$((1200 + bytes / 1000000))" "$rtar" "$tarw" "$ID:$rtar" ||
+    fail $ROUTE_RC "$ID" push-data "boat scp failed after $SCP_TRIES tries: $SCP_WHY"
   # in the box: the tar must hash to the verified sha256 before anything is extracted; then the manifest must be the
   # pinned one, every extracted file and folder must be exactly the manifest's (its own name excluded at the top
   # only), no link or special file, and every file re-hashed; any failure removes DEST and the tar
@@ -537,7 +701,7 @@ $PD_BOX" 2>&1); rc=$?
   rsha=$(sed -n 's/^RSHA //p' <<< "$out" | tr -d '\r')
   [ $rc = 0 ] || fail $ROUTE_RC "$ID" push-data "refused in the box (rc $rc, destination and tar removed): $(oneline "$(grep -E '^(REFUSED|RSHA)' <<< "$out" | tr '\n' ' ')")"
   [ "$(sed -n 's/^CHECKED //p' <<< "$out" | tr -d '\r')" = "$n" ] || fail $ROUTE_RC "$ID" push-data "the box did not confirm $n checked files: $(oneline "$out")"
-  rm -rf "$STAGE" "$priv"; trap - EXIT
+  unstage; rm -rf "$priv"; trap - EXIT
   note "$ID" "push-data $(basename "$dir")" ok "$n files, $bytes B -> $dest; tar built in a private folder and verified member by member against manifest $want; verified tar sha256 $vsha = staged stream $lsha = box $rsha; exact file set and sha256sum -c --strict in the box; staging removed"
   echo "pushed $n data files ($bytes B) to $dest, manifest $want, tar sha256 $lsha (both sides)"
 }
@@ -634,22 +798,57 @@ echo ----; tail -n 40 $RLOG/$log.log" 2>&1)
 cmd_pull() {
   [ $# = 3 ] || usage
   own "$1"
-  local rp=$2 ld=$3 ts rtar out rc rsha lsha n
-  stage_dir; ts=$(date -u +%Y%m%dT%H%M%SZ); rtar=/tmp/grm-pull-$ts.tar
-  trap 'rm -rf "$STAGE"' EXIT
+  local rp=$2 ld=$3 ts rtar out rc rsha lsha n size
+  stage_dir pull; ts=$(date -u +%Y%m%dT%H%M%SZ)
+  rtar=/tmp/grm-pull-$ts-${STAGE##*-}.tar   # this call's own name on the box too
+  trap unstage EXIT
   out=$(rexec "$ID" 600 "set -e; p=$(printf %q "$rp"); [ -e \"\$p\" ]
 tar -C \"\$(dirname \"\$p\")\" -cf $rtar \"\$(basename \"\$p\")\"
-echo \"RSHA \$(sha256sum $rtar | cut -d' ' -f1)\"" 2>&1) || fail $ROUTE_RC "$ID" "pull $rp" "remote tar failed: $(oneline "$out")"
-  rsha=$(sed -n 's/^RSHA //p' <<< "$out" | tr -d '\r')
-  out=$(cd "$STAGE" && BT=1200 bt scp "$ID:$rtar" "pull-$ts.tar" 2>&1) || fail $ROUTE_RC "$ID" "pull $rp" "boat scp failed: $(oneline "$out")"
+echo \"RSHA \$(sha256sum $rtar | cut -d' ' -f1)\"
+echo \"RSIZE \$(stat -c %s $rtar)\"" 2>&1) || fail $ROUTE_RC "$ID" "pull $rp" "remote tar failed: $(oneline "$out")"
+  rsha=$(sed -n 's/^RSHA //p' <<< "$out" | tr -d '\r') size=$(sed -n 's/^RSIZE //p' <<< "$out" | tr -d '\r')
+  [[ "$size" =~ ^[0-9]+$ ]] || fail $ROUTE_RC "$ID" "pull $rp" "no size for the remote tar: $(oneline "$out")"
+  # each try: 1200 s plus 1 s per MB, under the progress floor (measured on the local copy)
+  scp_floor "pull $rp" down "$STAGE" "$size" "$((1200 + size / 1000000))" "$STAGE/pull-$ts.tar" "$ID:$rtar" "pull-$ts.tar" ||
+    fail $ROUTE_RC "$ID" "pull $rp" "boat scp failed after $SCP_TRIES tries: $SCP_WHY"
   lsha=$(sha "$STAGE/pull-$ts.tar")
   [ "$lsha" = "$rsha" ] || fail $ROUTE_RC "$ID" "pull $rp" "tar sha256 local $lsha remote $rsha differ"
   mkdir -p "$ld" && tar -xf "$STAGE/pull-$ts.tar" -C "$ld" --no-same-owner || fail $ROUTE_RC "$ID" "pull $rp" "local extract failed"
   n=$(tar -tf "$STAGE/pull-$ts.tar" | grep -vc '/$')
   rexec "$ID" 60 "rm -f $rtar" > /dev/null 2>&1
-  rm -rf "$STAGE"; trap - EXIT
+  unstage; trap - EXIT
   note "$ID" "pull $rp" ok "$n files -> $ld; tar sha256 local $lsha remote $rsha"
   echo "pulled $n files into $ld, tar sha256 $lsha (both sides)"
+}
+
+# ---------------------------------------------------------------- extend
+# boat extend --ttl/--hours SET the remaining lifetime (boat.exe extend --help); ASSURE's `--hours 1` with more than an
+# hour left moved its box's end from 03:45Z to 03:34Z (REVIEW-ASSURE L4). This one only lengthens.
+cmd_extend() {
+  local ttl="" st a0 a1 out want
+  [ $# -ge 1 ] || usage
+  own "$1"; shift
+  while [ $# -gt 0 ]; do case "$1" in
+    --ttl) ttl=${2:-}; shift 2 || usage;;
+    *) usage;;
+  esac; done
+  [[ "$ttl" =~ ^[0-9]+$ ]] && [ "$ttl" -gt 0 ] || fail 2 "$ID" extend "--ttl takes the seconds from now the box must still live"
+  out=$(binfo "$ID") || fail $ROUTE_RC "$ID" extend "boat info failed: $out"
+  read -r st _ _ a0 <<< "$out"
+  [[ "$a0" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}t ]] && a0=$(date -u -d "${a0^^}" +%s 2> /dev/null) || fail $ROUTE_RC "$ID" extend "no archiveAfter in boat info ($(oneline "$out" 120)): can't tell whether --ttl $ttl would shorten the box"
+  want=$(( $(date +%s) + ttl ))
+  [ "$want" -gt "$a0" ] || fail 2 "$ID" extend "--ttl $ttl would end the box at $(date -u -d "@$want" +%FT%TZ), before its current end $(date -u -d "@$a0" +%FT%TZ): boat extend sets the remaining lifetime, so give the whole time still needed; nothing changed"
+  out=$(bt extend "$ID" --ttl "$ttl" 2>&1) || fail $ROUTE_RC "$ID" extend "boat extend failed: $(oneline "$out")"
+  out=$(binfo "$ID") || fail $ROUTE_RC "$ID" extend "boat info after the extend failed: $out"
+  read -r st _ _ a1 <<< "$out"
+  [[ "$a1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}t ]] && a1=$(date -u -d "${a1^^}" +%s 2> /dev/null) || fail $ROUTE_RC "$ID" extend "no archiveAfter after the extend: $(oneline "$out" 120)"
+  [ "$a1" -ge "$a0" ] || fail $ROUTE_RC "$ID" extend "archiveAfter moved back, $(date -u -d "@$a0" +%FT%TZ) to $(date -u -d "@$a1" +%FT%TZ)"
+  # REVIEW-KIT10 L2: boat extend can return 0 and move the end less than asked, or not at all; the caller plans its
+  # last checkpoint from this end, so anything more than 120 s short of the asked end fails
+  [ "$a1" -ge $(( want - 120 )) ] || fail $ROUTE_RC "$ID" extend "boat extend returned 0 but the box ends $(date -u -d "@$a1" +%FT%TZ), $(( want - a1 )) s short of the asked $(date -u -d "@$want" +%FT%TZ) (was $(date -u -d "@$a0" +%FT%TZ))"
+  note "$ID" "extend --ttl $ttl" ok "archiveAfter $(date -u -d "@$a0" +%FT%TZ) -> $(date -u -d "@$a1" +%FT%TZ) (asked $(date -u -d "@$want" +%FT%TZ)); state $st"
+  echo "extended $ID: ends $(date -u -d "@$a1" +%FT%TZ) (was $(date -u -d "@$a0" +%FT%TZ))"
+  echo "END $a1"
 }
 
 # ---------------------------------------------------------------- snapshot
@@ -695,7 +894,7 @@ if [ "$cmd" != close ] && [ "$cmd" != preflight ]; then
   mkdir -p "$(dirname "$NOTES")" && NOTES=$(readlink -f "$NOTES")
 fi
 case "$cmd" in
-  new|toolchain|push|run|pull|snapshot|close|preflight) "cmd_$cmd" "$@";;
+  new|toolchain|push|run|pull|extend|snapshot|close|preflight) "cmd_$cmd" "$@";;
   push-data) cmd_push_data "$@";;
   *) usage;;
 esac

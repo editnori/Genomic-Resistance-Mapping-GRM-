@@ -25,7 +25,7 @@
 #   5. box: push the source worktree and the kit, write stage.env, build and speed-check (r11-box.sh host). A slow
 #      host on a stage whose slow estimate breaks its ceiling closes the box and exits 80; a slow host on a SLOW_OK
 #      stage sets its remaining lifetime once so it ends at slow estimate + 30 min after creation (at most MAX_TTL,
-#      6 h, PF-D6). The build uses the repo's default target (x86-64-v3, .cargo/config.toml; M2). Then the binary
+#      6 h, PF-D6), through grm-boat.sh extend; the deadline is the END the runner reports (REVIEW-KIT10 L2). The build uses the repo's default target (x86-64-v3, .cargo/config.toml; M2). Then the binary
 #      gate: a grm sha256 equal to the reference goes straight on. An r11 box with any other pushes g1a's inputs and
 #      the reference g1a reports (two push-data sets) and runs r11-box.sh bincheck, which must match byte for byte
 #      after the wall-clock fields; an MTB box with any other stops. A mismatch writes BINARY-MISMATCH-C, pulls the
@@ -36,15 +36,31 @@
 #      with sha256sum -c --strict on the laptop; at TTL - TTL_MARGIN a stop, a full checkpoint and close: exit 74
 #      when the box finished a species (the next call resumes from them), exit 83 when it finished nothing (or is an
 #      MTB box, whose sections don't resume): rerun only with TTL_OVERRIDE_S raised (6 h, PF-D6); a rerun with no
-#      larger TTL is refused with 83 before any box. FORCE_TTL_NEAR_AFTER=s forces that path for a dry run.
+#      larger TTL is refused with 83 before any box. FORCE_TTL_NEAR_AFTER=s forces that path for a dry run. A status
+#      of "paused" (an H-1 stage whose guard stopped it for disk or memory, REVIEW-KIT10 L3) stops the stage, pulls a
+#      final checkpoint and exits 81 with the guard's reason.
 #   Any exit after the box exists (an error, INT, TERM, HUP) runs the exit trap: it stops the stage, pulls a full
 #   checkpoint when the stage had started, books usage and deletes the box. A failed `new` looks up a live box of the
 #   lane's name made in this call and deletes it (M4).
 #   8. end: a full checkpoint, pulled and checked, merged into RUN_DIR/stages/<box>/out with its own SHA256SUMS and a
-#      second copy under COPY2 (D11) when set; boat usage into the ledger; grm-boat.sh close.
+#      second copy under COPY2 (D11) when set; boat usage into the ledger; grm-boat.sh close. A rerun of a stage first
+#      moves the earlier attempt's out/ and ckpt/ to attempts/ and starts out/ clean but for its finished species.
+# KIND=h1 (KIT10, G5; H-1's input comparison): the stage table's 8th column is the spec (relative to SRC), the 9th
+#   the TTL in hours (slow estimate + 30 min: no resume, G6), the 10th a combine box's parts (comma list of boxes).
+#   A run box (kind pilot or s1): the reference box REF_BOX fixes BINARY-REF-C.sha and every other run box must equal
+#   it (82), as MTB's; then push-data of the metadata (h1-manifest.py meta: the master's bvbrc/*.jsonl, catalog/,
+#   species-check/) and of GRM's vocabulary copy (h1-manifest.py vocab VOCAB_ROOT, whose manifest must hash to
+#   VOCAB_MANIFEST_SHA256), h1-box.sh union (the spec's union, read back), push-data of exactly the union's FASTAs
+#   (h1-manifest.py fasta, every line the master's), h1-box.sh verify (sets checked, RAW read only, --estimate-only
+#   with the measured free disk), then the run, checkpointed every CKPT_SECS without ksets or matrices. A combine box
+#   (kind combine, type default, no build) waits for every part's DONE, refuses parts whose H1-FLAGS (the trace and extra
+#   flags each run box recorded) differ or are missing, empty or malformed (2, no box; DC1), gets each part's pulled WORK records and a copy
+#   of the master manifest (h1-manifest.py combine, one push-data) and runs run.py combine on the box. NEEDS may be
+#   a comma list. GRM_SCP_FLOOR_MBPS comes from the run file (H-1: 5).
 # Exit: 0 stage done; 82 binary gate mismatch (the run stops); 74 TTL checkpoint; 83 TTL reached with nothing
 # finished (rerun with TTL_OVERRIDE_S); 78 budget; 79 order; 80 slow host; 81 the stage stopped
 # (pipeline, gate or validation failure: see the pulled run/status); 2 usage; others from grm-boat.sh.
+# A placeholder (@@NAME@@) in the run file or in the box's stage table row is refused with 2 before anything runs.
 # usage: RUN_CONF=run-r11.conf drive.sh <box>
 set -u -o pipefail
 : "${RUN_CONF:?set RUN_CONF}"; . "$RUN_CONF"
@@ -84,7 +100,20 @@ bt() { local c=$1; shift; timeout -k 10 180 "$BOATX" "$c" --no-update "$@" < /de
 
 row=$(awk -F'\t' -v b="$BOX" '$1 == b' "$STAGES")
 [ -n "$row" ] || die 2 "no stage $BOX in $STAGES"
-IFS=$'\t' read -r _ GATES TYPE EST_FAST EST_SLOW SLOW_OK NEEDS SPECIES <<< "$row"
+# KIT10 round 2: a stage table row with a placeholder left in it is refused before any box, as the run file is
+ph=$(grep -o '@@[A-Za-z0-9_-]*@@' <<< "$row" | sort -u | paste -sd' ')
+[ -z "$ph" ] || die 2 "stage $BOX: placeholder left in $STAGES: $ph"
+IFS=$'\t' read -r _ GATES TYPE EST_FAST EST_SLOW SLOW_OK NEEDS SPECIES TTL_H PARTS _ <<< "$row"
+H1ROLE=""
+if [ "$KIND" = h1 ]; then
+  case "$GATES" in pilot|s1|s2|conf) H1ROLE=run;; combine) H1ROLE=combine;; *) die 2 "stage $BOX: kind $GATES is not pilot, s1, s2, conf or combine";; esac
+  [ -f "$SRC/$SPECIES" ] || die 2 "stage $BOX: no spec $SPECIES in $SRC"
+  [[ "${TTL_H:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die 2 "stage $BOX: no TTL hours in column 9"
+  if [ "$H1ROLE" = combine ] && { [ -z "${PARTS:-}" ] || [ "$PARTS" = - ]; }; then die 2 "stage $BOX: a combine row names no parts"; fi
+  for v in VOCAB_ROOT VOCAB_MANIFEST_SHA256; do case "${!v:-}" in ""|*@@*) die 2 "$v is unset or a placeholder";; esac; done
+  [ -n "${GRM_SCP_FLOOR_MBPS:-}" ] && export GRM_SCP_FLOOR_MBPS
+  H1T=$([[ ",${H1_TRACE_BOXES:-}," == *",$BOX,"* ]] && echo 1 || echo 0)
+fi
 
 # ---- 1. budget
 used=$(awk -F'\t' 'NR > 1 {s += $6} END {printf "%.3f", s + 0}' "$LEDGER" 2> /dev/null || echo 0)
@@ -113,8 +142,12 @@ if [ "$KIND" = mtb ]; then
   MTB_REF_BOX=${MTB_REF_BOX:-X1}
   [ "$BOX" != "$MTB_REF_BOX" ] && [ ! -e "$REFK.sha" ] && die 79 "the MTB reference box $MTB_REF_BOX has not fixed source $C's binary yet"
 fi
+if [ "$KIND" = h1 ] && [ "$H1ROLE" = run ]; then
+  [ -n "$REF_BOX" ] || die 2 "KIND=h1 needs REF_BOX (the pilot box, P1)"
+  [ "$BOX" != "$REF_BOX" ] && [ ! -e "$REFK.sha" ] && die 79 "the H-1 reference box $REF_BOX has not fixed source $C's binary yet"
+fi
 NEEDS=${NEEDS//\$RUN_DIR/$RUN_DIR}
-[ "$NEEDS" != - ] && [ ! -e "$NEEDS" ] && die 79 "needs $NEEDS"
+for n in ${NEEDS//,/ }; do [ "$n" != - ] && [ ! -e "$n" ] && die 79 "needs $n"; done
 [ -e "$SD/DONE" ] && die 0 "already done ($(cat "$SD/DONE"))"
 
 # ---- 2b. MTB source checks that need git (K2): on the laptop, against SRC, before any box
@@ -142,10 +175,49 @@ fi
 
 # ---- 3. inputs
 [ "$(sha256sum "$MASTER_MANIFEST" | cut -d' ' -f1)" = "$MASTER_SHA256" ] || die 2 "master manifest is not $MASTER_SHA256"
+if [ "$KIND" = h1 ]; then
+  # the reviewed source commit, clean (RUN-PLAN-H1 setup; as MTB's K2 L1)
+  [[ "${SRC_COMMIT:-}" =~ ^[0-9a-f]{40}$ ]] || die 2 "KIND=h1 needs SRC_COMMIT, the reviewed commit (40 hex)"
+  [ "$C" = "$SRC_COMMIT" ] || die 2 "$SRC is at $C, not SRC_COMMIT $SRC_COMMIT"
+  # REVIEW-KIT10 note: a git status that fails reads as clean unless its rc is checked (as K2's src_rc)
+  st=$(git -C "$SRC" status --porcelain --untracked-files=all 2> /dev/null); src_rc=$?
+  [ $src_rc = 0 ] || die 2 "git status failed in $SRC (rc $src_rc); can't tell whether it is clean"
+  [ -z "$st" ] || die 2 "$SRC is not a clean worktree"
+  # H-1: the metadata set (from the master), GRM's vocabulary set (pinned), or a combine box's parts; each manifest
+  # pinned in NOTES.md before anything is pushed. The FASTA set follows the box's union (step 6).
+  if [ "$H1ROLE" = run ]; then
+    python3 -I "$KIT/h1-manifest.py" meta "$MASTER_MANIFEST" > "$SD/INPUT-MANIFEST.sha256" || die 2 "metadata manifest: $(tail -n 1 "$SD/INPUT-MANIFEST.sha256")"
+    python3 -I "$KIT/h1-manifest.py" vocab "$VOCAB_ROOT" > "$SD/VOCAB-MANIFEST.sha256" || die 2 "vocabulary manifest: $(tail -n 1 "$SD/VOCAB-MANIFEST.sha256")"
+    VSHA=$(sha256sum "$SD/VOCAB-MANIFEST.sha256" | cut -d' ' -f1)
+    [ "$VSHA" = "$VOCAB_MANIFEST_SHA256" ] || die 2 "the vocabulary in $VOCAB_ROOT hashes to manifest $VSHA, not the pinned $VOCAB_MANIFEST_SHA256"
+    say "vocabulary manifest pinned: $SD/VOCAB-MANIFEST.sha256 sha256 $VSHA, $(wc -l < "$SD/VOCAB-MANIFEST.sha256") files, from $VOCAB_ROOT"
+    printf 'H1_TRACE=%s H1_EXTRA=%s\n' "$H1T" "${H1_EXTRA:-}" > "$SD/H1-FLAGS"   # DC1: what a combine checks
+  else
+    pargs=()
+    for p in ${PARTS//,/ }; do
+      [ -e "$RUN_DIR/stages/$p/DONE" ] && [ -d "$RUN_DIR/stages/$p/out/h1work" ] || die 79 "part $p has no finished, pulled WORK"
+      pargs+=("$(tr 'A-Z' 'a-z' <<< "$p")=$RUN_DIR/stages/$p/out/h1work")
+    done
+    # DC1 (the H-1 dry run): run.py combine refuses parts whose arms ran with other flags, but only on the combine box.
+    # KIT10 round 2: each part's H1-FLAGS must be the one line a run box writes (H1_TRACE=0|1 H1_EXTRA=...); a
+    # missing, empty or other file is "none", and any none refuses
+    pf=$(for p in ${PARTS//,/ }; do
+      f=$RUN_DIR/stages/$p/H1-FLAGS
+      if [ -f "$f" ] && [ "$(wc -l < "$f")" = 1 ] && grep -qxE 'H1_TRACE=[01] H1_EXTRA=[^ ]*' "$f"; then echo "$p: $(cat "$f")"; else echo "$p: none"; fi
+    done)
+    [ "$(cut -d' ' -f2- <<< "$pf" | sort -u | wc -l)" = 1 ] && ! grep -q ': none$' <<< "$pf" ||
+      die 2 "the parts ran with different H-1 flags, or record none (a missing, empty or malformed H1-FLAGS): $(paste -sd';' <<< "$pf")"
+    rm -rf "$SD/combine-in"
+    python3 -I "$KIT/h1-manifest.py" combine "$SD/combine-in" "$MASTER_MANIFEST" "$MASTER_SHA256" "${pargs[@]}" > "$SD/INPUT-MANIFEST.sha256" ||
+      die 2 "combine input: $(tail -n 1 "$SD/INPUT-MANIFEST.sha256")"
+    H1PARTS=$(tr 'A-Z' 'a-z' <<< "$PARTS")
+  fi
+else
 # an MTB box lists sections, not species: its inputs are MTB's selection plus EXTRA_LISTS (bindings/full-genomes.txt)
 MSP=${SPECIES//@canary/}; [ "$KIND" = mtb ] && MSP=mycobacterium_tuberculosis
 python3 -I "$KIT/stage-manifest.py" "$DATA_ROOT" "$MASTER_MANIFEST" "$MSP" "${CANARY_REF_PREFIX:-}" "$([ -n "${CANARY_REF_PREFIX:-}" ] && echo 1 || echo 0)" \
   "${EXTRA_LISTS:-}" > "$SD/INPUT-MANIFEST.sha256" || die 2 "stage manifest: $(tail -n 1 "$SD/INPUT-MANIFEST.sha256")"
+fi
 # a side set (MTB: revision N's g5 data root as the reference; an earlier X box's cohort matrices to restore), each
 # its own push-data with its own manifest of allowlisted files
 # K3: the reference's report index and dataset reports go too, since plan 7b's fold rebuild (audit.py) reads
@@ -178,6 +250,29 @@ fi
 [ -n "${RESTORE_DIR:-}" ] && { side_manifest "$RESTORE_DIR" "$SD/RESTORE-MANIFEST.sha256"; say "restore set $RESTORE_DIR pinned: $(sha256sum "$SD/RESTORE-MANIFEST.sha256" | cut -d' ' -f1)"; }
 MSHA=$(sha256sum "$SD/INPUT-MANIFEST.sha256" | cut -d' ' -f1)
 say "stage input manifest pinned: $SD/INPUT-MANIFEST.sha256 sha256 $MSHA, $(wc -l < "$SD/INPUT-MANIFEST.sha256") files, from master $MASTER_SHA256"
+# DRIVE7 L2: a rerun of a stage starts from a clean out/. Checkpoints merge into out/ (rsync -a, no --delete), so an
+# earlier box's files would ride along into SHA256SUMS, COPY2 and a later stage's restore set. The earlier attempt's
+# out/ and ckpt/ move whole to attempts/<UTC>-<pid>/ (kept; nothing is deleted), and out/ gets back only what a resume
+# reads: each finished species' sp-*.done mark and outputs, hardlinked from the kept copy at the same paths
+# (BINARY-REF-C's ref_reports_dir names out/data). Within one box, checkpoints still merge.
+if [ -e "$SD/out" ] || [ -e "$SD/ckpt" ]; then
+  A=$SD/attempts/$(date -u +%Y%m%dT%H%M%SZ)-$$
+  mkdir -p "$A" || die 2 "could not make $A"
+  for x in out ckpt; do [ -e "$SD/$x" ] || continue; mv "$SD/$x" "$A/" || die 2 "could not keep the earlier attempt's $x under $A"; done
+  if [ -d "$A/out/data/species" ]; then
+    for f in "$A"/out/run/gates/sp-*.done; do
+      [ -e "$f" ] || continue; s=${f##*/sp-}; s=${s%.done}
+      # L2 (REVIEW-KIT9): the outputs first and the mark last; a kill between them leaves outputs with no mark,
+      # which the next rerun doesn't resume (it reruns the species)
+      mkdir -p "$SD/out/run/gates" "$SD/out/data/species" || die 2 "could not make out/ for $s"
+      if [ -d "$A/out/data/species/$s" ]; then
+        cp -al "$A/out/data/species/$s" "$SD/out/data/species/" || die 2 "could not carry $s's outputs from $A"
+      fi
+      ln "$f" "$SD/out/run/gates/" || die 2 "could not carry $s's done mark from $A"
+    done
+  fi
+  say "earlier attempt's out/ and ckpt/ kept under $A; out/ starts clean$([ -d "$SD/out/run/gates" ] && echo ", with the done marks of $(ls "$SD/out/run/gates" | sed 's/^sp-//; s/\.done$//' | paste -sd, -)")"
+fi
 # species finished in an earlier box of this stage come back as a resume set (their outputs, hashed at pull)
 SKIP="" RES=$SD/resume
 if [ -d "$SD/out/data/species" ]; then
@@ -185,7 +280,11 @@ if [ -d "$SD/out/data/species" ]; then
 fi
 START_DONE=$(tr ',' '\n' <<< "$SKIP" | grep -c .)   # species already finished before this box (L5)
 if [ -n "$SKIP" ]; then
-  rm -rf "$RES"; mkdir -p "$RES/species"
+  # KIT10 L3: cp -al keeps each output dir's mode, so a read-only results/ comes back read-only here and the next
+  # call's rm can't empty it. resume/ is this script's own copy: its dirs are made writable (a directory before its
+  # contents, so mode 000 works), its files are links of the kept outputs and keep their modes
+  [ -d "$RES" ] && find "$RES" -type d -exec chmod u+rwx {} \;
+  rm -rf "$RES" && mkdir -p "$RES/species" || die 2 "could not clear the earlier resume set $RES"
   for s in ${SKIP//,/ }; do cp -al "$SD/out/data/species/$s" "$RES/species/" || die 2 "resume set: no outputs for $s"; done
   (cd "$RES" && find species -type f | LC_ALL=C sort | xargs sha256sum) > "$SD/RESUME-MANIFEST.sha256"
   say "resume set: species $SKIP, manifest sha256 $(sha256sum "$SD/RESUME-MANIFEST.sha256" | cut -d' ' -f1)"
@@ -193,6 +292,7 @@ fi
 
 # ---- L5: a stage that hit TTL - margin with nothing finished reruns only with a larger TTL
 TTL=$(awk -v e="$EST_FAST" -v m="$MAX_TTL" 'BEGIN { t = int((e + 0.5) * 3600); print (t > m ? m : t) }')
+[ "$KIND" = h1 ] && TTL=$(awk -v h="$TTL_H" -v m="$MAX_TTL" 'BEGIN { t = int(h * 3600); print (t > m ? m : t) }')
 if [ -n "${TTL_OVERRIDE_S:-}" ]; then
   [[ "$TTL_OVERRIDE_S" =~ ^[0-9]+$ ]] && [ "$TTL_OVERRIDE_S" -le "$MAX_TTL" ] || die 2 "TTL_OVERRIDE_S must be seconds, at most $MAX_TTL"
   TTL=$TTL_OVERRIDE_S
@@ -218,7 +318,7 @@ CLOSED=0 STARTED=0 FGPID=""
 waited() { "$@" & FGPID=$!; wait "$FGPID"; local rc=$?; FGPID=""; return $rc; }
 mult() { case "$TYPE" in xlarge) echo 5.56;; large) echo 2.78;; default) echo 1;; small) echo 0.5;; *) echo 5.56;; esac; }
 record() { # result: boat usage into the ledger (once), then delete; the box counts as closed only on a confirmed 404
-  local u vs xl est="" i gone=0
+  local u vs xl est="" i gone=0 x
   trap '' INT TERM HUP                       # N2: nothing interrupts a delete in progress
   [ "$CLOSED" = 1 ] && return 0
   if [ "$BOOKED" != 1 ]; then
@@ -243,7 +343,11 @@ record() { # result: boat usage into the ledger (once), then delete; the box cou
       sleep 6
     done
   fi
-  if [ $gone = 1 ]; then CLOSED=1; say "closed $ID: $BOOK, $1"
+  if [ $gone = 1 ]; then
+    # DC1 (the H-1 dry run): a failed first close (bail's) put the box in ALIVE; the exit trap's close then deleted it,
+    # and the stale entry made the exit 86 for a box that is gone
+    x="$ALIVE "; while [[ "$x" == *" $ID "* ]]; do x=${x/ "$ID" / }; done; ALIVE=${x% }
+    CLOSED=1; say "closed $ID: $BOOK, $1"
   else ALIVE="$ALIVE $ID"; say "BOX STILL UP: $ID could not be deleted (close and direct delete failed); delete it by hand"; fi
 }
 # N2, M4: whatever ends this script once `new` has been called, the box is stopped, checkpointed if it ran, booked
@@ -325,7 +429,8 @@ NEWCALLED=0 NEWPHASE=0 ALIVE="" BOOKED=0
 trap on_exit EXIT; trap 'exit 130' INT; trap 'exit 143' TERM; trap 'exit 129' HUP   # N2: before new
 T_NEW=$(date -u -d '-15 sec' +%FT%T) T0=$(date +%s)                                     # I-h: the deadline counts from here
 NEWCALLED=1 NEWPHASE=1
-waited "$R" new "${LANE_NAME#grm-}" --type "$TYPE" --ttl "$TTL" ${TEMPLATE:+--from-template "$TEMPLATE"} > "$SD/new.out" 2> "$SD/new.err"; nrc=$?
+NEWTMPL=${TEMPLATE:-}; [ "$H1ROLE" = combine ] && NEWTMPL=""
+waited "$R" new "${LANE_NAME#grm-}" --type "$TYPE" --ttl "$TTL" ${NEWTMPL:+--from-template "$NEWTMPL"} > "$SD/new.out" 2> "$SD/new.err"; nrc=$?
 NEWPHASE=0
 ID=$(grep -o '^bx_[a-z0-9]*$' "$SD/new.out" | tail -n 1)
 if [ $nrc != 0 ] || [ -z "$ID" ]; then
@@ -363,9 +468,31 @@ SLOW_LIB_SECS=${SLOW_LIB_SECS:-60}
 RAM_WAIT_SECS=${RAM_WAIT_SECS:-1800}
 AUDIT=${AUDIT:-1}
 ${EXTRA_ENV:-}"
+if [ "$KIND" = h1 ]; then
+  ENV="$ENV
+SPEC=$SPECIES
+H1_ROLE=$H1ROLE
+H1_TRACE=$H1T
+H1_JOBS=${H1_JOBS:-2}
+H1_EXTRA=${H1_EXTRA:-}
+H1_PARTS=${H1PARTS:-}
+H1_META_SHA256=$([ "$H1ROLE" = run ] && echo "$MSHA")
+H1_VOCAB_SHA256=${VSHA:-}
+H1_COMBINE_SHA256=$([ "$H1ROLE" = combine ] && echo "$MSHA")"
+fi
 "$R" run "$ID" --log stage-env --cwd /home/user -- "mkdir -p /home/user/r11 && printf '%s\n' $(printf %q "$ENV") > /home/user/r11/stage.env" > /dev/null ||
   bail 86 "could not write stage.env"
+if [ "$H1ROLE" = combine ]; then
+  # a combine box builds nothing: its host record is the CPU and the box's python, and it runs no binary gate
+  waited "$R" run "$ID" --log host --cwd /home/user -- bash -c 'echo "cpu=$(grep -m1 "model name" /proc/cpuinfo | sed "s/.*: //")"; echo "HOST fast"; nproc; free -g | head -n 2' > "$SD/host.out" 2>&1 ||
+    bail 81 "host record failed"
+else
 waited "$R" run "$ID" --log host --cwd /home/user -- bash /home/user/port/r11-box.sh host > "$SD/host.out" 2>&1 || bail 81 "host step failed: $(tail -n 2 "$SD/host.out" | tr '\n' ' ')"
+fi
+if [ "$KIND" = h1 ]; then
+  waited "$R" run "$ID" --log prep --cwd /home/user -- bash /home/user/port/h1-box.sh prep > "$SD/prep.out" 2>&1 || bail 81 "prep failed: $(tail -n 2 "$SD/prep.out" | tr '\n' ' ')"
+  say "prep: $(grep -m1 '^numpy' "$SD/prep.out")"
+fi
 HOST=$(sed -n 's/^HOST //p' "$SD/host.out" | tail -n 1) CPU=$(sed -n 's/^cpu=//p' "$SD/host.out" | tail -n 1)
 say "host $HOST, cpu $CPU, $(grep -h -E '^(speed_lib|avx512f)' "$SD/host.out" | tr '\n' ' ')$(grep -h 'release/grm$' "$SD/host.out")"
 if [ "$HOST" = slow ]; then
@@ -375,12 +502,16 @@ if [ "$HOST" = slow ]; then
   [ "$want" -le "$MAX_TTL" ] || bail 80 "slow host: $EST_SLOW h + 30 min passes the $MAX_TTL s TTL ceiling"
   if [ "$want" -gt "$TTL" ]; then
     rem=$(( T0 + want - $(date +%s) ))
-    bt extend "$ID" --ttl "$rem" > /dev/null || bail 86 "boat extend failed"
-    DEADLINE=$((T0 + want)); say "slow host on a SLOW_OK stage: lifetime set once to $want s from creation ($rem s left)"
+    GRM_BOAT_ADOPT=1 "$R" extend "$ID" --ttl "$rem" > "$SD/extend.out" 2>&1 || bail 86 "extend failed: $(tail -n 1 "$SD/extend.out")"
+    # REVIEW-KIT10 L2: the deadline is the end the box got (the runner's END line, epoch seconds), not the one asked
+    end=$(sed -n 's/^END \([0-9][0-9]*\)$/\1/p' "$SD/extend.out" | tail -n 1)
+    [ -n "$end" ] || bail 86 "extend gave no END line, so the box's new end is unknown: $(tail -n 1 "$SD/extend.out")"
+    DEADLINE=$end; say "slow host on a SLOW_OK stage: lifetime set once to $want s from creation ($rem s left); the box ends $(date -u -d "@$end" +%FT%TZ)"
   fi
 fi
 
 # ---- 5b. the binary gate (one reference per source commit C)
+if [ "$H1ROLE" != combine ]; then
 GSHA=$(grep -h 'release/grm$' "$SD/host.out" | tail -n 1 | cut -d' ' -f1)
 [[ "$GSHA" =~ ^[0-9a-f]{64}$ ]] || bail 81 "no grm sha256 in the host step's output"
 echo "$GSHA $(now) $ID $CPU $C" > "$SD/binary.sha256"
@@ -388,14 +519,15 @@ REF_SHA=$(cut -d' ' -f1 "$REFK.sha" 2> /dev/null)
 differs() { [ "$GSHA" != "$REF_SHA" ] || [ "${FORCE_BINARY_MISMATCH:-0}" = 1 ]; }
 mismatch() { printf '%s %s %s source %s grm %s vs reference %s: %s\n' "$(now)" "$BOX" "$ID" "$C" "$GSHA" "$REF_SHA" "$1" > "$MISK"
   bail 82 "binary gate MISMATCH: $(cat "$MISK"); every box of source $C stops"; }
-if [ "$KIND" = mtb ]; then
+if [ "$KIND" = mtb ] || [ "$KIND" = h1 ]; then
+  [ "$KIND" = h1 ] && MTB_REF_BOX=$REF_BOX
   if [ -z "$REF_SHA" ] && [ "$BOX" = "$MTB_REF_BOX" ]; then
     printf '%s %s %s %s %s\n' "$GSHA" "$BOX" "$ID" "$(now)" "$CPU" > "$REFK.sha"
-    say "MTB reference binary fixed for source $C: grm $GSHA ($CPU); binary only, MTB runs no g1a"
+    say "$KIND reference binary fixed for source $C: grm $GSHA ($CPU); binary only, no g1a"
   elif differs; then
-    mismatch "an MTB box's binary differs from the MTB reference${FORCE_BINARY_MISMATCH:+ (forced)}"
+    mismatch "a $KIND box's binary differs from the $KIND reference${FORCE_BINARY_MISMATCH:+ (forced)}"
   else
-    say "binary gate: grm $GSHA equals source $C's MTB reference"
+    say "binary gate: grm $GSHA equals source $C's $KIND reference"
   fi
 elif [ -n "$REF_BOX" ]; then
   if [ "$BOX" = "$REF_BOX" ] && [ ! -e "$REFK" ]; then
@@ -428,10 +560,36 @@ elif [ -n "$REF_BOX" ]; then
     esac
   fi
 fi
+fi
 
 # ---- 6. data
+if [ "$KIND" = h1 ]; then
+  h1run() { local l=$1; shift; waited "$R" run "$ID" --log "$l" --cwd /home/user -- bash /home/user/port/h1-box.sh "$@" > "$SD/$l.out" 2>&1; }
+  if [ "$H1ROLE" = combine ]; then
+    waited "$R" push-data "$ID" "$SD/combine-in" --manifest "$SD/INPUT-MANIFEST.sha256" --manifest-sha256 "$MSHA" --dest /home/user/grm-combine > "$SD/push-data.out" 2>&1 ||
+      bail $? "push-data of the parts refused or failed: $(tail -n 1 "$SD/push-data.out")"
+  else
+    # one upload at a time: metadata, vocabulary, then (after the union is read back) the FASTAs
+    waited "$R" push-data "$ID" "$DATA_ROOT" --manifest "$SD/INPUT-MANIFEST.sha256" --manifest-sha256 "$MSHA" --dest /home/user/grm-meta > "$SD/push-data.out" 2>&1 ||
+      bail $? "push-data of the metadata refused or failed: $(tail -n 1 "$SD/push-data.out")"
+    waited "$R" push-data "$ID" "$VOCAB_ROOT" --manifest "$SD/VOCAB-MANIFEST.sha256" --manifest-sha256 "$VSHA" --dest /home/user/grm-vocab > "$SD/push-vocab.out" 2>&1 ||
+      bail $? "push-data of the vocabulary refused or failed: $(tail -n 1 "$SD/push-vocab.out")"
+    h1run union union || bail 81 "union failed: $(grep '^STOP' "$SD/union.out" | tail -n 1)"
+    rm -rf "$SD/union"
+    "$R" pull "$ID" /home/user/r11/receipts/h1 "$SD/union" > /dev/null || bail 86 "union pull failed"
+    U=$SD/union/h1/union.txt
+    [ "$(sed -n 's/^UNION [0-9]* //p' "$SD/union.out" | tail -n 1)" = "$(sha256sum "$U" | cut -d' ' -f1)" ] || bail 81 "the pulled union.txt is not the box's"
+    python3 -I "$KIT/h1-manifest.py" fasta "$MASTER_MANIFEST" "$U" > "$SD/FASTA-MANIFEST.sha256" || bail 2 "FASTA manifest: $(tail -n 1 "$SD/FASTA-MANIFEST.sha256")"
+    FSHA=$(sha256sum "$SD/FASTA-MANIFEST.sha256" | cut -d' ' -f1)
+    say "union: $(wc -l < "$U") genomes (union.txt $(sha256sum "$U" | cut -d' ' -f1)); FASTA manifest pinned: $SD/FASTA-MANIFEST.sha256 sha256 $FSHA, $(wc -l < "$SD/FASTA-MANIFEST.sha256") files, from master $MASTER_SHA256"
+    "$R" run "$ID" --log fasta-pin --cwd /home/user -- "printf 'H1_FASTA_SHA256=%s\n' $FSHA >> /home/user/r11/stage.env" > /dev/null || bail 86 "could not pin the FASTA set in stage.env"
+    waited "$R" push-data "$ID" "$DATA_ROOT" --manifest "$SD/FASTA-MANIFEST.sha256" --manifest-sha256 "$FSHA" --dest /home/user/grm-fasta > "$SD/push-fasta.out" 2>&1 ||
+      bail $? "push-data of the FASTAs refused or failed: $(tail -n 1 "$SD/push-fasta.out")"
+  fi
+else
 waited "$R" push-data "$ID" "$DATA_ROOT" --manifest "$SD/INPUT-MANIFEST.sha256" --manifest-sha256 "$MSHA" > "$SD/push-data.out" 2>&1 ||
   bail $? "push-data refused or failed: $(tail -n 1 "$SD/push-data.out")"
+fi
 for x in REF:/home/user/grm-ref RESTORE:/home/user/grm-resume; do
   v=${x%%:*}_DIR; [ -n "${!v:-}" ] || continue
   m=$SD/${x%%:*}-MANIFEST.sha256
@@ -442,7 +600,10 @@ if [ -n "$SKIP" ]; then
   "$R" push-data "$ID" "$RES" --manifest "$SD/RESUME-MANIFEST.sha256" --manifest-sha256 "$(sha256sum "$SD/RESUME-MANIFEST.sha256" | cut -d' ' -f1)" \
     --dest /home/user/grm-resume > /dev/null 2>&1 || bail 86 "resume push-data failed"
 fi
-"$R" run "$ID" --log verify --cwd /home/user -- bash /home/user/port/r11-box.sh verify > "$SD/verify.out" 2>&1 || bail 81 "verify failed: $(tail -n 2 "$SD/verify.out" | tr '\n' ' ')"
+if [ "$H1ROLE" != combine ]; then
+waited "$R" run "$ID" --log verify --cwd /home/user -- bash /home/user/port/r11-box.sh verify > "$SD/verify.out" 2>&1 || bail 81 "verify failed: $(tail -n 2 "$SD/verify.out" | tr '\n' ' ')"
+[ "$KIND" = h1 ] && say "verify: $(grep -m1 '^RAW ' "$SD/verify.out"); $(grep -m1 'gate' "$SD/verify.out" | cut -c1-200)"
+fi
 "$R" run "$ID" --log start --cwd /home/user -- bash /home/user/port/r11-box.sh start > /dev/null || bail 86 "start failed"
 say "stage started"; STARTED=1
 T1=$(date +%s)   # FORCE_TTL_NEAR_AFTER counts from here
@@ -450,7 +611,11 @@ T1=$(date +%s)   # FORCE_TTL_NEAR_AFTER counts from here
 # ---- 7. watch
 ckpt() { # label [--all]: build, pull, check, merge
   local l=$1 out d
+  if [ "$KIND" = h1 ]; then
+    out=$("$R" run "$ID" --log "ckpt-$l" --cwd /home/user -- bash /home/user/port/h1-box.sh ckpt "$l" 2>&1) || { say "checkpoint $l failed on the box: $(tail -n 1 <<< "$out")"; return 1; }
+  else
   out=$("$R" run "$ID" --log "ckpt-$l" --cwd /home/user -- bash /home/user/port/ckpt.sh "$l" ${2:-} 2>&1) || { say "checkpoint $l failed on the box: $(tail -n 1 <<< "$out")"; return 1; }
+  fi
   "$R" pull "$ID" "/home/user/ckpt/$l" "$SD/ckpt" > /dev/null || { say "checkpoint $l pull failed"; return 1; }
   d=$SD/ckpt/$l
   (cd "$d" && sha256sum -c --strict --quiet SHA256SUMS) || { say "checkpoint $l: sha256sum -c FAILED on the laptop"; return 1; }
@@ -481,6 +646,13 @@ while :; do
     continue
   fi
   misses=0
+  # REVIEW-KIT10 L3: guard.sh stopped the stage's group (low disk or memory) and nothing will free it; stop now with
+  # its reason rather than wait for TTL-near and advise a longer TTL
+  if [ "$state" = paused ]; then
+    say "the stage is paused by its guard ($(cut -d'|' -f2- <<< "$st" | sed 's/^ *//')): stopping for a final checkpoint"
+    "$R" run "$ID" --log stop --cwd /home/user -- bash /home/user/port/r11-box.sh stop > /dev/null
+    break
+  fi
   [ "$state" = running ] || break
   near=0
   [ $(( DEADLINE - $(date +%s) )) -le "$TTL_MARGIN" ] && near=1
@@ -490,7 +662,7 @@ while :; do
     "$R" run "$ID" --log stop --cwd /home/user -- bash /home/user/port/r11-box.sh stop > /dev/null
     n=$((n + 1)); ckpt "ttl-$n" --all || bail 86 "TTL checkpoint failed; the box is closed anyway"
     after=$(ls "$SD"/out/run/gates/sp-*.done 2> /dev/null | wc -l)
-    if [ "$KIND" = mtb ] || [ "$after" -le "$START_DONE" ]; then
+    if [ "$KIND" = mtb ] || [ "$KIND" = h1 ] || [ "$after" -le "$START_DONE" ]; then
       printf '%s %s\n' "$(now)" "$TTL" > "$SD/TTL-EXHAUSTED"
       record "TTL reached with nothing finished; rerun with TTL_OVERRIDE_S=$MAX_TTL"
       say "STOP rc=83: $BOX reached TTL - ${TTL_MARGIN} s with nothing finished in this box: rerun with TTL_OVERRIDE_S=$MAX_TTL (6 h, PF-D6)"
@@ -509,11 +681,19 @@ n=$((n + 1)); ckpt "final-$n" --all || bail 86 "final checkpoint failed"
 (cd "$SD/out" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > "$SD/out/SHA256SUMS"
 say "results on the laptop: $SD/out, $(wc -l < "$SD/out/SHA256SUMS") files, SHA256SUMS $(sha256sum "$SD/out/SHA256SUMS" | cut -d' ' -f1)"
 if [ -n "${COPY2:-}" ]; then
-  mkdir -p "$COPY2/$BOX" && rsync -a "$SD/out/" "$COPY2/$BOX/" && (cd "$COPY2/$BOX" && sha256sum -c --strict --quiet SHA256SUMS) &&
+  # L1 (REVIEW-KIT9): --delete, so an earlier attempt's file can't stay in COPY2 beside a clean out/
+  mkdir -p "$COPY2/$BOX" && rsync -a --delete "$SD/out/" "$COPY2/$BOX/" && (cd "$COPY2/$BOX" && sha256sum -c --strict --quiet SHA256SUMS) &&
     say "second copy verified: $COPY2/$BOX" || say "second copy FAILED: $COPY2/$BOX"
 fi
+[ -e "$SD/out/run/receipts/h1/disk-measured.json" ] && say "H-1 measured disk: $(python3 -I -c 'import json, sys
+d = json.load(open(sys.argv[1])); p = d.get("pool") or {}
+print("work %s B, roots together %s B, arms %s B, pool mean kset %s B, peak RSS %s B" % (d["work_blocks_bytes"], d["all_roots_blocks_bytes"], d["arms_blocks_bytes"], p.get("mean_kset_apparent_bytes"), d["peak_rss_bytes"]))' "$SD/out/run/receipts/h1/disk-measured.json" 2> /dev/null)"
+[ -e "$SD/out/run/receipts/h1/combine-equal.json" ] && say "combine of one part against the part: $(tr -d ' \n' < "$SD/out/run/receipts/h1/combine-equal.json")"
 [ -e "$SD/out/run/receipts/diff-rev9.out" ] && say "revision-9 diff report (not a gate): $(head -n 1 "$SD/out/run/receipts/diff-rev9.out" | cut -c1-240)"
 case "$state" in
   done) now > "$SD/DONE"; rm -f "$SD/TTL-EXHAUSTED"; record "done"; exit 0;;
+  paused) record "stopped: paused by its guard: $(cut -d'|' -f2- <<< "$st" | sed 's/^ *//')"
+    say "STOP rc=81: $BOX was paused by its guard ($(cut -d'|' -f2- <<< "$st" | sed 's/^ *//')); a longer TTL won't help: free disk or memory, or re-plan the stage"
+    exit 81;;
   *) record "stopped: $(cat "$SD/out/run/status" 2> /dev/null)"; exit 81;;
 esac

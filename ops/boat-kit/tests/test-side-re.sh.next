@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# drive.sh's SIDE_RE on X4's real restore sources, with assertions; it fails loudly. Replaces main's test-side-re.sh,
+# which read the uninstalled drive.sh.new, filtered the manifest's report entries down to index.json and asserted
+# nothing (REVIEW-DRIVE7 L1). In a scratch folder: merge X1, X2 and X3's out/run/mtb and X4's decision folder
+# (RESTORE_DIRS of X4 try 5) exactly as drive.sh does, then check:
+#   1. no two sources disagree on a path;
+#   2. the merged set's manifest, built as drive.sh's side_manifest builds it, equals X4's pinned
+#      RESTORE-MANIFEST.sha256 byte for byte (179 files);
+#   3. report files per cohort: prefix 24, added 16, full 24, matched2k 0;
+#   4. every path passes the runner's own push-data allowlist (the classes taken from the runner, not a copy);
+#   5. each cohort's validation manifest: every input and report entry under data/report/ or data/species/ is in
+#      the merged set with its listed sha256 (prefix 22, added 14, full 22 reports, plus each index.json).
+# Touches no box and no stage folder. Prints "CHECK name: ok|FAIL detail" lines, then "FAILS n"; exits 1 on a failure.
+# usage: test-side-re.sh [DRIVE_SH [RUNNER]]     (default: the installed drive.sh and runner)
+set -u
+DRV=${1:-/home/layth/review/grm-port-r11-20261105/drive/drive.sh}
+RUNNER=${2:-/home/layth/review/grm-boat-runner-20261031/grm-boat.sh}
+R=/home/layth/review/grm-r12-run-20261105
+FAILS=0
+chk() { if [ "$2" = ok ]; then echo "CHECK $1: ok${3:+ ($3)}"; else echo "CHECK $1: FAIL $3"; FAILS=$((FAILS + 1)); fi; }
+sha256sum "$DRV" "$RUNNER"
+SIDE_RE=$(grep -m1 "^SIDE_RE=" "$DRV" | sed "s/^SIDE_RE='//; s/'\$//")
+[ -n "$SIDE_RE" ] || { echo "CHECK side-re: FAIL no SIDE_RE in $DRV"; echo "FAILS 1"; exit 1; }
+T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+M=$T/merged; mkdir -p "$M"
+dis=""
+for d in $R/stages/X1/out/run/mtb $R/stages/X2/out/run/mtb $R/stages/X3/out/run/mtb $R/stages/X4/decision; do
+  [ -d "$d" ] || { chk "source $d" FAIL "missing"; continue; }
+  dis=$dis$( (cd "$d" && find species cohorts audit -type f 2> /dev/null | grep -v '/ksets/' | grep -E "$SIDE_RE") | while read -r f; do
+    if [ -e "$M/$f" ]; then cmp -s "$d/$f" "$M/$f" || echo "disagree $f "; continue; fi
+    mkdir -p "$M/$(dirname "$f")" && ln "$d/$f" "$M/$f" || echo "link failed $f "
+  done)
+done
+[ -z "$dis" ] && chk 1-no-disagreement ok || chk 1-no-disagreement FAIL "$dis"
+(cd "$M" && find species cohorts audit report -type f 2> /dev/null | grep -v '/ksets/' | grep -E "$SIDE_RE" | LC_ALL=C sort | xargs -r sha256sum) > "$T/manifest"
+cmp -s "$T/manifest" "$R/stages/X4/RESTORE-MANIFEST.sha256" && chk 2-equals-X4-restore-manifest ok "$(wc -l < "$T/manifest") files" ||
+  chk 2-equals-X4-restore-manifest FAIL "$(wc -l < "$T/manifest") lines vs $(wc -l < "$R/stages/X4/RESTORE-MANIFEST.sha256"); $(diff "$T/manifest" "$R/stages/X4/RESTORE-MANIFEST.sha256" | head -n 3 | tr '\n' ' ')"
+got=$(for c in prefix added full matched2k; do printf '%s=%s ' "$c" "$(grep -c "  cohorts/$c/data/report/" "$T/manifest")"; done)
+[ "$got" = "prefix=24 added=16 full=24 matched2k=0 " ] && chk 3-report-files ok "$got" || chk 3-report-files FAIL "$got"
+# the runner's allowlist: the classes and receipts lists from its pd_tool, executed as written
+py=$(sed -n '/^seg = r"\[a-z0-9\]/,/^receipt = re.compile/p' "$RUNNER")
+[ -n "$py" ] || chk 4-runner-allowlist FAIL "no allowlist in $RUNNER"
+out=$(cut -c67- "$T/manifest" | python3 -I -c "import re, sys
+$py
+paths = [p.strip() for p in sys.stdin if p.strip()]
+bad = [p for p in paths if not allow.fullmatch(p)]
+print(len(paths) - len(bad), len(paths), bad[:3])")
+read -r a n _ <<< "$out"
+[ -n "$a" ] && [ "$a" = "$n" ] && [ "$n" -gt 0 ] && chk 4-runner-allowlist ok "$a/$n" || chk 4-runner-allowlist FAIL "$out"
+out=$(python3 -I - "$M" << 'EOF'
+import hashlib, json, os, sys
+t = sys.argv[1]
+want = {"prefix": 22, "added": 14, "full": 22}
+for c, nrep in want.items():
+    m = os.path.join(t, "cohorts", c, "validation-manifest.json")
+    if not os.path.exists(m): print(c, "FAIL no validation manifest"); continue
+    man = json.load(open(m))
+    entries = [e for e in man.get("inputs", []) if e["path"].startswith(("data/report/", "data/species/"))]
+    entries += list(man.get("reports", {}).values())
+    hit = miss = wrong = 0
+    for e in entries:
+        f = os.path.join(t, "cohorts", c, e["path"])
+        if not os.path.exists(f): miss += 1
+        elif hashlib.sha256(open(f, "rb").read()).hexdigest() == e["sha256"]: hit += 1
+        else: wrong += 1
+    idx = any(e["path"] == "data/report/index.json" for e in man.get("inputs", []))
+    ok = miss == 0 and wrong == 0 and len(man.get("reports", {})) == nrep and idx
+    print(c, "ok" if ok else "FAIL", "entries", len(entries), "matched", hit, "missing", miss, "differ", wrong, "reports", len(man.get("reports", {})), "index pinned", idx)
+EOF
+)
+while read -r c v rest; do [ "$v" = ok ] && chk "5-manifest-$c" ok "$rest" || chk "5-manifest-$c" FAIL "$rest"; done <<< "$out"
+[ "$(grep -c . <<< "$out")" = 3 ] || chk 5-manifests FAIL "expected 3 cohorts: $out"
+echo "FAILS $FAILS"
+[ "$FAILS" = 0 ]

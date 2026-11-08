@@ -16,6 +16,9 @@
 #   start    launch the stage detached (setsid) and return; status says how it goes
 #   status   print one line: running|done|stopped ... and the last status text
 #   stop     SIGTERM the stage's process groups (the TTL-near checkpoint)
+# KIND=h1 (KIT10, G5): host is the same; verify and the stage are h1-box.sh's (verify, then run or combine by
+# H1_ROLE), whose other steps (prep, union, ckpt) the drive calls directly. status reports "paused" while the H-1
+# stage's guard holds its group stopped (gates/h1-<role>.tripped ends in a pause; REVIEW-KIT10 L3).
 # The stage, in order of SPECIES (comma list): one `scripts/run-pipeline.sh --species S` per species (PREFLIGHT
 # section 2 item 2), each after the RAM gate (effective memory >= RAM_NEED_GIB, 13.5, PF-D7) and the disk gate
 # (DISK_PAUSE_GIB + the species' kset estimate x 1.05 + 1 GiB), under guard.sh; then the species is validated
@@ -176,7 +179,10 @@ cmd_bincheck() {
     [ -f "$CD/fasta/$i.fna.gz" ] && [ -f "$CD/bvbrc/features/$i.json" ] || echo "$s/$i"; done; done | head -n 3)
   [ -z "$miss" ] || RC=2 fail "bincheck: g1a inputs missing, so the run would fetch them: $miss"
   status "bincheck stage=$STAGE: this binary differs from the reference; g1a ($CANARY_SPECIES) reruns"
-  # run-pipeline.sh's settings (12 workers, --drop-ksets, nice 10) on the canary root, under the guard
+  # run-pipeline.sh's settings (12 workers, --drop-ksets, nice 10) on the canary root, under the guard, from the
+  # checkout as run-pipeline.sh runs: pipeline reads reference/kover-summary.json from the working folder only and
+  # refuses before counting without it (M1, REVIEW-INTEG7)
+  cd "$S" || RC=2 fail "bincheck: cannot enter the checkout $S"
   RAYON_NUM_THREADS=$THREADS DATA=$CD SKIP_SPECIES= bash "$K/pg-run.sh" bincheck-g1a -- \
     nice -n 10 "$GRM" --data "$CD" pipeline --workers 12 --drop-ksets --species "$CANARY_SPECIES"
   rc=$?; [ $rc = 0 ] || RC=1 fail "bincheck: g1a pipeline exited $rc (logs/bincheck-g1a.log)"
@@ -194,6 +200,11 @@ cmd_bincheck() {
 run_stage() {
   local sp list=() done_before="" s tag lg pg start guard rc need waited t0 launch
   status "running stage=$STAGE"
+  if [ "$KIND" = h1 ]; then
+    case "${H1_ROLE:-run}" in run|combine) ;; *) RC=2 fail "H1_ROLE is ${H1_ROLE}, not run or combine";; esac
+    bash "$K/h1-box.sh" "${H1_ROLE:-run}" >> "$W/logs/h1-stage.log" 2>&1 || RC=1 fail "H-1 ${H1_ROLE:-run} failed: $(grep '^STOP' "$W/logs/h1-stage.log" | tail -n 1)"
+    date -u +%FT%TZ > "$W/done"; status "done stage=$STAGE: H-1 ${H1_ROLE:-run} of $SPEC"; return
+  fi
   if [ "$KIND" = mtb ]; then
     GRM=$GRM FOLDGEN=$FOLDGEN bash "$K/mtb-box.sh" ${SPECIES//,/ } || RC=1 fail "MTB section failed: $(tail -n 1 "$W/logs/sections.log")"
     date -u +%FT%TZ > "$W/done"; status "done stage=$STAGE: sections ${SPECIES}"; return
@@ -249,7 +260,7 @@ run_stage() {
 
 case "${1:-}" in
   host) cmd_host;;
-  verify) cmd_verify;;
+  verify) if [ "$KIND" = h1 ]; then exec bash "$K/h1-box.sh" verify; fi; cmd_verify;;
   bincheck) cmd_bincheck;;
   start)
     [ -e "$W/done" ] && { echo "already done"; exit 0; }
@@ -259,8 +270,19 @@ case "${1:-}" in
   _run) run_stage;;
   status)
     st=$(cat "$W/status" 2> /dev/null || echo "none")
+    # REVIEW-KIT10 L3: an H-1 stage whose guard.sh stopped its group (the last line of gates/h1-<role>.tripped is a
+    # pause) reports paused with the guard's reading, so the drive stops with that reason
+    gp=""; [ "$KIND" = h1 ] && gp=$(tail -n 1 "$W/gates/h1-${H1_ROLE:-run}.tripped" 2> /dev/null | grep '^paused ')
     if [ -e "$W/done" ]; then echo "STATE done | $st"
-    elif [ -s "$W/stage.pid" ] && kill -0 "$(cat "$W/stage.pid")" 2> /dev/null; then echo "STATE running | $st"
+    elif [ -s "$W/stage.pid" ] && kill -0 "$(cat "$W/stage.pid")" 2> /dev/null; then
+      if [ -n "$gp" ]; then
+        why=$(awk -v d="${DISK_PAUSE_GIB:-30}" -v m="${RAM_PAUSE_GIB:-4}" '{ for (i = 1; i <= NF; i++) { split($i, a, "="); v[a[1]] = a[2] } }
+          END { g = 1073741824; r = ""
+                if (v["disk_free"] != "" && v["disk_free"] + 0 < d * g) r = "disk: " v["disk_free"] " B free, below DISK_PAUSE_GIB " d " GiB"
+                if (v["eff_mem"] != "" && v["eff_mem"] + 0 < m * g) r = (r != "" ? r "; " : "") "memory: " v["eff_mem"] " B, below RAM_PAUSE_GIB " m " GiB"
+                print (r != "" ? r : "a pause") }' <<< "$gp")
+        echo "STATE paused | guard $why ($gp) | $st"
+      else echo "STATE running | $st"; fi
     else echo "STATE stopped | $st"; fi;;
   stop)
     touch "$W/stop"
