@@ -21,7 +21,8 @@ const NO_SCOPE = "Internal cross-validation against reported lab calls; not exte
 
 /** The scope every passing score shares, in plain words: internal
  *  cross-validation, with training and testing inside BV-BRC. The status
- *  line, the inspector header and Present's title slide print it. */
+ *  lines, the inspector header, the primer's scope caption and Present's
+ *  title slide print it. */
 export const AUDIT_SCOPE = "Tested within one public database only";
 
 /** The report audit in lines: the reading, then each scope or reason. */
