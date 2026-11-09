@@ -1092,7 +1092,7 @@ def decisions_made(spec, arms, records):
 
 def manifest(spec, default, arms, work, binary_sha256, source_commit, seconds):
     """K's run manifest: every arm's runs, with each paired arm's rule and reference."""
-    blocks, runs, datasets = {}, [], []
+    blocks, refused, runs, datasets = {}, {}, [], []
     for d in spec["datasets"]:
         ds = d["id"]
         record = json.loads((work / "arms" / DEFAULT_ARM / ds / "arm.json").read_text())
@@ -1109,12 +1109,8 @@ def manifest(spec, default, arms, work, binary_sha256, source_commit, seconds):
                 if not own_root(arm):
                     blocks.setdefault(b["id"], b)
             for bid, reason in a["unavailable"]:
-                blocks.setdefault(bid, {"id": bid, "kind": {"C": "CuratedExact", "H": "Hierarchical",
-                                                            "P": "Presence", "N": "Count", "X": "Context",
-                                                            "K": "Anonymous"}[bid],
-                                        "version": "", "source_sha256": "",
-                                        "priority": "CHPNXK".index(bid), "screen_cap": None, "catalog_date": None,
-                                        "circularity_risk": bid != "K", "unavailable_reason": reason})
+                if reason not in refused.setdefault(bid, []):
+                    refused[bid].append(reason)
             for u in json.loads((out / "runs.json").read_text()):
                 run = {k: u[k] for k in ("dataset", "arm", "blocks", "learner", "split", "repeats",
                                          "fold_plan_sha256", "status", "reason", "metrics", "fit_count", "seconds")}
@@ -1125,6 +1121,17 @@ def manifest(spec, default, arms, work, binary_sha256, source_commit, seconds):
                     run["pairing"] = {"rule": u["pairing"], "reference_arm": DEFAULT_ARM,
                                       "arm_plan_sha256": u["arm_plan_sha256"]}
                 runs.append(run)
+    # K's block list is one for the whole run, and a block in it as unavailable may have no ok run. A block some
+    # datasets refuse (H's "no panel targets <drug>") and another admits keeps the admitted spec: each refusing
+    # dataset's runs are already unavailable, with the block's reason. H's spec is per drug, so the list holds the
+    # first admitting dataset's, and every dataset's own is in its arm.json. A block no dataset admits is unavailable
+    # with each distinct reason, in dataset order.
+    for bid, reasons in refused.items():
+        blocks.setdefault(bid, {"id": bid, "kind": {"C": "CuratedExact", "H": "Hierarchical", "P": "Presence",
+                                                    "N": "Count", "X": "Context", "K": "Anonymous"}[bid],
+                                "version": "", "source_sha256": "",
+                                "priority": "CHPNXK".index(bid), "screen_cap": None, "catalog_date": None,
+                                "circularity_risk": bid != "K", "unavailable_reason": "; ".join(reasons)})
     return {
         "schema_version": k_schema.SCHEMA_VERSION,
         "protocol_sha256": sha256_bytes(canonical(spec).encode()),
