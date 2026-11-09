@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # KIT11 runner tests, no box (stub-boat-kit10.sh; every byte synthetic): the Linux host mode (L) and stage-local (T).
-# L: GRM_HOST=linux needs GRM_BOAT, reads this host's memory and cgroup room against GRM_MIN_AVAIL_MB, and stages
-# under GRM_STAGE_DIR with no wslpath call (a wslpath that fails is first on PATH); GRM_HOST=wsl stages as before.
+# L: GRM_HOST=linux needs GRM_BOAT, reads this host's memory and cgroup room (reclaimable cache counted, KIT12) against
+# GRM_MIN_AVAIL_MB, and stages under GRM_STAGE_DIR with no wslpath call (a wslpath that fails is first on PATH);
+# GRM_HOST=wsl stages as before.
 # T: stage-local checks the manifest here (pin, lines, classes, deny, vocabulary; receipts and grm-combine refused)
 # before any box call, sends only the manifest, re-hashes it in the box, links each file without following a link,
 # and runs push-data's box checks; every box failure leaves no destination, no manifest copy and the source intact.
@@ -74,6 +75,34 @@ res L7-wsl-mode-stages-as-before "0,yes" "$rc,$(yn test -d "$WSTAGE/stage-kit10-
 case_ l8; mkdir -p "$B/home/user/pullme"; echo pulled > "$B/home/user/pullme/f.txt"; rm -rf "$W/pulled"; : > "$WSL_CALLS"
 lin "$RUNNER" pull "$ID" /home/user/pullme "$W/pulled" > "$W/out" 2>&1; rc=$?
 res L8-linux-pull "0,pulled,0" "$rc,$(cat "$W/pulled/pullme/f.txt" 2> /dev/null),$(wcalls)" "$(tail -n 1 "$W/out" | cut -c1-80)"
+# L9 (KIT12): a fake cgroup tree (GRM_MEMINFO, GRM_PROC_CGROUP, GRM_CGROUP_FS). Each level's room is its limit less
+# memory.current plus its own reclaimable cache: memory.stat's inactive_file less file_dirty and file_writeback, never
+# below 0, and 0 with no memory.stat. This process sits in /user.slice/s.scope; MemAvailable is 3906 MiB; floor 512.
+MiB=1048576
+lvl() { # dir max current inactive dirty writeback (MiB; max "max" for none, inactive "-" for no memory.stat)
+  mkdir -p "$1"; if [ "$2" = max ]; then echo max > "$1/memory.max"; else echo $(($2 * MiB)) > "$1/memory.max"; fi
+  echo max > "$1/memory.high"; echo $(($3 * MiB)) > "$1/memory.current"
+  [ "$4" = - ] || printf 'anon %s\ninactive_anon 0\ninactive_file %s\nfile_dirty %s\nfile_writeback %s\n' \
+    $(($3 * MiB)) $(($4 * MiB)) $(($5 * MiB)) $(($6 * MiB)) > "$1/memory.stat"; }
+printf 'MemTotal: 4000000 kB\nMemAvailable: 4000000 kB\n' > "$W/meminfo"; printf '0::/user.slice/s.scope\n' > "$W/proc-cgroup"
+lin9() { lin env GRM_MEMINFO="$W/meminfo" GRM_PROC_CGROUP="$W/proc-cgroup" GRM_CGROUP_FS="$W/cg-$1" GRM_MIN_AVAIL_MB=512 \
+  "$RUNNER" preflight > "$W/out" 2>&1; }
+room() { grep -o 'cgroup room -\{0,1\}[0-9]* MiB ([^)]*)' "$W/out" | head -n 1; }
+case_ l9a; F=$W/cg-l9a; rm -rf "$F"; lvl "$F/user.slice" 1024 900 700 0 0; lvl "$F/user.slice/s.scope" max 900 700 0 0
+lin9 l9a; rc=$?
+res L9a-reclaimable-cache-counts-as-room "0,cgroup room 824 MiB (/user.slice:memory.max:with:700:MiB:of:reclaimable:cache)" "$rc,$(room)" "1024 limit, 900 used, 700 inactive file"
+case_ l9b; F=$W/cg-l9b; rm -rf "$F"; lvl "$F/user.slice" 1024 900 700 300 100; lvl "$F/user.slice/s.scope" max 900 700 300 100
+lin9 l9b; rc=$?
+res L9b-dirty-and-writeback-are-not-reclaimable-76 "76,cgroup room 424 MiB (/user.slice:memory.max:with:300:MiB:of:reclaimable:cache)" "$rc,$(room)" "700 inactive less 300 dirty and 100 writeback"
+case_ l9c; F=$W/cg-l9c; rm -rf "$F"; lvl "$F/user.slice" 1024 900 - 0 0; lvl "$F/user.slice/s.scope" max 900 - 0 0
+lin9 l9c; rc=$?
+res L9c-no-memory-stat-counts-no-cache-76 "76,cgroup room 124 MiB (/user.slice:memory.max:with:0:MiB:of:reclaimable:cache)" "$rc,$(room)" "the KIT11 reading"
+case_ l9d; F=$W/cg-l9d; rm -rf "$F"; lvl "$F/user.slice" 1024 900 100 300 0; lvl "$F/user.slice/s.scope" max 900 100 300 0
+lin9 l9d; rc=$?
+res L9d-cache-is-never-below-0-76 "76,cgroup room 124 MiB (/user.slice:memory.max:with:0:MiB:of:reclaimable:cache)" "$rc,$(room)" "100 inactive, 300 dirty"
+case_ l9e; F=$W/cg-l9e; rm -rf "$F"; lvl "$F/user.slice" 1024 900 700 0 0; lvl "$F/user.slice/s.scope" 1000 900 0 0 0
+lin9 l9e; rc=$?
+res L9e-each-level-counts-only-its-own-cache-76 "76,cgroup room 100 MiB (/user.slice/s.scope:memory.max:with:0:MiB:of:reclaimable:cache)" "$rc,$(room)" "the scope's 1000 limit has no cache under it; the slice's 700 does not lend"
 
 # ---------------------------------------------------------------- T: stage-local
 case_ t1; mkbox; : > "$WSL_CALLS"; sl; rc=$?

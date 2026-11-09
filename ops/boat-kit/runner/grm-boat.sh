@@ -69,7 +69,11 @@
 # boat binary, and the staging folders go under GRM_STAGE_DIR (default ~/.cache/grm-boat), with no wslpath. memcheck
 # reads this host's MemAvailable and its cgroup room: the tightest memory.high or memory.max, less memory.current,
 # over this process's cgroup and every parent. Each must be GRM_MIN_AVAIL_MB (512) or more, or memcheck fails with
-# 76. GRM_HOST=wsl, the default, is the laptop, unchanged.
+# 76. GRM_HOST=wsl, the default, is the laptop, unchanged. KIT12 (Layth, 9 Nov 2026): each cgroup's room counts its
+# reclaimable page cache as free (memory.stat's inactive_file less file_dirty and file_writeback, never below 0), since
+# the kernel drops those pages before it reaches the limit. memory.current alone read 150 MiB of room on the
+# controller with 737 MiB of inactive cache and 1.7 GB MemAvailable. GRM_MEMINFO, GRM_PROC_CGROUP and GRM_CGROUP_FS
+# (tests only) name /proc/meminfo, /proc/self/cgroup and /sys/fs/cgroup.
 # NOTES.md comes from --notes or GRM_NOTES (close takes it as its argument). Only ids this script created are used
 # (state in ~/.local/state/grm-boat/created; GRM_BOAT_ADOPT=1 accepts a grm-* sandbox made by hand).
 # Exit codes: run returns the command's own; 97 the data guard, push-data or stage-local refused (nothing sent); 86 a Boat step or working-directory
@@ -244,23 +248,34 @@ win_mem() {
   rm -f "$e"
 }
 # lin_mem (KIT11, GRM_HOST=linux): "MemAvailable room where" in MiB. room is the tightest memory.high or memory.max,
-# less memory.current, over this process's cgroup v2 path and every parent; with no limit anywhere it is
-# MemAvailable. where names the cgroup and the limit file (spaces as colons). "-" where a value can't be read.
+# less memory.current and plus that cgroup's reclaimable page cache (KIT12), over this process's cgroup v2 path and
+# every parent; with no limit anywhere it is MemAvailable. where names the cgroup, the limit file and the cache
+# counted (spaces as colons). "-" where a value can't be read.
 lin_mem() {
   python3 -I - << 'EOF'
 import os
+MEMINFO = os.environ.get("GRM_MEMINFO") or "/proc/meminfo"
+PROC_CGROUP = os.environ.get("GRM_PROC_CGROUP") or "/proc/self/cgroup"
+CGROUP_FS = os.environ.get("GRM_CGROUP_FS") or "/sys/fs/cgroup"
 def rd(p):
     try:
         with open(p) as f: return f.read().strip()
     except OSError: return None
+def reclaimable(d):
+    """memory.stat's inactive_file less file_dirty and file_writeback, in bytes, never below 0; 0 with no stat."""
+    st = {}
+    for line in (rd(d + "/memory.stat") or "").splitlines():
+        k, _, v = line.partition(" ")
+        if v.isdigit(): st[k] = int(v)
+    return max(0, st.get("inactive_file", 0) - st.get("file_dirty", 0) - st.get("file_writeback", 0))
 avail = None
 try:
-    for line in open("/proc/meminfo"):
+    for line in open(MEMINFO):
         if line.startswith("MemAvailable:"): avail = int(line.split()[1]) // 1024
 except (OSError, ValueError): pass
 cg = None
 try:
-    for line in open("/proc/self/cgroup"):
+    for line in open(PROC_CGROUP):
         h, _, rest = line.rstrip("\n").partition(":")
         ctrl, _, path = rest.partition(":")
         if h == "0" and ctrl == "": cg = path
@@ -269,14 +284,16 @@ room, where = None, "no-cgroup-limit"
 if cg is not None and cg.startswith("/"):
     p = cg
     while True:
-        d = "/sys/fs/cgroup" + ("" if p == "/" else p)
+        d = CGROUP_FS + ("" if p == "/" else p)
         cur = rd(d + "/memory.current")
+        cache = reclaimable(d)
         for k in ("memory.high", "memory.max"):
             v = rd(d + "/" + k)
             if v and v != "max" and cur is not None:
-                try: r = (int(v) - int(cur)) // (1024 * 1024)
+                try: r = (int(v) - int(cur) + cache) // (1024 * 1024)
                 except ValueError: continue
-                if room is None or r < room: room, where = r, "%s:%s" % (p, k)
+                if room is None or r < room:
+                    room, where = r, "%s:%s:with:%d:MiB:of:reclaimable:cache" % (p, k, cache // (1024 * 1024))
         if p == "/": break
         p = os.path.dirname(p) or "/"
 if room is None: room = avail

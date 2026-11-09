@@ -24,7 +24,7 @@ The laptop runs the kit from these paths. `install/install-kit10.sh` puts this s
 
 ## Running from the T3 controller
 
-KIT11 lets the runner run on the Boat T3 controller as well as the laptop. `GRM_HOST=linux` turns this mode on, and `GRM_BOAT` must name the boat binary. Staging dirs go under `GRM_STAGE_DIR`, with no `wslpath`. memcheck reads the controller's MemAvailable and its cgroup room, and each must be `GRM_MIN_AVAIL_MB` (512) or more. Without `GRM_HOST`, the runner works as before on the laptop.
+KIT11 lets the runner run on the Boat T3 controller as well as the laptop. `GRM_HOST=linux` turns this mode on, and `GRM_BOAT` must name the boat binary. Staging dirs go under `GRM_STAGE_DIR`, with no `wslpath`. memcheck reads the controller's MemAvailable and its cgroup room, and each must be `GRM_MIN_AVAIL_MB` (512) or more. Without `GRM_HOST`, the runner works as before on the laptop. KIT12 counts each cgroup's reclaimable page cache as room: `memory.stat`'s `inactive_file` less `file_dirty` and `file_writeback`, never below 0. The work program's rule is not to treat raw `memory.current` as non-reclaimable RAM.
 
 `stage-local` takes a push-data set from a dir that is already on the box, such as a data snapshot's copy of H-1's data root, and only the manifest crosses. drive.sh uses it for an H-1 run box when the run file sets `DATA_SNAPSHOT_DIR`, `VOCAB_SNAPSHOT_DIR`, `VOCAB_MANIFEST` and a `grm-tmpl-*` `TEMPLATE`.
 
