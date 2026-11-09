@@ -12,7 +12,8 @@ rm -rf "$WK"; mkdir -p "$WK"
 FAILS=0
 res() { local v=as-predicted; [ "$2" = "$3" ] || { v=DIFFERS; FAILS=$((FAILS + 1)); }; printf 'RESULT %s want=%s got=%s %s %s\n' "$1" "$2" "$3" "$v" "${4:-}"; }
 yn() { if "$@"; then echo yes; else echo no; fi; }
-# the fake run.py: --estimate-only writes each root's genomes.txt (FAKE_UNION) and an estimate whose
+# the fake run.py: --estimate-only writes each root's genomes.txt (FAKE_UNION) and, with FAKE_OTHER=1, a second
+# species' list in r2 as a real curated root holds one per species (ids 9.1 and 9.2, which no union may take); an estimate whose
 # union_without_fasta counts the ids with no RAW/fasta/<id>.fna.gz (FAKE_UWF overrides) and whose ok is FAKE_OK;
 # the stderr gate line is FAKE_GATE. A run writes roots with ksets, a matrix, a curated tree, a link and arm outputs.
 mkfake() { # HOME
@@ -28,6 +29,9 @@ if "--estimate-only" in a:
     for r, part in (("r1", ids[:1]), ("r2", ids)):
         d = os.path.join(work, "roots", r, "species", "s"); os.makedirs(d, exist_ok=True)
         open(os.path.join(d, "genomes.txt"), "w").write("\n".join(part) + "\n")
+    if os.environ.get("FAKE_OTHER") == "1":
+        d = os.path.join(work, "roots", "r2", "species", "o"); os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "genomes.txt"), "w").write("9.1\n9.2\n")
     miss = [i for i in ids if not os.path.isfile(os.path.join(raw, "fasta", i + ".fna.gz"))]
     uwf = int(os.environ.get("FAKE_UWF", len(miss)))
     print(json.dumps({"ok": os.environ.get("FAKE_OK", "1") == "1", "union_without_fasta": uwf}))
@@ -52,6 +56,8 @@ sys.exit(rc)
 EOF
   echo '{"species": "s"}' > "$1/grm/scripts/input-comparison/h1/real.json"
   echo '{"species": "s", "synthetic": true}' > "$1/grm/scripts/input-comparison/h1/syn.json"
+  echo '{"species": "S/../o"}' > "$1/grm/scripts/input-comparison/h1/badsp.json"
+  echo '{}' > "$1/grm/scripts/input-comparison/h1/nosp.json"
   printf '#!/bin/sh\nexit 0\n' > "$1/grm/grm"
 }
 # set_ NAME [SPEC]: a fresh home with the three pushed sets (metadata, vocabulary, the union's FASTAs) and stage.env
@@ -62,7 +68,7 @@ set_() {
   printf 'a\n' > "$H/grm-vocab/vocabulary/a.tsv"
   printf '1.1\n2.1\n' > "$H/union"; for i in 1.1 2.1; do echo ">$i" > "$H/grm-fasta/fasta/$i.fna.gz"; done
   export FAKE_UNION=$H/union FAKE_ARGS=$H/args H1_HOME=$H W=$H/r11
-  unset FAKE_UWF FAKE_OK FAKE_GATE FAKE_RUN_RC
+  unset FAKE_UWF FAKE_OK FAKE_GATE FAKE_RUN_RC FAKE_OTHER
   SP=${2:-real}
 }
 man() { (cd "$1" && find . -type f ! -name .grm-input-manifest.sha256 | sed 's#^\./##' | LC_ALL=C sort | xargs sha256sum) > "$1/.grm-input-manifest.sha256"; sha256sum "$1/.grm-input-manifest.sha256" | cut -d' ' -f1; }
@@ -111,6 +117,54 @@ set_ b11; env_; hb union; hb verify; hb run; printf 'H1_REFERENCE=main\n' >> "$H
 res B11-a-run-box-passes-no-reference "0,0" "$rc,$(grep -c -- '--reference-from' "$H/args")" "(H1_REFERENCE is ignored for H1_ROLE=run)"
 set_ b12; env_; addon_; hb union; hb verify; chmod -R u+w "$H/grm-combine"; rm -rf "$H/grm-combine/parts/main"; hb run; rc=$?
 res B12-run-rechecks-the-set "2,0" "$rc,$(grep -v -- '--estimate-only' "$H/args" | grep -c .)" "$(stop)"
+
+# KIT12 round 3: the union is the spec's species only (a real root lists every species it holds), and verify leaves
+# no scratch WORK behind
+set_ u1; env_; FAKE_OTHER=1 hb union; rc=$?
+res U1-union-is-the-spec-s-species-only "0,1.1 2.1" "$rc,$(paste -sd' ' "$H/r11/receipts/h1/union.txt" 2> /dev/null)" "$(stop)$(grep '^UNION' "$H/out")"
+set_ u2; env_; addon_; FAKE_OTHER=1 hb union; rc=$?
+res U2-addon-union-is-the-spec-s-species-only "0,1.1 2.1" "$rc,$(paste -sd' ' "$H/r11/receipts/h1/union.txt" 2> /dev/null)" "$(stop)"
+set_ u3 nosp; env_; hb union; rc=$?
+res U3-spec-without-species-2-no-run "2,0,1" "$rc,$(cnt "$H/args"),$(grep -c 'the spec names no species slug: none' "$H/out")" "$(stop)"
+set_ u4 badsp; env_; hb union; rc=$?
+res U4-species-not-a-slug-2-no-run "2,0" "$rc,$(cnt "$H/args")" "$(stop)"
+set_ u5; env_; FAKE_OTHER=1 hb union; hb verify; rc=$?
+res U5-verify-leaves-no-scratch-work "0,no,no,yes" "$rc,$(yn test -e "$H/h1union"),$(yn test -e "$H/h1est"),$(yn test -s "$H/r11/receipts/h1/estimate.json")" "$(stop)"
+
+# prune DIR: the box's copy of the snapshot's master root, once the sets are linked from it and match their pins
+# snap_ NAME: a fresh home whose metadata and FASTA sets are hard links of SNAP=$H/grm-h1raw, which also holds files no
+# set takes, and whose sets' files are read only as a staged set's are
+snap_() {
+  set_ "$1"; local f
+  mkdir -p "$H/grm-h1raw/bvbrc" "$H/grm-h1raw/fasta" "$H/grm-h1raw/rev9/x" "$H/grm-h1raw/catalog" "$H/grm-h1raw/species-check"
+  for f in bvbrc/genomes.jsonl catalog/version.txt species-check/species_check.json fasta/1.1.fna.gz fasta/2.1.fna.gz; do
+    local s=$H/grm-meta; case "$f" in fasta/*) s=$H/grm-fasta;; esac
+    ln "$s/$f" "$H/grm-h1raw/$f"
+  done
+  echo extra > "$H/grm-h1raw/fasta/7.1.fna.gz"; echo r > "$H/grm-h1raw/rev9/x/r.json"
+  env_; chmod a-w "$H"/grm-meta/*/* "$H"/grm-fasta/fasta/* "$H/grm-h1raw/rev9/x"
+  SNAP=$H/grm-h1raw
+}
+okset() { yn bash -c "cd '$1' && sha256sum -c --strict --quiet .grm-input-manifest.sha256"; }
+snap_ p1; hb union; hb prune "$SNAP"; rc=$?
+res P1-prune-removes-the-root "0,no,yes,yes,1" "$rc,$(yn test -e "$SNAP"),$(okset "$H/grm-meta"),$(okset "$H/grm-fasta"),$(grep -c "^PRUNED $SNAP: " "$H/out")" "$(stop)$(grep '^PRUNED' "$H/out" | cut -c1-90)"
+res P1-prune-receipt "pruned,free_before,free_after" "$(cut -f1 "$H/r11/receipts/h1/prune.txt" 2> /dev/null | paste -sd, -)" ""
+res P2-sets-stay-read-only "no,no" "$(yn test -w "$H/grm-fasta/fasta/1.1.fna.gz"),$(yn test -w "$H/grm-meta/bvbrc/genomes.jsonl")" ""
+hb verify; rc=$?
+res P3-verify-after-prune 0 "$rc" "$(stop)"
+snap_ p4; hb prune "$H/grm-fasta"; rc=$?
+res P4-prune-of-a-set-2 "2,yes,yes,1" "$rc,$(yn test -d "$H/grm-fasta/fasta"),$(yn test -d "$SNAP"),$(grep -c 'is a set or run folder' "$H/out")" "$(stop)"
+# P5's folder holds a link to the metadata set, so only the folder's place refuses it
+snap_ p5; mkdir -p "$WK/p5-out/bvbrc"; ln "$H/grm-meta/bvbrc/genomes.jsonl" "$WK/p5-out/bvbrc/genomes.jsonl"; hb prune "$WK/p5-out"; rc=$?
+res P5-prune-outside-the-home-2 "2,yes,1" "$rc,$(yn test -d "$WK/p5-out"),$(grep -c 'is not a folder directly under' "$H/out")" "$(stop)"
+snap_ p6; hb prune "$SNAP/"; r1=$?; hb prune "$H/grm-meta/"; r2=$?; hb prune "$H/./grm-h1raw"; r3=$?; hb prune; r4=$?
+res P6-prune-of-an-unplain-path-2 "2,2,2,2,yes,yes" "$r1,$r2,$r3,$r4,$(yn test -d "$SNAP"),$(yn test -d "$H/grm-meta/bvbrc")" "$(stop)"
+snap_ p7; ln -s "$SNAP" "$H/snaplink"; hb prune "$H/snaplink"; rc=$?
+res P7-prune-of-a-link-2 "2,yes" "$rc,$(yn test -d "$SNAP")" "$(stop)"
+snap_ p8; chmod u+w "$H/grm-fasta/fasta/2.1.fna.gz"; echo changed >> "$H/grm-fasta/fasta/2.1.fna.gz"; hb prune "$SNAP"; rc=$?
+res P8-prune-with-a-changed-set-2 "2,yes" "$rc,$(yn test -d "$SNAP")" "$(stop)"
+snap_ p9; mkdir -p "$H/other/bvbrc"; cp "$H/grm-meta/bvbrc/genomes.jsonl" "$H/other/bvbrc/genomes.jsonl"; hb prune "$H/other"; rc=$?
+res P9-prune-of-a-root-the-sets-are-not-linked-from-2 "2,yes,1" "$rc,$(yn test -d "$H/other"),$(grep -c 'was not linked from' "$H/out")" "$(stop)"
 
 # r11-box.sh: an add-on's stage is h1-box.sh run, and its guard's pause file is h1-run's
 rb() { bash "$KIT/r11-box.sh" "$@" > "$H/rb.out" 2>&1; }

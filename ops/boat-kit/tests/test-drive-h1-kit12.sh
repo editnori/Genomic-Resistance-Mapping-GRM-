@@ -135,5 +135,22 @@ d=$W/j; conf "$d" snap; drive "$d" P1; drive "$d" S2; drive "$d" K2; r1=$?; cp "
 rm -f "$d/stages/K2/DONE"; m=$(mark "$d"); drive "$d" K2; rc=$?; K=$(since "$d" "$m")
 res A14-rerun-builds-the-set-afresh "0,0,yes,1" "$r1,$rc,$(yn cmp -s "$W/j-ref1" "$d/stages/K2/REF-MANIFEST.sha256"),$(grep -c '^push-data .*--dest /home/user/grm-combine' <<< "$K")" "$(tail -n 1 "$d/out.K2" | cut -c1-90)"
 
+# KIT12 round 3, DATA_SNAPSHOT_PRUNE=1: each run box (a pilot, a main part, an add-on) prunes its copy of the
+# snapshot's master root once its FASTA set is staged, before verify; a refused prune stops the stage (81)
+seq_() { grep -oE '^((stage-local|push-data) .*--dest /home/user/grm-[a-z]*|run .*--log (union|prune|verify) )' | sed -E 's#.*--dest /home/user/##; s#^run .*--log ([a-z]*) $#\1#' | paste -sd, -; }
+d=$W/p; conf "$d" snap DATA_SNAPSHOT_PRUNE=1; m=$(mark "$d"); drive "$d" P1; r0=$?; K=$(since "$d" "$m")
+res A15-pilot-prunes-after-its-fasta-set "0,grm-meta,grm-vocab,union,grm-fasta,prune,verify,1,1" "$r0,$(seq_ <<< "$K"),$(grep -c -- '--log prune --cwd /home/user -- bash /home/user/port/h1-box.sh prune /home/user/grm-h1raw ' <<< "$K"),$(grep -c 'P1 | PRUNED /home/user/grm-h1raw: ' "$d/NOTES.md")" "$(tail -n 1 "$d/out.P1" | cut -c1-90)"
+drive "$d" S2; m=$(mark "$d"); drive "$d" K2; rc=$?; K=$(since "$d" "$m")
+res A16-addon-prunes-after-its-fasta-set "0,grm-meta,grm-vocab,grm-combine,union,grm-fasta,prune,verify" "$rc,$(seq_ <<< "$K")" "$(tail -n 1 "$d/out.K2" | cut -c1-90)"
+res A17-no-prune-unless-set "0,0" "$(grep -c -- '--log prune' "$W/a/calls.log"),$(grep -c -- '--log prune' "$W/g/calls.log")" ""
+d=$W/q; conf "$d" snap DATA_SNAPSHOT_PRUNE=1; m=$(mark "$d"); drive "$d" P1 SR_PRUNE_FAIL=1; rc=$?; K=$(since "$d" "$m")
+res A18-prune-refused-81-closed-before-verify "81,1,1,0,yes" "$rc,$(boxes "$d"),$(cnt "$d/closed"),$(grep -c -- '--log verify' <<< "$K"),$(yn grep -q 'prune of /home/user/grm-h1raw failed: STOP stub prune refused' "$d/NOTES.md")" "$(tail -n 1 "$d/out.P1" | cut -c1-90)"
+d=$W/r1; conf "$d" snap DATA_SNAPSHOT_PRUNE=yes; drive "$d" P1; r1=$?
+d=$W/r2; conf "$d" push DATA_SNAPSHOT_PRUNE=1; drive "$d" P1; r2=$?
+d=$W/r3; conf "$d" snap DATA_SNAPSHOT_PRUNE=1 DATA_SNAPSHOT_DIR=/home/user/a/grm-h1raw; drive "$d" P1; r3=$?
+d=$W/r4; conf "$d" snap DATA_SNAPSHOT_PRUNE=1 DATA_SNAPSHOT_DIR=/home/user/..; drive "$d" P1; r4=$?
+res A19-bad-prune-settings-2-no-box "2,2,2,2,0" "$r1,$r2,$r3,$r4,$(( $(boxes "$W/r1") + $(boxes "$W/r2") + $(boxes "$W/r3") + $(boxes "$W/r4") ))" ""
+res A19-each-names-its-setting "1,1,1,1" "$(grep -c 'DATA_SNAPSHOT_PRUNE is 0 or 1, not yes' "$W/r1/out.P1"),$(grep -c 'DATA_SNAPSHOT_PRUNE=1 needs DATA_SNAPSHOT_DIR$' "$W/r2/out.P1"),$(grep -c 'DATA_SNAPSHOT_PRUNE=1 needs DATA_SNAPSHOT_DIR directly under /home/user: /home/user/a/grm-h1raw' "$W/r3/out.P1"),$(grep -c 'directly under /home/user: /home/user/..$' "$W/r4/out.P1")" ""
+
 echo "FAILS $FAILS"
 [ "$FAILS" = 0 ]

@@ -28,6 +28,8 @@ KIT11 lets the runner run on the Boat T3 controller as well as the laptop. `GRM_
 
 `stage-local` takes a push-data set from a dir that is already on the box, such as a data snapshot's copy of H-1's data root, and only the manifest crosses. drive.sh uses it for an H-1 run box when the run file sets `DATA_SNAPSHOT_DIR`, `VOCAB_SNAPSHOT_DIR`, `VOCAB_MANIFEST` and a `grm-tmpl-*` `TEMPLATE`.
 
+A box made from H-1's data snapshot starts with its own 76 GB copy of the master root, which leaves about 202 GB free on an xlarge. The pilot and the Salmonella and TB main parts need more than that. With `DATA_SNAPSHOT_PRUNE=1`, each run box runs `h1-box.sh prune` once its FASTA set is staged. The step first checks every set against its pin, and that the metadata set was linked from that folder. It then deletes the box's copy. The staged sets are hard links, so they keep their files, and the run gets back the disk only the copy held. The snapshot itself isn't touched. A refused prune stops the stage with 81 before verify.
+
 ## k add-on boxes
 
 KIT12 adds a stage kind, `addon`, for H-1's k21 and k25 arms. Each runs as a part on its own box with `run.py --reference-from`, against the main part that left the k arms out. Column 10 of its stage row names that one main part, which must be a run box of the same table. An add-on box is a run box in every step. It also waits for the main part's DONE and pulled WORK, and its H-1 flags must be the main part's.

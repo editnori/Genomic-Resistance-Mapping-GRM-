@@ -63,7 +63,10 @@
 #   MASTER_MANIFEST, and the vocabulary set copied from VOCAB_MANIFEST, which must hash to VOCAB_MANIFEST_SHA256.
 #   The three push-data calls become grm-boat.sh stage-local calls from those folders on the box, to the same --dest
 #   paths, so only the manifests cross. DATA_ROOT and VOCAB_ROOT aren't needed. A combine box is unchanged: its
-#   parts are pulled records, pushed from here.
+#   parts are pulled records, pushed from here. KIT12: with DATA_SNAPSHOT_PRUNE=1 (DATA_SNAPSHOT_DIR then directly
+#   under /home/user), each run box runs h1-box.sh prune DATA_SNAPSHOT_DIR once its FASTA set is staged: the box's
+#   copy of the master root goes, and the sets keep their linked files, so the run gets the disk only that copy held
+#   (a 76 GB root on a 278 GB xlarge). A refused or failed prune stops the stage with 81 before verify.
 # KIT12, a k add-on box (kind addon, KIND=h1; G2(b), run.py --reference-from): column 10 names its one main part, a
 #   run box (pilot, s1, s2 or conf) of the same stage table. It is a run box in every step (the binary gate, the
 #   metadata, vocabulary and FASTA sets, union, verify, the run and its checkpoints), and it waits for the main part's
@@ -105,6 +108,15 @@ if [ $SNAPDATA = 1 ]; then
   done
   [ -f "${VOCAB_MANIFEST:-}" ] || { echo "drive: DATA_SNAPSHOT_DIR needs VOCAB_MANIFEST, the vocabulary manifest file" >&2; exit 2; }
 fi
+# KIT12: DATA_SNAPSHOT_PRUNE=1 removes a run box's own copy of the snapshot's master root once its FASTA set is staged
+# (h1-box.sh prune), so the run gets that disk; the folder must then sit directly under /home/user
+case "${DATA_SNAPSHOT_PRUNE:-0}" in
+  0) ;;
+  1) [ $SNAPDATA = 1 ] || { echo "drive: DATA_SNAPSHOT_PRUNE=1 needs DATA_SNAPSHOT_DIR" >&2; exit 2; }
+     [[ "$DATA_SNAPSHOT_DIR" =~ ^/home/user/[A-Za-z0-9._-]+$ ]] && [[ ! "$DATA_SNAPSHOT_DIR" =~ ^/home/user/\.\.?$ ]] ||
+       { echo "drive: DATA_SNAPSHOT_PRUNE=1 needs DATA_SNAPSHOT_DIR directly under /home/user: $DATA_SNAPSHOT_DIR" >&2; exit 2; };;
+  *) echo "drive: DATA_SNAPSHOT_PRUNE is 0 or 1, not ${DATA_SNAPSHOT_PRUNE}" >&2; exit 2;;
+esac
 # I-g: SRC must be the top of a git worktree with a commit, and clean (a plain archive extract has no commit key)
 [ "$(git -C "$SRC" rev-parse --show-toplevel 2> /dev/null)" = "$(readlink -f "$SRC")" ] &&
   [[ "$(git -C "$SRC" rev-parse HEAD 2> /dev/null)" =~ ^[0-9a-f]{40}$ ]] || { echo "drive: $SRC is not a git worktree with a commit" >&2; exit 2; }
@@ -658,6 +670,10 @@ if [ "$KIND" = h1 ]; then
     "$R" run "$ID" --log fasta-pin --cwd /home/user -- "printf 'H1_FASTA_SHA256=%s\n' $FSHA >> /home/user/r11/stage.env" > /dev/null || bail 86 "could not pin the FASTA set in stage.env"
     h1data "${DATA_ROOT:-}" "${DATA_SNAPSHOT_DIR:-}" --manifest "$SD/FASTA-MANIFEST.sha256" --manifest-sha256 "$FSHA" --dest /home/user/grm-fasta > "$SD/push-fasta.out" 2>&1 ||
       bail $? "$PDWHAT of the FASTAs refused or failed: $(tail -n 1 "$SD/push-fasta.out")"
+    if [ "${DATA_SNAPSHOT_PRUNE:-0}" = 1 ]; then
+      h1run prune prune "$DATA_SNAPSHOT_DIR" || bail 81 "prune of $DATA_SNAPSHOT_DIR failed: $(grep '^STOP' "$SD/prune.out" | tail -n 1)"
+      say "$(grep -m1 '^PRUNED' "$SD/prune.out")"
+    fi
   fi
 else
 waited "$R" push-data "$ID" "$DATA_ROOT" --manifest "$SD/INPUT-MANIFEST.sha256" --manifest-sha256 "$MSHA" > "$SD/push-data.out" 2>&1 ||
