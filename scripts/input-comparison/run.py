@@ -40,9 +40,13 @@ before count, structure, matrix, fold plans and evaluation (REVIEW-INPUT M1), so
 same genome set give bit-identical predictions whatever order their selection rule drew them in.
 A cohort arm whose genome set equals the default's is not run: its runs are `identical_cohort`
 with the reason, and K reports it with no contrasts (`--run-identical-cohorts` runs it anyway,
-for the order-twin proof only). The spec's `panel_floor` sets the eligible genomes a species
-needs (more than 2,000, so cap-4000 and grr-v1 change the set); the runner refuses a species
-below it unless `--below-panel-floor` is given (synthetic studies only).
+for the order-twin proof only). A cohort arm whose own cohort leaves a dataset short of its
+class minimum, which `grm arm` refuses, has `unavailable` runs on that dataset with the reason, so
+K reports its contrasts there as not produced and the run goes on (Layth's ruling on H-1's pilot,
+2026-11-09, applied to a cohort arm after NG-1's grr-v1 stopped on cefixime). The default, and any
+arm on the default's cohort, still stops the run there. The spec's `panel_floor` sets the eligible
+genomes a species needs (more than 2,000, so cap-4000 and grr-v1 change the set); the runner
+refuses a species below it unless `--below-panel-floor` is given (synthetic studies only).
 
 Every spec run gets two sentinel arms, each exchangeable with the default: `sentinel-seed-twin`,
 the default's learner-seed twin (learner seed 1001), judges rf and gbt, the learners that draw
@@ -891,6 +895,38 @@ class Runner:
         (out / "arm.json").write_text(json.dumps({"arm": arm["name"], "dataset": dataset, "blocks": [],
                                                   "unavailable": [], "identical_cohort": reason}, indent=1))
 
+    @staticmethod
+    def refused_as_short(arm, dataset, log):
+        """Whether `grm arm` refused this cohort arm on `dataset` because the arm's own cohort leaves a class below
+        the dataset's class minimum: the arm changes the cohort, and the call's log ends with grm's own refusal
+        (`ablate::arm::run_arm`). The log is appended to, so its last line is this call's. Any other failure, and
+        this refusal on the default or on an arm scored on the default's cohort, is not."""
+        if not changes_cohort(arm) or not log.is_file():
+            return False
+        lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+        return bool(lines) and lines[-1] == f"Error: {dataset} is short of its class minimum"
+
+    def short_cohort(self, arm, dataset, out):
+        """Records a cohort arm that `grm arm` refused on `dataset` as short of its class minimum: every run
+        unavailable with the reason, so K reports the arm's contrasts on the dataset as not produced. Whatever the
+        refused call left in `out` goes first."""
+        n = len(self.genome_set(arm))
+        reason = (f"short_of_class_minimum: arm {arm['name']}'s cohort ({n} genomes) leaves {dataset} with fewer than "
+                  f"{arm['min_class']} genomes in a class, so grm arm refused it")
+        shutil.rmtree(out)
+        out.mkdir()
+        runs = [{"dataset": dataset, "arm": arm["name"], "blocks": arm["blocks"], "learner": learner,
+                 "split": split, "repeats": split_repeats(self.spec, split), "fold_plan_sha256": None,
+                 "status": "unavailable", "reason": reason, "metrics": {}, "fit_count": 0, "seconds": 0.0,
+                 "predictions": None, "pairing": arm["pairing"], "arm_plan_sha256": None, "cohort_drops": None}
+                for split in SPLITS for learner in LEARNERS]
+        (out / "runs.json").write_text(json.dumps(runs, indent=1))
+        (out / "predictions.jsonl").write_text("")
+        (out / "arm.json").write_text(json.dumps({"arm": arm["name"], "dataset": dataset, "blocks": [],
+                                                  "unavailable": [], "short_of_class_minimum": reason}, indent=1))
+        print(f"SHORT COHORT: {reason}; its contrasts on {dataset} are not produced and the run goes on",
+              file=sys.stderr)
+
     def arm(self, arm, dataset, run_identical=False):
         out = self.work / "arms" / arm["name"] / dataset
         arms_dir = (self.work / "arms").resolve()
@@ -927,7 +963,13 @@ class Runner:
             argv.append("--trace-training")
         if arm["name"] == DEFAULT_ARM or arm["pairing"] == "common_outer_test_set_balanced":
             argv += ["--groups", str(self.groups)]
-        self.call(f"arm-{arm['name']}-{dataset}", root, *argv)
+        name = f"arm-{arm['name']}-{dataset}"
+        try:
+            self.call(name, root, *argv)
+        except RuntimeError:
+            if not self.refused_as_short(arm, dataset, self.log / f"{name}.log"):
+                raise
+            self.short_cohort(arm, dataset, out)
         self.finished(out, record)
         return out
 

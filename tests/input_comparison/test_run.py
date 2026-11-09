@@ -1628,11 +1628,12 @@ ids = [f"g{i:03d}" for i in range(50)]
             with self.assertRaises(SystemExit, msg=bad):
                 run.load_spec(self.write(spec))
 
-    def stub_work(self, tmp, arms, refuse_lineage=False, pairing_error=None):
+    def stub_work(self, tmp, arms, refuse_lineage=False, pairing_error=None, short=None):
         """WORK/arms/<arm>/ds/{runs.json,predictions.jsonl} as `grm arm` writes them, for run.contrasts(): every
         arm scores 40 genomes (20 lineages of 2, one of each class) in 5 folds per repeat, 3 lineage repeats and 1
         random; k-h's scores move towards the label. refuse_lineage makes the default's lineage runs unavailable;
-        pairing_error moves one of that arm's rows to another fold."""
+        pairing_error moves one of that arm's rows to another fold; the arm `short` names has every run unavailable
+        and no rows, as Runner.short_cohort leaves an arm short of a class minimum."""
         work = Path(tmp)
         for name in ["default"] + [a["name"] for a in arms]:
             out = work / "arms" / name / "ds"
@@ -1640,6 +1641,10 @@ ids = [f"g{i:03d}" for i in range(50)]
             rows, runs = [], []
             for split, repeats in (("random", 1), ("lineage", 3)):
                 for learner in run.LEARNERS:
+                    if name == short:
+                        runs.append({"arm": name, "learner": learner, "split": split, "status": "unavailable",
+                                     "reason": "short_of_class_minimum: the stub's reason"})
+                        continue
                     down = refuse_lineage and name == "default" and split == "lineage"
                     runs.append({"arm": name, "learner": learner, "split": split, "status":
                                  "unavailable" if down else "ok", "reason": "the gbt holdout lacks a class" if down
@@ -1695,6 +1700,20 @@ ids = [f"g{i:03d}" for i in range(50)]
         self.assertEqual(sorted(missing), sorted(p for p in planned if "->k-h:" in p))
         self.assertTrue(all(reason.startswith("pairing refused: fold:") for reason in missing.values()))
         self.assertEqual(len(records), len(planned) - len(missing))
+
+    def test_a_short_cohort_arm_s_contrasts_are_not_produced_and_the_rest_decided(self):
+        """An arm short of a class minimum (Runner.short_cohort) has each of its 10 contrasts not produced, with its
+        runs' reason; the sentinels' 20 are still produced."""
+        spec, arms = self.stub_arms()
+        with tempfile.TemporaryDirectory() as tmp:
+            records, planned, missing = run.contrasts(spec, arms, self.stub_work(tmp, arms, short="k-h"))
+        self.assertEqual(sorted(missing), sorted(p for p in planned if "->k-h:" in p))
+        self.assertEqual(len(missing), 5 * 2)
+        for pid, reason in missing.items():
+            self.assertRegex(reason, r"^arm k-h has no \w+ (random|lineage) result: short_of_class_minimum: the stub's "
+                                     r"reason$", pid)
+        self.assertEqual(len(records), len(planned) - 10)
+        self.assertEqual({x["treatment"] for x in records}, {a["name"] for a in arms if a.get("sentinel")})
 
     def k_unanswered(self, spec, arms, records, planned, missing):
         """K's unanswered datasets for run.contrasts' output, from the report fields K reads them from."""

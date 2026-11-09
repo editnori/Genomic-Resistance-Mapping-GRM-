@@ -30,7 +30,8 @@ D2 = {"salmonella_enterica": 29147870, "mycobacterium_tuberculosis": 25881860, "
       "neisseria_gonorrhoeae": 12750902}
 
 # base.SpecTests' stub grm with two changes: `grm arm` writes a complete arm output (its one plan tagged with
-# STUB_PLAN_TAG; with STUB_ARM_FAILS set it fails before writing it) and records each call in WORK/arm-calls.txt;
+# STUB_PLAN_TAG; with STUB_ARM_FAILS set it fails before writing it, and the arm STUB_ARM_SHORT names ends with grm's
+# class-minimum refusal) and records each call in WORK/arm-calls.txt;
 # with STUB_RECOUNT set, `grm count` replaces every kset already in the root, as a recount would.
 STUB_GRM = base.SpecTests.STUB_GRM.replace(
     """    (out / "seen.json").write_text(json.dumps({"plans_present": (out / "plans").exists()}))
@@ -38,6 +39,8 @@ STUB_GRM = base.SpecTests.STUB_GRM.replace(
     """    (out / "seen.json").write_text(json.dumps({"plans_present": (out / "plans").exists()}))
     if os.environ.get("STUB_ARM_FAILS"):
         sys.exit(5)
+    if os.environ.get("STUB_ARM_SHORT") == argv[argv.index("--arm") + 1]:
+        sys.exit("Error: " + argv[argv.index("--dataset") + 1] + " is short of its class minimum")
     (out / "plans").mkdir(exist_ok=True)
     (out / "plans" / "lineage-0.json").write_text(json.dumps({"tag": os.environ.get("STUB_PLAN_TAG", "")}))
     (out / "runs.json").write_text("[]")
@@ -522,6 +525,62 @@ class ResumeTests(Stub):
             self.run_arms()
         self.assertIn(f"{arm} is a symlink", str(e.exception))
         self.assertEqual(list((arm.parent / "elsewhere").iterdir()), [])
+
+    def test_a_cohort_arm_short_of_a_class_minimum_is_unavailable_and_the_run_goes_on(self):
+        """Layth's ruling on H-1's pilot applied to a cohort arm (NG-1's grr-v1 on cefixime, 2026-11-09): grm arm's
+        class-minimum refusal of cap-10 leaves cap-10 unavailable on DS, every run with the reason and nothing the
+        refused call wrote, and the record resumes."""
+        os.environ["STUB_ARM_SHORT"] = "cap-10"
+        err = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(err):
+                ran, r = self.run_arms()
+        finally:
+            del os.environ["STUB_ARM_SHORT"]
+        self.assertEqual(ran, ["default"])
+        out = self.out("cap-10")
+        self.assertEqual(sorted(p.name for p in out.iterdir()),
+                         sorted(["arm.json", "predictions.jsonl", "runs.json", run.RESUME]))
+        reason = (f"short_of_class_minimum: arm cap-10's cohort (10 genomes) leaves {DS} with fewer than "
+                  f"{r.arms['cap-10']['min_class']} genomes in a class, so grm arm refused it")
+        runs = json.loads((out / "runs.json").read_text())
+        self.assertEqual(sorted((u["learner"], u["split"]) for u in runs),
+                         sorted((learner, split) for learner in run.LEARNERS for split in run.SPLITS))
+        self.assertEqual({(u["arm"], u["dataset"], u["status"], u["reason"], u["fit_count"]) for u in runs},
+                         {("cap-10", DS, "unavailable", reason, 0)})
+        self.assertEqual(json.loads((out / "arm.json").read_text())["short_of_class_minimum"], reason)
+        self.assertEqual((out / "predictions.jsonl").read_text(), "")
+        self.assertIn(f"SHORT COHORT: {reason}; its contrasts on {DS} are not produced and the run goes on",
+                      err.getvalue())
+        self.assertEqual(self.run_arms()[0], [])
+
+    def test_the_default_s_class_minimum_refusal_still_stops_the_run(self):
+        """The default's cohort is the one every contrast rests on, so its refusal stops the run with no record."""
+        os.environ["STUB_ARM_SHORT"] = "default"
+        try:
+            with self.assertRaises(RuntimeError):
+                self.run_arms()
+        finally:
+            del os.environ["STUB_ARM_SHORT"]
+        self.assertFalse((self.out("default") / run.RESUME).exists())
+        self.assertFalse(self.out("cap-10").exists())
+
+    def test_only_grm_s_own_refusal_of_a_cohort_arm_counts_as_short(self):
+        """refused_as_short reads the call's last log line, and only for an arm that changes the cohort."""
+        r = self.runner()
+        log = self.tmp / "arm.log"
+        refusal = f"Error: {DS} is short of its class minimum"
+        cap10, k21 = r.arms["cap-10"], r.arms["k21"]
+        self.assertFalse(r.refused_as_short(cap10, DS, log), "no log")
+        for text, arm, want in ((f"grm arm ...\n{refusal}\n", cap10, True),
+                                (f"{refusal}\nError: a later failure\n", cap10, False),
+                                (f"grm arm ...\n{refusal.replace(DS, DS + '_x')}\n", cap10, False),
+                                (f"grm arm ...\nError: {DS} has no curated dataset\n", cap10, False),
+                                ("", cap10, False),
+                                (f"{refusal}\n", r.default, False),
+                                (f"{refusal}\n", k21, False)):
+            log.write_text(text)
+            self.assertEqual(r.refused_as_short(arm, DS, log), want, (text, arm["name"]))
 
     def test_a_linked_output_is_never_resumed(self):
         self.run_arms()
