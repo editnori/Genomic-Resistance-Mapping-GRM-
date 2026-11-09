@@ -666,6 +666,68 @@ class PredictionFileCases(unittest.TestCase):
             rp.validate_report(bad)
 
 
+KPNEU_C, KPNEU_LOBO_C = cid("kpneu__amp"), cid("kpneu__amp", **LOBO)
+UNANSWERED_KPNEU = ("- `kpneu__amp`: can't be tested this way: 2 planned family C contrasts outside the sentinel arms "
+                    "(lineage split), 2 not produced, 0 undefined.")
+
+
+class UnansweredDatasetCases(unittest.TestCase):
+    """Layth's ruling on H-1's pilot (2026-11-09): a confirmatory dataset whose planned family C contrasts outside
+    the sentinel arms all lack a p is listed as one the per-dataset test can't answer. The list is derived from the
+    report's records, so the JSON keys and validate_report don't change."""
+
+    def test_a_confirmatory_dataset_with_no_family_c_p_is_listed(self):
+        # kpneu__amp's two family C contrasts were not produced. spneu__ery and saur__oxa plan no family C (they
+        # feed the pools), and mtb__inh is a development dataset, so neither is listed; the ecoli pair decide.
+        report = build()
+        self.assertEqual(rp.unanswered_datasets(report), [{"dataset": "kpneu__amp", "planned": 2, "not_produced": 2,
+                                                           "undefined": 0, "splits": ["lineage"]}])
+        md = rp.render_markdown(report)
+        section = md.split(rp.UNANSWERED_HEADING + "\n")[1].split("\n## ")[0]
+        self.assertEqual(section, f"\n{rp.UNANSWERED_SENTENCE}\n\n{UNANSWERED_KPNEU}\n")
+        self.assertLess(md.index("## Datasets\n"), md.index(rp.UNANSWERED_HEADING))
+        self.assertLess(md.index(rp.UNANSWERED_HEADING), md.index("## Pooled across species"))
+        # No new JSON key: the loaded report validates and lists the same dataset.
+        self.assertEqual(set(report), set(rp.REPORT_KEYS))
+        loaded = rp.validate_report(json.loads(rp.dumps(report)))
+        self.assertEqual(rp.unanswered_datasets(loaded), rp.unanswered_datasets(report))
+        self.assertIn(UNANSWERED_KPNEU, rp.render_markdown(loaded))
+
+    def test_no_section_when_every_planned_family_c_dataset_decides(self):
+        report = copy.deepcopy(build())
+        report["planned_contrasts"] = [x for x in report["planned_contrasts"] if x not in (KPNEU_C, KPNEU_LOBO_C)]
+        self.assertEqual(rp.unanswered_datasets(report), [])
+        self.assertNotIn(rp.UNANSWERED_HEADING, rp.render_markdown(report))
+
+    def test_undefined_contrasts_count_as_no_answer(self):
+        values = dict(zip(NAMES, good_inputs()))
+        for x in values["contrasts"]:
+            if x["id"] in (FWD_C, LOBO_C):
+                x.update(fx.UNDEFINED)
+        report = build(contrasts=values["contrasts"])
+        cip = [u for u in rp.unanswered_datasets(report) if u["dataset"] == "ecoli__cip"]
+        self.assertEqual(cip, [{"dataset": "ecoli__cip", "planned": 2, "not_produced": 0, "undefined": 2,
+                                "splits": ["lineage"]}])
+        self.assertIn("- `ecoli__cip`: can't be tested this way: 2 planned family C contrasts outside the sentinel "
+                      "arms (lineage split), 0 not produced, 2 undefined.", rp.render_markdown(report))
+
+    def test_a_sentinel_p_does_not_answer_a_dataset(self):
+        # ecoli__cip without its forward contrast keeps LOBO_C's p, whose treatment is K. With K a sentinel,
+        # that p decides nothing and the dataset is listed, with 1 planned contrast outside the sentinels.
+        values = dict(zip(NAMES, good_inputs()))
+        contrasts = [x for x in values["contrasts"] if x["id"] != FWD_C]
+        not_produced = {**values["not_produced"], FWD_C: "dropped (fixture)"}
+        plain = build(contrasts=contrasts, not_produced=not_produced)
+        self.assertNotIn("ecoli__cip", [u["dataset"] for u in rp.unanswered_datasets(plain)])
+        m = good_inputs()[0]
+        m["sentinel_arms"] = ["K"]
+        report = build(manifest=m, contrasts=contrasts, not_produced=not_produced)
+        by_dataset = {u["dataset"]: u for u in rp.unanswered_datasets(report)}
+        self.assertEqual(by_dataset["ecoli__cip"], {"dataset": "ecoli__cip", "planned": 1, "not_produced": 1,
+                                                    "undefined": 0, "splits": ["lineage"]})
+        self.assertEqual(by_dataset["kpneu__amp"]["planned"], 1)
+
+
 class SentinelAndRandomSplitCases(unittest.TestCase):
     """Main's ruling after the calibration study: random-split contrasts are descriptive, and a sentinel
     arm (the learner-seed twin) that is not inconclusive marks its learner and species unreliable."""

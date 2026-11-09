@@ -40,7 +40,7 @@ Every learner needs a judged row, and every planted arm (k-h, k-p, k-c-h-p) must
 learner on at least 95% of seeds, as the run decided it (BH over the run's lineage contrasts; main's ruling
 after round 2's calibration). Every record, twin or planted, must carry its learner's test (stats.LEARNER_TESTS;
 REVIEW-STATSFIX-R3 L2). A seed whose
-run made no lineage decision (run.py's exit 3) keeps its summary, is listed and counts toward no
+run made no lineage decision (its summary's `no_decision_datasets`) is listed and counts toward no
 row; a seed counts once however many folders hold it (REVIEW-INPUT17 L2).
 
 `report --power` is the power curve (pre-registered in docs/input-comparison-runner.md, round 2), on seeds
@@ -89,7 +89,6 @@ MAX_UPPER = 0.11
 # The power curve's detection bar, and the planted arms' (main's ruling after round 2's calibration).
 DETECTED = 0.8
 PLANTED_BAR = 0.95
-NO_DECISIONS_EXIT = 3
 
 
 def seeds(text):
@@ -131,8 +130,9 @@ def one_seed(seed, out, grm, jobs, spec=HERE / "spec.json", visible=1.0):
         rc = subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(path), "--raw", str(raw),
                              "--work", str(run), "--grm", grm, "--source-commit", "0" * 40, "--jobs", str(jobs),
                              *vocabulary], stdout=log, stderr=subprocess.STDOUT).returncode
-    # A run with a dataset that made no lineage decision exits 3 after writing its summary; the seed keeps it.
-    if rc not in (0, NO_DECISIONS_EXIT):
+    # A run with a dataset that made no lineage decision exits 0 and its summary names that dataset (Layth's ruling
+    # on H-1's pilot, 2026-11-09, which replaced M3's exit 3); report() lists the seed.
+    if rc != 0:
         raise subprocess.CalledProcessError(rc, "run.py")
     # summary.json last and whole (REVIEW-INPUT18 L2): a rerun skips a folder with one, so a seed killed before it
     # landed reruns, and one that has it also has the cohort.json that names its seed.

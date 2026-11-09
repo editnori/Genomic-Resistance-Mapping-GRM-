@@ -724,6 +724,43 @@ RANDOM_SPLIT_SENTENCE = ("Descriptive only, with no p and no direction: decision
 UNRELIABLE_SENTENCE = ("The sentinel judging these learners, which is exchangeable with its baseline, was not "
                        "inconclusive on the lineage split, so every decision of these learners on these species is "
                        "unreliable: kept below and flagged, and left out of every summary of decisions.")
+UNANSWERED_HEADING = "## Datasets the per-dataset test can't answer"
+UNANSWERED_SENTENCE = ("No family C contrast of these confirmatory datasets outside the sentinel arms has a p: each "
+                       "planned one was not produced or is undefined, for the reasons listed above. So the "
+                       "test decides nothing for them. Each can't be tested this way, and its missing "
+                       "decisions are not a measured result.")
+
+
+def unanswered_datasets(report):
+    """The confirmatory datasets with planned family C contrasts outside the sentinel arms, none of which has a p:
+    the per-dataset test answers nothing for them, and the summary lists each rather than leave it to read as a
+    contrast that found nothing (Layth's ruling on H-1's pilot, 2026-11-09). A dataset with no family C planned
+    asked that test nothing and isn't listed, and K refuses family C on a development dataset, so each one listed
+    is confirmatory. Derived from the report's own records, so its JSON keys and validate_report are unchanged.
+    Each entry gives the dataset, its planned family C contrasts outside the sentinels, how many of them were not
+    produced or are undefined, and their splits."""
+    sentinels = set(report["manifest"].get("sentinel_arms", []))
+    decided = {x["dataset"] for x in report["contrasts"]
+               if x["family"] == "C" and x["p"] is not None and x["treatment"] not in sentinels}
+    absent = {x["id"] for x in report["not_produced"]}
+    undefined = {x["id"] for x in report["undefined_contrasts"]}
+    planned = defaultdict(list)
+    for pid in report["planned_contrasts"]:
+        parts = schema.parse_key(schema.contrast_key(pid))
+        if parts["family"] == "C" and parts["treatment"] not in sentinels:
+            planned[schema.contrast_dataset(pid)].append((pid, parts["split"]))
+    return [{"dataset": d["id"], "planned": len(planned[d["id"]]),
+             "not_produced": sum(pid in absent for pid, _ in planned[d["id"]]),
+             "undefined": sum(pid in undefined for pid, _ in planned[d["id"]]),
+             "splits": sorted({split for _, split in planned[d["id"]]})}
+            for d in report["manifest"]["datasets"] if planned[d["id"]] and d["id"] not in decided]
+
+
+def _unanswered_line(u):
+    splits = ", ".join(_md(s) for s in u["splits"])
+    return (f"- {_code(u['dataset'])}: can't be tested this way: {_plural(u['planned'], 'planned family C contrast')} "
+            f"outside the sentinel arms ({splits} split), {u['not_produced']} not produced, {u['undefined']} "
+            "undefined.")
 
 
 def _unreliable(manifest, contrasts, planned, missing):
@@ -927,6 +964,9 @@ def render_markdown(report):
         groups = ", ".join(f"{_md(k)} {v}" for k, v in sorted(d["group_counts"].items())) or "none"
         out.append(f"| {_code(d['id'])} | {_md(d['species'])} | {d['partition']} | {d['n_samples']} | {groups} |")
     out.append("")
+    unanswered = unanswered_datasets(report)
+    if unanswered:
+        out += [UNANSWERED_HEADING, "", UNANSWERED_SENTENCE, ""] + [_unanswered_line(u) for u in unanswered] + [""]
 
     out += ["## Pooled across species", ""]
     for family in schema.POOLED_FAMILIES:

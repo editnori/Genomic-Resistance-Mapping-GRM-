@@ -30,8 +30,10 @@ decides each lineage contrast by a t over its (repeat, outer fold) unit means, d
 and 5 folds, by learner (stats.LEARNER_TESTS): the paired t for scm, cart and rf, Nadeau and
 Bengio's corrected t for gbt and the lasso (stats.compare_units). Random-split contrasts are planned in family D: an
 estimate, interval and AUROC delta, no p and no direction. A dataset with no decision-bearing
-lineage contrast (every one not produced or undefined) fails the run: summary.json names it under
-`no_decision_datasets` and the run exits 3 after writing its report.
+lineage contrast (every one not produced or undefined) can't be tested this way. summary.json names
+it under `no_decision_datasets`, the report lists it under "Datasets the per-dataset test can't
+answer", and the run says so and finishes with exit 0. This is Layth's ruling on H-1's pilot
+(2026-11-09), which replaced REVIEW-ICODE-PY M3's exit 3.
 
 Every data root puts its genomes in canonical order (sorted by genome id) after `grm curate` and
 before count, structure, matrix, fold plans and evaluation (REVIEW-INPUT M1), so two arms with the
@@ -144,8 +146,6 @@ SENTINELS = ({"name": "sentinel-seed-twin", "calibration": "learner_seed", "lear
 CALIBRATION = {"cohort_path": ("balance_seed", "common_outer_test_set_balanced"),
                "learner_seed": ("learner_seed", "same_plan"), "tuning_seed": ("tuning_seed", "same_plan")}
 SPLITS = ("random", "lineage")
-# The exit code of a run with a dataset that has no decision-bearing lineage contrast (ruling 2, M3).
-NO_DECISIONS_EXIT = 3
 
 
 def changes_cohort(arm):
@@ -1037,7 +1037,9 @@ def pending_contrasts(spec, arms, work):
 
 def decisions_made(spec, arms, records):
     """Per dataset, its decision-bearing lineage contrasts: non-sentinel family C records with a p. A dataset
-    with none answers nothing, so the run fails on it (main's ruling 2 after VERIFY-H1STATS, REVIEW-ICODE-PY M3)."""
+    with none answers nothing: the run names it and goes on (Layth's ruling on H-1's pilot, 2026-11-09, which
+    replaced M3's exit 3). The report lists it too, by K's rule (k_report.unanswered_datasets), which is this one
+    for a dataset with a planned family C contrast outside the sentinels, as every H-1 confirmatory dataset has."""
     sentinels = {a["name"] for a in arms if a.get("sentinel")}
     out = {d["id"]: 0 for d in spec["datasets"] if d["partition"] == "confirmatory"}
     for x in records:
@@ -1396,17 +1398,18 @@ def write_summary(work, summary):
             counts[v.split(":")[0]] = counts.get(v.split(":")[0], 0) + 1
         print(f"{name:<14} {s['factor']:<7} {s['pairing']:<22} {counts}")
     print(f"refused plans: {len(summary['refused_plans'])}; report: {work / 'report'}; {summary['seconds']} s")
-    check_decisions(summary)
+    note_decisions(summary)
 
 
-def check_decisions(summary):
-    """Fails the run, after its summary and report are written, when a dataset made no lineage decision: its
-    answer would otherwise read as "no measured difference" (REVIEW-ICODE-PY M3)."""
+def note_decisions(summary):
+    """Says, after the summary and report are written, which datasets made no lineage decision. The run still
+    finishes: each is one the lineage test can't answer, and the report lists it so its missing answer doesn't
+    read as "no measured difference" (Layth's ruling on H-1's pilot, 2026-11-09, which replaced M3's exit 3)."""
     if summary["no_decision_datasets"]:
-        print(f"FAILED: no decision-bearing lineage contrast for {', '.join(summary['no_decision_datasets'])}: every "
-              "one was not produced or undefined (summary.json no_decision_datasets, refused_plans); this run "
-              "answers nothing for them", file=sys.stderr)
-        raise SystemExit(NO_DECISIONS_EXIT)
+        print(f"NO LINEAGE ANSWER for {', '.join(summary['no_decision_datasets'])}: every lineage contrast outside "
+              "the sentinels was not produced or undefined, so the lineage test can't answer them (summary.json "
+              "no_decision_datasets, refused_plans; the report's \"Datasets the per-dataset test can't answer\"). "
+              "The run goes on.", file=sys.stderr)
 
 
 def read_part(work):
