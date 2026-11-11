@@ -164,6 +164,8 @@ jobs:
           - suite: tests/input_comparison
             top: .
             ok: OK (skipped=27)
+          - suite: tests/outside_study
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
