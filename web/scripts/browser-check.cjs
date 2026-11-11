@@ -56,6 +56,9 @@ expected.stats = {
   meMeets: manifest.datasets.filter(d => best(d)?.me <= 0.03).length,
   leadPanel: leadId,
   leadPanelDatasets: expected.panels.length,
+  // Datasets whose best learner has both error rates with lineages held out
+  // and called at least one genome of each class there.
+  barsCounted: manifest.datasets.filter(d => { const r = d.learners.find(l => l.learner === d.best_learner)?.lineage; return r && r.vme != null && r.me != null && d.n_resistant - (r.no_call?.resistant ?? 0) > 0 && d.n - d.n_resistant - (r.no_call?.susceptible ?? 0) > 0; }).length,
 };
 const SHORT = [[/lacks one or both classes/, 'Fold lacks a class'], [/fewer than twice as many lineages/, 'Too few lineages']];
 const stateRows = [
@@ -1034,11 +1037,36 @@ async function interactions(page, tag, width) {
   await page.locator('#corpus').waitFor();
   for (const button of await page.getByRole('button', { name: 'Method and coverage' }).all()) await button.click();
   await reachCheck(page, tag + ' overview with every Method and coverage open');
-  // The primer is a section of its own above the six numbered ones, under
+  // Each finding keeps its longer table one control away. With all of them
+  // open, a wide table scrolls inside its own frame and the page keeps its
+  // width.
+  // A finding offers its table only when the tree has a dataset to count in
+  // it, so the tree decides which controls the page owes.
+  const longerTables = [
+    ['Show best learner against each learner', manifest.datasets.some(d => d.best_lineage !== null)],
+    ['Show each learner against the bars', expected.stats.barsCounted > 0],
+    ['Show rules grouped by their own score', expected.catalog.length > 0],
+  ];
+  const tablesOpened = [];
+  for (const [name] of longerTables) { const b = page.getByRole('button', { name, exact: true }); if (await b.count() === 1) { await b.click(); tablesOpened.push(name); } }
+  const tablesOwed = longerTables.filter(([, owed]) => owed).map(([name]) => name);
+  check(tag + ' overview longer tables one control away', tablesOpened.length === tablesOwed.length && tablesOwed.every(name => tablesOpened.includes(name)), { tablesOpened, tablesOwed });
+  await reachCheck(page, tag + ' overview with every longer table open');
+  const wideTables = await page.evaluate(() => [...document.querySelectorAll('[data-view-scroll] section[id] .scroll-frame [role="region"]')].map(r => ({ label: r.getAttribute('aria-label'), section: r.closest('section[id]').id, scroll: r.scrollWidth, client: r.clientWidth, table: r.querySelector('table')?.getBoundingClientRect().width ?? 0, columns: r.querySelectorAll('thead th').length })));
+  // With all three tables open the page holds at least four tables of five
+  // or more columns; a tree that owes fewer is held to the width alone.
+  check(tag + ' overview tables of five or more columns keep a readable width', (tablesOwed.length < longerTables.length || wideTables.filter(t => t.columns > 4).length >= 4) && wideTables.filter(t => t.columns > 4).every(t => t.table >= 543), wideTables);
+  for (const id of ['learners', 'bars', 'catalog']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id + '-open'); }
+  // The bar counts are the page's own reading of the index: the three
+  // outcomes add up to the datasets counted.
+  const barTiles = await page.evaluate(() => [...document.querySelectorAll('#bars ol li')].map(li => ({ value: Number(li.firstElementChild.textContent.replace(/,/g, '')), unit: li.lastElementChild.textContent })));
+  // A tree with no dataset to count draws no tiles.
+  check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
+  // The primer is a section of its own above the eight numbered ones, under
   // the same hairline.
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
   const numbered = rules.filter(r => r.id !== 'primer');
-  check(tag + ' one hairline between findings', numbered.length === 6 && rules.length === 7 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
+  check(tag + ' one hairline between findings', numbered.length === 8 && rules.length === 9 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
   await headerCheck(page, tag + ' overview', 'What GRM found');
@@ -1048,7 +1076,7 @@ async function interactions(page, tag, width) {
   const marks = await page.evaluate(() => { const c = document.querySelector('#lineage svg circle[data-dataset]'); return c ? getComputedStyle(c).fill : null; });
   const blue = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--series-s'); document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
   check(tag + ' chart marks in the blue series', marks === blue, { marks, blue });
-  for (const id of ['lineage', 'catalog', 'panels', 'mic']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
+  for (const id of ['lineage', 'learners', 'bars', 'catalog', 'panels', 'mic']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
 
   const micId = expected.mic[0].id;
   const micReport = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'datasets', micId + '.json')));
@@ -1132,12 +1160,12 @@ async function present(page, tag, width, height) {
   await settle(page);
   await slideSelect.click();
   let slideCount = 0, previousCount = -1, stableCounts = 0;
-  // Title, five primer steps, five findings, the rule: twelve slides, plus
+  // Title, five primer steps, seven findings, the rule: fourteen slides, plus
   // the extra pages of any figure too dense for the viewport (the outline
   // labels each page "(k of n)"). Which figures continue depends on the
   // viewport and on the report's row counts, so the count is checked
   // against the labels the deck shows.
-  const BASE_SLIDES = 12;
+  const BASE_SLIDES = 14;
   for (let attempt = 0; attempt < 200; attempt++) {
     slideCount = await dialog.getByRole('option').count();
     if (slideCount === previousCount) stableCounts++;
@@ -1237,7 +1265,7 @@ async function present(page, tag, width, height) {
     runs[runs.length - 1].pages.push([Number(p[1]), Number(p[2])]);
   });
   const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
-  check(tag + ' expected slide count: twelve slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  check(tag + ' expected slide count: fourteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
   check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
   const closeButton = dialog.getByRole('button', { name: 'Close', exact: true });
   await closeButton.focus(); await page.keyboard.press('Home');

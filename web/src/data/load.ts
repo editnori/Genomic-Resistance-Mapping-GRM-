@@ -127,11 +127,13 @@ export const useResearch = (): Resource<Research> => useResource(PATHS.research,
  *  as no intervals (intervalsFor). */
 export const useIntervals = (id: string): Resource<Intervals> => useResource(PATHS.intervals(id), parseIntervals);
 
-/** One literal sentence for a load failure. */
+/** A load failure in words a visitor can act on. Where the cause is a
+ *  report that was never built or was built by another version, the last
+ *  sentence tells someone who runs GRM what to do. */
 export const loadErrorText = (error: LoadError): string => {
   switch (error.kind) {
     case "missing":
-      return `${error.path} does not exist yet. Run \`grm report\` once the pipeline has written this file.`;
+      return `${error.path} was not found, so this part of the report is not published here. If you run GRM yourself, \`grm report\` writes this file.`;
     case "http":
       return `${error.path} answered HTTP ${error.status}.`;
     case "network":
@@ -139,7 +141,7 @@ export const loadErrorText = (error: LoadError): string => {
     case "parse":
       return `${error.path} is not valid JSON: ${error.message}.`;
     case "schema":
-      return `${error.message}. Rebuild the report with the matching \`grm\` version.`;
+      return `${error.message}. The page and the report come from different versions of GRM. If you run GRM yourself, rebuild the report with the matching \`grm\` version.`;
     case "shape":
       return `${error.path} does not match the dashboard contract: ${error.message}.`;
   }

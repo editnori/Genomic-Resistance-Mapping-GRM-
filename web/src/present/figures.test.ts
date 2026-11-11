@@ -101,7 +101,7 @@ const open = async (manifest: Manifest = base) => {
   return { dialog, status, right, onClose };
 };
 
-it("opens the deck on its title slide, then the primer, then the six finding slides, with a named outline and no deck chooser", async () => {
+it("opens the deck on its title slide, then the primer, then the finding slides, with a named outline and no deck chooser", async () => {
   motion(true);
   const { dialog, status, right, onClose } = await open();
   const titles = ["Genomic Resistance Mapping", ...primerSteps(base).map((s) => s.title), ...FINDINGS.map((f) => f(base, { page: false }).title), "One rule a person can read"];
@@ -209,7 +209,9 @@ describe("continuation slides", () => {
     // into pages of at most 9 rows: two pages of 8 and 7.
     const caption = panelsFinding(m, { page: false }).caption;
     const seen: string[] = [];
-    const panelAt = 1 + primerSteps(m).length + 3;
+    // The slide before the panel figure's first page: the title, the
+    // primer steps, then the findings ahead of it.
+    const panelAt = 1 + primerSteps(m).length + FINDINGS.findIndex((f) => f(m, { page: false }).id === "panels");
     for (const [page, first, last] of [
       [1, 1, 8],
       [2, 9, 15],

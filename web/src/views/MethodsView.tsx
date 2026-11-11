@@ -15,6 +15,7 @@ import { BARS, barWords } from "../data/metrics";
 import { loadErrorText, useCorpus } from "../data/load";
 import { manifestAudit, nullFitWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
+import { ZERO_MISS_FLOOR } from "../data/derive/evidence";
 import { notScored } from "../data/derive/tests";
 import { FOCUS_RING, PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitives";
 import { ViewHeader } from "../ui/ViewHeader";
@@ -285,7 +286,8 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
       <Def term="Balanced accuracy" plain="The average of two shares: resistant genomes called resistant (sensitivity) and susceptible genomes called susceptible (specificity). 50% is no better than a coin toss.">The mean of sensitivity and specificity, over pooled out-of-fold predictions. A score of 0.5 or more calls resistant.</Def>
       <Def term="Best learner" plain="For each dataset, the learner that scored highest on the random split.">
         The learner with the highest random-split balanced accuracy among those that call every isolate on every split that ran. The known-gene rule is a baseline, never a candidate.
-        Overview&apos;s figures use the best learner.
+        A learner&apos;s score with lineages held out takes no part in the pick. Overview&apos;s figures use the best learner, and its learner table sets the best learner beside each
+        learner used alone.
       </Def>
       <Def
         term="VME and ME"
@@ -293,6 +295,9 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
       >
         Very major error (VME) is resistant isolates called susceptible, over the resistant isolates called; major error (ME) is susceptible isolates called resistant, over the
         susceptible isolates called. They are read against FDA-style bars for susceptibility test devices, VME at most 1.5% and ME at most 3%, as a reference, not a regulatory claim.
+        Overview counts a dataset as shown to meet a bar when the exact 95% interval (Clopper-Pearson) of its rate lies at or under the bar, and as shown to miss it when the interval
+        lies over the bar. A learner that misses no resistant genome needs at least {int(ZERO_MISS_FLOOR)} resistant genomes before its interval lies under the VME bar. The interval
+        treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.
       </Def>
       <Def term="Learner no-calls" plain="What happens when a fitted model learned nothing from the DNA, and how its genomes are counted.">{nullFitWords(manifest.evaluation_revision)}</Def>
       <Def term="Probe no-calls" plain="A probe test that finds none of its targets gives no answer, and that genome is left out of the test's own score.">
@@ -311,8 +316,10 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
         AUROC for that learner.
       </Def>
       <Def term="What each Overview figure counts" plain="Which datasets each Overview figure includes. A median is the middle value when the datasets are lined up by score.">
-        The lineage figure draws datasets with both splits; the known-gene figure, datasets with a rule and a lineage-held-out result; the PCR panel, datasets with that panel and a best
-        learner; the MIC figure, datasets with an MIC model. Datasets with no best learner are left out of every median, and each figure states what it leaves out.
+        The lineage figure draws datasets with both splits. Each row of the learner table counts the datasets where that learner has a score on both splits. The bar counts take the
+        datasets where the best learner has both error rates with lineages held out. The known-gene figure draws datasets with a rule and a lineage-held-out result; the PCR panel,
+        datasets with that panel and a best learner; the MIC figure, datasets with an MIC model. Datasets with no best learner are left out of every median of the best learner, and
+        each figure states what it leaves out.
       </Def>
     </Defs>
   </MethodsSection>
@@ -436,11 +443,18 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
         {corpus.status === "ready" ? <Sources corpus={corpus.data} /> : null}
       </Part>
       <Part title="Learner cross-check">
-        <P>GRM runs its own code for each learner, so GRM checked each one against a standard version of the same method.</P>
+        <P>
+          GRM runs its own code for each learner. In October 2026 a check compared each learner with a standard version of the same method on 16 small test cases, under revision 7 of
+          the evaluation. Nobody has repeated the check on the revision shown here.
+        </P>
         <p className="prose-measure text-note text-ink">
-          On seven small test fixtures and on the 868-isolate <i>E. coli</i> ceftriaxone dataset from an earlier report, run with the same learner code as this report, each of the five
-          learners matched a reference implementation of the same model (scikit-learn, XGBoost, or a reimplementation of its documented rules) exactly or within that reference&apos;s own
-          run-to-run noise.
+          The set covering machine, the decision tree and the random forest matched their reference on all 16 cases. The check set the boosted trees against XGBoost 3.0.5: most trees
+          were identical, and it traced each tree that differed to a known difference in rounding or in settings. GRM keeps one difference on purpose. When its boosting keeps no tree
+          it gives no call, and XGBoost always keeps at least one.
+        </p>
+        <p className="prose-measure text-note text-ink">
+          The check showed that the L1 logistic regression solver stopped early on some cases. Revision 8 replaced that solver, and its tests now require each saved case to converge
+          on the best known fit.
         </p>
       </Part>
       {unsupported.length > 0 ? (
