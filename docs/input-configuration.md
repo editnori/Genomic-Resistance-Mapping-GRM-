@@ -51,7 +51,7 @@ Legacy with `--selection-seed` or `--stratum`, or the group rule without a seed,
 | Block | What it is | Adapter, as `grm arm` builds it | State |
 |---|---|---|---|
 | C | curated exact calls (region probes) | `ProbeSource::from_ksets` over the species' ksets | present where the species has a callable assay |
-| H | hierarchical panel calls | `PanelSource::new` over the counted catalog gene calls | present where a panel targets the drug |
+| H | hierarchical panel calls | `PanelSource::new` over the counted catalog gene calls | present where a panel reports a target read for the drug in the species; otherwise unavailable, with the reason per panel |
 | P | catalog gene-group presence | `PresenceSource::new` over the ksets | present with a catalog |
 | N | gene copy counts | `CountSource` | unavailable: nothing in GRM counts gene copies |
 | X | genome context | `ContextSource` | unavailable: no reviewed genome-context source |

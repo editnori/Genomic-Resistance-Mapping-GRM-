@@ -258,6 +258,7 @@ fn block(
                 .collect();
             let source = PanelSource::new(
                 &spec.antibiotic,
+                &spec.species,
                 &provenance,
                 &cat.calls_version(),
                 genomes.clone(),

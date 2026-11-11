@@ -93,6 +93,7 @@ src/lib.rs analysis::tests::fingerprint_ignores_rows_and_fields_the_evaluation_d
 src/lib.rs analysis::tests::fingerprint_tracks_every_evaluation_config_field
 src/lib.rs analysis::tests::fingerprint_tracks_mic_inferred_labels_added_on_a_matrix_genome
 src/lib.rs analysis::tests::fingerprint_tracks_the_dataset_class_minimum
+src/lib.rs analysis::tests::gene_panels_score_the_drug_s_targets_and_list_uncovered_organisms
 src/lib.rs analysis::tests::kset_duplicates_group_samples_by_digest_in_sample_order
 src/lib.rs analysis::tests::learn_keeps_matching_reports_and_removes_those_of_datasets_that_no_longer_qualify
 src/lib.rs analysis::tests::learn_recomputes_a_current_report_whose_audit_is_invalid
@@ -330,6 +331,11 @@ src/lib.rs matrix::tests::small_and_empty_cohorts_match_the_oracle_under_both_ke
 src/lib.rs matrix::tests::stale_partials_are_refused_after_catalog_or_assembly_changes
 src/lib.rs matrix::tests::supported_cohorts_keep_their_digests_under_both_keys
 src/lib.rs matrix::tests::the_disk_sparse_sequence_makes_the_matrix_build_makes
+src/lib.rs panels::tests::a_panel_reports_only_for_the_organisms_its_assay_names
+src/lib.rs panels::tests::ctx_m_is_not_read_as_a_carbapenem_call
+src/lib.rs panels::tests::each_panel_and_drug_has_the_documented_targets
+src/lib.rs panels::tests::each_reason_is_recorded_apart
+src/lib.rs panels::tests::host_lists_extend_the_enterobacterales
 src/lib.rs panels::tests::oxa48_target_does_not_match_other_oxa_groups
 src/lib.rs probes::tests::a_mutated_region_decides_the_assay_before_a_region_without_a_call
 src/lib.rs probes::tests::calls_follow_the_probed_bases_and_ignore_flanking_changes
