@@ -2,7 +2,7 @@
 
 From revision 9 on, genomicresistance.com is meant to be served with no origin process: a Cloudflare Worker (`ops/cloudflare/worker/`) answers every request from one R2 bucket, `grm-site`. The bucket holds immutable app releases and report publications, and one pointer object, `state/active`, names the pair the Worker serves. The release scripts in `ops/cloudflare/scripts/` write the bucket. This replaces the `grm serve` host described in [deployment.md](deployment.md), whose toolkit stays for a host if one is ever needed again.
 
-Nothing here has run against a Cloudflare account yet. Everything below was tested locally with Miniflare (`wrangler dev --local`) on synthetic trees; see [Checks](#checks).
+The Worker serves genomicresistance.com this way now. On 11 November 2026 it answered with the revision-12 report, 274 datasets over 23 species. The tests under [Checks](#checks) ran locally with Miniflare (`wrangler dev --local`) on synthetic trees.
 
 ## What the Worker serves
 
