@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Box-side run script for the outside-study test, a retrospective test on
+"""The run script of the outside-study test, a retrospective test on
 newly deposited studies from the same database (docs/outside-study-test.md).
 
 Stages, each callable on its own and in this order:
 
-  setup          build the scratch data root (links and copies; the master
-                 root is only read)
-  fetch          grm fetch fasta for the frozen ids; the failures are the
-                 availability result
+  setup          derive the frozen ids and the eligible datasets from the
+                 kit's frozen tables; build the scratch data root (links and
+                 copies; the master root is only read)
+  fetch          grm fetch fasta for the frozen ids; a database answer of no
+                 sequence is the availability result, any other failure
+                 stops the stage
   species-check  grm species-check against the master root's recorded
                  references; the recorded verdicts must come out unchanged
   count          grm count for the frozen genomes and the cohort genomes the
@@ -18,28 +20,34 @@ Stages, each callable on its own and in this order:
 
 Each stage writes work/receipts/<stage>.json (counts, SHA-256 of inputs and
 outputs, the kit commit, the grm binary's SHA-256, seconds) and refuses to
-run when an earlier receipt is missing or a file it lists has changed.
-known-gene and predict refuse unless the plan and the scripts match the
-committed FROZEN.sha256. Standard library only.
+run when an earlier receipt is missing or a file it lists has changed, or
+when its own receipt exists. Every start and end of a stage is appended to
+work/receipts/attempts.jsonl. Every stage passes the frozen gate
+(score.frozen_gate) first. Standard library only.
 """
 
 import argparse
 import concurrent.futures
+import datetime
 import importlib.util
 import json
-import os
 import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-KIT = Path(__file__).resolve().parent
-STAGES = ("setup", "fetch", "species-check", "count", "known-gene", "predict")
+# The kit root is where this file is; no option points it elsewhere.
+KIT_ROOT = Path(__file__).resolve().parents[2]
+KIT = KIT_ROOT / "scripts" / "outside-study"
 # What `grm species-check` decides a fail and a boundary flag from. When a
 # recorded genome keeps all of them, only the GC rule can move its verdict.
 SAME_DISTANCES = ("distance", "nearest_species", "nearest_distance", "inside_species")
-GATED = ("known-gene", "predict")
+# The last part of `grm fetch fasta`'s failure message when BV-BRC answered
+# and the answer held no sequence (src/bvbrc.rs, `fetch_fasta`). Any other
+# failure (a timeout, a refused connection, an HTTP error status) is not an
+# answer about the genome.
+NO_SEQUENCE_ANSWER = "empty FASTA response"
 
 
 def _load_score():
@@ -51,6 +59,21 @@ def _load_score():
 
 S = _load_score()
 Refusal, refuse = S.Refusal, S.refuse
+STAGES = S.STAGES
+
+
+def check_running():
+    """This file and the score.py it loaded are the kit's own."""
+    if Path(__file__).resolve() != KIT / "run.py":
+        refuse(f"the running script {Path(__file__).resolve()} is not the kit's own {KIT / 'run.py'}")
+    if Path(S.__file__).resolve() != KIT / "score.py":
+        refuse(f"the loaded score.py {Path(S.__file__).resolve()} is not {KIT / 'score.py'}")
+    S.check_running(__file__, S.RUN_REL)
+
+
+def no_sequence_answer(message):
+    m = message.strip()
+    return m == NO_SEQUENCE_ANSWER or m.endswith(": " + NO_SEQUENCE_ANSWER)
 
 
 def log(msg):
@@ -85,9 +108,9 @@ class Run:
         self.work = Path(args.work).resolve()
         self.root = self.work / "root"
         self.species = args.species
+        self.population = args.population
         self.out_slug = f"outside__{args.species}"
         self.replay_slug = f"replay__{args.species}"
-        self.kit_root = Path(args.kit_root).resolve()
         self.rehearsal = args.rehearsal
         self.jobs = max(1, args.jobs)
         if self.work == self.master or self.master in self.work.parents:
@@ -98,27 +121,51 @@ class Run:
     def receipt_path(self, stage):
         return self.work / "receipts" / f"{stage}.json"
 
+    def attempt(self, stage, event, message=""):
+        """Appends one line to receipts/attempts.jsonl: every start and every
+        end (done, refused or failed) of a stage."""
+        p = self.work / "receipts" / "attempts.jsonl"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        line = {"stage": stage, "event": event, "message": message,
+                "utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+        with open(p, "a") as f:
+            f.write(json.dumps(line, sort_keys=True) + "\n")
+
+    def key(self, path):
+        """How a receipt names a file: relative to the work directory when it
+        is inside it, so a saved work directory can be scored anywhere."""
+        p = Path(path)
+        if p.is_absolute() and self.work in p.parents:
+            return "work/" + str(p.relative_to(self.work))
+        return str(p)
+
     def digest(self, key):
         if key.startswith("listing:"):
             _, directory, pattern = key.split(":", 2)
             return listing_digest(directory, pattern)
-        p = Path(key)
+        p = self.work / key[len("work/"):] if key.startswith("work/") else Path(key)
         return S.sha256_file(p) if p.is_file() else "absent"
 
-    def kit_state(self):
-        head = subprocess.run(["git", "-C", str(self.kit_root), "rev-parse", "HEAD"],
-                              capture_output=True, text=True)
-        return {
-            "commit": head.stdout.strip() if head.returncode == 0 else None,
-            "run.py": S.sha256_file(KIT / "run.py"),
-            "score.py": S.sha256_file(KIT / "score.py"),
-        }
+    def gate(self):
+        """The frozen gate, before every stage, real or rehearsal."""
+        check_running()
+        return S.frozen_gate(self.args.expect_commit, self.rehearsal)
 
-    def check_earlier(self, stage):
-        """Every earlier receipt exists and every file it lists is unchanged;
-        the same grm binary and kit scripts; the same arguments."""
+    def kit_state(self, gate):
+        return dict(gate, **{
+            "run.py": S.sha256_file(Path(__file__).resolve()),
+            "score.py": S.sha256_file(Path(S.__file__).resolve()),
+        })
+
+    def check_earlier(self, stage, gate):
+        """This stage has no receipt yet; every earlier receipt exists and
+        every file it lists is unchanged; the same grm binary, kit commit
+        and scripts; the same arguments."""
+        if self.receipt_path(stage).exists():
+            refuse(f"{stage}: this stage already has a receipt in {self.work}; a stage never runs twice "
+                   f"in one work directory, so start a new work directory")
         grm_sha = S.sha256_file(self.grm)
-        kit = self.kit_state()
+        kit = self.kit_state(gate)
         for earlier in STAGES[: STAGES.index(stage)]:
             p = self.receipt_path(earlier)
             if not p.is_file():
@@ -128,6 +175,8 @@ class Run:
                 refuse(f"{stage}: the grm binary differs from the one the {earlier} stage ran")
             if r["kit"]["run.py"] != kit["run.py"] or r["kit"]["score.py"] != kit["score.py"]:
                 refuse(f"{stage}: the kit scripts changed since the {earlier} stage")
+            if r["kit"]["commit"] != kit["commit"]:
+                refuse(f"{stage}: the kit commit changed since the {earlier} stage")
             if r["args"] != self.arg_record():
                 refuse(f"{stage}: the arguments differ from the {earlier} stage's")
             for section in ("inputs", "outputs"):
@@ -137,27 +186,29 @@ class Run:
 
     def arg_record(self):
         a = self.args
+        opt = lambda v: None if v is None else str(Path(v).resolve())  # noqa: E731
         return {
             "grm": str(self.grm), "master": str(self.master), "work": str(self.work),
-            "species": self.species, "ids": str(Path(a.ids).resolve()),
-            "reports": str(Path(a.reports).resolve()), "datasets": str(Path(a.datasets).resolve()),
+            "species": self.species, "population": self.population,
+            "reports": str(Path(a.reports).resolve()), "expect_commit": a.expect_commit,
+            "tables": opt(a.tables), "ids": opt(a.ids), "datasets": opt(a.datasets),
             "rehearsal": self.rehearsal,
         }
 
-    def write_receipt(self, stage, started, inputs, outputs, counts, frozen=None):
+    def write_receipt(self, stage, started, inputs, outputs, counts, gate, extra=None):
         r = {
             "stage": stage,
             "rehearsal": self.rehearsal,
             "args": self.arg_record(),
             "jobs": self.jobs,
             "grm": {"path": str(self.grm), "sha256": S.sha256_file(self.grm)},
-            "kit": self.kit_state(),
-            "frozen": frozen,
-            "inputs": {k: self.digest(k) for k in sorted(inputs)},
-            "outputs": {k: self.digest(k) for k in sorted(outputs)},
+            "kit": self.kit_state(gate),
+            "inputs": {self.key(k): self.digest(self.key(k)) for k in sorted(inputs)},
+            "outputs": {self.key(k): self.digest(self.key(k)) for k in sorted(outputs)},
             "counts": counts,
             "seconds": round(time.monotonic() - started, 3),
         }
+        r.update(extra or {})
         p = self.receipt_path(stage)
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps(r, sort_keys=True, indent=1) + "\n")
@@ -167,28 +218,42 @@ class Run:
 
     # -------------------------------------------------------------- inputs
 
-    def ids(self):
-        return read_ids(self.args.ids)
-
-    def datasets(self):
-        ds = read_ids_plain(self.args.datasets)
+    def frozen_lists(self):
+        """The frozen ids and the eligible datasets. A real run derives both
+        from the kit's frozen tables, with score.py's definitions; only a
+        rehearsal may give them as files."""
+        a = self.args
+        if a.ids is not None:
+            ids, ds = read_ids(a.ids), read_ids_plain(a.datasets)
+        else:
+            tables = S.load_tables(self.rehearsal, a.tables)
+            ids = list(S.population(tables["candidates"], self.species, self.population))
+            ds = S.eligible(tables["datasets"], self.species, self.population)
+            if not ds:
+                refuse(f"no dataset of {self.species} is eligible in the {self.population} population")
         for d in ds:
             if not d.startswith(self.species + "__"):
-                refuse(f"{self.args.datasets}: {d} is not a {self.species} dataset")
-        return ds
+                refuse(f"{d} is not a {self.species} dataset")
+        return sorted(ids, key=S.genome_key), ds
 
-    def reports(self):
-        pins = S.read_pins(self.args.pins)
+    def ids(self):
+        return read_ids(self.work / "ids.txt")
+
+    def datasets(self):
+        return read_ids_plain(self.work / "datasets.txt")
+
+    def reports(self, datasets=None):
+        pins = S.read_pins(KIT / "reports.sha256")
         out = {}
-        for d in self.datasets():
+        for d in datasets or self.datasets():
             out[d] = S.load_report(self.args.reports, d, pins)
         ks = {r["counts"]["k"] for r, _ in out.values()}
         if len(ks) != 1:
             refuse(f"the reports use several k: {sorted(ks)}")
         return out
 
-    def report_inputs(self):
-        return [str(S.report_path(self.args.reports, d).resolve()) for d in self.datasets()]
+    def report_inputs(self, datasets=None):
+        return [str(S.report_path(self.args.reports, d).resolve()) for d in datasets or self.datasets()]
 
     def cohort_ids(self, reports):
         ids = set()
@@ -215,10 +280,12 @@ class Run:
 
     # -------------------------------------------------------------- stages
 
-    def setup(self):
+    def setup(self, gate):
         started = time.monotonic()
-        ids = self.ids()
-        reports = self.reports()
+        if self.root.exists() and any(self.root.iterdir()):
+            refuse(f"{self.root} exists and is not empty; start a new work directory")
+        ids, datasets = self.frozen_lists()
+        reports = self.reports(datasets)
         cohort = self.cohort_ids(reports)
         if self.rehearsal:
             stray = [g for g in ids if g not in cohort]
@@ -227,33 +294,30 @@ class Run:
         else:
             inside = [g for g in ids if g in cohort]
             if inside:
-                refuse(f"{inside[0]} is a cohort genome of these reports; the ids file must hold the frozen list")
+                refuse(f"{inside[0]} is a cohort genome of these reports; the frozen list holds none")
         mfasta = self.master / "fasta"
         held = [g for g in ids if (mfasta / f"{g}.fna.gz").exists()]
         if held:
             refuse(f"{held[0]} already has a FASTA file in the master root; fetch must find the frozen genomes' availability itself")
-        if self.root.exists() and any(self.root.iterdir()):
-            log(f"setup: reusing {self.root}; links and copies are refreshed")
         for sub in ("fasta", "catalog", "curated", "species-check/sketches", "species"):
             (self.root / sub).mkdir(parents=True, exist_ok=True)
         linked = 0
         if mfasta.is_dir():
             for p in mfasta.glob("*.fna.gz"):
-                dst = self.root / "fasta" / p.name
-                if not dst.is_symlink() and not dst.exists():
-                    dst.symlink_to(p)
-                    linked += 1
+                (self.root / "fasta" / p.name).symlink_to(p)
+                linked += 1
         sketches = 0
         msk = self.master / "species-check" / "sketches"
         if msk.is_dir():
             for p in msk.glob("*.json"):
-                dst = self.root / "species-check" / "sketches" / p.name
-                if not dst.is_symlink() and not dst.exists():
-                    dst.symlink_to(p)
-                    sketches += 1
-        inputs = [str(Path(self.args.ids).resolve()), str(Path(self.args.datasets).resolve()),
-                  *self.report_inputs(),
-                  f"listing:{mfasta}:*.fna.gz", f"listing:{msk}:*.json"]
+                (self.root / "species-check" / "sketches" / p.name).symlink_to(p)
+                sketches += 1
+        ids_file, ds_file = self.work / "ids.txt", self.work / "datasets.txt"
+        ids_file.write_text("".join(g + "\n" for g in ids))
+        ds_file.write_text("".join(d + "\n" for d in datasets))
+        inputs = [*self.report_inputs(datasets), f"listing:{mfasta}:*.fna.gz", f"listing:{msk}:*.json"]
+        if self.args.ids is not None:
+            inputs += [str(Path(self.args.ids).resolve()), str(Path(self.args.datasets).resolve())]
         catalog_files = 0
         for name in ("AMR_CDS.fa", "ReferenceGeneCatalog.txt", "version.txt"):
             src = self.master / "catalog" / name
@@ -283,17 +347,17 @@ class Run:
         rp = self.root / "species" / self.replay_slug / "genomes.txt"
         rp.parent.mkdir(parents=True, exist_ok=True)
         rp.write_text("\n".join(replay) + ("\n" if replay else ""))
-        self.write_receipt("setup", started, inputs, [str(out_list), str(rp)], {
+        self.write_receipt("setup", started, inputs, [str(ids_file), str(ds_file), str(out_list), str(rp)], {
             "frozen ids requested": len(ids),
             "datasets": len(reports),
             "cohort genomes for the replay checks": len(replay),
             "cohort genomes without FASTA (rehearsal only)": len(missing),
-            "master FASTA files linked now": linked,
-            "master sketches linked now": sketches,
+            "master FASTA files linked": linked,
+            "master sketches linked": sketches,
             "catalog files copied": catalog_files,
-        })
+        }, gate, {"frozen_ids": ids, "datasets": datasets})
 
-    def fetch(self):
+    def fetch(self, gate):
         started = time.monotonic()
         ids = self.ids()
         failures_log = self.root / "species" / self.out_slug / "fasta_failures.tsv"
@@ -306,15 +370,20 @@ class Run:
             for line in failures_log.read_text().splitlines():
                 g, _, why = line.partition("\t")
                 failed[g] = why
-        rows, outputs = [], []
+        rows, outputs, unanswered = [], [], []
         for g in ids:
             f = self.fasta(g)
             if f.is_file() and not f.is_symlink():
                 rows.append({"genome_id": g, "fasta": "yes", "detail": ""})
                 outputs.append(str(f))
+            elif g in failed and no_sequence_answer(failed[g]):
+                rows.append({"genome_id": g, "fasta": "no", "detail": " ".join(failed[g].split())})
             else:
-                why = failed.get(g, "no FASTA file after fetch, and no failure recorded")
-                rows.append({"genome_id": g, "fasta": "no", "detail": " ".join(why.split())})
+                unanswered.append((g, " ".join(failed.get(g, "no FASTA file after fetch, and no failure recorded").split())))
+        if unanswered:
+            g, why = unanswered[0]
+            refuse(f"fetch: {len(unanswered)} genomes have no FASTA and no answer of no sequence from the database "
+                   f"(e.g. {g}: {why}); the stage stops without a receipt and may be run again in this work directory")
         out = self.work / "fetch" / "availability.tsv"
         out.parent.mkdir(parents=True, exist_ok=True)
         S.write_tsv(out, ["genome_id", "fasta", "detail"], rows)
@@ -322,11 +391,11 @@ class Run:
         self.write_receipt("fetch", started, [], [str(out), *outputs], {
             "requested": len(ids),
             "fetched": n_yes,
-            "not fetched": len(ids) - n_yes,
+            "no sequence (the database answered with none)": len(ids) - n_yes,
             "bytes fetched (gzip)": sum(Path(p).stat().st_size for p in outputs),
-        })
+        }, gate)
 
-    def species_check(self):
+    def species_check(self, gate):
         started = time.monotonic()
         ids = self.ids()
         avail = {r["genome_id"]: r for r in S.read_tsv(self.work / "fetch" / "availability.tsv")}
@@ -408,9 +477,9 @@ class Run:
             "recorded genomes with unchanged verdicts": len(recorded["genomes"]) - len(moves),
             "recorded genomes whose GC flag alone moved (listed)": len(moves),
             "reference": rec_refs[name],
-        })
+        }, gate)
 
-    def count(self):
+    def count(self, gate):
         started = time.monotonic()
         ids = self.ids()
         reports = self.reports()
@@ -428,27 +497,35 @@ class Run:
             outputs.append(str(cj))
             for g in c["genomes"]:
                 outputs.append(str(self.root / "species" / slug / "ksets" / f"{g['genome_id']}.kset"))
+                if not g.get("kset_digest"):
+                    refuse(f"{slug}: counted.json records no k-mer set digest for {g['genome_id']}")
             counts[f"{slug}: counted"] = len(c["genomes"])
             counts[f"{slug}: missing FASTA"] = len(c["missing_fasta"])
             counts[f"{slug}: failed"] = len(c["failed"])
-            if slug == self.replay_slug and (c["missing_fasta"] or c["failed"]):
-                refuse(f"{len(c['missing_fasta']) + len(c['failed'])} cohort genomes for the replay checks were not counted")
+            if slug == self.replay_slug:
+                if c["missing_fasta"] or c["failed"]:
+                    refuse(f"{len(c['missing_fasta']) + len(c['failed'])} cohort genomes for the replay checks were not counted")
+                cohort_rows = [{"genome_id": g["genome_id"], "kset_digest": g["kset_digest"]}
+                               for g in sorted(c["genomes"], key=lambda g: S.genome_key(g["genome_id"]))]
             if slug == self.out_slug:
-                got = {g["genome_id"] for g in c["genomes"]}
+                got = {g["genome_id"]: g for g in c["genomes"]}
                 why = dict((g, w) for g, w in c["failed"])
                 rows = []
                 for g in ids:
                     if g in got:
-                        rows.append({"genome_id": g, "counted": "yes", "detail": ""})
+                        rows.append({"genome_id": g, "counted": "yes", "detail": "",
+                                     "kset_digest": got[g]["kset_digest"]})
                     else:
                         rows.append({"genome_id": g, "counted": "no",
-                                     "detail": " ".join(why.get(g, "no FASTA").split())})
+                                     "detail": " ".join(why.get(g, "no FASTA").split()), "kset_digest": ""})
         out = self.work / "count" / "counted.tsv"
         out.parent.mkdir(parents=True, exist_ok=True)
-        S.write_tsv(out, ["genome_id", "counted", "detail"], rows)
-        outputs.append(str(out))
+        S.write_tsv(out, ["genome_id", "counted", "detail", "kset_digest"], rows)
+        cd = self.work / "count" / "cohort-digests.tsv"
+        S.write_tsv(cd, ["genome_id", "kset_digest"], cohort_rows)
+        outputs += [str(out), str(cd)]
         counts["kset bytes"] = sum(Path(p).stat().st_size for p in outputs if p.endswith(".kset"))
-        self.write_receipt("count", started, [], outputs, counts)
+        self.write_receipt("count", started, [], outputs, counts, gate)
 
     def survivors(self):
         ids = self.ids()
@@ -462,9 +539,8 @@ class Run:
         c = json.loads((self.root / "species" / slug / "counted.json").read_text())
         return {g["genome_id"]: g for g in c["genomes"]}
 
-    def known_gene(self):
+    def known_gene(self, gate):
         started = time.monotonic()
-        frozen = S.frozen_gate(self.kit_root)
         reports = self.reports()
         survivors, _ = self.survivors()
         kdir = self.work / "known-gene"
@@ -477,7 +553,7 @@ class Run:
                 refuse("no catalog in the scratch root")
             out = kdir / "unavailable.txt"
             out.write_text("no AMRFinderPlus catalog in the stand-in master root, so grm count recorded no gene calls\n")
-            self.write_receipt("known-gene", started, [], [str(out)], {"known-gene comparator": "not available (rehearsal without a catalog)"}, frozen)
+            self.write_receipt("known-gene", started, [], [str(out)], {"known-gene comparator": "not available (rehearsal without a catalog)"}, gate)
             return
         version = version_file.read_text().strip()
         cohort = self.counted_genes(self.replay_slug)
@@ -516,25 +592,9 @@ class Run:
         S.write_tsv(kdir / "calls.tsv", ["dataset", "genome_id", "groups", "rule_groups", "catalog_resistant"], call_rows)
         counts["scored genomes with calls"] = len(survivors)
         self.write_receipt("known-gene", started, [str(version_file)],
-                           [str(kdir / "datasets.tsv"), str(kdir / "calls.tsv")], counts, frozen)
+                           [str(kdir / "datasets.tsv"), str(kdir / "calls.tsv")], counts, gate)
 
-    def predict(self):
-        started = time.monotonic()
-        frozen = S.frozen_gate(self.kit_root)
-        reports = self.reports()
-        survivors, _ = self.survivors()
-        if not survivors:
-            refuse("no genome survived the exclusions")
-        pdir, rdir = self.work / "predict", self.work / "predict-replay"
-        for d in (pdir, rdir):
-            if d.exists():
-                shutil.rmtree(d)
-            d.mkdir(parents=True)
-        (pdir / "survivors.txt").write_text("\n".join(survivors) + "\n")
-        okset = self.root / "species" / self.out_slug / "ksets"
-        rkset = self.root / "species" / self.replay_slug / "ksets"
-        cohort_counted = set(self.counted_genes(self.replay_slug))
-
+    def predict_jobs(self, jobs):
         def one(job):
             d, genomes, kdir, out = job
             argv = [str(self.grm), "predict", "--report", str(S.report_path(self.args.reports, d)), "--out", str(out)]
@@ -544,17 +604,35 @@ class Run:
                 p = subprocess.run(argv, stdout=subprocess.DEVNULL, stderr=f)
             return d, out, p.returncode
 
-        jobs = []
-        for d, (report, _) in sorted(reports.items()):
-            jobs.append((d, survivors, okset, pdir / f"{d}.jsonl"))
-            samples = [s["id"] for s in report["samples"] if s["id"] in cohort_counted]
-            if samples:
-                jobs.append((d, samples, rkset, rdir / f"{d}.jsonl"))
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.jobs) as pool:
             done = list(pool.map(one, jobs))
         for d, out, code in done:
             if code != 0:
                 refuse(f"grm predict on {d} exited {code}; see {out.with_suffix('.stderr')}")
+
+    def predict(self, gate):
+        started = time.monotonic()
+        reports = self.reports()
+        survivors, _ = self.survivors()
+        if not survivors:
+            refuse("no genome survived the exclusions")
+        pdir, rdir = self.work / "predict", self.work / "predict-replay"
+        for d in (pdir, rdir):
+            if d.exists():
+                shutil.rmtree(d)
+        rdir.mkdir(parents=True)
+        okset = self.root / "species" / self.out_slug / "ksets"
+        rkset = self.root / "species" / self.replay_slug / "ksets"
+        cohort_counted = set(self.counted_genes(self.replay_slug))
+
+        # First the cohort's own genomes, judged before any new genome is
+        # predicted.
+        replay_jobs = []
+        for d, (report, _) in sorted(reports.items()):
+            samples = [s["id"] for s in report["samples"] if s["id"] in cohort_counted]
+            if samples:
+                replay_jobs.append((d, samples, rkset, rdir / f"{d}.jsonl"))
+        self.predict_jobs(replay_jobs)
         counts, problems, checked = {}, [], 0
         for d, (report, sha) in sorted(reports.items()):
             rp = rdir / f"{d}.jsonl"
@@ -563,18 +641,24 @@ class Run:
                 problems.extend(f"{d}: {x}" for x in p)
                 checked += n
                 counts[f"{d}: cohort genomes replayed"] = n
-            rows = S.read_rows(pdir / f"{d}.jsonl")
-            learners = sorted({r["learner"] for r in rows})
-            counts[f"{d}: rows"] = f"{len(rows)} ({', '.join(learners)})"
         if problems:
             p = rdir / "replay-problems.txt"
             p.write_text("\n".join(problems) + "\n")
             refuse(f"the final models do not replay on the cohort ({len(problems)} mismatches); see {p}")
+
+        # Then the new genomes.
+        pdir.mkdir(parents=True)
+        (pdir / "survivors.txt").write_text("\n".join(survivors) + "\n")
+        self.predict_jobs([(d, survivors, okset, pdir / f"{d}.jsonl") for d in sorted(reports)])
+        for d in sorted(reports):
+            rows = S.read_rows(pdir / f"{d}.jsonl")
+            learners = sorted({r["learner"] for r in rows})
+            counts[f"{d}: rows"] = f"{len(rows)} ({', '.join(learners)})"
         counts["genomes scored"] = len(survivors)
         counts["cohort genome-report replays"] = checked
         outputs = [str(pdir / "survivors.txt")] + [str(p) for p in sorted(pdir.glob("*.jsonl"))] \
             + [str(p) for p in sorted(rdir.glob("*.jsonl"))]
-        self.write_receipt("predict", started, [], outputs, counts, frozen)
+        self.write_receipt("predict", started, [], outputs, counts, gate)
 
 
 def read_ids_plain(path):
@@ -584,37 +668,50 @@ def read_ids_plain(path):
     return ds
 
 
-def main(argv=None, overrides=None):
+def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("stage", choices=STAGES + ("all",))
     ap.add_argument("--grm", required=True, help="the grm binary, built at the kit's commit")
     ap.add_argument("--master", required=True, help="the master data root; only read")
-    ap.add_argument("--work", required=True, help="the work directory; the scratch root is <work>/root")
+    ap.add_argument("--work", required=True, help="a new work directory; the scratch root is <work>/root")
     ap.add_argument("--species", required=True, help="species slug, e.g. staphylococcus_aureus")
-    ap.add_argument("--ids", required=True, help="the frozen genome ids, one per line")
+    ap.add_argument("--population", required=True, choices=sorted(S.POPULATIONS))
     ap.add_argument("--reports", required=True, help="the served revision-12 dataset reports")
-    ap.add_argument("--datasets", required=True, help="the dataset ids to score, one per line")
+    ap.add_argument("--expect-commit", help="the published commit of the kit (40 hex characters); a real run needs it")
     ap.add_argument("--jobs", type=int, default=8)
     ap.add_argument("--rehearsal", action="store_true",
                     help="cohort genomes as a stand-in list, to show the kit runs; measures nothing")
+    ap.add_argument("--tables", help="rehearsal only: stand-in candidates.tsv, pairs.tsv and datasets.tsv")
+    ap.add_argument("--ids", help="rehearsal only: the stand-in genome ids, one per line")
+    ap.add_argument("--datasets", help="rehearsal only: the dataset ids, one per line")
     args = ap.parse_args(argv)
-    # The report pins and the kit root are fixed; only the tests set other
-    # values, through `overrides`.
-    args.pins, args.kit_root = KIT / "reports.sha256", S.KIT_ROOT
-    for k, v in (overrides or {}).items():
-        setattr(args, k, v)
     stages = STAGES if args.stage == "all" else (args.stage,)
     try:
+        if not args.rehearsal:
+            for opt in ("tables", "ids", "datasets"):
+                if getattr(args, opt) is not None:
+                    refuse(f"--{opt} is for a rehearsal only; a real run derives the lists from the kit's frozen tables")
+        if (args.ids is None) != (args.datasets is None):
+            refuse("--ids and --datasets go together")
         run = Run(args)
-        for stage in stages:
-            log(f"{stage}: start")
-            run.check_earlier(stage)
-            if stage in GATED:
-                S.frozen_gate(run.kit_root)
-            getattr(run, stage.replace("-", "_"))()
     except Refusal as e:
         log(f"refused: {e}")
         return 2
+    for stage in stages:
+        log(f"{stage}: start")
+        run.attempt(stage, "start")
+        try:
+            gate = run.gate()
+            run.check_earlier(stage, gate)
+            getattr(run, stage.replace("-", "_"))(gate)
+        except Refusal as e:
+            run.attempt(stage, "refused", str(e))
+            log(f"refused: {e}")
+            return 2
+        except Exception as e:
+            run.attempt(stage, "failed", f"{type(e).__name__}: {e}")
+            raise
+        run.attempt(stage, "done")
     return 0
 
 
