@@ -2499,6 +2499,27 @@ class EndToEndTests(unittest.TestCase):
         for d in reading["panel"]["decisions"]:
             self.assertEqual(d["p_adj_panel"], d["p_adj_species"], d["id"])
 
+    def test_the_learner_reading_takes_the_work_as_run_wrote_it(self):
+        """learner_reading.py's unit tests write their folders by hand. This one runs the command on the WORK
+        run.py wrote, with the sensitivity reading, which loads K's report through its validation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "reading.json"
+            subprocess.run([sys.executable, "-B", str(HERE / "learner_reading.py"), str(self.work), "--json",
+                            str(out), "--sensitivity"], check=True, capture_output=True, text=True)
+            got = json.loads(out.read_text())
+        made = [x for x in self.report["contrasts"] if x["estimate"] is not None]
+        self.assertTrue(made)
+        self.assertEqual(sorted((r["dataset"], r["arm"], r["learner"], r["split"], r["estimate"]) for r in got["rows"]),
+                         sorted((x["dataset"], x["treatment"], x["learner"], x["split"], x["estimate"]) for x in made))
+        for r in got["rows"]:
+            self.assertEqual(sum(r["calls_default"].values()), r["paired_calls"], r)
+            self.assertEqual(sum(r["calls_arm"].values()), r["paired_calls"], r)
+        cohort = {r["arm"] for r in got["rows"] if r["pairing"] in run.stats.SUBSET_PAIRINGS}
+        self.assertEqual({c["arm"] for c in got["cohort"]}, cohort)
+        self.assertEqual({c["arm_class_mix"] for c in got["cohort"]}, {"not recorded"} if cohort else set())
+        second = load("second_reading").read([run.k_report.load_report(self.work / "report" / "ablation-report.json")])
+        self.assertEqual(got["sensitivity"]["registered"]["firm"], second["panel"]["firm"])
+
 
 if __name__ == "__main__":
     unittest.main()
