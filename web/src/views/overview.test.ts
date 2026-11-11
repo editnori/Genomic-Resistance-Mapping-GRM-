@@ -84,7 +84,7 @@ describe("report leads with revision 7's numbers", () => {
 
   it("states the lineage, known-gene, and MIC leads with their denominators", () => {
     expect(lineageLead({ n: 237, nNoBest: 0, nLineage: 231, medianRandom: 0.9253561253561253, medianLineage: 0.859608745684695, medianGap: 0.045254403131115395, nLargeGap: 106 })).toBe(
-      "A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out lowers median balanced accuracy from 92.5% on a random split to 86.0%. 106 of 231 datasets lose more than 5 points; the median loss is 4.5 points.",
+      "A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out lowers median balanced accuracy from 92.5% on a random split to 86.0%. The random-split figure is each dataset's best of five learners, picked on the same folds that score it, so it runs a little above what one learner named in advance would score. 106 of 231 datasets lose more than 5 points; the median loss is 4.5 points.",
     );
     expect(
       catalogLead({

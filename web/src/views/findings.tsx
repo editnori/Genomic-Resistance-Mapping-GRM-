@@ -252,7 +252,7 @@ export const lineageLead = (s: SplitSummary): string => {
   const verb = s.medianLineage <= s.medianRandom ? "lowers" : "raises";
   const lose = s.nLargeGap === 1 ? "loses" : "lose";
   const median = s.medianGap >= 0 ? `the median loss is ${points(s.medianGap)}` : `the median dataset gains ${points(-s.medianGap)}`;
-  return `A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out ${verb} median balanced accuracy from ${pct(s.medianRandom)} on a random split to ${pct(s.medianLineage)}. ${int(s.nLargeGap)} of ${plural(s.nLineage, "dataset")} ${lose} more than 5 points; ${median}.`;
+  return `A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out ${verb} median balanced accuracy from ${pct(s.medianRandom)} on a random split to ${pct(s.medianLineage)}. The random-split figure is each dataset's best of five learners, picked on the same folds that score it, so it runs a little above what one learner named in advance would score. ${int(s.nLargeGap)} of ${plural(s.nLineage, "dataset")} ${lose} more than 5 points; ${median}.`;
 };
 
 /** The catalog lead: what the rule is, then within the cutoff or ahead,
@@ -677,7 +677,7 @@ export const learnersFinding = (m: Manifest, opts: FindingOptions): Finding => {
     caption: none
       ? "The table sets each learner, used alone for every dataset, beside the best learner picked for each dataset."
       : opts.page
-        ? "Each row is a median over the datasets with a score on both tests. The first row picks a learner for each dataset by its random-split score, and every other row uses one learner for all datasets. The drop is the median of each dataset's own drop from the random split to held-out lineages."
+        ? "Each row is a median over the datasets with a score on both tests. The first row picks a learner for each dataset by its random-split score, so its random-split median is read on the folds that picked it, and every other row uses one learner for all datasets. The drop is the median of each dataset's own drop from the random split to held-out lineages."
         : "Median balanced accuracy over the datasets scored on both tests. The first row picks a learner for each dataset by its random-split score, and every other row uses one learner for all datasets.",
     note:
       opts.page && !none ? (

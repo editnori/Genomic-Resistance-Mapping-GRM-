@@ -286,8 +286,9 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
       <Def term="Balanced accuracy" plain="The average of two shares: resistant genomes called resistant (sensitivity) and susceptible genomes called susceptible (specificity). 50% is no better than a coin toss.">The mean of sensitivity and specificity, over pooled out-of-fold predictions. A score of 0.5 or more calls resistant.</Def>
       <Def term="Best learner" plain="For each dataset, the learner that scored highest on the random split.">
         The learner with the highest random-split balanced accuracy among those that call every isolate on every split that ran. The known-gene rule is a baseline, never a candidate.
-        A learner&apos;s score with lineages held out takes no part in the pick. Overview&apos;s figures use the best learner, and its learner table sets the best learner beside each
-        learner used alone.
+        A learner&apos;s score with lineages held out takes no part in the pick. Its random-split score is read on the same folds that picked it, so it is the highest of five
+        scores rather than what one learner named in advance would score, and runs a little above that. Overview&apos;s figures use the best learner, and its learner table sets
+        the best learner beside each learner used alone.
       </Def>
       <Def
         term="VME and ME"
