@@ -341,10 +341,14 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
   const audit = manifestAudit(manifest);
   const { cap, capped } = selectionCap(manifest);
   const unsupportedRows = manifest.unsupported_panels ?? [];
-  const unsupported = [...new Set(unsupportedRows.map((u) => u.panel))].map((panel) => {
-    const datasets = unsupportedRows.filter((u) => u.panel === panel);
-    return { ...datasets[0]!, datasets };
+  // One entry per assay and reason: a gene panel can be unsupported for its
+  // organism on some datasets and for the drug on others.
+  const reasonKey = (u: { panel: string; reason: string }) => `${u.panel}\u0000${u.reason}`;
+  const unsupported = [...new Set(unsupportedRows.map(reasonKey))].map((key) => {
+    const datasets = unsupportedRows.filter((u) => reasonKey(u) === key);
+    return { ...datasets[0]!, key, datasets };
   });
+  const unsupportedAssays = new Set(unsupportedRows.map((u) => u.panel)).size;
   return (
     <MethodsSection id={METHODS_ANCHORS.limits} n={4} title="Scope, limitations and audit">
       <Part id={METHODS_ANCHORS.audit} title="Evaluation audit">
@@ -387,12 +391,12 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
       {unsupported.length > 0 ? (
         <Part id="m-unsupported" title="Assays not scored">
           <p className="prose-measure text-note text-ink">
-            {plural(unsupported.length, "assay")} {unsupported.length === 1 ? "has" : "have"} no result on the datasets listed, so no sensitivity or specificity is reported for{" "}
-            {unsupported.length === 1 ? "it" : "them"}.
+            {plural(unsupportedAssays, "assay")} {unsupportedAssays === 1 ? "has" : "have"} no result on the datasets listed, so no sensitivity or specificity is reported for{" "}
+            {unsupportedAssays === 1 ? "it" : "them"}.
           </p>
           <ul className="space-y-3">
             {unsupported.map((a) => (
-              <li key={a.panel} className="border-t border-hair pt-3">
+              <li key={a.key} className="border-t border-hair pt-3">
                 <p className="text-control font-semibold text-ink">{a.name}</p>
                 <p className="text-note text-muted-text">{a.datasets.map((d) => `${capitalize(d.antibiotic)} in ${speciesShort(d.species)}`).join(", ")}</p>
                 <p className="prose-measure mt-1 text-note text-ink">{notScored(a.reason)}</p>

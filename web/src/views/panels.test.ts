@@ -37,6 +37,19 @@ describe("panel evidence and unscored assays", () => {
     expect(html.split(`Not scored. ${reason}`).length - 1).toBe(1);
   });
 
+  it("keeps each reason of one assay apart", () => {
+    const organism = "the panel does not cover this organism: the assay reports none of its targets for it";
+    const drug = "no target of this panel is interpreted for this drug in this organism";
+    const row = { panel: "gram_negative_bcid", name: "Gram-negative blood-culture panel", dataset: "streptococcus_pneumoniae__meropenem", species: "Streptococcus pneumoniae", antibiotic: "meropenem", reason: organism };
+    const rows = [row, { ...row, dataset: "pseudomonas_aeruginosa__colistin", species: "Pseudomonas aeruginosa", antibiotic: "colistin", reason: drug }];
+    const html = renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, unsupported_panels: rows } }));
+    expect(html).toContain("1 assay has no result on the datasets listed");
+    expect(html).toContain(`Not scored. ${organism.charAt(0).toUpperCase()}${organism.slice(1)}.`);
+    expect(html).toContain(`Not scored. ${drug.charAt(0).toUpperCase()}${drug.slice(1)}.`);
+    expect(html).toContain(`Meropenem in ${speciesShort("Streptococcus pneumoniae")}`);
+    expect(html).toContain(`Colistin in ${speciesShort("Pseudomonas aeruginosa")}`);
+  });
+
   it("says how many datasets with a panel have no best learner instead of dropping them silently", () => {
     const base = withRealProbeRows(manifest);
     const none = { ...base.datasets[0]!, id: "x__none", best_learner: null, best_random: null, best_lineage: null, panels: [["carbapenemase", base.panels[0]!.metrics] as [string, Lite]] };
