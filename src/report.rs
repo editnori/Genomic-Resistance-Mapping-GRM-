@@ -262,18 +262,17 @@ fn rule_text(report: &Value) -> Vec<String> {
                     let f = feats.get(&id);
                     let label = f
                         .and_then(|f| {
-                            f["catalog_families"]
+                            let families: Vec<&str> = f["catalog_families"]
                                 .as_array()
-                                .and_then(|a| a.first())
-                                .and_then(Value::as_str)
-                                .map(String::from)
-                                .or_else(|| {
-                                    let locus = &f["locus"];
-                                    locus["gene"]
-                                        .as_str()
-                                        .map(String::from)
-                                        .or_else(|| locus["product"].as_str().map(String::from))
-                                })
+                                .map(|a| a.iter().filter_map(Value::as_str).collect())
+                                .unwrap_or_default();
+                            crate::annotate::family_label(&families).or_else(|| {
+                                let locus = &f["locus"];
+                                locus["gene"]
+                                    .as_str()
+                                    .map(String::from)
+                                    .or_else(|| locus["product"].as_str().map(String::from))
+                            })
                         })
                         .unwrap_or_else(|| format!("feature {id}"));
                     format!(
@@ -1603,6 +1602,37 @@ mod tests {
         assert_eq!(
             audits,
             vec![(current, true), (current - 1, true), (0, false)]
+        );
+    }
+
+    #[test]
+    fn a_rule_term_names_every_catalog_family_its_feature_matches() {
+        let report = serde_json::json!({
+            "features": [
+                {"feature": 1, "catalog_families": ["blaKPC"], "locus": {"gene": "kpc"}},
+                {"feature": 2, "catalog_families": ["blaNDM", "ble", "blaAFM"], "locus": null},
+                {"feature": 3, "catalog_families": [], "locus": {"gene": null, "product": "porin"}},
+                {"feature": 4, "catalog_families": [], "locus": null},
+            ],
+            "models": {"scm": {"rules": [
+                {"feature": 1, "presence": true},
+                {"feature": 2, "presence": true},
+                {"feature": 2, "presence": false},
+                {"feature": 3, "presence": false},
+                {"feature": 4, "presence": true},
+                {"feature": 5, "presence": true},
+            ]}},
+        });
+        assert_eq!(
+            rule_text(&report),
+            [
+                "presence of blaKPC",
+                "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)",
+                "absence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)",
+                "absence of porin",
+                "presence of feature 4",
+                "presence of feature 5",
+            ]
         );
     }
 }
