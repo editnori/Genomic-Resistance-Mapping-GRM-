@@ -189,9 +189,14 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     check(tag + ' MIC region counts', geometry.text.includes((values.length - expected.stats.micAbove90) + ' <90%') && geometry.text.includes(expected.stats.micAbove90 + ' ≥90%'), geometry.text);
   }
   if (finding === 3) {
-    const counts = expected.panels.map(p => ({ panel: p.counts, model: p.best_model_counts }));
-    const panel = counts.reduce((a, c) => a + c.panel.tp, 0) / counts.reduce((a, c) => a + c.panel.tp + c.panel.fn, 0);
-    const model = counts.reduce((a, c) => a + c.model.tp, 0) / counts.reduce((a, c) => a + c.model.tp + c.model.fn, 0);
+    // A report from before revision 11 has no panel counts. The page then
+    // rebuilds them from each rate and the dataset's class sizes (joinPanels).
+    const counts = expected.panels.map(p => {
+      const called = p.counts ? p.counts.tp + p.counts.fn : (byId.get(p.dataset)?.n_resistant ?? 0), resistant = called + (p.no_call?.resistant ?? 0), m = p.best_model_counts;
+      return { caught: p.counts ? p.counts.tp : Math.round(p.metrics.sensitivity * called), called, modelCaught: m ? m.tp : Math.round(p.best_model.sensitivity * resistant), modelResistant: m ? m.tp + m.fn : resistant };
+    });
+    const panel = counts.reduce((a, c) => a + c.caught, 0) / counts.reduce((a, c) => a + c.called, 0);
+    const model = counts.reduce((a, c) => a + c.modelCaught, 0) / counts.reduce((a, c) => a + c.modelResistant, 0);
     const start = Math.min(220, Math.round(geometry.width * 0.5)) + 10;
     wanted = [panel, model].map(v => start + v * (geometry.width - 20 - start));
     // Pooled reference lines span every row on every page; a page draws
@@ -357,7 +362,10 @@ async function headerCheck(page, tag, title) {
     return { text: h1?.textContent, size: h1 ? parseFloat(getComputedStyle(h1).fontSize) : null, srOnly: h1?.classList.contains('sr-only') ?? null, status: header?.textContent ?? '', scopeHref: header?.querySelector('a[data-audit-status], a[href$="#limits"], a[href="#m-limits"]')?.getAttribute('href') ?? null };
   });
   check(tag + ' visible title', h.text === title && h.size === 32 && h.srOnly === false, h);
-  check(tag + ' plain status line with scope and report date', h.status.includes(CHIP) && h.status.includes('Report built') && !h.status.includes('BV-BRC lab records') && isLimitsHref(h.scopeHref), h);
+  // On a provisional report, Overview and Methods print the status in bold with the reasons
+  // under the line, and carry no scope link (ReportLine in findings.tsx).
+  const bare = !allValid && / (overview|methods)$/.test(tag);
+  check(tag + ' plain status line with scope and report date', h.status.includes(CHIP) && h.status.includes('Report built') && !h.status.includes('BV-BRC lab records') && (bare ? h.scopeHref === null : isLimitsHref(h.scopeHref)), h);
 }
 
 const scrollTo = async (page, selector) => {
@@ -794,7 +802,10 @@ async function interactions(page, tag, width) {
   await shot(page, tag + '-empty-filter');
   await page.getByRole('button', { name: 'Clear filters and search' }).click();
   check(tag + ' clear filter recovery', await search.inputValue() === '', null);
-  await page.getByRole('button', { name: 'Show all ' + expected.datasets.toLocaleString('en-US'), exact: true }).click();
+  // The table offers Show all only past one page of rows (PAGE_SIZE in DataTable.tsx).
+  const showAll = page.getByRole('button', { name: 'Show all ' + expected.datasets.toLocaleString('en-US'), exact: true });
+  if (expected.datasets > 25) await showAll.click();
+  else check(tag + ' one page of rows offers no Show all', await showAll.count() === 0, null);
   const status = await page.getByRole('region', { name: 'Datasets', exact: true }).evaluate(region => {
     const rows = [...region.querySelectorAll('tbody tr')];
     const v = (r, i) => r.children[i]?.querySelector('[data-verdict]')?.getAttribute('data-verdict');
@@ -939,7 +950,7 @@ async function interactions(page, tag, width) {
     const header = document.querySelector('dialog[open] header');
     return { status: header.querySelector('p')?.textContent, links: [...header.querySelectorAll('nav[aria-label="Sections"] button')].map(b => b.textContent), current: header.querySelector('nav[aria-label="Sections"] [aria-current="true"]')?.textContent, title: document.getElementById('inspector-title')?.getBoundingClientRect().x, body: document.querySelector('#ds-learners h2')?.getBoundingClientRect().x, linksX: header.querySelector('nav[aria-label="Sections"] button')?.getBoundingClientRect().x, classMark: header.querySelector('p svg.class-glyph')?.getAttribute('data-class-family') ?? null };
   });
-  check(tag + ' inspector header: chip and facts in one status row', head.status?.includes(CHIP.replace('Provisional metrics', 'Provisional')) || head.status?.includes('Tested within one public database only') || head.status?.includes('Provisional'), head.status);
+  check(tag + ' inspector header: chip and facts in one status row', head.status?.includes(CHIP.replace('Provisional metrics', 'Provisional')) || head.status?.includes('Tested within one public database only') || head.status?.includes('Provisional') || head.status?.includes('Unaudited, provisional'), head.status);
   check(tag + ' inspector section links', JSON.stringify(head.links) === JSON.stringify(['Learners', 'Interpretable model', 'Genes and panels', 'Marker designer', 'MIC', 'Lineages']) && head.current === 'Learners', head);
   check(tag + ' inspector header and body share a column', Math.abs(head.title - head.body) <= 1 && Math.abs(head.linksX - head.body) <= 1, head);
   check(tag + ' inspector names the drug class with its family mark', head.classMark !== null, head.classMark);
@@ -1125,21 +1136,26 @@ async function states(browser, width, height, theme) {
   await page.route('**/data/index.json', route => route.fulfill({ json: empty }));
   await page.goto(BASE); await page.getByText('No dataset has a report yet', { exact: true }).waitFor(); await shot(page, tag + '-empty-manifest');
   await page.unroute('**/data/index.json');
-  const mixed = structuredClone(manifest); mixed.datasets[0].evaluation.revision = manifest.evaluation_revision - 1;
-  await page.route('**/data/index.json', route => route.fulfill({ json: mixed }));
-  await page.goto(BASE + '/datasets');
-  const mixedStatus = page.getByText('Provisional metrics', { exact: true }).first();
-  await mixedStatus.waitFor();
-  await mixedStatus.hover();
-  check(tag + ' mixed audit status is plain text without a hover wall', await mixedStatus.textContent() === 'Provisional metrics' && await page.getByRole('tooltip').count() === 0, await mixedStatus.textContent());
-  check(tag + ' mixed audit row marker', await page.getByRole('region', { name: 'Datasets', exact: true }).getByText('Provisional', { exact: true }).count() === 1, null);
-  await page.goto(BASE);
-  const mixedNote = page.getByRole('note').first();
-  await mixedNote.waitFor();
-  const mixedNoteText = await mixedNote.textContent();
-  check(tag + ' mixed audit count and reason are visible', mixedNoteText.includes('1 of ' + expected.datasets + ' dataset evaluations do not pass') && mixedNoteText.includes('current revision'), mixedNoteText);
-  await shot(page, tag + '-mixed-audit');
-  await page.unroute('**/data/index.json');
+  // A report from before the audit has no revision to make stale in one dataset.
+  if (manifest.datasets[0].evaluation === undefined) {
+    for (const name of [' mixed audit status is plain text without a hover wall', ' mixed audit row marker', ' mixed audit count and reason are visible']) skipped.push({ check: tag + name, reason: 'no dataset in this tree has an evaluation audit' });
+  } else {
+    const mixed = structuredClone(manifest); mixed.datasets[0].evaluation.revision = manifest.evaluation_revision - 1;
+    await page.route('**/data/index.json', route => route.fulfill({ json: mixed }));
+    await page.goto(BASE + '/datasets');
+    const mixedStatus = page.getByText('Provisional metrics', { exact: true }).first();
+    await mixedStatus.waitFor();
+    await mixedStatus.hover();
+    check(tag + ' mixed audit status is plain text without a hover wall', await mixedStatus.textContent() === 'Provisional metrics' && await page.getByRole('tooltip').count() === 0, await mixedStatus.textContent());
+    check(tag + ' mixed audit row marker', await page.getByRole('region', { name: 'Datasets', exact: true }).getByText('Provisional', { exact: true }).count() === 1, null);
+    await page.goto(BASE);
+    const mixedNote = page.getByRole('note').first();
+    await mixedNote.waitFor();
+    const mixedNoteText = await mixedNote.textContent();
+    check(tag + ' mixed audit count and reason are visible', mixedNoteText.includes('1 of ' + expected.datasets + ' dataset evaluations do not pass') && mixedNoteText.includes('current revision'), mixedNoteText);
+    await shot(page, tag + '-mixed-audit');
+    await page.unroute('**/data/index.json');
+  }
   for (const [row, word] of stateRows) {
     await page.goto(BASE + '/datasets'); await page.getByRole('searchbox', { name: 'Search datasets' }).fill(row.antibiotic + ' ' + row.species);
     check(tag + ' ' + row.id + ' state ' + word, await page.getByText(word, { exact: true }).count() > 0, word);
