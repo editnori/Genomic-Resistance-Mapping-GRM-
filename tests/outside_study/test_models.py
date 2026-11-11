@@ -35,7 +35,10 @@ class FinalModels(unittest.TestCase):
         self.assertEqual(S.final_call(self.rb, "cart", {}), ("susceptible", 0.3))
         call, p = S.final_call(self.ra, "lasso", {1: False, 2: True})
         self.assertEqual(call, "susceptible")
-        self.assertAlmostEqual(p, 1 / (1 + 2.718281828459045 ** 0.7))
+        self.assertAlmostEqual(p, 1 / (1 + 2.718281828459045 ** 4.0))
+        call, p = S.final_call(self.ra, "lasso", {1: True, 2: True})
+        self.assertEqual(call, "susceptible", "feature 2 cancels feature 1")
+        self.assertAlmostEqual(p, 1 / (1 + 2.718281828459045 ** 1.5))
         r = copy.deepcopy(self.ra)
         r["models"]["scm"] = {"kind": "disjunction", "rules": [{"feature": 1, "presence": False},
                                                                {"feature": 2, "presence": True}]}
@@ -43,6 +46,15 @@ class FinalModels(unittest.TestCase):
         self.assertEqual(S.final_call(r, "scm", {1: True, 2: True})[0], "resistant")
         r["models"]["lasso"]["coef"] = []
         self.assertEqual(S.final_call(r, "lasso", {}), (None, None))
+
+    def test_cart_stops_at_its_published_depth(self):
+        # grm predict reads a tree no deeper than cart_depth: at depth 0 the
+        # root's value (0.5, at the cut-off) is the call for every genome.
+        r = copy.deepcopy(self.ra)
+        r["models"]["cart_depth"] = 0
+        self.assertEqual(S.final_call(r, "cart", {1: False}), ("resistant", 0.5))
+        self.assertEqual(S.final_call(r, "cart", {1: True}), ("resistant", 0.5))
+        self.assertEqual(S.learner_features(r, "cart"), [])
 
     def test_cohort_replay_passes_on_the_published_bits(self):
         problems, n = S.replay_problems(self.ra, self.sa, cohort_rows(A, self.sa))

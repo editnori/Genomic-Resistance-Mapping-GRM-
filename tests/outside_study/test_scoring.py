@@ -23,13 +23,17 @@ class Scoring(unittest.TestCase):
         return by(self.res["metrics"], dataset=d, learner=learner)
 
     def test_confusion_counts_per_dataset_and_learner(self):
-        for learner in ("scm", "cart", "lasso"):
+        for learner in ("scm", "cart"):
             r = self.metric(A, learner)
             self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (48, 12, 7, 53), learner)
+        # The lasso differs from the SCM on 1001.4 (R) and 1001.31 (S).
+        r = self.metric(A, "lasso")
+        self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (47, 13, 6, 54))
         r = self.metric(A, "known_gene")
         self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (50, 10, 0, 60))
+        # drugB labels 1001.24 S and 1001.54 R, the other way round from drugA.
         r = self.metric(B, "scm")
-        self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (22, 3, 3, 22))
+        self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (21, 4, 4, 21))
         r = self.metric(B, "cart")
         self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (0, 25, 0, 25))
 
@@ -125,7 +129,7 @@ class Scoring(unittest.TestCase):
         self.assertEqual((d["scored_resistant"], d["scored_susceptible"]), (24, 25))
         self.assertFalse(d["reportable"])
         r = by(res["metrics"], dataset=B, learner="scm")
-        self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (21, 3, 3, 22))
+        self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (20, 4, 4, 21))
         self.assertNotIn("sensitivity", r)
         self.assertEqual(r["reading_sensitivity"], "not read: counts only")
         self.assertEqual(r["reading_specificity"], "not read: counts only")
@@ -155,10 +159,16 @@ class Scoring(unittest.TestCase):
         # (MLST.testus.1 and .2); the fixture cycles .1, .7 and none by id.
         st = {r["group"]: r["scored_resistant"] + r["scored_susceptible"]
               for r in rows if r["grouping"] == "mlst_in_cohort"}
-        want = {"yes": 0, "no": 0, "no ST": 0}
-        for g in F.new_genomes():
-            want[{"MLST.testus.1": "yes", "MLST.testus.7": "no", "": "no ST"}[g["mlst"]]] += 1
-        self.assertEqual(st, want)
+        # 1001.4's "MLST.testus.-" names no ST.
+        self.assertEqual(st, {"yes": 40, "no": 39, "no ST": 41})
+        g = {r["genome_id"]: r for r in self.res["genomes"]}
+        self.assertEqual((g[F.NO_ST_DASH]["mlst"], g[F.NO_ST_DASH]["mlst_in_cohort"]), ("MLST.testus.-", "no ST"))
+
+    def test_no_st(self):
+        for v in ("", "  ", "MLST.testus.-", "MLST.testus.", "MLST.testus. - "):
+            self.assertTrue(S.no_st(v), repr(v))
+        for v in ("MLST.testus.1", "MLST.testus.0", "MLST.testus.123"):
+            self.assertFalse(S.no_st(v), v)
 
     def test_leave_one_study_out(self):
         rows = {r["left_out"]: r for r in self.res["leave_one_study_out"]
@@ -211,10 +221,61 @@ class Scoring(unittest.TestCase):
         self.assertEqual((f1["cohort_susceptible_carriers"], f1["cohort_susceptible"]), (1, 4))
         self.assertEqual(f1["kmer"], F.KMER[1])
         f2 = by(self.res["features"], dataset=A, learner="lasso", feature=2)
-        self.assertEqual((f2["new_resistant_carriers"], f2["new_susceptible_carriers"]), (30, 30))
+        self.assertEqual((f2["new_resistant_carriers"], f2["new_susceptible_carriers"]), (1, 1))
         self.assertEqual((f2["cohort_resistant_carriers"], f2["cohort_susceptible_carriers"]), (2, 0))
         self.assertFalse([r for r in self.res["features"] if r["learner"] == "known_gene"])
         self.assertFalse([r for r in self.res["features"] if r["dataset"] == B and r["learner"] == "cart"])
+
+    def test_studies_per_dataset(self):
+        a = by(self.res["dataset_counts"], dataset=A)
+        self.assertEqual((a["top_study_resistant"], a["top_study_resistant_count"], a["top_study_resistant_share"]),
+                         ("P1", 30, 0.5))
+        self.assertEqual((a["top_study_susceptible"], a["top_study_susceptible_count"]), ("P1", 30))
+        self.assertEqual((a["studies"], a["loso_folds_reportable"]), (3, 3))
+        b = by(self.res["dataset_counts"], dataset=B)
+        self.assertEqual((b["top_study_resistant"], b["top_study_resistant_share"],
+                          b["top_study_susceptible_share"]), ("P1", 1.0, 1.0))
+        self.assertEqual((b["studies"], b["loso_folds_reportable"]), (1, 0))
+        text = S.reading_text(self.res)
+        self.assertIn("  By study: P1 holds 30 of the 60 resistant genomes (50.0%); P1 holds 30 of the 60 susceptible "
+                      "genomes (50.0%). Of 3 studies, 3 can be left out with 25 of each class remaining.", text)
+        self.assertIn("  By study: P1 holds 25 of the 25 resistant genomes (100.0%); P1 holds 25 of the 25 susceptible "
+                      "genomes (100.0%). Of 1 studies, 0 can be left out with 25 of each class remaining.\n"
+                      "  No leave-one-study-out fold is reportable, so no study-to-study range can be shown, "
+                      "and the estimate is in effect one study's.", text)
+
+    def test_reference_kind(self):
+        for learner in ("scm", "cart", "lasso"):
+            r = self.metric(A, learner)
+            self.assertEqual(r["reference_kind"], "cross-validation, lineage split")
+            self.assertFalse(r["reference_at_0_or_1"], learner)
+        k = self.metric(A, "known_gene")
+        self.assertEqual(k["reference_kind"], "fixed rule, whole cohort")
+        self.assertTrue(k["reference_at_0_or_1"], "the catalog's lineage specificity is 1.0")
+        text = S.reading_text(self.res)
+        self.assertIn("    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity "
+                      "is exactly 0 or 1.", text)
+        self.assertIn("    Reference figure: cross-validation, lineage split.", text)
+
+    def test_paired_with_the_known_gene_rule(self):
+        got = {r["learner"]: r for r in self.res["paired"]}
+        self.assertEqual(sorted(got), ["cart", "lasso", "scm"], "drugB has no known-gene rule")
+        cols = ("genomes", "both", "learner_only", "known_gene_only", "neither")
+        for learner, r_want, s_want in (("scm", (60, 43, 5, 7, 5), (60, 0, 7, 0, 53)),
+                                        ("cart", (60, 43, 5, 7, 5), (60, 0, 7, 0, 53)),
+                                        ("lasso", (60, 42, 5, 8, 5), (60, 0, 6, 0, 54))):
+            r = got[learner]
+            self.assertEqual(tuple(r[f"resistant_{c}"] for c in cols), r_want, learner)
+            self.assertEqual(tuple(r[f"susceptible_{c}"] for c in cols), s_want, learner)
+
+    def test_duplicates_by_kmer_set(self):
+        got = [(r["genome_id"], r["other_genome_id"], r["other_is"]) for r in self.res["duplicates"]]
+        self.assertEqual(got, [("1001.5", "999.2", "cohort"), ("1001.7", "1001.8", "scored new genome"),
+                               ("1001.8", "1001.7", "scored new genome")])
+        self.assertEqual(self.res["duplicate_counts"],
+                         {"scored genomes with the k-mer set of a cohort genome": 1,
+                          "scored genomes with the k-mer set of another scored genome": 2})
+        self.assertEqual(self.res["genomes_scored"], 123, "a duplicate is listed, never excluded")
 
     def test_reading_text(self):
         text = S.reading_text(self.res)
@@ -225,11 +286,91 @@ class Scoring(unittest.TestCase):
         self.assertIn("Sensitivity 80.0% [67.7%, 89.2%], lineage split 95.0%, random split 85.0%: below.", text)
         self.assertIn("Genomes excluded, species check failed: 1.", text)
         self.assertNotIn("REHEARSAL", text)
+        for sentence in (
+            "Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted "
+            "in their own column.",
+            "The datasets share genomes and studies, so they are not independent of each other.",
+            "Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.",
+            "Scored genomes with the same k-mer set as a cohort genome: 1; as another scored genome: 2",
+            "Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.",
+        ):
+            self.assertIn(sentence, text)
+
+    def test_forbidden_words(self):
+        for word in ("validated", "generalizes", "clinical", "proves", "proven"):
+            self.assertIn(word, S.FORBIDDEN_WORDS)
+            res = dict(self.res, species=word + "_testus")
+            with self.assertRaises(S.Refusal):
+                S.reading_text(res)
 
     def test_reading_text_refuses_forbidden_words(self):
         res = dict(self.res, species="clin" + "ical_testus")
         with self.assertRaises(S.Refusal):
             S.reading_text(res)
+
+
+
+class Variants(unittest.TestCase):
+    """Worlds changed in one way each, so that a fault in one place of the
+    scoring changes a number these tests know."""
+
+    def test_known_gene_calls_are_read_per_dataset(self):
+        # drugB's catalog rule calls every genome resistant; drugA's does not.
+        res = S.score(F.inputs(F.world(b_catalog=True)))
+        r = by(res["metrics"], dataset=B, learner="known_gene")
+        self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (25, 0, 25, 0))
+        r = by(res["metrics"], dataset=A, learner="known_gene")
+        self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"]), (50, 10, 0, 60))
+
+    def test_counts_only_is_decided_after_the_exclusions(self):
+        # 25 R labelled on drugB, one of them with no sequence: 24 scored.
+        res = S.score(F.inputs(F.world(drug_b_resistant=24, b_extra_label="1001.121")))
+        d = by(res["dataset_counts"], dataset=B)
+        self.assertEqual((d["labelled_resistant"], d["scored_resistant"], d["excluded_no_sequence"]), (25, 24, 1))
+        self.assertFalse(d["reportable"])
+        self.assertEqual(by(res["metrics"], dataset=B, learner="scm")["reading_sensitivity"], "not read: counts only")
+
+    def test_a_fold_needs_25_of_each_class_left(self):
+        # Six of P2's S genomes moved to P1: leaving P1 out leaves 30 R, 24 S.
+        w = F.world()
+        moved = {f"1001.{i}" for i in range(81, 87)}
+        for c in w["candidates"]:
+            if c["genome_id"] in moved:
+                c["bioproject"] = "P1"
+        res = S.score(F.inputs(w))
+        rows = {r["left_out"]: r for r in res["leave_one_study_out"] if r["dataset"] == A and r["learner"] == "scm"}
+        self.assertEqual((rows["P1"]["scored_resistant"], rows["P1"]["scored_susceptible"]), (30, 24))
+        self.assertFalse(rows["P1"]["reportable"])
+        r = by(res["metrics"], dataset=A, learner="scm")
+        self.assertEqual(r["loso_sensitivity_n"], 2)
+        self.assertEqual(by(res["dataset_counts"], dataset=A)["loso_folds_reportable"], 2)
+
+    def test_no_calls_are_counted_apart(self):
+        res = S.score(F.inputs(F.world(lasso_empty=True)))
+        r = by(res["metrics"], dataset=A, learner="lasso")
+        self.assertEqual((r["tp"], r["fn"], r["fp"], r["tn"], r["no_call_resistant"], r["no_call_susceptible"]),
+                         (0, 0, 0, 0, 60, 60))
+        self.assertEqual(r["reading_sensitivity"], "not read: no interval")
+        self.assertIsNone(r["sensitivity"])
+        self.assertFalse([p for p in res["paired"] if p["learner"] == "lasso" and p["resistant_genomes"]])
+
+    def test_an_empty_bioproject_or_country_is_never_a_study(self):
+        w = F.world()
+        blank = {f"1001.{i}" for i in range(91, 121)}  # all of P3
+        for c in w["candidates"]:
+            if c["genome_id"] in blank:
+                c["bioproject"], c["isolation_country"] = "", " "
+        res = S.score(F.inputs(w))
+        rows = [r for r in res["leave_one_study_out"] if r["dataset"] == A and r["learner"] == "scm"]
+        self.assertEqual(sorted(r["left_out"] for r in rows), ["P1", "P2"])
+        self.assertEqual(by(res["metrics"], dataset=A, learner="scm")["studies"], 2)
+        groups = {(r["grouping"], r["group"]) for r in res["groups"] if r["dataset"] == A and r["learner"] == "scm"}
+        self.assertIn(("bioproject", "no BioProject recorded"), groups)
+        self.assertIn(("country", "no country recorded"), groups)
+        g = {r["genome_id"]: r for r in res["genomes"]}
+        self.assertEqual((g["1001.100"]["bioproject"], g["1001.100"]["country"]),
+                         ("no BioProject recorded", "no country recorded"))
+        self.assertEqual(by(res["dataset_counts"], dataset=A)["studies"], 2)
 
 
 if __name__ == "__main__":

@@ -20,8 +20,8 @@ genomes that test the exclusions and the label rules:
   1001.126  call none on drugA       (BioProject P4)
   1001.1    borderline in the species check: kept, scored, flagged
 
-Every model here calls resistant exactly when feature 1 is present, except
-drugB's CART, which is one leaf at 0.3 (always susceptible). So the counts
+SCM and CART call resistant exactly when feature 1 is present, except
+drugB's CART, which is one leaf at 0.3 (always susceptible). So their counts
 follow from which genomes carry feature 1:
 
   project  R   FN  S   FP
@@ -29,28 +29,39 @@ follow from which genomes carry feature 1:
   P2       20  4   20  4
   P3       10  5   10  0
 
-drugA SCM, CART and lasso: TP 48, FN 12, FP 7, TN 53.
+drugA SCM and CART: TP 48, FN 12, FP 7, TN 53.
+The lasso calls resistant when feature 1 is present and feature 2 absent
+(-1 + 2.5 x1 - 3.0 x2). Feature 2 is on two new genomes, 1001.4 (R) and
+1001.31 (S), both carrying feature 1, so the lasso differs from the SCM on
+one R and one S genome: TP 47, FN 13, FP 6, TN 54.
 The known-gene calls are resistant for the R genomes of P1 and P2 only:
 TP 50, FN 10, FP 0, TN 60.
-drugB labels the first 25 R and first 25 S genomes of P1 with the same
-labels: SCM TP 22, FN 3, FP 3, TN 22; CART TP 0, FN 25, FP 0, TN 25.
+drugB labels the first 25 R and first 25 S genomes of P1, with two labels
+the other way round from drugA's: 1001.24 (R on drugA, carries feature 1)
+is S on drugB, and 1001.54 (S on drugA, no feature 1) is R on drugB.
+drugB SCM: TP 21, FN 4, FP 4, TN 21; CART TP 0, FN 25, FP 0, TN 25.
+1001.4's MLST value is "MLST.testus.-": no ST.
+K-mer set digests: 1001.5 has cohort genome 999.2's, and 1001.7 and 1001.8
+share one.
 """
 
 import base64
+import gzip
 import hashlib
 import importlib.util
 import json
 import math
 import shutil
 import subprocess
+import types
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 KIT = ROOT / "scripts" / "outside-study"
 
 
-def load(name):
-    spec = importlib.util.spec_from_file_location(f"outside_study_{name}_under_test", KIT / f"{name}.py")
+def load(name, kit=KIT):
+    spec = importlib.util.spec_from_file_location(f"outside_study_{name}_under_test", Path(kit) / f"{name}.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -71,6 +82,12 @@ COHORT_F = {1: {"999.1", "999.2", "999.5"}, 2: {"999.1", "999.3"}, 3: {"999.4"}}
 COHORT_ST = {g: ("MLST.testus.1" if i < 4 else "MLST.testus.2") for i, g in enumerate(COHORT)}
 PROJECTS = (("P1", 30, 3, 30, 3), ("P2", 20, 4, 20, 4), ("P3", 10, 5, 10, 0))
 MLST_CYCLE = ("MLST.testus.1", "MLST.testus.7", "")
+NO_ST_DASH = "1001.4"
+LASSO_F2 = -3.0
+F2_NEW = {"1001.4", "1001.31"}
+B_FLIPPED = {"1001.24": "S", "1001.54": "R"}
+SAME_AS_COHORT = ("1001.5", "999.2")
+SAME_PAIR = ("1001.7", "1001.8")
 
 # The reports' cross-validation rows: (sensitivity, specificity) per split
 # and report learner, chosen so each reading has a known answer against the
@@ -133,9 +150,10 @@ CATALOG_GROUPS = [
 ]
 CATALOG_RESISTANT = {"999.1": True, "999.2": True, "999.5": True}
 RULE = [["C:BETA-LACTAM"]]
+RULE_B = [["C:TETRACYCLINE"]]
 
 
-def make_report(dataset):
+def make_report(dataset, lasso_empty=False, b_catalog=False):
     features = [1, 2] if dataset != B else [1]
     rows = []
     for f in features:
@@ -152,7 +170,7 @@ def make_report(dataset):
             {"value": 0.1, "n": 5, "n_resistant": 2, "depth": 1, "split": None},
             {"value": 0.9, "n": 3, "n_resistant": 2, "depth": 1, "split": None},
         ]}
-        lasso = {"intercept": -1.0, "coef": [[1, 2.5], [2, 0.3]], "lambda": 0.1}
+        lasso = {"intercept": -1.0, "coef": [[1, 2.5], [2, LASSO_F2]], "lambda": 0.1}
     splits = []
     for scheme in ("random", "lineage"):
         refs = REFS[dataset][scheme]
@@ -172,6 +190,10 @@ def make_report(dataset):
     if dataset != B:
         catalog = {"version": "2026-08-07.1", "rule": RULE, "groups": CATALOG_GROUPS,
                    "metrics": {"n": 8, "tp": 2, "fn": 2, "fp": 1, "tn": 3}}
+    elif b_catalog:
+        catalog = {"version": "2026-08-07.1", "rule": RULE_B, "groups": [], "metrics": {}}
+    if lasso_empty and dataset == A:
+        lasso = {"intercept": -1.0, "coef": [], "lambda": 0.1}
     return {
         "schema": 2, "id": dataset, "species": NAME, "species_slug": SPECIES,
         "antibiotic": dataset.split("__")[1],
@@ -197,7 +219,7 @@ def sha(data):
 
 
 # What `grm predict` would write, worked out here without score.py.
-def model_call(dataset, learner, found):
+def model_call(dataset, learner, found, lasso_empty=False):
     f1 = found.get(1, False)
     if learner == "scm":
         return ("resistant" if f1 else "susceptible"), None
@@ -206,7 +228,9 @@ def model_call(dataset, learner, found):
             return "susceptible", 0.3
         return ("resistant", 0.9) if f1 else ("susceptible", 0.1)
     if learner == "lasso":
-        eta = -1.0 + (2.5 if f1 else 0.0) + (0.3 if found.get(2, False) else 0.0)
+        if lasso_empty and dataset == A:
+            return None, None
+        eta = -1.0 + (2.5 if f1 else 0.0) + (LASSO_F2 if found.get(2, False) else 0.0)
         p = 1.0 / (1.0 + math.exp(-eta))
         return ("resistant" if p >= 0.5 else "susceptible"), p
     raise ValueError(learner)
@@ -220,11 +244,11 @@ MODEL_FEATURES = {
 LEARNERS = {A: ("scm", "cart", "lasso"), B: ("scm", "cart"), C: ("scm", "cart", "lasso")}
 
 
-def make_row(dataset, report_sha, genome, learner, found):
-    call, score = model_call(dataset, learner, found)
+def make_row(dataset, report_sha, genome, learner, found, lasso_empty=False):
+    call, score = model_call(dataset, learner, found, lasso_empty)
     feats = [{"feature": f, "kmer": KMER[f], "found": bool(found.get(f, False)), "n_kmers": 10 * f,
               "kmers_found": 10 * f if found.get(f, False) else 0}
-             for f in MODEL_FEATURES[(dataset, learner)]]
+             for f in ([] if lasso_empty and (dataset, learner) == (A, "lasso") else MODEL_FEATURES[(dataset, learner)])]
     return {"contract": "grm-predict-1", "dataset": dataset, "report_sha256": report_sha,
             "input_fingerprint": "f00d" + dataset[-1], "evaluation_revision": 12, "k": K,
             "genome": genome, "source": "kset", "assembly": None, "learner": learner,
@@ -238,15 +262,15 @@ def new_genomes():
         for i in range(nr):
             n += 1
             out.append({"id": f"1001.{n}", "project": proj, "resistant": True, "f1": i >= fn,
-                        "f2": proj == "P1", "known": proj in ("P1", "P2")})
+                        "f2": f"1001.{n}" in F2_NEW, "known": proj in ("P1", "P2")})
         for i in range(ns):
             n += 1
             out.append({"id": f"1001.{n}", "project": proj, "resistant": False, "f1": i < fp,
-                        "f2": proj == "P1", "known": False})
+                        "f2": f"1001.{n}" in F2_NEW, "known": False})
     for g in out:
         k = int(g["id"].split(".")[1])
         g["country"] = "Atlantis" if g["project"] == "P1" else "Lemuria"
-        g["mlst"] = MLST_CYCLE[k % 3]
+        g["mlst"] = "MLST.testus.-" if g["id"] == NO_ST_DASH else MLST_CYCLE[k % 3]
     return out
 
 
@@ -278,10 +302,23 @@ def candidate(g, pop, project, country, mlst, on):
             "on_eligible_dataset": "yes" if on else "no"}
 
 
-def world(drug_b_resistant=25):
+def digest_of(g):
+    """The k-mer set digest `grm count` records, here made up per genome."""
+    if g == SAME_AS_COHORT[0]:
+        return digest_of(SAME_AS_COHORT[1])
+    if g == SAME_PAIR[1]:
+        return digest_of(SAME_PAIR[0])
+    return "fnv1a64:" + hashlib.sha256(g.encode()).hexdigest()[:16]
+
+
+def world(drug_b_resistant=25, lasso_empty=False, b_catalog=False, b_extra_label=None):
     """Every input the scoring needs, as Python objects. `drug_b_resistant`
-    sets how many R genomes drugB labels (25 makes it just reportable)."""
-    reports = {d: make_report(d) for d in (A, B, C)}
+    sets how many genomes of P1's first R genomes drugB labels (25 makes it
+    just reportable). `lasso_empty` gives drugA a lasso with no coefficient
+    (no call on any genome); `b_catalog` gives drugB a catalog rule whose
+    calls are resistant on every genome; `b_extra_label` labels one more
+    genome R on drugB."""
+    reports = {d: make_report(d, lasso_empty, b_catalog) for d in (A, B, C)}
     shas = {d: sha(report_bytes(r)) for d, r in reports.items()}
     gens = new_genomes()
     cands, pairs = [], []
@@ -291,7 +328,10 @@ def world(drug_b_resistant=25):
     p1r = [g for g in gens if g["project"] == "P1" and g["resistant"]][:drug_b_resistant]
     p1s = [g for g in gens if g["project"] == "P1" and not g["resistant"]][:25]
     for g in p1r + p1s:
-        pairs.append(pair(g["id"], B, "R" if g["resistant"] else "S", PRIMARY, True, True, False))
+        call = B_FLIPPED.get(g["id"], "R" if g["resistant"] else "S")
+        pairs.append(pair(g["id"], B, call, PRIMARY, True, True, False))
+    if b_extra_label is not None:
+        pairs.append(pair(b_extra_label, B, "R", PRIMARY, True, True, False))
     # A non-eligible dataset's labels never count.
     pairs.append(pair(gens[0]["id"], C, "S", PRIMARY, False, False, False))
     for g, e in EXTRA.items():
@@ -322,9 +362,10 @@ def world(drug_b_resistant=25):
                            "reason": "nearer another species" if v == "fail" else "", "distance": "0.01", "gc": "0.33"}
             ok = e.get("counted", True) and v != "fail"
             counted[g] = {"genome_id": g, "counted": "yes" if ok else "no",
-                          "detail": "" if ok else "count failed: truncated gzip"}
+                          "detail": "" if ok else "count failed: truncated gzip",
+                          "kset_digest": digest_of(g) if ok else ""}
         else:
-            counted[g] = {"genome_id": g, "counted": "no", "detail": "no FASTA"}
+            counted[g] = {"genome_id": g, "counted": "no", "detail": "no FASTA", "kset_digest": ""}
     found = {g["id"]: {1: g["f1"], 2: g["f2"]} for g in gens}
     for g in ("1001.124", "1001.125", "1001.126"):
         found[g] = {1: True, 2: False}
@@ -333,7 +374,7 @@ def world(drug_b_resistant=25):
     for d in (A, B):
         for g in survivors:
             for lr in LEARNERS[d]:
-                rows[d].append(make_row(d, shas[d], g, lr, found[g]))
+                rows[d].append(make_row(d, shas[d], g, lr, found[g], lasso_empty))
     known = {g["id"]: g["known"] for g in gens}
     kg = {"unavailable": None,
           "datasets": {A: {"dataset": A, "rule": json.dumps(RULE, separators=(",", ":")),
@@ -342,10 +383,16 @@ def world(drug_b_resistant=25):
                            "samples": "0"}},
           "calls": {(A, g): {"dataset": A, "genome_id": g, "groups": "", "rule_groups": "",
                              "catalog_resistant": "yes" if known.get(g) else "no"} for g in survivors}}
+    if b_catalog:
+        kg["datasets"][B] = {"dataset": B, "rule": json.dumps(RULE_B, separators=(",", ":")),
+                             "catalog_version": "2026-08-07.1", "replay": "pass", "samples": "8"}
+        kg["calls"].update({(B, g): {"dataset": B, "genome_id": g, "groups": "tet(38)", "rule_groups": "tet(38)",
+                                     "catalog_resistant": "yes"} for g in survivors})
     return {
         "reports": reports, "shas": shas, "genomes": gens, "candidates": cands, "pairs": pairs,
         "datasets": datasets, "availability": availability, "verdicts": verdicts, "counted": counted,
         "rows": rows, "known_gene": kg, "survivors": survivors, "found": found,
+        "cohort_digests": {g: digest_of(g) for g in COHORT},
     }
 
 
@@ -357,7 +404,11 @@ def inputs(w, rehearsal=False, population="primary"):
         "reports": {d: (r, w["shas"][d]) for d, r in w["reports"].items()},
         "species_reports": [w["reports"][d] for d in sorted(w["reports"])],
         "availability": w["availability"], "verdicts": w["verdicts"], "counted": w["counted"],
-        "rows": w["rows"], "known_gene": w["known_gene"], "hashes": {"fixture": "1"},
+        "digests": {"new": {g: r["kset_digest"] for g, r in w["counted"].items() if r["counted"] == "yes"},
+                    "cohort": w["cohort_digests"]},
+        "rows": w["rows"], "predict_survivors": sorted(w["survivors"], key=S.genome_key),
+        "known_gene": w["known_gene"], "attempts": {s: 1 for s in S.STAGES},
+        "table_pins_checked": True, "grm_sha256": "0" * 64, "hashes": {"fixture": "1"},
     }
 
 
@@ -367,71 +418,144 @@ PAIR_COLS = ["genome_id", "dataset_id", "call", "records_R", "records_S", "recor
              "genome_population", "genome_drop_reason", "dataset_eligible_in_population", "in_frozen_test",
              "in_same_study_set"]
 DS_COLS = ["dataset_id", "species_slug", "eligible_primary", "eligible_same_study"]
+PLAN = b"A stand-in plan for the tests.\n"
+RULES = b"Stand-in rules for the tests.\n"
+GRM_SHA = "9" * 64
 
 
-def write_world(w, root):
-    """Writes the world as files in the layout score.py's `load_inputs`
-    reads. Returns the paths and the overrides `score.main` takes."""
-    root = Path(root)
-    reports, tables, work = root / "reports", root / "tables", root / "work"
-    for p in (reports, tables, work / "fetch", work / "species-check", work / "count", work / "predict",
-              work / "known-gene"):
-        p.mkdir(parents=True, exist_ok=True)
+def tsv_bytes(header, rows, tmp):
+    """A TSV as score.write_tsv writes it, as bytes."""
+    S.write_tsv(tmp, header, rows)
+    data = Path(tmp).read_bytes()
+    Path(tmp).unlink()
+    return data
+
+
+def git(root, *args, env=None):
+    return subprocess.run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.invalid",
+                           "-c", "commit.gpgsign=false", *args], capture_output=True, text=True, check=True,
+                          env=env)
+
+
+def write_reports(w, reports):
+    """The world's reports as files, and their pin lines."""
+    reports = Path(reports)
+    reports.mkdir(parents=True, exist_ok=True)
     pins = []
     for d, r in sorted(w["reports"].items()):
         data = report_bytes(r)
         (reports / f"{d}.json").write_bytes(data)
-        pins.append(f"{sha(data)}  {d}.json")
-    (root / "reports.sha256").write_text("\n".join(pins) + "\n")
-    S.write_tsv(tables / "candidates.tsv", CAND_COLS, w["candidates"])
-    S.write_tsv(tables / "pairs.tsv", PAIR_COLS, w["pairs"])
-    S.write_tsv(tables / "datasets.tsv", DS_COLS, w["datasets"])
-    (root / "tables.sha256").write_text("".join(
-        f"{S.sha256_file(tables / n)}  {n}\n" for n in ("candidates.tsv", "pairs.tsv", "datasets.tsv")))
+        pins.append(f"{sha(data)}  {d}.json\n")
+    return "".join(pins)
+
+
+def kit_repo(root, w, reports, scripts=KIT, plan=PLAN):
+    """A temporary git repository laid out as the kit: copies of the real
+    score.py and run.py (from `scripts`), the world's frozen tables and
+    report pins, a stand-in plan and rules text, and a FROZEN.sha256 that
+    pins them, all committed. Its score.py and run.py are loaded from the
+    copy, so their kit root is this repository. Returns a namespace with
+    root, commit, S (score) and R (run; R.S is the score.py it loaded)."""
+    root = Path(root)
+    kit = root / "scripts/outside-study"
+    (kit / "frozen").mkdir(parents=True)
+    (root / "docs").mkdir()
+    for name in ("score.py", "run.py"):
+        shutil.copyfile(Path(scripts) / name, kit / name)
+    (root / "docs/outside-study-test.md").write_bytes(plan)
+    (kit / "frozen/RULES.md").write_bytes(RULES)
+    raw = {"candidates.tsv": tsv_bytes(CAND_COLS, w["candidates"], root / "t.tsv"),
+           "pairs.tsv": tsv_bytes(PAIR_COLS, w["pairs"], root / "t.tsv"),
+           "datasets.tsv": tsv_bytes(DS_COLS, w["datasets"], root / "t.tsv")}
+    (kit / "frozen/candidates.tsv.gz").write_bytes(gzip.compress(raw["candidates.tsv"], mtime=0))
+    (kit / "frozen/pairs.tsv.gz").write_bytes(gzip.compress(raw["pairs.tsv"], mtime=0))
+    (kit / "frozen/datasets.tsv").write_bytes(raw["datasets.tsv"])
+    (kit / "tables.sha256").write_text("".join(f"{sha(raw[n])}  {n}\n" for n in S.TABLE_FILES))
+    (kit / "reports.sha256").write_text(write_reports(w, reports))
+    repin(root)
+    git(root, "init", "-q")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "freeze")
+    return open_kit(root)
+
+
+def repin(root):
+    """FROZEN.sha256 for the frozen files as they are in `root`."""
+    root = Path(root)
+    (root / S.FROZEN_REL).write_text("".join(
+        f"{S.sha256_file(root / rel)}  {rel}\n" for rel in S.FROZEN_FILES))
+
+
+def open_kit(root):
+    root = Path(root)
+    R = load("run", root / "scripts/outside-study")
+    return types.SimpleNamespace(root=root, commit=git(root, "rev-parse", "HEAD").stdout.strip(),
+                                 S=R.S, R=R, reports_pins=root / "scripts/outside-study/reports.sha256")
+
+
+def commit_all(kit, message="change"):
+    git(kit.root, "add", "-A")
+    git(kit.root, "commit", "-q", "-m", message)
+    kit.commit = git(kit.root, "rev-parse", "HEAD").stdout.strip()
+    return kit.commit
+
+
+RECEIPT_FILES = {
+    "setup": ["ids.txt", "datasets.txt"],
+    "fetch": ["fetch/availability.tsv"],
+    "species-check": ["species-check/verdicts.tsv"],
+    "count": ["count/counted.tsv", "count/cohort-digests.tsv"],
+}
+
+
+def write_work(w, work, kit, species=SPECIES, population="primary", rehearsal=False):
+    """The world's run outputs as files in a work directory, with the six
+    receipts and the attempts log run.py writes (in the fields score.py
+    reads), as one run of `kit` at its HEAD would leave them."""
+    work = Path(work)
+    for sub in ("fetch", "species-check", "count", "predict", "known-gene", "receipts"):
+        (work / sub).mkdir(parents=True, exist_ok=True)
+    ids = sorted(w["availability"], key=S.genome_key)
+    (work / "ids.txt").write_text("".join(g + "\n" for g in ids))
+    (work / "datasets.txt").write_text("".join(d + "\n" for d in sorted(w["rows"])))
     S.write_tsv(work / "fetch/availability.tsv", ["genome_id", "fasta", "detail"], w["availability"].values())
     S.write_tsv(work / "species-check/verdicts.tsv", ["genome_id", "verdict", "reason", "distance", "gc"],
                 w["verdicts"].values())
-    S.write_tsv(work / "count/counted.tsv", ["genome_id", "counted", "detail"], w["counted"].values())
+    S.write_tsv(work / "count/counted.tsv", ["genome_id", "counted", "detail", "kset_digest"], w["counted"].values())
+    S.write_tsv(work / "count/cohort-digests.tsv", ["genome_id", "kset_digest"],
+                [{"genome_id": g, "kset_digest": dg} for g, dg in sorted(w["cohort_digests"].items())])
     for d, rows in w["rows"].items():
         (work / "predict" / f"{d}.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in rows))
+    (work / "predict/survivors.txt").write_text("".join(g + "\n" for g in sorted(w["survivors"], key=S.genome_key)))
     kg = w["known_gene"]
     if kg["unavailable"] is not None:
         (work / "known-gene/unavailable.txt").write_text(kg["unavailable"] + "\n")
+        known = ["known-gene/unavailable.txt"]
     else:
         S.write_tsv(work / "known-gene/datasets.tsv", ["dataset", "rule", "catalog_version", "replay", "samples"],
                     kg["datasets"].values())
         S.write_tsv(work / "known-gene/calls.tsv", ["dataset", "genome_id", "groups", "rule_groups",
                                                     "catalog_resistant"], kg["calls"].values())
-    return {"reports": reports, "tables": tables, "work": work, "pins": root / "reports.sha256",
-            "table_pins": root / "tables.sha256"}
+        known = ["known-gene/datasets.tsv", "known-gene/calls.tsv"]
+    files = dict(RECEIPT_FILES, **{
+        "known-gene": known,
+        "predict": ["predict/survivors.txt"] + [f"predict/{d}.jsonl" for d in sorted(w["rows"])]})
+    write_receipts(work, kit, files, species, population, rehearsal)
+    return work
 
 
-def git(root, *args):
-    return subprocess.run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.invalid",
-                           "-c", "commit.gpgsign=false", *args], capture_output=True, text=True, check=True)
-
-
-def frozen_kit(root):
-    """A git repository holding stand-in frozen files and a FROZEN.sha256
-    that pins them, committed: a kit root the gate passes."""
-    root = Path(root)
-    (root / "docs").mkdir(parents=True)
-    (root / "scripts/outside-study").mkdir(parents=True)
-    (root / "docs/outside-study-test.md").write_text("plan\n")
-    (root / "scripts/outside-study/score.py").write_text("score\n")
-    (root / "scripts/outside-study/run.py").write_text("run\n")
-    (root / "scripts/outside-study/FROZEN.sha256").write_text("".join(
-        f"{S.sha256_file(root / rel)}  {rel}\n" for rel in S.FROZEN_FILES))
-    git(root, "init", "-q")
-    git(root, "add", "-A")
-    git(root, "commit", "-q", "-m", "freeze")
-    return root
-
-
-def copy_kit(dst):
-    """The kit's own scripts and pins, copied, for tests that edit them."""
-    shutil.copytree(KIT, dst, ignore=shutil.ignore_patterns("__pycache__"))
-    return Path(dst)
+def write_receipts(work, kit, files, species=SPECIES, population="primary", rehearsal=False):
+    work = Path(work)
+    scripts = {n: S.sha256_file(kit.root / "scripts/outside-study" / n) for n in ("run.py", "score.py")}
+    attempts = []
+    for stage in S.STAGES:
+        r = {"stage": stage, "rehearsal": rehearsal,
+             "args": {"species": species, "population": population, "rehearsal": rehearsal},
+             "grm": {"sha256": GRM_SHA}, "kit": dict(commit=kit.commit, **scripts),
+             "outputs": {f"work/{rel}": S.sha256_file(work / rel) for rel in files[stage]}}
+        (work / "receipts" / f"{stage}.json").write_text(json.dumps(r, sort_keys=True, indent=1) + "\n")
+        attempts += [{"stage": stage, "event": "start"}, {"stage": stage, "event": "done"}]
+    (work / "receipts/attempts.jsonl").write_text("".join(json.dumps(a) + "\n" for a in attempts))
 
 
 def rehearsal_world():
@@ -444,11 +568,23 @@ def rehearsal_world():
     w["pairs"] = [pair(g, d, "R" if g in COHORT_R else "S", PRIMARY, True, True, False)
                   for d in (A, B) for g in ids]
     w["availability"] = {g: {"genome_id": g, "fasta": "yes", "detail": ""} for g in ids}
-    w["verdicts"] = {g: {"genome_id": g, "verdict": "pass", "reason": ""} for g in ids}
-    w["counted"] = {g: {"genome_id": g, "counted": "yes", "detail": ""} for g in ids}
+    w["verdicts"] = {g: {"genome_id": g, "verdict": "pass", "reason": "", "distance": "0.01", "gc": "0.33"}
+                     for g in ids}
+    w["counted"] = {g: {"genome_id": g, "counted": "yes", "detail": "", "kset_digest": digest_of(g)} for g in ids}
     found = {g: {f: g in COHORT_F[f] for f in (1, 2)} for g in ids}
     w["rows"] = {d: [make_row(d, w["shas"][d], g, lr, found[g]) for g in ids for lr in LEARNERS[d]] for d in (A, B)}
-    w["known_gene"]["calls"] = {(A, g): {"catalog_resistant": "yes" if g in CATALOG_RESISTANT else "no"}
+    w["known_gene"]["calls"] = {(A, g): {"dataset": A, "genome_id": g, "groups": "", "rule_groups": "",
+                                         "catalog_resistant": "yes" if g in CATALOG_RESISTANT else "no"}
                                 for g in ids}
     w["survivors"], w["found"] = list(ids), found
     return w
+
+
+def write_tables(w, folder):
+    """A rehearsal's stand-in tables, as plain TSV files."""
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    S.write_tsv(folder / "candidates.tsv", CAND_COLS, w["candidates"])
+    S.write_tsv(folder / "pairs.tsv", PAIR_COLS, w["pairs"])
+    S.write_tsv(folder / "datasets.tsv", DS_COLS, w["datasets"])
+    return folder

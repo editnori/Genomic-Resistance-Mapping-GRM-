@@ -41,6 +41,16 @@ class Refusals(unittest.TestCase):
         self.row()["dataset"] = B
         self.refused("a row for dataset")
 
+    def test_a_row_at_another_k(self):
+        self.row()["k"] = F.K + 1
+        self.refused("another k")
+
+    def test_predicted_genomes_that_are_not_the_survivors(self):
+        inputs = F.inputs(self.w)
+        inputs["predict_survivors"] = inputs["predict_survivors"][:-1]
+        with self.assertRaisesRegex(S.Refusal, "survivors"):
+            S.score(inputs)
+
     def test_a_row_with_another_fingerprint(self):
         self.row()["input_fingerprint"] = "beef"
         self.refused("fingerprint")
@@ -160,10 +170,12 @@ class SameStudy(unittest.TestCase):
         ids = F.SAME_STUDY
         w["availability"] = {g: {"genome_id": g, "fasta": "yes", "detail": ""} for g in ids}
         w["verdicts"] = {g: {"genome_id": g, "verdict": "pass", "reason": ""} for g in ids}
-        w["counted"] = {g: {"genome_id": g, "counted": "yes", "detail": ""} for g in ids}
+        w["counted"] = {g: {"genome_id": g, "counted": "yes", "detail": "", "kset_digest": F.digest_of(g)}
+                        for g in ids}
         w["rows"] = {A: [F.make_row(A, w["shas"][A], g, lr, {1: i % 2 == 0, 2: False})
                          for i, g in enumerate(ids) for lr in ("scm", "cart", "lasso")]}
         w["known_gene"]["calls"] = {(A, g): {"catalog_resistant": "no"} for g in ids}
+        w["survivors"] = list(ids)
         res = S.score(F.inputs(w, population="same-study"))
         self.assertEqual(res["datasets"], [A])
         self.assertEqual(res["population"], "same-study")
