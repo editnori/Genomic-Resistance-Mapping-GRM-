@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only metric audit of GRM result reports, revisions 5 to 12.
+"""Read-only metric audit of GRM result reports, revisions 5 to 13.
 
 From each report's saved per-sample labels and out-of-fold scores this
 recomputes, over the called isolates, the pooled confusion matrices and
@@ -21,7 +21,7 @@ member). Earlier reports have no groups.
 
 Schema-1 reports (revisions 5 and 6) score every isolate: a null-model fold
 is one whose held-out scores are all exactly 0.5. Schema-2 reports
-(revisions 7 to 12) leave a null fit's isolates uncalled: a null-model fold
+(revisions 7 to 13) leave a null fit's isolates uncalled: a null-model fold
 is one whose held-out scores are all null, and it has to be a gbt or lasso
 fold with complexity 0. The best learner of a schema-2 report is the highest
 random-split balanced accuracy among learners that call every isolate on
@@ -35,7 +35,10 @@ audited as revision 10 is, with --revision 11: it changes only how the
 random split's inner tuning is drawn, and this audit does not rebuild tuning.
 Revision 12 is audited as revision 11 is, with --revision 12: it draws the
 final models' tuning on the duplicate groups and reads a genome's annotation
-in a fixed order, and neither touches what this audit rebuilds.
+in a fixed order, and neither touches what this audit rebuilds. Revision
+13 is audited as revision 12 is, with --revision 13: it changes which
+targets each gene-panel row reads, and this audit rescores a panel row from
+the targets the report lists.
 
 usage: python3 -I audit.py OUT.json [species-glob] --revision N [--root DIR]
            (--backup DIR --log FILE --launch UTC | --reshaped)

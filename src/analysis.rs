@@ -37,8 +37,10 @@ pub const REPORT_SCHEMA: u32 = 2;
 /// duplicates whole in one outer fold (docs/duplicate-isolation.md).
 /// Revision 11 keeps those groups whole in the random split's inner tuning
 /// too (`eval::tuning_groups`), and revision 12 in the final models' tuning
-/// (`eval::final_tuning`).
-pub const EVALUATION_REVISION: u32 = 12;
+/// (`eval::final_tuning`). Revision 13 reads each gene-panel target only for
+/// its own drugs and organisms (`panels`, `panels-v2`): a report's `panels`
+/// rows change and an out-of-scope panel moves to `unsupported_assays`.
+pub const EVALUATION_REVISION: u32 = 13;
 
 #[derive(Serialize)]
 pub struct EvaluationAudit {
@@ -1343,19 +1345,20 @@ mod tests {
                 "input_fingerprint": fingerprint,
             })
         };
-        assert_eq!(EVALUATION_REVISION, 12);
+        assert_eq!(EVALUATION_REVISION, 13);
         assert_eq!(stale_reason(&saved(EVALUATION_REVISION, key), key), None);
         // Revision 8's solver could stop where revision 9's converges, a
         // revision-9 report may have scored a genome with its own copy in
         // training, a revision-10 report's random-split tuning may have put a
-        // genome and its copy on both sides of a tuning partition, and a
-        // revision-11 report's final models may have. The input fingerprint
-        // sees none of these changes.
-        for old in [7, 8, 9, 10, 11] {
+        // genome and its copy on both sides of a tuning partition, a
+        // revision-11 report's final models may have, and a revision-12
+        // report's panel rows read every target for every panel drug and
+        // organism. The input fingerprint sees none of these changes.
+        for old in [7, 8, 9, 10, 11, 12] {
             assert_eq!(
                 stale_reason(&saved(old, key), key),
                 Some("evaluation audit revision changed"),
-                "a same-fingerprint revision-{old} result must not enter revision 12"
+                "a same-fingerprint revision-{old} result must not enter revision 13"
             );
         }
         // A current report whose audit is invalid, or says nothing, is not a
