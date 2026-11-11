@@ -96,7 +96,7 @@ REVIEW-ICODE-PY's H1 and VERIFY-H1STATS showed that the lineage-cluster test was
 3. **Cohort arms pair per repeat.** A cohort arm's balanced subsample can differ by repeat, so J pairs it with the default's rows of the same repeat. The refusal of repeats > 1 with a cohort arm (PR #69's review) is gone. Under `common_outer_test_set_balanced`, J also checks the subsample is the balanced draw of the default's whole test fold: every default fold of every repeat is scored, with both classes, in counts `grm arm`'s `balanced_counts` gives (REVIEW-ICODE-PY L1).
 4. **A refused repeat.** When the default's lineage draw for a repeat is refused, `grm arm` draws the next keyed repeat past the slots (3, then 4), at most 2 replacements per dataset. Each refused draw is kept as `plans/refused-lineage-<repeat>.json` (summary.json's `refused_plans` lists it) and `repeats.json` lists every slot's keyed repeat. With fewer than 3 valid repeats after that, every lineage run of the arm is unavailable with that reason, and its contrasts are not produced. **A dataset with no decision-bearing lineage contrast can't be tested this way, and the run still finishes:** summary.json gives `decisions_made` per dataset and names it in `no_decision_datasets`, the report lists it under "Datasets the per-dataset test can't answer" with its planned, not produced and undefined counts, and `run.py` prints a `NO LINEAGE ANSWER` line and exits 0. This is Layth's ruling on H-1's pilot (2026-11-09), where Salmonella ciprofloxacin's lineage draws were refused. It replaced the exit 3 of REVIEW-ICODE-PY M3, which stopped the pilot after its report was written.
 5. **Sentinels.** Every run adds two arms exchangeable with the default. `sentinel-seed-twin` (learner seed 1001) judges rf and gbt, the learners its seed reaches. `sentinel-tuning-twin` (tuning seed 1002) judges scm, cart and the lasso: it keeps the default's outer folds and draws every outer fold's inner folds and both tuning holdouts again (`plan::retuned_plan`). Those draws are the only randomness those learners have. The default's own draw is the same procedure at its own seed (Rust test `a_retuned_plan_keeps_the_outer_folds_and_redraws_tuning`), so the twin is exchangeable with it. VERIFY-H1STATS listed a bootstrap or subsample of each training fold as other options; both train on other data than the default, so they aren't exchangeable with it and would flag real differences. The manifest records `sentinel_learners`. A sentinel's family C contrast is judged on its own p, outside BH (`adjust` none, `p_adj` = p; the manifest's `sentinel_adjust`), so its sensitivity no longer depends on the other arms (VERIFY's M1). When it isn't `inconclusive` for a learner it judges, or isn't produced, K marks that learner's decisions on the species unreliable.
-6. **BH's family.** One family over every non-sentinel lineage contrast of the run's species (REVIEW-ICODE-PY L4). For H-1's panel the family is every lineage contrast of every species run: `run.pending_contrasts` gives each run's records before adjustment, and `stats.finalize_sets` adjusts several runs' sets as one family, for `run.py combine`. K recomputes BH over the planned non-sentinel family C ids.
+6. **BH's family.** One family over every non-sentinel lineage contrast of the run's species (REVIEW-ICODE-PY L4). The ruling for H-1's panel was one family over every lineage contrast of every species run. `run.pending_contrasts` gives each run's records before adjustment and `stats.finalize_sets` adjusts several runs' sets as one family, but `run.py combine` joins the parts of one species and calls `stats.finalize` once, so every H-1 report adjusts inside its species. `second_reading.py` reads the panel-wide family beside the reports ([below](#a-second-reading-across-species-11-nov-2026)). K recomputes BH over the planned non-sentinel family C ids.
 7. **Inputs.** Cap and selection are two inputs, so an arm changing both is refused (REVIEW-ICODE-PY L2). A RAW holding `truth.json` (a synthetic root's marker) refuses to run unless the spec says `"synthetic": true`, so a synthetic run can't be recorded as real (L3).
 8. **Stage 2's entry, D3 as amended (ruling 5).** `scripts/input-comparison/stage2.py`: a stage-1 setting enters on a dataset when at least one reliable learner is `improves` on the lineage unit t with its log-loss interval's lower end above the 0.02 margin and its AUROC-delta interval above 0, and no reliable learner is `worse`. Blocks that enter combine by union; of two entering values of one other input, the larger mean log-loss gain wins, then the value nearer the default, then the smaller budget; k joins only after the k add-on. A spec that says `"stage": 2` may hold an arm changing the blocks and one other input, paired by that input's rule (never two inputs besides the blocks, so never k with a cohort change). Stage 2 itself runs later and is exploratory.
 
@@ -766,6 +766,203 @@ The 11 stage-1 arms are cap-1000, cap-4000, grr-v1, k21, k25, k-c, k-h, k-p, k-c
 A species runs as its main parts, each with the nine arms that aren't k arms, and a k21 and a k25 add-on part per main part, each run with `--reference-from` that main part's WORK. `combine` of a species' full spec takes them all. Every part equals its species spec but for `datasets` and `arms`. The pilot runs k21 in its own run, with no add-on part, so it times a k21 root on real data.
 
 The gate's pins, panel floor, base rates, curate inputs, learners, splits, repeats, margin and seed are `spec.json`'s; only the gate's `recorded` values are H-1's (above). `H1SpecTests` checks all of this, and feeds each species' parts to `combine`'s checks as finished parts. The lane report has each spec's `--estimate-only` on the master root.
+
+## A second reading across species (11 Nov 2026)
+
+The second reading takes the finished reports of several species together and prints its own tables beside K's. `scripts/input-comparison/second_reading.py` computes it. It changes no report, and it fits and tests nothing again. Every number is a count, a median, a binomial tail or a BH adjustment over the records J wrote.
+
+```
+python3 -B scripts/input-comparison/second_reading.py REPORT [REPORT ...] [--json OUT] \
+    [--predict ARM=better|worse ...] [--predict-on SPECIES ...]
+```
+
+REPORT is a run's or a combine's `report/ablation-report.json`, one species each. The script loads it through K's validation (`report.load_report`). It refuses a species given twice, and it refuses reports that differ in source commit, grm binary or the synthetic flag. The text goes to stdout, and `--json` writes the same reading as JSON.
+
+### The two faults
+
+K's report decides inside one species. Two of its rules read badly on a panel of species.
+
+**The family.** Item 6 of the decision method rules one BH family over H-1's panel. `combine` joins the parts of one species and adjusts once, so each H-1 report adjusts inside its species. The second reading computes the panel-wide family.
+
+**Rule 10.** The rule marks every decision of a learner on a species unreliable when one twin contrast of that learner rejects or isn't produced. Real data shows two faults in it.
+
+1. A twin contrast is also "not produced" on a dataset whose default has no lineage result (item 4 of the decision method). That dataset has no decision to protect, and the rule still flags the learner on the whole species.
+2. The rule judges each twin contrast at 0.05 on its own. An exactly calibrated test rejects at least once in 18 twin contrasts 60 times in 100 (1 − 0.95^18 = 0.603).
+
+On H-1 the rule marks all five learners on all four species (the first table under "H-1's reading"). A mark on every decision separates none of them.
+
+### Output
+
+A contrast is default → arm for one dataset and learner, and an estimate above zero means the arm's log loss is lower. The contrasts that decide are family C: the lineage split of the confirmatory datasets. A twin is a sentinel arm, the default again with other seeds, so every true difference on a twin is zero.
+
+The script prints three parts per species.
+
+**arms.** Per arm, the family C contrasts planned and made, and improves and worse as the report decided them. `inside` counts the made contrasts whose 90% interval lies wholly inside ± the margin. `beyond` counts those whose estimate is at least the margin either way, and `zero` those whose estimate is exactly 0. Then come the quartiles of the estimate and the median AUROC change. The twins are in the table, so each arm reads against them.
+
+**by dataset.** Per arm, the datasets where the mean estimate over the learners is above zero (better) and below it (worse), with a two-sided exact sign test. The JSON holds each mean (`dataset_means`).
+
+**calibration.** Per learner, k rejections out of n contrasts of the twins that judge it. Those are the family C contrasts among the ones rule 10 reads (`report.judging_contrasts`). A twin contrast rejects when its own p is under 0.05 and its 95% interval is off zero.
+
+A twin contrast with no p stays out of the count when the default has no lineage result for that dataset and learner. With the default's result present it counts as a rejection. `flagged` = P(k or more given n, 0.05) < 0.05. With no twin contrast to count, `flagged` is null and no decision of that learner is firm. The number of contrasts rule 10 marks prints beside the count.
+
+It prints five parts across the species (the panel).
+
+**family.** BH over every report's family C as one family, as `stats.finalize_sets` adjusts several sets. The family is every planned contrast outside the ids the report judged on their own p (`report.unadjusted_ids`). A contrast without a p enters at p = 1.
+
+**decisions.** Every contrast that is improves or worse inside its species or in the panel family. `firm` = the same decision under both, on a learner the species' calibration count leaves unflagged.
+
+**calibration.** The calibration count per learner over all the species, with its exact 95% interval.
+
+**by dataset.** The sign test per arm over the datasets of all the species.
+
+**predictions.** Each `--predict` names an arm and `better` or `worse`. The script reads it on the `--predict-on` species, or on every species without that flag. It sets the datasets on the predicted side of zero against the other side, ties dropped, in a one-sided exact sign test at 0.05. `pass` needs every prediction.
+
+### Limits
+
+- The reading is descriptive. Its two thresholds, the calibration count and the firm rule, date from after rule 10's faults showed on real Salmonella and N. gonorrhoeae results. K's reports stand as written, and this reading withdraws none of their decisions.
+- Every interval is conditional on the species' cohorts. Nothing here is external validation.
+- A lower log loss can come from calibration alone, so the AUROC change prints beside each estimate.
+- The sign test treats datasets as separate, and the datasets of one species share genomes. Its p guides and doesn't decide.
+- A cohort arm scores on the test genomes both cohorts hold, drawn to the default's class balance. Its change is the effect of the training cohort on those genomes.
+- The calibration count has little power on a small species. With 4 twin contrasts it takes 2 rejections to flag a learner, and with 18 it takes 4.
+- A twin contrast that is missing while the default has a result counts as a rejection, whatever made it missing. A twin whose redraws were refused then reads like a failed test (S. aureus, below).
+
+### Tests
+
+`tests/input_comparison/test_second_reading.py` reads reports cut down by hand to the keys the reading takes. Their records go through `stats.finalize`, as `run.py` finalizes them, and the tests need no binary. Its 16 tests cover:
+
+- **A twin's rejection:** it needs both the p and the interval, and a twin inside BH is still counted on its own p.
+- **A missing twin:** with the default's result it counts, and with the default missing too it stays out.
+- **The judge:** a twin that `sentinel_learners` gives no learner judges none.
+- **The flag:** it is the binomial tail, and a tail of exactly 0.05 doesn't flag.
+- **The panel:** the family's size and its entries at p = 1; a decision under one family only isn't firm; a decision on a flagged or unjudged learner isn't firm.
+- **The sign tests:** the mean over the learners and not the median; ties dropped; the larger side's tail; a prediction read on its own species only.
+- **The arm table, the text and the command:** each count beside its label; the JSON and the text equal `read`'s and `render`'s.
+- **Refusals:** a species twice; reports of two commits, binaries or synthetic flags; an unknown `--predict-on` species; a prediction for an arm no report holds; a prediction that isn't `ARM=better` or `ARM=worse`.
+
+Those reports skip K's validation, so a field K renamed would pass them. `test_the_second_reading_takes_the_report_as_k_wrote_it` in `tests/input_comparison/test_run.py` closes that gap. It loads the end-to-end run's report through K's `load_report` and holds the reading's counts to the report's own. It needs the release `grm`, so CI skips it and Boat runs it.
+
+`tests/ablation/test_report.py` checks `judging_contrasts` on its own, since rule 10 and the calibration count both read it.
+
+### H-1's reading
+
+H-1 ran the four species specs above at `31b7edb` on public BV-BRC genomes: 72 datasets, 11 arms and the two twins. Its four `combine` reports are K's and stand as written. The numbers below are their second reading.
+
+```
+python3 -B scripts/input-comparison/second_reading.py \
+    SAL/report/ablation-report.json SA/report/ablation-report.json \
+    NG/report/ablation-report.json MTB/report/ablation-report.json --json reading.json \
+    --predict cap-4000=better --predict cap-1000=worse \
+    --predict-on "Staphylococcus aureus" --predict-on "Mycobacterium tuberculosis"
+```
+
+SAL, SA, NG and MTB are the four `combine` WORK folders.
+
+**Timing.** The plan's author fixed the parts to count, the calibration rule, the firm rule and the four predictions on 11 Nov 2026 at 06:15 UTC. The run's five main parts were still running then. None had written a report, and the author had opened none of the run's checkpoint files. The first S. aureus part finished at 07:17 UTC and the M. tuberculosis part at 09:56 UTC.
+
+The author had seen two things before. One was a Salmonella report rebuilt from arm outputs that earlier stages of the run had saved: 25 datasets, 9 arms and the two twins. The other was N. gonorrhoeae counts and medians from a stage that stopped: 7 datasets, no grr-v1. So S. aureus and M. tuberculosis were unseen for every arm, and k21 and k25 were unseen on every species.
+
+The plan is a private working note. Its sha256 (`57ba6f212a57e2516477f020d1c3ae225b2f8a6c37fc9941cedcfd7be1b8c24d`) went into a private ledger at 06:15 UTC, and no public timestamp attests it. A script fixed with the plan first read the numbers below, and `second_reading.py` gives the same numbers on the four reports.
+
+**Counts.** A dataset has a lineage answer when the report doesn't list it under "Datasets the per-dataset test can't answer" (item 4 of the decision method). The 72 datasets split into 49 with a lineage answer and 23 without. The reports made 2,420 of the 4,680 planned family C contrasts.
+
+| Species | Datasets | With a lineage answer | Family C planned | Made | Rule 10 marks, per learner | Learners the count flags |
+|---|---:|---:|---:|---:|---:|---|
+| Salmonella | 25 | 18 | 1,625 | 965 | 469 | none |
+| S. aureus | 18 | 7 | 1,170 | 305 | 241 | scm, cart, lasso |
+| N. gonorrhoeae | 7 | 4 | 455 | 210 | 118 | none |
+| M. tuberculosis | 22 | 20 | 1,430 | 940 | 379 | none |
+| All four | 72 | 49 | 4,680 | 2,420 | | |
+
+Rule 10 marks all five learners on all four species, and the calibration count flags 3 of the 20 pairs of species and learner.
+
+**Calibration.** Rejections out of the twin contrasts counted, per learner:
+
+| Learner | Salmonella | S. aureus | N. gonorrhoeae | M. tuberculosis | All four | Tail | 95% interval |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| scm | 1 of 18 | 3 of 7 | 0 of 4 | 0 of 20 | 4 of 49 | 0.2287 | 0.0227 to 0.1960 |
+| cart | 0 of 18 | 4 of 7 | 0 of 4 | 0 of 20 | 4 of 49 | 0.2287 | 0.0227 to 0.1960 |
+| rf | 1 of 18 | 1 of 7 | 0 of 4 | 1 of 20 | 3 of 49 | 0.4463 | 0.0128 to 0.1687 |
+| gbt | 0 of 18 | 0 of 7 | 0 of 4 | 0 of 20 | 0 of 49 | 1.0000 | 0.0000 to 0.0725 |
+| lasso | 0 of 18 | 3 of 7 | 0 of 4 | 0 of 20 | 3 of 49 | 0.4463 | 0.0128 to 0.1687 |
+
+Over the four species the count flags no learner: 0 to 4 rejections of 49, where a calibrated test gives 2 or 3.
+
+The three S. aureus flags are the three learners the retuned twin judges. They come from 3 datasets (chloramphenicol, oxacillin and tetracycline) where the retuned twin has no lineage result while the default has one. On each, the twin's redraws of an inner fold or a tuning holdout kept lacking a class. The twin replaces a refused redraw with the next keyed draw at most 2 times per split (`MAX_REPLACEMENTS`), and the next refusal leaves the arm without a lineage result.
+
+The plan counts each of those as a rejection. Among the 4 contrasts the twin did make per learner, cart rejects 1 and scm and the lasso 0. So these flags record redraws the twin couldn't draw on a species with 7 answerable datasets, and they say little about how often those learners' tests reject there. They stand as the plan wrote them, and no firm decision sits on S. aureus.
+
+**The panel family.** One BH family holds 3,960 planned contrasts: 1,945 tested and 2,015 entering at p = 1. That is the 4,680 planned family C contrasts less the 720 twin contrasts, which the reports judge on their own p.
+
+33 contrasts are improves or worse under at least one family. 23 of them are firm, 5 improves and 18 worse. The other 10 hold under one family only (4 in the panel only, 6 inside M. tuberculosis only), and none of the 33 sits on a flagged learner.
+
+By species and learner, the firm decisions are rf on M. tuberculosis (1 improves, 15 worse), rf on Salmonella (2 improves, 2 worse), and one each on gbt on Salmonella (improves), scm on M. tuberculosis (improves) and gbt on M. tuberculosis (worse). By arm they are budget-16000 (5 worse), cap-4000 (3 improves, 4 worse), cap-1000 (4 worse), grr-v1 (2 improves, 2 worse), budget-1000 (2 worse) and k21 (1 worse).
+
+There is no firm decision on S. aureus or N. gonorrhoeae, on cart or the lasso, or on k25 or a block arm (k-c, k-h, k-p, k-c-h-p). The one firm scm decision, cap-4000 on M. tuberculosis clofazimine, has an AUROC change of −0.0138. Its lower log loss is a change in the probabilities, and the ranking got no better.
+
+**The size of the change.** Family C contrasts over the four species, 360 planned per arm. The report lists why each planned contrast is missing when a run didn't make it.
+
+| Arm | Planned | Made | Inside the margin | Beyond the margin | Exactly zero |
+|---|---:|---:|---:|---:|---:|
+| cap-1000 | 360 | 165 | 4 | 118 | 0 |
+| cap-4000 | 360 | 245 | 15 | 160 | 1 |
+| grr-v1 | 360 | 165 | 1 | 143 | 1 |
+| k21 | 360 | 245 | 60 | 100 | 1 |
+| k25 | 360 | 245 | 79 | 99 | 3 |
+| k-c | 360 | 110 | 101 | 2 | 91 |
+| k-h | 360 | 20 | 14 | 4 | 13 |
+| k-p | 360 | 245 | 198 | 23 | 153 |
+| k-c-h-p | 360 | 15 | 10 | 3 | 8 |
+| budget-1000 | 360 | 245 | 115 | 71 | 98 |
+| budget-16000 | 360 | 245 | 125 | 57 | 98 |
+| sentinel-seed-twin | 360 | 245 | 201 | 11 | 147 |
+| sentinel-tuning-twin | 360 | 230 | 71 | 102 | 49 |
+
+A retune alone moves 102 of the retuned twin's 230 contrasts beyond the 0.02 margin, and k21 and k25 move 100 and 99 of 245. The reseeded twin moves 11 of 245.
+
+**By dataset.** Each cell is the datasets where the arm is better, then worse, of those with a made contrast. The rest have a mean of exactly zero.
+
+| Arm | Salmonella | S. aureus | N. gonorrhoeae | M. tuberculosis | All four | Sign p | Median |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| cap-1000 | 1, 9 of 10 | 0, 3 of 3 | 0, 2 of 2 | 7, 11 of 18 | 8, 25 of 33 | 0.0046 | -0.0329 |
+| cap-4000 | 14, 4 of 18 | 4, 3 of 7 | 2, 2 of 4 | 11, 9 of 20 | 31, 18 of 49 | 0.0854 | 0.0189 |
+| grr-v1 | 7, 8 of 15 | 3, 1 of 4 | 3, 1 of 4 | 2, 8 of 10 | 15, 18 of 33 | 0.7283 | -0.0101 |
+| k21 | 7, 11 of 18 | 4, 3 of 7 | 1, 3 of 4 | 8, 12 of 20 | 20, 29 of 49 | 0.2529 | -0.0040 |
+| k25 | 8, 10 of 18 | 1, 6 of 7 | 2, 2 of 4 | 8, 12 of 20 | 19, 30 of 49 | 0.1524 | -0.0047 |
+| k-c | 3, 3 of 18 | none made | 2, 1 of 4 | none made | 5, 4 of 22 | 1.0000 | 0.0000 |
+| k-h | 2, 0 of 3 | 0, 0 of 1 | none made | none made | 2, 0 of 4 | 0.5000 | 0.0117 |
+| k-p | 7, 9 of 18 | 3, 4 of 7 | 2, 1 of 4 | 1, 0 of 20 | 13, 14 of 49 | 1.0000 | 0.0000 |
+| k-c-h-p | 2, 0 of 3 | none made | none made | none made | 2, 0 of 3 | 0.5000 | 0.0072 |
+| budget-1000 | 6, 12 of 18 | 3, 4 of 7 | 1, 3 of 4 | 2, 18 of 20 | 12, 37 of 49 | 0.0005 | -0.0082 |
+| budget-16000 | 12, 6 of 18 | 3, 4 of 7 | 3, 1 of 4 | 9, 11 of 20 | 27, 22 of 49 | 0.5682 | 0.0019 |
+| sentinel-seed-twin | 9, 9 of 18 | 1, 6 of 7 | 3, 1 of 4 | 9, 11 of 20 | 22, 27 of 49 | 0.5682 | -0.0003 |
+| sentinel-tuning-twin | 7, 11 of 18 | 2, 2 of 4 | 2, 2 of 4 | 9, 11 of 20 | 20, 26 of 46 | 0.4614 | -0.0016 |
+
+budget-1000 is worse on 37 of 49 datasets (median change −0.0082, under the margin) and cap-1000 on 25 of 33 (median −0.0329). cap-4000 is better on 31 of 49, and 14 of those are Salmonella's: on the other three species it is better on 17 and worse on 14. k21, k25, grr-v1, k-c, k-p and budget-16000 show no direction, and neither do the twins. k-h and k-c-h-p have a made contrast on 4 and 3 datasets, too few to read.
+
+**The predictions.** The plan gave one prediction a direction and predicted no direction for three.
+
+P1, cohort size, fails. On S. aureus and M. tuberculosis together, the plan predicted cap-4000 better on more than half the datasets and cap-1000 worse on more than half. cap-4000 is better on 15 and worse on 12 of 27 (one-sided p 0.3506). cap-1000 is worse on 14 and better on 7 of 21 (p 0.0946).
+
+The prediction came from Salmonella's pattern (cap-4000 better on 14 of 18, cap-1000 worse on 9 of 10). That pattern doesn't carry to the two unseen species.
+
+- **P2, the feature side.** The plan predicted no direction for k-c, k-p, budget-1000 and budget-16000. None shows for k-c (sign p 1.0), k-p (1.0) and budget-16000 (0.5682). budget-1000 goes against the prediction: it is worse on 37 of 49 (p 0.0005).
+- **P3, k.** The plan predicted no direction for k21 and k25, and none shows (p 0.2529 and 0.1524).
+- **P4, selection.** The plan predicted no direction for grr-v1, and none shows (p 0.7283).
+
+A sign test that finds no direction doesn't show that an arm equals the default. The table of sizes is the evidence for that. k-c and k-p sit inside the margin on 101 of 110 and 198 of 245 contrasts, and the two budget arms on 115 and 125 of 245. k21, k25 and grr-v1 move many contrasts beyond it both ways.
+
+**Result.** By the plan's tests, no arm beats the default across the four species. A budget of 1,000 features is worse on most datasets by less than the margin, and a cohort capped at 1,000 genomes is worse on most by more than it.
+
+A cohort of 4,000 was better on 14 of 18 Salmonella datasets. On the two species that tested the prediction it was better on 15 of 27, which the sign test can't tell from an even split.
+
+Firm decisions are 23 of 1,945 tested contrasts, 20 of them on rf and 18 of them worse. N. gonorrhoeae, with 4 answerable datasets, and S. aureus, with 7, are too small to decide anything alone.
+
+**Open.** The sign test counts datasets and ignores the size of a change. cap-4000's mean change over its 49 datasets is 0.0448, against a median of 0.0189. Five datasets carry that mean, each above 0.2: M. tuberculosis clofazimine (0.5634), pyrazinamide (0.3358), linezolid (0.2476) and amoxicillin (0.2237), and Salmonella gentamicin (0.2430).
+
+On clofazimine and linezolid the reports' AUROC change, averaged over the learners, is below zero (−0.0166 and −0.0261). The five come from the JSON's `dataset_means`. They were read after the results, and no test here stands on them.
+
+The calibration count reads a twin whose redraws were refused as a rejection. A later reading could count those apart, and its rule would have to be fixed before the results it reads. Rule 10 keeps the two faults above, so on a panel its mark separates no decision.
 
 ## Cost
 

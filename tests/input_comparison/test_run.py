@@ -2469,6 +2469,36 @@ class EndToEndTests(unittest.TestCase):
         from scripts.ablation import report as k_report
         k_report.load_report(self.work / "report" / "ablation-report.json", prediction_root=self.work)
 
+    def test_the_second_reading_takes_the_report_as_k_wrote_it(self):
+        """second_reading.py's unit tests read reports cut down by hand. This one reads a report K wrote, through
+        K's validation, and holds the reading's counts to the report's own."""
+        report = run.k_report.load_report(self.work / "report" / "ablation-report.json")
+        reading = load("second_reading").read([report])
+        (species,) = reading["species"]
+        family_c = [x for x in report["contrasts"] if x["family"] == "C"]
+        self.assertEqual(species["planned"], 13 * 5)  # the lineage half of the 13 * 5 * 2 planned
+        self.assertEqual(species["made"], sum(x["estimate"] is not None for x in family_c))
+        self.assertGreater(species["made"], 0)
+        self.assertEqual(species["unanswered"], self.summary["no_decision_datasets"])
+        for arm, row in species["arms"].items():
+            decided = [x["decision"] for x in family_c if x["treatment"] == arm]
+            self.assertEqual((row["improves"], row["worse"]), (decided.count("improves"), decided.count("worse")), arm)
+        # Every learner has a twin that judges it, and each of its twin contrasts is counted or left out.
+        twins = report["manifest"]["sentinel_learners"]
+        for learner, count in species["calibration"].items():
+            judges = sorted(arm for arm, learners in twins.items() if learner in learners)
+            self.assertEqual(count["twins"], judges, learner)
+            self.assertEqual(count["of"] + count["left_out"], len(judges) * species["datasets"], learner)
+        # One report: the panel's family is the species' own, so its BH gives K's p_adj back.
+        outside = set(run.k_report.unadjusted_ids(report["manifest"], report["planned_contrasts"]))
+        self.assertTrue(outside)
+        self.assertEqual(reading["panel"]["family"]["tested"],
+                         sum(x["p"] is not None for x in family_c if x["id"] not in outside))
+        self.assertEqual(reading["panel"]["one_family_only"], 0)
+        self.assertTrue(reading["panel"]["decisions"])  # the planted effect's, at the least
+        for d in reading["panel"]["decisions"]:
+            self.assertEqual(d["p_adj_panel"], d["p_adj_species"], d["id"])
+
 
 if __name__ == "__main__":
     unittest.main()
