@@ -36,6 +36,9 @@ from pathlib import Path
 
 KIT = Path(__file__).resolve().parent
 STAGES = ("setup", "fetch", "species-check", "count", "known-gene", "predict")
+# What `grm species-check` decides a fail and a boundary flag from. When a
+# recorded genome keeps all of them, only the GC rule can move its verdict.
+SAME_DISTANCES = ("distance", "nearest_species", "nearest_distance", "inside_species")
 GATED = ("known-gene", "predict")
 
 
@@ -359,16 +362,35 @@ class Run:
                 changes.append({"genome_id": s["reference"], "species": s["species"],
                                 "recorded": f"reference {rec_refs[s['species']]}", "now": f"reference {s['reference']}"})
         now_by = {(g["species"], g["genome_id"]): g for g in now["genomes"]}
+        # A recorded genome's verdict may move only between pass and
+        # borderline, and only when its distances are the recorded ones: then
+        # the GC rule alone moved it, because the species' GC median and
+        # spread are now taken over the cohort and the new genomes together.
+        # Such a move is listed and the run goes on. Any other change stops it.
+        moves = []
         for g in recorded["genomes"]:
             n = now_by.get((g["species"], g["genome_id"]))
-            if n is None or n["verdict"] != g["verdict"]:
-                changes.append({"genome_id": g["genome_id"], "species": g["species"],
-                                "recorded": g["verdict"], "now": None if n is None else n["verdict"]})
+            if n is not None and n["verdict"] == g["verdict"]:
+                continue
+            row = {"genome_id": g["genome_id"], "species": g["species"],
+                   "recorded": g["verdict"], "now": None if n is None else n["verdict"]}
+            gc_only = (
+                n is not None
+                and {g["verdict"], n["verdict"]} == {"pass", "borderline"}
+                and all(k in g and k in n and g[k] == n[k] for k in SAME_DISTANCES)
+            )
+            (moves if gc_only else changes).append(row)
+        cdir = self.work / "species-check"
+        cdir.mkdir(parents=True, exist_ok=True)
+        for stale in ("cohort-changes.tsv", "cohort-gc-moves.tsv"):
+            if (cdir / stale).exists():
+                (cdir / stale).unlink()
         if changes:
-            p = self.work / "species-check" / "cohort-changes.tsv"
-            p.parent.mkdir(parents=True, exist_ok=True)
+            p = cdir / "cohort-changes.tsv"
             S.write_tsv(p, ["genome_id", "species", "recorded", "now"], changes)
             refuse(f"{len(changes)} recorded species-check results changed when the frozen genomes joined; see {p}")
+        moves_path = cdir / "cohort-gc-moves.tsv"
+        S.write_tsv(moves_path, ["genome_id", "species", "recorded", "now"], moves)
         rows = []
         for g in fetched:
             n = now_by.get((name, g))
@@ -377,14 +399,14 @@ class Run:
             rows.append({"genome_id": g, "verdict": n["verdict"],
                          "reason": " ".join((n.get("reason") or "").split()),
                          "distance": n["distance"], "gc": n["gc"]})
-        out = self.work / "species-check" / "verdicts.tsv"
-        out.parent.mkdir(parents=True, exist_ok=True)
+        out = cdir / "verdicts.tsv"
         S.write_tsv(out, ["genome_id", "verdict", "reason", "distance", "gc"], rows)
         count = {v: sum(r["verdict"] == v for r in rows) for v in ("pass", "borderline", "fail")}
-        self.write_receipt("species-check", started, [str(recorded_path)], [str(out), str(dst)], {
+        self.write_receipt("species-check", started, [str(recorded_path)], [str(out), str(moves_path), str(dst)], {
             "fetched genomes judged": len(rows),
             "pass": count["pass"], "borderline (kept, flagged)": count["borderline"], "fail (excluded)": count["fail"],
-            "recorded genomes with unchanged verdicts": len(recorded["genomes"]),
+            "recorded genomes with unchanged verdicts": len(recorded["genomes"]) - len(moves),
+            "recorded genomes whose GC flag alone moved (listed)": len(moves),
             "reference": rec_refs[name],
         })
 

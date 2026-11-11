@@ -373,8 +373,8 @@ def write_world(w, root):
     """Writes the world as files in the layout score.py's `load_inputs`
     reads. Returns the paths and the overrides `score.main` takes."""
     root = Path(root)
-    reports, w7, work = root / "reports", root / "w7", root / "work"
-    for p in (reports, w7, work / "fetch", work / "species-check", work / "count", work / "predict",
+    reports, tables, work = root / "reports", root / "tables", root / "work"
+    for p in (reports, tables, work / "fetch", work / "species-check", work / "count", work / "predict",
               work / "known-gene"):
         p.mkdir(parents=True, exist_ok=True)
     pins = []
@@ -383,11 +383,11 @@ def write_world(w, root):
         (reports / f"{d}.json").write_bytes(data)
         pins.append(f"{sha(data)}  {d}.json")
     (root / "reports.sha256").write_text("\n".join(pins) + "\n")
-    S.write_tsv(w7 / "candidates.tsv", CAND_COLS, w["candidates"])
-    S.write_tsv(w7 / "pairs.tsv", PAIR_COLS, w["pairs"])
-    S.write_tsv(w7 / "datasets.tsv", DS_COLS, w["datasets"])
-    (root / "w7.sha256").write_text("".join(
-        f"{S.sha256_file(w7 / n)}  {n}\n" for n in ("candidates.tsv", "pairs.tsv", "datasets.tsv")))
+    S.write_tsv(tables / "candidates.tsv", CAND_COLS, w["candidates"])
+    S.write_tsv(tables / "pairs.tsv", PAIR_COLS, w["pairs"])
+    S.write_tsv(tables / "datasets.tsv", DS_COLS, w["datasets"])
+    (root / "tables.sha256").write_text("".join(
+        f"{S.sha256_file(tables / n)}  {n}\n" for n in ("candidates.tsv", "pairs.tsv", "datasets.tsv")))
     S.write_tsv(work / "fetch/availability.tsv", ["genome_id", "fasta", "detail"], w["availability"].values())
     S.write_tsv(work / "species-check/verdicts.tsv", ["genome_id", "verdict", "reason", "distance", "gc"],
                 w["verdicts"].values())
@@ -402,8 +402,8 @@ def write_world(w, root):
                     kg["datasets"].values())
         S.write_tsv(work / "known-gene/calls.tsv", ["dataset", "genome_id", "groups", "rule_groups",
                                                     "catalog_resistant"], kg["calls"].values())
-    return {"reports": reports, "w7": w7, "work": work, "pins": root / "reports.sha256",
-            "w7_pins": root / "w7.sha256"}
+    return {"reports": reports, "tables": tables, "work": work, "pins": root / "reports.sha256",
+            "table_pins": root / "tables.sha256"}
 
 
 def git(root, *args):

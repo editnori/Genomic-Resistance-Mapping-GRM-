@@ -5,6 +5,9 @@ environment variables:
 
   FAKE_MISSING   comma-separated ids fetch fails to get
   FAKE_VERDICTS  JSON {id: verdict} for species-check (default pass)
+  FAKE_DISTANCES JSON {id: distance} for species-check (default 0.01)
+  FAKE_UNJUDGED  comma-separated ids species-check leaves out
+  FAKE_REFERENCE a reference id species-check writes for every species
   FAKE_UNCOUNTED comma-separated ids count fails on
 """
 
@@ -40,15 +43,25 @@ def main(argv):
         return 0
     if cmd[:1] == ["species-check"]:
         verdicts = json.loads(os.environ.get("FAKE_VERDICTS", "{}"))
+        distances = json.loads(os.environ.get("FAKE_DISTANCES", "{}"))
+        unjudged = env("FAKE_UNJUDGED")
         path = root / "species-check" / "species_check.json"
         doc = json.loads(path.read_text())
         rows = []
         for sp in json.loads((root / "curated" / "species.json").read_text()):
             for g in ids_of(root, sp["slug"]):
+                if g in unjudged:
+                    continue
                 v = verdicts.get(g, "pass")
-                rows.append({"genome_id": g, "species": sp["species"], "verdict": v, "gc": 0.33,
-                             "distance": 0.01, "reason": "far from the reference" if v == "fail" else None})
+                d = distances.get(g, 0.01)
+                rows.append({"genome_id": g, "species": sp["species"], "verdict": v, "gc": 0.33, "gc_z": 0.0,
+                             "distance": d, "ani": 1.0 - d, "nearest_species": None, "nearest_distance": None,
+                             "inside_species": None,
+                             "reason": "far from the reference" if v == "fail" else None})
         doc["genomes"] = rows
+        if os.environ.get("FAKE_REFERENCE"):
+            for sp in doc["species"]:
+                sp["reference"] = os.environ["FAKE_REFERENCE"]
         path.write_text(json.dumps(doc))
         print(f"judged {len(rows)}")
         return 0

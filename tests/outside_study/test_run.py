@@ -28,6 +28,18 @@ def tree_digest(root):
     return h.hexdigest()
 
 
+FAKE_SWITCHES = ("FAKE_MISSING", "FAKE_VERDICTS", "FAKE_UNCOUNTED", "FAKE_DISTANCES", "FAKE_UNJUDGED",
+                 "FAKE_REFERENCE")
+
+
+def recorded_genome(g, verdict="pass"):
+    """A genome of the master root's recorded species check, with the fields
+    `grm species-check` writes and the stand-in's default values."""
+    return {"genome_id": g, "species": F.NAME, "verdict": verdict, "gc": 0.33, "gc_z": 0.0, "distance": 0.01,
+            "ani": 0.99, "nearest_species": None, "nearest_distance": None, "inside_species": None,
+            "reason": "far from the reference" if verdict == "fail" else None}
+
+
 class RunScript(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -46,7 +58,7 @@ class RunScript(unittest.TestCase):
         (m / f"species/{F.SPECIES}/genomes.txt").write_text("\n".join(F.COHORT) + "\n")
         (m / "species-check/species_check.json").write_text(json.dumps({
             "species": [{"species": F.NAME, "slug": F.SPECIES, "reference": "999.1"}],
-            "genomes": [{"genome_id": g, "species": F.NAME, "verdict": "pass"} for g in F.COHORT]}))
+            "genomes": [recorded_genome(g) for g in F.COHORT]}))
         grm = self.grm = root / "grm"
         grm.write_text(f"#!{sys.executable} -I\n" + (F.ROOT / "tests/outside_study/fake_grm.py").read_text())
         grm.chmod(grm.stat().st_mode | stat.S_IXUSR)
@@ -56,7 +68,9 @@ class RunScript(unittest.TestCase):
         self.datasets.write_text(f"{F.A}\n{F.B}\n")
         self.work = root / "work"
         self.kit = F.frozen_kit(root / "kit")
-        self.env = {k: os.environ.get(k) for k in ("FAKE_MISSING", "FAKE_VERDICTS", "FAKE_UNCOUNTED")}
+        self.env = {k: os.environ.get(k) for k in FAKE_SWITCHES}
+        for k in FAKE_SWITCHES:
+            os.environ.pop(k, None)
 
     def tearDown(self):
         for k, v in self.env.items():
@@ -210,15 +224,83 @@ class RunScript(unittest.TestCase):
                                   datasets=str(self.datasets), jobs=2, rehearsal=False,
                                   pins=self.paths["pins"], kit_root=self.kit)
 
-    def test_a_changed_recorded_verdict_stops_the_run(self):
-        os.environ["FAKE_VERDICTS"] = json.dumps({"999.6": "borderline"})
+    def species_check_refused(self, pattern, rows):
         self.assertEqual(self.run_stage("setup")[0], 0)
         self.assertEqual(self.run_stage("fetch")[0], 0)
-        self.assertRefused(self.run_stage("species-check"), "1 recorded species-check results changed")
+        self.assertRefused(self.run_stage("species-check"), pattern)
         changes = R.S.read_tsv(self.work / "species-check/cohort-changes.tsv")
-        self.assertEqual([(r["genome_id"], r["recorded"], r["now"]) for r in changes],
-                         [("999.6", "pass", "borderline")])
+        self.assertEqual([(r["genome_id"], r["recorded"], r["now"]) for r in changes], rows)
         self.assertFalse((self.work / "receipts/species-check.json").exists())
+        self.assertFalse((self.work / "species-check/cohort-gc-moves.tsv").exists())
+        self.assertFalse((self.work / "species-check/verdicts.tsv").exists())
+
+    def test_a_recorded_gc_flag_that_moves_is_listed_and_the_run_goes_on(self):
+        os.environ["FAKE_VERDICTS"] = json.dumps({"999.6": "borderline"})
+        for stage in ("setup", "fetch", "species-check"):
+            code, err = self.run_stage(stage)
+            self.assertEqual(code, 0, f"{stage}: {err}")
+        moves = R.S.read_tsv(self.work / "species-check/cohort-gc-moves.tsv")
+        self.assertEqual([(r["genome_id"], r["recorded"], r["now"]) for r in moves],
+                         [("999.6", "pass", "borderline")])
+        self.assertFalse((self.work / "species-check/cohort-changes.tsv").exists())
+        counts = self.receipt("species-check")["counts"]
+        self.assertEqual(counts["recorded genomes with unchanged verdicts"], len(F.COHORT) - 1)
+        self.assertEqual(counts["recorded genomes whose GC flag alone moved (listed)"], 1)
+        self.assertIn(str(self.work / "species-check/cohort-gc-moves.tsv"), self.receipt("species-check")["outputs"])
+
+    def test_no_recorded_flag_moving_writes_an_empty_list(self):
+        for stage in ("setup", "fetch", "species-check"):
+            self.assertEqual(self.run_stage(stage)[0], 0)
+        self.assertEqual(R.S.read_tsv(self.work / "species-check/cohort-gc-moves.tsv"), [])
+        counts = self.receipt("species-check")["counts"]
+        self.assertEqual(counts["recorded genomes with unchanged verdicts"], len(F.COHORT))
+        self.assertEqual(counts["recorded genomes whose GC flag alone moved (listed)"], 0)
+
+    def test_a_recorded_borderline_that_moves_back_to_pass_is_listed(self):
+        check = self.master / "species-check/species_check.json"
+        doc = json.loads(check.read_text())
+        doc["genomes"] = [recorded_genome(g, "borderline" if g == "999.6" else "pass") for g in F.COHORT]
+        check.write_text(json.dumps(doc))
+        for stage in ("setup", "fetch", "species-check"):
+            self.assertEqual(self.run_stage(stage)[0], 0)
+        moves = R.S.read_tsv(self.work / "species-check/cohort-gc-moves.tsv")
+        self.assertEqual([(r["genome_id"], r["recorded"], r["now"]) for r in moves],
+                         [("999.6", "borderline", "pass")])
+
+    def test_a_recorded_verdict_that_moves_to_fail_stops_the_run(self):
+        os.environ["FAKE_VERDICTS"] = json.dumps({"999.6": "fail"})
+        self.species_check_refused("1 recorded species-check results changed", [("999.6", "pass", "fail")])
+
+    def test_a_recorded_fail_that_no_longer_fails_stops_the_run(self):
+        check = self.master / "species-check/species_check.json"
+        doc = json.loads(check.read_text())
+        doc["genomes"] = [recorded_genome(g, "fail" if g == "999.6" else "pass") for g in F.COHORT]
+        check.write_text(json.dumps(doc))
+        os.environ["FAKE_VERDICTS"] = json.dumps({"999.6": "borderline"})
+        self.species_check_refused("1 recorded species-check results changed", [("999.6", "fail", "borderline")])
+
+    def test_a_recorded_flag_that_moves_with_another_distance_stops_the_run(self):
+        os.environ["FAKE_VERDICTS"] = json.dumps({"999.6": "borderline"})
+        os.environ["FAKE_DISTANCES"] = json.dumps({"999.6": 0.06})
+        self.species_check_refused("1 recorded species-check results changed", [("999.6", "pass", "borderline")])
+
+    def test_a_recorded_genome_the_new_check_leaves_out_stops_the_run(self):
+        os.environ["FAKE_UNJUDGED"] = "999.6"
+        self.species_check_refused("1 recorded species-check results changed", [("999.6", "pass", "")])
+
+    def test_a_changed_reference_stops_the_run(self):
+        os.environ["FAKE_REFERENCE"] = "999.2"
+        self.species_check_refused("1 recorded species-check results changed",
+                                   [("999.2", "reference 999.1", "reference 999.2")])
+
+    def test_an_earlier_refusal_leaves_no_stale_list(self):
+        os.environ["FAKE_VERDICTS"] = json.dumps({"999.6": "fail"})
+        self.species_check_refused("1 recorded species-check results changed", [("999.6", "pass", "fail")])
+        os.environ["FAKE_VERDICTS"] = json.dumps({"999.6": "borderline"})
+        code, err = self.run_stage("species-check")
+        self.assertEqual(code, 0, err)
+        self.assertFalse((self.work / "species-check/cohort-changes.tsv").exists())
+        self.assertTrue((self.work / "species-check/cohort-gc-moves.tsv").exists())
 
     def test_cohort_genomes_the_replay_needs_must_all_count(self):
         os.environ["FAKE_UNCOUNTED"] = "999.4"

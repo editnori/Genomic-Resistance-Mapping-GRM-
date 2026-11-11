@@ -3,7 +3,7 @@
 studies from the same database (docs/outside-study-test.md).
 
 Reads the run script's work directory (fetch, species-check, count,
-known-gene and predict outputs), W7's frozen candidates.tsv, pairs.tsv and
+known-gene and predict outputs), the frozen population tables candidates.tsv, pairs.tsv and
 datasets.tsv, and the served revision-12 dataset reports. Writes TSV tables,
 results.json with every number, and reading.txt. Standard library only; the
 same inputs give byte-identical outputs.
@@ -62,7 +62,7 @@ FROZEN_FILES = (
     "scripts/outside-study/score.py",
     "scripts/outside-study/run.py",
 )
-W7_FILES = ("candidates.tsv", "pairs.tsv", "datasets.tsv")
+TABLE_FILES = ("candidates.tsv", "pairs.tsv", "datasets.tsv")
 GENOME_ID = re.compile(r"^[0-9]+\.[0-9]+$")
 
 
@@ -90,7 +90,7 @@ def sha256_file(path):
 
 
 def read_tsv(path):
-    """Rows of a tab-separated file with a header, as W7 and run.py write
+    """Rows of a tab-separated file with a header, as the frozen tables and run.py have
     them: no quoting, tabs never inside a value."""
     with open(path, newline="") as f:
         lines = f.read().split("\n")
@@ -1100,16 +1100,16 @@ def write_outputs(res, out):
 
 
 def load_inputs(args):
-    work, w7, reports_dir = Path(args.work), Path(args.w7), Path(args.reports)
+    work, tables, reports_dir = Path(args.work), Path(args.tables), Path(args.reports)
     hashes = {}
     if not args.rehearsal:
-        w7pins = read_pins(getattr(args, "w7_pins", KIT / "w7.sha256"))
-        for name in W7_FILES:
-            got = sha256_file(w7 / name)
-            if got != w7pins[name]:
-                refuse(f"W7 {name} has sha256 {got}, the kit pins {w7pins[name]}")
-    for name in W7_FILES:
-        hashes[f"w7/{name}"] = sha256_file(w7 / name)
+        tpins = read_pins(getattr(args, "table_pins", KIT / "tables.sha256"))
+        for name in TABLE_FILES:
+            got = sha256_file(tables / name)
+            if got != tpins[name]:
+                refuse(f"the frozen table {name} has sha256 {got}, the kit pins {tpins[name]}")
+    for name in TABLE_FILES:
+        hashes[f"tables/{name}"] = sha256_file(tables / name)
     pins = read_pins(getattr(args, "pins", KIT / "reports.sha256"))
     species = args.species
     species_ids = sorted(n[: -len(".json")] for n in pins if n.startswith(species + "__"))
@@ -1119,7 +1119,7 @@ def load_inputs(args):
         species_reports.append(r)
         reports[d] = (r, sha)
         hashes[f"reports/{d}.json"] = sha
-    candidates = read_tsv(w7 / "candidates.tsv")
+    candidates = read_tsv(tables / "candidates.tsv")
     if args.rehearsal:
         cohort = {s["id"] for r in species_reports for s in r["samples"]}
         for c in candidates:
@@ -1165,8 +1165,8 @@ def load_inputs(args):
         "species": species,
         "rehearsal": args.rehearsal,
         "candidates": candidates,
-        "pairs": read_tsv(w7 / "pairs.tsv"),
-        "datasets": read_tsv(w7 / "datasets.tsv"),
+        "pairs": read_tsv(tables / "pairs.tsv"),
+        "datasets": read_tsv(tables / "datasets.tsv"),
         "reports": reports,
         "species_reports": species_reports,
         "availability": availability,
@@ -1181,7 +1181,8 @@ def load_inputs(args):
 def main(argv=None, overrides=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--work", required=True, help="the run script's work directory")
-    ap.add_argument("--w7", required=True, help="folder with W7's candidates.tsv, pairs.tsv and datasets.tsv")
+    ap.add_argument("--tables", required=True,
+                    help="directory with the frozen candidates.tsv, pairs.tsv and datasets.tsv")
     ap.add_argument("--reports", required=True, help="the served revision-12 dataset reports")
     ap.add_argument("--species", required=True)
     ap.add_argument("--population", required=True, choices=sorted(POPULATIONS))
@@ -1191,7 +1192,7 @@ def main(argv=None, overrides=None):
     args = ap.parse_args(argv)
     # The pins and the kit root are fixed: no option points them elsewhere.
     # Only the tests set other values, through `overrides`.
-    args.pins, args.w7_pins, args.kit_root = KIT / "reports.sha256", KIT / "w7.sha256", KIT_ROOT
+    args.pins, args.table_pins, args.kit_root = KIT / "reports.sha256", KIT / "tables.sha256", KIT_ROOT
     for k, v in (overrides or {}).items():
         setattr(args, k, v)
     try:

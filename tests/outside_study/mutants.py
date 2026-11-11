@@ -4,14 +4,17 @@ Run from the repository root:
 
     python3 -I tests/outside_study/mutants.py [--out results.tsv]
 
-Each mutant is a copy of scripts/outside-study and tests/outside_study in a
-temporary directory with one change made; the suite runs there with
-`python3 -I -B -m unittest discover -s tests/outside_study -t .`. A mutant
-is caught when the suite fails. The unchanged copy must pass first. Not a
-test module: unittest does not discover it.
+Each mutant is a copy of scripts/outside-study, tests/outside_study and the
+plan in a temporary directory with one change made; the suite runs there
+with `python3 -I -B -m unittest discover -s tests/outside_study -t .`. A
+mutant is caught when the suite fails. The copy's FROZEN.sha256 is rewritten
+to match the changed file first, so the test that compares the pin file with
+the files is never what catches a break. The unchanged copy must pass first.
+Not a test module: unittest does not discover it.
 """
 
 import argparse
+import hashlib
 import shutil
 import subprocess
 import sys
@@ -19,6 +22,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+PLAN = "docs/outside-study-test.md"
 
 # (name, file, [(old, new), ...]); each old string must occur exactly once.
 MUTANTS = [
@@ -46,8 +50,8 @@ MUTANTS = [
      [('    if row.get("report_sha256") != sha:', '    if False:')]),
     ("the report pin not checked", "score.py",
      [('    if sha != want:\n        refuse(f"{dataset}: report sha256', '    if False:\n        refuse(f"{dataset}: report sha256')]),
-    ("the W7 pins not checked", "score.py",
-     [('            if got != w7pins[name]:', '            if False:')]),
+    ("the frozen tables' pins not checked", "score.py",
+     [('            if got != tpins[name]:', '            if False:')]),
     ("the frozen gate skips git", "score.py",
      [('    if git("diff", "--quiet", "HEAD", "--", *tracked).returncode != 0:', '    if False:')]),
     ("25 of a class no longer enough", "score.py",
@@ -70,7 +74,16 @@ MUTANTS = [
     ("run.py: a cohort genome accepted as a frozen id", "run.py",
      [('            inside = [g for g in ids if g in cohort]', '            inside = []')]),
     ("run.py: a changed recorded species-check verdict not noticed", "run.py",
-     [('        if changes:\n            p = self.work', '        if False:\n            p = self.work')]),
+     [('        if changes:\n            p = cdir', '        if False:\n            p = cdir')]),
+    ("run.py: a recorded verdict that moves to or from fail read as a GC move", "run.py",
+     [('                and {g["verdict"], n["verdict"]} == {"pass", "borderline"}\n',
+       '                and True\n')]),
+    ("run.py: a recorded flag that moves with another distance read as a GC move", "run.py",
+     [('                and all(k in g and k in n and g[k] == n[k] for k in SAME_DISTANCES)\n',
+       '                and True\n')]),
+    ("run.py: GC moves of recorded genomes not listed", "run.py",
+     [('        S.write_tsv(moves_path, ["genome_id", "species", "recorded", "now"], moves)',
+       '        S.write_tsv(moves_path, ["genome_id", "species", "recorded", "now"], [])')]),
 ]
 
 
@@ -79,6 +92,15 @@ def copy_tree(dst):
                     ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copytree(ROOT / "tests/outside_study", dst / "tests/outside_study",
                     ignore=shutil.ignore_patterns("__pycache__"))
+    (dst / "docs").mkdir()
+    shutil.copy(ROOT / PLAN, dst / PLAN)
+
+
+def repin(top):
+    """The copy's pin file, rewritten for the files as they now are."""
+    pins = top / "scripts/outside-study/FROZEN.sha256"
+    names = [line.split(None, 1)[1].strip() for line in pins.read_text().splitlines() if line.strip()]
+    pins.write_text("".join(f"{hashlib.sha256((top / n).read_bytes()).hexdigest()}  {n}\n" for n in names))
 
 
 def run_suite(top):
@@ -114,6 +136,7 @@ def main(argv=None):
                     return 1
                 text = text.replace(old, new)
             path.write_text(text)
+            repin(top)
             code, last, failed = run_suite(top)
             caught = code != 0
             rows.append((i, name, fname, "caught" if caught else "NOT CAUGHT", last, len(failed),

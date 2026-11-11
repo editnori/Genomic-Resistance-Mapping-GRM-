@@ -55,7 +55,7 @@ Exclusions are label-blind and are applied in this order (`score.EXCLUSION_ORDER
 
 A genome takes the first reason that applies. Every excluded genome is listed in `genomes.tsv` with its reason and the tool's message.
 
-Without `--reset`, `grm species-check` keeps the recorded references and judges the cohort and the new genomes together. It recomputes each species' GC median and spread over all of them, so a new genome can move a cohort genome's GC borderline flag. A fail never depends on GC. The species-check stage compares every recorded reference and verdict with the new run. On any change it writes `species-check/cohort-changes.tsv` and refuses, so the run stops instead of going on with a changed cohort. This is stricter than the brief's "come out unchanged (the script checks)": a cohort flag that moves stops the run rather than being reported.
+Without `--reset`, `grm species-check` keeps the recorded references and judges the cohort and the new genomes together. It recomputes each species' GC median and spread over all of them, so a new genome can move a cohort genome's GC flag between `pass` and `borderline`. A fail never depends on GC, and a borderline genome is kept either way, so such a move changes neither which new genome is scored nor any cohort report. The species-check stage compares every recorded reference and verdict with the new run (`run.species_check`). A recorded genome whose verdict moved between `pass` and `borderline` while its distance, its nearest species and that distance, and its `inside_species` all stayed as recorded is listed in `species-check/cohort-gc-moves.tsv`, counted in the receipt, and the run goes on. Any other change stops the run with `species-check/cohort-changes.tsv`: a changed reference, a recorded genome the new check leaves out, a verdict that moves to or from `fail`, or a flag that moves with a changed distance. This rule was fixed before the first new genome was fetched.
 
 ### 4. Models
 
@@ -208,7 +208,7 @@ Each stage can also be run alone in order (`setup`, `fetch`, `species-check`, `c
 |---|---|
 | setup | `root/`, the scratch data root. It holds per-file links to the master's FASTA and sketches, and copies of its catalog, `curated/species.json` and `species_check.json`. It also holds the lists `outside__<species>` (frozen ids) and `replay__<species>` (the cohort genomes of the datasets' reports, 1,988 for the 7 *S. aureus* datasets). |
 | fetch | `fetch/availability.tsv` |
-| species-check | `species-check/verdicts.tsv` (and `cohort-changes.tsv` on refusal) |
+| species-check | `species-check/verdicts.tsv`, `species-check/cohort-gc-moves.tsv` (and `cohort-changes.tsv` on refusal) |
 | count | `count/counted.tsv`, plus k-mer sets and gene calls under `root/species/` |
 | known-gene | `known-gene/datasets.tsv`, `known-gene/calls.tsv` (or `replay-problems.txt` on refusal) |
 | predict | `predict/<dataset>.jsonl`, `predict/survivors.txt`, `predict-replay/<dataset>.jsonl` |

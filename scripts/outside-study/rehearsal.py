@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Stand-in W7 tables for a rehearsal of the outside-study kit on cohort
+"""Stand-in population tables for a rehearsal of the outside-study kit on cohort
 genomes (docs/outside-study-test.md, "Rehearsal").
 
-Writes candidates.tsv, pairs.tsv and datasets.tsv in W7's columns for a list
+Writes candidates.tsv, pairs.tsv and datasets.tsv in the frozen tables' columns for a list
 of cohort genome ids. Labels are the reports' own `samples[].resistant`. Each
 genome is put in a stand-in study (REHEARSAL-A, -B or -C, by its place in id
 order) so the by-study and leave-one-study-out tables have something to

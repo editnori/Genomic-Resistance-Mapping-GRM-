@@ -28,11 +28,11 @@ class Files(unittest.TestCase):
         self.tmp.cleanup()
 
     def overrides(self):
-        return {"pins": self.paths["pins"], "w7_pins": self.paths["w7_pins"], "kit_root": self.kit}
+        return {"pins": self.paths["pins"], "table_pins": self.paths["table_pins"], "kit_root": self.kit}
 
     def argv(self, out, *extra):
         p = self.paths
-        return ["--work", str(p["work"]), "--w7", str(p["w7"]), "--reports", str(p["reports"]),
+        return ["--work", str(p["work"]), "--tables", str(p["tables"]), "--reports", str(p["reports"]),
                 "--species", F.SPECIES, "--population", "primary", "--out", str(out), *extra]
 
     def main(self, out, *extra, overrides=None):
@@ -92,10 +92,10 @@ class Files(unittest.TestCase):
         self.assertRegex(err, pattern)
         self.assertFalse(out.exists(), "a refusal writes nothing")
 
-    def test_w7_files_must_match_their_pins(self):
-        with open(self.paths["w7"] / "pairs.tsv", "a") as f:
+    def test_the_frozen_tables_must_match_their_pins(self):
+        with open(self.paths["tables"] / "pairs.tsv", "a") as f:
             f.write("\t".join(["1001.1", F.C, "S"] + [""] * 9) + "\n")
-        self.refused("W7 pairs.tsv has sha256")
+        self.refused("the frozen table pairs.tsv has sha256")
 
     def test_reports_must_match_their_pins(self):
         p = self.paths["reports"] / f"{F.A}.json"
@@ -103,12 +103,13 @@ class Files(unittest.TestCase):
         self.refused("is not the pinned")
 
     def test_a_cohort_genome_in_the_frozen_list_is_refused(self):
-        rows = S.read_tsv(self.paths["w7"] / "candidates.tsv")
+        rows = S.read_tsv(self.paths["tables"] / "candidates.tsv")
         rows[0]["genome_id"] = "999.3"
-        S.write_tsv(self.paths["w7"] / "candidates.tsv", F.CAND_COLS, rows)
+        S.write_tsv(self.paths["tables"] / "candidates.tsv", F.CAND_COLS, rows)
         o = self.overrides()
-        o["w7_pins"] = self.root / "w7-repinned.sha256"
-        o["w7_pins"].write_text("".join(f"{S.sha256_file(self.paths['w7'] / n)}  {n}\n" for n in S.W7_FILES))
+        o["table_pins"] = self.root / "tables-repinned.sha256"
+        o["table_pins"].write_text(
+            "".join(f"{S.sha256_file(self.paths['tables'] / n)}  {n}\n" for n in S.TABLE_FILES))
         self.refused("999.3 is a cohort genome", overrides=o)
 
     def test_known_gene_unavailable_only_in_a_rehearsal(self):
@@ -128,6 +129,18 @@ class Files(unittest.TestCase):
         for flag in ("--pins", "--kit-root"):
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 S.main(self.argv(self.root / "x") + [flag, "elsewhere"])
+
+
+class CommittedPins(unittest.TestCase):
+    """The repository's own pin file against the repository's own files, so
+    a change to a frozen file that leaves its pin behind fails here and not
+    first on the box."""
+
+    def test_the_pin_file_names_the_frozen_files_and_matches_them(self):
+        pins = S.read_pins(F.ROOT / "scripts/outside-study/FROZEN.sha256")
+        self.assertEqual(sorted(pins), sorted(S.FROZEN_FILES))
+        for rel in S.FROZEN_FILES:
+            self.assertEqual(pins[rel], S.sha256_file(F.ROOT / rel), rel)
 
 
 class FrozenGate(unittest.TestCase):
