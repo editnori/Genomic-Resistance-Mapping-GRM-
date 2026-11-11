@@ -10,7 +10,9 @@
 //! would it report a susceptible isolate as carrying a marker?
 //!
 //! Target lists, drug readings and organism lists follow the manufacturers'
-//! published documents, cited on each list below. Detection here is in silico,
+//! published documents, cited on each list below. The blood-culture panel
+//! also reads its carbapenemase targets for the other drugs a primary source
+//! says the enzyme hydrolyses, cited on those lists. Detection here is in silico,
 //! so it measures what the targets can explain, not how a given cartridge
 //! performs, and a detected marker is what the panel would report, not proof
 //! that the gene causes the resistance.
@@ -70,6 +72,43 @@ const EXTENDED_CEPHALOSPORINS: &[&str] = &[
     "ceftazidime",
     "cefepime",
     "aztreonam",
+    "cefpodoxime",
+];
+/// KPC, Bush-Jacoby group 2f: "Carbapenems, oxyimino-β-lactams,
+/// cephamycins" (Sawa et al., J Intensive Care 2020;8:13, Table 1, after
+/// Bush and Jacoby 2010); KPC-1 "hydrolyzed not only carbapenems but also
+/// penicillins, cephalosporins, and monobactams" (Hammoudi Halat and Ayoub
+/// Moubareck, Antibiotics 2020;9:186, section 3). So the carbapenems, the
+/// extended-spectrum cephalosporins and aztreonam.
+const KPC_DRUGS: &[&str] = &[
+    "meropenem",
+    "imipenem",
+    "ertapenem",
+    "doripenem",
+    "ceftriaxone",
+    "cefotaxime",
+    "ceftazidime",
+    "cefepime",
+    "aztreonam",
+    "cefpodoxime",
+];
+/// NDM, VIM and IMP, metallo-β-lactamases: they "hydrolyze all β-lactams
+/// except aztreonam" (Nordmann et al., Emerg Infect Dis 2011;17:1791, p.
+/// 1792, of VIM and IMP); NDM "confers resistance to all current β-lactam
+/// antibiotics, with the exception of aztreonam" and IMP reaches "oxymino
+/// cephalosporins" (BCID2 IFU pp. 9 and 8); MBLs hydrolyse "virtually all
+/// β-lactam antibiotics including carbapenems with the exception of
+/// monobactams" (Hammoudi Halat and Ayoub Moubareck 2020, section 4). So the
+/// carbapenems and the extended-spectrum cephalosporins, not aztreonam.
+const MBL_DRUGS: &[&str] = &[
+    "meropenem",
+    "imipenem",
+    "ertapenem",
+    "doripenem",
+    "ceftriaxone",
+    "cefotaxime",
+    "ceftazidime",
+    "cefepime",
     "cefpodoxime",
 ];
 const POLYMYXINS: &[&str] = &["colistin", "polymyxin b"];
@@ -196,17 +235,21 @@ pub const PANELS: &[Panel] = &[
     // BCID2 IFU: CTX-M is read against ESBL activity (Table 78), the five
     // carbapenemases against carbapenem resistance (Table 79), mcr-1 against
     // colistin (Table 82); OXA-48-like is reported for Enterobacterales only
-    // (Table 6).
+    // (Table 6). This panel asks what its targets explain, so KPC, NDM, VIM
+    // and IMP are also read for the drugs the enzyme hydrolyses (KPC_DRUGS,
+    // MBL_DRUGS). OXA-48-like stays on the carbapenems: "extremely weak
+    // activity against expanded-spectrum cephalosporins" (IFU p. 9). The
+    // `ctx_m` panel keeps the maker's CTX-M-only cephalosporin reading.
     Panel {
         id: "gram_negative_bcid",
         name: "Gram-negative blood-culture panel",
         mirrors: "BioFire BCID2 resistance targets: CTX-M, KPC, NDM, VIM, IMP, OXA-48-like, mcr-1",
         targets: &[
             target("blaCTX-M", EXTENDED_CEPHALOSPORINS, BCID2_GRAM_NEGATIVES),
-            target("blaKPC", CARBAPENEMS, BCID2_GRAM_NEGATIVES),
-            target("blaNDM", CARBAPENEMS, BCID2_GRAM_NEGATIVES),
-            target("blaVIM", CARBAPENEMS, BCID2_GRAM_NEGATIVES),
-            target("blaIMP", CARBAPENEMS, BCID2_GRAM_NEGATIVES),
+            target("blaKPC", KPC_DRUGS, BCID2_GRAM_NEGATIVES),
+            target("blaNDM", MBL_DRUGS, BCID2_GRAM_NEGATIVES),
+            target("blaVIM", MBL_DRUGS, BCID2_GRAM_NEGATIVES),
+            target("blaIMP", MBL_DRUGS, BCID2_GRAM_NEGATIVES),
             target("blaOXA (OXA-48 family)", CARBAPENEMS, ENTEROBACTERALES),
             target("mcr-1", POLYMYXINS, MCR1_HOSTS),
         ],
@@ -390,8 +433,15 @@ mod tests {
             expected.push(("carbapenemase", drug, carbapenemases.to_vec()));
             expected.push(("gram_negative_bcid", drug, carbapenemases.to_vec()));
         }
+        // BCID2 reads KPC for aztreonam too, and the metallo-β-lactamases
+        // for the cephalosporins only; the CTX-M panel reads CTX-M alone.
         for drug in EXTENDED_CEPHALOSPORINS {
-            expected.push(("gram_negative_bcid", drug, vec!["blaCTX-M"]));
+            let bcid = if *drug == "aztreonam" {
+                vec!["blaCTX-M", "blaKPC"]
+            } else {
+                vec!["blaCTX-M", "blaKPC", "blaNDM", "blaVIM", "blaIMP"]
+            };
+            expected.push(("gram_negative_bcid", drug, bcid));
             expected.push(("ctx_m", drug, vec!["blaCTX-M"]));
         }
         for drug in POLYMYXINS {
@@ -446,10 +496,42 @@ mod tests {
             .targets_for("ceftriaxone", "Klebsiella pneumoniae")
             .unwrap();
         assert_eq!(detected(&ceftriaxone, &ctx_m), ["blaCTX-M"]);
-        // Nor is a carbapenemase read as a cephalosporin call, nor mcr-1 as
-        // either.
-        let kpc = [hit("blaKPC", "blaKPC"), hit("mcr-1", "mcr-1")];
-        assert!(detected(&ceftriaxone, &kpc).is_empty());
+        // Nor is mcr-1 read for either.
+        let mcr = [hit("mcr-1", "mcr-1")];
+        assert!(detected(&ceftriaxone, &mcr).is_empty());
+    }
+
+    #[test]
+    fn bcid2_reads_a_carbapenemase_for_the_drugs_the_enzyme_hydrolyses() {
+        let species = "Klebsiella pneumoniae";
+        let call = |id: &str, drug: &str, hits: &[FamilyHit]| {
+            detected(&panel_targets(id, drug, species).unwrap(), hits)
+        };
+        // A KPC genome without CTX-M: BCID2 reports it on a cephalosporin,
+        // the CTX-M panel does not.
+        let kpc = [hit("blaKPC", "blaKPC")];
+        for drug in EXTENDED_CEPHALOSPORINS {
+            assert_eq!(call("gram_negative_bcid", drug, &kpc), ["blaKPC"], "{drug}");
+            assert!(call("ctx_m", drug, &kpc).is_empty(), "{drug}");
+        }
+        // A metallo-β-lactamase is read for ceftazidime, not for aztreonam.
+        for mbl in ["blaNDM", "blaVIM", "blaIMP"] {
+            let hits = [hit(mbl, mbl)];
+            assert_eq!(call("gram_negative_bcid", "ceftazidime", &hits), [mbl]);
+            assert!(call("gram_negative_bcid", "aztreonam", &hits).is_empty());
+        }
+        // OXA-48-like and mcr-1 are no cephalosporin call, and Carba-R reads
+        // no cephalosporin.
+        let others = [
+            hit("blaOXA", "blaOXA (OXA-48 family)"),
+            hit("mcr-1", "mcr-1"),
+        ];
+        assert!(call("gram_negative_bcid", "cefotaxime", &others).is_empty());
+        assert!(
+            for_dataset("ceftriaxone", species)
+                .iter()
+                .all(|(p, _)| p.id != "carbapenemase")
+        );
     }
 
     #[test]

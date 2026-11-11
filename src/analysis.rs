@@ -2068,6 +2068,43 @@ mod tests {
         );
     }
 
+    #[test]
+    fn bcid2_and_ctx_m_rows_differ_on_a_kpc_carrier_without_ctx_m() {
+        let (ctx, kpc, ndm) = ([hit("blaCTX-M")], [hit("blaKPC")], [hit("blaNDM")]);
+        // Resistant: KPC, CTX-M, NDM; susceptible: CTX-M, none.
+        let hits: [&[FamilyHit]; 5] = [&kpc, &ctx, &ndm, &ctx, &[]];
+        let truth = [true, true, true, false, false];
+        let row = |drug: &str, id: &str| {
+            let (scored, unsupported) = gene_panels(drug, "Klebsiella pneumoniae", &hits, &truth);
+            assert!(unsupported.is_empty(), "{drug}");
+            let p = scored.into_iter().find(|p| p.id == id).unwrap();
+            let m = &p.metrics;
+            ((m.tp, m.fn_, m.fp, m.tn), p.detected)
+        };
+        let detected = |rows: &[(&str, usize, usize)]| -> Vec<(String, usize, usize)> {
+            rows.iter().map(|&(g, tp, fp)| (g.into(), tp, fp)).collect()
+        };
+        assert_eq!(
+            row("ceftriaxone", "gram_negative_bcid"),
+            (
+                (3, 0, 1, 1),
+                detected(&[("blaCTX-M", 1, 1), ("blaKPC", 1, 0), ("blaNDM", 1, 0)])
+            )
+        );
+        assert_eq!(
+            row("ceftriaxone", "ctx_m"),
+            ((1, 2, 1, 1), detected(&[("blaCTX-M", 1, 1)]))
+        );
+        // NDM spares aztreonam: its carrier is no aztreonam call.
+        assert_eq!(
+            row("aztreonam", "gram_negative_bcid"),
+            (
+                (2, 1, 1, 1),
+                detected(&[("blaCTX-M", 1, 1), ("blaKPC", 1, 0)])
+            )
+        );
+    }
+
     fn phenotype(genome: &str, antibiotic: &str, reported: Call, mic: Option<Mic>) -> Phenotype {
         Phenotype {
             genome_id: genome.into(),

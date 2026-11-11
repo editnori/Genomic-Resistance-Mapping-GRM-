@@ -84,6 +84,7 @@ src/lib.rs analysis::tests::a_report_with_a_locus_missing_its_annotation_is_reco
 src/lib.rs analysis::tests::an_invalid_report_is_kept_but_never_logged_done
 src/lib.rs analysis::tests::audit_limits_validity_to_internal_cross_validation
 src/lib.rs analysis::tests::base64_matches_known_encoding
+src/lib.rs analysis::tests::bcid2_and_ctx_m_rows_differ_on_a_kpc_carrier_without_ctx_m
 src/lib.rs analysis::tests::cached_ksets_give_probe_calls_in_genome_order
 src/lib.rs analysis::tests::cohorts_admit_a_class_of_exactly_min_class
 src/lib.rs analysis::tests::cohorts_gate_on_the_dataset_min_class_and_count_mic_labels_left_out
@@ -332,6 +333,7 @@ src/lib.rs matrix::tests::stale_partials_are_refused_after_catalog_or_assembly_c
 src/lib.rs matrix::tests::supported_cohorts_keep_their_digests_under_both_keys
 src/lib.rs matrix::tests::the_disk_sparse_sequence_makes_the_matrix_build_makes
 src/lib.rs panels::tests::a_panel_reports_only_for_the_organisms_its_assay_names
+src/lib.rs panels::tests::bcid2_reads_a_carbapenemase_for_the_drugs_the_enzyme_hydrolyses
 src/lib.rs panels::tests::ctx_m_is_not_read_as_a_carbapenem_call
 src/lib.rs panels::tests::each_panel_and_drug_has_the_documented_targets
 src/lib.rs panels::tests::each_reason_is_recorded_apart

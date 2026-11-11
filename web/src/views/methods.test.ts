@@ -16,3 +16,14 @@ describe("methods features", () => {
     expect(unshared).not.toContain("its -mers");
   });
 });
+
+describe("methods panels", () => {
+  it("says what the blood-culture and CTX-M rows read, and that a gene is a marker", () => {
+    const html = render(21);
+    expect(html).toContain("Blood-culture and CTX-M rows");
+    expect(html).toContain("also the carbapenemase genes KPC, NDM, VIM and IMP");
+    expect(html).toContain("The CTX-M row counts CTX-M alone");
+    expect(html).toContain("For aztreonam the blood-culture row adds KPC only");
+    expect(html).toContain("it does not prove that the gene causes the isolate&#x27;s resistance");
+  });
+});

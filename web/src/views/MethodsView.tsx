@@ -219,8 +219,15 @@ const Models = ({ manifest }: { manifest: Manifest }) => (
         the AMRFinderPlus program or test the point mutations AMRFinderPlus also describes, so mutational resistance counts against it.
       </Def>
       <Def term="Simulated PCR panels">
-        A gene panel calls resistant when the assembled genome carries any of its targets, which follow the manufacturers&apos; published target lists; a probe assay calls resistant when a
-        probed region differs from the wild-type sequence. Detection is in silico, from assembled genomes.
+        A gene panel calls resistant when the assembled genome carries one of its targets that the panel reads for the drug, in a species the assay reports that target for. Targets,
+        drugs and species follow the manufacturers&apos; published documents. A probe assay calls resistant when a probed region differs from the wild-type sequence. Detection is in
+        silico, from assembled genomes. A detected gene is what the panel would report; it does not prove that the gene causes the isolate&apos;s resistance.
+      </Def>
+      <Def term="Blood-culture and CTX-M rows">
+        On a cephalosporin the two rows read the same panel two ways. The blood-culture row counts every gene of the panel that breaks down the drug: CTX-M, and also the carbapenemase
+        genes KPC, NDM, VIM and IMP, as published studies of these enzymes describe. It shows what the panel&apos;s genes could explain. The CTX-M row counts CTX-M alone, as the maker
+        compares the panel&apos;s cephalosporin result. For aztreonam the blood-culture row adds KPC only, since NDM, VIM and IMP do not break down aztreonam. OXA-48-like is read for
+        carbapenems only.
       </Def>
       <Def term="MIC regression">
         Censored gradient-boosted regression on log2 dilution steps, fitted on the MICs of genomes with a reported call; a genome whose label was inferred from its MIC is left out. It
