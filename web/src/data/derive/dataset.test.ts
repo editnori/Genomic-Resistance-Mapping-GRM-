@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fixtureFile } from "../../dev/fixtures/files";
 import { parseDataset, parseManifest } from "../validate";
 import type { DatasetReport, FeatureCard, Learner, LearnerResult, Scheme } from "../schema";
-import { answerSentence, bestLearner, catalogRuleWords, contextRuns, featureLabel, featurePlace, featureWhere, NO_BEST_LEARNER, oofErrors, outscoringPartial, panelCalls, unexplained } from "./dataset";
+import { answerSentence, bestLearner, catalogRuleWords, contextRuns, familyLabel, featureLabel, featurePlace, featureWhere, NO_BEST_LEARNER, oofErrors, outscoringPartial, panelCalls, ruleWords, unexplained } from "./dataset";
 import { encodeBits } from "../bits";
 
 const manifest = parseManifest(fixtureFile("/data/index.json"));
@@ -67,6 +67,27 @@ describe("words", () => {
     expect(featureLabel(card({ gene: "gyrA" }), 12)).toBe("gyrA");
     expect(featureLabel(card({ product: "porin" }), 12)).toBe("porin");
     expect(featureLabel(card(null), 12)).toBe("k-mer feature 12");
+  });
+
+  it("names every catalog family a feature matches, in one order, and never just the first", () => {
+    const shared = "k-mers matching 3 catalog families (blaAFM, blaNDM, ble)";
+    for (const families of [["blaAFM", "blaNDM", "ble"], ["ble", "blaNDM", "blaAFM"], ["blaNDM", "blaAFM", "ble", "blaAFM"]]) {
+      expect(familyLabel(families)).toBe(shared);
+      expect(featureLabel(card({ gene: "blaNDM-1" }, families), 12)).toBe(shared);
+    }
+    expect(familyLabel(["blaKPC", "blaKPC"])).toBe("blaKPC");
+    expect(familyLabel([])).toBeNull();
+    const features = new Map([[12, card({ gene: "blaNDM-1" }, ["blaNDM", "ble", "blaAFM"])]]);
+    expect(ruleWords({ feature: 12, presence: true }, features)).toBe(`Presence of ${shared}`);
+    expect(ruleWords({ feature: 12, presence: false }, features)).toBe(`Absence of ${shared}`);
+  });
+
+  it("labels a schema-1 report's cards the same way, from the families it already holds", () => {
+    const raw = structuredClone(fixtureFile(`/data/datasets/${withPanel.id}.json`)) as { schema: number; features: { catalog_families: string[] }[] };
+    raw.schema = 1;
+    raw.features[0]!.catalog_families = ["blaNDM", "ble", "blaAFM"];
+    const old = parseDataset(raw);
+    expect(featureLabel(old.features[0], old.features[0]!.feature)).toBe("k-mers matching 3 catalog families (blaAFM, blaNDM, ble)");
   });
 
   it("places a feature by codon range or by its nearest gene", () => {
