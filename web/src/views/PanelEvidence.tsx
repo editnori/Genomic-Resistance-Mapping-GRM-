@@ -254,7 +254,7 @@ export const PanelEvidence = ({ manifest, onOpen }: { manifest: Manifest; onOpen
             <p className="type-note mt-2">
               Found is resistant isolates with a panel call whose assembled genome carries a target, over the resistant isolates the panel calls; Specificity is susceptible isolates with a
               panel call and no target, over the susceptible isolates it calls. No call counts isolates whose genome carries none of a probe assay&apos;s k-mers: they are neither found nor
-              missed. Learner is the share of all resistant isolates {BEST_LEARNER_WORDS} calls resistant. VME and ME are read against the FDA-style bars in their headers.
+              missed. Learner is the share of all resistant isolates {BEST_LEARNER_WORDS} calls resistant. VME and ME are read against the limits in their headers, adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems as a research screen.
             </p>
           </div>
         </>

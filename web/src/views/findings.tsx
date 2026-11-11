@@ -9,7 +9,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import type { CatalogRow, Manifest } from "../data/schema";
 import { LEARNER_NAME, datasetTitle, dateText, int, learnerInSentence, listWords, pct, plural, points } from "../data/format";
-import { BARS, barWords } from "../data/metrics";
+import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import {
   CATALOG_CUTOFF,
   UNIFORM_SHARE,
@@ -704,12 +704,13 @@ export const learnersFinding = (m: Manifest, opts: FindingOptions): Finding => {
 
 // ---- error rates against the bars ---------------------------------------------------
 
-/** The bars lead: the two bars, why a rate is read with an interval, then
+/** The bars lead: the two bars and whose they are, what they do not
+ *  cover, why a rate is read with an interval, then
  *  the three outcomes of the best learner with lineages held out. */
 export const barsLead = (b: BarSummary): string => {
   if (b.n === 0) return "No dataset has both error rates with lineages held out yet.";
   const rest = b.open === 0 ? "" : ` The other ${int(b.open)} ${b.open === 1 ? "has" : "have"} too few genomes to tell.`;
-  return `Lab devices that test susceptibility are held to a VME of ${barWords(BARS.vme)} and an ME of ${barWords(BARS.me)}. A rate counted on few genomes can sit under its bar by chance, so each rate is read with its 95% interval. With lineages held out, the best learner is shown to meet both bars on ${int(b.meets)} of ${plural(b.n, "dataset")} and shown to miss at least one on ${int(b.misses)}.${rest}`;
+  return `The site reads VME against ${barWords(BARS.vme)} and ME against ${barWords(BARS.me)}, limits taken from FDA's 2009 guidance for growth-based susceptibility test systems. ${BARS_SCOPE} A rate counted on few genomes can sit under its bar by chance, so each rate is read with its 95% interval. With lineages held out, the best learner is shown to meet both bars on ${int(b.meets)} of ${plural(b.n, "dataset")} and shown to miss at least one on ${int(b.misses)}.${rest}`;
 };
 
 /** Every learner against the bars, on both tests. */
@@ -750,7 +751,7 @@ export const barsFinding = (m: Manifest, opts: FindingOptions): Finding => {
     result:
       opts.page || b.n === 0
         ? barsLead(b)
-        : `With lineages held out, the best learner is shown to meet both bars for test devices on ${int(b.meets)} of ${plural(b.n, "dataset")} and shown to miss at least one on ${int(b.misses)}.`,
+        : `With lineages held out, the best learner is shown to meet both bars, a research screen adapted from FDA guidance for growth-based tests, on ${int(b.meets)} of ${plural(b.n, "dataset")} and shown to miss at least one on ${int(b.misses)}.`,
     figure:
       b.n === 0 ? null : (
         <StatGrid
@@ -1097,7 +1098,7 @@ export const micFinding = (m: Manifest, opts: FindingOptions): Finding => {
     title: "Predicting the drug level that stops growth (MIC)",
     result: opts.page || s.n === 0 ? micLead(s) : `For ${int(s.nAbove90)} of ${plural(s.n, "dataset")}, at least 90% of exact MICs are predicted within one doubling dilution.`,
     figure: s.n === 0 ? null : (fit: PagedFit) => <MicStrip rows={rows} height={fit.height} onOpen={opts.nav?.openDataset} />,
-    caption: `Each dot is one dataset: the share of its exact MICs predicted within one doubling dilution by a model that never trained on that genome (out of fold). An exact MIC is a single measured value, not a bound such as “≤0.25”. 90% is the essential-agreement bar used for lab test devices.${
+    caption: `Each dot is one dataset: the share of its exact MICs predicted within one doubling dilution by a model that never trained on that genome (out of fold). An exact MIC is a single measured value, not a bound such as “≤0.25”. 90% is the essential-agreement limit adapted from FDA's 2009 guidance for growth-based susceptibility test systems, as a research screen.${
       opts.page ? "" : ` Median ${pct(s.median)}.`
     }`,
     note:

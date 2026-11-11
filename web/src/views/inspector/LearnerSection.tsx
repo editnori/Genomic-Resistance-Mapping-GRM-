@@ -272,6 +272,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
       <p className="type-note mt-3">
         The genomes are cut into {random?.folds ?? 5} parts (folds), and each part is held out once while the model trains on the rest. Balanced accuracy pools those held-out
         predictions; faint dots are the single folds. AUROC is how well the scores rank resistant isolates above susceptible ones, from 0.5 for chance to 1 for a perfect ranking.
+        {" "}The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.
         {lineage !== undefined
           ? ` With lineages held out, each of the ${lineage.n_groups} lineages goes whole to one fold.`
           : ` No lineage-held-out result: ${splitAbsence(r, "lineage") ?? ""}`}

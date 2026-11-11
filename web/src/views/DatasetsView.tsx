@@ -18,7 +18,7 @@ import { Search } from "lucide-react";
 import type { CatalogRow, Learner, LearnerLite, Manifest } from "../data/schema";
 import { capitalize, hasEverydayName, int, LEARNER_LABEL, LEARNER_NAME, pct, speciesName, speciesOption, speciesShort } from "../data/format";
 import { applyAxes, countBy, memberTest, rowsWithout, type Axis } from "../data/facets";
-import { BARS, verdictOf } from "../data/metrics";
+import { BARS, BARS_SOURCE, verdictOf } from "../data/metrics";
 import { BEST_LEARNER_WORDS, NO_BEST_LEARNER, ruleSummary, splitReasonShort } from "../data/derive/dataset";
 import { CATALOG_CUTOFF, catalogDiff } from "../data/derive/overview";
 import { auditOf, manifestAudit } from "../data/derive/evaluation";
@@ -320,7 +320,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     header: "VME",
     unit: "≤1.5%",
     width: DATASET_WIDTHS.vme,
-    tip: [{ term: "Very major error (VME)", text: "The share of resistant isolates the best learner calls susceptible, on the random split. The bar follows FDA guidance for test devices and makes no regulatory claim." }],
+    tip: [{ term: "Very major error (VME)", text: `The share of resistant isolates the best learner calls susceptible, on the random split. ${BARS_SOURCE}` }],
     align: "right",
     sortValue: (r) => bestLite(r)?.vme ?? null,
     firstDir: "asc",
@@ -335,7 +335,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     header: "ME",
     unit: "≤3%",
     width: DATASET_WIDTHS.me,
-    tip: [{ term: "Major error (ME)", text: "The share of susceptible isolates the best learner calls resistant, on the random split. The bar follows FDA guidance for test devices and makes no regulatory claim." }],
+    tip: [{ term: "Major error (ME)", text: `The share of susceptible isolates the best learner calls resistant, on the random split. ${BARS_SOURCE}` }],
     align: "right",
     sortValue: (r) => bestLite(r)?.me ?? null,
     firstDir: "asc",
@@ -378,7 +378,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     tip: [
       {
         term: "MIC essential agreement",
-        text: "The MIC is the lowest drug level that stops growth. Share of isolates with an exact MIC whose predicted MIC is within one doubling dilution; a model needs at least 100 with an MIC, 50 exact.",
+        text: `Share of exact MICs (the lowest drug level that stops growth) predicted within one doubling dilution. Needs 100 isolates with an MIC, 50 exact. ${BARS_SOURCE}`,
       },
     ],
     align: "right",

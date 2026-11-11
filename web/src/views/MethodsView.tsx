@@ -11,7 +11,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Corpus, Manifest } from "../data/schema";
 import { datasetTitle, int, pct, plural } from "../data/format";
-import { BARS, barWords } from "../data/metrics";
+import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import { loadErrorText, useCorpus } from "../data/load";
 import { manifestAudit, nullFitWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
@@ -292,11 +292,16 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
       </Def>
       <Def
         term="VME and ME"
-        plain={`The two kinds of wrong call: a resistant genome called susceptible (very major error) and a susceptible genome called resistant (major error). Test devices are held to ${barWords(BARS.vme)} and ${barWords(BARS.me)}.`}
+        plain={`The two kinds of wrong call: a resistant genome called susceptible (very major error) and a susceptible genome called resistant (major error). The site reads them against ${barWords(BARS.vme)} and ${barWords(BARS.me)}, limits adapted from FDA's 2009 guidance for growth-based susceptibility test systems as a research screen.`}
       >
         Very major error (VME) is resistant isolates called susceptible, over the resistant isolates called; major error (ME) is susceptible isolates called resistant, over the
-        susceptible isolates called. They are read against FDA-style bars for susceptibility test devices, VME at most 1.5% and ME at most 3%, as a reference, not a regulatory claim.
-        Overview counts a dataset as shown to meet a bar when the exact 95% interval (Clopper-Pearson) of its rate lies at or under the bar, and as shown to miss it when the interval
+        susceptible isolates called. They are read against VME at most 1.5% and ME at most 3%, limits taken from FDA&apos;s 2009 guidance for growth-based susceptibility test
+        systems (Class II Special Controls Guidance Document: Antimicrobial Susceptibility Test (AST) Systems). {BARS_SCOPE} M. tuberculosis datasets test anti-mycobacterial
+        drugs, which the guidance excludes by name, so for them the limits are a comparison only. The site&apos;s reading is not the guidance&apos;s own rule either. The guidance
+        counts VME over every resistant isolate tested and asks that the 95% interval of that rate have its lower end under 1.5% and its upper end under 7.5%; it counts ME over
+        every susceptible isolate tested, and it has no category for a test that gives no call. The site counts each rate over the isolates a learner called, and the Datasets
+        table and each dataset&apos;s page compare the rate as printed with its limit. Overview counts a dataset as shown to meet a bar when the exact 95% interval
+        (Clopper-Pearson) of its rate lies at or under the bar, and as shown to miss it when the interval
         lies over the bar. A learner that misses no resistant genome needs at least {int(ZERO_MISS_FLOOR)} resistant genomes before its interval lies under the VME bar. The interval
         treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.
       </Def>
@@ -307,9 +312,10 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
       </Def>
       <Def
         term="MIC essential agreement"
-        plain={`How often the predicted MIC is within one dilution step of the measured MIC. Test devices are held to ${barWords(BARS.mic)}.`}
+        plain={`How often the predicted MIC is within one dilution step of the measured MIC. The site reads it against ${barWords(BARS.mic)}, a limit adapted from FDA's 2009 guidance for growth-based susceptibility test systems as a research screen.`}
       >
-        A prediction within one doubling dilution of an exact MIC, a single measured value rather than a bound such as “≤0.25”; 90% is the bar used for susceptibility test devices.
+        A prediction within one doubling dilution of an exact MIC, a single measured value rather than a bound such as “≤0.25”. 90% follows the essential-agreement limit in FDA&apos;s
+        2009 guidance for growth-based susceptibility test systems, which asks for more than 89.9%; it is a research screen here, with the limits of VME and ME above.
         Calls from the predicted MIC use each training fold&apos;s own empirical threshold and are scored against the reported resistant and susceptible labels.
       </Def>
       <Def term="AUROC" plain="How well a model's scores rank resistant genomes above susceptible ones: 0.5 is chance, and 1 means every resistant genome ranks above every susceptible one.">
@@ -510,7 +516,7 @@ const STUDY_STEPS: readonly { title: string; text: string; section: string; to: 
   },
   {
     title: "Count the errors against limits",
-    text: `A resistant genome called susceptible is a very major error (VME), and a susceptible genome called resistant is a major error (ME). Susceptibility test devices are held to a VME of ${barWords(BARS.vme)} and an ME of ${barWords(BARS.me)}.`,
+    text: `A resistant genome called susceptible is a very major error (VME), and a susceptible genome called resistant is a major error (ME). The site reads them against a VME of ${barWords(BARS.vme)} and an ME of ${barWords(BARS.me)}, a research screen adapted from FDA's 2009 guidance for growth-based susceptibility test systems.`,
     section: "section 3, How to read scores",
     to: "m-scores",
   },

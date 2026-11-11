@@ -57,10 +57,11 @@ export const markerCalls = (
   );
 };
 
-/** FDA-style reference bars for susceptibility test devices. These are the
- *  bars the dashboard judges VME and ME (at most) and MIC essential agreement
- *  (at least) against; they are a reference, not a regulatory claim about
- *  these models. */
+/** The limits the dashboard judges VME and ME (at most) and MIC essential
+ *  agreement (at least) against. They come from FDA's 2009 guidance for
+ *  growth-based susceptibility test systems, which does not cover tests that
+ *  read resistance from a genome or tests of anti-mycobacterial drugs, so
+ *  the site uses them as a research screen adapted from it (BARS_SCOPE). */
 export const REFERENCE_BARS = { vme: 0.015, me: 0.03, mic: 0.9 } as const;
 
 export type BarVerdict = "meets" | "misses";
@@ -90,3 +91,13 @@ export const barLabel = (bar: ReferenceBar): string => `${bar.direction === "at 
 
 /** The bar in words for a screen reader or a sentence: "at most 1.5%". */
 export const barWords = (bar: ReferenceBar): string => `${bar.direction} ${Number((bar.value * 100).toFixed(1))}%`;
+
+/** Whose limits these are, short enough for a header's hint or a table's
+ *  note. Wherever a view names the FDA guidance it says growth-based in the
+ *  same sentence (views/limits.test.ts). */
+export const BARS_SOURCE = "The limit is a screen adapted from FDA's 2009 guidance for growth-based tests.";
+
+/** What the limits are and are not, said in full in Methods and where the
+ *  Overview first reads rates against them. */
+export const BARS_SCOPE =
+  "The guidance does not cover tests that read resistance from a genome, or tests of anti-mycobacterial drugs, so this site uses its numbers as a research screen adapted from it. They are not a criterion these models were validated against, and meeting them is not clearance of anything.";
