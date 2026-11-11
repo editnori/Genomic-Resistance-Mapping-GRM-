@@ -331,6 +331,15 @@ src/lib.rs matrix::tests::stale_partials_are_refused_after_catalog_or_assembly_c
 src/lib.rs matrix::tests::supported_cohorts_keep_their_digests_under_both_keys
 src/lib.rs matrix::tests::the_disk_sparse_sequence_makes_the_matrix_build_makes
 src/lib.rs panels::tests::oxa48_target_does_not_match_other_oxa_groups
+src/lib.rs predict::tests::a_feature_found_in_part_is_counted_and_its_value_follows_the_published_kmer
+src/lib.rs predict::tests::a_genome_of_another_k_reads_or_no_kmer_is_refused
+src/lib.rs predict::tests::a_lasso_without_coefficients_makes_no_call
+src/lib.rs predict::tests::a_learner_with_an_unresolved_feature_is_left_out_and_refused_when_named
+src/lib.rs predict::tests::a_matrix_that_does_not_rebuild_the_report_is_refused
+src/lib.rs predict::tests::a_report_of_another_schema_or_an_invalid_evaluation_is_refused
+src/lib.rs predict::tests::a_row_names_the_model_and_the_genome
+src/lib.rs predict::tests::the_cohort_genomes_get_their_own_bits_from_fasta_and_kset_alike
+src/lib.rs predict::tests::the_published_kmer_is_found_on_either_strand_and_not_across_a_non_acgt_byte
 src/lib.rs probes::tests::a_mutated_region_decides_the_assay_before_a_region_without_a_call
 src/lib.rs probes::tests::calls_follow_the_probed_bases_and_ignore_flanking_changes
 src/lib.rs probes::tests::only_ecoli_qrdr_is_unsupported_and_it_reads_no_kset

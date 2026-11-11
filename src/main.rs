@@ -194,6 +194,33 @@ enum Command {
         #[arg(long)]
         out: PathBuf,
     },
+    /// Apply one dataset report's final models, frozen, to genomes, as
+    /// docs/prediction-contract.md defines: one JSON line per genome and
+    /// learner, with each model feature's published k-mer found or not
+    /// found. Fits nothing and reads no network.
+    Predict {
+        /// A dataset report that `grm learn` wrote or `grm report` served.
+        #[arg(long)]
+        report: PathBuf,
+        /// Assemblies (FASTA, gzip or plain), counted at the report's k.
+        #[arg(long, value_delimiter = ',')]
+        fasta: Vec<PathBuf>,
+        /// Ksets that `grm count` wrote at the report's k.
+        #[arg(long, value_delimiter = ',')]
+        kset: Vec<PathBuf>,
+        /// The species matrix the report was learned from
+        /// (<data>/species/<slug>/matrix). With it, each row also counts how
+        /// many of every feature's k-mers the genome carries.
+        #[arg(long)]
+        matrix: Option<PathBuf>,
+        /// Learners to apply; every complete one when omitted. A learner
+        /// whose published form is not a complete model is refused.
+        #[arg(long, value_enum, value_delimiter = ',')]
+        learners: Vec<LearnerArg>,
+        /// Output file; standard output when omitted.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
     /// Build the dashboard data under <data>/report.
     Report {
         /// Published Kover results to compare against. The default is
@@ -389,6 +416,14 @@ fn run(cli: Cli) -> Result<()> {
             );
             Ok(())
         }
+        Command::Predict {
+            report,
+            fasta,
+            kset,
+            matrix,
+            learners,
+            out,
+        } => predict(&report, &fasta, &kset, matrix.as_deref(), &learners, out),
         Command::Report { kover } => report(&layout, &kover),
         Command::Intervals => {
             let n = grm::intervals::write(&layout.root.join("report"))?;
@@ -715,6 +750,87 @@ impl From<PairingArg> for grm::ablate::arm::Pairing {
             PairingArg::CommonOuterTestSetBalanced => Self::CommonOuterTestSetBalanced,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum LearnerArg {
+    Scm,
+    Cart,
+    Lasso,
+}
+
+impl From<LearnerArg> for grm::predict::Learner {
+    fn from(l: LearnerArg) -> Self {
+        match l {
+            LearnerArg::Scm => Self::Scm,
+            LearnerArg::Cart => Self::Cart,
+            LearnerArg::Lasso => Self::Lasso,
+        }
+    }
+}
+
+/// `grm predict`: rows for every genome, FASTA files first, in the order
+/// given. Rows are written once every genome is scored, so a refused genome
+/// leaves no partial output.
+fn predict(
+    report: &std::path::Path,
+    fasta: &[PathBuf],
+    kset: &[PathBuf],
+    matrix: Option<&std::path::Path>,
+    learners: &[LearnerArg],
+    out: Option<PathBuf>,
+) -> Result<()> {
+    anyhow::ensure!(
+        !fasta.is_empty() || !kset.is_empty(),
+        "give genomes with --fasta or --kset"
+    );
+    let mut model = grm::predict::Model::load(report)?;
+    let requested: Vec<grm::predict::Learner> = learners.iter().map(|&l| l.into()).collect();
+    let learners = model.learners(&requested)?;
+    for (learner, why) in &model.incomplete {
+        eprintln!(
+            "{}: {} left out, its published form is not a complete model: {why}",
+            model.dataset,
+            learner.name()
+        );
+    }
+    if let Some(dir) = matrix {
+        model.attach_matrix(dir)?;
+    }
+    let mut lines = Vec::new();
+    for (path, is_fasta) in fasta
+        .iter()
+        .map(|p| (p, true))
+        .chain(kset.iter().map(|p| (p, false)))
+    {
+        let genome = if is_fasta {
+            model.genome_from_fasta(path)?
+        } else {
+            model.genome_from_kset(path)?
+        };
+        for row in model.predict(&genome, &learners) {
+            serde_json::to_writer(&mut lines, &row)?;
+            lines.push(b'\n');
+        }
+    }
+    match out {
+        Some(path) => {
+            ensure_parent(&path)?;
+            std::fs::write(&path, &lines).with_context(|| format!("write {}", path.display()))?;
+        }
+        None => std::io::stdout().write_all(&lines)?,
+    }
+    eprintln!(
+        "{}: {} genomes scored with {}",
+        model.dataset,
+        fasta.len() + kset.len(),
+        learners
+            .iter()
+            .map(|l| l.name())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    Ok(())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
