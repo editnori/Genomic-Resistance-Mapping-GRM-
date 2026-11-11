@@ -838,7 +838,10 @@ class SentinelAndRandomSplitCases(unittest.TestCase):
         rules = md.split(rp.RULES_HEADING)[1]
         for phrase in ("Random-split contrasts are descriptive only", "scores the random split once",
                        "(repeat, outer fold) refit", "26 to 46%", "the retuned twin", "outside the BH family",
-                       "marked unreliable"):
+                       "marked unreliable",
+                       # Rule 9 names each learner's test as the records carry it (ci_method).
+                       "a paired t for scm, cart and rf (repeat_fold_t)",
+                       "corrected resampled t for gbt and the lasso (repeat_fold_corrected_t)"):
             self.assertIn(phrase, rules)
 
 

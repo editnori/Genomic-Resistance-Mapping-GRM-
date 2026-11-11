@@ -87,10 +87,12 @@ discrimination. The AUROC delta printed beside each log-loss decision is the dis
 descriptive only and decides nothing.
 9. Random-split contrasts are descriptive only (family D, no p, no direction), and the input comparison scores \
 the random split once. Decisions come from the lineage split only. In the input comparison the unit of a \
-contrast is the (repeat, outer fold) refit (unit repeat_fold, a paired t over the unit means of 3 keyed lineage \
-repeats): one pair of fitted models scores every lineage of an outer fold, so a test over lineage clusters \
-treats dependent clusters as independent and is anti-conservative for learners whose fits vary (VERIFY-H1STATS: \
-gbt's learner-seed twin rejected in 26 to 46% of seeds).
+contrast is the (repeat, outer fold) refit of 3 keyed lineage repeats (unit repeat_fold). The test over the unit \
+means goes by learner, and each contrast's line prints its own: a paired t for scm, cart and rf (repeat_fold_t), \
+and Nadeau and Bengio's corrected resampled t for gbt and the lasso (repeat_fold_corrected_t). \
+One pair of fitted models scores every lineage of an outer fold, so a test over lineage clusters treats \
+dependent clusters as independent and is anti-conservative for learners whose fits vary (VERIFY-H1STATS: gbt's \
+learner-seed twin rejected in 26 to 46% of seeds).
 10. A sentinel arm is exchangeable with the default: the learner-seed twin judges rf and gbt, and the retuned \
 twin, which redraws every outer fold's inner folds and tuning holdouts, judges scm, cart and the lasso, which \
 draw no other randomness. When a sentinel's lineage-split contrast for a learner it judges is anything but \
