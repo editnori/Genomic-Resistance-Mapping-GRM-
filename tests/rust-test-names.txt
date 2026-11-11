@@ -438,6 +438,7 @@ src/main.rs tests::direct_learn_refuses_added_removed_and_reordered_genome_selec
 src/main.rs tests::learn_refuses_a_structure_and_matrix_built_from_other_ksets
 src/main.rs tests::pipeline_and_learn_take_a_k_and_a_retained_feature_budget
 src/main.rs tests::pipeline_refuses_a_missing_kover_file_with_its_own_remedy
+src/main.rs tests::predict_replays_the_final_models_on_their_own_cohort
 src/main.rs tests::required_catalog_rejects_incomplete_inputs_unless_allowed
 src/main.rs tests::selection_flags_are_refused_where_they_do_not_apply
 src/main.rs tests::species_check_and_curate_reach_a_fixed_point
