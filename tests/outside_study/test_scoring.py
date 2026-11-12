@@ -269,21 +269,130 @@ class Scoring(unittest.TestCase):
         self.assertEqual((b["studies"], b["loso_folds_reportable"]), (1, 0))
         self.assertEqual((b["top_study_resistant_fold_reportable"], b["top_study_susceptible_fold_reportable"]),
                          (False, False))
+        self.assertEqual((a["studies_not_left_out"], b["studies_not_left_out"]), ("", "P1"))
+        self.assertEqual((a["scored_no_bioproject"], b["scored_no_bioproject"]), (0, 0))
         text = S.reading_text(self.res)
         self.assertNotIn("no estimate can be shown without that study", text,
-                         "a dataset with no reportable fold gets the one-study sentence only")
+                         "a dataset with one study gets the one-study sentence only")
+        self.assertNotIn("no BioProject recorded", text)
+        self.assertNotIn("measured mostly on different studies", text)
         self.assertIn("  By study: P1 holds 30 of the 60 resistant genomes (50.0%); P1 holds 30 of the 60 susceptible "
                       "genomes (50.0%). Of 3 studies, 3 can be left out with 25 of each class remaining.", text)
         self.assertIn("  By study: P1 holds 25 of the 25 resistant genomes (100.0%); P1 holds 25 of the 25 susceptible "
-                      "genomes (100.0%). Of 1 studies, 0 can be left out with 25 of each class remaining.\n"
-                      "  No leave-one-study-out fold is reportable, so no study-to-study range can be shown, "
-                      "and the estimate is in effect one study's.", text)
+                      "genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.\n"
+                      "  Every scored genome is from one study, so the estimate is that study's "
+                      "and no study-to-study range can be shown.", text)
+
+    def restudied(self, study, **world_args):
+        """The world with each labelled genome's BioProject given by
+        study(genome, its place among the genomes of its class)."""
+        w = F.world(**world_args)
+        place, new = {True: 0, False: 0}, {}
+        for g in F.new_genomes():
+            new[g["id"]] = study(g, place[g["resistant"]])
+            place[g["resistant"]] += 1
+        for c in w["candidates"]:
+            c["bioproject"] = new.get(c["genome_id"], c["bioproject"])
+        return w
+
+    def test_two_studies_and_no_fold_is_not_one_study(self):
+        # X holds 36 R and 24 S, Y 24 R and 36 S. Neither can be left out.
+        w = self.restudied(lambda g, i: "X" if i < (36 if g["resistant"] else 24) else "Y")
+        res = S.score(F.inputs(w))
+        a = by(res["dataset_counts"], dataset=A)
+        self.assertEqual((a["top_study_resistant"], a["top_study_resistant_count"]), ("X", 36))
+        self.assertEqual((a["top_study_susceptible"], a["top_study_susceptible_count"]), ("Y", 36))
+        self.assertEqual((a["studies"], a["loso_folds_reportable"], a["studies_not_left_out"]), (2, 0, "X;Y"))
+        text = S.reading_text(res)
+        self.assertNotIn("is from one study", text, "two studies are never called one")
+        self.assertIn("Of 2 studies, 0 can be left out with 25 of each class remaining.\n"
+                      "  More than half of the resistant genomes are from X and more than half of the susceptible "
+                      "genomes from Y, so sensitivity and specificity are measured mostly on different studies.\n"
+                      "  No leave-one-study-out fold is reportable, so no study-to-study range can be shown.\n", text)
+
+    def test_every_study_that_cannot_be_left_out_is_named(self):
+        # drugA keeps 60 R and 40 S labels (P2's 20 S genomes become I).
+        # R: 20 each in X, Y and Z. S: 17 in Y, 16 in Z, 7 in X. Without Y
+        # 23 S remain and without Z 24, so neither can be left out; without
+        # X 33 remain. X is named for the most R (a tie, first name), Y for
+        # the most S. Z is the largest study of neither class.
+        def study(g, i):
+            if g["resistant"]:
+                return "XYZ"[i // 20]
+            if g["project"] == "P2":
+                return "P2"
+            j = i if g["project"] == "P1" else i - 20
+            return "Y" if j < 17 else "Z" if j < 33 else "X"
+        w = self.restudied(study)
+        unlabelled = {g["id"] for g in F.new_genomes() if g["project"] == "P2" and not g["resistant"]}
+        for p in w["pairs"]:
+            if p["genome_id"] in unlabelled and p["dataset_id"] == A:
+                p.update(call="I", records_S=0, records_I=1, in_frozen_test="no")
+        res = S.score(F.inputs(w))
+        a = by(res["dataset_counts"], dataset=A)
+        self.assertEqual((a["scored_resistant"], a["scored_susceptible"]), (60, 40))
+        self.assertEqual((a["top_study_resistant"], a["top_study_resistant_count"]), ("X", 20))
+        self.assertEqual((a["top_study_susceptible"], a["top_study_susceptible_count"]), ("Y", 17))
+        self.assertEqual((a["top_study_resistant_fold_reportable"], a["top_study_susceptible_fold_reportable"]),
+                         (True, False))
+        self.assertEqual((a["studies"], a["loso_folds_reportable"], a["studies_not_left_out"]), (3, 1, "Y;Z"))
+        self.assertEqual((a["top_study_resistant_tied"], a["top_study_susceptible_tied"]), ("Y;Z", ""))
+        text = S.reading_text(res)
+        self.assertIn("  By study: X holds 20 of the 60 resistant genomes (33.3%), as many as Y and Z; "
+                      "Y holds 17 of the 40 susceptible genomes (42.5%). Of 3 studies, 1 can be left out", text)
+        for b in "YZ":
+            self.assertEqual(text.count(f"  With {b} left out, fewer than 25 resistant or 25 susceptible genomes "
+                                        "remain, so no estimate can be shown without that study"), 1, b)
+        self.assertNotIn("With X left out", text)
+
+    def test_a_tie_for_the_most_genomes_names_every_study(self):
+        # Y and Z each hold 30 R and 30 S: Y is named, and Z beside it.
+        w = self.restudied(lambda g, i: "Y" if i < 30 else "Z")
+        res = S.score(F.inputs(w))
+        a = by(res["dataset_counts"], dataset=A)
+        self.assertEqual((a["top_study_resistant"], a["top_study_resistant_tied"]), ("Y", "Z"))
+        self.assertEqual((a["top_study_susceptible"], a["top_study_susceptible_tied"]), ("Y", "Z"))
+        self.assertIn("  By study: Y holds 30 of the 60 resistant genomes (50.0%), as many as Z; Y holds 30 of the "
+                      "60 susceptible genomes (50.0%), as many as Z. Of 2 studies, 2 can be left out",
+                      S.reading_text(res))
+        # No tie in the plain world.
+        a = by(self.res["dataset_counts"], dataset=A)
+        self.assertEqual((a["top_study_resistant_tied"], a["top_study_susceptible_tied"]), ("", ""))
+        self.assertNotIn("as many as", S.reading_text(self.res))
+
+    def test_genomes_with_no_bioproject_are_counted_and_said(self):
+        # P2's and P3's genomes lose their BioProject: one study, P1, and
+        # 60 genomes in none. Leaving P1 out leaves those 60 (30 R, 30 S).
+        w = self.restudied(lambda g, i: "P1" if g["project"] == "P1" else "")
+        res = S.score(F.inputs(w))
+        a = by(res["dataset_counts"], dataset=A)
+        self.assertEqual((a["studies"], a["loso_folds_reportable"], a["scored_no_bioproject"]), (1, 1, 60))
+        self.assertEqual(a["studies_not_left_out"], "")
+        text = S.reading_text(res)
+        self.assertIn("Of 1 study, 1 can be left out with 25 of each class remaining.\n"
+                      "  Scored genomes with no BioProject recorded, counted in no study: 60.\n", text)
+        block = text.split(f"{A}:")[1].split(f"{B}:")[0]
+        self.assertNotIn("is from one study", block, "60 of the 120 genomes are in no study")
+
+    def test_a_counts_only_dataset_gets_no_sentence_about_its_estimate(self):
+        res = S.score(F.inputs(F.world(drug_b_resistant=24)))
+        self.assertFalse(by(res["dataset_counts"], dataset=B)["reportable"])
+        block = S.reading_text(res).split(f"{B}:")[1]
+        self.assertIn("Of 1 study, 0 can be left out with 25 of each class remaining.", block)
+        self.assertNotIn("the estimate", block)
+        self.assertNotIn("study-to-study range", block)
 
     def test_reference_kind(self):
         for learner in ("scm", "cart", "lasso"):
             r = self.metric(A, learner)
             self.assertEqual(r["reference_kind"], "cross-validation, lineage split")
             self.assertFalse(r["reference_at_0_or_1"], learner)
+        # drugB's report has no lineage split, and its reference says so.
+        for learner in ("scm", "cart"):
+            r = self.metric(B, learner)
+            self.assertIn("unavailable", r["lineage_note"])
+            self.assertEqual(r["reference_kind"], "cross-validation, random split only (lineage split unavailable)")
+        self.assertIn("    Reference figure: cross-validation, random split only (lineage split unavailable)", S.reading_text(self.res))
         k = self.metric(A, "known_gene")
         self.assertEqual(k["reference_kind"], "fixed rule, whole cohort")
         self.assertTrue(k["reference_at_0_or_1"], "the catalog's lineage specificity is 1.0")
@@ -311,6 +420,26 @@ class Scoring(unittest.TestCase):
                          {"scored genomes with the k-mer set of a cohort genome": 1,
                           "scored genomes with the k-mer set of another scored genome": 2})
         self.assertEqual(self.res["genomes_scored"], 123, "a duplicate is listed, never excluded")
+
+    def test_duplicate_counts_are_genomes_not_rows(self):
+        # 1001.9 gets the k-mer set of 1001.7 and 1001.8: three genomes, six rows.
+        inputs = F.inputs(F.world())
+        inputs["digests"]["new"]["1001.9"] = inputs["digests"]["new"]["1001.7"]
+        res = S.score(inputs)
+        self.assertEqual(sum(1 for r in res["duplicates"] if r["other_is"] == "scored new genome"), 6)
+        self.assertEqual(res["duplicate_counts"]["scored genomes with the k-mer set of another scored genome"], 3)
+
+    def test_the_0_or_1_flag_reads_both_splits(self):
+        # Only the random split's figure is exactly 1 here.
+        w = F.world()
+        split = by(w["reports"][A]["splits"], scheme="random")
+        by(split["learners"], learner="scm")["metrics"]["specificity"] = 1.0
+        w["shas"][A] = F.sha(F.report_bytes(w["reports"][A]))
+        for r in w["rows"][A] + w["replay_rows"][A]:
+            r["report_sha256"] = w["shas"][A]
+        res = S.score(F.inputs(w))
+        self.assertTrue(by(res["metrics"], dataset=A, learner="scm")["reference_at_0_or_1"])
+        self.assertFalse(by(res["metrics"], dataset=A, learner="cart")["reference_at_0_or_1"])
 
     def test_reading_text(self):
         text = S.reading_text(self.res)

@@ -4,11 +4,14 @@ stand-in for grm (fake_grm.py) inside a temporary committed kit."""
 import argparse
 import contextlib
 import hashlib
+import importlib.util
 import io
 import json
+import marshal
 import os
 import shutil
 import stat
+import struct
 import sys
 import tempfile
 import unittest
@@ -51,6 +54,7 @@ def genome_contents(w):
     genes = dict(F.COHORT_HITS)
     for g in w["genomes"]:
         genes[g["id"]] = [F.BLAZ] if g["known"] else []
+    genes.update(w["known_gene"]["hits"]["new"])
     digests = {g: F.digest_of(g) for g in list(F.COHORT) + list(w["availability"])}
     return kmers, genes, digests
 
@@ -306,6 +310,25 @@ class Receipts(RunCase):
         other = F.kit_repo(self.root / "other", self.w, self.root / "other-reports")
         self.R.S = other.S
         self.assertRefused(self.run_stage("setup"), "the loaded score.py .* is not")
+
+    def test_a_planted_bytecode_cache_is_never_run(self):
+        # A __pycache__ file for score.py whose header carries the source's
+        # time and size, so the import system takes it for the compiled
+        # source. Its code is score.py with another class minimum.
+        kit = self.kit.root / "scripts/outside-study"
+        src = kit / "score.py"
+        code = compile(src.read_text().replace("\nMIN_CLASS = 25\n", "\nMIN_CLASS = 61\n"), str(src), "exec")
+        st = src.stat()
+        pyc = Path(importlib.util.cache_from_source(str(src)))
+        pyc.parent.mkdir(exist_ok=True)
+        pyc.write_bytes(importlib.util.MAGIC_NUMBER + struct.pack("<III", 0, int(st.st_mtime) & 0xFFFFFFFF,
+                                                                  st.st_size & 0xFFFFFFFF) + marshal.dumps(code))
+        self.assertEqual(F.load("score", kit).MIN_CLASS, 61, "the import system does run the planted file")
+        R = F.load("run", kit)
+        self.assertEqual(R.S.MIN_CLASS, 25)
+        self.assertEqual(R.S.LOADED_SHA256, hashlib.sha256(src.read_bytes()).hexdigest())
+        self.run_ok("setup", R=R)
+        self.assertEqual(self.receipt("setup")["kit"]["score.py"], R.S.LOADED_SHA256)
 
     def test_a_copy_of_the_run_script_elsewhere_is_refused(self):
         d = self.root / "elsewhere"

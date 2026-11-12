@@ -12,15 +12,16 @@ those carry no label. Measures nothing: these genomes trained the models.
 """
 
 import argparse
-import importlib.util
 import json
 import sys
+import types
 from pathlib import Path
 
 KIT = Path(__file__).resolve().parent
-_spec = importlib.util.spec_from_file_location("outside_study_score", KIT / "score.py")
-S = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(S)
+# score.py compiled from its source, never from a bytecode cache (as run.py does).
+S = types.ModuleType("outside_study_score")
+S.__file__ = str(KIT / "score.py")
+exec(compile((KIT / "score.py").read_bytes(), S.__file__, "exec"), S.__dict__)
 
 CANDIDATE_COLS = (
     "genome_id species species_slug salmonella_tag genome_name biosample sra_accession assembly_accession "
@@ -112,4 +113,5 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    S.isolated_or_exit("rehearsal.py")
     sys.exit(main())

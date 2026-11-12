@@ -149,8 +149,21 @@ CATALOG_GROUPS = [
      "n_resistant": 2, "n_susceptible": 0},
 ]
 CATALOG_RESISTANT = {"999.1": True, "999.2": True, "999.5": True}
+# The same for a tetracycline rule (drugB with `b_catalog`): tet(38) is on
+# 999.3 (resistant), 999.6 and 999.8 (susceptible).
+CATALOG_GROUPS_B = [dict(row, counts_for_rule=row["group"] == "tet(38)") for row in CATALOG_GROUPS]
+CATALOG_RESISTANT_B = {"999.3": True, "999.6": True, "999.8": True}
 RULE = [["C:BETA-LACTAM"]]
 RULE_B = [["C:TETRACYCLINE"]]
+CALLS_VERSION = "2026-08-07.1|group-calls-v2"
+
+
+def known_call(dataset, genome, hits, cls="BETA-LACTAM"):
+    """The known-gene stage's row for one genome, worked here without
+    score.py: resistant when a gene call is of the rule's one class."""
+    used = sorted({h["group"] for h in hits if h["class"] == cls})
+    return {"dataset": dataset, "genome_id": genome, "groups": ";".join(h["group"] for h in hits),
+            "rule_groups": ";".join(used), "catalog_resistant": "yes" if used else "no"}
 
 
 def make_report(dataset, lasso_empty=False, b_catalog=False):
@@ -185,13 +198,15 @@ def make_report(dataset, lasso_empty=False, b_catalog=False):
     for g in COHORT:
         samples.append({"id": g, "resistant": g in COHORT_R, "mlst": COHORT_ST[g],
                         "country": "Testland", "groups": [GROUP_NAMES.index(h["group"]) for h in COHORT_HITS[g]],
-                        "catalog_resistant": g in CATALOG_RESISTANT})
+                        "catalog_resistant": g in (CATALOG_RESISTANT_B if dataset == B and b_catalog
+                                                   else CATALOG_RESISTANT)})
     catalog = None
     if dataset != B:
         catalog = {"version": "2026-08-07.1", "rule": RULE, "groups": CATALOG_GROUPS,
                    "metrics": {"n": 8, "tp": 2, "fn": 2, "fp": 1, "tn": 3}}
     elif b_catalog:
-        catalog = {"version": "2026-08-07.1", "rule": RULE_B, "groups": [], "metrics": {}}
+        catalog = {"version": "2026-08-07.1", "rule": RULE_B, "groups": CATALOG_GROUPS_B,
+                   "metrics": {"n": 8, "tp": 1, "fn": 3, "fp": 2, "tn": 2}}
     if lasso_empty and dataset == A:
         lasso = {"intercept": -1.0, "coef": [], "lambda": 0.1}
     return {
@@ -376,19 +391,26 @@ def world(drug_b_resistant=25, lasso_empty=False, b_catalog=False, b_extra_label
             for lr in LEARNERS[d]:
                 rows[d].append(make_row(d, shas[d], g, lr, found[g], lasso_empty))
     known = {g["id"]: g["known"] for g in gens}
-    kg = {"unavailable": None,
+    # grm count's gene calls: blaZ on the known genomes, and with a drugB
+    # rule tet(38) on every genome.
+    hits = {g: ([BLAZ] if known.get(g) else []) + ([TET] if b_catalog else [])
+            for g, c in counted.items() if c["counted"] == "yes"}
+    kg = {"unavailable": None, "calls_version": CALLS_VERSION, "hits": {"new": hits, "cohort": dict(COHORT_HITS)},
           "datasets": {A: {"dataset": A, "rule": json.dumps(RULE, separators=(",", ":")),
                            "catalog_version": "2026-08-07.1", "replay": "pass", "samples": "8"},
                        B: {"dataset": B, "rule": "", "catalog_version": "", "replay": "no rule published",
                            "samples": "0"}},
-          "calls": {(A, g): {"dataset": A, "genome_id": g, "groups": "", "rule_groups": "",
-                             "catalog_resistant": "yes" if known.get(g) else "no"} for g in survivors}}
+          "calls": {(A, g): known_call(A, g, hits[g]) for g in survivors}}
     if b_catalog:
         kg["datasets"][B] = {"dataset": B, "rule": json.dumps(RULE_B, separators=(",", ":")),
                              "catalog_version": "2026-08-07.1", "replay": "pass", "samples": "8"}
-        kg["calls"].update({(B, g): {"dataset": B, "genome_id": g, "groups": "tet(38)", "rule_groups": "tet(38)",
-                                     "catalog_resistant": "yes"} for g in survivors})
+        kg["calls"].update({(B, g): known_call(B, g, hits[g], "TETRACYCLINE") for g in survivors})
+    # The cohort's own genomes through the final models, from their published bits.
+    bits_of = {g: {f: g in COHORT_F[f] for f in (1, 2)} for g in COHORT}
+    replay = {d: [make_row(d, shas[d], g, lr, bits_of[g], lasso_empty) for g in COHORT for lr in LEARNERS[d]]
+              for d in (A, B)}
     return {
+        "replay_rows": replay,
         "reports": reports, "shas": shas, "genomes": gens, "candidates": cands, "pairs": pairs,
         "datasets": datasets, "availability": availability, "verdicts": verdicts, "counted": counted,
         "rows": rows, "known_gene": kg, "survivors": survivors, "found": found,
@@ -407,6 +429,7 @@ def inputs(w, rehearsal=False, population="primary"):
         "digests": {"new": {g: r["kset_digest"] for g, r in w["counted"].items() if r["counted"] == "yes"},
                     "cohort": w["cohort_digests"]},
         "rows": w["rows"], "predict_survivors": sorted(w["survivors"], key=S.genome_key),
+        "replay_rows": lambda d: iter(w["replay_rows"].get(d, [])),
         "known_gene": w["known_gene"], "attempts": {s: 1 for s in S.STAGES},
         "table_pins_checked": True, "grm_sha256": "0" * 64, "hashes": {"fixture": "1"},
     }
@@ -508,12 +531,13 @@ RECEIPT_FILES = {
 }
 
 
-def write_work(w, work, kit, species=SPECIES, population="primary", rehearsal=False):
+def write_work(w, work, kit, species=SPECIES, population="primary", rehearsal=False, refused=()):
     """The world's run outputs as files in a work directory, with the six
     receipts and the attempts log run.py writes (in the fields score.py
-    reads), as one run of `kit` at its HEAD would leave them."""
+    reads), as one run of `kit` at its HEAD would leave them. Each stage
+    in `refused` was refused once before it ran."""
     work = Path(work)
-    for sub in ("fetch", "species-check", "count", "predict", "known-gene", "receipts"):
+    for sub in ("fetch", "species-check", "count", "predict", "predict-replay", "known-gene", "receipts"):
         (work / sub).mkdir(parents=True, exist_ok=True)
     ids = sorted(w["availability"], key=S.genome_key)
     (work / "ids.txt").write_text("".join(g + "\n" for g in ids))
@@ -524,10 +548,23 @@ def write_work(w, work, kit, species=SPECIES, population="primary", rehearsal=Fa
     S.write_tsv(work / "count/counted.tsv", ["genome_id", "counted", "detail", "kset_digest"], w["counted"].values())
     S.write_tsv(work / "count/cohort-digests.tsv", ["genome_id", "kset_digest"],
                 [{"genome_id": g, "kset_digest": dg} for g, dg in sorted(w["cohort_digests"].items())])
+    # grm count's own record of both folders, as the count stage leaves it.
+    kg = w["known_gene"]
+    version = None if kg["unavailable"] is not None else kg["calls_version"]
+    new_digests = {g: c["kset_digest"] for g, c in w["counted"].items() if c["counted"] == "yes"}
+    counted_json = []
+    for which, slug, digests in (("new", S.OUT_SLUG, new_digests), ("cohort", S.REPLAY_SLUG, w["cohort_digests"])):
+        rel = f"root/species/{slug.format(species)}/counted.json"
+        (work / rel).parent.mkdir(parents=True, exist_ok=True)
+        (work / rel).write_text(json.dumps({"missing_fasta": [], "failed": [], "genomes": [
+            {"genome_id": g, "kset_digest": dg, "catalog_version": version, "genes": kg["hits"][which].get(g, [])}
+            for g, dg in digests.items()]}, sort_keys=True))
+        counted_json.append(rel)
     for d, rows in w["rows"].items():
         (work / "predict" / f"{d}.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in rows))
     (work / "predict/survivors.txt").write_text("".join(g + "\n" for g in sorted(w["survivors"], key=S.genome_key)))
-    kg = w["known_gene"]
+    for d, rows in w["replay_rows"].items():
+        (work / "predict-replay" / f"{d}.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in rows))
     if kg["unavailable"] is not None:
         (work / "known-gene/unavailable.txt").write_text(kg["unavailable"] + "\n")
         known = ["known-gene/unavailable.txt"]
@@ -538,24 +575,30 @@ def write_work(w, work, kit, species=SPECIES, population="primary", rehearsal=Fa
                                                     "catalog_resistant"], kg["calls"].values())
         known = ["known-gene/datasets.tsv", "known-gene/calls.tsv"]
     files = dict(RECEIPT_FILES, **{
+        "count": RECEIPT_FILES["count"] + counted_json,
         "known-gene": known,
-        "predict": ["predict/survivors.txt"] + [f"predict/{d}.jsonl" for d in sorted(w["rows"])]})
-    write_receipts(work, kit, files, species, population, rehearsal)
+        "predict": ["predict/survivors.txt"] + [f"predict/{d}.jsonl" for d in sorted(w["rows"])]
+                   + [f"predict-replay/{d}.jsonl" for d in sorted(w["replay_rows"])]})
+    write_receipts(work, kit, files, species, population, rehearsal, refused)
     return work
 
 
-def write_receipts(work, kit, files, species=SPECIES, population="primary", rehearsal=False):
+def write_receipts(work, kit, files, species=SPECIES, population="primary", rehearsal=False, refused=()):
     work = Path(work)
     scripts = {n: S.sha256_file(kit.root / "scripts/outside-study" / n) for n in ("run.py", "score.py")}
-    attempts = []
+    log = b""
     for stage in S.STAGES:
-        r = {"stage": stage, "rehearsal": rehearsal,
+        # run.py records the log as it stands when the stage writes its
+        # receipt, its start being the last line.
+        for event in ("start", "refused") * (stage in refused) + ("start",):
+            log += (json.dumps({"stage": stage, "event": event}) + "\n").encode()
+        r = {"stage": stage, "rehearsal": rehearsal, "attempts": {"lines": log.count(b"\n"), "sha256": sha(log)},
              "args": {"species": species, "population": population, "rehearsal": rehearsal},
              "grm": {"sha256": GRM_SHA}, "kit": dict(commit=kit.commit, **scripts),
              "outputs": {f"work/{rel}": S.sha256_file(work / rel) for rel in files[stage]}}
         (work / "receipts" / f"{stage}.json").write_text(json.dumps(r, sort_keys=True, indent=1) + "\n")
-        attempts += [{"stage": stage, "event": "start"}, {"stage": stage, "event": "done"}]
-    (work / "receipts/attempts.jsonl").write_text("".join(json.dumps(a) + "\n" for a in attempts))
+        log += (json.dumps({"stage": stage, "event": "done"}) + "\n").encode()
+    (work / "receipts/attempts.jsonl").write_bytes(log)
 
 
 def rehearsal_world():
@@ -573,9 +616,8 @@ def rehearsal_world():
     w["counted"] = {g: {"genome_id": g, "counted": "yes", "detail": "", "kset_digest": digest_of(g)} for g in ids}
     found = {g: {f: g in COHORT_F[f] for f in (1, 2)} for g in ids}
     w["rows"] = {d: [make_row(d, w["shas"][d], g, lr, found[g]) for g in ids for lr in LEARNERS[d]] for d in (A, B)}
-    w["known_gene"]["calls"] = {(A, g): {"dataset": A, "genome_id": g, "groups": "", "rule_groups": "",
-                                         "catalog_resistant": "yes" if g in CATALOG_RESISTANT else "no"}
-                                for g in ids}
+    w["known_gene"]["hits"]["new"] = {g: COHORT_HITS[g] for g in ids}
+    w["known_gene"]["calls"] = {(A, g): known_call(A, g, COHORT_HITS[g]) for g in ids}
     w["survivors"], w["found"] = list(ids), found
     return w
 

@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 from tests.outside_study import fixtures as F
@@ -91,14 +92,79 @@ class Files(KitCase):
         self.assertEqual(len(S.read_tsv(out / "duplicates.tsv")), 3)
 
     def test_the_attempts_are_counted(self):
-        log = self.work / "receipts/attempts.jsonl"
-        with open(log, "a") as f:
-            f.write(json.dumps({"stage": "fetch", "event": "start"}) + "\n")
+        shutil.rmtree(self.work)
+        F.write_work(self.w, self.work, self.kit, refused=("fetch",))
         out = self.root / "out"
         self.assertEqual(self.main(out)[0], 0)
         res = json.loads((out / "results.json").read_text())
         self.assertEqual(res["attempts"]["fetch"], 2)
         self.assertIn("Stage attempts: setup 1, fetch 2,", (out / "reading.txt").read_text())
+
+    def test_the_attempts_log_is_the_one_the_receipts_recorded(self):
+        # A refused try of fetch is in the log; then the log is edited.
+        shutil.rmtree(self.work)
+        F.write_work(self.w, self.work, self.kit, refused=("fetch",))
+        log = self.work / "receipts/attempts.jsonl"
+        lines = log.read_bytes().splitlines(keepends=True)
+        self.assertEqual(len(lines), 14)
+        start = (json.dumps({"stage": "predict", "event": "start"}) + "\n").encode()
+        cases = (
+            (lines[:2] + lines[4:], "does not hold the 4 lines the fetch stage recorded|are not the ones"),
+            (lines + [start], "1 lines after the predict stage ended"),
+            (lines[:-1], "does not hold the 13 lines the predict stage recorded and then its end"),
+            (lines[:-1] + [start], "line 14 is not the end of the predict stage"),
+            (lines[:2] + [lines[2].replace(b"fetch", b"count")] + lines[3:], "are not the ones the fetch stage recorded"),
+        )
+        for edited, why in cases:
+            log.write_bytes(b"".join(edited))
+            self.refused(why)
+        log.write_bytes(b"".join(lines))
+        r = json.loads((self.work / "receipts/setup.json").read_text())
+        del r["attempts"]
+        (self.work / "receipts/setup.json").write_text(json.dumps(r))
+        self.refused("the setup receipt does not record the attempts log")
+
+    def test_grm_counts_own_record_is_read(self):
+        # The gene calls and digests come from grm count's counted.json,
+        # which the count receipt lists.
+        rel = f"root/species/{S.OUT_SLUG.format(F.SPECIES)}/counted.json"
+        p = self.work / rel
+        original = p.read_bytes()
+        receipt = self.work / "receipts/count.json"
+        saved = receipt.read_text()
+
+        def rewritten(change):
+            c = json.loads(original)
+            change(c["genomes"])
+            p.write_text(json.dumps(c, sort_keys=True))
+            r = json.loads(saved)
+            r["outputs"][f"work/{rel}"] = S.sha256_file(p)
+            receipt.write_text(json.dumps(r))
+
+        p.write_bytes(original + b" ")
+        self.refused(f"work/{rel} has sha256")
+        # A known genome's blaZ call taken out, the receipt rewritten to match.
+        rewritten(lambda gs: next(g for g in gs if g["genes"])["genes"].clear())
+        self.refused("the known-gene record has groups 'blaZ' for 1001\\.\\d+, its gene calls give ''")
+        rewritten(lambda gs: gs[0].update(kset_digest="0" * 64))
+        self.refused("has k-mer set digest 0{64}, the count stage listed")
+        rewritten(lambda gs: gs.pop())
+        self.refused("and the count stage's list hold different genomes")
+        rewritten(lambda gs: gs.append(dict(gs[0])))
+        self.refused("twice")
+        rewritten(lambda gs: gs[0].update(catalog_version="2026-01-01.1|group-calls-v2"))
+        self.refused("the gene calls come from more than one catalog")
+        # Every call from another catalog than the report's.
+        for which in (S.OUT_SLUG, S.REPLAY_SLUG):
+            q = self.work / f"root/species/{which.format(F.SPECIES)}/counted.json"
+            c = json.loads(original if q == p else q.read_text())
+            for g in c["genomes"]:
+                g["catalog_version"] = "2026-01-01.1|group-calls-v2"
+            q.write_text(json.dumps(c, sort_keys=True))
+            r = json.loads(receipt.read_text())
+            r["outputs"]["work/" + str(q.relative_to(self.work))] = S.sha256_file(q)
+            receipt.write_text(json.dumps(r))
+        self.refused("gene calls from catalog '2026-01-01.1\\|group-calls-v2', the report's is '2026-08-07.1'")
 
     def test_reruns_are_byte_identical_in_separate_processes(self):
         # Each `python3 -I` process draws its own random hash seed.
@@ -501,6 +567,79 @@ class FrozenGate(KitCase):
         shutil.move(docs, self.root / "docs-real")
         docs.symlink_to(self.root / "docs-real")
         self.assertGateRefuses("docs is a symbolic link")
+
+    def forge(self, oid, kind, data):
+        """Rewrites a loose object in place: `data` under the id `oid`."""
+        p = self.kit.root / ".git/objects" / oid[:2] / oid[2:]
+        p.chmod(0o644)
+        p.write_bytes(zlib.compress(f"{kind} {len(data)}\0".encode() + data))
+
+    def test_rewritten_blobs_under_their_own_ids(self):
+        # score.py edited and re-pinned, then HEAD's own blobs of score.py
+        # and FROZEN.sha256 rewritten to hold those bytes. HEAD is still the
+        # expected commit, git status is clean, and git hands the edited
+        # bytes out as the committed ones.
+        self.edit_score()
+        F.repin(self.kit.root)
+        for rel in (S.SCORE_REL, S.FROZEN_REL):
+            oid = self.git("rev-parse", f"HEAD:{rel}").stdout.strip()
+            self.forge(oid, "blob", self.path(rel).read_bytes())
+        self.git("update-index", "--assume-unchanged", S.SCORE_REL, S.FROZEN_REL)
+        self.assertEqual(self.git("status", "--short", "--untracked-files=no").stdout, "")
+        self.assertEqual(self.git("rev-parse", "HEAD").stdout.strip(), self.kit.commit)
+        self.assertEqual(self.git("show", f"HEAD:{S.FROZEN_REL}").stdout, self.path(S.FROZEN_REL).read_text(),
+                         "plain git now shows the edited pins at HEAD")
+        self.assertGateRefuses("does not hash to its id: the object store was altered")
+
+    def test_a_rewritten_tree_under_its_own_id(self):
+        # The same edit, staged into a tree of its own; HEAD's root tree is
+        # then rewritten to hold that tree's bytes.
+        root_tree = self.git("rev-parse", "HEAD^{tree}").stdout.strip()
+        self.edit_score()
+        F.repin(self.kit.root)
+        self.git("add", "-A")
+        edited = self.git("write-tree").stdout.strip()
+        body = subprocess.run(["git", "-C", str(self.kit.root), "cat-file", "tree", edited],
+                              capture_output=True, check=True).stdout
+        self.forge(root_tree, "tree", body)
+        self.assertGateRefuses("does not hash to its id|git cannot read tree")
+
+    def test_the_tree_walk_reads_what_git_reads(self):
+        # On the untouched kit, the gate's own walk from the commit gives
+        # each frozen file the bytes `git show` gives.
+        read = self.S.committed_reader(self.kit.commit)
+        for rel in S.FROZEN_FILES:
+            want = subprocess.run(["git", "-C", str(self.kit.root), "show", f"HEAD:{rel}"],
+                                  capture_output=True, check=True).stdout
+            self.assertEqual(read(rel), want, rel)
+        with self.assertRaisesRegex(self.S.Refusal, "nowhere.txt is not committed at HEAD"):
+            read("docs/nowhere.txt")
+        with self.assertRaisesRegex(self.S.Refusal, "is not committed at HEAD"):
+            read("docs/outside-study-test.md/below")
+        with self.assertRaisesRegex(self.S.Refusal, "docs is committed at HEAD as mode 40000, not as a file"):
+            read("docs")
+
+    def test_the_score_py_that_was_loaded_is_the_pinned_one(self):
+        # run.py records the SHA-256 of the bytes it compiled score.py from.
+        self.assertEqual(self.S.LOADED_SHA256, S.sha256_file(self.path(S.SCORE_REL)))
+        self.S.LOADED_SHA256 = "0" * 64
+        self.assertGateRefuses("the score.py that was loaded has sha256 0000")
+
+    def test_the_command_line_needs_isolated_mode(self):
+        for name in ("score.py", "run.py"):
+            script = str(self.path(f"scripts/outside-study/{name}"))
+            p = subprocess.run([sys.executable, "-B", script, "--help"], capture_output=True, text=True)
+            self.assertEqual((p.returncode, p.stdout, p.stderr.strip()),
+                             (2, "", f"{name}: refused: run it with python3 -I"), name)
+            p = subprocess.run([sys.executable, "-I", "-B", script, "--help"], capture_output=True, text=True)
+            self.assertEqual((p.returncode, p.stderr), (0, ""), name)
+            # Isolated, with a trace or a profile function set before the script runs.
+            for hook in ("settrace", "setprofile"):
+                code = f"import runpy, sys; sys.{hook}(lambda *a: None); runpy.run_path({script!r}, run_name='__main__')"
+                p = subprocess.run([sys.executable, "-I", "-B", "-c", code, "--help"], capture_output=True, text=True)
+                self.assertEqual((p.returncode, p.stdout, p.stderr.strip()),
+                                 (2, "", f"{name}: refused: a trace or profile function is set in this interpreter"),
+                                 (name, hook))
 
     def test_pins_for_files_the_gate_does_not_know_or_missing_pins(self):
         p = self.path(S.FROZEN_REL)

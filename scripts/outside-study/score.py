@@ -85,6 +85,12 @@ NO_BIOPROJECT = "no BioProject recorded"
 NO_COUNTRY = "no country recorded"
 REFERENCE_KIND = {KNOWN: "fixed rule, whole cohort"}
 CV_REFERENCE = "cross-validation, lineage split"
+CV_RANDOM_ONLY = "cross-validation, random split only (lineage split unavailable)"
+NO_CV_REFERENCE = "no cross-validation figure"
+NO_RULE = "no rule published"
+# The two species folders grm count writes in the scratch root: the new
+# genomes and the cohort's own, counted again for the replay checks.
+OUT_SLUG, REPLAY_SLUG = "outside__{}", "replay__{}"
 
 
 class Refusal(Exception):
@@ -231,18 +237,56 @@ def work_tree_bytes(rel):
     return path.read_bytes()
 
 
-def committed_bytes(rel):
-    """A frozen file as committed at HEAD, read from the commit itself, so
-    neither the index nor its flags can stand in for it."""
-    tree = git("ls-tree", "HEAD", "--", rel)
-    if tree.returncode != 0 or not tree.stdout.strip():
-        refuse(f"{rel} is not committed at HEAD")
-    if tree.stdout.split()[0] != b"100644" and tree.stdout.split()[0] != b"100755":
-        refuse(f"{rel} is committed at HEAD as mode {tree.stdout.split()[0].decode()}, not as a file")
-    blob = git("cat-file", "blob", f"HEAD:{rel}")
-    if blob.returncode != 0:
-        refuse(f"{rel} cannot be read from HEAD")
-    return blob.stdout
+def git_object(kind, oid):
+    """The content of one git object, refused unless it hashes to its own
+    id. git does not check that on every read, so without this a rewritten
+    object file could stand in for the committed one."""
+    out = git("cat-file", kind, oid)
+    if out.returncode != 0:
+        refuse(f"git cannot read {kind} {oid}")
+    if hashlib.sha1(f"{kind} {len(out.stdout)}\0".encode() + out.stdout).hexdigest() != oid:
+        refuse(f"{kind} {oid} does not hash to its id: the object store was altered")
+    return out.stdout
+
+
+def tree_entries(data):
+    """{name: (mode, id)} of a raw tree object."""
+    entries, i = {}, 0
+    while i < len(data):
+        space = data.index(b" ", i)
+        nul = data.index(b"\0", space)
+        entries[data[space + 1:nul].decode()] = (data[i:space].decode(), data[nul + 1:nul + 21].hex())
+        i = nul + 21
+    return entries
+
+
+def committed_reader(commit):
+    """Returns a function that gives a file's bytes as committed at
+    `commit`. It walks from the commit object to its tree, down each folder
+    and to the blob, reading every object by id and checking that it hashes
+    to that id. So the bytes are the ones the commit id names: neither the
+    index, its flags nor a rewritten object can stand in for them."""
+    seen = {}
+
+    def obj(kind, oid):
+        if (kind, oid) not in seen:
+            seen[(kind, oid)] = git_object(kind, oid)
+        return seen[(kind, oid)]
+
+    def read(rel):
+        first = obj("commit", commit).split(b"\n", 1)[0].decode()
+        if not re.match(r"^tree [0-9a-f]{40}$", first):
+            refuse(f"commit {commit} does not start with its tree")
+        oid, parts = first[len("tree "):], Path(rel).parts
+        for n, part in enumerate(parts):
+            mode, oid = tree_entries(obj("tree", oid)).get(part, (None, None))
+            if mode is None or (n + 1 < len(parts) and mode != "40000"):
+                refuse(f"{rel} is not committed at HEAD")
+            if n + 1 == len(parts) and mode not in ("100644", "100755"):
+                refuse(f"{rel} is committed at HEAD as mode {mode}, not as a file")
+        return obj("blob", oid)
+
+    return read
 
 
 def frozen_gate(expect_commit=None, rehearsal=False):
@@ -251,10 +295,13 @@ def frozen_gate(expect_commit=None, rehearsal=False):
     score.py; git (an absolute path, a clean environment) puts the kit root
     at the top of its work tree; FROZEN.sha256 is the same at HEAD and on
     disk; every frozen file has its pinned SHA-256 both at HEAD and on disk;
-    HEAD is `expect_commit`, which only a rehearsal may leave out. Returns
-    the commit, the expected commit, the SHA-256 of FROZEN.sha256 and the
-    pins. It stops an accident or a casual edit; it cannot stop someone who
-    rewrites this function and commits that (docs/outside-study-test.md)."""
+    HEAD is `expect_commit`, which only a rehearsal may leave out. The
+    committed bytes are read object by object from the commit id down, each
+    object checked against its id (`committed_reader`). Returns the commit,
+    the expected commit, the SHA-256 of FROZEN.sha256 and the pins. It
+    stops an accident or a casual edit; it cannot stop someone who rewrites
+    this function and commits that, or who changes the file between
+    Python's reading of it and this check (docs/outside-study-test.md)."""
     if expect_commit is None and not rehearsal:
         refuse("a real run needs --expect-commit, the published commit of the kit")
     if expect_commit is not None and not COMMIT.match(expect_commit):
@@ -269,6 +316,9 @@ def frozen_gate(expect_commit=None, rehearsal=False):
     if head.returncode != 0:
         refuse("no git commit at the kit root")
     commit = head.stdout.decode().strip()
+    if not COMMIT.match(commit):
+        refuse(f"HEAD is {commit!r}, not a 40-character SHA-1 commit id")
+    committed_bytes = committed_reader(commit)
     frozen_disk = work_tree_bytes(FROZEN_REL) if (KIT_ROOT / FROZEN_REL).exists() else None
     if frozen_disk is None:
         refuse(f"{KIT_ROOT / FROZEN_REL} is missing: the plan and scoring script are not frozen")
@@ -289,6 +339,11 @@ def frozen_gate(expect_commit=None, rehearsal=False):
             refuse(f"{rel} has sha256 {got}, FROZEN.sha256 pins {pins[rel]}")
     if expect_commit is not None and commit != expect_commit:
         refuse(f"HEAD is {commit}, not the expected commit {expect_commit}")
+    # run.py compiles this file from bytes it read itself and records their
+    # SHA-256 here, so the code it runs is the code that was hashed.
+    loaded = globals().get("LOADED_SHA256")
+    if loaded is not None and loaded != pins[SCORE_REL]:
+        refuse(f"the score.py that was loaded has sha256 {loaded}, FROZEN.sha256 pins {pins[SCORE_REL]}")
     return {"commit": commit, "expect_commit": expect_commit, "frozen_sha256": sha256_bytes(frozen_disk),
             "files": {rel: pins[rel] for rel in FROZEN_FILES}}
 
@@ -484,13 +539,13 @@ def replay_problems(report, sha, rows):
     index = {s["id"]: i for i, s in enumerate(report["samples"])}
     listed = listed_features(report)
     learners = complete_learners(report)
-    problems, genomes = [], set()
+    problems, have = [], {}
     for row in rows:
         g = row["genome"]
         if g not in index:
             problems.append(f"{g}: not a sample of {report['id']}")
             continue
-        genomes.add(g)
+        have.setdefault(g, []).append(str(row.get("learner")))
         try:
             check_row(report, sha, row, learners)
         except Refusal as e:
@@ -504,11 +559,10 @@ def replay_problems(report, sha, rows):
         call, _ = final_call(report, row["learner"], bits)
         if row["call"] != call:
             problems.append(f"{g} {row['learner']}: call {row['call']}, final model on the bits {call}")
-    for g in sorted(genomes, key=genome_key):
-        have = sorted(r["learner"] for r in rows if r["genome"] == g)
-        if have != sorted(learners):
-            problems.append(f"{g}: rows for {have}, complete learners {learners}")
-    return problems, len(genomes)
+    for g in sorted(have, key=genome_key):
+        if sorted(have[g]) != sorted(learners):
+            problems.append(f"{g}: rows for {sorted(have[g])}, complete learners {learners}")
+    return problems, len(have)
 
 
 def read_rows(path):
@@ -944,6 +998,15 @@ def score(inputs):
                 refuse(f"{d}: two rows for {g} {row['learner']}")
             calls[key] = row["call"]
             found_by[key] = found
+        # The final models on the cohort's own genomes: the rows the predict
+        # stage judged before any new genome was predicted are judged again
+        # here, and they have to cover every counted sample of the report.
+        problems, n = replay_problems(report, sha, inputs["replay_rows"](d))
+        if problems:
+            refuse(f"{d}: the final models do not replay on the cohort: {problems[0]} ({len(problems)} mismatches)")
+        want = sum(1 for s in report["samples"] if s["id"] in inputs["digests"]["cohort"])
+        if n != want:
+            refuse(f"{d}: {n} cohort genomes replayed, {want} of the report's samples were counted")
         if inputs["rehearsal"]:
             # Stand-in genomes are cohort samples: on each report they are
             # samples of, their rows must be the report's own bits and
@@ -964,7 +1027,9 @@ def score(inputs):
         if d not in datasets:
             refuse(f"prediction rows for {d}, which is not eligible in the {which} population")
 
-    # Known-gene comparator.
+    # Known-gene comparator. The cohort replay and every call are worked
+    # again here, from grm count's gene calls and the report's rule; the
+    # known-gene stage's own record has to agree with them.
     kg = inputs["known_gene"]
     known_status = {}
     for d in datasets:
@@ -974,20 +1039,39 @@ def score(inputs):
         status = kg["datasets"].get(d)
         if status is None:
             refuse(f"the known-gene record has no row for {d}")
-        if status["replay"] != "pass":
-            known_status[d] = status["replay"]
+        cat = reports[d][0].get("catalog")
+        if cat is None:
+            if status["replay"] != NO_RULE:
+                refuse(f"{d}: the report publishes no catalog rule, the known-gene record says {status['replay']!r}")
+            known_status[d] = NO_RULE
             continue
-        rule = json.loads(status["rule"])
-        report = reports[d][0]
-        if report.get("catalog") is None or rule != report["catalog"]["rule"]:
+        if status["replay"] != "pass":
+            refuse(f"{d}: the known-gene record says {status['replay']!r}, not a replay that passed")
+        if parse_json(status["rule"], "known-gene/datasets.tsv") != cat["rule"]:
             refuse(f"{d}: the known-gene rule is not the report's catalog.rule")
+        if kg["calls_version"] != cat["version"] + CALLS_VERSION_SUFFIX:
+            refuse(f"{d}: gene calls from catalog {kg['calls_version']!r}, the report's is {cat['version']!r}")
+        problems = known_gene_replay(reports[d][0], kg["hits"]["cohort"], every_sample=not inputs["rehearsal"])
+        if problems:
+            refuse(f"{d}: the known-gene rule does not replay on the cohort's gene calls: {problems[0]} "
+                   f"({len(problems)} mismatches)")
         known_status[d] = "scored"
         learners_by[d].append(KNOWN)
         for g in survivors:
             row = kg["calls"].get((d, g))
             if row is None:
                 refuse(f"{d}: no known-gene call for scored genome {g}")
-            calls[(d, KNOWN, g)] = "resistant" if row["catalog_resistant"] == "yes" else "susceptible"
+            hits = kg["hits"]["new"].get(g)
+            if hits is None:
+                refuse(f"{d}: grm count recorded no gene calls for scored genome {g}")
+            met, used = explain(cat["rule"], hits)
+            worked = {"groups": ";".join(h["group"] for h in hits), "rule_groups": ";".join(used),
+                      "catalog_resistant": "yes" if met else "no"}
+            for col, value in worked.items():
+                if row[col] != value:
+                    refuse(f"{d}: the known-gene record has {col} {row[col]!r} for {g}, "
+                           f"its gene calls give {value!r}")
+            calls[(d, KNOWN, g)] = "resistant" if met else "susceptible"
     if kg["unavailable"] is None:
         for (d, g) in kg["calls"]:
             if g not in pop:
@@ -1022,11 +1106,15 @@ def score(inputs):
         # many leave-one-study-out folds keep 25 of each class.
         studies_d = sorted({group_of(g, "bioproject") for g in scored} - {NO_BIOPROJECT})
         for cls, name, n in ((True, "resistant", n_r), (False, "susceptible", n_s)):
-            top = largest(collections.Counter(group_of(g, "bioproject") for g in scored
-                                              if lab[(d, g)] == cls and group_of(g, "bioproject") != NO_BIOPROJECT))
+            held = collections.Counter(group_of(g, "bioproject") for g in scored
+                                       if lab[(d, g)] == cls and group_of(g, "bioproject") != NO_BIOPROJECT)
+            top = largest(held)
+            # Every other study that holds as many: the first name is not the only one.
+            tied = [] if top is None else sorted(b for b, k in held.items() if k == top[1] and b != top[0])
             drow[f"top_study_{name}"] = None if top is None else top[0]
             drow[f"top_study_{name}_count"] = 0 if top is None else top[1]
             drow[f"top_study_{name}_share"] = None if top is None else ratio(top[1], n)
+            drow[f"top_study_{name}_tied"] = ";".join(tied)
         drow["studies"] = len(studies_d)
         fold_ok = {}
         for b in studies_d:
@@ -1034,6 +1122,10 @@ def score(inputs):
             rest_s = sum(1 for g in scored if not lab[(d, g)] and group_of(g, "bioproject") != b)
             fold_ok[b] = rest_r >= MIN_CLASS and rest_s >= MIN_CLASS
         drow["loso_folds_reportable"] = sum(fold_ok.values())
+        # Every study without which no estimate can be shown, and the scored
+        # genomes that are in no study at all.
+        drow["studies_not_left_out"] = ";".join(b for b in studies_d if not fold_ok[b])
+        drow["scored_no_bioproject"] = sum(1 for g in scored if group_of(g, "bioproject") == NO_BIOPROJECT)
         # Whether an estimate can be shown without the study that holds the
         # most genomes of a class: the fold that leaves that study out.
         for name in ("resistant", "susceptible"):
@@ -1052,6 +1144,8 @@ def score(inputs):
                 for k in ("n", "tp", "fn", "fp", "tn", "sensitivity", "specificity"):
                     row[f"{split}_{k}"] = None if ref is None else ref[k]
                 row[f"{split}_note"] = why
+            if learner != KNOWN and row["lineage_note"] is not None:
+                row["reference_kind"] = CV_RANDOM_ONLY if row["random_note"] is None else NO_CV_REFERENCE
             row["reference_at_0_or_1"] = any(
                 row[f"{split}_{m}"] in (0.0, 1.0) for split in SPLITS for m in METRICS_READ
                 if row[f"{split}_{m}"] is not None)
@@ -1234,7 +1328,9 @@ DATASET_COLS = ["dataset", "labelled_resistant", "labelled_susceptible",
                 "top_study_resistant", "top_study_resistant_count", "top_study_resistant_share",
                 "top_study_susceptible", "top_study_susceptible_count", "top_study_susceptible_share",
                 "studies", "loso_folds_reportable",
-                "top_study_resistant_fold_reportable", "top_study_susceptible_fold_reportable"]
+                "top_study_resistant_fold_reportable", "top_study_susceptible_fold_reportable",
+                "studies_not_left_out", "scored_no_bioproject",
+                "top_study_resistant_tied", "top_study_susceptible_tied"]
 METRIC_COLS = (
     ["dataset", "learner", "reportable", "scored_resistant", "scored_susceptible",
      "tp", "fn", "fp", "tn", "no_call_resistant", "no_call_susceptible",
@@ -1302,17 +1398,32 @@ def reading_text(res):
             if d[f"top_study_{name}"] is None:
                 shares.append(f"no {name} genome is in a study")
             else:
+                tied = d[f"top_study_{name}_tied"]
                 shares.append(f"{d[f'top_study_{name}']} holds {d[f'top_study_{name}_count']} of the "
-                              f"{d[f'scored_{name}']} {name} genomes ({pct(d[f'top_study_{name}_share'])})")
-        lines.append(f"  By study: {shares[0]}; {shares[1]}. Of {d['studies']} studies, "
-                     f"{d['loso_folds_reportable']} can be left out with {MIN_CLASS} of each class remaining.")
-        if d["loso_folds_reportable"] == 0:
-            lines.append("  No leave-one-study-out fold is reportable, so no study-to-study range can be shown, "
-                         "and the estimate is in effect one study's.")
+                              f"{d[f'scored_{name}']} {name} genomes ({pct(d[f'top_study_{name}_share'])})"
+                              + (f", as many as {' and '.join(tied.split(';'))}" if tied else ""))
+        lines.append(f"  By study: {shares[0]}; {shares[1]}. Of {d['studies']} "
+                     f"{'study' if d['studies'] == 1 else 'studies'}, {d['loso_folds_reportable']} can be left out "
+                     f"with {MIN_CLASS} of each class remaining.")
+        if d["scored_no_bioproject"]:
+            lines.append(f"  Scored genomes with no BioProject recorded, counted in no study: {d['scored_no_bioproject']}.")
+        tops = [d[f"top_study_{name}"] for name in ("resistant", "susceptible")]
+        if None not in tops and tops[0] != tops[1] and all(
+                d[f"top_study_{name}_share"] > 0.5 for name in ("resistant", "susceptible")):
+            lines.append(f"  More than half of the resistant genomes are from {tops[0]} and more than half of the "
+                         f"susceptible genomes from {tops[1]}, so sensitivity and specificity are measured mostly "
+                         f"on different studies.")
+        # A counts-only dataset shows no estimate, so it gets none of these.
+        if not d["reportable"]:
+            pass
+        elif d["studies"] == 1 and not d["scored_no_bioproject"]:
+            lines.append("  Every scored genome is from one study, so the estimate is that study's "
+                         "and no study-to-study range can be shown.")
+        elif d["loso_folds_reportable"] == 0:
+            lines.append("  No leave-one-study-out fold is reportable, so no study-to-study range can be shown.")
         else:
-            # A range from the other folds still includes the largest study.
-            for b in sorted({d[f"top_study_{name}"] for name in ("resistant", "susceptible")
-                             if d[f"top_study_{name}_fold_reportable"] is False}):
+            # A range from the other folds still includes each of these.
+            for b in filter(None, d["studies_not_left_out"].split(";")):
                 lines.append(f"  With {b} left out, fewer than {MIN_CLASS} resistant or {MIN_CLASS} susceptible genomes "
                              f"remain, so no estimate can be shown without that study, and every "
                              f"leave-one-study-out range for this dataset includes it.")
@@ -1418,16 +1529,46 @@ def load_receipts(work, args, gate):
         for key, sha in r["outputs"].items():
             if key.startswith("work/"):
                 written[key[len("work/"):]] = (stage, sha)
-    attempts = {stage: 0 for stage in STAGES}
+    return written, grm.pop(), attempt_counts(work, receipts)
+
+
+def attempt_counts(work, receipts):
+    """The starts per stage in receipts/attempts.jsonl, refused unless the
+    log is the one the receipts recorded: each receipt holds the SHA-256 of
+    the log as it stood when its stage wrote it, the next line is that
+    stage's end, and the log stops at the last stage's end."""
+    name = "receipts/attempts.jsonl"
     log = work / "receipts" / "attempts.jsonl"
     if not log.is_file():
-        refuse("the run left no receipts/attempts.jsonl")
-    for line in log.read_text().splitlines():
-        if line.strip():
-            a = parse_json(line, "receipts/attempts.jsonl")
-            if a["event"] == "start" and a["stage"] in attempts:
-                attempts[a["stage"]] += 1
-    return written, grm.pop(), attempts
+        refuse(f"the run left no {name}")
+    lines = log.read_bytes().splitlines(keepends=True)
+    end = 0
+    for stage in STAGES:
+        rec = receipts[stage].get("attempts")
+        if not isinstance(rec, dict) or type(rec.get("lines")) is not int:
+            refuse(f"the {stage} receipt does not record the attempts log")
+        n = rec["lines"]
+        if not end < n < len(lines):
+            refuse(f"{name} does not hold the {n} lines the {stage} stage recorded and then its end")
+        if sha256_bytes(b"".join(lines[:n])) != rec["sha256"]:
+            refuse(f"{name}: its first {n} lines are not the ones the {stage} stage recorded")
+        last = parse_json(lines[n].decode(), name)
+        if (last.get("stage"), last.get("event")) != (stage, "done"):
+            refuse(f"{name}: line {n + 1} is not the end of the {stage} stage")
+        end = n + 1
+    if end != len(lines):
+        refuse(f"{name} has {len(lines) - end} lines after the {STAGES[-1]} stage ended")
+    attempts, done = {stage: 0 for stage in STAGES}, {stage: 0 for stage in STAGES}
+    for line in lines:
+        a = parse_json(line.decode(), name)
+        if a.get("stage") not in attempts:
+            refuse(f"{name}: a line for stage {a.get('stage')!r}")
+        attempts[a["stage"]] += a.get("event") == "start"
+        done[a["stage"]] += a.get("event") == "done"
+    for stage in STAGES:
+        if done[stage] != 1:
+            refuse(f"{name}: the {stage} stage ended {done[stage]} times")
+    return attempts
 
 
 def load_inputs(args, gate):
@@ -1491,12 +1632,42 @@ def load_inputs(args, gate):
         d = rel[len("predict/"): -len(".jsonl")]
         rows[d] = [parse_json(line, f"work/{rel}") for line in read(rel).splitlines() if line.strip()]
     predict_survivors = [g for g in read("predict/survivors.txt").splitlines() if g.strip()]
-    kg = {"unavailable": None, "datasets": {}, "calls": {}}
+
+    def replay_rows(d):
+        """One dataset's cohort replay rows, as the predict stage left
+        them; none when it wrote no file for the dataset."""
+        rel = f"predict-replay/{d}.jsonl"
+        if rel in written or (work / rel).exists():
+            for line in read(rel).splitlines():
+                if line.strip():
+                    yield parse_json(line, f"work/{rel}")
+
+    # grm count's own record of both folders: the k-mer set digests have to
+    # be the ones the count stage listed, and the gene calls are what the
+    # known-gene comparator is worked from.
+    kg = {"unavailable": None, "datasets": {}, "calls": {}, "hits": {}, "calls_version": None}
+    versions = set()
+    for which, slug in (("new", OUT_SLUG.format(species)), ("cohort", REPLAY_SLUG.format(species))):
+        rel = f"root/species/{slug}/counted.json"
+        hits = kg["hits"][which] = {}
+        for g in parse_json(read(rel), f"work/{rel}")["genomes"]:
+            if g["genome_id"] in hits:
+                refuse(f"work/{rel}: {g['genome_id']} twice")
+            if digests[which].get(g["genome_id"]) != g["kset_digest"]:
+                refuse(f"work/{rel}: {g['genome_id']} has k-mer set digest {g['kset_digest']}, "
+                       f"the count stage listed {digests[which].get(g['genome_id'])}")
+            hits[g["genome_id"]] = g["genes"]
+            versions.add(g["catalog_version"])
+        if set(hits) != set(digests[which]):
+            refuse(f"work/{rel} and the count stage's list hold different genomes")
     if (work / "known-gene" / "unavailable.txt").exists():
         if not args.rehearsal:
             refuse("the known-gene stage recorded no calls; only a rehearsal may go on without them")
         kg["unavailable"] = read("known-gene/unavailable.txt").strip()
     else:
+        if len(versions) > 1:
+            refuse(f"the gene calls come from more than one catalog: {sorted(map(str, versions))}")
+        kg["calls_version"] = versions.pop() if versions else None
         kg["datasets"] = tsv("known-gene/datasets.tsv", "dataset")
         for r in tsv_rows(read("known-gene/calls.tsv"), "known-gene/calls.tsv"):
             key = (r["dataset"], r["genome_id"])
@@ -1518,6 +1689,7 @@ def load_inputs(args, gate):
         "digests": digests,
         "rows": rows,
         "predict_survivors": predict_survivors,
+        "replay_rows": replay_rows,
         "known_gene": kg,
         "attempts": attempts,
         "table_pins_checked": tables["pins_checked"],
@@ -1555,5 +1727,19 @@ def main(argv=None):
     return 0
 
 
+def isolated_or_exit(name):
+    """The command line runs under `python3 -I` only, so PYTHONPATH, the
+    user site and the current directory put no module in front of the
+    standard library, and with no trace or profile function set, which
+    could change a value while the code runs."""
+    if not sys.flags.isolated:
+        print(f"{name}: refused: run it with python3 -I", file=sys.stderr)
+        sys.exit(2)
+    if sys.gettrace() is not None or sys.getprofile() is not None:
+        print(f"{name}: refused: a trace or profile function is set in this interpreter", file=sys.stderr)
+        sys.exit(2)
+
+
 if __name__ == "__main__":
+    isolated_or_exit("score.py")
     sys.exit(main())

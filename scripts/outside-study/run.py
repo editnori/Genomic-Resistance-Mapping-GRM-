@@ -29,12 +29,13 @@ work/receipts/attempts.jsonl. Every stage passes the frozen gate
 import argparse
 import concurrent.futures
 import datetime
-import importlib.util
+import hashlib
 import json
 import shutil
 import subprocess
 import sys
 import time
+import types
 from pathlib import Path
 
 # The kit root is where this file is; no option points it elsewhere.
@@ -51,9 +52,15 @@ NO_SEQUENCE_ANSWER = "empty FASTA response"
 
 
 def _load_score():
-    spec = importlib.util.spec_from_file_location("outside_study_score", KIT / "score.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    """score.py compiled from the bytes read here, never through the import
+    system: a stale or planted __pycache__ file cannot stand in for it. The
+    gate compares the SHA-256 of these bytes with the pin."""
+    path = KIT / "score.py"
+    source = path.read_bytes()
+    mod = types.ModuleType("outside_study_score")
+    mod.__file__ = str(path)
+    mod.LOADED_SHA256 = hashlib.sha256(source).hexdigest()
+    exec(compile(source, str(path), "exec"), mod.__dict__)
     return mod
 
 
@@ -109,8 +116,8 @@ class Run:
         self.root = self.work / "root"
         self.species = args.species
         self.population = args.population
-        self.out_slug = f"outside__{args.species}"
-        self.replay_slug = f"replay__{args.species}"
+        self.out_slug = S.OUT_SLUG.format(args.species)
+        self.replay_slug = S.REPLAY_SLUG.format(args.species)
         self.rehearsal = args.rehearsal
         self.jobs = max(1, args.jobs)
         if self.work == self.master or self.master in self.work.parents:
@@ -154,7 +161,7 @@ class Run:
     def kit_state(self, gate):
         return dict(gate, **{
             "run.py": S.sha256_file(Path(__file__).resolve()),
-            "score.py": S.sha256_file(Path(S.__file__).resolve()),
+            "score.py": S.LOADED_SHA256,
         })
 
     def check_earlier(self, stage, gate):
@@ -208,6 +215,10 @@ class Run:
             "counts": counts,
             "seconds": round(time.monotonic() - started, 3),
         }
+        # The attempts log as it stands now, this stage's start being its
+        # last line: score.py refuses a log that does not begin with it.
+        attempts = (self.work / "receipts" / "attempts.jsonl").read_bytes()
+        r["attempts"] = {"lines": attempts.count(b"\n"), "sha256": hashlib.sha256(attempts).hexdigest()}
         r.update(extra or {})
         p = self.receipt_path(stage)
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -567,8 +578,8 @@ class Run:
         for d, (report, _) in sorted(reports.items()):
             cat = report.get("catalog")
             if cat is None:
-                ds_rows.append({"dataset": d, "rule": "", "catalog_version": "", "replay": "no rule published", "samples": 0})
-                counts[f"{d}"] = "no rule published"
+                ds_rows.append({"dataset": d, "rule": "", "catalog_version": "", "replay": S.NO_RULE, "samples": 0})
+                counts[f"{d}"] = S.NO_RULE
                 continue
             if cat["version"] != version:
                 refuse(f"{d}: the report's catalog is {cat['version']}, the scratch root's {version}")
@@ -716,4 +727,5 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    S.isolated_or_exit("run.py")
     sys.exit(main())

@@ -17,14 +17,34 @@ The frozen population is in `scripts/outside-study/frozen/`: `candidates.tsv.gz`
 
 - git is the first of `/usr/bin/git`, `/bin/git` and `/usr/local/bin/git` that exists. It is never looked up on `PATH`. Every call passes `-C <kit root>` and `--no-replace-objects`, with an environment that holds only `PATH=/usr/bin:/bin`, `HOME`, `LC_ALL=C`, `GIT_CONFIG_NOSYSTEM=1`, `GIT_CONFIG_GLOBAL=/dev/null` and `GIT_OPTIONAL_LOCKS=0`. No inherited `GIT_*` variable reaches it.
 - The kit root is the folder two levels above the running script. No option points it or a pin file elsewhere. `git rev-parse --show-toplevel` must be that folder.
-- The running `score.py` is the kit's own file, and `run.py` checks the same for itself and for the `score.py` it loaded.
+- The running `score.py` is the kit's own file, and `run.py` checks the same for itself and for the `score.py` it loaded. `run.py` and `rehearsal.py` read `score.py`'s bytes themselves and compile those, so Python's import system and its bytecode cache (`__pycache__`) play no part. `run.py` gives the gate the SHA-256 of the bytes it compiled, and the gate refuses unless that is the pinned hash.
 - `FROZEN.sha256` as committed at HEAD has the same bytes as the file on disk. It pins exactly the six files.
-- Each frozen file, read from the commit at HEAD (`git cat-file blob HEAD:<path>`), has its pinned SHA-256, and so does the file on disk. No frozen path, or folder above it, is a symbolic link. The gate reads the committed content itself, so index flags (`--assume-unchanged`, `--skip-worktree`), a staged-only edit and another index file cannot hide a change.
+- Each frozen file, as committed at HEAD, has its pinned SHA-256, and so does the file on disk. A frozen path must be committed as a regular file, and no frozen path, or folder above it, is a symbolic link on disk. The gate reads the committed content itself, so index flags (`--assume-unchanged`, `--skip-worktree`), a staged-only edit and another index file cannot hide a change.
+- The gate reads that content object by object: the commit, each tree on the path and the file's blob, each by its id (`git cat-file <type> <id>`). It refuses an object whose SHA-1 is not its id, so a rewritten object in git's store is caught (`score.committed_reader`).
 - HEAD is the commit given as `--expect-commit` (40 lower-case hex characters). A real run requires that option; a rehearsal may leave it out.
+
+The command lines of `run.py`, `score.py` and `rehearsal.py` also refuse unless Python runs in isolated mode (`python3 -I`), so that `PYTHONPATH`, the user site directory and the current directory put no module ahead of the standard library. They refuse when a trace or profile function is set, since one could change a value while the code runs.
+
+The reports and the frozen tables are checked by content, each against its pin in `reports.sha256` or `tables.sha256`, wherever their bytes are stored.
 
 The gate returns the commit, the expected commit, the SHA-256 of `FROZEN.sha256` and the pinned hashes. Every receipt and `results.json` record them.
 
-The gate stops an accident or a casual edit. It cannot stop someone who rewrites the gate and commits that, and no check inside the kit can. The check that holds is outside the kit: the commit is public before the first genome is fetched, the launcher passes that commit as `--expect-commit`, the outputs name it, and `score.py` at that commit can be run again on the saved work directory to compare the outputs byte for byte.
+The gate stops an accident or a casual edit. It cannot stop someone who rewrites the gate and commits that, and no check inside the kit can. Four more things are out of its reach:
+
+- what runs the kit: the Python interpreter and its standard library, the `git` binary, and the machine;
+- a `score.py` swapped on disk between the moment Python reads it as the main script and the moment the gate hashes it (for the `score.py` that `run.py` loads, the hash is of the bytes that ran);
+- the `grm` binary: the receipts record its SHA-256, not that it was built from the commit;
+- the receipts themselves, which are not signed. Someone who can write the work directory can rewrite a stage's output and its receipt together.
+
+`score.py` narrows the last one for the checks that decide whether a model or the comparator is scored at all. It works again, from `grm`'s own files, the final-model replay (item 4), the known-gene replay and every known-gene call (item 9), and it holds the attempts log to what the receipts recorded (Receipts and stages).
+
+The availability, species-check and count tables stay as `run.py` wrote them from `grm`'s outputs, except that each counted genome's k-mer set digest is compared with `grm count`'s own record. `score.py` cannot tell whether a file that `grm` is recorded to have written is the one `grm` wrote.
+
+The check that holds is outside the kit. The commit is public before the first genome is fetched, the launcher passes that commit as `--expect-commit`, and the outputs name it. Anyone can take a fresh clone of that commit, run `score.py` under `python3 -I` on the saved work directory, and compare the outputs byte for byte.
+
+That catches a `score.py` that was altered where the run happened. It doesn't catch an altered stage or `grm` binary: for those, the stages are run again from the fresh clone on the same public genomes, and the outputs compared.
+
+Until the first new genome is fetched, a change to a frozen file is a new commit that pins the file again; both reviews of the kit led to such commits. The plan is frozen from the commit the launcher names. A change after that makes another kit, and its runs are other runs.
 
 ## Inputs
 
@@ -100,7 +120,7 @@ It also refuses:
 - rows for a dataset that is not eligible in the population;
 - a `predict/survivors.txt` that differs from the survivors the scoring derives from the availability, species-check and count files.
 
-The `predict` stage first runs `grm predict` on the cohort's own genomes for every report and judges all of those rows. Every feature value must equal the report's published bit, and every call must equal the final model's call on those bits (`score.replay_problems`). Otherwise the stage refuses, and no `predict/*.jsonl` exists. Only after every replay passes does it submit a job for the new genomes.
+The `predict` stage first runs `grm predict` on the cohort's own genomes for every report and judges all of those rows. Every feature value must equal the report's published bit, and every call must equal the final model's call on those bits (`score.replay_problems`). Otherwise the stage refuses, and no `predict/*.jsonl` exists. Only after every replay passes does it submit a job for the new genomes. `score.py` judges the same rows again from `predict-replay/<dataset>.jsonl`, and refuses a mismatch or a replay that does not cover every counted sample of the dataset's report.
 
 ### 5. Metrics
 
@@ -136,7 +156,9 @@ The two kinds of figure measure different things:
 - The report's figures for the learners come from models refitted in each fold on part of the cohort and scored on held-out cohort genomes.
 - The new figures come from one final model, fitted once on the whole cohort, applied unchanged to genomes from other studies.
 
-The known-gene rule is different again. Its rule comes from the drug's name and class alone (`catalog::drug_rule`, called in `src/analysis.rs`), with no use of the cohort's labels, so its figure in the report is a fixed rule applied to the whole cohort: nothing was fitted, and there is no cross-validation figure for it. The `reference_kind` column of `metrics.tsv` says which kind each row has ("cross-validation, lineage split" or "fixed rule, whole cohort"), and `reference_at_0_or_1` flags a row whose reference sensitivity or specificity is exactly 0 or 1. `reading.txt` says this in plain words.
+The known-gene rule is different again. Its rule comes from the drug's name and class alone (`catalog::drug_rule`, called in `src/analysis.rs`), with no use of the cohort's labels, so its figure in the report is a fixed rule applied to the whole cohort: nothing was fitted, and there is no cross-validation figure for it. `reading.txt` says this in plain words.
+
+The `reference_kind` column of `metrics.tsv` says which kind each row has. A learner's row has "cross-validation, lineage split". Where the report has no lineage-split figure for the learner, the row has "cross-validation, random split only (lineage split unavailable)", and where it has neither split's figure, "no cross-validation figure". The known-gene rule's row has "fixed rule, whole cohort". `reference_at_0_or_1` flags a row whose reference sensitivity or specificity is exactly 0 or 1 in either split.
 
 ### 7. Fixed reading
 
@@ -160,7 +182,7 @@ A report whose lineage split is unavailable has no lineage-split estimate. Its r
 
 A genome with an empty BioProject is grouped under "no BioProject recorded". That group is never left out as a study and is not counted as one. An empty country is grouped under "no country recorded". The frozen primary population has neither: 0 of the 7,258 genomes has an empty `bioproject`, and 0 an empty `isolation_country`.
 
-The MLST grouping compares the whole value of the `candidates.tsv` column `mlst` as written, scheme name and ST, with the set of `samples[].mlst` values over every pinned report of the species (`score.cohort_sts`). For *S. aureus* that is 18 reports, 2,000 cohort genomes and 169 STs. A value that is empty, or whose ST field (after the last dot) is `-` or empty, is "no ST" (`score.no_st`). For the primary population:
+The MLST grouping compares the whole value of the `candidates.tsv` column `mlst` as written, scheme name and ST, with the set of `samples[].mlst` values over every pinned report of the species (`score.cohort_sts`). For *S. aureus* that is 18 reports, 2,000 cohort genomes and 169 STs. The replay checks and the duplicate comparison use fewer: the 1,988 cohort genomes of the 7 eligible datasets' reports (`setup`, under Receipts and stages). The other 12 are samples only of reports that no frozen genome is scored on. A value that is empty, or whose ST field (after the last dot) is `-` or empty, is "no ST" (`score.no_st`). For the primary population:
 
 | Species | ST in the cohort | ST not in the cohort | no ST |
 |---|---|---|---|
@@ -176,7 +198,21 @@ So 779 of the 803 *S. aureus* genomes have an ST. There is no table of scheme al
 
 `leave_one_study_out.tsv` drops each BioProject in turn and recomputes the confusion counts on the rest. It gives sensitivity, specificity and balanced accuracy only when the rest still has at least 25 R and 25 S genomes. This is the same threshold as item 5, and it stops a range being drawn from two or three genomes. `metrics.tsv` gives the range of those estimates (min and max) and how many there are. There is no study-level interval. *S. aureus* has 3 BioProjects, so each dataset has at most 3 leave-one-out estimates.
 
-For each dataset, the scoring's `datasets.tsv` gives the BioProject with the most scored R genomes, with its count and share, the same for S, the number of studies, and how many leave-one-study-out folds keep at least 25 R and 25 S genomes. `reading.txt` prints those figures on one line per dataset. Where no fold is reportable, it says that no study-to-study range can be shown and that the estimate is in effect one study's. `datasets.tsv` also says, for each of those two studies, whether the fold that leaves it out is reportable. Where some fold is reportable but that one is not, `reading.txt` says that no estimate can be shown without that study and that every leave-one-study-out range for the dataset includes it. This is description only; nothing is decided by it.
+For each dataset, the scoring's `datasets.tsv` gives:
+
+- The BioProject with the most scored R genomes, with its count and share, and any other BioProject that holds as many (`top_study_resistant_tied`). The same for S.
+- The number of studies, and how many leave-one-study-out folds keep at least 25 R and 25 S genomes.
+- For each of the two named studies, whether the fold that leaves it out is reportable.
+- Every study whose fold is not reportable (`studies_not_left_out`).
+- The scored genomes with no BioProject recorded (`scored_no_bioproject`). They are in no study and are never a fold.
+
+`reading.txt` prints the shares and the fold count on one line per dataset, then the number of genomes in no study where there are any. Where more than half of the R genomes are from one study and more than half of the S genomes from another, it says that sensitivity and specificity are measured mostly on different studies. For a dataset with estimates it then says one of three things:
+
+- Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+- There are several studies and no fold is reportable, so no study-to-study range can be shown.
+- Some fold is reportable. For each study that cannot be left out, no estimate can be shown without that study, and every leave-one-study-out range for the dataset includes it.
+
+A counts-only dataset gets none of the three. This is description only; nothing is decided by it.
 
 ### 9. Known-gene comparator
 
@@ -192,6 +228,10 @@ Before any new genome is called, the `known-gene` stage counts every cohort geno
 Any mismatch writes `known-gene/replay-problems.txt` and refuses. The comparator is then exact or absent. A report with no catalog rule gets "no rule published" and no comparator row.
 
 The stage also refuses if the scratch root's catalog version differs from a report's `catalog.version` (2026-08-07.1 for every *S. aureus* report), or if any gene call came from another catalog.
+
+`score.py` takes neither the replay nor a call as the stage wrote it. It reads `grm count`'s own `counted.json` for both lists (`root/species/outside__<species>/` and `root/species/replay__<species>/`, which the count receipt lists) and refuses unless their k-mer set digests are the ones in `count/counted.tsv` and `count/cohort-digests.tsv`.
+
+From those gene calls it replays the published catalog on the cohort again, and works each scored genome's call again with the report's rule. It refuses when the replay fails, when the gene calls are from another catalog than the report's, or when `known-gene/datasets.tsv` or any column of a `known-gene/calls.tsv` row differs from what it worked out.
 
 The dry run had no AMRFinderPlus catalog, so the stage wrote "not available" there, which only a rehearsal accepts. The tests run the stage with a stand-in `grm` that writes gene calls, through its pass and its refusals. On the real run, the replay against the real cohort is the check that the port is exact.
 
@@ -233,6 +273,8 @@ Each stage can also be run alone, in order: `setup`, `fetch`, `species-check`, `
 Each stage writes `$WORK/receipts/<stage>.json`. It holds the stage's arguments, the `grm` path and SHA-256, what the gate returned with the hashes of the two scripts, the SHA-256 of each input and output, the counts it prints, and its seconds. Files inside the work directory are named `work/<path>`, so a saved work directory can be scored anywhere. Large folders are pinned as a listing of `name<TAB>size`.
 
 A stage refuses when its own receipt already exists: a stage never runs twice in one work directory, and there is no option to rerun one. To start again, start a new work directory. `setup` also refuses when `$WORK/root` exists and is not empty. A stage refuses when an earlier receipt is missing, or when any file it lists, the `grm` binary, the kit commit, the scripts or the arguments have changed. Every start and every end of a stage (done, refused or failed, with the message) is appended to `receipts/attempts.jsonl`, and `results.json` gives the number of attempts per stage.
+
+Each receipt records how many lines the log held when its stage wrote it, with their SHA-256. `score.py` refuses unless the log begins with exactly those lines for every stage, the line after them is that stage's end, and the log stops at the last stage's end.
 
 `score.py` reads the six receipts. It refuses unless all six exist; each one names the commit at HEAD; the script hashes are the pinned ones and the `grm` SHA-256 is the same in all six; the species, population and rehearsal flag match its own arguments; and every work file it reads has the SHA-256 the stage that wrote it recorded.
 
@@ -276,21 +318,22 @@ python3 -I -m unittest discover -s tests/outside_study -t . -v
 python3 -I tests/outside_study/mutants.py
 ```
 
-The suite runs in CI (docs/ci.md) and holds 195 tests. It needs `git`, and it passes in a copy of the tree with no `.git`, because the tests make their own repositories. Its fixtures are hand-built: a made-up species with three reports and 126 frozen genomes whose counts, intervals, readings, groupings, paired counts and leave-one-out values are worked out by hand in `tests/outside_study/fixtures.py`. The learners give different calls on at least one R and one S genome, and two datasets label two genomes the other way round, so a learner or dataset swap changes a number. The suite covers:
+The suite runs in CI (docs/ci.md) and holds 217 tests. It needs `git`, and it passes in a copy of the tree with no `.git`, because the tests make their own repositories. Its fixtures are hand-built: a made-up species with three reports and 126 frozen genomes whose counts, intervals, readings, groupings, paired counts and leave-one-out values are worked out by hand in `tests/outside_study/fixtures.py`. The learners give different calls on at least one R and one S genome, and two datasets label two genomes the other way round, so a learner or dataset swap changes a number. The suite covers:
 
 - every refusal of both scripts;
 - the label rules and the exclusion order;
 - the Clopper-Pearson values;
-- the frozen gate, on temporary committed copies of the kit, against each way around it the review tried (index flags, a staged-only edit, `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, a stand-in `git` on `PATH`, an edited pin file, a modified copy of `score.py` run from elsewhere, and a commit other than `--expect-commit`) and a few more (replace objects, a work tree elsewhere, a copy inside another repository, symbolic links, a missing or malformed `--expect-commit`);
+- the frozen gate, on temporary committed copies of the kit, against each way around it the review tried (index flags, a staged-only edit, `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, a stand-in `git` on `PATH`, an edited pin file, a modified copy of `score.py` run from elsewhere, and a commit other than `--expect-commit`) and a few more (replace objects, a work tree elsewhere, a copy inside another repository, symbolic links, a missing or malformed `--expect-commit`), and the ways the second review found (git objects rewritten under their own ids, a planted bytecode cache for `score.py`, a command line without `-I`, a trace function);
 - every stage of `run.py` and its receipts, with a stand-in `grm` (`tests/outside_study/fake_grm.py`) that fetches, checks species, counts with gene calls and digests, and predicts, including the refusals of each stage;
-- the receipts `score.py` reads;
+- the receipts `score.py` reads, the attempts log they bind, and the replays and known-gene calls it works again from `grm`'s files;
+- the by-study sentences, on hand-built cases: two studies that each hold most of one class, a tie for the most genomes, genomes in no study, and a counts-only dataset;
 - byte-identical outputs from three separate processes, each with its own random hash seed, and from shuffled input rows.
 
-`mutants.py` breaks the scripts in 73 ways, one at a time, in a temporary copy, and fails unless the suite catches every one.
+`mutants.py` breaks the scripts in 103 ways, one at a time, in a temporary copy, and fails unless the suite catches every one.
 
 ## Limits
 
 - The genomes come from the same database as the cohort. Their labels follow the same practices, and the metadata and label totals of the batch were read before this plan was frozen.
 - Each new estimate has one model per dataset and no refit. Its interval covers only the sampling of these genomes, not study-to-study variation.
-- For *S. aureus*, one study dominates the resistant genomes. Before exclusions, PRJNA1050907 holds 74.5% to 100% of the R genomes on every dataset: 252 of 254 on ciprofloxacin, 195 of 209 on erythromycin, 78 of 92 on gentamicin, 60 of 60 on levofloxacin, 491 of 659 on oxacillin, 94 of 94 on sulfamethoxazole/trimethoprim and 96 of 104 on tetracycline. Leaving it out leaves a reportable fold only on oxacillin (168 R and 34 S genomes). On the other six datasets no estimate can be shown without that study, and each estimate is in effect that one study's. Levofloxacin has no other study. On the other five, one or two folds stay reportable (they leave out a smaller study), so `metrics.tsv` shows a range, but every fold in it includes PRJNA1050907. On oxacillin the susceptible genomes are few: PRJNA819273 holds 33 of the 56, and leaving it out leaves 23.
+- For *S. aureus*, one study dominates the resistant genomes. Before exclusions, PRJNA1050907 holds 74.5% to 100% of the R genomes on every dataset: 252 of 254 on ciprofloxacin, 195 of 209 on erythromycin, 78 of 92 on gentamicin, 60 of 60 on levofloxacin, 491 of 659 on oxacillin, 94 of 94 on sulfamethoxazole/trimethoprim and 96 of 104 on tetracycline. Leaving it out leaves a reportable fold only on oxacillin (168 R and 34 S genomes). On the other six datasets no estimate can be shown without that study. It holds 85% to 100% of their R genomes and 69% to 100% of their S genomes, so each estimate there is mostly or wholly that one study's. Levofloxacin has no other study. On the other five, one or two folds stay reportable (they leave out a smaller study), so `metrics.tsv` shows a range, but every fold in it includes PRJNA1050907. On oxacillin the susceptible genomes are few: PRJNA819273 holds 33 of the 56, and leaving it out leaves 23.
 - `setup` needs a FASTA file in the master root for every cohort genome of the datasets' reports; the replays depend on it.

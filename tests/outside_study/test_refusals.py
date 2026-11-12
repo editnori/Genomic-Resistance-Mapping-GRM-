@@ -51,6 +51,12 @@ class Refusals(unittest.TestCase):
         with self.assertRaisesRegex(S.Refusal, "survivors"):
             S.score(inputs)
 
+    def test_as_many_predicted_genomes_but_not_the_survivors(self):
+        inputs = F.inputs(self.w)
+        inputs["predict_survivors"] = inputs["predict_survivors"][:-1] + ["1001.121"]
+        with self.assertRaisesRegex(S.Refusal, "survivors"):
+            S.score(inputs)
+
     def test_a_row_with_another_fingerprint(self):
         self.row()["input_fingerprint"] = "beef"
         self.refused("fingerprint")
@@ -135,6 +141,59 @@ class Refusals(unittest.TestCase):
         self.w["known_gene"]["calls"][(A, "1001.999")] = {"catalog_resistant": "no"}
         self.refused("outside the frozen list")
 
+    def test_a_known_gene_call_is_worked_again_from_the_gene_calls(self):
+        # 1001.1 has a blaZ call, so the rule calls it resistant whatever
+        # the known-gene stage wrote.
+        row = self.w["known_gene"]["calls"][(A, "1001.1")]
+        self.assertEqual((row["groups"], row["rule_groups"], row["catalog_resistant"]), ("blaZ", "blaZ", "yes"))
+        for col, wrong in (("catalog_resistant", "no"), ("rule_groups", ""), ("groups", "blaZ;mecA")):
+            w = copy.deepcopy(self.w)
+            w["known_gene"]["calls"][(A, "1001.1")][col] = wrong
+            with self.assertRaisesRegex(S.Refusal, f"the known-gene record has {col} {wrong!r} for 1001.1, "
+                                                   f"its gene calls give {row[col]!r}"):
+                S.score(F.inputs(w))
+        del self.w["known_gene"]["hits"]["new"]["1001.1"]
+        self.refused("grm count recorded no gene calls for scored genome 1001.1")
+
+    def test_the_known_gene_replay_is_worked_again(self):
+        # 999.4 is published without a gene call; with blaZ the rule would
+        # call it resistant, and the report says it is not.
+        self.w["known_gene"]["hits"]["cohort"]["999.4"] = [F.BLAZ]
+        self.refused("the known-gene rule does not replay on the cohort's gene calls: 999.4: groups")
+
+    def test_the_final_models_are_replayed_again_on_the_cohort(self):
+        # 999.1 holds feature 1 by its published bit; a replay row says not.
+        w = copy.deepcopy(self.w)
+        row = next(r for r in w["replay_rows"][A] if r["genome"] == "999.1" and r["learner"] == "scm")
+        row["features"][0]["found"] = False
+        row["call"] = "susceptible"
+        with self.assertRaisesRegex(S.Refusal, "drugA: the final models do not replay on the cohort: "
+                                               "999.1 feature 1: found False, published bit True"):
+            S.score(F.inputs(w))
+        # A cohort genome with a learner's row missing, and one with no row at all.
+        w = copy.deepcopy(self.w)
+        w["replay_rows"][A] = [r for r in w["replay_rows"][A] if (r["genome"], r["learner"]) != ("999.2", "cart")]
+        with self.assertRaisesRegex(S.Refusal, "999.2: rows for \\['lasso', 'scm'\\], complete learners"):
+            S.score(F.inputs(w))
+        w = copy.deepcopy(self.w)
+        w["replay_rows"][B] = [r for r in w["replay_rows"][B] if r["genome"] != "999.8"]
+        with self.assertRaisesRegex(S.Refusal, "drugB: 7 cohort genomes replayed, 8 of the report's samples were counted"):
+            S.score(F.inputs(w))
+        del self.w["replay_rows"][A]
+        self.refused("drugA: 0 cohort genomes replayed, 8 of the report's samples were counted")
+
+    def test_a_known_gene_replay_that_did_not_pass(self):
+        self.w["known_gene"]["datasets"][A]["replay"] = "fail"
+        self.refused("the known-gene record says 'fail', not a replay that passed")
+
+    def test_a_known_gene_replay_claimed_without_a_rule(self):
+        self.w["known_gene"]["datasets"][B]["replay"] = "pass"
+        self.refused("the report publishes no catalog rule, the known-gene record says 'pass'")
+
+    def test_gene_calls_from_another_catalog_than_the_reports(self):
+        self.w["known_gene"]["calls_version"] = "2026-01-01.1|group-calls-v2"
+        self.refused("gene calls from catalog '2026-01-01.1\\|group-calls-v2', the report's is '2026-08-07.1'")
+
     def test_known_gene_record_missing_a_dataset(self):
         del self.w["known_gene"]["datasets"][B]
         self.refused("no row for")
@@ -174,7 +233,8 @@ class SameStudy(unittest.TestCase):
                         for g in ids}
         w["rows"] = {A: [F.make_row(A, w["shas"][A], g, lr, {1: i % 2 == 0, 2: False})
                          for i, g in enumerate(ids) for lr in ("scm", "cart", "lasso")]}
-        w["known_gene"]["calls"] = {(A, g): {"catalog_resistant": "no"} for g in ids}
+        w["known_gene"]["hits"]["new"] = {g: [] for g in ids}
+        w["known_gene"]["calls"] = {(A, g): F.known_call(A, g, []) for g in ids}
         w["survivors"] = list(ids)
         res = S.score(F.inputs(w, population="same-study"))
         self.assertEqual(res["datasets"], [A])
