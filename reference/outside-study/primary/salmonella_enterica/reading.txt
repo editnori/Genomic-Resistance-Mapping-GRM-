@@ -1,0 +1,230 @@
+Outside-study test, salmonella_enterica, primary population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 2107. Scored: 2107 (0 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 10 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+salmonella_enterica__ampicillin: 489 resistant and 865 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB67737 holds 243 of the 489 resistant genomes (49.7%); PRJEB48506 holds 344 of the 865 susceptible genomes (39.8%). Of 18 studies, 18 can be left out with 25 of each class remaining.
+  scm: TP 464, FN 25, FP 6, TN 859. Sensitivity 94.9% [92.5%, 96.7%], lineage split 84.4%, random split 92.0%: above. Specificity 99.3% [98.5%, 99.7%], lineage split 91.7%, random split 93.6%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 18 BioProjects left out: sensitivity 90.2% to 98.9%, specificity 98.8% to 99.5% (over 18 estimates).
+  cart: TP 305, FN 184, FP 5, TN 860. Sensitivity 62.4% [57.9%, 66.7%], lineage split 84.9%, random split 93.5%: below. Specificity 99.4% [98.7%, 99.8%], lineage split 79.7%, random split 89.7%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 18 BioProjects left out: sensitivity 55.3% to 87.4%, specificity 99.0% to 99.5% (over 18 estimates).
+  known_gene: TP 485, FN 4, FP 4, TN 861. Sensitivity 99.2% [97.9%, 99.8%], lineage split 95.2%, random split 95.2%: above. Specificity 99.5% [98.8%, 99.9%], lineage split 93.9%, random split 93.9%: above.
+    Reference figure: fixed rule, whole cohort.
+    With each of 18 BioProjects left out: sensitivity 98.8% to 99.6%, specificity 99.2% to 99.8% (over 18 estimates).
+salmonella_enterica__azithromycin: 149 resistant and 1263 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841813 holds 117 of the 149 resistant genomes (78.5%); PRJEB48506 holds 344 of the 1263 susceptible genomes (27.2%). Of 21 studies, 21 can be left out with 25 of each class remaining.
+  scm: TP 122, FN 27, FP 12, TN 1251. Sensitivity 81.9% [74.7%, 87.7%], lineage split 79.9%, random split 79.9%: consistent. Specificity 99.0% [98.3%, 99.5%], lineage split 99.3%, random split 98.9%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 21 BioProjects left out: sensitivity 25.0% to 95.3%, specificity 98.7% to 99.7% (over 21 estimates).
+  cart: TP 122, FN 27, FP 12, TN 1251. Sensitivity 81.9% [74.7%, 87.7%], lineage split 78.8%, random split 78.8%: consistent. Specificity 99.0% [98.3%, 99.5%], lineage split 99.3%, random split 98.7%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 21 BioProjects left out: sensitivity 25.0% to 95.3%, specificity 98.7% to 99.7% (over 21 estimates).
+  lasso: TP 123, FN 26, FP 13, TN 1250. Sensitivity 82.6% [75.5%, 88.3%], lineage split 81.5%, random split 81.5%: consistent. Specificity 99.0% [98.2%, 99.5%], lineage split 96.2%, random split 97.4%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 21 BioProjects left out: sensitivity 25.0% to 96.1%, specificity 98.6% to 99.6% (over 21 estimates).
+  known_gene: TP 139, FN 10, FP 150, TN 1113. Sensitivity 93.3% [88.0%, 96.7%], lineage split 85.3%, random split 85.3%: above. Specificity 88.1% [86.2%, 89.9%], lineage split 91.6%, random split 91.6%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 21 BioProjects left out: sensitivity 75.0% to 96.9%, specificity 83.7% to 97.7% (over 21 estimates).
+salmonella_enterica__cefazolin: 174 resistant and 29 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841813 holds 126 of the 174 resistant genomes (72.4%); PRJNA803326 holds 18 of the 29 susceptible genomes (62.1%). Of 2 studies, 0 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJNA841813 and more than half of the susceptible genomes from PRJNA803326, so sensitivity and specificity are measured mostly on different studies.
+  No leave-one-study-out fold is reportable, so no study-to-study range can be shown.
+  scm: TP 165, FN 9, FP 28, TN 1. Sensitivity 94.8% [90.4%, 97.6%], lineage split 48.7%, random split 47.9%: above. Specificity 3.4% [0.1%, 17.8%], lineage split 65.2%, random split 37.9%: below.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 117, FN 57, FP 25, TN 4. Sensitivity 67.2% [59.7%, 74.2%], lineage split 40.3%, random split 37.8%: above. Specificity 13.8% [3.9%, 31.7%], lineage split 72.7%, random split 63.6%: below.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 164, FN 10, FP 17, TN 12. Sensitivity 94.3% [89.7%, 97.2%], lineage split 40.8%, random split 50.0%: above. Specificity 41.4% [23.5%, 61.1%], lineage split 61.8%, random split 37.0%: below.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 123, FN 51, FP 1, TN 28. Sensitivity 70.7% [63.3%, 77.3%], lineage split 13.4%, random split 13.4%: above. Specificity 96.6% [82.2%, 99.9%], lineage split 90.9%, random split 90.9%: consistent.
+    Reference figure: fixed rule, whole cohort.
+salmonella_enterica__cefotaxime: 350 resistant and 123 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB67737 holds 226 of the 350 resistant genomes (64.6%); PRJNA803326 holds 67 of the 123 susceptible genomes (54.5%). Of 5 studies, 5 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJEB67737 and more than half of the susceptible genomes from PRJNA803326, so sensitivity and specificity are measured mostly on different studies.
+  scm: TP 337, FN 13, FP 18, TN 105. Sensitivity 96.3% [93.7%, 98.0%], lineage split 66.5%, random split 85.3%: above. Specificity 85.4% [77.9%, 91.1%], lineage split 86.2%, random split 93.6%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 5 BioProjects left out: sensitivity 95.2% to 98.4%, specificity 67.9% to 92.1% (over 5 estimates).
+  cart: TP 98, FN 252, FP 2, TN 121. Sensitivity 28.0% [23.4%, 33.0%], lineage split 59.2%, random split 85.0%: below. Specificity 98.4% [94.2%, 99.8%], lineage split 83.6%, random split 96.9%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 5 BioProjects left out: sensitivity 1.3% to 78.2%, specificity 96.4% to 99.0% (over 5 estimates).
+  known_gene: TP 338, FN 12, FP 13, TN 110. Sensitivity 96.6% [94.1%, 98.2%], lineage split 87.5%, random split 87.5%: above. Specificity 89.4% [82.6%, 94.3%], lineage split 93.1%, random split 93.1%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 5 BioProjects left out: sensitivity 95.2% to 99.2%, specificity 76.8% to 96.5% (over 5 estimates).
+salmonella_enterica__ceftazidime: 238 resistant and 277 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB67737 holds 124 of the 238 resistant genomes (52.1%); PRJEB71958 holds 121 of the 277 susceptible genomes (43.7%). Of 15 studies, 15 can be left out with 25 of each class remaining.
+  scm: TP 191, FN 47, FP 22, TN 255. Sensitivity 80.3% [74.6%, 85.1%], lineage split 33.3%, random split 53.3%: above. Specificity 92.1% [88.2%, 95.0%], lineage split 95.5%, random split 91.2%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 15 BioProjects left out: sensitivity 66.7% to 92.7%, specificity 85.9% to 95.5% (over 15 estimates).
+  cart: TP 30, FN 208, FP 242, TN 35. Sensitivity 12.6% [8.7%, 17.5%], lineage split 46.7%, random split 73.3%: below. Specificity 12.6% [9.0%, 17.1%], lineage split 29.7%, random split 68.9%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 15 BioProjects left out: sensitivity 0.0% to 26.3%, specificity 6.7% to 22.4% (over 15 estimates).
+  lasso: TP 218, FN 20, FP 224, TN 53. Sensitivity 91.6% [87.3%, 94.8%], lineage split 25.0%, random split 33.3%: above. Specificity 19.1% [14.7%, 24.3%], lineage split 96.0%, random split 96.3%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 15 BioProjects left out: sensitivity 86.8% to 96.0%, specificity 11.9% to 30.1% (over 15 estimates).
+  known_gene: TP 229, FN 9, FP 17, TN 260. Sensitivity 96.2% [92.9%, 98.3%], lineage split 70.0%, random split 70.0%: above. Specificity 93.9% [90.4%, 96.4%], lineage split 89.0%, random split 89.0%: above.
+    Reference figure: fixed rule, whole cohort.
+    With each of 15 BioProjects left out: sensitivity 92.7% to 100.0%, specificity 89.1% to 97.4% (over 15 estimates).
+salmonella_enterica__ceftriaxone: 120 resistant and 1199 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB62461 holds 91 of the 120 resistant genomes (75.8%); PRJEB48506 holds 344 of the 1199 susceptible genomes (28.7%). Of 39 studies, 39 can be left out with 25 of each class remaining.
+  scm: TP 106, FN 14, FP 1, TN 1198. Sensitivity 88.3% [81.2%, 93.5%], lineage split 86.6%, random split 97.5%: consistent. Specificity 99.9% [99.5%, 100.0%], lineage split 98.1%, random split 98.6%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 39 BioProjects left out: sensitivity 51.7% to 96.4%, specificity 99.9% to 100.0% (over 39 estimates).
+  cart: TP 107, FN 13, FP 1, TN 1198. Sensitivity 89.2% [82.2%, 94.1%], lineage split 85.9%, random split 97.5%: consistent. Specificity 99.9% [99.5%, 100.0%], lineage split 98.8%, random split 99.1%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 39 BioProjects left out: sensitivity 55.2% to 97.3%, specificity 99.9% to 100.0% (over 39 estimates).
+  known_gene: TP 117, FN 3, FP 0, TN 1199. Sensitivity 97.5% [92.9%, 99.5%], lineage split 98.6%, random split 98.6%: consistent. Specificity 100.0% [99.7%, 100.0%], lineage split 97.3%, random split 97.3%: above.
+    Reference figure: fixed rule, whole cohort.
+    With each of 39 BioProjects left out: sensitivity 89.7% to 100.0%, specificity 100.0% to 100.0% (over 39 estimates).
+salmonella_enterica__chloramphenicol: 245 resistant and 1066 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841813 holds 122 of the 245 resistant genomes (49.8%); PRJEB48506 holds 344 of the 1066 susceptible genomes (32.3%). Of 19 studies, 19 can be left out with 25 of each class remaining.
+  scm: TP 185, FN 60, FP 58, TN 1008. Sensitivity 75.5% [69.6%, 80.8%], lineage split 78.7%, random split 91.7%: consistent. Specificity 94.6% [93.0%, 95.8%], lineage split 95.1%, random split 96.2%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 19 BioProjects left out: sensitivity 52.0% to 96.2%, specificity 92.0% to 99.8% (over 19 estimates).
+  cart: TP 185, FN 60, FP 58, TN 1008. Sensitivity 75.5% [69.6%, 80.8%], lineage split 72.2%, random split 89.3%: consistent. Specificity 94.6% [93.0%, 95.8%], lineage split 75.9%, random split 97.6%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 19 BioProjects left out: sensitivity 52.0% to 96.2%, specificity 92.0% to 99.8% (over 19 estimates).
+  known_gene: TP 185, FN 60, FP 64, TN 1002. Sensitivity 75.5% [69.6%, 80.8%], lineage split 92.0%, random split 92.0%: below. Specificity 94.0% [92.4%, 95.3%], lineage split 96.6%, random split 96.6%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 19 BioProjects left out: sensitivity 52.0% to 96.2%, specificity 91.1% to 99.1% (over 19 estimates).
+salmonella_enterica__ciprofloxacin: 948 resistant and 484 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB48506 holds 339 of the 948 resistant genomes (35.8%); PRJEB14050 holds 155 of the 484 susceptible genomes (32.0%). Of 28 studies, 28 can be left out with 25 of each class remaining.
+  scm: TP 764, FN 184, FP 18, TN 466. Sensitivity 80.6% [77.9%, 83.1%], lineage split 82.7%, random split 87.3%: consistent. Specificity 96.3% [94.2%, 97.8%], lineage split 89.3%, random split 95.6%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 28 BioProjects left out: sensitivity 70.1% to 91.8%, specificity 94.5% to 99.3% (over 28 estimates).
+  cart: TP 716, FN 232, FP 23, TN 461. Sensitivity 75.5% [72.7%, 78.2%], lineage split 82.2%, random split 89.2%: below. Specificity 95.2% [93.0%, 97.0%], lineage split 94.2%, random split 94.8%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 28 BioProjects left out: sensitivity 66.8% to 86.1%, specificity 93.0% to 98.2% (over 28 estimates).
+  known_gene: TP 205, FN 743, FP 29, TN 455. Sensitivity 21.6% [19.0%, 24.4%], lineage split 32.6%, random split 32.6%: below. Specificity 94.0% [91.5%, 96.0%], lineage split 91.7%, random split 91.7%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 28 BioProjects left out: sensitivity 12.0% to 33.7%, specificity 91.2% to 98.5% (over 28 estimates).
+salmonella_enterica__gentamicin: 176 resistant and 542 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841813 holds 108 of the 176 resistant genomes (61.4%); PRJEB67737 holds 201 of the 542 susceptible genomes (37.1%). Of 21 studies, 21 can be left out with 25 of each class remaining.
+  scm: TP 133, FN 43, FP 44, TN 498. Sensitivity 75.6% [68.5%, 81.7%], lineage split 65.1%, random split 86.5%: above. Specificity 91.9% [89.3%, 94.0%], lineage split 84.8%, random split 91.0%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 21 BioProjects left out: sensitivity 50.0% to 92.3%, specificity 89.5% to 93.8% (over 21 estimates).
+  cart: TP 143, FN 33, FP 74, TN 468. Sensitivity 81.2% [74.7%, 86.7%], lineage split 73.5%, random split 82.9%: above. Specificity 86.3% [83.2%, 89.1%], lineage split 75.6%, random split 92.0%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 21 BioProjects left out: sensitivity 52.9% to 98.6%, specificity 82.4% to 89.6% (over 21 estimates).
+  known_gene: TP 145, FN 31, FP 46, TN 496. Sensitivity 82.4% [75.9%, 87.7%], lineage split 88.4%, random split 88.4%: below. Specificity 91.5% [88.8%, 93.7%], lineage split 94.1%, random split 94.1%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 21 BioProjects left out: sensitivity 55.9% to 99.3%, specificity 89.1% to 96.5% (over 21 estimates).
+salmonella_enterica__kanamycin: 135 resistant and 295 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841813 holds 128 of the 135 resistant genomes (94.8%); PRJEB71958 holds 121 of the 295 susceptible genomes (41.0%). Of 13 studies, 12 can be left out with 25 of each class remaining.
+  With PRJNA841813 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 118, FN 17, FP 1, TN 294. Sensitivity 87.4% [80.6%, 92.5%], lineage split 74.0%, random split 85.7%: above. Specificity 99.7% [98.1%, 100.0%], lineage split 94.7%, random split 97.7%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 13 BioProjects left out: sensitivity 86.7% to 87.4%, specificity 99.5% to 100.0% (over 12 estimates).
+  cart: TP 119, FN 16, FP 15, TN 280. Sensitivity 88.1% [81.5%, 93.1%], lineage split 72.7%, random split 85.1%: above. Specificity 94.9% [91.8%, 97.1%], lineage split 84.2%, random split 92.8%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 13 BioProjects left out: sensitivity 87.5% to 88.1%, specificity 91.4% to 94.9% (over 12 estimates).
+  known_gene: TP 134, FN 1, FP 0, TN 295. Sensitivity 99.3% [95.9%, 100.0%], lineage split 78.6%, random split 78.6%: above. Specificity 100.0% [98.8%, 100.0%], lineage split 93.7%, random split 93.7%: above.
+    Reference figure: fixed rule, whole cohort.
+    With each of 13 BioProjects left out: sensitivity 99.2% to 99.3%, specificity 100.0% to 100.0% (over 12 estimates).
+salmonella_enterica__nalidixic_acid: 339 resistant and 294 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB67737 holds 175 of the 339 resistant genomes (51.6%); PRJEB71958 holds 117 of the 294 susceptible genomes (39.8%). Of 20 studies, 20 can be left out with 25 of each class remaining.
+  scm: TP 163, FN 176, FP 3, TN 291. Sensitivity 48.1% [42.7%, 53.5%], lineage split 85.6%, random split 91.6%: below. Specificity 99.0% [97.0%, 99.8%], lineage split 94.5%, random split 95.0%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 20 BioProjects left out: sensitivity 18.0% to 95.1%, specificity 98.3% to 99.3% (over 20 estimates).
+  cart: TP 155, FN 184, FP 1, TN 293. Sensitivity 45.7% [40.3%, 51.2%], lineage split 85.2%, random split 87.4%: below. Specificity 99.7% [98.1%, 100.0%], lineage split 97.8%, random split 95.5%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 20 BioProjects left out: sensitivity 14.2% to 94.5%, specificity 99.4% to 100.0% (over 20 estimates).
+  known_gene: TP 157, FN 182, FP 65, TN 229. Sensitivity 46.3% [40.9%, 51.8%], lineage split 26.6%, random split 26.6%: above. Specificity 77.9% [72.7%, 82.5%], lineage split 97.1%, random split 97.1%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 20 BioProjects left out: sensitivity 1.8% to 74.4%, specificity 63.3% to 100.0% (over 20 estimates).
+salmonella_enterica__pefloxacin: 146 resistant and 155 susceptible genomes scored (estimates); known-gene rule: no rule published.
+  By study: PRJNA564922 holds 129 of the 146 resistant genomes (88.4%); PRJEB14050 holds 152 of the 155 susceptible genomes (98.1%). Of 2 studies, 0 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJNA564922 and more than half of the susceptible genomes from PRJEB14050, so sensitivity and specificity are measured mostly on different studies.
+  No leave-one-study-out fold is reportable, so no study-to-study range can be shown.
+  scm: TP 133, FN 13, FP 0, TN 155. Sensitivity 91.1% [85.3%, 95.2%], lineage split 97.9%, random split 97.9%: below. Specificity 100.0% [97.6%, 100.0%], lineage split 99.5%, random split 99.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 133, FN 13, FP 0, TN 155. Sensitivity 91.1% [85.3%, 95.2%], lineage split 97.9%, random split 97.9%: below. Specificity 100.0% [97.6%, 100.0%], lineage split 99.5%, random split 99.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+salmonella_enterica__streptomycin: 169 resistant and 258 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841813 holds 117 of the 169 resistant genomes (69.2%); PRJEB71958 holds 118 of the 258 susceptible genomes (45.7%). Of 15 studies, 15 can be left out with 25 of each class remaining.
+  scm: TP 138, FN 31, FP 20, TN 238. Sensitivity 81.7% [75.0%, 87.2%], lineage split 87.0%, random split 91.6%: consistent. Specificity 92.2% [88.3%, 95.2%], lineage split 83.3%, random split 92.1%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 15 BioProjects left out: sensitivity 75.0% to 85.4%, specificity 85.7% to 99.6% (over 15 estimates).
+  cart: TP 134, FN 35, FP 14, TN 244. Sensitivity 79.3% [72.4%, 85.1%], lineage split 83.3%, random split 89.2%: consistent. Specificity 94.6% [91.1%, 97.0%], lineage split 85.9%, random split 94.0%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 15 BioProjects left out: sensitivity 67.3% to 82.8%, specificity 90.0% to 98.3% (over 15 estimates).
+  known_gene: TP 160, FN 9, FP 17, TN 241. Sensitivity 94.7% [90.1%, 97.5%], lineage split 97.0%, random split 97.0%: consistent. Specificity 93.4% [89.7%, 96.1%], lineage split 79.2%, random split 79.2%: above.
+    Reference figure: fixed rule, whole cohort.
+    With each of 15 BioProjects left out: sensitivity 86.5% to 96.4%, specificity 87.9% to 95.9% (over 15 estimates).
+salmonella_enterica__sulfamethoxazole: 271 resistant and 120 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB67737 holds 235 of the 271 resistant genomes (86.7%); PRJNA564922 holds 112 of the 120 susceptible genomes (93.3%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJEB67737 and more than half of the susceptible genomes from PRJNA564922, so sensitivity and specificity are measured mostly on different studies.
+  With PRJNA564922 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 83, FN 188, FP 3, TN 117. Sensitivity 30.6% [25.2%, 36.5%], lineage split 87.0%, random split 93.5%: below. Specificity 97.5% [92.9%, 99.5%], lineage split 93.4%, random split 98.9%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 27.1% to 88.9%, specificity 97.5% to 100.0% (over 2 estimates).
+  cart: TP 31, FN 240, FP 2, TN 118. Sensitivity 11.4% [7.9%, 15.8%], lineage split 82.6%, random split 93.5%: below. Specificity 98.3% [94.1%, 99.8%], lineage split 95.6%, random split 93.4%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 7.1% to 77.8%, specificity 98.3% to 100.0% (over 2 estimates).
+  lasso: TP 252, FN 19, FP 2, TN 118. Sensitivity 93.0% [89.3%, 95.7%], lineage split 75.8%, random split 93.5%: above. Specificity 98.3% [94.1%, 99.8%], lineage split 88.2%, random split 96.2%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 88.9% to 93.3%, specificity 98.3% to 100.0% (over 2 estimates).
+  known_gene: TP 268, FN 3, FP 0, TN 120. Sensitivity 98.9% [96.8%, 99.8%], lineage split 93.5%, random split 93.5%: above. Specificity 100.0% [97.0%, 100.0%], lineage split 99.5%, random split 99.5%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 91.7% to 99.2%, specificity 100.0% to 100.0% (over 2 estimates).
+salmonella_enterica__sulfamethoxazole_trimethoprim: 161 resistant and 931 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841813 holds 102 of the 161 resistant genomes (63.4%); PRJEB48506 holds 344 of the 931 susceptible genomes (36.9%). Of 23 studies, 23 can be left out with 25 of each class remaining.
+  scm: TP 118, FN 43, FP 25, TN 906. Sensitivity 73.3% [65.8%, 79.9%], lineage split 44.3%, random split 82.4%: above. Specificity 97.3% [96.1%, 98.3%], lineage split 89.5%, random split 89.5%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 23 BioProjects left out: sensitivity 70.9% to 77.3%, specificity 95.7% to 99.8% (over 23 estimates).
+  cart: TP 99, FN 62, FP 37, TN 894. Sensitivity 61.5% [53.5%, 69.0%], lineage split 69.6%, random split 76.0%: below. Specificity 96.0% [94.6%, 97.2%], lineage split 72.4%, random split 92.3%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 23 BioProjects left out: sensitivity 44.1% to 67.4%, specificity 93.7% to 99.7% (over 23 estimates).
+  known_gene: TP 146, FN 15, FP 3, TN 928. Sensitivity 90.7% [85.1%, 94.7%], lineage split 77.0%, random split 77.0%: above. Specificity 99.7% [99.1%, 99.9%], lineage split 96.2%, random split 96.2%: above.
+    Reference figure: fixed rule, whole cohort.
+    With each of 23 BioProjects left out: sensitivity 89.4% to 92.4%, specificity 99.5% to 99.9% (over 23 estimates).
+salmonella_enterica__tetracycline: 440 resistant and 393 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB67737 holds 243 of the 440 resistant genomes (55.2%); PRJEB71958 holds 120 of the 393 susceptible genomes (30.5%), as many as PRJNA564922. Of 17 studies, 17 can be left out with 25 of each class remaining.
+  scm: TP 435, FN 5, FP 224, TN 169. Sensitivity 98.9% [97.4%, 99.6%], lineage split 77.0%, random split 92.9%: above. Specificity 43.0% [38.0%, 48.1%], lineage split 96.1%, random split 94.0%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 17 BioProjects left out: sensitivity 98.0% to 99.1%, specificity 17.9% to 61.9% (over 17 estimates).
+  cart: TP 425, FN 15, FP 4, TN 389. Sensitivity 96.6% [94.4%, 98.1%], lineage split 83.7%, random split 89.6%: above. Specificity 99.0% [97.4%, 99.7%], lineage split 93.3%, random split 95.5%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 17 BioProjects left out: sensitivity 93.9% to 97.3%, specificity 98.5% to 99.5% (over 17 estimates).
+  known_gene: TP 435, FN 5, FP 6, TN 387. Sensitivity 98.9% [97.4%, 99.6%], lineage split 92.8%, random split 92.8%: above. Specificity 98.5% [96.7%, 99.4%], lineage split 91.7%, random split 91.7%: above.
+    Reference figure: fixed rule, whole cohort.
+    With each of 17 BioProjects left out: sensitivity 97.5% to 99.1%, specificity 97.8% to 99.2% (over 17 estimates).
+salmonella_enterica__trimethoprim: 78 resistant and 531 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB67737 holds 45 of the 78 resistant genomes (57.7%); PRJEB67737 holds 190 of the 531 susceptible genomes (35.8%). Of 14 studies, 14 can be left out with 25 of each class remaining.
+  scm: TP 18, FN 60, FP 40, TN 491. Sensitivity 23.1% [14.3%, 34.0%], lineage split 82.0%, random split 91.0%: below. Specificity 92.5% [89.9%, 94.6%], lineage split 78.0%, random split 95.0%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 14 BioProjects left out: sensitivity 9.2% to 39.4%, specificity 90.2% to 99.7% (over 14 estimates).
+  cart: TP 36, FN 42, FP 44, TN 487. Sensitivity 46.2% [34.8%, 57.8%], lineage split 87.9%, random split 95.7%: below. Specificity 91.7% [89.0%, 93.9%], lineage split 66.7%, random split 92.9%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 14 BioProjects left out: sensitivity 30.5% to 87.9%, specificity 89.3% to 100.0% (over 14 estimates).
+  known_gene: TP 36, FN 42, FP 39, TN 492. Sensitivity 46.2% [34.8%, 57.8%], lineage split 91.8%, random split 91.8%: below. Specificity 92.7% [90.1%, 94.7%], lineage split 97.4%, random split 97.4%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 14 BioProjects left out: sensitivity 30.5% to 93.9%, specificity 90.5% to 100.0% (over 14 estimates).
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 7, consistent 10, above 17, not read 0.
+  cart: below 11, consistent 8, above 15, not read 0.
+  lasso: below 2, consistent 1, above 5, not read 0.
+  known_gene: below 9, consistent 6, above 17, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

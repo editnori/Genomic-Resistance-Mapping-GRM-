@@ -1,0 +1,271 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+klebsiella_pneumoniae__aztreonam	scm	bioproject	PRJNA288601	273	183	267	6	25	158	0	0
+klebsiella_pneumoniae__aztreonam	scm	country	USA	273	183	267	6	25	158	0	0
+klebsiella_pneumoniae__aztreonam	scm	mlst_in_cohort	no	12	79	11	1	11	68	0	0
+klebsiella_pneumoniae__aztreonam	scm	mlst_in_cohort	no ST	2	4	1	1	1	3	0	0
+klebsiella_pneumoniae__aztreonam	scm	mlst_in_cohort	yes	259	100	255	4	13	87	0	0
+klebsiella_pneumoniae__aztreonam	cart	bioproject	PRJNA288601	273	183	261	12	9	174	0	0
+klebsiella_pneumoniae__aztreonam	cart	country	USA	273	183	261	12	9	174	0	0
+klebsiella_pneumoniae__aztreonam	cart	mlst_in_cohort	no	12	79	11	1	3	76	0	0
+klebsiella_pneumoniae__aztreonam	cart	mlst_in_cohort	no ST	2	4	0	2	0	4	0	0
+klebsiella_pneumoniae__aztreonam	cart	mlst_in_cohort	yes	259	100	250	9	6	94	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	bioproject	PRJNA288601	273	183	109	164	47	136	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	country	USA	273	183	109	164	47	136	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	mlst_in_cohort	no	12	79	7	5	10	69	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	mlst_in_cohort	no ST	2	4	2	0	1	3	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	mlst_in_cohort	yes	259	100	100	159	36	64	0	0
+klebsiella_pneumoniae__cefazolin	scm	bioproject	PRJNA288601	296	139	275	21	5	134	0	0
+klebsiella_pneumoniae__cefazolin	scm	country	USA	296	139	275	21	5	134	0	0
+klebsiella_pneumoniae__cefazolin	scm	mlst_in_cohort	no	20	65	12	8	2	63	0	0
+klebsiella_pneumoniae__cefazolin	scm	mlst_in_cohort	no ST	2	3	2	0	0	3	0	0
+klebsiella_pneumoniae__cefazolin	scm	mlst_in_cohort	yes	274	71	261	13	3	68	0	0
+klebsiella_pneumoniae__cefazolin	cart	bioproject	PRJNA288601	296	139	275	21	6	133	0	0
+klebsiella_pneumoniae__cefazolin	cart	country	USA	296	139	275	21	6	133	0	0
+klebsiella_pneumoniae__cefazolin	cart	mlst_in_cohort	no	20	65	12	8	3	62	0	0
+klebsiella_pneumoniae__cefazolin	cart	mlst_in_cohort	no ST	2	3	2	0	0	3	0	0
+klebsiella_pneumoniae__cefazolin	cart	mlst_in_cohort	yes	274	71	261	13	3	68	0	0
+klebsiella_pneumoniae__cefazolin	known_gene	bioproject	PRJNA288601	296	139	278	18	31	108	0	0
+klebsiella_pneumoniae__cefazolin	known_gene	country	USA	296	139	278	18	31	108	0	0
+klebsiella_pneumoniae__cefazolin	known_gene	mlst_in_cohort	no	20	65	14	6	7	58	0	0
+klebsiella_pneumoniae__cefazolin	known_gene	mlst_in_cohort	no ST	2	3	2	0	1	2	0	0
+klebsiella_pneumoniae__cefazolin	known_gene	mlst_in_cohort	yes	274	71	262	12	23	48	0	0
+klebsiella_pneumoniae__cefepime	scm	bioproject	PRJNA288601	268	191	238	30	14	177	0	0
+klebsiella_pneumoniae__cefepime	scm	country	USA	268	191	238	30	14	177	0	0
+klebsiella_pneumoniae__cefepime	scm	mlst_in_cohort	no	14	77	10	4	1	76	0	0
+klebsiella_pneumoniae__cefepime	scm	mlst_in_cohort	no ST	2	4	1	1	0	4	0	0
+klebsiella_pneumoniae__cefepime	scm	mlst_in_cohort	yes	252	110	227	25	13	97	0	0
+klebsiella_pneumoniae__cefepime	cart	bioproject	PRJNA288601	268	191	249	19	15	176	0	0
+klebsiella_pneumoniae__cefepime	cart	country	USA	268	191	249	19	15	176	0	0
+klebsiella_pneumoniae__cefepime	cart	mlst_in_cohort	no	14	77	10	4	1	76	0	0
+klebsiella_pneumoniae__cefepime	cart	mlst_in_cohort	no ST	2	4	1	1	0	4	0	0
+klebsiella_pneumoniae__cefepime	cart	mlst_in_cohort	yes	252	110	238	14	14	96	0	0
+klebsiella_pneumoniae__cefepime	known_gene	bioproject	PRJNA288601	268	191	262	6	57	134	0	0
+klebsiella_pneumoniae__cefepime	known_gene	country	USA	268	191	262	6	57	134	0	0
+klebsiella_pneumoniae__cefepime	known_gene	mlst_in_cohort	no	14	77	11	3	11	66	0	0
+klebsiella_pneumoniae__cefepime	known_gene	mlst_in_cohort	no ST	2	4	2	0	1	3	0	0
+klebsiella_pneumoniae__cefepime	known_gene	mlst_in_cohort	yes	252	110	249	3	45	65	0	0
+klebsiella_pneumoniae__cefoxitin	scm	bioproject	PRJNA288601	264	178	231	33	4	174	0	0
+klebsiella_pneumoniae__cefoxitin	scm	country	USA	264	178	231	33	4	174	0	0
+klebsiella_pneumoniae__cefoxitin	scm	mlst_in_cohort	no	17	73	8	9	1	72	0	0
+klebsiella_pneumoniae__cefoxitin	scm	mlst_in_cohort	no ST	2	4	1	1	0	4	0	0
+klebsiella_pneumoniae__cefoxitin	scm	mlst_in_cohort	yes	245	101	222	23	3	98	0	0
+klebsiella_pneumoniae__cefoxitin	cart	bioproject	PRJNA288601	264	178	238	26	20	158	0	0
+klebsiella_pneumoniae__cefoxitin	cart	country	USA	264	178	238	26	20	158	0	0
+klebsiella_pneumoniae__cefoxitin	cart	mlst_in_cohort	no	17	73	9	8	7	66	0	0
+klebsiella_pneumoniae__cefoxitin	cart	mlst_in_cohort	no ST	2	4	1	1	0	4	0	0
+klebsiella_pneumoniae__cefoxitin	cart	mlst_in_cohort	yes	245	101	228	17	13	88	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	bioproject	PRJNA288601	264	178	250	14	59	119	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	country	USA	264	178	250	14	59	119	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	mlst_in_cohort	no	17	73	10	7	12	61	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	mlst_in_cohort	no ST	2	4	1	1	2	2	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	mlst_in_cohort	yes	245	101	239	6	45	56	0	0
+klebsiella_pneumoniae__ceftazidime	scm	bioproject	PRJNA288601	280	177	266	14	6	171	0	0
+klebsiella_pneumoniae__ceftazidime	scm	country	USA	280	177	266	14	6	171	0	0
+klebsiella_pneumoniae__ceftazidime	scm	mlst_in_cohort	no	16	75	11	5	1	74	0	0
+klebsiella_pneumoniae__ceftazidime	scm	mlst_in_cohort	no ST	2	4	1	1	0	4	0	0
+klebsiella_pneumoniae__ceftazidime	scm	mlst_in_cohort	yes	262	98	254	8	5	93	0	0
+klebsiella_pneumoniae__ceftazidime	cart	bioproject	PRJNA288601	280	177	254	26	7	170	0	0
+klebsiella_pneumoniae__ceftazidime	cart	country	USA	280	177	254	26	7	170	0	0
+klebsiella_pneumoniae__ceftazidime	cart	mlst_in_cohort	no	16	75	10	6	1	74	0	0
+klebsiella_pneumoniae__ceftazidime	cart	mlst_in_cohort	no ST	2	4	1	1	0	4	0	0
+klebsiella_pneumoniae__ceftazidime	cart	mlst_in_cohort	yes	262	98	243	19	6	92	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	bioproject	PRJNA288601	280	177	271	9	47	130	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	country	USA	280	177	271	9	47	130	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	mlst_in_cohort	no	16	75	12	4	10	65	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	mlst_in_cohort	no ST	2	4	2	0	1	3	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	mlst_in_cohort	yes	262	98	257	5	36	62	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	bioproject	PRJNA288601	279	173	269	10	2	171	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	country	USA	279	173	269	10	2	171	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	mlst_in_cohort	no	14	74	12	2	0	74	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	mlst_in_cohort	no ST	2	4	2	0	0	4	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	mlst_in_cohort	yes	263	95	255	8	2	93	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	bioproject	PRJNA288601	279	173	263	16	9	164	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	country	USA	279	173	263	16	9	164	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	mlst_in_cohort	no	14	74	13	1	1	73	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	mlst_in_cohort	no ST	2	4	1	1	0	4	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	mlst_in_cohort	yes	263	95	249	14	8	87	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	bioproject	PRJNA288601	279	173	273	6	44	129	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	country	USA	279	173	273	6	44	129	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	mlst_in_cohort	no	14	74	13	1	9	65	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	mlst_in_cohort	no ST	2	4	2	0	1	3	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	mlst_in_cohort	yes	263	95	258	5	34	61	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJNA288601	283	163	257	26	2	161	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	USA	283	163	257	26	2	161	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	mlst_in_cohort	no	14	70	9	5	1	69	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	mlst_in_cohort	no ST	2	3	1	1	0	3	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	mlst_in_cohort	yes	267	90	247	20	1	89	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJNA288601	283	163	266	17	0	163	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	USA	283	163	266	17	0	163	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	mlst_in_cohort	no	14	70	12	2	0	70	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	mlst_in_cohort	no ST	2	3	2	0	0	3	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	mlst_in_cohort	yes	267	90	252	15	0	90	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJNA288601	283	163	268	15	154	9	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	USA	283	163	268	15	154	9	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	mlst_in_cohort	no	14	70	14	0	67	3	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	mlst_in_cohort	no ST	2	3	2	0	2	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	mlst_in_cohort	yes	267	90	252	15	85	5	0	0
+klebsiella_pneumoniae__doripenem	scm	bioproject	PRJNA288601	232	208	222	10	125	83	0	0
+klebsiella_pneumoniae__doripenem	scm	country	USA	232	208	222	10	125	83	0	0
+klebsiella_pneumoniae__doripenem	scm	mlst_in_cohort	no	7	82	6	1	43	39	0	0
+klebsiella_pneumoniae__doripenem	scm	mlst_in_cohort	no ST	1	5	1	0	3	2	0	0
+klebsiella_pneumoniae__doripenem	scm	mlst_in_cohort	yes	224	121	215	9	79	42	0	0
+klebsiella_pneumoniae__doripenem	cart	bioproject	PRJNA288601	232	208	77	155	37	171	0	0
+klebsiella_pneumoniae__doripenem	cart	country	USA	232	208	77	155	37	171	0	0
+klebsiella_pneumoniae__doripenem	cart	mlst_in_cohort	no	7	82	1	6	6	76	0	0
+klebsiella_pneumoniae__doripenem	cart	mlst_in_cohort	no ST	1	5	1	0	1	4	0	0
+klebsiella_pneumoniae__doripenem	cart	mlst_in_cohort	yes	224	121	75	149	30	91	0	0
+klebsiella_pneumoniae__doripenem	lasso	bioproject	PRJNA288601	232	208	216	16	104	104	0	0
+klebsiella_pneumoniae__doripenem	lasso	country	USA	232	208	216	16	104	104	0	0
+klebsiella_pneumoniae__doripenem	lasso	mlst_in_cohort	no	7	82	6	1	40	42	0	0
+klebsiella_pneumoniae__doripenem	lasso	mlst_in_cohort	no ST	1	5	1	0	3	2	0	0
+klebsiella_pneumoniae__doripenem	lasso	mlst_in_cohort	yes	224	121	209	15	61	60	0	0
+klebsiella_pneumoniae__doripenem	known_gene	bioproject	PRJNA288601	232	208	219	13	1	207	0	0
+klebsiella_pneumoniae__doripenem	known_gene	country	USA	232	208	219	13	1	207	0	0
+klebsiella_pneumoniae__doripenem	known_gene	mlst_in_cohort	no	7	82	5	2	1	81	0	0
+klebsiella_pneumoniae__doripenem	known_gene	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__doripenem	known_gene	mlst_in_cohort	yes	224	121	213	11	0	121	0	0
+klebsiella_pneumoniae__ertapenem	scm	bioproject	PRJNA288601	257	199	233	24	0	199	0	0
+klebsiella_pneumoniae__ertapenem	scm	country	USA	257	199	233	24	0	199	0	0
+klebsiella_pneumoniae__ertapenem	scm	mlst_in_cohort	no	12	77	5	7	0	77	0	0
+klebsiella_pneumoniae__ertapenem	scm	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__ertapenem	scm	mlst_in_cohort	yes	244	117	227	17	0	117	0	0
+klebsiella_pneumoniae__ertapenem	cart	bioproject	PRJNA288601	257	199	251	6	175	24	0	0
+klebsiella_pneumoniae__ertapenem	cart	country	USA	257	199	251	6	175	24	0	0
+klebsiella_pneumoniae__ertapenem	cart	mlst_in_cohort	no	12	77	8	4	69	8	0	0
+klebsiella_pneumoniae__ertapenem	cart	mlst_in_cohort	no ST	1	5	1	0	4	1	0	0
+klebsiella_pneumoniae__ertapenem	cart	mlst_in_cohort	yes	244	117	242	2	102	15	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	bioproject	PRJNA288601	257	199	232	25	0	199	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	country	USA	257	199	232	25	0	199	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	mlst_in_cohort	no	12	77	5	7	0	77	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	mlst_in_cohort	yes	244	117	226	18	0	117	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJNA288601	86	340	71	15	9	331	0	0
+klebsiella_pneumoniae__gentamicin	scm	country	USA	86	340	71	15	9	331	0	0
+klebsiella_pneumoniae__gentamicin	scm	mlst_in_cohort	no	5	85	5	0	1	84	0	0
+klebsiella_pneumoniae__gentamicin	scm	mlst_in_cohort	no ST	1	5	0	1	0	5	0	0
+klebsiella_pneumoniae__gentamicin	scm	mlst_in_cohort	yes	80	250	66	14	8	242	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJNA288601	86	340	56	30	5	335	0	0
+klebsiella_pneumoniae__gentamicin	cart	country	USA	86	340	56	30	5	335	0	0
+klebsiella_pneumoniae__gentamicin	cart	mlst_in_cohort	no	5	85	5	0	1	84	0	0
+klebsiella_pneumoniae__gentamicin	cart	mlst_in_cohort	no ST	1	5	0	1	0	5	0	0
+klebsiella_pneumoniae__gentamicin	cart	mlst_in_cohort	yes	80	250	51	29	4	246	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJNA288601	86	340	79	7	65	275	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	country	USA	86	340	79	7	65	275	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	mlst_in_cohort	no	5	85	5	0	3	82	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	mlst_in_cohort	no ST	1	5	0	1	0	5	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	mlst_in_cohort	yes	80	250	74	6	62	188	0	0
+klebsiella_pneumoniae__imipenem	scm	bioproject	PRJNA288601	234	207	227	7	4	203	0	0
+klebsiella_pneumoniae__imipenem	scm	country	USA	234	207	227	7	4	203	0	0
+klebsiella_pneumoniae__imipenem	scm	mlst_in_cohort	no	8	82	6	2	1	81	0	0
+klebsiella_pneumoniae__imipenem	scm	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__imipenem	scm	mlst_in_cohort	yes	225	120	220	5	3	117	0	0
+klebsiella_pneumoniae__imipenem	cart	bioproject	PRJNA288601	234	207	224	10	5	202	0	0
+klebsiella_pneumoniae__imipenem	cart	country	USA	234	207	224	10	5	202	0	0
+klebsiella_pneumoniae__imipenem	cart	mlst_in_cohort	no	8	82	6	2	2	80	0	0
+klebsiella_pneumoniae__imipenem	cart	mlst_in_cohort	no ST	1	5	0	1	0	5	0	0
+klebsiella_pneumoniae__imipenem	cart	mlst_in_cohort	yes	225	120	218	7	3	117	0	0
+klebsiella_pneumoniae__imipenem	known_gene	bioproject	PRJNA288601	234	207	228	6	1	206	0	0
+klebsiella_pneumoniae__imipenem	known_gene	country	USA	234	207	228	6	1	206	0	0
+klebsiella_pneumoniae__imipenem	known_gene	mlst_in_cohort	no	8	82	6	2	0	82	0	0
+klebsiella_pneumoniae__imipenem	known_gene	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__imipenem	known_gene	mlst_in_cohort	yes	225	120	221	4	1	119	0	0
+klebsiella_pneumoniae__levofloxacin	scm	bioproject	PRJNA288601	272	173	253	19	0	173	0	0
+klebsiella_pneumoniae__levofloxacin	scm	country	USA	272	173	253	19	0	173	0	0
+klebsiella_pneumoniae__levofloxacin	scm	mlst_in_cohort	no	14	74	7	7	0	74	0	0
+klebsiella_pneumoniae__levofloxacin	scm	mlst_in_cohort	no ST	1	4	1	0	0	4	0	0
+klebsiella_pneumoniae__levofloxacin	scm	mlst_in_cohort	yes	257	95	245	12	0	95	0	0
+klebsiella_pneumoniae__levofloxacin	cart	bioproject	PRJNA288601	272	173	253	19	0	173	0	0
+klebsiella_pneumoniae__levofloxacin	cart	country	USA	272	173	253	19	0	173	0	0
+klebsiella_pneumoniae__levofloxacin	cart	mlst_in_cohort	no	14	74	7	7	0	74	0	0
+klebsiella_pneumoniae__levofloxacin	cart	mlst_in_cohort	no ST	1	4	1	0	0	4	0	0
+klebsiella_pneumoniae__levofloxacin	cart	mlst_in_cohort	yes	257	95	245	12	0	95	0	0
+klebsiella_pneumoniae__levofloxacin	lasso	bioproject	PRJNA288601	272	173	253	19	0	173	0	0
+klebsiella_pneumoniae__levofloxacin	lasso	country	USA	272	173	253	19	0	173	0	0
+klebsiella_pneumoniae__levofloxacin	lasso	mlst_in_cohort	no	14	74	7	7	0	74	0	0
+klebsiella_pneumoniae__levofloxacin	lasso	mlst_in_cohort	no ST	1	4	1	0	0	4	0	0
+klebsiella_pneumoniae__levofloxacin	lasso	mlst_in_cohort	yes	257	95	245	12	0	95	0	0
+klebsiella_pneumoniae__levofloxacin	known_gene	bioproject	PRJNA288601	272	173	257	15	164	9	0	0
+klebsiella_pneumoniae__levofloxacin	known_gene	country	USA	272	173	257	15	164	9	0	0
+klebsiella_pneumoniae__levofloxacin	known_gene	mlst_in_cohort	no	14	74	14	0	71	3	0	0
+klebsiella_pneumoniae__levofloxacin	known_gene	mlst_in_cohort	no ST	1	4	1	0	3	1	0	0
+klebsiella_pneumoniae__levofloxacin	known_gene	mlst_in_cohort	yes	257	95	242	15	90	5	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJNA288601	240	206	223	17	5	201	0	0
+klebsiella_pneumoniae__meropenem	scm	country	USA	240	206	223	17	5	201	0	0
+klebsiella_pneumoniae__meropenem	scm	mlst_in_cohort	no	7	80	5	2	1	79	0	0
+klebsiella_pneumoniae__meropenem	scm	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__meropenem	scm	mlst_in_cohort	yes	232	121	217	15	4	117	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJNA288601	240	206	217	23	6	200	0	0
+klebsiella_pneumoniae__meropenem	cart	country	USA	240	206	217	23	6	200	0	0
+klebsiella_pneumoniae__meropenem	cart	mlst_in_cohort	no	7	80	5	2	1	79	0	0
+klebsiella_pneumoniae__meropenem	cart	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__meropenem	cart	mlst_in_cohort	yes	232	121	211	21	5	116	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJNA288601	240	206	224	16	3	203	0	0
+klebsiella_pneumoniae__meropenem	known_gene	country	USA	240	206	224	16	3	203	0	0
+klebsiella_pneumoniae__meropenem	known_gene	mlst_in_cohort	no	7	80	5	2	1	79	0	0
+klebsiella_pneumoniae__meropenem	known_gene	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__meropenem	known_gene	mlst_in_cohort	yes	232	121	218	14	2	119	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	bioproject	PRJNA288601	263	186	234	29	0	186	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	country	USA	263	186	234	29	0	186	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	mlst_in_cohort	no	12	78	6	6	0	78	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	mlst_in_cohort	yes	250	103	227	23	0	103	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	bioproject	PRJNA288601	263	186	250	13	83	103	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	country	USA	263	186	250	13	83	103	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	mlst_in_cohort	no	12	78	9	3	23	55	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	mlst_in_cohort	no ST	1	5	1	0	5	0	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	mlst_in_cohort	yes	250	103	240	10	55	48	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	bioproject	PRJNA288601	263	186	254	9	56	130	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	country	USA	263	186	254	9	56	130	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	mlst_in_cohort	no	12	78	8	4	13	65	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	mlst_in_cohort	no ST	1	5	1	0	2	3	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	mlst_in_cohort	yes	250	103	245	5	41	62	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA288601	282	177	256	26	5	172	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	USA	282	177	256	26	5	172	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no	18	73	13	5	1	72	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	yes	263	99	242	21	4	95	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA288601	282	177	239	43	9	168	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	USA	282	177	239	43	9	168	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no	18	73	12	6	2	71	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	yes	263	99	226	37	7	92	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA288601	282	177	237	45	1	176	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	USA	282	177	237	45	1	176	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no	18	73	12	6	0	73	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no ST	1	5	1	0	0	5	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	yes	263	99	224	39	1	98	0	0
+klebsiella_pneumoniae__tetracycline	scm	bioproject	PRJNA288601	95	327	67	28	114	213	0	0
+klebsiella_pneumoniae__tetracycline	scm	country	USA	95	327	67	28	114	213	0	0
+klebsiella_pneumoniae__tetracycline	scm	mlst_in_cohort	no	13	75	9	4	40	35	0	0
+klebsiella_pneumoniae__tetracycline	scm	mlst_in_cohort	no ST	2	4	1	1	2	2	0	0
+klebsiella_pneumoniae__tetracycline	scm	mlst_in_cohort	yes	80	248	57	23	72	176	0	0
+klebsiella_pneumoniae__tetracycline	cart	bioproject	PRJNA288601	95	327	95	0	304	23	0	0
+klebsiella_pneumoniae__tetracycline	cart	country	USA	95	327	95	0	304	23	0	0
+klebsiella_pneumoniae__tetracycline	cart	mlst_in_cohort	no	13	75	13	0	57	18	0	0
+klebsiella_pneumoniae__tetracycline	cart	mlst_in_cohort	no ST	2	4	2	0	4	0	0	0
+klebsiella_pneumoniae__tetracycline	cart	mlst_in_cohort	yes	80	248	80	0	243	5	0	0
+klebsiella_pneumoniae__tetracycline	lasso	bioproject	PRJNA288601	95	327	58	37	5	322	0	0
+klebsiella_pneumoniae__tetracycline	lasso	country	USA	95	327	58	37	5	322	0	0
+klebsiella_pneumoniae__tetracycline	lasso	mlst_in_cohort	no	13	75	9	4	1	74	0	0
+klebsiella_pneumoniae__tetracycline	lasso	mlst_in_cohort	no ST	2	4	1	1	0	4	0	0
+klebsiella_pneumoniae__tetracycline	lasso	mlst_in_cohort	yes	80	248	48	32	4	244	0	0
+klebsiella_pneumoniae__tetracycline	known_gene	bioproject	PRJNA288601	95	327	84	11	162	165	0	0
+klebsiella_pneumoniae__tetracycline	known_gene	country	USA	95	327	84	11	162	165	0	0
+klebsiella_pneumoniae__tetracycline	known_gene	mlst_in_cohort	no	13	75	11	2	7	68	0	0
+klebsiella_pneumoniae__tetracycline	known_gene	mlst_in_cohort	no ST	2	4	1	1	0	4	0	0
+klebsiella_pneumoniae__tetracycline	known_gene	mlst_in_cohort	yes	80	248	72	8	155	93	0	0
+klebsiella_pneumoniae__tobramycin	scm	bioproject	PRJNA288601	213	198	213	0	20	178	0	0
+klebsiella_pneumoniae__tobramycin	scm	country	USA	213	198	213	0	20	178	0	0
+klebsiella_pneumoniae__tobramycin	scm	mlst_in_cohort	no	9	76	9	0	2	74	0	0
+klebsiella_pneumoniae__tobramycin	scm	mlst_in_cohort	no ST	0	5	0	0	1	4	0	0
+klebsiella_pneumoniae__tobramycin	scm	mlst_in_cohort	yes	204	117	204	0	17	100	0	0
+klebsiella_pneumoniae__tobramycin	cart	bioproject	PRJNA288601	213	198	211	2	20	178	0	0
+klebsiella_pneumoniae__tobramycin	cart	country	USA	213	198	211	2	20	178	0	0
+klebsiella_pneumoniae__tobramycin	cart	mlst_in_cohort	no	9	76	9	0	3	73	0	0
+klebsiella_pneumoniae__tobramycin	cart	mlst_in_cohort	no ST	0	5	0	0	0	5	0	0
+klebsiella_pneumoniae__tobramycin	cart	mlst_in_cohort	yes	204	117	202	2	17	100	0	0
+klebsiella_pneumoniae__tobramycin	known_gene	bioproject	PRJNA288601	213	198	162	51	7	191	0	0
+klebsiella_pneumoniae__tobramycin	known_gene	country	USA	213	198	162	51	7	191	0	0
+klebsiella_pneumoniae__tobramycin	known_gene	mlst_in_cohort	no	9	76	6	3	0	76	0	0
+klebsiella_pneumoniae__tobramycin	known_gene	mlst_in_cohort	no ST	0	5	0	0	0	5	0	0
+klebsiella_pneumoniae__tobramycin	known_gene	mlst_in_cohort	yes	204	117	156	48	7	110	0	0

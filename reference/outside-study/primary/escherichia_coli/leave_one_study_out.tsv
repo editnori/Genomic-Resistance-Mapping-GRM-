@@ -1,0 +1,183 @@
+dataset	learner	left_out	scored_resistant	scored_susceptible	reportable	tp	fn	fp	tn	no_call_resistant	no_call_susceptible	sensitivity	specificity	balanced_accuracy
+escherichia_coli__amikacin	scm	PRJNA1223317	62	472	yes	6	56	27	445	0	0	0.096774	0.942797	0.519785
+escherichia_coli__amikacin	scm	PRJNA1223857	64	504	yes	6	58	32	472	0	0	0.093750	0.936508	0.515129
+escherichia_coli__amikacin	scm	PRJNA675772	60	436	yes	6	54	27	409	0	0	0.100000	0.938073	0.519037
+escherichia_coli__amikacin	scm	PRJNA841811	6	172	no	0	6	10	162	0	0			
+escherichia_coli__amikacin	cart	PRJNA1223317	62	472	yes	4	58	14	458	0	0	0.064516	0.970339	0.517428
+escherichia_coli__amikacin	cart	PRJNA1223857	64	504	yes	5	59	23	481	0	0	0.078125	0.954365	0.516245
+escherichia_coli__amikacin	cart	PRJNA675772	60	436	yes	5	55	26	410	0	0	0.083333	0.940367	0.511850
+escherichia_coli__amikacin	cart	PRJNA841811	6	172	no	1	5	18	154	0	0			
+escherichia_coli__amikacin	lasso	PRJNA1223317	62	472	yes	6	56	16	456	0	0	0.096774	0.966102	0.531438
+escherichia_coli__amikacin	lasso	PRJNA1223857	64	504	yes	6	58	21	483	0	0	0.093750	0.958333	0.526042
+escherichia_coli__amikacin	lasso	PRJNA675772	60	436	yes	6	54	19	417	0	0	0.100000	0.956422	0.528211
+escherichia_coli__amikacin	lasso	PRJNA841811	6	172	no	0	6	7	165	0	0			
+escherichia_coli__amikacin	known_gene	PRJNA1223317	62	472	yes	42	20	43	429	0	0	0.677419	0.908898	0.793159
+escherichia_coli__amikacin	known_gene	PRJNA1223857	64	504	yes	44	20	51	453	0	0	0.687500	0.898810	0.793155
+escherichia_coli__amikacin	known_gene	PRJNA675772	60	436	yes	41	19	49	387	0	0	0.683333	0.887615	0.785474
+escherichia_coli__amikacin	known_gene	PRJNA841811	6	172	no	5	1	25	147	0	0			
+escherichia_coli__ampicillin	scm	PRJNA1223317	513	26	yes	485	28	11	15	0	0	0.945419	0.576923	0.761171
+escherichia_coli__ampicillin	scm	PRJNA1223857	523	53	yes	493	30	17	36	0	0	0.942639	0.679245	0.810942
+escherichia_coli__ampicillin	scm	PRJNA675772	455	49	yes	428	27	17	32	0	0	0.940659	0.653061	0.796860
+escherichia_coli__ampicillin	scm	PRJNA841811	150	31	yes	145	5	6	25	0	0	0.966667	0.806452	0.886559
+escherichia_coli__ampicillin	cart	PRJNA1223317	513	26	yes	476	37	11	15	0	0	0.927875	0.576923	0.752399
+escherichia_coli__ampicillin	cart	PRJNA1223857	523	53	yes	484	39	14	39	0	0	0.925430	0.735849	0.830640
+escherichia_coli__ampicillin	cart	PRJNA675772	455	49	yes	420	35	14	35	0	0	0.923077	0.714286	0.818681
+escherichia_coli__ampicillin	cart	PRJNA841811	150	31	yes	144	6	3	28	0	0	0.960000	0.903226	0.931613
+escherichia_coli__ampicillin	known_gene	PRJNA1223317	513	26	yes	513	0	25	1	0	0	1.000000	0.038462	0.519231
+escherichia_coli__ampicillin	known_gene	PRJNA1223857	523	53	yes	523	0	52	1	0	0	1.000000	0.018868	0.509434
+escherichia_coli__ampicillin	known_gene	PRJNA675772	455	49	yes	455	0	49	0	0	0	1.000000	0.000000	0.500000
+escherichia_coli__ampicillin	known_gene	PRJNA841811	150	31	yes	150	0	30	1	0	0	1.000000	0.032258	0.516129
+escherichia_coli__ampicillin_sulbactam	scm	PRJNA1223317	365	43	yes	207	158	23	20	0	0	0.567123	0.465116	0.516120
+escherichia_coli__ampicillin_sulbactam	scm	PRJNA675772	303	72	yes	164	139	41	31	0	0	0.541254	0.430556	0.485905
+escherichia_coli__ampicillin_sulbactam	scm	PRJNA841811	70	41	yes	49	21	26	15	0	0	0.700000	0.365854	0.532927
+escherichia_coli__ampicillin_sulbactam	cart	PRJNA1223317	365	43	yes	363	2	43	0	0	0	0.994521	0.000000	0.497260
+escherichia_coli__ampicillin_sulbactam	cart	PRJNA675772	303	72	yes	302	1	71	1	0	0	0.996700	0.013889	0.505294
+escherichia_coli__ampicillin_sulbactam	cart	PRJNA841811	70	41	yes	69	1	40	1	0	0	0.985714	0.024390	0.505052
+escherichia_coli__ampicillin_sulbactam	known_gene	PRJNA1223317	365	43	yes	354	11	36	7	0	0	0.969863	0.162791	0.566327
+escherichia_coli__ampicillin_sulbactam	known_gene	PRJNA675772	303	72	yes	296	7	62	10	0	0	0.976898	0.138889	0.557893
+escherichia_coli__ampicillin_sulbactam	known_gene	PRJNA841811	70	41	yes	66	4	34	7	0	0	0.942857	0.170732	0.556794
+escherichia_coli__aztreonam	scm	PRJNA1104021	348	133	yes	166	182	37	96	0	0	0.477011	0.721805	0.599408
+escherichia_coli__aztreonam	scm	PRJNA675772	293	103	yes	137	156	34	69	0	0	0.467577	0.669903	0.568740
+escherichia_coli__aztreonam	scm	PRJNA841811	57	30	yes	31	26	3	27	0	0	0.543860	0.900000	0.721930
+escherichia_coli__aztreonam	cart	PRJNA1104021	348	133	yes	289	59	41	92	0	0	0.830460	0.691729	0.761095
+escherichia_coli__aztreonam	cart	PRJNA675772	293	103	yes	241	52	37	66	0	0	0.822526	0.640777	0.731651
+escherichia_coli__aztreonam	cart	PRJNA841811	57	30	yes	50	7	4	26	0	0	0.877193	0.866667	0.871930
+escherichia_coli__aztreonam	known_gene	PRJNA1104021	348	133	yes	345	3	118	15	0	0	0.991379	0.112782	0.552081
+escherichia_coli__aztreonam	known_gene	PRJNA675772	293	103	yes	290	3	94	9	0	0	0.989761	0.087379	0.538570
+escherichia_coli__aztreonam	known_gene	PRJNA841811	57	30	yes	57	0	24	6	0	0	1.000000	0.200000	0.600000
+escherichia_coli__cefazolin	scm	PRJNA675772	370	33	yes	194	176	6	27	0	0	0.524324	0.818182	0.671253
+escherichia_coli__cefazolin	scm	PRJNA841811	81	7	no	42	39	0	7	0	0			
+escherichia_coli__cefazolin	cart	PRJNA675772	370	33	yes	191	179	10	23	0	0	0.516216	0.696970	0.606593
+escherichia_coli__cefazolin	cart	PRJNA841811	81	7	no	51	30	0	7	0	0			
+escherichia_coli__cefazolin	lasso	PRJNA675772	370	33	yes	224	146	4	29	0	0	0.605405	0.878788	0.742097
+escherichia_coli__cefazolin	lasso	PRJNA841811	81	7	no	49	32	1	6	0	0			
+escherichia_coli__cefazolin	known_gene	PRJNA675772	370	33	yes	361	9	29	4	0	0	0.975676	0.121212	0.548444
+escherichia_coli__cefazolin	known_gene	PRJNA841811	81	7	no	77	4	5	2	0	0			
+escherichia_coli__cefepime	scm	PRJNA1223857	253	155	yes	200	53	18	137	0	0	0.790514	0.883871	0.837192
+escherichia_coli__cefepime	scm	PRJNA675772	211	122	yes	162	49	16	106	0	0	0.767773	0.868852	0.818312
+escherichia_coli__cefepime	scm	PRJNA841811	46	33	yes	38	8	2	31	0	0	0.826087	0.939394	0.882740
+escherichia_coli__cefepime	cart	PRJNA1223857	253	155	yes	128	125	21	134	0	0	0.505929	0.864516	0.685222
+escherichia_coli__cefepime	cart	PRJNA675772	211	122	yes	98	113	18	104	0	0	0.464455	0.852459	0.658457
+escherichia_coli__cefepime	cart	PRJNA841811	46	33	yes	30	16	3	30	0	0	0.652174	0.909091	0.780632
+escherichia_coli__cefepime	known_gene	PRJNA1223857	253	155	yes	251	2	137	18	0	0	0.992095	0.116129	0.554112
+escherichia_coli__cefepime	known_gene	PRJNA675772	211	122	yes	209	2	110	12	0	0	0.990521	0.098361	0.544441
+escherichia_coli__cefepime	known_gene	PRJNA841811	46	33	yes	46	0	27	6	0	0	1.000000	0.181818	0.590909
+escherichia_coli__cefotaxime	scm	PRJNA1223317	431	105	yes	383	48	21	84	0	0	0.888631	0.800000	0.844316
+escherichia_coli__cefotaxime	scm	PRJNA1223857	414	159	yes	364	50	26	133	0	0	0.879227	0.836478	0.857853
+escherichia_coli__cefotaxime	scm	PRJNA675772	369	133	yes	325	44	24	109	0	0	0.880759	0.819549	0.850154
+escherichia_coli__cefotaxime	scm	PRJNA841811	100	80	yes	92	8	7	73	0	0	0.920000	0.912500	0.916250
+escherichia_coli__cefotaxime	cart	PRJNA1223317	431	105	yes	383	48	18	87	0	0	0.888631	0.828571	0.858601
+escherichia_coli__cefotaxime	cart	PRJNA1223857	414	159	yes	364	50	21	138	0	0	0.879227	0.867925	0.873576
+escherichia_coli__cefotaxime	cart	PRJNA675772	369	133	yes	325	44	19	114	0	0	0.880759	0.857143	0.868951
+escherichia_coli__cefotaxime	cart	PRJNA841811	100	80	yes	92	8	5	75	0	0	0.920000	0.937500	0.928750
+escherichia_coli__cefotaxime	known_gene	PRJNA1223317	431	105	yes	427	4	88	17	0	0	0.990719	0.161905	0.576312
+escherichia_coli__cefotaxime	known_gene	PRJNA1223857	414	159	yes	409	5	135	24	0	0	0.987923	0.150943	0.569433
+escherichia_coli__cefotaxime	known_gene	PRJNA675772	369	133	yes	364	5	115	18	0	0	0.986450	0.135338	0.560894
+escherichia_coli__cefotaxime	known_gene	PRJNA841811	100	80	yes	99	1	67	13	0	0	0.990000	0.162500	0.576250
+escherichia_coli__cefoxitin	scm	PRJNA1223857	58	392	yes	14	44	11	381	0	0	0.241379	0.971939	0.606659
+escherichia_coli__cefoxitin	scm	PRJNA675772	46	337	yes	14	32	12	325	0	0	0.304348	0.964392	0.634370
+escherichia_coli__cefoxitin	scm	PRJNA841811	12	103	no	0	12	1	102	0	0			
+escherichia_coli__cefoxitin	cart	PRJNA1223857	58	392	yes	36	22	160	232	0	0	0.620690	0.591837	0.606263
+escherichia_coli__cefoxitin	cart	PRJNA675772	46	337	yes	28	18	138	199	0	0	0.608696	0.590504	0.599600
+escherichia_coli__cefoxitin	cart	PRJNA841811	12	103	no	8	4	38	65	0	0			
+escherichia_coli__cefoxitin	known_gene	PRJNA1223857	58	392	yes	57	1	375	17	0	0	0.982759	0.043367	0.513063
+escherichia_coli__cefoxitin	known_gene	PRJNA675772	46	337	yes	45	1	326	11	0	0	0.978261	0.032641	0.505451
+escherichia_coli__cefoxitin	known_gene	PRJNA841811	12	103	no	12	0	97	6	0	0			
+escherichia_coli__ceftazidime	scm	PRJNA1223317	176	293	yes	38	138	16	277	0	0	0.215909	0.945392	0.580651
+escherichia_coli__ceftazidime	scm	PRJNA1223857	172	334	yes	36	136	17	317	0	0	0.209302	0.949102	0.579202
+escherichia_coli__ceftazidime	scm	PRJNA675772	157	288	yes	30	127	15	273	0	0	0.191083	0.947917	0.569500
+escherichia_coli__ceftazidime	scm	PRJNA841811	32	132	yes	19	13	6	126	0	0	0.593750	0.954545	0.774148
+escherichia_coli__ceftazidime	cart	PRJNA1223317	176	293	yes	92	84	44	249	0	0	0.522727	0.849829	0.686278
+escherichia_coli__ceftazidime	cart	PRJNA1223857	172	334	yes	91	81	45	289	0	0	0.529070	0.865269	0.697170
+escherichia_coli__ceftazidime	cart	PRJNA675772	157	288	yes	81	76	40	248	0	0	0.515924	0.861111	0.688517
+escherichia_coli__ceftazidime	cart	PRJNA841811	32	132	yes	21	11	12	120	0	0	0.656250	0.909091	0.782670
+escherichia_coli__ceftazidime	known_gene	PRJNA1223317	176	293	yes	174	2	274	19	0	0	0.988636	0.064846	0.526741
+escherichia_coli__ceftazidime	known_gene	PRJNA1223857	172	334	yes	170	2	308	26	0	0	0.988372	0.077844	0.533108
+escherichia_coli__ceftazidime	known_gene	PRJNA675772	157	288	yes	155	2	268	20	0	0	0.987261	0.069444	0.528353
+escherichia_coli__ceftazidime	known_gene	PRJNA841811	32	132	yes	32	0	119	13	0	0	1.000000	0.098485	0.549242
+escherichia_coli__chloramphenicol	scm	PRJNA1223317	470	60	yes	451	19	17	43	0	0	0.959574	0.716667	0.838121
+escherichia_coli__chloramphenicol	scm	PRJNA1223857	479	80	yes	453	26	18	62	0	0	0.945720	0.775000	0.860360
+escherichia_coli__chloramphenicol	scm	PRJNA675772	421	69	yes	397	24	16	53	0	0	0.942993	0.768116	0.855554
+escherichia_coli__chloramphenicol	scm	PRJNA841811	118	52	yes	106	12	6	46	0	0	0.898305	0.884615	0.891460
+escherichia_coli__chloramphenicol	cart	PRJNA1223317	470	60	yes	436	34	17	43	0	0	0.927660	0.716667	0.822163
+escherichia_coli__chloramphenicol	cart	PRJNA1223857	479	80	yes	439	40	18	62	0	0	0.916493	0.775000	0.845746
+escherichia_coli__chloramphenicol	cart	PRJNA675772	421	69	yes	389	32	15	54	0	0	0.923990	0.782609	0.853300
+escherichia_coli__chloramphenicol	cart	PRJNA841811	118	52	yes	98	20	7	45	0	0	0.830508	0.865385	0.847947
+escherichia_coli__chloramphenicol	known_gene	PRJNA1223317	470	60	yes	457	13	17	43	0	0	0.972340	0.716667	0.844504
+escherichia_coli__chloramphenicol	known_gene	PRJNA1223857	479	80	yes	466	13	22	58	0	0	0.972860	0.725000	0.848930
+escherichia_coli__chloramphenicol	known_gene	PRJNA675772	421	69	yes	410	11	20	49	0	0	0.973872	0.710145	0.842008
+escherichia_coli__chloramphenicol	known_gene	PRJNA841811	118	52	yes	113	5	10	42	0	0	0.957627	0.807692	0.882660
+escherichia_coli__ciprofloxacin	scm	PRJNA1223317	465	52	yes	387	78	18	34	0	0	0.832258	0.653846	0.743052
+escherichia_coli__ciprofloxacin	scm	PRJNA1223857	491	60	yes	407	84	19	41	0	0	0.828921	0.683333	0.756127
+escherichia_coli__ciprofloxacin	scm	PRJNA675772	450	37	yes	367	83	17	20	0	0	0.815556	0.540541	0.678048
+escherichia_coli__ciprofloxacin	scm	PRJNA841811	133	37	yes	111	22	3	34	0	0	0.834586	0.918919	0.876753
+escherichia_coli__ciprofloxacin	cart	PRJNA1223317	465	52	yes	384	81	20	32	0	0	0.825806	0.615385	0.720596
+escherichia_coli__ciprofloxacin	cart	PRJNA1223857	491	60	yes	403	88	20	40	0	0	0.820774	0.666667	0.743720
+escherichia_coli__ciprofloxacin	cart	PRJNA675772	450	37	yes	361	89	16	21	0	0	0.802222	0.567568	0.684895
+escherichia_coli__ciprofloxacin	cart	PRJNA841811	133	37	yes	103	30	4	33	0	0	0.774436	0.891892	0.833164
+escherichia_coli__ciprofloxacin	known_gene	PRJNA1223317	465	52	yes	280	185	21	31	0	0	0.602151	0.596154	0.599152
+escherichia_coli__ciprofloxacin	known_gene	PRJNA1223857	491	60	yes	301	190	26	34	0	0	0.613035	0.566667	0.589851
+escherichia_coli__ciprofloxacin	known_gene	PRJNA675772	450	37	yes	274	176	16	21	0	0	0.608889	0.567568	0.588228
+escherichia_coli__ciprofloxacin	known_gene	PRJNA841811	133	37	yes	81	52	15	22	0	0	0.609023	0.594595	0.601809
+escherichia_coli__doxycycline	scm	PRJNA675772	227	32	yes	175	52	9	23	0	0	0.770925	0.718750	0.744838
+escherichia_coli__doxycycline	scm	PRJNA841811	64	7	no	59	5	3	4	0	0			
+escherichia_coli__doxycycline	cart	PRJNA675772	227	32	yes	184	43	8	24	0	0	0.810573	0.750000	0.780286
+escherichia_coli__doxycycline	cart	PRJNA841811	64	7	no	58	6	3	4	0	0			
+escherichia_coli__doxycycline	known_gene	PRJNA675772	227	32	yes	224	3	19	13	0	0	0.986784	0.406250	0.696517
+escherichia_coli__doxycycline	known_gene	PRJNA841811	64	7	no	64	0	3	4	0	0			
+escherichia_coli__gentamicin	scm	PRJNA1223857	336	150	yes	313	23	35	115	0	0	0.931548	0.766667	0.849107
+escherichia_coli__gentamicin	scm	PRJNA675772	304	128	yes	282	22	30	98	0	0	0.927632	0.765625	0.846628
+escherichia_coli__gentamicin	scm	PRJNA841811	42	60	yes	41	1	9	51	0	0	0.976190	0.850000	0.913095
+escherichia_coli__gentamicin	cart	PRJNA1223857	336	150	yes	117	219	11	139	0	0	0.348214	0.926667	0.637440
+escherichia_coli__gentamicin	cart	PRJNA675772	304	128	yes	100	204	13	115	0	0	0.328947	0.898438	0.613692
+escherichia_coli__gentamicin	cart	PRJNA841811	42	60	yes	27	15	2	58	0	0	0.642857	0.966667	0.804762
+escherichia_coli__gentamicin	known_gene	PRJNA1223857	336	150	yes	323	13	34	116	0	0	0.961310	0.773333	0.867321
+escherichia_coli__gentamicin	known_gene	PRJNA675772	304	128	yes	292	12	28	100	0	0	0.960526	0.781250	0.870888
+escherichia_coli__gentamicin	known_gene	PRJNA841811	42	60	yes	41	1	8	52	0	0	0.976190	0.866667	0.921429
+escherichia_coli__levofloxacin	scm	PRJNA675772	364	25	yes	310	54	17	8	0	0	0.851648	0.320000	0.585824
+escherichia_coli__levofloxacin	scm	PRJNA841811	64	21	no	57	7	4	17	0	0			
+escherichia_coli__levofloxacin	cart	PRJNA675772	364	25	yes	307	57	17	8	0	0	0.843407	0.320000	0.581703
+escherichia_coli__levofloxacin	cart	PRJNA841811	64	21	no	57	7	2	19	0	0			
+escherichia_coli__levofloxacin	lasso	PRJNA675772	364	25	yes	310	54	17	8	0	0	0.851648	0.320000	0.585824
+escherichia_coli__levofloxacin	lasso	PRJNA841811	64	21	no	57	7	2	19	0	0			
+escherichia_coli__levofloxacin	known_gene	PRJNA675772	364	25	yes	216	148	11	14	0	0	0.593407	0.560000	0.576703
+escherichia_coli__levofloxacin	known_gene	PRJNA841811	64	21	no	39	25	7	14	0	0			
+escherichia_coli__nalidixic_acid	scm	PRJNA1223317	438	77	yes	410	28	30	47	0	0	0.936073	0.610390	0.773231
+escherichia_coli__nalidixic_acid	scm	PRJNA675772	406	67	yes	377	29	24	43	0	0	0.928571	0.641791	0.785181
+escherichia_coli__nalidixic_acid	scm	PRJNA841811	124	26	yes	109	15	8	18	0	0	0.879032	0.692308	0.785670
+escherichia_coli__nalidixic_acid	cart	PRJNA1223317	438	77	yes	407	31	15	62	0	0	0.929224	0.805195	0.867209
+escherichia_coli__nalidixic_acid	cart	PRJNA675772	406	67	yes	374	32	14	53	0	0	0.921182	0.791045	0.856114
+escherichia_coli__nalidixic_acid	cart	PRJNA841811	124	26	yes	109	15	1	25	0	0	0.879032	0.961538	0.920285
+escherichia_coli__nalidixic_acid	known_gene	PRJNA1223317	438	77	yes	248	190	60	17	0	0	0.566210	0.220779	0.393495
+escherichia_coli__nalidixic_acid	known_gene	PRJNA675772	406	67	yes	233	173	52	15	0	0	0.573892	0.223881	0.398886
+escherichia_coli__nalidixic_acid	known_gene	PRJNA841811	124	26	yes	67	57	20	6	0	0	0.540323	0.230769	0.385546
+escherichia_coli__streptomycin	scm	PRJNA1223317	449	66	yes	346	103	22	44	0	0	0.770601	0.666667	0.718634
+escherichia_coli__streptomycin	scm	PRJNA675772	392	81	yes	294	98	18	63	0	0	0.750000	0.777778	0.763889
+escherichia_coli__streptomycin	scm	PRJNA841811	101	49	yes	76	25	8	41	0	0	0.752475	0.836735	0.794605
+escherichia_coli__streptomycin	cart	PRJNA1223317	449	66	yes	344	105	22	44	0	0	0.766147	0.666667	0.716407
+escherichia_coli__streptomycin	cart	PRJNA675772	392	81	yes	292	100	18	63	0	0	0.744898	0.777778	0.761338
+escherichia_coli__streptomycin	cart	PRJNA841811	101	49	yes	74	27	8	41	0	0	0.732673	0.836735	0.784704
+escherichia_coli__streptomycin	known_gene	PRJNA1223317	449	66	yes	441	8	47	19	0	0	0.982183	0.287879	0.635031
+escherichia_coli__streptomycin	known_gene	PRJNA675772	392	81	yes	383	9	46	35	0	0	0.977041	0.432099	0.704570
+escherichia_coli__streptomycin	known_gene	PRJNA841811	101	49	yes	100	1	27	22	0	0	0.990099	0.448980	0.719539
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	PRJNA1223317	416	98	yes	401	15	68	30	0	0	0.963942	0.306122	0.635032
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	PRJNA675772	370	109	yes	341	29	69	40	0	0	0.921622	0.366972	0.644297
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	PRJNA841811	130	27	yes	114	16	5	22	0	0	0.876923	0.814815	0.845869
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	PRJNA1223317	416	98	yes	338	78	59	39	0	0	0.812500	0.397959	0.605230
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	PRJNA675772	370	109	yes	286	84	60	49	0	0	0.772973	0.449541	0.611257
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	PRJNA841811	130	27	yes	98	32	5	22	0	0	0.753846	0.814815	0.784330
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	PRJNA1223317	416	98	yes	366	50	16	82	0	0	0.879808	0.836735	0.858271
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	PRJNA675772	370	109	yes	312	58	15	94	0	0	0.843243	0.862385	0.852814
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	PRJNA841811	130	27	yes	112	18	3	24	0	0	0.861538	0.888889	0.875214
+escherichia_coli__tetracycline	scm	PRJNA1223317	498	34	yes	485	13	11	23	0	0	0.973896	0.676471	0.825183
+escherichia_coli__tetracycline	scm	PRJNA1223857	530	39	yes	516	14	11	28	0	0	0.973585	0.717949	0.845767
+escherichia_coli__tetracycline	scm	PRJNA675772	462	40	yes	450	12	10	30	0	0	0.974026	0.750000	0.862013
+escherichia_coli__tetracycline	scm	PRJNA841811	151	25	yes	145	6	4	21	0	0	0.960265	0.840000	0.900132
+escherichia_coli__tetracycline	cart	PRJNA1223317	498	34	yes	452	46	10	24	0	0	0.907631	0.705882	0.806756
+escherichia_coli__tetracycline	cart	PRJNA1223857	530	39	yes	483	47	10	29	0	0	0.911321	0.743590	0.827455
+escherichia_coli__tetracycline	cart	PRJNA675772	462	40	yes	417	45	9	31	0	0	0.902597	0.775000	0.838799
+escherichia_coli__tetracycline	cart	PRJNA841811	151	25	yes	145	6	4	21	0	0	0.960265	0.840000	0.900132
+escherichia_coli__tetracycline	known_gene	PRJNA1223317	498	34	yes	489	9	12	22	0	0	0.981928	0.647059	0.814493
+escherichia_coli__tetracycline	known_gene	PRJNA1223857	530	39	yes	521	9	12	27	0	0	0.983019	0.692308	0.837663
+escherichia_coli__tetracycline	known_gene	PRJNA675772	462	40	yes	452	10	11	29	0	0	0.978355	0.725000	0.851677
+escherichia_coli__tetracycline	known_gene	PRJNA841811	151	25	yes	149	2	4	21	0	0	0.986755	0.840000	0.913377

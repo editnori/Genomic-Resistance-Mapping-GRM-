@@ -1,0 +1,2015 @@
+genome_id	bioproject	country	mlst	mlst_in_cohort	fasta	species_check	borderline	scored	exclusion	exclusion_detail
+573.29602	PRJNA1052100	Ghana	MLST.klebsiella.660	no	yes	pass	no	yes		
+573.29603	PRJNA1052100	Ghana	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.29609	PRJNA1052100	Ghana	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.29619	PRJNA1052100	Ghana	MLST.klebsiella.5211	no	yes	pass	no	yes		
+573.29623	PRJNA1052100	Ghana	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.32284	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.32285	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.32291	PRJNA1052100	Ghana	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.32496	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.34085	PRJNA1052100	Ghana	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.36618	PRJNA1052100	Ghana	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.36625	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.36635	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.36642	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.45878	PRJNA1052100	Ghana	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.45880	PRJNA1052100	Ghana	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.51778	PRJNA1052100	Ghana	MLST.klebsiella.661	yes	yes	pass	no	yes		
+573.52317	PRJNA1052100	Ghana	MLST.klebsiella.3619	no	yes	pass	no	yes		
+573.52320	PRJNA1052100	Ghana	MLST.klebsiella.2746	no	yes	pass	no	yes		
+573.52322	PRJNA1052100	Ghana	MLST.klebsiella.116	yes	yes	pass	no	yes		
+573.52323	PRJNA1052100	Ghana	MLST.klebsiella.1530	yes	yes	pass	no	yes		
+573.52609	PRJNA1052100	Ghana	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.52611	PRJNA1052100	Ghana	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.52617	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.52746	PRJNA1052100	Ghana	MLST.klebsiella.3345	no	yes	pass	no	yes		
+573.54847	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.54850	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.54907	PRJNA1052100	Ghana	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.56111	PRJNA1052100	Ghana	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.56153	PRJNA1052100	Ghana	MLST.klebsiella.54	no	yes	pass	no	yes		
+573.56223	PRJNA1052100	Ghana	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.56224	PRJNA1052100	Ghana	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.56225	PRJNA1052100	Ghana	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.56233	PRJNA1052100	Ghana	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.56246	PRJNA1052100	Ghana	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.56247	PRJNA1052100	Ghana	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.57312	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.58973	PRJNA1052100	Ghana	MLST.klebsiella.54	no	yes	pass	no	yes		
+573.72956	PRJNA1052100	Ghana	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.72959	PRJNA1052100	Ghana	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.72968	PRJNA1052100	Ghana	MLST.klebsiella.6	yes	yes	pass	no	yes		
+573.81344	PRJNA1052100	Ghana	MLST.Klebsiella_pneumoniae.11	no	yes	pass	no	yes		
+573.91948	PRJNA1223317	China	MLST.klebsiella.294	yes	yes	pass	no	yes		
+573.91949	PRJNA1223317	China	MLST.klebsiella.1876	yes	yes	pass	no	yes		
+573.91950	PRJNA1223317	China	MLST.klebsiella.1876	yes	yes	pass	no	yes		
+573.92169	PRJNA1052100	Ghana	MLST.klebsiella.2407	no	yes	pass	no	yes		
+573.92233	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.92235	PRJNA1052100	Ghana	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.92236	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.92238	PRJNA1052100	Ghana	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.92239	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.92241	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.92243	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.92247	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.92248	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.92252	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.92253	PRJNA1052100	Ghana	MLST.klebsiella.3612	yes	yes	pass	no	yes		
+573.93895	PRJNA613441	Lebanon	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.93896	PRJNA613441	Lebanon	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.93897	PRJNA613441	Lebanon	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.93898	PRJNA613441	Lebanon	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.93925	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.93926	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.93927	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.93928	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.93929	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.93930	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.93933	PRJNA1052100	Ghana	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.94447	PRJNA1052100	Ghana	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.94472	PRJNA1052100	Ghana	MLST.klebsiella.437	yes	yes	pass	no	yes		
+573.95026	PRJNA1052100	Ghana	MLST.klebsiella.1207	no	yes	pass	no	yes		
+573.97454	PRJEB29739	Nigeria	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97455	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97456	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97457	PRJEB29739	Nigeria	MLST.klebsiella.5243	no	yes	pass	no	yes		
+573.97458	PRJEB29739	Nigeria	MLST.klebsiella.185	no	yes	pass	no	yes		
+573.97459	PRJEB29739	Nigeria	MLST.klebsiella.5244	no	yes	pass	no	yes		
+573.97460	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97461	PRJEB29739	Nigeria	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.97462	PRJEB29739	Nigeria	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97463	PRJEB29739	Nigeria	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.97464	PRJEB29739	Nigeria	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.97465	PRJEB29739	Nigeria	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.97466	PRJEB29739	Nigeria	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97467	PRJEB29739	Nigeria	MLST.klebsiella.403	no	yes	pass	no	yes		
+573.97468	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97469	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97470	PRJEB29739	Nigeria	MLST.klebsiella.342	no	yes	pass	no	yes		
+573.97471	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97472	PRJEB29739	Nigeria	MLST.klebsiella.86	yes	yes	pass	no	yes		
+573.97473	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97474	PRJEB29739	Nigeria	MLST.klebsiella.5244	no	yes	pass	no	yes		
+573.97475	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97476	PRJEB29739	Nigeria	MLST.klebsiella.5243	no	yes	pass	no	yes		
+573.97477	PRJEB29739	Nigeria	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.97478	PRJEB29739	Nigeria	MLST.klebsiella.242	no	yes	pass	no	yes		
+573.97479	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97480	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97481	PRJEB29739	Nigeria	MLST.klebsiella.530	no	yes	pass	no	yes		
+573.97482	PRJEB29739	Nigeria	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97483	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97484	PRJEB29739	Nigeria	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.97485	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97486	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97487	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97488	PRJEB29739	Nigeria	MLST.klebsiella.502	yes	yes	pass	no	yes		
+573.97489	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97490	PRJEB29739	Nigeria	MLST.klebsiella.502	yes	yes	pass	no	yes		
+573.97491	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97492	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97493	PRJEB29739	Nigeria	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.97494	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97495	PRJEB29739	Nigeria	MLST.klebsiella.281	no	yes	pass	no	yes		
+573.97496	PRJEB29739	Nigeria	MLST.klebsiella.530	no	yes	pass	no	yes		
+573.97497	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97498	PRJEB29739	Nigeria	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.97499	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97500	PRJEB29739	Nigeria	MLST.klebsiella.5246	no	yes	pass	no	yes		
+573.97501	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97502	PRJEB29739	Nigeria	MLST.klebsiella.716	yes	yes	pass	no	yes		
+573.97503	PRJEB29739	Nigeria	MLST.klebsiella.43	yes	yes	pass	no	yes		
+573.97504	PRJEB29739	Nigeria	MLST.klebsiella.4	yes	yes	pass	no	yes		
+573.97505	PRJEB29739	Nigeria	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.97506	PRJEB29739	Nigeria	MLST.klebsiella.1801	no	yes	pass	no	yes		
+573.97507	PRJEB29739	Nigeria	MLST.klebsiella.4	yes	yes	pass	no	yes		
+573.97508	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97509	PRJEB29739	Nigeria	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.97510	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97511	PRJEB29739	Nigeria	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97512	PRJEB29739	Nigeria	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97513	PRJEB29739	Nigeria	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97514	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97515	PRJEB29739	Nigeria	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.97516	PRJEB29739	Nigeria	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.97517	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97518	PRJEB29739	Nigeria	MLST.klebsiella.5242	no	yes	pass	no	yes		
+573.97519	PRJEB29739	Nigeria	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.97520	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97521	PRJEB29739	Nigeria	MLST.klebsiella.1801	no	yes	pass	no	yes		
+573.97522	PRJEB29739	Nigeria	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.97523	PRJEB29739	Nigeria	MLST.klebsiella.5243	no	yes	pass	no	yes		
+573.97524	PRJEB29739	Nigeria	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.97525	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97526	PRJEB29739	Nigeria	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97527	PRJEB29739	Nigeria	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.97528	PRJEB29739	Nigeria	MLST.klebsiella.342	no	yes	pass	no	yes		
+573.97529	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97530	PRJEB29739	Nigeria	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97531	PRJEB29739	Nigeria	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97532	PRJEB29739	Nigeria	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.97533	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97534	PRJEB29739	Nigeria	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.97535	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97536	PRJEB29739	Nigeria	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97537	PRJEB29739	Nigeria	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97538	PRJEB29739	Nigeria	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97539	PRJEB29739	Nigeria	MLST.klebsiella.5247	no	yes	pass	no	yes		
+573.97540	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97541	PRJEB29739	Nigeria	MLST.klebsiella.5241	no	yes	pass	no	yes		
+573.97542	PRJEB29739	Nigeria	MLST.klebsiella.3071	yes	yes	pass	no	yes		
+573.97543	PRJEB29739	Nigeria	MLST.klebsiella.4	yes	yes	pass	no	yes		
+573.97544	PRJEB29739	Nigeria	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97545	PRJEB29739	Nigeria	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.97546	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97547	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97548	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97549	PRJEB29739	Nigeria	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.97550	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97551	PRJEB29739	Nigeria	MLST.klebsiella.86	yes	yes	pass	no	yes		
+573.97552	PRJEB29739	Nigeria	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.97553	PRJEB29739	Nigeria	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.97554	PRJEB29739	Nigeria	MLST.klebsiella.5244	no	yes	pass	no	yes		
+573.97555	PRJEB29739	Nigeria	MLST.klebsiella.342	no	yes	pass	no	yes		
+573.97556	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97557	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97559	PRJEB29739	Nigeria	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97560	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97561	PRJEB29739	Nigeria	MLST.klebsiella.4566	no	yes	pass	no	yes		
+573.97562	PRJEB29739	Nigeria	MLST.klebsiella.73	yes	yes	pass	no	yes		
+573.97563	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97564	PRJEB29739	Nigeria	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97565	PRJEB29739	Nigeria	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.97566	PRJEB29739	Nigeria	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.97567	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97568	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97569	PRJEB29739	Nigeria	MLST.klebsiella.5245	no	yes	pass	no	yes		
+573.97570	PRJEB29739	Nigeria	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97571	PRJEB29739	Nigeria	MLST.klebsiella.5248	no	yes	pass	no	yes		
+573.97572	PRJEB29739	Nigeria	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.97573	PRJEB29739	Nigeria	MLST.klebsiella.5239	no	yes	pass	no	yes		
+573.97574	PRJEB29739	Nigeria	MLST.klebsiella.5240	no	yes	pass	no	yes		
+573.97575	PRJEB29739	Nigeria	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97576	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97577	PRJEB29739	Nigeria	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97578	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97579	PRJEB29739	Nigeria	MLST.klebsiella.967	yes	yes	pass	no	yes		
+573.97580	PRJEB29739	Nigeria	MLST.klebsiella.1119	no	yes	pass	no	yes		
+573.97581	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97582	PRJEB29739	Nigeria	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97583	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97584	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97585	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97586	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97587	PRJEB58216	Greece	MLST.klebsiella.29	yes	yes	pass	no	yes		
+573.97588	PRJEB58216	Greece	MLST.klebsiella.1237	no	yes	pass	no	yes		
+573.97589	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97590	PRJEB58216	Greece	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97591	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97592	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97593	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97594	PRJEB58216	Greece	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.97595	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97596	PRJEB58216	Greece	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.97597	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97598	PRJEB58216	Greece	MLST.klebsiella.1237	no	yes	pass	no	yes		
+573.97599	PRJEB58216	Greece	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.97600	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97601	PRJEB58216	Greece	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97602	PRJEB58216	Greece	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.97603	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97604	PRJEB58216	Greece	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97605	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97606	PRJEB58216	Greece	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97607	PRJEB58216	Greece	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.97608	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97609	PRJEB58216	Greece	MLST.klebsiella.323	yes	yes	pass	no	yes		
+573.97610	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97611	PRJEB58216	Greece	MLST.klebsiella.427	yes	yes	pass	no	yes		
+573.97612	PRJEB58216	Greece	MLST.klebsiella.253	yes	yes	pass	no	yes		
+573.97613	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97614	PRJEB58216	Greece	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.97615	PRJEB58216	Greece	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.97616	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97617	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97618	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97619	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97620	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97621	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97622	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97623	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97624	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97625	PRJEB58216	Greece	MLST.klebsiella.1084	no	yes	pass	no	yes		
+573.97626	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97627	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97628	PRJEB58216	Greece	MLST.klebsiella.323	yes	yes	pass	no	yes		
+573.97629	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97630	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97631	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97632	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97633	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97634	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97635	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97636	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97637	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97638	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97639	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97640	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97641	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97642	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97643	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97644	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97645	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97646	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97647	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97648	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97649	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97650	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97651	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97652	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97653	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97654	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97655	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97656	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97657	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97658	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97659	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97660	PRJEB58216	Greece	MLST.klebsiella.1228	yes	yes	pass	no	yes		
+573.97661	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97662	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97663	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97664	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97665	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97666	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97667	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97668	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97669	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97670	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97671	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97672	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97673	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97674	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97675	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97676	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97677	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97678	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97679	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97680	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97681	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97682	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97683	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97684	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97685	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97686	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97687	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97688	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97689	PRJEB58216	Greece	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.97690	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97691	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97692	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97693	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97694	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97695	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97696	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97697	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97698	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97699	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97700	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97701	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97702	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97703	PRJEB58216	Greece	MLST.klebsiella.6	yes	yes	pass	no	yes		
+573.97704	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97705	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97706	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97707	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97708	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97709	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97710	PRJEB58216	Greece	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97711	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97712	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97713	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97714	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97715	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97716	PRJEB58216	Greece	MLST.klebsiella.4609	no	yes	pass	no	yes		
+573.97717	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97718	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97719	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97720	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97721	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97722	PRJEB58216	Greece	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97723	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97724	PRJEB58216	Greece	MLST.klebsiella.902	no	yes	pass	no	yes		
+573.97725	PRJEB58216	Greece	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97726	PRJEB58216	Greece	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97727	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97728	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97729	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97730	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97731	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97732	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97733	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97734	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97735	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97736	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97737	PRJEB58216	Greece	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97738	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97739	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97740	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97741	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97742	PRJEB58216	Greece	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97743	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97744	PRJEB58216	Greece	MLST.klebsiella.4609	no	yes	pass	no	yes		
+573.97745	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97746	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97747	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97748	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97749	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97750	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97751	PRJEB58216	Greece	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.97752	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97753	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97754	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97755	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97756	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97757	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97758	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97759	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97760	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97761	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97762	PRJEB58216	Greece	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.97763	PRJEB58216	Greece	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.97764	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97765	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97766	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97767	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97768	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97769	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97770	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97771	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97772	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97773	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97774	PRJEB58216	Greece	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.97775	PRJEB58216	Greece	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.97776	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97777	PRJEB58216	Greece	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.97778	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97779	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97780	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97781	PRJEB58216	Greece	MLST.klebsiella.643	yes	yes	pass	no	yes		
+573.97782	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97783	PRJEB58216	Greece	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.97784	PRJEB58216	Greece	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.97785	PRJEB58216	Greece	MLST.klebsiella.225	no	yes	pass	no	yes		
+573.97786	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97787	PRJEB58216	Greece	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.97788	PRJEB58216	Greece	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.97789	PRJEB58216	Greece	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.97790	PRJEB58216	Greece	MLST.klebsiella.323	yes	yes	pass	no	yes		
+573.98343	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98344	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98345	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98346	PRJEB29742	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.98347	PRJEB29742	Colombia	MLST.klebsiella.40	no	yes	pass	no	yes		
+573.98348	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98349	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98350	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98351	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98352	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98353	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98354	PRJEB29742	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.98355	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98356	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98358	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98359	PRJEB29742	Colombia	MLST.klebsiella.273	yes	yes	pass	no	yes		
+573.98360	PRJEB29742	Colombia	MLST.klebsiella.1271	no	yes	pass	no	yes		
+573.98361	PRJEB29742	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.98362	PRJEB29742	Colombia	MLST.klebsiella.3403	no	yes	pass	no	yes		
+573.98363	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98364	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98365	PRJEB29742	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.98366	PRJEB29742	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.98367	PRJEB29742	Colombia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.98368	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98369	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98370	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98371	PRJEB29742	Colombia	MLST.klebsiella.560	yes	yes	pass	no	yes		
+573.98372	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98373	PRJEB29742	Colombia	MLST.klebsiella.3403	no	yes	pass	no	yes		
+573.98374	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98375	PRJEB29742	Colombia	MLST.klebsiella.151	yes	yes	pass	no	yes		
+573.98376	PRJEB29742	Colombia	MLST.klebsiella.4839	no	yes	pass	no	yes		
+573.98377	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98378	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98379	PRJEB29742	Colombia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.98380	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98381	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98382	PRJEB29742	Colombia	MLST.klebsiella.629	yes	yes	pass	no	yes		
+573.98383	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98384	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98385	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98386	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98387	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98388	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98389	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98390	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98391	PRJEB29742	Colombia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.98392	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98393	PRJEB29742	Colombia	MLST.klebsiella.1373	yes	yes	pass	no	yes		
+573.98394	PRJEB29742	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.98395	PRJEB29742	Colombia	MLST.klebsiella.4840	no	yes	pass	no	yes		
+573.98396	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98397	PRJEB29742	Colombia	MLST.klebsiella.4841	no	yes	pass	no	yes		
+573.98398	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98399	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98400	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98401	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98402	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98403	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98404	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98405	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98406	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98407	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98408	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98409	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98410	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98411	PRJEB29742	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.98412	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98413	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98414	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98415	PRJEB29742	Colombia	MLST.klebsiella.4838	no	yes	pass	no	yes		
+573.98416	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98417	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98418	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98419	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98420	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98421	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98422	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98423	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98424	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98425	PRJEB29742	Colombia	MLST.klebsiella.348	yes	yes	pass	no	yes		
+573.98426	PRJEB29742	Colombia	MLST.klebsiella.4852	no	yes	pass	no	yes		
+573.98427	PRJEB29742	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.98428	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98429	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98430	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98431	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98432	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98433	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98434	PRJEB29742	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.98435	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98436	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98437	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98438	PRJEB29742	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.98439	PRJEB29742	Colombia	MLST.klebsiella.280	yes	yes	pass	no	yes		
+573.98440	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98441	PRJEB29742	Colombia	MLST.klebsiella.2053	no	yes	pass	no	yes		
+573.98442	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98443	PRJEB29742	Colombia	MLST.klebsiella.560	yes	yes	pass	no	yes		
+573.98444	PRJEB29742	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.98445	PRJEB29742	Colombia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.98446	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98447	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98448	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98449	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98450	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98451	PRJEB29742	Colombia	MLST.klebsiella.8	yes	yes	pass	no	yes		
+573.98452	PRJEB29742	Colombia	MLST.klebsiella.273	yes	yes	pass	no	yes		
+573.98453	PRJEB29742	Colombia	MLST.klebsiella.1271	no	yes	pass	no	yes		
+573.98454	PRJEB29742	Colombia	MLST.klebsiella.29	yes	yes	pass	no	yes		
+573.98455	PRJEB29742	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.98456	PRJEB29742	Colombia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.98457	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98458	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98459	PRJEB29742	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.98460	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98461	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98462	PRJEB29742	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.98463	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98464	PRJEB29742	Colombia	MLST.klebsiella.4851	no	yes	pass	no	yes		
+573.98465	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98466	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98467	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98468	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98469	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98470	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98471	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98472	PRJEB29742	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.98473	PRJEB29742	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.98474	PRJEB29742	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.98475	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98476	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98477	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98478	PRJEB29742	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.98479	PRJEB29742	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.98480	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98481	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98482	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98483	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98484	PRJEB29742	Colombia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.98485	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98486	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98487	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98488	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98489	PRJEB29742	Colombia	MLST.klebsiella.294	yes	yes	pass	no	yes		
+573.98490	PRJEB29742	Colombia	MLST.klebsiella.3660	yes	yes	pass	no	yes		
+573.98491	PRJEB29742	Colombia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.98492	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98493	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98494	PRJEB29742	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.98495	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98496	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98497	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98498	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98499	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98500	PRJEB29742	Colombia	MLST.klebsiella.140	yes	yes	pass	no	yes		
+573.98501	PRJEB29742	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.98502	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98503	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98504	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98505	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98506	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98507	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98508	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98509	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98510	PRJEB29742	Colombia	MLST.klebsiella.35	yes	yes	pass	no	yes		
+573.98511	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98512	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98513	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98514	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98515	PRJEB29742	Colombia	MLST.klebsiella.2599	yes	yes	pass	no	yes		
+573.98516	PRJEB29742	Colombia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.98517	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98518	PRJEB29742	Colombia	MLST.klebsiella.629	yes	yes	pass	no	yes		
+573.98519	PRJEB29742	Colombia	MLST.klebsiella.789	no	yes	pass	no	yes		
+573.98520	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98521	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98522	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98523	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98524	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98525	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98526	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98527	PRJEB29742	Colombia	MLST.klebsiella.567	no	yes	pass	no	yes		
+573.98528	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98529	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98530	PRJEB29742	Colombia	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.98531	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98532	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98533	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98534	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98535	PRJEB29742	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.98536	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98537	PRJEB29742	Colombia	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.98538	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98539	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98540	PRJEB29742	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.98541	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98542	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98543	PRJEB29742	Colombia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.98544	PRJEB29742	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.98545	PRJEB29742	Colombia	MLST.klebsiella.40	no	yes	pass	no	yes		
+573.98546	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98547	PRJEB29742	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.98548	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98549	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98550	PRJEB29742	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.98551	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98552	PRJEB29742	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.98553	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98554	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98555	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98556	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98557	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98558	PRJEB29742	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.98559	PRJEB29742	Colombia	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.98560	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98561	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98562	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98563	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98564	PRJEB29742	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.98565	PRJEB29742	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.98566	PRJEB29742	Colombia	MLST.klebsiella.1886	yes	yes	pass	no	yes		
+573.98567	PRJEB29742	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.98568	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98569	PRJEB29742	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.98570	PRJEB29742	Colombia	MLST.klebsiella.4110	no	yes	pass	no	yes		
+573.98571	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98572	PRJEB29742	Colombia	MLST.klebsiella.40	no	yes	pass	no	yes		
+573.98573	PRJEB29742	Colombia	MLST.klebsiella.342	no	yes	pass	no	yes		
+573.98574	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98575	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98576	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98577	PRJEB29742	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.98578	PRJEB29742	Colombia	MLST.klebsiella.129	no	yes	pass	no	yes		
+573.98579	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98580	PRJEB29742	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.98581	PRJEB29742	Colombia	MLST.klebsiella.342	no	yes	pass	no	yes		
+573.98582	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98583	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98584	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98585	PRJEB29742	Colombia	MLST.klebsiella.281	no	yes	pass	no	yes		
+573.98586	PRJEB29742	Colombia	MLST.klebsiella.1303	no	yes	pass	no	yes		
+573.98587	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98588	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98589	PRJEB29742	Colombia	MLST.klebsiella.1519	yes	yes	pass	no	yes		
+573.98591	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98592	PRJEB29742	Colombia	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.98593	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98594	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98595	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98596	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98597	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98598	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98599	PRJEB29742	Colombia	MLST.klebsiella.629	yes	yes	pass	no	yes		
+573.98600	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98601	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98602	PRJEB29742	Colombia	MLST.klebsiella.161	no	yes	pass	no	yes		
+573.98603	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98604	PRJEB29742	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.98605	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98606	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98607	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98608	PRJEB29742	Colombia	MLST.klebsiella.694	no	yes	pass	no	yes		
+573.98609	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98610	PRJEB29742	Colombia	MLST.klebsiella.327	yes	yes	pass	no	yes		
+573.98611	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98612	PRJEB29742	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.98613	PRJEB29742	Colombia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.98614	PRJEB29742	Colombia	MLST.klebsiella.833	no	yes	pass	no	yes		
+573.98615	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98616	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98617	PRJEB29742	Colombia	MLST.klebsiella.1198	no	yes	pass	no	yes		
+573.98618	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98619	PRJEB29742	Colombia	MLST.klebsiella.107	yes	yes	pass	no	yes		
+573.98620	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98621	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98622	PRJEB29742	Colombia	MLST.klebsiella.1440	yes	yes	pass	no	yes		
+573.98623	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98624	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98625	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98626	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98627	PRJEB29742	Colombia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.98628	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98629	PRJEB29742	Colombia	MLST.klebsiella.4110	no	yes	pass	no	yes		
+573.98630	PRJEB29742	Colombia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.98631	PRJEB29742	Colombia	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.98632	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98633	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98634	PRJEB29742	Colombia	MLST.klebsiella.4851	no	yes	pass	no	yes		
+573.98635	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98636	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98637	PRJEB29742	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.98638	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98639	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98640	PRJEB29742	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.98641	PRJEB29742	Colombia	MLST.klebsiella.40	no	yes	pass	no	yes		
+573.98642	PRJEB29742	Colombia	MLST.klebsiella.4986	no	yes	pass	no	yes		
+573.98643	PRJEB29742	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.98644	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98645	PRJEB29742	Colombia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.98646	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98647	PRJEB29742	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.98648	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98649	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98650	PRJEB29742	Colombia	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.98651	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98652	PRJEB29742	Colombia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.98653	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98654	PRJEB29742	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.98655	PRJEB29742	Colombia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.98656	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98657	PRJEB29742	Colombia	MLST.klebsiella.846	yes	yes	pass	no	yes		
+573.98658	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98659	PRJEB29742	Colombia	MLST.klebsiella.629	yes	yes	pass	no	yes		
+573.98660	PRJEB29742	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.98661	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98662	PRJEB29742	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.98663	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98664	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98665	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98666	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98667	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98668	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98669	PRJEB29742	Colombia	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.98670	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98671	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98672	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98673	PRJEB29742	Colombia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.98674	PRJEB29742	Colombia	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.98675	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98676	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98677	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98678	PRJEB29742	Colombia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.98679	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98680	PRJEB29742	Colombia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.98681	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98682	PRJEB29742	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.98683	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98684	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98685	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98686	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98687	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98688	PRJEB29742	Colombia	MLST.klebsiella.525	yes	yes	pass	no	yes		
+573.98689	PRJEB29742	Colombia	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.98690	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98691	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98692	PRJEB29742	Colombia	MLST.klebsiella.4987	no	yes	pass	no	yes		
+573.98693	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98694	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98695	PRJEB29742	Colombia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.98696	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98697	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98698	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98699	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98700	PRJEB29742	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.98701	PRJEB29742	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.98702	PRJEB29742	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.98703	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98704	PRJEB29742	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.98705	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98706	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98707	PRJEB29742	Colombia	MLST.klebsiella.280	yes	yes	pass	no	yes		
+573.98708	PRJEB29742	Colombia	MLST.klebsiella.1303	no	yes	pass	no	yes		
+573.98709	PRJEB29742	Colombia	MLST.klebsiella.405	yes	yes	pass	no	yes		
+573.98710	PRJEB29742	Colombia	MLST.klebsiella.2833	no	yes	pass	no	yes		
+573.98711	PRJEB29742	Colombia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.98712	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98713	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98714	PRJEB29742	Colombia	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.98715	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98716	PRJEB29742	Colombia	MLST.klebsiella.273	yes	yes	pass	no	yes		
+573.98717	PRJEB29742	Colombia	MLST.klebsiella.1165	no	yes	pass	no	yes		
+573.98718	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98719	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98720	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98721	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98722	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98723	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98724	PRJEB29742	Colombia	MLST.klebsiella.4841	no	yes	pass	no	yes		
+573.98725	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98726	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98727	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98728	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98729	PRJEB29742	Colombia	MLST.klebsiella.113	yes	yes	pass	no	yes		
+573.98730	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98731	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98732	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98733	PRJEB29742	Colombia	MLST.klebsiella.4984	no	yes	pass	no	yes		
+573.98734	PRJEB29742	Colombia	MLST.klebsiella.520	no	yes	pass	no	yes		
+573.98735	PRJEB29742	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98736	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98737	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98738	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98739	PRJEB29742	Colombia	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.98740	PRJEB29742	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98741	PRJEB29742	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.98742	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98743	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98744	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98745	PRJEB29742	Colombia	MLST.klebsiella.1758	yes	yes	pass	no	yes		
+573.98746	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98747	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98748	PRJEB29742	Colombia	MLST.klebsiella.40	no	yes	pass	no	yes		
+573.98749	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98750	PRJEB29742	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98751	PRJEB29742	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98752	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98753	PRJEB29742	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.98754	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98755	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98756	PRJEB29742	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98757	PRJEB29742	Colombia	MLST.klebsiella.300	no	yes	pass	no	yes		
+573.98758	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98759	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98760	PRJEB29742	Colombia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.98761	PRJEB29742	Colombia	MLST.klebsiella.1198	no	yes	pass	no	yes		
+573.98762	PRJEB29742	Colombia	MLST.klebsiella.560	yes	yes	pass	no	yes		
+573.98763	PRJEB29742	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98764	PRJEB29742	Colombia	MLST.klebsiella.4985	no	yes	pass	no	yes		
+573.98765	PRJEB29742	Colombia	MLST.klebsiella.35	yes	yes	pass	no	yes		
+573.98784	PRJNA1104021	Spain	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98785	PRJNA1104021	Spain	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.98786	PRJNA1104021	Spain	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98787	PRJNA1104021	Spain	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.98788	PRJNA1104021	Spain	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98789	PRJNA1104021	Spain	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.98790	PRJNA1104021	Spain	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98791	PRJNA1104021	Spain	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98792	PRJNA1104021	Spain	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98793	PRJNA1104021	Spain	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98794	PRJNA1104021	Spain	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.98795	PRJNA1104021	Spain	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98796	PRJNA1104021	Spain	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98797	PRJNA1104021	Spain	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98798	PRJNA1104021	Spain	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98799	PRJNA1104021	Spain	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98800	PRJNA1104021	Spain	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98801	PRJNA1104021	Spain	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98802	PRJNA1104021	Spain	MLST.klebsiella.16	yes	yes	pass	no	yes		
+573.98803	PRJNA1104021	Spain	MLST.klebsiella.16	yes	yes	pass	no	yes		
+573.98804	PRJNA1104021	Spain	MLST.klebsiella.395	yes	yes	pass	no	yes		
+573.98805	PRJNA1104021	Spain	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98806	PRJNA1104021	Spain	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98807	PRJNA1104021	Spain	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98808	PRJNA1104021	Spain	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98809	PRJNA1104021	Spain	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98810	PRJNA1104021	Spain	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.98959	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98960	PRJEB80567	Colombia	MLST.klebsiella.3379	no	yes	pass	no	yes		
+573.98961	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98962	PRJEB80567	Colombia	MLST.klebsiella.1271	no	yes	pass	no	yes		
+573.98963	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98964	PRJEB80567	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.98965	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.98966	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.98967	PRJEB80567	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.98968	PRJEB80567	Colombia	MLST.klebsiella.1079	no	yes	pass	no	yes		
+573.98969	PRJEB80567	Colombia	MLST.klebsiella.1229	yes	yes	pass	no	yes		
+573.98970	PRJEB80567	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.98971	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.98972	PRJEB80567	Colombia	MLST.klebsiella.920	no	yes	pass	no	yes		
+573.98973	PRJEB80567	Colombia	MLST.klebsiella.920	no	yes	pass	no	yes		
+573.98974	PRJEB80567	Colombia	MLST.klebsiella.556	yes	yes	pass	no	yes		
+573.98975	PRJEB80567	Colombia	MLST.klebsiella.234	yes	yes	pass	no	yes		
+573.98976	PRJEB80567	Colombia	MLST.klebsiella.846	yes	yes	pass	no	yes		
+573.98977	PRJEB80567	Colombia	MLST.klebsiella.327	yes	yes	pass	no	yes		
+573.98978	PRJEB80567	Colombia	MLST.klebsiella.2601	no	yes	pass	no	yes		
+573.98979	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98980	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98981	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.98982	PRJEB80567	Colombia	MLST.klebsiella.22	yes	yes	pass	no	yes		
+573.98983	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98984	PRJEB80567	Colombia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.98985	PRJEB80567	Colombia	MLST.klebsiella.186	no	yes	pass	no	yes		
+573.98986	PRJEB80567	Colombia	MLST.klebsiella.2623	no	yes	pass	no	yes		
+573.98987	PRJEB80567	Colombia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.98988	PRJEB80567	Colombia	MLST.klebsiella.551	yes	yes	pass	no	yes		
+573.98989	PRJEB80567	Colombia	MLST.klebsiella.661	yes	yes	pass	no	yes		
+573.98990	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.98991	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.98992	PRJEB80567	Colombia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.98993	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.98994	PRJEB80567	Colombia	MLST.klebsiella.65	yes	yes	pass	no	yes		
+573.98995	PRJEB80567	Colombia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.98996	PRJEB80567	Colombia	MLST.klebsiella.412	yes	yes	pass	no	yes		
+573.98997	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.98998	PRJEB80567	Colombia	MLST.klebsiella.3991	yes	yes	pass	no	yes		
+573.98999	PRJEB80567	Colombia	MLST.klebsiella.8	yes	yes	pass	no	yes		
+573.99000	PRJEB80567	Colombia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.99001	PRJEB80567	Colombia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.99002	PRJEB80567	Colombia	MLST.klebsiella.661	yes	yes	pass	no	yes		
+573.99003	PRJEB80567	Colombia	MLST.klebsiella.323	yes	yes	pass	no	yes		
+573.99004	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99005	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99006	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99007	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99008	PRJEB80567	Colombia	MLST.klebsiella.882	yes	yes	pass	no	yes		
+573.99009	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.99010	PRJEB80567	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.99011	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.99012	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.99013	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.99014	PRJEB80567	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.99015	PRJEB80567	Colombia	MLST.klebsiella.337	yes	yes	pass	no	yes		
+573.99016	PRJEB80567	Colombia	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.99017	PRJEB80567	Colombia	MLST.klebsiella.281	no	yes	pass	no	yes		
+573.99018	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99019	PRJEB80567	Colombia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.99020	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99021	PRJEB80567	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.99022	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99023	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99024	PRJEB80567	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.99025	PRJEB80567	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.99026	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99027	PRJEB80567	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.99028	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99029	PRJEB80567	Colombia	MLST.klebsiella.5388	no	yes	pass	no	yes		
+573.99030	PRJEB80567	Colombia	MLST.klebsiella.833	no	yes	pass	no	yes		
+573.99031	PRJEB80567	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.99032	PRJEB80567	Colombia	MLST.klebsiella.3049	no	yes	pass	no	yes		
+573.99033	PRJEB80567	Colombia	MLST.klebsiella.3049	no	yes	pass	no	yes		
+573.99034	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99035	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.99036	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99037	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99038	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99039	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99040	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99041	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99042	PRJEB80567	Colombia	MLST.klebsiella.1867	no	yes	pass	no	yes		
+573.99043	PRJEB80567	Colombia	MLST.klebsiella.29	yes	yes	pass	no	yes		
+573.99044	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99045	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99046	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99047	PRJEB80567	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.99048	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99049	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99050	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99051	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99052	PRJEB80567	Colombia	MLST.klebsiella.679	no	yes	pass	no	yes		
+573.99053	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99054	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99055	PRJEB80567	Colombia	MLST.klebsiella.485	yes	yes	pass	no	yes		
+573.99056	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99057	PRJEB80567	Colombia	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.99058	PRJEB80567	Colombia	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.99059	PRJEB80567	Colombia	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.99060	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.99061	PRJEB80567	Colombia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.99062	PRJEB80567	Colombia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.99063	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.99064	PRJEB80567	Colombia	MLST.klebsiella.184	no	yes	pass	no	yes		
+573.99065	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99066	PRJEB80567	Colombia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.99067	PRJEB80567	Colombia	MLST.klebsiella.86	yes	yes	pass	no	yes		
+573.99068	PRJEB80567	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.99069	PRJEB80567	Colombia	MLST.klebsiella.1440	yes	yes	pass	no	yes		
+573.99070	PRJEB80567	Colombia	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.99071	PRJEB80567	Colombia	MLST.klebsiella.469	no	yes	pass	no	yes		
+573.99072	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99073	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99074	PRJEB80567	Colombia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.99075	PRJEB80567	Colombia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.99076	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99077	PRJEB80567	Colombia	MLST.klebsiella.2654	no	yes	pass	no	yes		
+573.99078	PRJEB80567	Colombia	MLST.klebsiella.628	yes	yes	pass	no	yes		
+573.99079	PRJEB80567	Colombia	MLST.klebsiella.5994	no	yes	pass	no	yes		
+573.99080	PRJEB80567	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.99081	PRJEB80567	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.99082	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99083	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99084	PRJEB80567	Colombia	MLST.klebsiella.2039	no	yes	pass	no	yes		
+573.99085	PRJEB80567	Colombia	MLST.klebsiella.502	yes	yes	pass	no	yes		
+573.99086	PRJEB80567	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.99087	PRJEB80567	Colombia	MLST.klebsiella.1758	yes	yes	pass	no	yes		
+573.99088	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.99089	PRJEB80567	Colombia	MLST.klebsiella.1401	yes	yes	pass	no	yes		
+573.99090	PRJEB80567	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.99091	PRJEB80567	Colombia	MLST.klebsiella.1	yes	yes	pass	no	yes		
+573.99092	PRJEB80567	Colombia	MLST.klebsiella.29	yes	yes	pass	no	yes		
+573.99094	PRJEB80567	Colombia	MLST.klebsiella.867	no	yes	pass	no	yes		
+573.99095	PRJEB80567	Colombia	MLST.klebsiella.512	yes	yes	pass	no	yes		
+573.99096	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99097	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99098	PRJEB80567	Colombia	MLST.klebsiella.1296	yes	yes	pass	no	yes		
+573.99099	PRJEB80567	Colombia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.99100	PRJEB80567	Colombia	MLST.klebsiella.22	yes	yes	pass	no	yes		
+573.99101	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99102	PRJEB80567	Colombia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.99103	PRJEB80567	Colombia	MLST.klebsiella.292	yes	yes	pass	no	yes		
+573.99104	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99105	PRJEB80567	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.99106	PRJEB80567	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.99107	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99108	PRJEB80567	Colombia	MLST.klebsiella.784	yes	yes	pass	no	yes		
+573.99109	PRJEB80567	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.99110	PRJEB80567	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.99111	PRJEB80567	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.99112	PRJEB80567	Colombia	MLST.klebsiella.3379	no	yes	pass	no	yes		
+573.99113	PRJEB80567	Colombia	MLST.klebsiella.70	yes	yes	pass	no	yes		
+573.99114	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99115	PRJEB80567	Colombia	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.99116	PRJEB80567	Colombia	MLST.klebsiella.1079	no	yes	pass	no	yes		
+573.99117	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99118	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.99119	PRJEB80567	Colombia	MLST.klebsiella.881	yes	yes	pass	no	yes		
+573.99120	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99121	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99122	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99123	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99124	PRJEB80567	Colombia	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.99125	PRJEB80567	Colombia	MLST.klebsiella.567	no	yes	pass	no	yes		
+573.99126	PRJEB80567	Colombia	MLST.klebsiella.3680	no	yes	pass	no	yes		
+573.99127	PRJEB80567	Colombia	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.99128	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99129	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.99130	PRJEB80567	Colombia	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.99131	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.99132	PRJEB80567	Colombia	MLST.klebsiella.1079	no	yes	pass	no	yes		
+573.99133	PRJEB80567	Colombia	MLST.klebsiella.901	no	yes	pass	no	yes		
+573.99134	PRJEB80567	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.99135	PRJEB80567	Colombia	MLST.klebsiella.268	yes	yes	pass	no	yes		
+573.99136	PRJEB80567	Colombia	MLST.klebsiella.399	no	yes	pass	no	yes		
+573.99137	PRJEB80567	Colombia	MLST.klebsiella.2643	no	yes	pass	no	yes		
+573.99138	PRJEB80567	Colombia	MLST.klebsiella.152	yes	yes	pass	no	yes		
+573.99139	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99140	PRJEB80567	Colombia	MLST.klebsiella.881	yes	yes	pass	no	yes		
+573.99141	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99142	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99143	PRJEB80567	Colombia	MLST.klebsiella.504	no	yes	pass	no	yes		
+573.99144	PRJEB80567	Colombia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.99145	PRJEB80567	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.99146	PRJEB80567	Colombia	MLST.klebsiella.4384	no	yes	pass	no	yes		
+573.99147	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99148	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99149	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99150	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99151	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99152	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99153	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99154	PRJEB80567	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.99155	PRJEB80567	Colombia	MLST.klebsiella.12	yes	yes	pass	no	yes		
+573.99156	PRJEB80567	Colombia	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.99157	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99158	PRJEB80567	Colombia	MLST.klebsiella.5135	no	yes	pass	no	yes		
+573.99159	PRJEB80567	Colombia	MLST.klebsiella.109	no	yes	pass	no	yes		
+573.99160	PRJEB80567	Colombia	MLST.klebsiella.831	no	yes	pass	no	yes		
+573.99161	PRJEB80567	Colombia	MLST.klebsiella.327	yes	yes	pass	no	yes		
+573.99162	PRJEB80567	Colombia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.99163	PRJEB80567	Colombia	MLST.klebsiella.505	no	yes	pass	no	yes		
+573.99164	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99165	PRJEB80567	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.99166	PRJEB80567	Colombia	MLST.klebsiella.86	yes	yes	pass	no	yes		
+573.99167	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99168	PRJEB80567	Colombia	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.99169	PRJEB80567	Colombia	MLST.klebsiella.1296	yes	yes	pass	no	yes		
+573.99170	PRJEB80567	Colombia	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.99171	PRJEB80567	Colombia	MLST.klebsiella.1334	no	yes	pass	no	yes		
+573.99172	PRJEB80567	Colombia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.99174	PRJEB80567	Colombia	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.99175	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99177	PRJEB80567	Colombia	MLST.klebsiella.458	no	yes	pass	no	yes		
+573.99178	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99179	PRJEB80567	Colombia	MLST.klebsiella.458	no	yes	pass	no	yes		
+573.99180	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99181	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99182	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99183	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99184	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99185	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99186	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99187	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99188	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99189	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.99190	PRJEB80567	Colombia	MLST.klebsiella.252	yes	yes	pass	no	yes		
+573.99191	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99192	PRJEB80567	Colombia	MLST.klebsiella.483	no	yes	pass	no	yes		
+573.99193	PRJEB80567	Colombia	MLST.klebsiella.485	yes	yes	pass	no	yes		
+573.99194	PRJEB80567	Colombia	MLST.klebsiella.4970	no	yes	pass	no	yes		
+573.99195	PRJEB80567	Colombia	MLST.klebsiella.502	yes	yes	pass	no	yes		
+573.99196	PRJEB80567	Colombia	MLST.klebsiella.380	no	yes	pass	no	yes		
+573.99197	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99198	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99199	PRJEB80567	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.99200	PRJEB80567	Colombia	MLST.klebsiella.834	yes	yes	pass	no	yes		
+573.99201	PRJEB80567	Colombia	MLST.klebsiella.35	yes	yes	pass	no	yes		
+573.99202	PRJEB80567	Colombia	MLST.klebsiella.3003	no	yes	pass	no	yes		
+573.99203	PRJEB80567	Colombia	MLST.klebsiella.184	no	yes	pass	no	yes		
+573.99204	PRJEB80567	Colombia	MLST.klebsiella.33	yes	yes	pass	no	yes		
+573.99205	PRJEB80567	Colombia	MLST.klebsiella.1897	no	yes	pass	no	yes		
+573.99206	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99207	PRJEB80567	Colombia	MLST.klebsiella.1082	no	yes	pass	no	yes		
+573.99208	PRJEB80567	Colombia	MLST.klebsiella.828	no	yes	pass	no	yes		
+573.99209	PRJEB80567	Colombia	MLST.klebsiella.2127	no	yes	pass	no	yes		
+573.99210	PRJEB80567	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.99211	PRJEB80567	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.99212	PRJEB80567	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.99213	PRJEB80567	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.99214	PRJEB80567	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.99215	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.99216	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99217	PRJEB80567	Colombia	MLST.klebsiella.776	no	yes	pass	no	yes		
+573.99218	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99219	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99220	PRJEB80567	Colombia	MLST.klebsiella.560	yes	yes	pass	no	yes		
+573.99221	PRJEB80567	Colombia	MLST.klebsiella.4343	no	yes	pass	no	yes		
+573.99222	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99223	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99224	PRJEB80567	Colombia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99225	PRJEB80567	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.99226	PRJEB80567	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.99227	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99228	PRJEB80567	Colombia	MLST.klebsiella.322	yes	yes	pass	no	yes		
+573.99229	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99230	PRJEB80567	Colombia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.99231	PRJEB80567	Colombia	MLST.klebsiella.1228	yes	yes	pass	no	yes		
+573.99232	PRJEB80567	Colombia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.99233	PRJEB80567	Colombia	MLST.klebsiella.25	yes	yes	pass	no	yes		
+573.99234	PRJEB80567	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.99235	PRJEB80567	Colombia	MLST.klebsiella.776	no	yes	pass	no	yes		
+573.99236	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.99237	PRJEB80567	Colombia	MLST.klebsiella.2039	no	yes	pass	no	yes		
+573.99238	PRJEB80567	Colombia	MLST.klebsiella.3157	no	yes	pass	no	yes		
+573.99239	PRJEB80567	Colombia	MLST.klebsiella.828	no	yes	pass	no	yes		
+573.99240	PRJEB80567	Colombia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.99241	PRJEB80567	Colombia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.99242	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99243	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99244	PRJEB80567	Colombia	MLST.klebsiella.4232	no	yes	pass	no	yes		
+573.99245	PRJEB80567	Colombia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.99246	PRJEB80567	Colombia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.99247	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99248	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99250	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99251	PRJEB80567	Colombia	MLST.klebsiella.188	yes	yes	pass	no	yes		
+573.99252	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99253	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99254	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99255	PRJEB80567	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.99256	PRJEB80567	Colombia	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.99257	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99258	PRJEB80567	Colombia	MLST.klebsiella.433	yes	yes	pass	no	yes		
+573.99259	PRJEB80567	Colombia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99260	PRJEB80567	Colombia	MLST.klebsiella.342	no	yes	pass	no	yes		
+573.99261	PRJEB80567	Colombia	MLST.klebsiella.342	no	yes	pass	no	yes		
+573.99262	PRJEB80567	Colombia	MLST.klebsiella.433	yes	yes	pass	no	yes		
+573.99263	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99264	PRJEB80567	Colombia	MLST.klebsiella.433	yes	yes	pass	no	yes		
+573.99265	PRJEB80567	Colombia	MLST.klebsiella.348	yes	yes	pass	no	yes		
+573.99266	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.99267	PRJEB80567	Colombia	MLST.klebsiella.3240	no	yes	pass	no	yes		
+573.99268	PRJEB80567	Colombia	MLST.klebsiella.5994	no	yes	pass	no	yes		
+573.99269	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99270	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99271	PRJEB80567	Colombia	MLST.klebsiella.2856	no	yes	pass	no	yes		
+573.99272	PRJEB80567	Colombia	MLST.klebsiella.258	yes	yes	pass	no	yes		
+573.99273	PRJEB80567	Colombia	MLST.klebsiella.145	no	yes	pass	no	yes		
+573.99274	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99275	PRJEB80567	Colombia	MLST.klebsiella.5388	no	yes	pass	no	yes		
+573.99276	PRJEB80567	Colombia	MLST.klebsiella.628	yes	yes	pass	no	yes		
+573.99277	PRJEB80567	Colombia	MLST.klebsiella.920	no	yes	pass	no	yes		
+573.99278	PRJEB80567	Colombia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.99279	PRJEB80567	Colombia	MLST.klebsiella.337	yes	yes	pass	no	yes		
+573.99280	PRJEB80567	Colombia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.99281	PRJEB80567	Colombia	MLST.klebsiella.1079	no	yes	pass	no	yes		
+573.99282	PRJEB80567	Colombia	MLST.klebsiella.1296	yes	yes	pass	no	yes		
+573.99283	PRJEB80567	Colombia	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.99284	PRJEB80567	Colombia	MLST.klebsiella.348	yes	yes	pass	no	yes		
+573.99285	PRJEB80567	Colombia	MLST.klebsiella.628	yes	yes	pass	no	yes		
+573.99286	PRJEB80567	Colombia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.99287	PRJEB80567	Colombia	MLST.klebsiella.65	yes	yes	pass	no	yes		
+573.99288	PRJEB80567	Colombia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.99289	PRJEB80567	Colombia	MLST.klebsiella.567	no	yes	pass	no	yes		
+573.99290	PRJEB80567	Colombia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.99291	PRJEB80567	Colombia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.99292	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99293	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99294	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99295	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99296	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99297	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99298	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99299	PRJEB35084	Portugal	MLST.klebsiella.960	no	yes	pass	no	yes		
+573.99300	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99302	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99305	PRJEB35084	Portugal	MLST.klebsiella.423	no	yes	pass	no	yes		
+573.99306	PRJEB35084	Portugal	MLST.klebsiella.423	no	yes	pass	no	yes		
+573.99312	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99313	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99315	PRJEB35084	Portugal	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.99316	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99318	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99319	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99320	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99321	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99323	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99324	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99325	PRJEB35084	Portugal	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.99328	PRJEB35084	Portugal	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105456	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105457	PRJEB36683	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105458	PRJEB36683	Saudi Arabia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.105459	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105460	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105461	PRJEB36683	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105462	PRJEB36683	Saudi Arabia	MLST.klebsiella.1662	yes	yes	pass	no	yes		
+573.105463	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105464	PRJEB36683	Saudi Arabia	MLST.klebsiella.1271	no	yes	pass	no	yes		
+573.105465	PRJEB36683	Saudi Arabia	MLST.klebsiella.1630	no	yes	pass	no	yes		
+573.105466	PRJEB36683	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105467	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105468	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105469	PRJEB36683	Saudi Arabia	MLST.klebsiella.4283	no	yes	pass	no	yes		
+573.105470	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105471	PRJEB36683	Saudi Arabia	MLST.klebsiella.1317	no	yes	pass	no	yes		
+573.105472	PRJEB36683	Saudi Arabia	MLST.klebsiella.1537	no	yes	pass	no	yes		
+573.105473	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105474	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105475	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105476	PRJEB36683	Saudi Arabia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.105477	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105478	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105479	PRJEB36683	Saudi Arabia	MLST.klebsiella.3159	no	yes	pass	no	yes		
+573.105480	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105481	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105482	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105483	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105484	PRJEB36683	Saudi Arabia	MLST.klebsiella.408	no	yes	pass	no	yes		
+573.105485	PRJEB36683	Saudi Arabia	MLST.klebsiella.784	yes	yes	pass	no	yes		
+573.105486	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105487	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105488	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105489	PRJEB36683	Saudi Arabia	MLST.klebsiella.3153	no	yes	pass	no	yes		
+573.105490	PRJEB36683	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105491	PRJEB36683	Saudi Arabia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.105492	PRJEB36683	Saudi Arabia	MLST.klebsiella.76	yes	yes	pass	no	yes		
+573.105493	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105494	PRJEB36683	Saudi Arabia	MLST.klebsiella.268	yes	yes	pass	no	yes		
+573.105495	PRJEB36683	Saudi Arabia	MLST.klebsiella.29	yes	yes	pass	no	yes		
+573.105496	PRJEB36683	Saudi Arabia	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.105497	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105498	PRJEB36683	Saudi Arabia	MLST.klebsiella.105	yes	yes	pass	no	yes		
+573.105499	PRJEB36683	Saudi Arabia	MLST.klebsiella.1777	yes	yes	pass	no	yes		
+573.105500	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105501	PRJEB36683	Saudi Arabia	MLST.klebsiella.1691	no	yes	pass	no	yes		
+573.105502	PRJEB36683	Saudi Arabia	MLST.klebsiella.866	no	yes	pass	no	yes		
+573.105503	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105504	PRJEB36683	Saudi Arabia	MLST.klebsiella.636	yes	yes	pass	no	yes		
+573.105505	PRJEB36683	Saudi Arabia	MLST.klebsiella.437	yes	yes	pass	no	yes		
+573.105506	PRJEB36683	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105507	PRJEB36683	Saudi Arabia	MLST.klebsiella.560	yes	yes	pass	no	yes		
+573.105508	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105509	PRJEB36683	Saudi Arabia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.105510	PRJEB36683	Saudi Arabia	MLST.klebsiella.420	no	yes	pass	no	yes		
+573.105511	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105512	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105513	PRJEB36683	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.105514	PRJEB36683	Saudi Arabia	MLST.klebsiella.107	yes	yes	pass	no	yes		
+573.105515	PRJEB36683	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105516	PRJEB36683	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105517	PRJEB36683	Saudi Arabia	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.105518	PRJEB36683	Saudi Arabia	MLST.klebsiella.187	yes	yes	pass	no	yes		
+573.105519	PRJEB36683	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105520	PRJEB36683	Saudi Arabia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.105521	PRJEB36683	Saudi Arabia	MLST.klebsiella.198	yes	yes	pass	no	yes		
+573.105522	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105523	PRJEB36683	Saudi Arabia	MLST.klebsiella.716	yes	yes	pass	no	yes		
+573.105524	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105526	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105527	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105528	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105529	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105530	PRJEB36683	Saudi Arabia	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.105531	PRJEB36683	Saudi Arabia	MLST.klebsiella.133	yes	yes	pass	no	yes		
+573.105532	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105533	PRJEB36683	Saudi Arabia	MLST.klebsiella.35	yes	yes	pass	no	yes		
+573.105534	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105535	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105536	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105537	PRJEB36683	Saudi Arabia	MLST.klebsiella.3159	no	yes	pass	no	yes		
+573.105538	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105539	PRJEB36683	Saudi Arabia	MLST.klebsiella.1962	yes	yes	pass	no	yes		
+573.105540	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105541	PRJEB36683	Saudi Arabia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.105542	PRJEB36683	Saudi Arabia	MLST.klebsiella.30	yes	yes	pass	no	yes		
+573.105543	PRJEB36683	Saudi Arabia	MLST.klebsiella.313	no	yes	pass	no	yes		
+573.105544	PRJEB36683	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105545	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105546	PRJEB36683	Saudi Arabia	MLST.klebsiella.1317	no	yes	pass	no	yes		
+573.105547	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105548	PRJEB36683	Saudi Arabia	MLST.klebsiella.134	yes	yes	pass	no	yes		
+573.105549	PRJEB36683	Saudi Arabia	MLST.klebsiella.1777	yes	yes	pass	no	yes		
+573.105550	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105551	PRJEB36683	Saudi Arabia	MLST.klebsiella.3345	no	yes	pass	no	yes		
+573.105552	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105553	PRJEB36683	Saudi Arabia	MLST.klebsiella.610	yes	yes	pass	no	yes		
+573.105554	PRJEB36683	Saudi Arabia	MLST.klebsiella.377	no	yes	pass	no	yes		
+573.105555	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105556	PRJEB36683	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.105557	PRJEB36683	Saudi Arabia	MLST.klebsiella.985	yes	yes	pass	no	yes		
+573.105558	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105559	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105560	PRJEB36683	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105561	PRJEB36683	Saudi Arabia	MLST.klebsiella.377	no	yes	pass	no	yes		
+573.105562	PRJEB36683	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.105563	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105564	PRJEB36683	Saudi Arabia	MLST.klebsiella.377	no	yes	pass	no	yes		
+573.105565	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105566	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105567	PRJEB36683	Saudi Arabia	MLST.klebsiella.610	yes	yes	pass	no	yes		
+573.105568	PRJEB36683	Saudi Arabia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.105569	PRJEB36683	Saudi Arabia	MLST.klebsiella.4998	no	yes	pass	no	yes		
+573.105570	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105571	PRJEB36683	Saudi Arabia	MLST.klebsiella.405	yes	yes	pass	no	yes		
+573.105572	PRJEB36683	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.105573	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105574	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105575	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105576	PRJEB36683	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.105577	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105578	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105579	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105580	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105581	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105582	PRJEB36683	Saudi Arabia	MLST.klebsiella.377	no	yes	pass	no	yes		
+573.105583	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105584	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105585	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105586	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105587	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105588	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105589	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105590	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105591	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105592	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105593	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105594	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105595	PRJEB36683	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.105596	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105597	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105598	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105599	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105600	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105601	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105602	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105603	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105604	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105606	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105607	PRJEB36683	Saudi Arabia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.105608	PRJEB36683	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105609	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105610	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105611	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105612	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105613	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105614	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105615	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105616	PRJEB36683	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105617	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105618	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105619	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105620	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105621	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105622	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105623	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105624	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105625	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105626	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105627	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105628	PRJEB36683	Saudi Arabia	MLST.klebsiella.610	yes	yes	pass	no	yes		
+573.105629	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105630	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105631	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105632	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105633	PRJEB36683	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105634	PRJEB36683	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105635	PRJEB36683	Saudi Arabia	MLST.klebsiella.353	yes	yes	pass	no	yes		
+573.105636	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105637	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105638	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105639	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105640	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105641	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105642	PRJEB36683	Saudi Arabia	MLST.klebsiella.110	no	yes	pass	no	yes		
+573.105643	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105644	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105645	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105646	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105648	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105649	PRJEB36683	Saudi Arabia	MLST.klebsiella.340	yes	yes	pass	no	yes		
+573.105650	PRJEB36683	Saudi Arabia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.105651	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105653	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105654	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105655	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105656	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105657	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105658	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105659	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105660	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105661	PRJEB36683	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105662	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105663	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105664	PRJEB36683	Saudi Arabia	MLST.klebsiella.643	yes	yes	pass	no	yes		
+573.105665	PRJEB36683	Saudi Arabia	MLST.klebsiella.610	yes	yes	pass	no	yes		
+573.105666	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105667	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105668	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105669	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105670	PRJEB36683	Saudi Arabia	MLST.klebsiella.219	yes	yes	pass	no	yes		
+573.105671	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105672	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105673	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105674	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105675	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105676	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105677	PRJEB36683	Saudi Arabia	MLST.klebsiella.835	no	yes	pass	no	yes		
+573.105678	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105679	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105680	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105682	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105683	PRJEB36683	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105684	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105685	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105686	PRJEB36683	Saudi Arabia	MLST.klebsiella.48	yes	yes	pass	no	yes		
+573.105687	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105688	PRJEB36683	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.105689	PRJEB36683	Saudi Arabia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.105690	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105691	PRJEB36683	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.105692	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105693	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105694	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105695	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105696	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105697	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105698	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105699	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105700	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105701	PRJEB36683	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105702	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105703	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105704	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105705	PRJEB36683	Saudi Arabia	MLST.klebsiella.377	no	yes	pass	no	yes		
+573.105706	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105707	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105708	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105709	PRJEB36683	Saudi Arabia	MLST.klebsiella.377	no	yes	pass	no	yes		
+573.105710	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105711	PRJEB36683	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.105712	PRJEB36683	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.105713	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105714	PRJEB36683	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.105715	PRJEB36683	Saudi Arabia	MLST.klebsiella.377	no	yes	pass	no	yes		
+573.105716	PRJEB36683	Saudi Arabia	MLST.klebsiella.13	yes	yes	pass	no	yes		
+573.105717	PRJEB36683	Saudi Arabia	MLST.klebsiella.48	yes	yes	pass	no	yes		
+573.105718	PRJEB36683	Saudi Arabia	MLST.klebsiella.280	yes	yes	pass	no	yes		
+573.105719	PRJEB36683	Saudi Arabia	MLST.klebsiella.280	yes	yes	pass	no	yes		
+573.105720	PRJEB36683	Saudi Arabia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.105721	PRJEB36683	Saudi Arabia	MLST.klebsiella.48	yes	yes	pass	no	yes		
+573.105722	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105723	PRJEB66182	Saudi Arabia	MLST.klebsiella.5221	no	yes	pass	no	yes		
+573.105724	PRJEB66182	Saudi Arabia	MLST.klebsiella.294	yes	yes	pass	no	yes		
+573.105725	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105726	PRJEB66182	Saudi Arabia	MLST.klebsiella.268	yes	yes	pass	no	yes		
+573.105727	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105728	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105729	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105730	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105731	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105732	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105733	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105734	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105735	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105736	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105737	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105738	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105739	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105740	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105741	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105742	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105743	PRJEB66182	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.105744	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105745	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105746	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105747	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105748	PRJEB66182	Saudi Arabia	MLST.klebsiella.502	yes	yes	pass	no	yes		
+573.105749	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105750	PRJEB66182	Saudi Arabia	MLST.klebsiella.502	yes	yes	pass	no	yes		
+573.105751	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105752	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105753	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105754	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105755	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105756	PRJEB66182	Saudi Arabia	MLST.klebsiella.751	no	yes	pass	no	yes		
+573.105757	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105758	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105759	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105760	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105761	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105762	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105763	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105764	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105765	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105766	PRJEB66182	Saudi Arabia	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.105767	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105768	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105769	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105770	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105771	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105772	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105773	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105774	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105775	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105776	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.105777	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105778	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105779	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105780	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105781	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105782	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105783	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105784	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105785	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105786	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105787	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105788	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105789	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105790	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105791	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105792	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105793	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105794	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105795	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105796	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105797	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105798	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105799	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105800	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105801	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105802	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105803	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105804	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105805	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105806	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105807	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105808	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105809	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105810	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105811	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105812	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105813	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105814	PRJEB66182	Saudi Arabia	MLST.klebsiella.3626	no	yes	pass	no	yes		
+573.105815	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105816	PRJEB66182	Saudi Arabia	MLST.klebsiella.432	yes	yes	pass	no	yes		
+573.105817	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105818	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105819	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105820	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105821	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105822	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105823	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105824	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105825	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105826	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105827	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105828	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105829	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105830	PRJEB66182	Saudi Arabia	MLST.klebsiella.873	yes	yes	pass	no	yes		
+573.105831	PRJEB66182	Saudi Arabia	MLST.klebsiella.1593	no	yes	pass	no	yes		
+573.105832	PRJEB66182	Saudi Arabia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.105833	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105834	PRJEB66182	Saudi Arabia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.105835	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105836	PRJEB66182	Saudi Arabia	MLST.klebsiella.889	no	yes	pass	no	yes		
+573.105837	PRJEB66182	Saudi Arabia	MLST.klebsiella.661	yes	yes	pass	no	yes		
+573.105838	PRJEB66182	Saudi Arabia	MLST.klebsiella.43	yes	yes	pass	no	yes		
+573.105839	PRJEB66182	Saudi Arabia	MLST.klebsiella.313	no	yes	pass	no	yes		
+573.105840	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105841	PRJEB66182	Saudi Arabia	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.105842	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105843	PRJEB66182	Saudi Arabia	MLST.klebsiella.469	no	yes	pass	no	yes		
+573.105844	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105845	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105846	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105847	PRJEB66182	Saudi Arabia	MLST.klebsiella.437	yes	yes	pass	no	yes		
+573.105848	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105849	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105850	PRJEB66182	Saudi Arabia	MLST.klebsiella.1552	no	yes	pass	no	yes		
+573.105851	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105852	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105853	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105854	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105855	PRJEB66182	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.105856	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105857	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105858	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105859	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105860	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105861	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105862	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105863	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105864	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.105865	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105866	PRJEB66182	Saudi Arabia	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.105867	PRJEB66182	Saudi Arabia	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.105868	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105869	PRJEB66182	Saudi Arabia	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.105870	PRJEB66182	Saudi Arabia	MLST.klebsiella.268	yes	yes	pass	no	yes		
+573.105871	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105872	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105873	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105874	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105875	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105876	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105877	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105878	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105879	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105880	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105881	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105882	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105883	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105884	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105885	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105886	PRJEB66182	Saudi Arabia	MLST.klebsiella.16	yes	yes	pass	no	yes		
+573.105887	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105888	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105889	PRJEB66182	Saudi Arabia	MLST.klebsiella.485	yes	yes	pass	no	yes		
+573.105890	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105891	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105892	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105893	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105894	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105895	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105896	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105897	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105898	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105899	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105900	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105901	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105902	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105903	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105904	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105905	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105906	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105907	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105908	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105909	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105910	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105911	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105912	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105913	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105914	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105915	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105916	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105917	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105918	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105919	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105920	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105921	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105922	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105923	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105924	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105925	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105926	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105927	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105928	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105929	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105930	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105931	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105932	PRJEB66182	Saudi Arabia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.105933	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105934	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105935	PRJEB66182	Saudi Arabia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.105936	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105937	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105938	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105939	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105940	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105941	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105942	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105943	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105944	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105945	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105946	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105947	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105948	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105949	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105950	PRJEB66182	Saudi Arabia	MLST.klebsiella.1418	no	yes	pass	no	yes		
+573.105951	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105952	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105953	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105954	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105955	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105956	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105957	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105958	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105959	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105960	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105961	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105962	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105963	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105964	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105965	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.105966	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105967	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105968	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105969	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.105970	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105971	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105972	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105973	PRJEB66182	Saudi Arabia	MLST.klebsiella.322	yes	yes	pass	no	yes		
+573.105974	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105975	PRJEB66182	Saudi Arabia	MLST.klebsiella.437	yes	yes	pass	no	yes		
+573.105976	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105977	PRJEB66182	Saudi Arabia	MLST.klebsiella.1229	yes	yes	pass	no	yes		
+573.105978	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105979	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105980	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105981	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105982	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105983	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105984	PRJEB66182	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.105985	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105986	PRJEB66182	Saudi Arabia	MLST.klebsiella.437	yes	yes	pass	no	yes		
+573.105987	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105988	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105989	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105990	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.105991	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105992	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105993	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105994	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105995	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.105996	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105997	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.105998	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.105999	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106000	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106001	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106002	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106003	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106004	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106005	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106006	PRJEB66182	Saudi Arabia	MLST.klebsiella.437	yes	yes	pass	no	yes		
+573.106007	PRJEB66182	Saudi Arabia	MLST.klebsiella.383	yes	yes	pass	no	yes		
+573.106008	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106009	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106010	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106011	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106012	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106013	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106014	PRJEB66182	Saudi Arabia	MLST.klebsiella.48	yes	yes	pass	no	yes		
+573.106015	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.106016	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106017	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.106018	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106019	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106020	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106021	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106022	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106023	PRJEB66182	Saudi Arabia	MLST.klebsiella.294	yes	yes	pass	no	yes		
+573.106024	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106025	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.106026	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106027	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106028	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.106029	PRJEB66182	Saudi Arabia	MLST.klebsiella.22	yes	yes	pass	no	yes		
+573.106030	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106031	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106032	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106033	PRJEB66182	Saudi Arabia	MLST.klebsiella.11	yes	yes	pass	no	yes		
+573.106034	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106035	PRJEB66182	Saudi Arabia	MLST.klebsiella.969	no	yes	pass	no	yes		
+573.106036	PRJEB66182	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.106037	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106038	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106039	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106040	PRJEB66182	Saudi Arabia	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.106041	PRJEB66182	Saudi Arabia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.106042	PRJEB66182	Saudi Arabia	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.106043	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106044	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106045	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106046	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106047	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106048	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106049	PRJEB66182	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106050	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106051	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106052	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.106053	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106054	PRJEB66182	Saudi Arabia	MLST.klebsiella.16	yes	yes	pass	no	yes		
+573.106055	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.106056	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106057	PRJEB66182	Saudi Arabia	MLST.klebsiella.16	yes	yes	pass	no	yes		
+573.106058	PRJEB66182	Saudi Arabia	MLST.klebsiella.225	no	yes	pass	no	yes		
+573.106059	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106060	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106061	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106062	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106063	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106064	PRJEB66182	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106065	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106066	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106067	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.106068	PRJEB66182	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106069	PRJEB66182	Saudi Arabia	MLST.klebsiella.231	yes	yes	pass	no	yes		
+573.106070	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106071	PRJEB66182	Saudi Arabia	MLST.klebsiella.251	yes	yes	pass	no	yes		
+573.106072	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106073	PRJEB66182	Saudi Arabia	MLST.klebsiella.268	yes	yes	pass	no	yes		
+573.106074	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106075	PRJEB66182	Saudi Arabia	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106076	PRJNA1054115	USA	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.106077	PRJNA1054115	USA	MLST.klebsiella.240	yes	yes	pass	no	yes		
+573.106078	PRJNA1054115	USA	MLST.klebsiella.405	yes	yes	pass	no	yes		
+573.106079	PRJNA1054115	USA	MLST.klebsiella.995	yes	yes	pass	no	yes		
+573.106080	PRJNA1054115	USA	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.106081	PRJNA1054115	USA	MLST.klebsiella.922	yes	yes	pass	no	yes		
+573.106082	PRJNA1054115	USA	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106083	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106084	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106085	PRJNA1054115	USA	MLST.klebsiella.359	yes	yes	pass	no	yes		
+573.106086	PRJNA1054115	USA	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106087	PRJNA1054115	USA	MLST.klebsiella.134	yes	yes	pass	no	yes		
+573.106088	PRJNA1054115	USA	MLST.klebsiella.4381	no	yes	pass	no	yes		
+573.106089	PRJNA1054115	USA	MLST.klebsiella.1695	no	yes	pass	no	yes		
+573.106090	PRJNA1054115	USA	MLST.klebsiella.155	no	yes	pass	no	yes		
+573.106091	PRJNA1054115	USA	MLST.klebsiella.464	no	yes	pass	no	yes		
+573.106092	PRJNA1054115	USA	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.106093	PRJNA1054115	USA	MLST.klebsiella.2217	yes	yes	pass	no	yes		
+573.106094	PRJNA1054115	USA	MLST.klebsiella.39	yes	yes	pass	no	yes		
+573.106095	PRJNA1054115	USA	MLST.klebsiella.277	yes	yes	pass	no	yes		
+573.106096	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106097	PRJNA1054115	USA	MLST.klebsiella.225	no	yes	pass	no	yes		
+573.106098	PRJNA1054115	USA	MLST.klebsiella.997	no	yes	pass	no	yes		
+573.106099	PRJNA1054115	USA	MLST.klebsiella.393	yes	yes	pass	no	yes		
+573.106100	PRJNA1054115	USA	MLST.klebsiella.540	no	yes	pass	no	yes		
+573.106101	PRJNA1054115	USA	MLST.klebsiella.941	no	yes	pass	no	yes		
+573.106102	PRJNA1054115	USA	MLST.klebsiella.528	yes	yes	pass	no	yes		
+573.106103	PRJNA1054115	USA	MLST.klebsiella.753	yes	yes	pass	no	yes		
+573.106104	PRJNA1054115	USA	MLST.klebsiella.252	yes	yes	pass	no	yes		
+573.106105	PRJNA1054115	USA	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.106106	PRJNA1054115	USA	MLST.klebsiella.753	yes	yes	pass	no	yes		
+573.106107	PRJNA1054115	USA	MLST.klebsiella.1613	no	yes	pass	no	yes		
+573.106108	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106109	PRJNA1054115	USA	MLST.klebsiella.1554	no	yes	pass	no	yes		
+573.106110	PRJNA1054115	USA	MLST.klebsiella.943	no	yes	pass	no	yes		
+573.106111	PRJNA1054115	USA	MLST.klebsiella.5122	no	yes	pass	no	yes		
+573.106112	PRJNA1054115	USA	MLST.klebsiella.443	yes	yes	pass	no	yes		
+573.106113	PRJNA1054115	USA	MLST.klebsiella.889	no	yes	pass	no	yes		
+573.106114	PRJNA1054115	USA	MLST.klebsiella.422	no	yes	pass	no	yes		
+573.106115	PRJNA1054115	USA	MLST.klebsiella.2004	no	yes	pass	no	yes		
+573.106116	PRJNA1054115	USA	MLST.klebsiella.422	no	yes	pass	no	yes		
+573.106117	PRJNA1054115	USA	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.106118	PRJNA1054115	USA	MLST.klebsiella.458	no	yes	pass	no	yes		
+573.106119	PRJNA1054115	USA	MLST.klebsiella.253	yes	yes	pass	no	yes		
+573.106120	PRJNA1054115	USA	MLST.klebsiella.465	yes	yes	pass	no	yes		
+573.106121	PRJNA1054115	USA	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.106122	PRJNA1054115	USA	MLST.klebsiella.105	yes	yes	pass	no	yes		
+573.106123	PRJNA1054115	USA	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.106124	PRJNA1054115	USA	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106125	PRJNA1054115	USA	MLST.klebsiella.1427	yes	yes	pass	no	yes		
+573.106126	PRJNA1054115	USA	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.106127	PRJNA1054115	USA	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.106128	PRJNA1054115	USA	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.106129	PRJNA1054115	USA	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.106130	PRJNA1054115	USA	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.106131	PRJNA1054115	USA	MLST.klebsiella.3020	no	yes	pass	no	yes		
+573.106132	PRJNA1054115	USA	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106133	PRJNA1054115	USA	MLST.klebsiella.45	yes	yes	pass	no	yes		
+573.106134	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106135	PRJNA1054115	USA	MLST.klebsiella.1380	yes	yes	pass	no	yes		
+573.106136	PRJNA1054115	USA	MLST.klebsiella.35	yes	yes	pass	no	yes		
+573.106137	PRJNA1054115	USA	MLST.klebsiella.2623	no	yes	pass	no	yes		
+573.106138	PRJNA1054115	USA	MLST.klebsiella.922	yes	yes	pass	no	yes		
+573.106139	PRJNA1054115	USA	MLST.klebsiella.27	yes	yes	pass	no	yes		
+573.106140	PRJNA1054115	USA	MLST.klebsiella.4427	no	yes	pass	no	yes		
+573.106141	PRJNA1054115	USA	MLST.klebsiella.628	yes	yes	pass	no	yes		
+573.106142	PRJNA1054115	USA	MLST.klebsiella.1380	yes	yes	pass	no	yes		
+573.106143	PRJNA1054115	USA	MLST.klebsiella.268	yes	yes	pass	no	yes		
+573.106144	PRJNA1054115	USA	MLST.klebsiella.993	no	yes	pass	no	yes		
+573.106145	PRJNA1054115	USA	MLST.klebsiella.3228	no	yes	pass	no	yes		
+573.106146	PRJNA1054115	USA	MLST.klebsiella.461	yes	yes	pass	no	yes		
+573.106147	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106148	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106149	PRJNA1054115	USA	MLST.klebsiella.2248	no	yes	pass	no	yes		
+573.106150	PRJNA1054115	USA	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.106151	PRJNA1054115	USA	MLST.klebsiella.605	no	yes	pass	no	yes		
+573.106152	PRJNA1054115	USA	MLST.klebsiella.628	yes	yes	pass	no	yes		
+573.106153	PRJNA1054115	USA	MLST.klebsiella.3642	no	yes	pass	no	yes		
+573.106154	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106155	PRJNA1054115	USA	MLST.klebsiella.34	yes	yes	pass	no	yes		
+573.106156	PRJNA1054115	USA	MLST.klebsiella.163	yes	yes	pass	no	yes		
+573.106157	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106158	PRJNA1054115	USA	MLST.klebsiella.1564	no	yes	pass	no	yes		
+573.106159	PRJNA1054115	USA	MLST.klebsiella.29	yes	yes	pass	no	yes		
+573.106160	PRJNA1054115	USA	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.106161	PRJNA1054115	USA	MLST.klebsiella.987	no	yes	pass	no	yes		
+573.106162	PRJNA1054115	USA	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.106163	PRJNA1054115	USA	MLST.klebsiella.289	no	yes	pass	no	yes		
+573.106164	PRJNA1054115	USA	MLST.klebsiella.942	no	yes	pass	no	yes		
+573.106165	PRJNA1054115	USA	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.106166	PRJNA1054115	USA	MLST.klebsiella.4060	no	yes	pass	no	yes		
+573.106167	PRJNA1054115	USA	MLST.klebsiella.107	yes	yes	pass	no	yes		
+573.106168	PRJNA1054115	USA	MLST.klebsiella.5340	no	yes	pass	no	yes		
+573.106169	PRJNA1054115	USA	MLST.klebsiella.1436	no	yes	pass	no	yes		
+573.106170	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106171	PRJNA1054115	USA	MLST.klebsiella.4423	no	yes	pass	no	yes		
+573.106172	PRJNA1054115	USA	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.106173	PRJNA1054115	USA	MLST.klebsiella.3640	no	yes	pass	no	yes		
+573.106174	PRJNA1054115	USA	MLST.klebsiella.253	yes	yes	pass	no	yes		
+573.106175	PRJNA1054115	USA	MLST.klebsiella.1380	yes	yes	pass	no	yes		
+573.106176	PRJNA1054115	USA	MLST.klebsiella.253	yes	yes	pass	no	yes		
+573.106177	PRJNA1054115	USA	MLST.klebsiella.872	no	yes	pass	no	yes		
+573.106178	PRJNA1054115	USA	MLST.klebsiella.2217	yes	yes	pass	no	yes		
+573.106179	PRJNA1054115	USA	MLST.klebsiella.3293	no	yes	pass	no	yes		
+573.106180	PRJNA1054115	USA	MLST.klebsiella.1180	yes	yes	pass	no	yes		
+573.106181	PRJNA1054115	USA	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106182	PRJNA1054115	USA	MLST.klebsiella.35	yes	yes	pass	no	yes		
+573.106183	PRJNA1054115	USA	MLST.klebsiella.323	yes	yes	pass	no	yes		
+573.106184	PRJNA1054115	USA	MLST.klebsiella.20	yes	yes	pass	no	yes		
+573.106185	PRJNA1054115	USA	MLST.klebsiella.941	no	yes	pass	no	yes		
+573.106186	PRJNA1054115	USA	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106187	PRJNA1054115	USA	MLST.klebsiella.1380	yes	yes	pass	no	yes		
+573.106188	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106189	PRJNA1054115	USA	MLST.klebsiella.17	yes	yes	pass	no	yes		
+573.106190	PRJNA1054115	USA	MLST.klebsiella.187	yes	yes	pass	no	yes		
+573.106191	PRJNA1054115	USA	MLST.klebsiella.111	yes	yes	pass	no	yes		
+573.106192	PRJNA1054115	USA	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.106193	PRJNA1054115	USA	MLST.klebsiella.225	no	yes	pass	no	yes		
+573.106194	PRJNA1054115	USA	MLST.klebsiella.253	yes	yes	pass	no	yes		
+573.106195	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106196	PRJNA1054115	USA	MLST.klebsiella.36	yes	yes	pass	no	yes		
+573.106197	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106198	PRJNA1054115	USA	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106199	PRJNA1054115	USA	MLST.klebsiella.941	no	yes	pass	no	yes		
+573.106200	PRJNA1054115	USA	MLST.klebsiella.253	yes	yes	pass	no	yes		
+573.106201	PRJNA1054115	USA	MLST.klebsiella.987	no	yes	pass	no	yes		
+573.106202	PRJNA1054115	USA	MLST.klebsiella.225	no	yes	pass	no	yes		
+573.106203	PRJNA1054115	USA	MLST.klebsiella.429	yes	yes	pass	no	yes		
+573.106204	PRJNA1054115	USA	MLST.klebsiella.200	yes	yes	pass	no	yes		
+573.106205	PRJNA1054115	USA	MLST.klebsiella.1695	no	yes	pass	no	yes		
+573.106210	PRJEB36683	Saudi Arabia	MLST.klebsiella.48	yes	yes	pass	no	yes		
+573.106211	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106212	PRJEB36683	Saudi Arabia	MLST.klebsiella.29	yes	yes	pass	no	yes		
+573.106213	PRJEB36683	Saudi Arabia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.106214	PRJEB36683	Saudi Arabia	MLST.klebsiella.392	yes	yes	pass	no	yes		
+573.106215	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106216	PRJEB36683	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106217	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106218	PRJEB36683	Saudi Arabia	MLST.klebsiella.37	yes	yes	pass	no	yes		
+573.106219	PRJEB36683	Saudi Arabia	MLST.klebsiella.268	yes	yes	pass	no	yes		
+573.106220	PRJEB36683	Saudi Arabia	MLST.klebsiella.3513	no	yes	pass	no	yes		
+573.106221	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106222	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106223	PRJEB36683	Saudi Arabia	MLST.klebsiella.377	no	yes	pass	no	yes		
+573.106224	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106225	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106226	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106227	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106228	PRJEB36683	Saudi Arabia	MLST.klebsiella.985	yes	yes	pass	no	yes		
+573.106229	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106230	PRJEB36683	Saudi Arabia	MLST.klebsiella.48	yes	yes	pass	no	yes		
+573.106231	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.106232	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106233	PRJEB36683	Saudi Arabia	MLST.klebsiella.15	yes	yes	pass	no	yes		
+573.106234	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106235	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106236	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106237	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.106238	PRJEB36683	Saudi Arabia	MLST.klebsiella.610	yes	yes	pass	no	yes		
+573.106239	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106240	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106241	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.106242	PRJEB36683	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106243	PRJEB36683	Saudi Arabia	MLST.klebsiella.48	yes	yes	pass	no	yes		
+573.106244	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106245	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106246	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106247	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106248	PRJEB36683	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106249	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106250	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.106251	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106252	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106253	PRJEB36683	Saudi Arabia	MLST.klebsiella.-	no ST	yes	pass	no	yes		
+573.106254	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106255	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106256	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106257	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106258	PRJEB36683	Saudi Arabia	MLST.klebsiella.23	yes	yes	pass	no	yes		
+573.106259	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106260	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.106261	PRJEB36683	Saudi Arabia	MLST.klebsiella.307	yes	yes	pass	no	yes		
+573.106262	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106263	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106264	PRJEB36683	Saudi Arabia	MLST.klebsiella.101	yes	yes	pass	no	yes		
+573.106265	PRJEB36683	Saudi Arabia	MLST.klebsiella.14	yes	yes	pass	no	yes		
+573.106267	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106268	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106269	PRJEB36683	Saudi Arabia	MLST.klebsiella.2096	no	yes	pass	no	yes		
+573.106271	PRJNA905193	India	MLST.klebsiella.147	yes	yes	pass	no	yes		
+573.106272	PRJNA905193	India	MLST.klebsiella.147	yes	yes	pass	no	yes		

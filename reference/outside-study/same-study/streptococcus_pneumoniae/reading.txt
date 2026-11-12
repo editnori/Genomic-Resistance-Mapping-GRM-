@@ -1,0 +1,76 @@
+Outside-study test, streptococcus_pneumoniae, same-study population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 418. Scored: 418 (0 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 0 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+streptococcus_pneumoniae__erythromycin: 171 resistant and 243 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB3084 holds 171 of the 171 resistant genomes (100.0%); PRJEB3084 holds 243 of the 243 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 166, FN 5, FP 2, TN 241. Sensitivity 97.1% [93.3%, 99.0%], lineage split 94.6%, random split 93.9%: consistent. Specificity 99.2% [97.1%, 99.9%], lineage split 99.1%, random split 99.6%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 162, FN 9, FP 2, TN 241. Sensitivity 94.7% [90.2%, 97.6%], lineage split 90.9%, random split 93.0%: consistent. Specificity 99.2% [97.1%, 99.9%], lineage split 98.3%, random split 98.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 166, FN 5, FP 3, TN 240. Sensitivity 97.1% [93.3%, 99.0%], lineage split 93.7%, random split 94.6%: consistent. Specificity 98.8% [96.4%, 99.7%], lineage split 92.6%, random split 99.5%: above.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 166, FN 5, FP 3, TN 240. Sensitivity 97.1% [93.3%, 99.0%], lineage split 94.8%, random split 94.8%: consistent. Specificity 98.8% [96.4%, 99.7%], lineage split 99.7%, random split 99.7%: consistent.
+    Reference figure: fixed rule, whole cohort.
+streptococcus_pneumoniae__penicillin: 171 resistant and 239 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB3084 holds 171 of the 171 resistant genomes (100.0%); PRJEB3084 holds 239 of the 239 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 169, FN 2, FP 5, TN 234. Sensitivity 98.8% [95.8%, 99.9%], lineage split 95.9%, random split 96.4%: consistent. Specificity 97.9% [95.2%, 99.3%], lineage split 92.4%, random split 97.5%: above.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 169, FN 2, FP 5, TN 234. Sensitivity 98.8% [95.8%, 99.9%], lineage split 98.5%, random split 97.4%: consistent. Specificity 97.9% [95.2%, 99.3%], lineage split 92.1%, random split 97.0%: above.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 51, FN 120, FP 2, TN 237. Sensitivity 29.8% [23.1%, 37.3%], lineage split 95.4%, random split 96.9%: below. Specificity 99.2% [97.0%, 99.9%], lineage split 98.3%, random split 98.8%: consistent.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 0, FN 171, FP 0, TN 239. Sensitivity 0.0% [0.0%, 2.1%], lineage split 0.0%, random split 0.0%: consistent. Specificity 100.0% [98.5%, 100.0%], lineage split 99.9%, random split 99.9%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim: 87 resistant and 111 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB3084 holds 87 of the 87 resistant genomes (100.0%); PRJEB3084 holds 111 of the 111 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 76, FN 11, FP 0, TN 111. Sensitivity 87.4% [78.5%, 93.5%], lineage split 92.7%, random split 96.8%: consistent. Specificity 100.0% [96.7%, 100.0%], lineage split 98.6%, random split 98.3%: consistent.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 87, FN 0, FP 76, TN 35. Sensitivity 100.0% [95.8%, 100.0%], lineage split 82.2%, random split 97.1%: above. Specificity 31.5% [23.0%, 41.0%], lineage split 82.7%, random split 98.4%: below.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 87, FN 0, FP 76, TN 35. Sensitivity 100.0% [95.8%, 100.0%], lineage split 95.6%, random split 96.8%: above. Specificity 31.5% [23.0%, 41.0%], lineage split 98.7%, random split 99.2%: below.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 0, FN 87, FP 0, TN 111. Sensitivity 0.0% [0.0%, 4.2%], lineage split 0.0%, random split 0.0%: consistent. Specificity 100.0% [96.7%, 100.0%], lineage split 100.0%, random split 100.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+streptococcus_pneumoniae__tetracycline: 89 resistant and 132 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJEB3084 holds 89 of the 89 resistant genomes (100.0%); PRJEB3084 holds 132 of the 132 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 88, FN 1, FP 9, TN 123. Sensitivity 98.9% [93.9%, 100.0%], lineage split 90.4%, random split 93.3%: above. Specificity 93.2% [87.5%, 96.8%], lineage split 98.2%, random split 98.6%: below.
+    Reference figure: cross-validation, lineage split.
+  cart: TP 88, FN 1, FP 9, TN 123. Sensitivity 98.9% [93.9%, 100.0%], lineage split 91.1%, random split 93.0%: above. Specificity 93.2% [87.5%, 96.8%], lineage split 98.2%, random split 98.9%: below.
+    Reference figure: cross-validation, lineage split.
+  lasso: TP 88, FN 1, FP 16, TN 116. Sensitivity 98.9% [93.9%, 100.0%], lineage split 90.8%, random split 91.1%: above. Specificity 87.9% [81.1%, 92.9%], lineage split 98.2%, random split 98.7%: below.
+    Reference figure: cross-validation, lineage split.
+  known_gene: TP 88, FN 1, FP 9, TN 123. Sensitivity 98.9% [93.9%, 100.0%], lineage split 93.9%, random split 93.9%: consistent. Specificity 93.2% [87.5%, 96.8%], lineage split 98.2%, random split 98.2%: below.
+    Reference figure: fixed rule, whole cohort.
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 1, consistent 5, above 2, not read 0.
+  cart: below 2, consistent 3, above 3, not read 0.
+  lasso: below 3, consistent 2, above 3, not read 0.
+  known_gene: below 1, consistent 7, above 0, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

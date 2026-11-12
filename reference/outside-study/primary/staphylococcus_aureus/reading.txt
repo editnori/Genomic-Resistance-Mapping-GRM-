@@ -1,0 +1,126 @@
+Outside-study test, staphylococcus_aureus, primary population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 803. Scored: 803 (0 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 0 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+staphylococcus_aureus__ciprofloxacin: 254 resistant and 476 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1050907 holds 252 of the 254 resistant genomes (99.2%); PRJNA1050907 holds 343 of the 476 susceptible genomes (72.1%). Of 2 studies, 1 can be left out with 25 of each class remaining.
+  With PRJNA1050907 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 250, FN 4, FP 19, TN 457. Sensitivity 98.4% [96.0%, 99.6%], lineage split 80.0%, random split 89.3%: above. Specificity 96.0% [93.8%, 97.6%], lineage split 95.1%, random split 98.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 98.8% to 98.8%, specificity 94.5% to 94.5% (over 1 estimates).
+  cart: TP 250, FN 4, FP 23, TN 453. Sensitivity 98.4% [96.0%, 99.6%], lineage split 77.6%, random split 90.2%: above. Specificity 95.2% [92.8%, 96.9%], lineage split 97.6%, random split 97.2%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 98.8% to 98.8%, specificity 93.3% to 93.3% (over 1 estimates).
+  known_gene: TP 0, FN 254, FP 0, TN 476. Sensitivity 0.0% [0.0%, 1.4%], lineage split 0.0%, random split 0.0%: consistent. Specificity 100.0% [99.2%, 100.0%], lineage split 100.0%, random split 100.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 2 BioProjects left out: sensitivity 0.0% to 0.0%, specificity 100.0% to 100.0% (over 1 estimates).
+staphylococcus_aureus__erythromycin: 209 resistant and 574 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1050907 holds 195 of the 209 resistant genomes (93.3%); PRJNA1050907 holds 396 of the 574 susceptible genomes (69.0%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  With PRJNA1050907 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 202, FN 7, FP 38, TN 536. Sensitivity 96.7% [93.2%, 98.6%], lineage split 92.0%, random split 91.1%: above. Specificity 93.4% [91.0%, 95.3%], lineage split 86.7%, random split 93.5%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 96.7% to 96.9%, specificity 91.1% to 93.0% (over 2 estimates).
+  cart: TP 183, FN 26, FP 250, TN 324. Sensitivity 87.6% [82.3%, 91.7%], lineage split 63.9%, random split 88.8%: above. Specificity 56.4% [52.3%, 60.5%], lineage split 75.2%, random split 89.0%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 87.2% to 87.6%, specificity 42.0% to 53.8% (over 2 estimates).
+  known_gene: TP 203, FN 6, FP 27, TN 547. Sensitivity 97.1% [93.9%, 98.9%], lineage split 91.4%, random split 91.4%: above. Specificity 95.3% [93.2%, 96.9%], lineage split 94.5%, random split 94.5%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 97.1% to 97.4%, specificity 93.7% to 95.0% (over 2 estimates).
+staphylococcus_aureus__gentamicin: 92 resistant and 624 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1050907 holds 78 of the 92 resistant genomes (84.8%); PRJNA1050907 holds 461 of the 624 susceptible genomes (73.9%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  With PRJNA1050907 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 84, FN 8, FP 6, TN 618. Sensitivity 91.3% [83.6%, 96.2%], lineage split 88.8%, random split 93.2%: consistent. Specificity 99.0% [97.9%, 99.6%], lineage split 97.2%, random split 96.8%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 91.0% to 91.3%, specificity 98.8% to 99.0% (over 2 estimates).
+  cart: TP 83, FN 9, FP 5, TN 619. Sensitivity 90.2% [82.2%, 95.4%], lineage split 89.4%, random split 93.7%: consistent. Specificity 99.2% [98.1%, 99.7%], lineage split 97.0%, random split 97.2%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 90.2% to 91.0%, specificity 99.0% to 99.2% (over 2 estimates).
+  lasso: TP 84, FN 8, FP 5, TN 619. Sensitivity 91.3% [83.6%, 96.2%], lineage split 88.3%, random split 93.2%: consistent. Specificity 99.2% [98.1%, 99.7%], lineage split 94.5%, random split 97.6%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 91.0% to 91.3%, specificity 99.0% to 99.2% (over 2 estimates).
+  known_gene: TP 84, FN 8, FP 6, TN 618. Sensitivity 91.3% [83.6%, 96.2%], lineage split 88.8%, random split 88.8%: consistent. Specificity 99.0% [97.9%, 99.6%], lineage split 94.6%, random split 94.6%: above.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 91.0% to 91.3%, specificity 98.8% to 99.0% (over 2 estimates).
+staphylococcus_aureus__levofloxacin: 60 resistant and 346 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1050907 holds 60 of the 60 resistant genomes (100.0%); PRJNA1050907 holds 346 of the 346 susceptible genomes (100.0%). Of 1 study, 0 can be left out with 25 of each class remaining.
+  Every scored genome is from one study, so the estimate is that study's and no study-to-study range can be shown.
+  scm: TP 60, FN 0, FP 21, TN 325. Sensitivity 100.0% [94.0%, 100.0%], lineage split n/a, random split 90.6%: not read: no lineage-split estimate. Specificity 93.9% [90.9%, 96.2%], lineage split n/a, random split 100.0%: not read: no lineage-split estimate.
+    No lineage-split figure: lineage split unavailable: invalid lineage outer evaluation: fold 4 validation lacks one or both classes.
+    Reference figure: cross-validation, random split only (lineage split unavailable); a reference sensitivity or specificity is exactly 0 or 1.
+  cart: TP 60, FN 0, FP 83, TN 263. Sensitivity 100.0% [94.0%, 100.0%], lineage split n/a, random split 93.8%: not read: no lineage-split estimate. Specificity 76.0% [71.2%, 80.4%], lineage split n/a, random split 100.0%: not read: no lineage-split estimate.
+    No lineage-split figure: lineage split unavailable: invalid lineage outer evaluation: fold 4 validation lacks one or both classes.
+    Reference figure: cross-validation, random split only (lineage split unavailable); a reference sensitivity or specificity is exactly 0 or 1.
+  lasso: TP 60, FN 0, FP 22, TN 324. Sensitivity 100.0% [94.0%, 100.0%], lineage split n/a, random split 96.9%: not read: no lineage-split estimate. Specificity 93.6% [90.5%, 96.0%], lineage split n/a, random split 100.0%: not read: no lineage-split estimate.
+    No lineage-split figure: lineage split unavailable: invalid lineage outer evaluation: fold 4 validation lacks one or both classes.
+    Reference figure: cross-validation, random split only (lineage split unavailable); a reference sensitivity or specificity is exactly 0 or 1.
+  known_gene: TP 0, FN 60, FP 0, TN 346. Sensitivity 0.0% [0.0%, 6.0%], lineage split n/a, random split 0.0%: not read: no lineage-split estimate. Specificity 100.0% [98.9%, 100.0%], lineage split n/a, random split 100.0%: not read: no lineage-split estimate.
+    No lineage-split figure: lineage split unavailable: invalid lineage outer evaluation: fold 4 validation lacks one or both classes.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+staphylococcus_aureus__oxacillin: 659 resistant and 56 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1050907 holds 491 of the 659 resistant genomes (74.5%); PRJNA819273 holds 33 of the 56 susceptible genomes (58.9%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJNA1050907 and more than half of the susceptible genomes from PRJNA819273, so sensitivity and specificity are measured mostly on different studies.
+  With PRJNA819273 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 652, FN 7, FP 3, TN 53. Sensitivity 98.9% [97.8%, 99.6%], lineage split 90.3%, random split 93.0%: above. Specificity 94.6% [85.1%, 98.9%], lineage split 98.3%, random split 98.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.6% to 100.0%, specificity 94.5% to 100.0% (over 2 estimates).
+  cart: TP 652, FN 7, FP 3, TN 53. Sensitivity 98.9% [97.8%, 99.6%], lineage split 92.8%, random split 92.8%: above. Specificity 94.6% [85.1%, 98.9%], lineage split 98.7%, random split 98.7%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.6% to 100.0%, specificity 94.5% to 100.0% (over 2 estimates).
+  lasso: TP 652, FN 7, FP 3, TN 53. Sensitivity 98.9% [97.8%, 99.6%], lineage split 92.8%, random split 93.3%: above. Specificity 94.6% [85.1%, 98.9%], lineage split 96.4%, random split 98.3%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.6% to 100.0%, specificity 94.5% to 100.0% (over 2 estimates).
+  known_gene: TP 652, FN 7, FP 3, TN 53. Sensitivity 98.9% [97.8%, 99.6%], lineage split 92.8%, random split 92.8%: above. Specificity 94.6% [85.1%, 98.9%], lineage split 98.7%, random split 98.7%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 98.6% to 100.0%, specificity 94.5% to 100.0% (over 2 estimates).
+staphylococcus_aureus__sulfamethoxazole_trimethoprim: 94 resistant and 661 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1050907 holds 94 of the 94 resistant genomes (100.0%); PRJNA1050907 holds 504 of the 661 susceptible genomes (76.2%). Of 2 studies, 1 can be left out with 25 of each class remaining.
+  With PRJNA1050907 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 72, FN 22, FP 4, TN 657. Sensitivity 76.6% [66.7%, 84.7%], lineage split 88.8%, random split 89.5%: below. Specificity 99.4% [98.5%, 99.8%], lineage split 94.5%, random split 93.8%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 76.6% to 76.6%, specificity 99.2% to 99.2% (over 1 estimates).
+  cart: TP 72, FN 22, FP 5, TN 656. Sensitivity 76.6% [66.7%, 84.7%], lineage split 88.8%, random split 88.8%: below. Specificity 99.2% [98.2%, 99.8%], lineage split 94.4%, random split 92.8%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 76.6% to 76.6%, specificity 99.0% to 99.0% (over 1 estimates).
+  known_gene: TP 0, FN 94, FP 0, TN 661. Sensitivity 0.0% [0.0%, 3.8%], lineage split 0.0%, random split 0.0%: consistent. Specificity 100.0% [99.4%, 100.0%], lineage split 100.0%, random split 100.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 2 BioProjects left out: sensitivity 0.0% to 0.0%, specificity 100.0% to 100.0% (over 1 estimates).
+staphylococcus_aureus__tetracycline: 104 resistant and 627 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA1050907 holds 96 of the 104 resistant genomes (92.3%); PRJNA1050907 holds 501 of the 627 susceptible genomes (79.9%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  With PRJNA1050907 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 91, FN 13, FP 37, TN 590. Sensitivity 87.5% [79.6%, 93.2%], lineage split 72.3%, random split 88.0%: above. Specificity 94.1% [92.0%, 95.8%], lineage split 90.1%, random split 95.9%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 87.5% to 88.5%, specificity 93.2% to 94.0% (over 2 estimates).
+  cart: TP 88, FN 16, FP 21, TN 606. Sensitivity 84.6% [76.2%, 90.9%], lineage split 65.2%, random split 86.3%: above. Specificity 96.7% [94.9%, 97.9%], lineage split 88.9%, random split 96.0%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 84.6% to 85.4%, specificity 96.0% to 96.7% (over 2 estimates).
+  known_gene: TP 104, FN 0, FP 627, TN 0. Sensitivity 100.0% [96.5%, 100.0%], lineage split 100.0%, random split 100.0%: consistent. Specificity 0.0% [0.0%, 0.6%], lineage split 0.0%, random split 0.0%: consistent.
+    Reference figure: fixed rule, whole cohort; a reference sensitivity or specificity is exactly 0 or 1.
+    With each of 3 BioProjects left out: sensitivity 100.0% to 100.0%, specificity 0.0% to 0.0% (over 2 estimates).
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 1, consistent 3, above 8, not read 2.
+  cart: below 3, consistent 2, above 7, not read 2.
+  lasso: below 0, consistent 2, above 2, not read 2.
+  known_gene: below 0, consistent 9, above 3, not read 2.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

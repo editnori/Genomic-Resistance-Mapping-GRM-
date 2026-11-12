@@ -152,6 +152,8 @@ It verifies the revision-5 reports against the snapshot hash list pinned in the 
 
 [docs/research/genotype-to-phenotype.md](docs/research/genotype-to-phenotype.md) covers diagnostic and surveillance uses, the published evidence, and the validation a clinical claim would still need.
 
+[docs/outside-study-results.md](docs/outside-study-results.md) gives the result of a retrospective test on newly deposited studies from the same database: each revision-12 report's final model, applied unchanged to BV-BRC genomes added after the cohort was built. [docs/outside-study-results-by-species.md](docs/outside-study-results-by-species.md) reads it one species at a time. [docs/outside-study-test.md](docs/outside-study-test.md) is the plan, frozen before any of those genomes was fetched. The output files are in `reference/outside-study/`.
+
 ## Checks
 
 `.github/workflows/ci.yml` runs the Rust, Python, deployment-toolkit and web checks on every push and pull request. [docs/ci.md](docs/ci.md) lists its jobs and what it leaves out, such as the web app's browser check.

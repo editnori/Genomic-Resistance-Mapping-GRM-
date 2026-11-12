@@ -1,0 +1,86 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+enterococcus_faecium__ampicillin	scm	bioproject	PRJNA771404	323	39	317	6	2	37	0	0
+enterococcus_faecium__ampicillin	scm	country	USA	323	39	317	6	2	37	0	0
+enterococcus_faecium__ampicillin	scm	mlst_in_cohort	no	49	14	48	1	0	14	0	0
+enterococcus_faecium__ampicillin	scm	mlst_in_cohort	no ST	13	4	13	0	1	3	0	0
+enterococcus_faecium__ampicillin	scm	mlst_in_cohort	yes	261	21	256	5	1	20	0	0
+enterococcus_faecium__ampicillin	cart	bioproject	PRJNA771404	323	39	323	0	2	37	0	0
+enterococcus_faecium__ampicillin	cart	country	USA	323	39	323	0	2	37	0	0
+enterococcus_faecium__ampicillin	cart	mlst_in_cohort	no	49	14	49	0	0	14	0	0
+enterococcus_faecium__ampicillin	cart	mlst_in_cohort	no ST	13	4	13	0	1	3	0	0
+enterococcus_faecium__ampicillin	cart	mlst_in_cohort	yes	261	21	261	0	1	20	0	0
+enterococcus_faecium__ampicillin	lasso	bioproject	PRJNA771404	323	39	323	0	2	37	0	0
+enterococcus_faecium__ampicillin	lasso	country	USA	323	39	323	0	2	37	0	0
+enterococcus_faecium__ampicillin	lasso	mlst_in_cohort	no	49	14	49	0	0	14	0	0
+enterococcus_faecium__ampicillin	lasso	mlst_in_cohort	no ST	13	4	13	0	1	3	0	0
+enterococcus_faecium__ampicillin	lasso	mlst_in_cohort	yes	261	21	261	0	1	20	0	0
+enterococcus_faecium__ampicillin	known_gene	bioproject	PRJNA771404	323	39	0	323	0	39	0	0
+enterococcus_faecium__ampicillin	known_gene	country	USA	323	39	0	323	0	39	0	0
+enterococcus_faecium__ampicillin	known_gene	mlst_in_cohort	no	49	14	0	49	0	14	0	0
+enterococcus_faecium__ampicillin	known_gene	mlst_in_cohort	no ST	13	4	0	13	0	4	0	0
+enterococcus_faecium__ampicillin	known_gene	mlst_in_cohort	yes	261	21	0	261	0	21	0	0
+enterococcus_faecium__doxycycline	scm	bioproject	PRJNA771404	198	103	171	27	6	97	0	0
+enterococcus_faecium__doxycycline	scm	country	USA	198	103	171	27	6	97	0	0
+enterococcus_faecium__doxycycline	scm	mlst_in_cohort	no	15	32	14	1	2	30	0	0
+enterococcus_faecium__doxycycline	scm	mlst_in_cohort	no ST	12	4	10	2	0	4	0	0
+enterococcus_faecium__doxycycline	scm	mlst_in_cohort	yes	171	67	147	24	4	63	0	0
+enterococcus_faecium__doxycycline	cart	bioproject	PRJNA771404	198	103	172	26	9	94	0	0
+enterococcus_faecium__doxycycline	cart	country	USA	198	103	172	26	9	94	0	0
+enterococcus_faecium__doxycycline	cart	mlst_in_cohort	no	15	32	14	1	4	28	0	0
+enterococcus_faecium__doxycycline	cart	mlst_in_cohort	no ST	12	4	10	2	0	4	0	0
+enterococcus_faecium__doxycycline	cart	mlst_in_cohort	yes	171	67	148	23	5	62	0	0
+enterococcus_faecium__doxycycline	known_gene	bioproject	PRJNA771404	198	103	198	0	31	72	0	0
+enterococcus_faecium__doxycycline	known_gene	country	USA	198	103	198	0	31	72	0	0
+enterococcus_faecium__doxycycline	known_gene	mlst_in_cohort	no	15	32	15	0	3	29	0	0
+enterococcus_faecium__doxycycline	known_gene	mlst_in_cohort	no ST	12	4	12	0	0	4	0	0
+enterococcus_faecium__doxycycline	known_gene	mlst_in_cohort	yes	171	67	171	0	28	39	0	0
+enterococcus_faecium__gentamicin	scm	bioproject	PRJNA771404	30	324	4	26	11	313	0	0
+enterococcus_faecium__gentamicin	scm	country	USA	30	324	4	26	11	313	0	0
+enterococcus_faecium__gentamicin	scm	mlst_in_cohort	no	8	56	0	8	2	54	0	0
+enterococcus_faecium__gentamicin	scm	mlst_in_cohort	no ST	1	16	1	0	2	14	0	0
+enterococcus_faecium__gentamicin	scm	mlst_in_cohort	yes	21	252	3	18	7	245	0	0
+enterococcus_faecium__gentamicin	cart	bioproject	PRJNA771404	30	324	6	24	15	309	0	0
+enterococcus_faecium__gentamicin	cart	country	USA	30	324	6	24	15	309	0	0
+enterococcus_faecium__gentamicin	cart	mlst_in_cohort	no	8	56	0	8	3	53	0	0
+enterococcus_faecium__gentamicin	cart	mlst_in_cohort	no ST	1	16	1	0	2	14	0	0
+enterococcus_faecium__gentamicin	cart	mlst_in_cohort	yes	21	252	5	16	10	242	0	0
+enterococcus_faecium__gentamicin	known_gene	bioproject	PRJNA771404	30	324	30	0	324	0	0	0
+enterococcus_faecium__gentamicin	known_gene	country	USA	30	324	30	0	324	0	0	0
+enterococcus_faecium__gentamicin	known_gene	mlst_in_cohort	no	8	56	8	0	56	0	0	0
+enterococcus_faecium__gentamicin	known_gene	mlst_in_cohort	no ST	1	16	1	0	16	0	0	0
+enterococcus_faecium__gentamicin	known_gene	mlst_in_cohort	yes	21	252	21	0	252	0	0	0
+enterococcus_faecium__tetracycline	scm	bioproject	PRJNA771404	273	83	198	75	4	79	0	0
+enterococcus_faecium__tetracycline	scm	country	USA	273	83	198	75	4	79	0	0
+enterococcus_faecium__tetracycline	scm	mlst_in_cohort	no	26	31	20	6	1	30	0	0
+enterococcus_faecium__tetracycline	scm	mlst_in_cohort	no ST	13	4	11	2	0	4	0	0
+enterococcus_faecium__tetracycline	scm	mlst_in_cohort	yes	234	48	167	67	3	45	0	0
+enterococcus_faecium__tetracycline	cart	bioproject	PRJNA771404	273	83	195	78	3	80	0	0
+enterococcus_faecium__tetracycline	cart	country	USA	273	83	195	78	3	80	0	0
+enterococcus_faecium__tetracycline	cart	mlst_in_cohort	no	26	31	21	5	1	30	0	0
+enterococcus_faecium__tetracycline	cart	mlst_in_cohort	no ST	13	4	11	2	0	4	0	0
+enterococcus_faecium__tetracycline	cart	mlst_in_cohort	yes	234	48	163	71	2	46	0	0
+enterococcus_faecium__tetracycline	lasso	bioproject	PRJNA771404	273	83	199	74	3	80	0	0
+enterococcus_faecium__tetracycline	lasso	country	USA	273	83	199	74	3	80	0	0
+enterococcus_faecium__tetracycline	lasso	mlst_in_cohort	no	26	31	21	5	1	30	0	0
+enterococcus_faecium__tetracycline	lasso	mlst_in_cohort	no ST	13	4	11	2	0	4	0	0
+enterococcus_faecium__tetracycline	lasso	mlst_in_cohort	yes	234	48	167	67	2	46	0	0
+enterococcus_faecium__tetracycline	known_gene	bioproject	PRJNA771404	273	83	271	2	11	72	0	0
+enterococcus_faecium__tetracycline	known_gene	country	USA	273	83	271	2	11	72	0	0
+enterococcus_faecium__tetracycline	known_gene	mlst_in_cohort	no	26	31	24	2	2	29	0	0
+enterococcus_faecium__tetracycline	known_gene	mlst_in_cohort	no ST	13	4	13	0	0	4	0	0
+enterococcus_faecium__tetracycline	known_gene	mlst_in_cohort	yes	234	48	234	0	9	39	0	0
+enterococcus_faecium__vancomycin	scm	bioproject	PRJNA771404	298	65	296	2	2	63	0	0
+enterococcus_faecium__vancomycin	scm	country	USA	298	65	296	2	2	63	0	0
+enterococcus_faecium__vancomycin	scm	mlst_in_cohort	no	41	21	41	0	0	21	0	0
+enterococcus_faecium__vancomycin	scm	mlst_in_cohort	no ST	12	5	12	0	0	5	0	0
+enterococcus_faecium__vancomycin	scm	mlst_in_cohort	yes	245	39	243	2	2	37	0	0
+enterococcus_faecium__vancomycin	cart	bioproject	PRJNA771404	298	65	296	2	2	63	0	0
+enterococcus_faecium__vancomycin	cart	country	USA	298	65	296	2	2	63	0	0
+enterococcus_faecium__vancomycin	cart	mlst_in_cohort	no	41	21	41	0	0	21	0	0
+enterococcus_faecium__vancomycin	cart	mlst_in_cohort	no ST	12	5	12	0	0	5	0	0
+enterococcus_faecium__vancomycin	cart	mlst_in_cohort	yes	245	39	243	2	2	37	0	0
+enterococcus_faecium__vancomycin	known_gene	bioproject	PRJNA771404	298	65	298	0	6	59	0	0
+enterococcus_faecium__vancomycin	known_gene	country	USA	298	65	298	0	6	59	0	0
+enterococcus_faecium__vancomycin	known_gene	mlst_in_cohort	no	41	21	41	0	1	20	0	0
+enterococcus_faecium__vancomycin	known_gene	mlst_in_cohort	no ST	12	5	12	0	1	4	0	0
+enterococcus_faecium__vancomycin	known_gene	mlst_in_cohort	yes	245	39	245	0	4	35	0	0

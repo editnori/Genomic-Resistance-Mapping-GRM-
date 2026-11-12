@@ -1,0 +1,7 @@
+dataset	learner	resistant_genomes	resistant_both	resistant_learner_only	resistant_known_gene_only	resistant_neither	susceptible_genomes	susceptible_both	susceptible_learner_only	susceptible_known_gene_only	susceptible_neither
+enterobacter_cloacae__ciprofloxacin	scm	25	1	5	6	13	46	0	0	7	39
+enterobacter_cloacae__ciprofloxacin	cart	25	0	5	7	13	46	0	0	7	39
+enterobacter_cloacae__ciprofloxacin	lasso	25	3	13	4	5	46	0	0	7	39
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	scm	27	12	4	5	6	44	0	4	1	39
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	cart	27	12	4	5	6	44	0	4	1	39
+enterobacter_cloacae__sulfamethoxazole_trimethoprim	lasso	27	11	3	6	7	44	1	2	0	41

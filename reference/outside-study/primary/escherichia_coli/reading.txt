@@ -1,0 +1,245 @@
+Outside-study test, escherichia_coli, primary population
+This is a retrospective test on newly deposited studies from the same database.
+It is not a lockbox: the batch's metadata and label totals were read before the rules were frozen.
+The genomes come from the same database as the cohort.
+
+Frozen genomes: 601. Scored: 601 (328 of them borderline in the species check, kept and flagged).
+Genomes excluded, no sequence: 0.
+Genomes excluded, species check failed: 0.
+Genomes excluded, not counted: 0.
+
+Each model is the report's final model, fitted once on the whole cohort and applied unchanged.
+The report's figures are for models refitted in each cross-validation fold and scored on held-out cohort genomes.
+Calls use the 0.5 cutoff. Intervals are exact Clopper-Pearson 95% intervals.
+A dataset with fewer than 25 resistant or 25 susceptible scored genomes is reported as counts only.
+Sensitivity and specificity are over the genomes a learner called; genomes with no call are counted in their own column.
+The known-gene rule's reference figure is a fixed rule applied to the whole cohort: nothing was fitted, so there is no cross-validation figure for it.
+The datasets share genomes and studies, so they are not independent of each other.
+Precision depends on the share of resistant genomes, which differs between the cohort and the new genomes.
+Scored genomes with the same k-mer set as a cohort genome: 0; as another scored genome: 0 (listed in duplicates.tsv; none is excluded for it).
+Stage attempts: setup 1, fetch 1, species-check 1, count 1, known-gene 1, predict 1.
+
+escherichia_coli__amikacin: 64 resistant and 528 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 58 of the 64 resistant genomes (90.6%); PRJNA841811 holds 356 of the 528 susceptible genomes (67.4%). Of 4 studies, 3 can be left out with 25 of each class remaining.
+  With PRJNA841811 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 6, FN 58, FP 32, TN 496. Sensitivity 9.4% [3.5%, 19.3%], lineage split 46.7%, random split 63.3%: below. Specificity 93.9% [91.6%, 95.8%], lineage split 98.4%, random split 98.2%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 9.4% to 10.0%, specificity 93.7% to 94.3% (over 3 estimates).
+  cart: TP 5, FN 59, FP 27, TN 501. Sensitivity 7.8% [2.6%, 17.3%], lineage split 63.3%, random split 53.3%: below. Specificity 94.9% [92.6%, 96.6%], lineage split 87.6%, random split 89.5%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 6.5% to 8.3%, specificity 94.0% to 97.0% (over 3 estimates).
+  lasso: TP 6, FN 58, FP 21, TN 507. Sensitivity 9.4% [3.5%, 19.3%], lineage split 56.7%, random split 70.0%: below. Specificity 96.0% [94.0%, 97.5%], lineage split 98.2%, random split 97.8%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 9.4% to 10.0%, specificity 95.6% to 96.6% (over 3 estimates).
+  known_gene: TP 44, FN 20, FP 56, TN 472. Sensitivity 68.8% [55.9%, 79.8%], lineage split 76.7%, random split 76.7%: consistent. Specificity 89.4% [86.4%, 91.9%], lineage split 87.8%, random split 87.8%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 4 BioProjects left out: sensitivity 67.7% to 68.8%, specificity 88.8% to 90.9% (over 3 estimates).
+escherichia_coli__ampicillin: 547 resistant and 53 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 397 of the 547 resistant genomes (72.6%); PRJNA1223317 holds 27 of the 53 susceptible genomes (50.9%). Of 4 studies, 4 can be left out with 25 of each class remaining.
+  More than half of the resistant genomes are from PRJNA841811 and more than half of the susceptible genomes from PRJNA1223317, so sensitivity and specificity are measured mostly on different studies.
+  scm: TP 517, FN 30, FP 17, TN 36. Sensitivity 94.5% [92.3%, 96.3%], lineage split 95.0%, random split 96.0%: consistent. Specificity 67.9% [53.7%, 80.1%], lineage split 96.7%, random split 96.7%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 94.1% to 96.7%, specificity 57.7% to 80.6% (over 4 estimates).
+  cart: TP 508, FN 39, FP 14, TN 39. Sensitivity 92.9% [90.4%, 94.9%], lineage split 91.7%, random split 95.3%: consistent. Specificity 73.6% [59.7%, 84.7%], lineage split 96.7%, random split 95.7%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 92.3% to 96.0%, specificity 57.7% to 90.3% (over 4 estimates).
+  known_gene: TP 547, FN 0, FP 52, TN 1. Sensitivity 100.0% [99.3%, 100.0%], lineage split 99.9%, random split 99.9%: consistent. Specificity 1.9% [0.0%, 10.1%], lineage split 1.1%, random split 1.1%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 4 BioProjects left out: sensitivity 100.0% to 100.0%, specificity 0.0% to 3.8% (over 4 estimates).
+escherichia_coli__ampicillin_sulbactam: 369 resistant and 78 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 299 of the 369 resistant genomes (81.0%); PRJNA841811 holds 37 of the 78 susceptible genomes (47.4%). Of 3 studies, 3 can be left out with 25 of each class remaining.
+  scm: TP 210, FN 159, FP 45, TN 33. Sensitivity 56.9% [51.7%, 62.0%], lineage split 13.4%, random split 73.9%: above. Specificity 42.3% [31.2%, 54.0%], lineage split 94.3%, random split 90.8%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 54.1% to 70.0%, specificity 36.6% to 46.5% (over 3 estimates).
+  cart: TP 367, FN 2, FP 77, TN 1. Sensitivity 99.5% [98.1%, 99.9%], lineage split 38.0%, random split 86.6%: above. Specificity 1.3% [0.0%, 6.9%], lineage split 83.0%, random split 78.0%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 98.6% to 99.7%, specificity 0.0% to 2.4% (over 3 estimates).
+  known_gene: TP 358, FN 11, FP 66, TN 12. Sensitivity 97.0% [94.7%, 98.5%], lineage split 97.9%, random split 97.9%: consistent. Specificity 15.4% [8.2%, 25.3%], lineage split 12.8%, random split 12.8%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 94.3% to 97.7%, specificity 13.9% to 17.1% (over 3 estimates).
+escherichia_coli__aztreonam: 349 resistant and 133 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 292 of the 349 resistant genomes (83.7%); PRJNA841811 holds 103 of the 133 susceptible genomes (77.4%). Of 3 studies, 3 can be left out with 25 of each class remaining.
+  scm: TP 167, FN 182, FP 37, TN 96. Sensitivity 47.9% [42.5%, 53.2%], lineage split 81.3%, random split 86.7%: below. Specificity 72.2% [63.7%, 79.6%], lineage split 85.7%, random split 92.6%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 46.8% to 54.4%, specificity 67.0% to 90.0% (over 3 estimates).
+  cart: TP 290, FN 59, FP 41, TN 92. Sensitivity 83.1% [78.7%, 86.9%], lineage split 82.2%, random split 88.9%: consistent. Specificity 69.2% [60.6%, 76.9%], lineage split 86.5%, random split 92.0%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 82.3% to 87.7%, specificity 64.1% to 86.7% (over 3 estimates).
+  known_gene: TP 346, FN 3, FP 118, TN 15. Sensitivity 99.1% [97.5%, 99.8%], lineage split 99.1%, random split 99.1%: consistent. Specificity 11.3% [6.5%, 17.9%], lineage split 8.9%, random split 8.9%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 99.0% to 100.0%, specificity 8.7% to 20.0% (over 3 estimates).
+escherichia_coli__cefazolin: 451 resistant and 40 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 370 of the 451 resistant genomes (82.0%); PRJNA841811 holds 33 of the 40 susceptible genomes (82.5%). Of 2 studies, 1 can be left out with 25 of each class remaining.
+  With PRJNA841811 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 236, FN 215, FP 6, TN 34. Sensitivity 52.3% [47.6%, 57.0%], lineage split 68.0%, random split 85.4%: below. Specificity 85.0% [70.2%, 94.3%], lineage split 65.2%, random split 84.8%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 52.4% to 52.4%, specificity 81.8% to 81.8% (over 1 estimates).
+  cart: TP 242, FN 209, FP 10, TN 30. Sensitivity 53.7% [48.9%, 58.3%], lineage split 70.5%, random split 89.1%: below. Specificity 75.0% [58.8%, 87.3%], lineage split 88.0%, random split 75.0%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 51.6% to 51.6%, specificity 69.7% to 69.7% (over 1 estimates).
+  lasso: TP 273, FN 178, FP 5, TN 35. Sensitivity 60.5% [55.9%, 65.1%], lineage split 74.8%, random split 91.3%: below. Specificity 87.5% [73.2%, 95.8%], lineage split 82.6%, random split 81.5%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 60.5% to 60.5%, specificity 87.9% to 87.9% (over 1 estimates).
+  known_gene: TP 438, FN 13, FP 34, TN 6. Sensitivity 97.1% [95.1%, 98.5%], lineage split 99.7%, random split 99.7%: below. Specificity 15.0% [5.7%, 29.8%], lineage split 21.7%, random split 21.7%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 2 BioProjects left out: sensitivity 97.6% to 97.6%, specificity 12.1% to 12.1% (over 1 estimates).
+escherichia_coli__cefepime: 255 resistant and 155 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 209 of the 255 resistant genomes (82.0%); PRJNA841811 holds 122 of the 155 susceptible genomes (78.7%). Of 3 studies, 3 can be left out with 25 of each class remaining.
+  scm: TP 200, FN 55, FP 18, TN 137. Sensitivity 78.4% [72.9%, 83.3%], lineage split 76.8%, random split 83.4%: consistent. Specificity 88.4% [82.3%, 93.0%], lineage split 91.6%, random split 89.7%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 76.8% to 82.6%, specificity 86.9% to 93.9% (over 3 estimates).
+  cart: TP 128, FN 127, FP 21, TN 134. Sensitivity 50.2% [43.9%, 56.5%], lineage split 81.5%, random split 83.4%: below. Specificity 86.5% [80.0%, 91.4%], lineage split 85.7%, random split 86.3%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 46.4% to 65.2%, specificity 85.2% to 90.9% (over 3 estimates).
+  known_gene: TP 253, FN 2, FP 137, TN 18. Sensitivity 99.2% [97.2%, 99.9%], lineage split 99.5%, random split 99.5%: consistent. Specificity 11.6% [7.0%, 17.7%], lineage split 14.8%, random split 14.8%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 99.1% to 100.0%, specificity 9.8% to 18.2% (over 3 estimates).
+escherichia_coli__cefotaxime: 438 resistant and 159 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 338 of the 438 resistant genomes (77.2%); PRJNA841811 holds 79 of the 159 susceptible genomes (49.7%). Of 4 studies, 4 can be left out with 25 of each class remaining.
+  scm: TP 388, FN 50, FP 26, TN 133. Sensitivity 88.6% [85.2%, 91.4%], lineage split 85.9%, random split 88.3%: consistent. Specificity 83.6% [77.0%, 89.0%], lineage split 97.2%, random split 97.4%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 87.9% to 92.0%, specificity 80.0% to 91.2% (over 4 estimates).
+  cart: TP 388, FN 50, FP 21, TN 138. Sensitivity 88.6% [85.2%, 91.4%], lineage split 82.3%, random split 87.0%: above. Specificity 86.8% [80.5%, 91.6%], lineage split 97.2%, random split 97.4%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 87.9% to 92.0%, specificity 82.9% to 93.8% (over 4 estimates).
+  known_gene: TP 433, FN 5, FP 135, TN 24. Sensitivity 98.9% [97.4%, 99.6%], lineage split 99.3%, random split 99.3%: consistent. Specificity 15.1% [9.9%, 21.6%], lineage split 14.2%, random split 14.2%: consistent.
+    Reference figure: fixed rule, whole cohort.
+    With each of 4 BioProjects left out: sensitivity 98.6% to 99.1%, specificity 13.5% to 16.2% (over 4 estimates).
+escherichia_coli__cefoxitin: 58 resistant and 416 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 46 of the 58 resistant genomes (79.3%); PRJNA841811 holds 313 of the 416 susceptible genomes (75.2%). Of 3 studies, 2 can be left out with 25 of each class remaining.
+  With PRJNA841811 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 14, FN 44, FP 12, TN 404. Sensitivity 24.1% [13.9%, 37.2%], lineage split 79.7%, random split 80.5%: below. Specificity 97.1% [95.0%, 98.5%], lineage split 86.7%, random split 94.0%: above.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 24.1% to 30.4%, specificity 96.4% to 97.2% (over 2 estimates).
+  cart: TP 36, FN 22, FP 168, TN 248. Sensitivity 62.1% [48.4%, 74.5%], lineage split 77.9%, random split 85.0%: below. Specificity 59.6% [54.7%, 64.4%], lineage split 81.4%, random split 88.2%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 60.9% to 62.1%, specificity 59.1% to 59.2% (over 2 estimates).
+  known_gene: TP 57, FN 1, FP 399, TN 17. Sensitivity 98.3% [90.8%, 100.0%], lineage split 99.5%, random split 99.5%: consistent. Specificity 4.1% [2.4%, 6.5%], lineage split 10.2%, random split 10.2%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 97.8% to 98.3%, specificity 3.3% to 4.3% (over 2 estimates).
+escherichia_coli__ceftazidime: 179 resistant and 349 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 147 of the 179 resistant genomes (82.1%); PRJNA841811 holds 217 of the 349 susceptible genomes (62.2%). Of 4 studies, 4 can be left out with 25 of each class remaining.
+  scm: TP 41, FN 138, FP 18, TN 331. Sensitivity 22.9% [17.0%, 29.8%], lineage split 87.2%, random split 86.5%: below. Specificity 94.8% [92.0%, 96.9%], lineage split 92.1%, random split 94.7%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 19.1% to 59.4%, specificity 94.5% to 95.5% (over 4 estimates).
+  cart: TP 95, FN 84, FP 47, TN 302. Sensitivity 53.1% [45.5%, 60.6%], lineage split 88.4%, random split 89.2%: below. Specificity 86.5% [82.5%, 89.9%], lineage split 88.4%, random split 91.6%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 51.6% to 65.6%, specificity 85.0% to 90.9% (over 4 estimates).
+  known_gene: TP 177, FN 2, FP 323, TN 26. Sensitivity 98.9% [96.0%, 99.9%], lineage split 99.5%, random split 99.5%: consistent. Specificity 7.4% [4.9%, 10.7%], lineage split 15.8%, random split 15.8%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 4 BioProjects left out: sensitivity 98.7% to 100.0%, specificity 6.5% to 9.8% (over 4 estimates).
+escherichia_coli__chloramphenicol: 496 resistant and 87 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 378 of the 496 resistant genomes (76.2%); PRJNA841811 holds 35 of the 87 susceptible genomes (40.2%). Of 4 studies, 4 can be left out with 25 of each class remaining.
+  scm: TP 469, FN 27, FP 19, TN 68. Sensitivity 94.6% [92.2%, 96.4%], lineage split 89.2%, random split 92.8%: above. Specificity 78.2% [68.0%, 86.3%], lineage split 97.2%, random split 96.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 89.8% to 96.0%, specificity 71.7% to 88.5% (over 4 estimates).
+  cart: TP 454, FN 42, FP 19, TN 68. Sensitivity 91.5% [88.7%, 93.8%], lineage split 87.2%, random split 90.4%: above. Specificity 78.2% [68.0%, 86.3%], lineage split 93.5%, random split 94.3%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 83.1% to 92.8%, specificity 71.7% to 86.5% (over 4 estimates).
+  known_gene: TP 482, FN 14, FP 23, TN 64. Sensitivity 97.2% [95.3%, 98.4%], lineage split 92.8%, random split 92.8%: above. Specificity 73.6% [63.0%, 82.4%], lineage split 93.2%, random split 93.2%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 4 BioProjects left out: sensitivity 95.8% to 97.4%, specificity 71.0% to 80.8% (over 4 estimates).
+escherichia_coli__ciprofloxacin: 513 resistant and 62 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 380 of the 513 resistant genomes (74.1%); PRJNA675772 holds 25 of the 62 susceptible genomes (40.3%), as many as PRJNA841811. Of 4 studies, 4 can be left out with 25 of each class remaining.
+  scm: TP 424, FN 89, FP 19, TN 43. Sensitivity 82.7% [79.1%, 85.8%], lineage split 93.0%, random split 93.6%: below. Specificity 69.4% [56.3%, 80.4%], lineage split 89.1%, random split 98.6%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 81.6% to 83.5%, specificity 54.1% to 91.9% (over 4 estimates).
+  cart: TP 417, FN 96, FP 20, TN 42. Sensitivity 81.3% [77.6%, 84.6%], lineage split 94.1%, random split 93.7%: below. Specificity 67.7% [54.7%, 79.1%], lineage split 88.0%, random split 96.6%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 77.4% to 82.6%, specificity 56.8% to 89.2% (over 4 estimates).
+  known_gene: TP 312, FN 201, FP 26, TN 36. Sensitivity 60.8% [56.4%, 65.1%], lineage split 38.7%, random split 38.7%: above. Specificity 58.1% [44.8%, 70.5%], lineage split 92.9%, random split 92.9%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 4 BioProjects left out: sensitivity 60.2% to 61.3%, specificity 56.7% to 59.6% (over 4 estimates).
+escherichia_coli__doxycycline: 291 resistant and 39 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 227 of the 291 resistant genomes (78.0%); PRJNA841811 holds 32 of the 39 susceptible genomes (82.1%). Of 2 studies, 1 can be left out with 25 of each class remaining.
+  With PRJNA841811 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 234, FN 57, FP 12, TN 27. Sensitivity 80.4% [75.4%, 84.8%], lineage split 93.9%, random split 87.8%: below. Specificity 69.2% [52.4%, 83.0%], lineage split 73.8%, random split 86.2%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 77.1% to 77.1%, specificity 71.9% to 71.9% (over 1 estimates).
+  cart: TP 242, FN 49, FP 11, TN 28. Sensitivity 83.2% [78.4%, 87.3%], lineage split 91.2%, random split 85.7%: below. Specificity 71.8% [55.1%, 85.0%], lineage split 66.2%, random split 91.2%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 81.1% to 81.1%, specificity 75.0% to 75.0% (over 1 estimates).
+  known_gene: TP 288, FN 3, FP 22, TN 17. Sensitivity 99.0% [97.0%, 99.8%], lineage split 93.9%, random split 93.9%: above. Specificity 43.6% [27.8%, 60.4%], lineage split 83.8%, random split 83.8%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 2 BioProjects left out: sensitivity 98.7% to 98.7%, specificity 40.6% to 40.6% (over 1 estimates).
+escherichia_coli__gentamicin: 341 resistant and 169 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 299 of the 341 resistant genomes (87.7%); PRJNA841811 holds 109 of the 169 susceptible genomes (64.5%). Of 3 studies, 3 can be left out with 25 of each class remaining.
+  scm: TP 318, FN 23, FP 37, TN 132. Sensitivity 93.3% [90.1%, 95.7%], lineage split 88.1%, random split 91.9%: above. Specificity 78.1% [71.1%, 84.1%], lineage split 98.3%, random split 98.0%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 92.8% to 97.6%, specificity 76.6% to 85.0% (over 3 estimates).
+  cart: TP 122, FN 219, FP 13, TN 156. Sensitivity 35.8% [30.7%, 41.1%], lineage split 80.4%, random split 89.5%: below. Specificity 92.3% [87.2%, 95.8%], lineage split 95.8%, random split 98.1%: consistent.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 32.9% to 64.3%, specificity 89.8% to 96.7% (over 3 estimates).
+  known_gene: TP 328, FN 13, FP 35, TN 134. Sensitivity 96.2% [93.6%, 98.0%], lineage split 94.9%, random split 94.9%: consistent. Specificity 79.3% [72.4%, 85.1%], lineage split 97.4%, random split 97.4%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 96.1% to 97.6%, specificity 77.3% to 86.7% (over 3 estimates).
+escherichia_coli__levofloxacin: 428 resistant and 46 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 364 of the 428 resistant genomes (85.0%); PRJNA841811 holds 25 of the 46 susceptible genomes (54.3%). Of 2 studies, 1 can be left out with 25 of each class remaining.
+  With PRJNA841811 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be shown without that study, and every leave-one-study-out range for this dataset includes it.
+  scm: TP 367, FN 61, FP 21, TN 25. Sensitivity 85.7% [82.1%, 88.9%], lineage split 94.6%, random split 93.9%: below. Specificity 54.3% [39.0%, 69.1%], lineage split 79.8%, random split 94.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 85.2% to 85.2%, specificity 32.0% to 32.0% (over 1 estimates).
+  cart: TP 364, FN 64, FP 19, TN 27. Sensitivity 85.0% [81.3%, 88.3%], lineage split 94.6%, random split 93.5%: below. Specificity 58.7% [43.2%, 73.0%], lineage split 80.7%, random split 94.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 84.3% to 84.3%, specificity 32.0% to 32.0% (over 1 estimates).
+  lasso: TP 367, FN 61, FP 19, TN 27. Sensitivity 85.7% [82.1%, 88.9%], lineage split 94.9%, random split 95.9%: below. Specificity 58.7% [43.2%, 73.0%], lineage split 74.3%, random split 93.6%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 2 BioProjects left out: sensitivity 85.2% to 85.2%, specificity 32.0% to 32.0% (over 1 estimates).
+  known_gene: TP 255, FN 173, FP 18, TN 28. Sensitivity 59.6% [54.8%, 64.3%], lineage split 36.4%, random split 36.4%: above. Specificity 60.9% [45.4%, 74.9%], lineage split 83.5%, random split 83.5%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 2 BioProjects left out: sensitivity 59.3% to 59.3%, specificity 56.0% to 56.0% (over 1 estimates).
+escherichia_coli__nalidixic_acid: 484 resistant and 85 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 360 of the 484 resistant genomes (74.4%); PRJNA841811 holds 59 of the 85 susceptible genomes (69.4%). Of 3 studies, 3 can be left out with 25 of each class remaining.
+  scm: TP 448, FN 36, FP 31, TN 54. Sensitivity 92.6% [89.9%, 94.7%], lineage split 95.7%, random split 95.7%: below. Specificity 63.5% [52.4%, 73.7%], lineage split 96.3%, random split 96.7%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 87.9% to 93.6%, specificity 61.0% to 69.2% (over 3 estimates).
+  cart: TP 445, FN 39, FP 15, TN 70. Sensitivity 91.9% [89.1%, 94.2%], lineage split 95.7%, random split 95.7%: below. Specificity 82.4% [72.6%, 89.8%], lineage split 95.5%, random split 95.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 87.9% to 92.9%, specificity 79.1% to 96.2% (over 3 estimates).
+  known_gene: TP 274, FN 210, FP 66, TN 19. Sensitivity 56.6% [52.1%, 61.1%], lineage split 39.0%, random split 39.0%: above. Specificity 22.4% [14.0%, 32.7%], lineage split 95.9%, random split 95.9%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 54.0% to 57.4%, specificity 22.1% to 23.1% (over 3 estimates).
+escherichia_coli__streptomycin: 471 resistant and 98 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 370 of the 471 resistant genomes (78.6%); PRJNA841811 holds 49 of the 98 susceptible genomes (50.0%). Of 3 studies, 3 can be left out with 25 of each class remaining.
+  scm: TP 358, FN 113, FP 24, TN 74. Sensitivity 76.0% [71.9%, 79.8%], lineage split 81.5%, random split 89.0%: below. Specificity 75.5% [65.8%, 83.6%], lineage split 92.4%, random split 93.2%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 75.0% to 77.1%, specificity 66.7% to 83.7% (over 3 estimates).
+  cart: TP 355, FN 116, FP 24, TN 74. Sensitivity 75.4% [71.2%, 79.2%], lineage split 76.8%, random split 89.0%: consistent. Specificity 75.5% [65.8%, 83.6%], lineage split 95.5%, random split 92.4%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 73.3% to 76.6%, specificity 66.7% to 83.7% (over 3 estimates).
+  known_gene: TP 462, FN 9, FP 60, TN 38. Sensitivity 98.1% [96.4%, 99.1%], lineage split 94.5%, random split 94.5%: above. Specificity 38.8% [29.1%, 49.2%], lineage split 62.1%, random split 62.1%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 97.7% to 99.0%, specificity 28.8% to 44.9% (over 3 estimates).
+escherichia_coli__sulfamethoxazole_trimethoprim: 458 resistant and 117 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 328 of the 458 resistant genomes (71.6%); PRJNA841811 holds 90 of the 117 susceptible genomes (76.9%). Of 3 studies, 3 can be left out with 25 of each class remaining.
+  scm: TP 428, FN 30, FP 71, TN 46. Sensitivity 93.4% [90.8%, 95.5%], lineage split 89.8%, random split 91.2%: above. Specificity 39.3% [30.4%, 48.8%], lineage split 83.5%, random split 84.1%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 87.7% to 96.4%, specificity 30.6% to 81.5% (over 3 estimates).
+  cart: TP 361, FN 97, FP 62, TN 55. Sensitivity 78.8% [74.8%, 82.5%], lineage split 80.5%, random split 89.1%: consistent. Specificity 47.0% [37.7%, 56.5%], lineage split 88.1%, random split 85.5%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 3 BioProjects left out: sensitivity 75.4% to 81.2%, specificity 39.8% to 81.5% (over 3 estimates).
+  known_gene: TP 395, FN 63, FP 17, TN 100. Sensitivity 86.2% [82.7%, 89.3%], lineage split 94.0%, random split 94.0%: below. Specificity 85.5% [77.8%, 91.3%], lineage split 94.5%, random split 94.5%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 3 BioProjects left out: sensitivity 84.3% to 88.0%, specificity 83.7% to 88.9% (over 3 estimates).
+escherichia_coli__tetracycline: 547 resistant and 46 susceptible genomes scored (estimates); known-gene rule: scored.
+  By study: PRJNA841811 holds 396 of the 547 resistant genomes (72.4%); PRJNA841811 holds 21 of the 46 susceptible genomes (45.7%). Of 4 studies, 4 can be left out with 25 of each class remaining.
+  scm: TP 532, FN 15, FP 12, TN 34. Sensitivity 97.3% [95.5%, 98.5%], lineage split 94.2%, random split 94.2%: above. Specificity 73.9% [58.9%, 85.7%], lineage split 95.9%, random split 95.6%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 96.0% to 97.4%, specificity 67.6% to 84.0% (over 4 estimates).
+  cart: TP 499, FN 48, FP 11, TN 35. Sensitivity 91.2% [88.5%, 93.5%], lineage split 85.6%, random split 93.8%: above. Specificity 76.1% [61.2%, 87.4%], lineage split 96.2%, random split 95.9%: below.
+    Reference figure: cross-validation, lineage split.
+    With each of 4 BioProjects left out: sensitivity 90.3% to 96.0%, specificity 70.6% to 84.0% (over 4 estimates).
+  known_gene: TP 537, FN 10, FP 13, TN 33. Sensitivity 98.2% [96.7%, 99.1%], lineage split 95.0%, random split 95.0%: above. Specificity 71.7% [56.5%, 84.0%], lineage split 95.0%, random split 95.0%: below.
+    Reference figure: fixed rule, whole cohort.
+    With each of 4 BioProjects left out: sensitivity 97.8% to 98.7%, specificity 64.7% to 84.0% (over 4 estimates).
+
+Readings per learner (each dataset contributes sensitivity and specificity):
+  scm: below 23, consistent 6, above 7, not read 0.
+  cart: below 23, consistent 8, above 5, not read 0.
+  lasso: below 5, consistent 1, above 0, not read 0.
+  known_gene: below 13, consistent 16, above 7, not read 0.
+The reading is descriptive. It has no multiplicity correction and is not a hypothesis test.
+paired.tsv sets each learner beside the known-gene rule on the same genomes (counts only, no test).
+
+Not run here: sequence-distance novelty, partial-feature counts (--matrix), calibration,
+any hypothesis test, forests and boosted trees (not published in full).

@@ -1,0 +1,18 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+klebsiella_pneumoniae__aztreonam	274	193	0	11	0	273	183	0	yes	no	scored	PRJNA288601	273	1.000000	PRJNA288601	183	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__cefazolin	299	146	0	10	0	296	139	0	yes	no	scored	PRJNA288601	296	1.000000	PRJNA288601	139	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__cefepime	268	202	0	11	0	268	191	0	yes	no	scored	PRJNA288601	268	1.000000	PRJNA288601	191	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__cefoxitin	266	187	0	11	0	264	178	0	yes	no	scored	PRJNA288601	264	1.000000	PRJNA288601	178	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__ceftazidime	280	188	0	11	0	280	177	0	yes	no	scored	PRJNA288601	280	1.000000	PRJNA288601	177	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__ceftriaxone	279	183	0	10	0	279	173	0	yes	no	scored	PRJNA288601	279	1.000000	PRJNA288601	173	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__ciprofloxacin	284	172	0	10	0	283	163	0	yes	no	scored	PRJNA288601	283	1.000000	PRJNA288601	163	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__doripenem	232	219	0	11	0	232	208	0	yes	yes	scored	PRJNA288601	232	1.000000	PRJNA288601	208	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__ertapenem	257	210	0	11	0	257	199	0	yes	no	scored	PRJNA288601	257	1.000000	PRJNA288601	199	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__gentamicin	86	351	0	11	0	86	340	0	yes	no	scored	PRJNA288601	86	1.000000	PRJNA288601	340	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__imipenem	234	218	0	11	0	234	207	0	yes	no	scored	PRJNA288601	234	1.000000	PRJNA288601	207	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__levofloxacin	273	182	0	10	0	272	173	0	yes	yes	scored	PRJNA288601	272	1.000000	PRJNA288601	173	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__meropenem	240	217	0	11	0	240	206	0	yes	no	scored	PRJNA288601	240	1.000000	PRJNA288601	206	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__piperacillin_tazobactam	264	195	0	10	0	263	186	0	yes	no	scored	PRJNA288601	263	1.000000	PRJNA288601	186	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	287	183	0	11	0	282	177	0	yes	no	scored	PRJNA288601	282	1.000000	PRJNA288601	177	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__tetracycline	98	335	0	11	0	95	327	0	yes	yes	scored	PRJNA288601	95	1.000000	PRJNA288601	327	1.000000	1	0	no	no	PRJNA288601	0		
+klebsiella_pneumoniae__tobramycin	213	209	0	11	0	213	198	0	yes	no	scored	PRJNA288601	213	1.000000	PRJNA288601	198	1.000000	1	0	no	no	PRJNA288601	0		

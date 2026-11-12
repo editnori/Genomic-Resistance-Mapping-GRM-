@@ -1,0 +1,924 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJEB29739	7	119	6	1	0	119	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJEB29742	232	138	12	220	4	134	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJEB36683	186	34	132	54	16	18	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJEB58216	167	42	96	71	4	38	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJEB66182	209	77	134	75	17	60	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJEB80567	54	266	1	53	1	265	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJNA1052100	3	61	1	2	8	53	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJNA1054115	0	130	0	0	1	129	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJNA613441	3	1	1	2	0	1	0	0
+klebsiella_pneumoniae__amikacin	scm	bioproject	PRJNA905193	0	2	0	0	0	2	0	0
+klebsiella_pneumoniae__amikacin	scm	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__amikacin	scm	country	Colombia	286	404	13	273	5	399	0	0
+klebsiella_pneumoniae__amikacin	scm	country	Ghana	3	61	1	2	8	53	0	0
+klebsiella_pneumoniae__amikacin	scm	country	Greece	167	42	96	71	4	38	0	0
+klebsiella_pneumoniae__amikacin	scm	country	India	0	2	0	0	0	2	0	0
+klebsiella_pneumoniae__amikacin	scm	country	Lebanon	3	1	1	2	0	1	0	0
+klebsiella_pneumoniae__amikacin	scm	country	Nigeria	7	119	6	1	0	119	0	0
+klebsiella_pneumoniae__amikacin	scm	country	Saudi Arabia	395	111	266	129	33	78	0	0
+klebsiella_pneumoniae__amikacin	scm	country	USA	0	130	0	0	1	129	0	0
+klebsiella_pneumoniae__amikacin	scm	mlst_in_cohort	no	216	231	185	31	21	210	0	0
+klebsiella_pneumoniae__amikacin	scm	mlst_in_cohort	no ST	17	43	2	15	0	43	0	0
+klebsiella_pneumoniae__amikacin	scm	mlst_in_cohort	yes	628	599	196	432	30	569	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJEB29739	7	119	6	1	23	96	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJEB29742	232	138	95	137	28	110	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJEB36683	186	34	153	33	25	9	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJEB58216	167	42	140	27	22	20	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJEB66182	209	77	198	11	49	28	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJEB80567	54	266	40	14	24	242	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJNA1052100	3	61	1	2	35	26	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJNA1054115	0	130	0	0	2	128	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJNA613441	3	1	3	0	1	0	0	0
+klebsiella_pneumoniae__amikacin	cart	bioproject	PRJNA905193	0	2	0	0	2	0	0	0
+klebsiella_pneumoniae__amikacin	cart	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__amikacin	cart	country	Colombia	286	404	135	151	52	352	0	0
+klebsiella_pneumoniae__amikacin	cart	country	Ghana	3	61	1	2	35	26	0	0
+klebsiella_pneumoniae__amikacin	cart	country	Greece	167	42	140	27	22	20	0	0
+klebsiella_pneumoniae__amikacin	cart	country	India	0	2	0	0	2	0	0	0
+klebsiella_pneumoniae__amikacin	cart	country	Lebanon	3	1	3	0	1	0	0	0
+klebsiella_pneumoniae__amikacin	cart	country	Nigeria	7	119	6	1	23	96	0	0
+klebsiella_pneumoniae__amikacin	cart	country	Saudi Arabia	395	111	351	44	74	37	0	0
+klebsiella_pneumoniae__amikacin	cart	country	USA	0	130	0	0	2	128	0	0
+klebsiella_pneumoniae__amikacin	cart	mlst_in_cohort	no	216	231	194	22	28	203	0	0
+klebsiella_pneumoniae__amikacin	cart	mlst_in_cohort	no ST	17	43	13	4	8	35	0	0
+klebsiella_pneumoniae__amikacin	cart	mlst_in_cohort	yes	628	599	429	199	175	424	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJEB29739	7	119	6	1	57	62	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJEB29742	232	138	206	26	86	52	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJEB36683	186	34	161	25	21	13	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJEB58216	167	42	164	3	33	9	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJEB66182	209	77	203	6	39	38	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJEB80567	54	266	47	7	74	192	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJNA1052100	3	61	0	3	35	26	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJNA1054115	0	130	0	0	4	126	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJNA1223317	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJNA613441	3	1	3	0	1	0	0	0
+klebsiella_pneumoniae__amikacin	known_gene	bioproject	PRJNA905193	0	2	0	0	0	2	0	0
+klebsiella_pneumoniae__amikacin	known_gene	country	China	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__amikacin	known_gene	country	Colombia	286	404	253	33	160	244	0	0
+klebsiella_pneumoniae__amikacin	known_gene	country	Ghana	3	61	0	3	35	26	0	0
+klebsiella_pneumoniae__amikacin	known_gene	country	Greece	167	42	164	3	33	9	0	0
+klebsiella_pneumoniae__amikacin	known_gene	country	India	0	2	0	0	0	2	0	0
+klebsiella_pneumoniae__amikacin	known_gene	country	Lebanon	3	1	3	0	1	0	0	0
+klebsiella_pneumoniae__amikacin	known_gene	country	Nigeria	7	119	6	1	57	62	0	0
+klebsiella_pneumoniae__amikacin	known_gene	country	Saudi Arabia	395	111	364	31	60	51	0	0
+klebsiella_pneumoniae__amikacin	known_gene	country	USA	0	130	0	0	4	126	0	0
+klebsiella_pneumoniae__amikacin	known_gene	mlst_in_cohort	no	216	231	202	14	69	162	0	0
+klebsiella_pneumoniae__amikacin	known_gene	mlst_in_cohort	no ST	17	43	13	4	2	41	0	0
+klebsiella_pneumoniae__amikacin	known_gene	mlst_in_cohort	yes	628	599	575	53	281	318	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	scm	bioproject	PRJEB36683	247	34	221	26	8	26	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	scm	bioproject	PRJEB66182	297	16	280	17	3	13	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	scm	bioproject	PRJNA1054115	2	61	0	2	1	60	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	scm	country	Saudi Arabia	544	50	501	43	11	39	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	scm	country	USA	2	61	0	2	1	60	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	scm	mlst_in_cohort	no	230	31	217	13	2	29	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	scm	mlst_in_cohort	no ST	24	11	19	5	0	11	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	scm	mlst_in_cohort	yes	292	69	265	27	10	59	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	cart	bioproject	PRJEB36683	247	34	203	44	8	26	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	cart	bioproject	PRJEB66182	297	16	224	73	8	8	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	cart	bioproject	PRJNA1054115	2	61	0	2	1	60	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	cart	country	Saudi Arabia	544	50	427	117	16	34	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	cart	country	USA	2	61	0	2	1	60	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	cart	mlst_in_cohort	no	230	31	213	17	5	26	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	cart	mlst_in_cohort	no ST	24	11	18	6	0	11	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	cart	mlst_in_cohort	yes	292	69	196	96	12	57	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	known_gene	bioproject	PRJEB36683	247	34	235	12	15	19	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	known_gene	bioproject	PRJEB66182	297	16	296	1	14	2	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	known_gene	bioproject	PRJNA1054115	2	61	1	1	19	42	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	known_gene	country	Saudi Arabia	544	50	531	13	29	21	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	known_gene	country	USA	2	61	1	1	19	42	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	known_gene	mlst_in_cohort	no	230	31	225	5	13	18	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	known_gene	mlst_in_cohort	no ST	24	11	22	2	2	9	0	0
+klebsiella_pneumoniae__amoxicillin_clavulanate	known_gene	mlst_in_cohort	yes	292	69	285	7	33	36	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	bioproject	PRJEB80567	200	117	167	33	11	106	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	bioproject	PRJNA1054115	14	108	9	5	5	103	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	bioproject	PRJNA1223317	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	country	China	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	country	Colombia	200	117	167	33	11	106	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	country	USA	14	108	9	5	5	103	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	mlst_in_cohort	no	44	80	37	7	6	74	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	mlst_in_cohort	no ST	9	28	6	3	3	25	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	scm	mlst_in_cohort	yes	165	120	137	28	9	111	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	bioproject	PRJEB80567	200	117	170	30	8	109	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	bioproject	PRJNA1054115	14	108	9	5	8	100	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	bioproject	PRJNA1223317	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	country	China	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	country	Colombia	200	117	170	30	8	109	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	country	USA	14	108	9	5	8	100	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	mlst_in_cohort	no	44	80	34	10	3	77	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	mlst_in_cohort	no ST	9	28	8	1	3	25	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	cart	mlst_in_cohort	yes	165	120	141	24	12	108	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	bioproject	PRJEB80567	200	117	177	23	18	99	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	bioproject	PRJNA1054115	14	108	7	7	31	77	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	country	Colombia	200	117	177	23	18	99	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	country	USA	14	108	7	7	31	77	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	mlst_in_cohort	no	44	80	39	5	14	66	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	mlst_in_cohort	no ST	9	28	7	2	3	25	0	0
+klebsiella_pneumoniae__ampicillin_sulbactam	known_gene	mlst_in_cohort	yes	165	120	142	23	32	88	0	0
+klebsiella_pneumoniae__aztreonam	scm	bioproject	PRJEB29742	393	19	367	26	7	12	0	0
+klebsiella_pneumoniae__aztreonam	scm	bioproject	PRJNA1054115	8	122	6	2	13	109	0	0
+klebsiella_pneumoniae__aztreonam	scm	bioproject	PRJNA1104021	27	0	27	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	scm	bioproject	PRJNA905193	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	scm	country	Colombia	393	19	367	26	7	12	0	0
+klebsiella_pneumoniae__aztreonam	scm	country	India	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	scm	country	Spain	27	0	27	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	scm	country	USA	8	122	6	2	13	109	0	0
+klebsiella_pneumoniae__aztreonam	scm	mlst_in_cohort	no	37	45	27	10	4	41	0	0
+klebsiella_pneumoniae__aztreonam	scm	mlst_in_cohort	no ST	6	14	6	0	1	13	0	0
+klebsiella_pneumoniae__aztreonam	scm	mlst_in_cohort	yes	391	82	373	18	15	67	0	0
+klebsiella_pneumoniae__aztreonam	cart	bioproject	PRJEB29742	393	19	352	41	2	17	0	0
+klebsiella_pneumoniae__aztreonam	cart	bioproject	PRJNA1054115	8	122	6	2	5	117	0	0
+klebsiella_pneumoniae__aztreonam	cart	bioproject	PRJNA1104021	27	0	19	8	0	0	0	0
+klebsiella_pneumoniae__aztreonam	cart	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	cart	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__aztreonam	cart	country	Colombia	393	19	352	41	2	17	0	0
+klebsiella_pneumoniae__aztreonam	cart	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__aztreonam	cart	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	cart	country	Spain	27	0	19	8	0	0	0	0
+klebsiella_pneumoniae__aztreonam	cart	country	USA	8	122	6	2	5	117	0	0
+klebsiella_pneumoniae__aztreonam	cart	mlst_in_cohort	no	37	45	25	12	4	41	0	0
+klebsiella_pneumoniae__aztreonam	cart	mlst_in_cohort	no ST	6	14	1	5	1	13	0	0
+klebsiella_pneumoniae__aztreonam	cart	mlst_in_cohort	yes	391	82	355	36	2	80	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	bioproject	PRJEB29742	393	19	296	97	6	13	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	bioproject	PRJNA1054115	8	122	6	2	32	90	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	bioproject	PRJNA1104021	27	0	19	8	0	0	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	country	Colombia	393	19	296	97	6	13	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	country	Spain	27	0	19	8	0	0	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	country	USA	8	122	6	2	32	90	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	mlst_in_cohort	no	37	45	25	12	8	37	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	mlst_in_cohort	no ST	6	14	1	5	3	11	0	0
+klebsiella_pneumoniae__aztreonam	known_gene	mlst_in_cohort	yes	391	82	299	92	27	55	0	0
+klebsiella_pneumoniae__cefepime	scm	bioproject	PRJEB29739	35	79	23	12	44	35	0	0
+klebsiella_pneumoniae__cefepime	scm	bioproject	PRJEB29742	384	37	262	122	9	28	0	0
+klebsiella_pneumoniae__cefepime	scm	bioproject	PRJEB66182	310	26	212	98	18	8	0	0
+klebsiella_pneumoniae__cefepime	scm	bioproject	PRJEB80567	99	229	68	31	31	198	0	0
+klebsiella_pneumoniae__cefepime	scm	bioproject	PRJNA1054115	6	123	2	4	1	122	0	0
+klebsiella_pneumoniae__cefepime	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__cefepime	scm	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__cefepime	scm	country	Colombia	483	266	330	153	40	226	0	0
+klebsiella_pneumoniae__cefepime	scm	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__cefepime	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__cefepime	scm	country	Nigeria	35	79	23	12	44	35	0	0
+klebsiella_pneumoniae__cefepime	scm	country	Saudi Arabia	310	26	212	98	18	8	0	0
+klebsiella_pneumoniae__cefepime	scm	country	USA	6	123	2	4	1	122	0	0
+klebsiella_pneumoniae__cefepime	scm	mlst_in_cohort	no	156	163	129	27	35	128	0	0
+klebsiella_pneumoniae__cefepime	scm	mlst_in_cohort	no ST	20	36	17	3	2	34	0	0
+klebsiella_pneumoniae__cefepime	scm	mlst_in_cohort	yes	664	295	425	239	66	229	0	0
+klebsiella_pneumoniae__cefepime	cart	bioproject	PRJEB29739	35	79	21	14	50	29	0	0
+klebsiella_pneumoniae__cefepime	cart	bioproject	PRJEB29742	384	37	305	79	15	22	0	0
+klebsiella_pneumoniae__cefepime	cart	bioproject	PRJEB66182	310	26	244	66	18	8	0	0
+klebsiella_pneumoniae__cefepime	cart	bioproject	PRJEB80567	99	229	79	20	54	175	0	0
+klebsiella_pneumoniae__cefepime	cart	bioproject	PRJNA1054115	6	123	3	3	3	120	0	0
+klebsiella_pneumoniae__cefepime	cart	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__cefepime	cart	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__cefepime	cart	country	Colombia	483	266	384	99	69	197	0	0
+klebsiella_pneumoniae__cefepime	cart	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__cefepime	cart	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__cefepime	cart	country	Nigeria	35	79	21	14	50	29	0	0
+klebsiella_pneumoniae__cefepime	cart	country	Saudi Arabia	310	26	244	66	18	8	0	0
+klebsiella_pneumoniae__cefepime	cart	country	USA	6	123	3	3	3	120	0	0
+klebsiella_pneumoniae__cefepime	cart	mlst_in_cohort	no	156	163	142	14	54	109	0	0
+klebsiella_pneumoniae__cefepime	cart	mlst_in_cohort	no ST	20	36	18	2	3	33	0	0
+klebsiella_pneumoniae__cefepime	cart	mlst_in_cohort	yes	664	295	496	168	83	212	0	0
+klebsiella_pneumoniae__cefepime	known_gene	bioproject	PRJEB29739	35	79	34	1	63	16	0	0
+klebsiella_pneumoniae__cefepime	known_gene	bioproject	PRJEB29742	384	37	381	3	35	2	0	0
+klebsiella_pneumoniae__cefepime	known_gene	bioproject	PRJEB66182	310	26	309	1	24	2	0	0
+klebsiella_pneumoniae__cefepime	known_gene	bioproject	PRJEB80567	99	229	99	0	103	126	0	0
+klebsiella_pneumoniae__cefepime	known_gene	bioproject	PRJNA1054115	6	123	5	1	32	91	0	0
+klebsiella_pneumoniae__cefepime	known_gene	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__cefepime	known_gene	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__cefepime	known_gene	country	Colombia	483	266	480	3	138	128	0	0
+klebsiella_pneumoniae__cefepime	known_gene	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__cefepime	known_gene	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__cefepime	known_gene	country	Nigeria	35	79	34	1	63	16	0	0
+klebsiella_pneumoniae__cefepime	known_gene	country	Saudi Arabia	310	26	309	1	24	2	0	0
+klebsiella_pneumoniae__cefepime	known_gene	country	USA	6	123	5	1	32	91	0	0
+klebsiella_pneumoniae__cefepime	known_gene	mlst_in_cohort	no	156	163	154	2	78	85	0	0
+klebsiella_pneumoniae__cefepime	known_gene	mlst_in_cohort	no ST	20	36	20	0	7	29	0	0
+klebsiella_pneumoniae__cefepime	known_gene	mlst_in_cohort	yes	664	295	658	6	172	123	0	0
+klebsiella_pneumoniae__cefoxitin	scm	bioproject	PRJEB29742	340	54	291	49	53	1	0	0
+klebsiella_pneumoniae__cefoxitin	scm	bioproject	PRJEB35084	18	6	2	16	0	6	0	0
+klebsiella_pneumoniae__cefoxitin	scm	bioproject	PRJEB66182	313	29	295	18	2	27	0	0
+klebsiella_pneumoniae__cefoxitin	scm	bioproject	PRJEB80567	102	200	87	15	40	160	0	0
+klebsiella_pneumoniae__cefoxitin	scm	bioproject	PRJNA1054115	3	56	1	2	0	56	0	0
+klebsiella_pneumoniae__cefoxitin	scm	bioproject	PRJNA905193	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__cefoxitin	scm	country	Colombia	442	254	378	64	93	161	0	0
+klebsiella_pneumoniae__cefoxitin	scm	country	India	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__cefoxitin	scm	country	Portugal	18	6	2	16	0	6	0	0
+klebsiella_pneumoniae__cefoxitin	scm	country	Saudi Arabia	313	29	295	18	2	27	0	0
+klebsiella_pneumoniae__cefoxitin	scm	country	USA	3	56	1	2	0	56	0	0
+klebsiella_pneumoniae__cefoxitin	scm	mlst_in_cohort	no	158	105	146	12	27	78	0	0
+klebsiella_pneumoniae__cefoxitin	scm	mlst_in_cohort	no ST	19	26	15	4	1	25	0	0
+klebsiella_pneumoniae__cefoxitin	scm	mlst_in_cohort	yes	601	214	517	84	67	147	0	0
+klebsiella_pneumoniae__cefoxitin	cart	bioproject	PRJEB29742	340	54	271	69	38	16	0	0
+klebsiella_pneumoniae__cefoxitin	cart	bioproject	PRJEB35084	18	6	6	12	0	6	0	0
+klebsiella_pneumoniae__cefoxitin	cart	bioproject	PRJEB66182	313	29	279	34	8	21	0	0
+klebsiella_pneumoniae__cefoxitin	cart	bioproject	PRJEB80567	102	200	68	34	39	161	0	0
+klebsiella_pneumoniae__cefoxitin	cart	bioproject	PRJNA1054115	3	56	1	2	4	52	0	0
+klebsiella_pneumoniae__cefoxitin	cart	bioproject	PRJNA905193	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__cefoxitin	cart	country	Colombia	442	254	339	103	77	177	0	0
+klebsiella_pneumoniae__cefoxitin	cart	country	India	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__cefoxitin	cart	country	Portugal	18	6	6	12	0	6	0	0
+klebsiella_pneumoniae__cefoxitin	cart	country	Saudi Arabia	313	29	279	34	8	21	0	0
+klebsiella_pneumoniae__cefoxitin	cart	country	USA	3	56	1	2	4	52	0	0
+klebsiella_pneumoniae__cefoxitin	cart	mlst_in_cohort	no	158	105	130	28	26	79	0	0
+klebsiella_pneumoniae__cefoxitin	cart	mlst_in_cohort	no ST	19	26	18	1	2	24	0	0
+klebsiella_pneumoniae__cefoxitin	cart	mlst_in_cohort	yes	601	214	479	122	61	153	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	bioproject	PRJEB29742	340	54	336	4	54	0	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	bioproject	PRJEB35084	18	6	18	0	6	0	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	bioproject	PRJEB66182	313	29	312	1	27	2	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	bioproject	PRJEB80567	102	200	94	8	82	118	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	bioproject	PRJNA1054115	3	56	0	3	14	42	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	country	Colombia	442	254	430	12	136	118	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	country	Portugal	18	6	18	0	6	0	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	country	Saudi Arabia	313	29	312	1	27	2	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	country	USA	3	56	0	3	14	42	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	mlst_in_cohort	no	158	105	154	4	47	58	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	mlst_in_cohort	no ST	19	26	18	1	5	21	0	0
+klebsiella_pneumoniae__cefoxitin	known_gene	mlst_in_cohort	yes	601	214	588	13	131	83	0	0
+klebsiella_pneumoniae__ceftazidime	scm	bioproject	PRJEB29742	386	21	347	39	11	10	0	0
+klebsiella_pneumoniae__ceftazidime	scm	bioproject	PRJEB35084	24	0	24	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	scm	bioproject	PRJEB36683	101	5	74	27	2	3	0	0
+klebsiella_pneumoniae__ceftazidime	scm	bioproject	PRJEB66182	319	12	288	31	8	4	0	0
+klebsiella_pneumoniae__ceftazidime	scm	bioproject	PRJEB80567	145	176	130	15	13	163	0	0
+klebsiella_pneumoniae__ceftazidime	scm	bioproject	PRJNA1054115	5	123	4	1	2	121	0	0
+klebsiella_pneumoniae__ceftazidime	scm	bioproject	PRJNA1223317	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ceftazidime	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	scm	country	China	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ceftazidime	scm	country	Colombia	531	197	477	54	24	173	0	0
+klebsiella_pneumoniae__ceftazidime	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	scm	country	Portugal	24	0	24	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	scm	country	Saudi Arabia	420	17	362	58	10	7	0	0
+klebsiella_pneumoniae__ceftazidime	scm	country	USA	5	123	4	1	2	121	0	0
+klebsiella_pneumoniae__ceftazidime	scm	mlst_in_cohort	no	218	111	184	34	9	102	0	0
+klebsiella_pneumoniae__ceftazidime	scm	mlst_in_cohort	no ST	26	34	22	4	1	33	0	0
+klebsiella_pneumoniae__ceftazidime	scm	mlst_in_cohort	yes	740	195	665	75	28	167	0	0
+klebsiella_pneumoniae__ceftazidime	cart	bioproject	PRJEB29742	386	21	244	142	8	13	0	0
+klebsiella_pneumoniae__ceftazidime	cart	bioproject	PRJEB35084	24	0	22	2	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	cart	bioproject	PRJEB36683	101	5	75	26	3	2	0	0
+klebsiella_pneumoniae__ceftazidime	cart	bioproject	PRJEB66182	319	12	271	48	8	4	0	0
+klebsiella_pneumoniae__ceftazidime	cart	bioproject	PRJEB80567	145	176	53	92	9	167	0	0
+klebsiella_pneumoniae__ceftazidime	cart	bioproject	PRJNA1054115	5	123	4	1	1	122	0	0
+klebsiella_pneumoniae__ceftazidime	cart	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ceftazidime	cart	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	cart	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ceftazidime	cart	country	Colombia	531	197	297	234	17	180	0	0
+klebsiella_pneumoniae__ceftazidime	cart	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	cart	country	Portugal	24	0	22	2	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	cart	country	Saudi Arabia	420	17	346	74	11	6	0	0
+klebsiella_pneumoniae__ceftazidime	cart	country	USA	5	123	4	1	1	122	0	0
+klebsiella_pneumoniae__ceftazidime	cart	mlst_in_cohort	no	218	111	174	44	8	103	0	0
+klebsiella_pneumoniae__ceftazidime	cart	mlst_in_cohort	no ST	26	34	22	4	1	33	0	0
+klebsiella_pneumoniae__ceftazidime	cart	mlst_in_cohort	yes	740	195	477	263	20	175	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	bioproject	PRJEB29742	386	21	381	5	21	0	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	bioproject	PRJEB35084	24	0	24	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	bioproject	PRJEB36683	101	5	93	8	3	2	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	bioproject	PRJEB66182	319	12	317	2	11	1	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	bioproject	PRJEB80567	145	176	143	2	52	124	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	bioproject	PRJNA1054115	5	123	4	1	32	91	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	country	Colombia	531	197	524	7	73	124	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	country	Portugal	24	0	24	0	0	0	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	country	Saudi Arabia	420	17	410	10	14	3	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	country	USA	5	123	4	1	32	91	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	mlst_in_cohort	no	218	111	213	5	36	75	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	mlst_in_cohort	no ST	26	34	24	2	5	29	0	0
+klebsiella_pneumoniae__ceftazidime	known_gene	mlst_in_cohort	yes	740	195	729	11	78	117	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	scm	bioproject	PRJEB66182	31	25	12	19	21	4	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	scm	bioproject	PRJNA1223317	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	scm	country	China	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	scm	country	Saudi Arabia	31	25	12	19	21	4	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	scm	mlst_in_cohort	no	5	16	5	0	16	0	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	scm	mlst_in_cohort	no ST	7	1	0	7	1	0	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	scm	mlst_in_cohort	yes	19	11	7	12	6	5	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	cart	bioproject	PRJEB66182	31	25	12	19	21	4	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	cart	bioproject	PRJNA1223317	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	cart	country	China	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	cart	country	Saudi Arabia	31	25	12	19	21	4	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	cart	mlst_in_cohort	no	5	16	5	0	16	0	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	cart	mlst_in_cohort	no ST	7	1	0	7	1	0	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	cart	mlst_in_cohort	yes	19	11	7	12	6	5	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	lasso	bioproject	PRJEB66182	31	25	27	4	5	20	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	lasso	bioproject	PRJNA1223317	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	lasso	country	China	0	3	0	0	2	1	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	lasso	country	Saudi Arabia	31	25	27	4	5	20	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	lasso	mlst_in_cohort	no	5	16	1	4	0	16	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	lasso	mlst_in_cohort	no ST	7	1	7	0	1	0	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	lasso	mlst_in_cohort	yes	19	11	19	0	6	5	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	known_gene	bioproject	PRJEB66182	31	25	31	0	23	2	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	known_gene	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	known_gene	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	known_gene	country	Saudi Arabia	31	25	31	0	23	2	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	known_gene	mlst_in_cohort	no	5	16	5	0	15	1	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	known_gene	mlst_in_cohort	no ST	7	1	7	0	1	0	0	0
+klebsiella_pneumoniae__ceftazidime_avibactam	known_gene	mlst_in_cohort	yes	19	11	19	0	7	4	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	bioproject	PRJEB29739	88	36	86	2	23	13	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	bioproject	PRJEB36683	256	37	229	27	18	19	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	bioproject	PRJEB66182	344	4	333	11	2	2	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	bioproject	PRJEB80567	175	152	143	32	8	144	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	bioproject	PRJNA1052100	52	11	33	19	7	4	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	bioproject	PRJNA1054115	7	123	6	1	2	121	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	country	Colombia	175	152	143	32	8	144	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	country	Ghana	52	11	33	19	7	4	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	country	Nigeria	88	36	86	2	23	13	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	country	Saudi Arabia	600	41	562	38	20	21	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	country	USA	7	123	6	1	2	121	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	mlst_in_cohort	no	303	127	277	26	24	103	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	mlst_in_cohort	no ST	34	35	27	7	3	32	0	0
+klebsiella_pneumoniae__ceftriaxone	scm	mlst_in_cohort	yes	589	201	530	59	33	168	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	bioproject	PRJEB29739	88	36	76	12	23	13	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	bioproject	PRJEB36683	256	37	187	69	12	25	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	bioproject	PRJEB66182	344	4	309	35	1	3	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	bioproject	PRJEB80567	175	152	154	21	16	136	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	bioproject	PRJNA1052100	52	11	21	31	6	5	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	bioproject	PRJNA1054115	7	123	5	2	4	119	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	country	Colombia	175	152	154	21	16	136	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	country	Ghana	52	11	21	31	6	5	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	country	Nigeria	88	36	76	12	23	13	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	country	Saudi Arabia	600	41	496	104	13	28	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	country	USA	7	123	5	2	4	119	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	mlst_in_cohort	no	303	127	264	39	29	98	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	mlst_in_cohort	no ST	34	35	27	7	3	32	0	0
+klebsiella_pneumoniae__ceftriaxone	cart	mlst_in_cohort	yes	589	201	465	124	30	171	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	bioproject	PRJEB29739	88	36	85	3	21	15	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	bioproject	PRJEB36683	256	37	242	14	22	15	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	bioproject	PRJEB66182	344	4	342	2	3	1	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	bioproject	PRJEB80567	175	152	171	4	29	123	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	bioproject	PRJNA1052100	52	11	43	9	10	1	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	bioproject	PRJNA1054115	7	123	6	1	32	91	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	country	Colombia	175	152	171	4	29	123	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	country	Ghana	52	11	43	9	10	1	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	country	Nigeria	88	36	85	3	21	15	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	country	Saudi Arabia	600	41	584	16	25	16	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	country	USA	7	123	6	1	32	91	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	mlst_in_cohort	no	303	127	290	13	44	83	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	mlst_in_cohort	no ST	34	35	31	3	5	30	0	0
+klebsiella_pneumoniae__ceftriaxone	known_gene	mlst_in_cohort	yes	589	201	572	17	68	133	0	0
+klebsiella_pneumoniae__cefuroxime	scm	bioproject	PRJEB29739	89	35	86	3	3	32	0	0
+klebsiella_pneumoniae__cefuroxime	scm	bioproject	PRJNA1054115	13	114	6	7	5	109	0	0
+klebsiella_pneumoniae__cefuroxime	scm	country	Nigeria	89	35	86	3	3	32	0	0
+klebsiella_pneumoniae__cefuroxime	scm	country	USA	13	114	6	7	5	109	0	0
+klebsiella_pneumoniae__cefuroxime	scm	mlst_in_cohort	no	20	59	17	3	0	59	0	0
+klebsiella_pneumoniae__cefuroxime	scm	mlst_in_cohort	no ST	1	14	0	1	3	11	0	0
+klebsiella_pneumoniae__cefuroxime	scm	mlst_in_cohort	yes	81	76	75	6	5	71	0	0
+klebsiella_pneumoniae__cefuroxime	cart	bioproject	PRJEB29739	89	35	88	1	8	27	0	0
+klebsiella_pneumoniae__cefuroxime	cart	bioproject	PRJNA1054115	13	114	8	5	17	97	0	0
+klebsiella_pneumoniae__cefuroxime	cart	country	Nigeria	89	35	88	1	8	27	0	0
+klebsiella_pneumoniae__cefuroxime	cart	country	USA	13	114	8	5	17	97	0	0
+klebsiella_pneumoniae__cefuroxime	cart	mlst_in_cohort	no	20	59	18	2	9	50	0	0
+klebsiella_pneumoniae__cefuroxime	cart	mlst_in_cohort	no ST	1	14	1	0	1	13	0	0
+klebsiella_pneumoniae__cefuroxime	cart	mlst_in_cohort	yes	81	76	77	4	15	61	0	0
+klebsiella_pneumoniae__cefuroxime	lasso	bioproject	PRJEB29739	89	35	87	2	22	13	0	0
+klebsiella_pneumoniae__cefuroxime	lasso	bioproject	PRJNA1054115	13	114	6	7	6	108	0	0
+klebsiella_pneumoniae__cefuroxime	lasso	country	Nigeria	89	35	87	2	22	13	0	0
+klebsiella_pneumoniae__cefuroxime	lasso	country	USA	13	114	6	7	6	108	0	0
+klebsiella_pneumoniae__cefuroxime	lasso	mlst_in_cohort	no	20	59	17	3	19	40	0	0
+klebsiella_pneumoniae__cefuroxime	lasso	mlst_in_cohort	no ST	1	14	1	0	2	12	0	0
+klebsiella_pneumoniae__cefuroxime	lasso	mlst_in_cohort	yes	81	76	75	6	7	69	0	0
+klebsiella_pneumoniae__cefuroxime	known_gene	bioproject	PRJEB29739	89	35	86	3	20	15	0	0
+klebsiella_pneumoniae__cefuroxime	known_gene	bioproject	PRJNA1054115	13	114	7	6	31	83	0	0
+klebsiella_pneumoniae__cefuroxime	known_gene	country	Nigeria	89	35	86	3	20	15	0	0
+klebsiella_pneumoniae__cefuroxime	known_gene	country	USA	13	114	7	6	31	83	0	0
+klebsiella_pneumoniae__cefuroxime	known_gene	mlst_in_cohort	no	20	59	16	4	23	36	0	0
+klebsiella_pneumoniae__cefuroxime	known_gene	mlst_in_cohort	no ST	1	14	1	0	3	11	0	0
+klebsiella_pneumoniae__cefuroxime	known_gene	mlst_in_cohort	yes	81	76	76	5	25	51	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJEB29739	108	14	61	47	2	12	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJEB29742	355	51	302	53	8	43	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJEB35084	21	3	21	0	0	3	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJEB36683	266	27	220	46	10	17	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJEB58216	199	10	193	6	5	5	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJEB66182	335	11	314	21	2	9	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJEB80567	133	181	94	39	4	177	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJNA1052100	49	15	35	14	8	7	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJNA1054115	5	124	3	2	2	122	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJNA1223317	2	1	2	0	0	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	bioproject	PRJNA905193	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	China	2	1	2	0	0	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	Colombia	488	232	396	92	12	220	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	Ghana	49	15	35	14	8	7	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	Greece	199	10	193	6	5	5	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	India	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	Nigeria	108	14	61	47	2	12	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	Portugal	21	3	21	0	0	3	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	Saudi Arabia	601	38	534	67	12	26	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	country	USA	5	124	3	2	2	122	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	mlst_in_cohort	no	325	155	253	72	12	143	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	mlst_in_cohort	no ST	30	33	25	5	1	32	0	0
+klebsiella_pneumoniae__ciprofloxacin	scm	mlst_in_cohort	yes	1124	249	973	151	28	221	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJEB29739	108	14	70	38	2	12	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJEB29742	355	51	341	14	9	42	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJEB35084	21	3	21	0	0	3	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJEB36683	266	27	232	34	10	17	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJEB58216	199	10	193	6	5	5	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJEB66182	335	11	310	25	3	8	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJEB80567	133	181	110	23	7	174	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJNA1052100	49	15	33	16	10	5	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJNA1054115	5	124	5	0	1	123	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJNA1223317	2	1	0	2	0	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	bioproject	PRJNA905193	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	China	2	1	0	2	0	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	Colombia	488	232	451	37	16	216	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	Ghana	49	15	33	16	10	5	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	Greece	199	10	193	6	5	5	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	India	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	Nigeria	108	14	70	38	2	12	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	Portugal	21	3	21	0	0	3	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	Saudi Arabia	601	38	542	59	13	25	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	country	USA	5	124	5	0	1	123	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	mlst_in_cohort	no	325	155	272	53	14	141	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	mlst_in_cohort	no ST	30	33	24	6	1	32	0	0
+klebsiella_pneumoniae__ciprofloxacin	cart	mlst_in_cohort	yes	1124	249	1025	99	32	217	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJEB29739	108	14	107	1	13	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJEB29742	355	51	354	1	50	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJEB35084	21	3	21	0	2	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJEB36683	266	27	266	0	27	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJEB58216	199	10	199	0	9	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJEB66182	335	11	335	0	10	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJEB80567	133	181	133	0	172	9	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJNA1052100	49	15	42	7	14	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJNA1054115	5	124	5	0	111	13	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJNA1223317	2	1	2	0	1	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	bioproject	PRJNA905193	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	China	2	1	2	0	1	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	Colombia	488	232	487	1	222	10	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	Ghana	49	15	42	7	14	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	Greece	199	10	199	0	9	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	India	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	Nigeria	108	14	107	1	13	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	Portugal	21	3	21	0	2	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	Saudi Arabia	601	38	601	0	37	1	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	country	USA	5	124	5	0	111	13	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	mlst_in_cohort	no	325	155	325	0	146	9	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	mlst_in_cohort	no ST	30	33	30	0	31	2	0	0
+klebsiella_pneumoniae__ciprofloxacin	known_gene	mlst_in_cohort	yes	1124	249	1115	9	232	17	0	0
+klebsiella_pneumoniae__colistin	scm	bioproject	PRJEB29739	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__colistin	scm	bioproject	PRJEB36683	77	55	35	42	17	38	0	0
+klebsiella_pneumoniae__colistin	scm	bioproject	PRJEB80567	27	0	10	17	0	0	0	0
+klebsiella_pneumoniae__colistin	scm	bioproject	PRJNA1223317	2	1	0	2	0	1	0	0
+klebsiella_pneumoniae__colistin	scm	bioproject	PRJNA905193	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__colistin	scm	country	China	2	1	0	2	0	1	0	0
+klebsiella_pneumoniae__colistin	scm	country	Colombia	27	0	10	17	0	0	0	0
+klebsiella_pneumoniae__colistin	scm	country	India	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__colistin	scm	country	Nigeria	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__colistin	scm	country	Saudi Arabia	77	55	35	42	17	38	0	0
+klebsiella_pneumoniae__colistin	scm	mlst_in_cohort	no	40	29	22	18	13	16	0	0
+klebsiella_pneumoniae__colistin	scm	mlst_in_cohort	no ST	1	4	0	1	1	3	0	0
+klebsiella_pneumoniae__colistin	scm	mlst_in_cohort	yes	67	26	25	42	3	23	0	0
+klebsiella_pneumoniae__colistin	cart	bioproject	PRJEB29739	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__colistin	cart	bioproject	PRJEB36683	77	55	35	42	20	35	0	0
+klebsiella_pneumoniae__colistin	cart	bioproject	PRJEB80567	27	0	10	17	0	0	0	0
+klebsiella_pneumoniae__colistin	cart	bioproject	PRJNA1223317	2	1	0	2	0	1	0	0
+klebsiella_pneumoniae__colistin	cart	bioproject	PRJNA905193	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__colistin	cart	country	China	2	1	0	2	0	1	0	0
+klebsiella_pneumoniae__colistin	cart	country	Colombia	27	0	10	17	0	0	0	0
+klebsiella_pneumoniae__colistin	cart	country	India	2	0	2	0	0	0	0	0
+klebsiella_pneumoniae__colistin	cart	country	Nigeria	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__colistin	cart	country	Saudi Arabia	77	55	35	42	20	35	0	0
+klebsiella_pneumoniae__colistin	cart	mlst_in_cohort	no	40	29	22	18	17	12	0	0
+klebsiella_pneumoniae__colistin	cart	mlst_in_cohort	no ST	1	4	0	1	1	3	0	0
+klebsiella_pneumoniae__colistin	cart	mlst_in_cohort	yes	67	26	25	42	2	24	0	0
+klebsiella_pneumoniae__colistin	lasso	bioproject	PRJEB29739	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__colistin	lasso	bioproject	PRJEB36683	77	55	27	50	15	40	0	0
+klebsiella_pneumoniae__colistin	lasso	bioproject	PRJEB80567	27	0	9	18	0	0	0	0
+klebsiella_pneumoniae__colistin	lasso	bioproject	PRJNA1223317	2	1	0	2	0	1	0	0
+klebsiella_pneumoniae__colistin	lasso	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__colistin	lasso	country	China	2	1	0	2	0	1	0	0
+klebsiella_pneumoniae__colistin	lasso	country	Colombia	27	0	9	18	0	0	0	0
+klebsiella_pneumoniae__colistin	lasso	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__colistin	lasso	country	Nigeria	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__colistin	lasso	country	Saudi Arabia	77	55	27	50	15	40	0	0
+klebsiella_pneumoniae__colistin	lasso	mlst_in_cohort	no	40	29	21	19	13	16	0	0
+klebsiella_pneumoniae__colistin	lasso	mlst_in_cohort	no ST	1	4	0	1	1	3	0	0
+klebsiella_pneumoniae__colistin	lasso	mlst_in_cohort	yes	67	26	15	52	1	25	0	0
+klebsiella_pneumoniae__colistin	known_gene	bioproject	PRJEB29739	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__colistin	known_gene	bioproject	PRJEB36683	77	55	1	76	0	55	0	0
+klebsiella_pneumoniae__colistin	known_gene	bioproject	PRJEB80567	27	0	0	27	0	0	0	0
+klebsiella_pneumoniae__colistin	known_gene	bioproject	PRJNA1223317	2	1	2	0	0	1	0	0
+klebsiella_pneumoniae__colistin	known_gene	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__colistin	known_gene	country	China	2	1	2	0	0	1	0	0
+klebsiella_pneumoniae__colistin	known_gene	country	Colombia	27	0	0	27	0	0	0	0
+klebsiella_pneumoniae__colistin	known_gene	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__colistin	known_gene	country	Nigeria	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__colistin	known_gene	country	Saudi Arabia	77	55	1	76	0	55	0	0
+klebsiella_pneumoniae__colistin	known_gene	mlst_in_cohort	no	40	29	1	39	0	29	0	0
+klebsiella_pneumoniae__colistin	known_gene	mlst_in_cohort	no ST	1	4	0	1	0	4	0	0
+klebsiella_pneumoniae__colistin	known_gene	mlst_in_cohort	yes	67	26	2	65	0	26	0	0
+klebsiella_pneumoniae__doripenem	scm	bioproject	PRJEB80567	145	175	116	29	101	74	0	0
+klebsiella_pneumoniae__doripenem	scm	country	Colombia	145	175	116	29	101	74	0	0
+klebsiella_pneumoniae__doripenem	scm	mlst_in_cohort	no	28	55	19	9	30	25	0	0
+klebsiella_pneumoniae__doripenem	scm	mlst_in_cohort	no ST	4	19	3	1	10	9	0	0
+klebsiella_pneumoniae__doripenem	scm	mlst_in_cohort	yes	113	101	94	19	61	40	0	0
+klebsiella_pneumoniae__doripenem	cart	bioproject	PRJEB80567	145	175	75	70	47	128	0	0
+klebsiella_pneumoniae__doripenem	cart	country	Colombia	145	175	75	70	47	128	0	0
+klebsiella_pneumoniae__doripenem	cart	mlst_in_cohort	no	28	55	7	21	20	35	0	0
+klebsiella_pneumoniae__doripenem	cart	mlst_in_cohort	no ST	4	19	4	0	5	14	0	0
+klebsiella_pneumoniae__doripenem	cart	mlst_in_cohort	yes	113	101	64	49	22	79	0	0
+klebsiella_pneumoniae__doripenem	lasso	bioproject	PRJEB80567	145	175	111	34	74	101	0	0
+klebsiella_pneumoniae__doripenem	lasso	country	Colombia	145	175	111	34	74	101	0	0
+klebsiella_pneumoniae__doripenem	lasso	mlst_in_cohort	no	28	55	18	10	17	38	0	0
+klebsiella_pneumoniae__doripenem	lasso	mlst_in_cohort	no ST	4	19	3	1	9	10	0	0
+klebsiella_pneumoniae__doripenem	lasso	mlst_in_cohort	yes	113	101	90	23	48	53	0	0
+klebsiella_pneumoniae__doripenem	known_gene	bioproject	PRJEB80567	145	175	139	6	5	170	0	0
+klebsiella_pneumoniae__doripenem	known_gene	country	Colombia	145	175	139	6	5	170	0	0
+klebsiella_pneumoniae__doripenem	known_gene	mlst_in_cohort	no	28	55	27	1	1	54	0	0
+klebsiella_pneumoniae__doripenem	known_gene	mlst_in_cohort	no ST	4	19	4	0	0	19	0	0
+klebsiella_pneumoniae__doripenem	known_gene	mlst_in_cohort	yes	113	101	108	5	4	97	0	0
+klebsiella_pneumoniae__ertapenem	scm	bioproject	PRJEB29739	10	114	8	2	1	113	0	0
+klebsiella_pneumoniae__ertapenem	scm	bioproject	PRJEB29742	409	1	303	106	0	1	0	0
+klebsiella_pneumoniae__ertapenem	scm	bioproject	PRJEB80567	146	181	116	30	1	180	0	0
+klebsiella_pneumoniae__ertapenem	scm	bioproject	PRJNA1054115	1	129	0	1	0	129	0	0
+klebsiella_pneumoniae__ertapenem	scm	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ertapenem	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ertapenem	scm	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ertapenem	scm	country	Colombia	555	182	419	136	1	181	0	0
+klebsiella_pneumoniae__ertapenem	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ertapenem	scm	country	Nigeria	10	114	8	2	1	113	0	0
+klebsiella_pneumoniae__ertapenem	scm	country	USA	1	129	0	1	0	129	0	0
+klebsiella_pneumoniae__ertapenem	scm	mlst_in_cohort	no	72	135	47	25	0	135	0	0
+klebsiella_pneumoniae__ertapenem	scm	mlst_in_cohort	no ST	5	34	3	2	0	34	0	0
+klebsiella_pneumoniae__ertapenem	scm	mlst_in_cohort	yes	493	259	381	112	2	257	0	0
+klebsiella_pneumoniae__ertapenem	cart	bioproject	PRJEB29739	10	114	9	1	102	12	0	0
+klebsiella_pneumoniae__ertapenem	cart	bioproject	PRJEB29742	409	1	376	33	1	0	0	0
+klebsiella_pneumoniae__ertapenem	cart	bioproject	PRJEB80567	146	181	143	3	156	25	0	0
+klebsiella_pneumoniae__ertapenem	cart	bioproject	PRJNA1054115	1	129	1	0	115	14	0	0
+klebsiella_pneumoniae__ertapenem	cart	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ertapenem	cart	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ertapenem	cart	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ertapenem	cart	country	Colombia	555	182	519	36	157	25	0	0
+klebsiella_pneumoniae__ertapenem	cart	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ertapenem	cart	country	Nigeria	10	114	9	1	102	12	0	0
+klebsiella_pneumoniae__ertapenem	cart	country	USA	1	129	1	0	115	14	0	0
+klebsiella_pneumoniae__ertapenem	cart	mlst_in_cohort	no	72	135	71	1	108	27	0	0
+klebsiella_pneumoniae__ertapenem	cart	mlst_in_cohort	no ST	5	34	5	0	28	6	0	0
+klebsiella_pneumoniae__ertapenem	cart	mlst_in_cohort	yes	493	259	457	36	238	21	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	bioproject	PRJEB29739	10	114	8	2	1	113	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	bioproject	PRJEB29742	409	1	373	36	1	0	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	bioproject	PRJEB80567	146	181	140	6	9	172	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	bioproject	PRJNA1054115	1	129	0	1	0	129	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	country	Colombia	555	182	513	42	10	172	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	country	Nigeria	10	114	8	2	1	113	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	country	USA	1	129	0	1	0	129	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	mlst_in_cohort	no	72	135	60	12	4	131	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	mlst_in_cohort	no ST	5	34	5	0	0	34	0	0
+klebsiella_pneumoniae__ertapenem	known_gene	mlst_in_cohort	yes	493	259	460	33	7	252	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJEB29739	97	30	90	7	5	25	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJEB29742	233	148	197	36	15	133	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJEB35084	17	7	16	1	2	5	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJEB36683	193	115	129	64	57	58	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJEB58216	79	130	47	32	2	128	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJEB66182	206	135	163	43	48	87	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJEB80567	64	252	60	4	4	248	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJNA1052100	38	24	10	28	10	14	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJNA1054115	1	129	1	0	0	129	0	0
+klebsiella_pneumoniae__gentamicin	scm	bioproject	PRJNA613441	3	1	3	0	0	1	0	0
+klebsiella_pneumoniae__gentamicin	scm	country	Colombia	297	400	257	40	19	381	0	0
+klebsiella_pneumoniae__gentamicin	scm	country	Ghana	38	24	10	28	10	14	0	0
+klebsiella_pneumoniae__gentamicin	scm	country	Greece	79	130	47	32	2	128	0	0
+klebsiella_pneumoniae__gentamicin	scm	country	Lebanon	3	1	3	0	0	1	0	0
+klebsiella_pneumoniae__gentamicin	scm	country	Nigeria	97	30	90	7	5	25	0	0
+klebsiella_pneumoniae__gentamicin	scm	country	Portugal	17	7	16	1	2	5	0	0
+klebsiella_pneumoniae__gentamicin	scm	country	Saudi Arabia	399	250	292	107	105	145	0	0
+klebsiella_pneumoniae__gentamicin	scm	country	USA	1	129	1	0	0	129	0	0
+klebsiella_pneumoniae__gentamicin	scm	mlst_in_cohort	no	235	254	206	29	61	193	0	0
+klebsiella_pneumoniae__gentamicin	scm	mlst_in_cohort	no ST	23	47	19	4	2	45	0	0
+klebsiella_pneumoniae__gentamicin	scm	mlst_in_cohort	yes	673	670	491	182	80	590	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJEB29739	97	30	78	19	4	26	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJEB29742	233	148	179	54	14	134	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJEB35084	17	7	16	1	2	5	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJEB36683	193	115	129	64	55	60	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJEB58216	79	130	35	44	1	129	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJEB66182	206	135	155	51	48	87	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJEB80567	64	252	55	9	4	248	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJNA1052100	38	24	9	29	9	15	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJNA1054115	1	129	0	1	0	129	0	0
+klebsiella_pneumoniae__gentamicin	cart	bioproject	PRJNA613441	3	1	3	0	0	1	0	0
+klebsiella_pneumoniae__gentamicin	cart	country	Colombia	297	400	234	63	18	382	0	0
+klebsiella_pneumoniae__gentamicin	cart	country	Ghana	38	24	9	29	9	15	0	0
+klebsiella_pneumoniae__gentamicin	cart	country	Greece	79	130	35	44	1	129	0	0
+klebsiella_pneumoniae__gentamicin	cart	country	Lebanon	3	1	3	0	0	1	0	0
+klebsiella_pneumoniae__gentamicin	cart	country	Nigeria	97	30	78	19	4	26	0	0
+klebsiella_pneumoniae__gentamicin	cart	country	Portugal	17	7	16	1	2	5	0	0
+klebsiella_pneumoniae__gentamicin	cart	country	Saudi Arabia	399	250	284	115	103	147	0	0
+klebsiella_pneumoniae__gentamicin	cart	country	USA	1	129	0	1	0	129	0	0
+klebsiella_pneumoniae__gentamicin	cart	mlst_in_cohort	no	235	254	200	35	59	195	0	0
+klebsiella_pneumoniae__gentamicin	cart	mlst_in_cohort	no ST	23	47	19	4	2	45	0	0
+klebsiella_pneumoniae__gentamicin	cart	mlst_in_cohort	yes	673	670	440	233	76	594	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJEB29739	97	30	91	6	5	25	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJEB29742	233	148	223	10	41	107	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJEB35084	17	7	17	0	2	5	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJEB36683	193	115	138	55	55	60	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJEB58216	79	130	62	17	6	124	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJEB66182	206	135	199	7	44	91	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJEB80567	64	252	63	1	7	245	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJNA1052100	38	24	25	13	16	8	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJNA1054115	1	129	1	0	0	129	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	bioproject	PRJNA613441	3	1	3	0	1	0	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	country	Colombia	297	400	286	11	48	352	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	country	Ghana	38	24	25	13	16	8	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	country	Greece	79	130	62	17	6	124	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	country	Lebanon	3	1	3	0	1	0	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	country	Nigeria	97	30	91	6	5	25	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	country	Portugal	17	7	17	0	2	5	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	country	Saudi Arabia	399	250	337	62	99	151	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	country	USA	1	129	1	0	0	129	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	mlst_in_cohort	no	235	254	210	25	63	191	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	mlst_in_cohort	no ST	23	47	19	4	2	45	0	0
+klebsiella_pneumoniae__gentamicin	known_gene	mlst_in_cohort	yes	673	670	593	80	112	558	0	0
+klebsiella_pneumoniae__imipenem	scm	bioproject	PRJEB29739	8	117	7	1	2	115	0	0
+klebsiella_pneumoniae__imipenem	scm	bioproject	PRJEB29742	361	30	351	10	4	26	0	0
+klebsiella_pneumoniae__imipenem	scm	bioproject	PRJEB35084	2	22	2	0	0	22	0	0
+klebsiella_pneumoniae__imipenem	scm	bioproject	PRJEB36683	196	34	96	100	8	26	0	0
+klebsiella_pneumoniae__imipenem	scm	bioproject	PRJEB66182	190	114	155	35	61	53	0	0
+klebsiella_pneumoniae__imipenem	scm	bioproject	PRJEB80567	124	195	98	26	48	147	0	0
+klebsiella_pneumoniae__imipenem	scm	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__imipenem	scm	country	Colombia	485	225	449	36	52	173	0	0
+klebsiella_pneumoniae__imipenem	scm	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__imipenem	scm	country	Nigeria	8	117	7	1	2	115	0	0
+klebsiella_pneumoniae__imipenem	scm	country	Portugal	2	22	2	0	0	22	0	0
+klebsiella_pneumoniae__imipenem	scm	country	Saudi Arabia	386	148	251	135	69	79	0	0
+klebsiella_pneumoniae__imipenem	scm	mlst_in_cohort	no	185	176	122	63	63	113	0	0
+klebsiella_pneumoniae__imipenem	scm	mlst_in_cohort	no ST	18	28	11	7	8	20	0	0
+klebsiella_pneumoniae__imipenem	scm	mlst_in_cohort	yes	680	308	576	104	52	256	0	0
+klebsiella_pneumoniae__imipenem	cart	bioproject	PRJEB29739	8	117	7	1	3	114	0	0
+klebsiella_pneumoniae__imipenem	cart	bioproject	PRJEB29742	361	30	343	18	4	26	0	0
+klebsiella_pneumoniae__imipenem	cart	bioproject	PRJEB35084	2	22	2	0	0	22	0	0
+klebsiella_pneumoniae__imipenem	cart	bioproject	PRJEB36683	196	34	142	54	12	22	0	0
+klebsiella_pneumoniae__imipenem	cart	bioproject	PRJEB66182	190	114	185	5	74	40	0	0
+klebsiella_pneumoniae__imipenem	cart	bioproject	PRJEB80567	124	195	93	31	48	147	0	0
+klebsiella_pneumoniae__imipenem	cart	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__imipenem	cart	country	Colombia	485	225	436	49	52	173	0	0
+klebsiella_pneumoniae__imipenem	cart	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__imipenem	cart	country	Nigeria	8	117	7	1	3	114	0	0
+klebsiella_pneumoniae__imipenem	cart	country	Portugal	2	22	2	0	0	22	0	0
+klebsiella_pneumoniae__imipenem	cart	country	Saudi Arabia	386	148	327	59	86	62	0	0
+klebsiella_pneumoniae__imipenem	cart	mlst_in_cohort	no	185	176	146	39	67	109	0	0
+klebsiella_pneumoniae__imipenem	cart	mlst_in_cohort	no ST	18	28	13	5	9	19	0	0
+klebsiella_pneumoniae__imipenem	cart	mlst_in_cohort	yes	680	308	613	67	65	243	0	0
+klebsiella_pneumoniae__imipenem	known_gene	bioproject	PRJEB29739	8	117	7	1	3	114	0	0
+klebsiella_pneumoniae__imipenem	known_gene	bioproject	PRJEB29742	361	30	357	4	4	26	0	0
+klebsiella_pneumoniae__imipenem	known_gene	bioproject	PRJEB35084	2	22	2	0	0	22	0	0
+klebsiella_pneumoniae__imipenem	known_gene	bioproject	PRJEB36683	196	34	144	52	12	22	0	0
+klebsiella_pneumoniae__imipenem	known_gene	bioproject	PRJEB66182	190	114	187	3	73	41	0	0
+klebsiella_pneumoniae__imipenem	known_gene	bioproject	PRJEB80567	124	195	97	27	46	149	0	0
+klebsiella_pneumoniae__imipenem	known_gene	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__imipenem	known_gene	country	Colombia	485	225	454	31	50	175	0	0
+klebsiella_pneumoniae__imipenem	known_gene	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__imipenem	known_gene	country	Nigeria	8	117	7	1	3	114	0	0
+klebsiella_pneumoniae__imipenem	known_gene	country	Portugal	2	22	2	0	0	22	0	0
+klebsiella_pneumoniae__imipenem	known_gene	country	Saudi Arabia	386	148	331	55	85	63	0	0
+klebsiella_pneumoniae__imipenem	known_gene	mlst_in_cohort	no	185	176	150	35	66	110	0	0
+klebsiella_pneumoniae__imipenem	known_gene	mlst_in_cohort	no ST	18	28	13	5	9	19	0	0
+klebsiella_pneumoniae__imipenem	known_gene	mlst_in_cohort	yes	680	308	631	49	63	245	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJEB29739	10	117	8	2	2	115	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJEB29742	379	4	309	70	0	4	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJEB36683	227	33	67	160	7	26	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJEB66182	290	49	145	145	5	44	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJEB80567	155	172	120	35	2	170	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJNA1052100	7	57	5	2	32	25	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJNA1054115	0	130	0	0	0	130	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__meropenem	scm	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__meropenem	scm	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__meropenem	scm	country	Colombia	534	176	429	105	2	174	0	0
+klebsiella_pneumoniae__meropenem	scm	country	Ghana	7	57	5	2	32	25	0	0
+klebsiella_pneumoniae__meropenem	scm	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__meropenem	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__meropenem	scm	country	Nigeria	10	117	8	2	2	115	0	0
+klebsiella_pneumoniae__meropenem	scm	country	Saudi Arabia	517	82	212	305	12	70	0	0
+klebsiella_pneumoniae__meropenem	scm	country	USA	0	130	0	0	0	130	0	0
+klebsiella_pneumoniae__meropenem	scm	mlst_in_cohort	no	277	180	76	201	6	174	0	0
+klebsiella_pneumoniae__meropenem	scm	mlst_in_cohort	no ST	26	37	14	12	2	35	0	0
+klebsiella_pneumoniae__meropenem	scm	mlst_in_cohort	yes	771	348	568	203	40	308	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJEB29739	10	117	8	2	4	113	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJEB29742	379	4	299	80	2	2	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJEB36683	227	33	69	158	6	27	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJEB66182	290	49	152	138	4	45	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJEB80567	155	172	112	43	2	170	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJNA1052100	7	57	5	2	35	22	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJNA1054115	0	130	0	0	0	130	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__meropenem	cart	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__meropenem	cart	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__meropenem	cart	country	Colombia	534	176	411	123	4	172	0	0
+klebsiella_pneumoniae__meropenem	cart	country	Ghana	7	57	5	2	35	22	0	0
+klebsiella_pneumoniae__meropenem	cart	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__meropenem	cart	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__meropenem	cart	country	Nigeria	10	117	8	2	4	113	0	0
+klebsiella_pneumoniae__meropenem	cart	country	Saudi Arabia	517	82	221	296	10	72	0	0
+klebsiella_pneumoniae__meropenem	cart	country	USA	0	130	0	0	0	130	0	0
+klebsiella_pneumoniae__meropenem	cart	mlst_in_cohort	no	277	180	50	227	4	176	0	0
+klebsiella_pneumoniae__meropenem	cart	mlst_in_cohort	no ST	26	37	15	11	0	37	0	0
+klebsiella_pneumoniae__meropenem	cart	mlst_in_cohort	yes	771	348	584	187	49	299	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJEB29739	10	117	8	2	3	114	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJEB29742	379	4	359	20	1	3	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJEB36683	227	33	170	57	16	17	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJEB66182	290	49	279	11	7	42	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJEB80567	155	172	148	7	1	171	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJNA1052100	7	57	4	3	35	22	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJNA1054115	0	130	0	0	0	130	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJNA1223317	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__meropenem	known_gene	bioproject	PRJNA905193	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__meropenem	known_gene	country	China	0	3	0	0	0	3	0	0
+klebsiella_pneumoniae__meropenem	known_gene	country	Colombia	534	176	507	27	2	174	0	0
+klebsiella_pneumoniae__meropenem	known_gene	country	Ghana	7	57	4	3	35	22	0	0
+klebsiella_pneumoniae__meropenem	known_gene	country	India	2	0	0	2	0	0	0	0
+klebsiella_pneumoniae__meropenem	known_gene	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__meropenem	known_gene	country	Nigeria	10	117	8	2	3	114	0	0
+klebsiella_pneumoniae__meropenem	known_gene	country	Saudi Arabia	517	82	449	68	23	59	0	0
+klebsiella_pneumoniae__meropenem	known_gene	country	USA	0	130	0	0	0	130	0	0
+klebsiella_pneumoniae__meropenem	known_gene	mlst_in_cohort	no	277	180	244	33	15	165	0	0
+klebsiella_pneumoniae__meropenem	known_gene	mlst_in_cohort	no ST	26	37	22	4	1	36	0	0
+klebsiella_pneumoniae__meropenem	known_gene	mlst_in_cohort	yes	771	348	706	65	47	301	0	0
+klebsiella_pneumoniae__nitrofurantoin	scm	bioproject	PRJEB29739	47	16	41	6	7	9	0	0
+klebsiella_pneumoniae__nitrofurantoin	scm	bioproject	PRJEB66182	307	13	293	14	7	6	0	0
+klebsiella_pneumoniae__nitrofurantoin	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__nitrofurantoin	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__nitrofurantoin	scm	country	Nigeria	47	16	41	6	7	9	0	0
+klebsiella_pneumoniae__nitrofurantoin	scm	country	Saudi Arabia	307	13	293	14	7	6	0	0
+klebsiella_pneumoniae__nitrofurantoin	scm	mlst_in_cohort	no	122	7	115	7	0	7	0	0
+klebsiella_pneumoniae__nitrofurantoin	scm	mlst_in_cohort	no ST	19	0	18	1	0	0	0	0
+klebsiella_pneumoniae__nitrofurantoin	scm	mlst_in_cohort	yes	217	22	205	12	14	8	0	0
+klebsiella_pneumoniae__nitrofurantoin	cart	bioproject	PRJEB29739	47	16	41	6	6	10	0	0
+klebsiella_pneumoniae__nitrofurantoin	cart	bioproject	PRJEB66182	307	13	290	17	7	6	0	0
+klebsiella_pneumoniae__nitrofurantoin	cart	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__nitrofurantoin	cart	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__nitrofurantoin	cart	country	Nigeria	47	16	41	6	6	10	0	0
+klebsiella_pneumoniae__nitrofurantoin	cart	country	Saudi Arabia	307	13	290	17	7	6	0	0
+klebsiella_pneumoniae__nitrofurantoin	cart	mlst_in_cohort	no	122	7	115	7	0	7	0	0
+klebsiella_pneumoniae__nitrofurantoin	cart	mlst_in_cohort	no ST	19	0	18	1	0	0	0	0
+klebsiella_pneumoniae__nitrofurantoin	cart	mlst_in_cohort	yes	217	22	202	15	13	9	0	0
+klebsiella_pneumoniae__nitrofurantoin	known_gene	bioproject	PRJEB29739	47	16	6	41	0	16	0	0
+klebsiella_pneumoniae__nitrofurantoin	known_gene	bioproject	PRJEB66182	307	13	24	283	0	13	0	0
+klebsiella_pneumoniae__nitrofurantoin	known_gene	bioproject	PRJNA613441	4	0	0	4	0	0	0	0
+klebsiella_pneumoniae__nitrofurantoin	known_gene	country	Lebanon	4	0	0	4	0	0	0	0
+klebsiella_pneumoniae__nitrofurantoin	known_gene	country	Nigeria	47	16	6	41	0	16	0	0
+klebsiella_pneumoniae__nitrofurantoin	known_gene	country	Saudi Arabia	307	13	24	283	0	13	0	0
+klebsiella_pneumoniae__nitrofurantoin	known_gene	mlst_in_cohort	no	122	7	3	119	0	7	0	0
+klebsiella_pneumoniae__nitrofurantoin	known_gene	mlst_in_cohort	no ST	19	0	0	19	0	0	0	0
+klebsiella_pneumoniae__nitrofurantoin	known_gene	mlst_in_cohort	yes	217	22	27	190	0	22	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	bioproject	PRJEB29739	37	71	21	16	5	66	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	bioproject	PRJEB36683	241	18	169	72	2	16	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	bioproject	PRJEB66182	325	16	295	30	1	15	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	bioproject	PRJNA1054115	3	124	0	3	0	124	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	country	Nigeria	37	71	21	16	5	66	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	country	Saudi Arabia	566	34	464	102	3	31	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	country	USA	3	124	0	3	0	124	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	mlst_in_cohort	no	236	82	190	46	2	80	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	mlst_in_cohort	no ST	27	17	20	7	0	17	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	scm	mlst_in_cohort	yes	347	130	279	68	6	124	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	bioproject	PRJEB29739	37	71	32	5	53	18	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	bioproject	PRJEB36683	241	18	224	17	10	8	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	bioproject	PRJEB66182	325	16	317	8	11	5	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	bioproject	PRJNA1054115	3	124	3	0	68	56	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	bioproject	PRJNA613441	4	0	3	1	0	0	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	country	Lebanon	4	0	3	1	0	0	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	country	Nigeria	37	71	32	5	53	18	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	country	Saudi Arabia	566	34	541	25	21	13	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	country	USA	3	124	3	0	68	56	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	mlst_in_cohort	no	236	82	231	5	49	33	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	mlst_in_cohort	no ST	27	17	25	2	6	11	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	cart	mlst_in_cohort	yes	347	130	323	24	87	43	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	bioproject	PRJEB29739	37	71	37	0	53	18	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	bioproject	PRJEB36683	241	18	226	15	7	11	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	bioproject	PRJEB66182	325	16	323	2	15	1	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	bioproject	PRJNA1054115	3	124	1	2	35	89	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	bioproject	PRJNA613441	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	country	Lebanon	4	0	4	0	0	0	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	country	Nigeria	37	71	37	0	53	18	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	country	Saudi Arabia	566	34	549	17	22	12	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	country	USA	3	124	1	2	35	89	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	mlst_in_cohort	no	236	82	232	4	36	46	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	mlst_in_cohort	no ST	27	17	24	3	4	13	0	0
+klebsiella_pneumoniae__piperacillin_tazobactam	known_gene	mlst_in_cohort	yes	347	130	335	12	70	60	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJEB29739	125	0	104	21	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJEB29742	347	53	303	44	22	31	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJEB36683	245	35	202	43	19	16	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJEB58216	187	22	179	8	7	15	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJEB66182	262	86	245	17	44	42	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA1052100	55	9	32	23	6	3	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA1054115	12	118	10	2	0	118	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA1223317	3	0	3	0	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA613441	4	0	3	1	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	China	3	0	3	0	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	Colombia	347	53	303	44	22	31	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	Ghana	55	9	32	23	6	3	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	Greece	187	22	179	8	7	15	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	Lebanon	4	0	3	1	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	Nigeria	125	0	104	21	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	Saudi Arabia	507	121	447	60	63	58	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	USA	12	118	10	2	0	118	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no	304	86	270	34	28	58	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no ST	25	19	21	4	5	14	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	yes	911	218	790	121	65	153	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJEB29739	125	0	101	24	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJEB29742	347	53	295	52	20	33	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJEB36683	245	35	222	23	18	17	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJEB58216	187	22	149	38	6	16	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJEB66182	262	86	229	33	52	34	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA1052100	55	9	41	14	6	3	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA1054115	12	118	10	2	0	118	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA1223317	3	0	3	0	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA613441	4	0	2	2	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	China	3	0	3	0	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	Colombia	347	53	295	52	20	33	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	Ghana	55	9	41	14	6	3	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	Greece	187	22	149	38	6	16	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	Lebanon	4	0	2	2	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	Nigeria	125	0	101	24	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	Saudi Arabia	507	121	451	56	70	51	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	USA	12	118	10	2	0	118	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no	304	86	270	34	33	53	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no ST	25	19	7	18	4	15	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	yes	911	218	775	136	65	153	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJEB29739	125	0	107	18	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJEB29742	347	53	311	36	6	47	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJEB36683	245	35	189	56	19	16	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJEB58216	187	22	169	18	1	21	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJEB66182	262	86	245	17	22	64	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA1052100	55	9	27	28	3	6	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA1054115	12	118	11	1	1	117	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA1223317	3	0	3	0	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA613441	4	0	2	2	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	China	3	0	3	0	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	Colombia	347	53	311	36	6	47	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	Ghana	55	9	27	28	3	6	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	Greece	187	22	169	18	1	21	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	Lebanon	4	0	2	2	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	Nigeria	125	0	107	18	0	0	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	Saudi Arabia	507	121	434	73	41	80	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	USA	12	118	11	1	1	117	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no	304	86	268	36	18	68	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no ST	25	19	19	6	1	18	0	0
+klebsiella_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	yes	911	218	777	134	33	185	0	0
+klebsiella_pneumoniae__tigecycline	scm	bioproject	PRJEB36683	125	75	123	2	74	1	0	0
+klebsiella_pneumoniae__tigecycline	scm	bioproject	PRJEB66182	57	161	57	0	160	1	0	0
+klebsiella_pneumoniae__tigecycline	scm	bioproject	PRJEB80567	33	272	30	3	255	17	0	0
+klebsiella_pneumoniae__tigecycline	scm	bioproject	PRJNA613441	3	1	3	0	1	0	0	0
+klebsiella_pneumoniae__tigecycline	scm	country	Colombia	33	272	30	3	255	17	0	0
+klebsiella_pneumoniae__tigecycline	scm	country	Lebanon	3	1	3	0	1	0	0	0
+klebsiella_pneumoniae__tigecycline	scm	country	Saudi Arabia	182	236	180	2	234	2	0	0
+klebsiella_pneumoniae__tigecycline	scm	mlst_in_cohort	no	100	153	98	2	138	15	0	0
+klebsiella_pneumoniae__tigecycline	scm	mlst_in_cohort	no ST	6	32	6	0	30	2	0	0
+klebsiella_pneumoniae__tigecycline	scm	mlst_in_cohort	yes	112	324	109	3	322	2	0	0
+klebsiella_pneumoniae__tigecycline	cart	bioproject	PRJEB36683	125	75	98	27	60	15	0	0
+klebsiella_pneumoniae__tigecycline	cart	bioproject	PRJEB66182	57	161	34	23	103	58	0	0
+klebsiella_pneumoniae__tigecycline	cart	bioproject	PRJEB80567	33	272	21	12	164	108	0	0
+klebsiella_pneumoniae__tigecycline	cart	bioproject	PRJNA613441	3	1	1	2	0	1	0	0
+klebsiella_pneumoniae__tigecycline	cart	country	Colombia	33	272	21	12	164	108	0	0
+klebsiella_pneumoniae__tigecycline	cart	country	Lebanon	3	1	1	2	0	1	0	0
+klebsiella_pneumoniae__tigecycline	cart	country	Saudi Arabia	182	236	132	50	163	73	0	0
+klebsiella_pneumoniae__tigecycline	cart	mlst_in_cohort	no	100	153	85	15	105	48	0	0
+klebsiella_pneumoniae__tigecycline	cart	mlst_in_cohort	no ST	6	32	2	4	20	12	0	0
+klebsiella_pneumoniae__tigecycline	cart	mlst_in_cohort	yes	112	324	67	45	202	122	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	bioproject	PRJEB36683	125	75	3	122	10	65	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	bioproject	PRJEB66182	57	161	0	57	24	137	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	bioproject	PRJEB80567	33	272	5	28	76	196	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	bioproject	PRJNA613441	3	1	0	3	0	1	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	country	Colombia	33	272	5	28	76	196	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	country	Lebanon	3	1	0	3	0	1	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	country	Saudi Arabia	182	236	3	179	34	202	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	mlst_in_cohort	no	100	153	1	99	7	146	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	mlst_in_cohort	no ST	6	32	1	5	5	27	0	0
+klebsiella_pneumoniae__tigecycline	known_gene	mlst_in_cohort	yes	112	324	6	106	98	226	0	0
