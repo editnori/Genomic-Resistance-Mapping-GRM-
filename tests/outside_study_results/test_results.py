@@ -212,6 +212,19 @@ class Tables(unittest.TestCase):
         self.assertTrue(T.calls_one_way(row))
         self.assertTrue(T.calls_one_way(dict(row, tp="30", fn="0", fp="40", tn="0")))
         self.assertFalse(T.calls_one_way(dict(row, tp="1", fn="29")))
+        # The kit flags a row when a lineage-split or a random-split figure is at 0 or 1.
+        # A reading uses the lineage-split figure only, so each row counted here is one the kit flags.
+        flagged = counted = 0
+        for run in runs():
+            for r in tsv(run / "metrics.tsv"):
+                if T.holds(r) is None:
+                    continue
+                flagged += r["reference_at_0_or_1"] == "yes"
+                if T.at_the_edge(r):
+                    counted += 1
+                    self.assertEqual(r["reference_at_0_or_1"], "yes", (run, r["dataset"], r["learner"]))
+        self.assertGreater(counted, 0)
+        self.assertGreaterEqual(flagged, counted)
 
     def test_a_cited_row_that_is_missing_is_refused(self):
         data = T.load(RESULTS)

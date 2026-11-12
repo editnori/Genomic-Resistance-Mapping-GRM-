@@ -169,7 +169,10 @@ def different_majority_studies(d):
 
 
 def at_the_edge(r):
-    """A row whose report figure is exactly 0% or 100% on a measure. There a reading can go one way only."""
+    """A row whose report figure is exactly 0% or 100% on a measure. There a reading can go one way only.
+
+    This is the figure a reading uses, `lineage_*`. The kit's `reference_at_0_or_1`
+    column is wider: it also flags a random-split figure at 0 or 1, which no reading uses."""
     return any(float(r["lineage_" + k]) in (0.0, 1.0) for k in ("sensitivity", "specificity"))
 
 
