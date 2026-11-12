@@ -1,0 +1,14 @@
+dataset	labelled_resistant	labelled_susceptible	excluded_no_sequence	excluded_species_check_failed	excluded_not_counted	scored_resistant	scored_susceptible	scored_borderline	reportable	lasso_complete	known_gene	top_study_resistant	top_study_resistant_count	top_study_resistant_share	top_study_susceptible	top_study_susceptible_count	top_study_susceptible_share	studies	loso_folds_reportable	top_study_resistant_fold_reportable	top_study_susceptible_fold_reportable	studies_not_left_out	scored_no_bioproject	top_study_resistant_tied	top_study_susceptible_tied
+escherichia_coli__aztreonam	40	45	0	0	0	40	45	8	yes	no	scored	PRJNA288601	40	1.000000	PRJNA288601	45	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__cefazolin	56	25	0	0	0	56	25	8	yes	yes	scored	PRJNA288601	56	1.000000	PRJNA288601	25	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__cefepime	29	58	0	0	0	29	58	8	yes	no	scored	PRJNA288601	29	1.000000	PRJNA288601	58	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__cefotaxime	45	42	0	0	0	45	42	8	yes	no	scored	PRJNA288601	45	1.000000	PRJNA288601	42	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__cefoxitin	28	54	0	0	0	28	54	7	yes	no	scored	PRJNA288601	28	1.000000	PRJNA288601	54	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__ceftazidime	36	48	0	0	0	36	48	8	yes	no	scored	PRJNA288601	36	1.000000	PRJNA288601	48	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__ceftriaxone	45	42	0	0	0	45	42	8	yes	no	scored	PRJNA288601	45	1.000000	PRJNA288601	42	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__ciprofloxacin	51	33	0	0	0	51	33	8	yes	no	scored	PRJNA288601	51	1.000000	PRJNA288601	33	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__ertapenem	31	56	0	0	0	31	56	8	yes	no	scored	PRJNA288601	31	1.000000	PRJNA288601	56	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__levofloxacin	50	34	0	0	0	50	34	8	yes	yes	scored	PRJNA288601	50	1.000000	PRJNA288601	34	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__piperacillin_tazobactam	32	52	0	0	0	32	52	8	yes	no	scored	PRJNA288601	32	1.000000	PRJNA288601	52	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__sulfamethoxazole_trimethoprim	48	39	0	0	0	48	39	8	yes	no	scored	PRJNA288601	48	1.000000	PRJNA288601	39	1.000000	1	0	no	no	PRJNA288601	0		
+escherichia_coli__tetracycline	43	40	0	0	0	43	40	8	yes	no	scored	PRJNA288601	43	1.000000	PRJNA288601	40	1.000000	1	0	no	no	PRJNA288601	0		

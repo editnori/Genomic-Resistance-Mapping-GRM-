@@ -1,0 +1,59 @@
+dataset	learner	left_out	scored_resistant	scored_susceptible	reportable	tp	fn	fp	tn	no_call_resistant	no_call_susceptible	sensitivity	specificity	balanced_accuracy
+staphylococcus_aureus__ciprofloxacin	scm	PRJEB24782	252	343	yes	249	3	19	324	0	0	0.988095	0.944606	0.966351
+staphylococcus_aureus__ciprofloxacin	scm	PRJNA1050907	2	133	no	1	1	0	133	0	0			
+staphylococcus_aureus__ciprofloxacin	cart	PRJEB24782	252	343	yes	249	3	23	320	0	0	0.988095	0.932945	0.960520
+staphylococcus_aureus__ciprofloxacin	cart	PRJNA1050907	2	133	no	1	1	0	133	0	0			
+staphylococcus_aureus__ciprofloxacin	known_gene	PRJEB24782	252	343	yes	0	252	0	343	0	0	0.000000	1.000000	0.500000
+staphylococcus_aureus__ciprofloxacin	known_gene	PRJNA1050907	2	133	no	0	2	0	133	0	0			
+staphylococcus_aureus__erythromycin	scm	PRJEB24782	195	429	yes	189	6	38	391	0	0	0.969231	0.911422	0.940326
+staphylococcus_aureus__erythromycin	scm	PRJNA1050907	14	178	no	13	1	0	178	0	0			
+staphylococcus_aureus__erythromycin	scm	PRJNA819273	209	541	yes	202	7	38	503	0	0	0.966507	0.929760	0.948133
+staphylococcus_aureus__erythromycin	cart	PRJEB24782	195	429	yes	170	25	249	180	0	0	0.871795	0.419580	0.645688
+staphylococcus_aureus__erythromycin	cart	PRJNA1050907	14	178	no	13	1	1	177	0	0			
+staphylococcus_aureus__erythromycin	cart	PRJNA819273	209	541	yes	183	26	250	291	0	0	0.875598	0.537893	0.706745
+staphylococcus_aureus__erythromycin	known_gene	PRJEB24782	195	429	yes	190	5	27	402	0	0	0.974359	0.937063	0.955711
+staphylococcus_aureus__erythromycin	known_gene	PRJNA1050907	14	178	no	13	1	0	178	0	0			
+staphylococcus_aureus__erythromycin	known_gene	PRJNA819273	209	541	yes	203	6	27	514	0	0	0.971292	0.950092	0.960692
+staphylococcus_aureus__gentamicin	scm	PRJEB24782	78	494	yes	71	7	6	488	0	0	0.910256	0.987854	0.949055
+staphylococcus_aureus__gentamicin	scm	PRJNA1050907	14	163	no	13	1	0	163	0	0			
+staphylococcus_aureus__gentamicin	scm	PRJNA819273	92	591	yes	84	8	6	585	0	0	0.913043	0.989848	0.951446
+staphylococcus_aureus__gentamicin	cart	PRJEB24782	78	494	yes	71	7	5	489	0	0	0.910256	0.989879	0.950067
+staphylococcus_aureus__gentamicin	cart	PRJNA1050907	14	163	no	12	2	0	163	0	0			
+staphylococcus_aureus__gentamicin	cart	PRJNA819273	92	591	yes	83	9	5	586	0	0	0.902174	0.991540	0.946857
+staphylococcus_aureus__gentamicin	lasso	PRJEB24782	78	494	yes	71	7	5	489	0	0	0.910256	0.989879	0.950067
+staphylococcus_aureus__gentamicin	lasso	PRJNA1050907	14	163	no	13	1	0	163	0	0			
+staphylococcus_aureus__gentamicin	lasso	PRJNA819273	92	591	yes	84	8	5	586	0	0	0.913043	0.991540	0.952292
+staphylococcus_aureus__gentamicin	known_gene	PRJEB24782	78	494	yes	71	7	6	488	0	0	0.910256	0.987854	0.949055
+staphylococcus_aureus__gentamicin	known_gene	PRJNA1050907	14	163	no	13	1	0	163	0	0			
+staphylococcus_aureus__gentamicin	known_gene	PRJNA819273	92	591	yes	84	8	6	585	0	0	0.913043	0.989848	0.951446
+staphylococcus_aureus__levofloxacin	scm	PRJNA1050907	0	0	no	0	0	0	0	0	0			
+staphylococcus_aureus__levofloxacin	cart	PRJNA1050907	0	0	no	0	0	0	0	0	0			
+staphylococcus_aureus__levofloxacin	lasso	PRJNA1050907	0	0	no	0	0	0	0	0	0			
+staphylococcus_aureus__levofloxacin	known_gene	PRJNA1050907	0	0	no	0	0	0	0	0	0			
+staphylococcus_aureus__oxacillin	scm	PRJEB24782	491	55	yes	484	7	3	52	0	0	0.985743	0.945455	0.965599
+staphylococcus_aureus__oxacillin	scm	PRJNA1050907	168	34	yes	168	0	0	34	0	0	1.000000	1.000000	1.000000
+staphylococcus_aureus__oxacillin	scm	PRJNA819273	659	23	no	652	7	3	20	0	0			
+staphylococcus_aureus__oxacillin	cart	PRJEB24782	491	55	yes	484	7	3	52	0	0	0.985743	0.945455	0.965599
+staphylococcus_aureus__oxacillin	cart	PRJNA1050907	168	34	yes	168	0	0	34	0	0	1.000000	1.000000	1.000000
+staphylococcus_aureus__oxacillin	cart	PRJNA819273	659	23	no	652	7	3	20	0	0			
+staphylococcus_aureus__oxacillin	lasso	PRJEB24782	491	55	yes	484	7	3	52	0	0	0.985743	0.945455	0.965599
+staphylococcus_aureus__oxacillin	lasso	PRJNA1050907	168	34	yes	168	0	0	34	0	0	1.000000	1.000000	1.000000
+staphylococcus_aureus__oxacillin	lasso	PRJNA819273	659	23	no	652	7	3	20	0	0			
+staphylococcus_aureus__oxacillin	known_gene	PRJEB24782	491	55	yes	484	7	3	52	0	0	0.985743	0.945455	0.965599
+staphylococcus_aureus__oxacillin	known_gene	PRJNA1050907	168	34	yes	168	0	0	34	0	0	1.000000	1.000000	1.000000
+staphylococcus_aureus__oxacillin	known_gene	PRJNA819273	659	23	no	652	7	3	20	0	0			
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	scm	PRJEB24782	94	504	yes	72	22	4	500	0	0	0.765957	0.992063	0.879010
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	scm	PRJNA1050907	0	157	no	0	0	0	157	0	0			
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	cart	PRJEB24782	94	504	yes	72	22	5	499	0	0	0.765957	0.990079	0.878018
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	cart	PRJNA1050907	0	157	no	0	0	0	157	0	0			
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	known_gene	PRJEB24782	94	504	yes	0	94	0	504	0	0	0.000000	1.000000	0.500000
+staphylococcus_aureus__sulfamethoxazole_trimethoprim	known_gene	PRJNA1050907	0	157	no	0	0	0	157	0	0			
+staphylococcus_aureus__tetracycline	scm	PRJEB24782	104	526	yes	91	13	36	490	0	0	0.875000	0.931559	0.903279
+staphylococcus_aureus__tetracycline	scm	PRJNA1050907	8	126	no	6	2	2	124	0	0			
+staphylococcus_aureus__tetracycline	scm	PRJNA819273	96	602	yes	85	11	36	566	0	0	0.885417	0.940199	0.912808
+staphylococcus_aureus__tetracycline	cart	PRJEB24782	104	526	yes	88	16	21	505	0	0	0.846154	0.960076	0.903115
+staphylococcus_aureus__tetracycline	cart	PRJNA1050907	8	126	no	6	2	1	125	0	0			
+staphylococcus_aureus__tetracycline	cart	PRJNA819273	96	602	yes	82	14	20	582	0	0	0.854167	0.966777	0.910472
+staphylococcus_aureus__tetracycline	known_gene	PRJEB24782	104	526	yes	104	0	526	0	0	0	1.000000	0.000000	0.500000
+staphylococcus_aureus__tetracycline	known_gene	PRJNA1050907	8	126	no	8	0	126	0	0	0			
+staphylococcus_aureus__tetracycline	known_gene	PRJNA819273	96	602	yes	96	0	602	0	0	0	1.000000	0.000000	0.500000

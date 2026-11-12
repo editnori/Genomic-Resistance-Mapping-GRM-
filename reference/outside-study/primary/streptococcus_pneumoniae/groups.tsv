@@ -1,0 +1,245 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+streptococcus_pneumoniae__chloramphenicol	scm	bioproject	PRJEB82317	42	95	42	0	79	16	0	0
+streptococcus_pneumoniae__chloramphenicol	scm	bioproject	PRJNA1357085	48	55	45	3	45	10	0	0
+streptococcus_pneumoniae__chloramphenicol	scm	bioproject	PRJNA320861	0	262	0	0	1	261	0	0
+streptococcus_pneumoniae__chloramphenicol	scm	country	Canada	0	262	0	0	1	261	0	0
+streptococcus_pneumoniae__chloramphenicol	scm	country	China	48	55	45	3	45	10	0	0
+streptococcus_pneumoniae__chloramphenicol	scm	country	Taiwan	42	95	42	0	79	16	0	0
+streptococcus_pneumoniae__chloramphenicol	scm	mlst_in_cohort	no	20	63	17	3	39	24	0	0
+streptococcus_pneumoniae__chloramphenicol	scm	mlst_in_cohort	no ST	8	16	8	0	13	3	0	0
+streptococcus_pneumoniae__chloramphenicol	scm	mlst_in_cohort	yes	62	333	62	0	73	260	0	0
+streptococcus_pneumoniae__chloramphenicol	cart	bioproject	PRJEB82317	42	95	41	1	72	23	0	0
+streptococcus_pneumoniae__chloramphenicol	cart	bioproject	PRJNA1357085	48	55	22	26	33	22	0	0
+streptococcus_pneumoniae__chloramphenicol	cart	bioproject	PRJNA320861	0	262	0	0	4	258	0	0
+streptococcus_pneumoniae__chloramphenicol	cart	country	Canada	0	262	0	0	4	258	0	0
+streptococcus_pneumoniae__chloramphenicol	cart	country	China	48	55	22	26	33	22	0	0
+streptococcus_pneumoniae__chloramphenicol	cart	country	Taiwan	42	95	41	1	72	23	0	0
+streptococcus_pneumoniae__chloramphenicol	cart	mlst_in_cohort	no	20	63	15	5	42	21	0	0
+streptococcus_pneumoniae__chloramphenicol	cart	mlst_in_cohort	no ST	8	16	3	5	9	7	0	0
+streptococcus_pneumoniae__chloramphenicol	cart	mlst_in_cohort	yes	62	333	45	17	58	275	0	0
+streptococcus_pneumoniae__chloramphenicol	lasso	bioproject	PRJEB82317	42	95	41	1	38	57	0	0
+streptococcus_pneumoniae__chloramphenicol	lasso	bioproject	PRJNA1357085	48	55	19	29	16	39	0	0
+streptococcus_pneumoniae__chloramphenicol	lasso	bioproject	PRJNA320861	0	262	0	0	0	262	0	0
+streptococcus_pneumoniae__chloramphenicol	lasso	country	Canada	0	262	0	0	0	262	0	0
+streptococcus_pneumoniae__chloramphenicol	lasso	country	China	48	55	19	29	16	39	0	0
+streptococcus_pneumoniae__chloramphenicol	lasso	country	Taiwan	42	95	41	1	38	57	0	0
+streptococcus_pneumoniae__chloramphenicol	lasso	mlst_in_cohort	no	20	63	12	8	15	48	0	0
+streptococcus_pneumoniae__chloramphenicol	lasso	mlst_in_cohort	no ST	8	16	4	4	4	12	0	0
+streptococcus_pneumoniae__chloramphenicol	lasso	mlst_in_cohort	yes	62	333	44	18	35	298	0	0
+streptococcus_pneumoniae__chloramphenicol	known_gene	bioproject	PRJEB82317	42	95	41	1	0	95	0	0
+streptococcus_pneumoniae__chloramphenicol	known_gene	bioproject	PRJNA1357085	48	55	5	43	2	53	0	0
+streptococcus_pneumoniae__chloramphenicol	known_gene	bioproject	PRJNA320861	0	262	0	0	0	262	0	0
+streptococcus_pneumoniae__chloramphenicol	known_gene	country	Canada	0	262	0	0	0	262	0	0
+streptococcus_pneumoniae__chloramphenicol	known_gene	country	China	48	55	5	43	2	53	0	0
+streptococcus_pneumoniae__chloramphenicol	known_gene	country	Taiwan	42	95	41	1	0	95	0	0
+streptococcus_pneumoniae__chloramphenicol	known_gene	mlst_in_cohort	no	20	63	6	14	1	62	0	0
+streptococcus_pneumoniae__chloramphenicol	known_gene	mlst_in_cohort	no ST	8	16	3	5	0	16	0	0
+streptococcus_pneumoniae__chloramphenicol	known_gene	mlst_in_cohort	yes	62	333	37	25	1	332	0	0
+streptococcus_pneumoniae__clindamycin	scm	bioproject	PRJEB82317	105	32	104	1	1	31	0	0
+streptococcus_pneumoniae__clindamycin	scm	bioproject	PRJNA1357085	86	16	86	0	15	1	0	0
+streptococcus_pneumoniae__clindamycin	scm	bioproject	PRJNA320861	4	258	3	1	0	258	0	0
+streptococcus_pneumoniae__clindamycin	scm	country	Canada	4	258	3	1	0	258	0	0
+streptococcus_pneumoniae__clindamycin	scm	country	China	86	16	86	0	15	1	0	0
+streptococcus_pneumoniae__clindamycin	scm	country	Taiwan	105	32	104	1	1	31	0	0
+streptococcus_pneumoniae__clindamycin	scm	mlst_in_cohort	no	59	24	58	1	5	19	0	0
+streptococcus_pneumoniae__clindamycin	scm	mlst_in_cohort	no ST	14	9	14	0	3	6	0	0
+streptococcus_pneumoniae__clindamycin	scm	mlst_in_cohort	yes	122	273	121	1	8	265	0	0
+streptococcus_pneumoniae__clindamycin	cart	bioproject	PRJEB82317	105	32	104	1	1	31	0	0
+streptococcus_pneumoniae__clindamycin	cart	bioproject	PRJNA1357085	86	16	86	0	15	1	0	0
+streptococcus_pneumoniae__clindamycin	cart	bioproject	PRJNA320861	4	258	3	1	0	258	0	0
+streptococcus_pneumoniae__clindamycin	cart	country	Canada	4	258	3	1	0	258	0	0
+streptococcus_pneumoniae__clindamycin	cart	country	China	86	16	86	0	15	1	0	0
+streptococcus_pneumoniae__clindamycin	cart	country	Taiwan	105	32	104	1	1	31	0	0
+streptococcus_pneumoniae__clindamycin	cart	mlst_in_cohort	no	59	24	58	1	5	19	0	0
+streptococcus_pneumoniae__clindamycin	cart	mlst_in_cohort	no ST	14	9	14	0	3	6	0	0
+streptococcus_pneumoniae__clindamycin	cart	mlst_in_cohort	yes	122	273	121	1	8	265	0	0
+streptococcus_pneumoniae__clindamycin	lasso	bioproject	PRJEB82317	105	32	104	1	1	31	0	0
+streptococcus_pneumoniae__clindamycin	lasso	bioproject	PRJNA1357085	86	16	86	0	15	1	0	0
+streptococcus_pneumoniae__clindamycin	lasso	bioproject	PRJNA320861	4	258	3	1	0	258	0	0
+streptococcus_pneumoniae__clindamycin	lasso	country	Canada	4	258	3	1	0	258	0	0
+streptococcus_pneumoniae__clindamycin	lasso	country	China	86	16	86	0	15	1	0	0
+streptococcus_pneumoniae__clindamycin	lasso	country	Taiwan	105	32	104	1	1	31	0	0
+streptococcus_pneumoniae__clindamycin	lasso	mlst_in_cohort	no	59	24	58	1	5	19	0	0
+streptococcus_pneumoniae__clindamycin	lasso	mlst_in_cohort	no ST	14	9	14	0	3	6	0	0
+streptococcus_pneumoniae__clindamycin	lasso	mlst_in_cohort	yes	122	273	121	1	8	265	0	0
+streptococcus_pneumoniae__clindamycin	known_gene	bioproject	PRJEB82317	105	32	103	2	1	31	0	0
+streptococcus_pneumoniae__clindamycin	known_gene	bioproject	PRJNA1357085	86	16	86	0	15	1	0	0
+streptococcus_pneumoniae__clindamycin	known_gene	bioproject	PRJNA320861	4	258	4	0	0	258	0	0
+streptococcus_pneumoniae__clindamycin	known_gene	country	Canada	4	258	4	0	0	258	0	0
+streptococcus_pneumoniae__clindamycin	known_gene	country	China	86	16	86	0	15	1	0	0
+streptococcus_pneumoniae__clindamycin	known_gene	country	Taiwan	105	32	103	2	1	31	0	0
+streptococcus_pneumoniae__clindamycin	known_gene	mlst_in_cohort	no	59	24	58	1	5	19	0	0
+streptococcus_pneumoniae__clindamycin	known_gene	mlst_in_cohort	no ST	14	9	14	0	3	6	0	0
+streptococcus_pneumoniae__clindamycin	known_gene	mlst_in_cohort	yes	122	273	121	1	8	265	0	0
+streptococcus_pneumoniae__erythromycin	scm	bioproject	PRJEB82317	124	13	124	0	0	13	0	0
+streptococcus_pneumoniae__erythromycin	scm	bioproject	PRJNA1357085	94	7	94	0	6	1	0	0
+streptococcus_pneumoniae__erythromycin	scm	bioproject	PRJNA320861	4	259	3	1	0	259	0	0
+streptococcus_pneumoniae__erythromycin	scm	country	Canada	4	259	3	1	0	259	0	0
+streptococcus_pneumoniae__erythromycin	scm	country	China	94	7	94	0	6	1	0	0
+streptococcus_pneumoniae__erythromycin	scm	country	Taiwan	124	13	124	0	0	13	0	0
+streptococcus_pneumoniae__erythromycin	scm	mlst_in_cohort	no	65	18	64	1	3	15	0	0
+streptococcus_pneumoniae__erythromycin	scm	mlst_in_cohort	no ST	17	5	17	0	2	3	0	0
+streptococcus_pneumoniae__erythromycin	scm	mlst_in_cohort	yes	140	256	140	0	1	255	0	0
+streptococcus_pneumoniae__erythromycin	cart	bioproject	PRJEB82317	124	13	122	2	5	8	0	0
+streptococcus_pneumoniae__erythromycin	cart	bioproject	PRJNA1357085	94	7	90	4	6	1	0	0
+streptococcus_pneumoniae__erythromycin	cart	bioproject	PRJNA320861	4	259	4	0	0	259	0	0
+streptococcus_pneumoniae__erythromycin	cart	country	Canada	4	259	4	0	0	259	0	0
+streptococcus_pneumoniae__erythromycin	cart	country	China	94	7	90	4	6	1	0	0
+streptococcus_pneumoniae__erythromycin	cart	country	Taiwan	124	13	122	2	5	8	0	0
+streptococcus_pneumoniae__erythromycin	cart	mlst_in_cohort	no	65	18	61	4	7	11	0	0
+streptococcus_pneumoniae__erythromycin	cart	mlst_in_cohort	no ST	17	5	17	0	3	2	0	0
+streptococcus_pneumoniae__erythromycin	cart	mlst_in_cohort	yes	140	256	138	2	1	255	0	0
+streptococcus_pneumoniae__erythromycin	lasso	bioproject	PRJEB82317	124	13	124	0	0	13	0	0
+streptococcus_pneumoniae__erythromycin	lasso	bioproject	PRJNA1357085	94	7	94	0	6	1	0	0
+streptococcus_pneumoniae__erythromycin	lasso	bioproject	PRJNA320861	4	259	3	1	0	259	0	0
+streptococcus_pneumoniae__erythromycin	lasso	country	Canada	4	259	3	1	0	259	0	0
+streptococcus_pneumoniae__erythromycin	lasso	country	China	94	7	94	0	6	1	0	0
+streptococcus_pneumoniae__erythromycin	lasso	country	Taiwan	124	13	124	0	0	13	0	0
+streptococcus_pneumoniae__erythromycin	lasso	mlst_in_cohort	no	65	18	64	1	3	15	0	0
+streptococcus_pneumoniae__erythromycin	lasso	mlst_in_cohort	no ST	17	5	17	0	2	3	0	0
+streptococcus_pneumoniae__erythromycin	lasso	mlst_in_cohort	yes	140	256	140	0	1	255	0	0
+streptococcus_pneumoniae__erythromycin	known_gene	bioproject	PRJEB82317	124	13	123	1	0	13	0	0
+streptococcus_pneumoniae__erythromycin	known_gene	bioproject	PRJNA1357085	94	7	94	0	6	1	0	0
+streptococcus_pneumoniae__erythromycin	known_gene	bioproject	PRJNA320861	4	259	4	0	0	259	0	0
+streptococcus_pneumoniae__erythromycin	known_gene	country	Canada	4	259	4	0	0	259	0	0
+streptococcus_pneumoniae__erythromycin	known_gene	country	China	94	7	94	0	6	1	0	0
+streptococcus_pneumoniae__erythromycin	known_gene	country	Taiwan	124	13	123	1	0	13	0	0
+streptococcus_pneumoniae__erythromycin	known_gene	mlst_in_cohort	no	65	18	64	1	3	15	0	0
+streptococcus_pneumoniae__erythromycin	known_gene	mlst_in_cohort	no ST	17	5	17	0	2	3	0	0
+streptococcus_pneumoniae__erythromycin	known_gene	mlst_in_cohort	yes	140	256	140	0	1	255	0	0
+streptococcus_pneumoniae__meropenem	scm	bioproject	PRJEB82317	28	61	28	0	22	39	0	0
+streptococcus_pneumoniae__meropenem	scm	bioproject	PRJNA1357085	19	51	19	0	28	23	0	0
+streptococcus_pneumoniae__meropenem	scm	bioproject	PRJNA320861	0	190	0	0	0	190	0	0
+streptococcus_pneumoniae__meropenem	scm	country	Canada	0	190	0	0	0	190	0	0
+streptococcus_pneumoniae__meropenem	scm	country	China	19	51	19	0	28	23	0	0
+streptococcus_pneumoniae__meropenem	scm	country	Taiwan	28	61	28	0	22	39	0	0
+streptococcus_pneumoniae__meropenem	scm	mlst_in_cohort	no	5	56	5	0	19	37	0	0
+streptococcus_pneumoniae__meropenem	scm	mlst_in_cohort	no ST	3	15	3	0	7	8	0	0
+streptococcus_pneumoniae__meropenem	scm	mlst_in_cohort	yes	39	231	39	0	24	207	0	0
+streptococcus_pneumoniae__meropenem	cart	bioproject	PRJEB82317	28	61	28	0	16	45	0	0
+streptococcus_pneumoniae__meropenem	cart	bioproject	PRJNA1357085	19	51	19	0	27	24	0	0
+streptococcus_pneumoniae__meropenem	cart	bioproject	PRJNA320861	0	190	0	0	0	190	0	0
+streptococcus_pneumoniae__meropenem	cart	country	Canada	0	190	0	0	0	190	0	0
+streptococcus_pneumoniae__meropenem	cart	country	China	19	51	19	0	27	24	0	0
+streptococcus_pneumoniae__meropenem	cart	country	Taiwan	28	61	28	0	16	45	0	0
+streptococcus_pneumoniae__meropenem	cart	mlst_in_cohort	no	5	56	5	0	13	43	0	0
+streptococcus_pneumoniae__meropenem	cart	mlst_in_cohort	no ST	3	15	3	0	7	8	0	0
+streptococcus_pneumoniae__meropenem	cart	mlst_in_cohort	yes	39	231	39	0	23	208	0	0
+streptococcus_pneumoniae__meropenem	lasso	bioproject	PRJEB82317	28	61	27	1	18	43	0	0
+streptococcus_pneumoniae__meropenem	lasso	bioproject	PRJNA1357085	19	51	19	0	18	33	0	0
+streptococcus_pneumoniae__meropenem	lasso	bioproject	PRJNA320861	0	190	0	0	0	190	0	0
+streptococcus_pneumoniae__meropenem	lasso	country	Canada	0	190	0	0	0	190	0	0
+streptococcus_pneumoniae__meropenem	lasso	country	China	19	51	19	0	18	33	0	0
+streptococcus_pneumoniae__meropenem	lasso	country	Taiwan	28	61	27	1	18	43	0	0
+streptococcus_pneumoniae__meropenem	lasso	mlst_in_cohort	no	5	56	4	1	10	46	0	0
+streptococcus_pneumoniae__meropenem	lasso	mlst_in_cohort	no ST	3	15	3	0	5	10	0	0
+streptococcus_pneumoniae__meropenem	lasso	mlst_in_cohort	yes	39	231	39	0	21	210	0	0
+streptococcus_pneumoniae__meropenem	known_gene	bioproject	PRJEB82317	28	61	0	28	0	61	0	0
+streptococcus_pneumoniae__meropenem	known_gene	bioproject	PRJNA1357085	19	51	0	19	0	51	0	0
+streptococcus_pneumoniae__meropenem	known_gene	bioproject	PRJNA320861	0	190	0	0	0	190	0	0
+streptococcus_pneumoniae__meropenem	known_gene	country	Canada	0	190	0	0	0	190	0	0
+streptococcus_pneumoniae__meropenem	known_gene	country	China	19	51	0	19	0	51	0	0
+streptococcus_pneumoniae__meropenem	known_gene	country	Taiwan	28	61	0	28	0	61	0	0
+streptococcus_pneumoniae__meropenem	known_gene	mlst_in_cohort	no	5	56	0	5	0	56	0	0
+streptococcus_pneumoniae__meropenem	known_gene	mlst_in_cohort	no ST	3	15	0	3	0	15	0	0
+streptococcus_pneumoniae__meropenem	known_gene	mlst_in_cohort	yes	39	231	0	39	0	231	0	0
+streptococcus_pneumoniae__penicillin	scm	bioproject	PRJEB82317	44	36	43	1	3	33	0	0
+streptococcus_pneumoniae__penicillin	scm	bioproject	PRJNA1357085	0	87	0	0	71	16	0	0
+streptococcus_pneumoniae__penicillin	scm	bioproject	PRJNA320861	0	185	0	0	0	185	0	0
+streptococcus_pneumoniae__penicillin	scm	country	Canada	0	185	0	0	0	185	0	0
+streptococcus_pneumoniae__penicillin	scm	country	China	0	87	0	0	71	16	0	0
+streptococcus_pneumoniae__penicillin	scm	country	Taiwan	44	36	43	1	3	33	0	0
+streptococcus_pneumoniae__penicillin	scm	mlst_in_cohort	no	5	56	5	0	30	26	0	0
+streptococcus_pneumoniae__penicillin	scm	mlst_in_cohort	no ST	3	15	3	0	7	8	0	0
+streptococcus_pneumoniae__penicillin	scm	mlst_in_cohort	yes	36	237	35	1	37	200	0	0
+streptococcus_pneumoniae__penicillin	cart	bioproject	PRJEB82317	44	36	43	1	3	33	0	0
+streptococcus_pneumoniae__penicillin	cart	bioproject	PRJNA1357085	0	87	0	0	70	17	0	0
+streptococcus_pneumoniae__penicillin	cart	bioproject	PRJNA320861	0	185	0	0	0	185	0	0
+streptococcus_pneumoniae__penicillin	cart	country	Canada	0	185	0	0	0	185	0	0
+streptococcus_pneumoniae__penicillin	cart	country	China	0	87	0	0	70	17	0	0
+streptococcus_pneumoniae__penicillin	cart	country	Taiwan	44	36	43	1	3	33	0	0
+streptococcus_pneumoniae__penicillin	cart	mlst_in_cohort	no	5	56	5	0	30	26	0	0
+streptococcus_pneumoniae__penicillin	cart	mlst_in_cohort	no ST	3	15	3	0	7	8	0	0
+streptococcus_pneumoniae__penicillin	cart	mlst_in_cohort	yes	36	237	35	1	36	201	0	0
+streptococcus_pneumoniae__penicillin	lasso	bioproject	PRJEB82317	44	36	43	1	3	33	0	0
+streptococcus_pneumoniae__penicillin	lasso	bioproject	PRJNA1357085	0	87	0	0	65	22	0	0
+streptococcus_pneumoniae__penicillin	lasso	bioproject	PRJNA320861	0	185	0	0	0	185	0	0
+streptococcus_pneumoniae__penicillin	lasso	country	Canada	0	185	0	0	0	185	0	0
+streptococcus_pneumoniae__penicillin	lasso	country	China	0	87	0	0	65	22	0	0
+streptococcus_pneumoniae__penicillin	lasso	country	Taiwan	44	36	43	1	3	33	0	0
+streptococcus_pneumoniae__penicillin	lasso	mlst_in_cohort	no	5	56	5	0	27	29	0	0
+streptococcus_pneumoniae__penicillin	lasso	mlst_in_cohort	no ST	3	15	3	0	7	8	0	0
+streptococcus_pneumoniae__penicillin	lasso	mlst_in_cohort	yes	36	237	35	1	34	203	0	0
+streptococcus_pneumoniae__penicillin	known_gene	bioproject	PRJEB82317	44	36	0	44	0	36	0	0
+streptococcus_pneumoniae__penicillin	known_gene	bioproject	PRJNA1357085	0	87	0	0	0	87	0	0
+streptococcus_pneumoniae__penicillin	known_gene	bioproject	PRJNA320861	0	185	0	0	0	185	0	0
+streptococcus_pneumoniae__penicillin	known_gene	country	Canada	0	185	0	0	0	185	0	0
+streptococcus_pneumoniae__penicillin	known_gene	country	China	0	87	0	0	0	87	0	0
+streptococcus_pneumoniae__penicillin	known_gene	country	Taiwan	44	36	0	44	0	36	0	0
+streptococcus_pneumoniae__penicillin	known_gene	mlst_in_cohort	no	5	56	0	5	0	56	0	0
+streptococcus_pneumoniae__penicillin	known_gene	mlst_in_cohort	no ST	3	15	0	3	0	15	0	0
+streptococcus_pneumoniae__penicillin	known_gene	mlst_in_cohort	yes	36	237	0	36	0	237	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA1357085	62	26	58	4	10	16	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA320861	1	231	1	0	0	231	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	Canada	1	231	1	0	0	231	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	scm	country	China	62	26	58	4	10	16	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no	16	17	15	1	4	13	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no ST	6	5	6	0	2	3	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	yes	41	235	38	3	4	231	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA1357085	62	26	59	3	13	13	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA320861	1	231	1	0	1	230	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	Canada	1	231	1	0	1	230	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	cart	country	China	62	26	59	3	13	13	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no	16	17	16	0	5	12	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no ST	6	5	6	0	4	1	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	yes	41	235	38	3	5	230	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	lasso	bioproject	PRJNA1357085	62	26	58	4	11	15	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	lasso	bioproject	PRJNA320861	1	231	1	0	1	230	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	lasso	country	Canada	1	231	1	0	1	230	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	lasso	country	China	62	26	58	4	11	15	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	lasso	mlst_in_cohort	no	16	17	15	1	4	13	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	lasso	mlst_in_cohort	no ST	6	5	6	0	3	2	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	lasso	mlst_in_cohort	yes	41	235	38	3	5	230	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA1357085	62	26	0	62	0	26	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA320861	1	231	0	1	0	231	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	Canada	1	231	0	1	0	231	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	country	China	62	26	0	62	0	26	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no	16	17	0	16	0	17	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no ST	6	5	0	6	0	5	0	0
+streptococcus_pneumoniae__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	yes	41	235	0	41	0	235	0	0
+streptococcus_pneumoniae__tetracycline	scm	bioproject	PRJEB82317	123	11	122	1	3	8	0	0
+streptococcus_pneumoniae__tetracycline	scm	bioproject	PRJNA1357085	89	13	88	1	10	3	0	0
+streptococcus_pneumoniae__tetracycline	scm	bioproject	PRJNA320861	3	247	3	0	0	247	0	0
+streptococcus_pneumoniae__tetracycline	scm	country	Canada	3	247	3	0	0	247	0	0
+streptococcus_pneumoniae__tetracycline	scm	country	China	89	13	88	1	10	3	0	0
+streptococcus_pneumoniae__tetracycline	scm	country	Taiwan	123	11	122	1	3	8	0	0
+streptococcus_pneumoniae__tetracycline	scm	mlst_in_cohort	no	60	19	59	1	7	12	0	0
+streptococcus_pneumoniae__tetracycline	scm	mlst_in_cohort	no ST	21	3	21	0	1	2	0	0
+streptococcus_pneumoniae__tetracycline	scm	mlst_in_cohort	yes	134	249	133	1	5	244	0	0
+streptococcus_pneumoniae__tetracycline	cart	bioproject	PRJEB82317	123	11	122	1	3	8	0	0
+streptococcus_pneumoniae__tetracycline	cart	bioproject	PRJNA1357085	89	13	88	1	10	3	0	0
+streptococcus_pneumoniae__tetracycline	cart	bioproject	PRJNA320861	3	247	3	0	0	247	0	0
+streptococcus_pneumoniae__tetracycline	cart	country	Canada	3	247	3	0	0	247	0	0
+streptococcus_pneumoniae__tetracycline	cart	country	China	89	13	88	1	10	3	0	0
+streptococcus_pneumoniae__tetracycline	cart	country	Taiwan	123	11	122	1	3	8	0	0
+streptococcus_pneumoniae__tetracycline	cart	mlst_in_cohort	no	60	19	59	1	7	12	0	0
+streptococcus_pneumoniae__tetracycline	cart	mlst_in_cohort	no ST	21	3	21	0	1	2	0	0
+streptococcus_pneumoniae__tetracycline	cart	mlst_in_cohort	yes	134	249	133	1	5	244	0	0
+streptococcus_pneumoniae__tetracycline	lasso	bioproject	PRJEB82317	123	11	122	1	2	9	0	0
+streptococcus_pneumoniae__tetracycline	lasso	bioproject	PRJNA1357085	89	13	88	1	11	2	0	0
+streptococcus_pneumoniae__tetracycline	lasso	bioproject	PRJNA320861	3	247	3	0	0	247	0	0
+streptococcus_pneumoniae__tetracycline	lasso	country	Canada	3	247	3	0	0	247	0	0
+streptococcus_pneumoniae__tetracycline	lasso	country	China	89	13	88	1	11	2	0	0
+streptococcus_pneumoniae__tetracycline	lasso	country	Taiwan	123	11	122	1	2	9	0	0
+streptococcus_pneumoniae__tetracycline	lasso	mlst_in_cohort	no	60	19	59	1	7	12	0	0
+streptococcus_pneumoniae__tetracycline	lasso	mlst_in_cohort	no ST	21	3	21	0	1	2	0	0
+streptococcus_pneumoniae__tetracycline	lasso	mlst_in_cohort	yes	134	249	133	1	5	244	0	0
+streptococcus_pneumoniae__tetracycline	known_gene	bioproject	PRJEB82317	123	11	122	1	3	8	0	0
+streptococcus_pneumoniae__tetracycline	known_gene	bioproject	PRJNA1357085	89	13	88	1	10	3	0	0
+streptococcus_pneumoniae__tetracycline	known_gene	bioproject	PRJNA320861	3	247	3	0	0	247	0	0
+streptococcus_pneumoniae__tetracycline	known_gene	country	Canada	3	247	3	0	0	247	0	0
+streptococcus_pneumoniae__tetracycline	known_gene	country	China	89	13	88	1	10	3	0	0
+streptococcus_pneumoniae__tetracycline	known_gene	country	Taiwan	123	11	122	1	3	8	0	0
+streptococcus_pneumoniae__tetracycline	known_gene	mlst_in_cohort	no	60	19	59	1	7	12	0	0
+streptococcus_pneumoniae__tetracycline	known_gene	mlst_in_cohort	no ST	21	3	21	0	1	2	0	0
+streptococcus_pneumoniae__tetracycline	known_gene	mlst_in_cohort	yes	134	249	133	1	5	244	0	0

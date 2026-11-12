@@ -1,0 +1,4 @@
+dataset	learner	resistant_genomes	resistant_both	resistant_learner_only	resistant_known_gene_only	resistant_neither	susceptible_genomes	susceptible_both	susceptible_learner_only	susceptible_known_gene_only	susceptible_neither
+shigella_flexneri__ciprofloxacin	scm	31	0	23	0	8	47	0	8	0	39
+shigella_flexneri__ciprofloxacin	cart	31	0	23	0	8	47	0	9	0	38
+shigella_flexneri__ciprofloxacin	lasso	31	0	23	0	8	47	0	8	0	39

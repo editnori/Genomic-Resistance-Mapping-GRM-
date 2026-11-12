@@ -1,0 +1,445 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+escherichia_coli__amikacin	scm	bioproject	PRJNA1223317	2	56	0	2	5	51	0	0
+escherichia_coli__amikacin	scm	bioproject	PRJNA1223857	0	24	0	0	0	24	0	0
+escherichia_coli__amikacin	scm	bioproject	PRJNA675772	4	92	0	4	5	87	0	0
+escherichia_coli__amikacin	scm	bioproject	PRJNA841811	58	356	6	52	22	334	0	0
+escherichia_coli__amikacin	scm	country	China	64	504	6	58	32	472	0	0
+escherichia_coli__amikacin	scm	country	Zimbabwe	0	24	0	0	0	24	0	0
+escherichia_coli__amikacin	scm	mlst_in_cohort	no	6	133	1	5	6	127	0	0
+escherichia_coli__amikacin	scm	mlst_in_cohort	no ST	6	33	0	6	0	33	0	0
+escherichia_coli__amikacin	scm	mlst_in_cohort	yes	52	362	5	47	26	336	0	0
+escherichia_coli__amikacin	cart	bioproject	PRJNA1223317	2	56	1	1	13	43	0	0
+escherichia_coli__amikacin	cart	bioproject	PRJNA1223857	0	24	0	0	4	20	0	0
+escherichia_coli__amikacin	cart	bioproject	PRJNA675772	4	92	0	4	1	91	0	0
+escherichia_coli__amikacin	cart	bioproject	PRJNA841811	58	356	4	54	9	347	0	0
+escherichia_coli__amikacin	cart	country	China	64	504	5	59	23	481	0	0
+escherichia_coli__amikacin	cart	country	Zimbabwe	0	24	0	0	4	20	0	0
+escherichia_coli__amikacin	cart	mlst_in_cohort	no	6	133	1	5	10	123	0	0
+escherichia_coli__amikacin	cart	mlst_in_cohort	no ST	6	33	1	5	1	32	0	0
+escherichia_coli__amikacin	cart	mlst_in_cohort	yes	52	362	3	49	16	346	0	0
+escherichia_coli__amikacin	lasso	bioproject	PRJNA1223317	2	56	0	2	5	51	0	0
+escherichia_coli__amikacin	lasso	bioproject	PRJNA1223857	0	24	0	0	0	24	0	0
+escherichia_coli__amikacin	lasso	bioproject	PRJNA675772	4	92	0	4	2	90	0	0
+escherichia_coli__amikacin	lasso	bioproject	PRJNA841811	58	356	6	52	14	342	0	0
+escherichia_coli__amikacin	lasso	country	China	64	504	6	58	21	483	0	0
+escherichia_coli__amikacin	lasso	country	Zimbabwe	0	24	0	0	0	24	0	0
+escherichia_coli__amikacin	lasso	mlst_in_cohort	no	6	133	1	5	5	128	0	0
+escherichia_coli__amikacin	lasso	mlst_in_cohort	no ST	6	33	0	6	0	33	0	0
+escherichia_coli__amikacin	lasso	mlst_in_cohort	yes	52	362	5	47	16	346	0	0
+escherichia_coli__amikacin	known_gene	bioproject	PRJNA1223317	2	56	2	0	13	43	0	0
+escherichia_coli__amikacin	known_gene	bioproject	PRJNA1223857	0	24	0	0	5	19	0	0
+escherichia_coli__amikacin	known_gene	bioproject	PRJNA675772	4	92	3	1	7	85	0	0
+escherichia_coli__amikacin	known_gene	bioproject	PRJNA841811	58	356	39	19	31	325	0	0
+escherichia_coli__amikacin	known_gene	country	China	64	504	44	20	51	453	0	0
+escherichia_coli__amikacin	known_gene	country	Zimbabwe	0	24	0	0	5	19	0	0
+escherichia_coli__amikacin	known_gene	mlst_in_cohort	no	6	133	4	2	16	117	0	0
+escherichia_coli__amikacin	known_gene	mlst_in_cohort	no ST	6	33	6	0	0	33	0	0
+escherichia_coli__amikacin	known_gene	mlst_in_cohort	yes	52	362	34	18	40	322	0	0
+escherichia_coli__ampicillin	scm	bioproject	PRJNA1223317	34	27	32	2	6	21	0	0
+escherichia_coli__ampicillin	scm	bioproject	PRJNA1223857	24	0	24	0	0	0	0	0
+escherichia_coli__ampicillin	scm	bioproject	PRJNA675772	92	4	89	3	0	4	0	0
+escherichia_coli__ampicillin	scm	bioproject	PRJNA841811	397	22	372	25	11	11	0	0
+escherichia_coli__ampicillin	scm	country	China	523	53	493	30	17	36	0	0
+escherichia_coli__ampicillin	scm	country	Zimbabwe	24	0	24	0	0	0	0	0
+escherichia_coli__ampicillin	scm	mlst_in_cohort	no	134	9	126	8	2	7	0	0
+escherichia_coli__ampicillin	scm	mlst_in_cohort	no ST	32	7	32	0	2	5	0	0
+escherichia_coli__ampicillin	scm	mlst_in_cohort	yes	381	37	359	22	13	24	0	0
+escherichia_coli__ampicillin	cart	bioproject	PRJNA1223317	34	27	32	2	3	24	0	0
+escherichia_coli__ampicillin	cart	bioproject	PRJNA1223857	24	0	24	0	0	0	0	0
+escherichia_coli__ampicillin	cart	bioproject	PRJNA675772	92	4	88	4	0	4	0	0
+escherichia_coli__ampicillin	cart	bioproject	PRJNA841811	397	22	364	33	11	11	0	0
+escherichia_coli__ampicillin	cart	country	China	523	53	484	39	14	39	0	0
+escherichia_coli__ampicillin	cart	country	Zimbabwe	24	0	24	0	0	0	0	0
+escherichia_coli__ampicillin	cart	mlst_in_cohort	no	134	9	125	9	2	7	0	0
+escherichia_coli__ampicillin	cart	mlst_in_cohort	no ST	32	7	31	1	2	5	0	0
+escherichia_coli__ampicillin	cart	mlst_in_cohort	yes	381	37	352	29	10	27	0	0
+escherichia_coli__ampicillin	known_gene	bioproject	PRJNA1223317	34	27	34	0	27	0	0	0
+escherichia_coli__ampicillin	known_gene	bioproject	PRJNA1223857	24	0	24	0	0	0	0	0
+escherichia_coli__ampicillin	known_gene	bioproject	PRJNA675772	92	4	92	0	3	1	0	0
+escherichia_coli__ampicillin	known_gene	bioproject	PRJNA841811	397	22	397	0	22	0	0	0
+escherichia_coli__ampicillin	known_gene	country	China	523	53	523	0	52	1	0	0
+escherichia_coli__ampicillin	known_gene	country	Zimbabwe	24	0	24	0	0	0	0	0
+escherichia_coli__ampicillin	known_gene	mlst_in_cohort	no	134	9	134	0	8	1	0	0
+escherichia_coli__ampicillin	known_gene	mlst_in_cohort	no ST	32	7	32	0	7	0	0	0
+escherichia_coli__ampicillin	known_gene	mlst_in_cohort	yes	381	37	381	0	37	0	0	0
+escherichia_coli__ampicillin_sulbactam	scm	bioproject	PRJNA1223317	4	35	3	1	22	13	0	0
+escherichia_coli__ampicillin_sulbactam	scm	bioproject	PRJNA675772	66	6	46	20	4	2	0	0
+escherichia_coli__ampicillin_sulbactam	scm	bioproject	PRJNA841811	299	37	161	138	19	18	0	0
+escherichia_coli__ampicillin_sulbactam	scm	country	China	369	78	210	159	45	33	0	0
+escherichia_coli__ampicillin_sulbactam	scm	mlst_in_cohort	no	88	14	34	54	7	7	0	0
+escherichia_coli__ampicillin_sulbactam	scm	mlst_in_cohort	no ST	25	10	11	14	7	3	0	0
+escherichia_coli__ampicillin_sulbactam	scm	mlst_in_cohort	yes	256	54	165	91	31	23	0	0
+escherichia_coli__ampicillin_sulbactam	cart	bioproject	PRJNA1223317	4	35	4	0	34	1	0	0
+escherichia_coli__ampicillin_sulbactam	cart	bioproject	PRJNA675772	66	6	65	1	6	0	0	0
+escherichia_coli__ampicillin_sulbactam	cart	bioproject	PRJNA841811	299	37	298	1	37	0	0	0
+escherichia_coli__ampicillin_sulbactam	cart	country	China	369	78	367	2	77	1	0	0
+escherichia_coli__ampicillin_sulbactam	cart	mlst_in_cohort	no	88	14	88	0	14	0	0	0
+escherichia_coli__ampicillin_sulbactam	cart	mlst_in_cohort	no ST	25	10	25	0	10	0	0	0
+escherichia_coli__ampicillin_sulbactam	cart	mlst_in_cohort	yes	256	54	254	2	53	1	0	0
+escherichia_coli__ampicillin_sulbactam	known_gene	bioproject	PRJNA1223317	4	35	4	0	30	5	0	0
+escherichia_coli__ampicillin_sulbactam	known_gene	bioproject	PRJNA675772	66	6	62	4	4	2	0	0
+escherichia_coli__ampicillin_sulbactam	known_gene	bioproject	PRJNA841811	299	37	292	7	32	5	0	0
+escherichia_coli__ampicillin_sulbactam	known_gene	country	China	369	78	358	11	66	12	0	0
+escherichia_coli__ampicillin_sulbactam	known_gene	mlst_in_cohort	no	88	14	86	2	11	3	0	0
+escherichia_coli__ampicillin_sulbactam	known_gene	mlst_in_cohort	no ST	25	10	24	1	5	5	0	0
+escherichia_coli__ampicillin_sulbactam	known_gene	mlst_in_cohort	yes	256	54	248	8	50	4	0	0
+escherichia_coli__aztreonam	scm	bioproject	PRJNA1104021	1	0	1	0	0	0	0	0
+escherichia_coli__aztreonam	scm	bioproject	PRJNA675772	56	30	30	26	3	27	0	0
+escherichia_coli__aztreonam	scm	bioproject	PRJNA841811	292	103	136	156	34	69	0	0
+escherichia_coli__aztreonam	scm	country	China	348	133	166	182	37	96	0	0
+escherichia_coli__aztreonam	scm	country	Spain	1	0	1	0	0	0	0	0
+escherichia_coli__aztreonam	scm	mlst_in_cohort	no	82	34	29	53	4	30	0	0
+escherichia_coli__aztreonam	scm	mlst_in_cohort	no ST	19	10	10	9	3	7	0	0
+escherichia_coli__aztreonam	scm	mlst_in_cohort	yes	248	89	128	120	30	59	0	0
+escherichia_coli__aztreonam	cart	bioproject	PRJNA1104021	1	0	1	0	0	0	0	0
+escherichia_coli__aztreonam	cart	bioproject	PRJNA675772	56	30	49	7	4	26	0	0
+escherichia_coli__aztreonam	cart	bioproject	PRJNA841811	292	103	240	52	37	66	0	0
+escherichia_coli__aztreonam	cart	country	China	348	133	289	59	41	92	0	0
+escherichia_coli__aztreonam	cart	country	Spain	1	0	1	0	0	0	0	0
+escherichia_coli__aztreonam	cart	mlst_in_cohort	no	82	34	64	18	5	29	0	0
+escherichia_coli__aztreonam	cart	mlst_in_cohort	no ST	19	10	11	8	1	9	0	0
+escherichia_coli__aztreonam	cart	mlst_in_cohort	yes	248	89	215	33	35	54	0	0
+escherichia_coli__aztreonam	known_gene	bioproject	PRJNA1104021	1	0	1	0	0	0	0	0
+escherichia_coli__aztreonam	known_gene	bioproject	PRJNA675772	56	30	56	0	24	6	0	0
+escherichia_coli__aztreonam	known_gene	bioproject	PRJNA841811	292	103	289	3	94	9	0	0
+escherichia_coli__aztreonam	known_gene	country	China	348	133	345	3	118	15	0	0
+escherichia_coli__aztreonam	known_gene	country	Spain	1	0	1	0	0	0	0	0
+escherichia_coli__aztreonam	known_gene	mlst_in_cohort	no	82	34	82	0	31	3	0	0
+escherichia_coli__aztreonam	known_gene	mlst_in_cohort	no ST	19	10	18	1	5	5	0	0
+escherichia_coli__aztreonam	known_gene	mlst_in_cohort	yes	248	89	246	2	82	7	0	0
+escherichia_coli__cefazolin	scm	bioproject	PRJNA675772	81	7	42	39	0	7	0	0
+escherichia_coli__cefazolin	scm	bioproject	PRJNA841811	370	33	194	176	6	27	0	0
+escherichia_coli__cefazolin	scm	country	China	451	40	236	215	6	34	0	0
+escherichia_coli__cefazolin	scm	mlst_in_cohort	no	112	8	51	61	0	8	0	0
+escherichia_coli__cefazolin	scm	mlst_in_cohort	no ST	28	5	10	18	0	5	0	0
+escherichia_coli__cefazolin	scm	mlst_in_cohort	yes	311	27	175	136	6	21	0	0
+escherichia_coli__cefazolin	cart	bioproject	PRJNA675772	81	7	51	30	0	7	0	0
+escherichia_coli__cefazolin	cart	bioproject	PRJNA841811	370	33	191	179	10	23	0	0
+escherichia_coli__cefazolin	cart	country	China	451	40	242	209	10	30	0	0
+escherichia_coli__cefazolin	cart	mlst_in_cohort	no	112	8	54	58	1	7	0	0
+escherichia_coli__cefazolin	cart	mlst_in_cohort	no ST	28	5	6	22	2	3	0	0
+escherichia_coli__cefazolin	cart	mlst_in_cohort	yes	311	27	182	129	7	20	0	0
+escherichia_coli__cefazolin	lasso	bioproject	PRJNA675772	81	7	49	32	1	6	0	0
+escherichia_coli__cefazolin	lasso	bioproject	PRJNA841811	370	33	224	146	4	29	0	0
+escherichia_coli__cefazolin	lasso	country	China	451	40	273	178	5	35	0	0
+escherichia_coli__cefazolin	lasso	mlst_in_cohort	no	112	8	71	41	0	8	0	0
+escherichia_coli__cefazolin	lasso	mlst_in_cohort	no ST	28	5	17	11	0	5	0	0
+escherichia_coli__cefazolin	lasso	mlst_in_cohort	yes	311	27	185	126	5	22	0	0
+escherichia_coli__cefazolin	known_gene	bioproject	PRJNA675772	81	7	77	4	5	2	0	0
+escherichia_coli__cefazolin	known_gene	bioproject	PRJNA841811	370	33	361	9	29	4	0	0
+escherichia_coli__cefazolin	known_gene	country	China	451	40	438	13	34	6	0	0
+escherichia_coli__cefazolin	known_gene	mlst_in_cohort	no	112	8	110	2	6	2	0	0
+escherichia_coli__cefazolin	known_gene	mlst_in_cohort	no ST	28	5	26	2	1	4	0	0
+escherichia_coli__cefazolin	known_gene	mlst_in_cohort	yes	311	27	302	9	27	0	0	0
+escherichia_coli__cefepime	scm	bioproject	PRJNA1223857	2	0	0	2	0	0	0	0
+escherichia_coli__cefepime	scm	bioproject	PRJNA675772	44	33	38	6	2	31	0	0
+escherichia_coli__cefepime	scm	bioproject	PRJNA841811	209	122	162	47	16	106	0	0
+escherichia_coli__cefepime	scm	country	China	253	155	200	53	18	137	0	0
+escherichia_coli__cefepime	scm	country	Zimbabwe	2	0	0	2	0	0	0	0
+escherichia_coli__cefepime	scm	mlst_in_cohort	no	59	41	49	10	1	40	0	0
+escherichia_coli__cefepime	scm	mlst_in_cohort	no ST	14	16	11	3	0	16	0	0
+escherichia_coli__cefepime	scm	mlst_in_cohort	yes	182	98	140	42	17	81	0	0
+escherichia_coli__cefepime	cart	bioproject	PRJNA1223857	2	0	0	2	0	0	0	0
+escherichia_coli__cefepime	cart	bioproject	PRJNA675772	44	33	30	14	3	30	0	0
+escherichia_coli__cefepime	cart	bioproject	PRJNA841811	209	122	98	111	18	104	0	0
+escherichia_coli__cefepime	cart	country	China	253	155	128	125	21	134	0	0
+escherichia_coli__cefepime	cart	country	Zimbabwe	2	0	0	2	0	0	0	0
+escherichia_coli__cefepime	cart	mlst_in_cohort	no	59	41	37	22	3	38	0	0
+escherichia_coli__cefepime	cart	mlst_in_cohort	no ST	14	16	2	12	0	16	0	0
+escherichia_coli__cefepime	cart	mlst_in_cohort	yes	182	98	89	93	18	80	0	0
+escherichia_coli__cefepime	known_gene	bioproject	PRJNA1223857	2	0	2	0	0	0	0	0
+escherichia_coli__cefepime	known_gene	bioproject	PRJNA675772	44	33	44	0	27	6	0	0
+escherichia_coli__cefepime	known_gene	bioproject	PRJNA841811	209	122	207	2	110	12	0	0
+escherichia_coli__cefepime	known_gene	country	China	253	155	251	2	137	18	0	0
+escherichia_coli__cefepime	known_gene	country	Zimbabwe	2	0	2	0	0	0	0	0
+escherichia_coli__cefepime	known_gene	mlst_in_cohort	no	59	41	59	0	37	4	0	0
+escherichia_coli__cefepime	known_gene	mlst_in_cohort	no ST	14	16	13	1	11	5	0	0
+escherichia_coli__cefepime	known_gene	mlst_in_cohort	yes	182	98	181	1	89	9	0	0
+escherichia_coli__cefotaxime	scm	bioproject	PRJNA1223317	7	54	5	2	5	49	0	0
+escherichia_coli__cefotaxime	scm	bioproject	PRJNA1223857	24	0	24	0	0	0	0	0
+escherichia_coli__cefotaxime	scm	bioproject	PRJNA675772	69	26	63	6	2	24	0	0
+escherichia_coli__cefotaxime	scm	bioproject	PRJNA841811	338	79	296	42	19	60	0	0
+escherichia_coli__cefotaxime	scm	country	China	414	159	364	50	26	133	0	0
+escherichia_coli__cefotaxime	scm	country	Zimbabwe	24	0	24	0	0	0	0	0
+escherichia_coli__cefotaxime	scm	mlst_in_cohort	no	108	35	94	14	3	32	0	0
+escherichia_coli__cefotaxime	scm	mlst_in_cohort	no ST	21	16	18	3	2	14	0	0
+escherichia_coli__cefotaxime	scm	mlst_in_cohort	yes	309	108	276	33	21	87	0	0
+escherichia_coli__cefotaxime	cart	bioproject	PRJNA1223317	7	54	5	2	3	51	0	0
+escherichia_coli__cefotaxime	cart	bioproject	PRJNA1223857	24	0	24	0	0	0	0	0
+escherichia_coli__cefotaxime	cart	bioproject	PRJNA675772	69	26	63	6	2	24	0	0
+escherichia_coli__cefotaxime	cart	bioproject	PRJNA841811	338	79	296	42	16	63	0	0
+escherichia_coli__cefotaxime	cart	country	China	414	159	364	50	21	138	0	0
+escherichia_coli__cefotaxime	cart	country	Zimbabwe	24	0	24	0	0	0	0	0
+escherichia_coli__cefotaxime	cart	mlst_in_cohort	no	108	35	94	14	0	35	0	0
+escherichia_coli__cefotaxime	cart	mlst_in_cohort	no ST	21	16	18	3	1	15	0	0
+escherichia_coli__cefotaxime	cart	mlst_in_cohort	yes	309	108	276	33	20	88	0	0
+escherichia_coli__cefotaxime	known_gene	bioproject	PRJNA1223317	7	54	6	1	47	7	0	0
+escherichia_coli__cefotaxime	known_gene	bioproject	PRJNA1223857	24	0	24	0	0	0	0	0
+escherichia_coli__cefotaxime	known_gene	bioproject	PRJNA675772	69	26	69	0	20	6	0	0
+escherichia_coli__cefotaxime	known_gene	bioproject	PRJNA841811	338	79	334	4	68	11	0	0
+escherichia_coli__cefotaxime	known_gene	country	China	414	159	409	5	135	24	0	0
+escherichia_coli__cefotaxime	known_gene	country	Zimbabwe	24	0	24	0	0	0	0	0
+escherichia_coli__cefotaxime	known_gene	mlst_in_cohort	no	108	35	108	0	27	8	0	0
+escherichia_coli__cefotaxime	known_gene	mlst_in_cohort	no ST	21	16	20	1	10	6	0	0
+escherichia_coli__cefotaxime	known_gene	mlst_in_cohort	yes	309	108	305	4	98	10	0	0
+escherichia_coli__cefoxitin	scm	bioproject	PRJNA1223857	0	24	0	0	1	23	0	0
+escherichia_coli__cefoxitin	scm	bioproject	PRJNA675772	12	79	0	12	0	79	0	0
+escherichia_coli__cefoxitin	scm	bioproject	PRJNA841811	46	313	14	32	11	302	0	0
+escherichia_coli__cefoxitin	scm	country	China	58	392	14	44	11	381	0	0
+escherichia_coli__cefoxitin	scm	country	Zimbabwe	0	24	0	0	1	23	0	0
+escherichia_coli__cefoxitin	scm	mlst_in_cohort	no	14	107	4	10	1	106	0	0
+escherichia_coli__cefoxitin	scm	mlst_in_cohort	no ST	5	26	0	5	0	26	0	0
+escherichia_coli__cefoxitin	scm	mlst_in_cohort	yes	39	283	10	29	11	272	0	0
+escherichia_coli__cefoxitin	cart	bioproject	PRJNA1223857	0	24	0	0	8	16	0	0
+escherichia_coli__cefoxitin	cart	bioproject	PRJNA675772	12	79	8	4	30	49	0	0
+escherichia_coli__cefoxitin	cart	bioproject	PRJNA841811	46	313	28	18	130	183	0	0
+escherichia_coli__cefoxitin	cart	country	China	58	392	36	22	160	232	0	0
+escherichia_coli__cefoxitin	cart	country	Zimbabwe	0	24	0	0	8	16	0	0
+escherichia_coli__cefoxitin	cart	mlst_in_cohort	no	14	107	8	6	34	73	0	0
+escherichia_coli__cefoxitin	cart	mlst_in_cohort	no ST	5	26	2	3	5	21	0	0
+escherichia_coli__cefoxitin	cart	mlst_in_cohort	yes	39	283	26	13	129	154	0	0
+escherichia_coli__cefoxitin	known_gene	bioproject	PRJNA1223857	0	24	0	0	24	0	0	0
+escherichia_coli__cefoxitin	known_gene	bioproject	PRJNA675772	12	79	12	0	73	6	0	0
+escherichia_coli__cefoxitin	known_gene	bioproject	PRJNA841811	46	313	45	1	302	11	0	0
+escherichia_coli__cefoxitin	known_gene	country	China	58	392	57	1	375	17	0	0
+escherichia_coli__cefoxitin	known_gene	country	Zimbabwe	0	24	0	0	24	0	0	0
+escherichia_coli__cefoxitin	known_gene	mlst_in_cohort	no	14	107	14	0	103	4	0	0
+escherichia_coli__cefoxitin	known_gene	mlst_in_cohort	no ST	5	26	5	0	21	5	0	0
+escherichia_coli__cefoxitin	known_gene	mlst_in_cohort	yes	39	283	38	1	275	8	0	0
+escherichia_coli__ceftazidime	scm	bioproject	PRJNA1223317	3	56	3	0	2	54	0	0
+escherichia_coli__ceftazidime	scm	bioproject	PRJNA1223857	7	15	5	2	1	14	0	0
+escherichia_coli__ceftazidime	scm	bioproject	PRJNA675772	22	61	11	11	3	58	0	0
+escherichia_coli__ceftazidime	scm	bioproject	PRJNA841811	147	217	22	125	12	205	0	0
+escherichia_coli__ceftazidime	scm	country	China	172	334	36	136	17	317	0	0
+escherichia_coli__ceftazidime	scm	country	Zimbabwe	7	15	5	2	1	14	0	0
+escherichia_coli__ceftazidime	scm	mlst_in_cohort	no	40	79	8	32	2	77	0	0
+escherichia_coli__ceftazidime	scm	mlst_in_cohort	no ST	12	25	3	9	0	25	0	0
+escherichia_coli__ceftazidime	scm	mlst_in_cohort	yes	127	245	30	97	16	229	0	0
+escherichia_coli__ceftazidime	cart	bioproject	PRJNA1223317	3	56	3	0	3	53	0	0
+escherichia_coli__ceftazidime	cart	bioproject	PRJNA1223857	7	15	4	3	2	13	0	0
+escherichia_coli__ceftazidime	cart	bioproject	PRJNA675772	22	61	14	8	7	54	0	0
+escherichia_coli__ceftazidime	cart	bioproject	PRJNA841811	147	217	74	73	35	182	0	0
+escherichia_coli__ceftazidime	cart	country	China	172	334	91	81	45	289	0	0
+escherichia_coli__ceftazidime	cart	country	Zimbabwe	7	15	4	3	2	13	0	0
+escherichia_coli__ceftazidime	cart	mlst_in_cohort	no	40	79	20	20	7	72	0	0
+escherichia_coli__ceftazidime	cart	mlst_in_cohort	no ST	12	25	6	6	1	24	0	0
+escherichia_coli__ceftazidime	cart	mlst_in_cohort	yes	127	245	69	58	39	206	0	0
+escherichia_coli__ceftazidime	known_gene	bioproject	PRJNA1223317	3	56	3	0	49	7	0	0
+escherichia_coli__ceftazidime	known_gene	bioproject	PRJNA1223857	7	15	7	0	15	0	0	0
+escherichia_coli__ceftazidime	known_gene	bioproject	PRJNA675772	22	61	22	0	55	6	0	0
+escherichia_coli__ceftazidime	known_gene	bioproject	PRJNA841811	147	217	145	2	204	13	0	0
+escherichia_coli__ceftazidime	known_gene	country	China	172	334	170	2	308	26	0	0
+escherichia_coli__ceftazidime	known_gene	country	Zimbabwe	7	15	7	0	15	0	0	0
+escherichia_coli__ceftazidime	known_gene	mlst_in_cohort	no	40	79	40	0	71	8	0	0
+escherichia_coli__ceftazidime	known_gene	mlst_in_cohort	no ST	12	25	11	1	19	6	0	0
+escherichia_coli__ceftazidime	known_gene	mlst_in_cohort	yes	127	245	126	1	233	12	0	0
+escherichia_coli__chloramphenicol	scm	bioproject	PRJNA1223317	26	27	18	8	2	25	0	0
+escherichia_coli__chloramphenicol	scm	bioproject	PRJNA1223857	17	7	16	1	1	6	0	0
+escherichia_coli__chloramphenicol	scm	bioproject	PRJNA675772	75	18	72	3	3	15	0	0
+escherichia_coli__chloramphenicol	scm	bioproject	PRJNA841811	378	35	363	15	13	22	0	0
+escherichia_coli__chloramphenicol	scm	country	China	479	80	453	26	18	62	0	0
+escherichia_coli__chloramphenicol	scm	country	Zimbabwe	17	7	16	1	1	6	0	0
+escherichia_coli__chloramphenicol	scm	mlst_in_cohort	no	120	22	116	4	5	17	0	0
+escherichia_coli__chloramphenicol	scm	mlst_in_cohort	no ST	32	7	30	2	1	6	0	0
+escherichia_coli__chloramphenicol	scm	mlst_in_cohort	yes	344	58	323	21	13	45	0	0
+escherichia_coli__chloramphenicol	cart	bioproject	PRJNA1223317	26	27	18	8	2	25	0	0
+escherichia_coli__chloramphenicol	cart	bioproject	PRJNA1223857	17	7	15	2	1	6	0	0
+escherichia_coli__chloramphenicol	cart	bioproject	PRJNA675772	75	18	65	10	4	14	0	0
+escherichia_coli__chloramphenicol	cart	bioproject	PRJNA841811	378	35	356	22	12	23	0	0
+escherichia_coli__chloramphenicol	cart	country	China	479	80	439	40	18	62	0	0
+escherichia_coli__chloramphenicol	cart	country	Zimbabwe	17	7	15	2	1	6	0	0
+escherichia_coli__chloramphenicol	cart	mlst_in_cohort	no	120	22	116	4	5	17	0	0
+escherichia_coli__chloramphenicol	cart	mlst_in_cohort	no ST	32	7	30	2	2	5	0	0
+escherichia_coli__chloramphenicol	cart	mlst_in_cohort	yes	344	58	308	36	12	46	0	0
+escherichia_coli__chloramphenicol	known_gene	bioproject	PRJNA1223317	26	27	25	1	6	21	0	0
+escherichia_coli__chloramphenicol	known_gene	bioproject	PRJNA1223857	17	7	16	1	1	6	0	0
+escherichia_coli__chloramphenicol	known_gene	bioproject	PRJNA675772	75	18	72	3	3	15	0	0
+escherichia_coli__chloramphenicol	known_gene	bioproject	PRJNA841811	378	35	369	9	13	22	0	0
+escherichia_coli__chloramphenicol	known_gene	country	China	479	80	466	13	22	58	0	0
+escherichia_coli__chloramphenicol	known_gene	country	Zimbabwe	17	7	16	1	1	6	0	0
+escherichia_coli__chloramphenicol	known_gene	mlst_in_cohort	no	120	22	116	4	5	17	0	0
+escherichia_coli__chloramphenicol	known_gene	mlst_in_cohort	no ST	32	7	32	0	1	6	0	0
+escherichia_coli__chloramphenicol	known_gene	mlst_in_cohort	yes	344	58	334	10	17	41	0	0
+escherichia_coli__ciprofloxacin	scm	bioproject	PRJNA1223317	48	10	37	11	1	9	0	0
+escherichia_coli__ciprofloxacin	scm	bioproject	PRJNA1223857	22	2	17	5	0	2	0	0
+escherichia_coli__ciprofloxacin	scm	bioproject	PRJNA675772	63	25	57	6	2	23	0	0
+escherichia_coli__ciprofloxacin	scm	bioproject	PRJNA841811	380	25	313	67	16	9	0	0
+escherichia_coli__ciprofloxacin	scm	country	China	491	60	407	84	19	41	0	0
+escherichia_coli__ciprofloxacin	scm	country	Zimbabwe	22	2	17	5	0	2	0	0
+escherichia_coli__ciprofloxacin	scm	mlst_in_cohort	no	124	13	75	49	0	13	0	0
+escherichia_coli__ciprofloxacin	scm	mlst_in_cohort	no ST	32	6	22	10	1	5	0	0
+escherichia_coli__ciprofloxacin	scm	mlst_in_cohort	yes	357	43	327	30	18	25	0	0
+escherichia_coli__ciprofloxacin	cart	bioproject	PRJNA1223317	48	10	33	15	0	10	0	0
+escherichia_coli__ciprofloxacin	cart	bioproject	PRJNA1223857	22	2	14	8	0	2	0	0
+escherichia_coli__ciprofloxacin	cart	bioproject	PRJNA675772	63	25	56	7	4	21	0	0
+escherichia_coli__ciprofloxacin	cart	bioproject	PRJNA841811	380	25	314	66	16	9	0	0
+escherichia_coli__ciprofloxacin	cart	country	China	491	60	403	88	20	40	0	0
+escherichia_coli__ciprofloxacin	cart	country	Zimbabwe	22	2	14	8	0	2	0	0
+escherichia_coli__ciprofloxacin	cart	mlst_in_cohort	no	124	13	74	50	2	11	0	0
+escherichia_coli__ciprofloxacin	cart	mlst_in_cohort	no ST	32	6	22	10	1	5	0	0
+escherichia_coli__ciprofloxacin	cart	mlst_in_cohort	yes	357	43	321	36	17	26	0	0
+escherichia_coli__ciprofloxacin	known_gene	bioproject	PRJNA1223317	48	10	32	16	5	5	0	0
+escherichia_coli__ciprofloxacin	known_gene	bioproject	PRJNA1223857	22	2	11	11	0	2	0	0
+escherichia_coli__ciprofloxacin	known_gene	bioproject	PRJNA675772	63	25	38	25	10	15	0	0
+escherichia_coli__ciprofloxacin	known_gene	bioproject	PRJNA841811	380	25	231	149	11	14	0	0
+escherichia_coli__ciprofloxacin	known_gene	country	China	491	60	301	190	26	34	0	0
+escherichia_coli__ciprofloxacin	known_gene	country	Zimbabwe	22	2	11	11	0	2	0	0
+escherichia_coli__ciprofloxacin	known_gene	mlst_in_cohort	no	124	13	79	45	6	7	0	0
+escherichia_coli__ciprofloxacin	known_gene	mlst_in_cohort	no ST	32	6	23	9	3	3	0	0
+escherichia_coli__ciprofloxacin	known_gene	mlst_in_cohort	yes	357	43	210	147	17	26	0	0
+escherichia_coli__doxycycline	scm	bioproject	PRJNA675772	64	7	59	5	3	4	0	0
+escherichia_coli__doxycycline	scm	bioproject	PRJNA841811	227	32	175	52	9	23	0	0
+escherichia_coli__doxycycline	scm	country	China	291	39	234	57	12	27	0	0
+escherichia_coli__doxycycline	scm	mlst_in_cohort	no	75	10	60	15	2	8	0	0
+escherichia_coli__doxycycline	scm	mlst_in_cohort	no ST	15	4	13	2	0	4	0	0
+escherichia_coli__doxycycline	scm	mlst_in_cohort	yes	201	25	161	40	10	15	0	0
+escherichia_coli__doxycycline	cart	bioproject	PRJNA675772	64	7	58	6	3	4	0	0
+escherichia_coli__doxycycline	cart	bioproject	PRJNA841811	227	32	184	43	8	24	0	0
+escherichia_coli__doxycycline	cart	country	China	291	39	242	49	11	28	0	0
+escherichia_coli__doxycycline	cart	mlst_in_cohort	no	75	10	62	13	2	8	0	0
+escherichia_coli__doxycycline	cart	mlst_in_cohort	no ST	15	4	12	3	0	4	0	0
+escherichia_coli__doxycycline	cart	mlst_in_cohort	yes	201	25	168	33	9	16	0	0
+escherichia_coli__doxycycline	known_gene	bioproject	PRJNA675772	64	7	64	0	3	4	0	0
+escherichia_coli__doxycycline	known_gene	bioproject	PRJNA841811	227	32	224	3	19	13	0	0
+escherichia_coli__doxycycline	known_gene	country	China	291	39	288	3	22	17	0	0
+escherichia_coli__doxycycline	known_gene	mlst_in_cohort	no	75	10	74	1	3	7	0	0
+escherichia_coli__doxycycline	known_gene	mlst_in_cohort	no ST	15	4	15	0	2	2	0	0
+escherichia_coli__doxycycline	known_gene	mlst_in_cohort	yes	201	25	199	2	17	8	0	0
+escherichia_coli__gentamicin	scm	bioproject	PRJNA1223857	5	19	5	0	2	17	0	0
+escherichia_coli__gentamicin	scm	bioproject	PRJNA675772	37	41	36	1	7	34	0	0
+escherichia_coli__gentamicin	scm	bioproject	PRJNA841811	299	109	277	22	28	81	0	0
+escherichia_coli__gentamicin	scm	country	China	336	150	313	23	35	115	0	0
+escherichia_coli__gentamicin	scm	country	Zimbabwe	5	19	5	0	2	17	0	0
+escherichia_coli__gentamicin	scm	mlst_in_cohort	no	84	40	77	7	7	33	0	0
+escherichia_coli__gentamicin	scm	mlst_in_cohort	no ST	21	12	20	1	1	11	0	0
+escherichia_coli__gentamicin	scm	mlst_in_cohort	yes	236	117	221	15	29	88	0	0
+escherichia_coli__gentamicin	cart	bioproject	PRJNA1223857	5	19	5	0	2	17	0	0
+escherichia_coli__gentamicin	cart	bioproject	PRJNA675772	37	41	22	15	0	41	0	0
+escherichia_coli__gentamicin	cart	bioproject	PRJNA841811	299	109	95	204	11	98	0	0
+escherichia_coli__gentamicin	cart	country	China	336	150	117	219	11	139	0	0
+escherichia_coli__gentamicin	cart	country	Zimbabwe	5	19	5	0	2	17	0	0
+escherichia_coli__gentamicin	cart	mlst_in_cohort	no	84	40	34	50	1	39	0	0
+escherichia_coli__gentamicin	cart	mlst_in_cohort	no ST	21	12	13	8	0	12	0	0
+escherichia_coli__gentamicin	cart	mlst_in_cohort	yes	236	117	75	161	12	105	0	0
+escherichia_coli__gentamicin	known_gene	bioproject	PRJNA1223857	5	19	5	0	1	18	0	0
+escherichia_coli__gentamicin	known_gene	bioproject	PRJNA675772	37	41	36	1	7	34	0	0
+escherichia_coli__gentamicin	known_gene	bioproject	PRJNA841811	299	109	287	12	27	82	0	0
+escherichia_coli__gentamicin	known_gene	country	China	336	150	323	13	34	116	0	0
+escherichia_coli__gentamicin	known_gene	country	Zimbabwe	5	19	5	0	1	18	0	0
+escherichia_coli__gentamicin	known_gene	mlst_in_cohort	no	84	40	78	6	6	34	0	0
+escherichia_coli__gentamicin	known_gene	mlst_in_cohort	no ST	21	12	21	0	1	11	0	0
+escherichia_coli__gentamicin	known_gene	mlst_in_cohort	yes	236	117	229	7	28	89	0	0
+escherichia_coli__levofloxacin	scm	bioproject	PRJNA675772	64	21	57	7	4	17	0	0
+escherichia_coli__levofloxacin	scm	bioproject	PRJNA841811	364	25	310	54	17	8	0	0
+escherichia_coli__levofloxacin	scm	country	China	428	46	367	61	21	25	0	0
+escherichia_coli__levofloxacin	scm	mlst_in_cohort	no	103	8	65	38	1	7	0	0
+escherichia_coli__levofloxacin	scm	mlst_in_cohort	no ST	28	2	21	7	2	0	0	0
+escherichia_coli__levofloxacin	scm	mlst_in_cohort	yes	297	36	281	16	18	18	0	0
+escherichia_coli__levofloxacin	cart	bioproject	PRJNA675772	64	21	57	7	2	19	0	0
+escherichia_coli__levofloxacin	cart	bioproject	PRJNA841811	364	25	307	57	17	8	0	0
+escherichia_coli__levofloxacin	cart	country	China	428	46	364	64	19	27	0	0
+escherichia_coli__levofloxacin	cart	mlst_in_cohort	no	103	8	63	40	1	7	0	0
+escherichia_coli__levofloxacin	cart	mlst_in_cohort	no ST	28	2	21	7	1	1	0	0
+escherichia_coli__levofloxacin	cart	mlst_in_cohort	yes	297	36	280	17	17	19	0	0
+escherichia_coli__levofloxacin	lasso	bioproject	PRJNA675772	64	21	57	7	2	19	0	0
+escherichia_coli__levofloxacin	lasso	bioproject	PRJNA841811	364	25	310	54	17	8	0	0
+escherichia_coli__levofloxacin	lasso	country	China	428	46	367	61	19	27	0	0
+escherichia_coli__levofloxacin	lasso	mlst_in_cohort	no	103	8	63	40	1	7	0	0
+escherichia_coli__levofloxacin	lasso	mlst_in_cohort	no ST	28	2	21	7	1	1	0	0
+escherichia_coli__levofloxacin	lasso	mlst_in_cohort	yes	297	36	283	14	17	19	0	0
+escherichia_coli__levofloxacin	known_gene	bioproject	PRJNA675772	64	21	39	25	7	14	0	0
+escherichia_coli__levofloxacin	known_gene	bioproject	PRJNA841811	364	25	216	148	11	14	0	0
+escherichia_coli__levofloxacin	known_gene	country	China	428	46	255	173	18	28	0	0
+escherichia_coli__levofloxacin	known_gene	mlst_in_cohort	no	103	8	68	35	4	4	0	0
+escherichia_coli__levofloxacin	known_gene	mlst_in_cohort	no ST	28	2	20	8	1	1	0	0
+escherichia_coli__levofloxacin	known_gene	mlst_in_cohort	yes	297	36	167	130	13	23	0	0
+escherichia_coli__nalidixic_acid	scm	bioproject	PRJNA1223317	46	8	38	8	1	7	0	0
+escherichia_coli__nalidixic_acid	scm	bioproject	PRJNA675772	78	18	71	7	7	11	0	0
+escherichia_coli__nalidixic_acid	scm	bioproject	PRJNA841811	360	59	339	21	23	36	0	0
+escherichia_coli__nalidixic_acid	scm	country	China	484	85	448	36	31	54	0	0
+escherichia_coli__nalidixic_acid	scm	mlst_in_cohort	no	106	29	87	19	5	24	0	0
+escherichia_coli__nalidixic_acid	scm	mlst_in_cohort	no ST	28	10	26	2	1	9	0	0
+escherichia_coli__nalidixic_acid	scm	mlst_in_cohort	yes	350	46	335	15	25	21	0	0
+escherichia_coli__nalidixic_acid	cart	bioproject	PRJNA1223317	46	8	38	8	0	8	0	0
+escherichia_coli__nalidixic_acid	cart	bioproject	PRJNA675772	78	18	71	7	1	17	0	0
+escherichia_coli__nalidixic_acid	cart	bioproject	PRJNA841811	360	59	336	24	14	45	0	0
+escherichia_coli__nalidixic_acid	cart	country	China	484	85	445	39	15	70	0	0
+escherichia_coli__nalidixic_acid	cart	mlst_in_cohort	no	106	29	85	21	0	29	0	0
+escherichia_coli__nalidixic_acid	cart	mlst_in_cohort	no ST	28	10	26	2	0	10	0	0
+escherichia_coli__nalidixic_acid	cart	mlst_in_cohort	yes	350	46	334	16	15	31	0	0
+escherichia_coli__nalidixic_acid	known_gene	bioproject	PRJNA1223317	46	8	26	20	6	2	0	0
+escherichia_coli__nalidixic_acid	known_gene	bioproject	PRJNA675772	78	18	41	37	14	4	0	0
+escherichia_coli__nalidixic_acid	known_gene	bioproject	PRJNA841811	360	59	207	153	46	13	0	0
+escherichia_coli__nalidixic_acid	known_gene	country	China	484	85	274	210	66	19	0	0
+escherichia_coli__nalidixic_acid	known_gene	mlst_in_cohort	no	106	29	61	45	26	3	0	0
+escherichia_coli__nalidixic_acid	known_gene	mlst_in_cohort	no ST	28	10	17	11	10	0	0	0
+escherichia_coli__nalidixic_acid	known_gene	mlst_in_cohort	yes	350	46	196	154	30	16	0	0
+escherichia_coli__streptomycin	scm	bioproject	PRJNA1223317	22	32	12	10	2	30	0	0
+escherichia_coli__streptomycin	scm	bioproject	PRJNA675772	79	17	64	15	6	11	0	0
+escherichia_coli__streptomycin	scm	bioproject	PRJNA841811	370	49	282	88	16	33	0	0
+escherichia_coli__streptomycin	scm	country	China	471	98	358	113	24	74	0	0
+escherichia_coli__streptomycin	scm	mlst_in_cohort	no	110	24	81	29	6	18	0	0
+escherichia_coli__streptomycin	scm	mlst_in_cohort	no ST	28	9	22	6	1	8	0	0
+escherichia_coli__streptomycin	scm	mlst_in_cohort	yes	333	65	255	78	17	48	0	0
+escherichia_coli__streptomycin	cart	bioproject	PRJNA1223317	22	32	11	11	2	30	0	0
+escherichia_coli__streptomycin	cart	bioproject	PRJNA675772	79	17	63	16	6	11	0	0
+escherichia_coli__streptomycin	cart	bioproject	PRJNA841811	370	49	281	89	16	33	0	0
+escherichia_coli__streptomycin	cart	country	China	471	98	355	116	24	74	0	0
+escherichia_coli__streptomycin	cart	mlst_in_cohort	no	110	24	80	30	6	18	0	0
+escherichia_coli__streptomycin	cart	mlst_in_cohort	no ST	28	9	22	6	1	8	0	0
+escherichia_coli__streptomycin	cart	mlst_in_cohort	yes	333	65	253	80	17	48	0	0
+escherichia_coli__streptomycin	known_gene	bioproject	PRJNA1223317	22	32	21	1	13	19	0	0
+escherichia_coli__streptomycin	known_gene	bioproject	PRJNA675772	79	17	79	0	14	3	0	0
+escherichia_coli__streptomycin	known_gene	bioproject	PRJNA841811	370	49	362	8	33	16	0	0
+escherichia_coli__streptomycin	known_gene	country	China	471	98	462	9	60	38	0	0
+escherichia_coli__streptomycin	known_gene	mlst_in_cohort	no	110	24	106	4	14	10	0	0
+escherichia_coli__streptomycin	known_gene	mlst_in_cohort	no ST	28	9	28	0	4	5	0	0
+escherichia_coli__streptomycin	known_gene	mlst_in_cohort	yes	333	65	328	5	42	23	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA1223317	42	19	27	15	3	16	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA675772	88	8	87	1	2	6	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	bioproject	PRJNA841811	328	90	314	14	66	24	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	country	China	458	117	428	30	71	46	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no	104	30	98	6	22	8	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	no ST	24	14	23	1	6	8	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	scm	mlst_in_cohort	yes	330	73	307	23	43	30	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA1223317	42	19	23	19	3	16	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA675772	88	8	75	13	2	6	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	bioproject	PRJNA841811	328	90	263	65	57	33	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	country	China	458	117	361	97	62	55	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no	104	30	83	21	20	10	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	no ST	24	14	19	5	6	8	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	cart	mlst_in_cohort	yes	330	73	259	71	36	37	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA1223317	42	19	29	13	1	18	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA675772	88	8	83	5	2	6	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	bioproject	PRJNA841811	328	90	283	45	14	76	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	country	China	458	117	395	63	17	100	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no	104	30	84	20	3	27	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	no ST	24	14	20	4	0	14	0	0
+escherichia_coli__sulfamethoxazole_trimethoprim	known_gene	mlst_in_cohort	yes	330	73	291	39	14	59	0	0
+escherichia_coli__tetracycline	scm	bioproject	PRJNA1223317	49	12	47	2	1	11	0	0
+escherichia_coli__tetracycline	scm	bioproject	PRJNA1223857	17	7	16	1	1	6	0	0
+escherichia_coli__tetracycline	scm	bioproject	PRJNA675772	85	6	82	3	2	4	0	0
+escherichia_coli__tetracycline	scm	bioproject	PRJNA841811	396	21	387	9	8	13	0	0
+escherichia_coli__tetracycline	scm	country	China	530	39	516	14	11	28	0	0
+escherichia_coli__tetracycline	scm	country	Zimbabwe	17	7	16	1	1	6	0	0
+escherichia_coli__tetracycline	scm	mlst_in_cohort	no	131	11	127	4	0	11	0	0
+escherichia_coli__tetracycline	scm	mlst_in_cohort	no ST	33	4	33	0	1	3	0	0
+escherichia_coli__tetracycline	scm	mlst_in_cohort	yes	383	31	372	11	11	20	0	0
+escherichia_coli__tetracycline	cart	bioproject	PRJNA1223317	49	12	47	2	1	11	0	0
+escherichia_coli__tetracycline	cart	bioproject	PRJNA1223857	17	7	16	1	1	6	0	0
+escherichia_coli__tetracycline	cart	bioproject	PRJNA675772	85	6	82	3	2	4	0	0
+escherichia_coli__tetracycline	cart	bioproject	PRJNA841811	396	21	354	42	7	14	0	0
+escherichia_coli__tetracycline	cart	country	China	530	39	483	47	10	29	0	0
+escherichia_coli__tetracycline	cart	country	Zimbabwe	17	7	16	1	1	6	0	0
+escherichia_coli__tetracycline	cart	mlst_in_cohort	no	131	11	117	14	0	11	0	0
+escherichia_coli__tetracycline	cart	mlst_in_cohort	no ST	33	4	33	0	1	3	0	0
+escherichia_coli__tetracycline	cart	mlst_in_cohort	yes	383	31	349	34	10	21	0	0
+escherichia_coli__tetracycline	known_gene	bioproject	PRJNA1223317	49	12	48	1	1	11	0	0
+escherichia_coli__tetracycline	known_gene	bioproject	PRJNA1223857	17	7	16	1	1	6	0	0
+escherichia_coli__tetracycline	known_gene	bioproject	PRJNA675772	85	6	85	0	2	4	0	0
+escherichia_coli__tetracycline	known_gene	bioproject	PRJNA841811	396	21	388	8	9	12	0	0
+escherichia_coli__tetracycline	known_gene	country	China	530	39	521	9	12	27	0	0
+escherichia_coli__tetracycline	known_gene	country	Zimbabwe	17	7	16	1	1	6	0	0
+escherichia_coli__tetracycline	known_gene	mlst_in_cohort	no	131	11	127	4	0	11	0	0
+escherichia_coli__tetracycline	known_gene	mlst_in_cohort	no ST	33	4	33	0	1	3	0	0
+escherichia_coli__tetracycline	known_gene	mlst_in_cohort	yes	383	31	377	6	12	19	0	0

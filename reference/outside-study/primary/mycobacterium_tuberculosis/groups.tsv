@@ -1,0 +1,464 @@
+dataset	learner	grouping	group	scored_resistant	scored_susceptible	tp	fn	fp	tn	no_call_resistant	no_call_susceptible
+mycobacterium_tuberculosis__amikacin	scm	bioproject	PRJEB27354	3	7	3	0	1	6	0	0
+mycobacterium_tuberculosis__amikacin	scm	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__amikacin	scm	bioproject	PRJEB38780	4	45	3	1	7	38	0	0
+mycobacterium_tuberculosis__amikacin	scm	bioproject	PRJEB40777	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__amikacin	scm	bioproject	PRJEB48275	176	679	171	5	29	650	0	0
+mycobacterium_tuberculosis__amikacin	scm	bioproject	PRJNA1044389	2	95	1	1	10	85	0	0
+mycobacterium_tuberculosis__amikacin	scm	country	Georgia	12	77	11	1	17	60	0	0
+mycobacterium_tuberculosis__amikacin	scm	country	Germany	7	54	6	1	8	46	0	0
+mycobacterium_tuberculosis__amikacin	scm	country	Moldova	7	201	6	1	6	195	0	0
+mycobacterium_tuberculosis__amikacin	scm	country	Peru	8	77	7	1	4	73	0	0
+mycobacterium_tuberculosis__amikacin	scm	country	South Africa	143	133	141	2	1	132	0	0
+mycobacterium_tuberculosis__amikacin	scm	country	Viet Nam	2	95	1	1	10	85	0	0
+mycobacterium_tuberculosis__amikacin	scm	country	Vietnam	6	191	6	0	1	190	0	0
+mycobacterium_tuberculosis__amikacin	scm	mlst_in_cohort	no	5	27	4	1	1	26	0	0
+mycobacterium_tuberculosis__amikacin	scm	mlst_in_cohort	no ST	2	20	2	0	1	19	0	0
+mycobacterium_tuberculosis__amikacin	scm	mlst_in_cohort	yes	178	781	172	6	45	736	0	0
+mycobacterium_tuberculosis__amikacin	cart	bioproject	PRJEB27354	3	7	3	0	0	7	0	0
+mycobacterium_tuberculosis__amikacin	cart	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__amikacin	cart	bioproject	PRJEB38780	4	45	3	1	4	41	0	0
+mycobacterium_tuberculosis__amikacin	cart	bioproject	PRJEB40777	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__amikacin	cart	bioproject	PRJEB48275	176	679	171	5	17	662	0	0
+mycobacterium_tuberculosis__amikacin	cart	bioproject	PRJNA1044389	2	95	1	1	3	92	0	0
+mycobacterium_tuberculosis__amikacin	cart	country	Georgia	12	77	11	1	6	71	0	0
+mycobacterium_tuberculosis__amikacin	cart	country	Germany	7	54	6	1	4	50	0	0
+mycobacterium_tuberculosis__amikacin	cart	country	Moldova	7	201	6	1	6	195	0	0
+mycobacterium_tuberculosis__amikacin	cart	country	Peru	8	77	7	1	0	77	0	0
+mycobacterium_tuberculosis__amikacin	cart	country	South Africa	143	133	141	2	0	133	0	0
+mycobacterium_tuberculosis__amikacin	cart	country	Viet Nam	2	95	1	1	3	92	0	0
+mycobacterium_tuberculosis__amikacin	cart	country	Vietnam	6	191	6	0	5	186	0	0
+mycobacterium_tuberculosis__amikacin	cart	mlst_in_cohort	no	5	27	4	1	0	27	0	0
+mycobacterium_tuberculosis__amikacin	cart	mlst_in_cohort	no ST	2	20	2	0	1	19	0	0
+mycobacterium_tuberculosis__amikacin	cart	mlst_in_cohort	yes	178	781	172	6	23	758	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	bioproject	PRJEB27354	3	7	0	3	0	7	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	bioproject	PRJEB38780	4	45	0	4	0	45	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	bioproject	PRJEB40777	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	bioproject	PRJEB48275	176	679	0	176	0	679	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	bioproject	PRJNA1044389	2	95	0	2	0	95	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	country	Georgia	12	77	0	12	0	77	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	country	Germany	7	54	0	7	0	54	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	country	Moldova	7	201	0	7	0	201	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	country	Peru	8	77	0	8	0	77	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	country	South Africa	143	133	0	143	0	133	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	country	Viet Nam	2	95	0	2	0	95	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	country	Vietnam	6	191	0	6	0	191	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	mlst_in_cohort	no	5	27	0	5	0	27	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	mlst_in_cohort	no ST	2	20	0	2	0	20	0	0
+mycobacterium_tuberculosis__amikacin	known_gene	mlst_in_cohort	yes	178	781	0	178	0	781	0	0
+mycobacterium_tuberculosis__capreomycin	scm	bioproject	PRJEB26996	13	48	9	4	1	47	0	0
+mycobacterium_tuberculosis__capreomycin	scm	bioproject	PRJEB27354	3	7	2	1	0	7	0	0
+mycobacterium_tuberculosis__capreomycin	scm	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__capreomycin	scm	bioproject	PRJEB38780	6	43	2	4	1	42	0	0
+mycobacterium_tuberculosis__capreomycin	scm	bioproject	PRJEB40777	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__capreomycin	scm	bioproject	PRJEB48275	25	612	18	7	8	604	0	0
+mycobacterium_tuberculosis__capreomycin	scm	bioproject	PRJNA1044389	2	95	1	1	0	95	0	0
+mycobacterium_tuberculosis__capreomycin	scm	country	Georgia	5	84	4	1	6	78	0	0
+mycobacterium_tuberculosis__capreomycin	scm	country	Germany	9	52	4	5	1	51	0	0
+mycobacterium_tuberculosis__capreomycin	scm	country	Moldova	6	202	4	2	0	202	0	0
+mycobacterium_tuberculosis__capreomycin	scm	country	Peru	8	77	5	3	1	76	0	0
+mycobacterium_tuberculosis__capreomycin	scm	country	South Africa	2	56	1	1	0	56	0	0
+mycobacterium_tuberculosis__capreomycin	scm	country	Ukraine	13	48	9	4	1	47	0	0
+mycobacterium_tuberculosis__capreomycin	scm	country	Viet Nam	2	95	1	1	0	95	0	0
+mycobacterium_tuberculosis__capreomycin	scm	country	Vietnam	4	193	4	0	1	192	0	0
+mycobacterium_tuberculosis__capreomycin	scm	mlst_in_cohort	no	3	29	2	1	1	28	0	0
+mycobacterium_tuberculosis__capreomycin	scm	mlst_in_cohort	no ST	2	18	2	0	0	18	0	0
+mycobacterium_tuberculosis__capreomycin	scm	mlst_in_cohort	yes	44	760	28	16	9	751	0	0
+mycobacterium_tuberculosis__capreomycin	cart	bioproject	PRJEB26996	13	48	9	4	3	45	0	0
+mycobacterium_tuberculosis__capreomycin	cart	bioproject	PRJEB27354	3	7	2	1	1	6	0	0
+mycobacterium_tuberculosis__capreomycin	cart	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__capreomycin	cart	bioproject	PRJEB38780	6	43	2	4	7	36	0	0
+mycobacterium_tuberculosis__capreomycin	cart	bioproject	PRJEB40777	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__capreomycin	cart	bioproject	PRJEB48275	25	612	21	4	45	567	0	0
+mycobacterium_tuberculosis__capreomycin	cart	bioproject	PRJNA1044389	2	95	1	1	15	80	0	0
+mycobacterium_tuberculosis__capreomycin	cart	country	Georgia	5	84	4	1	12	72	0	0
+mycobacterium_tuberculosis__capreomycin	cart	country	Germany	9	52	4	5	8	44	0	0
+mycobacterium_tuberculosis__capreomycin	cart	country	Moldova	6	202	6	0	22	180	0	0
+mycobacterium_tuberculosis__capreomycin	cart	country	Peru	8	77	6	2	2	75	0	0
+mycobacterium_tuberculosis__capreomycin	cart	country	South Africa	2	56	1	1	1	55	0	0
+mycobacterium_tuberculosis__capreomycin	cart	country	Ukraine	13	48	9	4	3	45	0	0
+mycobacterium_tuberculosis__capreomycin	cart	country	Viet Nam	2	95	1	1	15	80	0	0
+mycobacterium_tuberculosis__capreomycin	cart	country	Vietnam	4	193	4	0	8	185	0	0
+mycobacterium_tuberculosis__capreomycin	cart	mlst_in_cohort	no	3	29	3	0	2	27	0	0
+mycobacterium_tuberculosis__capreomycin	cart	mlst_in_cohort	no ST	2	18	2	0	0	18	0	0
+mycobacterium_tuberculosis__capreomycin	cart	mlst_in_cohort	yes	44	760	30	14	69	691	0	0
+mycobacterium_tuberculosis__ethambutol	scm	bioproject	PRJEB27354	6	4	5	1	3	1	0	0
+mycobacterium_tuberculosis__ethambutol	scm	bioproject	PRJEB36040	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__ethambutol	scm	bioproject	PRJEB38780	28	20	25	3	17	3	0	0
+mycobacterium_tuberculosis__ethambutol	scm	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__ethambutol	scm	bioproject	PRJEB48275	268	364	232	36	242	122	0	0
+mycobacterium_tuberculosis__ethambutol	scm	bioproject	PRJNA1044389	40	57	32	8	45	12	0	0
+mycobacterium_tuberculosis__ethambutol	scm	country	Georgia	6	0	6	0	0	0	0	0
+mycobacterium_tuberculosis__ethambutol	scm	country	Germany	36	24	32	4	20	4	0	0
+mycobacterium_tuberculosis__ethambutol	scm	country	Moldova	78	94	71	7	86	8	0	0
+mycobacterium_tuberculosis__ethambutol	scm	country	Peru	15	49	7	8	30	19	0	0
+mycobacterium_tuberculosis__ethambutol	scm	country	South Africa	94	149	87	7	66	83	0	0
+mycobacterium_tuberculosis__ethambutol	scm	country	Viet Nam	40	57	32	8	45	12	0	0
+mycobacterium_tuberculosis__ethambutol	scm	country	Vietnam	75	72	61	14	60	12	0	0
+mycobacterium_tuberculosis__ethambutol	scm	mlst_in_cohort	no	12	12	10	2	11	1	0	0
+mycobacterium_tuberculosis__ethambutol	scm	mlst_in_cohort	no ST	7	7	7	0	3	4	0	0
+mycobacterium_tuberculosis__ethambutol	scm	mlst_in_cohort	yes	325	426	279	46	293	133	0	0
+mycobacterium_tuberculosis__ethambutol	cart	bioproject	PRJEB27354	6	4	5	1	4	0	0	0
+mycobacterium_tuberculosis__ethambutol	cart	bioproject	PRJEB36040	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__ethambutol	cart	bioproject	PRJEB38780	28	20	26	2	17	3	0	0
+mycobacterium_tuberculosis__ethambutol	cart	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__ethambutol	cart	bioproject	PRJEB48275	268	364	236	32	256	108	0	0
+mycobacterium_tuberculosis__ethambutol	cart	bioproject	PRJNA1044389	40	57	32	8	46	11	0	0
+mycobacterium_tuberculosis__ethambutol	cart	country	Georgia	6	0	6	0	0	0	0	0
+mycobacterium_tuberculosis__ethambutol	cart	country	Germany	36	24	33	3	21	3	0	0
+mycobacterium_tuberculosis__ethambutol	cart	country	Moldova	78	94	71	7	88	6	0	0
+mycobacterium_tuberculosis__ethambutol	cart	country	Peru	15	49	8	7	36	13	0	0
+mycobacterium_tuberculosis__ethambutol	cart	country	South Africa	94	149	89	5	69	80	0	0
+mycobacterium_tuberculosis__ethambutol	cart	country	Viet Nam	40	57	32	8	46	11	0	0
+mycobacterium_tuberculosis__ethambutol	cart	country	Vietnam	75	72	62	13	63	9	0	0
+mycobacterium_tuberculosis__ethambutol	cart	mlst_in_cohort	no	12	12	10	2	11	1	0	0
+mycobacterium_tuberculosis__ethambutol	cart	mlst_in_cohort	no ST	7	7	7	0	4	3	0	0
+mycobacterium_tuberculosis__ethambutol	cart	mlst_in_cohort	yes	325	426	284	41	308	118	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	bioproject	PRJEB27354	6	4	6	0	4	0	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	bioproject	PRJEB36040	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	bioproject	PRJEB38780	28	20	28	0	14	6	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	bioproject	PRJEB48275	268	364	250	18	248	116	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	bioproject	PRJNA1044389	40	57	34	6	37	20	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	country	Georgia	6	0	6	0	0	0	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	country	Germany	36	24	36	0	18	6	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	country	Moldova	78	94	74	4	87	7	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	country	Peru	15	49	8	7	25	24	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	country	South Africa	94	149	93	1	87	62	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	country	Viet Nam	40	57	34	6	37	20	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	country	Vietnam	75	72	69	6	49	23	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	mlst_in_cohort	no	12	12	10	2	9	3	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	mlst_in_cohort	no ST	7	7	6	1	3	4	0	0
+mycobacterium_tuberculosis__ethambutol	lasso	mlst_in_cohort	yes	325	426	304	21	291	135	0	0
+mycobacterium_tuberculosis__isoniazid	scm	bioproject	PRJEB26996	72	62	62	10	1	61	0	0
+mycobacterium_tuberculosis__isoniazid	scm	bioproject	PRJEB27354	10	0	10	0	0	0	0	0
+mycobacterium_tuberculosis__isoniazid	scm	bioproject	PRJEB36040	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__isoniazid	scm	bioproject	PRJEB38780	47	2	47	0	1	1	0	0
+mycobacterium_tuberculosis__isoniazid	scm	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__isoniazid	scm	bioproject	PRJEB48275	772	86	760	12	5	81	0	0
+mycobacterium_tuberculosis__isoniazid	scm	bioproject	PRJNA1044389	90	7	88	2	0	7	0	0
+mycobacterium_tuberculosis__isoniazid	scm	country	Georgia	90	3	90	0	1	2	0	0
+mycobacterium_tuberculosis__isoniazid	scm	country	Germany	59	2	59	0	1	1	0	0
+mycobacterium_tuberculosis__isoniazid	scm	country	Moldova	200	7	199	1	0	7	0	0
+mycobacterium_tuberculosis__isoniazid	scm	country	Peru	75	10	74	1	0	10	0	0
+mycobacterium_tuberculosis__isoniazid	scm	country	South Africa	217	59	213	4	2	57	0	0
+mycobacterium_tuberculosis__isoniazid	scm	country	Ukraine	72	62	62	10	1	61	0	0
+mycobacterium_tuberculosis__isoniazid	scm	country	Viet Nam	90	7	88	2	0	7	0	0
+mycobacterium_tuberculosis__isoniazid	scm	country	Vietnam	190	7	184	6	2	5	0	0
+mycobacterium_tuberculosis__isoniazid	scm	mlst_in_cohort	no	33	2	32	1	0	2	0	0
+mycobacterium_tuberculosis__isoniazid	scm	mlst_in_cohort	no ST	20	4	20	0	0	4	0	0
+mycobacterium_tuberculosis__isoniazid	scm	mlst_in_cohort	yes	940	151	917	23	7	144	0	0
+mycobacterium_tuberculosis__isoniazid	cart	bioproject	PRJEB26996	72	62	62	10	1	61	0	0
+mycobacterium_tuberculosis__isoniazid	cart	bioproject	PRJEB27354	10	0	10	0	0	0	0	0
+mycobacterium_tuberculosis__isoniazid	cart	bioproject	PRJEB36040	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__isoniazid	cart	bioproject	PRJEB38780	47	2	47	0	1	1	0	0
+mycobacterium_tuberculosis__isoniazid	cart	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__isoniazid	cart	bioproject	PRJEB48275	772	86	760	12	5	81	0	0
+mycobacterium_tuberculosis__isoniazid	cart	bioproject	PRJNA1044389	90	7	88	2	0	7	0	0
+mycobacterium_tuberculosis__isoniazid	cart	country	Georgia	90	3	90	0	1	2	0	0
+mycobacterium_tuberculosis__isoniazid	cart	country	Germany	59	2	59	0	1	1	0	0
+mycobacterium_tuberculosis__isoniazid	cart	country	Moldova	200	7	199	1	0	7	0	0
+mycobacterium_tuberculosis__isoniazid	cart	country	Peru	75	10	74	1	0	10	0	0
+mycobacterium_tuberculosis__isoniazid	cart	country	South Africa	217	59	213	4	2	57	0	0
+mycobacterium_tuberculosis__isoniazid	cart	country	Ukraine	72	62	62	10	1	61	0	0
+mycobacterium_tuberculosis__isoniazid	cart	country	Viet Nam	90	7	88	2	0	7	0	0
+mycobacterium_tuberculosis__isoniazid	cart	country	Vietnam	190	7	184	6	2	5	0	0
+mycobacterium_tuberculosis__isoniazid	cart	mlst_in_cohort	no	33	2	32	1	0	2	0	0
+mycobacterium_tuberculosis__isoniazid	cart	mlst_in_cohort	no ST	20	4	20	0	0	4	0	0
+mycobacterium_tuberculosis__isoniazid	cart	mlst_in_cohort	yes	940	151	917	23	7	144	0	0
+mycobacterium_tuberculosis__kanamycin	scm	bioproject	PRJEB26996	17	45	16	1	8	37	0	0
+mycobacterium_tuberculosis__kanamycin	scm	bioproject	PRJEB38780	3	2	2	1	0	2	0	0
+mycobacterium_tuberculosis__kanamycin	scm	bioproject	PRJEB48275	314	541	301	13	29	512	0	0
+mycobacterium_tuberculosis__kanamycin	scm	bioproject	PRJNA1044389	4	93	2	2	1	92	0	0
+mycobacterium_tuberculosis__kanamycin	scm	country	Georgia	28	61	27	1	11	50	0	0
+mycobacterium_tuberculosis__kanamycin	scm	country	Germany	3	2	2	1	0	2	0	0
+mycobacterium_tuberculosis__kanamycin	scm	country	Moldova	124	84	118	6	10	74	0	0
+mycobacterium_tuberculosis__kanamycin	scm	country	Peru	10	75	8	2	0	75	0	0
+mycobacterium_tuberculosis__kanamycin	scm	country	South Africa	144	132	141	3	7	125	0	0
+mycobacterium_tuberculosis__kanamycin	scm	country	Ukraine	17	45	16	1	8	37	0	0
+mycobacterium_tuberculosis__kanamycin	scm	country	Viet Nam	4	93	2	2	1	92	0	0
+mycobacterium_tuberculosis__kanamycin	scm	country	Vietnam	8	189	7	1	1	188	0	0
+mycobacterium_tuberculosis__kanamycin	scm	mlst_in_cohort	no	6	24	5	1	0	24	0	0
+mycobacterium_tuberculosis__kanamycin	scm	mlst_in_cohort	no ST	3	19	3	0	0	19	0	0
+mycobacterium_tuberculosis__kanamycin	scm	mlst_in_cohort	yes	329	638	313	16	38	600	0	0
+mycobacterium_tuberculosis__kanamycin	cart	bioproject	PRJEB26996	17	45	16	1	8	37	0	0
+mycobacterium_tuberculosis__kanamycin	cart	bioproject	PRJEB38780	3	2	2	1	0	2	0	0
+mycobacterium_tuberculosis__kanamycin	cart	bioproject	PRJEB48275	314	541	301	13	29	512	0	0
+mycobacterium_tuberculosis__kanamycin	cart	bioproject	PRJNA1044389	4	93	2	2	1	92	0	0
+mycobacterium_tuberculosis__kanamycin	cart	country	Georgia	28	61	27	1	11	50	0	0
+mycobacterium_tuberculosis__kanamycin	cart	country	Germany	3	2	2	1	0	2	0	0
+mycobacterium_tuberculosis__kanamycin	cart	country	Moldova	124	84	118	6	10	74	0	0
+mycobacterium_tuberculosis__kanamycin	cart	country	Peru	10	75	8	2	0	75	0	0
+mycobacterium_tuberculosis__kanamycin	cart	country	South Africa	144	132	141	3	7	125	0	0
+mycobacterium_tuberculosis__kanamycin	cart	country	Ukraine	17	45	16	1	8	37	0	0
+mycobacterium_tuberculosis__kanamycin	cart	country	Viet Nam	4	93	2	2	1	92	0	0
+mycobacterium_tuberculosis__kanamycin	cart	country	Vietnam	8	189	7	1	1	188	0	0
+mycobacterium_tuberculosis__kanamycin	cart	mlst_in_cohort	no	6	24	5	1	0	24	0	0
+mycobacterium_tuberculosis__kanamycin	cart	mlst_in_cohort	no ST	3	19	3	0	0	19	0	0
+mycobacterium_tuberculosis__kanamycin	cart	mlst_in_cohort	yes	329	638	313	16	38	600	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	bioproject	PRJEB26996	17	45	0	17	0	45	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	bioproject	PRJEB38780	3	2	0	3	0	2	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	bioproject	PRJEB48275	314	541	0	314	0	541	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	bioproject	PRJNA1044389	4	93	0	4	0	93	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	country	Georgia	28	61	0	28	0	61	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	country	Germany	3	2	0	3	0	2	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	country	Moldova	124	84	0	124	0	84	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	country	Peru	10	75	0	10	0	75	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	country	South Africa	144	132	0	144	0	132	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	country	Ukraine	17	45	0	17	0	45	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	country	Viet Nam	4	93	0	4	0	93	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	country	Vietnam	8	189	0	8	0	189	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	mlst_in_cohort	no	6	24	0	6	0	24	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	mlst_in_cohort	no ST	3	19	0	3	0	19	0	0
+mycobacterium_tuberculosis__kanamycin	known_gene	mlst_in_cohort	yes	329	638	0	329	0	638	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	bioproject	PRJEB27354	4	6	4	0	0	6	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	bioproject	PRJEB38780	9	40	8	1	5	35	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	bioproject	PRJEB48275	108	598	102	6	34	564	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	country	Georgia	19	72	19	0	6	66	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	country	Germany	14	47	13	1	5	42	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	country	Moldova	13	195	10	3	5	190	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	country	Peru	3	82	3	0	6	76	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	country	South Africa	57	69	55	2	15	54	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	country	Vietnam	16	180	15	1	2	178	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	mlst_in_cohort	no	3	22	3	0	0	22	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	mlst_in_cohort	no ST	1	12	1	0	0	12	0	0
+mycobacterium_tuberculosis__levofloxacin	scm	mlst_in_cohort	yes	118	611	111	7	39	572	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	bioproject	PRJEB27354	4	6	4	0	0	6	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	bioproject	PRJEB38780	9	40	8	1	5	35	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	bioproject	PRJEB48275	108	598	102	6	34	564	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	country	Georgia	19	72	19	0	6	66	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	country	Germany	14	47	13	1	5	42	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	country	Moldova	13	195	10	3	5	190	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	country	Peru	3	82	3	0	6	76	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	country	South Africa	57	69	55	2	15	54	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	country	Vietnam	16	180	15	1	2	178	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	mlst_in_cohort	no	3	22	3	0	0	22	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	mlst_in_cohort	no ST	1	12	1	0	0	12	0	0
+mycobacterium_tuberculosis__levofloxacin	cart	mlst_in_cohort	yes	118	611	111	7	39	572	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	bioproject	PRJEB27354	4	6	4	0	6	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	bioproject	PRJEB36040	0	1	0	0	1	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	bioproject	PRJEB38780	9	40	9	0	40	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	bioproject	PRJEB48275	108	598	108	0	598	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	country	Georgia	19	72	19	0	72	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	country	Germany	14	47	14	0	47	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	country	Moldova	13	195	13	0	195	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	country	Peru	3	82	3	0	82	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	country	South Africa	57	69	57	0	69	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	country	Vietnam	16	180	16	0	180	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	mlst_in_cohort	no	3	22	3	0	22	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	mlst_in_cohort	no ST	1	12	1	0	12	0	0	0
+mycobacterium_tuberculosis__levofloxacin	known_gene	mlst_in_cohort	yes	118	611	118	0	611	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	bioproject	PRJEB27354	3	7	3	0	1	6	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	bioproject	PRJEB38780	7	42	6	1	7	35	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	bioproject	PRJEB48275	208	649	175	33	45	604	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	bioproject	PRJNA1044389	13	84	7	6	1	83	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	country	Georgia	18	73	17	1	6	67	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	country	Germany	11	50	10	1	8	42	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	country	Moldova	17	191	10	7	5	186	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	country	Peru	6	79	3	3	6	73	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	country	South Africa	151	125	130	21	26	99	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	country	Viet Nam	13	84	7	6	1	83	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	country	Vietnam	16	181	15	1	2	179	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	mlst_in_cohort	no	3	29	2	1	1	28	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	mlst_in_cohort	no ST	3	19	2	1	1	18	0	0
+mycobacterium_tuberculosis__moxifloxacin	scm	mlst_in_cohort	yes	226	735	188	38	52	683	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	bioproject	PRJEB27354	3	7	3	0	1	6	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	bioproject	PRJEB38780	7	42	6	1	7	35	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	bioproject	PRJEB48275	208	649	184	24	49	600	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	bioproject	PRJNA1044389	13	84	7	6	1	83	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	country	Georgia	18	73	17	1	6	67	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	country	Germany	11	50	10	1	8	42	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	country	Moldova	17	191	10	7	5	186	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	country	Peru	6	79	3	3	6	73	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	country	South Africa	151	125	139	12	30	95	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	country	Viet Nam	13	84	7	6	1	83	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	country	Vietnam	16	181	15	1	2	179	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	mlst_in_cohort	no	3	29	2	1	1	28	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	mlst_in_cohort	no ST	3	19	2	1	1	18	0	0
+mycobacterium_tuberculosis__moxifloxacin	cart	mlst_in_cohort	yes	226	735	197	29	56	679	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	bioproject	PRJEB27354	3	7	3	0	1	6	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	bioproject	PRJEB38780	7	42	6	1	7	35	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	bioproject	PRJEB48275	208	649	184	24	49	600	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	bioproject	PRJNA1044389	13	84	7	6	1	83	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	country	Georgia	18	73	17	1	6	67	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	country	Germany	11	50	10	1	8	42	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	country	Moldova	17	191	10	7	5	186	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	country	Peru	6	79	3	3	6	73	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	country	South Africa	151	125	139	12	30	95	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	country	Viet Nam	13	84	7	6	1	83	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	country	Vietnam	16	181	15	1	2	179	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	mlst_in_cohort	no	3	29	2	1	1	28	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	mlst_in_cohort	no ST	3	19	2	1	1	18	0	0
+mycobacterium_tuberculosis__moxifloxacin	lasso	mlst_in_cohort	yes	226	735	197	29	56	679	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	bioproject	PRJEB27354	3	7	3	0	7	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	bioproject	PRJEB36040	0	1	0	0	1	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	bioproject	PRJEB38780	7	42	7	0	42	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	bioproject	PRJEB48275	208	649	208	0	649	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	bioproject	PRJNA1044389	13	84	13	0	83	1	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	country	Georgia	18	73	18	0	73	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	country	Germany	11	50	11	0	50	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	country	Moldova	17	191	17	0	191	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	country	Peru	6	79	6	0	79	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	country	South Africa	151	125	151	0	125	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	country	Viet Nam	13	84	13	0	83	1	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	country	Vietnam	16	181	16	0	181	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	mlst_in_cohort	no	3	29	3	0	28	1	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	mlst_in_cohort	no ST	3	19	3	0	19	0	0	0
+mycobacterium_tuberculosis__moxifloxacin	known_gene	mlst_in_cohort	yes	226	735	226	0	735	0	0	0
+mycobacterium_tuberculosis__prothionamide	scm	bioproject	PRJEB27354	4	6	3	1	4	2	0	0
+mycobacterium_tuberculosis__prothionamide	scm	bioproject	PRJEB36040	1	0	0	1	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	scm	bioproject	PRJEB38780	23	26	19	4	17	9	0	0
+mycobacterium_tuberculosis__prothionamide	scm	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	scm	country	Germany	29	32	23	6	21	11	0	0
+mycobacterium_tuberculosis__prothionamide	scm	mlst_in_cohort	no	0	2	0	0	0	2	0	0
+mycobacterium_tuberculosis__prothionamide	scm	mlst_in_cohort	no ST	1	0	0	1	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	scm	mlst_in_cohort	yes	28	30	23	5	21	9	0	0
+mycobacterium_tuberculosis__prothionamide	cart	bioproject	PRJEB27354	4	6	3	1	4	2	0	0
+mycobacterium_tuberculosis__prothionamide	cart	bioproject	PRJEB36040	1	0	0	1	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	cart	bioproject	PRJEB38780	23	26	20	3	17	9	0	0
+mycobacterium_tuberculosis__prothionamide	cart	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	cart	country	Germany	29	32	24	5	21	11	0	0
+mycobacterium_tuberculosis__prothionamide	cart	mlst_in_cohort	no	0	2	0	0	0	2	0	0
+mycobacterium_tuberculosis__prothionamide	cart	mlst_in_cohort	no ST	1	0	0	1	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	cart	mlst_in_cohort	yes	28	30	24	4	21	9	0	0
+mycobacterium_tuberculosis__prothionamide	lasso	bioproject	PRJEB27354	4	6	4	0	6	0	0	0
+mycobacterium_tuberculosis__prothionamide	lasso	bioproject	PRJEB36040	1	0	0	1	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	lasso	bioproject	PRJEB38780	23	26	18	5	20	6	0	0
+mycobacterium_tuberculosis__prothionamide	lasso	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	lasso	country	Germany	29	32	23	6	26	6	0	0
+mycobacterium_tuberculosis__prothionamide	lasso	mlst_in_cohort	no	0	2	0	0	0	2	0	0
+mycobacterium_tuberculosis__prothionamide	lasso	mlst_in_cohort	no ST	1	0	0	1	0	0	0	0
+mycobacterium_tuberculosis__prothionamide	lasso	mlst_in_cohort	yes	28	30	23	5	26	4	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	bioproject	PRJEB26996	22	71	6	16	9	62	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	bioproject	PRJEB27354	7	3	2	5	2	1	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	bioproject	PRJEB38780	33	16	2	31	3	13	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	bioproject	PRJEB40777	1	0	0	1	0	0	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	bioproject	PRJEB48275	325	279	70	255	106	173	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	bioproject	PRJNA1044389	54	38	16	38	9	29	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	country	Georgia	60	14	2	58	1	13	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	country	Germany	41	20	4	37	5	15	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	country	Moldova	73	130	25	48	84	46	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	country	Peru	42	41	10	32	9	32	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	country	South Africa	38	13	15	23	4	9	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	country	Ukraine	22	71	6	16	9	62	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	country	Viet Nam	54	38	16	38	9	29	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	country	Vietnam	112	81	18	94	8	73	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	mlst_in_cohort	no	16	16	0	16	5	11	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	mlst_in_cohort	no ST	10	11	2	8	0	11	0	0
+mycobacterium_tuberculosis__pyrazinamide	scm	mlst_in_cohort	yes	416	381	94	322	124	257	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	bioproject	PRJEB26996	22	71	9	13	24	47	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	bioproject	PRJEB27354	7	3	4	3	1	2	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	bioproject	PRJEB36040	0	1	0	0	0	1	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	bioproject	PRJEB38780	33	16	21	12	10	6	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	bioproject	PRJEB48275	325	279	207	118	188	91	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	bioproject	PRJNA1044389	54	38	48	6	25	13	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	country	Georgia	60	14	29	31	6	8	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	country	Germany	41	20	26	15	11	9	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	country	Moldova	73	130	61	12	112	18	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	country	Peru	42	41	16	26	11	30	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	country	South Africa	38	13	21	17	7	6	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	country	Ukraine	22	71	9	13	24	47	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	country	Viet Nam	54	38	48	6	25	13	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	country	Vietnam	112	81	80	32	52	29	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	mlst_in_cohort	no	16	16	8	8	9	7	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	mlst_in_cohort	no ST	10	11	7	3	8	3	0	0
+mycobacterium_tuberculosis__pyrazinamide	cart	mlst_in_cohort	yes	416	381	275	141	231	150	0	0
+mycobacterium_tuberculosis__rifampin	scm	bioproject	PRJEB26996	58	75	56	2	0	75	0	0
+mycobacterium_tuberculosis__rifampin	scm	bioproject	PRJEB27354	8	2	8	0	2	0	0	0
+mycobacterium_tuberculosis__rifampin	scm	bioproject	PRJEB36040	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__rifampin	scm	bioproject	PRJEB38780	47	2	47	0	2	0	0	0
+mycobacterium_tuberculosis__rifampin	scm	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__rifampin	scm	bioproject	PRJEB48275	747	111	744	3	39	72	0	0
+mycobacterium_tuberculosis__rifampin	scm	bioproject	PRJNA1044389	83	14	83	0	10	4	0	0
+mycobacterium_tuberculosis__rifampin	scm	country	Georgia	88	5	88	0	3	2	0	0
+mycobacterium_tuberculosis__rifampin	scm	country	Germany	57	4	57	0	4	0	0	0
+mycobacterium_tuberculosis__rifampin	scm	country	Moldova	199	8	199	0	2	6	0	0
+mycobacterium_tuberculosis__rifampin	scm	country	Peru	68	17	68	0	7	10	0	0
+mycobacterium_tuberculosis__rifampin	scm	country	South Africa	217	59	217	0	8	51	0	0
+mycobacterium_tuberculosis__rifampin	scm	country	Ukraine	58	75	56	2	0	75	0	0
+mycobacterium_tuberculosis__rifampin	scm	country	Viet Nam	83	14	83	0	10	4	0	0
+mycobacterium_tuberculosis__rifampin	scm	country	Vietnam	175	22	172	3	19	3	0	0
+mycobacterium_tuberculosis__rifampin	scm	mlst_in_cohort	no	29	6	29	0	2	4	0	0
+mycobacterium_tuberculosis__rifampin	scm	mlst_in_cohort	no ST	17	7	17	0	3	4	0	0
+mycobacterium_tuberculosis__rifampin	scm	mlst_in_cohort	yes	899	191	894	5	48	143	0	0
+mycobacterium_tuberculosis__rifampin	cart	bioproject	PRJEB26996	58	75	56	2	0	75	0	0
+mycobacterium_tuberculosis__rifampin	cart	bioproject	PRJEB27354	8	2	8	0	2	0	0	0
+mycobacterium_tuberculosis__rifampin	cart	bioproject	PRJEB36040	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__rifampin	cart	bioproject	PRJEB38780	47	2	47	0	2	0	0	0
+mycobacterium_tuberculosis__rifampin	cart	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__rifampin	cart	bioproject	PRJEB48275	747	111	744	3	39	72	0	0
+mycobacterium_tuberculosis__rifampin	cart	bioproject	PRJNA1044389	83	14	83	0	10	4	0	0
+mycobacterium_tuberculosis__rifampin	cart	country	Georgia	88	5	88	0	3	2	0	0
+mycobacterium_tuberculosis__rifampin	cart	country	Germany	57	4	57	0	4	0	0	0
+mycobacterium_tuberculosis__rifampin	cart	country	Moldova	199	8	199	0	2	6	0	0
+mycobacterium_tuberculosis__rifampin	cart	country	Peru	68	17	68	0	7	10	0	0
+mycobacterium_tuberculosis__rifampin	cart	country	South Africa	217	59	217	0	8	51	0	0
+mycobacterium_tuberculosis__rifampin	cart	country	Ukraine	58	75	56	2	0	75	0	0
+mycobacterium_tuberculosis__rifampin	cart	country	Viet Nam	83	14	83	0	10	4	0	0
+mycobacterium_tuberculosis__rifampin	cart	country	Vietnam	175	22	172	3	19	3	0	0
+mycobacterium_tuberculosis__rifampin	cart	mlst_in_cohort	no	29	6	29	0	2	4	0	0
+mycobacterium_tuberculosis__rifampin	cart	mlst_in_cohort	no ST	17	7	17	0	3	4	0	0
+mycobacterium_tuberculosis__rifampin	cart	mlst_in_cohort	yes	899	191	894	5	48	143	0	0
+mycobacterium_tuberculosis__rifampin	lasso	bioproject	PRJEB26996	58	75	53	5	0	75	0	0
+mycobacterium_tuberculosis__rifampin	lasso	bioproject	PRJEB27354	8	2	8	0	2	0	0	0
+mycobacterium_tuberculosis__rifampin	lasso	bioproject	PRJEB36040	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__rifampin	lasso	bioproject	PRJEB38780	47	2	43	4	2	0	0	0
+mycobacterium_tuberculosis__rifampin	lasso	bioproject	PRJEB40777	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__rifampin	lasso	bioproject	PRJEB48275	747	111	686	61	25	86	0	0
+mycobacterium_tuberculosis__rifampin	lasso	bioproject	PRJNA1044389	83	14	74	9	10	4	0	0
+mycobacterium_tuberculosis__rifampin	lasso	country	Georgia	88	5	85	3	2	3	0	0
+mycobacterium_tuberculosis__rifampin	lasso	country	Germany	57	4	53	4	4	0	0	0
+mycobacterium_tuberculosis__rifampin	lasso	country	Moldova	199	8	194	5	0	8	0	0
+mycobacterium_tuberculosis__rifampin	lasso	country	Peru	68	17	46	22	2	15	0	0
+mycobacterium_tuberculosis__rifampin	lasso	country	South Africa	217	59	203	14	7	52	0	0
+mycobacterium_tuberculosis__rifampin	lasso	country	Ukraine	58	75	53	5	0	75	0	0
+mycobacterium_tuberculosis__rifampin	lasso	country	Viet Nam	83	14	74	9	10	4	0	0
+mycobacterium_tuberculosis__rifampin	lasso	country	Vietnam	175	22	158	17	14	8	0	0
+mycobacterium_tuberculosis__rifampin	lasso	mlst_in_cohort	no	29	6	26	3	3	3	0	0
+mycobacterium_tuberculosis__rifampin	lasso	mlst_in_cohort	no ST	17	7	16	1	2	5	0	0
+mycobacterium_tuberculosis__rifampin	lasso	mlst_in_cohort	yes	899	191	824	75	34	157	0	0
+mycobacterium_tuberculosis__streptomycin	scm	bioproject	PRJEB26996	72	62	57	15	3	59	0	0
+mycobacterium_tuberculosis__streptomycin	scm	bioproject	PRJEB27354	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__streptomycin	scm	bioproject	PRJEB38780	5	0	5	0	0	0	0	0
+mycobacterium_tuberculosis__streptomycin	scm	bioproject	PRJNA1044389	79	18	67	12	2	16	0	0
+mycobacterium_tuberculosis__streptomycin	scm	country	Germany	6	0	6	0	0	0	0	0
+mycobacterium_tuberculosis__streptomycin	scm	country	Ukraine	72	62	57	15	3	59	0	0
+mycobacterium_tuberculosis__streptomycin	scm	country	Viet Nam	79	18	67	12	2	16	0	0
+mycobacterium_tuberculosis__streptomycin	scm	mlst_in_cohort	no	8	2	7	1	0	2	0	0
+mycobacterium_tuberculosis__streptomycin	scm	mlst_in_cohort	no ST	7	1	3	4	0	1	0	0
+mycobacterium_tuberculosis__streptomycin	scm	mlst_in_cohort	yes	142	77	120	22	5	72	0	0
+mycobacterium_tuberculosis__streptomycin	cart	bioproject	PRJEB26996	72	62	57	15	3	59	0	0
+mycobacterium_tuberculosis__streptomycin	cart	bioproject	PRJEB27354	1	0	1	0	0	0	0	0
+mycobacterium_tuberculosis__streptomycin	cart	bioproject	PRJEB38780	5	0	5	0	0	0	0	0
+mycobacterium_tuberculosis__streptomycin	cart	bioproject	PRJNA1044389	79	18	67	12	2	16	0	0
+mycobacterium_tuberculosis__streptomycin	cart	country	Germany	6	0	6	0	0	0	0	0
+mycobacterium_tuberculosis__streptomycin	cart	country	Ukraine	72	62	57	15	3	59	0	0
+mycobacterium_tuberculosis__streptomycin	cart	country	Viet Nam	79	18	67	12	2	16	0	0
+mycobacterium_tuberculosis__streptomycin	cart	mlst_in_cohort	no	8	2	7	1	0	2	0	0
+mycobacterium_tuberculosis__streptomycin	cart	mlst_in_cohort	no ST	7	1	3	4	0	1	0	0
+mycobacterium_tuberculosis__streptomycin	cart	mlst_in_cohort	yes	142	77	120	22	5	72	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	bioproject	PRJEB26996	72	62	0	72	0	62	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	bioproject	PRJEB27354	1	0	0	1	0	0	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	bioproject	PRJEB38780	5	0	0	5	0	0	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	bioproject	PRJNA1044389	79	18	0	79	0	18	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	country	Germany	6	0	0	6	0	0	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	country	Ukraine	72	62	0	72	0	62	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	country	Viet Nam	79	18	0	79	0	18	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	mlst_in_cohort	no	8	2	0	8	0	2	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	mlst_in_cohort	no ST	7	1	0	7	0	1	0	0
+mycobacterium_tuberculosis__streptomycin	known_gene	mlst_in_cohort	yes	142	77	0	142	0	77	0	0

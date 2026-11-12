@@ -1,0 +1,8 @@
+dataset	learner	feature	kmer	n_kmers	cohort_resistant_carriers	cohort_resistant	cohort_resistant_share	cohort_susceptible_carriers	cohort_susceptible	cohort_susceptible_share	new_resistant_carriers	new_resistant	new_resistant_share	new_susceptible_carriers	new_susceptible	new_susceptible_share
+shigella_flexneri__ciprofloxacin	scm	23185	TAATCGGTAAATACCATCCCCATGGTGACTT	11	29	33	0.878788	4	328	0.012195	23	31	0.741935	8	47	0.170213
+shigella_flexneri__ciprofloxacin	scm	534	CAGCGTCGATATATAAGATAACACGACGTCT	111	33	33	1.000000	320	328	0.975610	31	31	1.000000	46	47	0.978723
+shigella_flexneri__ciprofloxacin	cart	22184	GCCATACGGACGATCGTGTCATAAACCGCCG	1	0	33	0.000000	304	328	0.926829	8	31	0.258065	38	47	0.808511
+shigella_flexneri__ciprofloxacin	lasso	23185	TAATCGGTAAATACCATCCCCATGGTGACTT	11	29	33	0.878788	4	328	0.012195	23	31	0.741935	8	47	0.170213
+shigella_flexneri__ciprofloxacin	lasso	8092	TTCATTTTTCACCTGTTTCTCATGCGGGGGT	31	8	33	0.242424	328	328	1.000000	8	31	0.258065	39	47	0.829787
+shigella_flexneri__ciprofloxacin	lasso	22184	GCCATACGGACGATCGTGTCATAAACCGCCG	1	0	33	0.000000	304	328	0.926829	8	31	0.258065	38	47	0.808511
+shigella_flexneri__ciprofloxacin	lasso	6053	GATGTTGGAGTGGTGTTCGAACATGATGCTT	6	4	33	0.121212	1	328	0.003049	0	31	0.000000	0	47	0.000000

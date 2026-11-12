@@ -1,0 +1,52 @@
+dataset	learner	left_out	scored_resistant	scored_susceptible	reportable	tp	fn	fp	tn	no_call_resistant	no_call_susceptible	sensitivity	specificity	balanced_accuracy
+salmonella_enterica__amoxicillin_clavulanate	scm	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__amoxicillin_clavulanate	scm	PRJNA378379	301	715	yes	0	301	0	715	0	0	0.000000	1.000000	0.500000
+salmonella_enterica__amoxicillin_clavulanate	cart	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__amoxicillin_clavulanate	cart	PRJNA378379	301	715	yes	0	301	0	715	0	0	0.000000	1.000000	0.500000
+salmonella_enterica__amoxicillin_clavulanate	lasso	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__amoxicillin_clavulanate	lasso	PRJNA378379	301	715	yes	0	301	0	715	0	0	0.000000	1.000000	0.500000
+salmonella_enterica__amoxicillin_clavulanate	known_gene	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__amoxicillin_clavulanate	known_gene	PRJNA378379	301	715	yes	48	253	0	715	0	0	0.159468	1.000000	0.579734
+salmonella_enterica__ceftazidime	scm	PRJNA248792	0	0	no	0	0	0	0	0	0			
+salmonella_enterica__ceftazidime	cart	PRJNA248792	0	0	no	0	0	0	0	0	0			
+salmonella_enterica__ceftazidime	lasso	PRJNA248792	0	0	no	0	0	0	0	0	0			
+salmonella_enterica__ceftazidime	known_gene	PRJNA248792	0	0	no	0	0	0	0	0	0			
+salmonella_enterica__ceftriaxone	scm	PRJEB2226	50	1689	yes	47	3	1	1688	0	0	0.940000	0.999408	0.969704
+salmonella_enterica__ceftriaxone	scm	PRJEB3215	50	1680	yes	47	3	1	1679	0	0	0.940000	0.999405	0.969702
+salmonella_enterica__ceftriaxone	scm	PRJNA230403	50	1674	yes	47	3	1	1673	0	0	0.940000	0.999403	0.969701
+salmonella_enterica__ceftriaxone	scm	PRJNA248792	0	27	no	0	0	0	27	0	0			
+salmonella_enterica__ceftriaxone	cart	PRJEB2226	50	1689	yes	46	4	1	1688	0	0	0.920000	0.999408	0.959704
+salmonella_enterica__ceftriaxone	cart	PRJEB3215	50	1680	yes	46	4	1	1679	0	0	0.920000	0.999405	0.959702
+salmonella_enterica__ceftriaxone	cart	PRJNA230403	50	1674	yes	46	4	1	1673	0	0	0.920000	0.999403	0.959701
+salmonella_enterica__ceftriaxone	cart	PRJNA248792	0	27	no	0	0	0	27	0	0			
+salmonella_enterica__ceftriaxone	known_gene	PRJEB2226	50	1689	yes	48	2	1	1688	0	0	0.960000	0.999408	0.979704
+salmonella_enterica__ceftriaxone	known_gene	PRJEB3215	50	1680	yes	48	2	1	1679	0	0	0.960000	0.999405	0.979702
+salmonella_enterica__ceftriaxone	known_gene	PRJNA230403	50	1674	yes	48	2	1	1673	0	0	0.960000	0.999403	0.979701
+salmonella_enterica__ceftriaxone	known_gene	PRJNA248792	0	27	no	0	0	0	27	0	0			
+salmonella_enterica__chloramphenicol	scm	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__chloramphenicol	scm	PRJNA378379	316	1388	yes	304	12	0	1388	0	0	0.962025	1.000000	0.981013
+salmonella_enterica__chloramphenicol	cart	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__chloramphenicol	cart	PRJNA378379	316	1388	yes	304	12	0	1388	0	0	0.962025	1.000000	0.981013
+salmonella_enterica__chloramphenicol	known_gene	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__chloramphenicol	known_gene	PRJNA378379	316	1388	yes	304	12	0	1388	0	0	0.962025	1.000000	0.981013
+salmonella_enterica__ciprofloxacin	scm	PRJNA248792	1	0	no	1	0	0	0	0	0			
+salmonella_enterica__ciprofloxacin	scm	PRJNA378379	1526	178	yes	1487	39	0	178	0	0	0.974443	1.000000	0.987221
+salmonella_enterica__ciprofloxacin	cart	PRJNA248792	1	0	no	1	0	0	0	0	0			
+salmonella_enterica__ciprofloxacin	cart	PRJNA378379	1526	178	yes	1419	107	2	176	0	0	0.929882	0.988764	0.959323
+salmonella_enterica__ciprofloxacin	known_gene	PRJNA248792	1	0	no	0	1	0	0	0	0			
+salmonella_enterica__ciprofloxacin	known_gene	PRJNA378379	1526	178	yes	56	1470	0	178	0	0	0.036697	1.000000	0.518349
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__sulfamethoxazole_trimethoprim	scm	PRJNA378379	329	1375	yes	251	78	1	1374	0	0	0.762918	0.999273	0.881095
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__sulfamethoxazole_trimethoprim	cart	PRJNA378379	329	1375	yes	299	30	0	1375	0	0	0.908815	1.000000	0.954407
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__sulfamethoxazole_trimethoprim	known_gene	PRJNA378379	329	1375	yes	322	7	0	1375	0	0	0.978723	1.000000	0.989362
+salmonella_enterica__tetracycline	scm	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__tetracycline	scm	PRJNA378379	27	1677	yes	25	2	91	1586	0	0	0.925926	0.945736	0.935831
+salmonella_enterica__tetracycline	cart	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__tetracycline	cart	PRJNA378379	27	1677	yes	25	2	0	1677	0	0	0.925926	1.000000	0.962963
+salmonella_enterica__tetracycline	known_gene	PRJNA248792	0	1	no	0	0	0	1	0	0			
+salmonella_enterica__tetracycline	known_gene	PRJNA378379	27	1677	yes	25	2	0	1677	0	0	0.925926	1.000000	0.962963
+salmonella_enterica__trimethoprim	scm	PRJNA248792	0	0	no	0	0	0	0	0	0			
+salmonella_enterica__trimethoprim	cart	PRJNA248792	0	0	no	0	0	0	0	0	0			
+salmonella_enterica__trimethoprim	known_gene	PRJNA248792	0	0	no	0	0	0	0	0	0			
