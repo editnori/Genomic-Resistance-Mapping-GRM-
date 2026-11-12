@@ -59,8 +59,12 @@ export interface LearnerLite {
   vme: number | null;
   me: number | null;
   auroc: number | null;
-  /** Isolates without a call. Absent on rows written before no-calls. */
+  /** Isolates in null-fit folds. Absent on rows written before no-calls. */
   no_call?: NoCall;
+  /** Revision 14 rows with a null-fit fold: those isolates are scored at
+   *  their fold's training prevalence and counted in the rates above, which
+   *  then cover every isolate. Absent otherwise. */
+  null_fits_scored?: boolean;
 }
 
 export interface ConformalPoint {
@@ -75,23 +79,31 @@ export interface ConformalPoint {
 
 export interface LearnerResult {
   learner: Learner;
-  /** Pooled out-of-fold calls; isolates without a call are left out. Null
-   *  when the learner called no isolate. */
+  /** Pooled out-of-fold calls. From revision 14 they cover every isolate,
+   *  a null fit's at its fold's training prevalence; before, isolates without
+   *  a call are left out, and metrics are null when none was called. */
   metrics: BinaryMetrics | null;
-  /** One per outer fold; null for a fold whose fit made no call. */
+  /** Revision 14 rows with a null-fit fold: the metrics over the other
+   *  isolates, the figure revisions 7 to 13 gave as `metrics`; null when
+   *  every fold's fit was null. Absent on every other row. */
+  called_metrics?: BinaryMetrics | null;
+  /** One per outer fold; null for a fold whose fit made no call (before
+   *  revision 14). */
   fold_balanced_accuracy: (number | null)[];
   /** ROC points [fpr, tpr]; empty for 0/1 learners (SCM, catalog). */
   roc: [number, number][];
-  /** Out-of-fold resistant score per sample, in `samples` order; null for
-   *  an isolate without a call. */
+  /** Out-of-fold resistant score per sample, in `samples` order; a null
+   *  fit's isolates carry its training prevalence from revision 14, and are
+   *  null (no call) in revisions 7 to 13. */
   scores: (number | null)[];
   /** Empty while the pipeline fits no separate calibration set. */
   conformal: ConformalPoint[];
   /** Per-fold model size: SCM rules, CART leaves, forest trees, boosted
    *  trees kept by early stopping, or lasso non-zero weights. Zero for
    *  boosting or the lasso is a null fit: rows without `no_call` scored
-   *  that fold 0.5, which the 0.5 cutoff calls resistant; rows with it
-   *  leave the fold uncalled. */
+   *  that fold 0.5, which the 0.5 cutoff calls resistant; rows of revisions
+   *  7 to 13 leave the fold uncalled; revision 14 scores it at its training
+   *  prevalence. */
   fold_complexity: number[];
   seconds: number;
   /** Isolates in folds whose fit was null, by class. Absent on catalog rows

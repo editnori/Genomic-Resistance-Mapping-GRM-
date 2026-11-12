@@ -9,7 +9,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { Corpus, Manifest } from "../data/schema";
 import { capitalize, int, pct, plural, speciesShort } from "../data/format";
 import { loadErrorText, useCorpus } from "../data/load";
-import { manifestAudit, nullFitWords } from "../data/derive/evaluation";
+import { EQUAL_SCORING_REVISION, manifestAudit, nullFitWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
 import { notScored } from "../data/derive/tests";
 import { FOCUS_RING, PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitives";
@@ -252,14 +252,14 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
     <Defs>
       <Def term="Balanced accuracy">The mean of sensitivity and specificity, over pooled out-of-fold predictions. A score of 0.5 or more calls resistant.</Def>
       <Def term="Best learner">
-        The learner with the highest random-split balanced accuracy among those that call every isolate on every split that ran. The known-gene rule is a baseline, never a candidate.
+        The learner with the highest random-split balanced accuracy among those scored on every isolate on every split that ran. From evaluation revision 14 that is every learner: a fold where boosting kept no tree, or the lasso kept no weight, predicts its training isolates' resistant share, called at 0.5 like any score. The known-gene rule is a baseline, never a candidate.
         Overview&apos;s figures use the best learner.
       </Def>
       <Def term="VME and ME">
         Very major error (VME) is resistant isolates called susceptible, over the resistant isolates called; major error (ME) is susceptible isolates called resistant, over the
         susceptible isolates called. They are read against FDA-style bars for susceptibility test devices, VME at most 1.5% and ME at most 3%, as a reference, not a regulatory claim.
       </Def>
-      <Def term="Learner no-calls">{nullFitWords(manifest.evaluation_revision)}</Def>
+      <Def term={(manifest.evaluation_revision ?? 0) >= EQUAL_SCORING_REVISION ? "Learner null fits" : "Learner no-calls"}>{nullFitWords(manifest.evaluation_revision)}</Def>
       <Def term="Probe no-calls">
         A probe assay gives no call for an isolate whose genome carries none of its probe k-mers. That isolate is neither found nor missed: the panel&apos;s sensitivity and specificity
         cover the isolates with a probe call, and the learner&apos;s shares still count it.

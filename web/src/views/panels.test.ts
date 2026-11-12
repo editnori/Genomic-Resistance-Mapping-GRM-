@@ -54,9 +54,9 @@ describe("panel evidence and unscored assays", () => {
     const base = withRealProbeRows(manifest);
     const none = { ...base.datasets[0]!, id: "x__none", best_learner: null, best_random: null, best_lineage: null, panels: [["carbapenemase", base.panels[0]!.metrics] as [string, Lite]] };
     const html = render({ ...base, datasets: [...base.datasets, none] });
-    expect(html).toContain("1 dataset with a simulated panel has no learner that calls every isolate and is left out.");
+    expect(html).toContain("1 dataset with a simulated panel has no learner scored on every isolate and is left out.");
     expect(html).not.toContain("undefined");
-    expect(render(base)).not.toContain("has no learner that calls every isolate");
+    expect(render(base)).not.toContain("has no learner scored on every isolate");
   });
 
   it("adds no unsupported section to a manifest without unsupported assays", () => {

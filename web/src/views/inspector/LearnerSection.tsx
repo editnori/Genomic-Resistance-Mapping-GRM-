@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import type { DatasetReport, Learner, LearnerResult, Research, Scheme } from "../../data/schema";
 import { int, LEARNER_NAME, LEARNER_ORDER, learnerInSentence, pct } from "../../data/format";
 import { BARS } from "../../data/metrics";
-import { bestLearner, countsNoCalls, learnerOf, NO_BEST_LEARNER, nullFolds, outscoringPartial, splitAbsence, splitOf, uncalledOf } from "../../data/derive/dataset";
+import { bestLearner, countsNoCalls, learnerOf, NO_BEST_LEARNER, nullFolds, outscoringPartial, scoresNullFits, splitAbsence, splitOf, uncalledOf } from "../../data/derive/dataset";
 import { linear, useWidth } from "../../charts/kit";
 import { LearnerStripRow, StripAxis } from "../../charts/LearnerStrip";
 import { BarPill, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../../ui/primitives";
@@ -49,8 +49,9 @@ const RateRange = ({ ci, of, as }: { ci: RateInterval | null | undefined; of: st
     </span>
   );
 
-/** Null folds in a report written before no-calls, which scored them 0.5;
- *  the note under the table says what that did to the rates. */
+/** Null folds in a report that scored them: at 0.5 before no-calls, at the
+ *  fold's training prevalence from revision 14; the note under the table
+ *  says what that did to the rates. */
 const NullFoldCell = ({ l }: { l: LearnerResult }) => {
   const k = nullFolds(l);
   return k === 0 ? <span className="text-muted-text">None</span> : <span className="tabular-nums">{`${int(k)} of ${int(l.fold_complexity.length)}`}</span>;
@@ -112,8 +113,10 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
   const x = linear([lo, 1], [8, stripWidth - 8]);
   const bestLineage = best === undefined ? undefined : learnerOf(r, "lineage", best.learner);
 
-  // Reports with no-call counts get the share each row calls; older reports
-  // get the null folds they scored 0.5, when they have any.
+  // Reports with no-call counts (revisions 7 to 13) get the share each row
+  // calls; other reports get the null folds they scored, when they have any:
+  // at 0.5 before no-calls, at the training prevalence from revision 14.
+  const prevalenceScored = scoresNullFits(r);
   const noCalls = countsNoCalls(r);
   const rows = learners.flatMap((l) => [learnerOf(r, "random", l), learnerOf(r, "lineage", l)]);
   const anyUncalled = rows.some((l) => l !== undefined && (uncalledOf(l) ?? 0) > 0);
@@ -141,7 +144,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
       ? null
       : `${outscoring
           .map((o) => `${LEARNER_NAME[o.learner]} scores ${pct(o.ba)} on random splits, above ${learnerInSentence(best.learner)}, but gives no call for ${o.uncalled.map(uncalledWords).join(" and ")}.`)
-          .join(" ")} The best learner has to call every isolate on every split it ran.`;
+          .join(" ")} The best learner has to be scored on every isolate on every split it ran.`;
 
   const errorsOf = (l: Learner) => learnerOf(r, scheme, l);
   // The rows the Called column reads, named in words under the table.
@@ -281,7 +284,9 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
           ? " Under VME and ME, the 95% Clopper-Pearson interval from this report's own counts: VME over the resistant isolates the row called, ME over the susceptible ones; a range's tooltip gives its counts. It treats the isolates as independent and reflects which ones happened to be sampled, not calibration or clinical performance."
           : ""}
         {anyNullFold
-          ? " This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
+          ? prevalenceScored
+            ? " A fold where boosting kept no tree, or the lasso kept no weight, predicts its training isolates' resistant share for each isolate it holds, and the 0.5 cutoff calls that score like any other; Null folds counts those folds, and every rate includes them."
+            : " This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
           : ""}
       </p>
       {uncalled.length === 0 ? null : (

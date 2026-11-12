@@ -56,8 +56,8 @@ describe("splitSummary", () => {
     expect([s.n, s.nLineage, s.nNoBest]).toEqual([1, 1, 1]);
     expect(s.medianRandom).toBeCloseTo(0.8);
     expect(s.medianGap).toBeCloseTo(0.1);
-    expect(noBestWords(s.nNoBest)).toBe(" 1 dataset has no learner that calls every isolate and is left out.");
-    expect(noBestWords(2, " with a simulated panel")).toBe(" 2 datasets with a simulated panel have no learner that calls every isolate and are left out.");
+    expect(noBestWords(s.nNoBest)).toBe(" 1 dataset has no learner scored on every isolate and is left out.");
+    expect(noBestWords(2, " with a simulated panel")).toBe(" 2 datasets with a simulated panel have no learner scored on every isolate and are left out.");
     expect(noBestWords(0)).toBe("");
   });
 });

@@ -15,15 +15,17 @@ import type {
 import { decodeBits } from "../bits";
 import { capitalize, int, learnerInSentence, pct } from "../format";
 import { CATALOG_CUTOFF } from "./overview";
+import { EQUAL_SCORING_REVISION } from "./evaluation";
 
 /** The best learner in words, for every view that names it. report.rs and
  *  bestLearner rank by random-split balanced accuracy, and only learners
- *  that call every isolate on every split that ran are candidates. */
-export const BEST_LEARNER_WORDS = "the best random-split learner among those that call every isolate";
+ *  whose rates cover every isolate on every split that ran are candidates:
+ *  from revision 14 all of them, earlier only those that call every isolate. */
+export const BEST_LEARNER_WORDS = "the best random-split learner among those scored on every isolate";
 
 /** A catalog row with no best learner: every learner leaves some isolate
- *  without a call. */
-export const NO_BEST_LEARNER = "No learner calls every isolate";
+ *  without a call (reports before revision 14). */
+export const NO_BEST_LEARNER = "No learner is scored on every isolate";
 
 /** A learner row with at least one call, so it has metrics. */
 export type CalledLearner = LearnerResult & { metrics: BinaryMetrics };
@@ -45,23 +47,32 @@ export const splitAbsence = (r: DatasetReport, scheme: Scheme): string | null =>
 export const learnerOf = (r: DatasetReport, scheme: Scheme, learner: Learner): LearnerResult | undefined =>
   splitOf(r, scheme)?.learners.find((l) => l.learner === learner);
 
+export { EQUAL_SCORING_REVISION };
+
+/** Whether the report scores a null fit's isolates at their fold's training
+ *  prevalence, so every learner's rates cover every isolate. */
+export const scoresNullFits = (r: DatasetReport): boolean => (r.evaluation?.revision ?? 0) >= EQUAL_SCORING_REVISION;
+
 /** Isolates a learner row gave no call; null on a catalog row or a row
- *  written before null fits became no-calls. */
-export const uncalledOf = (l: LearnerResult): number | null => (l.no_call === undefined ? null : l.no_call.resistant + l.no_call.susceptible);
+ *  written before null fits became no-calls. A revision-14 row (it carries
+ *  `called_metrics`) calls every isolate, a null fit's at its prevalence. */
+export const uncalledOf = (l: LearnerResult): number | null =>
+  l.no_call === undefined ? null : l.called_metrics !== undefined ? 0 : l.no_call.resistant + l.no_call.susceptible;
 
 /** Whether the report's learner rows count no-calls, so a null fit left its
- *  fold uncalled instead of scoring it 0.5. */
-export const countsNoCalls = (r: DatasetReport): boolean => r.splits.some((s) => s.learners.some((l) => l.no_call !== undefined));
+ *  fold uncalled instead of scoring it (revisions 7 to 13). */
+export const countsNoCalls = (r: DatasetReport): boolean => !scoresNullFits(r) && r.splits.some((s) => s.learners.some((l) => l.no_call !== undefined));
 
 /** Folds where boosting kept no tree or the lasso kept no weight, read from
- *  fold_complexity. Reports without no-call counts scored those folds 0.5. */
+ *  fold_complexity. Reports without no-call counts scored those folds 0.5;
+ *  revision-14 reports at their training prevalence. */
 export const nullFolds = (l: LearnerResult): number => (l.learner === "gbt" || l.learner === "lasso" ? l.fold_complexity.filter((c) => c === 0).length : 0);
 
 const callsEveryIsolate = (l: LearnerResult | undefined): l is CalledLearner => l !== undefined && l.metrics !== null && (uncalledOf(l) ?? 0) === 0;
 
 /** The best learner, as report.rs picks it: the highest random-split
- *  balanced accuracy among learners that call every isolate on every split
- *  that ran. The catalog is a baseline, not a candidate; a tie goes to the
+ *  balanced accuracy among learners whose rates cover every isolate on every
+ *  split that ran (every learner from revision 14). The catalog is a baseline, not a candidate; a tie goes to the
  *  later learner, as Rust's max_by does. */
 export const bestLearner = (r: DatasetReport): CalledLearner | undefined => {
   const lineage = splitOf(r, "lineage");
@@ -274,7 +285,7 @@ export const answerSentence = (r: DatasetReport): string => {
   const catalogClause = catalogBa !== undefined && catalogBa >= bar - CATALOG_CUTOFF ? `; the known-gene catalog alone reaches ${pct(catalogBa)}` : "";
   const text =
     ruleText !== null && best.learner === "scm"
-      ? `${ruleText} calls ${r.antibiotic} resistance at ${bothSplits(best)}, the best of the learners that call every isolate`
+      ? `${ruleText} calls ${r.antibiotic} resistance at ${bothSplits(best)}, the best of the learners scored on every isolate`
       : ruleText !== null && scmBa !== undefined
         ? `${ruleText} calls ${r.antibiotic} resistance at ${pct(scmBa)} balanced accuracy; ${BEST_LEARNER_WORDS}, ${learnerInSentence(best.learner)}, reaches ${bothSplits(best)}`
         : `${capitalize(BEST_LEARNER_WORDS)}, ${learnerInSentence(best.learner)}, reaches ${bothSplits(best)}`;
