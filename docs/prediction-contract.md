@@ -4,16 +4,16 @@ What a published dataset report's final model means on a genome outside its coho
 
 ## The published model
 
-A dataset report (schema 2, `REPORT_SCHEMA` in `src/analysis.rs:33`) holds the final models `grm learn` fits on every sample of the cohort (`final_models`, `src/learn/eval.rs:1199`). Their feature ids are rows of the dataset matrix: `final_plan` (`src/learn/eval.rs:1259`) requires that every row survives `training_candidates` on all samples, so the final models' candidates are the dataset matrix itself. A dataset row is every species-matrix pattern that is identical over the dataset's genomes (`Dataset::project`, `src/matrix.rs:1654`), and so every k-mer with one presence vector over the cohort.
+A dataset report (schema 2, `REPORT_SCHEMA` in `src/analysis.rs:36`) holds the final models `grm learn` fits on every sample of the cohort (`final_models`, `src/learn/eval.rs:1244`). Their feature ids are rows of the dataset matrix: `final_plan` (`src/learn/eval.rs:1304`) requires that every row survives `training_candidates` on all samples, so the final models' candidates are the dataset matrix itself. A dataset row is every species-matrix pattern that is identical over the dataset's genomes (`Dataset::project`, `src/matrix.rs:1654`), and so every k-mer with one presence vector over the cohort.
 
-The report lists some features under `features` (`model_features`, `src/analysis.rs:247`). Each entry has:
+The report lists some features under `features` (`model_features`, `src/analysis.rs:255`). Each entry has:
 
 - `feature`, the dataset row;
 - `n_kmers`, how many k-mers the row covers;
-- `kmer`, one of them: the first k-mer placed on the reference contig, read on the contig's strand (`src/annotate.rs:348`), or, when no reference places the feature, the first of its k-mers in canonical form (`src/annotate.rs:156`). Either way it is a k-mer of the row;
-- `bits`, the row's presence over the samples in report order: base64 of the little-endian u64 words, bit i for sample i (`base64`, `src/analysis.rs:224`; written at `src/analysis.rs:715`).
+- `kmer`, one of them: the first k-mer placed on the reference contig, read on the contig's strand (`src/annotate.rs:365`), or, when no reference places the feature, the first of its k-mers in canonical form (`src/annotate.rs:173`). Either way it is a k-mer of the row;
+- `bits`, the row's presence over the samples in report order: base64 of the little-endian u64 words, bit i for sample i (`base64`, `src/analysis.rs:232`; written at `src/analysis.rs:748`).
 
-The served copy under `report/datasets/` is the file `grm learn` wrote, byte for byte (`src/report.rs:595`), so either file identifies the same model.
+The served copy under `report/datasets/` is the file `grm learn` wrote, byte for byte (`src/report.rs:612`), so either file identifies the same model.
 
 ### Which learners are complete
 
@@ -21,8 +21,8 @@ The served copy under `report/datasets/` is the file `grm learn` wrote, byte for
 |---|---|---|
 | SCM | `models.scm`: `kind` and `rules` (feature, presence) | Always. `model_features` lists every rule's feature. |
 | CART | `models.cart.nodes` (value, split feature, children) and `models.cart_depth` | Always. `model_features` lists every split's feature, and the tree was grown to `cart_depth`. |
-| Lasso | `models.lasso`: `intercept`, nonzero `coef`, `lambda` | Only when every nonzero coefficient's feature is listed. `model_features` lists the 30 largest coefficients by magnitude (`src/analysis.rs:262`), plus any feature listed for another learner. |
-| Forest | `models.rf_importance`, the top 50 importances (`src/learn/eval.rs:1248`) | Never: no tree is published. |
+| Lasso | `models.lasso`: `intercept`, nonzero `coef`, `lambda` | Only when every nonzero coefficient's feature is listed. `model_features` lists the 30 largest coefficients by magnitude (`src/analysis.rs:270`), plus any feature listed for another learner. |
+| Forest | `models.rf_importance`, the top 50 importances (`src/learn/eval.rs:1293`) | Never: no tree is published. |
 | Boosted trees | `models.gbt_importance`, the top 50 importances | Never: no tree is published. |
 
 Checked on 2026-11-11 against the 274 served revision-12 reports: every SCM rule and CART split names a listed feature with a valid 31-mer in all 274; the lasso is complete in 142 and incomplete in 132; none publishes a forest or boosted model beyond importances. `grm predict` on each report, with any genome, prints the learners it leaves out and why, which reproduces the lasso count. Decoding the stored `bits` of their own features, the published SCM rules reproduce every greedy step's `covered` and `lost`, and the published CART tree every node's `n` and `n_resistant`, in all 274 (a read-only script outside the tree; changing its bit order breaks the replay in 273 of them).
@@ -62,11 +62,13 @@ One JSON line per genome and learner:
 | `assembly` | length, contigs, gc, n50, ambiguous, for a FASTA input; null for a kset |
 | `learner` | `scm`, `cart` or `lasso` |
 | `call` | `resistant` or `susceptible`; null for a lasso with no coefficient |
-| `score` | CART's leaf value, or the lasso's probability; null for the SCM |
+| `score` | CART's leaf value, or the lasso's probability; null for the SCM and for a lasso with no coefficient |
 | `features` | per feature the learner reads: `feature`, `kmer`, `found`, `n_kmers`, `kmers_found` (null without a matrix) |
 | `partial_features` | features found in part; null without a matrix |
 
-The SCM's call is its conjunction or disjunction of presence and absence terms (`ScmModel::predict`, `src/learn/scm.rs:80`). CART's score is the value of the leaf the genome reaches with nodes at `cart_depth` taken as leaves (`Tree::predict`, `src/learn/tree.rs:167`). The lasso's score is the logistic function of the intercept plus the coefficients of the features found (`LassoModel::predict_proba`, `src/learn/lasso.rs:104`); a lasso with no coefficient is the null fit, which calls nothing, as in evaluation (`lasso_scores`, `src/learn/eval.rs:415`). A score at or above 0.5 is a resistant call, the cutoff evaluation scores every learner with (`src/learn/eval.rs:714`). `grm predict` uses these functions themselves on a one-genome matrix of feature values, so a learner cannot be applied differently from how it was evaluated.
+The SCM's call is its conjunction or disjunction of presence and absence terms (`ScmModel::predict`, `src/learn/scm.rs:80`). CART's score is the value of the leaf the genome reaches with nodes at `cart_depth` taken as leaves (`Tree::predict`, `src/learn/tree.rs:167`). The lasso's score is the logistic function of the intercept plus the coefficients of the features found (`LassoModel::predict_proba`, `src/learn/lasso.rs:104`); a lasso with no coefficient is the null fit (`lasso_scores`, `src/learn/eval.rs:447`), and `grm predict` makes no call for it: `call` and `score` are null. A score at or above 0.5 is a resistant call, the cutoff evaluation scores every learner with (`src/learn/eval.rs:756`). `grm predict` uses these functions themselves on a one-genome matrix of feature values, so a learner with a fitted model cannot be applied differently from how it was evaluated.
+
+The null fit is the one case where the two differ. From evaluation revision 14, a cross-validation fold whose model is null scores each of its genomes at the share of resistant genomes in the fold's training set (`pool_folds`, `src/learn/eval.rs:728`), so that every learner is scored on the same genomes (docs/equal-scoring.md). That is a rule for scoring folds. It reads nothing from the genome, so `grm predict` does not apply it to a final model, at any revision.
 
 ## Refused
 

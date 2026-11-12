@@ -51,12 +51,42 @@ describe("methods in plain words", () => {
 });
 
 describe("methods panels", () => {
-  it("says what the blood-culture and CTX-M rows read, and that a gene is a marker", () => {
-    const html = render(21);
-    expect(html).toContain("Blood-culture and CTX-M rows");
-    expect(html).toContain("also the carbapenemase genes KPC, NDM, VIM and IMP");
-    expect(html).toContain("The CTX-M row counts CTX-M alone");
-    expect(html).toContain("For aztreonam the blood-culture row adds KPC only");
-    expect(html).toContain("it does not prove that the gene causes the isolate&#x27;s resistance");
+  const at = (evaluation_revision: number | undefined) => renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, evaluation_revision } }));
+  const marker = "it does not prove that the gene causes the isolate&#x27;s resistance";
+
+  it("from revision 13, says what the blood-culture and CTX-M rows read, and that a gene is a marker", () => {
+    for (const revision of [13, 14]) {
+      const html = at(revision);
+      expect(html).toContain("one of its targets that the panel reads for the drug, in a species the assay reports that target for");
+      expect(html).toContain("Blood-culture and CTX-M rows");
+      expect(html).toContain("also the carbapenemase genes KPC, NDM, VIM and IMP");
+      expect(html).toContain("The CTX-M row counts CTX-M alone");
+      expect(html).toContain("For aztreonam the blood-culture row adds KPC only");
+      expect(html).toContain("OXA-48-like is read for carbapenems only");
+      expect(html).toContain(marker);
+      expect(html).not.toContain("counts every target of the panel");
+    }
+  });
+
+  // The site serves revision 12, whose blood-culture rows list all seven
+  // targets on every drug, aztreonam included.
+  it("before revision 13, says a panel row counts every target on every drug", () => {
+    for (const revision of [undefined, 7, 12]) {
+      const html = at(revision);
+      expect(html).toContain("a panel calls resistant when it finds any gene it looks for");
+      expect(html).toContain("counts every target of the panel on every drug the row is shown for, in every species");
+      expect(html).toContain("Blood-culture and CTX-M rows");
+      expect(html).toContain("CTX-M, the carbapenemase genes KPC, NDM, VIM, IMP and OXA-48-like, and mcr-1");
+      expect(html).toContain("The CTX-M row counts CTX-M alone");
+      expect(html).toContain("Reports from evaluation revision 13");
+      expect(html).toContain(marker);
+      expect(html).not.toContain("the panel reads for the drug, in a species");
+      expect(html).not.toContain("For aztreonam the blood-culture row adds KPC only");
+      expect(html).not.toContain("OXA-48-like is read for carbapenems only");
+    }
+  });
+
+  it("names the best learner as the highest scorer among those scored on every isolate", () => {
+    for (const revision of [12, 14]) expect(at(revision)).toContain("the learner that scored highest on the random split, among those scored on every isolate.");
   });
 });

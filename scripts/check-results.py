@@ -25,7 +25,7 @@ groups; its reports have revision 10's fields and meet the same rules.
 Every report in a root must have the same evaluation revision. A run stopped
 part-way leaves new reports beside old ones, and revision 8's and 9's are
 the same shape, so a root that mixes revisions is refused rather than
-checked as one release. A revision-13 root holds only revision-13 reports.
+checked as one release. A revision-14 root holds only revision-14 reports.
 Revision 12 changes only how the final models tune (on the duplicate
 groups), not the report's shape, so its reports meet revision 11's rules.
 Revision 13 changes only which gene-panel targets each panel row reads

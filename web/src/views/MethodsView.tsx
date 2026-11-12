@@ -13,7 +13,7 @@ import type { Corpus, Manifest } from "../data/schema";
 import { datasetTitle, int, pct, plural } from "../data/format";
 import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import { loadErrorText, useCorpus } from "../data/load";
-import { EQUAL_SCORING_REVISION, manifestAudit, nullFitWords } from "../data/derive/evaluation";
+import { EQUAL_SCORING_REVISION, manifestAudit, nullFitWords, panelWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
 import { ZERO_MISS_FLOOR } from "../data/derive/evidence";
 import { notScored } from "../data/derive/tests";
@@ -254,17 +254,8 @@ const Models = ({ manifest }: { manifest: Manifest }) => (
         matching and applies its own fixed rule per drug: resistant when the genome carries a gene whose catalog class or subclass matches the drug. The rule does not train. It does not run
         the AMRFinderPlus program or test the point mutations AMRFinderPlus also describes, so mutational resistance counts against it.
       </Def>
-      <Def term="Simulated PCR panels" plain="Commercial lab gene tests, imitated on the genome sequence: a panel calls resistant when it finds a gene that it reads for that drug in that species.">
-        A gene panel calls resistant when the assembled genome carries one of its targets that the panel reads for the drug, in a species the assay reports that target for. Targets,
-        drugs and species follow the manufacturers&apos; published documents. A probe assay calls resistant when a probed region differs from the wild-type sequence. Detection is in
-        silico, from assembled genomes. A detected gene is what the panel would report; it does not prove that the gene causes the isolate&apos;s resistance.
-      </Def>
-      <Def term="Blood-culture and CTX-M rows" plain="Two rows that read the same blood-culture gene test in two ways: every gene on it that breaks down the drug, or the CTX-M gene alone.">
-        On a cephalosporin the two rows read the same panel two ways. The blood-culture row counts every gene of the panel that breaks down the drug: CTX-M, and also the carbapenemase
-        genes KPC, NDM, VIM and IMP, as published studies of these enzymes describe. It shows what the panel&apos;s genes could explain. The CTX-M row counts CTX-M alone, as the maker
-        compares the panel&apos;s cephalosporin result. For aztreonam the blood-culture row adds KPC only, since NDM, VIM and IMP do not break down aztreonam. OXA-48-like is read for
-        carbapenems only.
-      </Def>
+      <Def term="Simulated PCR panels" plain={panelWords(manifest.evaluation_revision).panels.plain}>{panelWords(manifest.evaluation_revision).panels.detail}</Def>
+      <Def term="Blood-culture and CTX-M rows" plain={panelWords(manifest.evaluation_revision).bloodCulture.plain}>{panelWords(manifest.evaluation_revision).bloodCulture.detail}</Def>
       <Def term="MIC regression" plain="A model that predicts the MIC itself, the lowest amount of the drug that stops growth, instead of only R or S.">
         Censored gradient-boosted regression on log2 dilution steps, fitted on the MICs of genomes with a reported call; a genome whose label was inferred from its MIC is left out. It
         needs at least 100 isolates with an MIC, 50 of them exact.
@@ -291,7 +282,7 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
     </P>
     <Defs>
       <Def term="Balanced accuracy" plain="The average of two shares: resistant genomes called resistant (sensitivity) and susceptible genomes called susceptible (specificity). 50% is no better than a coin toss.">The mean of sensitivity and specificity, over pooled out-of-fold predictions. A score of 0.5 or more calls resistant.</Def>
-      <Def term="Best learner" plain="For each dataset, the learner that scored highest on the random split.">
+      <Def term="Best learner" plain="For each dataset, the learner that scored highest on the random split, among those scored on every isolate.">
         The learner with the highest random-split balanced accuracy among those scored on every isolate on every split that ran. From evaluation revision 14 that is every
         learner: a fold where boosting kept no tree, or the lasso kept no weight, predicts its training isolates&apos; resistant share, called at 0.5 like any score. The
         known-gene rule is a baseline, never a candidate.
