@@ -198,6 +198,33 @@ enum Command {
         #[arg(long)]
         out: PathBuf,
     },
+    /// Apply one dataset report's final models, frozen, to genomes, as
+    /// docs/prediction-contract.md defines: one JSON line per genome and
+    /// learner, with each model feature's published k-mer found or not
+    /// found. Fits nothing and reads no network.
+    Predict {
+        /// A dataset report that `grm learn` wrote or `grm report` served.
+        #[arg(long)]
+        report: PathBuf,
+        /// Assemblies (FASTA, gzip or plain), counted at the report's k.
+        #[arg(long, value_delimiter = ',')]
+        fasta: Vec<PathBuf>,
+        /// Ksets that `grm count` wrote at the report's k.
+        #[arg(long, value_delimiter = ',')]
+        kset: Vec<PathBuf>,
+        /// The species matrix the report was learned from
+        /// (<data>/species/<slug>/matrix). With it, each row also counts how
+        /// many of every feature's k-mers the genome carries.
+        #[arg(long)]
+        matrix: Option<PathBuf>,
+        /// Learners to apply; every complete one when omitted. A learner
+        /// whose published form is not a complete model is refused.
+        #[arg(long, value_enum, value_delimiter = ',')]
+        learners: Vec<LearnerArg>,
+        /// Output file; standard output when omitted.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
     /// Build the dashboard data under <data>/report.
     Report {
         /// Published Kover results to compare against. The default is
@@ -395,6 +422,14 @@ fn run(cli: Cli) -> Result<()> {
             );
             Ok(())
         }
+        Command::Predict {
+            report,
+            fasta,
+            kset,
+            matrix,
+            learners,
+            out,
+        } => predict(&report, &fasta, &kset, matrix.as_deref(), &learners, out),
         Command::Report { kover } => report(&layout, &kover),
         Command::Intervals => {
             let n = grm::intervals::write(&layout.root.join("report"))?;
@@ -721,6 +756,87 @@ impl From<PairingArg> for grm::ablate::arm::Pairing {
             PairingArg::CommonOuterTestSetBalanced => Self::CommonOuterTestSetBalanced,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum LearnerArg {
+    Scm,
+    Cart,
+    Lasso,
+}
+
+impl From<LearnerArg> for grm::predict::Learner {
+    fn from(l: LearnerArg) -> Self {
+        match l {
+            LearnerArg::Scm => Self::Scm,
+            LearnerArg::Cart => Self::Cart,
+            LearnerArg::Lasso => Self::Lasso,
+        }
+    }
+}
+
+/// `grm predict`: rows for every genome, FASTA files first, in the order
+/// given. Rows are written once every genome is scored, so a refused genome
+/// leaves no partial output.
+fn predict(
+    report: &std::path::Path,
+    fasta: &[PathBuf],
+    kset: &[PathBuf],
+    matrix: Option<&std::path::Path>,
+    learners: &[LearnerArg],
+    out: Option<PathBuf>,
+) -> Result<()> {
+    anyhow::ensure!(
+        !fasta.is_empty() || !kset.is_empty(),
+        "give genomes with --fasta or --kset"
+    );
+    let mut model = grm::predict::Model::load(report)?;
+    let requested: Vec<grm::predict::Learner> = learners.iter().map(|&l| l.into()).collect();
+    let learners = model.learners(&requested)?;
+    for (learner, why) in &model.incomplete {
+        eprintln!(
+            "{}: {} left out, its published form is not a complete model: {why}",
+            model.dataset,
+            learner.name()
+        );
+    }
+    if let Some(dir) = matrix {
+        model.attach_matrix(dir)?;
+    }
+    let mut lines = Vec::new();
+    for (path, is_fasta) in fasta
+        .iter()
+        .map(|p| (p, true))
+        .chain(kset.iter().map(|p| (p, false)))
+    {
+        let genome = if is_fasta {
+            model.genome_from_fasta(path)?
+        } else {
+            model.genome_from_kset(path)?
+        };
+        for row in model.predict(&genome, &learners) {
+            serde_json::to_writer(&mut lines, &row)?;
+            lines.push(b'\n');
+        }
+    }
+    match out {
+        Some(path) => {
+            ensure_parent(&path)?;
+            std::fs::write(&path, &lines).with_context(|| format!("write {}", path.display()))?;
+        }
+        None => std::io::stdout().write_all(&lines)?,
+    }
+    eprintln!(
+        "{}: {} genomes scored with {}",
+        model.dataset,
+        fasta.len() + kset.len(),
+        learners
+            .iter()
+            .map(|l| l.name())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    Ok(())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
@@ -2156,5 +2272,265 @@ mod tests {
             format!("{at:#}").contains("bvbrc/genome_amr.jsonl"),
             "{at:#}"
         );
+    }
+
+    /// Sixty genomes on a shared core for one fixture dataset. The 30
+    /// resistant genomes carry block A and lack block B; of the susceptible
+    /// ones, 15 carry both and 15 neither. Every odd genome carries A
+    /// reverse-complemented, and eight 100-base blocks come and go at random.
+    /// Annotation reads a cached empty feature list, so nothing is fetched.
+    fn replay_fixture(root: &Path) -> (Layout, Vec<String>) {
+        let layout = fixture(root);
+        let mut rng = ChaCha8Rng::seed_from_u64(29);
+        let mut random = |n: usize| -> String {
+            (0..n)
+                .map(|_| b"ACGT"[rng.random_range(0..4)] as char)
+                .collect()
+        };
+        let (core, a, b) = (random(3000), random(200), random(200));
+        let noise: Vec<String> = (0..8).map(|_| random(100)).collect();
+        let a_reverse: String = a
+            .bytes()
+            .rev()
+            .map(|c| match c {
+                b'A' => 'T',
+                b'C' => 'G',
+                b'G' => 'C',
+                _ => 'A',
+            })
+            .collect();
+        let mut draw = ChaCha8Rng::seed_from_u64(31);
+        let ids: Vec<String> = (0..60).map(|i| format!("g{i}")).collect();
+        let mut phenotypes = Vec::new();
+        for (i, id) in ids.iter().enumerate() {
+            let mut seq = core.clone();
+            let (carries_a, carries_b) = (i < 45, (30..45).contains(&i));
+            if carries_a {
+                seq += "N";
+                seq += if i % 2 == 1 { &a_reverse } else { &a };
+            }
+            if carries_b {
+                seq += "N";
+                seq += &b;
+            }
+            for block in &noise {
+                if draw.random_bool(0.5) {
+                    seq += "N";
+                    seq += block;
+                }
+            }
+            let path = bvbrc::fasta_path(&layout.fasta_dir(), id);
+            std::fs::write(path, format!(">c\n{seq}\n")).unwrap();
+            let features = layout.features_dir().join(format!("{id}.json"));
+            ensure_parent(&features).unwrap();
+            std::fs::write(features, "[]").unwrap();
+            let call = if i < 30 {
+                curate::Call::R
+            } else {
+                curate::Call::S
+            };
+            phenotypes.push(curate::Phenotype {
+                genome_id: id.clone(),
+                species: "Fixture species".into(),
+                antibiotic: "fixturemycin".into(),
+                reported: Some(call),
+                conflict: false,
+                mic: None,
+                mic_spread: 0,
+                label: Some(call),
+                label_from_mic: false,
+                methods: vec![],
+                standards: vec![],
+                n_records: 1,
+            });
+        }
+        let names: Vec<&str> = ids.iter().map(String::as_str).collect();
+        write_genome_list(&layout, &names);
+        let spec = curate::DatasetSpec {
+            id: format!("{SLUG}__fixturemycin"),
+            species: "Fixture species".into(),
+            species_slug: SLUG.into(),
+            antibiotic: "fixturemycin".into(),
+            drug_class: "fixture class".into(),
+            n_resistant: 30,
+            n_susceptible: 30,
+            n_intermediate: 0,
+            n_with_mic: 0,
+            n_labels_from_mic: 0,
+            breakpoint: None,
+            min_class: 25,
+            selection: None,
+        };
+        std::fs::write(
+            layout.curated().join("datasets.json"),
+            serde_json::to_vec(&[spec]).unwrap(),
+        )
+        .unwrap();
+        let lines: Vec<String> = phenotypes
+            .iter()
+            .map(|p| serde_json::to_string(p).unwrap())
+            .collect();
+        std::fs::write(
+            layout.curated().join("phenotypes.jsonl"),
+            lines.join("\n") + "\n",
+        )
+        .unwrap();
+        (layout, ids)
+    }
+
+    /// The acceptance check of docs/prediction-contract.md: `grm predict`,
+    /// from the report `grm learn` wrote and each cohort genome's FASTA,
+    /// gives every feature the genome's bit in the report and every genome
+    /// the final model's fitted call, for the SCM, CART and lasso.
+    #[test]
+    fn predict_replays_the_final_models_on_their_own_cohort() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, ids) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap())
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        grm(&["learn", "--species", SLUG]).unwrap();
+        let report_path = layout
+            .results_dir(SLUG)
+            .join(format!("{SLUG}__fixturemycin.json"));
+        let report: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&report_path).unwrap()).unwrap();
+        let samples: Vec<String> = report["samples"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s["id"].as_str().unwrap().to_string())
+            .collect();
+        assert_eq!(samples.len(), ids.len());
+
+        let fasta: Vec<String> = samples
+            .iter()
+            .map(|id| {
+                let path = bvbrc::fasta_path(&layout.fasta_dir(), id);
+                path.to_str().unwrap().to_string()
+            })
+            .collect();
+        let out = dir.path().join("predictions.jsonl");
+        let matrix_dir = layout.matrix_dir(SLUG);
+        grm(&[
+            "predict",
+            "--report",
+            report_path.to_str().unwrap(),
+            "--fasta",
+            &fasta.join(","),
+            "--matrix",
+            matrix_dir.to_str().unwrap(),
+            "--learners",
+            "scm,cart,lasso",
+            "--out",
+            out.to_str().unwrap(),
+        ])
+        .unwrap();
+        let rows: Vec<serde_json::Value> = std::fs::read_to_string(&out)
+            .unwrap()
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
+        assert_eq!(rows.len(), 3 * samples.len());
+
+        // The final models as `learn` fitted them, on the dataset matrix
+        // they were fitted on.
+        let matrix = FeatureMatrix::load(&matrix_dir).unwrap();
+        let columns: Vec<usize> = samples
+            .iter()
+            .map(|id| matrix.summary.genomes.iter().position(|g| g == id).unwrap())
+            .collect();
+        let resistant: Vec<bool> = report["samples"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s["resistant"].as_bool().unwrap())
+            .collect();
+        let min_support = report["counts"]["min_support"].as_u64().unwrap() as u32;
+        let ds = grm::matrix::Dataset::project(&matrix, columns, &resistant, min_support);
+        let models = &report["models"];
+        let scm: grm::learn::scm::ScmModel = serde_json::from_value(models["scm"].clone()).unwrap();
+        let cart: grm::learn::tree::Tree = serde_json::from_value(models["cart"].clone()).unwrap();
+        let depth = models["cart_depth"].as_u64().unwrap() as u32;
+        let lasso: grm::learn::lasso::LassoModel =
+            serde_json::from_value(models["lasso"].clone()).unwrap();
+        let fitted_scm = scm.predict(&ds.x);
+        let fitted_cart = cart.predict(&ds.x, depth);
+        let fitted_lasso = lasso.predict_proba(&ds.x);
+        // The fixture's models use presence and absence terms, and the
+        // lasso is listed in full.
+        let presence: BTreeSet<bool> = scm.rules.iter().map(|r| r.presence).collect();
+        assert_eq!(presence, BTreeSet::from([false, true]), "{:?}", scm.rules);
+        assert!(cart.nodes.iter().any(|n| n.split.is_some()));
+        assert!(!lasso.coef.is_empty());
+
+        let call = |r: bool| if r { "resistant" } else { "susceptible" };
+        let mut found: BTreeMap<u64, Vec<usize>> = BTreeMap::new();
+        for (i, id) in samples.iter().enumerate() {
+            let of = |learner: &str| {
+                rows.iter()
+                    .find(|r| r["genome"] == id.as_str() && r["learner"] == learner)
+                    .unwrap()
+            };
+            let (s, c, l) = (of("scm"), of("cart"), of("lasso"));
+            assert_eq!(s["call"], call(fitted_scm.contains(i)), "{id}");
+            assert_eq!(s["call"], call(resistant[i]), "{id}");
+            assert_eq!(c["score"].as_f64().unwrap(), fitted_cart[i], "{id}");
+            assert_eq!(c["call"], call(fitted_cart[i] >= 0.5), "{id}");
+            assert_eq!(l["score"].as_f64().unwrap(), fitted_lasso[i], "{id}");
+            assert_eq!(l["call"], call(fitted_lasso[i] >= 0.5), "{id}");
+            for row in [s, c, l] {
+                assert_eq!(row["partial_features"], 0, "{id}");
+                for f in row["features"].as_array().unwrap() {
+                    let carried = f["kmers_found"].as_u64().unwrap();
+                    let all = f["n_kmers"].as_u64().unwrap();
+                    let present = f["found"].as_bool().unwrap();
+                    assert_eq!(carried, if present { all } else { 0 }, "{id}: {f}");
+                    let list = found.entry(f["feature"].as_u64().unwrap()).or_default();
+                    if present && list.last() != Some(&i) {
+                        list.push(i);
+                    }
+                }
+            }
+        }
+        // Each model feature's values over the cohort are its published bits.
+        let published: BTreeMap<u64, &str> = report["features"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| (f["feature"].as_u64().unwrap(), f["bits"].as_str().unwrap()))
+            .collect();
+        for (feature, carriers) in &found {
+            let bits = grm::bits::Bits::from_indices(samples.len(), carriers.iter().copied());
+            assert_eq!(
+                grm::analysis::base64(bits.words()),
+                published[feature],
+                "feature {feature}"
+            );
+        }
+        // A published k-mer reads on one strand of its reference contig, and
+        // some carriers hold only the other: the presence feature on A.
+        let a = scm.rules.iter().find(|r| r.presence).unwrap().feature as u64;
+        let kmer = rows[0]["features"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|f| f["feature"] == a)
+            .unwrap()["kmer"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let mut strands = BTreeSet::new();
+        for &i in &found[&a] {
+            let path = bvbrc::fasta_path(&layout.fasta_dir(), &samples[i]);
+            let text = String::from_utf8(std::fs::read(path).unwrap()).unwrap();
+            strands.insert(text.contains(&kmer));
+        }
+        assert_eq!(strands, BTreeSet::from([false, true]));
     }
 }
