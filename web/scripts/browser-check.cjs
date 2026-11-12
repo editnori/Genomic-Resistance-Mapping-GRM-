@@ -134,6 +134,19 @@ const speciesName = manifest.species.find(s => s.slug === speciesSlug).species;
 const allValid = manifest.datasets.every(d => d.evaluation?.valid === true && (manifest.evaluation_revision === undefined || d.evaluation.revision === manifest.evaluation_revision));
 const CHIP = allValid ? 'Tested within one public database only' : 'Provisional metrics';
 const isLimitsHref = href => href === '/#limits' || href === '#limits' || href === '#m-limits';
+// How long a check waits for the state it reads (a transition that lands, a
+// strip that redraws, a link that follows the scroll) before it reads what is
+// there and judges that. A wait on state returns as soon as the state holds,
+// so a fast machine reads as early as before; the deadline only decides how
+// slow a machine may be before the check calls the state missing.
+const STATE_MS = 10000;
+// The inspector's freshness window for a launch point (FRESH_MS in
+// web/src/ui/launch.ts), read from the app's own source so the two cannot
+// drift apart.
+const FRESH_MS = Number(fs.readFileSync(path.join(__dirname, '../src/ui/launch.ts'), 'utf8').match(/const FRESH_MS = (\d+);/)[1]);
+// When the title slide's last beat lands: the sum of its stage delays
+// (useSlideTimeline's delays for the title in web/src/present/PresentMode.tsx).
+const TITLE_REVEAL_MS = fs.readFileSync(path.join(__dirname, '../src/present/PresentMode.tsx'), 'utf8').match(/slide\.kind === "title" \? \[([\d, ]+)\]/)[1].split(',').reduce((a, v) => a + Number(v), 0);
 const SLIDE_TITLES = ['Genomic Resistance Mapping', 'Corpus', 'Lineage cost', 'Known-gene catalog', null, 'MIC prediction', 'One interpretable rule'];
 
 const settle = async page => {
@@ -574,7 +587,7 @@ async function stripFit(page, tag) {
     const button = page.locator('#ds-learners [role="group"][aria-label="Errors measured under"]').getByRole('button', { name: view, exact: true });
     if (await button.count() === 0) { skipped.push({ check: name, reason: id + ' has no "' + view + '" button' }); continue; }
     await button.click({ timeout: 2000 }).catch(() => {});
-    const read = await page.locator('#ds-learners').evaluate(async s => {
+    const read = await page.locator('#ds-learners').evaluate(async (s, STATE_MS) => {
       const measure = () => {
         const cells = [...s.querySelectorAll('table tr > :nth-child(2)')].filter(c => c.querySelector('svg') !== null);
         let over = -Infinity, marksOut = 0;
@@ -586,12 +599,12 @@ async function stripFit(page, tag) {
         }
         return { cells: cells.length, over: Math.round(over * 10) / 10, marksOut };
       };
-      // Up to a second for the cell's observer to fire and the strip to redraw.
+      // Until the cell's observer fires and the strip redraws, up to STATE_MS.
       const t0 = performance.now();
       let m = measure();
-      while (m.over > 1 && performance.now() - t0 < 1000) { await new Promise(r => requestAnimationFrame(r)); m = measure(); }
+      while (m.over > 1 && performance.now() - t0 < STATE_MS) { await new Promise(r => requestAnimationFrame(r)); m = measure(); }
       return { ...m, waited: Math.round(performance.now() - t0), pressed: s.querySelector('[role="group"][aria-label="Errors measured under"] [aria-pressed="true"]')?.textContent ?? null };
-    }, null, { timeout: 5000 }).catch(() => null);
+    }, STATE_MS, { timeout: STATE_MS + 5000 }).catch(() => null);
     check(name, read !== null && read.cells > 1 && read.pressed === view && read.over <= 1 && read.marksOut === 0, { id, ...read });
   }
   // Paint: every strip pushed 64 px right, as a strip still drawn for a wider
@@ -885,17 +898,17 @@ async function interactions(page, tag, width) {
   // The tint is a colour transition (transition-colors on the row), so it
   // lands a frame or more after focus moves. Read it after two frames, then
   // each frame until two frames in a row agree on a colour that isn't
-  // clear, for up to a second, and compare that colour with the focus tint,
+  // clear, for up to STATE_MS, and compare that colour with the focus tint,
   // blue at 5% (DataTable's focus-within:bg-blue/[0.05]).
-  const tint = await rows.nth(1).evaluate(e => new Promise(resolve => {
+  const tint = await rows.nth(1).evaluate((e, STATE_MS) => new Promise(resolve => {
     const row = e.closest('tr'), start = performance.now();
     const probe = document.createElement('div');
     probe.style.backgroundColor = 'rgb(' + getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() + ' / 0.05)';
     document.body.append(probe); const want = getComputedStyle(probe).backgroundColor; probe.remove();
     let last = null;
-    const read = () => { const c = getComputedStyle(row).backgroundColor; const settled = c === last && c !== 'rgba(0, 0, 0, 0)'; if (settled || performance.now() - start > 1000) resolve({ colour: c, settled, want }); else { last = c; requestAnimationFrame(read); } };
+    const read = () => { const c = getComputedStyle(row).backgroundColor; const settled = c === last && c !== 'rgba(0, 0, 0, 0)'; if (settled || performance.now() - start > STATE_MS) resolve({ colour: c, settled, want, ms: Math.round(performance.now() - start) }); else { last = c; requestAnimationFrame(read); } };
     requestAnimationFrame(() => requestAnimationFrame(read));
-  }));
+  }), STATE_MS);
   check(tag + ' focused row tints', tint.settled && tint.colour === tint.want, tint);
   // The tint follows focus, in the row and in its cells. The sticky cell is
   // left out: it paints its own paper (and its tint has a check of its
@@ -913,29 +926,63 @@ async function interactions(page, tag, width) {
   }, ruleKey);
   check(tag + ' unfocused row has no tint', unfocused.tinted !== null && unfocused.tinted.length === 0, unfocused);
   // ... and the row ArrowDown left loses its tint, read each frame for up to
-  // a second until it is clear.
-  const leftRow = await rows.nth(0).evaluate(e => new Promise(resolve => {
+  // STATE_MS until it is clear.
+  const leftRow = await rows.nth(0).evaluate((e, STATE_MS) => new Promise(resolve => {
     const r = e.closest('tr'), start = performance.now();
     const clear = c => c === 'transparent' || /^rgba\([^,]+,[^,]+,[^,]+,\s*0\)$/.test(c);
     const read = () => {
       const paints = [['tr', getComputedStyle(r).backgroundColor], ...[...r.children].map((td, k) => ['td' + k, td]).filter(([, td]) => getComputedStyle(td).position !== 'sticky').map(([k, td]) => [k, getComputedStyle(td).backgroundColor])];
       const tinted = paints.filter(([, c]) => !clear(c));
-      if (tinted.length === 0 || performance.now() - start > 1000) resolve({ tinted, ms: Math.round(performance.now() - start) }); else requestAnimationFrame(read);
+      if (tinted.length === 0 || performance.now() - start > STATE_MS) resolve({ tinted, ms: Math.round(performance.now() - start) }); else requestAnimationFrame(read);
     };
     requestAnimationFrame(read);
-  }));
+  }), STATE_MS);
   check(tag + ' tint leaves the row focus left', leftRow.tinted.length === 0, leftRow);
   const stickyTint = await table.evaluate(region => { const rs = [...region.querySelectorAll('tbody tr')]; return { focused: getComputedStyle(rs[1].children[0]).backgroundColor, rest: getComputedStyle(rs[3].children[0]).backgroundColor }; });
   check(tag + ' focus tint reaches the sticky cell', stickyTint.focused !== stickyTint.rest, stickyTint);
   await shot(page, tag + '-row-focus');
-  await page.keyboard.press('Enter');
-  await page.locator('#ds-learners').waitFor();
-  const opening = await page.evaluate(() => {
-    const panel = document.querySelector('dialog[open] .inspector-in');
-    const owner = document.querySelector('dialog[open] [data-modal-scroll-owner]');
-    return { origin: panel ? getComputedStyle(panel).transformOrigin : null, launchY: panel?.style.getPropertyValue('--launch-y'), focus: document.activeElement === owner, tips: document.querySelectorAll('[role="tooltip"]').length };
-  });
-  check(tag + ' inspector opens from the row, focus on its body, no tip', opening.launchY !== '' && opening.focus && opening.tips === 0, opening);
+  // The app keeps a launch point for FRESH_MS (launch.ts) and the inspector
+  // reads it once, in the layout effect of its first render. So the check
+  // times the open itself: from the Enter keydown (a window listener in the
+  // capture phase, which runs before the app's own document listener records
+  // the point) to the panel's insertion (a mutation observer, called after
+  // the commit that ran the layout effect). That span is never shorter than
+  // the app's own. An open without a launch point is a failure, unless the
+  // span reached FRESH_MS: then the machine, not the app, missed the window,
+  // and the check closes the inspector and opens it again, up to three times.
+  // A launch point missed inside the window fails at once.
+  const openFromRow = async () => {
+    await page.evaluate(() => {
+      const t = window.__grmOpen = { key: null, open: null };
+      window.addEventListener('keydown', e => { if (e.key === 'Enter' && t.key === null) t.key = performance.now(); }, { capture: true, once: true });
+      const seen = () => document.querySelector('dialog[open] .inspector-in') !== null;
+      const mo = new MutationObserver(() => { if (seen()) { t.open = performance.now(); mo.disconnect(); } });
+      mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
+    });
+    await page.keyboard.press('Enter');
+    await page.locator('#ds-learners').waitFor();
+    // Focus moves to the inspector's body in an effect after the open; wait
+    // for it rather than read it on the first frame.
+    await page.waitForFunction(() => document.activeElement === document.querySelector('dialog[open] [data-modal-scroll-owner]'), null, { timeout: STATE_MS }).catch(() => {});
+    return page.evaluate(() => {
+      const panel = document.querySelector('dialog[open] .inspector-in');
+      const owner = document.querySelector('dialog[open] [data-modal-scroll-owner]');
+      const t = window.__grmOpen;
+      return { origin: panel ? getComputedStyle(panel).transformOrigin : null, launchY: panel?.style.getPropertyValue('--launch-y'), focus: document.activeElement === owner, tips: document.querySelectorAll('[role="tooltip"]').length, openMs: t.key !== null && t.open !== null ? Math.round(t.open - t.key) : null };
+    });
+  };
+  const openings = [];
+  for (;;) {
+    const o = await openFromRow();
+    openings.push(o);
+    const missedWindow = o.launchY === '' && o.openMs !== null && o.openMs >= FRESH_MS;
+    if (!missedWindow || openings.length === 3) break;
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+    await rows.nth(1).focus();
+  }
+  const opening = openings.at(-1);
+  check(tag + ' inspector opens from the row, focus on its body, no tip', opening.launchY !== '' && opening.focus && opening.tips === 0, { ...opening, freshMs: FRESH_MS, attempts: openings.map(o => ({ launchY: o.launchY, openMs: o.openMs })) });
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   check(tag + ' inspector focus return', await rows.nth(1).evaluate(e => e === document.activeElement), await activeName(page));
@@ -962,9 +1009,12 @@ async function interactions(page, tag, width) {
     check(tag + ' inspector tables fit without sideways scroll', frames.length === 0, frames);
   }
   for (const id of ['ds-model', 'ds-mechanisms', 'ds-designer', 'ds-mic', 'ds-lineages']) {
-    await scrollTo(page, '#' + id); await page.waitForTimeout(80);
-    const current = await page.locator('dialog[open] nav[aria-label="Sections"] [aria-current="true"]').textContent();
     const want = { 'ds-model': 'Interpretable model', 'ds-mechanisms': 'Genes and panels', 'ds-designer': 'Marker designer', 'ds-mic': 'MIC', 'ds-lineages': 'Lineages' }[id];
+    // The link follows the scroll through an observer; wait for it, up to
+    // STATE_MS, then read whatever link is current.
+    await scrollTo(page, '#' + id);
+    await page.waitForFunction(w => document.querySelector('dialog[open] nav[aria-label="Sections"] [aria-current="true"]')?.textContent === w, want, { timeout: STATE_MS }).catch(() => {});
+    const current = await page.locator('dialog[open] nav[aria-label="Sections"] [aria-current="true"]').textContent();
     check(tag + ' section link follows ' + id, current === want, current);
     await shot(page, tag + '-' + id);
   }
@@ -993,8 +1043,9 @@ async function interactions(page, tag, width) {
   // outline that steps rows at another pitch than the labels fails. The choice
   // reaches the outline through a state update and a transform transition,
   // so read after two frames, then each frame until two frames in a row
-  // agree on a position on that row, for up to a second.
-  const outlineOn = label => page.evaluate(label => new Promise(resolve => {
+  // agree on a position on that row, for up to STATE_MS. A fast machine
+  // settles in a few frames, as before; the deadline only bounds a slow one.
+  const outlineOn = label => page.evaluate(([label, STATE_MS]) => new Promise(resolve => {
     const place = () => {
       const o = [...document.querySelectorAll('[role="grid"] ~ div[aria-hidden="true"]')].find(e => e.className.includes('border-ink'));
       const l = o && [...(o.closest('#sp-structure') ?? document).querySelectorAll('span.whitespace-nowrap')].find(s => s.textContent === label && s.className.includes('leading-[16px]'));
@@ -1006,10 +1057,10 @@ async function interactions(page, tag, width) {
     let last = null;
     const poll = () => {
       const p = place(), settled = p !== null && last !== null && Math.abs(p.outline[0] - last.outline[0]) < 0.01;
-      if ((settled && Math.abs(p.off) <= 2) || performance.now() - start > 1000) resolve({ label, ...p, settled }); else { last = p; requestAnimationFrame(poll); }
+      if ((settled && Math.abs(p.off) <= 2) || performance.now() - start > STATE_MS) resolve({ label, ...p, settled, ms: Math.round(performance.now() - start) }); else { last = p; requestAnimationFrame(poll); }
     };
     requestAnimationFrame(() => requestAnimationFrame(poll));
-  }), label);
+  }), [label, STATE_MS]);
   await drug.click();
   const options = await page.getByRole('option').evaluateAll(os => os.map(o => ({ label: (o.querySelector('span.flex-1') ?? o).textContent.trim(), selected: o.getAttribute('aria-selected') === 'true' })));
   const fromLabel = options.find(o => o.selected)?.label ?? null, toLabel = options[1]?.label ?? null;
@@ -1308,31 +1359,59 @@ async function present(page, tag, width, height) {
 }
 
 async function normalMotion(browser) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
-  const page = await context.newPage();
-  await page.goto(BASE); await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
-  check('normal motion media preference', await page.evaluate(() => !matchMedia('(prefers-reduced-motion: reduce)').matches), null);
-  await page.getByRole('button', { name: 'Present', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'GRM findings presentation' }); await dialog.waitFor();
-  await dialog.getByRole('button', { name: 'Close', exact: true }).focus();
-  await page.keyboard.press('ArrowRight');
-  check('normal motion: an arrow mid-reveal lands the beats first', await slideNumber(dialog) === 1, await slideNumber(dialog));
-  await page.keyboard.press('ArrowRight');
-  check('normal motion: the next arrow moves on', await slideNumber(dialog) === 2, await slideNumber(dialog));
-  await page.waitForTimeout(2600);
-  const landed = await dialog.locator('main').innerText();
-  await page.keyboard.press('Escape');
-  await context.close();
+  // The reduced-motion deck renders every slide's final text at once; read
+  // slide 2's first, so the normal-motion deck can be waited on until its
+  // staged beats land on that same text (up to STATE_MS), not for a fixed time.
   const reduced = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   const page2 = await reduced.newPage();
   await page2.goto(BASE); await page2.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
   await page2.getByRole('button', { name: 'Present', exact: true }).click();
   const d2 = page2.getByRole('dialog', { name: 'GRM findings presentation' }); await d2.waitFor();
   await d2.getByRole('button', { name: 'Close', exact: true }).focus(); await page2.keyboard.press('ArrowRight');
-  check('normal motion: staged beats land on the reduced-motion final text', landed === await d2.locator('main').innerText(), null);
+  const final = await d2.locator('main').innerText();
   const still = await page2.evaluate(() => document.getAnimations().filter(a => a.effect?.target?.closest?.('.grm-mark') && a.playState === 'running').length);
   check('reduced motion: the mark rests', still === 0, still);
   await reduced.close();
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+  const page = await context.newPage();
+  await page.goto(BASE); await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
+  check('normal motion media preference', await page.evaluate(() => !matchMedia('(prefers-reduced-motion: reduce)').matches), null);
+  // The title slide's beats land TITLE_REVEAL_MS after it opens (the title
+  // delays in PresentMode.tsx). The first arrow must come before that to test
+  // anything, so the check times the span from the deck's insertion (a
+  // mutation observer) to the arrow's keydown; that span is never shorter
+  // than the app's own. An arrow that moved on is a failure, unless the span
+  // reached TITLE_REVEAL_MS: then the machine missed the reveal, and the
+  // check closes the deck and opens it again, up to three times.
+  const dialog = page.getByRole('dialog', { name: 'GRM findings presentation' });
+  const arrows = [];
+  for (;;) {
+    await page.evaluate(() => {
+      const t = window.__grmDeck = { open: null, key: null };
+      const mo = new MutationObserver(() => { if (document.querySelector('dialog.presentation-dialog[open]')) { t.open = performance.now(); mo.disconnect(); } });
+      mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
+      window.addEventListener('keydown', () => { if (t.key === null) t.key = performance.now(); }, { capture: true, once: true });
+    });
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+    await dialog.waitFor();
+    await dialog.getByRole('button', { name: 'Close', exact: true }).focus();
+    await page.keyboard.press('ArrowRight');
+    const t = await page.evaluate(() => window.__grmDeck);
+    const a = { slide: await slideNumber(dialog), ms: t.open !== null && t.key !== null ? Math.round(t.key - t.open) : null };
+    arrows.push(a);
+    if (a.slide === 1 || a.ms === null || a.ms < TITLE_REVEAL_MS || arrows.length === 3) break;
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'detached' });
+  }
+  check('normal motion: an arrow mid-reveal lands the beats first', arrows.at(-1).slide === 1, { revealMs: TITLE_REVEAL_MS, arrows });
+  await page.keyboard.press('ArrowRight');
+  check('normal motion: the next arrow moves on', await slideNumber(dialog) === 2, await slideNumber(dialog));
+  const t0 = Date.now();
+  await page.waitForFunction(want => document.querySelector('dialog.presentation-dialog main')?.innerText === want, final, { timeout: STATE_MS }).catch(() => {});
+  const landed = await dialog.locator('main').innerText();
+  check('normal motion: staged beats land on the reduced-motion final text', landed === final, { ms: Date.now() - t0 });
+  await page.keyboard.press('Escape');
+  await context.close();
 }
 
 async function boundaries(browser) {
