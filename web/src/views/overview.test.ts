@@ -14,7 +14,9 @@ import { parseManifest } from "../data/validate";
 import type { CatalogRow, Manifest, SpeciesRow } from "../data/schema";
 import type { Navigator, Route } from "../app/router";
 import { catalogWords } from "../app/ReportStatus";
-import { catalogLead, cohortLead, coverageNote, lineageLead, micLead } from "./findings";
+import type { Fitted, LearnerRow, LearnerSummary } from "../data/derive/evidence";
+import type { SplitSummary } from "../data/derive/overview";
+import { barsLead, catalogLead, cohortLead, coverageNote, learnersLead, lineageLead, micLead } from "./findings";
 import { OverviewView } from "./OverviewView";
 import { MethodsView } from "./MethodsView";
 
@@ -82,7 +84,7 @@ describe("report leads with revision 7's numbers", () => {
 
   it("states the lineage, known-gene, and MIC leads with their denominators", () => {
     expect(lineageLead({ n: 237, nNoBest: 0, nLineage: 231, medianRandom: 0.9253561253561253, medianLineage: 0.859608745684695, medianGap: 0.045254403131115395, nLargeGap: 106 })).toBe(
-      "A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out lowers median balanced accuracy from 92.5% on a random split to 86.0%. 106 of 231 datasets lose more than 5 points; the median loss is 4.5 points.",
+      "A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out lowers median balanced accuracy from 92.5% on a random split to 86.0%. The random-split figure is each dataset's best of five learners, picked on the same folds that score it, so it runs a little above what one learner named in advance would score. 106 of 231 datasets lose more than 5 points; the median loss is 4.5 points.",
     );
     expect(
       catalogLead({
@@ -103,6 +105,61 @@ describe("report leads with revision 7's numbers", () => {
     expect(micLead({ n: 126, median: 0.8362655650985171, nAbove90: 40 })).toBe(
       "The MIC (minimum inhibitory concentration) is the lowest drug level, in mg/L, that stops the bacterium growing. Labs test levels that double at each step, and a predicted MIC within one step of the measured one counts as essential agreement. For 40 of 126 datasets, at least 90% of exact MICs are predicted within one doubling dilution. The median dataset reaches 83.6%.",
     );
+  });
+
+  // Revision 12's index (274 datasets, 268 with lineages held out), as the
+  // model of these summaries counts it.
+  const alone = (learner: Fitted, medianRandom: number, medianLineage: number, medianGap: number, nNoCall: number, bestHigher: number, bestLower: number): LearnerRow => ({
+    learner,
+    n: 268,
+    medianRandom,
+    medianLineage,
+    medianGap,
+    nNoCall,
+    nBest: 268,
+    bestHigher,
+    bestLower,
+    medianBestLead: 0,
+  });
+  const rev12Learners: LearnerSummary = {
+    rows: [
+      alone("scm", 0.9156, 0.8708, 0.0242, 0, 106, 79),
+      alone("cart", 0.9082, 0.8684, 0.0293, 0, 140, 68),
+      alone("rf", 0.8955, 0.8124, 0.0504, 0, 181, 46),
+      alone("gbt", 0.9119, 0.8459, 0.0463, 60, 141, 59),
+      alone("lasso", 0.9153, 0.8567, 0.0376, 48, 135, 62),
+    ],
+    nBest: 268,
+    bestAlsoTops: 123,
+    otherAheadByCutoff: 68,
+  };
+  const rev12Split: SplitSummary = { n: 274, nNoBest: 0, nLineage: 268, medianRandom: 0.9286458630476951, medianLineage: 0.8790200150467228, medianGap: 0.03711346885361494, nLargeGap: 112 };
+  const PICK =
+    "Each dataset's best learner is the one of five with the highest random-split score among those that call every isolate. A learner's score with lineages held out takes no part in that pick. With lineages held out, the best learner's median balanced accuracy is 87.9% over 268 datasets.";
+
+  it("sets the best learner beside the strongest learner used alone", () => {
+    expect(learnersLead(rev12Learners, rev12Split)).toBe(
+      `${PICK} For the set covering machine, used alone for every dataset, that median is 87.1%. The best learner scores higher than the set covering machine on 106 of 268 datasets and lower on 79.`,
+    );
+  });
+
+  it("names only a learner that calls every isolate as the strongest alone", () => {
+    // A higher median over fewer isolates does not stand beside the best learner's.
+    const lassoHigher: LearnerSummary = { ...rev12Learners, rows: rev12Learners.rows.map((r) => (r.learner === "lasso" ? { ...r, medianLineage: 0.95 } : r)) };
+    expect(learnersLead(lassoHigher, rev12Split)).toContain("For the set covering machine, used alone for every dataset, that median is 87.1%.");
+    const nonePlain: LearnerSummary = { ...rev12Learners, rows: rev12Learners.rows.map((r) => ({ ...r, nNoCall: 1 })) };
+    expect(learnersLead(nonePlain, rev12Split)).toBe(PICK);
+    expect(learnersLead(rev12Learners, { ...rev12Split, nLineage: 0, medianLineage: null })).toBe("No dataset has a lineage-held-out result yet.");
+  });
+
+  it("reads both error rates against the bars with the three outcomes and their denominator", () => {
+    expect(barsLead({ n: 268, meets: 0, misses: 239, open: 29, openAtBars: 6 })).toBe(
+      "The site reads VME against at most 1.5% and ME against at most 3%, limits taken from FDA's 2009 guidance for growth-based susceptibility test systems. The guidance does not cover tests that read resistance from a genome, or tests of anti-mycobacterial drugs, so this site uses its numbers as a research screen adapted from it. They are not a criterion these models were validated against, and meeting them is not clearance of anything. A rate counted on few genomes can sit under its bar by chance, so each rate is read with its 95% interval. With lineages held out, the best learner is shown to meet both bars on 0 of 268 datasets and shown to miss at least one on 239. The other 29 have too few genomes to tell.",
+    );
+    expect(barsLead({ n: 3, meets: 1, misses: 2, open: 0, openAtBars: 0 })).toBe(
+      "The site reads VME against at most 1.5% and ME against at most 3%, limits taken from FDA's 2009 guidance for growth-based susceptibility test systems. The guidance does not cover tests that read resistance from a genome, or tests of anti-mycobacterial drugs, so this site uses its numbers as a research screen adapted from it. They are not a criterion these models were validated against, and meeting them is not clearance of anything. A rate counted on few genomes can sit under its bar by chance, so each rate is read with its 95% interval. With lineages held out, the best learner is shown to meet both bars on 1 of 3 datasets and shown to miss at least one on 2.",
+    );
+    expect(barsLead({ n: 0, meets: 0, misses: 0, open: 0, openAtBars: 0 })).toBe("No dataset has both error rates with lineages held out yet.");
   });
 
   it("does not claim a selection cap the data does not show", () => {
@@ -152,12 +209,16 @@ const mount = async (m: Manifest, nav: Navigator) => {
 
 const click = (el: Element) => el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
 
+/** A section's control by the words on it, and a table by its frame's name. */
+const control = (section: Element, text: string) => [...section.querySelectorAll("button[aria-expanded]")].find((b) => b.textContent === text)!;
+const framed = (section: Element, label: string) => section.querySelector(`[role="region"][aria-label="${label}"]`)!;
+
 /** The fixture's rows carry no audit, so they read as provisional; this
  *  copy passes the current audit. */
 const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
 
 describe("What GRM found", () => {
-  it("reads as a report: a plain title, what the site asks, a plain status line, the primer, and six numbered sections", async () => {
+  it("reads as a report: a plain title, what the site asks, a plain status line, the primer, and eight numbered sections", async () => {
     const host = await mount(passing, fakeNav().nav);
     expect(host.querySelector("h1")?.textContent).toBe("What GRM found");
     // The question comes in words before any chart.
@@ -167,10 +228,12 @@ describe("What GRM found", () => {
       "How to read this report",
       "1 Genomes and lab calls",
       "2 Scores on unseen lineages",
-      "3 Known-gene rules against learners",
-      "4 Simulated PCR panel",
-      "5 Predicting the drug level that stops growth (MIC)",
-      "6 Limits",
+      "3 The five learners compared",
+      "4 Error rates against the bars",
+      "5 Known-gene rules against learners",
+      "6 Simulated PCR panel",
+      "7 Predicting the drug level that stops growth (MIC)",
+      "8 Limits",
     ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
     expect(scope?.textContent).toBe("Tested within one public database only");
@@ -246,6 +309,58 @@ describe("What GRM found", () => {
     const name = lineage.querySelector<HTMLAnchorElement>(`a[href="/?dataset=${encodeURIComponent(c!.id)}"]`)!;
     await act(async () => click(name));
     expect(calls.open).toEqual([c!.id]);
+  });
+
+  it("sets the five learners under the best learner, with the dataset-by-dataset counts one control away", async () => {
+    const host = await mount(base, fakeNav().nav);
+    const learners = host.querySelector("#learners")!;
+    const medians = framed(learners, "Median balanced accuracy by learner");
+    expect([...medians.querySelectorAll("thead th")].map((th) => th.textContent)).toEqual(["Learner", "Datasets", "Random split", "Lineages held out", "Median drop, points"]);
+    expect([...medians.querySelectorAll('tbody th[scope="row"]')].map((th) => th.textContent)).toEqual([
+      "Best learner for each dataset",
+      "Set covering machine",
+      "Decision tree (CART)",
+      "Random forest",
+      "Gradient boosted trees",
+      "L1 logistic regression",
+    ]);
+    expect(learners.querySelectorAll("table")).toHaveLength(1);
+    await act(async () => click(control(learners, "Show best learner against each learner")));
+    expect(framed(learners, "The best learner against each learner used alone").querySelectorAll('tbody th[scope="row"]')).toHaveLength(5);
+    expect(learners.textContent).toContain("Where that learner is itself the best learner, the two score the same.");
+  });
+
+  it("counts the best learner's datasets against the bars in three outcomes that add up", async () => {
+    const host = await mount(base, fakeNav().nav);
+    const bars = host.querySelector("#bars")!;
+    const tiles = [...bars.querySelectorAll("ol li")];
+    expect(tiles.map((li) => li.lastElementChild?.textContent).slice(1)).toEqual(["Shown to meet both bars", "Shown to miss at least one bar", "Too few genomes to tell"]);
+    expect(tiles[0]?.lastElementChild?.textContent).toMatch(/^Datasets? tested with lineages held out$/);
+    const counts = tiles.map((li) => Number((li.firstElementChild?.textContent ?? "").replace(/,/g, "")));
+    expect(counts).toHaveLength(4);
+    expect(counts[0]).toBeGreaterThan(0);
+    expect((counts[1] ?? 0) + (counts[2] ?? 0) + (counts[3] ?? 0)).toBe(counts[0]);
+    // The reading is stated beside the counts, with its limit.
+    expect(bars.textContent).toContain("The interval is exact (Clopper-Pearson)");
+    expect(bars.textContent).toContain("so the true interval is likely wider.");
+    await act(async () => click(control(bars, "Show each learner against the bars")));
+    const each = framed(bars, "Each learner against the bars");
+    expect([...each.querySelectorAll('th[scope="rowgroup"]')].map((th) => th.textContent)).toEqual(["Lineages held out", "Random split"]);
+    expect(each.querySelectorAll('tbody th[scope="row"]')).toHaveLength(12);
+    // The best learner's row with lineages held out repeats the four counts above it.
+    expect([...each.querySelectorAll("tbody tr")][1]?.textContent).toBe(`Best learner for each dataset${counts.join("")}`);
+  });
+
+  it("groups the known-gene rules by their own score behind one control", async () => {
+    const host = await mount(base, fakeNav().nav);
+    const catalog = host.querySelector("#catalog")!;
+    await act(async () => click(control(catalog, "Show rules grouped by their own score")));
+    const groups = framed(catalog, "Known-gene rules grouped by their own balanced accuracy");
+    expect([...groups.querySelectorAll('tbody th[scope="row"]')].map((th) => th.textContent)).toEqual(["Under 55%", "55% to under 70%", "70% to under 85%", "85% or more"]);
+    // Every rule falls in one group.
+    const inGroups = [...groups.querySelectorAll("tbody tr")].map((tr) => Number(tr.children[1]?.textContent));
+    expect(inGroups.reduce((a, b) => a + b, 0)).toBe(base.datasets.filter((d) => d.catalog !== null).length);
+    expect(catalog.textContent).toContain("A rule that calls every genome one way scores exactly 50%, a coin toss, so the first group ends just above that, at 55%.");
   });
 
   it("ends with the limits and a link to the audit in Methods", async () => {

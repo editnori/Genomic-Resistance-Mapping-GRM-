@@ -354,7 +354,8 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
           <p className="mt-2">
             The score is balanced accuracy: the average of the share of resistant genomes called resistant (sensitivity) and the share of susceptible genomes called
             susceptible (specificity). 50% is no better than a coin toss, and 100% gets every call right. A gap between two scores is counted in points: 90% to 85% is 5
-            points. Each dataset&apos;s best learner is the one with the highest random-split score among those that call every isolate, and the findings below use it.
+            points. Each dataset&apos;s best learner is the one with the highest random-split score among those that call every isolate. The findings below use it, and one of them sets it
+            beside each learner used alone.
           </p>
         </>
       ),
@@ -378,13 +379,13 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
           )}
           <p>
             A resistant genome called susceptible is a very major error (VME): in use, it would mean giving a drug that fails. A susceptible genome called resistant is a
-            major error (ME): it would mean giving a broader drug than needed. Lab devices that test susceptibility are held to a VME of {barLabel(BARS.vme)} and an ME of{" "}
-            {barLabel(BARS.me)}; the Datasets table marks each value against those bars.
+            major error (ME): it would mean giving a broader drug than needed. The site reads them against a VME of {barLabel(BARS.vme)} and an ME of {barLabel(BARS.me)},
+            limits adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems as a research screen; the Datasets table marks each value against them.
           </p>
         </>
       ),
       figure: ex === null ? null : <ErrorFigure ex={ex} />,
-      caption: `Counts per 100, rounded, from the best random-split learner with lineages held out. Bars for test devices: VME ${barLabel(BARS.vme)}, ME ${barLabel(BARS.me)}.`,
+      caption: `Counts per 100, rounded, from the best random-split learner with lineages held out. Limits, adapted from FDA guidance for growth-based tests as a research screen: VME ${barLabel(BARS.vme)}, ME ${barLabel(BARS.me)}.`,
     },
     {
       id: "primer-scope",

@@ -58,6 +58,7 @@ export const MicSection = ({ r, research }: { r: DatasetReport; research: Resour
             ) : null}
             <p className="type-note">
               Censored gradient-boosted regression on log2 dilution steps, predicted out of fold on the random split.
+              {mic.categorical === null ? "" : " The VME and ME limits are a screen adapted from FDA's 2009 guidance for growth-based susceptibility test systems."}
             </p>
           </div>
         </div>

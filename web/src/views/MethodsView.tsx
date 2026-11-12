@@ -11,10 +11,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Corpus, Manifest } from "../data/schema";
 import { datasetTitle, int, pct, plural } from "../data/format";
-import { BARS, barWords } from "../data/metrics";
+import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import { loadErrorText, useCorpus } from "../data/load";
 import { manifestAudit, nullFitWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
+import { ZERO_MISS_FLOOR } from "../data/derive/evidence";
 import { notScored } from "../data/derive/tests";
 import { FOCUS_RING, PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitives";
 import { ViewHeader } from "../ui/ViewHeader";
@@ -248,9 +249,9 @@ const Models = ({ manifest }: { manifest: Manifest }) => (
       <Def term="Random forest" plain="A learner that grows many different decision trees and lets them vote.">Many randomized trees whose votes score each isolate between 0 and 1.</Def>
       <Def term="Gradient-boosted trees" plain="A learner that adds small trees one at a time, each one fixing mistakes of the trees before it.">Trees added one at a time, each correcting the ones before; they score each isolate between 0 and 1.</Def>
       <Def term="L1 logistic regression (lasso)" plain="A learner that gives a weight to a small number of DNA pieces and ignores the rest.">A sparse linear model on screened features.</Def>
-      <Def term="Known-gene rules" plain="A fixed rule with no training: call the genome resistant when it carries a known resistance gene that acts on the drug.">
+      <Def term="Known-gene rules" plain="A fixed rule with no training: call the genome resistant when it carries a catalog gene whose class matches the drug.">
         GRM finds acquired genes of the AMRFinderPlus catalog ({manifest.amrfinder_version === "" ? "version not recorded" : manifest.amrfinder_version}) in each genome with its own k-mer
-        matching and applies its own fixed rule per drug: resistant when the genome carries a gene of a class or subclass that acts on the drug. The rule does not train. It does not run
+        matching and applies its own fixed rule per drug: resistant when the genome carries a gene whose catalog class or subclass matches the drug. The rule does not train. It does not run
         the AMRFinderPlus program or test the point mutations AMRFinderPlus also describes, so mutational resistance counts against it.
       </Def>
       <Def term="Simulated PCR panels" plain="Commercial lab gene tests, imitated on the genome sequence: a panel calls resistant when it finds any gene it looks for.">
@@ -285,14 +286,24 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
       <Def term="Balanced accuracy" plain="The average of two shares: resistant genomes called resistant (sensitivity) and susceptible genomes called susceptible (specificity). 50% is no better than a coin toss.">The mean of sensitivity and specificity, over pooled out-of-fold predictions. A score of 0.5 or more calls resistant.</Def>
       <Def term="Best learner" plain="For each dataset, the learner that scored highest on the random split.">
         The learner with the highest random-split balanced accuracy among those that call every isolate on every split that ran. The known-gene rule is a baseline, never a candidate.
-        Overview&apos;s figures use the best learner.
+        A learner&apos;s score with lineages held out takes no part in the pick. Its random-split score is read on the same folds that picked it, so it is the highest of five
+        scores rather than what one learner named in advance would score, and runs a little above that. Overview&apos;s figures use the best learner, and its learner table sets
+        the best learner beside each learner used alone.
       </Def>
       <Def
         term="VME and ME"
-        plain={`The two kinds of wrong call: a resistant genome called susceptible (very major error) and a susceptible genome called resistant (major error). Test devices are held to ${barWords(BARS.vme)} and ${barWords(BARS.me)}.`}
+        plain={`The two kinds of wrong call: a resistant genome called susceptible (very major error) and a susceptible genome called resistant (major error). The site reads them against ${barWords(BARS.vme)} and ${barWords(BARS.me)}, limits adapted from FDA's 2009 guidance for growth-based susceptibility test systems as a research screen.`}
       >
         Very major error (VME) is resistant isolates called susceptible, over the resistant isolates called; major error (ME) is susceptible isolates called resistant, over the
-        susceptible isolates called. They are read against FDA-style bars for susceptibility test devices, VME at most 1.5% and ME at most 3%, as a reference, not a regulatory claim.
+        susceptible isolates called. They are read against VME at most 1.5% and ME at most 3%, limits taken from FDA&apos;s 2009 guidance for growth-based susceptibility test
+        systems (Class II Special Controls Guidance Document: Antimicrobial Susceptibility Test (AST) Systems). {BARS_SCOPE} M. tuberculosis datasets test anti-mycobacterial
+        drugs, which the guidance excludes by name, so for them the limits are a comparison only. The site&apos;s reading is not the guidance&apos;s own rule either. The guidance
+        counts VME over every resistant isolate tested and asks that the 95% interval of that rate have its lower end under 1.5% and its upper end under 7.5%; it counts ME over
+        every susceptible isolate tested, and it has no category for a test that gives no call. The site counts each rate over the isolates a learner called, and the Datasets
+        table and each dataset&apos;s page compare the rate as printed with its limit. Overview counts a dataset as shown to meet a bar when the exact 95% interval
+        (Clopper-Pearson) of its rate lies at or under the bar, and as shown to miss it when the interval
+        lies over the bar. A learner that misses no resistant genome needs at least {int(ZERO_MISS_FLOOR)} resistant genomes before its interval lies under the VME bar. The interval
+        treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.
       </Def>
       <Def term="Learner no-calls" plain="What happens when a fitted model learned nothing from the DNA, and how its genomes are counted.">{nullFitWords(manifest.evaluation_revision)}</Def>
       <Def term="Probe no-calls" plain="A probe test that finds none of its targets gives no answer, and that genome is left out of the test's own score.">
@@ -301,9 +312,10 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
       </Def>
       <Def
         term="MIC essential agreement"
-        plain={`How often the predicted MIC is within one dilution step of the measured MIC. Test devices are held to ${barWords(BARS.mic)}.`}
+        plain={`How often the predicted MIC is within one dilution step of the measured MIC. The site reads it against ${barWords(BARS.mic)}, a limit adapted from FDA's 2009 guidance for growth-based susceptibility test systems as a research screen.`}
       >
-        A prediction within one doubling dilution of an exact MIC, a single measured value rather than a bound such as “≤0.25”; 90% is the bar used for susceptibility test devices.
+        A prediction within one doubling dilution of an exact MIC, a single measured value rather than a bound such as “≤0.25”. 90% follows the essential-agreement limit in FDA&apos;s
+        2009 guidance for growth-based susceptibility test systems, which asks for more than 89.9%; it is a research screen here, with the limits of VME and ME above.
         Calls from the predicted MIC use each training fold&apos;s own empirical threshold and are scored against the reported resistant and susceptible labels.
       </Def>
       <Def term="AUROC" plain="How well a model's scores rank resistant genomes above susceptible ones: 0.5 is chance, and 1 means every resistant genome ranks above every susceptible one.">
@@ -311,8 +323,10 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
         AUROC for that learner.
       </Def>
       <Def term="What each Overview figure counts" plain="Which datasets each Overview figure includes. A median is the middle value when the datasets are lined up by score.">
-        The lineage figure draws datasets with both splits; the known-gene figure, datasets with a rule and a lineage-held-out result; the PCR panel, datasets with that panel and a best
-        learner; the MIC figure, datasets with an MIC model. Datasets with no best learner are left out of every median, and each figure states what it leaves out.
+        The lineage figure draws datasets with both splits. Each row of the learner table counts the datasets where that learner has a score on both splits. The bar counts take the
+        datasets where the best learner has both error rates with lineages held out. The known-gene figure draws datasets with a rule and a lineage-held-out result; the PCR panel,
+        datasets with that panel and a best learner; the MIC figure, datasets with an MIC model. Datasets with no best learner are left out of every median of the best learner, and
+        each figure states what it leaves out.
       </Def>
     </Defs>
   </MethodsSection>
@@ -436,11 +450,18 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
         {corpus.status === "ready" ? <Sources corpus={corpus.data} /> : null}
       </Part>
       <Part title="Learner cross-check">
-        <P>GRM runs its own code for each learner, so GRM checked each one against a standard version of the same method.</P>
+        <P>
+          GRM runs its own code for each learner. In October 2026 a check compared each learner with a standard version of the same method on 16 small test cases, under revision 7 of
+          the evaluation. Nobody has repeated the check on the revision shown here.
+        </P>
         <p className="prose-measure text-note text-ink">
-          On seven small test fixtures and on the 868-isolate <i>E. coli</i> ceftriaxone dataset from an earlier report, run with the same learner code as this report, each of the five
-          learners matched a reference implementation of the same model (scikit-learn, XGBoost, or a reimplementation of its documented rules) exactly or within that reference&apos;s own
-          run-to-run noise.
+          The set covering machine, the decision tree and the random forest matched their reference on all 16 cases. The check set the boosted trees against XGBoost 3.0.5: most trees
+          were identical, and it traced each tree that differed to a known difference in rounding or in settings. GRM keeps one difference on purpose. When its boosting keeps no tree
+          it gives no call, and XGBoost always keeps at least one.
+        </p>
+        <p className="prose-measure text-note text-ink">
+          The check showed that the L1 logistic regression solver stopped early on some cases. Revision 8 replaced that solver, and its tests now require each saved case to converge
+          on the best known fit.
         </p>
       </Part>
       {unsupported.length > 0 ? (
@@ -495,7 +516,7 @@ const STUDY_STEPS: readonly { title: string; text: string; section: string; to: 
   },
   {
     title: "Count the errors against limits",
-    text: `A resistant genome called susceptible is a very major error (VME), and a susceptible genome called resistant is a major error (ME). Susceptibility test devices are held to a VME of ${barWords(BARS.vme)} and an ME of ${barWords(BARS.me)}.`,
+    text: `A resistant genome called susceptible is a very major error (VME), and a susceptible genome called resistant is a major error (ME). The site reads them against a VME of ${barWords(BARS.vme)} and an ME of ${barWords(BARS.me)}, a research screen adapted from FDA's 2009 guidance for growth-based susceptibility test systems.`,
     section: "section 3, How to read scores",
     to: "m-scores",
   },

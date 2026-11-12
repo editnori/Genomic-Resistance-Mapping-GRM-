@@ -145,7 +145,7 @@ export const PanelDesigner = ({ r }: { r: DatasetReport }) => {
         <Stat label="VME" value={a.vme} bar={BARS.vme} />
         <Stat label="ME" value={a.me} bar={BARS.me} />
       </div>
-      <p className="type-note mt-3">Calls use every isolate, with no held-out split.</p>
+      <p className="type-note mt-3">Calls use every isolate, with no held-out split. The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.</p>
       <div className="mt-5 grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-2">
         <MarkerList title="Model features" markers={featureMarkers} chosen={chosen} onToggle={toggle} />
         <MarkerList title="Catalog gene groups" markers={groupMarkers} chosen={chosen} onToggle={toggle} />

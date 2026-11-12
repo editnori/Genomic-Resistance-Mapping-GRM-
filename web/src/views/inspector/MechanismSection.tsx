@@ -146,6 +146,7 @@ export const MechanismSection = ({ r }: { r: DatasetReport }) => {
           </table>
         </ScrollFrame>
       )}
+      {tests.length === 0 ? null : <p className="type-note mt-2">The limits under VME and ME are a screen adapted from FDA&apos;s 2009 guidance for growth-based susceptibility test systems.</p>}
       <div className="mt-6">
         <h3 className="text-control font-semibold text-ink">Simulated PCR panels</h3>
         {r.panels.length === 0 && unsupported.length === 0 ? (

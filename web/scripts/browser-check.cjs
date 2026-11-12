@@ -56,6 +56,9 @@ expected.stats = {
   meMeets: manifest.datasets.filter(d => best(d)?.me <= 0.03).length,
   leadPanel: leadId,
   leadPanelDatasets: expected.panels.length,
+  // Datasets whose best learner has both error rates with lineages held out
+  // and called at least one genome of each class there.
+  barsCounted: manifest.datasets.filter(d => { const r = d.learners.find(l => l.learner === d.best_learner)?.lineage; return r && r.vme != null && r.me != null && d.n_resistant - (r.no_call?.resistant ?? 0) > 0 && d.n - d.n_resistant - (r.no_call?.susceptible ?? 0) > 0; }).length,
 };
 const SHORT = [[/lacks one or both classes/, 'Fold lacks a class'], [/fewer than twice as many lineages/, 'Too few lineages']];
 const stateRows = [
@@ -186,9 +189,14 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     check(tag + ' MIC region counts', geometry.text.includes((values.length - expected.stats.micAbove90) + ' <90%') && geometry.text.includes(expected.stats.micAbove90 + ' ≥90%'), geometry.text);
   }
   if (finding === 3) {
-    const counts = expected.panels.map(p => ({ panel: p.counts, model: p.best_model_counts }));
-    const panel = counts.reduce((a, c) => a + c.panel.tp, 0) / counts.reduce((a, c) => a + c.panel.tp + c.panel.fn, 0);
-    const model = counts.reduce((a, c) => a + c.model.tp, 0) / counts.reduce((a, c) => a + c.model.tp + c.model.fn, 0);
+    // A report from before revision 11 has no panel counts. The page then
+    // rebuilds them from each rate and the dataset's class sizes (joinPanels).
+    const counts = expected.panels.map(p => {
+      const called = p.counts ? p.counts.tp + p.counts.fn : (byId.get(p.dataset)?.n_resistant ?? 0), resistant = called + (p.no_call?.resistant ?? 0), m = p.best_model_counts;
+      return { caught: p.counts ? p.counts.tp : Math.round(p.metrics.sensitivity * called), called, modelCaught: m ? m.tp : Math.round(p.best_model.sensitivity * resistant), modelResistant: m ? m.tp + m.fn : resistant };
+    });
+    const panel = counts.reduce((a, c) => a + c.caught, 0) / counts.reduce((a, c) => a + c.called, 0);
+    const model = counts.reduce((a, c) => a + c.modelCaught, 0) / counts.reduce((a, c) => a + c.modelResistant, 0);
     const start = Math.min(220, Math.round(geometry.width * 0.5)) + 10;
     wanted = [panel, model].map(v => start + v * (geometry.width - 20 - start));
     // Pooled reference lines span every row on every page; a page draws
@@ -354,7 +362,10 @@ async function headerCheck(page, tag, title) {
     return { text: h1?.textContent, size: h1 ? parseFloat(getComputedStyle(h1).fontSize) : null, srOnly: h1?.classList.contains('sr-only') ?? null, status: header?.textContent ?? '', scopeHref: header?.querySelector('a[data-audit-status], a[href$="#limits"], a[href="#m-limits"]')?.getAttribute('href') ?? null };
   });
   check(tag + ' visible title', h.text === title && h.size === 32 && h.srOnly === false, h);
-  check(tag + ' plain status line with scope and report date', h.status.includes(CHIP) && h.status.includes('Report built') && !h.status.includes('BV-BRC lab records') && isLimitsHref(h.scopeHref), h);
+  // On a provisional report, Overview and Methods print the status in bold with the reasons
+  // under the line, and carry no scope link (ReportLine in findings.tsx).
+  const bare = !allValid && / (overview|methods)$/.test(tag);
+  check(tag + ' plain status line with scope and report date', h.status.includes(CHIP) && h.status.includes('Report built') && !h.status.includes('BV-BRC lab records') && (bare ? h.scopeHref === null : isLimitsHref(h.scopeHref)), h);
 }
 
 const scrollTo = async (page, selector) => {
@@ -791,7 +802,10 @@ async function interactions(page, tag, width) {
   await shot(page, tag + '-empty-filter');
   await page.getByRole('button', { name: 'Clear filters and search' }).click();
   check(tag + ' clear filter recovery', await search.inputValue() === '', null);
-  await page.getByRole('button', { name: 'Show all ' + expected.datasets.toLocaleString('en-US'), exact: true }).click();
+  // The table offers Show all only past one page of rows (PAGE_SIZE in DataTable.tsx).
+  const showAll = page.getByRole('button', { name: 'Show all ' + expected.datasets.toLocaleString('en-US'), exact: true });
+  if (expected.datasets > 25) await showAll.click();
+  else check(tag + ' one page of rows offers no Show all', await showAll.count() === 0, null);
   const status = await page.getByRole('region', { name: 'Datasets', exact: true }).evaluate(region => {
     const rows = [...region.querySelectorAll('tbody tr')];
     const v = (r, i) => r.children[i]?.querySelector('[data-verdict]')?.getAttribute('data-verdict');
@@ -936,7 +950,7 @@ async function interactions(page, tag, width) {
     const header = document.querySelector('dialog[open] header');
     return { status: header.querySelector('p')?.textContent, links: [...header.querySelectorAll('nav[aria-label="Sections"] button')].map(b => b.textContent), current: header.querySelector('nav[aria-label="Sections"] [aria-current="true"]')?.textContent, title: document.getElementById('inspector-title')?.getBoundingClientRect().x, body: document.querySelector('#ds-learners h2')?.getBoundingClientRect().x, linksX: header.querySelector('nav[aria-label="Sections"] button')?.getBoundingClientRect().x, classMark: header.querySelector('p svg.class-glyph')?.getAttribute('data-class-family') ?? null };
   });
-  check(tag + ' inspector header: chip and facts in one status row', head.status?.includes(CHIP.replace('Provisional metrics', 'Provisional')) || head.status?.includes('Tested within one public database only') || head.status?.includes('Provisional'), head.status);
+  check(tag + ' inspector header: chip and facts in one status row', head.status?.includes(CHIP.replace('Provisional metrics', 'Provisional')) || head.status?.includes('Tested within one public database only') || head.status?.includes('Provisional') || head.status?.includes('Unaudited, provisional'), head.status);
   check(tag + ' inspector section links', JSON.stringify(head.links) === JSON.stringify(['Learners', 'Interpretable model', 'Genes and panels', 'Marker designer', 'MIC', 'Lineages']) && head.current === 'Learners', head);
   check(tag + ' inspector header and body share a column', Math.abs(head.title - head.body) <= 1 && Math.abs(head.linksX - head.body) <= 1, head);
   check(tag + ' inspector names the drug class with its family mark', head.classMark !== null, head.classMark);
@@ -1034,11 +1048,36 @@ async function interactions(page, tag, width) {
   await page.locator('#corpus').waitFor();
   for (const button of await page.getByRole('button', { name: 'Method and coverage' }).all()) await button.click();
   await reachCheck(page, tag + ' overview with every Method and coverage open');
-  // The primer is a section of its own above the six numbered ones, under
+  // Each finding keeps its longer table one control away. With all of them
+  // open, a wide table scrolls inside its own frame and the page keeps its
+  // width.
+  // A finding offers its table only when the tree has a dataset to count in
+  // it, so the tree decides which controls the page owes.
+  const longerTables = [
+    ['Show best learner against each learner', manifest.datasets.some(d => d.best_lineage !== null)],
+    ['Show each learner against the bars', expected.stats.barsCounted > 0],
+    ['Show rules grouped by their own score', expected.catalog.length > 0],
+  ];
+  const tablesOpened = [];
+  for (const [name] of longerTables) { const b = page.getByRole('button', { name, exact: true }); if (await b.count() === 1) { await b.click(); tablesOpened.push(name); } }
+  const tablesOwed = longerTables.filter(([, owed]) => owed).map(([name]) => name);
+  check(tag + ' overview longer tables one control away', tablesOpened.length === tablesOwed.length && tablesOwed.every(name => tablesOpened.includes(name)), { tablesOpened, tablesOwed });
+  await reachCheck(page, tag + ' overview with every longer table open');
+  const wideTables = await page.evaluate(() => [...document.querySelectorAll('[data-view-scroll] section[id] .scroll-frame [role="region"]')].map(r => ({ label: r.getAttribute('aria-label'), section: r.closest('section[id]').id, scroll: r.scrollWidth, client: r.clientWidth, table: r.querySelector('table')?.getBoundingClientRect().width ?? 0, columns: r.querySelectorAll('thead th').length })));
+  // With all three tables open the page holds at least four tables of five
+  // or more columns; a tree that owes fewer is held to the width alone.
+  check(tag + ' overview tables of five or more columns keep a readable width', (tablesOwed.length < longerTables.length || wideTables.filter(t => t.columns > 4).length >= 4) && wideTables.filter(t => t.columns > 4).every(t => t.table >= 543), wideTables);
+  for (const id of ['learners', 'bars', 'catalog']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id + '-open'); }
+  // The bar counts are the page's own reading of the index: the three
+  // outcomes add up to the datasets counted.
+  const barTiles = await page.evaluate(() => [...document.querySelectorAll('#bars ol li')].map(li => ({ value: Number(li.firstElementChild.textContent.replace(/,/g, '')), unit: li.lastElementChild.textContent })));
+  // A tree with no dataset to count draws no tiles.
+  check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
+  // The primer is a section of its own above the eight numbered ones, under
   // the same hairline.
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
   const numbered = rules.filter(r => r.id !== 'primer');
-  check(tag + ' one hairline between findings', numbered.length === 6 && rules.length === 7 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
+  check(tag + ' one hairline between findings', numbered.length === 8 && rules.length === 9 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
   await headerCheck(page, tag + ' overview', 'What GRM found');
@@ -1048,7 +1087,7 @@ async function interactions(page, tag, width) {
   const marks = await page.evaluate(() => { const c = document.querySelector('#lineage svg circle[data-dataset]'); return c ? getComputedStyle(c).fill : null; });
   const blue = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--series-s'); document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
   check(tag + ' chart marks in the blue series', marks === blue, { marks, blue });
-  for (const id of ['lineage', 'catalog', 'panels', 'mic']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
+  for (const id of ['lineage', 'learners', 'bars', 'catalog', 'panels', 'mic']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
 
   const micId = expected.mic[0].id;
   const micReport = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'datasets', micId + '.json')));
@@ -1097,21 +1136,26 @@ async function states(browser, width, height, theme) {
   await page.route('**/data/index.json', route => route.fulfill({ json: empty }));
   await page.goto(BASE); await page.getByText('No dataset has a report yet', { exact: true }).waitFor(); await shot(page, tag + '-empty-manifest');
   await page.unroute('**/data/index.json');
-  const mixed = structuredClone(manifest); mixed.datasets[0].evaluation.revision = manifest.evaluation_revision - 1;
-  await page.route('**/data/index.json', route => route.fulfill({ json: mixed }));
-  await page.goto(BASE + '/datasets');
-  const mixedStatus = page.getByText('Provisional metrics', { exact: true }).first();
-  await mixedStatus.waitFor();
-  await mixedStatus.hover();
-  check(tag + ' mixed audit status is plain text without a hover wall', await mixedStatus.textContent() === 'Provisional metrics' && await page.getByRole('tooltip').count() === 0, await mixedStatus.textContent());
-  check(tag + ' mixed audit row marker', await page.getByRole('region', { name: 'Datasets', exact: true }).getByText('Provisional', { exact: true }).count() === 1, null);
-  await page.goto(BASE);
-  const mixedNote = page.getByRole('note').first();
-  await mixedNote.waitFor();
-  const mixedNoteText = await mixedNote.textContent();
-  check(tag + ' mixed audit count and reason are visible', mixedNoteText.includes('1 of ' + expected.datasets + ' dataset evaluations do not pass') && mixedNoteText.includes('current revision'), mixedNoteText);
-  await shot(page, tag + '-mixed-audit');
-  await page.unroute('**/data/index.json');
+  // A report from before the audit has no revision to make stale in one dataset.
+  if (manifest.datasets[0].evaluation === undefined) {
+    for (const name of [' mixed audit status is plain text without a hover wall', ' mixed audit row marker', ' mixed audit count and reason are visible']) skipped.push({ check: tag + name, reason: 'no dataset in this tree has an evaluation audit' });
+  } else {
+    const mixed = structuredClone(manifest); mixed.datasets[0].evaluation.revision = manifest.evaluation_revision - 1;
+    await page.route('**/data/index.json', route => route.fulfill({ json: mixed }));
+    await page.goto(BASE + '/datasets');
+    const mixedStatus = page.getByText('Provisional metrics', { exact: true }).first();
+    await mixedStatus.waitFor();
+    await mixedStatus.hover();
+    check(tag + ' mixed audit status is plain text without a hover wall', await mixedStatus.textContent() === 'Provisional metrics' && await page.getByRole('tooltip').count() === 0, await mixedStatus.textContent());
+    check(tag + ' mixed audit row marker', await page.getByRole('region', { name: 'Datasets', exact: true }).getByText('Provisional', { exact: true }).count() === 1, null);
+    await page.goto(BASE);
+    const mixedNote = page.getByRole('note').first();
+    await mixedNote.waitFor();
+    const mixedNoteText = await mixedNote.textContent();
+    check(tag + ' mixed audit count and reason are visible', mixedNoteText.includes('1 of ' + expected.datasets + ' dataset evaluations do not pass') && mixedNoteText.includes('current revision'), mixedNoteText);
+    await shot(page, tag + '-mixed-audit');
+    await page.unroute('**/data/index.json');
+  }
   for (const [row, word] of stateRows) {
     await page.goto(BASE + '/datasets'); await page.getByRole('searchbox', { name: 'Search datasets' }).fill(row.antibiotic + ' ' + row.species);
     check(tag + ' ' + row.id + ' state ' + word, await page.getByText(word, { exact: true }).count() > 0, word);
@@ -1132,12 +1176,12 @@ async function present(page, tag, width, height) {
   await settle(page);
   await slideSelect.click();
   let slideCount = 0, previousCount = -1, stableCounts = 0;
-  // Title, five primer steps, five findings, the rule: twelve slides, plus
+  // Title, five primer steps, seven findings, the rule: fourteen slides, plus
   // the extra pages of any figure too dense for the viewport (the outline
   // labels each page "(k of n)"). Which figures continue depends on the
   // viewport and on the report's row counts, so the count is checked
   // against the labels the deck shows.
-  const BASE_SLIDES = 12;
+  const BASE_SLIDES = 14;
   for (let attempt = 0; attempt < 200; attempt++) {
     slideCount = await dialog.getByRole('option').count();
     if (slideCount === previousCount) stableCounts++;
@@ -1237,7 +1281,7 @@ async function present(page, tag, width, height) {
     runs[runs.length - 1].pages.push([Number(p[1]), Number(p[2])]);
   });
   const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
-  check(tag + ' expected slide count: twelve slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  check(tag + ' expected slide count: fourteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
   check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
   const closeButton = dialog.getByRole('button', { name: 'Close', exact: true });
   await closeButton.focus(); await page.keyboard.press('Home');

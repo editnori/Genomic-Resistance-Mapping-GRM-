@@ -1,15 +1,18 @@
 // The report's findings, shared by Overview and Present: the data behind the
-// reports, what holding out whole lineages costs, GRM's known-gene rules, the
-// lead PCR panel, and MIC prediction. Each is a plain title, a lead with its
-// count and denominator, a figure that shows that number, and a caption that
-// says what a mark is; the page adds short notes on coverage, visible inline.
-// Every number comes from data/derive at render time.
+// reports, what holding out whole lineages costs, the five learners side by
+// side, the two error rates against the test-device bars, GRM's known-gene
+// rules, the lead PCR panel, and MIC prediction. Each is a plain title, a
+// lead with its count and denominator, a figure that shows that number, and
+// a caption that says what a mark is; the page adds short notes on coverage,
+// visible inline. Every number comes from data/derive at render time.
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import type { CatalogRow, Manifest } from "../data/schema";
-import { datasetTitle, dateText, int, listWords, pct, plural, points } from "../data/format";
+import { LEARNER_NAME, datasetTitle, dateText, int, learnerInSentence, listWords, pct, plural, points } from "../data/format";
+import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import {
   CATALOG_CUTOFF,
+  UNIFORM_SHARE,
   catalogSummary,
   classMinimum,
   classRows,
@@ -22,6 +25,19 @@ import {
   type MicSummary,
   type SplitSummary,
 } from "../data/derive/overview";
+import {
+  FITTED,
+  ZERO_MISS_FLOOR,
+  atZeroMissFloor,
+  barSummary,
+  learnerSummary,
+  ruleBands,
+  type BarSummary,
+  type LearnerRow,
+  type LearnerSummary,
+  type RuleBand,
+  type Who,
+} from "../data/derive/evidence";
 import { leadPanel, panelsWithoutBest, pool, share, type PanelRowJoined } from "../data/derive/tests";
 import { BEST_LEARNER_WORDS, splitReasonShort } from "../data/derive/dataset";
 import { manifestAudit } from "../data/derive/evaluation";
@@ -34,7 +50,7 @@ import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
-export type FindingId = "corpus" | "lineage" | "catalog" | "panels" | "mic";
+export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic";
 
 /** What a deck gives a figure that may continue onto further slides: the
  *  measured box, the page to draw and the page count, and, while the deck
@@ -236,7 +252,7 @@ export const lineageLead = (s: SplitSummary): string => {
   const verb = s.medianLineage <= s.medianRandom ? "lowers" : "raises";
   const lose = s.nLargeGap === 1 ? "loses" : "lose";
   const median = s.medianGap >= 0 ? `the median loss is ${points(s.medianGap)}` : `the median dataset gains ${points(-s.medianGap)}`;
-  return `A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out ${verb} median balanced accuracy from ${pct(s.medianRandom)} on a random split to ${pct(s.medianLineage)}. ${int(s.nLargeGap)} of ${plural(s.nLineage, "dataset")} ${lose} more than 5 points; ${median}.`;
+  return `A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out ${verb} median balanced accuracy from ${pct(s.medianRandom)} on a random split to ${pct(s.medianLineage)}. The random-split figure is each dataset's best of five learners, picked on the same folds that score it, so it runs a little above what one learner named in advance would score. ${int(s.nLargeGap)} of ${plural(s.nLineage, "dataset")} ${lose} more than 5 points; ${median}.`;
 };
 
 /** The catalog lead: what the rule is, then within the cutoff or ahead,
@@ -258,6 +274,77 @@ export const micLead = (s: MicSummary): string =>
 
 // ---- data ------------------------------------------------------------------------
 
+/** Counts side by side, each over its unit. A slide sets them larger. */
+const StatGrid = ({ stats, large = false }: { stats: readonly { value: number; unit: string }[]; large?: boolean }) => (
+  <ol className={`grid grid-cols-2 gap-x-6 md:grid-cols-4 ${large ? "gap-y-8" : "gap-y-5"}`}>
+    {stats.map((s) => (
+      <li key={s.unit} className="min-w-0">
+        <div className={`font-semibold tabular-nums text-ink ${large ? "text-stat sm:text-[2.75rem] sm:leading-[3rem] sm:tracking-tight" : "text-stat"}`}>{int(s.value)}</div>
+        <div className={`mt-1 text-muted-text ${large ? "text-note sm:text-body" : "text-note"}`}>{s.unit}</div>
+      </li>
+    ))}
+  </ol>
+);
+
+const TH = "px-2 py-2 text-tiny font-medium text-blue";
+
+interface TableGroup {
+  /** The group's name on a row of its own; none when the table has one group. */
+  title?: string;
+  rows: readonly { key: string; name: string; cells: readonly string[] }[];
+}
+
+/** A small table: a name column, then right-aligned numbers. The page sets
+ *  it in a scroll frame, and a table of five or more columns keeps a width
+ *  its column heads can be read at, so a phone scrolls it sideways instead
+ *  of squeezing each head into a column of single words. A slide draws it
+ *  bare and a size up, since a slide has no control of its own. */
+const NumberTable = ({ label, head, groups, slide = false }: { label: string; head: readonly string[]; groups: readonly TableGroup[]; slide?: boolean }) => {
+  const table = (
+    <table
+      aria-label={slide ? label : undefined}
+      className={`w-full border-collapse ${slide ? "text-control sm:text-body" : head.length > 4 ? "min-w-[34rem] text-control" : "text-control"}`}
+    >
+      <thead>
+        <tr className="border-b border-hair">
+          {head.map((h, i) => (
+            <th key={h} scope="col" className={`${TH} ${i === 0 ? "text-left" : "text-right"}`}>
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      {groups.map((g, at) => (
+        <tbody key={g.title ?? at}>
+          {g.title === undefined ? null : (
+            <tr className="border-b border-hair">
+              <th scope="rowgroup" colSpan={head.length} className="px-2 pb-1.5 pt-4 text-left text-tiny font-medium text-muted-text">
+                {g.title}
+              </th>
+            </tr>
+          )}
+          {g.rows.map((r) => (
+            <tr key={r.key} className="border-b border-hair">
+              <th scope="row" className="px-2 py-1 text-left font-normal">
+                {r.name}
+              </th>
+              {r.cells.map((c, i) => (
+                <td key={head[i + 1] ?? i} className="px-2 py-1 text-right tabular-nums">
+                  {c}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      ))}
+    </table>
+  );
+  return <div className="max-w-[44rem]">{slide ? table : <ScrollFrame label={label}>{table}</ScrollFrame>}</div>;
+};
+
+/** A difference of two shares as a signed number of points: "+3.1", "−0.4". */
+const signedPoints = (diff: number | null): string => (diff === null ? "–" : `${diff < 0 ? "−" : "+"}${Math.abs(diff * 100).toFixed(1)}`);
+
 /** The four counts the reports rest on, each with its unit. The deck shows
  *  them static; the page gives each its source in CorpusTiles. */
 export const CorpusFigure = ({ manifest, large = false }: { manifest: Manifest; large?: boolean }) => {
@@ -268,16 +355,7 @@ export const CorpusFigure = ({ manifest, large = false }: { manifest: Manifest; 
     { value: sum(manifest.species.map((s) => s.genomes_analyzed)), unit: "Genomes analyzed" },
     { value: manifest.datasets.length, unit: manifest.datasets.length === 1 ? "Dataset with a report" : "Datasets with a report" },
   ];
-  return (
-    <ol className={`grid grid-cols-2 gap-x-6 md:grid-cols-4 ${large ? "gap-y-8" : "gap-y-5"}`}>
-      {stages.map((s) => (
-        <li key={s.unit} className="min-w-0">
-          <div className={`font-semibold tabular-nums text-ink ${large ? "text-stat sm:text-[2.75rem] sm:leading-[3rem] sm:tracking-tight" : "text-stat"}`}>{int(s.value)}</div>
-          <div className={`mt-1 text-muted-text ${large ? "text-note sm:text-body" : "text-note"}`}>{s.unit}</div>
-        </li>
-      ))}
-    </ol>
-  );
+  return <StatGrid stats={stages} large={large} />;
 };
 
 /** A tile's action: visible words, a 44px target, and an arrow that says
@@ -291,7 +369,6 @@ const SpeciesCounts = ({ manifest, nav, id }: { manifest: Manifest; nav: Navigat
   const rows = manifest.species.filter((s) => s.datasets_curated > 0 || s.genomes_analyzed > 0);
   const analyzed = rows.filter((s) => s.genomes_analyzed > 0);
   const waiting = rows.filter((s) => s.genomes_analyzed === 0);
-  const TH = "px-2 py-2 text-tiny font-medium text-blue";
   const reports = (s: (typeof rows)[number]) =>
     s.datasets_reported === s.datasets_curated ? int(s.datasets_reported) : `${int(s.datasets_reported)} of ${int(s.datasets_curated)}`;
   return (
@@ -504,7 +581,276 @@ export const lineageFinding = (m: Manifest, opts: FindingOptions): Finding => {
   };
 };
 
+// ---- the five learners ---------------------------------------------------------------
+
+/** The best learner's row name in a table of learners. */
+const PICK_ROW = "Best learner for each dataset";
+
+/** The learner with the highest median score with lineages held out when it
+ *  is used alone for every dataset. Only a learner that calls every isolate
+ *  of every dataset stands here: its median covers the same isolates as the
+ *  best learner's. Null when no learner does. */
+const strongestAlone = (s: LearnerSummary): LearnerRow | null =>
+  s.rows.reduce<LearnerRow | null>((top, r) => (r.nNoCall === 0 && r.medianLineage !== null && r.medianLineage > (top?.medianLineage ?? -Infinity) ? r : top), null);
+
+/** The learners lead: how the best learner is picked, its median with
+ *  lineages held out, then the strongest single learner beside it, in
+ *  medians and in datasets. */
+export const learnersLead = (s: LearnerSummary, split: SplitSummary): string => {
+  if (split.nLineage === 0 || split.medianLineage === null) return "No dataset has a lineage-held-out result yet.";
+  const pick = `Each dataset's best learner is the one of ${spelledLower(FITTED.length)} with the highest random-split score among those that call every isolate. A learner's score with lineages held out takes no part in that pick. With lineages held out, the best learner's median balanced accuracy is ${pct(split.medianLineage)} over ${plural(split.nLineage, "dataset")}.`;
+  const top = strongestAlone(s);
+  if (top === null) return pick;
+  const name = learnerInSentence(top.learner);
+  const over = top.n === split.nLineage ? "" : ` over ${plural(top.n, "dataset")}`;
+  return `${pick} For the ${name}, used alone for every dataset, that median is ${pct(top.medianLineage)}${over}. The best learner scores higher than the ${name} on ${int(top.bestHigher)} of ${plural(top.nBest, "dataset")} and lower on ${int(top.bestLower)}.`;
+};
+
+/** A slide's one sentence for the learners: the two medians side by side. */
+const learnersHeadline = (s: LearnerSummary, split: SplitSummary): string => {
+  const top = strongestAlone(s);
+  if (top === null || split.medianLineage === null) return learnersLead(s, split);
+  return `With lineages held out, the median score is ${pct(split.medianLineage)} for each dataset's best learner and ${pct(top.medianLineage)} for the ${learnerInSentence(top.learner)} used alone.`;
+};
+
+/** A median drop in points; a minus sign when the lineage score is the higher one. */
+const dropPoints = (gap: number | null): string => (gap === null ? "–" : `${gap < 0 ? "−" : ""}${Math.abs(gap * 100).toFixed(1)}`);
+
+/** Each learner's medians on both tests under the best learner's. The page
+ *  adds each row's dataset count and its median drop. */
+const LearnersTable = ({ summary, split, page }: { summary: LearnerSummary; split: SplitSummary; page: boolean }) => {
+  const cells = (n: number, random: number | null, lineage: number | null, gap: number | null): string[] =>
+    page ? [int(n), pct(random), pct(lineage), dropPoints(gap)] : [pct(random), pct(lineage)];
+  return (
+    <NumberTable
+      label="Median balanced accuracy by learner"
+      head={page ? ["Learner", "Datasets", "Random split", "Lineages held out", "Median drop, points"] : ["Learner", "Random split", "Lineages held out"]}
+      groups={[
+        {
+          rows: [
+            { key: "best", name: PICK_ROW, cells: cells(split.nLineage, split.medianRandom, split.medianLineage, split.medianGap) },
+            ...summary.rows.map((r) => ({ key: r.learner, name: LEARNER_NAME[r.learner], cells: cells(r.n, r.medianRandom, r.medianLineage, r.medianGap) })),
+          ],
+        },
+      ]}
+      slide={!page}
+    />
+  );
+};
+
+/** The best learner against each learner used alone, dataset by dataset,
+ *  with lineages held out. */
+const PickAgainstEach = ({ summary }: { summary: LearnerSummary }) => (
+  <>
+    <NumberTable
+      label="The best learner against each learner used alone"
+      head={["Learner used alone", "Datasets", "Best learner higher", "Best learner lower", "Same score", "Median lead of the best learner, points"]}
+      groups={[
+        {
+          rows: summary.rows.map((r) => ({
+            key: r.learner,
+            name: LEARNER_NAME[r.learner],
+            cells: [int(r.nBest), int(r.bestHigher), int(r.bestLower), int(r.nBest - r.bestHigher - r.bestLower), signedPoints(r.medianBestLead)],
+          })),
+        },
+      ]}
+    />
+    <p className="type-note mt-2">
+      Each row counts the datasets where the best learner and that learner both have a score with lineages held out. Where that learner is itself the best learner, the two
+      score the same. The lead is the best learner&apos;s score minus that learner&apos;s, and a minus sign means that learner scores higher.
+    </p>
+  </>
+);
+
+export const learnersFinding = (m: Manifest, opts: FindingOptions): Finding => {
+  const rows = m.datasets;
+  const s = learnerSummary(rows);
+  const split = splitSummary(rows);
+  const none = split.nLineage === 0;
+  const partial = s.rows.filter((r) => r.nNoCall > 0);
+  const others = s.nBest - s.bestAlsoTops;
+  return {
+    id: "learners",
+    title: "The five learners compared",
+    result: opts.page ? learnersLead(s, split) : learnersHeadline(s, split),
+    figure: none ? null : <LearnersTable summary={s} split={split} page={opts.page} />,
+    caption: none
+      ? "The table sets each learner, used alone for every dataset, beside the best learner picked for each dataset."
+      : opts.page
+        ? "Each row is a median over the datasets with a score on both tests. The first row picks a learner for each dataset by its random-split score, so its random-split median is read on the folds that picked it, and every other row uses one learner for all datasets. The drop is the median of each dataset's own drop from the random split to held-out lineages."
+        : "Median balanced accuracy over the datasets scored on both tests. The first row picks a learner for each dataset by its random-split score, and every other row uses one learner for all datasets.",
+    note:
+      opts.page && !none ? (
+        <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+          {s.nBest > 0 ? (
+            <p>
+              With lineages held out, another learner that calls every isolate scores higher than the best learner on {int(others)} of {plural(s.nBest, "dataset")}, and by more
+              than {Math.round(CATALOG_CUTOFF * 100)} points on {int(s.otherAheadByCutoff)}. That count looks for the top learner after the lineage scores are known, which no pick
+              made beforehand can do.
+            </p>
+          ) : null}
+          {partial.length > 0 ? (
+            <p>
+              Some isolates get no call from {listWords(partial.map((r) => `${learnerInSentence(r.learner)} on ${int(r.nNoCall)} of ${plural(r.n, "dataset")}`))}. A score
+              there covers only the isolates that learner called, and on such a dataset it cannot be the best learner.
+            </p>
+          ) : null}
+        </div>
+      ) : undefined,
+    span: "unit",
+    more: opts.page && s.nBest > 0 ? { label: "Best learner against each learner", body: <PickAgainstEach summary={s} /> } : undefined,
+  };
+};
+
+// ---- error rates against the bars ---------------------------------------------------
+
+/** The bars lead: the two bars and whose they are, what they do not
+ *  cover, why a rate is read with an interval, then
+ *  the three outcomes of the best learner with lineages held out. */
+export const barsLead = (b: BarSummary): string => {
+  if (b.n === 0) return "No dataset has both error rates with lineages held out yet.";
+  const rest = b.open === 0 ? "" : ` The other ${int(b.open)} ${b.open === 1 ? "has" : "have"} too few genomes to tell.`;
+  return `The site reads VME against ${barWords(BARS.vme)} and ME against ${barWords(BARS.me)}, limits taken from FDA's 2009 guidance for growth-based susceptibility test systems. ${BARS_SCOPE} A rate counted on few genomes can sit under its bar by chance, so each rate is read with its 95% interval. With lineages held out, the best learner is shown to meet both bars on ${int(b.meets)} of ${plural(b.n, "dataset")} and shown to miss at least one on ${int(b.misses)}.${rest}`;
+};
+
+/** Every learner against the bars, on both tests. */
+const BarsTable = ({ rows }: { rows: readonly CatalogRow[] }) => {
+  const whos: readonly Who[] = ["best", ...FITTED];
+  const group = (scheme: "lineage" | "random", title: string): TableGroup => ({
+    title,
+    rows: whos.map((who) => {
+      const b = barSummary(rows, who, scheme);
+      return { key: `${scheme}-${who}`, name: who === "best" ? PICK_ROW : LEARNER_NAME[who], cells: [int(b.n), int(b.meets), int(b.misses), int(b.open)] };
+    }),
+  });
+  return (
+    <>
+      <NumberTable
+        label="Each learner against the bars"
+        head={["Learner", "Datasets", "Shown to meet both", "Shown to miss at least one", "Too few genomes to tell"]}
+        groups={[group("lineage", "Lineages held out"), group("random", "Random split")]}
+      />
+      <p className="type-note mt-2">
+        Datasets counts those where the learner has both error rates on that test. A rate is counted over the genomes the learner called, so a learner that gives no call for
+        some isolates is read on fewer.
+      </p>
+    </>
+  );
+};
+
+export const barsFinding = (m: Manifest, opts: FindingOptions): Finding => {
+  const rows = m.datasets;
+  const b = barSummary(rows, "best", "lineage");
+  const random = barSummary(rows, "best", "random");
+  const rule = barSummary(rows, "catalog", "lineage");
+  const atFloor = atZeroMissFloor(rows);
+  const bars = `VME ${barWords(BARS.vme)}, ME ${barWords(BARS.me)}`;
+  return {
+    id: "bars",
+    title: "Error rates against the bars",
+    result:
+      opts.page || b.n === 0
+        ? barsLead(b)
+        : `With lineages held out, the best learner is shown to meet both bars, a research screen adapted from FDA guidance for growth-based tests, on ${int(b.meets)} of ${plural(b.n, "dataset")} and shown to miss at least one on ${int(b.misses)}.`,
+    figure:
+      b.n === 0 ? null : (
+        <StatGrid
+          large={!opts.page}
+          stats={[
+            { value: b.n, unit: b.n === 1 ? "Dataset tested with lineages held out" : "Datasets tested with lineages held out" },
+            { value: b.meets, unit: "Shown to meet both bars" },
+            { value: b.misses, unit: "Shown to miss at least one bar" },
+            { value: b.open, unit: "Too few genomes to tell" },
+          ]}
+        />
+      ),
+    caption: opts.page
+      ? `Bars: ${bars}. A dataset is shown to meet both when the 95% interval of each rate lies at or under its bar, and shown to miss one when the interval of either rate lies over its bar. The interval is exact (Clopper-Pearson), counted over the dataset's resistant genomes for VME and its susceptible genomes for ME. It treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.`
+      : `Shown to meet: the exact 95% interval of each rate lies at or under its bar (${bars}). Shown to miss: the interval of either rate lies over its bar.`,
+    note:
+      opts.page && b.n > 0 ? (
+        <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+          {random.n > 0 ? (
+            <p>
+              On random splits the same reading shows the best learner to meet both bars on {int(random.meets)} of {plural(random.n, "dataset")} and to miss at least one on{" "}
+              {int(random.misses)}.{random.open === 0 ? "" : ` The other ${int(random.open)} ${random.open === 1 ? "has" : "have"} too few genomes to tell.`}
+            </p>
+          ) : null}
+          {b.openAtBars > 0 ? (
+            <p>
+              On {int(b.openAtBars)} of the {int(b.open)} with too few genomes, both rates as printed are at or under their bars. The Datasets table marks each printed rate
+              against its bar, so {b.openAtBars === 1 ? "that dataset reads" : "those datasets read"} as meeting both there. An interval still reaches over a bar.
+            </p>
+          ) : null}
+          <p>
+            A learner that misses no resistant genome still needs at least {int(ZERO_MISS_FLOOR)} resistant genomes before its interval lies under the VME bar. {int(atFloor)} of{" "}
+            {plural(rows.length, "dataset")} {atFloor === 1 ? "has" : "have"} that many.
+          </p>
+          {rule.n > 0 ? (
+            <p>
+              Read the same way, the known-gene rule is shown to meet both bars on {int(rule.meets)} of {plural(rule.n, "dataset")} with a rule and shown to miss at least one on{" "}
+              {int(rule.misses)}.
+            </p>
+          ) : null}
+        </div>
+      ) : undefined,
+    span: "unit",
+    more: opts.page && b.n > 0 ? { label: "Each learner against the bars", body: <BarsTable rows={rows} /> } : undefined,
+  };
+};
+
 // ---- known-gene rules ----------------------------------------------------------------
+
+/** A group of rule scores in words: "Under 55%", "55% to under 70%", "85% or more". */
+const bandName = (b: RuleBand): string =>
+  b.from === -Infinity ? `Under ${pct(b.to, 0)}` : b.to === Infinity ? `${pct(b.from, 0)} or more` : `${pct(b.from, 0)} to under ${pct(b.to, 0)}`;
+
+/** The rules in four groups by their own score: how many keep up with the
+ *  best learner in each, and by how much the learner leads. */
+const RuleBands = ({ bands }: { bands: readonly RuleBand[] }) => {
+  const cut = Math.round(CATALOG_CUTOFF * 100);
+  return (
+    <>
+      <NumberTable
+        label="Known-gene rules grouped by their own balanced accuracy"
+        head={["Rule's own balanced accuracy", "Datasets", "With a lineage result", `Within ${cut} points or ahead`, `Behind by more than ${cut}`, "Median lead of the best learner, points"]}
+        groups={[
+          {
+            rows: bands.map((b) => ({
+              key: bandName(b),
+              name: bandName(b),
+              cells: [int(b.datasets), int(b.compared), int(b.ruleHolds), int(b.ruleBehind), signedPoints(b.medianLearnerLead)],
+            })),
+          },
+        ]}
+      />
+      <p className="type-note mt-2">
+        A rule that calls every genome one way scores exactly 50%, a coin toss, so the first group ends just above that, at {pct(bands[0]?.to, 0)}. The last three columns count
+        the datasets with a lineage-held-out result. The lead is the best learner&apos;s balanced accuracy with lineages held out minus the rule&apos;s, and a minus sign means
+        the rule scores higher.
+      </p>
+    </>
+  );
+};
+
+/** The two ends of the rule groups in one paragraph: the rules that score
+ *  highest and lowest on their own, each against the best learner. */
+const RuleEnds = ({ bands }: { bands: readonly RuleBand[] }) => {
+  const low = bands[0];
+  const high = bands[bands.length - 1];
+  if (low === undefined || high === undefined || low === high || low.compared === 0 || high.compared === 0) return null;
+  const cut = Math.round(CATALOG_CUTOFF * 100);
+  const most = pct(1 - UNIFORM_SHARE, 0);
+  return (
+    <p>
+      Rules that score {pct(high.from, 0)} or more on their own are within {cut} points of the best learner or ahead on {int(high.ruleHolds)} of {plural(high.compared, "dataset")}.
+      Rules that score under {pct(low.to, 0)} trail by more than {cut} points on {int(low.ruleBehind)} of {int(low.compared)}.
+      {low.uniform.resistant + low.uniform.susceptible > 0
+        ? ` Of the ${plural(low.datasets, "rule")} under ${pct(low.to, 0)}, ${int(low.uniform.resistant)} call at least ${most} of susceptible isolates resistant and ${int(low.uniform.susceptible)} call at least ${most} of resistant isolates susceptible.`
+        : ""}
+    </p>
+  );
+};
 
 export const catalogFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const rows = m.datasets;
@@ -517,6 +863,7 @@ export const catalogFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const noRule = rows.length - c.nWithRule;
   const unpaired = c.nWithRule - c.nCompared;
   const noBest = rows.filter((r) => r.catalog !== null && r.best_learner === null).length;
+  const bands = ruleBands(rows);
   return {
     id: "catalog",
     title: "Known-gene rules against learners",
@@ -547,9 +894,11 @@ export const catalogFinding = (m: Manifest, opts: FindingOptions): Finding => {
             {noRuleClasses > 0 ? `; ${plural(noRuleClasses, "class", "classes")} ${noRuleClasses === 1 ? "has" : "have"} no acquired-gene rule` : ""}.
           </p>
         ) : null}
+        <RuleEnds bands={bands} />
       </div>
     ) : undefined,
     span: "unit",
+    more: opts.page && c.nCompared > 0 ? { label: "Rules grouped by their own score", body: <RuleBands bands={bands} /> } : undefined,
   };
 };
 
@@ -749,7 +1098,7 @@ export const micFinding = (m: Manifest, opts: FindingOptions): Finding => {
     title: "Predicting the drug level that stops growth (MIC)",
     result: opts.page || s.n === 0 ? micLead(s) : `For ${int(s.nAbove90)} of ${plural(s.n, "dataset")}, at least 90% of exact MICs are predicted within one doubling dilution.`,
     figure: s.n === 0 ? null : (fit: PagedFit) => <MicStrip rows={rows} height={fit.height} onOpen={opts.nav?.openDataset} />,
-    caption: `Each dot is one dataset: the share of its exact MICs predicted within one doubling dilution by a model that never trained on that genome (out of fold). An exact MIC is a single measured value, not a bound such as “≤0.25”. 90% is the essential-agreement bar used for lab test devices.${
+    caption: `Each dot is one dataset: the share of its exact MICs predicted within one doubling dilution by a model that never trained on that genome (out of fold). An exact MIC is a single measured value, not a bound such as “≤0.25”. 90% is the essential-agreement limit adapted from FDA's 2009 guidance for growth-based susceptibility test systems, as a research screen.${
       opts.page ? "" : ` Median ${pct(s.median)}.`
     }`,
     note:
@@ -762,4 +1111,4 @@ export const micFinding = (m: Manifest, opts: FindingOptions): Finding => {
   };
 };
 
-export const FINDINGS = [corpusFinding, lineageFinding, catalogFinding, panelsFinding, micFinding] as const;
+export const FINDINGS = [corpusFinding, lineageFinding, learnersFinding, barsFinding, catalogFinding, panelsFinding, micFinding] as const;

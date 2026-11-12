@@ -1,6 +1,6 @@
 // Present: one deck on a full canvas. A title slide where the mark runs its
 // full choreography, the five primer steps (one real report read from zero),
-// the five Overview findings, then the rule showcase.
+// the seven Overview findings, then the rule showcase.
 // Each slide stages its beats (the answer, the figure, the caption) and the
 // footer's ticks show them land; advancing mid-reveal completes the slide
 // first. Only the deck's own controls move it: Previous and Next, the arrow
