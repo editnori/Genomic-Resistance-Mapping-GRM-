@@ -10,7 +10,7 @@ GRM's lanes run their Boat boxes from the laptop with this kit. It has three par
   - `stage-manifest.py` and `h1-manifest.py` write the manifests that pick each stage's input files.
   - `chain-lib.sh` runs a chain of steps and exits 1 when any step fails.
 
-`ops/boat-kit/` holds KIT10's set, with KIT11's changes to the runner and drive. The other kit files stay on the laptop, and the kit's older history stays in the laptop's kit repo at `f764602`.
+`ops/boat-kit/` holds KIT10's set, with KIT11's changes to the runner and drive and KIT12's k add-on boxes. The other kit files stay on the laptop, and the kit's older history stays in the laptop's kit repo at `f764602`.
 
 ## Laptop paths
 
@@ -24,9 +24,17 @@ The laptop runs the kit from these paths. `install/install-kit10.sh` puts this s
 
 ## Running from the T3 controller
 
-KIT11 lets the runner run on the Boat T3 controller as well as the laptop. `GRM_HOST=linux` turns this mode on, and `GRM_BOAT` must name the boat binary. Staging dirs go under `GRM_STAGE_DIR`, with no `wslpath`. memcheck reads the controller's MemAvailable and its cgroup room, and each must be `GRM_MIN_AVAIL_MB` (512) or more. Without `GRM_HOST`, the runner works as before on the laptop.
+KIT11 lets the runner run on the Boat T3 controller as well as the laptop. `GRM_HOST=linux` turns this mode on, and `GRM_BOAT` must name the boat binary. Staging dirs go under `GRM_STAGE_DIR`, with no `wslpath`. memcheck reads the controller's MemAvailable and its cgroup room, and each must be `GRM_MIN_AVAIL_MB` (512) or more. Without `GRM_HOST`, the runner works as before on the laptop. KIT12 counts each cgroup's reclaimable page cache as room: `memory.stat`'s `inactive_file` less `file_dirty` and `file_writeback`, never below 0. The work program's rule is not to treat raw `memory.current` as non-reclaimable RAM.
 
 `stage-local` takes a push-data set from a dir that is already on the box, such as a data snapshot's copy of H-1's data root, and only the manifest crosses. drive.sh uses it for an H-1 run box when the run file sets `DATA_SNAPSHOT_DIR`, `VOCAB_SNAPSHOT_DIR`, `VOCAB_MANIFEST` and a `grm-tmpl-*` `TEMPLATE`.
+
+A box made from H-1's data snapshot starts with its own 76 GB copy of the master root, which leaves about 202 GB free on an xlarge. The pilot and the Salmonella and TB main parts need more than that. With `DATA_SNAPSHOT_PRUNE=1`, each run box runs `h1-box.sh prune` once its FASTA set is staged. The step first checks every set against its pin, and that the metadata set was linked from that folder. It then deletes the box's copy. The staged sets are hard links, so they keep their files, and the run gets back the disk only the copy held. The snapshot itself isn't touched. A refused prune stops the stage with 81 before verify.
+
+## k add-on boxes
+
+KIT12 adds a stage kind, `addon`, for H-1's k21 and k25 arms. Each runs as a part on its own box with `run.py --reference-from`, against the main part that left the k arms out. Column 10 of its stage row names that one main part, which must be a run box of the same table. An add-on box is a run box in every step. It also waits for the main part's DONE and pulled WORK, and its H-1 flags must be the main part's.
+
+drive.sh pins the main part's records as a one-part combine set and sends them through push-data to `/home/user/grm-combine` after the vocabulary. stage.env names the part (`H1_REFERENCE`) and the set's pin (`H1_REFERENCE_SHA256`). On the box, `h1-box.sh` checks that set against its pin before union, verify and the run, and passes `--reference-from` to each. `r11-box.sh` runs an add-on's stage as `h1-box.sh run`. The combine box then takes the add-on box as a part beside its main part.
 
 ## Installing
 
@@ -47,6 +55,7 @@ KIT11 lets the runner run on the Boat T3 controller as well as the laptop. `GRM_
 - `chain-tests.sh` runs every gate.
 - `mutants.py` runs the mutants.
 - `chain-kit11.sh` and `mutants-kit11.py` run KIT11's gates and mutants. They run in KIT10's harness with three additions: `cand/` holds KIT11's `grm-boat.sh` and `drive.sh`, `k10final/` holds KIT10's for the control runs, and the KIT11 tests (`test-runner-kit11.sh`, `test-drive-h1-kit11.sh`) sit in `tests/`.
+- `chain-kit12.sh` and `mutants-kit12.py` run KIT12's gates and mutants in KIT11's harness. `cand/drive.sh` and `kit/` hold KIT12's files, `k11final/` and `k11kit/` hold KIT11's for the control runs, and the KIT12 tests (`test-h1-box-kit12.sh`, `test-drive-h1-kit12.sh`) sit in `tests/`.
 
 The tests run from the harness's paths, which `make-harness.sh` builds. `test-restore-v7.sh.next` and `test-side-re.sh.next` read real restore sets, so round 2's chain ran neither. The other tests use synthetic files and copies from the harness.
 

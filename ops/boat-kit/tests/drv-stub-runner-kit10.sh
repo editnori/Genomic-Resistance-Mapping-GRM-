@@ -8,6 +8,8 @@
 # running for n status polls, then SR_STATUS.
 # KIT11: stage-local logs like push-data (its manifest as $SR_LOG.sl-<dest>, its --from as $SR_LOG.slfrom-<dest>);
 # SR_STAGELOCAL_FAIL=meta|vocab|fasta makes that one exit 97.
+# KIT12 round 3: a run --log prune answers as h1-box.sh prune does (PRUNED), or refuses with 2 and a STOP line
+# with SR_PRUNE_FAIL=1.
 L=${SR_LOG:?}; echo "$* | floor=${GRM_SCP_FLOOR_MBPS:-unset}" >> "$L"
 [ "$1" = --notes ] && shift 2
 c=$1; shift
@@ -45,6 +47,7 @@ case "$c" in
       prep) echo "numpy 1.26.4";;
       union) echo "UNION $(wc -l < "$SR_UNION") $(sha256sum "$SR_UNION" | cut -d' ' -f1)";;
       verify) echo "RAW 9 files"; echo "revision-12 gate: PASSED (stub)";;
+      prune) [ -n "${SR_PRUNE_FAIL:-}" ] && { echo "STOP stub prune refused"; exit 2; }; echo "PRUNED ${*: -1}: 1 B freed (stub)";;
       status)
         n=$(( $(cat "$L.polls" 2> /dev/null || echo 0) + 1 )); echo $n > "$L.polls"
         s=${SR_STATUS:-done}; [ -n "${SR_RUNNING_POLLS:-}" ] && [ "$n" -le "$SR_RUNNING_POLLS" ] && s=running
