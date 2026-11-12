@@ -1,17 +1,25 @@
-"""tables.py ROOT [--check FILE]: the tables of docs/outside-study-results.md.
+"""tables.py ROOT [--species] [--check FILE]: the tables of the outside-study results.
 
 ROOT holds the outside-study kit's output files, one folder per run:
 ROOT/<population>/<species>/ with `metrics.tsv`, `datasets.tsv`, `groups.tsv`
 and `reading.txt` (docs/outside-study-test.md, Outputs).
+
+Without --species it prints the tables of docs/outside-study-results.md: each
+population's, then the datasets scored in both. With --species it prints the
+tables of docs/outside-study-results-by-species.md: the rows that page cites.
 
 The script estimates nothing. Each figure is a cell of those files, or a count
 of their rows, or a cell shown as a percentage to one decimal. The readings
 ("below", "consistent", "above") are the kit's; the script counts them. The two
 populations are never added together.
 
+Two counts are not the plan's and were added after the results were read: the
+datasets where a learner "holds" (neither reading is "below"), and the table of
+datasets scored in both populations. The printed text says so.
+
 With --check FILE it prints nothing and exits 1 unless FILE holds, between the
 lines `<!-- tables:begin -->` and `<!-- tables:end -->`, exactly the text this
-script prints.
+script prints for that page.
 """
 import csv
 import pathlib
@@ -40,9 +48,11 @@ CITED = [
     ("primary", "mycobacterium_tuberculosis", "pyrazinamide", "scm"),
     ("primary", "mycobacterium_tuberculosis", "levofloxacin", "scm"),
     ("primary", "salmonella_enterica", "sulfamethoxazole", "scm"),
+    ("primary", "salmonella_enterica", "sulfamethoxazole", "cart"),
     ("primary", "salmonella_enterica", "sulfamethoxazole", "lasso"),
     ("primary", "salmonella_enterica", "sulfamethoxazole", "known_gene"),
     ("primary", "salmonella_enterica", "tetracycline", "scm"),
+    ("primary", "salmonella_enterica", "tetracycline", "cart"),
     ("primary", "salmonella_enterica", "tetracycline", "known_gene"),
     ("primary", "klebsiella_pneumoniae", "meropenem", "scm"),
     ("primary", "klebsiella_pneumoniae", "meropenem", "known_gene"),
@@ -146,6 +156,28 @@ def holds(r):
     return r["reading_sensitivity"] != "below" and r["reading_specificity"] != "below"
 
 
+def different_majority_studies(d):
+    """The plan's rule for a dataset (Outputs, item 8): more than half of the resistant
+    genomes are from one study and more than half of the susceptible genomes from
+    another. `reading.txt` says so on the same datasets. A share above one half has
+    no tie, so a tied top study never counts."""
+    return (
+        float(d["top_study_resistant_share"]) > 0.5
+        and float(d["top_study_susceptible_share"]) > 0.5
+        and d["top_study_resistant"] != d["top_study_susceptible"]
+    )
+
+
+def at_the_edge(r):
+    """A row whose report figure is exactly 0% or 100% on a measure. There a reading can go one way only."""
+    return any(float(r["lineage_" + k]) in (0.0, 1.0) for k in ("sensitivity", "specificity"))
+
+
+def calls_one_way(r):
+    """A row where every scored genome gets the same call."""
+    return int(r["tp"]) + int(r["fp"]) == 0 or int(r["tn"]) + int(r["fn"]) == 0
+
+
 def load(root):
     """{population: {species: (reading, datasets, metrics, groups)}}, in a fixed order."""
     out = {}
@@ -188,18 +220,25 @@ def population_tables(heading, runs):
         out.append(f"| {title(s)} | {cohort} | {scored} | {attempts(reading)} |")
     out.append("")
 
-    out.append("Where the scored genomes of a dataset with estimates come from. A study is a BioProject.")
+    out.append(
+        "Where the scored genomes of a dataset with estimates come from. A study is a BioProject. "
+        "The last column counts the datasets with no reportable leave-one-study-out fold, and a dataset with one study only is always among them."
+    )
     out.append("")
-    out.append("| Species | Datasets with estimates | One study holds at least half of the resistant genomes | One study holds at least half of the susceptible genomes | Most resistant and most susceptible genomes come from different studies | No study can be left out |")
-    out.append("|---|---:|---:|---:|---:|---:|")
-    acc = [0, 0, 0, 0, 0]
+    out.append(
+        "| Species | Datasets with estimates | One study holds at least half of the resistant genomes | One study holds at least half of the susceptible genomes "
+        "| More than half of the resistant genomes are from one study and more than half of the susceptible genomes from another | One study only | No study can be left out |"
+    )
+    out.append("|---|---:|---:|---:|---:|---:|---:|")
+    acc = [0, 0, 0, 0, 0, 0]
     for s, (_, datasets, _, _) in runs.items():
         est = [r for r in datasets if r["reportable"] == "yes"]
         got = [
             len(est),
             sum(1 for r in est if float(r["top_study_resistant_share"]) >= 0.5),
             sum(1 for r in est if float(r["top_study_susceptible_share"]) >= 0.5),
-            sum(1 for r in est if r["top_study_resistant"] != r["top_study_susceptible"]),
+            sum(1 for r in est if different_majority_studies(r)),
+            sum(1 for r in est if int(r["studies"]) == 1),
             sum(1 for r in est if int(r["loso_folds_reportable"]) == 0),
         ]
         acc = [a + b for a, b in zip(acc, got)]
@@ -223,7 +262,11 @@ def population_tables(heading, runs):
     out.append("")
 
     for column, word in (("reading_sensitivity", "Sensitivity"), ("reading_specificity", "Specificity")):
-        out.append(f"{word} against the report's lineage-split figure, in datasets with estimates. Each cell counts datasets as below / consistent / above; a fourth number counts rows the plan leaves unread.")
+        out.append(
+            f"{word} against the report's figure, in datasets with estimates. The report's figure is the lineage-split figure for a learner, "
+            "and the fixed rule's whole-cohort figure for the known-gene rule. "
+            "Each cell counts datasets as below / consistent / above; a fourth number counts rows the plan leaves unread."
+        )
         out.append("")
         out.append("| Species | " + " | ".join(NAMES[l] for l in LEARNERS) + " |")
         out.append("|---|" + "---|" * len(LEARNERS))
@@ -238,18 +281,19 @@ def population_tables(heading, runs):
         out.append(f"| All {len(runs)} | " + " | ".join(cell(sums[l]) for l in LEARNERS) + " |")
         out.append("")
 
-    out.append("The two readings of a row together, over all the species above. A row is one dataset with estimates and one learner.")
+    out.append(
+        "The two readings of a row together, over all the species above. A row is one dataset with estimates and one learner. "
+        "The rows with both readings consistent are part of the rows with neither reading below."
+    )
     out.append("")
-    out.append("| Learner | Rows read | Neither reading below | Sensitivity below only | Specificity below only | Both below |")
-    out.append("|---|---:|---:|---:|---:|---:|")
+    out.append("| Learner | Rows read | Neither reading below | Of them, both consistent | Sensitivity below only | Specificity below only | Both below |")
+    out.append("|---|---:|---:|---:|---:|---:|---:|")
     for l in LEARNERS:
-        both = [
-            (r["reading_sensitivity"] == "below", r["reading_specificity"] == "below")
-            for _, _, metrics, _ in runs.values()
-            for r in metrics
-            if r["learner"] == l and r["reportable"] == "yes" and r["reading_sensitivity"] in READINGS and r["reading_specificity"] in READINGS
-        ]
-        got = [len(both)] + [sum(1 for b in both if b == want) for want in ((False, False), (True, False), (False, True), (True, True))]
+        read = [r for _, _, metrics, _ in runs.values() for r in metrics if r["learner"] == l and holds(r) is not None]
+        both = [(r["reading_sensitivity"] == "below", r["reading_specificity"] == "below") for r in read]
+        flat = sum(1 for r in read if r["reading_sensitivity"] == r["reading_specificity"] == "consistent")
+        counts = [sum(1 for b in both if b == want) for want in ((False, False), (True, False), (False, True), (True, True))]
+        got = [len(both), counts[0], flat] + counts[1:]
         out.append(f"| {NAMES[l]} | " + " | ".join(str(x) for x in got) + " |")
     out.append("")
 
@@ -278,6 +322,21 @@ def population_tables(heading, runs):
         acc = [a + b for a, b in zip(acc, got)]
         out.append(f"| {title(s)} | {got[0]} | {got[1]} | {got[2]} |")
     out.append(f"| All {len(runs)} | {acc[0]} | {acc[1]} | {acc[2]} |")
+    out.append("")
+
+    out.append(
+        "Rows read that sit at an edge, over all the species above. A report figure of exactly 0% or 100% can be read one way only: "
+        "nothing reads above 100% or below 0%. A row that gives every scored genome the same call has a new estimate of 0% on one measure and 100% on the other. "
+        "Each \"Of them, holds\" column counts the rows of the column to its left where the learner holds."
+    )
+    out.append("")
+    out.append("| Learner | Rows read | Report figure at 0% or 100% on a measure | Of them, holds | Same call for every scored genome | Of them, holds |")
+    out.append("|---|---:|---:|---:|---:|---:|")
+    for l in LEARNERS:
+        read = [r for _, _, metrics, _ in runs.values() for r in metrics if r["learner"] == l and holds(r) is not None]
+        edge = [r for r in read if at_the_edge(r)]
+        flat = [r for r in read if calls_one_way(r)]
+        out.append(f"| {NAMES[l]} | {len(read)} | {len(edge)} | {sum(holds(r) for r in edge)} | {len(flat)} | {sum(holds(r) for r in flat)} |")
     out.append("")
     return out
 
@@ -308,8 +367,8 @@ def both_populations_table(data):
     out.append("")
 
     out.append(
-        "The same rows by the estimate alone, with no interval. A small batch has a wide interval, so it reads below less often; "
-        "this count does not depend on the batch's size. Each cell counts rows as higher in the same-study population / equal / higher in the primary population."
+        "The same rows by the estimate alone. A small batch has a wide interval, so it reads below less often; "
+        "this count uses no interval. Each cell counts rows as higher in the same-study population / equal / higher in the primary population."
     )
     out.append("")
     out.append("| Learner | Rows read in both | Sensitivity | Specificity |")
@@ -329,6 +388,29 @@ def both_populations_table(data):
             n = sum(got)
             cells.append(" / ".join(str(x) for x in got))
         out.append(f"| {NAMES[l]} | {n} | " + " | ".join(cells) + " |")
+    out.append("")
+
+    out.append("The same-study genomes of the datasets with estimates in both populations, by the study that holds the most resistant genomes there. Each share is the lowest over the study's datasets.")
+    out.append("")
+    out.append("| Study | Datasets | Lowest share of the resistant genomes | Lowest share of the susceptible genomes, for the study that holds the most of them |")
+    out.append("|---|---:|---:|---:|")
+    by_study = {}
+    for s in first:
+        if s not in second:
+            continue
+        here = {r["dataset"] for r in first[s][1] if r["reportable"] == "yes"}
+        for r in second[s][1]:
+            if r["reportable"] == "yes" and r["dataset"] in here:
+                by_study.setdefault(r["top_study_resistant"], []).append(r)
+    total = 0
+    for study in sorted(by_study, key=lambda k: (-len(by_study[k]), k)):
+        got = by_study[study]
+        total += len(got)
+        out.append(
+            f"| {study} | {len(got)} | {pct(min(float(r['top_study_resistant_share']) for r in got))} "
+            f"| {pct(min(float(r['top_study_susceptible_share']) for r in got))} |"
+        )
+    out.append(f"| All {len(by_study)} | {total} | | |")
     out.append("")
     return out
 
@@ -389,6 +471,7 @@ def cited_table(data):
 
 
 def build(root):
+    """The tables of the results page: each population's, then the datasets scored in both."""
     data = load(pathlib.Path(root))
     out = []
     for pop, heading in POPULATIONS:
@@ -396,28 +479,36 @@ def build(root):
             out += population_tables(heading, data[pop])
     if all(pop in data for pop, _ in POPULATIONS):
         out += both_populations_table(data)
-    if any(key[0] in data and key[1] in data[key[0]] for key in CITED):
-        out += cited_table(data)
-        out += by_study_table(data)
     return "\n".join(out).rstrip("\n") + "\n"
 
 
-def check(root, document):
-    """True when the document's table block is exactly what build() prints."""
+def build_species(root):
+    """The tables of the species page: the rows its text cites, and two of them study by study."""
+    data = load(pathlib.Path(root))
+    return "\n".join(cited_table(data) + by_study_table(data)).rstrip("\n") + "\n"
+
+
+def check(root, document, part=build):
+    """True when the document's table block is exactly what `part` prints."""
     doc = pathlib.Path(document).read_text(encoding="utf-8")
     m = re.search(re.escape(BEGIN) + r"\n(.*?)" + re.escape(END), doc, re.S)
-    return bool(m) and m.group(1).strip("\n") == build(root).strip("\n")
+    return bool(m) and m.group(1).strip("\n") == part(root).strip("\n")
 
 
 def main(argv):
-    if len(argv) not in (2, 4) or (len(argv) == 4 and argv[2] != "--check"):
+    args = argv[1:]
+    part = build
+    if "--species" in args:
+        args.remove("--species")
+        part = build_species
+    if len(args) not in (1, 3) or (len(args) == 3 and args[1] != "--check"):
         raise SystemExit(__doc__)
-    if len(argv) == 4:
-        if check(argv[1], argv[3]):
+    if len(args) == 3:
+        if check(args[0], args[2], part):
             return 0
         print("the tables in the document differ from the output files", file=sys.stderr)
         return 1
-    sys.stdout.write(build(argv[1]))
+    sys.stdout.write(part(args[0]))
     return 0
 
 
