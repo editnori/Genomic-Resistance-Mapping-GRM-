@@ -181,6 +181,90 @@ class ConsistentRuns(Case):
         self.assertEqual(len(rec["null_folds"]), 2)
 
 
+class EqualScoring(Case):
+    """Revision 14: a null fit's isolates score their fold's training
+    prevalence, every row covers every isolate, and gbt is best."""
+
+    def r14(self):
+        rep, digests = fx.isolated_report(revision=14)
+        return rep, digests
+
+    def audit14(self, rep, digests, index=None, log=None):
+        index = index if index is not None else fx.manifest(rep, "gbt", evaluation_revision=14)
+        log = log if log is not None else [fx.recompute_line(), fx.scored_done_line("gbt", ba(rep, "random", "gbt"))]
+        return self.run_audit(rep, index, log_lines=log, revision=14, digests=digests)
+
+    def test_a_revision14_run_audits_clean(self):
+        rep, digests = self.r14()
+        rec = self.audit14(rep, digests)
+        self.assertClean(rec)
+        self.assertEqual((rec["revision"], rec["best"]["learner"], rec["log_done"]["form"]), (14, "gbt", "scored coverage"))
+        # Null folds are found by complexity; lasso's random fold 4 trains on
+        # 32 of 64 resistant, so its constant 0.5 call has balanced accuracy 0.5.
+        folds = sorted((f["scheme"], f["learner"], f["fold"], f["fold_ba"]) for f in rec["null_folds"])
+        self.assertEqual([x[:3] for x in folds], [("lineage", "gbt", 2), ("random", "lasso", 4)])
+        self.assertEqual(folds[1][3], 0.5)
+        gbt = next(r for r in rec["learners"] if (r["scheme"], r["learner"]) == ("lineage", "gbt"))
+        self.assertEqual(gbt["called"], fx.N - 15)
+
+    def test_the_revision13_done_line_fails_on_revision14(self):
+        rep, digests = self.r14()
+        rec = self.audit14(rep, digests, log=[fx.recompute_line(), fx.done_line("rf", ba(rep, "random", "rf"))])
+        self.assertIssue(rec, "done line form does not match the revision")
+
+    def test_a_manifest_naming_rf_fails(self):
+        rep, digests = self.r14()
+        self.assertIssue(self.audit14(rep, digests, index=fx.manifest(rep, "rf", evaluation_revision=14)), "manifest best learner differs")
+
+    def test_manifest_rates_without_null_fits_scored_fail(self):
+        rep, digests = self.r14()
+        index = fx.manifest(rep, "gbt", evaluation_revision=14)
+        del index["datasets"][0]["learners"][3]["lineage"]["null_fits_scored"]
+        self.assertIssue(self.audit14(rep, digests, index=index), "manifest/lineage/gbt")
+
+    def test_a_null_fold_at_the_whole_datasets_prevalence(self):
+        rep, digests = self.r14()
+        row = fx.row(rep, "lineage", "gbt")
+        for i, f in enumerate(fx.FOLDS["lineage"]):
+            if f == 2:
+                row["scores"][i] = 0.5
+        self.assertIssue(self.audit14(rep, digests), "lineage/gbt/fold 2", "null fit not scored at its training prevalence")
+
+    def test_a_null_score(self):
+        rep, digests = self.r14()
+        fx.row(rep, "random", "lasso")["scores"][fx.FOLDS["random"].index(4)] = None
+        self.assertIssue(self.audit14(rep, digests), "null score in a revision-14 learner row")
+
+    def test_called_only_metrics_in_metrics(self):
+        rep, digests = self.r14()
+        row = fx.row(rep, "lineage", "gbt")
+        row["metrics"] = dict(row["called_metrics"])
+        self.assertIssue(self.audit14(rep, digests), '"where": "lineage/gbt/pooled", "field": "n"')
+
+    def test_called_metrics_missing_or_misplaced(self):
+        rep, digests = self.r14()
+        del fx.row(rep, "lineage", "gbt")["called_metrics"]
+        fx.row(rep, "random", "rf")["called_metrics"] = None
+        self.assertIssue(self.audit14(rep, digests), "a row with a null fit lacks called_metrics", "called_metrics on a row without a null fit")
+
+    def test_called_metrics_over_every_isolate(self):
+        rep, digests = self.r14()
+        row = fx.row(rep, "random", "lasso")
+        row["called_metrics"] = dict(row["metrics"])
+        self.assertIssue(self.audit14(rep, digests), '"where": "random/lasso/called", "field": "n"')
+
+    def test_no_call_left_at_zero(self):
+        rep, digests = self.r14()
+        fx.row(rep, "random", "lasso")["no_call"] = {"resistant": 0, "susceptible": 0}
+        self.assertIssue(self.audit14(rep, digests), "random/lasso/no_call")
+
+    def test_called_metrics_in_a_revision13_report(self):
+        rep, digests = fx.isolated_report(revision=13)
+        fx.row(rep, "random", "rf")["called_metrics"] = None
+        rec = self.run_audit(rep, fx.manifest(rep, "rf", evaluation_revision=13), revision=13, digests=digests)
+        self.assertIssue(rec, "called_metrics before revision 14")
+
+
 class NullScores(Case):
     def test_no_call_one_short(self):
         rep = fx.make_report()

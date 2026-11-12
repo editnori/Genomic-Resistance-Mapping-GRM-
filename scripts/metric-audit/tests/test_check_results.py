@@ -415,9 +415,9 @@ class SchemaAndRevision(Case):
         entry = self.passes(rep, [rf_line(rep)])
         self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (13, 2, "rf"))
 
-    def test_future_revision14_fails(self):
-        rep = revision8_report(revision=13)
-        rep["evaluation"]["revision"] = 14
+    def test_future_revision15_fails(self):
+        rep = revision8_report(revision=14)
+        rep["evaluation"]["revision"] = 15
         self.fails(rep, "'revision'")
 
     def test_a_root_that_mixes_revisions_fails(self):
@@ -436,7 +436,7 @@ class SchemaAndRevision(Case):
         same = run(revision8_report(revision=9), revision8_report(revision=9))
         self.assertEqual(same.returncode, 0, same.stderr[-1500:])
         self.assertEqual(json.loads(same.stdout)["revisions"], [9])
-        for revisions in ((10, 11), (9, 10), (8, 9), (7, 9), (7, 8)):
+        for revisions in ((13, 14), (10, 11), (9, 10), (8, 9), (7, 9), (7, 8)):
             with self.subTest(revisions=revisions):
                 mixed = run(*(revision8_report(revision=r) if r >= 8 else fx.make_report(revision=r) for r in revisions))
                 self.assertNotEqual(mixed.returncode, 0)
@@ -444,6 +444,123 @@ class SchemaAndRevision(Case):
                 self.assertTrue(last.startswith("AssertionError"), mixed.stderr[-1500:])
                 self.assertIn("root mixes evaluation revisions", last)
                 self.assertIn(str(list(revisions)), last)
+
+
+def revision14_report():
+    """A valid revision-14 report: gbt's lineage fold 2 and lasso's random
+    fold 4 are null fits, scored at their training prevalence (33 of 65,
+    and exactly 0.5), with an isolated pair."""
+    rep, _ = fx.isolated_report(report=revision8_report(revision=14))
+    return rep
+
+
+def gbt_line(report):
+    return fx.scored_done_line("gbt", ba(report, "random", "gbt"))
+
+
+class EqualScoring(Case):
+    def test_revision14_report_passes_and_names_gbt(self):
+        # gbt's null lineage fold is now in its rates, so it competes, and its
+        # random balanced accuracy is the highest.
+        rep = revision14_report()
+        entry = self.passes(rep, [gbt_line(rep)])
+        self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"], entry["rows_with_no_call"]), (14, 2, "gbt", 2))
+        gbt = fx.row(rep, "lineage", "gbt")
+        self.assertEqual(gbt["metrics"]["n"], fx.N)
+        self.assertEqual(gbt["called_metrics"]["n"], fx.N - gbt["no_call"]["resistant"] - gbt["no_call"]["susceptible"])
+        self.assertNotIn("called_metrics", fx.row(rep, "random", "gbt"))
+
+    def test_a_revision14_report_with_the_old_done_line_fails(self):
+        rep = revision14_report()
+        self.fails(rep, "done line form does not match the report schema", [fx.done_line("rf", ba(rep, "random", "rf"))])
+
+    def test_a_revision14_done_line_naming_rf_fails(self):
+        rep = revision14_report()
+        self.fails(rep, "done line names another best learner", [fx.scored_done_line("rf", ba(rep, "random", "rf"))])
+
+    def test_a_null_score_in_a_revision14_row_fails(self):
+        rep = revision14_report()
+        fx.row(rep, "lineage", "gbt")["scores"][fx.FOLDS["lineage"].index(2)] = None
+        self.fails(rep, "null score in a revision-14 learner row")
+
+    def test_a_null_fold_scored_at_the_whole_datasets_prevalence_fails(self):
+        rep = revision14_report()
+        row = fx.row(rep, "lineage", "gbt")
+        for i, f in enumerate(fx.FOLDS["lineage"]):
+            if f == 2:
+                row["scores"][i] = sum(fx.TRUTH) / fx.N
+        self.fails(rep, "a null fit's scores are not its training prevalence")
+
+    def test_a_null_fold_scored_at_its_test_folds_prevalence_fails(self):
+        rep = revision14_report()
+        row = fx.row(rep, "lineage", "gbt")
+        held = [i for i, f in enumerate(fx.FOLDS["lineage"]) if f == 2]
+        share = sum(fx.TRUTH[i] for i in held) / len(held)
+        self.assertNotEqual(share, fx.prevalence(fx.TRUTH, fx.FOLDS["lineage"], 2))
+        for i in held:
+            row["scores"][i] = share
+        self.fails(rep, "a null fit's scores are not its training prevalence")
+
+    def test_called_only_metrics_in_metrics_fail(self):
+        # The revision-13 figure written into metrics.
+        rep = revision14_report()
+        row = fx.row(rep, "lineage", "gbt")
+        row["metrics"] = row["called_metrics"]
+        self.fails(rep, "confusion of every isolate")
+
+    def test_a_null_fit_row_without_called_metrics_fails(self):
+        rep = revision14_report()
+        del fx.row(rep, "random", "lasso")["called_metrics"]
+        self.fails(rep, "a row with a null fit lacks called_metrics")
+
+    def test_called_metrics_on_a_row_without_a_null_fit_fail(self):
+        rep = revision14_report()
+        fx.row(rep, "random", "rf")["called_metrics"] = fx.row(rep, "random", "rf")["metrics"]
+        self.fails(rep, "called_metrics on a row without a null fit")
+
+    def test_called_metrics_over_every_isolate_fail(self):
+        rep = revision14_report()
+        row = fx.row(rep, "random", "lasso")
+        row["called_metrics"] = row["metrics"]
+        self.fails(rep, "called_metrics differ from the fitted folds")
+
+    def test_no_call_counting_nothing_fails(self):
+        rep = revision14_report()
+        fx.row(rep, "random", "lasso")["no_call"] = {"resistant": 0, "susceptible": 0}
+        self.fails(rep, "no_call differs from the null-fit folds")
+
+    def test_a_null_folds_balanced_accuracy_left_null_fails(self):
+        rep = revision14_report()
+        fx.row(rep, "random", "lasso")["fold_balanced_accuracy"][4] = None
+        self.fails(rep, "fold balanced accuracy")
+
+    def test_every_fold_null_has_null_called_metrics(self):
+        rep = fx.make_report(revision=14, null_fits=tuple(("lineage", "gbt", k) for k in range(5)))
+        rep = revision8_report_from(rep)
+        row = fx.row(rep, "lineage", "gbt")
+        self.assertIsNone(row["called_metrics"])
+        self.assertEqual(row["metrics"]["n"], fx.N)
+        self.passes(rep)
+        row["called_metrics"] = row["metrics"]
+        self.fails(rep, "called_metrics of a row whose every fit is null must be null")
+
+    def test_called_metrics_in_a_revision13_report_fail(self):
+        rep = revision8_report(revision=13)
+        fx.row(rep, "random", "rf")["called_metrics"] = None
+        self.fails(rep, "called_metrics before revision 14")
+
+
+def revision8_report_from(rep):
+    """`rep` with clean revision-8 lasso evidence added."""
+    status = {"irls_steps": 3, "sweep_cap_hits": 0, "converged": True}
+    fit = {"path_points": 30, "path_unconverged": 0, "selected_point": 2,
+           "selected_convergence": dict(status), "refit_convergence": dict(status)}
+    for split in rep["splits"]:
+        if split.get("unavailable_reason") is None:
+            fx.row(rep, split["scheme"], "lasso")["lasso_fits"] = [dict(fit) for _ in range(split["folds"])]
+    rep["models"]["lasso"] = {"intercept": -1.0, "coef": [[4, 0.5]], "lambda": 0.01}
+    rep["models"]["lasso_fit"] = dict(fit)
+    return rep
 
 
 class LassoSolverStatus(Case):

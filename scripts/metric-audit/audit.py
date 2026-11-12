@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only metric audit of GRM result reports, revisions 5 to 13.
+"""Read-only metric audit of GRM result reports, revisions 5 to 14.
 
 From each report's saved per-sample labels and out-of-fold scores this
 recomputes, over the called isolates, the pooled confusion matrices and
@@ -40,6 +40,19 @@ in a fixed order, and neither touches what this audit rebuilds. Revision
 targets each gene-panel row reads, and this audit rescores a panel row from
 the targets the report lists.
 
+Revision 14 (EQUAL_SCORING_REVISION) is audited with --revision 14. A null
+fit, a gbt or lasso fold with complexity 0, predicts its training
+prevalence (resistant over all isolates outside the test fold) for each
+isolate of its fold, so no learner score is null and a null-model fold is
+found from its complexity. Metrics, ROC points and every fold's balanced
+accuracy cover every isolate; no_call counts the isolates of null-model
+folds by class; called_metrics holds the metrics over the other isolates
+(null when every fold is null) on a row with any, and only there. The best
+learner is then the highest random-split balanced accuracy of the five,
+since every row covers every isolate, and the done line says "scored on
+every isolate". The manifest's learner rates carry null_fits_scored on a
+row with called_metrics.
+
 usage: python3 -I audit.py OUT.json [species-glob] --revision N [--root DIR]
            (--backup DIR --log FILE --launch UTC | --reshaped)
 --revision is the evaluation revision the audited run writes. --backup is
@@ -72,6 +85,9 @@ REVISION = None
 # The first evaluation revision that isolates kset duplicates in the outer
 # folds.
 DUPLICATE_ISOLATION_REVISION = 10
+# The first evaluation revision that scores a null fit's isolates at their
+# fold's training prevalence; check-results.py holds the same value.
+EQUAL_SCORING_REVISION = 14
 BACKUP = None
 LOG = None
 LAUNCH_EPOCH = None
@@ -92,6 +108,8 @@ GBT_KEYS = {"rounds", "learning_rate", "max_depth", "lambda", "min_child_weight"
 NO_WINNER = "no learner calls every isolate"
 DONE = re.compile(r"\s+(\S+__\S+) done in (\S+) \((.*)\)\s*$")
 FULL_COVERAGE = re.compile(r"best random-split learner among those that call every isolate: (\S+) (\S+)")
+NO_SCORED_WINNER = "no learner is scored on every isolate"
+SCORED_COVERAGE = re.compile(r"best random-split learner among those scored on every isolate: (\S+) (\S+)")
 ANY_ROW = re.compile(r"best random-split balanced accuracy: (\S+) (\S+)")
 RECOMPUTE = re.compile(r"\s+(\S+__\S+): (.+); recomputing report\s*$")
 
@@ -364,18 +382,32 @@ def is_null_fold(schema, held):
     return all(v == 0.5 for v in held)
 
 
+def complexity_null_folds(lr, k):
+    """A revision-14 row's null-model folds: gbt or lasso folds with complexity 0."""
+    c = lr["fold_complexity"]
+    return {fold for fold in range(k) if lr["learner"] in ("gbt", "lasso") and len(c) == k and c[fold] == 0}
+
+
+def train_prevalence(truth, f, fold):
+    """Resistant share of the isolates outside test fold `fold`: a null fit's score."""
+    train = [t for t, g in zip(truth, f) if g != fold]
+    return sum(train) / len(train)
+
+
 def null_folds(rep, truth, folds):
     """(scheme, learner, fold) of every null-model fold."""
     k = fold_settings(rep)[0]
     schema = rep.get("schema", 1)
+    equal = rep["evaluation"]["revision"] >= EQUAL_SCORING_REVISION
     found = []
     for split in rep["splits"]:
         f = folds[split["scheme"]]
         for lr in split["learners"]:
             if lr["learner"] not in LEARNERS:
                 continue
+            nullset = complexity_null_folds(lr, k) if equal else None
             for fold in range(k):
-                if is_null_fold(schema, [lr["scores"][i] for i in range(len(truth)) if f[i] == fold]):
+                if fold in nullset if equal else is_null_fold(schema, [lr["scores"][i] for i in range(len(truth)) if f[i] == fold]):
                     found.append((split["scheme"], lr["learner"], fold))
     return found
 
@@ -386,8 +418,10 @@ def learner_row(rep, scheme, name):
 
 
 def calls_every_isolate(lr):
+    """Whether a row's metrics cover every isolate: a revision-14 row with a
+    null fit carries called_metrics and does; an older row must call all."""
     nc = lr.get("no_call")
-    return lr["metrics"] is not None and (nc is None or nc["resistant"] + nc["susceptible"] == 0)
+    return lr["metrics"] is not None and ("called_metrics" in lr or nc is None or nc["resistant"] + nc["susceptible"] == 0)
 
 
 def full_coverage_best(rep):
@@ -443,6 +477,8 @@ def lite(lr, schema):
         out["auroc"] = m.get("auroc")
     if schema >= 2 and lr.get("no_call") is not None:
         out["no_call"] = lr["no_call"]
+    if "called_metrics" in lr:
+        out["null_fits_scored"] = True
     return out
 
 
@@ -480,6 +516,10 @@ def done_datasets():
                 entry["form"] = "full coverage"
             elif w := FULL_COVERAGE.fullmatch(words):
                 entry.update(form="full coverage", learner=w.group(1), ba=w.group(2))
+            elif words == NO_SCORED_WINNER:
+                entry["form"] = "scored coverage"
+            elif w := SCORED_COVERAGE.fullmatch(words):
+                entry.update(form="scored coverage", learner=w.group(1), ba=w.group(2))
             elif w := ANY_ROW.fullmatch(words):
                 entry.update(form="any row", learner=w.group(1), ba=w.group(2))
             done[m.group(1)] = entry
@@ -609,16 +649,45 @@ def audit_file(path, fg, counted_cache, log_done, log_recomputed, manifest):
             check(len(sc) == n, "score length", where=where)
             check(all(v is None or (isinstance(v, (int, float)) and math.isfinite(v)) for v in sc), "non-finite score", where=where)
             nc = lr.get("no_call")
-            uncalled = {"resistant": sum(1 for t, v in zip(truth, sc) if v is None and t),
-                        "susceptible": sum(1 for t, v in zip(truth, sc) if v is None and not t)}
+            equal = rec["revision"] >= EQUAL_SCORING_REVISION and name != "catalog"
+            nullset = complexity_null_folds(lr, k) if equal else set()
+            if equal:
+                check(None not in sc, "null score in a revision-%d learner row" % EQUAL_SCORING_REVISION, where=where)
+                for fold in sorted(nullset):
+                    p = train_prevalence(truth, f, fold)
+                    if any(sc[i] != p for i in range(n) if f[i] == fold):
+                        issues.append({"where": "%s/fold %d" % (where, fold), "what": "null fit not scored at its training prevalence", "prevalence": p})
+                uncalled = {"resistant": sum(1 for i in range(n) if f[i] in nullset and truth[i]),
+                            "susceptible": sum(1 for i in range(n) if f[i] in nullset and not truth[i])}
+            else:
+                check("called_metrics" not in lr, "called_metrics before revision %d" % EQUAL_SCORING_REVISION, where=where)
+                uncalled = {"resistant": sum(1 for t, v in zip(truth, sc) if v is None and t),
+                            "susceptible": sum(1 for t, v in zip(truth, sc) if v is None and not t)}
             if name == "catalog" or schema < 2:
                 check(None not in sc, "null score in a row that calls every isolate", where=where)
                 check(nc is None, "no_call on a row that calls every isolate", where=where)
             elif nc != uncalled:
                 issues.append({"where": where + "/no_call", "what": "no_call differs from the null scores", "stored": nc, "computed": uncalled})
             ranked = name in RANKED
-            called = [i for i in range(n) if sc[i] is not None]
-            tc, scc = [truth[i] for i in called], [sc[i] for i in called]
+            if equal:
+                # Every isolate is scored; `called` is the fitted folds' isolates.
+                fitted = [i for i in range(n) if f[i] not in nullset]
+                if len(fitted) < n:
+                    if "called_metrics" not in lr:
+                        issues.append({"where": where + "/called_metrics", "what": "a row with a null fit lacks called_metrics"})
+                    else:
+                        exact_all &= compare(lr["called_metrics"], metrics([truth[i] for i in fitted], [sc[i] for i in fitted], ranked),
+                                             where + "/called", issues)
+                elif "called_metrics" in lr:
+                    issues.append({"where": where + "/called_metrics", "what": "called_metrics on a row without a null fit"})
+                # A null score is already an issue; leave it out so the
+                # rest of the row is still audited.
+                kept = [i for i in range(n) if sc[i] is not None]
+                tc, scc = [truth[i] for i in kept], [sc[i] for i in kept]
+                called = fitted
+            else:
+                called = [i for i in range(n) if sc[i] is not None]
+                tc, scc = [truth[i] for i in called], [sc[i] for i in called]
             m = metrics(tc, scc, ranked)
             exact_all &= compare(lr["metrics"], m, where + "/pooled", issues)
             if ranked:
@@ -645,7 +714,7 @@ def audit_file(path, fg, counted_cache, log_done, log_recomputed, manifest):
                 idx = [i for i in range(n) if f[i] == fold]
                 tk = [truth[i] for i in idx]
                 sk = [sc[i] for i in idx]
-                if is_null_fold(schema, sk):
+                if (fold in nullset) if equal else is_null_fold(schema, sk):
                     fm = metrics(tk, sk, False)
                     fba.append(None if fm is None else fm["balanced_accuracy"])
                     nullf.append({"scheme": scheme, "learner": name, "fold": fold, "n": len(sk),
@@ -671,7 +740,7 @@ def audit_file(path, fg, counted_cache, log_done, log_recomputed, manifest):
             elif stored_fba != fba:
                 exact_all = False
             check(len(lr["fold_complexity"]) == k, "fold_complexity length", where=where)
-            if schema >= 2 and complexity is not None:
+            if schema >= 2 and complexity is not None and not equal:
                 for fold in range(k):
                     null = is_null_fold(schema, [sc[i] for i in range(n) if f[i] == fold])
                     zero = name in ("gbt", "lasso") and complexity[fold] == 0
@@ -886,8 +955,10 @@ def audit_file(path, fg, counted_cache, log_done, log_recomputed, manifest):
               else "recompute logged for a dataset without a backup report")
         logged = rec["log_done"]
         if logged is not None:
-            if logged["form"] == "full coverage":
+            if logged["form"] in ("full coverage", "scored coverage"):
                 check(schema >= 2, "full-coverage done line for a schema-1 file")
+                check((logged["form"] == "scored coverage") == (rec["revision"] >= EQUAL_SCORING_REVISION),
+                      "done line form does not match the revision", form=logged["form"])
                 want = (None, None) if best is None else (best[0], "%.3f" % best[1])
             else:
                 check(logged["form"] == "any row" and schema < 2, "done line form does not match the schema", form=logged["form"])
