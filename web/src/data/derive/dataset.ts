@@ -103,10 +103,20 @@ export const ruleSummary = (rules: readonly string[]): { first: string; more: nu
 export const featureIndex = (r: DatasetReport): Map<number, FeatureCard> =>
   new Map(r.features.map((f) => [f.feature, f]));
 
-/** The words a feature goes by: its catalog family, else the gene or product
- *  on the reference assembly, else its id. */
+/** The words a feature's catalog families give it, as `grm report` writes
+ *  them into a rule term (`annotate::family_label`): the family when it
+ *  matches one, or every family it matches, in code-unit order after their
+ *  count, since its k-mers may lie in any of them. Null when none. */
+export const familyLabel = (families: readonly string[]): string | null => {
+  const names = [...new Set(families)].sort();
+  if (names.length === 0) return null;
+  return names.length === 1 ? names[0]! : `k-mers matching ${names.length} catalog families (${names.join(", ")})`;
+};
+
+/** The words a feature goes by: its catalog families, else the gene or
+ *  product on the reference assembly, else its id. */
 export const featureLabel = (card: FeatureCard | undefined, id: number): string =>
-  card?.catalog_families[0] ?? card?.locus?.gene ?? card?.locus?.product ?? `k-mer feature ${id}`;
+  (card === undefined ? null : familyLabel(card.catalog_families)) ?? card?.locus?.gene ?? card?.locus?.product ?? `k-mer feature ${id}`;
 
 /** Where the feature sits: codon range inside a gene, or the distance to
  *  the nearest gene when intergenic. Null without a placed locus. */

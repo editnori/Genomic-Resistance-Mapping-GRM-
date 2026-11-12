@@ -119,6 +119,7 @@ src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason
 src/lib.rs analysis::tests::unsupported_assays_are_listed_with_their_reason_instead_of_a_panel
 src/lib.rs analysis::tests::write_lasso_scan_fixture_root [ignored]
 src/lib.rs annotate::tests::a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached
+src/lib.rs annotate::tests::a_feature_matching_several_families_is_labelled_with_all_of_them_in_byte_order
 src/lib.rs annotate::tests::the_cached_feature_order_does_not_choose_the_gene
 src/lib.rs bits::tests::set_algebra_and_counts
 src/lib.rs bvbrc::tests::genome_dates_keep_only_their_three_fields
@@ -353,6 +354,7 @@ src/lib.rs report::tests::a_learner_that_called_no_isolate_has_null_rates_in_the
 src/lib.rs report::tests::a_missing_lineage_learner_row_is_not_full_coverage
 src/lib.rs report::tests::a_missing_or_malformed_kover_comparison_refuses_before_writing
 src/lib.rs report::tests::a_rebuild_removes_files_for_datasets_and_species_it_no_longer_publishes
+src/lib.rs report::tests::a_rule_term_names_every_catalog_family_its_feature_matches
 src/lib.rs report::tests::index_rows_carry_the_kover_row_for_their_species_and_antibiotic
 src/lib.rs report::tests::iso_dates_match_known_days
 src/lib.rs report::tests::manifest_k_is_the_one_k_every_report_records

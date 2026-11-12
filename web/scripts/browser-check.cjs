@@ -102,8 +102,8 @@ const widestInterval = (() => {
 // slash-joined run, such as "lincosamide/oxazolidinone/..."); null when no
 // dataset has one. Also the trees whose labels the label check reads: the
 // widest, then those with the most default-view split labels longer than 18
-// characters (the app's own words for a feature: catalog family, else gene,
-// else product), then the most splits, by id; LABEL_TREES in all.
+// characters (the app's own words for a feature, featureLabel's: catalog
+// families, else gene, else product), then the most splits, by id; LABEL_TREES in all.
 const LABEL_TREES = 6;
 const widestPanels = (() => {
   let tree = null, catalog = null;
@@ -114,7 +114,8 @@ const widestPanels = (() => {
     const r = JSON.parse(fs.readFileSync(file));
     const nodes = r.models?.cart?.nodes ?? [], depth = Math.min(3, r.models?.cart_depth ?? 0);
     const cards = new Map((r.features ?? []).map(f => [f.feature, f]));
-    const words = i => { const c = cards.get(i); return c?.catalog_families?.[0] ?? c?.locus?.gene ?? c?.locus?.product ?? 'k-mer feature ' + i; };
+    const families = c => { const names = [...new Set(c?.catalog_families ?? [])].sort(); return names.length === 0 ? null : names.length === 1 ? names[0] : `k-mers matching ${names.length} catalog families (${names.join(', ')})`; };
+    const words = i => { const c = cards.get(i); return families(c) ?? c?.locus?.gene ?? c?.locus?.product ?? 'k-mer feature ' + i; };
     let columns = 0, splits = 0, long = 0;
     const visit = i => { const n = nodes[i]; if (n === undefined) return; if (n.split === null || n.depth >= depth) { columns += 1; return; } splits += 1; if (words(n.split.feature).length > 18) long += 1; visit(n.split.absent); visit(n.split.present); };
     if (nodes.length > 0) visit(0);

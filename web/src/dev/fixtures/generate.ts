@@ -29,6 +29,7 @@ import {
   type TreeNode,
 } from "../../data/schema";
 import { encodeBits } from "../../data/bits";
+import { familyLabel } from "../../data/derive/dataset";
 import { binaryMetrics, conformal, normal, rng, rocCurve } from "./stats";
 
 interface GroupDef {
@@ -758,7 +759,7 @@ const buildDataset = (spec: SpeciesSpec, drug: DrugSpec, genomes: Genome[], rand
     mic_essential_agreement: mic?.essential_agreement ?? null,
     scm_rules: scmRules.map((r) => {
       const f = byId.get(r.feature);
-      return `${r.presence ? "presence of" : "absence of"} ${f?.catalog_families[0] ?? f?.locus?.gene ?? f?.locus?.product ?? `feature ${r.feature}`}`;
+      return `${r.presence ? "presence of" : "absence of"} ${(f === undefined ? null : familyLabel(f.catalog_families)) ?? f?.locus?.gene ?? f?.locus?.product ?? `feature ${r.feature}`}`;
     }),
     panels: panels.map((p) => [p.id, lite(p.metrics)]),
     kover:
