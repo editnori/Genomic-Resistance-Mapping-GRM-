@@ -250,6 +250,14 @@ class ReceiptChecks(KitCase):
         self.put("count", r)
         self.refused("work/count/cohort-digests.tsv is in no stage's receipt")
 
+    def test_a_work_file_that_is_missing(self):
+        (self.work / "count/counted.tsv").unlink()
+        self.refused("work/count/counted.tsv is missing")
+
+    def test_a_report_that_is_missing(self):
+        (self.reports / f"{F.A}.json").unlink()
+        self.refused(f"{F.A}: no report file at ")
+
     def test_an_extra_prediction_file(self):
         shutil.copyfile(self.work / f"predict/{F.A}.jsonl", self.work / f"predict/{F.C}.jsonl")
         self.refused("the predict folder holds")

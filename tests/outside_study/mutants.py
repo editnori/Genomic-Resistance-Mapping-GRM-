@@ -202,7 +202,16 @@ MUTANTS = [
     ("a rehearsal's outputs without the prefix", "score.py",
      [('    return ("rehearsal-" if res["rehearsal"] else "") + name', '    return name')]),
     ("the reportable leave-one-study-out folds not counted", "score.py",
-     [('            folds += rest_r >= MIN_CLASS and rest_s >= MIN_CLASS', '            folds += 1')]),
+     [('            fold_ok[b] = rest_r >= MIN_CLASS and rest_s >= MIN_CLASS', '            fold_ok[b] = True')]),
+    ("a missing report read without a refusal", "score.py",
+     [('    if not path.is_file():\n        refuse(f"{dataset}: no report file at {path}")\n', '')]),
+    ("a missing work file read without a refusal", "score.py",
+     [('        if not (work / rel).is_file():\n            refuse(f"work/{rel} is missing")\n', '')]),
+    ("the largest study's fold always called reportable", "score.py",
+     [('= None if top is None else fold_ok[top]', '= None if top is None else True')]),
+    ("the largest study's sentence dropped from the reading", "score.py",
+     [('                             if d[f"top_study_{name}_fold_reportable"] is False}):',
+       '                             if d[f"top_study_{name}_fold_reportable"] is None}):')]),
 ]
 
 

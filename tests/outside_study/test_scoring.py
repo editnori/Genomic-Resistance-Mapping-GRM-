@@ -211,6 +211,35 @@ class Scoring(unittest.TestCase):
         r = by(res["metrics"], dataset=A, learner="scm")
         self.assertEqual((r["studies"], r["loso_sensitivity_n"]), (2, 1))
         self.assertEqual((r["loso_sensitivity_min"], r["loso_sensitivity_max"]), (43 / 50, 43 / 50))
+        # P1 holds the most genomes of both classes and can't be left out:
+        # the one reportable fold (P3 left out) still includes it.
+        a = by(res["dataset_counts"], dataset=A)
+        self.assertEqual((a["top_study_resistant"], a["top_study_susceptible"], a["loso_folds_reportable"]),
+                         ("P1", "P1", 1))
+        self.assertEqual((a["top_study_resistant_fold_reportable"], a["top_study_susceptible_fold_reportable"]),
+                         (False, False))
+        text = S.reading_text(res)
+        line = ("  With P1 left out, fewer than 25 resistant or 25 susceptible genomes remain, so no estimate can be "
+                "shown without that study, and every leave-one-study-out range for this dataset includes it.")
+        self.assertEqual(text.count(line), 1, "once for the dataset, not once per class")
+        self.assertIn("Of 2 studies, 1 can be left out with 25 of each class remaining.\n" + line, text)
+
+    def test_largest_study_of_one_class_only(self):
+        w = F.world()
+        # P2's susceptible genomes go to P3: P1 30 R and 30 S, P2 20 R, P3
+        # 10 R and 30 S. P1 holds the most R, and P1 and P3 tie on S, so P1
+        # is named for both. With P1 left out 30 R and 30 S remain.
+        moved = {g["id"] for g in F.new_genomes() if g["project"] == "P2" and not g["resistant"]}
+        self.assertEqual(len(moved), 20)
+        for c in w["candidates"]:
+            if c["genome_id"] in moved:
+                c["bioproject"] = "P3"
+        res = S.score(F.inputs(w))
+        a = by(res["dataset_counts"], dataset=A)
+        self.assertEqual((a["top_study_resistant"], a["top_study_susceptible"]), ("P1", "P1"))
+        self.assertEqual((a["top_study_resistant_fold_reportable"], a["top_study_susceptible_fold_reportable"]),
+                         (True, True))
+        self.assertNotIn("no estimate can be shown without that study", S.reading_text(res))
 
     def test_feature_carriage(self):
         f1 = by(self.res["features"], dataset=A, learner="scm", feature=1)
@@ -232,11 +261,17 @@ class Scoring(unittest.TestCase):
                          ("P1", 30, 0.5))
         self.assertEqual((a["top_study_susceptible"], a["top_study_susceptible_count"]), ("P1", 30))
         self.assertEqual((a["studies"], a["loso_folds_reportable"]), (3, 3))
+        self.assertEqual((a["top_study_resistant_fold_reportable"], a["top_study_susceptible_fold_reportable"]),
+                         (True, True))
         b = by(self.res["dataset_counts"], dataset=B)
         self.assertEqual((b["top_study_resistant"], b["top_study_resistant_share"],
                           b["top_study_susceptible_share"]), ("P1", 1.0, 1.0))
         self.assertEqual((b["studies"], b["loso_folds_reportable"]), (1, 0))
+        self.assertEqual((b["top_study_resistant_fold_reportable"], b["top_study_susceptible_fold_reportable"]),
+                         (False, False))
         text = S.reading_text(self.res)
+        self.assertNotIn("no estimate can be shown without that study", text,
+                         "a dataset with no reportable fold gets the one-study sentence only")
         self.assertIn("  By study: P1 holds 30 of the 60 resistant genomes (50.0%); P1 holds 30 of the 60 susceptible "
                       "genomes (50.0%). Of 3 studies, 3 can be left out with 25 of each class remaining.", text)
         self.assertIn("  By study: P1 holds 25 of the 25 resistant genomes (100.0%); P1 holds 25 of the 25 susceptible "

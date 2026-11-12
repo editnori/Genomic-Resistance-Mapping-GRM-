@@ -332,6 +332,8 @@ def report_path(reports_dir, dataset):
 def load_report(reports_dir, dataset, pins):
     """A served revision-12 report, refused unless its bytes match the pin."""
     path = report_path(reports_dir, dataset)
+    if not path.is_file():
+        refuse(f"{dataset}: no report file at {path}")
     data = path.read_bytes()
     sha = sha256_bytes(data)
     want = pins.get(f"{dataset}.json")
@@ -1026,12 +1028,17 @@ def score(inputs):
             drow[f"top_study_{name}_count"] = 0 if top is None else top[1]
             drow[f"top_study_{name}_share"] = None if top is None else ratio(top[1], n)
         drow["studies"] = len(studies_d)
-        folds = 0
+        fold_ok = {}
         for b in studies_d:
             rest_r = sum(1 for g in scored if lab[(d, g)] and group_of(g, "bioproject") != b)
             rest_s = sum(1 for g in scored if not lab[(d, g)] and group_of(g, "bioproject") != b)
-            folds += rest_r >= MIN_CLASS and rest_s >= MIN_CLASS
-        drow["loso_folds_reportable"] = folds
+            fold_ok[b] = rest_r >= MIN_CLASS and rest_s >= MIN_CLASS
+        drow["loso_folds_reportable"] = sum(fold_ok.values())
+        # Whether an estimate can be shown without the study that holds the
+        # most genomes of a class: the fold that leaves that study out.
+        for name in ("resistant", "susceptible"):
+            top = drow[f"top_study_{name}"]
+            drow[f"top_study_{name}_fold_reportable"] = None if top is None else fold_ok[top]
         dataset_rows.append(drow)
         for learner in learners_by[d]:
             c = confusion((lab[(d, g)], calls[(d, learner, g)]) for g in scored)
@@ -1226,7 +1233,8 @@ DATASET_COLS = ["dataset", "labelled_resistant", "labelled_susceptible",
                 "lasso_complete", "known_gene",
                 "top_study_resistant", "top_study_resistant_count", "top_study_resistant_share",
                 "top_study_susceptible", "top_study_susceptible_count", "top_study_susceptible_share",
-                "studies", "loso_folds_reportable"]
+                "studies", "loso_folds_reportable",
+                "top_study_resistant_fold_reportable", "top_study_susceptible_fold_reportable"]
 METRIC_COLS = (
     ["dataset", "learner", "reportable", "scored_resistant", "scored_susceptible",
      "tp", "fn", "fp", "tn", "no_call_resistant", "no_call_susceptible",
@@ -1301,6 +1309,13 @@ def reading_text(res):
         if d["loso_folds_reportable"] == 0:
             lines.append("  No leave-one-study-out fold is reportable, so no study-to-study range can be shown, "
                          "and the estimate is in effect one study's.")
+        else:
+            # A range from the other folds still includes the largest study.
+            for b in sorted({d[f"top_study_{name}"] for name in ("resistant", "susceptible")
+                             if d[f"top_study_{name}_fold_reportable"] is False}):
+                lines.append(f"  With {b} left out, fewer than {MIN_CLASS} resistant or {MIN_CLASS} susceptible genomes "
+                             f"remain, so no estimate can be shown without that study, and every "
+                             f"leave-one-study-out range for this dataset includes it.")
         for r in res["metrics"]:
             if r["dataset"] != d["dataset"]:
                 continue
@@ -1447,6 +1462,8 @@ def load_inputs(args, gate):
     def read(rel):
         """A work file's text, refused unless it has the SHA-256 the stage
         that wrote it recorded."""
+        if not (work / rel).is_file():
+            refuse(f"work/{rel} is missing")
         data = (work / rel).read_bytes()
         got = sha256_bytes(data)
         if rel not in written:

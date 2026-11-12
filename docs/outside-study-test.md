@@ -176,7 +176,7 @@ So 779 of the 803 *S. aureus* genomes have an ST. There is no table of scheme al
 
 `leave_one_study_out.tsv` drops each BioProject in turn and recomputes the confusion counts on the rest. It gives sensitivity, specificity and balanced accuracy only when the rest still has at least 25 R and 25 S genomes. This is the same threshold as item 5, and it stops a range being drawn from two or three genomes. `metrics.tsv` gives the range of those estimates (min and max) and how many there are. There is no study-level interval. *S. aureus* has 3 BioProjects, so each dataset has at most 3 leave-one-out estimates.
 
-For each dataset, the scoring's `datasets.tsv` gives the BioProject with the most scored R genomes, with its count and share, the same for S, the number of studies, and how many leave-one-study-out folds keep at least 25 R and 25 S genomes. `reading.txt` prints those figures on one line per dataset. Where no fold is reportable, it says that no study-to-study range can be shown and that the estimate is in effect one study's. This is description only; nothing is decided by it.
+For each dataset, the scoring's `datasets.tsv` gives the BioProject with the most scored R genomes, with its count and share, the same for S, the number of studies, and how many leave-one-study-out folds keep at least 25 R and 25 S genomes. `reading.txt` prints those figures on one line per dataset. Where no fold is reportable, it says that no study-to-study range can be shown and that the estimate is in effect one study's. `datasets.tsv` also says, for each of those two studies, whether the fold that leaves it out is reportable. Where some fold is reportable but that one is not, `reading.txt` says that no estimate can be shown without that study and that every leave-one-study-out range for the dataset includes it. This is description only; nothing is decided by it.
 
 ### 9. Known-gene comparator
 
@@ -276,7 +276,7 @@ python3 -I -m unittest discover -s tests/outside_study -t . -v
 python3 -I tests/outside_study/mutants.py
 ```
 
-The suite runs in CI (docs/ci.md) and holds 192 tests. It needs `git`, and it passes in a copy of the tree with no `.git`, because the tests make their own repositories. Its fixtures are hand-built: a made-up species with three reports and 126 frozen genomes whose counts, intervals, readings, groupings, paired counts and leave-one-out values are worked out by hand in `tests/outside_study/fixtures.py`. The learners give different calls on at least one R and one S genome, and two datasets label two genomes the other way round, so a learner or dataset swap changes a number. The suite covers:
+The suite runs in CI (docs/ci.md) and holds 195 tests. It needs `git`, and it passes in a copy of the tree with no `.git`, because the tests make their own repositories. Its fixtures are hand-built: a made-up species with three reports and 126 frozen genomes whose counts, intervals, readings, groupings, paired counts and leave-one-out values are worked out by hand in `tests/outside_study/fixtures.py`. The learners give different calls on at least one R and one S genome, and two datasets label two genomes the other way round, so a learner or dataset swap changes a number. The suite covers:
 
 - every refusal of both scripts;
 - the label rules and the exclusion order;
@@ -286,11 +286,11 @@ The suite runs in CI (docs/ci.md) and holds 192 tests. It needs `git`, and it pa
 - the receipts `score.py` reads;
 - byte-identical outputs from three separate processes, each with its own random hash seed, and from shuffled input rows.
 
-`mutants.py` breaks the scripts in 69 ways, one at a time, in a temporary copy, and fails unless the suite catches every one.
+`mutants.py` breaks the scripts in 73 ways, one at a time, in a temporary copy, and fails unless the suite catches every one.
 
 ## Limits
 
 - The genomes come from the same database as the cohort. Their labels follow the same practices, and the metadata and label totals of the batch were read before this plan was frozen.
 - Each new estimate has one model per dataset and no refit. Its interval covers only the sampling of these genomes, not study-to-study variation.
-- For *S. aureus*, one study dominates the resistant genomes. Before exclusions, PRJNA1050907 holds 74.5% to 100% of the R genomes on every dataset: 252 of 254 on ciprofloxacin, 195 of 209 on erythromycin, 78 of 92 on gentamicin, 60 of 60 on levofloxacin, 491 of 659 on oxacillin, 94 of 94 on sulfamethoxazole/trimethoprim and 96 of 104 on tetracycline. Leaving it out leaves a reportable fold only on oxacillin (168 R and 34 S genomes). On the other six datasets no study-to-study range can be shown, and each estimate is in effect that one study's.
+- For *S. aureus*, one study dominates the resistant genomes. Before exclusions, PRJNA1050907 holds 74.5% to 100% of the R genomes on every dataset: 252 of 254 on ciprofloxacin, 195 of 209 on erythromycin, 78 of 92 on gentamicin, 60 of 60 on levofloxacin, 491 of 659 on oxacillin, 94 of 94 on sulfamethoxazole/trimethoprim and 96 of 104 on tetracycline. Leaving it out leaves a reportable fold only on oxacillin (168 R and 34 S genomes). On the other six datasets no estimate can be shown without that study, and each estimate is in effect that one study's. Levofloxacin has no other study. On the other five, one or two folds stay reportable (they leave out a smaller study), so `metrics.tsv` shows a range, but every fold in it includes PRJNA1050907. On oxacillin the susceptible genomes are few: PRJNA819273 holds 33 of the 56, and leaving it out leaves 23.
 - `setup` needs a FASTA file in the master root for every cohort genome of the datasets' reports; the replays depend on it.
