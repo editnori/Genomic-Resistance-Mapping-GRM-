@@ -160,10 +160,10 @@ jobs:
             top: .
           - suite: tests/multitask
             top: .
-          # Its 28 end-to-end tests need a release grm (GRM_INPUT_E2E_BINARY) and skip here; Boat runs them.
+          # Its 29 end-to-end tests need a release grm (GRM_INPUT_E2E_BINARY) and skip here; Boat runs them.
           - suite: tests/input_comparison
             top: .
-            ok: OK (skipped=28)
+            ok: OK (skipped=29)
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}

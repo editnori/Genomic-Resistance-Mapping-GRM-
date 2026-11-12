@@ -1449,7 +1449,8 @@ ids = [f"g{i:03d}" for i in range(50)]
                               f"{learner}'s {test}", str(e.exception))
 
     def test_a_seed_without_lineage_decisions_is_listed_and_counts_toward_no_row(self):
-        """Ruling 2 (M3): run.py exits 3 on such a seed; the seed keeps its summary, which names it."""
+        """A seed whose summary names a dataset with no lineage decision is listed and counts toward no row; run.py
+        exits 0 on it (Layth's ruling on H-1's pilot, 2026-11-09, which replaced M3's exit 3)."""
         with tempfile.TemporaryDirectory() as tmp:
             self.cal_seeds(tmp, n=100)
             self.cal_seed(tmp, 100, hits={("sentinel-seed-twin", "rf"): "worse"}, no_decision=True)
@@ -1627,11 +1628,12 @@ ids = [f"g{i:03d}" for i in range(50)]
             with self.assertRaises(SystemExit, msg=bad):
                 run.load_spec(self.write(spec))
 
-    def stub_work(self, tmp, arms, refuse_lineage=False, pairing_error=None):
+    def stub_work(self, tmp, arms, refuse_lineage=False, pairing_error=None, short=None):
         """WORK/arms/<arm>/ds/{runs.json,predictions.jsonl} as `grm arm` writes them, for run.contrasts(): every
         arm scores 40 genomes (20 lineages of 2, one of each class) in 5 folds per repeat, 3 lineage repeats and 1
         random; k-h's scores move towards the label. refuse_lineage makes the default's lineage runs unavailable;
-        pairing_error moves one of that arm's rows to another fold."""
+        pairing_error moves one of that arm's rows to another fold; the arm `short` names has every run unavailable
+        and no rows, as Runner.short_cohort leaves an arm short of a class minimum."""
         work = Path(tmp)
         for name in ["default"] + [a["name"] for a in arms]:
             out = work / "arms" / name / "ds"
@@ -1639,6 +1641,10 @@ ids = [f"g{i:03d}" for i in range(50)]
             rows, runs = [], []
             for split, repeats in (("random", 1), ("lineage", 3)):
                 for learner in run.LEARNERS:
+                    if name == short:
+                        runs.append({"arm": name, "learner": learner, "split": split, "status": "unavailable",
+                                     "reason": "short_of_class_minimum: the stub's reason"})
+                        continue
                     down = refuse_lineage and name == "default" and split == "lineage"
                     runs.append({"arm": name, "learner": learner, "split": split, "status":
                                  "unavailable" if down else "ok", "reason": "the gbt holdout lacks a class" if down
@@ -1695,24 +1701,148 @@ ids = [f"g{i:03d}" for i in range(50)]
         self.assertTrue(all(reason.startswith("pairing refused: fold:") for reason in missing.values()))
         self.assertEqual(len(records), len(planned) - len(missing))
 
-    def test_a_dataset_without_a_lineage_decision_fails_the_run(self):
-        """Ruling 2 after VERIFY-H1STATS (REVIEW-ICODE-PY M3): with the default's lineage plan refused every lineage
-        contrast is not produced; decisions_made is 0, the summary names the dataset, and the run exits 3."""
+    def test_a_short_cohort_arm_s_contrasts_are_not_produced_and_the_rest_decided(self):
+        """An arm short of a class minimum (Runner.short_cohort) has each of its 10 contrasts not produced, with its
+        runs' reason; the sentinels' 20 are still produced."""
+        spec, arms = self.stub_arms()
+        with tempfile.TemporaryDirectory() as tmp:
+            records, planned, missing = run.contrasts(spec, arms, self.stub_work(tmp, arms, short="k-h"))
+        self.assertEqual(sorted(missing), sorted(p for p in planned if "->k-h:" in p))
+        self.assertEqual(len(missing), 5 * 2)
+        for pid, reason in missing.items():
+            self.assertRegex(reason, r"^arm k-h has no \w+ (random|lineage) result: short_of_class_minimum: the stub's "
+                                     r"reason$", pid)
+        self.assertEqual(len(records), len(planned) - 10)
+        self.assertEqual({x["treatment"] for x in records}, {a["name"] for a in arms if a.get("sentinel")})
+
+    def k_unanswered(self, spec, arms, records, planned, missing):
+        """K's unanswered datasets for run.contrasts' output, from the report fields K reads them from."""
+        return run.k_report.unanswered_datasets({
+            "manifest": {"datasets": spec["datasets"], "sentinel_arms": [a["name"] for a in arms if a.get("sentinel")]},
+            "contrasts": records, "planned_contrasts": planned,
+            "not_produced": [{"id": pid, "reason": why} for pid, why in missing.items()],
+            "undefined_contrasts": [{"id": x["id"], "reason": x["undefined_reason"]}
+                                    for x in records if x["undefined_reason"] is not None]})
+
+    def test_a_dataset_without_a_lineage_decision_is_reported_and_the_run_goes_on(self):
+        """Layth's ruling on H-1's pilot (2026-11-09), which replaced M3's exit 3: with the default's lineage plan
+        refused every lineage contrast is not produced; decisions_made is 0, the run names the dataset and doesn't
+        exit, and K lists the same dataset as one the lineage test can't answer, by the same rule."""
         spec, arms = self.stub_arms()
         with tempfile.TemporaryDirectory() as tmp:
             records, planned, missing = run.contrasts(spec, arms, self.stub_work(tmp, arms, refuse_lineage=True))
         made = run.decisions_made(spec, arms, records)
         self.assertEqual(made, {"ds": 0})
         self.assertEqual(len(missing), 3 * 5)
+        self.assertFalse(hasattr(run, "NO_DECISIONS_EXIT"))
         err = io.StringIO()
-        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as e:
-            run.check_decisions({"no_decision_datasets": ["ds"]})
-        self.assertEqual(e.exception.code, run.NO_DECISIONS_EXIT)
-        self.assertIn("FAILED: no decision-bearing lineage contrast for ds", err.getvalue())
-        run.check_decisions({"no_decision_datasets": []})
-        # Sentinel contrasts don't count as decisions.
-        self.assertEqual(run.decisions_made(spec, arms, [x for x in records if x["treatment"].startswith("sentinel")]),
-                         {"ds": 0})
+        with contextlib.redirect_stderr(err):
+            self.assertIsNone(run.note_decisions({"no_decision_datasets": ["ds"]}))
+        self.assertIn("NO LINEAGE ANSWER for ds: every lineage contrast outside the sentinels was not produced or "
+                      "undefined, so the lineage test can't answer them", err.getvalue())
+        self.assertIn("The run goes on.", err.getvalue())
+        quiet = io.StringIO()
+        with contextlib.redirect_stderr(quiet):
+            run.note_decisions({"no_decision_datasets": []})
+        self.assertEqual(quiet.getvalue(), "")
+        # K's list is run.py's: k-h's 5 lineage contrasts, every one not produced; the sentinels' 10 aren't counted.
+        self.assertEqual(self.k_unanswered(spec, arms, records, planned, missing),
+                         [{"dataset": "ds", "planned": 5, "not_produced": 5, "undefined": 0, "splits": ["lineage"]}])
+        # Sentinel contrasts don't count as decisions, in run.py or in K.
+        sentinel_only = [x for x in records if x["treatment"].startswith("sentinel")]
+        self.assertEqual(run.decisions_made(spec, arms, sentinel_only), {"ds": 0})
+
+    def test_a_decided_dataset_is_not_listed_as_unanswered(self):
+        """The ruling's other side: with k-h's lineage contrasts decided, neither run.py nor K lists the dataset; with
+        only the sentinels' records, both do, and K counts only k-h's 5 family C contrasts (its random ones are D)."""
+        spec, arms = self.stub_arms()
+        with tempfile.TemporaryDirectory() as tmp:
+            records, planned, missing = run.contrasts(spec, arms, self.stub_work(tmp, arms))
+        self.assertEqual((run.decisions_made(spec, arms, records), missing), ({"ds": 5}, {}))
+        self.assertEqual(self.k_unanswered(spec, arms, records, planned, missing), [])
+        sentinel_only = [x for x in records if x["treatment"].startswith("sentinel")]
+        kept = {x["id"] for x in sentinel_only}
+        dropped = {pid: "dropped (fixture)" for pid in planned if pid not in kept}
+        self.assertEqual(self.k_unanswered(spec, arms, sentinel_only, planned, dropped),
+                         [{"dataset": "ds", "planned": 5, "not_produced": 5, "undefined": 0, "splits": ["lineage"]}])
+
+    def block_work(self, tmp, admits):
+        """A run's arm records for run.manifest() over two Salmonella datasets, with each arm.json and runs.json
+        shaped as `grm arm` writes them: one run per learner and split of the default, k-h, k-c and both sentinels.
+        k-h's H spec is per drug, as H's panel source makes it. The datasets `admits` names admit H, and the
+        others refuse it with "no panel targets <drug>". k-c's C is refused on both datasets with the same reason.
+        A refused block's runs are unavailable with its reason."""
+        spec = {**SPEC, "arms": [{"name": "k-h", "blocks": ["K", "H"]}, {"name": "k-c", "blocks": ["K", "C"]}],
+                "datasets": [{"id": f"salmonella_enterica__{drug}", "partition": "confirmatory"}
+                             for drug in ("ampicillin", "cefoxitin")]}
+        spec, default, arms = run.load_spec(self.write(spec))
+        k = {"id": "K", "kind": "Anonymous", "version": "k=31 min_support=2 patterns=10 genomes=40",
+             "source_sha256": "1" * 64, "priority": 5, "screen_cap": 4000, "catalog_date": None,
+             "circularity_risk": False, "unavailable_reason": None}
+        work, specs = Path(tmp), {}
+        for d in spec["datasets"]:
+            ds, drug = d["id"], d["id"].split("__")[1]
+            specs[ds] = {"id": "H", "kind": "Hierarchical",
+                         "version": f"2026-08-07.1|group-calls-v2|panels-v1:{drug}",
+                         "source_sha256": run.sha256_bytes(drug.encode()), "priority": 1, "screen_cap": None,
+                         "catalog_date": "2026-08-07", "circularity_risk": True, "unavailable_reason": None}
+            for arm in [default] + arms:
+                out = work / "arms" / arm["name"] / ds
+                (out / "plans").mkdir(parents=True)
+                (out / "plans" / "lineage-0.json").write_text(json.dumps({"cluster": [i // 2 for i in range(40)]}))
+                held, refused = [k], []
+                if arm["name"] == "k-h" and ds in admits:
+                    held.append(specs[ds])
+                elif arm["name"] == "k-h":
+                    refused.append(["H", f"no panel targets {drug}"])
+                elif arm["name"] == "k-c":
+                    refused.append(["C", "no callable probe assay (the stub's reason)"])
+                (out / "arm.json").write_text(json.dumps({"species": "Salmonella enterica", "samples": 40,
+                                                          "blocks": held, "unavailable": refused}))
+                why = f"block {refused[0][0]} is unavailable: {refused[0][1]}" if refused else None
+                runs = []
+                for split in run.SPLITS:
+                    repeats = run.split_repeats(spec, split)
+                    runs += [{"dataset": ds, "arm": arm["name"], "blocks": arm["blocks"], "learner": learner,
+                              "split": split, "repeats": repeats,
+                              "fold_plan_sha256": [run.sha256_bytes(f"{ds}{split}{r}".encode())
+                                                   for r in range(repeats)],
+                              "status": "unavailable" if why else "ok", "reason": why,
+                              "metrics": {} if why else {"balanced_accuracy": 0.8}, "fit_count": 0 if why else 5,
+                              "seconds": 1.0, "pairing": arm["pairing"], "arm_plan_sha256": None}
+                             for learner in run.LEARNERS]
+                (out / "runs.json").write_text(json.dumps(runs))
+        m = run.manifest(spec, default, arms, work, "0" * 64, "a" * 40, {"x": 1.0})
+        return m, specs
+
+    def test_a_block_one_dataset_refuses_stays_available_for_another_dataset_s_runs(self):
+        """H-1's SAL-1 (9 Nov 2026): H's panel source refused H on the part's first dataset (no panel targets
+        amoxicillin/clavulanate), and the manifest's one H entry took that refusal, so K's schema refused every ok
+        k-h run on a dataset with a panel. The admitting dataset's spec is kept and the refusing dataset's runs stay
+        unavailable with H's reason; the order of the two datasets doesn't matter. A block that every dataset
+        refuses is unavailable with each distinct reason, so C keeps its one reason."""
+        with tempfile.TemporaryDirectory() as tmp:
+            m, specs = self.block_work(tmp, admits={"salmonella_enterica__cefoxitin"})
+        run.k_schema.validate_manifest(m)
+        blocks = {b["id"]: b for b in m["blocks"]}
+        self.assertEqual([b["id"] for b in m["blocks"]], ["C", "H", "K"])
+        self.assertEqual(blocks["H"], specs["salmonella_enterica__cefoxitin"])
+        self.assertEqual(blocks["C"]["unavailable_reason"], "no callable probe assay (the stub's reason)")
+        kh = {(u["dataset"], u["status"], u["reason"]) for u in m["runs"] if u["arm"] == "k-h"}
+        self.assertEqual(kh, {("salmonella_enterica__ampicillin", "unavailable",
+                               "block H is unavailable: no panel targets ampicillin"),
+                              ("salmonella_enterica__cefoxitin", "ok", None)})
+        self.assertEqual(sum(u["status"] == "ok" and "H" in u["blocks"] for u in m["runs"]), 10)
+        with tempfile.TemporaryDirectory() as tmp:
+            m, specs = self.block_work(tmp, admits={"salmonella_enterica__ampicillin"})
+        run.k_schema.validate_manifest(m)
+        self.assertEqual({b["id"]: b for b in m["blocks"]}["H"], specs["salmonella_enterica__ampicillin"])
+        with tempfile.TemporaryDirectory() as tmp:
+            m, _ = self.block_work(tmp, admits=set())
+        run.k_schema.validate_manifest(m)
+        self.assertEqual({b["id"]: b for b in m["blocks"]}["H"]["unavailable_reason"],
+                         "no panel targets ampicillin; no panel targets cefoxitin")
+        self.assertEqual({u["status"] for u in m["runs"] if u["arm"] == "k-h"}, {"unavailable"})
 
 
 class Stage2Tests(unittest.TestCase):

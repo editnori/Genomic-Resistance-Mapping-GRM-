@@ -1,7 +1,7 @@
 {
   "format": "grm-input-comparison-spec",
   "version": 1,
-  "decisions": "DECISIONS V-1 and H-1 and the rulings after lane INPUT and after H1PLAN (main, under Layth's 5 Nov 2026 delegation): one factor at a time against the default; k21 and k25 are left out (ruling M-2 after REGAUDIT: register section 13 G2 stands until Layth lifts it by name); cohort arms pair by common_outer_test_set_balanced; the group draw groups genomes by BV-BRC MLST sequence type; the selection seed 1 and the log-loss margin 0.02 (descriptive only, it decides nothing) are decided values",
+  "decisions": "DECISIONS V-1 and H-1 and the rulings after lane INPUT and after H1PLAN (main, under Layth's 5 Nov 2026 delegation): one factor at a time against the default; k21 and k25 run, since Layth lifted register section 13 G2 on 8 Nov 2026 and asked that no arm be skipped (ruling M-2 after REGAUDIT had held it until then); each runs as a k add-on part (G2(b), run.py --reference-from) against the main part that holds its datasets and leaves the k arms out; cohort arms pair by common_outer_test_set_balanced; the group draw groups genomes by BV-BRC MLST sequence type; the selection seed 1 and the log-loss margin 0.02 (descriptive only, it decides nothing) are decided values",
   "panel_floor": {
     "min_eligible_genomes": 2001,
     "reason": "main's ruling on REVIEW-INPUT M1: an H-1 species needs more than 2,000 eligible genomes, so cap-4000 and grr-v1 change the genome set"
@@ -275,6 +275,14 @@
       "name": "grr-v1",
       "selection": "group-round-robin-v1",
       "selection_seed": 1
+    },
+    {
+      "name": "k21",
+      "k": 21
+    },
+    {
+      "name": "k25",
+      "k": 25
     },
     {
       "name": "k-c",

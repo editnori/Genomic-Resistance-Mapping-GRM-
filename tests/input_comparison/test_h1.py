@@ -30,7 +30,8 @@ D2 = {"salmonella_enterica": 29147870, "mycobacterium_tuberculosis": 25881860, "
       "neisseria_gonorrhoeae": 12750902}
 
 # base.SpecTests' stub grm with two changes: `grm arm` writes a complete arm output (its one plan tagged with
-# STUB_PLAN_TAG; with STUB_ARM_FAILS set it fails before writing it) and records each call in WORK/arm-calls.txt;
+# STUB_PLAN_TAG; with STUB_ARM_FAILS set it fails before writing it, and the arm STUB_ARM_SHORT names ends with grm's
+# class-minimum refusal) and records each call in WORK/arm-calls.txt;
 # with STUB_RECOUNT set, `grm count` replaces every kset already in the root, as a recount would.
 STUB_GRM = base.SpecTests.STUB_GRM.replace(
     """    (out / "seen.json").write_text(json.dumps({"plans_present": (out / "plans").exists()}))
@@ -38,6 +39,8 @@ STUB_GRM = base.SpecTests.STUB_GRM.replace(
     """    (out / "seen.json").write_text(json.dumps({"plans_present": (out / "plans").exists()}))
     if os.environ.get("STUB_ARM_FAILS"):
         sys.exit(5)
+    if os.environ.get("STUB_ARM_SHORT") == argv[argv.index("--arm") + 1]:
+        sys.exit("Error: " + argv[argv.index("--dataset") + 1] + " is short of its class minimum")
     (out / "plans").mkdir(exist_ok=True)
     (out / "plans" / "lineage-0.json").write_text(json.dumps({"tag": os.environ.get("STUB_PLAN_TAG", "")}))
     (out / "runs.json").write_text("[]")
@@ -523,6 +526,62 @@ class ResumeTests(Stub):
         self.assertIn(f"{arm} is a symlink", str(e.exception))
         self.assertEqual(list((arm.parent / "elsewhere").iterdir()), [])
 
+    def test_a_cohort_arm_short_of_a_class_minimum_is_unavailable_and_the_run_goes_on(self):
+        """Layth's ruling on H-1's pilot applied to a cohort arm (NG-1's grr-v1 on cefixime, 2026-11-09): grm arm's
+        class-minimum refusal of cap-10 leaves cap-10 unavailable on DS, every run with the reason and nothing the
+        refused call wrote, and the record resumes."""
+        os.environ["STUB_ARM_SHORT"] = "cap-10"
+        err = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(err):
+                ran, r = self.run_arms()
+        finally:
+            del os.environ["STUB_ARM_SHORT"]
+        self.assertEqual(ran, ["default"])
+        out = self.out("cap-10")
+        self.assertEqual(sorted(p.name for p in out.iterdir()),
+                         sorted(["arm.json", "predictions.jsonl", "runs.json", run.RESUME]))
+        reason = (f"short_of_class_minimum: arm cap-10's cohort (10 genomes) leaves {DS} with fewer than "
+                  f"{r.arms['cap-10']['min_class']} genomes in a class, so grm arm refused it")
+        runs = json.loads((out / "runs.json").read_text())
+        self.assertEqual(sorted((u["learner"], u["split"]) for u in runs),
+                         sorted((learner, split) for learner in run.LEARNERS for split in run.SPLITS))
+        self.assertEqual({(u["arm"], u["dataset"], u["status"], u["reason"], u["fit_count"]) for u in runs},
+                         {("cap-10", DS, "unavailable", reason, 0)})
+        self.assertEqual(json.loads((out / "arm.json").read_text())["short_of_class_minimum"], reason)
+        self.assertEqual((out / "predictions.jsonl").read_text(), "")
+        self.assertIn(f"SHORT COHORT: {reason}; its contrasts on {DS} are not produced and the run goes on",
+                      err.getvalue())
+        self.assertEqual(self.run_arms()[0], [])
+
+    def test_the_default_s_class_minimum_refusal_still_stops_the_run(self):
+        """The default's cohort is the one every contrast rests on, so its refusal stops the run with no record."""
+        os.environ["STUB_ARM_SHORT"] = "default"
+        try:
+            with self.assertRaises(RuntimeError):
+                self.run_arms()
+        finally:
+            del os.environ["STUB_ARM_SHORT"]
+        self.assertFalse((self.out("default") / run.RESUME).exists())
+        self.assertFalse(self.out("cap-10").exists())
+
+    def test_only_grm_s_own_refusal_of_a_cohort_arm_counts_as_short(self):
+        """refused_as_short reads the call's last log line, and only for an arm that changes the cohort."""
+        r = self.runner()
+        log = self.tmp / "arm.log"
+        refusal = f"Error: {DS} is short of its class minimum"
+        cap10, k21 = r.arms["cap-10"], r.arms["k21"]
+        self.assertFalse(r.refused_as_short(cap10, DS, log), "no log")
+        for text, arm, want in ((f"grm arm ...\n{refusal}\n", cap10, True),
+                                (f"{refusal}\nError: a later failure\n", cap10, False),
+                                (f"grm arm ...\n{refusal.replace(DS, DS + '_x')}\n", cap10, False),
+                                (f"grm arm ...\nError: {DS} has no curated dataset\n", cap10, False),
+                                ("", cap10, False),
+                                (f"{refusal}\n", r.default, False),
+                                (f"{refusal}\n", k21, False)):
+            log.write_text(text)
+            self.assertEqual(r.refused_as_short(arm, DS, log), want, (text, arm["name"]))
+
     def test_a_linked_output_is_never_resumed(self):
         self.run_arms()
         out = self.out("cap-10")
@@ -554,6 +613,230 @@ def fake_part(top, name, spec, datasets, raw=None, **changes):
                         ("summary.json", json.dumps(summary)), (run.RAW_MANIFEST, text)):
         (work / path).write_text(value)
     return work
+
+
+SENTINEL_NAMES = [s["name"] for s in run.SENTINELS]
+
+
+def arm_folder(out, name, ds, record, plans=None):
+    """A finished arm folder as a run leaves it: runs.json, arm.json, predictions.jsonl, `plans` (name -> text) under
+    plans/, and resume.json with `record` and every file's sha256."""
+    out.mkdir(parents=True)
+    for f, text in (("runs.json", "[]"), ("arm.json", "{}"), ("predictions.jsonl", f'{{"arm": "{name}"}}\n')):
+        (out / f).write_text(text)
+    for p, text in (plans or {}).items():
+        (out / "plans").mkdir(exist_ok=True)
+        (out / "plans" / p).write_text(text)
+    outputs = {str(p.relative_to(out)): run.file_sha256(p) for p in sorted(out.rglob("*")) if p.is_file()}
+    (out / run.RESUME).write_text(run.canonical({"arm": name, "dataset": ds, "trace_training": False,
+                                                 "run_identical_cohorts": False, **record, "outputs": outputs}))
+
+
+class ReferenceTests(Stub):
+    """G2(b): a k add-on (--reference-from) takes a finished run's default arm, sentinels and grouping, checked and
+    copied, and runs only its k arms, with no species pool; a reference run that differs in what the add-on would
+    rest on refuses before anything is counted."""
+
+    def setUp(self):
+        super().setUp()
+        self.full = json.loads(self.spec_path().read_text())   # default cap 20; cap-10, cap-30 and k21
+        self.addon_spec = self.tmp / "addon.json"
+        self.addon_spec.write_text(json.dumps({**self.full, "arms": [{"name": "k21", "k": 21}]}))
+        self.ref = self.reference(self.tmp / "main")
+
+    def reference(self, work, arms=None, raw="", inputs=None, manifest=None, summary=None, trace=False, spec=None):
+        """A finished run of the full spec without k21 (or with `arms`, and `spec`'s changes) on DS, as `combine`
+        takes a part: its records and the default's, cap arms' and sentinels' outputs, the default with one plan."""
+        spec = {**self.full, "arms": arms if arms is not None else [a for a in self.full["arms"] if a["name"] != "k21"],
+                **(spec or {})}
+        (work / "k").mkdir(parents=True)
+        ins = {"raw_manifest_sha256": run.sha256_bytes(raw.encode()), "raw_files": len(raw.split("\n")) if raw else 0,
+               "grm_sha256": run.file_sha256(self.grm), "grm": str(self.grm), "vocabulary_sha256": None,
+               **(inputs or {})}
+        man = {"protocol_sha256": run.sha256_bytes(run.canonical(spec).encode()), "source_commit": "0" * 40,
+               "binary_sha256": ins["grm_sha256"], "synthetic": True, "revision12_gate": "not_required",
+               "compute": {"actual_seconds": 1.0}, **(manifest or {})}
+        self.groups_record = {"structure": f"{work}/roots/pool/structure.json", "sha256": "f" * 64, "genomes": 30,
+                              "lineages": 3, "arms": ["default", *(a["name"] for a in spec["arms"]), *SENTINEL_NAMES]}
+        for path, value in ((run.SPEC_COPY, run.canonical(spec)), (run.INPUTS, run.canonical(ins)),
+                            ("k/manifest.json", json.dumps(man)), ("species-groups.json", run.canonical(self.groups_record)),
+                            ("summary.json", json.dumps({"eligible_genomes": 50, "panel_floor": 2001, "seconds": 1.0,
+                                                         **(summary or {})})),
+                            (run.RAW_MANIFEST, raw)):
+            (work / path).write_text(value)
+        record = {"inputs_sha256": run.file_sha256(work / run.INPUTS), "spec_sha256": man["protocol_sha256"],
+                  "trace_training": trace}
+        arm_folder(work / "arms" / "default" / DS, "default", DS, record, {"lineage-0.json": '{"tag": "main"}'})
+        for name in [a["name"] for a in spec["arms"]] + SENTINEL_NAMES:
+            arm_folder(work / "arms" / name / DS, name, DS, record)
+        return work
+
+    def addon(self, *flags, spec=None, ref=None):
+        """run.main of the add-on with the stub grm and J and K left out; returns the refusal, or None."""
+        def report_run(*args):
+            return {"arms": {}, "no_decision_datasets": [], "refused_plans": []}
+        argv = [str(spec or self.addon_spec), "--raw", str(self.tmp / "raw"), "--work", str(self.tmp / "work"),
+                "--grm", str(self.grm), "--source-commit", "0" * 40, "--below-panel-floor", "--free-disk-bytes",
+                str(10 ** 15), "--reference-from", str(ref or self.ref), *flags]
+        with mock.patch.object(run, "report_run", report_run), contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
+            try:
+                run.main(argv)
+            except SystemExit as e:
+                return str(e.code)
+        return None
+
+    def work(self, *parts):
+        return self.tmp.joinpath("work", *parts)
+
+    def calls(self):
+        p = self.work("arm-calls.txt")
+        return p.read_text().split() if p.exists() else []
+
+    def test_the_add_on_takes_the_default_and_sentinels_and_runs_only_its_k_arm(self):
+        self.assertIsNone(self.addon())
+        self.assertEqual(self.calls(), ["k21"])
+        for name in ["default", *SENTINEL_NAMES]:
+            self.assertTrue(run.same_folder(self.work("arms", name, DS), self.ref / "arms" / name / DS), name)
+        # No species pool and no k31 root: only the k21 root is counted.
+        counted = self.work("counted.txt").read_text().splitlines()
+        self.assertEqual([c.split()[0] for c in counted], ["count", "structure", "matrix"])
+        self.assertIn("--k 21", counted[0])
+        self.assertEqual([p.name for p in self.work("roots").glob("pool-*")], [])
+        disk = json.loads(self.work("disk-estimate.json").read_text())
+        self.assertEqual((disk["pool_bytes"], [r["k"] for r in disk["roots"].values()]), (0, [21]))
+        ref = json.loads(self.work(run.REFERENCE).read_text())
+        self.assertEqual({k: ref[k] for k in ("work", "spec_sha256", "inputs_sha256", "species_groups")},
+                         {"work": str(self.ref.resolve()), "spec_sha256": run.sha256_bytes(
+                             (self.ref / run.SPEC_COPY).read_bytes()),
+                          "inputs_sha256": run.file_sha256(self.ref / run.INPUTS), "species_groups": self.groups_record})
+        self.assertEqual(sorted(ref["taken"]), sorted(f"{n}/{DS}" for n in ["default", *SENTINEL_NAMES]))
+        self.assertEqual(json.loads(self.work("species-groups.json").read_text()), self.groups_record)
+        k21 = json.loads(self.work("arms", "k21", DS, run.RESUME).read_text())
+        self.assertEqual((k21["groups_sha256"], k21["reference_plans"]),
+                         ("f" * 64, {"lineage-0.json": run.file_sha256(self.ref / "arms/default" / DS / "plans/lineage-0.json")}))
+        self.assertEqual(k21["spec_sha256"], run.sha256_bytes(run.canonical(json.loads(self.addon_spec.read_text())).encode()))
+        self.assertEqual(json.loads(self.work("summary.json").read_text())["reference_from"], ref)
+
+    def test_a_rerun_resumes_the_k_arm_on_a_fresh_copy(self):
+        self.assertIsNone(self.addon())
+        (self.work("arms", "default", DS, "predictions.jsonl")).write_text("damaged copy\n")
+        self.assertIsNone(self.addon())
+        self.assertEqual(self.calls(), ["k21"])
+        self.assertTrue(run.same_folder(self.work("arms", "default", DS), self.ref / "arms/default" / DS))
+
+    def test_estimate_only_plans_the_k_roots_alone(self):
+        disk = self.estimate("--reference-from", str(self.tmp / "not-read"), spec=self.addon_spec)
+        self.assertEqual((disk["pool_bytes"], disk["genomes"], [(r["k"], r["genomes"]) for r in disk["roots"].values()]),
+                         (0, 20, [(21, 20)]))
+
+    def test_a_reference_that_differs_refuses_before_anything_is_counted(self):
+        full = self.full
+        k21 = {"name": "k21", "k": 21}
+        other_partition = [{"id": DS, "partition": "exploratory"}]
+        cases = (
+            ("a cohort arm", {"spec": {**full, "arms": [{"name": "cap-10", "cap": 10}]}},
+             "--reference-from runs k arms only (the k add-on, G2(b)); this spec's arms change cap-10: cap"),
+            ("no arm", {"spec": {**full, "arms": []}}, "this spec's arms change nothing: it has none"),
+            ("other margin", {"spec": {**full, "arms": [k21], "margin": {"log_loss": 0.03}}},
+             "its spec differs from {spec} in margin, not only in its arms and datasets"),
+            ("other partition", {"ref": {"spec": {"datasets": other_partition}}},
+             f"did not run {DS} with this spec's partition"),
+            ("ran k21", {"ref": {"arms": full["arms"]}}, "already ran k21"),
+            ("grm", {"ref": {"inputs": {"grm_sha256": "0" * 64}}}, "ran another grm binary"),
+            ("vocabulary", {"ref": {"inputs": {"vocabulary_sha256": "d" * 64}}}, "ran another vocabulary"),
+            ("binary", {"ref": {"manifest": {"binary_sha256": "0" * 64}}},
+             "K's binary_sha256 is not the grm its inputs.json hashed"),
+            ("commit", {"ref": {"manifest": {"source_commit": "1" * 40}}}, f"ran source commit {'1' * 40}, not {'0' * 40}"),
+            ("synthetic", {"ref": {"manifest": {"synthetic": False}}}, "K's manifest records synthetic False"),
+            ("gate", {"ref": {"manifest": {"revision12_gate": "passed"}}}, "and gate passed"),
+            ("eligible", {"ref": {"summary": {"eligible_genomes": 49}}}, "counted 49 eligible genomes"),
+            ("floor", {"ref": {"summary": {"panel_floor": 7}}}, "against a floor of 7"),
+            ("protocol", {"ref": {"manifest": {"protocol_sha256": "0" * 64}}},
+             "K's manifest was not made from its spec.json"),
+            ("raw", {"raw": "bvbrc/genomes.jsonl"},
+             "1 of this run's 1 RAW files are not in its raw-manifest.txt with that size and sha256, "
+             "e.g. bvbrc/genomes.jsonl"),
+            ("trace", {"ref": {"trace": True}}, "ran with --trace-training True and --run-identical-cohorts False"),
+            ("add-on", {"mark": run.REFERENCE}, "is itself a k add-on"),
+            ("add-on by its summary", {"ref": {"summary": {"reference_from": {"work": "/elsewhere"}}}},
+             "is itself a k add-on"),
+            ("damaged", {"damage": "default"}, f"arm default on {DS}: predictions.jsonl changed after the arm finished"),
+            ("missing sentinel", {"drop": "sentinel-seed-twin"}, f"has no output of arm sentinel-seed-twin on {DS}"),
+            ("unfinished", {"drop_file": "summary.json"}, "no readable summary.json"),
+        )
+        for label, case, message in cases:
+            with self.subTest(label):
+                shutil.rmtree(self.tmp / "work", ignore_errors=True)
+                shutil.rmtree(self.tmp / "raw", ignore_errors=True)
+                ref = self.reference(self.tmp / f"ref-{label.replace(' ', '-')}", **case.get("ref", {}))
+                spec = None
+                if "spec" in case:
+                    spec = self.tmp / f"addon-{label.replace(' ', '-')}.json"
+                    spec.write_text(json.dumps(case["spec"]))
+                if "raw" in case:
+                    (self.tmp / "raw" / "bvbrc").mkdir(parents=True)
+                    (self.tmp / "raw" / case["raw"]).write_text("{}\n")
+                if "mark" in case:
+                    (ref / case["mark"]).write_text("{}")
+                if "damage" in case:
+                    (ref / "arms" / case["damage"] / DS / "predictions.jsonl").write_text("")
+                if "drop" in case:
+                    shutil.rmtree(ref / "arms" / case["drop"])
+                if "drop_file" in case:
+                    (ref / case["drop_file"]).unlink()
+                code = self.addon(spec=spec, ref=ref)
+                self.assertIsNotNone(code)
+                self.assertIn(message.format(spec=spec), code)
+                self.assertFalse(self.work("counted.txt").exists(), code)
+                self.assertEqual(self.calls(), [], code)
+
+    def test_a_k_arm_whose_cohort_is_not_the_default_s_refuses(self):
+        """A k arm's cohort is the default's (load_spec lets a k arm change nothing else); one that held another would
+        change the union the reference run's grouping was made from."""
+        real = run.Runner.genome_set
+
+        def genome_set(runner, arm):
+            s = real(runner, arm)
+            return s - {sorted(s)[0]} if arm["name"] == "k21" else s
+        with mock.patch.object(run.Runner, "genome_set", genome_set):
+            code = self.addon()
+        self.assertIn("arm k21's cohort is not the default's, so it would change the union the grouping of "
+                      f"--reference-from {self.ref} was made from", code)
+        self.assertFalse(self.work("counted.txt").exists(), code)
+        self.assertEqual(self.calls(), [])
+
+    def test_a_copy_that_differs_from_the_reference_refuses(self):
+        """Each copied folder is checked against its source after the copy, byte for byte."""
+        real = shutil.copytree
+
+        def copytree(src, dst, *args, **kw):   # shutil's own recursion calls it too
+            out = real(src, dst, *args, **kw)
+            if Path(src).parent.name == "default":
+                (Path(dst) / "predictions.jsonl").write_text("changed in the copy\n")
+            return out
+        with mock.patch.object(run.shutil, "copytree", copytree):
+            code = self.addon()
+        self.assertIn(f"the copy of arm default on {DS} from {self.ref} differs from it, or one of them holds a link",
+                      code)
+        self.assertEqual(self.calls(), [])
+
+    def test_a_reference_arm_folder_holding_a_link_refuses(self):
+        """A link in the reference run's arm folder refuses before the copy, as `combine` refuses a part's."""
+        (self.tmp / "target.txt").write_text("x")
+        (self.ref / "arms" / "default" / DS / "extra").symlink_to(self.tmp / "target.txt")
+        code = self.addon()
+        self.assertIn(f"part {self.ref}: arm default on {DS}: its folder holds a symlink", code)
+        self.assertEqual(self.calls(), [])
+
+    def test_a_linked_copy_destination_refuses(self):
+        """The copy never writes through a link in the add-on's WORK."""
+        (self.tmp / "elsewhere").mkdir()
+        self.work("arms").mkdir(parents=True)
+        self.work("arms", "default").symlink_to(self.tmp / "elsewhere", target_is_directory=True)
+        code = self.addon()
+        self.assertIn("is a symlink", code)
+        self.assertEqual(list((self.tmp / "elsewhere").iterdir()), [])
 
 
 class CombineRefusalTests(unittest.TestCase):
@@ -610,10 +893,18 @@ class CombineRefusalTests(unittest.TestCase):
     def test_a_part_spec_may_differ_only_in_its_datasets(self):
         a = self.part("a", [self.A])
         for changes, key in (({"margin": {"log_loss": 0.03}}, "margin"), ({"seed": 1}, "seed"),
-                             ({"arms": SPEC["arms"][:-1]}, "arms"), ({"species": "other"}, "species")):
+                             ({"species": "other"}, "species")):
             b = self.part(f"b-{key}", [self.B], spec_changes=changes)
             self.assertEqual(self.combine(a, b), f"part {b}: its spec differs from {self.tmp / 'spec.json'} in {key}, "
                                                  "not only in its datasets")
+        # G2(b): a part may leave out k arms only, and keeps SPEC's order and statement of the rest.
+        for label, arms in (("budget-16000 left out", SPEC["arms"][:-1]), ("reordered", SPEC["arms"][::-1]),
+                            ("restated", [*SPEC["arms"][:-1], {"name": "budget-16000", "screened_features": 8000}]),
+                            ("extra", [*SPEC["arms"], {"name": "cap-500", "cap": 500}])):
+            b = self.part(f"b-{label.replace(' ', '-')}", [self.B], spec_changes={"arms": arms})
+            self.assertEqual(self.combine(a, b), f"part {b}: its spec differs from {self.tmp / 'spec.json'} in arms, "
+                                                 "not only in its datasets (a part may leave out only k arms, which a "
+                                                 "k add-on part runs)", label)
         b = self.part("b-k", [self.B], manifest={"protocol_sha256": "0" * 64})
         self.assertEqual(self.combine(a, b), f"part {b}: K's manifest was not made from its spec.json")
 
@@ -630,8 +921,11 @@ class CombineRefusalTests(unittest.TestCase):
                 ("eligible", {"summary": {"eligible_genomes": 49}}, "eligible genomes")):
             b = self.part(f"b-{name}", [self.B], **changes)
             self.assertIn(f"the parts differ in {label}", self.combine(a, b), name)
-        # The pool's path may differ (another WORK); its content may not.
+        # The pool's path may differ (another WORK), and so may its arm list (a main part without the k arms); its
+        # grouping may not.
         b = self.part("b-path", [self.B], groups={"structure": "/elsewhere/structure.json"})
+        self.assertIn("has no output of arm default", self.combine(a, b))
+        b = self.part("b-arms", [self.B], groups={"arms": ["default", "cap-1000"]})
         self.assertIn("has no output of arm default", self.combine(a, b))
         b = self.part("b-binary", [self.B], manifest={"binary_sha256": "0" * 64})
         c = self.part("c-binary", [self.A], manifest={"binary_sha256": "0" * 64})
@@ -756,6 +1050,146 @@ class CombineRefusalTests(unittest.TestCase):
         self.arm_outputs(b, [self.B], run_identical_cohorts=True)
         self.assertEqual(self.reaches_the_report(a, b), "REPORT REACHED")
 
+    # G2(b): main parts that leave out k21 and k25, and k add-on parts that ran them against a main part.
+    K_ARMS = ("k21", "k25")
+
+    def main_part(self, name, datasets, **changes):
+        """A main part without k21 and k25, whose species-groups.json lists its own arms, as its run writes it."""
+        arms = [x for x in SPEC["arms"] if x["name"] not in self.K_ARMS]
+        own = {"arms": ["default", *(x["name"] for x in arms), *SENTINEL_NAMES]}
+        return self.part(name, datasets, spec_changes={"arms": arms, **changes.pop("spec_changes", {})},
+                         groups={**own, **changes.pop("groups", {})}, **changes)
+
+    def addon_part(self, name, datasets, main, k=K_ARMS, arms=None, reference=None, **changes):
+        """A k add-on part of `k` (or `arms` as stated) on `datasets`, with the reference.json a run with
+        --reference-from `main` writes."""
+        stated = arms if arms is not None else [x for x in SPEC["arms"] if x["name"] in k]
+        # The add-on's species-groups.json is its main part's (take_reference).
+        groups = {**json.loads((main / "species-groups.json").read_text()), **changes.pop("groups", {})}
+        work = self.part(name, datasets, spec_changes={"arms": stated}, groups=groups, **changes)
+        man = json.loads((main / "k" / "manifest.json").read_text())
+        record = {"work": str(main), "spec_sha256": man["protocol_sha256"],
+                  "inputs_sha256": run.file_sha256(main / run.INPUTS),
+                  "species_groups": json.loads((main / "species-groups.json").read_text()), "taken": {}}
+        (work / run.REFERENCE).write_text(reference if isinstance(reference, str) else
+                                          run.canonical({**record, **(reference or {})}))
+        return work
+
+    def outputs(self, work, names, datasets, plans=None, **record):
+        """`names`' finished arm folders on `datasets`, made from WORK's inputs.json and spec (`record` overrides)."""
+        man = json.loads((work / "k" / "manifest.json").read_text())
+        rec = {"inputs_sha256": run.file_sha256(work / run.INPUTS), "spec_sha256": man["protocol_sha256"], **record}
+        for name in names:
+            for ds in datasets:
+                arm_folder(work / "arms" / name / ds, name, ds, rec, plans if name == run.DEFAULT_ARM else None)
+
+    def finish_main(self, work, datasets):
+        names = [x["name"] for x in json.loads((work / run.SPEC_COPY).read_text())["arms"]]
+        self.outputs(work, [run.DEFAULT_ARM, *names, *SENTINEL_NAMES], datasets, plans={"lineage-0.json": '{"m": 1}'})
+
+    def finish_addon(self, work, main, datasets, plans=None):
+        """The add-on's copies of `main`'s default and sentinels, and its k arms scored on `main`'s default plans
+        (or `plans`)."""
+        for ds in datasets:
+            for name in (run.DEFAULT_ARM, *SENTINEL_NAMES):
+                shutil.copytree(main / "arms" / name / ds, work / "arms" / name / ds)
+            ref = plans if plans is not None else {p.name: run.file_sha256(p) for p in
+                                                   sorted((main / "arms" / run.DEFAULT_ARM / ds / "plans").glob("*.json"))}
+            names = [x["name"] for x in json.loads((work / run.SPEC_COPY).read_text())["arms"]]
+            self.outputs(work, names, [ds], reference_plans=ref)
+
+    def addon_set(self):
+        """Main parts a (A) and b (B) without k21 and k25; add-on ka runs both on A against a, kb21 and kb25 one
+        each on B against b; all finished."""
+        a, b = self.main_part("a", [self.A]), self.main_part("b", [self.B])
+        self.finish_main(a, [self.A])
+        self.finish_main(b, [self.B])
+        ka = self.addon_part("ka", [self.A], a)
+        kb21, kb25 = self.addon_part("kb21", [self.B], b, k=("k21",)), self.addon_part("kb25", [self.B], b, k=("k25",))
+        self.finish_addon(ka, a, [self.A])
+        self.finish_addon(kb21, b, [self.B])
+        self.finish_addon(kb25, b, [self.B])
+        return a, b, ka, kb21, kb25
+
+    def test_k_add_on_parts_complete_main_parts(self):
+        a, b, ka, kb21, kb25 = self.addon_set()
+        self.assertEqual(self.reaches_the_report(a, b, ka, kb21, kb25), "REPORT REACHED")
+        self.assertEqual(self.reaches_the_report(kb25, ka, b, kb21, a), "REPORT REACHED")
+        spec = self.tmp / "spec.json"
+        self.assertEqual(self.combine(a, b, ka), f"no part holds arm k21 on {self.B}, k25 on {self.B} of {spec}")
+        self.assertEqual(self.combine(a, b, ka, kb21), f"no part holds arm k25 on {self.B} of {spec}")
+        self.assertEqual(self.combine(a, b), f"no part holds arm k21 on {self.A}, k25 on {self.A}, k21 on {self.B}, "
+                                             f"k25 on {self.B} of {spec}")
+        # An add-on alone holds no dataset: its datasets belong to the main part it ran against.
+        self.assertEqual(self.combine(ka, kb21, kb25), f"no part holds {self.A}, {self.B} of {spec}")
+
+    def test_an_arm_on_a_dataset_is_in_one_part(self):
+        a, b, ka, kb21, kb25 = self.addon_set()
+        ka21 = self.addon_part("ka21", [self.A], a, k=("k21",))
+        self.assertEqual(self.combine(a, b, ka, kb21, kb25, ka21), f"arm k21 on {self.A} is in two parts: {ka} and {ka21}")
+        whole_a = self.part("whole-a", [self.A], groups={"arms": ["default", *(x["name"] for x in SPEC["arms"]),
+                                                                 *SENTINEL_NAMES]})   # it ran k21 and k25 itself
+        self.assertEqual(self.combine(whole_a, b, ka, kb21, kb25), f"arm k21 on {self.A} is in two parts: {whole_a} and {ka}")
+
+    def test_an_add_on_holds_only_k_arms_as_spec_states_them(self):
+        a, b, ka, kb21, kb25 = self.addon_set()
+        spec = self.tmp / "spec.json"
+        for label, arms, names in (("cohort arm", [{"name": "cap-1000", "cap": 1000}], "cap-1000"),
+                                   ("restated", [{"name": "k21", "k": 23}], "k21"), ("none", [], "none"),
+                                   ("twice", [{"name": "k21", "k": 21}] * 2, "k21, k21")):
+            x = self.addon_part(f"x-{label}", [self.A], a, arms=arms)
+            self.assertEqual(self.combine(a, b, x, kb21, kb25), f"part {x}: a k add-on part (--reference-from) holds "
+                                                                f"only k arms of {spec} as it states them, not {names}",
+                             label)
+
+    def test_an_add_on_names_the_main_part_that_holds_its_datasets(self):
+        a, b, ka, kb21, kb25 = self.addon_set()
+        both = self.addon_part("both", [self.A, self.B], a, k=("k21",))
+        ka25 = self.addon_part("ka25", [self.A], a, k=("k25",))
+        self.assertEqual(self.combine(a, b, both, ka25, kb25),
+                         f"part {both}: a k add-on part takes its datasets from one run, not 2")
+        for label, ref in (("other run", {"spec_sha256": json.loads((b / "k/manifest.json").read_text())["protocol_sha256"],
+                                          "inputs_sha256": run.file_sha256(b / run.INPUTS)}),
+                           ("other inputs", {"inputs_sha256": "0" * 64}), ("no record", {"spec_sha256": None})):
+            x = self.addon_part(f"x-{label.replace(' ', '-')}", [self.A], a, reference=ref)
+            self.assertEqual(self.combine(a, b, x, kb21, kb25), f"part {x}: its reference.json names another run than "
+                                                                f"{a}, the part that holds its datasets", label)
+        x = self.addon_part("x-list", [self.A], a, reference="[]")
+        self.assertEqual(self.combine(a, b, x, kb21, kb25), f"part {x}: reference.json is not a reference record")
+        x = self.addon_part("x-pool", [self.A], a, groups={"sha256": "0" * 64})
+        self.assertIn("the parts differ in the species pool", self.combine(a, b, x, kb21, kb25))
+
+    def test_an_add_on_ran_against_its_main_part_s_default_arm(self):
+        a, b, ka, kb21, kb25 = self.addon_set()
+        default = ka / "arms" / run.DEFAULT_ARM / self.A
+        for label, damage in (
+                ("predictions", lambda: (default / "predictions.jsonl").write_text("")),
+                ("plan", lambda: (default / "plans" / "lineage-0.json").write_text('{"m": 2}')),
+                ("extra file", lambda: (default / "extra.json").write_text("{}")),
+                # the same bytes, through a link to the main part's file
+                ("file linked", lambda: ((default / "predictions.jsonl").unlink(), (default / "predictions.jsonl")
+                                         .symlink_to(a / "arms" / run.DEFAULT_ARM / self.A / "predictions.jsonl"))),
+                ("sentinel gone", lambda: shutil.rmtree(ka / "arms" / "sentinel-tuning-twin" / self.A)),
+                ("linked", lambda: (shutil.rmtree(default), default.symlink_to(a / "arms" / run.DEFAULT_ARM / self.A,
+                                                                               target_is_directory=True)))):
+            shutil.rmtree(ka / "arms")
+            self.finish_addon(ka, a, [self.A])
+            damage()
+            name = "sentinel-tuning-twin" if label == "sentinel gone" else run.DEFAULT_ARM
+            self.assertEqual(self.reaches_the_report(a, b, ka, kb21, kb25),
+                             f"part {ka}: arm {name} on {self.A} is not the copy of {a}'s it ran against", label)
+        shutil.rmtree(ka / "arms")
+        self.finish_addon(ka, a, [self.A], plans={"lineage-0.json": "0" * 64})
+        self.assertEqual(self.reaches_the_report(a, b, ka, kb21, kb25),
+                         f"part {ka}: arm k21 on {self.A} was scored on other reference plans than the default arm "
+                         f"of {a}")
+        # Its own k arms are checked as any part's.
+        shutil.rmtree(ka / "arms")
+        self.finish_addon(ka, a, [self.A])
+        (ka / "arms" / "k25" / self.A / "predictions.jsonl").write_text("")
+        self.assertEqual(self.reaches_the_report(a, b, ka, kb21, kb25),
+                         f"part {ka}: arm k25 on {self.A}: predictions.jsonl changed after the arm finished")
+
     def test_out_must_be_new_or_empty_and_parts_finished(self):
         a, b = self.part("a", [self.A]), self.part("b", [self.B])
         (self.tmp / "full" / "x").mkdir(parents=True)
@@ -765,8 +1199,14 @@ class CombineRefusalTests(unittest.TestCase):
 
 
 class H1SpecTests(unittest.TestCase):
-    """G10: scripts/input-comparison/h1/ holds the pilot (D1) and the four species' stage-1 specs with the Salmonella
-    parts; each is spec.json with only its species, datasets, kset size (D2) and arms (no k arm, M-2) changed."""
+    """G10: scripts/input-comparison/h1/ holds the pilot (D1), the four species' stage-1 specs with all of spec.json's
+    arms (Layth lifted register section 13 G2 on 8 Nov 2026), and the parts each runs as: main parts with every arm but
+    k21 and k25, and one k add-on part (G2(b)) per main part and k arm. Each is spec.json with only its species,
+    datasets, kset size (D2) and arms changed."""
+
+    K_ARMS = ("k21", "k25")
+    MAIN_PARTS = {"salmonella_enterica": 2, "mycobacterium_tuberculosis": 1, "staphylococcus_aureus": 1,
+                  "neisseria_gonorrhoeae": 1}
 
     H1 = HERE / "h1"
     COUNTS = {"salmonella_enterica": 25, "mycobacterium_tuberculosis": 22, "staphylococcus_aureus": 18,
@@ -789,10 +1229,11 @@ class H1SpecTests(unittest.TestCase):
                              name)
             self.load(name)
 
-    def test_the_folder_holds_the_pilot_the_four_species_and_the_salmonella_parts(self):
-        self.assertEqual(sorted(self.specs()), sorted(
-            ["pilot.json", "h1-salmonella_enterica-part1.json", "h1-salmonella_enterica-part2.json",
-             *(f"h1-{s}.json" for s in self.COUNTS)]))
+    def test_the_folder_holds_the_pilot_the_four_species_and_their_parts(self):
+        parts = [f"h1-{s}-part{n}{k}.json" for s, m in self.MAIN_PARTS.items() for n in range(1, m + 1)
+                 for k in ("", *(f"-{k}" for k in self.K_ARMS))]
+        self.assertEqual(len(parts), 15)
+        self.assertEqual(sorted(self.specs()), sorted(["pilot.json", *(f"h1-{s}.json" for s in self.COUNTS), *parts]))
 
     def test_each_spec_changes_only_its_species_datasets_kset_size_and_arms(self):
         for name, s in self.specs().items():
@@ -805,12 +1246,12 @@ class H1SpecTests(unittest.TestCase):
             self.assertEqual(s["pool_budget"]["default_kset_bytes"], D2[s["species"]], name)
             self.assertIn(f"{D2[s['species']]:,} B per genome", s["pool_budget"]["reason"], name)
             self.assertIn("M-2", s["decisions"], name)
+            self.assertIn("Layth lifted register section 13 G2 on 8 Nov 2026", s["decisions"], name)
+            self.assertNotIn("left out", s["decisions"], name)
             self.assertNotIn("synthetic", s, name)
-            for arm in s["arms"]:
-                self.assertIn(arm, SPEC["arms"], name)
+            self.assertEqual(s["arms"], [a for a in SPEC["arms"] if a in s["arms"]], name)
             _, default, arms = self.load(name)
             self.assertEqual(default["k"], 31)
-            self.assertFalse([a["name"] for a in arms if a["factor"] == "k"], name)
             self.assertEqual([a["name"] for a in arms if a.get("sentinel")], [x["name"] for x in run.SENTINELS])
             for d in s["datasets"]:
                 self.assertEqual(d["partition"], "confirmatory", (name, d))
@@ -843,11 +1284,62 @@ class H1SpecTests(unittest.TestCase):
             self.assertIn("c2e7c389779e6aa009800a9d327a3b036a14a01153429c62b51cdd7b66c942ef", g["recorded"]["note"], name)
             self.assertNotIn("4af81f94", g["recorded"]["note"], name)
 
-    def test_stage_1_runs_spec_json_s_arms_without_k21_and_k25(self):
-        want = [a for a in SPEC["arms"] if a["name"] not in ("k21", "k25")]
+    def test_stage_1_runs_all_of_spec_json_s_arms(self):
         for species, n in self.COUNTS.items():
             s = self.specs()[f"h1-{species}.json"]
-            self.assertEqual((s["species"], len(s["datasets"]), s["arms"]), (species, n, want), species)
+            self.assertEqual((s["species"], len(s["datasets"]), s["arms"]), (species, n, SPEC["arms"]), species)
+            self.assertEqual(len(s["arms"]), 11)
+
+    def test_each_species_parts_are_main_parts_and_k_add_ons_that_combine_takes(self):
+        """The main parts split the species' datasets and run every arm but k21 and k25; each main part has one k
+        add-on part per k arm on its datasets. Fed to `check_parts` as finished parts, they pass every check up to
+        the master manifest, which this machine doesn't hold."""
+        specs = self.specs()
+        for species, m in self.MAIN_PARTS.items():
+            full_name = f"h1-{species}.json"
+            full = specs[full_name]
+            with self.subTest(species), tempfile.TemporaryDirectory() as tmp:
+                parts, mains = [], {}
+                for n in range(1, m + 1):
+                    for k in ("", *self.K_ARMS):
+                        name = f"h1-{species}-part{n}{'-' + k if k else ''}.json"
+                        s = specs[name]
+                        self.assertEqual({x: v for x, v in s.items() if x not in ("arms", "datasets")},
+                                         {x: v for x, v in full.items() if x not in ("arms", "datasets")}, name)
+                        if k:
+                            self.assertEqual(s["arms"], [a for a in SPEC["arms"] if a["name"] == k], name)
+                            self.assertEqual(s["datasets"], mains[n]["spec"]["datasets"], name)
+                            _, _, arms = self.load(name)
+                            self.assertEqual({a["factor"] for a in arms if not a.get("sentinel")}, {"k"}, name)
+                        else:
+                            self.assertEqual(s["arms"], [a for a in SPEC["arms"] if a["name"] not in self.K_ARMS],
+                                             name)
+                        work = Path(tmp) / name
+                        work.mkdir()
+                        (work / run.INPUTS).write_text("{}")
+                        protocol = run.sha256_bytes(run.canonical(s).encode())
+                        part = {"work": work, "spec": s, "raw": [],
+                                "inputs": {"grm_sha256": "c" * 64, "vocabulary_sha256": "d" * 64},
+                                "manifest": {"protocol_sha256": protocol, "source_commit": "e" * 40,
+                                             "binary_sha256": "c" * 64, "synthetic": False,
+                                             "revision12_gate": "passed"},
+                                "groups": {"sha256": "f" * 64}, "summary": {"eligible_genomes": 5000,
+                                                                          "panel_floor": 2001},
+                                "reference": None if not k else {
+                                    "spec_sha256": mains[n]["manifest"]["protocol_sha256"],
+                                    "inputs_sha256": run.file_sha256(mains[n]["work"] / run.INPUTS)}}
+                        if not k:
+                            mains[n] = part
+                        parts.append(part)
+                ids = [d["id"] for n in mains for d in mains[n]["spec"]["datasets"]]
+                self.assertEqual(sorted(ids), sorted(d["id"] for d in full["datasets"]))
+                _, _, arms = self.load(full_name)
+                master = Path(tmp) / "MASTER.sha256"
+                master.write_text("")
+                with self.assertRaises(SystemExit) as e:
+                    run.check_parts(self.H1 / full_name, full, arms, parts, master)
+                self.assertIn(f"master manifest {master} is {run.file_sha256(master)}, not the "
+                              f"{full['data_root']['manifest_sha256']}", str(e.exception))
 
     def test_the_salmonella_parts_split_its_datasets_13_and_12(self):
         specs = self.specs()
@@ -858,8 +1350,8 @@ class H1SpecTests(unittest.TestCase):
         self.assertEqual(sorted(ids), sorted(d["id"] for d in full["datasets"]))
         self.assertEqual(len(set(ids)), len(ids))
         for p in parts:
-            self.assertEqual({k: v for k, v in p.items() if k != "datasets"},
-                             {k: v for k, v in full.items() if k != "datasets"})
+            self.assertEqual({k: v for k, v in p.items() if k not in ("datasets", "arms")},
+                             {k: v for k, v in full.items() if k not in ("datasets", "arms")})
 
     def test_the_pilot_is_d1_s(self):
         s = self.specs()["pilot.json"]
@@ -868,7 +1360,7 @@ class H1SpecTests(unittest.TestCase):
                                                    "partition": "confirmatory"}]))
         _, _, arms = self.load("pilot.json")
         self.assertEqual([(a["name"], a["factor"]) for a in arms],
-                         [("grr-v1", "selection"), ("k-c-h-p", "blocks"), ("budget-16000", "budget"),
+                         [("grr-v1", "selection"), ("k21", "k"), ("k-c-h-p", "blocks"), ("budget-16000", "budget"),
                           ("sentinel-seed-twin", "calibration"), ("sentinel-tuning-twin", "calibration")])
         full = self.specs()["h1-salmonella_enterica.json"]
         self.assertEqual(s["pool_budget"], full["pool_budget"])
@@ -921,8 +1413,10 @@ def master_manifest(raw, path):
 @unittest.skipUnless(os.environ.get("GRM_INPUT_E2E_BINARY"), "set GRM_INPUT_E2E_BINARY to a grm release binary")
 class CombineEndToEndTests(unittest.TestCase):
     """G2 on a synthetic root with two datasets (meropenem and, with --second-drug, ciprofloxacin): the comparison
-    run whole, and run as two parts of one dataset each, through the real grm; combine of the parts must give the
-    whole run's J records and K report, after timings."""
+    run whole, and run as parts through the real grm: part1 runs every arm on meropenem; part2 runs every arm but
+    k21 on ciprofloxacin, and part2-k21, a k add-on (G2(b)), runs k21 on ciprofloxacin against part2's default arm.
+    Combine of the three must give the whole run's J records and K report, after timings. part2 goes first, so the
+    pool's arm list in K's manifest and summary.json must come from SPEC, not from the first part's."""
 
     DATASETS = (DS, "salmonella_enterica__ciprofloxacin")
 
@@ -930,6 +1424,9 @@ class CombineEndToEndTests(unittest.TestCase):
     def setUpClass(cls):
         out = os.environ.get("GRM_INPUT_E2E_OUT")
         cls.tmp = None if out else tempfile.TemporaryDirectory()
+        if cls.tmp:
+            # A class cleanup also runs when setUpClass fails, which tearDownClass does not.
+            cls.addClassCleanup(cls.tmp.cleanup)
         cls.out = Path(out or cls.tmp.name) / "combine"
         shutil.rmtree(cls.out, ignore_errors=True)
         cls.out.mkdir(parents=True)
@@ -942,7 +1439,7 @@ class CombineEndToEndTests(unittest.TestCase):
         spec["pool_budget"]["default_kset_bytes"] = 2 ** 20
         # Block C's salmonella_qrdr assay calls on both drugs' genomes; H has no ciprofloxacin panel, so k-h's
         # ciprofloxacin contrasts would not be produced.
-        spec["arms"] = [{"name": "cap-600", "cap": 600}, {"name": "k-c", "blocks": ["K", "C"]}]
+        spec["arms"] = [{"name": "cap-600", "cap": 600}, {"name": "k-c", "blocks": ["K", "C"]}, {"name": "k21", "k": 21}]
         spec["datasets"] = [{"id": d, "partition": "confirmatory"} for d in cls.DATASETS]
         # The parts' RAW is this root, and combine takes only the master manifest the spec pins (REVIEW-H1CODE L6).
         cls.master = master_manifest(cls.raw, cls.out / "MASTER.sha256")
@@ -951,22 +1448,27 @@ class CombineEndToEndTests(unittest.TestCase):
         cls.spec = cls.out / "spec.json"
         cls.spec.write_text(json.dumps(spec, indent=1))
         cls.parts = []
-        for i, d in enumerate(cls.DATASETS, 1):
-            path = cls.out / f"part{i}.json"
-            path.write_text(json.dumps({**spec, "datasets": [{"id": d, "partition": "confirmatory"}]}, indent=1))
+        k21 = [a for a in spec["arms"] if a["name"] == "k21"]
+        for i, (d, arms) in enumerate(((cls.DATASETS[0], spec["arms"]),
+                                       (cls.DATASETS[1], [a for a in spec["arms"] if a["name"] != "k21"]),
+                                       (cls.DATASETS[1], k21))):
+            path = cls.out / ("part2-k21.json" if i == 2 else f"part{i + 1}.json")
+            path.write_text(json.dumps({**spec, "arms": arms, "datasets": [{"id": d, "partition": "confirmatory"}]},
+                                       indent=1))
             cls.parts.append(path)
         cls.whole = cls.run_spec(cls.spec, "whole")
-        cls.works = [cls.run_spec(p, p.stem) for p in cls.parts]
+        cls.works = [cls.run_spec(p, p.stem) for p in cls.parts[:2]]
+        cls.addon = cls.run_spec(cls.parts[2], cls.parts[2].stem, "--reference-from", str(cls.works[1]))
         cls.combined = cls.out / "combined"
-        cls.combine(cls.combined, *cls.works)
+        cls.combine(cls.combined, cls.works[1], cls.addon, cls.works[0])
 
     @classmethod
-    def run_spec(cls, spec, name):
+    def run_spec(cls, spec, name, *flags):
         work = cls.out / name
         subprocess.run([sys.executable, "-B", str(HERE / "run.py"), str(spec), "--raw", str(cls.raw), "--work",
                         str(work), "--grm", os.environ["GRM_INPUT_E2E_BINARY"], "--source-commit", "0" * 40,
                         "--jobs", os.environ.get("GRM_INPUT_E2E_JOBS", "3"), "--below-panel-floor",
-                        "--sigdrug-vocabulary", str(cls.raw / "vocabulary")], check=True)
+                        "--sigdrug-vocabulary", str(cls.raw / "vocabulary"), *flags], check=True)
         return work
 
     @classmethod
@@ -977,22 +1479,39 @@ class CombineEndToEndTests(unittest.TestCase):
             argv += ["--work-from", str(w)]
         subprocess.run(argv, check=True)
 
-    @classmethod
-    def tearDownClass(cls):
-        if cls.tmp:
-            cls.tmp.cleanup()
-
     def test_both_datasets_are_decided_and_each_part_ran_one(self):
         report = json.loads((self.combined / "report" / "ablation-report.json").read_text())
-        # 2 datasets, 2 arms and the two sentinels.
-        self.assertEqual(report["contrast_counts"]["planned"], 2 * 4 * 5 * 2)
+        # 2 datasets, 3 arms and the two sentinels.
+        self.assertEqual(report["contrast_counts"]["planned"], 2 * 5 * 5 * 2)
         self.assertEqual(report["contrast_counts"]["not_produced"], 0, report["not_produced"])
-        for work, d in zip(self.works, self.DATASETS):
+        for work, d in zip((*self.works, self.addon), (*self.DATASETS, self.DATASETS[1])):
             self.assertEqual(sorted(p.name for p in (work / "arms" / "default").iterdir()), [d])
-        groups = [json.loads((w / "species-groups.json").read_text()) for w in (self.whole, *self.works)]
+        groups = [json.loads((w / "species-groups.json").read_text()) for w in (self.whole, *self.works, self.addon)]
         self.assertEqual(len({g["sha256"] for g in groups}), 1)
 
-    def test_two_parts_combined_equal_the_whole_run(self):
+    def test_the_k_add_on_ran_k21_alone_on_part2_s_default_arm(self):
+        """G2(b): the add-on counted no species pool and ran neither the default arm nor the sentinels: it took
+        part2's, byte for byte, and its k21 output is the whole run's."""
+        part2, addon, d = self.works[1], self.addon, self.DATASETS[1]
+        self.assertEqual(sorted(p.name for p in (addon / "arms").iterdir()),
+                         sorted(["default", "k21", *SENTINEL_NAMES]))
+        for name in ("default", *SENTINEL_NAMES):
+            self.assertTrue(run.same_folder(addon / "arms" / name / d, part2 / "arms" / name / d), name)
+        self.assertEqual([p.name for p in (addon / "roots").glob("pool-*")], [])
+        self.assertTrue(any((part2 / "roots").glob("pool-*")))
+        self.assertEqual(json.loads((addon / "disk-estimate.json").read_text())["pool_bytes"], 0)
+        ref = json.loads((addon / run.REFERENCE).read_text())
+        self.assertEqual(ref["work"], str(part2.resolve()))
+        self.assertEqual(json.loads((addon / "summary.json").read_text())["reference_from"], ref)
+        k21 = json.loads((addon / "arms" / "k21" / d / run.RESUME).read_text())
+        self.assertEqual(k21["groups_sha256"], json.loads((part2 / "species-groups.json").read_text())["sha256"])
+        whole = json.loads((self.whole / "arms" / "k21" / d / run.RESUME).read_text())
+        self.assertEqual(k21["reference_plans"], whole["reference_plans"])
+        self.assertEqual(k21["groups_sha256"], whole["groups_sha256"])
+        self.assertEqual((addon / "arms" / "k21" / d / "predictions.jsonl").read_bytes(),
+                         (self.whole / "arms" / "k21" / d / "predictions.jsonl").read_bytes())
+
+    def test_the_parts_and_the_k_add_on_combined_equal_the_whole_run(self):
         whole, combined = timeless(self.whole), timeless(self.combined)
         for name, data in whole["j"].items():
             self.assertEqual(combined["j"][name], data, name)
@@ -1002,10 +1521,21 @@ class CombineEndToEndTests(unittest.TestCase):
         for path in sorted((self.whole / "arms").rglob("predictions.jsonl")):
             self.assertEqual((self.combined / path.relative_to(self.whole)).read_bytes(), path.read_bytes(), path)
         record = json.loads((self.combined / "combine.json").read_text())
-        self.assertEqual([p["datasets"] for p in record["parts"]], [[d] for d in self.DATASETS])
+        # combine's order: part2, its add-on (both ciprofloxacin), then part1 (meropenem)
+        self.assertEqual([p["datasets"] for p in record["parts"]],
+                         [[self.DATASETS[1]], [self.DATASETS[1]], [self.DATASETS[0]]])
+        self.assertEqual([p["arms"] for p in record["parts"]],
+                         [["default", "cap-600", "k-c", *SENTINEL_NAMES], ["k21"],
+                          ["default", "cap-600", "k-c", "k21", *SENTINEL_NAMES]])
+        self.assertEqual([p["reference"] and p["reference"]["work"] for p in record["parts"]],
+                         [None, str(self.works[1].resolve()), None])
         self.assertEqual(record["spec_sha256"], whole["manifest"]["protocol_sha256"])
-        self.assertEqual(json.loads((self.combined / "summary.json").read_text())["arms"],
-                         json.loads((self.whole / "summary.json").read_text())["arms"])
+        summary, whole_summary = (json.loads((w / "summary.json").read_text()) for w in (self.combined, self.whole))
+        self.assertEqual(summary["arms"], whole_summary["arms"])
+        # The first part left k21 out, so its own species-groups.json lists fewer arms than the pool was made over.
+        self.assertNotIn("k21", json.loads((self.works[1] / "species-groups.json").read_text())["arms"])
+        self.assertEqual({k: v for k, v in summary["species_groups"].items() if k != "structure"},
+                         {k: v for k, v in whole_summary["species_groups"].items() if k != "structure"})
 
     def test_a_single_work_combined_equals_itself(self):
         """H1-PLAN §7 acceptance 11: combine of a species' single WORK reproduces its own J and K."""
