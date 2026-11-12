@@ -1,6 +1,6 @@
 // What GRM found: a five-step primer for a reader new to the terms, then the
-// report in eight numbered sections. The data behind the reports, then the
-// six findings Present shares, each with its lead, a figure, a caption that
+// report in nine numbered sections. The data behind the reports, then the
+// seven findings Present shares, each with its lead, a figure, a caption that
 // says what a mark is, and short notes on coverage in view; last, the limits
 // every number shares. The panel section also holds every panel result;
 // /tests lands on it through the #panels anchor.
@@ -87,8 +87,8 @@ const Limits = ({ n, manifest, nav }: { n: number; manifest: Manifest; nav: Navi
       </SectionHeading>
       <ul className="prose-measure mt-3 list-disc space-y-2 pl-5 text-body text-ink">
         <li>
-          Every number here is internal cross-validation on public BV-BRC genomes: learners train on part of the genomes and are scored on the rest, against the resistant and
-          susceptible calls BV-BRC reports.
+          Every number here, except those on newly deposited genomes, is internal cross-validation on public BV-BRC genomes: learners train on part of the genomes and are scored on the
+          rest, against the resistant and susceptible calls BV-BRC reports.
         </li>
         <li>
           {capped
@@ -96,8 +96,8 @@ const Limits = ({ n, manifest, nav }: { n: number; manifest: Manifest; nav: Navi
             : "The genomes are a selection, reduced where genomes failed QC or had no FASTA file."}
         </li>
         <li>
-          No external, prospective, or clinical validation has been done: no test on another lab&apos;s genomes, on newly collected isolates or in a clinical study.{" "}
-          {AUDIT_READING}
+          No external, prospective, or clinical validation has been done: no test on another lab&apos;s genomes, on newly collected isolates or in a clinical study. The newly
+          deposited genomes come from the same database as the cohorts, so that test is not external validation either. {AUDIT_READING}
         </li>
       </ul>
       <p className="mt-3 text-control">

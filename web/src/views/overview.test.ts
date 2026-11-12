@@ -218,7 +218,7 @@ const framed = (section: Element, label: string) => section.querySelector(`[role
 const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
 
 describe("What GRM found", () => {
-  it("reads as a report: a plain title, what the site asks, a plain status line, the primer, and eight numbered sections", async () => {
+  it("reads as a report: a plain title, what the site asks, a plain status line, the primer, and nine numbered sections", async () => {
     const host = await mount(passing, fakeNav().nav);
     expect(host.querySelector("h1")?.textContent).toBe("What GRM found");
     // The question comes in words before any chart.
@@ -233,7 +233,8 @@ describe("What GRM found", () => {
       "5 Known-gene rules against learners",
       "6 Simulated PCR panel",
       "7 Predicting the drug level that stops growth (MIC)",
-      "8 Limits",
+      "8 Newly deposited genomes",
+      "9 Limits",
     ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
     expect(scope?.textContent).toBe("Tested within one public database only");
@@ -361,6 +362,41 @@ describe("What GRM found", () => {
     const inGroups = [...groups.querySelectorAll("tbody tr")].map((tr) => Number(tr.children[1]?.textContent));
     expect(inGroups.reduce((a, b) => a + b, 0)).toBe(base.datasets.filter((d) => d.catalog !== null).length);
     expect(catalog.textContent).toContain("A rule that calls every genome one way scores exactly 50%, a coin toss, so the first group ends just above that, at 55%.");
+  });
+
+  it("reads the outside-study test with its limits, each population apart", async () => {
+    const host = await mount(base, fakeNav().nav);
+    const outside = host.querySelector("#outside")!;
+    const text = outside.textContent ?? "";
+    expect(outside.querySelector("h2 + p")?.textContent).toBe(
+      "Each report's final model was run, unchanged, on genomes newly added to the same public database. On 7,258 genomes from studies the cohorts do not hold, the set covering machine's sensitivity and specificity both hold on 32 of 81 datasets. On 3,155 new genomes from studies the cohorts already hold, they hold on 36 of 49.",
+    );
+    expect([...outside.querySelectorAll("h3")].map((h) => h.textContent)).toEqual([
+      "Genomes from studies the cohorts do not hold: 81 datasets",
+      "New genomes from studies the cohorts already hold: 49 datasets",
+    ]);
+    expect(text).toContain("so it is not an untouched held-out set. It is not external validation.");
+    expect(text).toContain("they were set side by side only after both results were read, so the page draws them apart and does not compare them.");
+    expect(text).toContain("sensitivity reads above the report on 36 of the 81 datasets and below it on 27. Specificity reads below on 35 datasets and above on 25. Only specificity reads below on 22 datasets, only sensitivity on 14, and both on 13.");
+    expect(text).toContain("One study holds at least half of the resistant genomes on 69 of the 82 datasets in the first group.");
+    expect(text).toContain("The second has 3,155 genomes on 49 datasets in 6 species, and 3,144 of its genomes were scored.");
+    expect(text).toContain("the lasso's included, is from the revision 12 reports");
+    expect(text).toContain("It does not say why, and it names no gene as a cause. It makes no claim that a model works, or fails, in a clinical lab.");
+    const table = framed(outside, "Datasets where each learner's figures hold");
+    expect([...table.querySelectorAll("tbody tr")].map((tr) => [...tr.children].map((c) => c.textContent))).toEqual([
+      ["Genomes from studies the cohorts do not hold"],
+      ["Set covering machine", "32", "81"],
+      ["Decision tree (CART)", "23", "81"],
+      ["L1 logistic regression (lasso)", "7", "25"],
+      ["Known-gene rule", "39", "74"],
+      ["New genomes from studies the cohorts already hold"],
+      ["Set covering machine", "36", "49"],
+      ["Decision tree (CART)", "31", "49"],
+      ["L1 logistic regression (lasso)", "9", "15"],
+      ["Known-gene rule", "30", "49"],
+    ]);
+    // No cause, gene or validation claim.
+    expect(text).not.toMatch(/validated|mechanism/i);
   });
 
   it("ends with the limits and a link to the audit in Methods", async () => {

@@ -187,6 +187,9 @@ const layout = ({ height, tall = false }: { height: number; tall?: boolean }) =>
 };
 
 describe("continuation slides", () => {
+  // At 300px the outside-study figure cannot draw both populations at its
+  // smallest plot, so it also takes two slides: one more slide in the deck.
+  const SPLIT = DECK + 2;
   let restore: (() => void) | null = null;
   afterEach(() => {
     restore?.();
@@ -218,7 +221,7 @@ describe("continuation slides", () => {
     ] as const) {
       const n = panelAt + page;
       while (!status().startsWith(`Slide ${n} `)) await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
-      expect(status()).toBe(`Slide ${n} of ${DECK + 1}: Simulated PCR panel (${page} of 2)`);
+      expect(status()).toBe(`Slide ${n} of ${SPLIT}: Simulated PCR panel (${page} of 2)`);
       const section = dialog.querySelector("main section")!;
       const ids = [...section.querySelectorAll("[data-dataset]")].map((g) => g.getAttribute("data-dataset")!);
       expect(ids).toHaveLength(last - first + 1);
@@ -233,7 +236,8 @@ describe("continuation slides", () => {
     const labels = [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent ?? "").filter((t) => /^\d+ · /.test(t));
     expect(labels).toContain(`${panelAt + 1} · Simulated PCR panel (1 of 2)`);
     expect(labels).toContain(`${panelAt + 2} · Simulated PCR panel (2 of 2)`);
-    expect(labels).toHaveLength(DECK + 1);
+    expect(labels).toHaveLength(SPLIT);
+    expect(labels.filter((t) => t.includes("Newly deposited genomes"))).toEqual([expect.stringContaining("(1 of 2)"), expect.stringContaining("(2 of 2)")]);
   });
 
   it("moves the rule's sequence onto its own slide only when the two do not fit together", async () => {
@@ -245,14 +249,14 @@ describe("continuation slides", () => {
     const { dialog, status } = await open();
     await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
     if (context === "") {
-      expect(status()).toContain(`Slide ${DECK} of ${DECK}: One rule a person can read`);
+      expect(status()).toContain(`Slide ${SPLIT - 1} of ${SPLIT - 1}: One rule a person can read`);
       return;
     }
-    expect(status()).toBe(`Slide ${DECK + 1} of ${DECK + 1}: One rule a person can read (2 of 2)`);
+    expect(status()).toBe(`Slide ${SPLIT} of ${SPLIT}: One rule a person can read (2 of 2)`);
     expect(dialog.querySelector("main section .seq")).not.toBeNull();
     expect(dialog.querySelector("main section")?.textContent).not.toContain("Resistant isolates carrying it");
     await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
-    expect(status()).toBe(`Slide ${DECK} of ${DECK + 1}: One rule a person can read (1 of 2)`);
+    expect(status()).toBe(`Slide ${SPLIT - 1} of ${SPLIT}: One rule a person can read (1 of 2)`);
     expect(dialog.querySelector("main section .seq")).toBeNull();
     expect(dialog.querySelector("main section")?.textContent).toContain("Resistant isolates carrying it");
     expect(dialog.querySelector("main section")?.textContent).toContain("The rule's sequence follows on the next slide.");

@@ -1,7 +1,8 @@
 // The report's findings, shared by Overview and Present: the data behind the
 // reports, what holding out whole lineages costs, the five learners side by
 // side, the two error rates against the test-device bars, GRM's known-gene
-// rules, the lead PCR panel, and MIC prediction. Each is a plain title, a
+// rules, the lead PCR panel, MIC prediction, and the reports' models on newly
+// deposited genomes. Each is a plain title, a
 // lead with its count and denominator, a figure that shows that number, and
 // a caption that says what a mark is; the page adds short notes on coverage,
 // visible inline. Every number comes from data/derive at render time.
@@ -46,11 +47,13 @@ import { catalogWords } from "../app/ReportStatus";
 import { AxisX, LABEL_CLASS, linear, MarkListbox, PlacedText, placeLabels, RefLine, ticks, useWidth, type ListMark } from "../charts/kit";
 import { GapSwarm, MicStrip } from "../charts/DotStrip";
 import { CatalogScatter } from "../charts/CatalogScatter";
+import { OutsideScatter, type OutsidePanel } from "../charts/OutsideScatter";
+import { OUTSIDE_LEARNERS, OUTSIDE_STUDY, outsidePoints, populationById, populationSummary, type Learner as OutsideLearner, type PopulationSummary } from "../data/derive/outside";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
-export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic";
+export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic" | "outside";
 
 /** What a deck gives a figure that may continue onto further slides: the
  *  measured box, the page to draw and the page count, and, while the deck
@@ -1111,4 +1114,113 @@ export const micFinding = (m: Manifest, opts: FindingOptions): Finding => {
   };
 };
 
-export const FINDINGS = [corpusFinding, lineageFinding, learnersFinding, barsFinding, catalogFinding, panelsFinding, micFinding] as const;
+// ---- newly deposited genomes ---------------------------------------------------------
+
+/** Each population in a reader's words: inside a sentence, and as a panel's
+ *  heading. The two are never added together. */
+const POPULATION_WORDS: Record<PopulationSummary["id"], { genomes: string; heading: string }> = {
+  primary: { genomes: "genomes from studies the cohorts do not hold", heading: "Genomes from studies the cohorts do not hold" },
+  "same-study": { genomes: "new genomes from studies the cohorts already hold", heading: "New genomes from studies the cohorts already hold" },
+};
+
+const OUTSIDE_LEARNER_NAME: Record<OutsideLearner, string> = {
+  scm: LEARNER_NAME.scm,
+  cart: LEARNER_NAME.cart,
+  lasso: `${LEARNER_NAME.lasso} (lasso)`,
+  known_gene: "Known-gene rule",
+};
+
+/** The datasets read for a learner, and where it holds, in each population. */
+const OutsideTable = ({ summaries }: { summaries: readonly PopulationSummary[] }) => (
+  <NumberTable
+    label="Datasets where each learner's figures hold"
+    head={["Learner", "Holds", "Datasets read"]}
+    groups={summaries.map((s) => ({
+      title: POPULATION_WORDS[s.id].heading,
+      rows: OUTSIDE_LEARNERS.map((l) => ({ key: `${s.id}-${l}`, name: OUTSIDE_LEARNER_NAME[l], cells: [int(s.holds[l].holds), int(s.holds[l].read)] })),
+    }))}
+  />
+);
+
+export const outsideFinding = (m: Manifest, opts: FindingOptions): Finding => {
+  const study = OUTSIDE_STUDY;
+  const primary = populationSummary(populationById("primary"));
+  const same = populationSummary(populationById("same-study"));
+  const level = pct(study.confidence, 0);
+  const rev = int(study.evaluation_revision);
+  const index = new Map(m.datasets.map((d) => [d.id, d]));
+  const named = new Map(study.populations.flatMap((p) => p.datasets.map((d) => [d.id, d] as const)));
+  const titleOf = (id: string) => {
+    const row = index.get(id) ?? named.get(id);
+    return row === undefined ? id : datasetTitle(row);
+  };
+  const panels: OutsidePanel[] = [primary, same].map((s) => {
+    const p = populationById(s.id);
+    const n = s.holds.scm.read;
+    return {
+      key: s.id,
+      heading: `${POPULATION_WORDS[s.id].heading}: ${plural(n, "dataset")}`,
+      name: POPULATION_WORDS[s.id].genomes,
+      points: { sensitivity: outsidePoints(p, "sensitivity"), specificity: outsidePoints(p, "specificity") },
+    };
+  });
+  const hold = (s: PopulationSummary) => `${int(s.holds.scm.holds)} of ${int(s.holds.scm.read)}`;
+  const c = primary.scm;
+  return {
+    id: "outside",
+    title: "Newly deposited genomes",
+    result: opts.page
+      ? `Each report's final model was run, unchanged, on genomes newly added to the same public database. On ${int(primary.frozen)} ${POPULATION_WORDS.primary.genomes}, the set covering machine's sensitivity and specificity both hold on ${hold(primary)} datasets. On ${int(same.frozen)} ${POPULATION_WORDS["same-study"].genomes}, they hold on ${hold(same)}.`
+      : `The set covering machine's figures hold on ${hold(primary)} datasets with ${POPULATION_WORDS.primary.genomes}, and on ${hold(same)} with ${POPULATION_WORDS["same-study"].genomes}.`,
+    figure: (fit: PagedFit) => (
+      <OutsideScatter
+        panels={panels}
+        height={fit.height}
+        titleOf={titleOf}
+        onOpen={opts.nav?.openDataset}
+        canOpen={opts.nav === undefined ? undefined : (id) => index.has(id)}
+        page={fit.page}
+        pages={fit.pages}
+        onPages={fit.onPages}
+      />
+    ),
+    caption: opts.page
+      ? `Each dot is one dataset and the set covering machine. Across is the report's figure with whole lineages held out. Up is the same model's figure on the new genomes, and the bar through the dot is its ${level} interval. A dot under the line scored lower on the new genomes than its report says. A figure reads below, and its dot is hollow, when its whole interval is under the line. A dataset holds when neither its sensitivity nor its specificity reads below.`
+      : `One dot per dataset: the report's figure with lineages held out, across, against the figure on the new genomes, up, with its ${level} interval. A hollow dot reads below: its whole interval is under the line. A retrospective test on newly deposited studies from the same database, not external validation.`,
+    note: opts.page ? (
+      <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+        <p>
+          This is a retrospective test on newly deposited studies from the same database. The batch&apos;s details and label totals were read before the rules were frozen, so it is
+          not an untouched held-out set. It is not external validation.
+        </p>
+        <p>
+          The first group has {int(primary.frozen)} genomes on {plural(primary.datasets, "dataset")} in {plural(primary.species, "species", "species")}, and {int(primary.holds.scm.read)} of the
+          datasets have a report figure to read. The second has {int(same.frozen)} genomes on {plural(same.datasets, "dataset")} in {plural(same.species, "species", "species")}, and{" "}
+          {int(same.scored)} of its genomes were scored. The two groups cover different species and datasets. The plan scores them apart, and they were set side by side only after both
+          results were read, so the page draws them apart and does not compare them.
+        </p>
+        <p>
+          The figures move both ways. For the set covering machine on the first group, sensitivity reads above the report on {int(c.sensitivityAbove)} of the {int(primary.holds.scm.read)}{" "}
+          datasets and below it on {int(c.sensitivityBelow)}. Specificity reads below on {int(c.specificityBelow)} datasets and above on {int(c.specificityAbove)}. Only specificity reads
+          below on {int(c.onlySpecificity)} datasets, only sensitivity on {int(c.onlySensitivity)}, and both on {int(c.both)}.
+        </p>
+        <p>
+          One study holds at least half of the resistant genomes on {int(primary.oneStudyHalf)} of the {int(primary.withEstimates)} datasets in the first group. A sensitivity estimate on
+          such a dataset is mostly that study&apos;s.
+        </p>
+        <OutsideTable summaries={[primary, same]} />
+        <p className="type-note">
+          A learner&apos;s report figure is its figure with whole lineages held out. The known-gene rule has no training, so its report figure is the fixed rule on the whole cohort.
+          Every report figure here, the lasso&apos;s included, is from the revision {rev} reports, the ones the test was frozen against.
+        </p>
+        <p>
+          The test shows that a figure moved. It does not say why, and it names no gene as a cause. It makes no claim that a model works, or fails, in a clinical lab.
+        </p>
+      </div>
+    ) : undefined,
+    span: "wide",
+    continues: true,
+  };
+};
+
+export const FINDINGS = [corpusFinding, lineageFinding, learnersFinding, barsFinding, catalogFinding, panelsFinding, micFinding, outsideFinding] as const;

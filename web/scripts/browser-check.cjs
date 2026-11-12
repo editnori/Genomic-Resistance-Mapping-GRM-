@@ -382,6 +382,53 @@ async function headerCheck(page, tag, title) {
   check(tag + ' plain status line with scope and report date', h.status.includes(CHIP) && h.status.includes('Report built') && !h.status.includes('BV-BRC lab records') && (bare ? h.scopeHref === null : isLimitsHref(h.scopeHref)), h);
 }
 
+// The outside-study rows the app bundles (web/src/data/outside-study.json,
+// written by scripts/outside-study-results/site_data.py), read here by the
+// documents' rule: a row holds when neither reading is "below", and a row
+// with a reading outside the three is not read.
+const OUTSIDE = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/outside-study.json')));
+const OUTSIDE_READ = ['below', 'consistent', 'above'];
+const outsideExpected = OUTSIDE.populations.map(p => {
+  const known = r => OUTSIDE_READ.includes(r.sensitivity) && OUTSIDE_READ.includes(r.specificity);
+  const scm = p.rows.filter(r => r.learner === 'scm' && known(r));
+  return { id: p.id, read: scm.length, holds: scm.filter(r => r.sensitivity !== 'below' && r.specificity !== 'below').length, genomes: p.species.reduce((a, x) => a + x.frozen, 0), below: { sensitivity: scm.filter(r => r.sensitivity === 'below').length, specificity: scm.filter(r => r.specificity === 'below').length }, above: { sensitivity: scm.filter(r => r.sensitivity === 'above').length, specificity: scm.filter(r => r.specificity === 'above').length }, ids: scm.map(r => r.dataset) };
+});
+
+/** Newly deposited genomes: the lead's two counts, one mark per set
+ *  covering machine row read in each of the four plots, hollow where it
+ *  reads below, each plot's above and below counts, and the populations in
+ *  panels of their own. A pinned mark offers Open dataset only when the
+ *  loaded index has that dataset. */
+async function outsideCheck(page, tag) {
+  const section = page.locator('#outside');
+  await section.waitFor();
+  const read = await section.evaluate(s => ({
+    lead: s.querySelector('h2 + p')?.textContent ?? '',
+    panels: [...s.querySelectorAll('h3')].map(h => h.textContent),
+    plots: [...s.querySelectorAll('[role="listbox"]')].map(l => ({ label: l.getAttribute('aria-label'), marks: [...l.querySelectorAll('[data-outside]')].map(g => [g.getAttribute('data-outside'), g.getAttribute('data-reading'), g.querySelector('circle').getAttribute('fill')]), text: [...l.querySelectorAll('svg text')].map(t => t.textContent) })),
+  }));
+  const [primary, same] = outsideExpected;
+  const fmt = n => n.toLocaleString('en-US');
+  check(tag + ' outside lead gives both populations apart', read.lead.includes(fmt(primary.genomes) + ' genomes from studies the cohorts do not hold') && read.lead.includes(primary.holds + ' of ' + primary.read + ' datasets') && read.lead.includes(fmt(same.genomes) + ' new genomes') && read.lead.includes(same.holds + ' of ' + same.read), read.lead);
+  check(tag + ' outside panels, one per population', read.panels.length === 2 && read.panels[0].endsWith(primary.read + ' datasets') && read.panels[1].endsWith(same.read + ' datasets'), read.panels);
+  const want = [[primary, 'sensitivity'], [primary, 'specificity'], [same, 'sensitivity'], [same, 'specificity']];
+  check(tag + ' outside plots: one mark per row read, hollow where it reads below, counts as the rows give', read.plots.length === 4 && want.every(([p, m], i) => {
+    const plot = read.plots[i];
+    return plot.marks.length === p.read && JSON.stringify(plot.marks.map(x => x[0]).sort()) === JSON.stringify([...p.ids].sort())
+      && plot.marks.filter(x => x[1] === 'below').length === p.below[m] && plot.marks.every(x => (x[1] === 'below') === (x[2] === 'rgb(var(--paper-pure))'))
+      && plot.text.includes(p.above[m] + ' above') && plot.text.includes(p.below[m] + ' below') && plot.label.startsWith(m.charAt(0).toUpperCase() + m.slice(1));
+  }), read.plots.map(p => ({ label: p.label, marks: p.marks.length, text: p.text.filter(t => /above|below/.test(t)) })));
+  // Pin the first mark by keyboard: Enter on the plot's listbox pins its
+  // first mark, and the strip offers Open dataset only for a dataset the
+  // index holds.
+  const first = page.locator('#outside [role="listbox"]').first();
+  await first.focus(); await page.keyboard.press('Home'); await page.keyboard.press('Enter');
+  const firstId = await first.evaluate(l => l.querySelector('[data-outside]')?.getAttribute('data-outside') ?? null);
+  const strip = await section.evaluate(s => ({ open: [...s.querySelectorAll('button')].some(b => b.textContent === 'Open dataset'), clear: [...s.querySelectorAll('button')].some(b => b.getAttribute('aria-label') === 'Clear the pinned mark') }));
+  check(tag + ' outside pinned mark opens its dataset only where the index has it', strip.clear && strip.open === byId.has(firstId), { firstId, inIndex: byId.has(firstId), ...strip });
+  await page.keyboard.press('Escape');
+}
+
 const scrollTo = async (page, selector) => {
   await page.locator(selector).evaluate(e => e.scrollIntoView({ block: 'start' }));
   await settle(page);
@@ -1125,11 +1172,11 @@ async function interactions(page, tag, width) {
   const barTiles = await page.evaluate(() => [...document.querySelectorAll('#bars ol li')].map(li => ({ value: Number(li.firstElementChild.textContent.replace(/,/g, '')), unit: li.lastElementChild.textContent })));
   // A tree with no dataset to count draws no tiles.
   check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
-  // The primer is a section of its own above the eight numbered ones, under
+  // The primer is a section of its own above the nine numbered ones, under
   // the same hairline.
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
   const numbered = rules.filter(r => r.id !== 'primer');
-  check(tag + ' one hairline between findings', numbered.length === 8 && rules.length === 9 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
+  check(tag + ' one hairline between findings', numbered.length === 9 && rules.length === 10 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
   await headerCheck(page, tag + ' overview', 'What GRM found');
@@ -1139,7 +1186,8 @@ async function interactions(page, tag, width) {
   const marks = await page.evaluate(() => { const c = document.querySelector('#lineage svg circle[data-dataset]'); return c ? getComputedStyle(c).fill : null; });
   const blue = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--series-s'); document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
   check(tag + ' chart marks in the blue series', marks === blue, { marks, blue });
-  for (const id of ['lineage', 'learners', 'bars', 'catalog', 'panels', 'mic']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
+  for (const id of ['lineage', 'learners', 'bars', 'catalog', 'panels', 'mic', 'outside']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
+  await outsideCheck(page, tag);
 
   const micId = expected.mic[0].id;
   const micReport = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'datasets', micId + '.json')));
@@ -1228,12 +1276,12 @@ async function present(page, tag, width, height) {
   await settle(page);
   await slideSelect.click();
   let slideCount = 0, previousCount = -1, stableCounts = 0;
-  // Title, five primer steps, seven findings, the rule: fourteen slides, plus
+  // Title, five primer steps, eight findings, the rule: fifteen slides, plus
   // the extra pages of any figure too dense for the viewport (the outline
   // labels each page "(k of n)"). Which figures continue depends on the
   // viewport and on the report's row counts, so the count is checked
   // against the labels the deck shows.
-  const BASE_SLIDES = 14;
+  const BASE_SLIDES = 15;
   for (let attempt = 0; attempt < 200; attempt++) {
     slideCount = await dialog.getByRole('option').count();
     if (slideCount === previousCount) stableCounts++;
@@ -1305,6 +1353,13 @@ async function present(page, tag, width, height) {
       const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);
+    }
+    if (title === 'Newly deposited genomes') {
+      // Both populations on one slide, or one on each page of two, never
+      // pooled: each plot draws one population's rows on one measure.
+      const plots = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section [role="listbox"]')].map(l => l.querySelectorAll('[data-outside]').length));
+      const shown = paged === null ? outsideExpected : [outsideExpected[Number(paged[1]) - 1]];
+      check(tag + ' slide ' + (slide + 1) + ' outside marks by population', JSON.stringify(plots) === JSON.stringify(shown.flatMap(p => [p.read, p.read])), { plots, page: paged?.[0] ?? null });
     }
     const beats = await dialog.locator('[data-beats] span').evaluateAll(es => es.map(e => getComputedStyle(e).backgroundColor));
     const frameLabel = await slideSelect.textContent();

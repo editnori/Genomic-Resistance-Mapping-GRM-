@@ -37,6 +37,14 @@ describe("methods in plain words", () => {
     expect(steps[4]!.textContent).toContain("a VME of at most 1.5% and an ME of at most 3%");
   });
 
+  it("gives the outside-study test an entry that names its documents and links its Overview section", () => {
+    const part = el.querySelector("#m-outside")!;
+    expect(part.querySelector("h3")?.textContent).toBe("Newly deposited genomes");
+    expect(part.textContent).toContain("so it is a retrospective test and not external validation.");
+    expect([...part.querySelectorAll("code")].map((c) => c.textContent)).toEqual(["docs/outside-study-test.md", "docs/outside-study-results.md"]);
+    expect(part.querySelector("a")?.getAttribute("href")).toBe("/#outside");
+  });
+
   it("starts every definition with a plain line before its technical detail", () => {
     const defs = [...el.querySelectorAll("dl > div")];
     expect(defs.length).toBeGreaterThanOrEqual(19);

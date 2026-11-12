@@ -21,7 +21,8 @@ import { FOCUS_RING, PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitive
 import { ViewHeader } from "../ui/ViewHeader";
 import { AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { YearColumns } from "../charts/YearColumns";
-import { minimumSentence, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK } from "./findings";
+import { LINK, minimumSentence, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK } from "./findings";
+import { routeHref } from "../app/router";
 
 /** The anchors other views link to. */
 export const METHODS_ANCHORS = { funnel: "m-funnel", audit: "m-audit", limits: "m-limits" } as const;
@@ -397,6 +398,25 @@ const Sources = ({ corpus }: { corpus: Corpus }) => {
   );
 };
 
+/** Where a test beyond the reports is written up: its section on the
+ *  Overview, and its documents in the GRM repository, named by path. */
+const DocNote = ({ href, section, plan, results }: { href: string; section: string; plan: string; results?: string }) => (
+  <p className="prose-measure text-note text-ink">
+    The result is in{" "}
+    <a href={href} className={LINK}>
+      {section}
+    </a>{" "}
+    on the Overview. {results === undefined ? "The write-up is" : "The plan is"} <code className="font-mono text-[0.92em]">{plan}</code>
+    {results === undefined ? null : (
+      <>
+        {" "}
+        and the results are <code className="font-mono text-[0.92em]">{results}</code>
+      </>
+    )}{" "}
+    in the GRM repository.
+  </p>
+);
+
 const NO_SCOPE = "Internal cross-validation against reported lab calls; not external or clinical validation.";
 
 const Scope = ({ manifest }: { manifest: Manifest }) => {
@@ -452,6 +472,14 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
         {corpus.status === "loading" ? <PanelState kind="loading" title="Loading the corpus file" /> : null}
         {corpus.status === "error" ? <PanelState kind="error" title="The corpus file could not be read" message={loadErrorText(corpus.error)} /> : null}
         {corpus.status === "ready" ? <Sources corpus={corpus.data} /> : null}
+      </Part>
+      <Part id="m-outside" title="Newly deposited genomes">
+        <P>
+          Each report&apos;s final model was also run, unchanged, on genomes newly added to the same database: genomes from studies the cohorts do not hold, and new genomes from
+          studies they already hold. The two groups are scored apart. The batch&apos;s details and label totals were read before the test&apos;s rules were frozen, and the genomes
+          come from the same database, so it is a retrospective test and not external validation.
+        </P>
+        <DocNote href={`${routeHref({ view: "overview", species: null, dataset: null })}#outside`} section="Newly deposited genomes" plan="docs/outside-study-test.md" results="docs/outside-study-results.md" />
       </Part>
       <Part title="Learner cross-check">
         <P>
