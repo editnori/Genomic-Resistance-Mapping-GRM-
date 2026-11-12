@@ -85,16 +85,18 @@ causal_supported come only from named manual annotations with evidence reference
 8. A log-loss improves can come from better calibration or less overfitting, not only from better \
 discrimination. The AUROC delta printed beside each log-loss decision is the discrimination change; it is \
 descriptive only and decides nothing.
-9. Random-split contrasts are descriptive only (family D, no p, no direction). With five outer folds a \
-fold-aware test cannot reach p < 0.05, and the cluster-level test is anti-conservative on this split: in GRM's \
-calibration over 20 seeds, a learner-seed twin of the default was non-inconclusive for gbt in 9 of 20 on the \
-random split, against 1 of 20 for gbt and 0 of 40 for rf on the lineage split (1.0% improves and 0.0% worse \
-over its lineage contrasts; 2.0% and 3.0% over both splits). Decisions come from the lineage split only.
-10. A sentinel arm, the learner-seed twin of the default, is exchangeable with it. When its lineage-split \
-contrast for a learner is anything but inconclusive, or was not produced, every decision of that learner on \
-that species is marked unreliable: kept and listed, but left out of every summary of decisions. The sentinel \
-probes only the learners that draw randomness, rf and gbt; scm, cart and the lasso draw nothing, so their twin \
-contrast is zero by construction. The input comparison sorts every arm's genomes by id, which removes \
+9. Random-split contrasts are descriptive only (family D, no p, no direction), and the input comparison scores \
+the random split once. Decisions come from the lineage split only. In the input comparison the unit of a \
+contrast is the (repeat, outer fold) refit (unit repeat_fold, a paired t over the unit means of 3 keyed lineage \
+repeats): one pair of fitted models scores every lineage of an outer fold, so a test over lineage clusters \
+treats dependent clusters as independent and is anti-conservative for learners whose fits vary (VERIFY-H1STATS: \
+gbt's learner-seed twin rejected in 26 to 46% of seeds).
+10. A sentinel arm is exchangeable with the default: the learner-seed twin judges rf and gbt, and the retuned \
+twin, which redraws every outer fold's inner folds and tuning holdouts, judges scm, cart and the lasso, which \
+draw no other randomness. When a sentinel's lineage-split contrast for a learner it judges is anything but \
+inconclusive on its own p (it is outside the BH family), or was not produced, every decision of that learner on \
+that species is marked unreliable: kept and listed, but left out of every summary of decisions. The input \
+comparison sorts every arm's genomes by id, which removes \
 genome-order effects only between arms with equal genome sets. It keys every fold on genome identity, through \
 the default's cohort and one grouping of the species' eligible genomes that every arm splits on, so a genome both \
 arms hold is scored only in its default outer fold and has the default's inner fold and holdout memberships in \
@@ -143,12 +145,31 @@ def _check_records(contrasts, pooled, features, planned, planned_pooled, not_pro
     c.done()
 
 
-def _check_adjustment(c, contrasts, pooled, planned, planned_pooled):
+def unadjusted_ids(manifest, planned):
+    """The planned family C ids judged on their own p, outside BH: every sentinel arm's, when the manifest says
+    "sentinel_adjust": "none" (main's ruling 3 after VERIFY-H1STATS)."""
+    if manifest.get("sentinel_adjust") != "none":
+        return set()
+    sentinels = set(manifest.get("sentinel_arms", []))
+    out = set()
+    for pid in planned:
+        parts = schema.parse_key(schema.contrast_key(pid))
+        if parts["family"] == "C" and parts["treatment"] in sentinels:
+            out.add(pid)
+    return out
+
+
+def _check_adjustment(c, contrasts, pooled, planned, planned_pooled, unadjusted=frozenset()):
     """Section 17: recompute p_adj in families A to C from every planned hypothesis of the family,
-    Holm in A and B and BH in C, with a missing or undefined hypothesis at p = 1."""
+    Holm in A and B and BH in C, with a missing or undefined hypothesis at p = 1. The `unadjusted`
+    ids (sentinels) are out of BH with adjust none; no other family C record is."""
     by_name = {x["id"]: (f"contrasts[{i}]", x) for i, x in enumerate(contrasts)}
     by_name.update({p["contrast"]: (f"pooled[{j}]", p) for j, p in enumerate(pooled)})
-    family_of = {pid: schema.parse_key(schema.contrast_key(pid))["family"] for pid in planned}
+    for i, x in enumerate(contrasts):
+        if x["family"] == "C" and (x["adjust"] == "none") != (x["id"] in unadjusted):
+            c.fail(f"contrasts[{i}].adjust", "a sentinel contrast is judged on its own p (adjust none) when the "
+                                             "manifest says sentinel_adjust none; every other family C contrast is bh")
+    family_of = {pid: schema.parse_key(schema.contrast_key(pid))["family"] for pid in planned if pid not in unadjusted}
     family_of.update({key: schema.parse_key(key)["family"] for key in planned_pooled})
     for family in schema.CONFIRMATORY_FAMILIES:
         method = schema.FAMILY_ADJUST[family]
@@ -290,7 +311,7 @@ def _check_links(manifest, contrasts, pooled, features, planned, planned_pooled,
         for b in f["blocks"]:
             if b not in blocks:
                 c.fail(f"features[{i}].blocks", f"unknown block {b}")
-    _check_adjustment(c, contrasts, pooled, planned, planned_pooled)
+    _check_adjustment(c, contrasts, pooled, planned, planned_pooled, unadjusted_ids(manifest, planned))
     c.done()
     return missing, pooled_missing
 
@@ -698,20 +719,21 @@ def _design(x):
             f"{_md(x['endpoint'])}")
 
 
-RANDOM_SPLIT_SENTENCE = ("Descriptive only, with no p and no direction: with five outer folds a fold-aware test "
-                         "cannot reach p < 0.05, and the cluster-level test is anti-conservative on this split "
-                         "(a learner-seed twin's gbt came out non-inconclusive in 9 of 20 seeds).")
-UNRELIABLE_SENTENCE = ("The learner-seed sentinel, which is exchangeable with its baseline, was not inconclusive "
-                       "on the lineage split, so every decision of these learners on these species is unreliable: "
-                       "kept below and flagged, and left out of every summary of decisions.")
+RANDOM_SPLIT_SENTENCE = ("Descriptive only, with no p and no direction: decisions come from the lineage split, "
+                         "and the input comparison scores the random split once.")
+UNRELIABLE_SENTENCE = ("The sentinel judging these learners, which is exchangeable with its baseline, was not "
+                       "inconclusive on the lineage split, so every decision of these learners on these species is "
+                       "unreliable: kept below and flagged, and left out of every summary of decisions.")
 
 
 def _unreliable(manifest, contrasts, planned, missing):
     """Each (species, learner) a sentinel arm flags, with the sentinel contrast, the reason and the
-    contrasts it makes unreliable (rule 10)."""
+    contrasts it makes unreliable (rule 10). With `sentinel_learners`, a sentinel judges only the learners
+    it names."""
     sentinels = set(manifest.get("sentinel_arms", []))
     if not sentinels:
         return []
+    judges = manifest.get("sentinel_learners")
     species = {d["id"]: d["species"] for d in manifest["datasets"]}
     by_id = {x["id"]: x for x in contrasts}
     absent = {m["id"]: m["reason"] for m in missing}
@@ -719,7 +741,8 @@ def _unreliable(manifest, contrasts, planned, missing):
     for pid in planned:
         parts = schema.parse_key(schema.contrast_key(pid))
         if (parts["treatment"] not in sentinels or parts["split"] != schema.SENTINEL_SPLIT
-                or parts["endpoint"] != schema.PRIMARY_CONTRAST_ENDPOINT):
+                or parts["endpoint"] != schema.PRIMARY_CONTRAST_ENDPOINT
+                or judges is not None and parts["learner"] not in judges.get(parts["treatment"], ())):
             continue
         x = by_id.get(pid)
         if x is None:

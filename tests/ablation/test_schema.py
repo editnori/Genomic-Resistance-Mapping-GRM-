@@ -369,11 +369,15 @@ class NullShapeCases(unittest.TestCase):
             schema.validate_contrast(good_contrast(**{**UNDEFINED, "decision": "equivalent"}))
 
     def test_ci_method_is_an_exact_token(self):
-        """Sections 10 and 12 (closes L3): equality against exactly cluster_jackknife_t and none."""
-        self.assertEqual(schema.CI_METHODS, ("cluster_jackknife_t", "none"))
+        """Sections 10 and 12 (closes L3): equality against exactly cluster_jackknife_t, the input comparison's
+        repeat_fold_corrected_t (main's rulings after VERIFY-H1STATS and the failed calibration) and none."""
+        self.assertEqual(schema.CI_METHODS, ("cluster_jackknife_t", "repeat_fold_t", "repeat_fold_corrected_t", "none"))
         for method in schema.CI_METHODS:
             schema.validate_contrast(good_contrast(**{**UNDEFINED, "ci_method": method}))
         schema.validate_contrast(good_contrast(ci_method="cluster_jackknife_t"))
+        schema.validate_contrast(good_contrast(ci_method="repeat_fold_corrected_t", unit="repeat_fold", few_clusters=False))
+        with self.assertRaisesRegex(SchemaError, "few_clusters: must be n_units < 20, and false on unit repeat_fold"):
+            schema.validate_contrast(good_contrast(ci_method="repeat_fold_corrected_t", unit="repeat_fold", few_clusters=True))
         for method in ("cluster_bootstrap_percentile_B2000", "cluster_bootstrap_percentile_B300", "jackknife_t"):
             with self.subTest(method=method), self.assertRaisesRegex(SchemaError, "ci_method: must be one of"):
                 schema.validate_contrast(good_contrast(ci_method=method))

@@ -34,6 +34,18 @@
 //! Every row of every arm carries the reference plan's `fold_plan_sha256`
 //! and the reference's lineage cluster, since its `fold` is the reference's;
 //! a cohort arm's run records its own plan's hash beside it.
+//!
+//! Repeats (main's rulings 1 and 2 after VERIFY-H1STATS): the lineage split
+//! scores `repeats` keyed plans and the random split one, since only the
+//! lineage split decides. A row's `repeat` is its slot, 0 to repeats − 1.
+//! The reference draws keyed repeat `slot` for each slot; when a lineage draw
+//! is refused, it draws the next keyed repeat past the slots (repeats,
+//! repeats + 1, …), at most `MAX_REPLACEMENTS` times per split, keeps each
+//! refused draw as `plans/refused-lineage-<repeat>.json` and lists every
+//! draw in `repeats.json`. A plan file holds its keyed repeat, so the other
+//! arms score the same draws. The twin seeds follow the draw: a learner,
+//! balance or tuning seed `s` acts as `plan::repeat_seed(s, repeat)`, so a
+//! twin draws anew in every repeat as the default does.
 
 use crate::ablate::blocks::{
     self, BlockSource, ContextSource, CountSource, KmerSource, PanelSource, PredictorBlock,
@@ -103,6 +115,10 @@ pub struct ArmConfig {
     /// The learners' own seed instead of the plan's (`PlanView::learner_seed`):
     /// the calibration twin of the default.
     pub learner_seed: Option<u64>,
+    /// A `same_plan` arm's tuning seed: it scores the reference's outer folds
+    /// with inner folds and holdouts drawn again (`plan::retuned_plan`), the
+    /// retuned twin that reaches scm, cart and the lasso.
+    pub tuning_seed: Option<u64>,
     /// Write `training.jsonl`: a first line with the arm's sample ids, then per
     /// split, repeat and outer fold the genome ids `run_arm` handed the
     /// learners as training samples.
@@ -111,6 +127,19 @@ pub struct ArmConfig {
 
 /// The splits an arm scores, in `evaluate`'s order.
 pub const SCHEMES: [Scheme; 2] = [Scheme::Random, Scheme::Lineage];
+
+/// The replacement draws a reference arm may make for refused lineage
+/// repeats, per dataset (main's ruling 2 after VERIFY-H1STATS).
+pub const MAX_REPLACEMENTS: u32 = 2;
+
+/// The repeats a split scores: `repeats` on the lineage split, which decides,
+/// and one on the random split, which is descriptive.
+pub fn split_repeats(cfg: &ArmConfig, scheme: Scheme) -> u32 {
+    match scheme {
+        Scheme::Lineage => cfg.repeats,
+        Scheme::Random => 1,
+    }
+}
 
 /// A reference arm's plan for one split and repeat, with the samples it is
 /// over, their labels and their lineage clusters.
@@ -291,6 +320,8 @@ struct ArmPlan {
     rows_sha256: String,
     arm_sha256: Option<String>,
     cluster: Vec<Option<u32>>,
+    /// The keyed repeat the reference drew (its `FoldPlan::repeat`).
+    repeat: u32,
 }
 
 impl ArmPlan {
@@ -304,10 +335,11 @@ impl ArmPlan {
 }
 
 /// The partitions `run_arm` scores one plan on: the plan's own (a cohort
-/// plan's held-out genomes included), with the arm's learner seed.
+/// plan's held-out genomes included), with the arm's learner seed keyed by
+/// the plan's repeat.
 fn fold_view<'a>(p: &'a ArmPlan, cfg: &ArmConfig) -> PlanView<'a> {
     let mut view = p.view();
-    view.learner_seed = cfg.learner_seed;
+    view.learner_seed = cfg.learner_seed.map(|s| plan::repeat_seed(s, p.repeat));
     view
 }
 
@@ -340,8 +372,102 @@ fn fold_matrix(
     Ok(encode::assemble(&candidates, train).x)
 }
 
-fn plan_name(scheme: Scheme, repeat: u32) -> String {
-    format!("{scheme}-{repeat}")
+fn plan_name(scheme: Scheme, slot: u32) -> String {
+    format!("{scheme}-{slot}")
+}
+
+/// One split's draws, as `repeats.json` lists them.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SplitDraws {
+    pub split: String,
+    /// The keyed repeat each slot scores.
+    pub drawn: Vec<u32>,
+    /// The reference's refused draws, each with its reason.
+    pub refused: Vec<RefusedDraw>,
+    /// A retuned twin's refused tuning draws, each with its slot and reason.
+    pub refused_tuning: Vec<RefusedTuning>,
+    pub max_replacements: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RefusedTuning {
+    pub slot: u32,
+    pub draw: u32,
+    pub reason: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RefusedDraw {
+    pub repeat: u32,
+    pub reason: String,
+}
+
+/// The plans an arm scores one split on, one per slot, and, when a slot is
+/// left without a valid plan after the replacement draws, why. The reference
+/// draws keyed repeat `slot` in each slot and, on the lineage split, replaces
+/// a refused draw with the next keyed repeat past the slots, at most
+/// `MAX_REPLACEMENTS` times; the other arms take the reference's slot plans.
+/// A retuned twin draws its tuning partitions again, keyed by draw, when they
+/// are refused, at most `MAX_REPLACEMENTS` times per split (`arm_plan`).
+fn arm_plans(
+    cfg: &ArmConfig,
+    a: &ArmInputs,
+    species: Option<&SpeciesGroups>,
+    scheme: Scheme,
+    plans_dir: &Path,
+) -> Result<(Vec<ArmPlan>, SplitDraws, Option<String>)> {
+    let n = split_repeats(cfg, scheme);
+    let replace = cfg.reference.is_none() && scheme == Scheme::Lineage;
+    let (mut plans, mut refused, mut spare, mut short) = (Vec::new(), Vec::new(), n, None);
+    let mut refused_tuning = Vec::new();
+    for slot in 0..n {
+        let mut repeat = slot;
+        loop {
+            let p = arm_plan(
+                cfg,
+                a,
+                species,
+                scheme,
+                slot,
+                repeat,
+                plans_dir,
+                &mut refused_tuning,
+            )?;
+            let why = p.fold.as_ref().and_then(|f| f.unavailable_reason.clone());
+            match why {
+                Some(reason) if replace && (refused.len() as u32) < MAX_REPLACEMENTS => {
+                    let name = plan_name(scheme, slot);
+                    std::fs::rename(
+                        plans_dir.join(format!("{name}.json")),
+                        plans_dir.join(format!("refused-{scheme}-{repeat}.json")),
+                    )?;
+                    refused.push(RefusedDraw { repeat, reason });
+                    repeat = spare;
+                    spare += 1;
+                }
+                Some(reason) if replace => {
+                    short.get_or_insert(format!(
+                        "{scheme} repeat {slot} (keyed repeat {repeat}) is refused: {reason}; with {MAX_REPLACEMENTS} \
+                         replacement draws spent, fewer than {n} valid {scheme} repeats remain"
+                    ));
+                    plans.push(p);
+                    break;
+                }
+                _ => {
+                    plans.push(p);
+                    break;
+                }
+            }
+        }
+    }
+    let draws = SplitDraws {
+        split: scheme.to_string(),
+        drawn: plans.iter().map(|p| p.repeat).collect(),
+        refused,
+        refused_tuning,
+        max_replacements: MAX_REPLACEMENTS,
+    };
+    Ok((plans, draws, short))
 }
 
 fn labels(y: &Bits) -> Vec<u8> {
@@ -372,20 +498,27 @@ pub fn load_species_groups(path: &Path) -> Result<(SpeciesGroups, usize)> {
     Ok((groups, k))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn arm_plan(
     cfg: &ArmConfig,
     a: &ArmInputs,
     species: Option<&SpeciesGroups>,
     scheme: Scheme,
+    slot: u32,
     repeat: u32,
     plans_dir: &Path,
+    refused_tuning: &mut Vec<RefusedTuning>,
 ) -> Result<ArmPlan> {
-    let name = plan_name(scheme, repeat);
+    let name = plan_name(scheme, slot);
     let Some(reference) = &cfg.reference else {
         ensure!(
             cfg.pairing == Pairing::SamePlan,
             "the reference arm pairs with itself by same_plan, not {}",
             cfg.pairing.as_str()
+        );
+        ensure!(
+            cfg.tuning_seed.is_none(),
+            "a tuning seed retunes the reference's plans, so the reference itself takes none"
         );
         let groups = match species {
             Some(s) => s.groups(&a.sample_ids)?,
@@ -417,6 +550,7 @@ fn arm_plan(
             rows_sha256: p.sha256.clone(),
             arm_sha256: None,
             cluster: groups.lineage().iter().map(|&c| Some(c)).collect(),
+            repeat: p.repeat,
             fold: Some(p),
             cohort: None,
         });
@@ -428,6 +562,12 @@ fn arm_plan(
     )
     .with_context(|| format!("parse {}", path.display()))?;
     r.plan.verify()?;
+    let drawn = r.plan.repeat;
+    ensure!(
+        cfg.tuning_seed.is_none() || cfg.pairing == Pairing::SamePlan,
+        "a tuning seed retunes the reference's plan under same_plan, not {}",
+        cfg.pairing.as_str()
+    );
     match cfg.pairing {
         Pairing::SamePlan | Pairing::K31Groups => {
             ensure!(
@@ -437,10 +577,53 @@ fn arm_plan(
                 a.sample_ids.len(),
                 r.sample_ids.len()
             );
+            let cluster = r.cluster.iter().map(|&c| Some(c)).collect();
+            if let (Some(seed), true) = (cfg.tuning_seed, r.plan.is_available()) {
+                // The groups the reference keyed its plan on: a species grouping's
+                // `groups` carries no source, so its lineages and duplicates rebuild it.
+                let groups = GroupIds::new(r.cluster.clone(), r.duplicates.clone(), None)?;
+                // A refused draw is kept and replaced by the next keyed draw, at
+                // most MAX_REPLACEMENTS times per split; past that its reason stands.
+                let mut draw = 0;
+                let t = loop {
+                    let t = plan::retuned_plan(&r.plan, &r.sample_ids, &a.y, &groups, seed, draw)?;
+                    match &t.unavailable_reason {
+                        Some(reason) if (refused_tuning.len() as u32) < MAX_REPLACEMENTS => {
+                            write_json(
+                                &plans_dir
+                                    .join(format!("refused-{name}-tuning-{draw}.retuned.json")),
+                                &serde_json::json!({ "tuning_seed": seed, "draw": draw, "plan": t }),
+                            )?;
+                            refused_tuning.push(RefusedTuning {
+                                slot,
+                                draw,
+                                reason: reason.clone(),
+                            });
+                            draw += 1;
+                        }
+                        _ => break t,
+                    }
+                };
+                write_json(
+                    &plans_dir.join(format!("{name}.retuned.json")),
+                    &serde_json::json!({ "tuning_seed": seed, "draw": draw, "plan": t }),
+                )?;
+                // The run records no plan hash of its own: K keeps arm_plan_sha256 for
+                // cohort pairings, and the retuned plan is in its .retuned.json.
+                return Ok(ArmPlan {
+                    rows_sha256: r.plan.sha256.clone(),
+                    arm_sha256: None,
+                    cluster,
+                    repeat: drawn,
+                    fold: Some(t),
+                    cohort: None,
+                });
+            }
             Ok(ArmPlan {
                 rows_sha256: r.plan.sha256.clone(),
                 arm_sha256: None,
-                cluster: r.cluster.iter().map(|&c| Some(c)).collect(),
+                cluster,
+                repeat: drawn,
                 fold: Some(r.plan),
                 cohort: None,
             })
@@ -467,6 +650,7 @@ fn arm_plan(
                     rows_sha256: r.plan.sha256.clone(),
                     arm_sha256: None,
                     cluster: vec![None; a.sample_ids.len()],
+                    repeat: drawn,
                     fold: Some(r.plan),
                     cohort: None,
                 });
@@ -490,7 +674,7 @@ fn arm_plan(
                 &a.sample_ids,
                 &a.y,
                 species,
-                cfg.balance_seed,
+                cfg.balance_seed.map(|s| plan::repeat_seed(s, drawn)),
             )?;
             write_json(&plans_dir.join(format!("{name}.cohort.json")), &c)?;
             let cluster = a
@@ -502,6 +686,7 @@ fn arm_plan(
                 rows_sha256: r.plan.sha256.clone(),
                 arm_sha256: Some(c.sha256.clone()),
                 cluster,
+                repeat: drawn,
                 fold: None,
                 cohort: Some(c),
             })
@@ -621,6 +806,7 @@ fn score_arm(
         None
     };
     let mut runs: Vec<ArmRun> = Vec::new();
+    let mut draws = Vec::new();
     let learners = crate::learn::eval::LEARNERS;
     for scheme in SCHEMES {
         let mut results = Vec::new();
@@ -628,8 +814,14 @@ fn score_arm(
             .first()
             .map(|(id, why)| format!("block {id} is unavailable: {why}"));
         let started = Instant::now();
-        for repeat in 0..cfg.repeats {
-            let p = arm_plan(cfg, a, species, scheme, repeat, &plans_dir)?;
+        let repeats = split_repeats(cfg, scheme);
+        let (plans, drawn, short) = arm_plans(cfg, a, species, scheme, &plans_dir)?;
+        draws.push(drawn);
+        if let Some(why) = short {
+            reason.get_or_insert(why);
+        }
+        for (slot, p) in plans.into_iter().enumerate() {
+            let repeat = slot as u32;
             if reason.is_some() {
                 results.push((p, None));
                 continue;
@@ -677,12 +869,12 @@ fn score_arm(
                 blocks: cfg.blocks.clone(),
                 learner: learner.to_string(),
                 split: scheme.to_string(),
-                repeats: cfg.repeats,
+                repeats,
                 fold_plan_sha256: Some(rows_sha.clone()),
                 status: "ok".into(),
                 reason: None,
                 metrics: serde_json::Map::new(),
-                fit_count: cfg.eval.folds * cfg.repeats as usize,
+                fit_count: cfg.eval.folds * repeats as usize,
                 seconds: seconds / learners.len() as f64,
                 predictions: Some("predictions.jsonl".into()),
                 pairing: cfg.pairing,
@@ -738,6 +930,7 @@ fn score_arm(
     if let Some(t) = trace.as_mut() {
         t.flush()?;
     }
+    write_json(&out.join("repeats.json"), &draws)?;
     write_json(&out.join("runs.json"), &runs)
 }
 
@@ -999,6 +1192,7 @@ mod tests {
             reference: None,
             balance_seed: None,
             learner_seed: None,
+            tuning_seed: None,
             trace_training: false,
             groups: None,
         };
@@ -1022,6 +1216,7 @@ mod tests {
                 rows_sha256: String::new(),
                 arm_sha256: None,
                 cluster: vec![],
+                repeat: 0,
             };
             let view = fold_view(&p, &cfg);
             assert!(view.unavailable_reason.is_none(), "{scheme}: no plan");
@@ -1083,6 +1278,7 @@ mod tests {
             rows_sha256: reference.sha256.clone(),
             arm_sha256: Some(cohort.sha256.clone()),
             cluster: vec![None; n + 1],
+            repeat: 0,
         };
         let cfg = ArmConfig {
             arm: "a".into(),
@@ -1093,6 +1289,7 @@ mod tests {
             reference: None,
             balance_seed: None,
             learner_seed: Some(5),
+            tuning_seed: None,
             trace_training: false,
             groups: None,
         };
@@ -1107,5 +1304,250 @@ mod tests {
                 );
             }
         }
+        // Keyed by the plan's repeat: repeat 0 keeps the seed, another draws anew.
+        let later = ArmPlan { repeat: 2, ..p };
+        assert_eq!(
+            fold_view(&later, &cfg).learner_seed,
+            Some(plan::repeat_seed(5, 2))
+        );
+        assert_ne!(plan::repeat_seed(5, 2), 5);
+    }
+
+    /// 60 lineages of 4 genomes, every fifth lineage resistant, so some keyed
+    /// lineage draws leave an outer fold or a holdout without a resistant
+    /// lineage and others don't.
+    fn patchy() -> ArmInputs {
+        let n = 240;
+        ArmInputs {
+            sample_ids: (0..n).map(|i| format!("g{i:03}")).collect(),
+            columns: (0..n).collect(),
+            y: Bits::from_indices(n, (0..n).filter(|i| (i / 4) % 5 == 0)),
+            min_support: 1,
+            x: crate::bits::BitMatrix::with_cols(n),
+            lineage: (0..n as u32).map(|i| i / 4).collect(),
+            duplicates: vec![],
+        }
+    }
+
+    fn reference_cfg(seed: u64, repeats: u32) -> ArmConfig {
+        ArmConfig {
+            arm: "default".into(),
+            blocks: vec!["K".into()],
+            eval: EvalConfig {
+                seed,
+                ..EvalConfig::default()
+            },
+            repeats,
+            pairing: Pairing::SamePlan,
+            reference: None,
+            balance_seed: None,
+            learner_seed: None,
+            tuning_seed: None,
+            trace_training: false,
+            groups: None,
+        }
+    }
+
+    /// Main's ruling 2 after VERIFY-H1STATS: a refused lineage repeat is
+    /// replaced by the next keyed repeat past the slots, at most twice per
+    /// split, each refused draw kept and listed; past that the split has
+    /// fewer valid repeats than asked and says so. The random split repeats once.
+    #[test]
+    fn a_refused_lineage_repeat_is_replaced_by_the_next_keyed_draw_at_most_twice() {
+        let a = patchy();
+        let groups = GroupIds::new(a.lineage.clone(), vec![], None).unwrap();
+        let ok = |seed: u64, repeat: u32| {
+            plan::keyed_fold_plan(
+                &a.sample_ids,
+                &a.y,
+                &groups,
+                Scheme::Lineage,
+                5,
+                3,
+                seed,
+                repeat,
+            )
+            .unwrap()
+            .is_available()
+        };
+        // The first seed whose keyed repeats 0, 1, … are available as `want` says.
+        let find = |want: &[bool]| {
+            (0..20000u64)
+                .find(|&s| (0..want.len()).all(|r| ok(s, r as u32) == want[r]))
+                .expect("a seed with this pattern")
+        };
+        // Slot 1 refused, replaced by keyed repeat 3.
+        let seed = find(&[true, false, true, true]);
+        let dir = tempfile::tempdir().unwrap();
+        let cfg = reference_cfg(seed, 3);
+        let (plans, draws, short) = arm_plans(&cfg, &a, None, Scheme::Lineage, dir.path()).unwrap();
+        assert_eq!(short, None);
+        assert_eq!(draws.drawn, vec![0, 3, 2]);
+        assert_eq!(
+            draws.refused.iter().map(|d| d.repeat).collect::<Vec<_>>(),
+            vec![1]
+        );
+        assert!(
+            plans
+                .iter()
+                .all(|p| p.fold.as_ref().unwrap().is_available())
+        );
+        let slot1: PlanFile =
+            serde_json::from_slice(&std::fs::read(dir.path().join("lineage-1.json")).unwrap())
+                .unwrap();
+        assert_eq!(slot1.plan.repeat, 3);
+        let kept: PlanFile = serde_json::from_slice(
+            &std::fs::read(dir.path().join("refused-lineage-1.json")).unwrap(),
+        )
+        .unwrap();
+        assert!(kept.plan.unavailable_reason.is_some());
+        // Slot 1 and both replacements refused: the split is short, named.
+        let seed = find(&[true, false, true, false, false]);
+        let dir = tempfile::tempdir().unwrap();
+        let cfg = reference_cfg(seed, 3);
+        let (_, draws, short) = arm_plans(&cfg, &a, None, Scheme::Lineage, dir.path()).unwrap();
+        assert_eq!(draws.drawn, vec![0, 4, 2]);
+        assert_eq!(draws.refused.len(), MAX_REPLACEMENTS as usize);
+        let why = short.expect("short of valid repeats");
+        assert!(
+            why.contains("2 replacement draws spent, fewer than 3 valid lineage repeats"),
+            "{why}"
+        );
+        // The random split scores one repeat and is never replaced; an arm
+        // with a reference takes its slot plans as they are.
+        let (plans, draws, _) = arm_plans(&cfg, &a, None, Scheme::Random, dir.path()).unwrap();
+        assert_eq!((plans.len(), draws.drawn.clone()), (1, vec![0]));
+        let shared = tempfile::tempdir().unwrap();
+        std::fs::create_dir(shared.path().join("plans")).unwrap();
+        for name in ["lineage-0.json", "lineage-1.json", "lineage-2.json"] {
+            std::fs::copy(
+                dir.path().join(name),
+                shared.path().join("plans").join(name),
+            )
+            .unwrap();
+        }
+        let twin = ArmConfig {
+            arm: "twin".into(),
+            reference: Some(shared.path().to_path_buf()),
+            ..reference_cfg(seed, 3)
+        };
+        let out = tempfile::tempdir().unwrap();
+        let (plans, draws, short) =
+            arm_plans(&twin, &a, None, Scheme::Lineage, out.path()).unwrap();
+        assert_eq!(
+            (draws.drawn, draws.refused.len(), short),
+            (vec![0, 4, 2], 0, None)
+        );
+        assert!(!plans[1].fold.as_ref().unwrap().is_available());
+    }
+
+    /// Main's ruling after the first calibration failed: a retuned twin whose
+    /// tuning draw is refused draws again, keyed by draw, at most twice per
+    /// split, keeping each refused draw; past that its split is unavailable.
+    #[test]
+    fn a_refused_retuned_draw_is_replaced_at_most_twice_per_split() {
+        let a = patchy();
+        let groups = GroupIds::new(a.lineage.clone(), vec![], None).unwrap();
+        let reference_ok = |seed: u64| {
+            plan::keyed_fold_plan(&a.sample_ids, &a.y, &groups, Scheme::Lineage, 5, 3, seed, 0)
+                .unwrap()
+                .is_available()
+        };
+        let seed = (0..20000u64).find(|&s| reference_ok(s)).unwrap();
+        let r = plan::keyed_fold_plan(&a.sample_ids, &a.y, &groups, Scheme::Lineage, 5, 3, seed, 0)
+            .unwrap();
+        let ok = |tuning: u64, draw: u32| {
+            plan::retuned_plan(&r, &a.sample_ids, &a.y, &groups, tuning, draw)
+                .unwrap()
+                .is_available()
+        };
+        let reference = tempfile::tempdir().unwrap();
+        let plans = reference.path().join("plans");
+        std::fs::create_dir(&plans).unwrap();
+        arm_plans(&reference_cfg(seed, 1), &a, None, Scheme::Lineage, &plans).unwrap();
+        let twin = |tuning: u64| ArmConfig {
+            arm: "twin".into(),
+            reference: Some(reference.path().to_path_buf()),
+            tuning_seed: Some(tuning),
+            ..reference_cfg(seed, 1)
+        };
+        // Draw 0 refused, draw 1 accepted.
+        let tuning = (0..20000u64).find(|&t| !ok(t, 0) && ok(t, 1)).unwrap();
+        let out = tempfile::tempdir().unwrap();
+        let (got, draws, _) =
+            arm_plans(&twin(tuning), &a, None, Scheme::Lineage, out.path()).unwrap();
+        assert!(got[0].fold.as_ref().unwrap().is_available());
+        assert_eq!(draws.refused_tuning.len(), 1);
+        assert_eq!(
+            (draws.refused_tuning[0].slot, draws.refused_tuning[0].draw),
+            (0, 0)
+        );
+        assert!(
+            out.path()
+                .join("refused-lineage-0-tuning-0.retuned.json")
+                .exists()
+        );
+        let kept: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(out.path().join("lineage-0.retuned.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(kept["draw"], 1);
+        // Draws 0, 1 and 2 refused: two replacements spent, the split unavailable.
+        let tuning = (0..20000u64)
+            .find(|&t| !ok(t, 0) && !ok(t, 1) && !ok(t, 2))
+            .unwrap();
+        let out = tempfile::tempdir().unwrap();
+        let (got, draws, _) =
+            arm_plans(&twin(tuning), &a, None, Scheme::Lineage, out.path()).unwrap();
+        assert_eq!(draws.refused_tuning.len(), MAX_REPLACEMENTS as usize);
+        assert!(!got[0].fold.as_ref().unwrap().is_available());
+    }
+
+    /// Main's ruling 1 after VERIFY-H1STATS: a cohort arm's balance seed is
+    /// keyed by the reference's draw, so its subsample is drawn anew in each
+    /// repeat, as a learner seed is.
+    #[test]
+    fn a_cohort_arm_s_balance_seed_is_keyed_by_repeat() {
+        let a = patchy();
+        let groups = GroupIds::new(a.lineage.clone(), vec![], None).unwrap();
+        let species = SpeciesGroups::of_cohorts(&[(&a.sample_ids, &groups)]);
+        let available = |seed: u64| {
+            (0..3).all(|r| {
+                plan::keyed_fold_plan(&a.sample_ids, &a.y, &groups, Scheme::Lineage, 5, 3, seed, r)
+                    .unwrap()
+                    .is_available()
+            })
+        };
+        let seed = (0..20000u64).find(|&s| available(s)).unwrap();
+        let reference = tempfile::tempdir().unwrap();
+        let plans = reference.path().join("plans");
+        std::fs::create_dir(&plans).unwrap();
+        arm_plans(
+            &reference_cfg(seed, 3),
+            &a,
+            Some(&species),
+            Scheme::Lineage,
+            &plans,
+        )
+        .unwrap();
+        let cohort = ArmConfig {
+            arm: "cohort-path".into(),
+            pairing: Pairing::CommonOuterTestSetBalanced,
+            reference: Some(reference.path().to_path_buf()),
+            balance_seed: Some(7),
+            ..reference_cfg(seed, 3)
+        };
+        let out = tempfile::tempdir().unwrap();
+        let (got, _, _) =
+            arm_plans(&cohort, &a, Some(&species), Scheme::Lineage, out.path()).unwrap();
+        let seeds: Vec<u64> = got
+            .iter()
+            .map(|p| p.cohort.as_ref().unwrap().balance_seed)
+            .collect();
+        assert_eq!(
+            seeds,
+            (0..3).map(|r| plan::repeat_seed(7, r)).collect::<Vec<_>>()
+        );
+        assert_eq!(seeds[0], 7);
     }
 }

@@ -709,6 +709,64 @@ class SentinelAndRandomSplitCases(unittest.TestCase):
             self.with_sentinel(["no-such-arm"])
         self.assertIn("sentinel_arms", str(e.exception))
 
+    def unadjusted_inputs(self):
+        """K+C as an unadjusted sentinel (main's ruling 3 after VERIFY-H1STATS): its family C contrasts are
+        judged on their own p (adjust none, p_adj = p), and BH covers the other planned family C contrasts:
+        LOBO_A at 0.30, LOBO_C at 0.50 and kpneu's missing one at 1, giving 0.75, 0.75."""
+        values = dict(zip(NAMES, good_inputs()))
+        values["manifest"].update(sentinel_arms=["K+C"], sentinel_adjust="none")
+        for x in values["contrasts"]:
+            if x["family"] == "C" and x["treatment"] == "K+C":
+                x.update(adjust="none", p_adj=x["p"])
+                x["decision"] = schema.expected_decision(x["ci"], x["p"])
+            elif x["family"] == "C":
+                x["p_adj"] = {LOBO_A: 0.75, LOBO_C: 0.75}[x["id"]]
+        return values
+
+    def test_a_sentinel_outside_bh_is_judged_on_its_own_p(self):
+        values = self.unadjusted_inputs()
+        report = rp.build_report(*(values[n] for n in NAMES))
+        by_id = {x["id"]: x for x in report["contrasts"]}
+        # FWD_C's p 0.03 was inconclusive at p_adj 0.09 under BH; on its own p it is improves.
+        self.assertEqual((by_id[FWD_C]["adjust"], by_id[FWD_C]["p_adj"], by_id[FWD_C]["decision"]),
+                         ("none", 0.03, "improves"))
+        flagged = {(u["species"], u["learner"]) for u in report["unreliable"]}
+        self.assertEqual(flagged, {("Escherichia coli", "lasso"), ("Klebsiella pneumoniae", "lasso")})
+        self.assertEqual(rp.validate_report(json.loads(rp.dumps(report)))["contrasts"], report["contrasts"])
+        # Without the manifest's sentinel_adjust, adjust none on a family C contrast is refused, and so is an
+        # unadjusted contrast whose arm is not a sentinel, or a sentinel left in BH.
+        for change in (lambda v: v["manifest"].pop("sentinel_adjust"),
+                       lambda v: v["manifest"].update(sentinel_arms=["K"]),
+                       lambda v: next(x for x in v["contrasts"] if x["id"] == FWD_A).update(adjust="bh")):
+            values = self.unadjusted_inputs()
+            change(values)
+            with self.assertRaises(SchemaError):
+                rp.build_report(*(values[n] for n in NAMES))
+
+    def test_a_sentinel_judges_only_the_learners_the_manifest_gives_it(self):
+        values = self.unadjusted_inputs()
+        values["manifest"]["sentinel_learners"] = {"K+C": ["rf", "gbt"]}
+        self.assertEqual(rp.build_report(*(values[n] for n in NAMES))["unreliable"], [])
+        values["manifest"]["sentinel_learners"] = {"K+C": ["lasso"]}
+        self.assertEqual(len(rp.build_report(*(values[n] for n in NAMES))["unreliable"]), 2)
+        values["manifest"]["sentinel_learners"] = {"K": ["lasso"]}
+        with self.assertRaises(SchemaError) as e:
+            rp.build_report(*(values[n] for n in NAMES))
+        self.assertIn("sentinel_learners", str(e.exception))
+
+    def test_a_missing_random_split_sentinel_flags_nothing(self):
+        """REVIEW-ICODE-PY L6 (mutant K3): only the lineage split judges; a sentinel whose random-split
+        contrast was not produced, with its lineage contrast inconclusive, flags no learner."""
+        manifest = {"sentinel_arms": ["twin"], "datasets": [{"id": "ds", "species": "S"}]}
+        lineage = "ds/C:gbt:lineage:default->twin:log_loss"
+        random = "ds/D:gbt:random:default->twin:log_loss"
+        contrasts = [{"id": lineage, "decision": "inconclusive", "learner": "gbt", "dataset": "ds"}]
+        missing = [{"id": random, "reason": "the random plan was refused"}]
+        self.assertEqual(rp._unreliable(manifest, contrasts, [lineage, random], missing), [])
+        contrasts[0]["decision"] = "worse"
+        (u,) = rp._unreliable(manifest, contrasts, [lineage, random], missing)
+        self.assertEqual((u["learner"], u["sentinel"]), ("gbt", lineage))
+
     def test_random_split_contrasts_are_printed_as_descriptive(self):
         md = rp.render_markdown(build())
         block = md.split("### Random split: descriptive only")[1]
@@ -716,7 +774,8 @@ class SentinelAndRandomSplitCases(unittest.TestCase):
         for ident in (RAND_A, RAND_K):
             self.assertIn(f"`{ident}`", block)
         rules = md.split(rp.RULES_HEADING)[1]
-        for phrase in ("Random-split contrasts are descriptive only", "9 of 20", "0 of 40", "1.0% improves",
+        for phrase in ("Random-split contrasts are descriptive only", "scores the random split once",
+                       "(repeat, outer fold) refit", "26 to 46%", "the retuned twin", "outside the BH family",
                        "marked unreliable"):
             self.assertIn(phrase, rules)
 

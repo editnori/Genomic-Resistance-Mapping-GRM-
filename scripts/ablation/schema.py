@@ -38,7 +38,12 @@ POOLED_FAMILIES = ("A", "B", "D")
 PRIMARY_CONTRAST_ENDPOINT = "log_loss"
 PRIMARY_POOLED_ENDPOINT = "r2_ll"
 # Contract section 12: ci_method is exactly one of these; "none" only on an undefined record.
-CI_METHODS = ("cluster_jackknife_t", "none")
+# repeat_fold_t and repeat_fold_corrected_t are the input comparison's paired t and corrected resampled t over
+# (repeat, outer fold) units, by learner
+# (stats.compare_units; main's rulings after VERIFY-H1STATS and after its first calibration failed).
+CI_METHODS = ("cluster_jackknife_t", "repeat_fold_t", "repeat_fold_corrected_t", "none")
+# That test's unit, a (repeat, outer fold) refit: few_clusters is about clusters, so it is false there.
+REPEAT_FOLD_UNIT = "repeat_fold"
 # Contract section 13: few_clusters is n_units < FEW_CLUSTERS; the exact sign-flip test cannot give
 # a pooled p below 2 / 2^S, so with fewer than MIN_TESTABLE_SPECIES species p < 0.05 is unreachable.
 FEW_CLUSTERS = 20
@@ -495,6 +500,11 @@ def _manifest_after(c, path, m):
     for i, arm in enumerate(m.get("sentinel_arms", [])):
         if arm not in arms:
             c.fail(f"{path}.sentinel_arms[{i}]", f"arm {arm} has no run")
+    for arm in m.get("sentinel_learners", {}):
+        if arm not in m.get("sentinel_arms", []):
+            c.fail(f"{path}.sentinel_learners.{arm}", "names an arm that is not a sentinel arm")
+    if "sentinel_adjust" in m and not m.get("sentinel_arms"):
+        c.fail(f"{path}.sentinel_adjust", "needs sentinel_arms")
     _unique(c, f"{path}.base_rates", m.get("base_rates", []), lambda b: b["arm"], "arm")
     for i, b in enumerate(m.get("base_rates", [])):
         if b["arm"] not in arms:
@@ -524,6 +534,10 @@ MANIFEST = record({
     # The input comparison's species pool: the union of the run's arms' cohorts, which its lineages and the
     # fold keys of units outside the default depend on (main's ruling on REVIEW-INPUT4 M1).
     "species_pool": record({"genomes": integer(1), "arms": strings(nonempty=True), "structure_sha256": text(HEX64)}),
+    # The input comparison's sentinels (main's ruling 3 after VERIFY-H1STATS): the learners each sentinel arm
+    # judges, and "none" when their family C contrasts sit outside BH, judged on their own p.
+    "sentinel_learners": mapping(strings(nonempty=True)),
+    "sentinel_adjust": enum(("none",)),
     "base_rates": records(record({
         "arm": text(), "rate": nullable(number(0, 1)), "ci95": nullable(interval), "seeds": nullable(integer(1)),
         "source": text(),
@@ -635,8 +649,13 @@ def _estimates(c, path, v, defined):
     unless it is family D. Then the decision must follow the rule."""
     values = ("estimate", "ci", "ci_tost", "p", "p_adj")
     before = len(c.errors)
-    if v["adjust"] != FAMILY_ADJUST[v["family"]]:
+    # A family C record with adjust none is a sentinel judged on its own p (main's ruling 3 after
+    # VERIFY-H1STATS); the report checks that it is one.
+    sentinel = v["family"] == "C" and v["adjust"] == "none"
+    if v["adjust"] != FAMILY_ADJUST[v["family"]] and not sentinel:
         c.fail(f"{path}.adjust", f"family {v['family']} uses {FAMILY_ADJUST[v['family']]}")
+    if sentinel and v["p_adj"] != v["p"]:
+        c.fail(f"{path}.adjust", "is none only on a sentinel judged on its own p, whose p_adj is its p")
     if not defined:
         for k in values:
             if v[k] is not None:
@@ -706,8 +725,8 @@ def _contrast_after(c, path, v):
         c.fail(f"{path}.claim_level", f"contrasts always carry {CONTRAST_LEVEL}; manual levels apply to features")
     if v["undefined_reason"] is None and v["ci_method"] == "none":
         c.fail(f"{path}.ci_method", "a defined record names its interval method")
-    if v["few_clusters"] != (v["n_units"] < FEW_CLUSTERS):
-        c.fail(f"{path}.few_clusters", f"must be n_units < {FEW_CLUSTERS}")
+    if v["few_clusters"] != (v["unit"] != REPEAT_FOLD_UNIT and v["n_units"] < FEW_CLUSTERS):
+        c.fail(f"{path}.few_clusters", f"must be n_units < {FEW_CLUSTERS}, and false on unit {REPEAT_FOLD_UNIT}")
     _jackknife_reason(c, path, v)
     if (v["auroc_delta"] is None) != (v["auroc_ci"] is None):
         c.fail(f"{path}.auroc_ci", "auroc_delta and auroc_ci are both null or both set")

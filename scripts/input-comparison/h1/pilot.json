@@ -209,7 +209,7 @@
     "random",
     "lineage"
   ],
-  "repeats": 1,
+  "repeats": 3,
   "margin": {
     "log_loss": 0.02
   },
