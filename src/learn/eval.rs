@@ -30,10 +30,17 @@
 //! `EvalConfig::seed` and the fold, so `fit_fold` rebuilds any held-out fit.
 //!
 //! A boosted model that keeps no tree, or a lasso that keeps no weight, is a
-//! null fit: it scores the class-balanced 0.5 prior, so it makes no call for
-//! its test fold. Metrics cover the called samples and `no_call` counts the
-//! rest; a learner with no called sample has no metrics. A fitted model's
-//! score is a call even when it is exactly 0.5.
+//! null fit. A null fit is still a model: it predicts its training
+//! prevalence (`train_prevalence`, resistant training samples over training
+//! samples of the outer fold) for every sample, and the 0.5 cutoff calls
+//! that score like any other, so a prevalence of exactly 0.5 is a resistant
+//! call. From revision 14 every learner is therefore scored on every sample
+//! of a split: `metrics`, the ROC points and each fold's balanced accuracy
+//! cover them all. `no_call` still counts, by class, the samples of null-fit
+//! folds, and a row with any such sample keeps the figure over the other
+//! samples in `called_metrics` (null when every fold's fit was null), the
+//! figure revisions 7 to 13 published as `metrics`. A fitted model's score
+//! is a call even when it is exactly 0.5.
 
 use super::gbt::{self, GbtParams, Objective};
 use super::lasso;
@@ -41,8 +48,8 @@ use super::scm::{self, Kind, Rule};
 use super::tree::{self, ForestParams, TreeParams};
 use super::{
     BinaryMetrics, NoCall, binary_metrics, fold_masks, grouped_folds, holdout, isolate_groups,
-    roc_curve, screen, stratified_folds, training_candidates, training_folds, tuning_holdout,
-    validate_folds,
+    roc_curve, screen, stratified_folds, train_prevalence, training_candidates, training_folds,
+    tuning_holdout, validate_folds,
 };
 use crate::bits::{BitMatrix, Bits};
 use crate::curate::{Breakpoint, Call, Censor, Mic, infer_breakpoint};
@@ -184,17 +191,31 @@ pub struct LassoProgress<'a> {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LearnerResult {
     pub learner: String,
-    /// Metrics on the pooled out-of-fold calls; samples without a call are
-    /// left out and counted in `no_call`. None (null in JSON) when no sample
-    /// has a call: an empty call set has no error rates, not 0% error.
+    /// Metrics on the pooled out-of-fold scores of every sample, a null-fit
+    /// fold's samples at that fold's training prevalence. Rows written before
+    /// revision 14 left a null fit's samples out (they are counted in
+    /// `no_call`) and are None (null in JSON) when no sample had a call.
     pub metrics: Option<BinaryMetrics>,
-    /// Balanced accuracy of each outer fold's calls, by fold id; NaN (null
-    /// in JSON) for a fold whose fit made no call.
+    /// Revision 14 rows with a null-fit fold only: the metrics over the
+    /// samples of fitted folds, which revisions 7 to 13 published as
+    /// `metrics`. `Some(None)` (null in JSON) when every fold's fit was null.
+    /// Absent on a row without a null fit, whose `metrics` already are that
+    /// figure, and on every row written before revision 14.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_present"
+    )]
+    pub called_metrics: Option<Option<BinaryMetrics>>,
+    /// Balanced accuracy of each outer fold's calls, by fold id; a null-fit
+    /// fold's is that of its constant prevalence call. Rows written before
+    /// revision 14 hold NaN (null in JSON) for a null-fit fold.
     #[serde(deserialize_with = "deserialize_nullable_scores")]
     pub fold_balanced_accuracy: Vec<f64>,
     pub roc: Vec<(f64, f64)>,
-    /// Out-of-fold resistant score per sample, in dataset sample order; NaN
-    /// (null in JSON) for a sample without a call.
+    /// Out-of-fold resistant score per sample, in dataset sample order; a
+    /// null-fit fold's samples carry its training prevalence. Rows written
+    /// before revision 14 hold NaN (null in JSON) for those samples.
     #[serde(deserialize_with = "deserialize_nullable_scores")]
     pub scores: Vec<f64>,
     pub conformal: Vec<ConformalPoint>,
@@ -202,12 +223,13 @@ pub struct LearnerResult {
     /// trees kept by early stopping, or lasso non-zero weights. Zero for
     /// boosting or the lasso is a null fit. Rows without `no_call` scored
     /// that fold's samples 0.5, which the 0.5 cutoff calls resistant; rows
-    /// with it leave them uncalled.
+    /// of revisions 7 to 13 leave them uncalled; revision 14 rows score them
+    /// at the fold's training prevalence.
     pub fold_complexity: Vec<f64>,
     pub seconds: f64,
-    /// Samples in folds whose fit was null, by reported class. Absent on
-    /// catalog rows, which call every sample, and on rows written before
-    /// null fits became no-calls.
+    /// Samples in folds whose fit was null, by reported class: those without
+    /// a fitted model's call. Absent on catalog rows, which call every
+    /// sample, and on rows written before null fits became no-calls.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub no_call: Option<NoCall>,
     /// One solver-audit record per outer fold on revision-8 lasso rows.
@@ -263,6 +285,16 @@ pub struct MicResult {
     /// Out-of-fold predicted log2 MIC per sample (NaN without an MIC).
     #[serde(deserialize_with = "deserialize_nullable_scores")]
     pub predicted: Vec<f64>,
+}
+
+/// Reads a field that is present, null included, as Some: `called_metrics`
+/// is absent (None), null (Some(None)) or an object.
+fn deserialize_present<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(d).map(Some)
 }
 
 /// Reads values that serde_json wrote as null from NaN back as NaN.
@@ -642,20 +674,31 @@ fn fit_fold(
 
 /// Pools one learner's outer-fold fits, in fold order. Sample i takes its
 /// score from the fit of fold `test_fold[i]`, the one fit that did not train
-/// on it. A null fit leaves its fold uncalled: those scores stay NaN, the
-/// fold's balanced accuracy is NaN, and every metric covers called samples.
-/// When every fit is null there are no metrics and no ROC points.
+/// on it. A null fit predicts its training prevalence, `train_prevalence[f]`
+/// (`learn::train_prevalence` of the fold's training samples), for every
+/// sample of its fold, and the 0.5 cutoff calls it like any other score, so
+/// `metrics`, the ROC points and each fold's balanced accuracy cover every
+/// sample. `no_call` counts the samples of null-fit folds by class, and a
+/// row with any keeps the metrics over the rest in `called_metrics`.
 pub(crate) fn pool_folds(
     learner: &str,
     truth: &[bool],
     test_fold: &[usize],
     fits: &[Scored],
+    train_prevalence: &[f64],
     seconds: f64,
 ) -> Result<LearnerResult> {
     let n = truth.len();
     ensure!(
         test_fold.len() == n && test_fold.iter().all(|&f| f < fits.len()),
         "a sample has no outer test fold"
+    );
+    ensure!(
+        train_prevalence.len() == fits.len()
+            && train_prevalence
+                .iter()
+                .all(|p| p.is_finite() && (0.0..=1.0).contains(p)),
+        "{learner} needs one training prevalence in [0, 1] per outer fold"
     );
     let lasso_fits = if learner == "lasso" {
         let audit = fits
@@ -671,47 +714,47 @@ pub(crate) fn pool_folds(
         );
         None
     };
+    let null = |i: usize| fits[test_fold[i]].scores.is_none();
     let mut scores = vec![f64::NAN; n];
     for (i, &f) in test_fold.iter().enumerate() {
-        if let Some(s) = &fits[f].scores {
-            ensure!(
-                s[i].is_finite(),
-                "{learner} produced a non-finite test score"
-            );
-            scores[i] = s[i];
-        }
+        scores[i] = match &fits[f].scores {
+            Some(s) => {
+                ensure!(
+                    s[i].is_finite(),
+                    "{learner} produced a non-finite test score"
+                );
+                s[i]
+            }
+            None => train_prevalence[f],
+        };
     }
-    let calls = |keep: &dyn Fn(usize) -> bool| -> (Vec<bool>, Vec<f64>) {
+    let pooled = |keep: &dyn Fn(usize) -> bool| -> (Vec<bool>, Vec<f64>) {
         (0..n)
-            .filter(|&i| keep(i) && !scores[i].is_nan())
+            .filter(|&i| keep(i))
             .map(|i| (truth[i], scores[i]))
             .unzip()
     };
-    let fold_balanced_accuracy = fits
-        .iter()
-        .enumerate()
-        .map(|(f, fit)| {
-            if fit.scores.is_none() {
-                return f64::NAN;
-            }
-            let (t, s) = calls(&|i| test_fold[i] == f);
+    let fold_balanced_accuracy = (0..fits.len())
+        .map(|f| {
+            let (t, s) = pooled(&|i| test_fold[i] == f);
             binary_metrics(&t, &s, 0.5, false).balanced_accuracy
         })
         .collect();
-    let uncalled = |class: bool| {
-        (0..n)
-            .filter(|&i| scores[i].is_nan() && truth[i] == class)
-            .count()
-    };
+    let in_null_fold = |class: bool| (0..n).filter(|&i| null(i) && truth[i] == class).count();
     let no_call = NoCall {
-        resistant: uncalled(true),
-        susceptible: uncalled(false),
+        resistant: in_null_fold(true),
+        susceptible: in_null_fold(false),
     };
     let ranked = !matches!(learner, "scm");
-    let (t, s) = calls(&|_| true);
+    let (t, s) = pooled(&|_| true);
+    let called_metrics = (no_call.resistant + no_call.susceptible > 0).then(|| {
+        let (t, s) = pooled(&|i| !null(i));
+        (!t.is_empty()).then(|| binary_metrics(&t, &s, 0.5, ranked))
+    });
     Ok(LearnerResult {
         learner: learner.to_string(),
         metrics: (!t.is_empty()).then(|| binary_metrics(&t, &s, 0.5, ranked)),
+        called_metrics,
         fold_balanced_accuracy,
         roc: if ranked {
             roc_curve(&t, &s, 60)
@@ -840,7 +883,9 @@ pub fn evaluate(
         }
         let mut fits: Vec<Vec<Scored>> = LEARNERS.iter().map(|_| Vec::new()).collect();
         let mut seconds = vec![0.0; LEARNERS.len()];
+        let mut prevalence = Vec::with_capacity(cfg.folds);
         for (fi, (train, _)) in fold_masks(folds, cfg.folds).into_iter().enumerate() {
+            prevalence.push(train_prevalence(y, &train));
             let (cx, _) = training_candidates(x, &train, min_support);
             for (li, learner) in LEARNERS.iter().enumerate() {
                 let t0 = Instant::now();
@@ -865,7 +910,7 @@ pub fn evaluate(
             .zip(&fits)
             .zip(seconds)
             .map(|((name, fits), seconds)| {
-                pool_folds(name, &truth, folds, fits, seconds)
+                pool_folds(name, &truth, folds, fits, &prevalence, seconds)
                     .with_context(|| format!("{scheme} split"))
             })
             .collect::<Result<_>>()?;
@@ -2530,24 +2575,39 @@ mod tests {
                 };
                 assert_eq!(split.test_fold, folds);
                 let tuning = tuning_groups(&split.scheme, &groups, &duplicates);
+                // Each fold's training prevalence, counted here from the
+                // saved folds and labels: the score of a null fit.
+                let prevalence = |f: usize| {
+                    let train: Vec<usize> = (0..n).filter(|&i| split.test_fold[i] != f).collect();
+                    train.iter().filter(|&&i| truth[i]).count() as f64 / train.len() as f64
+                };
+                let all: Vec<usize> = (0..n).collect();
                 for learner in &split.learners {
-                    let called: Vec<usize> =
-                        (0..n).filter(|&i| !learner.scores[i].is_nan()).collect();
                     let ranked = learner.learner != "scm";
+                    assert!(learner.scores.iter().all(|s| s.is_finite()));
                     assert_eq!(
                         learner.metrics,
-                        (!called.is_empty()).then(|| metrics_on(&called, &learner.scores, ranked))
+                        Some(metrics_on(&all, &learner.scores, ranked))
                     );
-                    let uncalled = |class: bool| {
-                        (0..n)
-                            .filter(|&i| learner.scores[i].is_nan() && truth[i] == class)
-                            .count()
+                    let null = |i: usize| {
+                        learner.fold_complexity[split.test_fold[i]] == 0.0
+                            && matches!(learner.learner.as_str(), "gbt" | "lasso")
                     };
+                    let fitted: Vec<usize> = (0..n).filter(|&i| !null(i)).collect();
+                    let in_null =
+                        |class: bool| (0..n).filter(|&i| null(i) && truth[i] == class).count();
                     assert_eq!(
                         learner.no_call,
                         Some(NoCall {
-                            resistant: uncalled(true),
-                            susceptible: uncalled(false)
+                            resistant: in_null(true),
+                            susceptible: in_null(false)
+                        })
+                    );
+                    assert_eq!(
+                        learner.called_metrics,
+                        (fitted.len() < n).then(|| {
+                            (!fitted.is_empty())
+                                .then(|| metrics_on(&fitted, &learner.scores, ranked))
                         })
                     );
                     for (f, (train, test)) in fold_masks(&split.test_fold, cfg.folds)
@@ -2570,17 +2630,14 @@ mod tests {
                         let idx: Vec<usize> = test.iter_ones().collect();
                         match &refit.scores {
                             None => {
-                                assert!(idx.iter().all(|&i| learner.scores[i].is_nan()));
-                                assert!(learner.fold_balanced_accuracy[f].is_nan());
+                                assert!(idx.iter().all(|&i| learner.scores[i] == prevalence(f)))
                             }
-                            Some(s) => {
-                                assert!(idx.iter().all(|&i| learner.scores[i] == s[i]));
-                                assert_eq!(
-                                    learner.fold_balanced_accuracy[f],
-                                    metrics_on(&idx, &learner.scores, false).balanced_accuracy
-                                );
-                            }
+                            Some(s) => assert!(idx.iter().all(|&i| learner.scores[i] == s[i])),
                         }
+                        assert_eq!(
+                            learner.fold_balanced_accuracy[f],
+                            metrics_on(&idx, &learner.scores, false).balanced_accuracy
+                        );
                         if learner.learner == "rf" {
                             // The forest scores its own training samples apart
                             // from the held-out fits whose scores were saved.
@@ -2593,33 +2650,68 @@ mod tests {
         }
     }
 
-    #[test]
-    fn pooled_metrics_cover_called_samples_and_count_null_folds_apart() {
-        // Six samples in three folds; fold 1's fit is null. Each fit also
-        // scores samples outside its test fold, which must not be read.
-        // Sample 4 scores exactly 0.5 from a fitted model: a resistant call.
-        let truth = [true, false, true, false, true, false];
-        let test_fold = [0, 0, 1, 1, 2, 2];
-        let fitted = |s: [f64; 6]| Scored {
-            scores: Some(s.to_vec()),
+    fn fitted(scores: &[f64]) -> Scored {
+        Scored {
+            scores: Some(scores.to_vec()),
             complexity: 3.0,
             lasso_fit: None,
-        };
+        }
+    }
+
+    fn null_fit() -> Scored {
+        Scored {
+            scores: None,
+            complexity: 0.0,
+            lasso_fit: None,
+        }
+    }
+
+    /// Each fold's training prevalence, as `evaluate` counts it.
+    fn prevalences(truth: &[bool], test_fold: &[usize], k: usize) -> Vec<f64> {
+        let y = Bits::from_indices(truth.len(), (0..truth.len()).filter(|&i| truth[i]));
+        fold_masks(test_fold, k)
+            .iter()
+            .map(|(train, _)| train_prevalence(&y, train))
+            .collect()
+    }
+
+    #[test]
+    fn one_null_fold_of_several_is_scored_at_its_training_prevalence() {
+        // Eight samples in three folds; fold 1's fit is null. Its training
+        // samples are 0, 1, 2, 5, 6, 7, two of them resistant, so samples 3
+        // and 4 score 2/6 = 1/3 and are called susceptible. The test fold's
+        // own prevalence (1/2) would call them resistant, and the whole
+        // dataset's is 3/8. Each fit also scores samples outside its test
+        // fold, which must not be read.
+        let truth = [true, true, false, true, false, false, false, false];
+        let test_fold = [0, 0, 0, 1, 1, 2, 2, 2];
+        let prevalence = prevalences(&truth, &test_fold, 3);
+        assert_eq!(prevalence, [1.0 / 5.0, 2.0 / 6.0, 3.0 / 5.0]);
         let fits = [
-            fitted([0.9, 0.2, 0.0, 0.0, 0.0, 0.0]),
-            Scored {
-                scores: None,
-                complexity: 0.0,
-                lasso_fit: None,
-            },
-            fitted([0.0, 0.0, 0.0, 0.0, 0.5, 0.6]),
+            fitted(&[0.9, 0.4, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0]),
+            null_fit(),
+            fitted(&[0.0, 0.0, 0.0, 0.0, 0.0, 0.6, 0.1, 0.3]),
         ];
-        let l = pool_folds("gbt", &truth, &test_fold, &fits, 1.0).unwrap();
-        assert_eq!(l.scores[..2], [0.9, 0.2]);
-        assert!(l.scores[2].is_nan() && l.scores[3].is_nan());
-        assert_eq!(l.scores[4..], [0.5, 0.6]);
+        let l = pool_folds("gbt", &truth, &test_fold, &fits, &prevalence, 1.0).unwrap();
+        let third = 2.0 / 6.0;
+        assert_eq!(l.scores, [0.9, 0.4, 0.2, third, third, 0.6, 0.1, 0.3]);
+        // Every sample: tp {0}, fn {1, 3}, fp {5}, tn {2, 4, 6, 7}.
         let m = l.metrics.as_ref().unwrap();
-        assert_eq!((m.n, m.tp, m.fn_, m.tn, m.fp), (4, 2, 0, 1, 1));
+        assert_eq!((m.n, m.tp, m.fn_, m.fp, m.tn), (8, 1, 2, 1, 4));
+        assert_eq!(m.sensitivity, 1.0 / 3.0);
+        assert_eq!(m.specificity, 0.8);
+        assert_eq!(m.balanced_accuracy, (1.0 / 3.0 + 0.8) / 2.0);
+        // Resistant scores 0.9, 0.4, 1/3 against susceptible 0.2, 1/3, 0.6,
+        // 0.1, 0.3: 5 + 4 + 3.5 of 15 pairs, the tie at 1/3 counting half.
+        assert!((m.auroc.unwrap() - 12.5 / 15.0).abs() < 1e-12);
+        assert_eq!(l.roc, roc_curve(&truth, &l.scores, 60));
+        // Fold 0: one of two resistant called, its susceptible sample right.
+        // Fold 1: the constant susceptible call, 0 and 1. Fold 2: no
+        // resistant sample, so sensitivity 0, and 2 of 3 susceptible right.
+        assert_eq!(
+            l.fold_balanced_accuracy,
+            [0.75, 0.5, (0.0 + 2.0 / 3.0) / 2.0]
+        );
         assert_eq!(
             l.no_call,
             Some(NoCall {
@@ -2627,24 +2719,104 @@ mod tests {
                 susceptible: 1
             })
         );
-        let (called, called_scores) = ([true, false, true, false], [0.9, 0.2, 0.5, 0.6]);
-        assert_eq!(m.auroc, crate::learn::auroc(&called, &called_scores));
-        assert_eq!(l.roc, roc_curve(&called, &called_scores, 60));
-        assert!(!l.roc.is_empty());
-        assert_eq!(l.fold_balanced_accuracy[0], 1.0);
-        assert!(l.fold_balanced_accuracy[1].is_nan());
-        assert_eq!(l.fold_balanced_accuracy[2], 0.5);
+        // The figure revision 13 published: samples 3 and 4 left out.
+        let c = l.called_metrics.as_ref().unwrap().as_ref().unwrap();
+        assert_eq!((c.n, c.tp, c.fn_, c.fp, c.tn), (6, 1, 1, 1, 3));
+        assert_eq!(c.balanced_accuracy, (0.5 + 0.75) / 2.0);
+        assert!((c.auroc.unwrap() - 7.0 / 8.0).abs() < 1e-12);
         assert_eq!(l.fold_complexity, [3.0, 0.0, 3.0]);
+        // Saved and read back, the row keeps both figures.
+        let saved = serde_json::to_value(&l).unwrap();
+        assert_eq!(saved["called_metrics"]["n"], 6);
+        assert_eq!(saved["metrics"]["n"], 8);
+        assert!(
+            saved["scores"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|s| s.is_number())
+        );
+        let back: LearnerResult = serde_json::from_value(saved).unwrap();
+        assert_eq!(back.called_metrics, l.called_metrics);
+        assert_eq!(back.metrics, l.metrics);
+        assert_eq!(back.scores, l.scores);
     }
 
     #[test]
-    fn null_fits_make_no_call_while_fitted_half_scores_are_calls() {
+    fn a_training_prevalence_of_exactly_one_half_is_a_resistant_call() {
+        // Fold 1's training samples are 0 and 1, one resistant: its null fit
+        // scores 0.5, which the 0.5 cutoff calls resistant.
+        let truth = [true, false, true, false];
+        let test_fold = [0, 0, 1, 1];
+        let prevalence = prevalences(&truth, &test_fold, 2);
+        assert_eq!(prevalence, [0.5, 0.5]);
+        let fits = [fitted(&[0.8, 0.3, 0.0, 0.0]), null_fit()];
+        let l = pool_folds("gbt", &truth, &test_fold, &fits, &prevalence, 1.0).unwrap();
+        assert_eq!(l.scores, [0.8, 0.3, 0.5, 0.5]);
+        let m = l.metrics.as_ref().unwrap();
+        assert_eq!((m.n, m.tp, m.fn_, m.fp, m.tn), (4, 2, 0, 1, 1));
+        assert_eq!(m.balanced_accuracy, 0.75);
+        // The constant resistant call: every resistant right, every
+        // susceptible wrong.
+        assert_eq!(l.fold_balanced_accuracy, [1.0, 0.5]);
+        let c = l.called_metrics.as_ref().unwrap().as_ref().unwrap();
+        assert_eq!((c.n, c.tp, c.fp, c.tn), (2, 1, 0, 1));
+    }
+
+    #[test]
+    fn a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers() {
+        // Every fold fitted: the metrics are those of every pooled score, as
+        // before revision 14, and the row has no `called_metrics` field.
+        let truth = [true, false, true, false, true, false];
+        let test_fold = [0, 0, 1, 1, 2, 2];
+        let fits = [
+            fitted(&[0.9, 0.2, 0.0, 0.0, 0.0, 0.0]),
+            fitted(&[0.0, 0.0, 0.4, 0.7, 0.0, 0.0]),
+            fitted(&[0.0, 0.0, 0.0, 0.0, 0.5, 0.6]),
+        ];
+        let prevalence = prevalences(&truth, &test_fold, 3);
+        let l = pool_folds("rf", &truth, &test_fold, &fits, &prevalence, 1.0).unwrap();
+        let scores = [0.9, 0.2, 0.4, 0.7, 0.5, 0.6];
+        assert_eq!(l.scores, scores);
+        assert_eq!(l.metrics, Some(binary_metrics(&truth, &scores, 0.5, true)));
+        let m = l.metrics.as_ref().unwrap();
+        assert_eq!((m.n, m.tp, m.fn_, m.fp, m.tn), (6, 2, 1, 2, 1));
+        assert_eq!(l.called_metrics, None);
+        assert_eq!(
+            l.no_call,
+            Some(NoCall {
+                resistant: 0,
+                susceptible: 0
+            })
+        );
+        assert_eq!(l.fold_balanced_accuracy, [1.0, 0.0, 0.5]);
+        let saved = serde_json::to_value(&l).unwrap();
+        assert!(saved.get("called_metrics").is_none());
+        // The prevalences are not read when no fit is null.
+        let other = pool_folds("rf", &truth, &test_fold, &fits, &[0.0, 1.0, 0.5], 1.0).unwrap();
+        assert_eq!(serde_json::to_value(&other).unwrap(), saved);
+    }
+
+    #[test]
+    fn pooling_refuses_a_missing_or_impossible_training_prevalence() {
+        let truth = [true, false];
+        let fits = [null_fit(), fitted(&[0.2, 0.7])];
+        for bad in [&[0.5][..], &[0.5, f64::NAN], &[1.5, 0.5]] {
+            assert!(pool_folds("gbt", &truth, &[0, 1], &fits, bad, 1.0).is_err());
+        }
+    }
+
+    #[test]
+    fn null_fits_are_scored_at_their_folds_training_prevalence_in_evaluate() {
         // With no candidate feature, boosting keeps no tree and the lasso
         // path is empty in every fold: null fits. CART's one leaf and the
         // forest's leaf-only trees score exactly 0.5 too, but they are
         // fitted models, so the 0.5 cutoff calls every sample resistant.
+        // Three extra resistant samples (1, 5, 9) make the folds' training
+        // prevalences differ from one another, from their test folds' and
+        // from the whole dataset's.
         let n = 80;
-        let y = Bits::from_indices(n, (0..n).filter(|i| i % 4 == 0));
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 4 == 0 || [1, 5, 9].contains(i)));
         let groups: Vec<u32> = (0..n).map(|i| (i / 4) as u32).collect();
         let cfg = small_config();
         let out = evaluate(
@@ -2658,39 +2830,66 @@ mod tests {
             &cfg,
         )
         .unwrap();
+        let truth: Vec<bool> = (0..n).map(|i| y.contains(i)).collect();
         let none = NoCall {
             resistant: 0,
             susceptible: 0,
         };
+        let mut distinct = std::collections::BTreeSet::new();
         for split in &out.splits {
             assert!(split.unavailable_reason.is_none());
+            let f = &split.test_fold;
+            let share = |keep: &dyn Fn(usize) -> bool| {
+                let idx: Vec<usize> = (0..n).filter(|&i| keep(i)).collect();
+                idx.iter().filter(|&&i| truth[i]).count() as f64 / idx.len() as f64
+            };
+            let train: Vec<f64> = (0..cfg.folds).map(|k| share(&|i| f[i] != k)).collect();
+            let test: Vec<f64> = (0..cfg.folds).map(|k| share(&|i| f[i] == k)).collect();
+            assert!(
+                (0..cfg.folds).any(|k| train[k] != test[k]),
+                "{}",
+                split.scheme
+            );
+            assert!(train.iter().any(|&p| p != 23.0 / 80.0), "{}", split.scheme);
+            distinct.extend(train.iter().map(|p| p.to_bits()));
             for l in &split.learners {
                 match l.learner.as_str() {
                     "gbt" | "lasso" => {
-                        assert!(l.scores.iter().all(|s| s.is_nan()));
-                        assert_eq!(l.metrics, None);
-                        assert!(l.roc.is_empty());
+                        let want: Vec<f64> = (0..n).map(|i| train[f[i]]).collect();
+                        assert_eq!(l.scores, want, "{} {}", split.scheme, l.learner);
+                        // Every prevalence is below 0.5: all called susceptible.
+                        let m = l.metrics.as_ref().unwrap();
+                        assert_eq!((m.n, m.tp, m.fp, m.tn, m.fn_), (n, 0, 0, 57, 23));
+                        assert_eq!(m.balanced_accuracy, 0.5);
+                        assert_eq!(m.auroc, crate::learn::auroc(&truth, &want));
+                        assert_eq!(l.roc, roc_curve(&truth, &want, 60));
                         assert_eq!(
                             l.no_call,
                             Some(NoCall {
-                                resistant: 20,
-                                susceptible: 60
+                                resistant: 23,
+                                susceptible: 57
                             })
                         );
-                        assert!(l.fold_balanced_accuracy.iter().all(|b| b.is_nan()));
+                        assert_eq!(l.called_metrics, Some(None));
+                        assert_eq!(l.fold_balanced_accuracy, vec![0.5; cfg.folds]);
                         assert_eq!(l.fold_complexity, vec![0.0; cfg.folds]);
                     }
                     "cart" | "rf" => {
                         assert!(l.scores.iter().all(|&s| s == 0.5));
                         let m = l.metrics.as_ref().unwrap();
-                        assert_eq!((m.n, m.tp, m.fp), (n, 20, 60));
+                        assert_eq!((m.n, m.tp, m.fp), (n, 23, 57));
                         assert_eq!(l.no_call, Some(none));
+                        assert_eq!(l.called_metrics, None);
                     }
-                    _ => assert_eq!(l.no_call, Some(none)),
+                    _ => {
+                        assert_eq!(l.no_call, Some(none));
+                        assert_eq!(l.called_metrics, None);
+                    }
                 }
             }
         }
-        // A sample without a call is saved as null and read back as NaN.
+        assert!(distinct.len() > 1);
+        // Saved, the scores are numbers and `called_metrics` is null.
         let gbt = &out.splits[0].learners[3];
         let saved = serde_json::to_value(gbt).unwrap();
         assert!(
@@ -2698,32 +2897,40 @@ mod tests {
                 .as_array()
                 .unwrap()
                 .iter()
-                .all(|s| s.is_null())
+                .all(|s| s.is_number())
         );
+        assert!(saved["called_metrics"].is_null() && saved.get("called_metrics").is_some());
         let back: LearnerResult = serde_json::from_value(saved).unwrap();
-        assert!(back.scores.iter().all(|s| s.is_nan()));
-        assert!(back.fold_balanced_accuracy.iter().all(|b| b.is_nan()));
+        assert_eq!(back.called_metrics, Some(None));
+        assert_eq!(back.scores, gbt.scores);
+        assert_eq!(back.fold_balanced_accuracy, gbt.fold_balanced_accuracy);
     }
 
     #[test]
-    fn a_learner_with_every_fold_null_has_no_metrics_roc_or_fold_scores() {
+    fn a_learner_with_every_fold_null_predicts_each_folds_prevalence() {
         // E. coli amikacin in revision 5: 1,012 isolates, 30 resistant, and
         // lineage boosting kept no tree in any of its 5 folds. Revision 5
-        // scored those isolates 0.5 and reported 0% VME; without a call
-        // there is no rate to report.
+        // scored those isolates 0.5 (all resistant, 0% VME); revisions 7 to
+        // 13 left them uncalled with no rates. A null fit predicts its
+        // training prevalence: folds 0 and 1 hold 203 isolates, so their
+        // training sets are 24 of 809, the others' 24 of 810. All are below
+        // 0.5, so every isolate is called susceptible.
         let truth: Vec<bool> = (0..1012).map(|i| i < 30).collect();
         let test_fold: Vec<usize> = (0..1012).map(|i| i % 5).collect();
-        let fits: Vec<Scored> = (0..5)
-            .map(|_| Scored {
-                scores: None,
-                complexity: 0.0,
-                lasso_fit: None,
-            })
-            .collect();
-        let l = pool_folds("gbt", &truth, &test_fold, &fits, 1.0).unwrap();
-        assert_eq!(l.metrics, None);
-        assert!(l.roc.is_empty());
-        assert!(l.fold_balanced_accuracy.iter().all(|b| b.is_nan()));
+        let fits: Vec<Scored> = (0..5).map(|_| null_fit()).collect();
+        let prevalence = prevalences(&truth, &test_fold, 5);
+        let (high, low) = (24.0 / 809.0, 24.0 / 810.0);
+        assert_eq!(prevalence, [high, high, low, low, low]);
+        let l = pool_folds("gbt", &truth, &test_fold, &fits, &prevalence, 1.0).unwrap();
+        let m = l.metrics.as_ref().unwrap();
+        assert_eq!((m.n, m.tp, m.fn_, m.fp, m.tn), (1012, 0, 30, 0, 982));
+        assert_eq!((m.sensitivity, m.specificity, m.vme), (0.0, 1.0, 1.0));
+        assert_eq!(m.balanced_accuracy, 0.5);
+        // 12 resistant and 394 susceptible score high, 18 and 588 low:
+        // (12 * 588 + (12 * 394 + 18 * 588) / 2) / (30 * 982).
+        assert!((m.auroc.unwrap() - 14712.0 / 29460.0).abs() < 1e-12);
+        assert!(!l.roc.is_empty());
+        assert_eq!(l.fold_balanced_accuracy, vec![0.5; 5]);
         assert_eq!(
             l.no_call,
             Some(NoCall {
@@ -2731,14 +2938,51 @@ mod tests {
                 susceptible: 982
             })
         );
+        assert_eq!(l.called_metrics, Some(None));
         let saved = serde_json::to_value(&l).unwrap();
-        assert!(saved["metrics"].is_null());
-        assert_eq!(saved["roc"], serde_json::json!([]));
+        assert_eq!(saved["metrics"]["n"], 1012);
+        assert!(saved["called_metrics"].is_null());
         for key in ["scores", "fold_balanced_accuracy"] {
-            assert!(saved[key].as_array().unwrap().iter().all(|v| v.is_null()));
+            assert!(saved[key].as_array().unwrap().iter().all(|v| v.is_number()));
         }
         let back: LearnerResult = serde_json::from_value(saved).unwrap();
-        assert_eq!(back.metrics, None);
+        assert_eq!(back.metrics, l.metrics);
+        assert_eq!(back.called_metrics, Some(None));
+    }
+
+    #[test]
+    fn rows_written_before_revision_14_read_back_unchanged() {
+        // A revision-13 row: fold 1's samples uncalled (null scores, null
+        // fold balanced accuracy), metrics over the called samples, and no
+        // `called_metrics` field.
+        let old = serde_json::json!({
+            "learner": "gbt",
+            "metrics": {"n": 4, "tp": 2, "fp": 1, "tn": 1, "fn": 0, "accuracy": 0.75,
+                        "balanced_accuracy": 0.75, "sensitivity": 1.0, "specificity": 0.5,
+                        "precision": 0.6666666666666666, "f1": 0.8, "mcc": 0.5773502691896258,
+                        "vme": 0.0, "me": 0.5, "auroc": 0.75, "auprc": 0.8333333333333333},
+            "fold_balanced_accuracy": [1.0, null, 0.5],
+            "roc": [[0.0, 0.0], [1.0, 1.0]],
+            "scores": [0.9, 0.2, null, null, 0.5, 0.6],
+            "conformal": [],
+            "fold_complexity": [3.0, 0.0, 3.0],
+            "seconds": 1.0,
+            "no_call": {"resistant": 1, "susceptible": 1}
+        });
+        let back: LearnerResult = serde_json::from_value(old.clone()).unwrap();
+        assert_eq!(back.called_metrics, None);
+        assert_eq!(back.metrics.as_ref().unwrap().n, 4);
+        assert!(back.scores[2].is_nan() && back.fold_balanced_accuracy[1].is_nan());
+        assert_eq!(serde_json::to_value(&back).unwrap(), old);
+        // A row with null metrics (every fold null, revisions 7 to 13).
+        let mut none = old;
+        none["metrics"] = serde_json::Value::Null;
+        let back: LearnerResult = serde_json::from_value(none.clone()).unwrap();
+        assert_eq!((back.metrics, back.called_metrics), (None, None));
+        let again =
+            serde_json::to_value(serde_json::from_value::<LearnerResult>(none.clone()).unwrap())
+                .unwrap();
+        assert_eq!(again, none);
     }
 
     #[test]
@@ -3313,6 +3557,7 @@ mod tests {
         let result = LearnerResult {
             learner: "lasso".into(),
             metrics: Some(binary_metrics(&truth, &scores, 0.5, true)),
+            called_metrics: None,
             fold_balanced_accuracy: vec![],
             roc: roc_curve(&truth, &scores, 60),
             // Infer the stored field's type so this regression also runs

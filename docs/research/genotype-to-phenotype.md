@@ -164,7 +164,7 @@ The cached species matrix remains a feature superset: a feature eligible under a
 
 For binary classification with R positive, report sensitivity, specificity, balanced accuracy, MCC, AUROC, average precision, and confusion counts. Give VME as false S among reference R, and ME as false R among reference S. Report negative predictive value, the fraction of susceptible calls that are reference S, at the observed test prevalence.
 
-For S/I/R outcomes, show the full confusion matrix and identify how errors involving I are counted. Undefined metrics from absent reference classes should be unavailable. In revision 7, null fits produce no-calls, and metrics are null when no isolate was called. A null or unavailable metric must not be interpreted as evidence of no error.
+For S/I/R outcomes, show the full confusion matrix and identify how errors involving I are counted. Undefined metrics from absent reference classes should be unavailable. In revisions 7 to 13, null fits produce no-calls, and metrics are null when no isolate was called; from revision 14 a null fit scores its fold at the training prevalence, so every learner's metrics cover every isolate. A null or unavailable metric must not be interpreted as evidence of no error.
 
 Attach uncertainty to the clinically meaningful denominators. Use paired isolate-level comparisons for models tested on the same cases; resample at the patient, source, or lineage level when that is the relevant independent unit. Name the unit and confidence-interval method. A task with 25 reference-resistant isolates cannot tightly bound a rare false-susceptible error rate even if every call is correct.
 

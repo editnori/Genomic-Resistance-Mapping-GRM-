@@ -69,12 +69,19 @@ describe("edge validation", () => {
     });
 
     it("rejects a best learner that leaves isolates uncalled or does not score best_random", () => {
-      const message = /should call every isolate and score best_random/;
+      const message = /should be scored on every isolate and score best_random/;
       expect(edited((row) => (winnerRow(row).random!.no_call = { resistant: 1, susceptible: 0 }))).toThrow(message);
       expect(edited((row) => (winnerRow(row).lineage = { ...winnerRow(row).random!, no_call: { resistant: 0, susceptible: 2 } }))).toThrow(message);
       expect(edited((row) => (winnerRow(row).lineage = null))).toThrow(message);
       expect(edited((row) => (row.best_random = (row.best_random as number) - 0.01))).toThrow(message);
       expect(edited((row) => (winnerRow(row).random!.no_call = { resistant: 0, susceptible: 0 }))).not.toThrow();
+    });
+
+    it("accepts a revision-14 best learner whose null-fit isolates are scored, and only with rates", () => {
+      const scored = (row: Row) => Object.assign(winnerRow(row).random!, { no_call: { resistant: 1, susceptible: 0 }, null_fits_scored: true });
+      expect(edited((row) => scored(row))).not.toThrow();
+      expect(edited((row) => (scored(row).null_fits_scored = false))).toThrow(/null_fits_scored is true only/);
+      expect(edited((row) => Object.assign(winnerRow(row).random!, { null_fits_scored: true }))).toThrow(/null_fits_scored is true only/);
     });
 
     it("rejects a panel row that names a learner other than its dataset's best", () => {
@@ -100,6 +107,24 @@ describe("edge validation", () => {
     const raw = fixtureFile(`/data/datasets/${id}.json`) as { splits: { learners: { scores: number[] }[] }[] };
     raw.splits[0]!.learners[0]!.scores.pop();
     expect(() => parseDataset(raw)).toThrow(/scores do not cover/);
+  });
+
+  it("reads a revision-14 learner row that scores its null-fit isolates, and rejects one that leaves them null", () => {
+    const id = parseManifest(manifest()).datasets[0]!.id;
+    type L = { learner: string; scores: (number | null)[]; metrics: Record<string, number> | null; called_metrics?: Record<string, number> | null; no_call?: { resistant: number; susceptible: number } };
+    const raw = fixtureFile(`/data/datasets/${id}.json`) as { samples: { resistant: boolean }[]; splits: { learners: L[] }[] };
+    const n = raw.samples.length;
+    const row = raw.splits[0]!.learners.find((l) => l.learner === "gbt")!;
+    // Isolates 0 and 1 sit in a null-fit fold, scored at its prevalence.
+    const nulled = [0, 1];
+    const noCall = { resistant: nulled.filter((i) => raw.samples[i]!.resistant).length, susceptible: nulled.filter((i) => !raw.samples[i]!.resistant).length };
+    Object.assign(row, { no_call: noCall, called_metrics: { ...row.metrics!, n: n - 2 } });
+    expect(() => parseDataset(raw)).not.toThrow();
+    row.scores[0] = null;
+    expect(() => parseDataset(raw)).toThrow(/no score should be null/);
+    row.scores[0] = 0.3;
+    row.called_metrics = { ...row.metrics!, n };
+    expect(() => parseDataset(raw)).toThrow(/called_metrics should cover the/);
   });
 
   it("checks that a probe panel's called isolates and no-calls add up to the dataset", () => {

@@ -695,12 +695,18 @@ fn arm_plan(
     }
 }
 
-/// Numeric metrics of a learner result, for K's run record.
+/// Numeric metrics of a learner result, for K's run record: those over the
+/// samples of folds with a fitted model (`called_metrics` when a fold's fit
+/// was null, else `metrics`), the figure every input-comparison run has
+/// recorded. The pooled result's `metrics`, which from evaluation revision
+/// 14 also score null-fit folds at their training prevalence, are not used
+/// here, so H-1's run records stay reproducible.
 fn metrics(
     result: &crate::learn::eval::LearnerResult,
 ) -> Result<serde_json::Map<String, serde_json::Value>> {
+    let called = result.called_metrics.as_ref().unwrap_or(&result.metrics);
     let mut out = serde_json::Map::new();
-    if let serde_json::Value::Object(m) = serde_json::to_value(&result.metrics)? {
+    if let serde_json::Value::Object(m) = serde_json::to_value(called)? {
         for (k, v) in m {
             if v.is_number() || v.is_null() {
                 out.insert(k, v);
@@ -708,6 +714,18 @@ fn metrics(
         }
     }
     Ok(out)
+}
+
+/// A prediction row's (score, called): a null fit's sample carries its
+/// fold's training prevalence and is not called; any other sample is called
+/// at the 0.5 cutoff. The pooled score of a null-fit sample is that same
+/// prevalence, so only `called` needs the null flag.
+fn prediction_call(score: f64, null_fit: bool, prevalence: f64) -> (f64, bool) {
+    if null_fit {
+        (prevalence, false)
+    } else {
+        (score, score >= 0.5)
+    }
 }
 
 /// Scores one arm of `dataset` in `layout` and writes, under `out`:
@@ -899,12 +917,11 @@ fn score_arm(
                 }
                 for (j, &i) in split.tested.iter().enumerate() {
                     let fold = split.result.test_fold[j];
-                    let s = result.scores[j];
-                    let (score, called) = if s.is_nan() {
-                        (split.train_prevalence[fold], false)
-                    } else {
-                        (s, s >= 0.5)
-                    };
+                    let (score, called) = prediction_call(
+                        result.scores[j],
+                        split.null_fit[li][fold],
+                        split.train_prevalence[fold],
+                    );
                     let row = PredictionRow {
                         dataset: dataset.to_string(),
                         arm: cfg.arm.clone(),
@@ -938,6 +955,76 @@ fn score_arm(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn run_metrics_and_prediction_rows_keep_a_null_fits_samples_uncalled() {
+        // The pooled result scores a null fit's samples at the fold's
+        // training prevalence (evaluation revision 14). The input
+        // comparison's run metrics and rows stay as H-1 recorded them: run
+        // metrics over the fitted folds' samples, and a null fit's rows
+        // carrying the prevalence with called = false.
+        use crate::learn::eval::{Scored, pool_folds};
+        let truth = [true, true, false, true, false, false, false, false];
+        let test_fold = [0, 0, 0, 1, 1, 2, 2, 2];
+        let prevalence = [1.0 / 5.0, 2.0 / 6.0, 3.0 / 5.0];
+        let fitted = |s: [f64; 8]| Scored {
+            scores: Some(s.to_vec()),
+            complexity: 3.0,
+            lasso_fit: None,
+        };
+        let fits = [
+            fitted([0.9, 0.4, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0]),
+            Scored {
+                scores: None,
+                complexity: 0.0,
+                lasso_fit: None,
+            },
+            fitted([0.0, 0.0, 0.0, 0.0, 0.0, 0.6, 0.1, 0.3]),
+        ];
+        let l = pool_folds("gbt", &truth, &test_fold, &fits, &prevalence, 1.0).unwrap();
+        let run = metrics(&l).unwrap();
+        // tp {0}, fn {1}, fp {5}, tn {2, 6, 7}: samples 3 and 4 left out.
+        assert_eq!(run["n"], 6);
+        assert_eq!(run["balanced_accuracy"], (0.5 + 0.75) / 2.0);
+        assert_eq!(
+            serde_json::Value::Object(run),
+            serde_json::to_value(l.called_metrics.clone().unwrap()).unwrap()
+        );
+        let null = [false, true, false];
+        let rows: Vec<(f64, bool)> = (0..8)
+            .map(|j| prediction_call(l.scores[j], null[test_fold[j]], prevalence[test_fold[j]]))
+            .collect();
+        assert_eq!(rows[3], (2.0 / 6.0, false));
+        assert_eq!(rows[4], (2.0 / 6.0, false));
+        assert_eq!(rows[0], (0.9, true));
+        assert_eq!(rows[1], (0.4, false));
+        assert_eq!(rows[5], (0.6, true));
+        // A fold with a fitted model is called at 0.5, and its exact 0.5 is
+        // resistant; a null fit at prevalence 0.5 stays uncalled.
+        assert_eq!(prediction_call(0.5, false, 0.2), (0.5, true));
+        assert_eq!(prediction_call(0.5, true, 0.5), (0.5, false));
+        // With every fold null the run records no metric, as before.
+        let all_null: Vec<Scored> = (0..3)
+            .map(|_| Scored {
+                scores: None,
+                complexity: 0.0,
+                lasso_fit: None,
+            })
+            .collect();
+        let l = pool_folds("gbt", &truth, &test_fold, &all_null, &prevalence, 1.0).unwrap();
+        assert!(metrics(&l).unwrap().is_empty());
+        // Without a null fit the run metrics are the pooled metrics.
+        let no_null = [
+            fitted([0.9, 0.4, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0]),
+            fitted([0.0, 0.0, 0.0, 0.7, 0.2, 0.0, 0.0, 0.0]),
+            fitted([0.0, 0.0, 0.0, 0.0, 0.0, 0.6, 0.1, 0.3]),
+        ];
+        let l = pool_folds("gbt", &truth, &test_fold, &no_null, &prevalence, 1.0).unwrap();
+        assert_eq!(
+            serde_json::Value::Object(metrics(&l).unwrap()),
+            serde_json::to_value(&l.metrics).unwrap()
+        );
+    }
     use crate::ablate::blocks::{RawBlock, RawColumn};
     use crate::ablate::plan::fold_plan;
 

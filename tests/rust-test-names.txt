@@ -8,6 +8,7 @@ src/lib.rs ablate::arm::tests::a_cohort_plan_keeps_its_held_out_genomes_in_run_a
 src/lib.rs ablate::arm::tests::a_refused_lineage_repeat_is_replaced_by_the_next_keyed_draw_at_most_twice
 src/lib.rs ablate::arm::tests::a_refused_retuned_draw_is_replaced_at_most_twice_per_split
 src/lib.rs ablate::arm::tests::run_arm_hands_each_c_and_k_fold_matrix_only_its_training_samples
+src/lib.rs ablate::arm::tests::run_metrics_and_prediction_rows_keep_a_null_fits_samples_uncalled
 src/lib.rs ablate::arm::tests::the_fold_matrix_reads_only_the_training_samples
 src/lib.rs ablate::blocks::tests::a_probe_no_call_is_not_assessable
 src/lib.rs ablate::blocks::tests::admission_checks_rows_and_shape
@@ -116,7 +117,7 @@ src/lib.rs analysis::tests::reports_use_the_reported_cohort_and_record_its_count
 src/lib.rs analysis::tests::rows_follow_matrix_columns_rather_than_genome_ids
 src/lib.rs analysis::tests::swapping_genomes_with_identical_columns_changes_the_matrix_digest
 src/lib.rs analysis::tests::the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does
-src/lib.rs analysis::tests::the_log_names_the_best_learner_that_calls_every_isolate
+src/lib.rs analysis::tests::the_log_names_the_best_learner_scored_on_every_isolate
 src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason_without_ksets
 src/lib.rs analysis::tests::unsupported_assays_are_listed_with_their_reason_instead_of_a_panel
 src/lib.rs analysis::tests::write_lasso_scan_fixture_root [ignored]
@@ -199,9 +200,11 @@ src/lib.rs learn::eval::tests::a_boosted_model_that_keeps_no_tree_is_a_null_fit_
 src/lib.rs learn::eval::tests::a_failed_lasso_fit_is_reported_with_its_trace_before_it_is_returned
 src/lib.rs learn::eval::tests::a_grouped_holdout_that_fails_after_its_inner_folds_pass_stops_the_plan
 src/lib.rs learn::eval::tests::a_lasso_refit_that_keeps_no_feature_is_a_null_fit_without_a_call
-src/lib.rs learn::eval::tests::a_learner_with_every_fold_null_has_no_metrics_roc_or_fold_scores
+src/lib.rs learn::eval::tests::a_learner_with_every_fold_null_predicts_each_folds_prevalence
 src/lib.rs learn::eval::tests::a_move_that_empties_a_class_from_a_random_fold_fails_the_dataset
 src/lib.rs learn::eval::tests::a_path_without_a_converged_candidate_fails_with_full_context
+src/lib.rs learn::eval::tests::a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers
+src/lib.rs learn::eval::tests::a_training_prevalence_of_exactly_one_half_is_a_resistant_call
 src/lib.rs learn::eval::tests::an_empty_lasso_path_is_a_null_fit_without_a_call
 src/lib.rs learn::eval::tests::an_unconverged_final_lasso_refit_fails_with_full_context
 src/lib.rs learn::eval::tests::conformal_trades_coverage_for_error
@@ -224,12 +227,14 @@ src/lib.rs learn::eval::tests::lineage_tuning_ignores_duplicate_groups
 src/lib.rs learn::eval::tests::malformed_duplicate_groups_are_rejected_before_any_fit
 src/lib.rs learn::eval::tests::mic_categorical_uses_reported_truth_and_each_training_threshold
 src/lib.rs learn::eval::tests::mic_scores_round_trip_missing_measurements_and_fit_fold_thresholds
-src/lib.rs learn::eval::tests::null_fits_make_no_call_while_fitted_half_scores_are_calls
+src/lib.rs learn::eval::tests::null_fits_are_scored_at_their_folds_training_prevalence_in_evaluate
+src/lib.rs learn::eval::tests::one_null_fold_of_several_is_scored_at_its_training_prevalence
 src/lib.rs learn::eval::tests::outer_test_samples_cannot_change_inner_tuning
-src/lib.rs learn::eval::tests::pooled_metrics_cover_called_samples_and_count_null_folds_apart
+src/lib.rs learn::eval::tests::pooling_refuses_a_missing_or_impossible_training_prevalence
 src/lib.rs learn::eval::tests::random_tuning_keeps_each_duplicate_group_whole_inside_outer_training
 src/lib.rs learn::eval::tests::random_tuning_that_cannot_keep_duplicates_whole_fails_before_any_fit
 src/lib.rs learn::eval::tests::random_tuning_without_duplicates_is_revision_10s_stratified_tuning
+src/lib.rs learn::eval::tests::rows_written_before_revision_14_read_back_unchanged
 src/lib.rs learn::eval::tests::saved_scores_are_held_out_fits_that_reproduce_every_reported_metric
 src/lib.rs learn::eval::tests::scm_cart_boosting_and_lasso_tune_on_the_splits_tuning_groups
 src/lib.rs learn::eval::tests::serialized_scores_preserve_threshold_calls_and_ranks
@@ -374,6 +379,7 @@ src/lib.rs report::tests::manifest_rows_read_a_report_without_min_class_as_the_o
 src/lib.rs report::tests::manifest_states_the_current_revision_beside_each_report_audit
 src/lib.rs report::tests::no_full_coverage_learner_means_no_headline_winner
 src/lib.rs report::tests::publishing_replaces_the_file_without_truncating_existing_readers
+src/lib.rs report::tests::revision_14_rows_with_null_fits_compete_for_best_learner
 src/lib.rs report::tests::the_best_learner_calls_every_random_split_sample
 src/lib.rs report::tests::the_best_learner_needs_full_coverage_on_every_available_split
 src/lib.rs report::tests::the_index_is_schema_2_and_reads_schema_1_reports_beside_schema_2_ones

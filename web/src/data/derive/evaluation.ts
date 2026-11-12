@@ -9,8 +9,14 @@ import type { EvaluationAudit, Manifest } from "../schema";
 export const NO_CALL_REVISION = 7;
 
 /** How a null fit counts under the manifest's evaluation revision. */
+/** The first evaluation revision that scores a null fit's isolates at their
+ *  fold's training prevalence (src/analysis.rs). */
+export const EQUAL_SCORING_REVISION = 14;
+
 export const nullFitWords = (revision: number | undefined): string =>
-  revision !== undefined && revision >= NO_CALL_REVISION
+  revision !== undefined && revision >= EQUAL_SCORING_REVISION
+    ? `A boosted model that keeps no tree, or a lasso that keeps no weight, has learned nothing beyond the class balance. From evaluation revision ${EQUAL_SCORING_REVISION} it scores each isolate of that fold at the share of resistant isolates in the fold's training set, and the 0.5 cutoff calls that score resistant when the share is 0.5 or more. Balanced accuracy, VME, ME, and AUROC cover every isolate for every learner, and each dataset's learner table counts the isolates scored this way. Reports computed under revisions ${NO_CALL_REVISION} to ${EQUAL_SCORING_REVISION - 1} made no call for those isolates and scored the rest; earlier revisions scored them 0.5. A fitted model that scores an isolate exactly 0.5 calls it resistant.`
+    : revision !== undefined && revision >= NO_CALL_REVISION
     ? `A boosted model that keeps no tree, or a lasso that keeps no weight, has learned nothing beyond the class balance. From evaluation revision ${NO_CALL_REVISION} it makes no call for the isolates of that fold: balanced accuracy, VME, ME, and AUROC cover the isolates called, and each dataset's learner table gives the share called. Reports computed under earlier revisions scored those isolates 0.5, which the 0.5 cutoff calls resistant. A fitted model that scores an isolate exactly 0.5 still calls it resistant.`
     : "A boosted model that keeps no tree, or a lasso that keeps no weight, has learned nothing beyond the class balance. It scores every isolate of that fold 0.5, which the 0.5 cutoff calls resistant.";
 

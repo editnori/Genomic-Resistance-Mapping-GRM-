@@ -32,6 +32,17 @@ Revision 13 changes only which gene-panel targets each panel row reads
 (some panels move to unsupported_assays), not the report's shape, so its
 reports meet revision 12's rules.
 
+Revision 14 (EQUAL_SCORING_REVISION) scores every isolate for every
+learner. A null fit, a gbt or lasso fold whose fold_complexity is 0,
+predicts its training prevalence (resistant over all isolates outside that
+test fold) for each isolate of the fold, and the 0.5 cutoff calls it. So no
+learner score is null; metrics, ROC and every fold's balanced accuracy
+cover every isolate; no_call counts the isolates of null-fit folds by
+class; and a row with any keeps the metrics over the other isolates in
+called_metrics (null when every fold was null). A row without a null fit
+has no called_metrics. A lasso fold has a weight exactly when it has a
+refit, as before.
+
 A report may list kset_duplicates: the samples with identical kset digests,
 one ascending list of two or more sample indices per group, ordered by first
 member and disjoint. Each group shares a lineage and sits whole in one test
@@ -42,7 +53,10 @@ a field that should be there is missing.
 
 The best learner follows the schema. In schema 2 it is the highest
 random-split balanced accuracy among scm, cart, rf, gbt, and lasso rows
-that call every isolate on every split that ran, or none. Schema-1 runs
+whose metrics cover every isolate on every split that ran, or none: before
+revision 14 a row that left isolates uncalled is passed over, and from
+revision 14 every row covers every isolate. The revision-14 done line says
+"scored on every isolate" where earlier ones said "call every isolate". Schema-1 runs
 logged the highest random-split balanced accuracy of any row, the catalog
 included. A tie goes to the later row in both. With --log, each report's
 last done line in that pipeline log must name that learner, and every
@@ -68,9 +82,14 @@ LEARNERS = ["scm", "cart", "rf", "gbt", "lasso"]
 # The first evaluation revision that isolates kset duplicates; audit.py
 # holds the same value.
 DUPLICATE_ISOLATION_REVISION = 10
+# The first evaluation revision that scores a null fit's isolates at their
+# fold's training prevalence; audit.py holds the same value.
+EQUAL_SCORING_REVISION = 14
 NO_WINNER = "no learner calls every isolate"
+NO_SCORED_WINNER = "no learner is scored on every isolate"
 DONE = re.compile(r"\s+(\S+__\S+) done in \S+ \((.*)\)$")
 WINNER = re.compile(r"best random-split learner among those that call every isolate: (\S+) (\S+)")
+SCORED_WINNER = re.compile(r"best random-split learner among those scored on every isolate: (\S+) (\S+)")
 ANY_ROW = re.compile(r"best random-split balanced accuracy: (\S+) (\S+)")
 
 
@@ -86,6 +105,10 @@ def done_lines(log):
             done[m.group(1)] = ("full coverage", None, None)
         elif w := WINNER.fullmatch(words):
             done[m.group(1)] = ("full coverage", w.group(1), w.group(2))
+        elif words == NO_SCORED_WINNER:
+            done[m.group(1)] = ("scored coverage", None, None)
+        elif w := SCORED_WINNER.fullmatch(words):
+            done[m.group(1)] = ("scored coverage", w.group(1), w.group(2))
         elif w := ANY_ROW.fullmatch(words):
             done[m.group(1)] = ("any row", w.group(1), w.group(2))
         else:
@@ -107,8 +130,10 @@ def full_coverage_best(report):
     rows = {(split["scheme"], learner["learner"]): learner for split in report["splits"] for learner in split["learners"]}
 
     def calls_every_isolate(learner):
+        # A revision-14 row with a null fit carries called_metrics: its
+        # metrics already cover the null fit's isolates.
         no_call = learner.get("no_call")
-        return learner["metrics"] is not None and (no_call is None or no_call["resistant"] + no_call["susceptible"] == 0)
+        return learner["metrics"] is not None and ("called_metrics" in learner or no_call is None or no_call["resistant"] + no_call["susceptible"] == 0)
 
     lineage_ran = any(split["scheme"] == "lineage" and split.get("unavailable_reason") is None for split in report["splits"])
     best = None
@@ -128,6 +153,58 @@ def any_row_best(report):
         if best is None or learner["metrics"]["balanced_accuracy"] >= best[1]:
             best = (learner["learner"], learner["metrics"]["balanced_accuracy"])
     return best
+
+
+def confusion_of(truth, scores, idx):
+    predicted = {i: scores[i] >= 0.5 for i in idx}
+    return {
+        "n": len(idx),
+        "tp": sum(truth[i] and predicted[i] for i in idx),
+        "tn": sum(not truth[i] and not predicted[i] for i in idx),
+        "fp": sum(not truth[i] and predicted[i] for i in idx),
+        "fn": sum(truth[i] and not predicted[i] for i in idx),
+    }
+
+
+def check_equal_scored_row(learner, truth, folds, k, identity):
+    """Check one revision-14 learner row: every isolate scored, a null-fit
+    fold at its training prevalence; return whether it has a null fit."""
+    n = len(truth)
+    scores = learner["scores"]
+    assert None not in scores, ("null score in a revision-%d learner row" % EQUAL_SCORING_REVISION,) + identity
+    complexity = learner["fold_complexity"]
+    assert isinstance(complexity, list) and len(complexity) == k, ("fold complexity length",) + identity
+    null = [learner["learner"] in ("gbt", "lasso") and complexity[f] == 0 for f in range(k)]
+    for f in range(k):
+        if null[f]:
+            train = [i for i in range(n) if folds[i] != f]
+            prevalence = sum(truth[i] for i in train) / len(train)
+            assert all(scores[i] == prevalence for i in range(n) if folds[i] == f), ("a null fit's scores are not its training prevalence",) + identity + (f,)
+    in_null = [i for i in range(n) if null[folds[i]]]
+    no_call = {"resistant": sum(1 for i in in_null if truth[i]), "susceptible": sum(1 for i in in_null if not truth[i])}
+    assert learner.get("no_call") == no_call, ("no_call differs from the null-fit folds",) + identity
+    metrics = learner["metrics"]
+    assert metrics is not None, ("null metrics on a revision-%d learner row" % EQUAL_SCORING_REVISION,) + identity
+    want = confusion_of(truth, scores, range(n))
+    assert all(metrics[key] == v for key, v in want.items()), ("confusion of every isolate",) + identity
+    assert math.isclose(metrics["balanced_accuracy"], balanced_accuracy(truth, scores), abs_tol=1e-12), ("balanced accuracy",) + identity
+    if not in_null:
+        assert "called_metrics" not in learner, ("called_metrics on a row without a null fit",) + identity
+    else:
+        assert "called_metrics" in learner, ("a row with a null fit lacks called_metrics",) + identity
+        fitted = [i for i in range(n) if not null[folds[i]]]
+        called = learner["called_metrics"]
+        if not fitted:
+            assert called is None, ("called_metrics of a row whose every fit is null must be null",) + identity
+        else:
+            want = confusion_of(truth, scores, fitted)
+            assert called is not None and all(called[key] == v for key, v in want.items()), ("called_metrics differ from the fitted folds",) + identity
+            assert math.isclose(called["balanced_accuracy"], balanced_accuracy([truth[i] for i in fitted], [scores[i] for i in fitted]), abs_tol=1e-12), ("called balanced accuracy",) + identity
+    fold_ba = learner["fold_balanced_accuracy"]
+    for f in range(k):
+        held = [i for i in range(n) if folds[i] == f]
+        assert fold_ba[f] is not None and math.isclose(fold_ba[f], balanced_accuracy([truth[i] for i in held], [scores[i] for i in held]), abs_tol=1e-12), ("fold balanced accuracy",) + identity + (f,)
+    return bool(in_null)
 
 
 def nonnegative_int(value):
@@ -188,7 +265,7 @@ def main():
         truth = [sample["resistant"] for sample in samples]
         nr = sum(truth)
         ns = n - nr
-        assert audit["revision"] in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13) and audit["valid"] is True, ("revision", path)
+        assert audit["revision"] in (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14) and audit["valid"] is True, ("revision", path)
         assert schema == (2 if args.reshaped or audit["revision"] >= 7 else 1), ("schema does not match the revision", path, schema)
         assert "not external or clinical validation" in audit["scope"], path
         if audit["revision"] >= 8:
@@ -238,11 +315,23 @@ def main():
                     assert isinstance(weights, list) and len(weights) == split["folds"], ("fold complexity length",) + identity
                     for fold, fit in enumerate(fits):
                         has_refit = check_lasso_fit(fit, identity + (fold,))
+                        if audit["revision"] >= EQUAL_SCORING_REVISION:
+                            # Every fold is scored; an empty path has no refit
+                            # and so no weight.
+                            assert has_refit or weights[fold] == 0, ("lasso fold without a selected point has weights",) + identity + (fold,)
+                            continue
                         # A fold is called exactly when its refit kept a weight,
                         # and an empty path has no refit to call with.
                         called = any(scores[i] is not None for i in range(n) if folds[i] == fold)
                         assert called == (weights[fold] > 0), ("lasso fold calls do not match its weight count",) + identity + (fold,)
                         assert has_refit or not called, ("lasso fold without a selected point has calls",) + identity + (fold,)
+                if audit["revision"] >= EQUAL_SCORING_REVISION and learner["learner"] != "catalog":
+                    assert len(learner["fold_balanced_accuracy"]) == split["folds"], ("fold balanced accuracy length",) + identity
+                    assert learner["conformal"] == [], identity
+                    no_call_rows += check_equal_scored_row(learner, truth, folds, split["folds"], identity)
+                    entries += 1
+                    continue
+                assert "called_metrics" not in learner, ("called_metrics before revision %d" % EQUAL_SCORING_REVISION,) + identity
                 uncalled = {"resistant": sum(1 for t, v in zip(truth, scores) if v is None and t), "susceptible": sum(1 for t, v in zip(truth, scores) if v is None and not t)}
                 if learner["learner"] == "catalog" or schema == 1:
                     assert no_call is None and None not in scores, ("null score or no_call on a row that calls every isolate",) + identity
@@ -301,7 +390,8 @@ def main():
         if logged is not None:
             line = logged.get(report["id"])
             assert line is not None or audit["revision"] < 7, ("revision-7 report without a done line", path)
-            assert line is None or line[0] == ("full coverage" if schema == 2 else "any row"), ("done line form does not match the report schema", path, line)
+            form = "any row" if schema == 1 else "scored coverage" if audit["revision"] >= EQUAL_SCORING_REVISION else "full coverage"
+            assert line is None or line[0] == form, ("done line form does not match the report schema", path, line)
             if line is not None:
                 want = (None, None) if best is None else (best[0], "%.3f" % best[1])
                 assert line[1:] == want, ("done line names another best learner", path, line, want)

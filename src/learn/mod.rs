@@ -43,8 +43,13 @@ pub struct BinaryMetrics {
     pub auprc: Option<f64>,
 }
 
-/// Samples that received no call, by reported class. Metrics beside it
-/// cover only the called samples, so called plus uncalled is every sample.
+/// Samples without a fitted model's call, by reported class. On a probe
+/// panel these are the isolates the probes give no call for, and the
+/// metrics beside it cover the rest. On a learner row they are the samples
+/// of folds whose fit was null; from evaluation revision 14 those samples
+/// are scored at their fold's training prevalence and counted in the
+/// metrics (`called_metrics` keeps the figure over the rest), while earlier
+/// rows left them out of the metrics.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NoCall {
     pub resistant: usize,
@@ -294,6 +299,13 @@ pub fn fold_masks(folds: &[usize], k: usize) -> Vec<(Bits, Bits)> {
             (test.not(), test)
         })
         .collect()
+}
+
+/// The resistant share of `train`: the score of a null fit, which predicts
+/// its training prevalence for every sample. The evaluation's pooled scores
+/// and the input comparison's prediction rows both use this one definition.
+pub fn train_prevalence(y: &Bits, train: &Bits) -> f64 {
+    train.and(y).count() as f64 / train.count() as f64
 }
 
 /// Build inner folds from training samples only. Outside samples receive a

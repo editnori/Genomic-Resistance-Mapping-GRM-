@@ -206,6 +206,18 @@ describe("no-calls", () => {
     expect(bestLearner(randomOnly)?.learner).toBe(other);
   });
 
+  it("lets a revision-14 learner with null-fit folds be best, since its rates cover every isolate", () => {
+    // Revision 14 scores a null fit's isolates at their fold's training
+    // prevalence and keeps the older figure in called_metrics; the same
+    // no_call counts on an older row leave it out.
+    const scored = (l: LearnerResult): LearnerResult => ({ ...l, no_call: noCall, called_metrics: { ...l.metrics!, n: n - nulled.length } });
+    const r14 = { ...withRows(other, (l, scheme) => (scheme === "random" ? topRandom(l) : scored(l))), evaluation: { revision: 14, valid: true, reasons: [] } };
+    expect(bestLearner(r14)?.learner).toBe(other);
+    expect(outscoringPartial(r14)).toEqual([]);
+    const r13 = withRows(other, (l, scheme) => (scheme === "random" ? topRandom(l) : { ...l, no_call: noCall }));
+    expect(bestLearner(r13)?.learner).toBe(winner);
+  });
+
   it("has no best learner when every learner leaves isolates uncalled", () => {
     const none = {
       ...withLineage,

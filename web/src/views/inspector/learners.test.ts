@@ -96,15 +96,15 @@ describe("best learner and learners without calls", () => {
     };
     const html = render(withRows(edit, withLineage));
     expect(html).toContain(
-      `${LEARNER_NAME[other]} scores 100.0% on random splits, above ${learnerInSentence(winner)}, but gives no call for ${int(nulled.length)} of ${int(total)} isolates with lineages held out. The best learner has to call every isolate on every split it ran.`,
+      `${LEARNER_NAME[other]} scores 100.0% on random splits, above ${learnerInSentence(winner)}, but gives no call for ${int(nulled.length)} of ${int(total)} isolates with lineages held out. The best learner has to be scored on every isolate on every split it ran.`,
     );
     expect(rowCells(html, LEARNER_NAME[other])[0]).toBe("100.0%");
-    expect(render(withRows(counted, withLineage))).not.toContain("The best learner has to call every isolate");
+    expect(render(withRows(counted, withLineage))).not.toContain("The best learner has to be scored on every isolate");
   });
 
   it("says learners exist but none calls every isolate, not that no result is recorded", () => {
     const html = render(withRows((l) => (l.learner === "catalog" ? l : partial(l)), withLineage));
-    expect(html).toContain("No learner calls every isolate on every split it ran, so none is marked best; Called gives the share each one calls.");
+    expect(html).toContain("No learner is scored on every isolate on every split it ran, so none is marked best; Called gives the share each one calls.");
     expect(html).not.toContain("No learner result is recorded");
     expect(html).not.toContain(">Best<");
   });

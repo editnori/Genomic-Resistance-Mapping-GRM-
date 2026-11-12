@@ -13,7 +13,7 @@ import type { Corpus, Manifest } from "../data/schema";
 import { datasetTitle, int, pct, plural } from "../data/format";
 import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import { loadErrorText, useCorpus } from "../data/load";
-import { manifestAudit, nullFitWords } from "../data/derive/evaluation";
+import { EQUAL_SCORING_REVISION, manifestAudit, nullFitWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
 import { ZERO_MISS_FLOOR } from "../data/derive/evidence";
 import { notScored } from "../data/derive/tests";
@@ -292,7 +292,9 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
     <Defs>
       <Def term="Balanced accuracy" plain="The average of two shares: resistant genomes called resistant (sensitivity) and susceptible genomes called susceptible (specificity). 50% is no better than a coin toss.">The mean of sensitivity and specificity, over pooled out-of-fold predictions. A score of 0.5 or more calls resistant.</Def>
       <Def term="Best learner" plain="For each dataset, the learner that scored highest on the random split.">
-        The learner with the highest random-split balanced accuracy among those that call every isolate on every split that ran. The known-gene rule is a baseline, never a candidate.
+        The learner with the highest random-split balanced accuracy among those scored on every isolate on every split that ran. From evaluation revision 14 that is every
+        learner: a fold where boosting kept no tree, or the lasso kept no weight, predicts its training isolates&apos; resistant share, called at 0.5 like any score. The
+        known-gene rule is a baseline, never a candidate.
         A learner&apos;s score with lineages held out takes no part in the pick. Its random-split score is read on the same folds that picked it, so it is the highest of five
         scores rather than what one learner named in advance would score, and runs a little above that. Overview&apos;s figures use the best learner, and its learner table sets
         the best learner beside each learner used alone.
@@ -312,7 +314,7 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
         lies over the bar. A learner that misses no resistant genome needs at least {int(ZERO_MISS_FLOOR)} resistant genomes before its interval lies under the VME bar. The interval
         treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.
       </Def>
-      <Def term="Learner no-calls" plain="What happens when a fitted model learned nothing from the DNA, and how its genomes are counted.">{nullFitWords(manifest.evaluation_revision)}</Def>
+      <Def term={(manifest.evaluation_revision ?? 0) >= EQUAL_SCORING_REVISION ? "Learner null fits" : "Learner no-calls"} plain="What happens when a fitted model learned nothing from the DNA, and how its genomes are counted.">{nullFitWords(manifest.evaluation_revision)}</Def>
       <Def term="Probe no-calls" plain="A probe test that finds none of its targets gives no answer, and that genome is left out of the test's own score.">
         A probe assay gives no call for an isolate whose genome carries none of its probe k-mers. That isolate is neither found nor missed: the panel&apos;s sensitivity and specificity
         cover the isolates with a probe call, and the learner&apos;s shares still count it.

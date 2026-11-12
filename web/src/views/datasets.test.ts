@@ -43,7 +43,7 @@ describe("dataset catalog", () => {
     const base = manifest.datasets.find((d) => d.best_lineage !== null)!;
     const cells = firstRow(render([{ ...base, best_learner: null, best_random: null, best_lineage: null }]));
     expect(cells).toHaveLength(10);
-    expect(cells[1]).toContain("No eligible learner: No learner calls every isolate");
+    expect(cells[1]).toContain("No eligible learner: No learner is scored on every isolate");
     expect([cells[2], cells[3], cells[5], cells[6]]).toEqual(["–", "–", "–", "–"]);
     const scored = firstRow(render([base]));
     expect(scored[1]).toBe(`${pct(base.best_random)}${LEARNER_LABEL[base.best_learner!]}`);

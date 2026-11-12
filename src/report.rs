@@ -45,10 +45,16 @@ pub struct Lite {
     pub vme: Option<f64>,
     pub me: Option<f64>,
     pub auroc: Option<f64>,
-    /// A learner row's uncalled samples; the rates above cover the rest.
-    /// Absent on panel metrics and on rows written before no-calls.
+    /// A learner row's samples in null-fit folds. Before revision 14 the
+    /// rates above cover the rest; see `null_fits_scored`. Absent on panel
+    /// metrics and on rows written before no-calls.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub no_call: Option<NoCall>,
+    /// True on a revision-14 learner row with a null-fit fold: its `no_call`
+    /// samples are scored at their fold's training prevalence and counted in
+    /// the rates above. Absent (false) on every other row.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub null_fits_scored: bool,
 }
 
 fn lite(m: &Value) -> Lite {
@@ -61,27 +67,37 @@ fn lite(m: &Value) -> Lite {
         me: f("me"),
         auroc: m.get("auroc").and_then(Value::as_f64),
         no_call: None,
+        null_fits_scored: false,
     }
 }
 
-/// A learner row's rates and no-calls. Null metrics mean the learner called
-/// no isolate, so its rates stay None.
+/// A learner row's rates and no-calls. Null metrics mean a row written
+/// before revision 14 called no isolate, so its rates stay None. A row that
+/// carries `called_metrics` (revision 14) scored its null-fit samples.
 fn learner_lite(l: &Value) -> Lite {
     let no_call = NoCall::deserialize(&l["no_call"]).ok();
+    let null_fits_scored = l.get("called_metrics").is_some();
     match &l["metrics"] {
         Value::Null => Lite {
             no_call,
+            null_fits_scored,
             ..Lite::default()
         },
-        m => Lite { no_call, ..lite(m) },
+        m => Lite {
+            no_call,
+            null_fits_scored,
+            ..lite(m)
+        },
     }
 }
 
-/// Whether a learner row has a call for every isolate: it has rates and
-/// leaves no isolate uncalled. Rows written before no-calls scored every
-/// isolate, so they pass.
-fn calls_every_isolate(m: &Lite) -> bool {
-    m.balanced_accuracy.is_some() && m.no_call.is_none_or(|x| x.resistant + x.susceptible == 0)
+/// Whether a learner row's rates cover every isolate. A revision-14 row
+/// always does: a null-fit fold is scored at its training prevalence. A row
+/// of revisions 7 to 13 does only when it left no isolate uncalled. Rows
+/// written before no-calls scored every isolate, so they pass.
+fn scored_on_every_isolate(m: &Lite) -> bool {
+    m.balanced_accuracy.is_some()
+        && (m.null_fits_scored || m.no_call.is_none_or(|x| x.resistant + x.susceptible == 0))
 }
 
 /// Every learner's rates on both splits of one report's `splits`, in
@@ -102,13 +118,15 @@ pub(crate) fn learner_rows(splits: &Value) -> Vec<LearnerRow> {
 }
 
 /// The best learner and its random-split balanced accuracy: the highest
-/// score among learners that call every isolate on every split that ran.
-/// None when no learner does. A tie goes to the later learner.
+/// score among learners whose rates cover every isolate on every split that
+/// ran. From revision 14 every learner's do, so all five compete; in an
+/// older report a learner that left isolates uncalled is passed over. None
+/// when no learner qualifies. A tie goes to the later learner.
 pub(crate) fn best_learner(rows: &[LearnerRow]) -> Option<(&LearnerRow, f64)> {
     rows.iter()
-        .filter(|l| !l.lineage_ran || l.lineage.as_ref().is_some_and(calls_every_isolate))
+        .filter(|l| !l.lineage_ran || l.lineage.as_ref().is_some_and(scored_on_every_isolate))
         .filter_map(|l| {
-            let random = l.random.filter(calls_every_isolate)?;
+            let random = l.random.filter(scored_on_every_isolate)?;
             Some((l, random.balanced_accuracy?))
         })
         .max_by(|a, b| a.1.total_cmp(&b.1))
@@ -1163,6 +1181,7 @@ mod tests {
         let learner = |name: &str, scores: &[f64]| LearnerResult {
             learner: name.into(),
             metrics: Some(binary_metrics(&truth, scores, 0.5, false)),
+            called_metrics: None,
             fold_balanced_accuracy: vec![],
             roc: vec![],
             scores: scores.to_vec(),
@@ -1414,6 +1433,71 @@ mod tests {
         assert_eq!(row["best_random"], 0.8);
         assert_eq!(row["best_lineage"], 0.6);
         assert_eq!(index["panels"][0]["best_learner"], "lasso");
+    }
+
+    #[test]
+    fn revision_14_rows_with_null_fits_compete_for_best_learner() {
+        // Boosting had null-fit folds on both splits. In a revision-14 row
+        // those isolates are scored at their fold's training prevalence and
+        // the row keeps the older figure in `called_metrics`, so its rates
+        // cover every isolate and it can be best. The same counts on a row
+        // without `called_metrics` (revisions 7 to 13) cover only the called
+        // isolates, and that row is passed over.
+        let rates = |ba: f64| {
+            serde_json::json!({
+                "n": 7, "tp": 3, "fp": 0, "tn": 4, "fn": 0, "balanced_accuracy": ba,
+                "sensitivity": 1.0, "specificity": 1.0, "vme": 0.0, "me": 0.0, "auroc": null
+            })
+        };
+        let row = |learner: &str, ba: f64, in_null: usize, scored: bool| {
+            let mut r = serde_json::json!({
+                "learner": learner, "metrics": rates(ba),
+                "no_call": {"resistant": in_null, "susceptible": 0}
+            });
+            if scored && in_null > 0 {
+                r["called_metrics"] = rates(ba + 0.05);
+            }
+            r
+        };
+        let report = |scored: bool| {
+            serde_json::json!({
+                "counts": {"samples": 7, "resistant": 3},
+                "splits": [
+                    {"scheme": "random", "learners": [row("rf", 0.8, 0, scored), row("gbt", 0.85, 2, scored)]},
+                    {"scheme": "lineage", "learners": [row("rf", 0.7, 0, scored), row("gbt", 0.6, 3, scored)]},
+                ],
+                "panels": [],
+            })
+        };
+        let index = built_index(&[("meropenem", report(true))]);
+        let row = &index["datasets"][0];
+        assert_eq!(row["best_learner"], "gbt");
+        assert_eq!(row["best_random"], 0.85);
+        assert_eq!(row["best_lineage"], 0.6);
+        let gbt = row["learners"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|l| l["learner"] == "gbt")
+            .unwrap();
+        assert_eq!(gbt["random"]["null_fits_scored"], true);
+        assert_eq!(gbt["random"]["no_call"]["resistant"], 2);
+        let rf = row["learners"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|l| l["learner"] == "rf")
+            .unwrap();
+        assert!(rf["random"].get("null_fits_scored").is_none());
+        let index = built_index(&[("meropenem", report(false))]);
+        assert_eq!(index["datasets"][0]["best_learner"], "rf");
+        assert!(
+            index["datasets"][0]["learners"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|l| l["random"].get("null_fits_scored").is_none())
+        );
     }
 
     #[test]
