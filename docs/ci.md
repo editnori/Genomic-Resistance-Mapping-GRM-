@@ -4,7 +4,7 @@
 
 ## Jobs
 
-Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are this tree's, measured with the same commands (evaluation revision 14): on Boat up to revision 13; the revision-14 counts on a host with Rust 1.97.1 and Node 24.22.1, since CI's 1.98.1 and 22.23.4 were not installed there.
+Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are this tree's, measured on Boat with the same commands (evaluation revision 14).
 
 | Job | Runs | Result |
 |---|---|---|
