@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CatalogRow, Learner, LearnerLite, Lite, NoCall } from "../schema";
-import { FITTED, ZERO_MISS_FLOOR, atZeroMissFloor, barOutcome, barSummary, learnerSummary, lowerTail, rateCounts, resultOf, ruleBands, shownAbove, shownAtMost } from "./evidence";
+import { FITTED, ZERO_MISS_FLOOR, atZeroMissFloor, barOutcome, barSummary, learnerSummary, leftOut, lowerTail, rateCounts, resultOf, ruleBands, shownAbove, shownAtMost } from "./evidence";
 
 /** A learner's result on one split: balanced accuracy and the two error rates. */
 const fit = (ba: number | null, vme: number | null = 0, me: number | null = 0, noCall?: NoCall): LearnerLite => ({
@@ -12,6 +12,10 @@ const fit = (ba: number | null, vme: number | null = 0, me: number | null = 0, n
   auroc: null,
   ...(noCall === undefined ? {} : { no_call: noCall }),
 });
+
+/** The same result as a revision-14 row writes it: the null-fit genomes are
+ *  still counted in no_call, and they are scored. */
+const scored = (result: LearnerLite): LearnerLite => ({ ...result, null_fits_scored: true });
 
 const rule = (ba: number, sensitivity: number, specificity: number): Lite => ({ balanced_accuracy: ba, sensitivity, specificity, vme: 1 - sensitivity, me: 1 - specificity, auroc: null });
 
@@ -98,6 +102,17 @@ describe("rateCounts", () => {
   it("counts a rate over the genomes the learner called", () => {
     // 8 resistant genomes have no call: 4 of 32 missed, 3 of 60 false alarms.
     expect(rateCounts(base, fit(0.9, 0.125, 0.05, { resistant: 8, susceptible: 0 }))).toEqual({ vme: { events: 4, n: 32 }, me: { events: 3, n: 60 } });
+  });
+
+  it("counts a rate over every genome when the null-fit genomes are scored", () => {
+    // Revision 14: the same 8 genomes sit in null-fit folds and are scored, so 5 of 40 and 3 of 60.
+    const result = scored(fit(0.9, 0.125, 0.05, { resistant: 8, susceptible: 0 }));
+    expect(leftOut(result)).toEqual({ resistant: 0, susceptible: 0 });
+    expect(rateCounts(base, result)).toEqual({ vme: { events: 5, n: 40 }, me: { events: 3, n: 60 } });
+    // A whole class in null-fit folds still has counts: every genome has a score.
+    expect(rateCounts(base, scored(fit(0.5, 0, 0.05, { resistant: 40, susceptible: 0 })))).toEqual({ vme: { events: 0, n: 40 }, me: { events: 3, n: 60 } });
+    expect(leftOut(fit(0.9, 0.125, 0.05, { resistant: 8, susceptible: 0 }))).toEqual({ resistant: 8, susceptible: 0 });
+    expect(leftOut(null)).toEqual({ resistant: 0, susceptible: 0 });
   });
 
   it("counts a known-gene rule over every genome", () => {
@@ -214,6 +229,11 @@ describe("learnerSummary", () => {
     const partial = fit(0.99, 0, 0, { resistant: 1, susceptible: 0 });
     const one = learnerSummary([row("e", 100, 50, "scm", { scm: { random: fit(0.9), lineage: fit(0.8) }, gbt: { random: fit(0.85), lineage: partial } })]);
     expect([one.nBest, one.bestAlsoTops, one.otherAheadByCutoff]).toEqual([1, 1, 0]);
+    // A revision-14 row scores its null-fit genomes, so the same row counts, and it is no longer a no-call dataset.
+    const rescored = learnerSummary([row("h", 100, 50, "scm", { scm: { random: fit(0.9), lineage: fit(0.8) }, gbt: { random: fit(0.85), lineage: scored(partial) } })]);
+    expect([rescored.nBest, rescored.bestAlsoTops, rescored.otherAheadByCutoff]).toEqual([1, 0, 1]);
+    expect(rescored.rows.find((r) => r.learner === "gbt")!.nNoCall).toBe(0);
+    expect(one.rows.find((r) => r.learner === "gbt")!.nNoCall).toBe(1);
     // The same score from a learner that calls every genome does count.
     const whole = learnerSummary([row("f", 100, 50, "scm", { scm: { random: fit(0.9), lineage: fit(0.8) }, gbt: { random: fit(0.85), lineage: fit(0.99) } })]);
     expect([whole.nBest, whole.bestAlsoTops, whole.otherAheadByCutoff]).toEqual([1, 0, 1]);

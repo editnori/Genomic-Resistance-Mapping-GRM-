@@ -9,9 +9,10 @@
 // at the bar, and its lower bound is over the bar exactly when x or more
 // events have probability under 2.5% there. The counts come from the index:
 // a rate is stored over the genomes its learner called, so the events are
-// the rate times that count.
+// the rate times that count. From evaluation revision 14 a null fit's genomes
+// are scored too (null_fits_scored), so such a row's rates cover every genome.
 
-import type { CatalogRow, Learner, LearnerLite, Scheme } from "../schema";
+import type { CatalogRow, Learner, LearnerLite, NoCall, Scheme } from "../schema";
 import { median } from "../format";
 import { REFERENCE_BARS } from "../metrics";
 import { CATALOG_CUTOFF, catalogDiff, uniformCall } from "./overview";
@@ -56,13 +57,21 @@ export interface RateCounts {
   me: RateCount;
 }
 
+const NONE: NoCall = { resistant: 0, susceptible: 0 };
+
+/** The genomes a result's rates leave out, by class. A row written from
+ *  evaluation revision 14 still counts its null-fit genomes in no_call, but
+ *  it scores them (null_fits_scored), so its rates leave none out. */
+export const leftOut = (result: LearnerLite | null): NoCall => (result === null || result.no_call === undefined || result.null_fits_scored === true ? NONE : result.no_call);
+
 /** A result's two error rates as counts. Null when a rate is missing or the
  *  result called no genome of one class. A known-gene rule's Lite fits here
  *  too: it calls every genome, so it carries no no_call. */
 export const rateCounts = (row: CatalogRow, result: LearnerLite | null): RateCounts | null => {
   if (result === null || result.vme === null || result.me === null) return null;
-  const resistant = row.n_resistant - (result.no_call?.resistant ?? 0);
-  const susceptible = row.n - row.n_resistant - (result.no_call?.susceptible ?? 0);
+  const out = leftOut(result);
+  const resistant = row.n_resistant - out.resistant;
+  const susceptible = row.n - row.n_resistant - out.susceptible;
   if (resistant <= 0 || susceptible <= 0) return null;
   return {
     vme: { events: Math.round(result.vme * resistant), n: resistant },
@@ -161,7 +170,7 @@ export interface LearnerSummary {
 
 const balanced = (row: CatalogRow, learner: Fitted, scheme: Scheme): number | null => resultOf(row, learner, scheme)?.balanced_accuracy ?? null;
 
-const withoutCall = (result: LearnerLite | null): boolean => (result?.no_call?.resistant ?? 0) + (result?.no_call?.susceptible ?? 0) > 0;
+const withoutCall = (result: LearnerLite | null): boolean => leftOut(result).resistant + leftOut(result).susceptible > 0;
 
 /** The best learner is picked by its random-split score, among the learners
  *  that call every genome; the lineage test plays no part in the pick. These

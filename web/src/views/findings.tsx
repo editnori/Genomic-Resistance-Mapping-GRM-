@@ -587,7 +587,7 @@ export const lineageFinding = (m: Manifest, opts: FindingOptions): Finding => {
 const PICK_ROW = "Best learner for each dataset";
 
 /** The learner with the highest median score with lineages held out when it
- *  is used alone for every dataset. Only a learner that calls every isolate
+ *  is used alone for every dataset. Only a learner scored on every isolate
  *  of every dataset stands here: its median covers the same isolates as the
  *  best learner's. Null when no learner does. */
 const strongestAlone = (s: LearnerSummary): LearnerRow | null =>
@@ -598,7 +598,7 @@ const strongestAlone = (s: LearnerSummary): LearnerRow | null =>
  *  medians and in datasets. */
 export const learnersLead = (s: LearnerSummary, split: SplitSummary): string => {
   if (split.nLineage === 0 || split.medianLineage === null) return "No dataset has a lineage-held-out result yet.";
-  const pick = `Each dataset's best learner is the one of ${spelledLower(FITTED.length)} with the highest random-split score among those that call every isolate. A learner's score with lineages held out takes no part in that pick. With lineages held out, the best learner's median balanced accuracy is ${pct(split.medianLineage)} over ${plural(split.nLineage, "dataset")}.`;
+  const pick = `Each dataset's best learner is the one of ${spelledLower(FITTED.length)} with the highest random-split score among those scored on every isolate. A learner's score with lineages held out takes no part in that pick. With lineages held out, the best learner's median balanced accuracy is ${pct(split.medianLineage)} over ${plural(split.nLineage, "dataset")}.`;
   const top = strongestAlone(s);
   if (top === null) return pick;
   const name = learnerInSentence(top.learner);
@@ -684,7 +684,7 @@ export const learnersFinding = (m: Manifest, opts: FindingOptions): Finding => {
         <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
           {s.nBest > 0 ? (
             <p>
-              With lineages held out, another learner that calls every isolate scores higher than the best learner on {int(others)} of {plural(s.nBest, "dataset")}, and by more
+              With lineages held out, another learner scored on every isolate scores higher than the best learner on {int(others)} of {plural(s.nBest, "dataset")}, and by more
               than {Math.round(CATALOG_CUTOFF * 100)} points on {int(s.otherAheadByCutoff)}. That count looks for the top learner after the lineage scores are known, which no pick
               made beforehand can do.
             </p>

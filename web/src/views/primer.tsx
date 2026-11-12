@@ -354,7 +354,7 @@ export const primerSteps = (m: Manifest, ex: PrimerExample | null = primerExampl
           <p className="mt-2">
             The score is balanced accuracy: the average of the share of resistant genomes called resistant (sensitivity) and the share of susceptible genomes called
             susceptible (specificity). 50% is no better than a coin toss, and 100% gets every call right. A gap between two scores is counted in points: 90% to 85% is 5
-            points. Each dataset&apos;s best learner is the one with the highest random-split score among those that call every isolate. The findings below use it, and one of them sets it
+            points. Each dataset&apos;s best learner is the one with the highest random-split score among those scored on every isolate. The findings below use it, and one of them sets it
             beside each learner used alone.
           </p>
         </>
