@@ -170,7 +170,7 @@ MUTANTS = [
      [('        if not args.rehearsal:\n            for opt in', '        if False:\n            for opt in')]),
     # Receipts and stages.
     ("run.py: a stage runs again over its own receipt", "run.py",
-     [('        if self.receipt_path(stage).exists():', '        if False:')]),
+     [('        if run.receipt_path(stage).exists():', '        if False:')]),
     ("run.py: a non-empty scratch root accepted", "run.py",
      [('        if self.root.exists() and any(self.root.iterdir()):', '        if False:')]),
     ("run.py: any fetch failure read as an answer of no sequence", "run.py",
@@ -209,7 +209,7 @@ MUTANTS = [
      [('        if not (work / rel).is_file():\n            refuse(f"work/{rel} is missing")\n', '')]),
     ("the largest study's fold always called reportable", "score.py",
      [('= None if top is None else fold_ok[top]', '= None if top is None else True')]),
-    # The second review (W8R2).
+    # The second review.
     ("a git object is not checked against its id", "score.py",
      [('    if hashlib.sha1(f"{kind} {len(out.stdout)}\\0".encode() + out.stdout).hexdigest() != oid:', '    if False:')]),
     ("a directory accepted where a frozen file is named", "score.py",
@@ -224,7 +224,7 @@ MUTANTS = [
     ("the command line runs without isolated mode", "score.py",
      [('    if not sys.flags.isolated:', '    if False:')]),
     ("the command line runs with a trace function set", "score.py",
-     [('    if sys.gettrace() is not None or sys.getprofile() is not None:', '    if False:')]),
+     [('    if traced():\n        print(', '    if False:\n        print(')]),
     ("two studies with no fold are called one study", "score.py",
      [('        elif d["studies"] == 1 and not d["scored_no_bioproject"]:',
        '        elif d["loso_folds_reportable"] == 0 and not d["scored_no_bioproject"]:')]),
@@ -282,6 +282,25 @@ MUTANTS = [
      [('        attempts[a["stage"]] += a.get("event") == "start"', '        attempts[a["stage"]] += a.get("event") == "done"')]),
     ("run.py records another attempts log than the one on disk", "run.py",
      [('"sha256": hashlib.sha256(attempts).hexdigest()}', '"sha256": hashlib.sha256(b"").hexdigest()}')]),
+    # The third check.
+    ("a tree that lists one name twice is read", "score.py",
+     [('        if name in entries:', '        if False:')]),
+    ("the gate passes with a trace function set", "score.py",
+     [('    if traced():\n        refuse(', '    if False:\n        refuse(')]),
+    ("a try refused for its receipt is written to the attempts log", "run.py",
+     [('        if run.receipt_path(stage).exists():\n',
+       '        if run.receipt_path(stage).exists():\n            run.attempt(stage, "start")\n'
+       '            run.attempt(stage, "refused", "this stage already has a receipt")\n')]),
+    ("a real run replays the known-gene rule only on the samples it has calls for", "score.py",
+     [('every_sample=not inputs["rehearsal"])', 'every_sample=False)')]),
+    ("a real run's replay need not cover every sample of the report", "score.py",
+     [('        if not inputs["rehearsal"] and want != len(report["samples"]):', '        if False:')]),
+    ("exactly half of a class is called more than half", "score.py",
+     [('                d[f"top_study_{name}_share"] > 0.5 for name in ("resistant", "susceptible")):',
+       '                d[f"top_study_{name}_share"] >= 0.5 for name in ("resistant", "susceptible")):')]),
+    ("genomes in no study counted over the labelled genomes, not the scored ones", "score.py",
+     [('        drow["scored_no_bioproject"] = sum(1 for g in scored if group_of(g, "bioproject") == NO_BIOPROJECT)',
+       '        drow["scored_no_bioproject"] = sum(1 for g in labelled if group_of(g, "bioproject") == NO_BIOPROJECT)')]),
 ]
 
 

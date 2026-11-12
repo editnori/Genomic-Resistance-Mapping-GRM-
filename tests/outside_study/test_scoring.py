@@ -310,6 +310,30 @@ class Scoring(unittest.TestCase):
                       "genomes from Y, so sensitivity and specificity are measured mostly on different studies.\n"
                       "  No leave-one-study-out fold is reportable, so no study-to-study range can be shown.\n", text)
 
+    def test_exactly_half_is_not_more_than_half(self):
+        # On drugA, X holds 30 of the 60 R genomes, exactly half, and Y 40
+        # of the 60 S genomes. "More than half" is true of Y only, so
+        # nothing is said.
+        def study(r_in_x):
+            return lambda g, i: (("X" if i < r_in_x else "Y" if i < 50 else "Z") if g["resistant"]
+                                 else ("Y" if i < 40 else "X"))
+
+        def drug_a(res):
+            return S.reading_text(res).split(f"{A}:")[1].split(f"{B}:")[0]
+        res = S.score(F.inputs(self.restudied(study(30))))
+        a = by(res["dataset_counts"], dataset=A)
+        self.assertEqual((a["top_study_resistant"], a["top_study_resistant_count"], a["top_study_resistant_share"]),
+                         ("X", 30, 0.5))
+        self.assertEqual((a["top_study_susceptible"], a["top_study_susceptible_count"]), ("Y", 40))
+        self.assertNotIn("measured mostly on different studies", drug_a(res))
+        # With one more R genome in X, 31 of 60, it is said.
+        res = S.score(F.inputs(self.restudied(study(31))))
+        a = by(res["dataset_counts"], dataset=A)
+        self.assertEqual((a["top_study_resistant"], a["top_study_resistant_count"]), ("X", 31))
+        self.assertIn("  More than half of the resistant genomes are from X and more than half of the susceptible "
+                      "genomes from Y, so sensitivity and specificity are measured mostly on different studies.\n",
+                      drug_a(res))
+
     def test_every_study_that_cannot_be_left_out_is_named(self):
         # drugA keeps 60 R and 40 S labels (P2's 20 S genomes become I).
         # R: 20 each in X, Y and Z. S: 17 in Y, 16 in Z, 7 in X. Without Y
@@ -373,6 +397,22 @@ class Scoring(unittest.TestCase):
                       "  Scored genomes with no BioProject recorded, counted in no study: 60.\n", text)
         block = text.split(f"{A}:")[1].split(f"{B}:")[0]
         self.assertNotIn("is from one study", block, "60 of the 120 genomes are in no study")
+
+    def test_an_excluded_genome_in_no_study_is_not_a_scored_one(self):
+        # The three labelled genomes that are excluded (no sequence, the
+        # species check, not counted) lose their BioProject. None of them is
+        # scored, so no scored genome is in no study.
+        w = F.world()
+        gone = {g for g, e in F.EXTRA.items() if e["label"] in ("R", "S")}
+        self.assertEqual(len(gone), 3)
+        for c in w["candidates"]:
+            if c["genome_id"] in gone:
+                c["bioproject"] = ""
+        res = S.score(F.inputs(w))
+        a = by(res["dataset_counts"], dataset=A)
+        self.assertEqual((a["labelled_resistant"], a["labelled_susceptible"]), (62, 61))
+        self.assertEqual((a["scored_resistant"], a["scored_susceptible"], a["scored_no_bioproject"]), (60, 60, 0))
+        self.assertNotIn("counted in no study", S.reading_text(res))
 
     def test_a_counts_only_dataset_gets_no_sentence_about_its_estimate(self):
         res = S.score(F.inputs(F.world(drug_b_resistant=24)))

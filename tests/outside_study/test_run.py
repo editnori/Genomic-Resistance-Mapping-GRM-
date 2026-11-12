@@ -257,13 +257,16 @@ class Receipts(RunCase):
     def test_a_stage_never_runs_twice_in_one_work_directory(self):
         self.run_ok("setup", "fetch")
         before = self.receipt("fetch")
-        self.assertRefused(self.run_stage("fetch"), "already has a receipt .* start a new work directory")
+        log = (self.work / "receipts/attempts.jsonl").read_bytes()
+        self.assertRefused(self.run_stage("fetch"), "fetch: this stage already has a receipt .* "
+                                                    "start a new work directory")
         self.assertEqual(self.receipt("fetch"), before)
-        self.assertRefused(self.run_stage("setup"), "already has a receipt")
+        self.assertRefused(self.run_stage("setup"), "setup: this stage already has a receipt")
+        self.assertRefused(self.run_stage("all"), "setup: this stage already has a receipt")
+        # A try that is refused for its receipt writes no line to the log.
+        self.assertEqual((self.work / "receipts/attempts.jsonl").read_bytes(), log)
         events = [(a["stage"], a["event"]) for a in self.attempts()]
-        self.assertEqual(events, [("setup", "start"), ("setup", "done"), ("fetch", "start"), ("fetch", "done"),
-                                  ("fetch", "start"), ("fetch", "refused"), ("setup", "start"),
-                                  ("setup", "refused")])
+        self.assertEqual(events, [("setup", "start"), ("setup", "done"), ("fetch", "start"), ("fetch", "done")])
 
     def test_a_changed_setup_output_is_refused(self):
         self.run_ok("setup")
@@ -550,15 +553,34 @@ class KnownGeneAndPredict(RunCase):
         self.assertReplayStops("the final models do not replay on the cohort")
         self.assertIn("another k", (self.work / "predict-replay/replay-problems.txt").read_text())
 
-    def test_the_run_scores_end_to_end(self):
-        self.run_ok("all")
-        out = self.root / "out"
+    def score(self, out):
         err = io.StringIO()
         with contextlib.redirect_stderr(err):
             code = self.kit.S.main(["--work", str(self.work), "--reports", str(self.reports), "--species", F.SPECIES,
                                     "--population", "primary", "--expect-commit", self.kit.commit,
                                     "--out", str(out)])
-        self.assertEqual(code, 0, err.getvalue())
+        return code, err.getvalue()
+
+    def test_a_refused_rerun_leaves_a_completed_run_as_it_was(self):
+        # After the last stage ended, one more try of a stage is refused.
+        # It must not add a line to the log: score.py refuses a log that
+        # goes on after the last stage's end.
+        self.run_ok("all")
+        log = self.work / "receipts/attempts.jsonl"
+        before = log.read_bytes()
+        for stage in ("predict", "all", "known-gene"):
+            self.assertRefused(self.run_stage(stage), "this stage already has a receipt")
+        self.assertEqual(log.read_bytes(), before)
+        code, err = self.score(self.root / "out")
+        self.assertEqual(code, 0, err)
+        res = json.loads((self.root / "out/results.json").read_text())
+        self.assertEqual(res["attempts"], {s: 1 for s in self.R.STAGES})
+
+    def test_the_run_scores_end_to_end(self):
+        self.run_ok("all")
+        out = self.root / "out"
+        code, err = self.score(out)
+        self.assertEqual(code, 0, err)
         res = json.loads((out / "results.json").read_text())
         want = self.kit.S.score(F.inputs(self.w))
         for key in ("metrics", "paired", "groups", "leave_one_study_out", "dataset_counts", "duplicates",

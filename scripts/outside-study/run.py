@@ -130,7 +130,8 @@ class Run:
 
     def attempt(self, stage, event, message=""):
         """Appends one line to receipts/attempts.jsonl: every start and every
-        end (done, refused or failed) of a stage."""
+        end (done, refused or failed) of a stage. A try of a stage that has
+        a receipt is refused in `main` and never gets here."""
         p = self.work / "receipts" / "attempts.jsonl"
         p.parent.mkdir(parents=True, exist_ok=True)
         line = {"stage": stage, "event": event, "message": message,
@@ -165,12 +166,9 @@ class Run:
         })
 
     def check_earlier(self, stage, gate):
-        """This stage has no receipt yet; every earlier receipt exists and
-        every file it lists is unchanged; the same grm binary, kit commit
-        and scripts; the same arguments."""
-        if self.receipt_path(stage).exists():
-            refuse(f"{stage}: this stage already has a receipt in {self.work}; a stage never runs twice "
-                   f"in one work directory, so start a new work directory")
+        """Every earlier receipt exists and every file it lists is
+        unchanged; the same grm binary, kit commit and scripts; the same
+        arguments. `main` has already refused a stage that has a receipt."""
         grm_sha = S.sha256_file(self.grm)
         kit = self.kit_state(gate)
         for earlier in STAGES[: STAGES.index(stage)]:
@@ -709,6 +707,13 @@ def main(argv=None):
         log(f"refused: {e}")
         return 2
     for stage in stages:
+        # A stage that has a receipt is refused before anything is logged.
+        # The try changes nothing, and a line after the last stage's end
+        # would leave a completed run that score.py refuses.
+        if run.receipt_path(stage).exists():
+            log(f"refused: {stage}: this stage already has a receipt in {run.work}; a stage never runs twice "
+                f"in one work directory, so start a new work directory")
+            return 2
         log(f"{stage}: start")
         run.attempt(stage, "start")
         try:

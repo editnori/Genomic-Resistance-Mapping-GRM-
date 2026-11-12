@@ -161,6 +161,37 @@ class Refusals(unittest.TestCase):
         self.w["known_gene"]["hits"]["cohort"]["999.4"] = [F.BLAZ]
         self.refused("the known-gene rule does not replay on the cohort's gene calls: 999.4: groups")
 
+    def test_the_catalog_table_and_counts_are_replayed_in_a_real_run(self):
+        # Every sample's groups and call replay. The report's own counts,
+        # or its table of groups, do not: the cohort gives TP 2 (999.1 and
+        # 999.2), and blaZ on one resistant genome (999.1).
+        w = copy.deepcopy(self.w)
+        w["reports"][A]["catalog"]["metrics"]["tp"] = 3
+        with self.assertRaisesRegex(S.Refusal, "drugA: the known-gene rule does not replay on the cohort's gene "
+                                               "calls: catalog tp 2, published 3 \\(1 mismatches\\)"):
+            S.score(F.inputs(w))
+        w = copy.deepcopy(self.w)
+        row = next(r for r in w["reports"][A]["catalog"]["groups"] if r["group"] == "blaZ")
+        self.assertEqual((row["n_resistant"], row["n_susceptible"]), (1, 1))
+        row["n_resistant"] = 2
+        with self.assertRaisesRegex(S.Refusal, "drugA: the known-gene rule does not replay on the cohort's gene "
+                                               "calls: the catalog.groups table does not replay"):
+            S.score(F.inputs(w))
+        # A sample with no gene calls counted at all.
+        del self.w["known_gene"]["hits"]["cohort"]["999.8"]
+        self.refused("drugA: the known-gene rule does not replay on the cohort's gene calls: "
+                     "999.8: no gene calls counted")
+
+    def test_a_real_run_replays_every_sample_of_the_report(self):
+        # 999.8 is dropped from the count stage's cohort list, from grm
+        # count's record and from the replay rows. What is left replays, on
+        # 7 of each report's 8 samples, and a real run does not accept that.
+        del self.w["cohort_digests"]["999.8"]
+        del self.w["known_gene"]["hits"]["cohort"]["999.8"]
+        for d in (A, B):
+            self.w["replay_rows"][d] = [r for r in self.w["replay_rows"][d] if r["genome"] != "999.8"]
+        self.refused("drugA: the count stage counted 7 of the report's 8 samples, and a real run replays every one")
+
     def test_the_final_models_are_replayed_again_on_the_cohort(self):
         # 999.1 holds feature 1 by its published bit; a replay row says not.
         w = copy.deepcopy(self.w)

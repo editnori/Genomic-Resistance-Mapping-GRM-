@@ -4,6 +4,7 @@ around it, the outputs and byte-identical reruns."""
 
 import contextlib
 import gzip
+import hashlib
 import io
 import json
 import os
@@ -604,6 +605,46 @@ class FrozenGate(KitCase):
         self.forge(root_tree, "tree", body)
         self.assertGateRefuses("does not hash to its id|git cannot read tree")
 
+    def test_a_tree_that_lists_a_name_twice(self):
+        # A commit whose scripts/outside-study tree lists score.py twice,
+        # both times with the committed blob. `git show` reads the first
+        # entry of such a tree and a checkout leaves the last, so two
+        # contents could sit behind one path.
+        one, two = b"\1" * 20, b"\2" * 20
+        self.assertEqual(self.S.tree_entries(b"100644 a\0" + one + b"40000 b\0" + two),
+                         {"a": ("100644", one.hex()), "b": ("40000", two.hex())})
+        with self.assertRaisesRegex(self.S.Refusal, "a committed tree lists a twice"):
+            self.S.tree_entries(b"100644 a\0" + one + b"100644 a\0" + two)
+
+        def raw(oid):
+            return subprocess.run(["git", "-C", str(self.kit.root), "cat-file", "tree", oid],
+                                  capture_output=True, check=True).stdout
+
+        def write(body):
+            # A loose object written by hand: git's own commands check a
+            # tree's format before they store it.
+            data = b"tree %d\0" % len(body) + body
+            oid = hashlib.sha1(data).hexdigest()
+            p = self.kit.root / ".git/objects" / oid[:2] / oid[2:]
+            p.parent.mkdir(exist_ok=True)
+            p.write_bytes(zlib.compress(data))
+            return oid
+
+        top, scripts, kit = (self.git("rev-parse", f"HEAD:{p}").stdout.strip()
+                             for p in ("", "scripts", "scripts/outside-study"))
+        mode, blob = self.S.tree_entries(raw(kit))["score.py"]
+        entry = f"{mode} score.py\0".encode() + bytes.fromhex(blob)
+        self.assertEqual(raw(kit).count(entry), 1)
+        twice = write(raw(kit).replace(entry, entry + entry))
+        scripts2 = write(raw(scripts).replace(bytes.fromhex(kit), bytes.fromhex(twice)))
+        top2 = write(raw(top).replace(bytes.fromhex(scripts), bytes.fromhex(scripts2)))
+        commit = self.git("commit-tree", top2, "-p", "HEAD", "-m", "one name twice").stdout.strip()
+        self.git("update-ref", "HEAD", commit)
+        self.assertEqual(self.git("rev-parse", "HEAD").stdout.strip(), commit)
+        self.assertEqual(self.git("show", f"HEAD:{S.SCORE_REL}").stdout, self.path(S.SCORE_REL).read_text(),
+                         "plain git reads the file at that commit without complaint")
+        self.assertGateRefuses("a committed tree lists score.py twice", expect=commit)
+
     def test_the_tree_walk_reads_what_git_reads(self):
         # On the untouched kit, the gate's own walk from the commit gives
         # each frozen file the bytes `git show` gives.
@@ -640,6 +681,20 @@ class FrozenGate(KitCase):
                 self.assertEqual((p.returncode, p.stdout, p.stderr.strip()),
                                  (2, "", f"{name}: refused: a trace or profile function is set in this interpreter"),
                                  (name, hook))
+
+    def test_the_gate_refuses_while_a_trace_or_profile_function_is_set(self):
+        # A program that loads score.py and calls it never meets the command
+        # line's check, so the gate makes this one itself.
+        for get, hook in ((sys.gettrace, sys.settrace), (sys.getprofile, sys.setprofile)):
+            before = get()
+            hook(lambda *a: None)
+            try:
+                with self.assertRaises(self.S.Refusal) as refusal:
+                    self.gate()
+            finally:
+                hook(before)
+            self.assertEqual(str(refusal.exception), "a trace or profile function is set in this interpreter")
+        self.assertEqual(self.gate()["commit"], self.kit.commit)
 
     def test_pins_for_files_the_gate_does_not_know_or_missing_pins(self):
         p = self.path(S.FROZEN_REL)

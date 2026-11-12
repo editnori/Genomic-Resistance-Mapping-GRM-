@@ -250,12 +250,18 @@ def git_object(kind, oid):
 
 
 def tree_entries(data):
-    """{name: (mode, id)} of a raw tree object."""
+    """{name: (mode, id)} of a raw tree object. A tree that lists one name
+    twice is refused: git's own commands then disagree about which entry
+    the path names (`git show` reads the first, a checkout leaves the
+    last), so the commit would name two contents for one file."""
     entries, i = {}, 0
     while i < len(data):
         space = data.index(b" ", i)
         nul = data.index(b"\0", space)
-        entries[data[space + 1:nul].decode()] = (data[i:space].decode(), data[nul + 1:nul + 21].hex())
+        name = data[space + 1:nul].decode()
+        if name in entries:
+            refuse(f"a committed tree lists {name} twice")
+        entries[name] = (data[i:space].decode(), data[nul + 1:nul + 21].hex())
         i = nul + 21
     return entries
 
@@ -297,8 +303,9 @@ def frozen_gate(expect_commit=None, rehearsal=False):
     disk; every frozen file has its pinned SHA-256 both at HEAD and on disk;
     HEAD is `expect_commit`, which only a rehearsal may leave out. The
     committed bytes are read object by object from the commit id down, each
-    object checked against its id (`committed_reader`). Returns the commit,
-    the expected commit, the SHA-256 of FROZEN.sha256 and the pins. It
+    object checked against its id (`committed_reader`). It also refuses
+    while a trace or profile function is set, whoever calls it. Returns the
+    commit, the expected commit, the SHA-256 of FROZEN.sha256 and the pins. It
     stops an accident or a casual edit; it cannot stop someone who rewrites
     this function and commits that, or who changes the file between
     Python's reading of it and this check (docs/outside-study-test.md)."""
@@ -306,6 +313,8 @@ def frozen_gate(expect_commit=None, rehearsal=False):
         refuse("a real run needs --expect-commit, the published commit of the kit")
     if expect_commit is not None and not COMMIT.match(expect_commit):
         refuse(f"--expect-commit {expect_commit!r} is not 40 lower-case hex characters")
+    if traced():
+        refuse("a trace or profile function is set in this interpreter")
     check_running(__file__, SCORE_REL)
     top = git("rev-parse", "--show-toplevel")
     if top.returncode != 0:
@@ -1001,10 +1010,14 @@ def score(inputs):
         # The final models on the cohort's own genomes: the rows the predict
         # stage judged before any new genome was predicted are judged again
         # here, and they have to cover every counted sample of the report.
+        # A real run counts every sample; a rehearsal leaves some out.
         problems, n = replay_problems(report, sha, inputs["replay_rows"](d))
         if problems:
             refuse(f"{d}: the final models do not replay on the cohort: {problems[0]} ({len(problems)} mismatches)")
         want = sum(1 for s in report["samples"] if s["id"] in inputs["digests"]["cohort"])
+        if not inputs["rehearsal"] and want != len(report["samples"]):
+            refuse(f"{d}: the count stage counted {want} of the report's {len(report['samples'])} samples, "
+                   f"and a real run replays every one")
         if n != want:
             refuse(f"{d}: {n} cohort genomes replayed, {want} of the report's samples were counted")
         if inputs["rehearsal"]:
@@ -1727,15 +1740,23 @@ def main(argv=None):
     return 0
 
 
+def traced():
+    """Whether a trace or profile function is set in this interpreter. One
+    could change a value while the code runs."""
+    return sys.gettrace() is not None or sys.getprofile() is not None
+
+
 def isolated_or_exit(name):
     """The command line runs under `python3 -I` only, so PYTHONPATH, the
     user site and the current directory put no module in front of the
-    standard library, and with no trace or profile function set, which
-    could change a value while the code runs."""
+    standard library, and with no trace or profile function set. The gate
+    makes the second check again, for a program that imports this file.
+    It does not make the first, and the plan lists such a program among
+    the things out of the gate's reach."""
     if not sys.flags.isolated:
         print(f"{name}: refused: run it with python3 -I", file=sys.stderr)
         sys.exit(2)
-    if sys.gettrace() is not None or sys.getprofile() is not None:
+    if traced():
         print(f"{name}: refused: a trace or profile function is set in this interpreter", file=sys.stderr)
         sys.exit(2)
 

@@ -17,22 +17,23 @@ The frozen population is in `scripts/outside-study/frozen/`: `candidates.tsv.gz`
 
 - git is the first of `/usr/bin/git`, `/bin/git` and `/usr/local/bin/git` that exists. It is never looked up on `PATH`. Every call passes `-C <kit root>` and `--no-replace-objects`, with an environment that holds only `PATH=/usr/bin:/bin`, `HOME`, `LC_ALL=C`, `GIT_CONFIG_NOSYSTEM=1`, `GIT_CONFIG_GLOBAL=/dev/null` and `GIT_OPTIONAL_LOCKS=0`. No inherited `GIT_*` variable reaches it.
 - The kit root is the folder two levels above the running script. No option points it or a pin file elsewhere. `git rev-parse --show-toplevel` must be that folder.
-- The running `score.py` is the kit's own file, and `run.py` checks the same for itself and for the `score.py` it loaded. `run.py` and `rehearsal.py` read `score.py`'s bytes themselves and compile those, so Python's import system and its bytecode cache (`__pycache__`) play no part. `run.py` gives the gate the SHA-256 of the bytes it compiled, and the gate refuses unless that is the pinned hash.
+- The running `score.py` is the kit's own file by its path, and `run.py` checks its own path the same way. For a script that Python read as the main program, this and the pin are checks of the file on disk at the moment the gate runs. Neither is a check of the bytes Python compiled (see the limits below). `run.py` and `rehearsal.py` read `score.py`'s bytes themselves and compile those, so Python's import system and its bytecode cache (`__pycache__`) play no part. `run.py` gives the gate the SHA-256 of the bytes it compiled, and the gate refuses unless that is the pinned hash.
 - `FROZEN.sha256` as committed at HEAD has the same bytes as the file on disk. It pins exactly the six files.
 - Each frozen file, as committed at HEAD, has its pinned SHA-256, and so does the file on disk. A frozen path must be committed as a regular file, and no frozen path, or folder above it, is a symbolic link on disk. The gate reads the committed content itself, so index flags (`--assume-unchanged`, `--skip-worktree`), a staged-only edit and another index file cannot hide a change.
-- The gate reads that content object by object: the commit, each tree on the path and the file's blob, each by its id (`git cat-file <type> <id>`). It refuses an object whose SHA-1 is not its id, so a rewritten object in git's store is caught (`score.committed_reader`).
+- The gate reads that content object by object: the commit, each tree on the path and the file's blob, each by its id (`git cat-file <type> <id>`). It refuses an object whose SHA-1 is not its id, so a rewritten object in git's store is caught (`score.committed_reader`). It refuses a tree that lists one name twice, because git's own commands read such a tree differently. With git 2.43, `git show` took the first entry and a checkout left the last.
 - HEAD is the commit given as `--expect-commit` (40 lower-case hex characters). A real run requires that option; a rehearsal may leave it out.
 
-The command lines of `run.py`, `score.py` and `rehearsal.py` also refuse unless Python runs in isolated mode (`python3 -I`), so that `PYTHONPATH`, the user site directory and the current directory put no module ahead of the standard library. They refuse when a trace or profile function is set, since one could change a value while the code runs.
+The command lines of `run.py`, `score.py` and `rehearsal.py` also refuse unless Python runs in isolated mode (`python3 -I`), so that `PYTHONPATH`, the user site directory and the current directory put no module ahead of the standard library. They refuse when a trace or profile function is set, since one could change a value while the code runs. The gate makes that second check again each time it runs, whoever calls it. The isolated-mode check is on the command lines only.
 
 The reports and the frozen tables are checked by content, each against its pin in `reports.sha256` or `tables.sha256`, wherever their bytes are stored.
 
 The gate returns the commit, the expected commit, the SHA-256 of `FROZEN.sha256` and the pinned hashes. Every receipt and `results.json` record them.
 
-The gate stops an accident or a casual edit. It cannot stop someone who rewrites the gate and commits that, and no check inside the kit can. Four more things are out of its reach:
+The gate stops an accident or a casual edit. It cannot stop someone who rewrites the gate and commits that, and no check inside the kit can. Five more things are out of its reach:
 
 - what runs the kit: the Python interpreter and its standard library, the `git` binary, and the machine;
-- a `score.py` swapped on disk between the moment Python reads it as the main script and the moment the gate hashes it (for the `score.py` that `run.py` loads, the hash is of the bytes that ran);
+- `run.py`, `score.py` or `rehearsal.py` swapped on disk after Python reads it as the main script and put back before the gate hashes it. The gate then hashes the pinned file while other code runs, and a swapped `run.py` can alter any stage. For the `score.py` that `run.py` loads, the hash is of the bytes that ran;
+- a program that imports the scripts and calls them in place of the command lines. It can run outside isolated mode and can wrap a stage;
 - the `grm` binary: the receipts record its SHA-256, not that it was built from the commit;
 - the receipts themselves, which are not signed. Someone who can write the work directory can rewrite a stage's output and its receipt together.
 
@@ -42,7 +43,7 @@ The availability, species-check and count tables stay as `run.py` wrote them fro
 
 The check that holds is outside the kit. The commit is public before the first genome is fetched, the launcher passes that commit as `--expect-commit`, and the outputs name it. Anyone can take a fresh clone of that commit, run `score.py` under `python3 -I` on the saved work directory, and compare the outputs byte for byte.
 
-That catches a `score.py` that was altered where the run happened. It doesn't catch an altered stage or `grm` binary: for those, the stages are run again from the fresh clone on the same public genomes, and the outputs compared.
+That catches a `score.py` that was altered or swapped where the run happened. It doesn't catch an altered stage, a `run.py` swapped while it ran, a program that wrapped a stage, or an altered `grm` binary. For those, the stages are run again from the fresh clone on the same public genomes, and the outputs compared.
 
 Until the first new genome is fetched, a change to a frozen file is a new commit that pins the file again; both reviews of the kit led to such commits. The plan is frozen from the commit the launcher names. A change after that makes another kit, and its runs are other runs.
 
@@ -120,7 +121,7 @@ It also refuses:
 - rows for a dataset that is not eligible in the population;
 - a `predict/survivors.txt` that differs from the survivors the scoring derives from the availability, species-check and count files.
 
-The `predict` stage first runs `grm predict` on the cohort's own genomes for every report and judges all of those rows. Every feature value must equal the report's published bit, and every call must equal the final model's call on those bits (`score.replay_problems`). Otherwise the stage refuses, and no `predict/*.jsonl` exists. Only after every replay passes does it submit a job for the new genomes. `score.py` judges the same rows again from `predict-replay/<dataset>.jsonl`, and refuses a mismatch or a replay that does not cover every counted sample of the dataset's report.
+The `predict` stage first runs `grm predict` on the cohort's own genomes for every report and judges all of those rows. Every feature value must equal the report's published bit, and every call must equal the final model's call on those bits (`score.replay_problems`). Otherwise the stage refuses, and no `predict/*.jsonl` exists. Only after every replay passes does it submit a job for the new genomes. `score.py` judges the same rows again from `predict-replay/<dataset>.jsonl`, and refuses a mismatch or a replay that does not cover every counted sample of the dataset's report. In a real run it also refuses a report sample that the count stage did not count, so the replay covers every sample.
 
 ### 5. Metrics
 
@@ -182,7 +183,7 @@ A report whose lineage split is unavailable has no lineage-split estimate. Its r
 
 A genome with an empty BioProject is grouped under "no BioProject recorded". That group is never left out as a study and is not counted as one. An empty country is grouped under "no country recorded". The frozen primary population has neither: 0 of the 7,258 genomes has an empty `bioproject`, and 0 an empty `isolation_country`.
 
-The MLST grouping compares the whole value of the `candidates.tsv` column `mlst` as written, scheme name and ST, with the set of `samples[].mlst` values over every pinned report of the species (`score.cohort_sts`). For *S. aureus* that is 18 reports, 2,000 cohort genomes and 169 STs. The replay checks and the duplicate comparison use fewer: the 1,988 cohort genomes of the 7 eligible datasets' reports (`setup`, under Receipts and stages). The other 12 are samples only of reports that no frozen genome is scored on. A value that is empty, or whose ST field (after the last dot) is `-` or empty, is "no ST" (`score.no_st`). For the primary population:
+The MLST grouping compares the whole value of the `candidates.tsv` column `mlst` as written, scheme name and ST, with the set of `samples[].mlst` values over every pinned report of the species (`score.cohort_sts`). For *S. aureus* that is 18 reports, 2,000 cohort genomes and 169 STs. The replay checks and the duplicate comparison use fewer: the 1,988 cohort genomes of the 7 eligible datasets' reports (`setup`, under Receipts and stages). The other 12 genomes are samples only of reports that no frozen genome is scored on. A value that is empty, or whose ST field (after the last dot) is `-` or empty, is "no ST" (`score.no_st`). For the primary population:
 
 | Species | ST in the cohort | ST not in the cohort | no ST |
 |---|---|---|---|
@@ -272,7 +273,7 @@ Each stage can also be run alone, in order: `setup`, `fetch`, `species-check`, `
 
 Each stage writes `$WORK/receipts/<stage>.json`. It holds the stage's arguments, the `grm` path and SHA-256, what the gate returned with the hashes of the two scripts, the SHA-256 of each input and output, the counts it prints, and its seconds. Files inside the work directory are named `work/<path>`, so a saved work directory can be scored anywhere. Large folders are pinned as a listing of `name<TAB>size`.
 
-A stage refuses when its own receipt already exists: a stage never runs twice in one work directory, and there is no option to rerun one. To start again, start a new work directory. `setup` also refuses when `$WORK/root` exists and is not empty. A stage refuses when an earlier receipt is missing, or when any file it lists, the `grm` binary, the kit commit, the scripts or the arguments have changed. Every start and every end of a stage (done, refused or failed, with the message) is appended to `receipts/attempts.jsonl`, and `results.json` gives the number of attempts per stage.
+A stage refuses when its own receipt already exists: a stage never runs twice in one work directory, and there is no option to rerun one. To start again, start a new work directory. That refusal comes before anything is logged, so one more try after the run has ended leaves the run as it was. `setup` also refuses when `$WORK/root` exists and is not empty. A stage refuses when an earlier receipt is missing, or when any file it lists, the `grm` binary, the kit commit, the scripts or the arguments have changed. Every other start of a stage, and its end (done, refused or failed, with the message), is appended to `receipts/attempts.jsonl`, and `results.json` gives the number of attempts per stage.
 
 Each receipt records how many lines the log held when its stage wrote it, with their SHA-256. `score.py` refuses unless the log begins with exactly those lines for every stage, the line after them is that stage's end, and the log stops at the last stage's end.
 
@@ -318,18 +319,18 @@ python3 -I -m unittest discover -s tests/outside_study -t . -v
 python3 -I tests/outside_study/mutants.py
 ```
 
-The suite runs in CI (docs/ci.md) and holds 217 tests. It needs `git`, and it passes in a copy of the tree with no `.git`, because the tests make their own repositories. Its fixtures are hand-built: a made-up species with three reports and 126 frozen genomes whose counts, intervals, readings, groupings, paired counts and leave-one-out values are worked out by hand in `tests/outside_study/fixtures.py`. The learners give different calls on at least one R and one S genome, and two datasets label two genomes the other way round, so a learner or dataset swap changes a number. The suite covers:
+The suite runs in CI (docs/ci.md) and holds 224 tests. It needs `git`, and it passes in a copy of the tree with no `.git`, because the tests make their own repositories. Its fixtures are hand-built: a made-up species with three reports and 126 frozen genomes whose counts, intervals, readings, groupings, paired counts and leave-one-out values are worked out by hand in `tests/outside_study/fixtures.py`. The learners give different calls on at least one R and one S genome, and two datasets label two genomes the other way round, so a learner or dataset swap changes a number. The suite covers:
 
 - every refusal of both scripts;
 - the label rules and the exclusion order;
 - the Clopper-Pearson values;
-- the frozen gate, on temporary committed copies of the kit, against each way around it the review tried (index flags, a staged-only edit, `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, a stand-in `git` on `PATH`, an edited pin file, a modified copy of `score.py` run from elsewhere, and a commit other than `--expect-commit`) and a few more (replace objects, a work tree elsewhere, a copy inside another repository, symbolic links, a missing or malformed `--expect-commit`), and the ways the second review found (git objects rewritten under their own ids, a planted bytecode cache for `score.py`, a command line without `-I`, a trace function);
+- the frozen gate, on temporary committed copies of the kit, against each way around it the review tried (index flags, a staged-only edit, `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, a stand-in `git` on `PATH`, an edited pin file, a modified copy of `score.py` run from elsewhere, and a commit other than `--expect-commit`) and a few more (replace objects, a work tree elsewhere, a copy inside another repository, symbolic links, a missing or malformed `--expect-commit`), and the ways the second review found (git objects rewritten under their own ids, a planted bytecode cache for `score.py`, a command line without `-I`, a trace function), and the two the third check found (a tree that lists one name twice, a trace function set by a program that calls the gate);
 - every stage of `run.py` and its receipts, with a stand-in `grm` (`tests/outside_study/fake_grm.py`) that fetches, checks species, counts with gene calls and digests, and predicts, including the refusals of each stage;
-- the receipts `score.py` reads, the attempts log they bind, and the replays and known-gene calls it works again from `grm`'s files;
-- the by-study sentences, on hand-built cases: two studies that each hold most of one class, a tie for the most genomes, genomes in no study, and a counts-only dataset;
+- the receipts `score.py` reads, the attempts log they bind, a try refused after the run ended, and the replays and known-gene calls it works again from `grm`'s files, on every sample of a report in a real run;
+- the by-study sentences, on hand-built cases: two studies that each hold most of one class, a tie for the most genomes, a share of exactly half, genomes in no study, and a counts-only dataset;
 - byte-identical outputs from three separate processes, each with its own random hash seed, and from shuffled input rows.
 
-`mutants.py` breaks the scripts in 103 ways, one at a time, in a temporary copy, and fails unless the suite catches every one.
+`mutants.py` breaks the scripts in 110 ways, one at a time, in a temporary copy, and fails unless the suite catches every one.
 
 ## Limits
 
