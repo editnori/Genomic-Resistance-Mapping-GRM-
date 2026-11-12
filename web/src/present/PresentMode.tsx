@@ -17,12 +17,13 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import type { Manifest } from "../data/schema";
-import { dateText, pct, speciesShort } from "../data/format";
+import { datasetTitle, dateText, pct } from "../data/format";
 import { manifestAudit } from "../data/derive/evaluation";
 import { GrmMark } from "../app/Mark";
 import { ModalDialog } from "../ui/ModalDialog";
 import { Dropdown } from "../ui/Dropdown";
 import { ACTION_BUTTON, type Fit, type SlidePart } from "../ui/primitives";
+import { AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { FINDINGS, type PagedFit } from "../views/findings";
 import { Reveal, useSlideTimeline, type SlideTimeline } from "./motion";
 import { RuleFigure, ruleDataset, ruleLineageScore } from "./figures";
@@ -85,12 +86,13 @@ const TitleSlide = ({ manifest, timeline }: { manifest: Manifest; timeline: Slid
       </Reveal>
       <Reveal at={2} timeline={timeline}>
         <p className="type-headline">What GRM found</p>
+        <p className="type-body mt-1">How well does a bacterium&apos;s genome predict whether a lab finds it resistant or susceptible to an antibiotic?</p>
         <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-note text-muted-text">
           <span>Report built {dateText(manifest.generated_at)}</span>
           {audit.total === 0 ? null : (
             <>
               <span aria-hidden="true">·</span>
-              {audit.invalid > 0 ? <strong className="font-semibold text-coral-text">Provisional metrics</strong> : <span>Internal cross-validation only</span>}
+              {audit.invalid > 0 ? <strong className="font-semibold text-coral-text">Provisional metrics</strong> : <span>{AUDIT_SCOPE}</span>}
             </>
           )}
         </p>
@@ -277,13 +279,13 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
       {
         kind: "figure",
         id: "rule",
-        title: "One interpretable rule",
+        title: "One rule a person can read",
         result:
           pick === null
             ? "No set covering machine rule in this report."
-            : `The set covering machine reaches ${pct(pick.ba)} balanced accuracy for ${pick.row.antibiotic} in ${speciesShort(pick.row.species)} on random splits${lineage === null ? "" : `, ${pct(lineage)} with lineages held out`}.`,
+            : `The set covering machine reaches ${pct(pick.ba)} balanced accuracy for ${datasetTitle(pick.row)} on random splits${lineage === null ? "" : `, ${pct(lineage)} with lineages held out`}.`,
         caption:
-          "Carriage of the first rule's k-mers, by lab call. A rule marks k-mers that separate the calls in these isolates; they can travel with the cause on a plasmid or in a lineage rather than be the cause.",
+          "This learner writes short yes-or-no rules. The bars count isolates carrying the first rule's k-mers, by lab call. A k-mer can travel with the cause, on a plasmid or in a lineage, without being it.",
         fixed: ({ page, pages }) => <RuleFigure manifest={manifest} page={page} pages={pages} />,
         continues: true,
       },

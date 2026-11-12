@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { fixtureFile } from "../dev/fixtures/files";
 import { parseManifest } from "../data/validate";
-import { speciesShort } from "../data/format";
 import { withRealProbeRows } from "../dev/fixtures/probeRows";
 import type { Lite, Manifest } from "../data/schema";
 import { PanelEvidence } from "./PanelEvidence";
@@ -33,7 +32,7 @@ describe("panel evidence and unscored assays", () => {
     const html = renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, unsupported_panels: [row, { ...row, dataset: "escherichia_coli__levofloxacin", antibiotic: "levofloxacin" }] } }));
     expect(html).toContain("Assays not scored");
     expect(html).toContain("1 assay has no result on the datasets listed");
-    expect(html).toContain(`Ciprofloxacin in ${speciesShort("Escherichia coli")}, Levofloxacin in ${speciesShort("Escherichia coli")}`);
+    expect(html).toContain("E.\u00a0coli vs\u00a0ciprofloxacin, E.\u00a0coli vs\u00a0levofloxacin");
     expect(html.split(`Not scored. ${reason}`).length - 1).toBe(1);
   });
 

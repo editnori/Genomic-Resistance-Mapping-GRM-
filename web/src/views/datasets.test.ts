@@ -121,11 +121,19 @@ describe("dataset catalog", () => {
   });
 
   it("keeps the species whole with its separator and lets a combination drug break after its slash", () => {
-    const base = manifest.datasets[0]!;
-    const cell = firstRowHtml(render([{ ...base, antibiotic: "sulfamethoxazole/trimethoprim" }]))[0]!;
-    expect(visible(cell)).toContain(`Sulfamethoxazole/trimethoprim${speciesShort(base.species)} · ${base.drug_class}`);
+    const base = { ...manifest.datasets[0]!, species: "Klebsiella pneumoniae", antibiotic: "sulfamethoxazole/trimethoprim" };
+    const cell = firstRowHtml(render([base]))[0]!;
+    expect(visible(cell)).toBe(`Sulfamethoxazole/trimethoprim${speciesShort(base.species)} · ${base.drug_class}`);
     expect(cell).toContain("/<wbr/>trimethoprim");
     // The separator closes the species' unbreakable run, so no line starts with it.
     expect(cell).toContain(`<i>${speciesShort(base.species)}</i> ·</span>`);
+  });
+
+  it("names a species with an everyday name by that name, out of italics", () => {
+    const base = { ...manifest.datasets[0]!, species: "Staphylococcus aureus", antibiotic: "oxacillin" };
+    const cell = firstRowHtml(render([base]))[0]!;
+    expect(visible(cell)).toBe(`OxacillinStaph · ${base.drug_class}`);
+    expect(cell).toContain("Staph ·</span>");
+    expect(cell).not.toContain("<i>");
   });
 });

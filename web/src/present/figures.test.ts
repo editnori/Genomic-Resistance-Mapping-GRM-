@@ -104,7 +104,7 @@ const open = async (manifest: Manifest = base) => {
 it("opens the deck on its title slide, then the primer, then the six finding slides, with a named outline and no deck chooser", async () => {
   motion(true);
   const { dialog, status, right, onClose } = await open();
-  const titles = ["Genomic Resistance Mapping", ...primerSteps(base).map((s) => s.title), ...FINDINGS.map((f) => f(base, { page: false }).title), "One interpretable rule"];
+  const titles = ["Genomic Resistance Mapping", ...primerSteps(base).map((s) => s.title), ...FINDINGS.map((f) => f(base, { page: false }).title), "One rule a person can read"];
   expect(titles).toHaveLength(DECK);
   expect(dialog.textContent).not.toContain("Choose a deck");
   const selector = dialog.querySelector<HTMLButtonElement>('[role="combobox"]')!;
@@ -117,7 +117,7 @@ it("opens the deck on its title slide, then the primer, then the six finding sli
     expect(status()).toContain(`Slide ${i} of ${titles.length}`);
     await right();
   }
-  expect(status()).toContain(`Slide ${titles.length} of ${titles.length}: One interpretable rule`);
+  expect(status()).toContain(`Slide ${titles.length} of ${titles.length}: One rule a person can read`);
   // The slide control keeps its own arrow keys.
   act(() => selector.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
   expect(status()).toContain(`Slide ${titles.length} of ${titles.length}`);
@@ -157,14 +157,14 @@ it("states the report's scope on the title slide as plain words, with no chip to
   document.body.innerHTML = "";
   const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
   const again = await open(passing);
-  expect(again.dialog.querySelector("main section")?.textContent).toContain("Internal cross-validation only");
+  expect(again.dialog.querySelector("main section")?.textContent).toContain("Tested within one public database only");
 });
 
 it("shows the rule's sequence inline, never in a second dialog", async () => {
   motion(true);
   const { dialog, status } = await open();
   await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
-  expect(status()).toContain(`Slide ${DECK} of ${DECK}: One interpretable rule`);
+  expect(status()).toContain(`Slide ${DECK} of ${DECK}: One rule a person can read`);
   expect(document.querySelectorAll("dialog")).toHaveLength(1);
   expect([...dialog.querySelectorAll("button")].map((b) => b.textContent)).not.toContain("Show sequence");
   const pick = ruleDataset(base)!;
@@ -216,7 +216,7 @@ describe("continuation slides", () => {
     ] as const) {
       const n = panelAt + page;
       while (!status().startsWith(`Slide ${n} `)) await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
-      expect(status()).toBe(`Slide ${n} of ${DECK + 1}: PCR panel (${page} of 2)`);
+      expect(status()).toBe(`Slide ${n} of ${DECK + 1}: Simulated PCR panel (${page} of 2)`);
       const section = dialog.querySelector("main section")!;
       const ids = [...section.querySelectorAll("[data-dataset]")].map((g) => g.getAttribute("data-dataset")!);
       expect(ids).toHaveLength(last - first + 1);
@@ -229,8 +229,8 @@ describe("continuation slides", () => {
     await act(async () => selector.click());
     // The outline's options, not the open chart's keyboard option.
     const labels = [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent ?? "").filter((t) => /^\d+ · /.test(t));
-    expect(labels).toContain(`${panelAt + 1} · PCR panel (1 of 2)`);
-    expect(labels).toContain(`${panelAt + 2} · PCR panel (2 of 2)`);
+    expect(labels).toContain(`${panelAt + 1} · Simulated PCR panel (1 of 2)`);
+    expect(labels).toContain(`${panelAt + 2} · Simulated PCR panel (2 of 2)`);
     expect(labels).toHaveLength(DECK + 1);
   });
 
@@ -243,14 +243,14 @@ describe("continuation slides", () => {
     const { dialog, status } = await open();
     await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
     if (context === "") {
-      expect(status()).toContain(`Slide ${DECK} of ${DECK}: One interpretable rule`);
+      expect(status()).toContain(`Slide ${DECK} of ${DECK}: One rule a person can read`);
       return;
     }
-    expect(status()).toBe(`Slide ${DECK + 1} of ${DECK + 1}: One interpretable rule (2 of 2)`);
+    expect(status()).toBe(`Slide ${DECK + 1} of ${DECK + 1}: One rule a person can read (2 of 2)`);
     expect(dialog.querySelector("main section .seq")).not.toBeNull();
     expect(dialog.querySelector("main section")?.textContent).not.toContain("Resistant isolates carrying it");
     await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
-    expect(status()).toBe(`Slide ${DECK} of ${DECK + 1}: One interpretable rule (1 of 2)`);
+    expect(status()).toBe(`Slide ${DECK} of ${DECK + 1}: One rule a person can read (1 of 2)`);
     expect(dialog.querySelector("main section .seq")).toBeNull();
     expect(dialog.querySelector("main section")?.textContent).toContain("Resistant isolates carrying it");
     expect(dialog.querySelector("main section")?.textContent).toContain("The rule's sequence follows on the next slide.");

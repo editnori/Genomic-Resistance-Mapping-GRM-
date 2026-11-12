@@ -11,9 +11,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fixtureFile } from "../dev/fixtures/files";
 import { parseManifest } from "../data/validate";
 import type { CatalogRow, Manifest } from "../data/schema";
-import { int, pct, speciesShort } from "../data/format";
+import { datasetTitle, int, pct } from "../data/format";
 import type { Navigator, Route } from "../app/router";
-import { exampleName, exampleNameInline, missedSentence, perHundred, primerExample, primerSteps, PRIMER_ANCHOR } from "./primer";
+import { missedSentence, perHundred, primerExample, primerSteps, PRIMER_ANCHOR } from "./primer";
 import { OverviewView } from "./OverviewView";
 import { PresentMode } from "../present/PresentMode";
 
@@ -55,7 +55,7 @@ describe("the primer's example report", () => {
     if (row !== undefined && row.learners.find((l) => l.learner === row.best_learner)?.lineage != null) expect(ex!.row.id).toBe(row.id);
     const steps = primerSteps(base, ex);
     expect(steps.map((s) => s.title)).toEqual(["A dataset", "A genome feature", "Two tests", "Reading one result", "What the numbers support"]);
-    const name = exampleName(ex!.row);
+    const name = datasetTitle(ex!.row);
     expect(steps[0]!.lead).toBe(`A dataset is one species tested against one antibiotic: ${name}, ${int(ex!.row.n)} genomes, ${int(ex!.row.n_resistant)} resistant.`);
     expect(steps[2]!.lead).toBe(`${name} scores ${pct(ex!.random.balanced_accuracy)} on random splits and ${pct(ex!.lineage.balanced_accuracy)} with whole lineages held out.`);
     const h = perHundred(ex!);
@@ -93,18 +93,18 @@ describe("the primer's example report", () => {
   it("says which drug and species missed which genomes, in one grammatical sentence from the report's own rate", () => {
     const ex = primerExample(base)!;
     const lead = primerSteps(base, ex)[3]!.lead;
-    expect(lead).toBe(`With lineages held out, the best learner for ${ex.row.antibiotic} in ${speciesShort(ex.row.species)} called ${perHundred(ex).missed} of every 100 resistant genomes susceptible.`);
+    expect(lead).toBe(`With lineages held out, the best learner for ${datasetTitle(ex.row)} called ${perHundred(ex).missed} of every 100 resistant genomes susceptible.`);
     expect(lead).not.toMatch(/genomes in [A-Z]/);
     // The rate, drug and species follow the row; nothing is fixed at 7.
-    for (const [antibiotic, species, sensitivity, missed] of [
-      ["clindamycin", "Staphylococcus aureus", 0.99, 1],
-      ["ciprofloxacin", "Klebsiella pneumoniae", 0.7, 30],
-      ["gentamicin", "Escherichia coli", 1, 0],
+    for (const [antibiotic, species, sensitivity, missed, title] of [
+      ["clindamycin", "Staphylococcus aureus", 0.99, 1, "Staph vs\u00a0clindamycin"],
+      ["ciprofloxacin", "Klebsiella pneumoniae", 0.7, 30, "K.\u00a0pneumoniae vs\u00a0ciprofloxacin"],
+      ["gentamicin", "Escherichia coli", 1, 0, "E.\u00a0coli vs\u00a0gentamicin"],
     ] as const) {
       const row = { ...withLearner("x", 400, { sensitivity, specificity: 0.9 }), antibiotic, species };
       const m: Manifest = { ...base, datasets: [row] };
       const s = primerSteps(m)[3]!;
-      expect(s.lead).toBe(`With lineages held out, the best learner for ${antibiotic} in ${speciesShort(species)} called ${missed} of every 100 resistant genomes susceptible.`);
+      expect(s.lead).toBe(`With lineages held out, the best learner for ${title} called ${missed} of every 100 resistant genomes susceptible.`);
       expect(missedSentence(primerExample(m)!)).toBe(s.lead);
       expect(`${s.lead} ${text(s.body)}`).not.toMatch(/patient|treat|clinical/i);
     }
@@ -125,13 +125,14 @@ describe("the primer's example report", () => {
       expect(groups[0]!.parentElement!.className).toContain("gap-x-2");
     }
     expect(rows[1]!.querySelectorAll("[data-lineage-group]")[2]!.querySelectorAll("[data-hidden]")).toHaveLength(5);
-    expect(el.textContent).toContain(`scores are ${exampleNameInline(primerExample(base)!.row)}`);
+    expect(el.textContent).toContain(`scores are from ${datasetTitle(primerExample(base)!.row)}`);
   });
 
   it("claims no more than internal cross-validation and labels its drawings", () => {
     const steps = primerSteps(base);
     const all = steps.map((s) => `${s.lead} ${s.caption} ${text(s.body)} ${text(s.figure)}`).join(" ");
-    expect(all).toContain("Internal cross-validation only");
+    expect(all).toContain("Every number is internal cross-validation");
+    expect(all).toContain("Tested within one public database only: both test splits come from the same BV-BRC records.");
     expect(all).toContain("No external, prospective or clinical validation has been done");
     expect(all).toContain("Choosing a treatment for a patient");
     expect(text(steps[1]!.figure)).toContain("Drawing, not data");
@@ -169,7 +170,7 @@ describe("the primer on Overview", () => {
     expect(primer.compareDocumentPosition(host.querySelector("#corpus")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect([...primer.querySelectorAll("h3")].map((h) => h.textContent)).toEqual(["A dataset", "A genome feature", "Two tests", "Reading one result", "What the numbers support"]);
     // The primer adds no tab stop beyond its two links.
-    expect([...primer.querySelectorAll("a, button, [tabindex='0']")].map((e) => e.textContent?.trim())).toEqual(["Skip to the findings↓", exampleName(primerExample(base)!.row)]);
+    expect([...primer.querySelectorAll("a, button, [tabindex='0']")].map((e) => e.textContent?.trim())).toEqual(["Skip to the findings↓", datasetTitle(primerExample(base)!.row)]);
     const example = [...primer.querySelectorAll<HTMLAnchorElement>("a")][1]!;
     await act(async () => example.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })));
     expect(calls.open).toEqual([primerExample(base)!.row.id]);
@@ -211,7 +212,7 @@ describe("the primer in Present", () => {
       expect(dialog.querySelectorAll("[data-beats] span").length === 0 || [...dialog.querySelectorAll("[data-beats] span")].every((t) => t.className.includes("bg-blue"))).toBe(true);
     }
     await key("ArrowRight");
-    expect(status()).toContain("Data");
+    expect(status()).toContain("Genomes and lab calls");
     await key("Home");
     expect(status()).toContain("Slide 1 of ");
   });

@@ -72,6 +72,7 @@ export const ModelSection = ({ r, row }: { r: DatasetReport; row?: CatalogRow })
     <Section
       id="ds-model"
       title="The interpretable model"
+      question="The set covering machine and the decision tree are the two learners a person can read. Each rule or split asks whether a genome carries one piece of DNA."
       answer={
         scm.rules.length === 0
           ? "The set covering machine found no rule that beats calling every isolate one way."
@@ -84,7 +85,7 @@ export const ModelSection = ({ r, row }: { r: DatasetReport; row?: CatalogRow })
         ))}
         <p className="type-note border-t border-hair pt-3">
           Rules were chosen greedily on all isolates for the final model, with the trade-off p = {scm.p} and the rule count picked by inner cross-validation (error {pct(scm.cv_error)}). A rule
-          names k-mers that separate the lab calls in these isolates; they can travel with the cause on a plasmid or in a lineage rather than be the cause.
+          names k-mers that separate the lab calls in these isolates; they can travel with the cause on a plasmid or in a lineage without being the cause.
         </p>
       </div>
 

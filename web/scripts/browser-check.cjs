@@ -70,6 +70,11 @@ const longRule = manifest.datasets.find(d => d.scm_rules.length === 1 && d.scm_r
 // as its genus initial joined to the rest by a non-breaking space, so the
 // short form never ends a line ("Synthetic species C", "S. species C").
 const speciesNames = species => { const [genus, ...rest] = species.split(' '); return rest.length > 0 ? [species, genus.charAt(0) + '.\u00a0' + rest.join(' ')] : [species]; };
+// A dataset as the app titles it (datasetTitle in format.ts): the species'
+// everyday name where it has one, else its short name, then "vs" held to
+// the drug by a non-breaking space ("S. species C vs ceftriaxone").
+const EVERYDAY = new Map([['Mycobacterium tuberculosis', 'TB'], ['Neisseria gonorrhoeae', 'Gonorrhea'], ['Salmonella enterica', 'Salmonella'], ['Staphylococcus aureus', 'Staph'], ['Streptococcus pneumoniae', 'Pneumococcus']]);
+const datasetTitle = d => (EVERYDAY.get(d.species) ?? speciesNames(d.species).at(-1)) + ' vs\u00a0' + d.antibiotic;
 // The dataset and error view whose interval text runs widest, in characters
 // as the learner table prints it (one decimal), from the tree's own
 // intervals/; null for a tree without them.
@@ -123,7 +128,7 @@ const inspectId = manifest.datasets.some(d => d.id === 'escherichia_coli__ceftri
 const speciesSlug = manifest.species.find(s => s.slug === 'escherichia_coli' && s.genomes_analyzed > 0)?.slug ?? manifest.species.find(s => s.genomes_analyzed > 0).slug;
 const speciesName = manifest.species.find(s => s.slug === speciesSlug).species;
 const allValid = manifest.datasets.every(d => d.evaluation?.valid === true && (manifest.evaluation_revision === undefined || d.evaluation.revision === manifest.evaluation_revision));
-const CHIP = allValid ? 'Internal cross-validation only' : 'Provisional metrics';
+const CHIP = allValid ? 'Tested within one public database only' : 'Provisional metrics';
 const isLimitsHref = href => href === '/#limits' || href === '#limits' || href === '#m-limits';
 const SLIDE_TITLES = ['Genomic Resistance Mapping', 'Corpus', 'Lineage cost', 'Known-gene catalog', null, 'MIC prediction', 'One interpretable rule'];
 
@@ -758,10 +763,14 @@ async function interactions(page, tag, width) {
   } else {
     await page.getByRole('button', { name: 'Filters', exact: true }).click();
   }
-  await page.getByRole('checkbox', { name: /^Has MIC regression/ }).click();
+  await page.getByRole('checkbox', { name: /^Has MIC prediction/ }).click();
   await shot(page, tag + '-filters');
   const band = await page.locator('[data-view-options-panel] footer').textContent();
   check(tag + ' rail band: the filter count and Clear once a filter is set', band === '1 filterClear', band);
+  const bandEdge = await page.evaluate(() => { const panel = document.querySelector('[data-view-options-panel]'); return { clear: panel.querySelector('footer button')?.getBoundingClientRect().right, field: panel.querySelector('.filter-field-control [role="combobox"]')?.getBoundingClientRect().right }; });
+  check(tag + ' rail band: Clear ends on the right edge of the controls', bandEdge.clear !== undefined && bandEdge.field !== undefined && Math.abs(bandEdge.clear - bandEdge.field) <= 1, bandEdge);
+  const groupGaps = await page.evaluate(() => [...document.querySelectorAll('[data-view-options-panel] .filter-rail-body > * + *')].map(e => getComputedStyle(e).marginTop));
+  check(tag + ' rail groups share one spacing', groupGaps.length > 0 && new Set(groupGaps).size === 1, groupGaps);
   if (!inline) {
     await page.keyboard.press('Escape');
     await page.locator('aside[data-view-options-mode="sheet"]').waitFor({ state: 'detached' });
@@ -927,7 +936,7 @@ async function interactions(page, tag, width) {
     const header = document.querySelector('dialog[open] header');
     return { status: header.querySelector('p')?.textContent, links: [...header.querySelectorAll('nav[aria-label="Sections"] button')].map(b => b.textContent), current: header.querySelector('nav[aria-label="Sections"] [aria-current="true"]')?.textContent, title: document.getElementById('inspector-title')?.getBoundingClientRect().x, body: document.querySelector('#ds-learners h2')?.getBoundingClientRect().x, linksX: header.querySelector('nav[aria-label="Sections"] button')?.getBoundingClientRect().x, classMark: header.querySelector('p svg.class-glyph')?.getAttribute('data-class-family') ?? null };
   });
-  check(tag + ' inspector header: chip and facts in one status row', head.status?.includes(CHIP.replace('Provisional metrics', 'Provisional')) || head.status?.includes('Internal cross-validation only') || head.status?.includes('Provisional'), head.status);
+  check(tag + ' inspector header: chip and facts in one status row', head.status?.includes(CHIP.replace('Provisional metrics', 'Provisional')) || head.status?.includes('Tested within one public database only') || head.status?.includes('Provisional'), head.status);
   check(tag + ' inspector section links', JSON.stringify(head.links) === JSON.stringify(['Learners', 'Interpretable model', 'Genes and panels', 'Marker designer', 'MIC', 'Lineages']) && head.current === 'Learners', head);
   check(tag + ' inspector header and body share a column', Math.abs(head.title - head.body) <= 1 && Math.abs(head.linksX - head.body) <= 1, head);
   check(tag + ' inspector names the drug class with its family mark', head.classMark !== null, head.classMark);
@@ -959,7 +968,7 @@ async function interactions(page, tag, width) {
   await headerCheck(page, tag + ' species', speciesName);
   await edgeCheck(page, tag + ' species', '[data-view-scroll] h1');
   const purpose = await page.evaluate(() => document.querySelector('[data-view-scroll] header h1 + p')?.textContent);
-  check(tag + ' species purpose line', purpose === 'How genomes cluster into lineages, and how resistance follows them.', purpose);
+  check(tag + ' species purpose line', purpose === "A lineage is a group of closely related genomes, like one branch of a family tree. This page shows how one species' genomes fall into lineages, and how resistance follows them.", purpose);
   const drug = page.getByRole('combobox', { name: /^Map drug/ });
   // The outline must sit on its drug's own row. The map's label column
   // draws each drug's name in a row of its own (Structure.tsx), so the
@@ -1014,13 +1023,12 @@ async function interactions(page, tag, width) {
   check(tag + ' top bar stays in view after scrolling Methods', await page.evaluate(() => document.querySelector('header').getBoundingClientRect().top >= -1 && document.scrollingElement.scrollTop === 0), null);
   // Assays the report could not score: one entry each in Methods, or no such
   // part when there are none. An entry's lines are its name, its datasets
-  // ("<Drug> in <species>", comma-separated, each matched exactly) and its
+  // ("<species> vs <drug>", comma-separated, each matched exactly) and its
   // reason.
   const unscored = manifest.unsupported_panels ?? [];
   const unscoredPart = await page.evaluate(() => { const p = document.getElementById('m-unsupported'); return p ? [...p.querySelectorAll('li')].map(li => [...li.querySelectorAll('p')].map(x => x.textContent)) : null; });
-  const datasetNamed = (u, text) => speciesNames(u.species).some(s => text.toLowerCase() === (u.antibiotic + ' in ' + s).toLowerCase());
   check(tag + ' assays not scored listed in Methods', unscored.length === 0 ? unscoredPart === null
-    : unscoredPart !== null && unscoredPart.length === new Set(unscored.map(u => u.panel)).size && unscored.every(u => unscoredPart.some(([name = '', sets = '', ...rest]) => name === u.name && sets.split(', ').some(t => datasetNamed(u, t)) && rest.join(' ').includes('Not scored.') && rest.join(' ').toLowerCase().includes(u.reason.toLowerCase()))), { unscored: unscored.map(u => [u.panel, u.dataset]), part: unscoredPart });
+    : unscoredPart !== null && unscoredPart.length === new Set(unscored.map(u => u.panel)).size && unscored.every(u => unscoredPart.some(([name = '', sets = '', ...rest]) => name === u.name && sets.split(', ').includes(datasetTitle(u)) && rest.join(' ').includes('Not scored.') && rest.join(' ').toLowerCase().includes(u.reason.toLowerCase()))), { unscored: unscored.map(u => [u.panel, u.dataset]), part: unscoredPart });
   if (unscoredPart !== null) { await scrollTo(page, '#m-unsupported'); await shot(page, tag + '-unscored'); }
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
@@ -1072,7 +1080,7 @@ async function states(browser, width, height, theme) {
   const gate = new Promise(resolve => release = resolve);
   await page.route('**/data/index.json', async route => { await gate; await route.continue(); });
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-  await page.getByText('Loading the report manifest', { exact: true }).waitFor();
+  await page.getByText('Loading the report', { exact: true }).waitFor();
   check(tag + ' loading aria-busy', await page.locator('[aria-busy="true"]').count() === 1, null);
   check(tag + ' loading runs the mark loop in the panel and the top bar', await page.locator('svg.grm-mark[data-motion="loop"]').count() === 2, await page.locator('svg.grm-mark').evaluateAll(es => es.map(e => e.getAttribute('data-motion'))));
   await shot(page, tag + '-loading'); release();
@@ -1188,7 +1196,7 @@ async function present(page, tag, width, height) {
     }
     check(tag + ' slide ' + (slide + 1) + ' figure above caption', m.contentBottom <= m.caption.y - 8 && (m.fit === null || m.fit.scrollHeight <= m.fit.height + 1), { contentBottom: m.contentBottom, caption: m.caption, fit: m.fit });
     check(tag + ' slide ' + (slide + 1) + ' labels inside', m.textOutside.length === 0, m.textOutside);
-    const finding = title.includes('Unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('MIC prediction') ? 4 : 0;
+    const finding = title.includes('unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('(MIC)') ? 4 : 0;
     // A paged panel figure draws its share of the rows on each page; the
     // pages together must draw every lead-panel dataset once.
     const paged = /\((\d+) of (\d+)\)/.exec(labels[slide] ?? '');
@@ -1197,7 +1205,7 @@ async function present(page, tag, width, height) {
     const count = [0, expected.paired.length, expected.catalog.length, panelShown, expected.mic.length][finding] ?? 0;
     if (finding > 0) check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title, page: paged?.[0] ?? null });
     await referenceChecks(page, tag, finding, panelSeen, paged !== null);
-    if (title === 'Data') {
+    if (title === 'Genomes and lab calls') {
       const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);

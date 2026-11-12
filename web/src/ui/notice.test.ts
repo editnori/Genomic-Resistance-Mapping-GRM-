@@ -23,7 +23,7 @@ describe("dataset audit notice", () => {
     // A passing audit has no band; the header says it in plain words, and
     // its scope stays available to the view that prints it.
     expect(notice(6, 6)).toBe("");
-    expect(chip(6, 6)).toContain("Internal cross-validation only");
+    expect(chip(6, 6)).toContain("Tested within one public database only");
     expect(chip(6, 6)).not.toContain('role="tooltip"');
     expect(tipText(6, 6)).toContain(scope);
     expect(tipText(6, 6)).toContain("passes the internal audit (revision 6)");
@@ -33,10 +33,10 @@ describe("dataset audit notice", () => {
     expect(stale).toContain("Provisional");
     expect(stale).toContain("does not pass the current evaluation audit");
     expect(stale).toContain("current revision is 6");
-    expect(stale).not.toContain("Internal cross-validation only");
+    expect(stale).not.toContain("Tested within one public database only");
     expect(stale).not.toContain(scope);
     expect(chip(5, 6)).toMatch(/<strong[^>]*>Provisional<\/strong>/);
-    expect(chip(5, 6)).not.toContain("Internal cross-validation only");
+    expect(chip(5, 6)).not.toContain("Tested within one public database only");
   });
 });
 
@@ -50,7 +50,7 @@ describe("report status line", () => {
     const html = line();
     expect(text(html)).toContain("Report built");
     expect(text(html)).toContain(`AMRFinderPlus ${manifest.amrfinder_version}`);
-    expect(html).toMatch(new RegExp(`<a[^>]*href="${LIMITS_HREF}"[^>]*>Internal cross-validation only</a>`));
+    expect(html).toMatch(new RegExp(`<a[^>]*href="${LIMITS_HREF}"[^>]*>Tested within one public database only</a>`));
     expect(html).not.toContain('role="tooltip"');
     expect(text(html)).not.toContain("BV-BRC lab records");
   });

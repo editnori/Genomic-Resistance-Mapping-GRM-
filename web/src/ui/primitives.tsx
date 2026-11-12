@@ -152,7 +152,9 @@ export const PanelState = ({ kind, title, message, action }: { kind: "loading" |
 
 /** A panel: the title names the artifact, the answer sentence answers it,
  *  then the evidence. A quiet question shows only where the title alone
- *  leaves the reader guessing. Hairline separated, never a card in a card. */
+ *  leaves the reader guessing. A control on the right sits on the title's
+ *  centre line, whatever its touch target adds. Hairline separated, never a
+ *  card in a card. */
 export const Section = ({
   id,
   title,
@@ -173,7 +175,7 @@ export const Section = ({
     aria-labelledby={id === undefined ? undefined : `${id}-title`}
     className="scroll-mt-4 border-t border-hair pt-6 first:border-t-0 first:pt-0"
   >
-    <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+    <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
       <div className="min-w-0 flex-1 basis-60">
         <h2 id={id === undefined ? undefined : `${id}-title`} className="text-body font-semibold tracking-tight text-ink">
           {title}
@@ -326,7 +328,7 @@ export const FigureBlock = ({
     </section>
   ) : (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-6 border-t border-hair pt-7">
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <div className="min-w-0">
           <h2 id={`${id}-title`} className="text-body font-semibold tracking-tight text-ink">
             {title}

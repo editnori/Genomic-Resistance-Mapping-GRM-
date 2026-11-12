@@ -13,6 +13,7 @@ import { fixtureFile } from "../dev/fixtures/files";
 import { parseManifest } from "../data/validate";
 import type { CatalogRow, Manifest, SpeciesRow } from "../data/schema";
 import type { Navigator, Route } from "../app/router";
+import { catalogWords } from "../app/ReportStatus";
 import { catalogLead, cohortLead, coverageNote, lineageLead, micLead } from "./findings";
 import { OverviewView } from "./OverviewView";
 import { MethodsView } from "./MethodsView";
@@ -73,15 +74,15 @@ const rev7Shape = (): Manifest => {
 describe("report leads with revision 7's numbers", () => {
   it("leads with the report cohort and one coverage note", () => {
     const m = rev7Shape();
-    expect(cohortLead(m)).toBe("237 reports cover 13 species and use 21,889 genomes selected from 119,072 QC-passing genomes.");
+    expect(cohortLead(m)).toBe("237 datasets have a report. They cover 13 species and use 21,889 genomes, chosen from 119,072 genomes that passed quality control (QC).");
     expect(coverageNote(m)).toBe(
-      "In this run, selection is capped at 2,000 genomes per species when more are eligible, and QC and FASTA availability reduce some cohorts further. A report needs 25 resistant and 25 susceptible selected genomes with unconflicted reported R/S calls. Two curated datasets in these species have no report. Another 10 species (38 curated datasets) were not analyzed; their FASTA files are staged separately, not in the pipeline's data root.",
+      "In this run, selection is capped at 2,000 genomes per species when more are eligible. Some datasets have fewer because genomes failed QC or had no FASTA file, the file that holds the DNA sequence. A report needs 25 resistant and 25 susceptible selected genomes with a reported call and no conflicting call. Two datasets in these species passed curation but have no report. Another 10 species (38 datasets that passed curation) were not analyzed. Their FASTA files are stored apart from the data this run read.",
     );
   });
 
   it("states the lineage, known-gene, and MIC leads with their denominators", () => {
     expect(lineageLead({ n: 237, nNoBest: 0, nLineage: 231, medianRandom: 0.9253561253561253, medianLineage: 0.859608745684695, medianGap: 0.045254403131115395, nLargeGap: 106 })).toBe(
-      "Holding out whole lineages lowers median balanced accuracy from 92.5% to 86.0%. 106 of 231 datasets lose more than 5 points; the median loss is 4.5 points.",
+      "A learner can score well by recognising a genome's close relatives, so each dataset is also tested on whole lineages it never saw. Holding them out lowers median balanced accuracy from 92.5% on a random split to 86.0%. 106 of 231 datasets lose more than 5 points; the median loss is 4.5 points.",
     );
     expect(
       catalogLead({
@@ -96,16 +97,23 @@ describe("report leads with revision 7's numbers", () => {
         regions: { ahead: 50, within: 33, behind: 130 },
         uniform: { resistant: 43, susceptible: 38, other: 132 },
       }),
-    ).toBe("GRM's known-gene rules are within 2 points or ahead on 83 of 213 datasets: 50 ahead by more than 2 and 33 within 2. They trail by more than 2 on the other 130.");
+    ).toBe(
+      "A known-gene rule needs no training: it calls a genome resistant when it carries a known resistance gene for the drug. Against the best learner with lineages held out, these rules are within 2 points or ahead on 83 of 213 datasets: 50 ahead by more than 2 and 33 within 2. They trail by more than 2 on the other 130.",
+    );
     expect(micLead({ n: 126, median: 0.8362655650985171, nAbove90: 40 })).toBe(
-      "For 40 of 126 datasets, at least 90% of exact MICs are predicted within one doubling dilution (essential agreement). The median dataset reaches 83.6%.",
+      "The MIC (minimum inhibitory concentration) is the lowest drug level, in mg/L, that stops the bacterium growing. Labs test levels that double at each step, and a predicted MIC within one step of the measured one counts as essential agreement. For 40 of 126 datasets, at least 90% of exact MICs are predicted within one doubling dilution. The median dataset reaches 83.6%.",
     );
   });
 
   it("does not claim a selection cap the data does not show", () => {
     // The fixture's species use every labeled genome they have.
-    expect(coverageNote(base)).toContain("In this run, QC and FASTA availability decide which labeled genomes are selected.");
+    expect(coverageNote(base)).toContain("In this run, every labeled genome that passed QC and has a FASTA file, the file that holds the DNA sequence, is selected.");
     expect(coverageNote(base)).not.toContain("capped");
+  });
+
+  it("names the known-gene catalog with its version, or says the version is not recorded", () => {
+    expect(catalogWords({ ...base, amrfinder_version: "2026-08-14.1" })).toBe("Known-gene catalog: AMRFinderPlus 2026-08-14.1");
+    expect(catalogWords({ ...base, amrfinder_version: "" })).toBe("Known-gene catalog: AMRFinderPlus version not recorded");
   });
 });
 
@@ -149,20 +157,23 @@ const click = (el: Element) => el.dispatchEvent(new MouseEvent("click", { bubble
 const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
 
 describe("What GRM found", () => {
-  it("reads as a report: a plain title, a plain status line, the primer, and six numbered sections", async () => {
+  it("reads as a report: a plain title, what the site asks, a plain status line, the primer, and six numbered sections", async () => {
     const host = await mount(passing, fakeNav().nav);
     expect(host.querySelector("h1")?.textContent).toBe("What GRM found");
+    // The question comes in words before any chart.
+    expect(host.querySelector("header")?.textContent).toContain("asks how well the bacterium's genome, its full DNA sequence, predicts that lab result.");
+    expect(host.querySelector("header")?.textContent).toContain("Known-gene catalog: AMRFinderPlus");
     expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual([
       "How to read this report",
-      "1 Data",
-      "2 Unseen lineages",
-      "3 Known-gene rules",
-      "4 PCR panel",
-      "5 MIC prediction",
+      "1 Genomes and lab calls",
+      "2 Scores on unseen lineages",
+      "3 Known-gene rules against learners",
+      "4 Simulated PCR panel",
+      "5 Predicting the drug level that stops growth (MIC)",
       "6 Limits",
     ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
-    expect(scope?.textContent).toBe("Internal cross-validation only");
+    expect(scope?.textContent).toBe("Tested within one public database only");
     // No chip, no hover wall, no Method and coverage fold.
     expect(host.querySelector('header [tabindex="0"]')).toBeNull();
     expect(host.querySelector('[role="tooltip"]')).toBeNull();
@@ -212,10 +223,10 @@ describe("What GRM found", () => {
     expect(link.textContent).toBe(first.species);
     await act(async () => click(link));
     expect(calls.go).toEqual([{ view: "species", species: first.slug }]);
-    expect(table.textContent).toContain("A report's cohort is smaller: the selected genomes with an unconflicted reported R or S call for its drug.");
+    expect(table.textContent).toContain("A report's cohort, the genomes it scores, is smaller: the selected genomes with a reported R or S call and no conflicting call for its drug.");
   });
 
-  it("explains datasets without a paired lineage result in words, each name opening its report", async () => {
+  it("explains datasets without a lineage-held-out score in words, each name opening its report", async () => {
     const [a, b, c, ...rest] = base.datasets;
     const unpaired = (row: CatalogRow, reason: string): CatalogRow => ({ ...row, best_random: 0.9, best_lineage: null, lineage_unavailable_reason: reason });
     const rows = [
@@ -227,7 +238,9 @@ describe("What GRM found", () => {
     const { nav, calls } = fakeNav();
     const host = await mount({ ...base, datasets: rows }, nav);
     const lineage = host.querySelector("#lineage")!;
-    expect(lineage.textContent).toContain("Three datasets have no paired lineage result and are left out of these medians: two because a held-out fold would hold only one class and one because there are too few lineages.");
+    expect(lineage.textContent).toContain(
+      "Three datasets have no score with lineages held out and are left out of these medians: two because a held-out test group (fold) would hold only resistant or only susceptible genomes and one because there are too few lineages.",
+    );
     expect(lineage.textContent).not.toContain("lacks one or both classes");
     expect(lineage.textContent).not.toContain("requested folds");
     const name = lineage.querySelector<HTMLAnchorElement>(`a[href="/?dataset=${encodeURIComponent(c!.id)}"]`)!;
@@ -240,12 +253,14 @@ describe("What GRM found", () => {
     const host = await mount(base, nav);
     const limits = host.querySelector("#limits")!;
     expect(limits.textContent).toContain("internal cross-validation on public BV-BRC genomes");
-    expect(limits.textContent).toContain("No external, prospective, or clinical validation has been done.");
+    expect(limits.textContent).toContain("No external, prospective, or clinical validation has been done:");
     expect(limits.querySelector("a")?.getAttribute("href")).toBe("/methods#m-audit");
   });
 
   it("keeps every panel result behind one explicit control, open on arrival at #panels", async () => {
     const closed = await mount(base, fakeNav().nav);
+    // The page says what a PCR panel is before its numbers.
+    expect(closed.querySelector("#panels p")?.textContent).toMatch(/^A PCR panel is a lab test that looks for a fixed list of resistance targets in a sample's DNA\. /);
     const toggle = [...closed.querySelectorAll("#panels button")].find((b) => b.hasAttribute("aria-expanded"))!;
     expect(toggle.textContent).toBe("Show all panel results");
     expect(closed.querySelector('#panels [aria-label="Panel results"]')).toBeNull();

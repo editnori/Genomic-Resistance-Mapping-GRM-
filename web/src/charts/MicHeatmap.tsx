@@ -87,8 +87,14 @@ export const MicHeatmap = ({ confusion }: { confusion: readonly [number, number,
       </svg>
       </MarkListbox>
       </ScrollFrame>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-tiny text-muted-text" aria-label="Cell counts">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-tiny text-muted-text" aria-label="Heatmap key">
         {cuts.map((cut, i) => <span key={cut} className="inline-flex items-center gap-1.5"><span className="size-4" aria-hidden="true" style={{ background: fill(cut) }} />{i === 0 ? 1 : cuts[i - 1]! + 1}–{cut} isolates</span>)}
+        <span className="inline-flex items-center gap-1.5">
+          <svg aria-hidden="true" width={16} height={12} className="shrink-0">
+            <line x1={0} x2={16} y1={6} y2={6} stroke="rgb(var(--ink) / 0.5)" strokeDasharray="3 3" />
+          </svg>
+          Between the dashed lines: predicted within one doubling dilution of the measured MIC
+        </span>
       </div>
     </div>
   );

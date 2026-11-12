@@ -101,7 +101,7 @@ describe("dataset filters", () => {
     expect(rail().querySelectorAll("[aria-pressed]")).toHaveLength(0);
     const boxes = [...rail().querySelectorAll<HTMLInputElement>("input[type='checkbox']")];
     expect(boxes.map((b) => b.closest("label")!.textContent)).toEqual([
-      expect.stringContaining("Has MIC regression"),
+      expect.stringContaining("Has MIC prediction"),
       expect.stringContaining("VME ≤1.5%"),
       expect.stringContaining("ME ≤3%"),
     ]);
@@ -347,6 +347,23 @@ describe("rule cells on touch and hover (A34)", () => {
     root = createRoot(host);
     draw({ ...manifest, datasets: [{ ...base, scm_rules: ["presence of blaKPC"] }] });
     expect(table().querySelector("tbody tr")!.lastElementChild!.querySelector("[title]")).toBeNull();
+  });
+});
+
+describe("dataset search", () => {
+  it("finds a dataset by its species' everyday name, and still by drug then species", () => {
+    const base = manifest.datasets[0]!;
+    // "gonorrhea" is not part of "Neisseria gonorrhoeae", so only the
+    // everyday name can match it.
+    const ngo = { ...base, id: "neisseria_gonorrhoeae__ceftriaxone", species: "Neisseria gonorrhoeae", antibiotic: "ceftriaxone" };
+    const kpn = { ...base, id: "klebsiella_pneumoniae__ceftriaxone", species: "Klebsiella pneumoniae", antibiotic: "ceftriaxone" };
+    draw({ ...manifest, datasets: [ngo, kpn] });
+    const search = host.querySelector<HTMLInputElement>("input[type='search']")!;
+    act(() => type(search, "gonorrhea"));
+    expect(live()).toBe("1 of 2 datasets");
+    expect(table().querySelector("tbody tr")!.textContent).toContain("CeftriaxoneGonorrhea ·");
+    act(() => type(search, "ceftriaxone klebsiella pneumoniae"));
+    expect(live()).toBe("1 of 2 datasets");
   });
 });
 

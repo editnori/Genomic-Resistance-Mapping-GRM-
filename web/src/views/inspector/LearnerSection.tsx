@@ -129,7 +129,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
         : "No learner result is recorded for this dataset."
       : `${LEARNER_NAME[best.learner]} scores ${pct(best.metrics.balanced_accuracy)} on random splits${
           bestLineage === undefined ? "" : ` and ${pct(baOf(bestLineage))} with lineages held out`
-        }${catalogBa === null ? "." : `; the catalog alone scores ${pct(catalogBa)}.`}`;
+        }${catalogBa === null ? "." : `; the known-gene catalog alone scores ${pct(catalogBa)}.`}`;
 
   // Higher random-split scores that lose to the best learner because they
   // leave isolates uncalled. The note sits outside the error toggle, so it
@@ -153,6 +153,7 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
     <Section
       id="ds-learners"
       title="Learner comparison"
+      question="Each row is one learner, a kind of model that calls resistance from the genome. Further right scores higher: a filled dot is the random split, a ring the test on lineages it never saw."
       answer={answer}
       right={
         lineage !== undefined ? (
@@ -269,7 +270,8 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
       </ScrollFrame>
       </div>
       <p className="type-note mt-3">
-        Balanced accuracy over pooled out-of-fold predictions; faint dots are the {random?.folds ?? 5} single folds.
+        The genomes are cut into {random?.folds ?? 5} parts (folds), and each part is held out once while the model trains on the rest. Balanced accuracy pools those held-out
+        predictions; faint dots are the single folds. AUROC is how well the scores rank resistant isolates above susceptible ones, from 0.5 for chance to 1 for a perfect ranking.
         {lineage !== undefined
           ? ` With lineages held out, each of the ${lineage.n_groups} lineages goes whole to one fold.`
           : ` No lineage-held-out result: ${splitAbsence(r, "lineage") ?? ""}`}
