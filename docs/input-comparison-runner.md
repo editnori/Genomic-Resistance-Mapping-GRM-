@@ -964,6 +964,57 @@ On clofazimine and linezolid the reports' AUROC change, averaged over the learne
 
 The calibration count reads a twin whose redraws were refused as a rejection. A later reading could count those apart, and its rule would have to be fixed before the results it reads. Rule 10 keeps the two faults above, so on a panel its mark separates no decision.
 
+## A per-learner reading with calls (11 Nov 2026)
+
+The third reading sets each learner's calls beside its log loss. `scripts/input-comparison/learner_reading.py` computes it.
+
+It is exploratory. It was designed on 11 Nov 2026, after H-1's results and the reviews of them had been read, and it decides nothing. Log loss stays the registered endpoint, K's reports and their decisions stand as written, and the second reading above is unchanged.
+
+```
+python3 -B scripts/input-comparison/learner_reading.py COMBINE [COMBINE ...] [--json OUT] [--sensitivity]
+```
+
+COMBINE is a run's or a combine's WORK folder, one species each. The script reads `k/manifest.json`, `j/contrasts.json`, `j/planned.json`, `j/missing.json` and each arm's `runs.json`, `predictions.jsonl`, `arm.json` and the default's `plans/`. It refuses a species given twice, and folders that differ in source commit, grm binary or the synthetic flag.
+
+### Why
+
+The five-learner mean log loss mixes two scales. The SCM scores every genome 0 or 1 (all 186,456 of the default's lineage rows on H-1), so with the 1e-4 clip each wrong call costs −ln(10⁻⁴) = 9.21, and its log loss is about 9.21 times its error rate. A lower log loss can also come with fewer resistant genomes found. Reviews of H-1 measured both, and this reading prints them per learner.
+
+### What it takes
+
+- **Log loss:** each contrast's estimate as J recorded it in `j/contrasts.json`. Above zero, the arm's log loss is lower.
+- **Pairing:** the record's own rule through `stats.pair_units`, the function J paired with. Per repeat, the pairs are the genomes the arm scored, with the default restricted to them. A genome only the default scored is left out, and a genome only the arm scored is refused, as J refuses it. A contrast J didn't make (`j/missing.json`) is left out.
+- **The rows are J's:** each record is recomputed with `stats.compare_units` under the learner's registered test. The script refuses the folder when the estimate or the unit count differs from J's record, or when a record's rows don't pair.
+- **Calls:** the row's `called`. `grm arm` writes `called = score >= 0.5`, and on a no-call row (no model, NaN score) it writes `called = false` with the training prevalence as score (`src/ablate/arm.rs` at `31b7edb`, where it writes each `PredictionRow`). A no-call is then a susceptible call, as in J's thresholded endpoints. Each (repeat, genome) pair is one call, so three repeats count a genome three times.
+
+### Output
+
+Per split (lineage, and random kept apart), arm and learner, over the folders' datasets:
+
+- **Log loss:** the datasets with an answer (a made contrast with an estimate); better, worse and zero by the sign of the estimate, with the two-sided exact sign test; median and mean.
+- **Calls:** TP, FN, FP and TN of the default and of the arm, summed over datasets and repeats; recall, specificity, balanced accuracy, precision and F1 from those sums, and their changes. A rate whose denominator is zero is null.
+- **Disagreement:** the datasets where log loss improves while recall falls, and those where log loss is worse while recall rises. Ties and undefined recall are left out. The twins change no input, so their counts are the reference for no change.
+- **Share:** each learner's part of the five learners' pooled change for the arm, under two weightings. `units` sums the run's estimates, where every (repeat, outer fold) unit weighs the same. `genomes` sums each repeat's mean over its paired genomes, averaged over repeats. A pooled line gives both sums beside the shares. When a sum is near zero, its shares mean nothing.
+- **Cohort:** for an arm under a subset pairing (cap-1000, cap-4000 and grr-v1), per dataset the default cohort's class counts from its plan files' labels and both arms' genome counts. The run saved no labels for an arm's own cohort, so its class mix prints as "not recorded".
+
+`--sensitivity` adds a sensitivity reading. It loads each folder's `report/ablation-report.json` through K's validation and recomputes every family C record from the rows under the registered tests. It refuses unless those records are the report's. Then it recomputes them with one test for every learner, the paired t and then the corrected t, finalizes each species as J does, and counts the second reading's firm decisions. A different formula doesn't validate a test, and the datasets share genomes and species, so this count decides nothing.
+
+### Tests
+
+`tests/input_comparison/test_learner_reading.py` writes WORK folders by hand, with J's records made from their rows by `pair_units`, `compare_units` and `finalize`. Its 20 tests cover known paired counts and their rates, the disagreement counts and a tie, the call rule on a no-call row scored above 0.5, a genome only the default scored and one only the arm scored, a contrast J didn't make, the random split kept apart, both weightings of a share, the cohort lines, the sensitivity reading against `second_reading.read`, the command's JSON and text, and the refusals.
+
+`test_the_learner_reading_takes_the_work_as_run_wrote_it` in `tests/input_comparison/test_run.py` runs the command with `--sensitivity` on the end-to-end WORK. It needs the release `grm`.
+
+### On H-1
+
+On the four H-1 combine folders, the script reads 2,420 lineage rows and 3,615 random rows.
+
+- **Two reviews:** the paired counts equal both reviews' independent derivations on every shared row.
+- **The SCM's share:** it holds 0.739 of cap-4000's pooled lineage change by units, and 0.694 by genomes.
+- **M. tuberculosis clofazimine, cap-4000, scm:** TP 381 and FN 198 under the default go to TP 105 and FN 474, while the log-loss estimate improves by 2.7935.
+- **No-change reference:** the twins have log loss improving while recall falls on up to 9 of 46 datasets per learner. Each cohort arm's counts sit within that range except cap-4000 rf (13 of 49).
+- **The sensitivity reading:** the registered tests give the second reading's 23 firm decisions back (20 on rf). The paired t for every learner gives 32, and the corrected t for every learner gives 5. That count decides nothing.
+
 ## Cost
 
 An arm costs a curate plus count, structure and matrix for each new data root (cap, selection and k arms; blocks and budget arms reuse the default root), and one `grm arm` per arm and dataset: two splits × five outer folds × five learners, with no final models, MIC regression or annotation. On the synthetic tree (2,000 genomes of 23 kb, about 30,000 K patterns, one dataset, Boat xlarge, three arms at a time) a root took 1 to 5 s and an arm 7 to 50 s; the whole comparison took 176 s. Real genomes are about 200 times longer and real matrices hold far more patterns, so these numbers don't scale to a real species; a real arm costs about what `grm learn`'s cross-validation costs for that dataset, plus a count, structure and matrix of the species for each cap, selection or k arm. H-1 sizes the real panel.
