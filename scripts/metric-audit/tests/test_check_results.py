@@ -410,9 +410,14 @@ class SchemaAndRevision(Case):
         entry = self.passes(rep, [rf_line(rep)])
         self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (12, 2, "rf"))
 
-    def test_future_revision13_fails(self):
-        rep = revision8_report(revision=12)
-        rep["evaluation"]["revision"] = 13
+    def test_revision13_report_with_an_isolated_pair_passes(self):
+        rep, _ = fx.isolated_report(report=revision8_report(revision=13))
+        entry = self.passes(rep, [rf_line(rep)])
+        self.assertEqual((entry["revision"], entry["schema"], entry["best_learner"]), (13, 2, "rf"))
+
+    def test_future_revision14_fails(self):
+        rep = revision8_report(revision=13)
+        rep["evaluation"]["revision"] = 14
         self.fails(rep, "'revision'")
 
     def test_a_root_that_mixes_revisions_fails(self):

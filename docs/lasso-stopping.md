@@ -113,9 +113,9 @@ An invalid report is written for review but is not a finished dataset. `grm lear
 
 ## Report schema and independent checker
 
-`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **12**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 to revision-12 output must contain the new evidence.
+`REPORT_SCHEMA` remains **2**. `EVALUATION_REVISION` is now **13**. The optional Rust deserialization defaults preserve the ability to read older reports, but revision-8 to revision-13 output must contain the new evidence.
 
-Revision 11 keeps this lasso and its evidence unchanged and adds no report field. It draws the random split's inner tuning on the kset duplicate groups ([duplicate-isolation.md](duplicate-isolation.md)), which can change the scores of a dataset that has a group. A revision-11 report meets the revision-8 rules below, and a same-fingerprint revision-10 report is stale against revision 11. Revision 12 draws the final lasso's holdout on the same duplicate groups, adds no report field, and makes a same-fingerprint revision-11 report stale.
+Revision 11 keeps this lasso and its evidence unchanged and adds no report field. It draws the random split's inner tuning on the kset duplicate groups ([duplicate-isolation.md](duplicate-isolation.md)), which can change the scores of a dataset that has a group. A revision-11 report meets the revision-8 rules below, and a same-fingerprint revision-10 report is stale against revision 11. Revision 12 draws the final lasso's holdout on the same duplicate groups, adds no report field, and makes a same-fingerprint revision-11 report stale. Revision 13 keeps the lasso unchanged and adds no report field. It reads each gene-panel target only for its own drugs and organisms (`src/panels.rs`, `panels-v2`), so a report's `panels` rows can change and an out-of-scope panel moves to `unsupported_assays`. A revision-13 report meets the revision-8 rules below, and a same-fingerprint revision-12 report is stale against revision 13.
 
 Revision 10 keeps this lasso and its evidence unchanged. It adds the species identity check ([species-check.md](species-check.md)) and keeps k-mer-identical duplicates whole in one outer fold, listed in the new `kset_duplicates` field ([duplicate-isolation.md](duplicate-isolation.md)). A revision-10 report meets the revision-8 rules below, and a same-fingerprint revision-9 report is stale against revision 10.
 
@@ -147,8 +147,8 @@ For a deliberate empty path, `path_points` and `path_unconverged` are zero and `
 
 `scripts/check-results.py` now:
 
-- accepts revisions 3 through 11 and rejects future revisions, applying the revision-8 lasso rules to revisions 9 to 11;
-- refuses a root whose reports have more than one evaluation revision, such as revision-8 reports left beside revision-9 ones by a run stopped part-way, so a revision-11 root must hold only revision-11 reports;
+- accepts revisions 3 through 13 and rejects future revisions, applying the revision-8 lasso rules to revisions 9 to 13;
+- refuses a root whose reports have more than one evaluation revision, such as revision-8 reports left beside revision-9 ones by a run stopped part-way, so a revision-13 root must hold only revision-13 reports;
 - keeps the existing revision 3–7 schema, no-call, metric, split, and log semantics;
 - requires per-fold and final lasso status on every available revision-8 split, including reports whose lasso rows have null fits;
 - rejects missing fields, wrong types, negative or out-of-range counts and indices, a wrong number of fold records, a non-empty path with no selected point (or the reverse), inconsistent selected/refit presence, and a final model inconsistent with an empty-path record;

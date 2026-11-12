@@ -37,8 +37,10 @@ pub const REPORT_SCHEMA: u32 = 2;
 /// duplicates whole in one outer fold (docs/duplicate-isolation.md).
 /// Revision 11 keeps those groups whole in the random split's inner tuning
 /// too (`eval::tuning_groups`), and revision 12 in the final models' tuning
-/// (`eval::final_tuning`).
-pub const EVALUATION_REVISION: u32 = 12;
+/// (`eval::final_tuning`). Revision 13 reads each gene-panel target only for
+/// its own drugs and organisms (`panels`, `panels-v2`): a report's `panels`
+/// rows change and an out-of-scope panel moves to `unsupported_assays`.
+pub const EVALUATION_REVISION: u32 = 13;
 
 #[derive(Serialize)]
 pub struct EvaluationAudit {
@@ -486,6 +488,55 @@ fn probe_results(
     (panels, unsupported)
 }
 
+/// The gene panels for `drug`, scored on a `species` dataset over each
+/// sample's catalog gene calls, and the reason for each panel that would
+/// report no result there.
+fn gene_panels(
+    drug: &str,
+    species: &str,
+    sample_hits: &[&[FamilyHit]],
+    truth: &[bool],
+) -> (Vec<PanelResult>, Vec<UnsupportedAssay>) {
+    let mut scored = Vec::new();
+    let mut unsupported = Vec::new();
+    for (panel, targets) in panels::for_dataset(drug, species) {
+        let targets = match targets {
+            Ok(t) => t,
+            Err(why) => {
+                unsupported.push(UnsupportedAssay {
+                    id: panel.id.into(),
+                    name: panel.name.into(),
+                    mirrors: panel.mirrors.into(),
+                    reason: why.reason().into(),
+                });
+                continue;
+            }
+        };
+        let found: Vec<Vec<String>> = sample_hits
+            .iter()
+            .map(|h| panels::detected(&targets, h))
+            .collect();
+        let scores: Vec<f64> = found.iter().map(|f| (!f.is_empty()) as u8 as f64).collect();
+        let mut detected: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+        for (f, &is_r) in found.iter().zip(truth) {
+            for g in f {
+                let e = detected.entry(g.clone()).or_default();
+                if is_r { e.0 += 1 } else { e.1 += 1 }
+            }
+        }
+        scored.push(PanelResult {
+            id: panel.id.into(),
+            name: panel.name.into(),
+            mirrors: panel.mirrors.into(),
+            targets: targets.iter().map(|t| t.gene.to_string()).collect(),
+            metrics: binary_metrics(truth, &scores, 0.5, false),
+            detected: detected.into_iter().map(|(g, (r, s))| (g, r, s)).collect(),
+            no_call: None,
+        });
+    }
+    (scored, unsupported)
+}
+
 // Keep the public analysis API and its positional call contract unchanged.
 #[allow(clippy::too_many_arguments)]
 pub fn analyze_dataset(
@@ -635,36 +686,11 @@ pub fn analyze_dataset(
         _ => None,
     };
 
-    let panels: Vec<PanelResult> = panels::for_drug(&spec.antibiotic)
-        .into_iter()
-        .map(|panel| {
-            let found: Vec<Vec<String>> = sample_hits
-                .iter()
-                .map(|h| panels::detected(panel, h))
-                .collect();
-            let scores: Vec<f64> = found.iter().map(|f| (!f.is_empty()) as u8 as f64).collect();
-            let mut detected: BTreeMap<String, (usize, usize)> = BTreeMap::new();
-            for (f, &is_r) in found.iter().zip(truth) {
-                for g in f {
-                    let e = detected.entry(g.clone()).or_default();
-                    if is_r { e.0 += 1 } else { e.1 += 1 }
-                }
-            }
-            PanelResult {
-                id: panel.id.into(),
-                name: panel.name.into(),
-                mirrors: panel.mirrors.into(),
-                targets: panel.targets.iter().map(|t| t.to_string()).collect(),
-                metrics: binary_metrics(truth, &scores, 0.5, false),
-                detected: detected.into_iter().map(|(g, (r, s))| (g, r, s)).collect(),
-                no_call: None,
-            }
-        })
-        .collect();
-
-    let mut panels = panels;
-    let (probe_panels, unsupported_assays) = probe_results(&assays, probe_cache, &columns, truth);
+    let (mut panels, mut unsupported_assays) =
+        gene_panels(&spec.antibiotic, &spec.species, &sample_hits, truth);
+    let (probe_panels, unsupported_probes) = probe_results(&assays, probe_cache, &columns, truth);
     panels.extend(probe_panels);
+    unsupported_assays.extend(unsupported_probes);
 
     // Catalog group dictionary for the sample table.
     let mut dict: BTreeMap<String, u16> = BTreeMap::new();
@@ -1319,19 +1345,20 @@ mod tests {
                 "input_fingerprint": fingerprint,
             })
         };
-        assert_eq!(EVALUATION_REVISION, 12);
+        assert_eq!(EVALUATION_REVISION, 13);
         assert_eq!(stale_reason(&saved(EVALUATION_REVISION, key), key), None);
         // Revision 8's solver could stop where revision 9's converges, a
         // revision-9 report may have scored a genome with its own copy in
         // training, a revision-10 report's random-split tuning may have put a
-        // genome and its copy on both sides of a tuning partition, and a
-        // revision-11 report's final models may have. The input fingerprint
-        // sees none of these changes.
-        for old in [7, 8, 9, 10, 11] {
+        // genome and its copy on both sides of a tuning partition, a
+        // revision-11 report's final models may have, and a revision-12
+        // report's panel rows read every target for every panel drug and
+        // organism. The input fingerprint sees none of these changes.
+        for old in [7, 8, 9, 10, 11, 12] {
             assert_eq!(
                 stale_reason(&saved(old, key), key),
                 Some("evaluation audit revision changed"),
-                "a same-fingerprint revision-{old} result must not enter revision 12"
+                "a same-fingerprint revision-{old} result must not enter revision 13"
             );
         }
         // A current report whose audit is invalid, or says nothing, is not a
@@ -1994,6 +2021,91 @@ mod tests {
             class: "BETA-LACTAM".into(),
             subclass: "CARBAPENEM".into(),
         }
+    }
+
+    #[test]
+    fn gene_panels_score_the_drug_s_targets_and_list_uncovered_organisms() {
+        let (ctx, kpc) = ([hit("blaCTX-M")], [hit("blaKPC")]);
+        // Resistant: KPC, CTX-M; susceptible: CTX-M, none.
+        let hits: [&[FamilyHit]; 4] = [&kpc, &ctx, &ctx, &[]];
+        let truth = [true, true, false, false];
+        let (scored, unsupported) =
+            gene_panels("meropenem", "Klebsiella pneumoniae", &hits, &truth);
+        assert!(unsupported.is_empty());
+        let bcid = scored
+            .iter()
+            .find(|p| p.id == "gram_negative_bcid")
+            .unwrap();
+        let m = &bcid.metrics;
+        // CTX-M carriers are not called: one true and no false positive.
+        assert_eq!((m.tp, m.fn_, m.fp, m.tn), (1, 1, 0, 2));
+        assert_eq!(bcid.detected, [("blaKPC".to_string(), 1, 0)]);
+        assert!(!bcid.targets.contains(&"blaCTX-M".to_string()));
+        let (_, ceph) = gene_panels("ceftriaxone", "Klebsiella pneumoniae", &hits, &truth);
+        assert!(ceph.is_empty());
+
+        let (scored, unsupported) = gene_panels("cefoxitin", "Escherichia coli", &hits, &truth);
+        assert!(scored.is_empty());
+        assert_eq!(
+            unsupported,
+            [UnsupportedAssay {
+                id: "mec".into(),
+                name: "mecA/mecC PCR".into(),
+                mirrors: "MRSA molecular assays (Xpert MRSA, BCID2 mecA/C)".into(),
+                reason: panels::Unsupported::Organism.reason().into(),
+            }]
+        );
+        let (scored, unsupported) =
+            gene_panels("colistin", "Pseudomonas aeruginosa", &hits, &truth);
+        assert!(scored.is_empty());
+        let reasons: Vec<(&str, &str)> = unsupported
+            .iter()
+            .map(|u| (u.id.as_str(), u.reason.as_str()))
+            .collect();
+        assert_eq!(
+            reasons,
+            [
+                ("gram_negative_bcid", panels::Unsupported::Drug.reason()),
+                ("mcr", panels::Unsupported::Organism.reason()),
+            ]
+        );
+    }
+
+    #[test]
+    fn bcid2_and_ctx_m_rows_differ_on_a_kpc_carrier_without_ctx_m() {
+        let (ctx, kpc, ndm) = ([hit("blaCTX-M")], [hit("blaKPC")], [hit("blaNDM")]);
+        // Resistant: KPC, CTX-M, NDM; susceptible: CTX-M, none.
+        let hits: [&[FamilyHit]; 5] = [&kpc, &ctx, &ndm, &ctx, &[]];
+        let truth = [true, true, true, false, false];
+        let row = |drug: &str, id: &str| {
+            let (scored, unsupported) = gene_panels(drug, "Klebsiella pneumoniae", &hits, &truth);
+            assert!(unsupported.is_empty(), "{drug}");
+            let p = scored.into_iter().find(|p| p.id == id).unwrap();
+            let m = &p.metrics;
+            ((m.tp, m.fn_, m.fp, m.tn), p.detected)
+        };
+        let detected = |rows: &[(&str, usize, usize)]| -> Vec<(String, usize, usize)> {
+            rows.iter().map(|&(g, tp, fp)| (g.into(), tp, fp)).collect()
+        };
+        assert_eq!(
+            row("ceftriaxone", "gram_negative_bcid"),
+            (
+                (3, 0, 1, 1),
+                detected(&[("blaCTX-M", 1, 1), ("blaKPC", 1, 0), ("blaNDM", 1, 0)])
+            )
+        );
+        assert_eq!(
+            row("ceftriaxone", "ctx_m"),
+            ((1, 2, 1, 1), detected(&[("blaCTX-M", 1, 1)]))
+        );
+        // NDM spares aztreonam: its carrier is no aztreonam call.
+        assert_eq!(
+            row("aztreonam", "gram_negative_bcid"),
+            (
+                (2, 1, 1, 1),
+                detected(&[("blaCTX-M", 1, 1), ("blaKPC", 1, 0)])
+            )
+        );
     }
 
     fn phenotype(genome: &str, antibiotic: &str, reported: Call, mic: Option<Mic>) -> Phenotype {

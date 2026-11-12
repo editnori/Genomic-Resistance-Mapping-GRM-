@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { fixtureFile } from "../dev/fixtures/files";
 import { parseManifest } from "../data/validate";
+import { datasetTitle } from "../data/format";
 import { withRealProbeRows } from "../dev/fixtures/probeRows";
 import type { Lite, Manifest } from "../data/schema";
 import { PanelEvidence } from "./PanelEvidence";
@@ -34,6 +35,21 @@ describe("panel evidence and unscored assays", () => {
     expect(html).toContain("1 assay has no result on the datasets listed");
     expect(html).toContain("E.\u00a0coli vs\u00a0ciprofloxacin, E.\u00a0coli vs\u00a0levofloxacin");
     expect(html.split(`Not scored. ${reason}`).length - 1).toBe(1);
+  });
+
+  it("keeps each reason of one assay apart", () => {
+    const organism = "the panel does not cover this organism: the assay reports none of its targets for it";
+    const drug = "no target of this panel is interpreted for this drug in this organism";
+    const row = { panel: "gram_negative_bcid", name: "Gram-negative blood-culture panel", dataset: "streptococcus_pneumoniae__meropenem", species: "Streptococcus pneumoniae", antibiotic: "meropenem", reason: organism };
+    const rows = [row, { ...row, dataset: "pseudomonas_aeruginosa__colistin", species: "Pseudomonas aeruginosa", antibiotic: "colistin", reason: drug }];
+    const html = renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, unsupported_panels: rows } }));
+    expect(html).toContain("1 assay has no result on the datasets listed");
+    expect(html).toContain(`Not scored. ${organism.charAt(0).toUpperCase()}${organism.slice(1)}.`);
+    expect(html).toContain(`Not scored. ${drug.charAt(0).toUpperCase()}${drug.slice(1)}.`);
+    // Each entry lists its own dataset, in the words the Methods page uses for a dataset.
+    expect(html).toContain(datasetTitle(rows[0]!));
+    expect(html).toContain(datasetTitle(rows[1]!));
+    expect(datasetTitle(rows[0]!)).not.toBe(datasetTitle(rows[1]!));
   });
 
   it("says how many datasets with a panel have no best learner instead of dropping them silently", () => {

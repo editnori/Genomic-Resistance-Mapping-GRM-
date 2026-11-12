@@ -254,9 +254,16 @@ const Models = ({ manifest }: { manifest: Manifest }) => (
         matching and applies its own fixed rule per drug: resistant when the genome carries a gene whose catalog class or subclass matches the drug. The rule does not train. It does not run
         the AMRFinderPlus program or test the point mutations AMRFinderPlus also describes, so mutational resistance counts against it.
       </Def>
-      <Def term="Simulated PCR panels" plain="Commercial lab gene tests, imitated on the genome sequence: a panel calls resistant when it finds any gene it looks for.">
-        A gene panel calls resistant when the assembled genome carries any of its targets, which follow the manufacturers&apos; published target lists; a probe assay calls resistant when a
-        probed region differs from the wild-type sequence. Detection is in silico, from assembled genomes.
+      <Def term="Simulated PCR panels" plain="Commercial lab gene tests, imitated on the genome sequence: a panel calls resistant when it finds a gene that it reads for that drug in that species.">
+        A gene panel calls resistant when the assembled genome carries one of its targets that the panel reads for the drug, in a species the assay reports that target for. Targets,
+        drugs and species follow the manufacturers&apos; published documents. A probe assay calls resistant when a probed region differs from the wild-type sequence. Detection is in
+        silico, from assembled genomes. A detected gene is what the panel would report; it does not prove that the gene causes the isolate&apos;s resistance.
+      </Def>
+      <Def term="Blood-culture and CTX-M rows" plain="Two rows that read the same blood-culture gene test in two ways: every gene on it that breaks down the drug, or the CTX-M gene alone.">
+        On a cephalosporin the two rows read the same panel two ways. The blood-culture row counts every gene of the panel that breaks down the drug: CTX-M, and also the carbapenemase
+        genes KPC, NDM, VIM and IMP, as published studies of these enzymes describe. It shows what the panel&apos;s genes could explain. The CTX-M row counts CTX-M alone, as the maker
+        compares the panel&apos;s cephalosporin result. For aztreonam the blood-culture row adds KPC only, since NDM, VIM and IMP do not break down aztreonam. OXA-48-like is read for
+        carbapenems only.
       </Def>
       <Def term="MIC regression" plain="A model that predicts the MIC itself, the lowest amount of the drug that stops growth, instead of only R or S.">
         Censored gradient-boosted regression on log2 dilution steps, fitted on the MICs of genomes with a reported call; a genome whose label was inferred from its MIC is left out. It
@@ -404,10 +411,14 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
   const audit = manifestAudit(manifest);
   const { cap, capped } = selectionCap(manifest);
   const unsupportedRows = manifest.unsupported_panels ?? [];
-  const unsupported = [...new Set(unsupportedRows.map((u) => u.panel))].map((panel) => {
-    const datasets = unsupportedRows.filter((u) => u.panel === panel);
-    return { ...datasets[0]!, datasets };
+  // One entry per assay and reason: a gene panel can be unsupported for its
+  // organism on some datasets and for the drug on others.
+  const reasonKey = (u: { panel: string; reason: string }) => `${u.panel}\u0000${u.reason}`;
+  const unsupported = [...new Set(unsupportedRows.map(reasonKey))].map((key) => {
+    const datasets = unsupportedRows.filter((u) => reasonKey(u) === key);
+    return { ...datasets[0]!, key, datasets };
   });
+  const unsupportedAssays = new Set(unsupportedRows.map((u) => u.panel)).size;
   return (
     <MethodsSection id={METHODS_ANCHORS.limits} n={4} title="Scope, limitations and audit">
       <P>
@@ -467,12 +478,12 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
       {unsupported.length > 0 ? (
         <Part id="m-unsupported" title="Assays not scored">
           <p className="prose-measure text-note text-ink">
-            {plural(unsupported.length, "assay")} {unsupported.length === 1 ? "has" : "have"} no result on the datasets listed, so no sensitivity or specificity is reported for{" "}
-            {unsupported.length === 1 ? "it" : "them"}.
+            {plural(unsupportedAssays, "assay")} {unsupportedAssays === 1 ? "has" : "have"} no result on the datasets listed, so no sensitivity or specificity is reported for{" "}
+            {unsupportedAssays === 1 ? "it" : "them"}.
           </p>
           <ul className="space-y-3">
             {unsupported.map((a) => (
-              <li key={a.panel} className="border-t border-hair pt-3">
+              <li key={a.key} className="border-t border-hair pt-3">
                 <p className="text-control font-semibold text-ink">{a.name}</p>
                 <p className="text-note text-muted-text">{a.datasets.map(datasetTitle).join(", ")}</p>
                 <p className="prose-measure mt-1 text-note text-ink">{notScored(a.reason)}</p>
