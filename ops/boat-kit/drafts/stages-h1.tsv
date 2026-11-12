@@ -1,0 +1,13 @@
+# KIT10 round 2 draft: H-1 stage table for drive.sh KIND=h1, read with run-h1.conf. Not a stage table yet: drive.sh refuses
+# a row with an @@NAME@@ left in it before any box (test-drive-h1.sh H21). Columns (tab-separated): BOX KIND TYPE
+# EST_FAST_H EST_SLOW_H SLOW_OK NEEDS SPEC TTL_H PARTS. Sources: the spec paths and SAL-1/SAL-2 split are repo
+# docs/input-comparison-runner.md:524-531 (main at aaa46ab); kinds, types and the combine row follow drive.sh's header
+# (a combine box is type default and waits for its parts' DONE); TTL_H is the slow estimate + 0.5 h (G6, no resume)
+# and at most 6 h (MAX_TTL). No hour estimate, SLOW_OK or run-box ordering is on this controller, so those are
+# placeholders. MTB-1 is left out: MTB is on hold.
+P1	pilot	xlarge	@@P1_EST_FAST_H@@	@@P1_EST_SLOW_H@@	@@P1_SLOW_OK@@	-	scripts/input-comparison/h1/pilot.json	@@P1_TTL_H@@	-
+SAL-1	s1	xlarge	@@SAL1_EST_FAST_H@@	@@SAL1_EST_SLOW_H@@	@@SAL1_SLOW_OK@@	@@SAL1_NEEDS@@	scripts/input-comparison/h1/h1-salmonella_enterica-part1.json	@@SAL1_TTL_H@@	-
+SAL-2	s1	xlarge	@@SAL2_EST_FAST_H@@	@@SAL2_EST_SLOW_H@@	@@SAL2_SLOW_OK@@	@@SAL2_NEEDS@@	scripts/input-comparison/h1/h1-salmonella_enterica-part2.json	@@SAL2_TTL_H@@	-
+SA-1	s1	xlarge	@@SA1_EST_FAST_H@@	@@SA1_EST_SLOW_H@@	@@SA1_SLOW_OK@@	@@SA1_NEEDS@@	scripts/input-comparison/h1/h1-staphylococcus_aureus.json	@@SA1_TTL_H@@	-
+NG-1	s1	xlarge	@@NG1_EST_FAST_H@@	@@NG1_EST_SLOW_H@@	@@NG1_SLOW_OK@@	@@NG1_NEEDS@@	scripts/input-comparison/h1/h1-neisseria_gonorrhoeae.json	@@NG1_TTL_H@@	-
+SAL-C	combine	default	@@SALC_EST_FAST_H@@	@@SALC_EST_SLOW_H@@	@@SALC_SLOW_OK@@	$RUN_DIR/stages/SAL-1/DONE,$RUN_DIR/stages/SAL-2/DONE	scripts/input-comparison/h1/h1-salmonella_enterica.json	@@SALC_TTL_H@@	SAL-1,SAL-2
