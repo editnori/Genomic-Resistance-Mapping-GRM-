@@ -158,7 +158,7 @@ export interface LearnerSummary {
   rows: LearnerRow[];
   /** Datasets with a best learner scored with lineages held out. */
   nBest: number;
-  /** Of nBest, datasets where no learner that calls every genome outscores
+  /** Of nBest, datasets where no learner scored on every genome outscores
    *  the best learner with lineages held out. A tie counts. A learner that
    *  leaves a genome without a call there is scored on fewer genomes than
    *  the best learner, so it is not set against it. */
@@ -173,7 +173,7 @@ const balanced = (row: CatalogRow, learner: Fitted, scheme: Scheme): number | nu
 const withoutCall = (result: LearnerLite | null): boolean => leftOut(result).resistant + leftOut(result).susceptible > 0;
 
 /** The best learner is picked by its random-split score, among the learners
- *  that call every genome; the lineage test plays no part in the pick. These
+ *  scored on every genome; the lineage test plays no part in the pick. These
  *  rows set it beside each learner used alone for every dataset, where no
  *  pick is made. */
 export const learnerSummary = (rows: readonly CatalogRow[]): LearnerSummary => {
@@ -197,7 +197,7 @@ export const learnerSummary = (rows: readonly CatalogRow[]): LearnerSummary => {
       medianBestLead: median(leads),
     };
   });
-  // How far the top learner that calls every genome sits over the best
+  // How far the top learner scored on every genome sits over the best
   // learner with lineages held out; zero when none does.
   const margins = rows.flatMap((row) => {
     if (row.best_lineage === null) return [];
