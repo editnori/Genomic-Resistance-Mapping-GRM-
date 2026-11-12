@@ -829,6 +829,22 @@ class SentinelAndRandomSplitCases(unittest.TestCase):
         (u,) = rp._unreliable(manifest, contrasts, [lineage, random], missing)
         self.assertEqual((u["learner"], u["sentinel"]), ("gbt", lineage))
 
+    def test_the_judging_contrasts_are_a_sentinel_s_lineage_log_loss_contrasts_for_its_learners(self):
+        ids = ["ds/C:gbt:lineage:default->twin:log_loss",   # the one that judges
+               "ds/C:rf:lineage:default->twin:log_loss",    # a learner the twin isn't given
+               "ds/D:gbt:random:default->twin:log_loss",    # the random split
+               "ds/D:gbt:lineage:default->twin:auroc",      # a secondary endpoint
+               "ds/C:gbt:lineage:default->cap:log_loss",    # no sentinel
+               "ds/C:gbt:lineage:default->other:log_loss"]  # a sentinel the manifest gives no learner
+        manifest = {"sentinel_arms": ["twin", "other"], "sentinel_learners": {"twin": ["gbt"]}}
+        self.assertEqual([pid for pid, _ in rp.judging_contrasts(manifest, ids)], ids[:1])
+        (_, parts), = rp.judging_contrasts(manifest, ids)
+        self.assertEqual((parts["treatment"], parts["learner"], parts["split"]), ("twin", "gbt", "lineage"))
+        # Without the map, every sentinel judges every learner.
+        del manifest["sentinel_learners"]
+        self.assertEqual([pid for pid, _ in rp.judging_contrasts(manifest, ids)], [ids[0], ids[1], ids[5]])
+        self.assertEqual(rp.judging_contrasts({}, ids), [])
+
     def test_random_split_contrasts_are_printed_as_descriptive(self):
         md = rp.render_markdown(build())
         block = md.split("### Random split: descriptive only")[1]
@@ -838,7 +854,10 @@ class SentinelAndRandomSplitCases(unittest.TestCase):
         rules = md.split(rp.RULES_HEADING)[1]
         for phrase in ("Random-split contrasts are descriptive only", "scores the random split once",
                        "(repeat, outer fold) refit", "26 to 46%", "the retuned twin", "outside the BH family",
-                       "marked unreliable"):
+                       "marked unreliable",
+                       # Rule 9 names each learner's test as the records carry it (ci_method).
+                       "a paired t for scm, cart and rf (repeat_fold_t)",
+                       "corrected resampled t for gbt and the lasso (repeat_fold_corrected_t)"):
             self.assertIn(phrase, rules)
 
 

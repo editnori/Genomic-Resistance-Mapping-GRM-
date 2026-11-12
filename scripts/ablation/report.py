@@ -87,10 +87,12 @@ discrimination. The AUROC delta printed beside each log-loss decision is the dis
 descriptive only and decides nothing.
 9. Random-split contrasts are descriptive only (family D, no p, no direction), and the input comparison scores \
 the random split once. Decisions come from the lineage split only. In the input comparison the unit of a \
-contrast is the (repeat, outer fold) refit (unit repeat_fold, a paired t over the unit means of 3 keyed lineage \
-repeats): one pair of fitted models scores every lineage of an outer fold, so a test over lineage clusters \
-treats dependent clusters as independent and is anti-conservative for learners whose fits vary (VERIFY-H1STATS: \
-gbt's learner-seed twin rejected in 26 to 46% of seeds).
+contrast is the (repeat, outer fold) refit of 3 keyed lineage repeats (unit repeat_fold). The test over the unit \
+means goes by learner, and each contrast's line prints its own: a paired t for scm, cart and rf (repeat_fold_t), \
+and Nadeau and Bengio's corrected resampled t for gbt and the lasso (repeat_fold_corrected_t). \
+One pair of fitted models scores every lineage of an outer fold, so a test over lineage clusters treats \
+dependent clusters as independent and is anti-conservative for learners whose fits vary (VERIFY-H1STATS: gbt's \
+learner-seed twin rejected in 26 to 46% of seeds).
 10. A sentinel arm is exchangeable with the default: the learner-seed twin judges rf and gbt, and the retuned \
 twin, which redraws every outer fold's inner folds and tuning holdouts, judges scm, cart and the lasso, which \
 draw no other randomness. When a sentinel's lineage-split contrast for a learner it judges is anything but \
@@ -763,24 +765,30 @@ def _unanswered_line(u):
             "undefined.")
 
 
+def judging_contrasts(manifest, planned):
+    """The planned contrasts by which a sentinel arm judges a learner (rule 10), each as (id, the parts of its
+    key): a sentinel arm's contrasts on the sentinel split and the primary endpoint. With `sentinel_learners`,
+    a sentinel judges only the learners it names."""
+    sentinels = set(manifest.get("sentinel_arms", []))
+    judges = manifest.get("sentinel_learners")
+    out = []
+    for pid in planned:
+        parts = schema.parse_key(schema.contrast_key(pid))
+        if (parts["treatment"] in sentinels and parts["split"] == schema.SENTINEL_SPLIT
+                and parts["endpoint"] == schema.PRIMARY_CONTRAST_ENDPOINT
+                and (judges is None or parts["learner"] in judges.get(parts["treatment"], ()))):
+            out.append((pid, parts))
+    return out
+
+
 def _unreliable(manifest, contrasts, planned, missing):
     """Each (species, learner) a sentinel arm flags, with the sentinel contrast, the reason and the
-    contrasts it makes unreliable (rule 10). With `sentinel_learners`, a sentinel judges only the learners
-    it names."""
-    sentinels = set(manifest.get("sentinel_arms", []))
-    if not sentinels:
-        return []
-    judges = manifest.get("sentinel_learners")
+    contrasts it makes unreliable (rule 10)."""
     species = {d["id"]: d["species"] for d in manifest["datasets"]}
     by_id = {x["id"]: x for x in contrasts}
     absent = {m["id"]: m["reason"] for m in missing}
     flagged = {}
-    for pid in planned:
-        parts = schema.parse_key(schema.contrast_key(pid))
-        if (parts["treatment"] not in sentinels or parts["split"] != schema.SENTINEL_SPLIT
-                or parts["endpoint"] != schema.PRIMARY_CONTRAST_ENDPOINT
-                or judges is not None and parts["learner"] not in judges.get(parts["treatment"], ())):
-            continue
+    for pid, parts in judging_contrasts(manifest, planned):
         x = by_id.get(pid)
         if x is None:
             reason = f"the sentinel contrast was not produced: {absent.get(pid, 'no record')}"
