@@ -12,17 +12,17 @@ The rows named here are in the table "Rows cited in the text" below. Every datas
 
 These genomes come from studies the cohort does not hold.
 
-***S. aureus*, 803 genomes, 7 datasets.** One study, PRJNA1050907, holds 74.5% to 100% of the resistant genomes on every dataset. Sensitivity mostly holds or rises: for the set covering machine, oxacillin has 98.9% against 90.3%. Levofloxacin has no lineage-split figure in its report, so its rows are not read. The known-gene rule is one-sided on four of the seven datasets. On tetracycline it calls all 731 genomes resistant.
+***S. aureus*, 803 genomes, 7 datasets.** One study, PRJNA1050907, holds 74.5% to 100% of the resistant genomes on every dataset. Levofloxacin has no lineage-split figure in its report, so its rows are not read. For the set covering machine, sensitivity reads below on 1 of the 6 datasets read, and oxacillin has 98.9% sensitivity against 90.3%. The known-gene rule gives every scored genome the same call on 4 of the 7 datasets. On tetracycline it calls all 731 genomes resistant.
 
-***S. pneumoniae*, 503 genomes, 7 datasets.** Sensitivity never reads below for a learner. Specificity reads below on 18 of the 21 learner rows. On chloramphenicol almost all of the set covering machine's false positives are in two of the three studies. It calls 1 of 262 susceptible genomes resistant in PRJNA320861, 79 of 95 in PRJEB82317 and 45 of 55 in PRJNA1357085.
+***S. pneumoniae*, 503 genomes, 7 datasets.** Sensitivity never reads below for a learner. Specificity reads below on 18 of the 21 learner rows. On chloramphenicol 124 of the set covering machine's 125 false positives are in two of the three studies. It calls 1 of 262 susceptible genomes resistant in PRJNA320861, 79 of 95 in PRJEB82317 and 45 of 55 in PRJNA1357085.
 
-On every *S. pneumoniae* dataset, more than half of the resistant genomes come from one study and more than half of the susceptible genomes from another. So these rows compare studies as much as they measure a model.
+On every *S. pneumoniae* dataset, more than half of the resistant genomes come from one study and more than half of the susceptible genomes from another. There sensitivity and specificity are measured mostly on different studies.
 
-***E. coli*, 601 genomes, 18 datasets.** This is the weakest batch for the learners. The set covering machine reads below on sensitivity on 10 datasets and on specificity on 13. Its amikacin sensitivity is 9.4% against 46.7%, and its ceftazidime sensitivity is 22.9% against 87.2%.
+***E. coli*, 601 genomes, 18 datasets.** The set covering machine holds on 1 of the 18 datasets, the decision tree on 0, and the lasso on 0 of the 3 it is read on. The set covering machine reads below on sensitivity on 10 datasets and on specificity on 13. Its amikacin sensitivity is 9.4% against 46.7%, and its ceftazidime sensitivity is 22.9% against 87.2%. On sulfamethoxazole/trimethoprim its specificity is 39.3% against 83.5%.
 
 Two facts limit this batch. One study, PRJNA841811, holds 71.6% to 90.6% of the resistant genomes on every dataset. The species check marks 328 of the 601 genomes as borderline, and the plan keeps and flags a borderline genome, so they are scored.
 
-***M. tuberculosis*, 1,152 genomes, 11 datasets.** Sensitivity mostly holds or rises. Specificity falls on some drugs: for the set covering machine, ethambutol has 31.0% against 60.9%. Pyrazinamide goes the other way, with 21.7% sensitivity against 58.0%. One study, PRJEB48275, holds at least half of the resistant genomes on 9 of the 11 datasets.
+***M. tuberculosis*, 1,152 genomes, 11 datasets.** For the set covering machine, sensitivity reads below on 1 of the 11 datasets and specificity on 3. Ethambutol has 31.0% specificity against 60.9%. Pyrazinamide goes the other way, with 21.7% sensitivity against 58.0%. On levofloxacin both figures read above, with 94.3% sensitivity against 59.8% and 94.0% specificity against 79.2%. One study, PRJEB48275, holds at least half of the resistant genomes on 9 of the 11 datasets.
 
 ***Salmonella enterica*, 2,107 genomes, 17 datasets.** This batch has the most studies, up to 39 on a dataset. On two drugs the set covering machine reads below where the known-gene rule does not. On sulfamethoxazole the set covering machine has 30.6% sensitivity against 87.0%, and the known-gene rule has 98.9%. On tetracycline the set covering machine's specificity is 43.0% against 96.1%, and the known-gene rule's is 98.5%.
 
@@ -32,15 +32,17 @@ The other learners split. The lasso holds on sulfamethoxazole, with 93.0% sensit
 
 The decision tree reads below on specificity on 15 datasets, and on ertapenem its specificity is 12.6% against 89.0%. On tigecycline the set covering machine's specificity is 3.7% against 66.4%, with sensitivity at 97.7% against 23.7%.
 
-***S. flexneri*, 78 genomes, 1 dataset.** Every genome is from one study. Sensitivity is consistent with the report's figure and specificity reads below it, on 31 resistant and 47 susceptible genomes.
+***S. flexneri*, 78 genomes, 1 dataset.** Every genome is from one study. For the set covering machine, sensitivity is consistent with the report's figure and specificity reads below it, on 31 resistant and 47 susceptible genomes. The decision tree holds.
 
 ## Same-study population
 
 These genomes are new, and they come from studies the cohort already holds. The two populations are scored apart and are never added together.
 
+Three sentences below set a same-study figure beside the primary figure of the same model. The plan does not compare the two populations, so that comparison was added after both results were read.
+
 On every dataset here, one study holds at least 99.9% of the resistant genomes. *E. cloacae*, *E. coli* and *K. pneumoniae* share one study, PRJNA288601, so their 32 datasets are one study's.
 
-***E. cloacae*, 71 genomes, 2 datasets.** This is the smallest batch, and the species check marks 25 of its 71 genomes as borderline. The set covering machine reads below on sensitivity on both datasets. On sulfamethoxazole/trimethoprim it has 59.3% against 100.0%.
+***E. cloacae*, 71 genomes, 2 datasets.** This is the smallest batch, and the species check marks 25 of its 71 genomes as borderline. The set covering machine reads below on sensitivity on both datasets. On sulfamethoxazole/trimethoprim its sensitivity is 59.3% against 100.0%.
 
 ***E. faecium*, 368 genomes, 5 datasets.** The study is PRJNA771404. The set covering machine holds on 3 of the 5 datasets. Its gentamicin sensitivity is 13.3% against 84.6%, on 30 resistant genomes.
 
@@ -50,7 +52,7 @@ On every dataset here, one study holds at least 99.9% of the resistant genomes. 
 
 ***Salmonella enterica*, 1,741 genomes, 8 datasets.** One study, PRJNA248792, holds 99.9% to 100% of the resistant genomes on every dataset. The set covering machine holds on 5 of the 8 datasets, and two of its other rows read below with a sensitivity under 5%.
 
-On amoxicillin/clavulanate it calls none of the 301 resistant genomes resistant, and the known-gene rule finds 15.9% of them against 93.6%. On trimethoprim its sensitivity is 4.0% against 82.0%, where the decision tree has 99.7%.
+On amoxicillin/clavulanate it calls none of the 301 resistant genomes resistant, and the known-gene rule's sensitivity is 15.9% against 93.6%. On trimethoprim its sensitivity is 4.0% against 82.0%, where the decision tree has 99.7%.
 
 ***S. pneumoniae*, 418 genomes, 4 datasets.** The study is PRJEB3084. The set covering machine holds on 3 of the 4 datasets. Its penicillin specificity is 97.9% against 92.4%, where the primary population gave 76.0%. The lasso's penicillin sensitivity is 29.8% against 95.4%.
 

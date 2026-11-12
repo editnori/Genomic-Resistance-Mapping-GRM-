@@ -96,6 +96,56 @@ def prose(page=None):
     return text[: text.index(T.BEGIN)] + text[text.index(T.END) + len(T.END) :]
 
 
+WORDS = {2: "two", 3: "three", 4: "four"}
+
+
+def share(x):
+    """A share of genomes as the pages write it: 100% with no decimal."""
+    return "100%" if float(x) == 1 else T.pct(x)
+
+
+class Rebuilt(unittest.TestCase):
+    """A page's sentences that carry a number, rebuilt from the output files.
+
+    `has` requires a sentence built here to be in the text as written, and
+    remembers it. `numbers_no_sentence_holds` then lists every number of the
+    prose that sits in no remembered sentence, so a count cannot be written on
+    a page without a test that rebuilds it. A count written as a word is
+    outside that net, and the tests build the ones that are results."""
+
+    text = ""
+
+    def setUp(self):
+        self.checked = []
+
+    def has(self, sentence):
+        self.assertIn(sentence, self.text)
+        self.checked.append(sentence)
+
+    def numbers_no_sentence_holds(self, fixed):
+        """The numbers left once the class's other tests have run.
+
+        Not counted as numbers of the prose: code, the numeral that opens a
+        numbered item, and the phrases in `fixed`."""
+        for name in sorted(n for n in dir(self) if n.startswith("test_") and n != self._testMethodName):
+            getattr(self, name)()
+        text = self.text
+        covered = [False] * len(text)
+
+        def mark(start, end):
+            covered[start:end] = [True] * (end - start)
+
+        for s in set(self.checked) | set(fixed):
+            start = text.find(s)
+            while start != -1:
+                mark(start, start + len(s))
+                start = text.find(s, start + 1)
+        for pattern in (r"```.*?```", r"`[^`\n]*`", r"^\d+\. "):
+            for m in re.finditer(pattern, text, re.S | re.M):
+                mark(m.start(), m.end())
+        return [(m.group(0), text[max(0, m.start() - 40) : m.end() + 20]) for m in re.finditer(r"\d+(?:[.,]\d+)*%?", text) if not all(covered[m.start() : m.end()])]
+
+
 class Tables(unittest.TestCase):
     def test_the_document_holds_the_tables_the_files_give(self):
         self.assertTrue(T.check(RESULTS, DOCUMENT))
@@ -246,21 +296,44 @@ class Tables(unittest.TestCase):
             self.assertIn(f"TP {row['tp']}, FN {row['fn']}, FP {row['fp']}, TN {row['tn']}.", line[0])
 
 
-class Prose(unittest.TestCase):
-    """The sentences outside the table block that carry a count.
+class Prose(Rebuilt):
+    """The main page's sentences outside the table block that carry a number.
 
     Each is rebuilt here from the output files and must be in the text as
     written, so a count in a sentence cannot drift from the files. A sentence
     that says "each", "no" or "more often" is checked for every learner it
     covers."""
 
+    # Numbers of the prose that are no count of the output files: the level of
+    # the interval, the two ends a figure can sit at, the day of the runs, the
+    # reports' revision and a command's exit status.
+    FIXED = [
+        "the whole 95% interval",
+        "A report figure of exactly 0% or 100% can be read one way only.",
+        "ran on 12 Nov 2026",
+        "at evaluation revision 12, each pinned by SHA-256",
+        "The second and third commands exit 1 unless",
+    ]
+    # Counts that come from the run logs. The repository does not hold those
+    # logs, so no test rebuilds these, and the page says so.
+    FROM_THE_RUN_LOGS = [
+        "the 46 files compared by bytes are identical",
+        "in the hashes of 79 of the 803 fetched FASTA files",
+        "the 46 files and the 79 FASTA files of the *S. aureus* repeat",
+    ]
+
     @classmethod
     def setUpClass(cls):
         cls.data = T.load(RESULTS)
         cls.text = prose()
 
-    def has(self, sentence):
-        self.assertIn(sentence, self.text)
+    def scored(self, pop, learner):
+        return sum(1 for _, _, metrics, _ in self.data[pop].values() for r in metrics if r["learner"] == learner)
+
+    def test_every_number_in_the_prose_is_in_a_rebuilt_sentence(self):
+        self.assertEqual(self.numbers_no_sentence_holds(self.FIXED + self.FROM_THE_RUN_LOGS), [])
+        for phrase in self.FIXED + self.FROM_THE_RUN_LOGS:
+            self.assertIn(phrase, self.text)
 
     def read(self, pop, learner):
         return [r for _, _, metrics, _ in self.data[pop].values() for r in metrics if r["learner"] == learner and T.holds(r) is not None]
@@ -294,6 +367,8 @@ class Prose(unittest.TestCase):
 
     def test_the_counts_of_datasets_where_a_learner_holds(self):
         h, n = self.held("primary", "scm")
+        self.assertEqual(len(self.estimates("primary")) - n, 1)
+        self.has(f"One dataset has no lineage-split figure in its report, so {n} datasets can be read.")
         self.has(f"- The set covering machine holds on {h} of the {n} datasets and reads below on the other {n - h}.")
         ch, cn = self.held("primary", "cart")
         self.has(f"- The decision tree holds on {ch} of the {cn} datasets.")
@@ -360,10 +435,11 @@ class Prose(unittest.TestCase):
         self.has(f"The set covering machine holds on {second} of the {n} in the same-study population and on {first} of the {n} in the primary population.")
         self.has(f"the set covering machine holds on {second} with same-study genomes and on {first} with genomes from other studies.")
         alone = {l: pairs[l].count((True, False)) for l in T.LEARNERS}
-        self.assertEqual((alone["scm"], alone["lasso"]), (0, 0))
+        self.assertEqual(alone["scm"], 0)
         self.has("For the set covering machine, no dataset holds in the primary population alone.")
+        self.assertEqual(alone["cart"], 1)
         self.has(f"The decision tree has {alone['cart']} such dataset and the known-gene rule has {alone['known_gene']}.")
-        self.has("On these 34 datasets a learner's lineage-split figure held more often on new genomes from a study the cohort already holds than on genomes from other studies.".replace("34", str(n)))
+        self.has(f"On these {n} datasets a learner's lineage-split figure held more often on new genomes from a study the cohort already holds than on genomes from other studies.")
         for learner in ("scm", "cart", "lasso"):
             self.assertGreater(sum(b for _, b in pairs[learner]), sum(a for a, _ in pairs[learner]), learner)
 
@@ -394,11 +470,16 @@ class Prose(unittest.TestCase):
             self.assertGreaterEqual(float(d["top_study_resistant_share"]), 0.999, d["dataset"])
             count[d["top_study_resistant"]] = count.get(d["top_study_resistant"], 0) + 1
         order = sorted(count, key=lambda k: (-count[k], k))
-        self.assertEqual(len(order), 3)
+        listed = [f"{k} on {count[k]}" for k in order]
+        listed[0] += " datasets"
         self.has(
-            f"one study has at least 99.9% of the resistant genomes on each of these {n} datasets, and there are three such studies: "
-            f"{order[0]} on {count[order[0]]} datasets, {order[1]} on {count[order[1]]} and {order[2]} on {count[order[2]]}."
+            f"one study has at least 99.9% of the resistant genomes on each of these {n} datasets, and there are {WORDS[len(order)]} such studies: "
+            f"{', '.join(listed[:-1])} and {listed[-1]}."
         )
+        self.has(f"So the same-study side of this comparison is {WORDS[len(order)]} studies")
+        self.has(f"The same-study genomes of the {n} datasets come from {WORDS[len(order)]} studies")
+        self.has(f"Only the {n} datasets in both compare one model on two sets of genomes")
+        self.has(f"On the {n} datasets in both populations, the set covering machine holds on {second} with same-study genomes and on {first} with genomes from other studies.")
 
     def test_the_limits_and_the_genome_counts(self):
         totals = {}
@@ -411,6 +492,30 @@ class Prose(unittest.TestCase):
         self.assertEqual(totals["primary"][0], totals["primary"][1])
         self.has("Every genome was scored and none was excluded.")
         self.has(f"{totals['same-study'][1]:,} of the {totals['same-study'][0]:,} genomes were scored.")
+        failed = {}
+        for species, (reading, _, _, _) in self.data["same-study"].items():
+            frozen, scored, _ = T.frozen_and_scored(reading)
+            self.assertEqual(frozen - scored, int(re.search(r"^Genomes excluded, species check failed: (\d+)\.", reading, re.M).group(1)), species)
+            if frozen != scored:
+                failed[species] = frozen - scored
+        self.assertEqual(list(failed), ["klebsiella_pneumoniae"])
+        self.has(f"The other {failed['klebsiella_pneumoniae']} are *K. pneumoniae* genomes that failed the species check")
+
+        self.has(f"There are {sum(len(r) for r in self.data.values())} of them, one for each species of a population.")
+        self.has(f"For all {sum(len(r) for r in self.data.values())} runs the second set is byte-identical to the first.")
+        p, s = (sum(len(d) for _, d, _, _ in self.data[pop].values()) for pop in POPULATIONS)
+        for learner in ("scm", "cart"):
+            self.assertEqual((self.scored("primary", learner), self.scored("same-study", learner)), (p, s), learner)
+        self.assertEqual(self.scored("same-study", "known_gene"), s)
+        self.has(
+            f"The lasso is scored on {self.scored('primary', 'lasso')} of the {p} primary datasets and on {self.scored('same-study', 'lasso')} of the {s} same-study datasets. "
+            f"The known-gene rule is scored on {self.scored('primary', 'known_gene')} of the {p} and on all {s}."
+        )
+        sizes = {species: T.frozen_and_scored(reading)[1] for species, (reading, _, _, _) in self.data["same-study"].items()}
+        small = sorted(sizes, key=sizes.get)[:2]
+        self.assertEqual(small, ["enterobacter_cloacae", "escherichia_coli"])
+        self.has(f"The same-study batches of *E. cloacae* and *E. coli* have {sizes[small[0]]} and {sizes[small[1]]} genomes.")
+        self.has(f"holds the kit's {len(FILES)} output files for each run")
 
         def borderline(pop, species):
             return T.frozen_and_scored(self.data[pop][species][0])[2]
@@ -422,10 +527,10 @@ class Prose(unittest.TestCase):
             f"{borderline('same-study', 'enterobacter_cloacae')} of them *E. cloacae*."
         )
         repeats = {s: T.same_kmer_set(reading)[1] for s, (reading, _, _, _) in self.data["primary"].items()}
-        self.assertEqual(sorted(s for s, v in repeats.items() if v), ["salmonella_enterica", "streptococcus_pneumoniae"])
         self.has(
             f"{sum(repeats.values())} scored primary genomes have the k-mer set of another scored genome: "
-            f"{repeats['salmonella_enterica']} *S. enterica* and {repeats['streptococcus_pneumoniae']} *S. pneumoniae*."
+            + " and ".join(f"{v} {T.title(s)}" for s, v in repeats.items() if v)
+            + "."
         )
 
         primary = self.estimates("primary")
@@ -441,9 +546,10 @@ class Prose(unittest.TestCase):
             f"On each of its {len(same)} datasets one study holds at least 99.9% of the resistant genomes, "
             f"and {sum(1 for d in same if int(d['studies']) == 1)} of the {len(same)} have one study only."
         )
-        studies = {d["top_study_resistant"] for d in same}
-        self.assertEqual(studies, {"PRJNA288601", "PRJNA771404", "PRJNA248792", "PRJEB3084"})
-        self.has("Four studies fill that place: PRJNA288601, PRJNA771404, PRJNA248792 and PRJEB3084.")
+        studies = list(dict.fromkeys(d["top_study_resistant"] for d in same))
+        self.has(f"**The same-study population is {WORDS[len(studies)]} studies.**")
+        self.has(f"{WORDS[len(studies)].capitalize()} studies fill that place: {', '.join(studies[:-1])} and {studies[-1]}.")
+        self.has(f"Its result is almost wholly the result on those {WORDS[len(studies)]}.")
 
         # The count of older genome records is the plan's own, and the plan is frozen.
         plan = (ROOT / "docs" / "outside-study-test.md").read_text(encoding="utf-8")
@@ -451,23 +557,71 @@ class Prose(unittest.TestCase):
         self.has(f"260 of the {totals['primary'][0]:,} primary genomes have a genome record from before July 2025.")
 
 
-class SpeciesPage(unittest.TestCase):
-    """The species page's own sentences: each species' heading and each figure set against a report's."""
+class SpeciesPage(Rebuilt):
+    """The species page's sentences that carry a number.
+
+    Each is rebuilt from the output files with its species, drug, learner and
+    measure named here, and must stand under its own species' heading."""
 
     WRITTEN = {"salmonella_enterica": "Salmonella enterica"}
+    THREE = ("scm", "cart", "lasso")
+    # A command's exit status, the one number of the prose that is no count of the output files.
+    FIXED = ["The command exits 1 unless"]
 
     @classmethod
     def setUpClass(cls):
         cls.data = T.load(RESULTS)
-        text = prose(SPECIES_PAGE)
-        first, second = text.index("## Primary population"), text.index("## Same-study population")
-        cls.sections = {"primary": text[first:second], "same-study": text[second : text.index("## Rows")]}
+        cls.text = prose(SPECIES_PAGE)
+        first, second, end = cls.text.index("## Primary population"), cls.text.index("## Same-study population"), cls.text.index("## Rows")
+        cls.parts = {}
+        for pop, section in (("primary", cls.text[first:second]), ("same-study", cls.text[second:end])):
+            species = None
+            names = {cls.WRITTEN.get(s, T.title(s).strip("*")): s for s in cls.data[pop]}
+            for paragraph in section.split("\n\n"):
+                if paragraph.startswith("***"):
+                    species = names[paragraph[3 : paragraph.index("*, ")]]
+                    if (pop, species) in cls.parts:
+                        raise AssertionError(f"two headings for {pop} {species}")
+                cls.parts[pop, species] = cls.parts.get((pop, species), "") + paragraph + "\n\n"
 
-    def paragraph(self, pop, species):
-        name = self.WRITTEN.get(species, T.title(species).strip("*"))
-        hit = [p for p in self.sections[pop].split("\n\n") if p.startswith(f"***{name}*, ")]
-        self.assertEqual(len(hit), 1, (pop, species))
-        return hit[0]
+    def setUp(self):
+        super().setUp()
+        self.cited = set()
+
+    def says(self, pop, species, sentence):
+        """The sentence stands under this species' heading (`None`: before the first heading)."""
+        self.assertIn(sentence, self.parts[pop, species], (pop, species))
+        self.has(sentence)
+
+    def run_of(self, pop, species):
+        return self.data[pop][species]
+
+    def row(self, pop, species, drug, learner):
+        self.cited.add((pop, species, drug, learner))
+        return T.cited_row(self.data, pop, species, drug, learner)
+
+    def against(self, r, k):
+        return f"{T.pct(r[k])} against {T.reference(r, k)}"
+
+    def read(self, pop, species, learners):
+        return [r for r in self.run_of(pop, species)[2] if r["learner"] in learners and T.holds(r) is not None]
+
+    def below(self, pop, species, learners, k):
+        return sum(1 for r in self.read(pop, species, learners) if r["reading_" + k] == "below")
+
+    def held(self, pop, species, learner):
+        got = [T.holds(r) for r in self.read(pop, species, (learner,))]
+        return sum(got), len(got)
+
+    def top_study(self, pop, species, study=None):
+        """(study, datasets it holds the most resistant genomes on, its lowest and highest share there)."""
+        datasets = self.run_of(pop, species)[1]
+        if study is None:
+            names = {d["top_study_resistant"] for d in datasets}
+            self.assertEqual(len(names), 1, (pop, species))
+            study = names.pop()
+        shares = [float(d["top_study_resistant_share"]) for d in datasets if d["top_study_resistant"] == study]
+        return study, len(shares), min(shares), max(shares)
 
     def test_each_species_heading_gives_the_run_s_genomes_and_datasets(self):
         for pop, runs_ in self.data.items():
@@ -476,39 +630,273 @@ class SpeciesPage(unittest.TestCase):
                 genomes = f"{frozen:,} genomes" if scored == frozen else f"{scored:,} genomes scored of {frozen:,}"
                 plural = "dataset" if len(datasets) == 1 else "datasets"
                 name = self.WRITTEN.get(species, T.title(species).strip("*"))
-                self.assertTrue(self.paragraph(pop, species).startswith(f"***{name}*, {genomes}, {len(datasets)} {plural}.**"), (pop, species))
+                heading = f"***{name}*, {genomes}, {len(datasets)} {plural}.**"
+                self.assertTrue(self.parts[pop, species].startswith(heading), (pop, species))
+                self.has(heading)
 
     def test_no_species_of_a_population_is_left_out_or_added(self):
         for pop, runs_ in self.data.items():
-            headed = [p for p in self.sections[pop].split("\n\n") if p.startswith("***")]
-            self.assertEqual(len(headed), len(runs_), pop)
+            self.assertEqual(sorted(s for p, s in self.parts if p == pop and s is not None), sorted(runs_), pop)
 
-    def test_each_figure_set_against_a_report_s_is_a_cited_row_s(self):
-        # "30.6% sensitivity against 87.0%" and "9.4% against 46.7%": the new
-        # estimate and the report's figure of one measure of one cited row of
-        # that population. A sentence that looks back at the primary population
-        # ("where the primary population gave 22.9%") names a cited estimate there.
-        pairs = {pop: set() for pop in self.data}
-        estimates = {pop: set() for pop in self.data}
-        for pop, species, drug, learner in T.CITED:
-            row = T.cited_row(self.data, pop, species, drug, learner)
-            for k in ("sensitivity", "specificity"):
-                pairs[pop].add((T.pct(row[k]), T.reference(row, k)))
-                estimates[pop].add(T.pct(row[k]))
-        seen = 0
-        for pop, text in self.sections.items():
-            for new, old in re.findall(r"(\d+\.\d%)(?: sensitivity| specificity)? against (\d+\.\d%)", text):
-                self.assertIn((new, old), pairs[pop], (pop, new, old))
-                seen += 1
-            for gave in re.findall(r"where the primary population gave (\d+\.\d%)", text):
-                self.assertIn(gave, estimates["primary"], gave)
-                seen += 1
-        self.assertGreater(seen, 20)
+    def test_every_number_in_the_prose_is_in_a_rebuilt_sentence(self):
+        self.assertEqual(self.numbers_no_sentence_holds(self.FIXED), [])
+        for phrase in self.FIXED:
+            self.assertIn(phrase, self.text)
+        # Every row of the table "Rows cited in the text" is used by a sentence above.
+        self.assertEqual(self.cited, set(T.CITED))
 
-    def test_the_datasets_where_the_set_covering_machine_holds(self):
-        for species in ("enterococcus_faecium", "escherichia_coli", "klebsiella_pneumoniae", "salmonella_enterica", "streptococcus_pneumoniae"):
-            got = [T.holds(r) for r in self.data["same-study"][species][2] if r["learner"] == "scm" and T.holds(r) is not None]
-            self.assertIn(f"The set covering machine holds on {sum(got)} of the {len(got)} datasets", self.paragraph("same-study", species), species)
+    def test_the_intro(self):
+        r = self.row("primary", "staphylococcus_aureus", "oxacillin", "scm")
+        self.has(f'as in "{self.against(r, "sensitivity")}"')
+
+    def test_primary_s_aureus(self):
+        pop, sp = "primary", "staphylococcus_aureus"
+        study, n, lo, hi = self.top_study(pop, sp)
+        self.assertEqual(n, len(self.run_of(pop, sp)[1]))
+        self.says(pop, sp, f"One study, {study}, holds {share(lo)} to {share(hi)} of the resistant genomes on every dataset.")
+        r = self.row(pop, sp, "oxacillin", "scm")
+        self.says(
+            pop,
+            sp,
+            f"For the set covering machine, sensitivity reads below on {self.below(pop, sp, ('scm',), 'sensitivity')} of the {len(self.read(pop, sp, ('scm',)))} datasets read, "
+            f"and oxacillin has {T.pct(r['sensitivity'])} sensitivity against {T.reference(r, 'sensitivity')}.",
+        )
+        unread = [r for r in self.run_of(pop, sp)[2] if T.holds(r) is None]
+        self.assertEqual({r["dataset"] for r in unread}, {f"{sp}__levofloxacin"})
+        self.says(pop, sp, "Levofloxacin has no lineage-split figure in its report, so its rows are not read.")
+        with_estimates, none, every = T.one_sided(self.run_of(pop, sp)[2])
+        self.says(pop, sp, f"The known-gene rule gives every scored genome the same call on {none + every} of the {with_estimates} datasets.")
+        r = self.row(pop, sp, "tetracycline", "known_gene")
+        self.assertEqual(int(r["fn"]) + int(r["tn"]), 0)
+        self.says(pop, sp, f"On tetracycline it calls all {int(r['tp']) + int(r['fp'])} genomes resistant.")
+
+    def test_primary_s_pneumoniae(self):
+        pop, sp = "primary", "streptococcus_pneumoniae"
+        self.assertEqual(self.below(pop, sp, self.THREE, "sensitivity"), 0)
+        self.says(pop, sp, "Sensitivity never reads below for a learner.")
+        self.says(pop, sp, f"Specificity reads below on {self.below(pop, sp, self.THREE, 'specificity')} of the {len(self.read(pop, sp, self.THREE))} learner rows.")
+        whole = self.row(pop, sp, "chloramphenicol", "scm")
+        studies = [g for g in self.run_of(pop, sp)[3] if g["dataset"] == whole["dataset"] and g["learner"] == "scm" and g["grouping"] == "bioproject"]
+        studies.sort(key=lambda g: -int(g["scored_susceptible"]))
+        wrong = sorted(int(g["fp"]) for g in studies)
+        self.assertEqual((len(studies), sum(wrong)), (3, int(whole["fp"])))
+        self.says(pop, sp, f"On chloramphenicol {sum(wrong[-2:])} of the set covering machine's {sum(wrong)} false positives are in two of the three studies.")
+        parts = [f"{g['fp']} of {g['scored_susceptible']} in {g['group']}" for g in studies]
+        self.says(pop, sp, f"It calls {parts[0].replace(' in ', ' susceptible genomes resistant in ')}, {parts[1]} and {parts[2]}.")
+        self.assertTrue(all(T.different_majority_studies(d) for d in self.run_of(pop, sp)[1]))
+        self.says(pop, sp, "On every *S. pneumoniae* dataset, more than half of the resistant genomes come from one study and more than half of the susceptible genomes from another.")
+        # The next sentence is the kit's own, printed in reading.txt under each such dataset.
+        named = [name for name, lines in blocks(self.run_of(pop, sp)[0]).items() if any("measured mostly on different studies" in l for l in lines)]
+        self.assertEqual(sorted(named), sorted(d["dataset"] for d in self.run_of(pop, sp)[1]))
+        self.says(pop, sp, "There sensitivity and specificity are measured mostly on different studies.")
+        self.row(pop, sp, "penicillin", "scm")  # cited from the same-study paragraph
+
+    def test_primary_e_coli(self):
+        pop, sp = "primary", "escherichia_coli"
+        (h, n), (ch, cn), (lh, ln) = (self.held(pop, sp, l) for l in self.THREE)
+        self.assertEqual(n, cn)
+        self.says(pop, sp, f"The set covering machine holds on {h} of the {n} datasets, the decision tree on {ch}, and the lasso on {lh} of the {ln} it is read on.")
+        self.says(pop, sp, f"The set covering machine reads below on sensitivity on {self.below(pop, sp, ('scm',), 'sensitivity')} datasets and on specificity on {self.below(pop, sp, ('scm',), 'specificity')}.")
+        a, c = self.row(pop, sp, "amikacin", "scm"), self.row(pop, sp, "ceftazidime", "scm")
+        self.says(pop, sp, f"Its amikacin sensitivity is {self.against(a, 'sensitivity')}, and its ceftazidime sensitivity is {self.against(c, 'sensitivity')}.")
+        x = self.row(pop, sp, "sulfamethoxazole_trimethoprim", "scm")
+        self.says(pop, sp, f"On sulfamethoxazole/trimethoprim its specificity is {self.against(x, 'specificity')}.")
+        study, k, lo, hi = self.top_study(pop, sp)
+        self.assertEqual(k, n)
+        self.says(pop, sp, f"One study, {study}, holds {share(lo)} to {share(hi)} of the resistant genomes on every dataset.")
+        frozen, _, borderline = T.frozen_and_scored(self.run_of(pop, sp)[0])
+        self.says(pop, sp, f"The species check marks {borderline} of the {frozen} genomes as borderline")
+
+    def test_primary_m_tuberculosis(self):
+        pop, sp = "primary", "mycobacterium_tuberculosis"
+        self.says(
+            pop,
+            sp,
+            f"For the set covering machine, sensitivity reads below on {self.below(pop, sp, ('scm',), 'sensitivity')} of the {len(self.read(pop, sp, ('scm',)))} datasets "
+            f"and specificity on {self.below(pop, sp, ('scm',), 'specificity')}.",
+        )
+        e, z, v = (self.row(pop, sp, d, "scm") for d in ("ethambutol", "pyrazinamide", "levofloxacin"))
+        self.assertEqual((e["reading_specificity"], z["reading_sensitivity"], z["reading_specificity"]), ("below", "below", "above"))
+        self.says(pop, sp, f"Ethambutol has {T.pct(e['specificity'])} specificity against {T.reference(e, 'specificity')}.")
+        self.says(pop, sp, f"Pyrazinamide goes the other way, with {T.pct(z['sensitivity'])} sensitivity against {T.reference(z, 'sensitivity')}.")
+        self.assertEqual((v["reading_sensitivity"], v["reading_specificity"]), ("above", "above"))
+        self.says(
+            pop,
+            sp,
+            f"On levofloxacin both figures read above, with {T.pct(v['sensitivity'])} sensitivity against {T.reference(v, 'sensitivity')} "
+            f"and {T.pct(v['specificity'])} specificity against {T.reference(v, 'specificity')}.",
+        )
+        datasets = self.run_of(pop, sp)[1]
+        count = {}
+        for d in datasets:
+            count[d["top_study_resistant"]] = count.get(d["top_study_resistant"], 0) + 1
+        study = max(count, key=count.get)
+        half = sum(1 for d in datasets if d["top_study_resistant"] == study and float(d["top_study_resistant_share"]) >= 0.5)
+        self.says(pop, sp, f"One study, {study}, holds at least half of the resistant genomes on {half} of the {len(datasets)} datasets.")
+
+    def test_primary_salmonella(self):
+        pop, sp = "primary", "salmonella_enterica"
+        most = {s: max(int(d["studies"]) for d in run[1]) for s, run in self.data[pop].items()}
+        self.assertEqual(max(most, key=most.get), sp)
+        self.says(pop, sp, f"This batch has the most studies, up to {most[sp]} on a dataset.")
+        rows = {(d, l): self.row(pop, sp, d, l) for d in ("sulfamethoxazole", "tetracycline") for l in ("scm", "cart", "known_gene")}
+        lasso = self.row(pop, sp, "sulfamethoxazole", "lasso")
+        for d in ("sulfamethoxazole", "tetracycline"):
+            self.assertEqual((T.holds(rows[d, "scm"]), T.holds(rows[d, "known_gene"])), (False, True), d)
+        self.says(pop, sp, "On two drugs the set covering machine reads below where the known-gene rule does not.")
+        self.says(
+            pop,
+            sp,
+            f"On sulfamethoxazole the set covering machine has {T.pct(rows['sulfamethoxazole', 'scm']['sensitivity'])} sensitivity against {T.reference(rows['sulfamethoxazole', 'scm'], 'sensitivity')}, "
+            f"and the known-gene rule has {T.pct(rows['sulfamethoxazole', 'known_gene']['sensitivity'])}.",
+        )
+        self.says(
+            pop,
+            sp,
+            f"On tetracycline the set covering machine's specificity is {self.against(rows['tetracycline', 'scm'], 'specificity')}, "
+            f"and the known-gene rule's is {T.pct(rows['tetracycline', 'known_gene']['specificity'])}.",
+        )
+        self.assertTrue(T.holds(lasso))
+        self.assertEqual(rows["sulfamethoxazole", "cart"]["reading_sensitivity"], "below")
+        self.says(
+            pop,
+            sp,
+            f"The lasso holds on sulfamethoxazole, with {T.pct(lasso['sensitivity'])} sensitivity, "
+            f"and the decision tree reads below there, with {self.against(rows['sulfamethoxazole', 'cart'], 'sensitivity')}.",
+        )
+        tree = rows["tetracycline", "cart"]
+        self.assertTrue(T.holds(tree))
+        self.says(pop, sp, f"On tetracycline the decision tree holds, with {T.pct(tree['sensitivity'])} sensitivity and {T.pct(tree['specificity'])} specificity.")
+
+    def test_primary_k_pneumoniae(self):
+        pop, sp = "primary", "klebsiella_pneumoniae"
+        datasets = self.run_of(pop, sp)[1]
+        count = {}
+        for d in datasets:
+            count[d["top_study_resistant"]] = count.get(d["top_study_resistant"], 0) + 1
+        study, n, lo, hi = self.top_study(pop, sp, max(count, key=count.get))
+        self.says(pop, sp, f"{study} holds the most resistant genomes on {n} of the {len(datasets)} datasets, with {share(lo)} to {share(hi)} of them.")
+        m, rule = self.row(pop, sp, "meropenem", "scm"), self.row(pop, sp, "meropenem", "known_gene")
+        self.says(
+            pop,
+            sp,
+            f"The set covering machine reads below on sensitivity on {self.below(pop, sp, ('scm',), 'sensitivity')} datasets: "
+            f"meropenem has {self.against(m, 'sensitivity')}, while the known-gene rule has {T.pct(rule['sensitivity'])}.",
+        )
+        e = self.row(pop, sp, "ertapenem", "cart")
+        self.says(
+            pop,
+            sp,
+            f"The decision tree reads below on specificity on {self.below(pop, sp, ('cart',), 'specificity')} datasets, "
+            f"and on ertapenem its specificity is {self.against(e, 'specificity')}.",
+        )
+        g = self.row(pop, sp, "tigecycline", "scm")
+        self.says(pop, sp, f"On tigecycline the set covering machine's specificity is {self.against(g, 'specificity')}, with sensitivity at {self.against(g, 'sensitivity')}.")
+
+    def test_primary_s_flexneri(self):
+        pop, sp = "primary", "shigella_flexneri"
+        self.assertEqual([d["studies"] for d in self.run_of(pop, sp)[1]], ["1"])
+        self.says(pop, sp, "Every genome is from one study.")
+        r = self.row(pop, sp, "ciprofloxacin", "scm")
+        self.assertEqual((r["reading_sensitivity"], r["reading_specificity"]), ("consistent", "below"))
+        self.says(
+            pop,
+            sp,
+            "For the set covering machine, sensitivity is consistent with the report's figure and specificity reads below it, "
+            f"on {int(r['tp']) + int(r['fn'])} resistant and {int(r['fp']) + int(r['tn'])} susceptible genomes.",
+        )
+        self.assertEqual(self.held(pop, sp, "cart"), (1, 1))
+        self.says(pop, sp, "The decision tree holds.")
+
+    def test_same_study_intro(self):
+        pop = "same-study"
+        datasets = [(s, d) for s, run in self.data[pop].items() for d in run[1]]
+        lowest = min(float(d["top_study_resistant_share"]) for _, d in datasets)
+        self.assertGreaterEqual(lowest, 0.999)
+        self.says(pop, None, f"On every dataset here, one study holds at least {T.pct(lowest)} of the resistant genomes.")
+        count, species = {}, {}
+        for s, d in datasets:
+            count[d["top_study_resistant"]] = count.get(d["top_study_resistant"], 0) + 1
+            species.setdefault(d["top_study_resistant"], []).append(s)
+        study = max(count, key=count.get)
+        names = list(dict.fromkeys(T.title(s) for s in species[study]))
+        self.says(pop, None, f"{', '.join(names[:-1])} and {names[-1]} share one study, {study}, so their {count[study]} datasets are one study's.")
+        looks_back = self.text.count("where the primary population gave")
+        self.says(pop, None, f"{WORDS[looks_back].capitalize()} sentences below set a same-study figure beside the primary figure of the same model.")
+
+    def test_same_study_e_cloacae(self):
+        pop, sp = "same-study", "enterobacter_cloacae"
+        sizes = {s: T.frozen_and_scored(run[0])[0] for s, run in self.data[pop].items()}
+        self.assertEqual(min(sizes, key=sizes.get), sp)
+        frozen, _, borderline = T.frozen_and_scored(self.run_of(pop, sp)[0])
+        self.says(pop, sp, f"This is the smallest batch, and the species check marks {borderline} of its {frozen} genomes as borderline.")
+        self.assertEqual(self.below(pop, sp, ("scm",), "sensitivity"), len(self.run_of(pop, sp)[1]))
+        self.assertEqual(len(self.run_of(pop, sp)[1]), 2)
+        self.says(pop, sp, "The set covering machine reads below on sensitivity on both datasets.")
+        r = self.row(pop, sp, "sulfamethoxazole_trimethoprim", "scm")
+        self.says(pop, sp, f"On sulfamethoxazole/trimethoprim its sensitivity is {self.against(r, 'sensitivity')}.")
+
+    def test_same_study_e_faecium(self):
+        pop, sp = "same-study", "enterococcus_faecium"
+        self.says(pop, sp, f"The study is {self.top_study(pop, sp)[0]}.")
+        h, n = self.held(pop, sp, "scm")
+        self.says(pop, sp, f"The set covering machine holds on {h} of the {n} datasets.")
+        r = self.row(pop, sp, "gentamicin", "scm")
+        self.says(pop, sp, f"Its gentamicin sensitivity is {self.against(r, 'sensitivity')}, on {int(r['tp']) + int(r['fn'])} resistant genomes.")
+
+    def test_same_study_e_coli(self):
+        pop, sp = "same-study", "escherichia_coli"
+        h, n = self.held(pop, sp, "scm")
+        self.says(pop, sp, f"The set covering machine holds on {h} of the {n} datasets.")
+        r, before = self.row(pop, sp, "ceftazidime", "scm"), self.row("primary", sp, "ceftazidime", "scm")
+        self.says(pop, sp, f"Its ceftazidime sensitivity is {self.against(r, 'sensitivity')}, where the primary population gave {T.pct(before['sensitivity'])}.")
+        resistant = [int(d["scored_resistant"]) for d in self.run_of(pop, sp)[1]]
+        self.says(pop, sp, f"A dataset here has {min(resistant)} to {max(resistant)} resistant genomes, so its intervals are wide.")
+
+    def test_same_study_k_pneumoniae(self):
+        pop, sp = "same-study", "klebsiella_pneumoniae"
+        out = [g for g in tsv(RESULTS / pop / sp / "genomes.tsv") if g["scored"] != "yes"]
+        frozen, scored, _ = T.frozen_and_scored(self.run_of(pop, sp)[0])
+        self.assertEqual(len(out), frozen - scored)
+        for g in out:
+            self.assertEqual(g["exclusion"], "species check failed")
+            self.assertIn("nearer the Klebsiella quasipneumoniae reference", g["exclusion_detail"])
+        self.says(pop, sp, f"The {len(out)} genomes that failed the species check are each nearer the *K. quasipneumoniae* reference.")
+        h, n = self.held(pop, sp, "scm")
+        self.says(pop, sp, f"The set covering machine holds on {h} of the {n} datasets.")
+        r, before = self.row(pop, sp, "meropenem", "scm"), self.row("primary", sp, "meropenem", "scm")
+        self.says(pop, sp, f"Its meropenem sensitivity is {self.against(r, 'sensitivity')}, where the primary population gave {T.pct(before['sensitivity'])}.")
+
+    def test_same_study_salmonella(self):
+        pop, sp = "same-study", "salmonella_enterica"
+        study, n, lo, hi = self.top_study(pop, sp)
+        self.assertEqual(n, len(self.run_of(pop, sp)[1]))
+        self.says(pop, sp, f"One study, {study}, holds {share(lo)} to {share(hi)} of the resistant genomes on every dataset.")
+        h, n = self.held(pop, sp, "scm")
+        low = [r for r in self.read(pop, sp, ("scm",)) if not T.holds(r) and r["reading_sensitivity"] == "below" and float(r["sensitivity"]) < 0.05]
+        self.assertEqual(len(low), 2)
+        self.says(pop, sp, f"The set covering machine holds on {h} of the {n} datasets, and two of its other rows read below with a sensitivity under 5%.")
+        a, rule = self.row(pop, sp, "amoxicillin_clavulanate", "scm"), self.row(pop, sp, "amoxicillin_clavulanate", "known_gene")
+        self.assertEqual(int(a["tp"]), 0)
+        self.says(
+            pop,
+            sp,
+            f"On amoxicillin/clavulanate it calls none of the {int(a['tp']) + int(a['fn'])} resistant genomes resistant, "
+            f"and the known-gene rule's sensitivity is {self.against(rule, 'sensitivity')}.",
+        )
+        m, tree = self.row(pop, sp, "trimethoprim", "scm"), self.row(pop, sp, "trimethoprim", "cart")
+        self.assertEqual({a["dataset"], m["dataset"]}, {r["dataset"] for r in low})
+        self.says(pop, sp, f"On trimethoprim its sensitivity is {self.against(m, 'sensitivity')}, where the decision tree has {T.pct(tree['sensitivity'])}.")
+
+    def test_same_study_s_pneumoniae(self):
+        pop, sp = "same-study", "streptococcus_pneumoniae"
+        self.says(pop, sp, f"The study is {self.top_study(pop, sp)[0]}.")
+        h, n = self.held(pop, sp, "scm")
+        self.says(pop, sp, f"The set covering machine holds on {h} of the {n} datasets.")
+        r, before = self.row(pop, sp, "penicillin", "scm"), self.row("primary", sp, "penicillin", "scm")
+        self.says(pop, sp, f"Its penicillin specificity is {self.against(r, 'specificity')}, where the primary population gave {T.pct(before['specificity'])}.")
+        lasso = self.row(pop, sp, "penicillin", "lasso")
+        self.says(pop, sp, f"The lasso's penicillin sensitivity is {self.against(lasso, 'sensitivity')}.")
 
 
 class Files(unittest.TestCase):

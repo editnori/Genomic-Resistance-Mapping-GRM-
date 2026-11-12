@@ -24,11 +24,11 @@ Three facts belong beside those counts.
 
 **The figures move both ways.** For the set covering machine, sensitivity reads above the report's figure on 36 of the 81 datasets and below it on 27. Its specificity reads below on 35 datasets and above on 25. Only its specificity reads below on 22 datasets, only its sensitivity on 14, and both on 13.
 
-**The known-gene rule moves too.** It is a fixed rule with no training, so fitting to the cohort cannot explain a move in its figure. It can be read on 74 datasets. It holds on 39 of them and reads below on at least one measure on the other 35. On 12 of the 39 its report figure is exactly 0% or 100% on a measure, and such a figure can be read one way only.
+**The known-gene rule moves too.** It is a fixed rule with no training, and its report figure is the rule's figure on the whole cohort. It can be read on 74 datasets. It holds on 39 of them and reads below on at least one measure on the other 35. On 12 of the 39 its report figure is exactly 0% or 100% on a measure, and such a figure can be read one way only.
 
-**One study holds most of a batch.** On 69 of the 82 datasets, a single study holds at least half of the resistant genomes. An estimate on such a dataset is mostly that study's.
+**One study holds most of a batch.** On 69 of the 82 datasets, a single study holds at least half of the resistant genomes. A sensitivity estimate on such a dataset is mostly that study's.
 
-So a report's figure describes the cohort it was measured on. For the set covering machine, both readings are consistent on 3 of the 81 datasets. On the other 78 at least one figure moved, up or down. The test does not say why a figure moved.
+For the set covering machine, both readings are consistent on 3 of the 81 datasets. On the other 78 at least one figure moved, up or down. The test does not say why a figure moved.
 
 The same-study population is 3,155 genomes on 49 datasets in 6 species. Its genomes are new, and they come from studies the cohort already holds. 3,144 of the 3,155 genomes were scored. The other 11 are *K. pneumoniae* genomes that failed the species check, and the plan excludes a genome that fails it.
 
@@ -47,7 +47,7 @@ The lasso is read on 8 of the 34, and its specificity is higher in each populati
 
 The lineage split holds out lineages. It does not hold out studies. On these 34 datasets a learner's lineage-split figure held more often on new genomes from a study the cohort already holds than on genomes from other studies.
 
-In the same-study population, one study has at least 99.9% of the resistant genomes on each of these 34 datasets, and there are three such studies: PRJNA288601 on 23 datasets, PRJNA248792 on 7 and PRJEB3084 on 4. So this is a comparison on three studies, added after the results were read.
+In the same-study population, one study has at least 99.9% of the resistant genomes on each of these 34 datasets, and there are three such studies: PRJNA288601 on 23 datasets, PRJNA248792 on 7 and PRJEB3084 on 4. So the same-study side of this comparison is three studies, and the comparison was added after the results were read.
 
 ## Runs
 
@@ -350,7 +350,7 @@ The same-study genomes of the datasets with estimates in both populations, by th
 
 The other limits come from the genomes and from the figures themselves.
 
-**The same-study population is four studies.** On each of its 49 datasets one study holds at least 99.9% of the resistant genomes, and 43 of the 49 have one study only. Four studies fill that place: PRJNA288601, PRJNA771404, PRJNA248792 and PRJEB3084. Its result is the result on those four.
+**The same-study population is four studies.** On each of its 49 datasets one study holds at least 99.9% of the resistant genomes, and 43 of the 49 have one study only. Four studies fill that place: PRJNA288601, PRJNA771404, PRJNA248792 and PRJEB3084. Its result is almost wholly the result on those four.
 
 **Figures at an edge.** A report figure of exactly 0% or 100% can be read one way only. In the primary population 12 of the 74 known-gene rows read have such a figure, and the rule holds on all 12. On 11 of the 74 it gives every scored genome the same call, and it holds on 10 of those.
 
@@ -384,6 +384,8 @@ python3 -I scripts/outside-study-results/tables.py reference/outside-study --spe
 python3 -I -m unittest discover -s tests/outside_study_results -t . -v
 ```
 
-The second and third commands exit 1 unless a page's tables are exactly what the files give. The suite runs both in CI. It also rebuilds from the files each sentence of this page that carries a count, and it fails when the sentence is not in the text as written.
+The second and third commands exit 1 unless a page's tables are exactly what the files give. The suite runs both in CI. It also rebuilds from the files each sentence of the two pages that carries a count written in digits, and it fails when the sentence is not in the text as written. Any other digit in a page's text fails the suite too, unless the suite lists it as a fixed term. The fixed terms are the level of the interval, the two ends a figure can sit at, the day of the runs, the reports' revision and a command's exit status.
+
+Two counts are outside that rule: the 46 files and the 79 FASTA files of the *S. aureus* repeat. They come from the run logs, which this repository does not hold, and the suite lists them as such.
 
 The suite checks each run's record against the frozen population too: the kit commit, the population, the species, and the genome and dataset lists.
