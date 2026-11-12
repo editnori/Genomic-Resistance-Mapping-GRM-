@@ -27,7 +27,7 @@ Consumers that check exact report keys must accept it. The MTB 4k plan's validat
 
 ## Checks
 
-- `scripts/check-results.py` checks the field's shape (ascending, disjoint, in range), that each group shares a lineage, that each group sits in one test fold of every split that ran, and that the report is from revision 10 or later. Without counted.json it cannot tell "no groups" from a missing field; that is the audit's job. It rejects an explicit empty list, which grm never writes and the audit treats as absent. It also refuses a root that mixes evaluation revisions, so a revision-13 root must hold only revision-13 reports.
+- `scripts/check-results.py` checks the field's shape (ascending, disjoint, in range), that each group shares a lineage, that each group sits in one test fold of every split that ran, and that the report is from revision 10 or later. Without counted.json it cannot tell "no groups" from a missing field; that is the audit's job. It rejects an explicit empty list, which grm never writes and the audit treats as absent. It also refuses a root that mixes evaluation revisions, so a revision-14 root must hold only revision-14 reports.
 - `scripts/metric-audit/audit.py`, from `DUPLICATE_ISOLATION_REVISION` (10), rebuilds the groups from `counted.json`'s kset digests, requires the report to list exactly those, and rebuilds the random folds with the same move before comparing `test_fold`. Earlier revisions must list no group.
 
 ## Scale at revision 10
