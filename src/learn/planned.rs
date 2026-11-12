@@ -135,9 +135,15 @@ pub struct PlannedSplit {
     pub result: SplitResult,
     /// The scored samples, in sample order (`PlanView::tested`).
     pub tested: Vec<usize>,
-    /// Per outer fold, the resistant share of its training samples: the
-    /// score a no-call sample of that fold carries in a prediction row.
+    /// Per outer fold, the resistant share of its training samples
+    /// (`learn::train_prevalence`): the score a null fit gives every sample
+    /// of that fold, in the pooled result and in a prediction row.
     pub train_prevalence: Vec<f64>,
+    /// Per learner (in `LEARNERS` order), per outer fold: whether its fit
+    /// was null. The input comparison marks those folds' prediction rows
+    /// uncalled and keeps its run metrics over the other samples, as it did
+    /// before the pooled result scored null fits.
+    pub null_fit: Vec<Vec<bool>>,
 }
 
 /// Scores every learner once per outer fold of `plan`. `fold_x(f, train)`
@@ -167,6 +173,7 @@ pub fn evaluate_plan(
             },
             tested,
             train_prevalence: vec![],
+            null_fit: vec![],
         });
     }
     let n = y.len();
@@ -177,7 +184,7 @@ pub fn evaluate_plan(
     for f in 0..view.k {
         let train = view.train(f);
         ensure!(train.count() > 0, "outer fold {f} has no training samples");
-        train_prevalence.push(train.and(y).count() as f64 / train.count() as f64);
+        train_prevalence.push(super::train_prevalence(y, &train));
         let x = fold_x(f, &train).with_context(|| format!("{scheme} outer fold {f}"))?;
         ensure!(
             x.cols == n,
@@ -215,6 +222,10 @@ pub fn evaluate_plan(
         .iter()
         .map(|&i| view.outer[i].expect("a tested sample has an outer fold"))
         .collect();
+    let null_fit: Vec<Vec<bool>> = fits
+        .iter()
+        .map(|fits| fits.iter().map(|f| f.scores.is_none()).collect())
+        .collect();
     let learners = LEARNERS
         .iter()
         .zip(fits)
@@ -227,7 +238,7 @@ pub fn evaluate_plan(
                     ..s
                 })
                 .collect();
-            eval::pool_folds(name, &truth, &test_fold, &fits, seconds)
+            eval::pool_folds(name, &truth, &test_fold, &fits, &train_prevalence, seconds)
                 .with_context(|| format!("{scheme} split"))
         })
         .collect::<Result<Vec<LearnerResult>>>()?;
@@ -244,6 +255,7 @@ pub fn evaluate_plan(
         },
         tested,
         train_prevalence,
+        null_fit,
     })
 }
 
@@ -402,6 +414,11 @@ mod tests {
                     serde_json::to_value(&a.metrics).unwrap(),
                     serde_json::to_value(&b.metrics).unwrap()
                 );
+                assert_eq!(
+                    serde_json::to_value(&a.called_metrics).unwrap(),
+                    serde_json::to_value(&b.called_metrics).unwrap()
+                );
+                assert_eq!(a.no_call, b.no_call);
             }
         }
     }
@@ -579,13 +596,29 @@ mod tests {
         })
         .unwrap();
         assert_eq!(planned.tested, view.tested());
-        for (f, train) in trained {
+        for (f, train) in &trained {
             assert!(
                 (common..common + 30).all(|i| train.contains(i)),
                 "outer fold {f}"
             );
             // Every common genome the reference tests in f is out of training.
-            assert!((0..common).all(|i| train.contains(i) == (r.outer[keep[i]] != f)));
+            assert!((0..common).all(|i| train.contains(i) == (r.outer[keep[i]] != *f)));
+        }
+        // A null fit's score is its fold's training prevalence, counted over
+        // the training genomes, arm-only ones included, not over the scored
+        // genomes the pooled result sees.
+        for (f, train) in &trained {
+            let share = train.and(&a.y).count() as f64 / train.count() as f64;
+            assert_eq!(planned.train_prevalence[*f], share);
+        }
+        assert_eq!(planned.null_fit.len(), LEARNERS.len());
+        for (li, l) in planned.result.learners.iter().enumerate() {
+            assert_eq!(planned.null_fit[li].len(), view.k);
+            for (j, &fold) in planned.result.test_fold.iter().enumerate() {
+                if planned.null_fit[li][fold] {
+                    assert_eq!(l.scores[j], planned.train_prevalence[fold]);
+                }
+            }
         }
     }
 

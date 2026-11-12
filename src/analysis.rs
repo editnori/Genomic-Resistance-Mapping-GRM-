@@ -30,6 +30,9 @@ use std::time::Instant;
 /// Schema 2 lets a learner row hold null scores (no call), null fold
 /// balanced accuracy, and null metrics when it called no isolate. A schema-1
 /// reader stops at its version check instead of reading them as numbers.
+/// Revision 14 writes none of these nulls on a learner row (it scores null
+/// fits) but keeps schema 2: its one new field, `called_metrics`, is
+/// optional, and a schema-2 reader that ignores it reads every number right.
 pub const REPORT_SCHEMA: u32 = 2;
 /// Revision 8 added the lasso solver evidence; revision 9 changes only the
 /// lasso's active-set solve (docs/lasso-stopping.md). Revision 10 adds the
@@ -40,7 +43,10 @@ pub const REPORT_SCHEMA: u32 = 2;
 /// (`eval::final_tuning`). Revision 13 reads each gene-panel target only for
 /// its own drugs and organisms (`panels`, `panels-v2`): a report's `panels`
 /// rows change and an out-of-scope panel moves to `unsupported_assays`.
-pub const EVALUATION_REVISION: u32 = 13;
+/// Revision 14 scores a null fit's samples at its fold's training prevalence,
+/// so every learner's `metrics` cover every sample; `called_metrics` keeps
+/// revision 13's figure (`eval::pool_folds`, docs/equal-scoring.md).
+pub const EVALUATION_REVISION: u32 = 14;
 
 #[derive(Serialize)]
 pub struct EvaluationAudit {
@@ -639,6 +645,7 @@ pub fn analyze_dataset(
                 split.learners.push(LearnerResult {
                     learner: "catalog".into(),
                     metrics: Some(metrics.clone()),
+                    called_metrics: None,
                     fold_balanced_accuracy: vec![],
                     roc: vec![],
                     scores: scores.clone(),
@@ -1086,10 +1093,10 @@ fn best_learner_words(splits: &[SplitResult]) -> Result<String> {
     let rows = crate::report::learner_rows(&serde_json::to_value(splits)?);
     Ok(match crate::report::best_learner(&rows) {
         Some((best, ba)) => format!(
-            "best random-split learner among those that call every isolate: {} {ba:.3}",
+            "best random-split learner among those scored on every isolate: {} {ba:.3}",
             best.learner
         ),
-        None => "no learner calls every isolate".into(),
+        None => "no learner is scored on every isolate".into(),
     })
 }
 
@@ -1345,20 +1352,21 @@ mod tests {
                 "input_fingerprint": fingerprint,
             })
         };
-        assert_eq!(EVALUATION_REVISION, 13);
+        assert_eq!(EVALUATION_REVISION, 14);
         assert_eq!(stale_reason(&saved(EVALUATION_REVISION, key), key), None);
         // Revision 8's solver could stop where revision 9's converges, a
         // revision-9 report may have scored a genome with its own copy in
         // training, a revision-10 report's random-split tuning may have put a
         // genome and its copy on both sides of a tuning partition, a
-        // revision-11 report's final models may have, and a revision-12
+        // revision-11 report's final models may have, a revision-12
         // report's panel rows read every target for every panel drug and
-        // organism. The input fingerprint sees none of these changes.
-        for old in [7, 8, 9, 10, 11, 12] {
+        // organism, and a revision-13 report's metrics leave a null fit's
+        // isolates out. The input fingerprint sees none of these changes.
+        for old in [7, 8, 9, 10, 11, 12, 13] {
             assert_eq!(
                 stale_reason(&saved(old, key), key),
                 Some("evaluation audit revision changed"),
-                "a same-fingerprint revision-{old} result must not enter revision 13"
+                "a same-fingerprint revision-{old} result must not enter revision 14"
             );
         }
         // A current report whose audit is invalid, or says nothing, is not a
@@ -1561,6 +1569,7 @@ mod tests {
             learners: vec![LearnerResult {
                 learner: "lasso".into(),
                 metrics: None,
+                called_metrics: None,
                 fold_balanced_accuracy: vec![],
                 roc: vec![],
                 scores: vec![],
@@ -1603,6 +1612,7 @@ mod tests {
             learners: vec![LearnerResult {
                 learner: "lasso".into(),
                 metrics: None,
+                called_metrics: None,
                 fold_balanced_accuracy: vec![],
                 roc: vec![],
                 scores: vec![],
@@ -1660,7 +1670,7 @@ mod tests {
         let line = done_line(id, 12.4, &evaluation_audit(&[], Some(&clean)), &[]).unwrap();
         assert_eq!(
             line,
-            "    fixture__meropenem done in 12s (no learner calls every isolate)"
+            "    fixture__meropenem done in 12s (no learner is scored on every isolate)"
         );
 
         // An unconverged point that was not selected leaves a written report
@@ -1692,13 +1702,17 @@ mod tests {
     }
 
     #[test]
-    fn the_log_names_the_best_learner_that_calls_every_isolate() {
-        let row = |learner: &str, ba: f64, uncalled: usize| LearnerResult {
+    fn the_log_names_the_best_learner_scored_on_every_isolate() {
+        // `scored` marks a revision-14 row: its null-fit isolates are scored
+        // at their fold's training prevalence and it carries
+        // `called_metrics`. Older rows leave them out of `metrics`.
+        let row = |learner: &str, ba: f64, in_null_folds: usize, scored: bool| LearnerResult {
             learner: learner.into(),
             metrics: Some(BinaryMetrics {
                 balanced_accuracy: ba,
                 ..Default::default()
             }),
+            called_metrics: (scored && in_null_folds > 0).then(|| Some(BinaryMetrics::default())),
             fold_balanced_accuracy: vec![],
             roc: vec![],
             scores: vec![],
@@ -1706,7 +1720,7 @@ mod tests {
             fold_complexity: vec![],
             seconds: 0.0,
             no_call: Some(crate::learn::NoCall {
-                resistant: uncalled,
+                resistant: in_null_folds,
                 susceptible: 0,
             }),
             lasso_fits: None,
@@ -1719,19 +1733,41 @@ mod tests {
             learners,
             unavailable_reason: None,
         };
-        // The lasso scores higher but leaves two isolates uncalled.
+        // Revision 14: the lasso's two null-fold isolates are in its rates,
+        // so it competes and wins.
         let splits = [
-            split("random", vec![row("rf", 0.8124, 0), row("lasso", 0.9, 2)]),
-            split("lineage", vec![row("rf", 0.7, 0), row("lasso", 0.6, 0)]),
+            split(
+                "random",
+                vec![row("rf", 0.8124, 0, true), row("lasso", 0.9, 2, true)],
+            ),
+            split(
+                "lineage",
+                vec![row("rf", 0.7, 0, true), row("lasso", 0.6, 3, true)],
+            ),
         ];
         assert_eq!(
             best_learner_words(&splits).unwrap(),
-            "best random-split learner among those that call every isolate: rf 0.812"
+            "best random-split learner among those scored on every isolate: lasso 0.900"
         );
-        let partial = [split("random", vec![row("rf", 0.8, 1)])];
+        // A revision-13 row whose rates leave two isolates out is passed over.
+        let old = [
+            split(
+                "random",
+                vec![row("rf", 0.8124, 0, false), row("lasso", 0.9, 2, false)],
+            ),
+            split(
+                "lineage",
+                vec![row("rf", 0.7, 0, false), row("lasso", 0.6, 0, false)],
+            ),
+        ];
+        assert_eq!(
+            best_learner_words(&old).unwrap(),
+            "best random-split learner among those scored on every isolate: rf 0.812"
+        );
+        let partial = [split("random", vec![row("rf", 0.8, 1, false)])];
         assert_eq!(
             best_learner_words(&partial).unwrap(),
-            "no learner calls every isolate"
+            "no learner is scored on every isolate"
         );
     }
 
