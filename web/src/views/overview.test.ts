@@ -135,7 +135,7 @@ describe("report leads with revision 7's numbers", () => {
   };
   const rev12Split: SplitSummary = { n: 274, nNoBest: 0, nLineage: 268, medianRandom: 0.9286458630476951, medianLineage: 0.8790200150467228, medianGap: 0.03711346885361494, nLargeGap: 112 };
   const PICK =
-    "Each dataset's best learner is the one of five with the highest random-split score among those that call every isolate. A learner's score with lineages held out takes no part in that pick. With lineages held out, the best learner's median balanced accuracy is 87.9% over 268 datasets.";
+    "Each dataset's best learner is the one of five with the highest random-split score among those scored on every isolate. A learner's score with lineages held out takes no part in that pick. With lineages held out, the best learner's median balanced accuracy is 87.9% over 268 datasets.";
 
   it("sets the best learner beside the strongest learner used alone", () => {
     expect(learnersLead(rev12Learners, rev12Split)).toBe(
