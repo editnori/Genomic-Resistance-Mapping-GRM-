@@ -21,6 +21,17 @@
 #       Refusal: 97, nothing sent. In the box: tar sha256, extract into DIR (default /home/user/grm-data, new or
 #       empty), sha256sum -c --strict and the count; any failure there removes DIR and the tar (86). The manifest
 #       stays as .grm-input-manifest.sha256. push's data guard is unchanged.
+#   grm-boat.sh [--notes PATH] stage-local <id> --from BOXDIR --manifest FILE --manifest-sha256 HEX [--dest DIR]
+#       KIT11: a push-data set taken from a folder already on the box (a data snapshot's copy, such as
+#       /home/user/grm-h1raw), not sent from here. FILE must hash to HEX and pass push-data's line, class, deny and
+#       vocabulary checks here before anything happens on the box. Run receipts and the combine classes are refused
+#       (they go through push-data), and BOXDIR's own path must be denied-name free. Only the manifest crosses.
+#       In the box: the manifest copy must hash to HEX again, and BOXDIR must be a real folder, not a link. Each
+#       listed file is reached under BOXDIR without following a link, must be a regular file, and is hard-linked
+#       into DIR (default /home/user/grm-data, new or empty, not a link, on BOXDIR's filesystem). Then come
+#       push-data's own box checks: the exact file and folder set, no link or special file, sha256sum -c --strict
+#       and the count. Any failure removes DIR (its links only, never BOXDIR's files) and the manifest copy (86).
+#       A refusal here is 97, and nothing reaches the box.
 #   grm-boat.sh [--notes PATH] run <id> [--log NAME] [--cwd DIR] [--argv] [--] <command...>
 #       one argument is a legacy bash script unless --argv is set; multiple arguments are executed directly with their
 #       boundaries preserved. The command runs detached in DIR with the toolchain env and ulimit -n 65536; output goes to
@@ -54,9 +65,14 @@
 # run side by side. The
 # Windows memory comes from PowerShell's CIM read through WSL interop; an unreadable read is read once more after
 # GRM_MEM_RETRY_SECS (5) s before memcheck fails with 76.
+# KIT11: GRM_HOST=linux runs the runner on a plain Linux host, such as the Boat T3 controller. GRM_BOAT must name the
+# boat binary, and the staging folders go under GRM_STAGE_DIR (default ~/.cache/grm-boat), with no wslpath. memcheck
+# reads this host's MemAvailable and its cgroup room: the tightest memory.high or memory.max, less memory.current,
+# over this process's cgroup and every parent. Each must be GRM_MIN_AVAIL_MB (512) or more, or memcheck fails with
+# 76. GRM_HOST=wsl, the default, is the laptop, unchanged.
 # NOTES.md comes from --notes or GRM_NOTES (close takes it as its argument). Only ids this script created are used
 # (state in ~/.local/state/grm-boat/created; GRM_BOAT_ADOPT=1 accepts a grm-* sandbox made by hand).
-# Exit codes: run returns the command's own; 97 the data guard or push-data refused (nothing sent); 86 a Boat step or working-directory
+# Exit codes: run returns the command's own; 97 the data guard, push-data or stage-local refused (nothing sent); 86 a Boat step or working-directory
 # change failed;
 # 75 the cap stayed full for 30 min; 76 the laptop memory check failed; 77 the plan is under its floor; 2 usage or
 # refused id.
@@ -64,6 +80,14 @@ set -u -o pipefail
 BOAT=${GRM_BOAT:-/mnt/c/Users/layth888/.ascii/bin/boat.exe}
 LANES_MD=${GRM_LANES_MD:-/home/layth/review/GRM-BOAT-LANES-20261031.md}   # holds the live GRM_CAP= line
 STAGE_WIN=${GRM_STAGE_WIN:-'C:\Users\layth888\.t3\scratch\2026-10-28-test-3a358d9a\boat-grm'}
+HOST_KIND=${GRM_HOST:-wsl}   # KIT11: wsl (the laptop) or linux (a plain Linux host, such as the T3 controller)
+case "$HOST_KIND" in
+  wsl) ;;
+  linux) [ -n "${GRM_BOAT:-}" ] || { echo "grm-boat: GRM_HOST=linux needs GRM_BOAT, the boat binary" >&2; exit 2; };;
+  *) echo "grm-boat: GRM_HOST must be wsl or linux, not $HOST_KIND" >&2; exit 2;;
+esac
+STAGE_DIR=${GRM_STAGE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/grm-boat}   # linux only
+MIN_AVAIL_MB=${GRM_MIN_AVAIL_MB:-512}                                  # linux only
 STATE=${GRM_BOAT_STATE:-$HOME/.local/state/grm-boat}
 LOCK=${GRM_BOAT_LOCK:-/var/tmp/grm-boat-create.lock}   # one cap check and create at a time on this laptop
 BT=${GRM_BT_TIMEOUT:-180}       # seconds for one boat call; a WSL interop call that stalls is killed after this
@@ -219,8 +243,57 @@ win_mem() {
   MEMERR="$MEMERR $MEMSRC rc $rc after $(( $(date +%s) - t0 )) s$([ -s "$e" ] && printf ': %s' "$(oneline "$(cat "$e")" 100)");"
   rm -f "$e"
 }
+# lin_mem (KIT11, GRM_HOST=linux): "MemAvailable room where" in MiB. room is the tightest memory.high or memory.max,
+# less memory.current, over this process's cgroup v2 path and every parent; with no limit anywhere it is
+# MemAvailable. where names the cgroup and the limit file (spaces as colons). "-" where a value can't be read.
+lin_mem() {
+  python3 -I - << 'EOF'
+import os
+def rd(p):
+    try:
+        with open(p) as f: return f.read().strip()
+    except OSError: return None
+avail = None
+try:
+    for line in open("/proc/meminfo"):
+        if line.startswith("MemAvailable:"): avail = int(line.split()[1]) // 1024
+except (OSError, ValueError): pass
+cg = None
+try:
+    for line in open("/proc/self/cgroup"):
+        h, _, rest = line.rstrip("\n").partition(":")
+        ctrl, _, path = rest.partition(":")
+        if h == "0" and ctrl == "": cg = path
+except OSError: pass
+room, where = None, "no-cgroup-limit"
+if cg is not None and cg.startswith("/"):
+    p = cg
+    while True:
+        d = "/sys/fs/cgroup" + ("" if p == "/" else p)
+        cur = rd(d + "/memory.current")
+        for k in ("memory.high", "memory.max"):
+            v = rd(d + "/" + k)
+            if v and v != "max" and cur is not None:
+                try: r = (int(v) - int(cur)) // (1024 * 1024)
+                except ValueError: continue
+                if room is None or r < room: room, where = r, "%s:%s" % (p, k)
+        if p == "/": break
+        p = os.path.dirname(p) or "/"
+if room is None: room = avail
+print("-" if avail is None else avail, "-" if room is None else room, where)
+EOF
+}
 host_guard() {
-  local free commit lim vmh M MEMSRC MEMERR=""
+  local free commit lim vmh M MEMSRC MEMERR="" where memmsg
+  if [ "$HOST_KIND" = linux ]; then
+    [[ "$MIN_AVAIL_MB" =~ ^[0-9]+$ ]] || fail 2 - memcheck "GRM_MIN_AVAIL_MB takes whole MiB, not $MIN_AVAIL_MB"
+    read -r free commit where <<< "$(lin_mem 2> /dev/null)"
+    [[ "$free" =~ ^[0-9]+$ && "$commit" =~ ^-?[0-9]+$ ]] ||
+      fail $MEM_RC - memcheck "could not read this host's memory (/proc/meminfo and the cgroup): '${free:-} ${commit:-}'"
+    [ "$free" -ge "$MIN_AVAIL_MB" ] && [ "$commit" -ge "$MIN_AVAIL_MB" ] ||
+      fail $MEM_RC - memcheck "this host has MemAvailable $free MiB and cgroup room $commit MiB ($where); each needs $MIN_AVAIL_MB or more"
+    memmsg="host: MemAvailable $free MiB, cgroup room $commit MiB ($where)"
+  else
   win_mem; read -r free commit <<< "$M"
   # one more read when the first gave nothing usable
   if ! [[ "$free" =~ ^[0-9]+(\.[0-9]+)?$ && "$commit" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
@@ -231,6 +304,8 @@ host_guard() {
     || fail $MEM_RC - memcheck "could not read Windows memory, twice ($(oneline "$M" 80)):$MEMERR"
   awk -v f="$free" -v c="$commit" -v mf="$MIN_FREE_GB" -v mc="$MAX_COMMIT_GB" 'BEGIN { exit !(f >= mf && c <= mc) }' \
     || fail $MEM_RC - memcheck "Windows free $free GB (needs $MIN_FREE_GB or more), commit $commit GB (needs $MAX_COMMIT_GB or less)"
+  memmsg="host: free $free GB, commit $commit GB ($MEMSRC)"
+  fi
   lim=$(bt_retry limits --all --json) || fail $ROUTE_RC - plan "boat limits failed: $(oneline "$lim")"
   vmh=$(python3 -c 'import json, sys
 l = json.load(sys.stdin)
@@ -239,7 +314,7 @@ print(c if isinstance(c, (int, float)) and not isinstance(c, bool) else l["planI
   [[ "$vmh" =~ ^[0-9]+(\.[0-9]+)?$ ]] || fail $ROUTE_RC - plan "no creditBalanceHours or planIncluded.vmHoursRemaining in boat limits"
   awk -v v="$vmh" -v m="$MIN_PLAN_VMH" 'BEGIN { exit !(v >= m) }' \
     || fail $PLAN_RC - plan "the plan and pack have $vmh VM-hours left, under $MIN_PLAN_VMH: start no new box and tell the user"
-  HOSTMSG="host: free $free GB, commit $commit GB ($MEMSRC); plan $vmh VM-h left"
+  HOSTMSG="$memmsg; plan $vmh VM-h left"
 }
 # own ID: refuse any sandbox this script did not create or whose name is not grm-*; sets ID NAME LANE SNAP
 own() {
@@ -275,7 +350,8 @@ e = d.get("exitCode"); sys.exit(e if isinstance(e, int) else 1)' "$rc"
 # A call removes only its own folder. The lane folder stays, even when empty (REVIEW-KIT10 L1: a call that removed
 # it when empty raced a call that had just made it, whose mktemp then failed with 86).
 stage_dir() {
-  local base; base=$(wslpath -u "$STAGE_WIN")/stage-$LANE
+  local base
+  if [ "${HOST_KIND:-wsl}" = linux ]; then base=$STAGE_DIR/stage-$LANE; else base=$(wslpath -u "$STAGE_WIN")/stage-$LANE; fi
   mkdir -p "$base" && STAGE=$(mktemp -d "$base/call-$1-XXXXXXXX") || fail $ROUTE_RC "$ID" "$1" "could not make a staging folder under $base"
 }
 unstage() { rm -rf "$STAGE"; return 0; }
@@ -513,7 +589,10 @@ RECEIPT_MAX = 64 * 1024 * 1024
 # the account rules' names, wherever they appear in a segment (I4), plus env and key files
 deny = re.compile(r"sealed|held-?out|ks30|ks50|vumc|aua2027|gold-review|clinical|private|secret|credential|ksd|sigdrug"
                   r"|^review$|^layth_review$|^\.env|\.(pem|key|p12|pfx|jks|ppk|asc|gpg)$|^id_(rsa|dsa|ecdsa|ed25519)", re.I)
-root = os.path.realpath(d)
+# KIT11: TAR "-" is stage-local's check only. DIR is then a folder on the box, so its path is taken as written
+# (normalised, never resolved here), and no file is read
+check_only = out == "-"
+root = os.path.normpath(d) if check_only else os.path.realpath(d)
 for x in root.split("/"):
     if x and x.lower() != "review" and deny.search(x):
         problems.append("the data folder's own path has a refused segment %r: %s" % (x, root))
@@ -554,6 +633,14 @@ for n, line in enumerate(lines, 1):
 vocab = sorted(p[len("vocabulary/"):] for p in want if p.startswith("vocabulary/"))
 if vocab and vocab != sorted(VOCAB):
     problems.append("the vocabulary goes whole or not at all: %d of its 13 files listed" % len(vocab))
+if check_only:
+    # stage-local takes data classes only: a receipt's size and text checks need its bytes, which are on the box
+    for p in order:
+        if is_receipt(p) or combine.fullmatch(p):
+            problems.append("%s: run receipts and H-1 parts go through push-data, not stage-local" % p)
+    if combine_dest: problems.append("stage-local does not fill /home/user/grm-combine")
+    if problems: done()
+    print("VALID %d" % len(order)); sys.exit(0)
 if problems: done()
 # build: each file read once, from a descriptor opened without following any symlink
 def open_nofollow(rel):
@@ -620,6 +707,22 @@ if problems: done()
 print("OK %d %d %s" % (len(want), nbytes, tar_sha))
 EOF
 }
+# PD_CHECK: the box checks push-data and stage-local share (KIT11), run once DEST holds the files and its manifest
+# sits at DEST/.grm-input-manifest.sha256, with bye, d, want and n set before it: the manifest is the pinned one, no
+# link or special file, the count, the exact file and folder set, then sha256sum -c --strict
+PD_CHECK='m=$(sha256sum "$d/.grm-input-manifest.sha256" | cut -d" " -f1); echo "MSHA $m"
+[ "$m" = "$want" ] || bye "manifest is not the pinned one" 6
+[ -z "$(find "$d" -mindepth 1 ! -type f ! -type d | head -n 1)" ] || bye "a link or special file is in the destination" 6
+c=$(wc -l < "$d/.grm-input-manifest.sha256")
+[ "$c" = "$n" ] || bye "manifest lists $c files, expected $n" 6
+got=$(cd "$d" && find . -mindepth 1 -type f -printf "%P\n" | LC_ALL=C sort)
+exp=$( { cut -c67- "$d/.grm-input-manifest.sha256"; echo .grm-input-manifest.sha256; } | LC_ALL=C sort)
+[ "$got" = "$exp" ] || bye "the files in the destination are not exactly the manifest" 6
+gotd=$(cd "$d" && find . -mindepth 1 -type d -printf "%P\n" | LC_ALL=C sort)
+expd=$(cut -c67- "$d/.grm-input-manifest.sha256" | awk -F/ "{p=\"\"; for (i = 1; i < NF; i++) { p = (i == 1 ? \$1 : p \"/\" \$i); print p } }" | LC_ALL=C sort -u)
+[ "$gotd" = "$expd" ] || bye "the folders in the destination are not exactly the manifest" 6
+(cd "$d" && sha256sum -c --strict --quiet .grm-input-manifest.sha256) || bye "sha256sum -c failed in the box" 6
+echo "CHECKED $c"'
 # PD_BOX: push-data's box side (N1), run with d, t, vsha, want and n set before it
 PD_BOX='set -u
 made=0
@@ -633,19 +736,7 @@ tar --no-same-owner --no-overwrite-dir -xf "$t" -C "$d" || bye "extract failed" 
 rm -f "$t"
 [ -f "$d/INPUT-MANIFEST.sha256" ] && [ ! -L "$d/INPUT-MANIFEST.sha256" ] || bye "no manifest in the tar" 5
 mv "$d/INPUT-MANIFEST.sha256" "$d/.grm-input-manifest.sha256" || bye "manifest rename failed" 5
-m=$(sha256sum "$d/.grm-input-manifest.sha256" | cut -d" " -f1); echo "MSHA $m"
-[ "$m" = "$want" ] || bye "manifest is not the pinned one" 6
-[ -z "$(find "$d" -mindepth 1 ! -type f ! -type d | head -n 1)" ] || bye "a link or special file came out of the tar" 6
-c=$(wc -l < "$d/.grm-input-manifest.sha256")
-[ "$c" = "$n" ] || bye "manifest lists $c files, expected $n" 6
-got=$(cd "$d" && find . -mindepth 1 -type f -printf "%P\n" | LC_ALL=C sort)
-exp=$( { cut -c67- "$d/.grm-input-manifest.sha256"; echo .grm-input-manifest.sha256; } | LC_ALL=C sort)
-[ "$got" = "$exp" ] || bye "the extracted files are not exactly the manifest" 6
-gotd=$(cd "$d" && find . -mindepth 1 -type d -printf "%P\n" | LC_ALL=C sort)
-expd=$(cut -c67- "$d/.grm-input-manifest.sha256" | awk -F/ "{p=\"\"; for (i = 1; i < NF; i++) { p = (i == 1 ? \$1 : p \"/\" \$i); print p } }" | LC_ALL=C sort -u)
-[ "$gotd" = "$expd" ] || bye "the extracted folders are not exactly the manifest" 6
-(cd "$d" && sha256sum -c --strict --quiet .grm-input-manifest.sha256) || bye "sha256sum -c failed in the box" 6
-echo "CHECKED $c"'
+'"$PD_CHECK"
 cmd_push_data() {
   local dir="" man="" want="" dest=/home/user/grm-data out rc n bytes lsha vsha rsha ts tarw rtar avail last priv size
   [ $# -ge 2 ] || usage
@@ -704,6 +795,95 @@ $PD_BOX" 2>&1); rc=$?
   unstage; rm -rf "$priv"; trap - EXIT
   note "$ID" "push-data $(basename "$dir")" ok "$n files, $bytes B -> $dest; tar built in a private folder and verified member by member against manifest $want; verified tar sha256 $vsha = staged stream $lsha = box $rsha; exact file set and sha256sum -c --strict in the box; staging removed"
   echo "pushed $n data files ($bytes B) to $dest, manifest $want, tar sha256 $lsha (both sides)"
+}
+
+# ---------------------------------------------------------------- stage-local
+# SL_BOX: stage-local's box side (KIT11), run with s, d, t, want and n set before it. The manifest copy t must hash to
+# want before anything else is read; s must be a real folder, d new or empty and not a link. Each listed file is
+# reached from s one component at a time with O_NOFOLLOW, must be a regular file, and is hard-linked into d under its
+# listed path without following a link; then PD_CHECK. A failure removes d, which holds only links, and t.
+SL_BOX='set -u
+made=0
+bye() { rm -f "$t"; [ $made = 1 ] && rm -rf "$d"; echo "REFUSED $1"; exit $2; }
+m=$(sha256sum "$t" | cut -d" " -f1); echo "TSHA $m"
+[ "$m" = "$want" ] || bye "the manifest copy is not the pinned one" 3
+[ -d "$s" ] && [ ! -L "$s" ] || bye "the source folder is missing or a link: $s" 3
+[ ! -L "$d" ] || bye "the destination is a link" 4
+if [ -e "$d" ] && [ -n "$(ls -A "$d")" ]; then rm -f "$t"; echo "REFUSED dest not empty"; exit 4; fi
+mkdir -p "$d" || bye "mkdir failed" 5
+made=1
+python3 -I - "$s" "$d" "$t" << "PYEOF" || bye "linking from the source folder failed" 5
+import os, stat, sys
+src, dst, man = sys.argv[1:]
+F = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+sfd = os.open(src, F)
+n = 0
+with open(man, encoding="utf-8") as f:
+    for line in f:
+        p = line.rstrip("\n")[66:]
+        parts = p.split("/")
+        fd = os.dup(sfd)
+        try:
+            for x in parts[:-1]:
+                nfd = os.open(x, F, dir_fd=fd); os.close(fd); fd = nfd
+            st = os.stat(parts[-1], dir_fd=fd, follow_symlinks=False)
+            if not stat.S_ISREG(st.st_mode):
+                print("LINKERR not a regular file in the source folder: " + p); sys.exit(1)
+            if len(parts) > 1: os.makedirs(os.path.join(dst, *parts[:-1]), exist_ok=True)
+            os.link(parts[-1], os.path.join(dst, p), src_dir_fd=fd, follow_symlinks=False)
+        except OSError as e:
+            print("LINKERR %s: %s" % (p, e.strerror)); sys.exit(1)
+        finally:
+            os.close(fd)
+        n += 1
+print("LINKED %d" % n)
+PYEOF
+mv "$t" "$d/.grm-input-manifest.sha256" || bye "manifest move failed" 5
+'"$PD_CHECK"
+cmd_stage_local() {
+  local src="" man="" want="" dest=/home/user/grm-data out rc n last ts rman size x
+  [ $# -ge 2 ] || usage
+  own "$1"; shift
+  while [ $# -gt 0 ]; do case "$1" in
+    --from) src=${2:-}; shift 2 || usage;;
+    --manifest) man=${2:-}; shift 2 || usage;;
+    --manifest-sha256) want=${2:-}; shift 2 || usage;;
+    --dest) dest=${2:-}; shift 2 || usage;;
+    *) usage;;
+  esac; done
+  [ -n "$src" ] && [ -n "$man" ] || usage
+  [[ "$want" =~ ^[0-9a-f]{64}$ ]] || fail 2 "$ID" stage-local "--manifest-sha256 takes the manifest's 64-hex sha256, written in NOTES.md first"
+  for x in "$src" "$dest"; do
+    [[ "$x" =~ ^/home/user(/[A-Za-z0-9._-]+)+$ ]] && [[ "/$x/" != */../* ]] && [[ "/$x/" != */./* ]] ||
+      fail 2 "$ID" stage-local "--from and --dest must be box folders under /home/user, without . or .. segments: $x"
+  done
+  case "$dest/" in "$src"/*) fail 2 "$ID" stage-local "--dest $dest is --from $src or inside it";; esac
+  case "$src/" in "$dest"/*) fail 2 "$ID" stage-local "--from $src is inside --dest $dest";; esac
+  case "${src,,}" in */ksd*|*sigdrug*) fail $GUARD_RC "$ID" stage-local "$src belongs to another project; nothing staged";; esac
+  [ -f "$man" ] || fail 2 "$ID" stage-local "$man is not a file"
+  stage_dir stage-local; ts=$(date -u +%Y%m%dT%H%M%SZ)
+  trap unstage EXIT
+  # the manifest is copied once; only the copy is checked here and sent
+  cp -- "$man" "$STAGE/manifest-$ts.sha256" || fail $ROUTE_RC "$ID" stage-local "could not copy the manifest"
+  out=$(pd_tool "$src" "$STAGE/manifest-$ts.sha256" "$want" - "$dest" 2>&1); rc=$?
+  last=$(tail -n 1 <<< "$out")
+  if [ $rc != 0 ] || [[ ! "$last" =~ ^VALID\ [0-9]+$ ]]; then
+    printf '%s\n' "$out" | head -n 40 >&2
+    fail $GUARD_RC "$ID" stage-local "refused (checker rc $rc, $(grep -vc '^VALID ' <<< "$out") problems), first: $(oneline "$(head -n 1 <<< "$out")" 200); nothing staged"
+  fi
+  n=${last#VALID }
+  rman=/tmp/grm-stage-$ts-${STAGE##*-}.sha256
+  size=$(stat -c %s "$STAGE/manifest-$ts.sha256")
+  scp_floor stage-local up "$STAGE" "$size" "${GRM_PUSH_TIMEOUT:-600}" "$rman" "manifest-$ts.sha256" "$ID:$rman" ||
+    fail $ROUTE_RC "$ID" stage-local "boat scp of the manifest failed after $SCP_TRIES tries: $SCP_WHY"
+  out=$(rexec "$ID" 600 "s=$(printf %q "$src") d=$(printf %q "$dest") t=$rman want=$want n=$n
+$SL_BOX" 2>&1); rc=$?
+  [ $rc = 0 ] || fail $ROUTE_RC "$ID" stage-local "refused in the box (rc $rc, destination and manifest copy removed): $(oneline "$(grep -E '^(REFUSED|TSHA|MSHA|LINKERR)' <<< "$out" | tr '\n' ' ')")"
+  [ "$(sed -n 's/^LINKED //p' <<< "$out" | tr -d '\r')" = "$n" ] && [ "$(sed -n 's/^CHECKED //p' <<< "$out" | tr -d '\r')" = "$n" ] ||
+    fail $ROUTE_RC "$ID" stage-local "the box did not confirm $n linked and checked files: $(oneline "$out")"
+  unstage; trap - EXIT
+  note "$ID" "stage-local $src" ok "$n files linked from $src -> $dest; manifest $want checked here (lines, classes, deny, vocabulary) and hashed in the box before any link; exact file and folder set and sha256sum -c --strict in the box; staging removed"
+  echo "staged $n data files from $src to $dest, manifest $want (checked here and in the box)"
 }
 
 # ---------------------------------------------------------------- run
@@ -896,5 +1076,6 @@ fi
 case "$cmd" in
   new|toolchain|push|run|pull|extend|snapshot|close|preflight) "cmd_$cmd" "$@";;
   push-data) cmd_push_data "$@";;
+  stage-local) cmd_stage_local "$@";;
   *) usage;;
 esac
