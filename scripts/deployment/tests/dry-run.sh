@@ -212,6 +212,9 @@ rev_report bad-audit 11 '"11"' 11.0
 rev_report not-json 11 11 11
 echo '{"id":"sp__b",' >"$T/not-json/datasets/sp__b.json"
 rehash not-json
+rev_report not-object 11 11 11
+echo '[{"id":"sp__b","evaluation":{"revision":11}}]' >"$T/not-object/datasets/sp__b.json"
+rehash not-object
 rev_report r8-no-audit 8 - -
 rev_report r7-mixed 7 7 6
 expect 0 'dry-run: would copy' "publish dry run accepts revision 11 with every dataset at 11" -- rev_publish 11 r11 pub-r11
@@ -240,6 +243,8 @@ expect 1 'datasets whose report has evaluation.revision 11.0, expected 11: sp__b
     "publish refuses a dataset revision that is not an integer" -- rev_publish 11 bad-audit pub-mix
 expect 1 'datasets whose report is not readable JSON: sp__b$' \
     "publish refuses a dataset report that is not JSON" -- rev_publish 11 not-json pub-mix
+expect 1 'datasets whose report has evaluation.revision missing, expected 11: sp__b$' \
+    "publish refuses a dataset report that is not a JSON object" -- rev_publish 11 not-object pub-mix
 expect 1 'datasets with index evaluation.revision missing, expected 8: sp__a, sp__b$' \
     "from revision 8, every dataset must record its revision" -- rev_publish 8 r8-no-audit pub-mix
 expect 0 'dry-run: would copy' "revision 7 keeps the index checks only" -- rev_publish 7 r7-mixed pub-mix
@@ -871,7 +876,7 @@ expect 2 'invalid port 0641' "stage refuses a spare port with a leading zero" --
     bash "$S/stage.sh" rel1 pub1 0641
 
 expect 1 '' "no stub grm, cargo, npm or node ever ran" -- test -e "$GRM_TEST_MARKER"
-EXPECTED_ASSERTIONS=$((285 - skipped))  # less the root-only skip
+EXPECTED_ASSERTIONS=$((286 - skipped))  # less the root-only skip
 if [ "$((pass + fail))" != "$EXPECTED_ASSERTIONS" ]; then
     fail=$((fail + 1))
     echo "FAIL dry-run suite ran $((pass + fail - 1)) assertions, expected $EXPECTED_ASSERTIONS"
