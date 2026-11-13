@@ -1241,6 +1241,7 @@ export const outsideFinding = (m: Manifest, opts: FindingOptions): Finding => {
     figure: (fit: PagedFit) => (
       <OutsideScatter
         panels={panels}
+        level={level}
         height={fit.height}
         titleOf={titleOf}
         onOpen={opts.nav?.openDataset}
@@ -1252,7 +1253,7 @@ export const outsideFinding = (m: Manifest, opts: FindingOptions): Finding => {
     ),
     caption: opts.page
       ? `Each dot is one dataset and the set covering machine. Across is the report's figure with whole lineages held out. Up is the same model's figure on the new genomes, and the bar through the dot is its ${level} interval. A dot under the line scored lower on the new genomes than its report says. A figure reads below, and its dot is hollow, when its whole interval is under the line. A dataset holds when neither its sensitivity nor its specificity reads below.`
-      : `One dot per dataset: the report's figure with lineages held out, across, against the figure on the new genomes, up, with its ${level} interval. A hollow dot reads below: its whole interval is under the line. A retrospective test on newly deposited studies from the same database, not external validation and not an untouched held-out set. The two groups are scored apart; setting them side by side, and counting a dataset as holding, were added after the results were read.`,
+      : `One dot per dataset. A retrospective test on newly deposited studies from the same database, not external validation and not an untouched held-out set. The two groups are scored apart; setting them side by side, and counting a dataset as holding, were added after the results were read.`,
     note: opts.page ? (
       <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
         <p>

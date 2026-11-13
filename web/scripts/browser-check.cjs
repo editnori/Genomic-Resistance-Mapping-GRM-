@@ -1485,6 +1485,10 @@ async function present(page, tag, width, height) {
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
+    if ((title ?? '').startsWith('Newly deposited genomes')) {
+      const plots = await page.evaluate(outsidePlots);
+      check(tag + ' slide ' + (slide + 1) + ' outside plots: no two axis labels touching', plots.length >= 2 && plots.every(p => p.touching.length === 0), plots);
+    }
     { const w = ((await dialog.locator('main').textContent()) ?? '').replace(/\s+/g, ' ').match(/By the guidance's own wording, read after the results, it meets on ([\d,]+)\./); if (w !== null) wordingSeen.push(toCount(w[1])); }
     labels.push(await slideSelect.textContent());
     await shot(page, tag + '-slide-' + (slide + 1));
@@ -1678,6 +1682,21 @@ async function normalMotion(browser) {
  *  text box overlaps another, no figure is drawn over text, and nothing runs
  *  past the slide. The older slides that also crowd at this size are not
  *  checked here. */
+/** On a slide, the outside study's live plots (a measuring copy has no
+ *  keyboard layer): each plot's size, and any two of its axis labels that
+ *  touch. */
+const outsidePlots = () => [...document.querySelectorAll('dialog.presentation-dialog main [data-figure-fit] [data-outside-plot] svg.block')].filter(s => s.closest('[role="listbox"]') !== null).map(svg => {
+  const t = [...svg.querySelectorAll('text')].filter(x => x.textContent !== '').map(x => ({ s: x.textContent, b: x.getBoundingClientRect() }));
+  const touching = [];
+  for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) { const a = t[i].b, c = t[j].b; if (a.left < c.right && c.left < a.right && a.top < c.bottom && c.top < a.bottom) touching.push([t[i].s, t[j].s]); }
+  return { side: Math.round(svg.getBoundingClientRect().width), labels: t.map(x => x.s), touching };
+});
+// The plot size the outside slide reaches at 1280x560 (114 px when this was
+// set, with the hollow-dot sentence off the slide's caption and the
+// caption's two qualifiers moved to the legend), less a small margin for
+// font metrics.
+const OUTSIDE_SHORT_MIN = 106;
+
 async function shortSlides(browser) {
   const SHORT = [1280, 560];
   const TITLES = ['Newly deposited genomes', 'Input settings against the default'];
@@ -1718,6 +1737,10 @@ async function shortSlides(browser) {
       if (r.skip) continue;
       seen[r.title]++;
       check('1280x560 slide ' + (slide + 1) + ' (' + r.title + '): no text over text or figure, nothing past the slide', r.over.length === 0 && r.past.length === 0, { over: r.over.slice(0, 4), past: r.past.slice(0, 4) });
+      if (r.title === TITLES[0]) {
+        const plots = await page.evaluate(outsidePlots);
+        check('1280x560 slide ' + (slide + 1) + ' (' + r.title + '): every plot at least ' + OUTSIDE_SHORT_MIN + ' px, no two axis labels touching', plots.length >= 2 && plots.every(p => p.side >= OUTSIDE_SHORT_MIN && p.touching.length === 0), { min: OUTSIDE_SHORT_MIN, plots });
+      }
     }
     check('1280x560 both results slides reached', TITLES.every(t => seen[t] > 0), seen);
   } catch (error) { errors.push({ width: SHORT[0], height: SHORT[1], message: error.stack }); }
