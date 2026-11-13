@@ -10,12 +10,12 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { Corpus, Manifest } from "../data/schema";
-import { datasetTitle, int, pct, plural } from "../data/format";
+import { datasetTitle, int, limitPct, pct, plural } from "../data/format";
 import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import { loadErrorText, useCorpus } from "../data/load";
 import { EQUAL_SCORING_REVISION, manifestAudit, nullFitWords, panelWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
-import { ZERO_MISS_FLOOR } from "../data/derive/evidence";
+import { GUIDANCE_WORDING, ZERO_MISS_FLOOR, wordingSummary } from "../data/derive/evidence";
 import { notScored } from "../data/derive/tests";
 import { FOCUS_RING, PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitives";
 import { ViewHeader } from "../ui/ViewHeader";
@@ -275,6 +275,15 @@ const Models = ({ manifest }: { manifest: Manifest }) => (
 
 // ---- 3 how to read scores ----------------------------------------------------------------
 
+/** The best learner's count by the guidance's own acceptance wording, with
+ *  lineages held out; empty when no dataset has both rates on that test. */
+const wordingSentence = (manifest: Manifest): string => {
+  const w = wordingSummary(manifest.datasets, "best", "lineage");
+  return w.n === 0
+    ? ""
+    : ` Read by that wording, over the isolates each learner called, the best learner meets on ${int(w.meets)} of ${plural(w.n, "dataset")} with lineages held out. Overview gives the count for each learner. The reading was added after the results were read.`;
+};
+
 const Scores = ({ manifest }: { manifest: Manifest }) => (
   <MethodsSection id="m-scores" n={3} title="How to read scores">
     <P>
@@ -299,8 +308,9 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
         susceptible isolates called. They are read against VME at most 1.5% and ME at most 3%, limits taken from FDA&apos;s 2009 guidance for growth-based susceptibility test
         systems (Class II Special Controls Guidance Document: Antimicrobial Susceptibility Test (AST) Systems). {BARS_SCOPE} M. tuberculosis datasets test anti-mycobacterial
         drugs, which the guidance excludes by name, so for them the limits are a comparison only. The site&apos;s reading is not the guidance&apos;s own rule either. The guidance
-        counts VME over every resistant isolate tested and asks that the 95% interval of that rate have its lower end under 1.5% and its upper end under 7.5%; it counts ME over
-        every susceptible isolate tested, and it has no category for a test that gives no call. The site counts each rate over the isolates a learner called, and the Datasets
+        counts VME over every resistant isolate tested and asks that the 95% interval of that rate have its lower end under {limitPct(GUIDANCE_WORDING.vmeLower)} and its upper
+        end under {limitPct(GUIDANCE_WORDING.vmeUpper)}; it counts ME over every susceptible isolate tested and asks that rate be under {limitPct(GUIDANCE_WORDING.meRate)},
+        and it has no category for a test that gives no call.{wordingSentence(manifest)} The site counts each rate over the isolates a learner called, and the Datasets
         table and each dataset&apos;s page compare the rate as printed with its limit. Overview counts a dataset as shown to meet a bar when the exact 95% interval
         (Clopper-Pearson) of its rate lies at or under the bar, and as shown to miss it when the interval
         lies over the bar. A learner that misses no resistant genome needs at least {int(ZERO_MISS_FLOOR)} resistant genomes before its interval lies under the VME bar. The interval

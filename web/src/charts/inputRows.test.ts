@@ -51,3 +51,20 @@ describe("the input table's pages", () => {
       }
   });
 });
+
+describe("the input table's legend", () => {
+  // Unlaid, the table is 640 px wide, wide enough for every column.
+  const render = (slide: boolean) => {
+    const el = document.createElement("div");
+    el.innerHTML = renderToStaticMarkup(createElement(InputRows, { label: "rows", groups, slide }));
+    return { head: [...el.querySelectorAll("thead th")].map((th) => th.textContent), text: el.textContent ?? "" };
+  };
+
+  it("explains the datasets-compared and median columns where it shows them, on a slide in short", () => {
+    const slide = render(true);
+    expect(slide.head).toEqual(["Change", "Worse", "Worse and better, drawn", "Better", "Of", "Sign p", "Median"]);
+    expect(slide.text).toContain("Of: datasets compared. Median: the middle per-dataset change, above zero when better.");
+    const page = render(false);
+    expect(page.text).toContain("Of: datasets compared; on any not counted worse or better, the score was exactly the same.");
+  });
+});

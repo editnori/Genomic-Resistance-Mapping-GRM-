@@ -14,9 +14,9 @@ import { parseManifest } from "../data/validate";
 import type { CatalogRow, Manifest, SpeciesRow } from "../data/schema";
 import type { Navigator, Route } from "../app/router";
 import { catalogWords } from "../app/ReportStatus";
-import type { Fitted, LearnerRow, LearnerSummary } from "../data/derive/evidence";
+import { wordingSummary, type Fitted, type LearnerRow, type LearnerSummary } from "../data/derive/evidence";
 import type { SplitSummary } from "../data/derive/overview";
-import { barsLead, catalogLead, cohortLead, coverageNote, learnersLead, lineageLead, micLead, signP } from "./findings";
+import { barsLead, catalogLead, cohortLead, coverageNote, learnersLead, lineageLead, micLead, signP, wordingNote } from "./findings";
 import { armById } from "../data/derive/inputs";
 import { OverviewView } from "./OverviewView";
 import { MethodsView } from "./MethodsView";
@@ -350,8 +350,31 @@ describe("What GRM found", () => {
     const each = framed(bars, "Each learner against the bars");
     expect([...each.querySelectorAll('th[scope="rowgroup"]')].map((th) => th.textContent)).toEqual(["Lineages held out", "Random split"]);
     expect(each.querySelectorAll('tbody th[scope="row"]')).toHaveLength(12);
-    // The best learner's row with lineages held out repeats the four counts above it.
-    expect([...each.querySelectorAll("tbody tr")][1]?.textContent).toBe(`Best learner for each dataset${counts.join("")}`);
+    // The best learner's row with lineages held out repeats the four counts
+    // above it, then its count by the guidance's own wording.
+    const wording = wordingSummary(base.datasets, "best", "lineage");
+    expect([...each.querySelectorAll("thead th")].map((th) => th.textContent).at(-1)).toBe("Meets the guidance's wording");
+    expect([...each.querySelectorAll("tbody tr")][1]?.textContent).toBe(`Best learner for each dataset${counts.join("")}${wording.meets}`);
+    // The note gives that count on both splits, and when the reading was added.
+    const note = wordingNote(wording, wordingSummary(base.datasets, "best", "random"));
+    expect(note).not.toBeNull();
+    expect(bars.textContent).toContain(note!);
+  });
+
+  it("reads the best learner by the guidance's own acceptance wording, and says when that reading was added", () => {
+    expect(wordingNote({ n: 268, meets: 14, tuberculosis: 0 }, { n: 274, meets: 22, tuberculosis: 0 })).toBe(
+      "The guidance's own acceptance wording asks less than this screen: a VME interval with its upper end under 7.5% and its lower end under 1.5%, and an ME rate under 3%. Read that way, the best learner meets on 14 of 268 datasets with lineages held out and on 22 of 274 on random splits, and no M. tuberculosis dataset is among them. This reading was added after the results were read. The guidance does not cover tests that read resistance from a genome, so neither reading is a regulatory test.",
+    );
+    // Any M. tuberculosis dataset that meets is counted, with the drugs the guidance excludes.
+    expect(wordingNote({ n: 268, meets: 14, tuberculosis: 1 }, { n: 274, meets: 22, tuberculosis: 2 })).toBe(
+      "The guidance's own acceptance wording asks less than this screen: a VME interval with its upper end under 7.5% and its lower end under 1.5%, and an ME rate under 3%. Read that way, the best learner meets on 14 of 268 datasets with lineages held out and on 22 of 274 on random splits. Of those, 1 with lineages held out and 2 on random splits are M. tuberculosis datasets, and the guidance excludes anti-mycobacterial drugs. This reading was added after the results were read. The guidance does not cover tests that read resistance from a genome, so neither reading is a regulatory test.",
+    );
+    expect(wordingNote({ n: 1, meets: 1, tuberculosis: 1 }, { n: 0, meets: 0, tuberculosis: 0 })).toBe(
+      "The guidance's own acceptance wording asks less than this screen: a VME interval with its upper end under 7.5% and its lower end under 1.5%, and an ME rate under 3%. Read that way, the best learner meets on 1 of 1 dataset with lineages held out. Of those, 1 with lineages held out is an M. tuberculosis dataset, and the guidance excludes anti-mycobacterial drugs. This reading was added after the results were read. The guidance does not cover tests that read resistance from a genome, so neither reading is a regulatory test.",
+    );
+    expect(wordingNote({ n: 0, meets: 0, tuberculosis: 0 }, { n: 5, meets: 0, tuberculosis: 0 })).toContain("the best learner meets on 0 of 5 datasets on random splits. This reading");
+    // No dataset with both rates on either split: no paragraph.
+    expect(wordingNote({ n: 0, meets: 0, tuberculosis: 0 }, { n: 0, meets: 0, tuberculosis: 0 })).toBeNull();
   });
 
   it("groups the known-gene rules by their own score behind one control", async () => {

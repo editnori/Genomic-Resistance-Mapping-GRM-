@@ -7,7 +7,9 @@
 // group of their own under the changed inputs. On a slide too short for every
 // row, the rows page (the deck's paging, as for the panel figure), split as
 // evenly as they go (pageRows); under BARS_FROM, on a slide or on the page, a
-// row keeps its name, its two counts and the sign test.
+// row keeps its name, its two counts and the sign test. The legend explains
+// the datasets-compared and median columns only where the table shows them,
+// so a slide's caption need not.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { int } from "../data/format";
@@ -197,10 +199,11 @@ export const InputRows = ({
             </span>
           </>
         ) : null}
-        {full && !slide ? (
+        {full ? (
           <span className="text-muted-text">
-            Of: datasets compared; on any not counted worse or better, the score was exactly the same. Median: the middle value of the per-dataset change in log loss, above zero when the change
-            scored better.
+            {slide
+              ? "Of: datasets compared. Median: the middle per-dataset change, above zero when better."
+              : "Of: datasets compared; on any not counted worse or better, the score was exactly the same. Median: the middle value of the per-dataset change in log loss, above zero when the change scored better."}
           </span>
         ) : null}
       </div>

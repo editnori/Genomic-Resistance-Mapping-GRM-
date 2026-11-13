@@ -382,6 +382,73 @@ async function headerCheck(page, tag, title) {
   check(tag + ' plain status line with scope and report date', h.status.includes(CHIP) && h.status.includes('Report built') && !h.status.includes('BV-BRC lab records') && (bare ? h.scopeHref === null : isLimitsHref(h.scopeHref)), h);
 }
 
+// The guidance's own acceptance wording, read from the release summary
+// whose revision, generation time and dataset count match this tree:
+// reference/release-summary/<release>/guidance.json, written by
+// scripts/release-summary/guidance.py. A synthetic tree matches none, and
+// the checks that compare with it are skipped by name.
+const GUIDANCE = (() => {
+  const dir = path.join(__dirname, '../../reference/release-summary');
+  const names = fs.existsSync(dir) ? fs.readdirSync(dir).sort() : [];
+  for (const name of names) {
+    const file = path.join(dir, name, 'guidance.json');
+    if (!fs.existsSync(file)) continue;
+    const g = JSON.parse(fs.readFileSync(file));
+    if (g.revision === manifest.evaluation_revision && g.generated_at === manifest.generated_at && g.datasets === manifest.datasets.length) return { release: name, rows: g.rows };
+  }
+  return null;
+})();
+const GUIDANCE_MISSING = 'no reference/release-summary/*/guidance.json has this tree\'s revision ' + manifest.evaluation_revision + ', generation time ' + manifest.generated_at + ' and ' + manifest.datasets.length + ' datasets';
+/** One row of the release summary as the page counts it: datasets with both
+ *  rates, those that meet the wording, and the M. tuberculosis datasets
+ *  among those. */
+const guidanceRow = key => {
+  const r = GUIDANCE?.rows?.[key];
+  return r === undefined ? null : { n: r.n, meets: r.meets_wording, tuberculosis: r.meets_wording - r.without_tuberculosis.meets_wording };
+};
+const WORDING_WHO = { 'Best learner for each dataset': 'best', 'Set covering machine': 'scm', 'Decision tree (CART)': 'cart', 'Random forest': 'rf', 'Gradient boosted trees': 'gbt', 'L1 logistic regression': 'lasso' };
+const WORDING_SPLIT = { 'Lineages held out': 'lineage', 'Random split': 'random' };
+const toCount = s => (s === undefined || s === null ? null : Number(String(s).replace(/,/g, '')));
+
+/** Overview's bars section, its table open: the last column of "Each
+ *  learner against the bars" and its Datasets column, for each of the
+ *  twelve rows, and the counts in the note on the guidance's wording, all
+ *  equal to the release summary's rows["<who>:<split>"].meets_wording and
+ *  .n. */
+async function wordingCheck(page, tag) {
+  const tableName = tag + ' overview counts by the guidance\'s wording match the release summary, each learner and split';
+  const noteName = tag + ' overview note on the guidance\'s wording gives the release summary\'s counts';
+  if (GUIDANCE === null) { for (const name of [tableName, noteName]) skipped.push({ check: name, reason: GUIDANCE_MISSING }); return; }
+  const shown = await page.evaluate(() => {
+    const region = document.querySelector('#bars [role="region"][aria-label="Each learner against the bars"]');
+    const head = region === null ? [] : [...region.querySelectorAll('thead th')].map(t => t.textContent.trim());
+    const col = head.indexOf('Meets the guidance\'s wording');
+    const rows = [];
+    let group = null;
+    for (const tr of region === null ? [] : region.querySelectorAll('tbody tr')) {
+      const g = tr.querySelector('th[scope="rowgroup"]');
+      if (g !== null) { group = g.textContent.trim(); continue; }
+      const cells = [...tr.children].map(c => c.textContent.trim());
+      rows.push({ group, who: cells[0], n: cells[1], meets: col < 0 ? null : cells[col] });
+    }
+    const note = [...document.querySelectorAll('#bars p')].map(p => p.textContent.replace(/\s+/g, ' ').trim()).find(t => t.startsWith('The guidance\'s own acceptance wording')) ?? null;
+    return { head, col, rows, note };
+  });
+  const rows = shown.rows.map(r => {
+    const key = WORDING_WHO[r.who] + ':' + WORDING_SPLIT[r.group];
+    const want = guidanceRow(key);
+    return { key, n: toCount(r.n), meets: toCount(r.meets), want: want === null ? null : { n: want.n, meets: want.meets } };
+  });
+  check(tableName, shown.col > 0 && rows.length === 12 && new Set(rows.map(r => r.key)).size === 12 && rows.every(r => r.want !== null && r.n === r.want.n && r.meets === r.want.meets), { release: GUIDANCE.release, column: shown.col, rows });
+  const lineage = guidanceRow('best:lineage'), random = guidanceRow('best:random');
+  const t = shown.note ?? '';
+  const l = t.match(/meets on ([\d,]+) of ([\d,]+) datasets? with lineages held out/), r = t.match(/(?:meets|and) on ([\d,]+) of ([\d,]+)(?: datasets?)? on random splits/);
+  const tb = /no M\. tuberculosis dataset is among them/.test(t) ? [0, 0] : (m => (m === null ? null : [toCount(m[1]), toCount(m[2])]))(t.match(/Of those, ([\d,]+) with lineages held out and ([\d,]+) on random splits/));
+  const read = { lineage: l === null ? null : [toCount(l[1]), toCount(l[2])], random: r === null ? null : [toCount(r[1]), toCount(r[2])], tuberculosis: tb ?? (lineage.meets + random.meets === 0 ? [0, 0] : null) };
+  const want = { lineage: [lineage.meets, lineage.n], random: [random.meets, random.n], tuberculosis: [lineage.tuberculosis, random.tuberculosis] };
+  check(noteName, shown.note !== null && JSON.stringify(read) === JSON.stringify(want), { release: GUIDANCE.release, read, want, note: shown.note });
+}
+
 // The outside-study rows the app bundles (web/src/data/outside-study.json,
 // written by scripts/outside-study-results/site_data.py), read here by the
 // documents' rule: a row holds when neither reading is "below", and a row
@@ -750,13 +817,21 @@ async function stripFit(page, tag) {
     }, STATE_MS, { timeout: STATE_MS + 5000 }).catch(() => null);
     check(name, read !== null && read.cells > 1 && read.pressed === view && read.over <= 1 && read.marksOut === 0, { id, ...read });
   }
-  // Paint: every strip pushed 64 px right, as a strip still drawn for a wider
-  // cell would be, carries its marks past the cell's edge; the Random
-  // column's pixels must not change, because the cell clips them. The push
-  // is a margin, a layout change: a transform painted but, in about one read
-  // in six, left the marks' boxes where they were.
+  // Paint: every strip pushed so its right end sits 64 px past its cell's
+  // content box, as a strip still drawn for a wider cell would, carries its
+  // marks past the cell's edge; the Random column's pixels must not change,
+  // because the cell clips them. The push is a margin, a layout change: a
+  // transform painted but, in about one read in six, left the marks' boxes
+  // where they were. A fixed 64 px push was not enough: at 1440 px a strip
+  // ends about 46 px short of its cell's content box, so the push carried
+  // its last tick about 1 px past the edge, and a pixel's change in the
+  // column widths left every mark inside the cell. So the push adds each
+  // cell's slack, the fonts load before the first screenshot, and the count
+  // is polled each frame until every strip reads past its edge, up to
+  // STATE_MS.
   const name = tag + ' a learner strip pushed past its cell paints nothing over Random';
   await page.locator('#ds-learners table').scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {});
+  await settle(page);
   const box = await page.evaluate(() => {
     const cells = [...document.querySelectorAll('#ds-learners table tr > :nth-child(3)')].map(c => c.getBoundingClientRect());
     if (cells.length === 0) return null;
@@ -765,15 +840,20 @@ async function stripFit(page, tag) {
   });
   if (box === null) { check(name, false, 'no Random column'); return; }
   const before = await page.screenshot({ clip: box });
-  const moved = await page.evaluate(async () => {
+  const push = await page.evaluate(async STATE_MS => {
     const svgs = [...document.querySelectorAll('#ds-learners table tr > :nth-child(2) svg')];
-    for (const s of svgs) s.style.marginLeft = '64px';
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    return svgs.filter(s => { const cell = s.closest('th, td').getBoundingClientRect(); return [...s.querySelectorAll('line, circle')].some(m => m.getBoundingClientRect().right > cell.right + 1); }).length;
-  });
+    const contentRight = s => { const c = s.closest('th, td'), b = c.getBoundingClientRect(), st = getComputedStyle(c); return b.right - parseFloat(st.paddingRight) - parseFloat(st.borderRightWidth); };
+    const slack = svgs.map(s => Math.max(0, contentRight(s) - s.getBoundingClientRect().right));
+    svgs.forEach((s, i) => { s.style.marginLeft = (slack[i] + 64) + 'px'; });
+    const past = () => svgs.filter(s => { const cell = s.closest('th, td').getBoundingClientRect(); return [...s.querySelectorAll('line, circle')].some(m => m.getBoundingClientRect().right > cell.right + 1); }).length;
+    const t0 = performance.now();
+    let n = 0;
+    do { await new Promise(r => requestAnimationFrame(r)); n = past(); } while (n < svgs.length && performance.now() - t0 < STATE_MS);
+    return { moved: n, strips: svgs.length, maxSlack: Math.round(Math.max(0, ...slack) * 10) / 10, waited: Math.round(performance.now() - t0) };
+  }, STATE_MS);
   const after = await page.screenshot({ clip: box });
   await page.evaluate(() => { for (const s of document.querySelectorAll('#ds-learners table tr > :nth-child(2) svg')) s.style.marginLeft = ''; });
-  check(name, moved > 1 && before.equals(after), { id, stripsPastEdge: moved, randomUnchanged: before.equals(after) });
+  check(name, push.moved > 1 && before.equals(after), { id, stripsPastEdge: push.moved, strips: push.strips, maxSlack: push.maxSlack, waited: push.waited, randomUnchanged: before.equals(after) });
 }
 
 /** The widest default decision tree and the longest catalog class list the
@@ -1225,6 +1305,16 @@ async function interactions(page, tag, width) {
   await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
   await headerCheck(page, tag + ' methods', 'Data & Methods');
   await edgeCheck(page, tag + ' methods', '[data-view-scroll] h1');
+  {
+    const name = tag + ' methods count by the guidance\'s wording matches the release summary';
+    if (GUIDANCE === null) skipped.push({ check: name, reason: GUIDANCE_MISSING });
+    else {
+      const def = await page.evaluate(() => { const dt = [...document.querySelectorAll('#m-scores dt')].find(d => d.textContent.trim() === 'VME and ME'); return dt?.nextElementSibling?.textContent.replace(/\s+/g, ' ') ?? null; });
+      const m = (def ?? '').match(/Read by that wording, over the isolates each learner called, the best learner meets on ([\d,]+) of ([\d,]+) datasets? with lineages held out\./);
+      const want = guidanceRow('best:lineage');
+      check(name, m !== null && toCount(m[1]) === want.meets && toCount(m[2]) === want.n, { release: GUIDANCE.release, read: m === null ? null : [toCount(m[1]), toCount(m[2])], want: [want.meets, want.n] });
+    }
+  }
   await controlCheck(page, tag + ' methods');
   const tracks = await page.evaluate(() => [...document.querySelectorAll('#m-funnel td span.relative')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)').length);
   check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
@@ -1268,6 +1358,7 @@ async function interactions(page, tag, width) {
   const barTiles = await page.evaluate(() => [...document.querySelectorAll('#bars ol li')].map(li => ({ value: Number(li.firstElementChild.textContent.replace(/,/g, '')), unit: li.lastElementChild.textContent })));
   // A tree with no dataset to count draws no tiles.
   check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
+  await wordingCheck(page, tag);
   // The primer is a section of its own above the ten numbered ones, under
   // the same hairline.
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
@@ -1390,9 +1481,15 @@ async function present(page, tag, width, height) {
   const labels = [];
   const panelSeen = [];
   const inputsSeen = [];
+  const wordingSeen = [];
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
+    if ((title ?? '').startsWith('Newly deposited genomes')) {
+      const plots = await page.evaluate(outsidePlots);
+      check(tag + ' slide ' + (slide + 1) + ' outside plots: no two axis labels touching', plots.length >= 2 && plots.every(p => p.touching.length === 0), plots);
+    }
+    { const w = ((await dialog.locator('main').textContent()) ?? '').replace(/\s+/g, ' ').match(/By the guidance's own wording, read after the results, it meets on ([\d,]+)\./); if (w !== null) wordingSeen.push(toCount(w[1])); }
     labels.push(await slideSelect.textContent());
     await shot(page, tag + '-slide-' + (slide + 1));
     check(tag + ' slide ' + (slide + 1) + ' selected in the outline', await slideNumber(dialog) === slide + 1, await slideNumber(dialog));
@@ -1466,6 +1563,12 @@ async function present(page, tag, width, height) {
       const text = await page.evaluate(() => document.querySelector('dialog.presentation-dialog main section')?.textContent ?? '');
       inputsSeen.push(...shownRows);
       check(tag + ' slide ' + (slide + 1) + ' input rows and no internal name', shownRows.length > 0 && !INTERNAL.test(text), { shownRows, page: paged?.[0] ?? null, internal: text.match(INTERNAL)?.[0] ?? null });
+      // The slide explains the datasets-compared and median columns exactly
+      // where the table shows them; a narrow table hides both.
+      const head = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section thead th')].map(th => th.textContent.trim()));
+      // The legend's spans sit side by side, so its text runs on with no space.
+      const explained = { Of: /Of: datasets compared/.test(text), Median: /Median: the middle/.test(text) };
+      check(tag + ' slide ' + (slide + 1) + ' input slide explains only the columns its table shows', ['Of', 'Median'].every(c => explained[c] === head.includes(c)), { head, explained });
     }
     const beats = await dialog.locator('[data-beats] span').evaluateAll(es => es.map(e => getComputedStyle(e).backgroundColor));
     const frameLabel = await slideSelect.textContent();
@@ -1497,6 +1600,10 @@ async function present(page, tag, width, height) {
   check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
   check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
   check(tag + ' input pages together show every row once, in order', JSON.stringify(inputsSeen) === JSON.stringify(inputsExpected.map(e => e.id)), { seen: inputsSeen });
+  // The bars slide's caption gives the best learner's count by the
+  // guidance's own wording with lineages held out, once.
+  if (GUIDANCE === null) skipped.push({ check: tag + ' bars slide count by the guidance\'s wording matches the release summary', reason: GUIDANCE_MISSING });
+  else check(tag + ' bars slide count by the guidance\'s wording matches the release summary', wordingSeen.length === 1 && wordingSeen[0] === guidanceRow('best:lineage').meets, { release: GUIDANCE.release, seen: wordingSeen, want: guidanceRow('best:lineage').meets });
   const closeButton = dialog.getByRole('button', { name: 'Close', exact: true });
   await closeButton.focus(); await page.keyboard.press('Home');
   check(tag + ' Home reaches the title slide', await slideNumber(dialog) === 1, await slideNumber(dialog));
@@ -1581,6 +1688,21 @@ async function normalMotion(browser) {
  *  text box overlaps another, no figure is drawn over text, and nothing runs
  *  past the slide. The older slides that also crowd at this size are not
  *  checked here. */
+/** On a slide, the outside study's live plots (a measuring copy has no
+ *  keyboard layer): each plot's size, and any two of its axis labels that
+ *  touch. */
+const outsidePlots = () => [...document.querySelectorAll('dialog.presentation-dialog main [data-figure-fit] [data-outside-plot] svg.block')].filter(s => s.closest('[role="listbox"]') !== null).map(svg => {
+  const t = [...svg.querySelectorAll('text')].filter(x => x.textContent !== '').map(x => ({ s: x.textContent, b: x.getBoundingClientRect() }));
+  const touching = [];
+  for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) { const a = t[i].b, c = t[j].b; if (a.left < c.right && c.left < a.right && a.top < c.bottom && c.top < a.bottom) touching.push([t[i].s, t[j].s]); }
+  return { side: Math.round(svg.getBoundingClientRect().width), labels: t.map(x => x.s), touching };
+});
+// The plot size the outside slide reaches at 1280x560 (114 px when this was
+// set, with the hollow-dot sentence off the slide's caption and the
+// caption's two qualifiers moved to the legend), less a small margin for
+// font metrics.
+const OUTSIDE_SHORT_MIN = 106;
+
 async function shortSlides(browser) {
   const SHORT = [1280, 560];
   const TITLES = ['Newly deposited genomes', 'Input settings against the default'];
@@ -1621,6 +1743,10 @@ async function shortSlides(browser) {
       if (r.skip) continue;
       seen[r.title]++;
       check('1280x560 slide ' + (slide + 1) + ' (' + r.title + '): no text over text or figure, nothing past the slide', r.over.length === 0 && r.past.length === 0, { over: r.over.slice(0, 4), past: r.past.slice(0, 4) });
+      if (r.title === TITLES[0]) {
+        const plots = await page.evaluate(outsidePlots);
+        check('1280x560 slide ' + (slide + 1) + ' (' + r.title + '): every plot at least ' + OUTSIDE_SHORT_MIN + ' px, no two axis labels touching', plots.length >= 2 && plots.every(p => p.side >= OUTSIDE_SHORT_MIN && p.touching.length === 0), { min: OUTSIDE_SHORT_MIN, plots });
+      }
     }
     check('1280x560 both results slides reached', TITLES.every(t => seen[t] > 0), seen);
   } catch (error) { errors.push({ width: SHORT[0], height: SHORT[1], message: error.stack }); }

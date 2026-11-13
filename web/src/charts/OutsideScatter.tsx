@@ -40,6 +40,11 @@ const MIN_SIDE = 150;
 const MIN_FLOOR = 72;
 /** The legend's width when it stands beside one population's plots. */
 const LEGEND_ASIDE_W = 340;
+/** The smallest plot that labels its middle tick, 50. Under it the axis
+ *  labels only 0 and 100, so no two labels touch: at 100 px the x axis is
+ *  54 px long, and in the 12 px tick font 50 sits 10 px clear of 100 and
+ *  16 px clear of 0; at 80 px, 50 and 100 would touch. */
+const MIDDLE_LABEL_FROM = 100;
 
 const readingWords = (p: OutsidePoint): string =>
   p.reading === "below"
@@ -82,6 +87,8 @@ const Plot = ({
   const x = linear([0, 1], [PAD.l, PAD.l + plotW]);
   const y = linear([0, 1], [PAD.t + plotH, PAD.t]);
   const values = ticks(0, 1, side < 220 ? 2 : 4);
+  // Every tick keeps its gridline; a small plot labels only the two ends.
+  const label = (v: number) => (side >= MIDDLE_LABEL_FROM || v === 0 || v === 1 ? `${Math.round(v * 100)}` : "");
   const above = points.filter((p) => p.reading === "above").length;
   const below = points.filter((p) => p.reading === "below").length;
   const marks: ListMark[] = points
@@ -119,8 +126,8 @@ const Plot = ({
       <p data-outside-counts className="text-control text-muted-text">{`${int(above)} read above, ${int(below)} read below`}</p>
       {keyed(
         <svg aria-hidden="true" width={side} height={side} className="block overflow-visible">
-          <AxisY y={y} x0={PAD.l} x1={PAD.l + plotW} values={values} format={(v) => `${Math.round(v * 100)}`} />
-          <AxisX x={x} y={PAD.t + plotH} height={0} values={values} format={(v) => `${Math.round(v * 100)}`} />
+          <AxisY y={y} x0={PAD.l} x1={PAD.l + plotW} values={values} format={label} />
+          <AxisX x={x} y={PAD.t + plotH} height={0} values={values} format={label} />
           <line x1={x(0)} y1={y(0)} x2={x(1)} y2={y(1)} stroke="var(--chart-ref)" strokeDasharray="4 3" />
           {marks.map((m) => {
             const p = byKey.get(m.key)!;
@@ -139,6 +146,7 @@ const Plot = ({
 
 export const OutsideScatter = ({
   panels,
+  level,
   height,
   titleOf,
   onOpen,
@@ -148,6 +156,8 @@ export const OutsideScatter = ({
   onPages,
 }: {
   panels: readonly OutsidePanel[];
+  /** The interval's level in words, "95%". */
+  level: string;
   height?: number;
   titleOf(id: string): string;
   onOpen?(id: string): void;
@@ -229,7 +239,8 @@ export const OutsideScatter = ({
           Reads below: the whole interval is under the line
         </span>
         <span>Reads above: the whole interval is over the line</span>
-        <span className="text-muted-text">Across: the report&apos;s figure. Up: the new figure. Both in %.</span>
+        {/* The legend carries both qualifiers, so a slide's caption need not repeat them. */}
+        <span className="text-muted-text">{`Across: the report's figure with lineages held out. Up: the new figure, with its ${level} interval as a bar. Both in %.`}</span>
       </div>
     </div>
   );

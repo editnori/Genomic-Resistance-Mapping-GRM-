@@ -16,9 +16,9 @@ const panel = (p: Population): OutsidePanel => ({
   points: { sensitivity: outsidePoints(p, "sensitivity"), specificity: outsidePoints(p, "specificity") },
 });
 
-const render = (panels: OutsidePanel[], page?: number, pages?: number) => {
+const render = (panels: OutsidePanel[], page?: number, pages?: number, height?: number) => {
   const el = document.createElement("div");
-  el.innerHTML = renderToStaticMarkup(createElement(OutsideScatter, { panels, titleOf: (id: string) => id, page, pages }));
+  el.innerHTML = renderToStaticMarkup(createElement(OutsideScatter, { panels, level: "95%", titleOf: (id: string) => id, page, pages, height }));
   return el;
 };
 
@@ -49,6 +49,23 @@ describe("the outside-study chart's counts lines", () => {
         expect(marks.sort()).toEqual(outsidePoints(p, m).map((x) => x.reading).sort());
       }
     });
+  });
+
+  it("labels only 0 and 100 on a plot too small for a third label, and keeps every gridline", () => {
+    // One population on a page, unlaid: the plot takes the height less the
+    // legend's 48 px and the head's 66 px, so 194 px draws an 80 px plot and
+    // 250 px a 136 px one, either side of the 100 px that labels 50.
+    const plot = (height: number) => render(populations.map(panel), 0, 2, height).querySelector("[data-outside-plot] svg")!;
+    const small = plot(194), large = plot(250);
+    expect(small.getAttribute("width")).toBe("80");
+    expect([...small.querySelectorAll("text")].map((t) => t.textContent)).toEqual(["0", "", "100", "0", "", "100"]);
+    expect(small.querySelectorAll("line[stroke='var(--chart-grid)']")).toHaveLength(6);
+    expect(large.getAttribute("width")).toBe("136");
+    expect([...large.querySelectorAll("text")].map((t) => t.textContent)).toEqual(["0", "50", "100", "0", "50", "100"]);
+  });
+
+  it("says in its legend what each axis reads, with lineages held out and the interval's level", () => {
+    expect(render(populations.map(panel)).textContent).toContain("Across: the report's figure with lineages held out. Up: the new figure, with its 95% interval as a bar. Both in %.");
   });
 
   it("shows each population once across two pages", () => {
