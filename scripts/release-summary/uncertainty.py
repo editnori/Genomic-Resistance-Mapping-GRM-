@@ -148,8 +148,13 @@ for _ in range(reps):
 
 
 def ci(v):
+    """The central 95% of the bootstrap values: the order statistics k and len - 1 - k, k = round(0.025 (len - 1)),
+    so the same number of values lies outside each end. With 4000 values these are the 101st and the 3900th."""
+    if not v:
+        return None
     v = sorted(v)
-    return [round(v[int(0.025 * (len(v) - 1))], 4), round(v[int(round(0.975 * (len(v) - 1)))], 4)] if v else None
+    k = round(0.025 * (len(v) - 1))
+    return [round(v[k], 4), round(v[len(v) - 1 - k], 4)]
 
 
 res = {}
