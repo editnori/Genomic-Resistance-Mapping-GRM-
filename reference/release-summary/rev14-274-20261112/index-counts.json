@@ -1,0 +1,19 @@
+{
+ "revision": 14,
+ "rule": "flagged rows scored on every genome",
+ "datasets": 274,
+ "files": 274,
+ "rows": 3212,
+ "learner_rows": 2710,
+ "rule_rows": 502,
+ "flagged_rows": 122,
+ "flagged_with_no_call": 122,
+ "unflagged_with_no_call": 0,
+ "rates_compared": 6424,
+ "rates_null_in_file": 0,
+ "mismatches": 0,
+ "examples": [],
+ "flag_keys_seen": {
+  "split:true": 122
+ }
+}

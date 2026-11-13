@@ -169,6 +169,9 @@ jobs:
           # Reads the committed results under reference/outside-study; it scores nothing.
           - suite: tests/outside_study_results
             top: .
+          # A synthetic release built in the test, and the committed outputs under reference/release-summary.
+          - suite: tests/release_summary
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}

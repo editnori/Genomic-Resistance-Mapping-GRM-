@@ -1,0 +1,436 @@
+{
+ "revision": 12,
+ "generated_at": "2026-11-05T23:40:25Z",
+ "datasets": 274,
+ "species": 23,
+ "genome_rows": 217514,
+ "per_learner": {
+  "scm": {
+   "n_both": 268,
+   "median_random": 0.9156,
+   "median_lineage": 0.8708,
+   "median_gap": 0.0242,
+   "share_gap_over_5pt": 0.377
+  },
+  "cart": {
+   "n_both": 268,
+   "median_random": 0.9082,
+   "median_lineage": 0.8684,
+   "median_gap": 0.0293,
+   "share_gap_over_5pt": 0.392
+  },
+  "rf": {
+   "n_both": 268,
+   "median_random": 0.8955,
+   "median_lineage": 0.8124,
+   "median_gap": 0.0504,
+   "share_gap_over_5pt": 0.5
+  },
+  "gbt": {
+   "n_both": 268,
+   "median_random": 0.9119,
+   "median_lineage": 0.8459,
+   "median_gap": 0.0463,
+   "share_gap_over_5pt": 0.481
+  },
+  "lasso": {
+   "n_both": 268,
+   "median_random": 0.9153,
+   "median_lineage": 0.8567,
+   "median_gap": 0.0376,
+   "share_gap_over_5pt": 0.429
+  }
+ },
+ "best": {
+  "median_random": [
+   0.9293,
+   274
+  ],
+  "median_lineage": [
+   0.879,
+   268
+  ],
+  "n_both": 268,
+  "median_gap": 0.0371,
+  "drop_over_5pt": 112,
+  "drop_over_10pt": 55,
+  "lineage_at_least_random": 41
+ },
+ "best_learner_counts": {
+  "scm": 60,
+  "cart": 52,
+  "rf": 40,
+  "gbt": 58,
+  "lasso": 64
+ },
+ "catalog_vs_best": {
+  "random": {
+   "n": 253,
+   "learner_ahead": 197,
+   "catalog_ahead": 52,
+   "catalog_within_2pt_or_ahead": 74,
+   "learner_ahead_over_2pt": 179,
+   "median_diff": 0.207
+  },
+  "lineage": {
+   "n": 249,
+   "learner_ahead": 152,
+   "catalog_ahead": 94,
+   "catalog_within_2pt_or_ahead": 104,
+   "learner_ahead_over_2pt": 145,
+   "median_diff": 0.085
+  }
+ },
+ "catalog": {
+  "with_rule": 253,
+  "median_ba": 0.6333
+ },
+ "error_bars_best_learner": {
+  "random": {
+   "n": 274,
+   "vme_le_1.5": 19,
+   "me_le_3": 95,
+   "both": 13,
+   "median_vme": 0.0795,
+   "median_me": 0.0494
+  },
+  "lineage": {
+   "n": 268,
+   "vme_le_1.5": 11,
+   "me_le_3": 77,
+   "both": 6,
+   "median_vme": 0.1374,
+   "median_me": 0.0653
+  }
+ },
+ "per_species": [
+  {
+   "species": "Klebsiella aerogenes",
+   "datasets": 3,
+   "with_lineage": 3,
+   "median_random": 0.7308,
+   "median_lineage": 0.5027,
+   "median_gap": 0.2308
+  },
+  {
+   "species": "Neisseria gonorrhoeae",
+   "datasets": 7,
+   "with_lineage": 7,
+   "median_random": 0.9404,
+   "median_lineage": 0.8465,
+   "median_gap": 0.1022
+  },
+  {
+   "species": "Klebsiella oxytoca",
+   "datasets": 4,
+   "with_lineage": 4,
+   "median_random": 0.8958,
+   "median_lineage": 0.8171,
+   "median_gap": 0.0905
+  },
+  {
+   "species": "Acinetobacter baumannii",
+   "datasets": 18,
+   "with_lineage": 18,
+   "median_random": 0.9321,
+   "median_lineage": 0.819,
+   "median_gap": 0.0858
+  },
+  {
+   "species": "Pseudomonas aeruginosa",
+   "datasets": 13,
+   "with_lineage": 13,
+   "median_random": 0.7957,
+   "median_lineage": 0.7078,
+   "median_gap": 0.0695
+  },
+  {
+   "species": "Salmonella enterica",
+   "datasets": 25,
+   "with_lineage": 24,
+   "median_random": 0.9356,
+   "median_lineage": 0.8674,
+   "median_gap": 0.0599
+  },
+  {
+   "species": "Enterococcus faecium",
+   "datasets": 14,
+   "with_lineage": 13,
+   "median_random": 0.9623,
+   "median_lineage": 0.8932,
+   "median_gap": 0.0589
+  },
+  {
+   "species": "Enterobacter cloacae",
+   "datasets": 9,
+   "with_lineage": 9,
+   "median_random": 0.8565,
+   "median_lineage": 0.7083,
+   "median_gap": 0.0565
+  },
+  {
+   "species": "Klebsiella pneumoniae",
+   "datasets": 38,
+   "with_lineage": 38,
+   "median_random": 0.909,
+   "median_lineage": 0.8395,
+   "median_gap": 0.0549
+  },
+  {
+   "species": "Vibrio cholerae",
+   "datasets": 3,
+   "with_lineage": 3,
+   "median_random": 0.9875,
+   "median_lineage": 0.9371,
+   "median_gap": 0.051
+  },
+  {
+   "species": "Staphylococcus haemolyticus",
+   "datasets": 3,
+   "with_lineage": 3,
+   "median_random": 0.8056,
+   "median_lineage": 0.7362,
+   "median_gap": 0.042
+  },
+  {
+   "species": "Shigella flexneri",
+   "datasets": 4,
+   "with_lineage": 4,
+   "median_random": 0.9621,
+   "median_lineage": 0.9122,
+   "median_gap": 0.0399
+  },
+  {
+   "species": "Streptococcus agalactiae",
+   "datasets": 3,
+   "with_lineage": 3,
+   "median_random": 0.9572,
+   "median_lineage": 0.9249,
+   "median_gap": 0.0323
+  },
+  {
+   "species": "Escherichia coli",
+   "datasets": 36,
+   "with_lineage": 36,
+   "median_random": 0.9284,
+   "median_lineage": 0.8745,
+   "median_gap": 0.0303
+  },
+  {
+   "species": "Staphylococcus aureus",
+   "datasets": 18,
+   "with_lineage": 14,
+   "median_random": 0.9373,
+   "median_lineage": 0.8937,
+   "median_gap": 0.0303
+  },
+  {
+   "species": "Streptococcus pneumoniae",
+   "datasets": 12,
+   "with_lineage": 12,
+   "median_random": 0.9617,
+   "median_lineage": 0.9375,
+   "median_gap": 0.0276
+  },
+  {
+   "species": "Mycobacterium tuberculosis",
+   "datasets": 22,
+   "with_lineage": 22,
+   "median_random": 0.7946,
+   "median_lineage": 0.7809,
+   "median_gap": 0.0165
+  },
+  {
+   "species": "Shigella sonnei",
+   "datasets": 20,
+   "with_lineage": 20,
+   "median_random": 0.9666,
+   "median_lineage": 0.9609,
+   "median_gap": 0.012
+  },
+  {
+   "species": "Clostridioides difficile",
+   "datasets": 4,
+   "with_lineage": 4,
+   "median_random": 0.9342,
+   "median_lineage": 0.9282,
+   "median_gap": 0.006
+  },
+  {
+   "species": "Campylobacter coli",
+   "datasets": 8,
+   "with_lineage": 8,
+   "median_random": 0.9833,
+   "median_lineage": 0.9841,
+   "median_gap": 0.0
+  },
+  {
+   "species": "Campylobacter jejuni",
+   "datasets": 4,
+   "with_lineage": 4,
+   "median_random": 0.9839,
+   "median_lineage": 0.9783,
+   "median_gap": 0.0
+  },
+  {
+   "species": "Corynebacterium diphtheriae",
+   "datasets": 3,
+   "with_lineage": 3,
+   "median_random": 0.9029,
+   "median_lineage": 0.9245,
+   "median_gap": 0.0
+  },
+  {
+   "species": "Klebsiella quasipneumoniae",
+   "datasets": 3,
+   "with_lineage": 3,
+   "median_random": 0.9597,
+   "median_lineage": 0.9597,
+   "median_gap": 0.0
+  }
+ ],
+ "per_drug_class_min5": [
+  {
+   "class": "cephalosporin (4th gen)",
+   "datasets": 7,
+   "median_random": 0.8736,
+   "median_lineage": 0.7921,
+   "median_gap": 0.079
+  },
+  {
+   "class": "phenicol",
+   "datasets": 6,
+   "median_random": 0.9214,
+   "median_lineage": 0.8399,
+   "median_gap": 0.0743
+  },
+  {
+   "class": "sulfonamide",
+   "datasets": 5,
+   "median_random": 0.9619,
+   "median_lineage": 0.902,
+   "median_gap": 0.0599
+  },
+  {
+   "class": "cephalosporin (3rd gen)",
+   "datasets": 30,
+   "median_random": 0.9341,
+   "median_lineage": 0.878,
+   "median_gap": 0.0572
+  },
+  {
+   "class": "cephalosporin + inhibitor",
+   "datasets": 5,
+   "median_random": 0.8082,
+   "median_lineage": 0.701,
+   "median_gap": 0.0566
+  },
+  {
+   "class": "aminoglycoside",
+   "datasets": 33,
+   "median_random": 0.9255,
+   "median_lineage": 0.8692,
+   "median_gap": 0.0565
+  },
+  {
+   "class": "carbapenem",
+   "datasets": 20,
+   "median_random": 0.866,
+   "median_lineage": 0.7886,
+   "median_gap": 0.054
+  },
+  {
+   "class": "trimethoprim",
+   "datasets": 8,
+   "median_random": 0.94,
+   "median_lineage": 0.9041,
+   "median_gap": 0.0425
+  },
+  {
+   "class": "tetracycline",
+   "datasets": 19,
+   "median_random": 0.9495,
+   "median_lineage": 0.9034,
+   "median_gap": 0.0422
+  },
+  {
+   "class": "penicillin + inhibitor",
+   "datasets": 11,
+   "median_random": 0.8905,
+   "median_lineage": 0.7497,
+   "median_gap": 0.0418
+  },
+  {
+   "class": "cephalosporin (1st-2nd gen)",
+   "datasets": 14,
+   "median_random": 0.9327,
+   "median_lineage": 0.8786,
+   "median_gap": 0.0362
+  },
+  {
+   "class": "folate pathway combination",
+   "datasets": 10,
+   "median_random": 0.9186,
+   "median_lineage": 0.8936,
+   "median_gap": 0.0241
+  },
+  {
+   "class": "lincosamide",
+   "datasets": 6,
+   "median_random": 0.928,
+   "median_lineage": 0.8875,
+   "median_gap": 0.0169
+  },
+  {
+   "class": "quinolone",
+   "datasets": 36,
+   "median_random": 0.9543,
+   "median_lineage": 0.9287,
+   "median_gap": 0.0152
+  },
+  {
+   "class": "penicillin",
+   "datasets": 12,
+   "median_random": 0.9579,
+   "median_lineage": 0.9412,
+   "median_gap": 0.012
+  },
+  {
+   "class": "macrolide",
+   "datasets": 16,
+   "median_random": 0.9512,
+   "median_lineage": 0.9193,
+   "median_gap": 0.0069
+  }
+ ],
+ "lineage_by_size": {
+  "cuts": [
+   358,
+   1104
+  ],
+  "large": [
+   0.8891,
+   91
+  ],
+  "mid": [
+   0.8906,
+   91
+  ],
+  "small": [
+   0.8257,
+   86
+  ]
+ },
+ "mic": {
+  "with_model": 134,
+  "median_ea": 0.8482
+ },
+ "no_lineage": [
+  "enterococcus_faecium__chloramphenicol",
+  "salmonella_enterica__temocillin",
+  "staphylococcus_aureus__ceftaroline",
+  "staphylococcus_aureus__levofloxacin",
+  "staphylococcus_aureus__moxifloxacin",
+  "staphylococcus_aureus__vancomycin"
+ ]
+}

@@ -1,0 +1,346 @@
+{
+ "datasets": 274,
+ "rule": {
+  "with_an_entry": 253,
+  "calls_nothing_resistant": 29,
+  "calls_everything_resistant": 30,
+  "balanced_accuracy_exactly_half": 59
+ },
+ "bands": {
+  "under 0.55": {
+   "datasets": 104,
+   "learner_ahead_random": 104,
+   "with_a_lineage_score": 101,
+   "learner_ahead_lineage": 95,
+   "rule_ahead_or_within_2pt_lineage": 6,
+   "median_lineage_difference": 0.3465,
+   "median_random_difference": 0.4266
+  },
+  "0.55 to 0.70": {
+   "datasets": 36,
+   "learner_ahead_random": 36,
+   "with_a_lineage_score": 36,
+   "learner_ahead_lineage": 28,
+   "rule_ahead_or_within_2pt_lineage": 8,
+   "median_lineage_difference": 0.2339,
+   "median_random_difference": 0.3
+  },
+  "0.70 to 0.85": {
+   "datasets": 32,
+   "learner_ahead_random": 23,
+   "with_a_lineage_score": 32,
+   "learner_ahead_lineage": 13,
+   "rule_ahead_or_within_2pt_lineage": 20,
+   "median_lineage_difference": -0.0471,
+   "median_random_difference": 0.0949
+  },
+  "0.85 and up": {
+   "datasets": 81,
+   "learner_ahead_random": 35,
+   "with_a_lineage_score": 80,
+   "learner_ahead_lineage": 11,
+   "rule_ahead_or_within_2pt_lineage": 74,
+   "median_lineage_difference": -0.0244,
+   "median_random_difference": -0.0006
+  },
+  "0.55 and up": {
+   "datasets": 149,
+   "learner_ahead_random": 94,
+   "with_a_lineage_score": 148,
+   "learner_ahead_lineage": 52,
+   "rule_ahead_or_within_2pt_lineage": 102,
+   "median_lineage_difference": -0.0113,
+   "median_random_difference": 0.0254
+  },
+  "all": {
+   "datasets": 253,
+   "learner_ahead_random": 198,
+   "with_a_lineage_score": 249,
+   "learner_ahead_lineage": 147,
+   "rule_ahead_or_within_2pt_lineage": 108,
+   "median_lineage_difference": 0.0694,
+   "median_random_difference": 0.2204
+  }
+ },
+ "at_chance_by": {
+  "failure": {
+   "calls_all_resistant": 51,
+   "misses_resistance": 52,
+   "neither": 1
+  },
+  "species": [
+   {
+    "name": "Klebsiella pneumoniae",
+    "under_0.55": 13,
+    "of": 37,
+    "calls_all_resistant": 9,
+    "misses_resistance": 3,
+    "neither": 1
+   },
+   {
+    "name": "Acinetobacter baumannii",
+    "under_0.55": 12,
+    "of": 18,
+    "calls_all_resistant": 8,
+    "misses_resistance": 4
+   },
+   {
+    "name": "Shigella sonnei",
+    "under_0.55": 11,
+    "of": 18,
+    "misses_resistance": 5,
+    "calls_all_resistant": 6
+   },
+   {
+    "name": "Escherichia coli",
+    "under_0.55": 10,
+    "of": 36,
+    "calls_all_resistant": 9,
+    "misses_resistance": 1
+   },
+   {
+    "name": "Mycobacterium tuberculosis",
+    "under_0.55": 9,
+    "of": 9,
+    "misses_resistance": 4,
+    "calls_all_resistant": 5
+   },
+   {
+    "name": "Enterococcus faecium",
+    "under_0.55": 7,
+    "of": 14,
+    "misses_resistance": 3,
+    "calls_all_resistant": 4
+   },
+   {
+    "name": "Staphylococcus aureus",
+    "under_0.55": 7,
+    "of": 16,
+    "misses_resistance": 6,
+    "calls_all_resistant": 1
+   },
+   {
+    "name": "Streptococcus pneumoniae",
+    "under_0.55": 7,
+    "of": 12,
+    "misses_resistance": 7
+   },
+   {
+    "name": "Pseudomonas aeruginosa",
+    "under_0.55": 6,
+    "of": 13,
+    "calls_all_resistant": 4,
+    "misses_resistance": 2
+   },
+   {
+    "name": "Campylobacter coli",
+    "under_0.55": 5,
+    "of": 7,
+    "misses_resistance": 5
+   },
+   {
+    "name": "Neisseria gonorrhoeae",
+    "under_0.55": 5,
+    "of": 7,
+    "misses_resistance": 5
+   },
+   {
+    "name": "Klebsiella oxytoca",
+    "under_0.55": 3,
+    "of": 4,
+    "calls_all_resistant": 3
+   },
+   {
+    "name": "Salmonella enterica",
+    "under_0.55": 3,
+    "of": 23,
+    "misses_resistance": 3
+   },
+   {
+    "name": "Campylobacter jejuni",
+    "under_0.55": 1,
+    "of": 4,
+    "misses_resistance": 1
+   },
+   {
+    "name": "Clostridioides difficile",
+    "under_0.55": 1,
+    "of": 4,
+    "misses_resistance": 1
+   },
+   {
+    "name": "Enterobacter cloacae",
+    "under_0.55": 1,
+    "of": 9,
+    "calls_all_resistant": 1
+   },
+   {
+    "name": "Shigella flexneri",
+    "under_0.55": 1,
+    "of": 4,
+    "calls_all_resistant": 1
+   },
+   {
+    "name": "Staphylococcus haemolyticus",
+    "under_0.55": 1,
+    "of": 3,
+    "misses_resistance": 1
+   },
+   {
+    "name": "Vibrio cholerae",
+    "under_0.55": 1,
+    "of": 3,
+    "misses_resistance": 1
+   }
+  ],
+  "drug_class": [
+   {
+    "name": "quinolone",
+    "under_0.55": 24,
+    "of": 35,
+    "misses_resistance": 16,
+    "calls_all_resistant": 8
+   },
+   {
+    "name": "cephalosporin (3rd gen)",
+    "under_0.55": 16,
+    "of": 29,
+    "calls_all_resistant": 12,
+    "misses_resistance": 4
+   },
+   {
+    "name": "aminoglycoside",
+    "under_0.55": 8,
+    "of": 32,
+    "calls_all_resistant": 2,
+    "misses_resistance": 6
+   },
+   {
+    "name": "cephalosporin (1st-2nd gen)",
+    "under_0.55": 7,
+    "of": 14,
+    "calls_all_resistant": 5,
+    "misses_resistance": 2
+   },
+   {
+    "name": "penicillin",
+    "under_0.55": 6,
+    "of": 10,
+    "misses_resistance": 2,
+    "calls_all_resistant": 4
+   },
+   {
+    "name": "carbapenem",
+    "under_0.55": 5,
+    "of": 20,
+    "calls_all_resistant": 3,
+    "misses_resistance": 2
+   },
+   {
+    "name": "macrolide",
+    "under_0.55": 5,
+    "of": 15,
+    "misses_resistance": 4,
+    "calls_all_resistant": 1
+   },
+   {
+    "name": "penicillin + inhibitor",
+    "under_0.55": 5,
+    "of": 11,
+    "calls_all_resistant": 4,
+    "misses_resistance": 1
+   },
+   {
+    "name": "cephalosporin (4th gen)",
+    "under_0.55": 4,
+    "of": 6,
+    "calls_all_resistant": 3,
+    "misses_resistance": 1
+   },
+   {
+    "name": "cephalosporin + inhibitor",
+    "under_0.55": 3,
+    "of": 5,
+    "calls_all_resistant": 3
+   },
+   {
+    "name": "folate pathway combination",
+    "under_0.55": 3,
+    "of": 10,
+    "misses_resistance": 3
+   },
+   {
+    "name": "glycopeptide",
+    "under_0.55": 2,
+    "of": 3,
+    "misses_resistance": 2
+   },
+   {
+    "name": "lincosamide",
+    "under_0.55": 2,
+    "of": 6,
+    "misses_resistance": 2
+   },
+   {
+    "name": "lipopeptide",
+    "under_0.55": 2,
+    "of": 2,
+    "misses_resistance": 2
+   },
+   {
+    "name": "monobactam",
+    "under_0.55": 2,
+    "of": 3,
+    "calls_all_resistant": 2
+   },
+   {
+    "name": "nitrofuran",
+    "under_0.55": 2,
+    "of": 2,
+    "misses_resistance": 2
+   },
+   {
+    "name": "polymyxin",
+    "under_0.55": 2,
+    "of": 4,
+    "misses_resistance": 2
+   },
+   {
+    "name": "fosfomycin",
+    "under_0.55": 1,
+    "of": 1,
+    "calls_all_resistant": 1
+   },
+   {
+    "name": "glycylcycline",
+    "under_0.55": 1,
+    "of": 1,
+    "neither": 1
+   },
+   {
+    "name": "oxazolidinone",
+    "under_0.55": 1,
+    "of": 2,
+    "misses_resistance": 1
+   },
+   {
+    "name": "phenicol",
+    "under_0.55": 1,
+    "of": 6,
+    "calls_all_resistant": 1
+   },
+   {
+    "name": "streptogramin",
+    "under_0.55": 1,
+    "of": 1,
+    "calls_all_resistant": 1
+   },
+   {
+    "name": "tetracycline",
+    "under_0.55": 1,
+    "of": 19,
+    "calls_all_resistant": 1
+   }
+  ]
+ }
+}
