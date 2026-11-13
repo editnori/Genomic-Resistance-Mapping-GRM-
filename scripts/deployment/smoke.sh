@@ -107,12 +107,17 @@ PY
 import json, os, sys
 index = json.load(open(sys.argv[1]))
 root, revision = sys.argv[2], int(sys.argv[3])
+def audit_only(report):
+    # As in check_report_index: a served report is dropped once it is read.
+    return {"evaluation": report.get("evaluation")} if isinstance(report, dict) else None
+
+
 stale = {}
 audits = [("with index", d["id"], d) for d in index["datasets"]]
 for d in index["datasets"]:
     try:
         with open(os.path.join(root, d["id"] + ".json")) as f:
-            audits.append(("whose served report has", d["id"], json.load(f)))
+            audits.append(("whose served report has", d["id"], audit_only(json.load(f))))
     except (OSError, ValueError):
         stale.setdefault("datasets whose served report is not readable JSON", []).append(d["id"])
 for where, name, record in audits:
