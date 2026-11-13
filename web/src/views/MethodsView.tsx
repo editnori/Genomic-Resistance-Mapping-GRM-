@@ -481,6 +481,14 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
         </P>
         <DocNote href={`${routeHref({ view: "overview", species: null, dataset: null })}#outside`} section="Newly deposited genomes" plan="docs/outside-study-test.md" results="docs/outside-study-results.md" />
       </Part>
+      <Part id="m-inputs" title="Input settings against the default">
+        <P>
+          A separate comparison changed one of the pipeline&apos;s inputs at a time (how many genomes, which genomes, k-mer length, added feature sources and how many features are
+          screened) and scored each change against the default on four species, by log loss with whole lineages held out. It counts the datasets where each change scored better and
+          worse. It does not show that the default is the best setting.
+        </P>
+        <DocNote href={`${routeHref({ view: "overview", species: null, dataset: null })}#inputs`} section="Input settings against the default" plan="docs/input-comparison-runner.md" />
+      </Part>
       <Part title="Learner cross-check">
         <P>
           GRM runs its own code for each learner. In October 2026 a check compared each learner with a standard version of the same method on 16 small test cases, under revision 7 of

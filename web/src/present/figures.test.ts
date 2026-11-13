@@ -187,9 +187,11 @@ const layout = ({ height, tall = false }: { height: number; tall?: boolean }) =>
 };
 
 describe("continuation slides", () => {
-  // At 300px the outside-study figure cannot draw both populations at its
-  // smallest plot, so it also takes two slides: one more slide in the deck.
-  const SPLIT = DECK + 2;
+  // At 300px the panel figure takes two slides, and so does the outside-study
+  // figure, which cannot draw both populations at its smallest plot. The
+  // input comparison measures its rows, 40px each here, so its 13 rows go 2
+  // to a page in the 116px left: seven slides. Eight more slides in the deck.
+  const SPLIT = DECK + 1 + 1 + 6;
   let restore: (() => void) | null = null;
   afterEach(() => {
     restore?.();
@@ -238,6 +240,7 @@ describe("continuation slides", () => {
     expect(labels).toContain(`${panelAt + 2} · Simulated PCR panel (2 of 2)`);
     expect(labels).toHaveLength(SPLIT);
     expect(labels.filter((t) => t.includes("Newly deposited genomes"))).toEqual([expect.stringContaining("(1 of 2)"), expect.stringContaining("(2 of 2)")]);
+    expect(labels.filter((t) => t.includes("Input settings against the default"))).toEqual([1, 2, 3, 4, 5, 6, 7].map((k) => expect.stringContaining(`(${k} of 7)`)));
   });
 
   it("moves the rule's sequence onto its own slide only when the two do not fit together", async () => {

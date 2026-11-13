@@ -429,6 +429,50 @@ async function outsideCheck(page, tag) {
   await page.keyboard.press('Escape');
 }
 
+// The input comparison the app bundles (web/src/data/input-comparison.json,
+// written by scripts/input-comparison/site_data.py from the reference
+// reading): one row per changed input, then the default's two repeat runs.
+const INPUTS = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/input-comparison.json')));
+const fixed4 = v => (v < 0 ? '−' + (-v).toFixed(4) : v.toFixed(4));
+const inputsExpected = INPUTS.arms.map(a => ({ id: a.id, twin: a.twin, cells: [String(a.all.worse), String(a.all.better), String(a.all.datasets), fixed4(a.all.p), fixed4(a.all.median)] }));
+// Names a reader must never see: the reading's own ids and terms.
+const INTERNAL = /H-1|\barm\b|sentinel|twin|family C|\bK\b|\bJ\b|cap-\d|grr-v1|budget-\d|k-c|k-h|k-p|\bk2[15]\b/;
+
+/** Input settings against the default: every row with the reading's counts,
+ *  sign p and median, the changed inputs and the default's repeat runs in
+ *  groups of their own, each bar drawn to its counts on one scale, no
+ *  internal name, and the by-species table behind its control, opened by
+ *  keyboard. */
+async function inputsCheck(page, tag) {
+  const section = page.locator('#inputs');
+  await section.waitFor();
+  const read = await section.evaluate(s => ({
+    lead: s.querySelector('h2 + p')?.textContent ?? '',
+    groups: [...s.querySelectorAll('tbody[data-input-group]')].map(g => ({ title: g.getAttribute('data-input-group'), rows: [...g.querySelectorAll('tr[data-input]')].map(tr => ({ id: tr.getAttribute('data-input'), cells: [...tr.querySelectorAll('td')].map(td => td.textContent).filter(t => t !== ''), bars: [...tr.querySelectorAll('svg rect')].map(r => Number(r.getAttribute('width'))) })) })),
+    text: s.textContent ?? '',
+  }));
+  const cap = INPUTS.arms.find(a => a.id === 'cap-1000').all, budget = INPUTS.arms.find(a => a.id === 'budget-1000').all;
+  check(tag + ' inputs lead gives the two worse counts', read.lead.includes(cap.worse + ' of ' + cap.datasets + ' datasets') && read.lead.includes(budget.worse + ' of ' + budget.datasets), read.lead);
+  const rows = read.groups.flatMap(g => g.rows);
+  check(tag + ' inputs rows: every change in order with its counts, sign p and median', JSON.stringify(rows.map(r => [r.id, r.cells])) === JSON.stringify(inputsExpected.map(e => [e.id, e.cells])), rows.map(r => [r.id, r.cells]));
+  check(tag + ' inputs groups: the changed inputs, then the default run again apart', read.groups.length === 2 && read.groups[0].rows.every(r => !inputsExpected.find(e => e.id === r.id).twin) && read.groups[1].rows.length === inputsExpected.filter(e => e.twin).length && read.groups[1].rows.every(r => inputsExpected.find(e => e.id === r.id).twin), read.groups.map(g => [g.title, g.rows.map(r => r.id)]));
+  // One scale for every bar: width per dataset is the same in every row.
+  const scale = Math.max(...INPUTS.arms.map(a => Math.max(a.all.better, a.all.worse)));
+  const perDataset = rows.flatMap(r => { const a = INPUTS.arms.find(x => x.id === r.id).all; return [[r.bars[0], a.worse], [r.bars[1], a.better]]; });
+  const unit = (perDataset.find(([, n]) => n === scale) ?? [0, 1])[0] / scale;
+  check(tag + ' inputs bars drawn to their counts on one scale', rows.every(r => r.bars.length === 2) && unit > 0 && perDataset.every(([w, n]) => Math.abs(w - n * unit) < 0.5), { unit, perDataset });
+  check(tag + ' inputs: no internal name reaches the reader', !INTERNAL.test(read.text), read.text.match(INTERNAL)?.[0] ?? null);
+  const more = section.getByRole('button', { name: 'Show each change by species' });
+  await more.focus(); await page.keyboard.press('Enter');
+  const opened = await section.evaluate(s => {
+    const b = [...s.querySelectorAll('button')].find(x => /each change by species/.test(x.textContent));
+    const region = s.querySelector('[role="region"][aria-label="Datasets better, then worse, by species"]');
+    return { expanded: b?.getAttribute('aria-expanded'), controls: b?.getAttribute('aria-controls') ?? null, rows: region ? region.querySelectorAll('tbody tr').length : 0, focus: document.activeElement === b, text: s.textContent ?? '' };
+  });
+  check(tag + ' inputs by-species table opens by keyboard behind its control', opened.expanded === 'true' && opened.controls !== null && opened.rows === INPUTS.arms.length + 2 && opened.focus && !INTERNAL.test(opened.text), { ...opened, text: undefined });
+  await page.keyboard.press('Enter');
+}
+
 const scrollTo = async (page, selector) => {
   await page.locator(selector).evaluate(e => e.scrollIntoView({ block: 'start' }));
   await settle(page);
@@ -1172,11 +1216,11 @@ async function interactions(page, tag, width) {
   const barTiles = await page.evaluate(() => [...document.querySelectorAll('#bars ol li')].map(li => ({ value: Number(li.firstElementChild.textContent.replace(/,/g, '')), unit: li.lastElementChild.textContent })));
   // A tree with no dataset to count draws no tiles.
   check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
-  // The primer is a section of its own above the nine numbered ones, under
+  // The primer is a section of its own above the ten numbered ones, under
   // the same hairline.
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
   const numbered = rules.filter(r => r.id !== 'primer');
-  check(tag + ' one hairline between findings', numbered.length === 9 && rules.length === 10 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
+  check(tag + ' one hairline between findings', numbered.length === 10 && rules.length === 11 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
   await headerCheck(page, tag + ' overview', 'What GRM found');
@@ -1186,8 +1230,9 @@ async function interactions(page, tag, width) {
   const marks = await page.evaluate(() => { const c = document.querySelector('#lineage svg circle[data-dataset]'); return c ? getComputedStyle(c).fill : null; });
   const blue = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--series-s'); document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
   check(tag + ' chart marks in the blue series', marks === blue, { marks, blue });
-  for (const id of ['lineage', 'learners', 'bars', 'catalog', 'panels', 'mic', 'outside']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
+  for (const id of ['lineage', 'learners', 'bars', 'catalog', 'panels', 'mic', 'outside', 'inputs']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
   await outsideCheck(page, tag);
+  await inputsCheck(page, tag);
 
   const micId = expected.mic[0].id;
   const micReport = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'datasets', micId + '.json')));
@@ -1276,12 +1321,12 @@ async function present(page, tag, width, height) {
   await settle(page);
   await slideSelect.click();
   let slideCount = 0, previousCount = -1, stableCounts = 0;
-  // Title, five primer steps, eight findings, the rule: fifteen slides, plus
+  // Title, five primer steps, nine findings, the rule: sixteen slides, plus
   // the extra pages of any figure too dense for the viewport (the outline
   // labels each page "(k of n)"). Which figures continue depends on the
   // viewport and on the report's row counts, so the count is checked
   // against the labels the deck shows.
-  const BASE_SLIDES = 15;
+  const BASE_SLIDES = 16;
   for (let attempt = 0; attempt < 200; attempt++) {
     slideCount = await dialog.getByRole('option').count();
     if (slideCount === previousCount) stableCounts++;
@@ -1292,6 +1337,7 @@ async function present(page, tag, width, height) {
   await page.keyboard.press('Escape');
   const labels = [];
   const panelSeen = [];
+  const inputsSeen = [];
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
@@ -1361,6 +1407,14 @@ async function present(page, tag, width, height) {
       const shown = paged === null ? outsideExpected : [outsideExpected[Number(paged[1]) - 1]];
       check(tag + ' slide ' + (slide + 1) + ' outside marks by population', JSON.stringify(plots) === JSON.stringify(shown.flatMap(p => [p.read, p.read])), { plots, page: paged?.[0] ?? null });
     }
+    if (title === 'Input settings against the default') {
+      // The rows in order, a share on each page; the pages together show
+      // every row once, and no internal name.
+      const shownRows = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section tr[data-input]')].map(tr => tr.getAttribute('data-input')));
+      const text = await page.evaluate(() => document.querySelector('dialog.presentation-dialog main section')?.textContent ?? '');
+      inputsSeen.push(...shownRows);
+      check(tag + ' slide ' + (slide + 1) + ' input rows and no internal name', shownRows.length > 0 && !INTERNAL.test(text), { shownRows, page: paged?.[0] ?? null, internal: text.match(INTERNAL)?.[0] ?? null });
+    }
     const beats = await dialog.locator('[data-beats] span').evaluateAll(es => es.map(e => getComputedStyle(e).backgroundColor));
     const frameLabel = await slideSelect.textContent();
     const continuation = /\((\d+) of \d+\)/.exec(frameLabel ?? '');
@@ -1388,8 +1442,9 @@ async function present(page, tag, width, height) {
     runs[runs.length - 1].pages.push([Number(p[1]), Number(p[2])]);
   });
   const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
-  check(tag + ' expected slide count: fourteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
   check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
+  check(tag + ' input pages together show every row once, in order', JSON.stringify(inputsSeen) === JSON.stringify(inputsExpected.map(e => e.id)), { seen: inputsSeen });
   const closeButton = dialog.getByRole('button', { name: 'Close', exact: true });
   await closeButton.focus(); await page.keyboard.press('Home');
   check(tag + ' Home reaches the title slide', await slideNumber(dialog) === 1, await slideNumber(dialog));

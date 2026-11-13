@@ -9,7 +9,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import type { CatalogRow, Manifest } from "../data/schema";
-import { LEARNER_NAME, datasetTitle, dateText, int, learnerInSentence, listWords, pct, plural, points } from "../data/format";
+import { LEARNER_NAME, datasetTitle, dateText, int, learnerInSentence, listWords, pct, plural, points, speciesName } from "../data/format";
 import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import {
   CATALOG_CUTOFF,
@@ -47,13 +47,15 @@ import { catalogWords } from "../app/ReportStatus";
 import { AxisX, LABEL_CLASS, linear, MarkListbox, PlacedText, placeLabels, RefLine, ticks, useWidth, type ListMark } from "../charts/kit";
 import { GapSwarm, MicStrip } from "../charts/DotStrip";
 import { CatalogScatter } from "../charts/CatalogScatter";
+import { InputRows, type InputGroup } from "../charts/InputRows";
 import { OutsideScatter, type OutsidePanel } from "../charts/OutsideScatter";
+import { INPUT_COMPARISON, armById, inputSummary, prediction, speciesIndex, type InputArm } from "../data/derive/inputs";
 import { OUTSIDE_LEARNERS, OUTSIDE_STUDY, outsidePoints, populationById, populationSummary, type Learner as OutsideLearner, type PopulationSummary } from "../data/derive/outside";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
-export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic" | "outside";
+export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic" | "outside" | "inputs";
 
 /** What a deck gives a figure that may continue onto further slides: the
  *  measured box, the page to draw and the page count, and, while the deck
@@ -1223,4 +1225,137 @@ export const outsideFinding = (m: Manifest, opts: FindingOptions): Finding => {
   };
 };
 
-export const FINDINGS = [corpusFinding, lineageFinding, learnersFinding, barsFinding, catalogFinding, panelsFinding, micFinding, outsideFinding] as const;
+// ---- input settings against the default -----------------------------------------------
+
+/** Each changed input in a reader's words, keyed by the reading's own id,
+ *  which never reaches the page. The default: at most 2,000 genomes per
+ *  species by the label-weighted ranking, 31-letter k-mers only, 4,000
+ *  screened features per fit (docs/input-configuration.md). */
+const INPUT_WORDS: Record<string, string> = {
+  "cap-1000": "At most 1,000 genomes per species",
+  "cap-4000": "At most 4,000 genomes per species",
+  "grr-v1": "Genomes picked across sequence types",
+  k21: "21-letter k-mers",
+  k25: "25-letter k-mers",
+  "k-c": "Adding resistance-region probes",
+  "k-h": "Adding simulated PCR-panel calls",
+  "k-p": "Adding known-gene presence",
+  "k-c-h-p": "Adding all three",
+  "budget-1000": "1,000 screened features",
+  "budget-16000": "16,000 screened features",
+  "sentinel-seed-twin": "The default again, new learner seed",
+  "sentinel-tuning-twin": "The default again, tuning folds drawn again",
+};
+
+const inputWords = (a: InputArm): string => {
+  const w = INPUT_WORDS[a.id];
+  if (w === undefined) throw new Error(`no reader's words for ${a.id}`);
+  return w;
+};
+
+const CHANGED_TITLE = "Each input changed once";
+const TWIN_TITLE = "The default run again, no input changed";
+
+const inputGroups = (): InputGroup[] => {
+  const s = inputSummary();
+  const rows = (arms: readonly InputArm[]) =>
+    arms.map((a) => ({ key: a.id, name: inputWords(a), better: a.all.better, worse: a.all.worse, datasets: a.all.datasets, p: a.all.p, median: a.all.median }));
+  return [
+    { title: CHANGED_TITLE, rows: rows(s.changed) },
+    { title: TWIN_TITLE, rows: rows(s.twins) },
+  ];
+};
+
+/** Datasets better, then worse, per species: the reading's table by species. */
+const InputSpeciesTable = () => {
+  const s = inputSummary();
+  const cell = (c: { better: number; worse: number; datasets: number }) => (c.datasets === 0 ? "none compared" : `${int(c.better)}, ${int(c.worse)} of ${int(c.datasets)}`);
+  const rows = (arms: readonly InputArm[]) => arms.map((a) => ({ key: a.id, name: inputWords(a), cells: [...a.species.map(cell), cell(a.all)] }));
+  return (
+    <NumberTable
+      label="Datasets better, then worse, by species"
+      head={["Change", ...INPUT_COMPARISON.species.map((x) => speciesName(x.name)), "All four"]}
+      groups={[
+        { title: CHANGED_TITLE, rows: rows(s.changed) },
+        { title: TWIN_TITLE, rows: rows(s.twins) },
+      ]}
+    />
+  );
+};
+
+export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
+  const c = INPUT_COMPARISON;
+  const s = inputSummary();
+  const cap1000 = armById("cap-1000").all;
+  const budget1000 = armById("budget-1000").all;
+  const cap4000 = armById("cap-4000");
+  const salmonella = cap4000.species[speciesIndex("Salmonella enterica")]!;
+  const told = prediction("cap-4000");
+  const unseen = listWords(c.predictions.species.map(speciesName));
+  const moved = (id: string) => {
+    const k = armById(id).contrasts;
+    return `${int(k.beyond)} of ${int(k.made)}`;
+  };
+  // The two species the document names as too small to decide anything alone.
+  const small = ["Neisseria gonorrhoeae", "Staphylococcus aureus"].map((n) => c.species[speciesIndex(n)]!);
+  const p4 = (v: number) => v.toFixed(4);
+  return {
+    id: "inputs",
+    title: "Input settings against the default",
+    result: opts.page
+      ? `Each of the pipeline's inputs was changed once and scored against the default on ${plural(s.species, "species", "species")}, by log loss with whole lineages held out. By the plan's tests, no change beat the default across the ${int(s.species)} species. At most 1,000 genomes per species scored worse on ${int(cap1000.worse)} of ${int(cap1000.datasets)} datasets, and 1,000 screened features scored worse on ${int(budget1000.worse)} of ${int(budget1000.datasets)}.`
+      : `No changed input beat the default across ${plural(s.species, "species", "species")}. At most 1,000 genomes per species scored worse on ${int(cap1000.worse)} of ${int(cap1000.datasets)} datasets, and 1,000 screened features on ${int(budget1000.worse)} of ${int(budget1000.datasets)}.`,
+    figure: (fit: PagedFit) => (
+      <InputRows
+        label="Each changed input against the default: datasets worse and better"
+        groups={inputGroups()}
+        slide={!opts.page}
+        height={fit.height}
+        page={fit.page}
+        pages={fit.pages}
+        onPages={fit.onPages}
+      />
+    ),
+    caption: opts.page
+      ? "Each row is one changed input. Worse and better count the datasets where the change's log loss, averaged over the learners, was higher or lower than the default's, with whole lineages held out. Sign p is a two-sided exact sign test over those datasets; a species' datasets share genomes, so it guides and does not decide. The last two rows run the default again with no input changed, so they show how far a score moves by chance."
+      : `Datasets where each change scored worse and better than the default, by log loss with whole lineages held out. The last two rows run the default again with no input changed. ${plural(s.species, "species", "species")}, ${int(s.answered)} datasets with a result.`,
+    note: opts.page ? (
+      <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+        <p>
+          The default is at most 2,000 genomes per species, picked by a ranking on their drug labels; 31-letter k-mers and nothing else; and 4,000 screened features per fit for the random
+          forest, the boosted trees and the lasso. The pipeline already tunes each learner inside each training fold, and the second repeat run draws those tuning folds again. The{" "}
+          {int(s.species)} species are {listWords(c.species.map((x) => x.name))}. They have {plural(s.datasets, "dataset")}, and {int(s.answered)} have a result with whole lineages held
+          out: {listWords(c.species.map((x) => `${speciesName(x.name)} ${int(x.answered)} of ${int(x.datasets)}`))}.
+        </p>
+        <p>
+          At most 4,000 genomes per species scored better on {int(cap4000.all.better)} of {int(cap4000.all.datasets)} datasets (sign p {p4(cap4000.all.p)}), and {int(salmonella.better)} of
+          the {int(cap4000.all.better)} are Salmonella&apos;s. More genomes helped on most Salmonella datasets, and the plan predicted the same on the two species it had not yet seen,{" "}
+          {unseen}. There it scored better on {int(told.better)} of {int(told.of)} datasets, which a sign test can&apos;t tell from an even split, so the prediction failed.
+        </p>
+        <p>
+          A count with no direction doesn&apos;t show that a change equals the default. 21-letter k-mers moved {moved("k21")} comparisons of one dataset and one learner by {c.margin} or
+          more in log loss, either way; 25-letter k-mers moved {moved("k25")}, and genomes picked across sequence types {moved("grr-v1")}. The default run again with its tuning folds
+          drawn again moved {moved("sentinel-tuning-twin")}.
+        </p>
+        <p>
+          Of {int(s.tested)} comparisons of one dataset and one learner that were tested, {int(s.firm)} were decided the same way inside their species and across the{" "}
+          {int(s.species)} species together: {int(s.firmBetter)} better and {int(s.firmWorse)} worse, {int(s.firmForest)} of them on the random forest.
+        </p>
+        <p>
+          {speciesName(small[0]!.name)} has {plural(small[0]!.answered, "dataset")} with a result and {speciesName(small[1]!.name)} {int(small[1]!.answered)}, too few to decide anything
+          alone. The plan for this reading was fixed after the Salmonella and Gonorrhea results had been seen and before the other two species finished, and no public timestamp attests
+          it.
+        </p>
+        <p>
+          The score is log loss with whole lineages held out. The test does not show that the default is the best setting, or that the inputs do not matter: by the plan&apos;s tests, no
+          single change beat it across these {int(s.species)} species.
+        </p>
+      </div>
+    ) : undefined,
+    span: "wide",
+    continues: true,
+    more: opts.page ? { label: "Each change by species", body: <InputSpeciesTable /> } : undefined,
+  };
+};
+
+export const FINDINGS = [corpusFinding, lineageFinding, learnersFinding, barsFinding, catalogFinding, panelsFinding, micFinding, outsideFinding, inputsFinding] as const;

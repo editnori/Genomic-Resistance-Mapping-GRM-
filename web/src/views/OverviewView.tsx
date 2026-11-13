@@ -1,6 +1,6 @@
 // What GRM found: a five-step primer for a reader new to the terms, then the
-// report in nine numbered sections. The data behind the reports, then the
-// seven findings Present shares, each with its lead, a figure, a caption that
+// report in ten numbered sections. The data behind the reports, then the
+// eight findings Present shares, each with its lead, a figure, a caption that
 // says what a mark is, and short notes on coverage in view; last, the limits
 // every number shares. The panel section also holds every panel result;
 // /tests lands on it through the #panels anchor.

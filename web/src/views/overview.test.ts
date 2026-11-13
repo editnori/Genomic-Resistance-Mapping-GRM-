@@ -218,7 +218,7 @@ const framed = (section: Element, label: string) => section.querySelector(`[role
 const passing: Manifest = { ...base, evaluation_revision: 7, datasets: base.datasets.map((d) => ({ ...d, evaluation: { revision: 7, valid: true, reasons: [] } })) };
 
 describe("What GRM found", () => {
-  it("reads as a report: a plain title, what the site asks, a plain status line, the primer, and nine numbered sections", async () => {
+  it("reads as a report: a plain title, what the site asks, a plain status line, the primer, and ten numbered sections", async () => {
     const host = await mount(passing, fakeNav().nav);
     expect(host.querySelector("h1")?.textContent).toBe("What GRM found");
     // The question comes in words before any chart.
@@ -234,7 +234,8 @@ describe("What GRM found", () => {
       "6 Simulated PCR panel",
       "7 Predicting the drug level that stops growth (MIC)",
       "8 Newly deposited genomes",
-      "9 Limits",
+      "9 Input settings against the default",
+      "10 Limits",
     ]);
     const scope = host.querySelector<HTMLAnchorElement>('header a[href="#limits"]');
     expect(scope?.textContent).toBe("Tested within one public database only");
@@ -397,6 +398,41 @@ describe("What GRM found", () => {
     ]);
     // No cause, gene or validation claim.
     expect(text).not.toMatch(/validated|mechanism/i);
+  });
+
+  it("reads the input comparison in a reader's words, with its limits and the default's repeat runs apart", async () => {
+    const host = await mount(base, fakeNav().nav);
+    const inputs = host.querySelector("#inputs")!;
+    const text = inputs.textContent ?? "";
+    expect(inputs.querySelector("h2 + p")?.textContent).toBe(
+      "Each of the pipeline's inputs was changed once and scored against the default on 4 species, by log loss with whole lineages held out. By the plan's tests, no change beat the default across the 4 species. At most 1,000 genomes per species scored worse on 25 of 33 datasets, and 1,000 screened features scored worse on 37 of 49.",
+    );
+    const table = framed(inputs, "Each changed input against the default: datasets worse and better");
+    const rows = [...table.querySelectorAll("tbody tr")].map((tr) => [...tr.children].map((c) => c.textContent));
+    expect(rows).toHaveLength(15);
+    expect(rows[0]).toEqual(["Each input changed once"]);
+    expect(rows[1]).toEqual(["At most 1,000 genomes per species", "25", "", "8", "33", "0.0046", "\u22120.0329"]);
+    expect(rows[2]).toEqual(["At most 4,000 genomes per species", "18", "", "31", "49", "0.0854", "0.0189"]);
+    expect(rows[10]).toEqual(["1,000 screened features", "37", "", "12", "49", "0.0005", "\u22120.0082"]);
+    expect(rows[12]).toEqual(["The default run again, no input changed"]);
+    expect(rows.slice(13).map((r) => r[0])).toEqual(["The default again, new learner seed", "The default again, tuning folds drawn again"]);
+    expect(text).toContain("They have 72 datasets, and 49 have a result with whole lineages held out: Salmonella 18 of 25, Staph 7 of 18, Gonorrhea 4 of 7 and TB 20 of 22.");
+    expect(text).toContain("scored better on 31 of 49 datasets (sign p 0.0854), and 14 of the 31 are Salmonella's.");
+    expect(text).toContain("There it scored better on 15 of 27 datasets, which a sign test can't tell from an even split, so the prediction failed.");
+    expect(text).toContain("A count with no direction doesn't show that a change equals the default.");
+    expect(text).toContain("Of 1,945 comparisons of one dataset and one learner that were tested, 23 were decided the same way inside their species and across the 4 species together: 5 better and 18 worse, 20 of them on the random forest.");
+    expect(text).toContain("Gonorrhea has 4 datasets with a result and Staph 7, too few to decide anything alone.");
+    expect(text).toContain("fixed after the Salmonella and Gonorrhea results had been seen and before the other two species finished, and no public timestamp attests it.");
+    expect(text).toContain("The pipeline already tunes each learner inside each training fold");
+    expect(text).not.toMatch(/optimal|untuned|do not matter\b(?!:)/i);
+    // No internal name reaches the reader.
+    expect(text).not.toMatch(/H-1|\barm\b|sentinel|twin|family C|\bK\b|\bJ\b|cap-\d|grr-v1|budget-|k-c|k21|k25/);
+    const more = [...inputs.querySelectorAll("button")].find((b) => b.textContent === "Show each change by species")!;
+    await act(async () => more.click());
+    const bySpecies = framed(inputs, "Datasets better, then worse, by species");
+    expect([...bySpecies.querySelectorAll("thead th")].map((th) => th.textContent)).toEqual(["Change", "Salmonella", "Staph", "Gonorrhea", "TB", "All four"]);
+    expect([...bySpecies.querySelectorAll("tbody tr")][2]!.textContent).toBe("At most 4,000 genomes per species14, 4 of 184, 3 of 72, 2 of 411, 9 of 2031, 18 of 49");
+    expect(inputs.textContent).not.toMatch(/sentinel|twin|cap-\d|grr-v1/);
   });
 
   it("ends with the limits and a link to the audit in Methods", async () => {
