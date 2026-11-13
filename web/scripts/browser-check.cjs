@@ -429,7 +429,7 @@ async function outsideCheck(page, tag) {
     const plot = read.plots[i];
     return plot.marks.length === p.read && JSON.stringify(plot.marks.map(x => x[0]).sort()) === JSON.stringify([...p.ids].sort())
       && plot.marks.filter(x => x[1] === 'below').length === p.below[m] && plot.marks.every(x => (x[1] === 'below') === (x[2] === 'rgb(var(--paper-pure))'))
-      && plot.counts === p.above[m] + ' above, ' + p.below[m] + ' below' && plot.svgText.length === 0 && plot.label.startsWith(m.charAt(0).toUpperCase() + m.slice(1));
+      && plot.counts === p.above[m] + ' read above, ' + p.below[m] + ' read below' && plot.svgText.length === 0 && plot.label.startsWith(m.charAt(0).toUpperCase() + m.slice(1));
   }), read.plots.map(p => ({ label: p.label, marks: p.marks.length, counts: p.counts, svgText: p.svgText })));
   check(tag + ' outside counts sit above each plot, clear of its svg', read.plots.length === 4 && read.plots.every(p => p.apart), read.plots.map(p => ({ label: p.label, apart: p.apart })));
   // Pin the first mark by keyboard: Enter on the plot's listbox pins its
@@ -448,7 +448,9 @@ async function outsideCheck(page, tag) {
 // reading): one row per changed input, then the default's two repeat runs.
 const INPUTS = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/input-comparison.json')));
 const fixed4 = v => (v < 0 ? '−' + (-v).toFixed(4) : v.toFixed(4));
-const inputsExpected = INPUTS.arms.map(a => ({ id: a.id, twin: a.twin, cells: [String(a.all.worse), String(a.all.better), String(a.all.datasets), fixed4(a.all.p), fixed4(a.all.median)] }));
+// The page's table keeps every column and its bars from BARS_FROM up; under
+// it, the slide's narrow set (Change, Worse, Better, Sign p) with no bars.
+const inputsExpected = INPUTS.arms.map(a => ({ id: a.id, twin: a.twin, cells: [String(a.all.worse), String(a.all.better), String(a.all.datasets), fixed4(a.all.p), fixed4(a.all.median)], narrow: [String(a.all.worse), String(a.all.better), fixed4(a.all.p)] }));
 // Names a reader must never see: the reading's own ids and terms.
 const INTERNAL = /H-1|\barm\b|sentinel|twin|family C|\bK\b|\bJ\b|cap-\d|grr-v1|budget-\d|k-c|k-h|k-p|\bk2[15]\b/;
 
@@ -462,19 +464,24 @@ async function inputsCheck(page, tag) {
   await section.waitFor();
   const read = await section.evaluate(s => ({
     lead: s.querySelector('h2 + p')?.textContent ?? '',
+    head: [...(s.querySelector('tbody[data-input-group]')?.closest('table')?.querySelectorAll('thead th') ?? [])].map(th => th.textContent),
+    fits: (() => { const t = s.querySelector('tbody[data-input-group]')?.closest('table'); const f = t?.parentElement; return t && f ? t.getBoundingClientRect().width <= f.clientWidth + 0.5 : false; })(),
     groups: [...s.querySelectorAll('tbody[data-input-group]')].map(g => ({ title: g.getAttribute('data-input-group'), rows: [...g.querySelectorAll('tr[data-input]')].map(tr => ({ id: tr.getAttribute('data-input'), cells: [...tr.querySelectorAll('td')].map(td => td.textContent).filter(t => t !== ''), bars: [...tr.querySelectorAll('svg rect')].map(r => Number(r.getAttribute('width'))) })) })),
     text: s.textContent ?? '',
   }));
   const cap = INPUTS.arms.find(a => a.id === 'cap-1000').all, budget = INPUTS.arms.find(a => a.id === 'budget-1000').all;
   check(tag + ' inputs lead gives the two worse counts', read.lead.includes(cap.worse + ' of ' + cap.datasets + ' datasets') && read.lead.includes(budget.worse + ' of ' + budget.datasets), read.lead);
   const rows = read.groups.flatMap(g => g.rows);
-  check(tag + ' inputs rows: every change in order with its counts, sign p and median', JSON.stringify(rows.map(r => [r.id, r.cells])) === JSON.stringify(inputsExpected.map(e => [e.id, e.cells])), rows.map(r => [r.id, r.cells]));
+  const full = read.head.includes('Median');
+  check(tag + ' inputs table: ' + (full ? 'every column with its bars' : 'the narrow set, Change, Worse, Better and Sign p, fitting its frame'), full ? JSON.stringify(read.head) === JSON.stringify(['Change', 'Worse', 'Worse and better, drawn', 'Better', 'Of', 'Sign p', 'Median']) : JSON.stringify(read.head) === JSON.stringify(['Change', 'Worse', 'Better', 'Sign p']) && read.fits, { head: read.head, fits: read.fits });
+  check(tag + ' inputs rows: every change in order with its counts, sign p' + (full ? ' and median' : ''), JSON.stringify(rows.map(r => [r.id, r.cells])) === JSON.stringify(inputsExpected.map(e => [e.id, full ? e.cells : e.narrow])), rows.map(r => [r.id, r.cells]));
   check(tag + ' inputs groups: the changed inputs, then the default run again apart', read.groups.length === 2 && read.groups[0].rows.every(r => !inputsExpected.find(e => e.id === r.id).twin) && read.groups[1].rows.length === inputsExpected.filter(e => e.twin).length && read.groups[1].rows.every(r => inputsExpected.find(e => e.id === r.id).twin), read.groups.map(g => [g.title, g.rows.map(r => r.id)]));
   // One scale for every bar: width per dataset is the same in every row.
   const scale = Math.max(...INPUTS.arms.map(a => Math.max(a.all.better, a.all.worse)));
   const perDataset = rows.flatMap(r => { const a = INPUTS.arms.find(x => x.id === r.id).all; return [[r.bars[0], a.worse], [r.bars[1], a.better]]; });
   const unit = (perDataset.find(([, n]) => n === scale) ?? [0, 1])[0] / scale;
-  check(tag + ' inputs bars drawn to their counts on one scale', rows.every(r => r.bars.length === 2) && unit > 0 && perDataset.every(([w, n]) => Math.abs(w - n * unit) < 0.5), { unit, perDataset });
+  if (!full) check(tag + ' inputs: no bars in the narrow set', rows.every(r => r.bars.length === 0), rows.map(r => r.bars.length));
+  else check(tag + ' inputs bars drawn to their counts on one scale', rows.every(r => r.bars.length === 2) && unit > 0 && perDataset.every(([w, n]) => Math.abs(w - n * unit) < 0.5), { unit, perDataset });
   check(tag + ' inputs: no internal name reaches the reader', !INTERNAL.test(read.text), read.text.match(INTERNAL)?.[0] ?? null);
   const more = section.getByRole('button', { name: 'Show each change by species' });
   await more.focus(); await page.keyboard.press('Enter');
@@ -1569,6 +1576,57 @@ async function normalMotion(browser) {
   await context.close();
 }
 
+/** The two results slides on a short wide screen (1280×560): on every page
+ *  of "Newly deposited genomes" and "Input settings against the default", no
+ *  text box overlaps another, no figure is drawn over text, and nothing runs
+ *  past the slide. The older slides that also crowd at this size are not
+ *  checked here. */
+async function shortSlides(browser) {
+  const SHORT = [1280, 560];
+  const TITLES = ['Newly deposited genomes', 'Input settings against the default'];
+  const context = await browser.newContext({ viewport: { width: SHORT[0], height: SHORT[1] }, colorScheme: 'light', reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  page.on('pageerror', error => errors.push({ width: SHORT[0], height: SHORT[1], message: error.message }));
+  try {
+    await page.goto(BASE); await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'GRM findings presentation' }); await dialog.waitFor();
+    await settle(page);
+    // The outline grows as figures measure their pages; read it once stable,
+    // with the slide chooser open (its options exist only then).
+    await dialog.getByRole('combobox', { name: /^Go to slide/ }).click();
+    let count = -1;
+    for (let attempt = 0, stable = 0; attempt < 200 && stable < 20; attempt++) { const n = await dialog.getByRole('option').count(); stable = n === count ? stable + 1 : 0; count = n; await page.waitForTimeout(50); }
+    await page.keyboard.press('Escape');
+    const seen = Object.fromEntries(TITLES.map(t => [t, 0]));
+    for (let slide = 0; slide < count; slide++) {
+      await goSlide(page, dialog, slide);
+      const r = await page.evaluate(titles => {
+        const main = document.querySelector('dialog.presentation-dialog main');
+        const title = titles.find(t => (main?.querySelector('h2')?.textContent ?? '').startsWith(t));
+        if (!title) return { skip: true };
+        const leaf = [...main.querySelectorAll('p, h1, h2, h3, span, th, td, li, figcaption')].filter(e => e.textContent.trim() !== '' && [...e.children].every(c => c.tagName.toLowerCase() === 'svg' || c.tagName === 'BR') && !e.closest('[inert], [aria-hidden="true"]') && getComputedStyle(e).visibility !== 'hidden');
+        const boxes = leaf.map(e => ({ e, t: e.textContent.trim().slice(0, 40), b: e.getBoundingClientRect() })).filter(x => x.b.width > 0 && x.b.height > 0);
+        const hit = (a, c) => a.left < c.right - 1 && c.left < a.right - 1 && a.top < c.bottom - 1 && c.top < a.bottom - 1;
+        const over = [];
+        for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) if (hit(boxes[i].b, boxes[j].b) && !boxes[i].e.contains(boxes[j].e) && !boxes[j].e.contains(boxes[i].e)) over.push([boxes[i].t, boxes[j].t]);
+        for (const g of main.querySelectorAll('svg')) {
+          const a = g.getBoundingClientRect();
+          if (g.closest('[inert]') || a.width <= 20 || a.height <= 20) continue;
+          for (const x of boxes) if (!x.e.contains(g) && hit(a, x.b)) over.push(['<svg>', x.t]);
+        }
+        const mb = main.getBoundingClientRect();
+        return { title, over, past: boxes.filter(x => x.b.bottom > mb.bottom + 1 || x.b.right > mb.right + 1).map(x => x.t) };
+      }, TITLES);
+      if (r.skip) continue;
+      seen[r.title]++;
+      check('1280x560 slide ' + (slide + 1) + ' (' + r.title + '): no text over text or figure, nothing past the slide', r.over.length === 0 && r.past.length === 0, { over: r.over.slice(0, 4), past: r.past.slice(0, 4) });
+    }
+    check('1280x560 both results slides reached', TITLES.every(t => seen[t] > 0), seen);
+  } catch (error) { errors.push({ width: SHORT[0], height: SHORT[1], message: error.stack }); }
+  await context.close();
+}
+
 async function boundaries(browser) {
   const context = await browser.newContext({ viewport: { width: 900, height: 900 }, reducedMotion: 'reduce', hasTouch: true });
   await context.addInitScript(() => { if (/^https?:$/.test(location.protocol)) localStorage.setItem('grm-filter-rail-open', '1'); });
@@ -1659,6 +1717,7 @@ async function boundaries(browser) {
       await context.close();
     }
     await boundaries(browser);
+    await shortSlides(browser);
     await normalMotion(browser);
   } finally { await browser.close(); }
   const receipt = { source: { fixture: FIXTURE, schema: manifest.schema, generated: manifest.generated_at, revision: manifest.evaluation_revision, datasets: expected.datasets, panelRows: manifest.panels.length }, independent: expected.stats, stateRows: stateRows.map(([d, w]) => [d.id, w]), skipped, checks, screenshots, errors, passed: checks.every(c => c.pass) && errors.length === 0 };
