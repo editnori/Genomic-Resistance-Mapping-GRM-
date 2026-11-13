@@ -750,13 +750,21 @@ async function stripFit(page, tag) {
     }, STATE_MS, { timeout: STATE_MS + 5000 }).catch(() => null);
     check(name, read !== null && read.cells > 1 && read.pressed === view && read.over <= 1 && read.marksOut === 0, { id, ...read });
   }
-  // Paint: every strip pushed 64 px right, as a strip still drawn for a wider
-  // cell would be, carries its marks past the cell's edge; the Random
-  // column's pixels must not change, because the cell clips them. The push
-  // is a margin, a layout change: a transform painted but, in about one read
-  // in six, left the marks' boxes where they were.
+  // Paint: every strip pushed so its right end sits 64 px past its cell's
+  // content box, as a strip still drawn for a wider cell would, carries its
+  // marks past the cell's edge; the Random column's pixels must not change,
+  // because the cell clips them. The push is a margin, a layout change: a
+  // transform painted but, in about one read in six, left the marks' boxes
+  // where they were. A fixed 64 px push was not enough: at 1440 px a strip
+  // ends about 46 px short of its cell's content box, so the push carried
+  // its last tick about 1 px past the edge, and a pixel's change in the
+  // column widths left every mark inside the cell. So the push adds each
+  // cell's slack, the fonts load before the first screenshot, and the count
+  // is polled each frame until every strip reads past its edge, up to
+  // STATE_MS.
   const name = tag + ' a learner strip pushed past its cell paints nothing over Random';
   await page.locator('#ds-learners table').scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {});
+  await settle(page);
   const box = await page.evaluate(() => {
     const cells = [...document.querySelectorAll('#ds-learners table tr > :nth-child(3)')].map(c => c.getBoundingClientRect());
     if (cells.length === 0) return null;
@@ -765,15 +773,20 @@ async function stripFit(page, tag) {
   });
   if (box === null) { check(name, false, 'no Random column'); return; }
   const before = await page.screenshot({ clip: box });
-  const moved = await page.evaluate(async () => {
+  const push = await page.evaluate(async STATE_MS => {
     const svgs = [...document.querySelectorAll('#ds-learners table tr > :nth-child(2) svg')];
-    for (const s of svgs) s.style.marginLeft = '64px';
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    return svgs.filter(s => { const cell = s.closest('th, td').getBoundingClientRect(); return [...s.querySelectorAll('line, circle')].some(m => m.getBoundingClientRect().right > cell.right + 1); }).length;
-  });
+    const contentRight = s => { const c = s.closest('th, td'), b = c.getBoundingClientRect(), st = getComputedStyle(c); return b.right - parseFloat(st.paddingRight) - parseFloat(st.borderRightWidth); };
+    const slack = svgs.map(s => Math.max(0, contentRight(s) - s.getBoundingClientRect().right));
+    svgs.forEach((s, i) => { s.style.marginLeft = (slack[i] + 64) + 'px'; });
+    const past = () => svgs.filter(s => { const cell = s.closest('th, td').getBoundingClientRect(); return [...s.querySelectorAll('line, circle')].some(m => m.getBoundingClientRect().right > cell.right + 1); }).length;
+    const t0 = performance.now();
+    let n = 0;
+    do { await new Promise(r => requestAnimationFrame(r)); n = past(); } while (n < svgs.length && performance.now() - t0 < STATE_MS);
+    return { moved: n, strips: svgs.length, maxSlack: Math.round(Math.max(0, ...slack) * 10) / 10, waited: Math.round(performance.now() - t0) };
+  }, STATE_MS);
   const after = await page.screenshot({ clip: box });
   await page.evaluate(() => { for (const s of document.querySelectorAll('#ds-learners table tr > :nth-child(2) svg')) s.style.marginLeft = ''; });
-  check(name, moved > 1 && before.equals(after), { id, stripsPastEdge: moved, randomUnchanged: before.equals(after) });
+  check(name, push.moved > 1 && before.equals(after), { id, stripsPastEdge: push.moved, strips: push.strips, maxSlack: push.maxSlack, waited: push.waited, randomUnchanged: before.equals(after) });
 }
 
 /** The widest default decision tree and the longest catalog class list the
