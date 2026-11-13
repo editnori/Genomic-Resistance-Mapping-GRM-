@@ -72,6 +72,15 @@ def tables():
                     f"{f('with_a_lineage_score')} | {f('rule_ahead_or_within_2pt_lineage')} | "
                     f"{a['median_lineage_difference']} / {b['median_lineage_difference']} |")
     out["bands"] = rows
+    ga, gb = load(A, "guidance.json"), load(B, "guidance.json")
+    rows = ["| Split | Learner | Datasets | Meet the guidance's wording | Shown to meet the release's screen |",
+            "| --- | --- | --- | --- | --- |"]
+    for s in ("random", "lineage"):
+        for who in ["best", "scm", "cart", "rf", "gbt", "lasso", "catalog"]:
+            a, b = ga["rows"][f"{who}:{s}"], gb["rows"][f"{who}:{s}"]
+            rows.append(f"| {s} | {NAMES[who]} | {a['n']} / {b['n']} | {a['meets_wording']} / {b['meets_wording']} | "
+                        f"{a['screen']['shown_to_meet_both']} / {b['screen']['shown_to_meet_both']} |")
+    out["guidance"] = rows
     return out
 
 
@@ -110,6 +119,50 @@ class Document(unittest.TestCase):
         for s in sentences:
             with self.subTest(sentence=s[:60]):
                 self.assertIn(s, " ".join(self.text.split()))
+
+    def test_guidance_sentences(self):
+        ga, gb = load(A, "guidance.json"), load(B, "guidance.json")
+        ra, rb = ga["rows"], gb["rows"]
+        learner_rows = [f"{l}:{s}" for l in ("best", "scm", "cart", "rf", "gbt", "lasso") for s in ("random", "lineage")]
+        both = lambda f: f(ra) if f(ra) == f(rb) else self.fail(f"the releases differ: {f(ra)} and {f(rb)}")
+        meets = both(lambda r: (r["best:random"]["meets_wording"], r["best:lineage"]["meets_wording"]))
+        shown = both(lambda r: (r["best:random"]["screen"]["shown_to_meet_both"], r["best:lineage"]["screen"]["shown_to_meet_both"]))
+        self.assertTrue(all(ra[k]["meets_wording"] == rb[k]["meets_wording"] for k in ra))
+        self.assertEqual(ga["best_meets_wording"], gb["best_meets_wording"])
+        # revision 12 leaves out no-call genomes on boosted trees and lasso rows only; revision 14 on none
+        fewer = {k: r["fewer_than_every_genome"] for k, r in ra.items() if r["fewer_than_every_genome"]}
+        self.assertEqual(sorted(fewer), ["gbt:lineage", "gbt:random", "lasso:lineage", "lasso:random"])
+        self.assertEqual(sum(fewer.values()), load(A, "index-counts.json")["unflagged_with_no_call"])
+        self.assertEqual(sum(r["fewer_than_every_genome"] for r in rb.values()), 0)
+        flagged = load(B, "index-counts.json")["flagged_rows"]
+        table_8 = both(lambda r: (r["best:random"]["vme_n_under_table_8"], r["best:lineage"]["vme_n_under_table_8"],
+                                  r["catalog:random"]["vme_n_under_table_8"], r["catalog:lineage"]["vme_n_under_table_8"]))
+        first = ga["criteria"]["table_8_first_resistant"]
+        self.assertEqual(first, gb["criteria"]["table_8_first_resistant"])
+        tb = lambda r, k: r[k]["n"] - r[k]["without_tuberculosis"]["n"]
+        tb_learners = both(lambda r: {tb(r, k) for k in learner_rows})
+        tb_rule = both(lambda r: {tb(r, "catalog:random"), tb(r, "catalog:lineage")})
+        self.assertEqual((len(tb_learners), len(tb_rule)), (1, 1))
+        for r in (ra, rb):
+            self.assertTrue(all(x["meets_wording"] == x["without_tuberculosis"]["meets_wording"] for x in r.values()))
+        sentences = [
+            f"Its first row is {first} resistant organisms with 0 discrepancies and an interval of 0.00 to 7.40%.",
+            f"By the guidance's wording, the best learner meets on {meets[0]} datasets of the random split and {meets[1]} of "
+            f"the lineage split, in both releases. By the release's screen, it is shown to meet on {shown[0]} and {shown[1]}.",
+            f"Of the rows read here, {sum(fewer.values())} count fewer genomes than their class: boosted trees on "
+            f"{fewer['gbt:random']} datasets of the random split and {fewer['gbt:lineage']} of the lineage split, and the "
+            f"lasso on {fewer['lasso:random']} and {fewer['lasso:lineage']}. None of them is the best learner's row:",
+            f"In revision 14, the {flagged} learner rows that carry the flag are scored on every genome, and every row read "
+            f"here counts every genome of its class.",
+            f"The best learner counts fewer than {first} resistant genomes on {table_8[0]} datasets of the random split and "
+            f"{table_8[1]} of the lineage split in both releases, and the known-gene rule on {table_8[2]} and {table_8[3]}.",
+            f"There are {tb_learners.pop()} of them on every learner row of both splits, and {tb_rule.pop()} on each split of "
+            f"the known-gene rule. None of them meets the wording on any row of either release,",
+        ]
+        text = " ".join(self.text.split())
+        for s in sentences:
+            with self.subTest(sentence=s[:60]):
+                self.assertIn(s, text)
 
 
 if __name__ == "__main__":

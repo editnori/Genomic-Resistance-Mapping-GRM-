@@ -1,7 +1,9 @@
 """The committed release summary outputs (reference/release-summary) and their README.
 
 The suite recomputes nothing from a release. It checks that each output parses, names its release's revision and 274
-datasets, that its counts partition as they must, and that the README lists the sha256 of each output."""
+datasets, that its counts partition as they must, and that the README lists the sha256 of each output. guidance.json must
+read the same rows as uncertainty.json, sort them into the same screen classes, and count the no-call rows that
+index-counts.json finds."""
 
 import hashlib
 import json
@@ -12,7 +14,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 REFERENCE = ROOT / "reference" / "release-summary"
 RELEASES = {"rev12-274-20261105": 12, "rev14-274-20261112": 14}
-OUTPUTS = ["uncertainty.json", "summary.json", "catalog.json", "index-counts.json"]
+OUTPUTS = ["uncertainty.json", "summary.json", "catalog.json", "index-counts.json", "guidance.json"]
 LEARNERS = ["scm", "cart", "rf", "gbt", "lasso"]
 
 
@@ -30,7 +32,7 @@ class Reference(unittest.TestCase):
     def test_revision_and_datasets(self):
         for release, revision in RELEASES.items():
             with self.subTest(release=release):
-                for name in ("uncertainty.json", "summary.json", "index-counts.json"):
+                for name in ("uncertainty.json", "summary.json", "index-counts.json", "guidance.json"):
                     doc = load(release, name)
                     self.assertEqual((doc["revision"], doc["datasets"]), (revision, 274), name)
                 # catalog.json names no revision; it reads the same index as summary.json beside it
@@ -118,6 +120,75 @@ class Reference(unittest.TestCase):
                     self.assertEqual(c["flagged_with_no_call"], c["flagged_rows"])
                     self.assertEqual(c["unflagged_with_no_call"], 0)
                     self.assertEqual(c["flag_keys_seen"], {"split:true": 122})
+
+    def test_guidance_criteria(self):
+        for release in RELEASES:
+            c = load(release, "guidance.json")["criteria"]
+            with self.subTest(release=release):
+                w = c["wording"]
+                self.assertEqual((w["vme_upper_below"], w["vme_lower_below"], w["me_rate_below"], w["strict"]),
+                                 (0.075, 0.015, 0.03, True))
+                self.assertEqual((c["screen"]["vme_upper_at_most"], c["screen"]["me_upper_at_most"]), (0.015, 0.03))
+                self.assertEqual(c["without_tuberculosis"], "mycobacterium_tuberculosis")
+                # the guidance's Table 8 starts at 48 resistant organisms, with 0 discrepancies and (0.00, 7.40)
+                self.assertEqual(c["table_8_first_resistant"], 48)
+
+    def test_guidance_parts_add_up(self):
+        for release in RELEASES:
+            g = load(release, "guidance.json")
+            self.assertEqual(len(g["rows"]), 2 * (len(LEARNERS) + 2))
+            for key, r in g["rows"].items():
+                with self.subTest(release=release, row=key):
+                    self.assertLessEqual(r["meets_wording"], min(r["vme_upper"], r["vme_lower"], r["me"], r["vme"]))
+                    self.assertLessEqual(r["vme"], min(r["vme_upper"], r["vme_lower"]))
+                    self.assertGreaterEqual(r["vme"], r["vme_upper"] + r["vme_lower"] - r["n"])
+                    self.assertLessEqual(max(r["vme_upper"], r["vme_lower"], r["me"]), r["n"])
+                    self.assertEqual(sum(r["screen"].values()), r["n"])
+                    t = r["without_tuberculosis"]
+                    self.assertLessEqual(t["meets_wording"], min(t["n"], r["meets_wording"]))
+                    self.assertLessEqual(r["meets_wording"] - t["meets_wording"], r["n"] - t["n"])
+                    # with fewer than 48 resistant genomes no exact upper bound falls under 7.5%
+                    self.assertLessEqual(r["vme_upper"], r["n"] - r["vme_n_under_table_8"])
+                    self.assertLessEqual(r["fewer_than_every_genome"], r["n"])
+                    # the screen asks more: an upper bound at or under 1.5% and 3% is under 7.5% and 1.5% as well
+                    self.assertLessEqual(r["screen"]["shown_to_meet_both"], r["meets_wording"])
+
+    def test_guidance_list_is_the_best_learners_count(self):
+        for release in RELEASES:
+            g = load(release, "guidance.json")
+            for split, listed in g["best_meets_wording"].items():
+                with self.subTest(release=release, split=split):
+                    self.assertEqual(len(listed), g["rows"][f"best:{split}"]["meets_wording"])
+                    self.assertEqual(len({e["dataset"] for e in listed}), len(listed))
+                    for e in listed:
+                        self.assertIn(e["learner"], LEARNERS)
+                        self.assertLess(e["vme"]["hi"], 0.075, e["dataset"])
+                        self.assertLess(e["vme"]["lo"], 0.015, e["dataset"])
+                        self.assertLessEqual(e["vme"]["x"], e["vme"]["n"])
+                        self.assertEqual(e["me"]["rate"], e["me"]["x"] / e["me"]["n"])
+                        self.assertLess(e["me"]["rate"], 0.03, e["dataset"])
+
+    def test_guidance_reads_the_rows_uncertainty_reads(self):
+        for release in RELEASES:
+            g, u = load(release, "guidance.json"), load(release, "uncertainty.json")
+            self.assertEqual(list(g["rows"]), list(u["error_bars"]["rows"]))
+            for key, r in g["rows"].items():
+                b = u["error_bars"]["rows"][key]
+                with self.subTest(release=release, row=key):
+                    self.assertEqual(r["n"], b["n"])
+                    self.assertEqual(r["screen"], {k: b[k] for k in ("shown_to_meet_both", "shown_to_miss_one", "not_decided")})
+
+    def test_guidance_counts_the_no_call_rows_index_counts_finds(self):
+        for release, revision in RELEASES.items():
+            g, c = load(release, "guidance.json"), load(release, "index-counts.json")
+            with self.subTest(release=release):
+                # a learner row counts fewer than every genome exactly when it leaves out no-call genomes
+                fewer = sum(g["rows"][f"{l}:{s}"]["fewer_than_every_genome"] for l in LEARNERS for s in ("random", "lineage"))
+                self.assertEqual(fewer, c["unflagged_with_no_call"])
+                self.assertEqual(g["rows"]["catalog:random"]["fewer_than_every_genome"], 0)
+                self.assertEqual(g["rows"]["catalog:lineage"]["fewer_than_every_genome"], 0)
+                if revision == 14:
+                    self.assertEqual(sum(r["fewer_than_every_genome"] for r in g["rows"].values()), 0)
 
     def test_readme_lists_the_sha256_of_each_output(self):
         readme = (REFERENCE / "README.md").read_text(encoding="utf-8")
