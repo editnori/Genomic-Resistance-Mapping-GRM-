@@ -862,7 +862,7 @@ SAL, SA, NG and MTB are the four `combine` WORK folders.
 
 The author had seen two things before. One was a Salmonella report rebuilt from arm outputs that earlier stages of the run had saved: 25 datasets, 9 arms and the two twins. The other was N. gonorrhoeae counts and medians from a stage that stopped: 7 datasets, no grr-v1. So S. aureus and M. tuberculosis were unseen for every arm, and k21 and k25 were unseen on every species.
 
-The plan is a private working note. Its sha256 (`57ba6f212a57e2516477f020d1c3ae225b2f8a6c37fc9941cedcfd7be1b8c24d`) went into a private ledger at 06:15 UTC, and no public timestamp attests it. A script fixed with the plan first read the numbers below, and `second_reading.py` gives the same numbers on the four reports.
+The plan is [`reference/input-comparison/reading-plan.md`](../reference/input-comparison/reading-plan.md), copied there unchanged on 13 Nov 2026. Until then it was a private working note. Its sha256 (`57ba6f212a57e2516477f020d1c3ae225b2f8a6c37fc9941cedcfd7be1b8c24d`) went into a private ledger at 06:15 UTC, and no public timestamp attests that hour: the sha256 first became public in pull request #82, opened at 19:58 UTC that day, after the results. A script fixed with the plan first read the numbers below, and `second_reading.py` gives the same numbers on the four reports.
 
 **Counts.** A dataset has a lineage answer when the report doesn't list it under "Datasets the per-dataset test can't answer" (item 4 of the decision method). The 72 datasets split into 49 with a lineage answer and 23 without. The reports made 2,420 of the 4,680 planned family C contrasts.
 

@@ -1,8 +1,8 @@
 """The input comparison's numbers the web app bundles (web/src/data/input-comparison.json).
 
 The file must be exactly what scripts/input-comparison/site_data.py writes from the two reference readings, each
-reference reading must be the one its README names, the second reading must give the runner document's "By dataset"
-table, and the reading by learner must give the numbers the document's "On H-1" lines name.
+reference reading and the reading plan must be the file its README names, the second reading must give the runner
+document's "By dataset" table, and the reading by learner must give the numbers the document's "On H-1" lines name.
 """
 
 import hashlib
@@ -16,9 +16,12 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 READING = ROOT / "reference" / "input-comparison" / "second-reading.json"
 LEARNERS = ROOT / "reference" / "input-comparison" / "learner-reading.json"
+PLAN = ROOT / "reference" / "input-comparison" / "reading-plan.md"
 README = ROOT / "reference" / "input-comparison" / "README.md"
 BUNDLED = ROOT / "web" / "src" / "data" / "input-comparison.json"
 RUNNER = ROOT / "docs" / "input-comparison-runner.md"
+# The sha256 of the reading plan as the runner document's "Timing" paragraph gives it.
+RUNNER_PLAN_SHA = re.search(r"reading-plan\.md\)[^`]*`([0-9a-f]{64})`", RUNNER.read_text(encoding="utf-8")).group(1)
 
 
 def load_site_data():
@@ -63,7 +66,8 @@ class BundledReading(unittest.TestCase):
 
     def test_the_references_are_the_files_the_readme_names(self):
         text = README.read_text(encoding="utf-8")
-        for name, path in (("second-reading.json", READING), ("learner-reading.json", LEARNERS)):
+        self.assertEqual(text.count(RUNNER_PLAN_SHA), 1, "the README names the sha256 the runner document names")
+        for name, path in (("second-reading.json", READING), ("learner-reading.json", LEARNERS), ("reading-plan.md", PLAN)):
             named = re.search(rf"`{re.escape(name)}` with sha256\s+`([0-9a-f]{{64}})`", text)
             self.assertIsNotNone(named, name)
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), named.group(1), name)

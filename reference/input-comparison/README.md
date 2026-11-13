@@ -45,6 +45,24 @@ cannot be rebuilt without them. It is copied here unchanged as `learner-reading.
 `105c2d1cc4d707a38673683e79d594ef1b9a1dbe58afcfe8583320df4e14acdc`. The script that wrote it had sha256
 `be5008be8c4e110a772631375f0c3192c805e4020aa542acf2e65aab5f0d4049`, the script in this repository at the time.
 
+## The plan fixed before the results
+
+`reading-plan.md` is the plan that fixed the second reading on 11 November 2026: what to count, the calibration
+rule, the firm rule and the four predictions
+([docs/input-comparison-runner.md](../../docs/input-comparison-runner.md), "H-1's reading", under "Timing").
+It was a private working note until 13 November 2026. It is copied here unchanged as `reading-plan.md` with sha256
+`57ba6f212a57e2516477f020d1c3ae225b2f8a6c37fc9941cedcfd7be1b8c24d`, the value the runner document has named since pull request #82.
+
+Three things about it need saying:
+
+- **Nothing public attests its hour.** The note gives its own time, 06:15 UTC on 11 November. The sha256 first
+  became public in pull request #82, opened at 19:58 UTC that day, after the results. So the file shows what the plan
+  said, and the claim that it came before the results rests on the author's record.
+- **It names files that are not in this repository.** The rebuilt reports under `rehearsal/`, the ledger row and
+  `analysis/h1_contrasts.py` belong to the author's working folder. `scripts/input-comparison/second_reading.py`
+  gives the numbers that script first read.
+- **H-1 is the working name** of the input comparison's run on four species.
+
 ## What the web app bundles
 
 The web app bundles part of both readings, `web/src/data/input-comparison.json` (of the reading by learner,
