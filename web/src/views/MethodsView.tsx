@@ -485,7 +485,8 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
         <P>
           A separate comparison changed one of the pipeline&apos;s inputs at a time (how many genomes, which genomes, k-mer length, added feature sources and how many features are
           screened) and scored each change against the default on four species, by log loss with whole lineages held out. It counts the datasets where each change scored better and
-          worse. It does not show that the default is the best setting.
+          worse. It does not show that the default is the best setting. The same counts by learner, with the resistant genomes found, are an exploratory reading: it was designed
+          after the results had been read, and it decides nothing.
         </P>
         <DocNote href={`${routeHref({ view: "overview", species: null, dataset: null })}#inputs`} section="Input settings against the default" plan="docs/input-comparison-runner.md" />
       </Part>

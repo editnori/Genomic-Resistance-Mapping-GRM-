@@ -14,7 +14,7 @@ import { ViewHeader } from "../ui/ViewHeader";
 import { FOCUS_RING, PanelState, VIEW_SHELL } from "../ui/primitives";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PrimerSection } from "./primer";
-import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding } from "./findings";
+import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding, type FindingMore } from "./findings";
 
 /** The anchor of the panel section, where /tests redirects. */
 export const PANELS_ANCHOR = "panels";
@@ -27,11 +27,11 @@ const OVERVIEW_PURPOSE =
 
 /** Supporting evidence under one explicit control, open on arrival from a
  *  link that names it. */
-const More = ({ label, open: initial, children }: { label: string; open: boolean; children: ReactNode }) => {
+const More = ({ label, open: initial, first = true, children }: { label: string; open: boolean; first?: boolean; children: ReactNode }) => {
   const [open, setOpen] = useState(initial);
   const id = useId();
   return (
-    <div className="mt-6">
+    <div className={first ? "mt-6" : "mt-1"}>
       <button
         type="button"
         aria-expanded={open}
@@ -68,11 +68,11 @@ const ReportSection = ({ n, finding, open }: { n: number; finding: Finding; open
         <p className={`prose-measure text-note text-muted-text ${figure === null || figure === undefined ? "" : "mt-3"}`}>{finding.caption}</p>
         {finding.note}
       </div>
-      {finding.more === undefined ? null : (
-        <More label={finding.more.label} open={open}>
-          {finding.more.body}
+      {(finding.more === undefined ? [] : Array.isArray(finding.more) ? finding.more : [finding.more]).map((m: FindingMore, i: number) => (
+        <More key={m.label} label={m.label} open={open && i === 0} first={i === 0}>
+          {m.body}
         </More>
-      )}
+      ))}
     </section>
   );
 };

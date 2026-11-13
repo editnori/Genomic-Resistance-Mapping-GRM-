@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INPUT_COMPARISON, armById, inputSummary, prediction, speciesIndex } from "./inputs";
+import { INPUT_COMPARISON, INPUT_LEARNERS, armById, inputSummary, namedRow, prediction, speciesIndex } from "./inputs";
 
 const s = inputSummary();
 const p4 = (x: number) => x.toFixed(4);
@@ -44,6 +44,50 @@ describe("the input comparison's bundled reading", () => {
     for (const a of INPUT_COMPARISON.arms) {
       expect(a.species.reduce((n, x) => n + x.datasets, 0)).toBe(a.all.datasets);
       expect(a.all.better + a.all.worse + a.all.unchanged).toBe(a.all.datasets);
+    }
+  });
+});
+
+describe("the reading by learner, whole lineages held out", () => {
+  const p3 = (x: number) => x.toFixed(3);
+  it("gives the set covering machine's share of the change for 4,000 genomes", () => {
+    const share = armById("cap-4000").learners.scm.share;
+    expect([p3(share.units), p3(share.genomes)]).toEqual(["0.739", "0.694"]);
+  });
+
+  it("counts 4,000 genomes by learner, with the set covering machine's recall", () => {
+    const scm = armById("cap-4000").learners.scm;
+    expect([scm.better, scm.worse, scm.unchanged, scm.datasets, p4(scm.p)]).toEqual([32, 16, 1, 49, "0.0293"]);
+    expect(scm.recall.map(p3)).toEqual(["0.802", "0.809"]);
+  });
+
+  it("counts 1,000 genomes worse for every learner", () => {
+    const a = armById("cap-1000").learners;
+    expect(INPUT_LEARNERS.map((l) => [a[l].worse, a[l].datasets])).toEqual([
+      [21, 33],
+      [24, 33],
+      [28, 33],
+      [25, 33],
+      [19, 33],
+    ]);
+    for (const l of INPUT_LEARNERS) expect(a[l].worse).toBeGreaterThan(a[l].better);
+  });
+
+  it("leaves the two learners that skip the screen unchanged on 1,000 screened features", () => {
+    const a = armById("budget-1000").learners;
+    expect([a.scm.unchanged, a.scm.datasets, a.cart.unchanged, a.cart.datasets]).toEqual([49, 49, 49, 49]);
+    expect([a.rf.worse, a.gbt.worse, a.lasso.worse, a.rf.datasets]).toEqual([30, 36, 34, 49]);
+  });
+
+  it("names the clofazimine calls", () => {
+    const r = namedRow("mycobacterium_tuberculosis__clofazimine", "cap-4000", "scm");
+    expect([r.default.tp, r.default.fn, r.arm_calls.tp, r.arm_calls.fn, p4(r.estimate)]).toEqual([381, 198, 105, 474, "2.7935"]);
+  });
+
+  it("has every learner on every change, its counts adding up", () => {
+    for (const a of INPUT_COMPARISON.arms) {
+      expect(Object.keys(a.learners)).toEqual([...INPUT_LEARNERS]);
+      for (const l of INPUT_LEARNERS) expect(a.learners[l].better + a.learners[l].worse + a.learners[l].unchanged).toBe(a.learners[l].datasets);
     }
   });
 });

@@ -49,7 +49,7 @@ import { GapSwarm, MicStrip } from "../charts/DotStrip";
 import { CatalogScatter } from "../charts/CatalogScatter";
 import { InputRows, type InputGroup } from "../charts/InputRows";
 import { OutsideScatter, type OutsidePanel } from "../charts/OutsideScatter";
-import { INPUT_COMPARISON, armById, inputSummary, prediction, speciesIndex, type InputArm } from "../data/derive/inputs";
+import { INPUT_COMPARISON, INPUT_LEARNERS, armById, inputSummary, namedRow, prediction, speciesIndex, type InputArm } from "../data/derive/inputs";
 import { OUTSIDE_LEARNERS, OUTSIDE_STUDY, outsidePoints, populationById, populationSummary, type Learner as OutsideLearner, type PopulationSummary } from "../data/derive/outside";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
@@ -69,6 +69,11 @@ export interface PagedFit extends Fit {
 
 export type FindingFigure = ReactNode | ((fit: PagedFit) => ReactNode);
 
+export interface FindingMore {
+  label: string;
+  body: ReactNode;
+}
+
 export interface Finding {
   id: FindingId;
   /** A plain section name. */
@@ -83,8 +88,9 @@ export interface Finding {
   /** Page only: a centered plot-and-legend unit, or a strip across the
    *  full width. */
   span: "unit" | "wide";
-  /** Page only: the evidence behind the figure, under one explicit control. */
-  more?: { label: string; body: ReactNode };
+  /** Page only: the evidence behind the figure, each part under one explicit
+   *  control of its own. */
+  more?: FindingMore | readonly FindingMore[];
   /** Deck only: the figure continues onto further slides when its rows do
    *  not fit at their minimum height. */
   continues?: boolean;
@@ -1199,7 +1205,8 @@ export const outsideFinding = (m: Manifest, opts: FindingOptions): Finding => {
           The first group has {int(primary.frozen)} genomes on {plural(primary.datasets, "dataset")} in {plural(primary.species, "species", "species")}, and {int(primary.holds.scm.read)} of the
           datasets have a report figure to read. The second has {int(same.frozen)} genomes on {plural(same.datasets, "dataset")} in {plural(same.species, "species", "species")}, and{" "}
           {int(same.scored)} of its genomes were scored. The two groups cover different species and datasets. The plan scores them apart, and they were set side by side only after both
-          results were read, so the page draws them apart and does not compare them.
+          results were read, so the page draws them apart and does not compare them. The plan reads sensitivity and specificity one at a time. Counting a dataset as holding when
+          neither reads below was added when the results were written up.
         </p>
         <p>
           The figures move both ways. For the set covering machine on the first group, sensitivity reads above the report on {int(c.sensitivityAbove)} of the {int(primary.holds.scm.read)}{" "}
@@ -1283,6 +1290,73 @@ const InputSpeciesTable = () => {
   );
 };
 
+/** Two shares of the summed calls, under the default and under the change. */
+const shareMove = ([was, now]: readonly number[]): string => `${pct(was)} → ${pct(now)}`;
+
+/** The reading by learner with whole lineages held out: one group per change,
+ *  in the order of the main rows, five learners each, with the datasets worse
+ *  and better and the shares of resistant and susceptible genomes called
+ *  right, from the summed calls. On a narrow screen the datasets compared and
+ *  the susceptible share leave the row, so it reads without scrolling. */
+const InputLearnerTable = () => {
+  const s = inputSummary();
+  const head: readonly { text: string; wide?: boolean }[] = [
+    { text: "Learner" },
+    { text: "Worse" },
+    { text: "Better" },
+    { text: "Of", wide: true },
+    { text: "Resistant found, default → change" },
+    { text: "Susceptible called susceptible, default → change", wide: true },
+  ];
+  const only = (wide?: boolean) => (wide ? "hidden sm:table-cell" : "");
+  const table = (
+    <table className="w-full border-collapse text-control sm:min-w-[40rem]">
+      <thead>
+        <tr className="border-b border-hair">
+          {head.map((h, i) => (
+            <th key={h.text} scope="col" className={`${TH} ${i === 0 ? "text-left" : "text-right"} ${only(h.wide)}`}>
+              {h.text}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      {[...s.changed, ...s.twins].map((a) => (
+        <tbody key={a.id} data-learner-group={inputWords(a)}>
+          <tr className="border-b border-hair">
+            <th scope="rowgroup" colSpan={head.length} className="px-2 pb-1.5 pt-4 text-left text-tiny font-medium text-muted-text">
+              {inputWords(a)}
+            </th>
+          </tr>
+          {INPUT_LEARNERS.map((l) => {
+            const r = a.learners[l];
+            return (
+              <tr key={l} data-learner={l} className="border-b border-hair">
+                <th scope="row" className="px-2 py-1 text-left font-normal">
+                  {LEARNER_NAME[l]}
+                </th>
+                <td className="px-2 py-1 text-right tabular-nums">{int(r.worse)}</td>
+                <td className="px-2 py-1 text-right tabular-nums">{int(r.better)}</td>
+                <td className={`px-2 py-1 text-right tabular-nums ${only(true)}`}>{int(r.datasets)}</td>
+                <td className="whitespace-nowrap px-2 py-1 text-right tabular-nums">{shareMove(r.recall)}</td>
+                <td className={`whitespace-nowrap px-2 py-1 text-right tabular-nums ${only(true)}`}>{shareMove(r.specificity)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      ))}
+    </table>
+  );
+  return (
+    <div className="max-w-[48rem]">
+      <ScrollFrame label="Each change by learner, whole lineages held out">{table}</ScrollFrame>
+      <p className="prose-measure mt-2 text-muted-text">
+        Worse and better count the datasets where the change&apos;s log loss for that learner was higher or lower than the default&apos;s. The shares come from the calls summed over
+        the datasets, with a genome counted once per repeat. This reading was designed after the results had been read, and it decides nothing.
+      </p>
+    </div>
+  );
+};
+
 export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
   const c = INPUT_COMPARISON;
   const s = inputSummary();
@@ -1299,6 +1373,13 @@ export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
   // The two species the document names as too small to decide anything alone.
   const small = ["Neisseria gonorrhoeae", "Staphylococcus aureus"].map((n) => c.species[speciesIndex(n)]!);
   const p4 = (v: number) => v.toFixed(4);
+  // The reading by learner, whole lineages held out.
+  const byLearner = cap4000.learners;
+  const others = INPUT_LEARNERS.filter((l) => l !== "scm").map((l) => byLearner[l].p);
+  const clofazimine = namedRow("mycobacterium_tuberculosis__clofazimine", "cap-4000", "scm");
+  const fewer = armById("cap-1000").learners;
+  const screen = armById("budget-1000").learners;
+  const screened = ["rf", "gbt", "lasso"] as const;
   return {
     id: "inputs",
     title: "Input settings against the default",
@@ -1318,7 +1399,7 @@ export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
     ),
     caption: opts.page
       ? "Each row is one changed input. Worse and better count the datasets where the change's log loss, averaged over the learners, was higher or lower than the default's, with whole lineages held out. Sign p is a two-sided exact sign test over those datasets; a species' datasets share genomes, so it guides and does not decide. The last two rows run the default again with no input changed, so they show how far a score moves by chance."
-      : `Datasets where each change scored worse and better than the default, by log loss with whole lineages held out. The last two rows run the default again with no input changed. ${plural(s.species, "species", "species")}, ${int(s.answered)} datasets with a result.`,
+      : `Datasets where each change scored worse and better than the default, by log loss with whole lineages held out. The last two rows run the default again with no input changed. Each count averages five learners; the page gives them by learner, with the resistant genomes found. ${plural(s.species, "species", "species")}, ${int(s.answered)} datasets with a result.`,
     note: opts.page ? (
       <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
         <p>
@@ -1329,8 +1410,18 @@ export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
         </p>
         <p>
           At most 4,000 genomes per species scored better on {int(cap4000.all.better)} of {int(cap4000.all.datasets)} datasets (sign p {p4(cap4000.all.p)}), and {int(salmonella.better)} of
-          the {int(cap4000.all.better)} are Salmonella&apos;s. More genomes helped on most Salmonella datasets, and the plan predicted the same on the two species it had not yet seen,{" "}
-          {unseen}. There it scored better on {int(told.better)} of {int(told.of)} datasets, which a sign test can&apos;t tell from an even split, so the prediction failed.
+          the {int(cap4000.all.better)} are Salmonella&apos;s: it scored better on {int(salmonella.better)} of {int(salmonella.datasets)} Salmonella datasets. The plan predicted
+          it would score better on the two species it had not yet seen, {unseen}. There it scored better on {int(told.better)} of {int(told.of)} datasets, which a sign test can&apos;t tell from an even split, so the prediction failed.
+        </p>
+        <p>
+          Log loss scores the probabilities a learner gives. It can improve while the learner finds fewer resistant genomes, and the five learners&apos; log loss is not on one scale: the
+          set covering machine answers yes or no, and it carries {pct(byLearner.scm.share.units, 0)} of the five learners&apos; summed change for 4,000 genomes. By learner, 4,000 genomes
+          scored better on {int(byLearner.scm.better)} of {int(byLearner.scm.datasets)} datasets for the set covering machine (sign p {p4(byLearner.scm.p)}) and showed no direction for
+          the other four (sign p {p4(Math.min(...others))} to {p4(Math.max(...others))}). On TB clofazimine its log loss improved while its correct resistant calls fell from{" "}
+          {int(clofazimine.default.tp)} to {int(clofazimine.arm_calls.tp)} of {int(clofazimine.default.tp + clofazimine.default.fn)}. 1,000 genomes scored worse on more datasets than
+          better for every learner ({listWords(INPUT_LEARNERS.map((l) => int(fewer[l].worse)))} of {int(fewer.scm.datasets)}). 1,000 screened features cannot move the set covering
+          machine or the decision tree, which do not use the screen; the other three scored worse on {listWords(screened.map((l) => int(screen[l].worse)))} of {int(screen.rf.datasets)}.
+          The reading by learner was designed after the results had been read, and it decides nothing.
         </p>
         <p>
           A count with no direction doesn&apos;t show that a change equals the default. 21-letter k-mers moved {moved("k21")} comparisons of one dataset and one learner by {c.margin} or
@@ -1354,7 +1445,12 @@ export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
     ) : undefined,
     span: "wide",
     continues: true,
-    more: opts.page ? { label: "Each change by species", body: <InputSpeciesTable /> } : undefined,
+    more: opts.page
+      ? [
+          { label: "Each change by species", body: <InputSpeciesTable /> },
+          { label: "Each change by learner", body: <InputLearnerTable /> },
+        ]
+      : undefined,
   };
 };
 

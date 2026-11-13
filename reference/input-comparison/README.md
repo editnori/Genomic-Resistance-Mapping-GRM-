@@ -27,11 +27,32 @@ e44b702dfb44b7ce916a76def768a89fb54f5bb84c2d8b666a61fe1f3ee58a1c  SA/report/abla
 The run used Python 3.12 and numpy 1.26.4. It wrote `second-reading.json` with sha256
 `8facf0640741c9991f823fdcb4034f942fdfc17a68b1d35c9d09f85f5d8bd606`.
 
-The web app bundles part of it, `web/src/data/input-comparison.json`.
+## The reading by learner
+
+`learner-reading.json` is the JSON that `scripts/input-comparison/learner_reading.py` writes for the same run:
+each learner's log loss beside its calls, per split, change and learner
+([docs/input-comparison-runner.md](../../docs/input-comparison-runner.md), "A per-learner reading with calls").
+It was designed after the results were read, and it decides nothing. It was made with:
+
+```
+python3 -I -B scripts/input-comparison/learner_reading.py \
+    SAL SA NG MTB --json learner-reading.json --sensitivity
+```
+
+SAL, SA, NG and MTB stand for the four `combine` WORK folders themselves, given by full path, not their reports:
+the reading pairs the prediction rows they hold. Those folders are not kept in this repository, so this file
+cannot be rebuilt without them. It is copied here unchanged as `learner-reading.json` with sha256
+`105c2d1cc4d707a38673683e79d594ef1b9a1dbe58afcfe8583320df4e14acdc`. The script that wrote it had sha256
+`be5008be8c4e110a772631375f0c3192c805e4020aa542acf2e65aab5f0d4049`, the script in this repository at the time.
+
+## What the web app bundles
+
+The web app bundles part of both readings, `web/src/data/input-comparison.json` (of the reading by learner,
+the lineage split only).
 `scripts/input-comparison/site_data.py` writes that part, and `tests/input_comparison/test_site_data.py`
 holds the bundled file to the script's output:
 
 ```
-python3 -I -B scripts/input-comparison/site_data.py reference/input-comparison/second-reading.json > web/src/data/input-comparison.json
-python3 -I -B scripts/input-comparison/site_data.py reference/input-comparison/second-reading.json --check web/src/data/input-comparison.json
+python3 -I -B scripts/input-comparison/site_data.py reference/input-comparison/second-reading.json reference/input-comparison/learner-reading.json > web/src/data/input-comparison.json
+python3 -I -B scripts/input-comparison/site_data.py reference/input-comparison/second-reading.json reference/input-comparison/learner-reading.json --check web/src/data/input-comparison.json
 ```

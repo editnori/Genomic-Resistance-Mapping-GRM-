@@ -49,6 +49,9 @@ describe("methods in plain words", () => {
     const part = el.querySelector("#m-inputs")!;
     expect(part.querySelector("h3")?.textContent).toBe("Input settings against the default");
     expect(part.textContent).toContain("It does not show that the default is the best setting.");
+    expect(part.textContent).toContain(
+      "The same counts by learner, with the resistant genomes found, are an exploratory reading: it was designed after the results had been read, and it decides nothing.",
+    );
     expect(part.textContent).toContain("The write-up is docs/input-comparison-runner.md in the GRM repository.");
     expect([...part.querySelectorAll("code")].map((c) => c.textContent)).toEqual(["docs/input-comparison-runner.md"]);
     expect(part.querySelector("a")?.getAttribute("href")).toBe("/#inputs");

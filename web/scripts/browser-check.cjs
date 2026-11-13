@@ -455,8 +455,8 @@ const INTERNAL = /H-1|\barm\b|sentinel|twin|family C|\bK\b|\bJ\b|cap-\d|grr-v1|b
 /** Input settings against the default: every row with the reading's counts,
  *  sign p and median, the changed inputs and the default's repeat runs in
  *  groups of their own, each bar drawn to its counts on one scale, no
- *  internal name, and the by-species table behind its control, opened by
- *  keyboard. */
+ *  internal name, and the by-species and by-learner tables each behind a
+ *  control of its own, opened by keyboard. */
 async function inputsCheck(page, tag) {
   const section = page.locator('#inputs');
   await section.waitFor();
@@ -484,6 +484,37 @@ async function inputsCheck(page, tag) {
     return { expanded: b?.getAttribute('aria-expanded'), controls: b?.getAttribute('aria-controls') ?? null, rows: region ? region.querySelectorAll('tbody tr').length : 0, focus: document.activeElement === b, text: s.textContent ?? '' };
   });
   check(tag + ' inputs by-species table opens by keyboard behind its control', opened.expanded === 'true' && opened.controls !== null && opened.rows === INPUTS.arms.length + 2 && opened.focus && !INTERNAL.test(opened.text), { ...opened, text: undefined });
+  await page.keyboard.press('Enter');
+  // The reading by learner: closed on arrival, then one group per change in
+  // the main rows' order, five learners each, with the counts and shares the
+  // bundled file gives; a narrow screen keeps the learner, the two counts and
+  // the resistant share, and the table fits without scrolling sideways.
+  const closedLearners = await section.evaluate(s => s.querySelectorAll('[data-learner-group]').length);
+  const byLearner = section.getByRole('button', { name: 'Show each change by learner' });
+  await byLearner.focus(); await page.keyboard.press('Enter');
+  await section.locator('[data-learner-group]').first().waitFor();
+  const learners = await section.evaluate(s => {
+    const b = [...s.querySelectorAll('button')].find(x => /each change by learner/.test(x.textContent));
+    const region = s.querySelector('[role="region"][aria-label="Each change by learner, whole lineages held out"]');
+    const shown = el => getComputedStyle(el).display !== 'none';
+    return {
+      expanded: b?.getAttribute('aria-expanded'), controls: b?.getAttribute('aria-controls') ?? null, focus: document.activeElement === b,
+      fits: region ? region.scrollWidth <= region.clientWidth : false,
+      head: region ? [...region.querySelectorAll('thead th')].filter(shown).map(th => th.textContent) : [],
+      groups: region ? [...region.querySelectorAll('tbody[data-learner-group]')].map(g => ({ title: g.getAttribute('data-learner-group'), rows: [...g.querySelectorAll('tr[data-learner]')].map(tr => ({ learner: tr.getAttribute('data-learner'), name: tr.querySelector('th')?.textContent ?? '', cells: [...tr.querySelectorAll('td')].filter(shown).map(td => td.textContent) })) })) : [],
+      text: s.textContent ?? '',
+    };
+  });
+  const wide = page.viewportSize().width >= 640;
+  const share = v => (v * 100).toFixed(1) + '%';
+  const move = xs => share(xs[0]) + ' → ' + share(xs[1]);
+  const LEARNER_ORDER = ['scm', 'cart', 'rf', 'gbt', 'lasso'];
+  const learnerExpected = INPUTS.arms.map(a => LEARNER_ORDER.map(l => { const r = a.learners[l]; return [l, ...(wide ? [String(r.worse), String(r.better), String(r.datasets), move(r.recall), move(r.specificity)] : [String(r.worse), String(r.better), move(r.recall)])]; }));
+  const learnerSeen = learners.groups.map(g => g.rows.map(r => [r.learner, ...r.cells]));
+  check(tag + ' inputs by-learner table closed on arrival, opens by keyboard behind its own control', closedLearners === 0 && learners.expanded === 'true' && learners.controls !== null && learners.focus, { closedLearners, expanded: learners.expanded, focus: learners.focus });
+  check(tag + ' inputs by-learner table: 13 groups of 5 learners, each with the reading\'s counts and shares', learners.groups.length === INPUTS.arms.length && learners.groups.every(g => g.rows.length === 5) && JSON.stringify(learnerSeen) === JSON.stringify(learnerExpected), { groups: learners.groups.length, seen: learnerSeen.slice(0, 2), expected: learnerExpected.slice(0, 2) });
+  check(tag + ' inputs by-learner table: ' + (wide ? 'every column' : 'the learner, the two counts and the resistant share') + ', fitting its frame on a narrow screen', learners.head.length === (wide ? 6 : 4) && (wide || learners.fits), { head: learners.head, fits: learners.fits });
+  check(tag + ' inputs by-learner table: no internal name reaches the reader', !INTERNAL.test(learners.text) && !/\b(scm|cart|rf|gbt|lasso)\b/.test(learners.groups.map(g => g.rows.map(r => r.name).join(' ')).join(' ')), learners.text.match(INTERNAL)?.[0] ?? null);
   await page.keyboard.press('Enter');
 }
 

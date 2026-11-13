@@ -378,6 +378,9 @@ describe("What GRM found", () => {
     ]);
     expect(text).toContain("so it is not an untouched held-out set. It is not external validation.");
     expect(text).toContain("they were set side by side only after both results were read, so the page draws them apart and does not compare them.");
+    expect(text).toContain(
+      "The plan reads sensitivity and specificity one at a time. Counting a dataset as holding when neither reads below was added when the results were written up.",
+    );
     expect(text).toContain("sensitivity reads above the report on 36 of the 81 datasets and below it on 27. Specificity reads below on 35 datasets and above on 25. Only specificity reads below on 22 datasets, only sensitivity on 14, and both on 13.");
     expect(text).toContain("One study holds at least half of the resistant genomes on 69 of the 82 datasets in the first group.");
     expect(text).toContain("The second has 3,155 genomes on 49 datasets in 6 species, and 3,144 of its genomes were scored.");
@@ -417,9 +420,19 @@ describe("What GRM found", () => {
     expect(rows[12]).toEqual(["The default run again, no input changed"]);
     expect(rows.slice(13).map((r) => r[0])).toEqual(["The default again, new learner seed", "The default again, tuning folds drawn again"]);
     expect(text).toContain("They have 72 datasets, and 49 have a result with whole lineages held out: Salmonella 18 of 25, Staph 7 of 18, Gonorrhea 4 of 7 and TB 20 of 22.");
-    expect(text).toContain("scored better on 31 of 49 datasets (sign p 0.0854), and 14 of the 31 are Salmonella's.");
+    expect(text).toContain("scored better on 31 of 49 datasets (sign p 0.0854), and 14 of the 31 are Salmonella's: it scored better on 14 of 18 Salmonella datasets.");
+    expect(text).not.toContain("helped");
     expect(text).toContain("There it scored better on 15 of 27 datasets, which a sign test can't tell from an even split, so the prediction failed.");
     expect(text).toContain("A count with no direction doesn't show that a change equals the default.");
+    // The reading by learner, in the notes in view.
+    expect(text).toContain("it carries 74% of the five learners' summed change for 4,000 genomes.");
+    expect(text).toContain(
+      "By learner, 4,000 genomes scored better on 32 of 49 datasets for the set covering machine (sign p 0.0293) and showed no direction for the other four (sign p 0.2529 to 0.5682).",
+    );
+    expect(text).toContain("On TB clofazimine its log loss improved while its correct resistant calls fell from 381 to 105 of 579.");
+    expect(text).toContain("1,000 genomes scored worse on more datasets than better for every learner (21, 24, 28, 25 and 19 of 33).");
+    expect(text).toContain("which do not use the screen; the other three scored worse on 30, 36 and 34 of 49.");
+    expect(text).toContain("The reading by learner was designed after the results had been read, and it decides nothing.");
     expect(text).toContain("Of 1,945 comparisons of one dataset and one learner that were tested, 23 were decided the same way inside their species and across the 4 species together: 5 better and 18 worse, 20 of them on the random forest.");
     expect(text).toContain("Gonorrhea has 4 datasets with a result and Staph 7, too few to decide anything alone.");
     expect(text).toContain("fixed after the Salmonella and Gonorrhea results had been seen and before the other two species finished, and no public timestamp attests it.");
@@ -433,6 +446,30 @@ describe("What GRM found", () => {
     expect([...bySpecies.querySelectorAll("thead th")].map((th) => th.textContent)).toEqual(["Change", "Salmonella", "Staph", "Gonorrhea", "TB", "All four"]);
     expect([...bySpecies.querySelectorAll("tbody tr")][2]!.textContent).toBe("At most 4,000 genomes per species14, 4 of 184, 3 of 72, 2 of 411, 9 of 2031, 18 of 49");
     expect(inputs.textContent).not.toMatch(/sentinel|twin|cap-\d|grr-v1/);
+    // The reading by learner, under a control of its own, closed on arrival.
+    expect(inputs.querySelector("[data-learner-group]")).toBeNull();
+    const learnerMore = [...inputs.querySelectorAll("button")].find((b) => b.textContent === "Show each change by learner")!;
+    await act(async () => learnerMore.click());
+    expect(learnerMore.getAttribute("aria-expanded")).toBe("true");
+    const byLearner = framed(inputs, "Each change by learner, whole lineages held out");
+    const groups = [...byLearner.querySelectorAll("tbody[data-learner-group]")];
+    expect(groups).toHaveLength(13);
+    for (const g of groups) expect(g.querySelectorAll("tr[data-learner]")).toHaveLength(5);
+    expect([...byLearner.querySelectorAll("thead th")].map((th) => th.textContent)).toEqual([
+      "Learner",
+      "Worse",
+      "Better",
+      "Of",
+      "Resistant found, default \u2192 change",
+      "Susceptible called susceptible, default \u2192 change",
+    ]);
+    const cap4000 = groups[1]!;
+    expect(cap4000.querySelector("th[scope=rowgroup]")?.textContent).toBe("At most 4,000 genomes per species");
+    const scm = [...cap4000.querySelector("tr[data-learner=scm]")!.children].map((c) => c.textContent);
+    expect(scm.slice(0, 5)).toEqual(["Set covering machine", "16", "32", "49", "80.2% \u2192 80.9%"]);
+    expect([...groups[0]!.querySelectorAll("tr[data-learner] td:first-of-type")].map((td) => td.textContent)).toEqual(["21", "24", "28", "25", "19"]);
+    expect(groups.slice(11).map((g) => g.querySelector("th[scope=rowgroup]")?.textContent)).toEqual(["The default again, new learner seed", "The default again, tuning folds drawn again"]);
+    expect(inputs.textContent).not.toMatch(/sentinel|twin|cap-\d|grr-v1|budget-|\bscm\b|\bgbt\b|\brf\b|\barm\b/);
   });
 
   it("ends with the limits and a link to the audit in Methods", async () => {
