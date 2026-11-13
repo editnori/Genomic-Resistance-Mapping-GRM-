@@ -275,12 +275,15 @@ export const nearestMark = (marks: readonly { x: number; y: number }[], px: numb
  *  its first tip line only; a tap pins with no hover first. `hit` replaces
  *  the nearest-mark test where a mark is a column rather than a point.
  *  `after` sits under the chart and above the strip (an axis title).
+ *  `canOpen` says which marks have a dataset to open; the strip offers
+ *  Open dataset only for those (every mark when it is not given).
  *  `marks` come in keyboard order. */
 export const MarkListbox = ({
   label,
   marks,
   width,
   onOpen,
+  canOpen,
   hit,
   after,
   children,
@@ -289,6 +292,7 @@ export const MarkListbox = ({
   marks: readonly ListMark[];
   width: number;
   onOpen?(index: number): void;
+  canOpen?(index: number): boolean;
   /** The mark under a point in plot pixels, or -1. */
   hit?(x: number, y: number): number;
   after?: ReactNode;
@@ -394,9 +398,11 @@ export const MarkListbox = ({
             <TipBody lines={pin.tip()} />
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <GhostButton tone="blue" onClick={() => onOpen(pinIndex)}>
-              Open dataset
-            </GhostButton>
+            {canOpen === undefined || canOpen(pinIndex) ? (
+              <GhostButton tone="blue" onClick={() => onOpen(pinIndex)}>
+                Open dataset
+              </GhostButton>
+            ) : null}
             <GhostButton onClick={() => setPinned(null)} ariaLabel="Clear the pinned mark">
               Clear
             </GhostButton>

@@ -37,6 +37,26 @@ describe("methods in plain words", () => {
     expect(steps[4]!.textContent).toContain("a VME of at most 1.5% and an ME of at most 3%");
   });
 
+  it("gives the outside-study test an entry that names its documents and links its Overview section", () => {
+    const part = el.querySelector("#m-outside")!;
+    expect(part.querySelector("h3")?.textContent).toBe("Newly deposited genomes");
+    expect(part.textContent).toContain("so it is a retrospective test and not external validation.");
+    expect([...part.querySelectorAll("code")].map((c) => c.textContent)).toEqual(["docs/outside-study-test.md", "docs/outside-study-results.md"]);
+    expect(part.querySelector("a")?.getAttribute("href")).toBe("/#outside");
+  });
+
+  it("gives the input comparison an entry that names its document and links its Overview section", () => {
+    const part = el.querySelector("#m-inputs")!;
+    expect(part.querySelector("h3")?.textContent).toBe("Input settings against the default");
+    expect(part.textContent).toContain("It does not show that the default is the best setting.");
+    expect(part.textContent).toContain(
+      "The same counts by learner, with the resistant genomes found, are an exploratory reading: it was designed after the results had been read, and it decides nothing.",
+    );
+    expect(part.textContent).toContain("The write-up is docs/input-comparison-runner.md in the GRM repository.");
+    expect([...part.querySelectorAll("code")].map((c) => c.textContent)).toEqual(["docs/input-comparison-runner.md"]);
+    expect(part.querySelector("a")?.getAttribute("href")).toBe("/#inputs");
+  });
+
   it("starts every definition with a plain line before its technical detail", () => {
     const defs = [...el.querySelectorAll("dl > div")];
     expect(defs.length).toBeGreaterThanOrEqual(19);

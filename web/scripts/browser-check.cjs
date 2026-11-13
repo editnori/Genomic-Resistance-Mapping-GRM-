@@ -134,6 +134,19 @@ const speciesName = manifest.species.find(s => s.slug === speciesSlug).species;
 const allValid = manifest.datasets.every(d => d.evaluation?.valid === true && (manifest.evaluation_revision === undefined || d.evaluation.revision === manifest.evaluation_revision));
 const CHIP = allValid ? 'Tested within one public database only' : 'Provisional metrics';
 const isLimitsHref = href => href === '/#limits' || href === '#limits' || href === '#m-limits';
+// How long a check waits for the state it reads (a transition that lands, a
+// strip that redraws, a link that follows the scroll) before it reads what is
+// there and judges that. A wait on state returns as soon as the state holds,
+// so a fast machine reads as early as before; the deadline only decides how
+// slow a machine may be before the check calls the state missing.
+const STATE_MS = 10000;
+// The inspector's freshness window for a launch point (FRESH_MS in
+// web/src/ui/launch.ts), read from the app's own source so the two cannot
+// drift apart.
+const FRESH_MS = Number(fs.readFileSync(path.join(__dirname, '../src/ui/launch.ts'), 'utf8').match(/const FRESH_MS = (\d+);/)[1]);
+// When the title slide's last beat lands: the sum of its stage delays
+// (useSlideTimeline's delays for the title in web/src/present/PresentMode.tsx).
+const TITLE_REVEAL_MS = fs.readFileSync(path.join(__dirname, '../src/present/PresentMode.tsx'), 'utf8').match(/slide\.kind === "title" \? \[([\d, ]+)\]/)[1].split(',').reduce((a, v) => a + Number(v), 0);
 const SLIDE_TITLES = ['Genomic Resistance Mapping', 'Corpus', 'Lineage cost', 'Known-gene catalog', null, 'MIC prediction', 'One interpretable rule'];
 
 const settle = async page => {
@@ -369,6 +382,149 @@ async function headerCheck(page, tag, title) {
   check(tag + ' plain status line with scope and report date', h.status.includes(CHIP) && h.status.includes('Report built') && !h.status.includes('BV-BRC lab records') && (bare ? h.scopeHref === null : isLimitsHref(h.scopeHref)), h);
 }
 
+// The outside-study rows the app bundles (web/src/data/outside-study.json,
+// written by scripts/outside-study-results/site_data.py), read here by the
+// documents' rule: a row holds when neither reading is "below", and a row
+// with a reading outside the three is not read.
+const OUTSIDE = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/outside-study.json')));
+const OUTSIDE_READ = ['below', 'consistent', 'above'];
+const outsideExpected = OUTSIDE.populations.map(p => {
+  const known = r => OUTSIDE_READ.includes(r.sensitivity) && OUTSIDE_READ.includes(r.specificity);
+  const scm = p.rows.filter(r => r.learner === 'scm' && known(r));
+  return { id: p.id, read: scm.length, holds: scm.filter(r => r.sensitivity !== 'below' && r.specificity !== 'below').length, genomes: p.species.reduce((a, x) => a + x.frozen, 0), below: { sensitivity: scm.filter(r => r.sensitivity === 'below').length, specificity: scm.filter(r => r.specificity === 'below').length }, above: { sensitivity: scm.filter(r => r.sensitivity === 'above').length, specificity: scm.filter(r => r.specificity === 'above').length }, ids: scm.map(r => r.dataset) };
+});
+
+/** Newly deposited genomes: the lead's two counts, one mark per set
+ *  covering machine row read in each of the four plots, hollow where it
+ *  reads below, each plot's above and below counts on the line above it and
+ *  clear of the drawn area, and the populations in panels of their own. A pinned mark offers Open dataset only when the
+ *  loaded index has that dataset. */
+async function outsideCheck(page, tag) {
+  const section = page.locator('#outside');
+  await section.waitFor();
+  const read = await section.evaluate(s => ({
+    lead: s.querySelector('h2 + p')?.textContent ?? '',
+    panels: [...s.querySelectorAll('h3')].map(h => h.textContent),
+    plots: [...s.querySelectorAll('[role="listbox"]')].map(l => {
+      // The plot's counts line sits above its svg, outside the drawn area.
+      const plot = l.closest('[data-outside-plot]');
+      const counts = plot?.querySelector('[data-outside-counts]');
+      const box = el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; };
+      const c = counts ? box(counts) : null, v = box(l.querySelector('svg'));
+      return {
+        label: l.getAttribute('aria-label'),
+        marks: [...l.querySelectorAll('[data-outside]')].map(g => [g.getAttribute('data-outside'), g.getAttribute('data-reading'), g.querySelector('circle').getAttribute('fill')]),
+        counts: counts?.textContent ?? null,
+        apart: c !== null && (c.bottom <= v.top || c.top >= v.bottom || c.right <= v.left || c.left >= v.right),
+        svgText: [...l.querySelectorAll('svg text')].map(t => t.textContent).filter(t => /above|below/.test(t)),
+      };
+    }),
+  }));
+  const [primary, same] = outsideExpected;
+  const fmt = n => n.toLocaleString('en-US');
+  check(tag + ' outside lead gives both populations apart', read.lead.includes(fmt(primary.genomes) + ' genomes from studies the cohorts do not hold') && read.lead.includes(primary.holds + ' of ' + primary.read + ' datasets') && read.lead.includes(fmt(same.genomes) + ' new genomes') && read.lead.includes(same.holds + ' of ' + same.read), read.lead);
+  check(tag + ' outside panels, one per population', read.panels.length === 2 && read.panels[0].endsWith(primary.read + ' datasets') && read.panels[1].endsWith(same.read + ' datasets'), read.panels);
+  const want = [[primary, 'sensitivity'], [primary, 'specificity'], [same, 'sensitivity'], [same, 'specificity']];
+  check(tag + ' outside plots: one mark per row read, hollow where it reads below, counts as the rows give', read.plots.length === 4 && want.every(([p, m], i) => {
+    const plot = read.plots[i];
+    return plot.marks.length === p.read && JSON.stringify(plot.marks.map(x => x[0]).sort()) === JSON.stringify([...p.ids].sort())
+      && plot.marks.filter(x => x[1] === 'below').length === p.below[m] && plot.marks.every(x => (x[1] === 'below') === (x[2] === 'rgb(var(--paper-pure))'))
+      && plot.counts === p.above[m] + ' read above, ' + p.below[m] + ' read below' && plot.svgText.length === 0 && plot.label.startsWith(m.charAt(0).toUpperCase() + m.slice(1));
+  }), read.plots.map(p => ({ label: p.label, marks: p.marks.length, counts: p.counts, svgText: p.svgText })));
+  check(tag + ' outside counts sit above each plot, clear of its svg', read.plots.length === 4 && read.plots.every(p => p.apart), read.plots.map(p => ({ label: p.label, apart: p.apart })));
+  // Pin the first mark by keyboard: Enter on the plot's listbox pins its
+  // first mark, and the strip offers Open dataset only for a dataset the
+  // index holds.
+  const first = page.locator('#outside [role="listbox"]').first();
+  await first.focus(); await page.keyboard.press('Home'); await page.keyboard.press('Enter');
+  const firstId = await first.evaluate(l => l.querySelector('[data-outside]')?.getAttribute('data-outside') ?? null);
+  const strip = await section.evaluate(s => ({ open: [...s.querySelectorAll('button')].some(b => b.textContent === 'Open dataset'), clear: [...s.querySelectorAll('button')].some(b => b.getAttribute('aria-label') === 'Clear the pinned mark') }));
+  check(tag + ' outside pinned mark opens its dataset only where the index has it', strip.clear && strip.open === byId.has(firstId), { firstId, inIndex: byId.has(firstId), ...strip });
+  await page.keyboard.press('Escape');
+}
+
+// The input comparison the app bundles (web/src/data/input-comparison.json,
+// written by scripts/input-comparison/site_data.py from the reference
+// reading): one row per changed input, then the default's two repeat runs.
+const INPUTS = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/input-comparison.json')));
+const fixed4 = v => (v < 0 ? '−' + (-v).toFixed(4) : v.toFixed(4));
+// The page's table keeps every column and its bars from BARS_FROM up; under
+// it, the slide's narrow set (Change, Worse, Better, Sign p) with no bars.
+const inputsExpected = INPUTS.arms.map(a => ({ id: a.id, twin: a.twin, cells: [String(a.all.worse), String(a.all.better), String(a.all.datasets), fixed4(a.all.p), fixed4(a.all.median)], narrow: [String(a.all.worse), String(a.all.better), fixed4(a.all.p)] }));
+// Names a reader must never see: the reading's own ids and terms.
+const INTERNAL = /H-1|\barm\b|sentinel|twin|family C|\bK\b|\bJ\b|cap-\d|grr-v1|budget-\d|k-c|k-h|k-p|\bk2[15]\b/;
+
+/** Input settings against the default: every row with the reading's counts,
+ *  sign p and median, the changed inputs and the default's repeat runs in
+ *  groups of their own, each bar drawn to its counts on one scale, no
+ *  internal name, and the by-species and by-learner tables each behind a
+ *  control of its own, opened by keyboard. */
+async function inputsCheck(page, tag) {
+  const section = page.locator('#inputs');
+  await section.waitFor();
+  const read = await section.evaluate(s => ({
+    lead: s.querySelector('h2 + p')?.textContent ?? '',
+    head: [...(s.querySelector('tbody[data-input-group]')?.closest('table')?.querySelectorAll('thead th') ?? [])].map(th => th.textContent),
+    fits: (() => { const t = s.querySelector('tbody[data-input-group]')?.closest('table'); const f = t?.parentElement; return t && f ? t.getBoundingClientRect().width <= f.clientWidth + 0.5 : false; })(),
+    groups: [...s.querySelectorAll('tbody[data-input-group]')].map(g => ({ title: g.getAttribute('data-input-group'), rows: [...g.querySelectorAll('tr[data-input]')].map(tr => ({ id: tr.getAttribute('data-input'), cells: [...tr.querySelectorAll('td')].map(td => td.textContent).filter(t => t !== ''), bars: [...tr.querySelectorAll('svg rect')].map(r => Number(r.getAttribute('width'))) })) })),
+    text: s.textContent ?? '',
+  }));
+  const cap = INPUTS.arms.find(a => a.id === 'cap-1000').all, budget = INPUTS.arms.find(a => a.id === 'budget-1000').all;
+  check(tag + ' inputs lead gives the two worse counts', read.lead.includes(cap.worse + ' of ' + cap.datasets + ' datasets') && read.lead.includes(budget.worse + ' of ' + budget.datasets), read.lead);
+  const rows = read.groups.flatMap(g => g.rows);
+  const full = read.head.includes('Median');
+  check(tag + ' inputs table: ' + (full ? 'every column with its bars' : 'the narrow set, Change, Worse, Better and Sign p, fitting its frame'), full ? JSON.stringify(read.head) === JSON.stringify(['Change', 'Worse', 'Worse and better, drawn', 'Better', 'Of', 'Sign p', 'Median']) : JSON.stringify(read.head) === JSON.stringify(['Change', 'Worse', 'Better', 'Sign p']) && read.fits, { head: read.head, fits: read.fits });
+  check(tag + ' inputs rows: every change in order with its counts, sign p' + (full ? ' and median' : ''), JSON.stringify(rows.map(r => [r.id, r.cells])) === JSON.stringify(inputsExpected.map(e => [e.id, full ? e.cells : e.narrow])), rows.map(r => [r.id, r.cells]));
+  check(tag + ' inputs groups: the changed inputs, then the default run again apart', read.groups.length === 2 && read.groups[0].rows.every(r => !inputsExpected.find(e => e.id === r.id).twin) && read.groups[1].rows.length === inputsExpected.filter(e => e.twin).length && read.groups[1].rows.every(r => inputsExpected.find(e => e.id === r.id).twin), read.groups.map(g => [g.title, g.rows.map(r => r.id)]));
+  // One scale for every bar: width per dataset is the same in every row.
+  const scale = Math.max(...INPUTS.arms.map(a => Math.max(a.all.better, a.all.worse)));
+  const perDataset = rows.flatMap(r => { const a = INPUTS.arms.find(x => x.id === r.id).all; return [[r.bars[0], a.worse], [r.bars[1], a.better]]; });
+  const unit = (perDataset.find(([, n]) => n === scale) ?? [0, 1])[0] / scale;
+  if (!full) check(tag + ' inputs: no bars in the narrow set', rows.every(r => r.bars.length === 0), rows.map(r => r.bars.length));
+  else check(tag + ' inputs bars drawn to their counts on one scale', rows.every(r => r.bars.length === 2) && unit > 0 && perDataset.every(([w, n]) => Math.abs(w - n * unit) < 0.5), { unit, perDataset });
+  check(tag + ' inputs: no internal name reaches the reader', !INTERNAL.test(read.text), read.text.match(INTERNAL)?.[0] ?? null);
+  const more = section.getByRole('button', { name: 'Show each change by species' });
+  await more.focus(); await page.keyboard.press('Enter');
+  const opened = await section.evaluate(s => {
+    const b = [...s.querySelectorAll('button')].find(x => /each change by species/.test(x.textContent));
+    const region = s.querySelector('[role="region"][aria-label="Datasets better, then worse, by species"]');
+    return { expanded: b?.getAttribute('aria-expanded'), controls: b?.getAttribute('aria-controls') ?? null, rows: region ? region.querySelectorAll('tbody tr').length : 0, focus: document.activeElement === b, text: s.textContent ?? '' };
+  });
+  check(tag + ' inputs by-species table opens by keyboard behind its control', opened.expanded === 'true' && opened.controls !== null && opened.rows === INPUTS.arms.length + 2 && opened.focus && !INTERNAL.test(opened.text), { ...opened, text: undefined });
+  await page.keyboard.press('Enter');
+  // The reading by learner: closed on arrival, then one group per change in
+  // the main rows' order, five learners each, with the counts and shares the
+  // bundled file gives; a narrow screen keeps the learner, the two counts and
+  // the resistant share, and the table fits without scrolling sideways.
+  const closedLearners = await section.evaluate(s => s.querySelectorAll('[data-learner-group]').length);
+  const byLearner = section.getByRole('button', { name: 'Show each change by learner' });
+  await byLearner.focus(); await page.keyboard.press('Enter');
+  await section.locator('[data-learner-group]').first().waitFor();
+  const learners = await section.evaluate(s => {
+    const b = [...s.querySelectorAll('button')].find(x => /each change by learner/.test(x.textContent));
+    const region = s.querySelector('[role="region"][aria-label="Each change by learner, whole lineages held out"]');
+    const shown = el => getComputedStyle(el).display !== 'none';
+    return {
+      expanded: b?.getAttribute('aria-expanded'), controls: b?.getAttribute('aria-controls') ?? null, focus: document.activeElement === b,
+      fits: region ? region.scrollWidth <= region.clientWidth : false,
+      head: region ? [...region.querySelectorAll('thead th')].filter(shown).map(th => th.textContent) : [],
+      groups: region ? [...region.querySelectorAll('tbody[data-learner-group]')].map(g => ({ title: g.getAttribute('data-learner-group'), rows: [...g.querySelectorAll('tr[data-learner]')].map(tr => ({ learner: tr.getAttribute('data-learner'), name: tr.querySelector('th')?.textContent ?? '', cells: [...tr.querySelectorAll('td')].filter(shown).map(td => td.textContent) })) })) : [],
+      text: s.textContent ?? '',
+    };
+  });
+  const wide = page.viewportSize().width >= 640;
+  const share = v => (v * 100).toFixed(1) + '%';
+  const move = xs => share(xs[0]) + ' → ' + share(xs[1]);
+  const LEARNER_ORDER = ['scm', 'cart', 'rf', 'gbt', 'lasso'];
+  const learnerExpected = INPUTS.arms.map(a => LEARNER_ORDER.map(l => { const r = a.learners[l]; return [l, ...(wide ? [String(r.worse), String(r.better), String(r.datasets), move(r.recall), move(r.specificity)] : [String(r.worse), String(r.better), move(r.recall)])]; }));
+  const learnerSeen = learners.groups.map(g => g.rows.map(r => [r.learner, ...r.cells]));
+  check(tag + ' inputs by-learner table closed on arrival, opens by keyboard behind its own control', closedLearners === 0 && learners.expanded === 'true' && learners.controls !== null && learners.focus, { closedLearners, expanded: learners.expanded, focus: learners.focus });
+  check(tag + ' inputs by-learner table: 13 groups of 5 learners, each with the reading\'s counts and shares', learners.groups.length === INPUTS.arms.length && learners.groups.every(g => g.rows.length === 5) && JSON.stringify(learnerSeen) === JSON.stringify(learnerExpected), { groups: learners.groups.length, seen: learnerSeen.slice(0, 2), expected: learnerExpected.slice(0, 2) });
+  check(tag + ' inputs by-learner table: ' + (wide ? 'every column' : 'the learner, the two counts and the resistant share') + ', fitting its frame on a narrow screen', learners.head.length === (wide ? 6 : 4) && (wide || learners.fits), { head: learners.head, fits: learners.fits });
+  check(tag + ' inputs by-learner table: no internal name reaches the reader', !INTERNAL.test(learners.text) && !/\b(scm|cart|rf|gbt|lasso)\b/.test(learners.groups.map(g => g.rows.map(r => r.name).join(' ')).join(' ')), learners.text.match(INTERNAL)?.[0] ?? null);
+  await page.keyboard.press('Enter');
+}
+
 const scrollTo = async (page, selector) => {
   await page.locator(selector).evaluate(e => e.scrollIntoView({ block: 'start' }));
   await settle(page);
@@ -574,7 +730,7 @@ async function stripFit(page, tag) {
     const button = page.locator('#ds-learners [role="group"][aria-label="Errors measured under"]').getByRole('button', { name: view, exact: true });
     if (await button.count() === 0) { skipped.push({ check: name, reason: id + ' has no "' + view + '" button' }); continue; }
     await button.click({ timeout: 2000 }).catch(() => {});
-    const read = await page.locator('#ds-learners').evaluate(async s => {
+    const read = await page.locator('#ds-learners').evaluate(async (s, STATE_MS) => {
       const measure = () => {
         const cells = [...s.querySelectorAll('table tr > :nth-child(2)')].filter(c => c.querySelector('svg') !== null);
         let over = -Infinity, marksOut = 0;
@@ -586,12 +742,12 @@ async function stripFit(page, tag) {
         }
         return { cells: cells.length, over: Math.round(over * 10) / 10, marksOut };
       };
-      // Up to a second for the cell's observer to fire and the strip to redraw.
+      // Until the cell's observer fires and the strip redraws, up to STATE_MS.
       const t0 = performance.now();
       let m = measure();
-      while (m.over > 1 && performance.now() - t0 < 1000) { await new Promise(r => requestAnimationFrame(r)); m = measure(); }
+      while (m.over > 1 && performance.now() - t0 < STATE_MS) { await new Promise(r => requestAnimationFrame(r)); m = measure(); }
       return { ...m, waited: Math.round(performance.now() - t0), pressed: s.querySelector('[role="group"][aria-label="Errors measured under"] [aria-pressed="true"]')?.textContent ?? null };
-    }, null, { timeout: 5000 }).catch(() => null);
+    }, STATE_MS, { timeout: STATE_MS + 5000 }).catch(() => null);
     check(name, read !== null && read.cells > 1 && read.pressed === view && read.over <= 1 && read.marksOut === 0, { id, ...read });
   }
   // Paint: every strip pushed 64 px right, as a strip still drawn for a wider
@@ -885,17 +1041,17 @@ async function interactions(page, tag, width) {
   // The tint is a colour transition (transition-colors on the row), so it
   // lands a frame or more after focus moves. Read it after two frames, then
   // each frame until two frames in a row agree on a colour that isn't
-  // clear, for up to a second, and compare that colour with the focus tint,
+  // clear, for up to STATE_MS, and compare that colour with the focus tint,
   // blue at 5% (DataTable's focus-within:bg-blue/[0.05]).
-  const tint = await rows.nth(1).evaluate(e => new Promise(resolve => {
+  const tint = await rows.nth(1).evaluate((e, STATE_MS) => new Promise(resolve => {
     const row = e.closest('tr'), start = performance.now();
     const probe = document.createElement('div');
     probe.style.backgroundColor = 'rgb(' + getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() + ' / 0.05)';
     document.body.append(probe); const want = getComputedStyle(probe).backgroundColor; probe.remove();
     let last = null;
-    const read = () => { const c = getComputedStyle(row).backgroundColor; const settled = c === last && c !== 'rgba(0, 0, 0, 0)'; if (settled || performance.now() - start > 1000) resolve({ colour: c, settled, want }); else { last = c; requestAnimationFrame(read); } };
+    const read = () => { const c = getComputedStyle(row).backgroundColor; const settled = c === last && c !== 'rgba(0, 0, 0, 0)'; if (settled || performance.now() - start > STATE_MS) resolve({ colour: c, settled, want, ms: Math.round(performance.now() - start) }); else { last = c; requestAnimationFrame(read); } };
     requestAnimationFrame(() => requestAnimationFrame(read));
-  }));
+  }), STATE_MS);
   check(tag + ' focused row tints', tint.settled && tint.colour === tint.want, tint);
   // The tint follows focus, in the row and in its cells. The sticky cell is
   // left out: it paints its own paper (and its tint has a check of its
@@ -913,29 +1069,63 @@ async function interactions(page, tag, width) {
   }, ruleKey);
   check(tag + ' unfocused row has no tint', unfocused.tinted !== null && unfocused.tinted.length === 0, unfocused);
   // ... and the row ArrowDown left loses its tint, read each frame for up to
-  // a second until it is clear.
-  const leftRow = await rows.nth(0).evaluate(e => new Promise(resolve => {
+  // STATE_MS until it is clear.
+  const leftRow = await rows.nth(0).evaluate((e, STATE_MS) => new Promise(resolve => {
     const r = e.closest('tr'), start = performance.now();
     const clear = c => c === 'transparent' || /^rgba\([^,]+,[^,]+,[^,]+,\s*0\)$/.test(c);
     const read = () => {
       const paints = [['tr', getComputedStyle(r).backgroundColor], ...[...r.children].map((td, k) => ['td' + k, td]).filter(([, td]) => getComputedStyle(td).position !== 'sticky').map(([k, td]) => [k, getComputedStyle(td).backgroundColor])];
       const tinted = paints.filter(([, c]) => !clear(c));
-      if (tinted.length === 0 || performance.now() - start > 1000) resolve({ tinted, ms: Math.round(performance.now() - start) }); else requestAnimationFrame(read);
+      if (tinted.length === 0 || performance.now() - start > STATE_MS) resolve({ tinted, ms: Math.round(performance.now() - start) }); else requestAnimationFrame(read);
     };
     requestAnimationFrame(read);
-  }));
+  }), STATE_MS);
   check(tag + ' tint leaves the row focus left', leftRow.tinted.length === 0, leftRow);
   const stickyTint = await table.evaluate(region => { const rs = [...region.querySelectorAll('tbody tr')]; return { focused: getComputedStyle(rs[1].children[0]).backgroundColor, rest: getComputedStyle(rs[3].children[0]).backgroundColor }; });
   check(tag + ' focus tint reaches the sticky cell', stickyTint.focused !== stickyTint.rest, stickyTint);
   await shot(page, tag + '-row-focus');
-  await page.keyboard.press('Enter');
-  await page.locator('#ds-learners').waitFor();
-  const opening = await page.evaluate(() => {
-    const panel = document.querySelector('dialog[open] .inspector-in');
-    const owner = document.querySelector('dialog[open] [data-modal-scroll-owner]');
-    return { origin: panel ? getComputedStyle(panel).transformOrigin : null, launchY: panel?.style.getPropertyValue('--launch-y'), focus: document.activeElement === owner, tips: document.querySelectorAll('[role="tooltip"]').length };
-  });
-  check(tag + ' inspector opens from the row, focus on its body, no tip', opening.launchY !== '' && opening.focus && opening.tips === 0, opening);
+  // The app keeps a launch point for FRESH_MS (launch.ts) and the inspector
+  // reads it once, in the layout effect of its first render. So the check
+  // times the open itself: from the Enter keydown (a window listener in the
+  // capture phase, which runs before the app's own document listener records
+  // the point) to the panel's insertion (a mutation observer, called after
+  // the commit that ran the layout effect). That span is never shorter than
+  // the app's own. An open without a launch point is a failure, unless the
+  // span reached FRESH_MS: then the machine, not the app, missed the window,
+  // and the check closes the inspector and opens it again, up to three times.
+  // A launch point missed inside the window fails at once.
+  const openFromRow = async () => {
+    await page.evaluate(() => {
+      const t = window.__grmOpen = { key: null, open: null };
+      window.addEventListener('keydown', e => { if (e.key === 'Enter' && t.key === null) t.key = performance.now(); }, { capture: true, once: true });
+      const seen = () => document.querySelector('dialog[open] .inspector-in') !== null;
+      const mo = new MutationObserver(() => { if (seen()) { t.open = performance.now(); mo.disconnect(); } });
+      mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
+    });
+    await page.keyboard.press('Enter');
+    await page.locator('#ds-learners').waitFor();
+    // Focus moves to the inspector's body in an effect after the open; wait
+    // for it rather than read it on the first frame.
+    await page.waitForFunction(() => document.activeElement === document.querySelector('dialog[open] [data-modal-scroll-owner]'), null, { timeout: STATE_MS }).catch(() => {});
+    return page.evaluate(() => {
+      const panel = document.querySelector('dialog[open] .inspector-in');
+      const owner = document.querySelector('dialog[open] [data-modal-scroll-owner]');
+      const t = window.__grmOpen;
+      return { origin: panel ? getComputedStyle(panel).transformOrigin : null, launchY: panel?.style.getPropertyValue('--launch-y'), focus: document.activeElement === owner, tips: document.querySelectorAll('[role="tooltip"]').length, openMs: t.key !== null && t.open !== null ? Math.round(t.open - t.key) : null };
+    });
+  };
+  const openings = [];
+  for (;;) {
+    const o = await openFromRow();
+    openings.push(o);
+    const missedWindow = o.launchY === '' && o.openMs !== null && o.openMs >= FRESH_MS;
+    if (!missedWindow || openings.length === 3) break;
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+    await rows.nth(1).focus();
+  }
+  const opening = openings.at(-1);
+  check(tag + ' inspector opens from the row, focus on its body, no tip', opening.launchY !== '' && opening.focus && opening.tips === 0, { ...opening, freshMs: FRESH_MS, attempts: openings.map(o => ({ launchY: o.launchY, openMs: o.openMs })) });
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('dialog[open]'));
   check(tag + ' inspector focus return', await rows.nth(1).evaluate(e => e === document.activeElement), await activeName(page));
@@ -962,9 +1152,12 @@ async function interactions(page, tag, width) {
     check(tag + ' inspector tables fit without sideways scroll', frames.length === 0, frames);
   }
   for (const id of ['ds-model', 'ds-mechanisms', 'ds-designer', 'ds-mic', 'ds-lineages']) {
-    await scrollTo(page, '#' + id); await page.waitForTimeout(80);
-    const current = await page.locator('dialog[open] nav[aria-label="Sections"] [aria-current="true"]').textContent();
     const want = { 'ds-model': 'Interpretable model', 'ds-mechanisms': 'Genes and panels', 'ds-designer': 'Marker designer', 'ds-mic': 'MIC', 'ds-lineages': 'Lineages' }[id];
+    // The link follows the scroll through an observer; wait for it, up to
+    // STATE_MS, then read whatever link is current.
+    await scrollTo(page, '#' + id);
+    await page.waitForFunction(w => document.querySelector('dialog[open] nav[aria-label="Sections"] [aria-current="true"]')?.textContent === w, want, { timeout: STATE_MS }).catch(() => {});
+    const current = await page.locator('dialog[open] nav[aria-label="Sections"] [aria-current="true"]').textContent();
     check(tag + ' section link follows ' + id, current === want, current);
     await shot(page, tag + '-' + id);
   }
@@ -993,8 +1186,9 @@ async function interactions(page, tag, width) {
   // outline that steps rows at another pitch than the labels fails. The choice
   // reaches the outline through a state update and a transform transition,
   // so read after two frames, then each frame until two frames in a row
-  // agree on a position on that row, for up to a second.
-  const outlineOn = label => page.evaluate(label => new Promise(resolve => {
+  // agree on a position on that row, for up to STATE_MS. A fast machine
+  // settles in a few frames, as before; the deadline only bounds a slow one.
+  const outlineOn = label => page.evaluate(([label, STATE_MS]) => new Promise(resolve => {
     const place = () => {
       const o = [...document.querySelectorAll('[role="grid"] ~ div[aria-hidden="true"]')].find(e => e.className.includes('border-ink'));
       const l = o && [...(o.closest('#sp-structure') ?? document).querySelectorAll('span.whitespace-nowrap')].find(s => s.textContent === label && s.className.includes('leading-[16px]'));
@@ -1006,10 +1200,10 @@ async function interactions(page, tag, width) {
     let last = null;
     const poll = () => {
       const p = place(), settled = p !== null && last !== null && Math.abs(p.outline[0] - last.outline[0]) < 0.01;
-      if ((settled && Math.abs(p.off) <= 2) || performance.now() - start > 1000) resolve({ label, ...p, settled }); else { last = p; requestAnimationFrame(poll); }
+      if ((settled && Math.abs(p.off) <= 2) || performance.now() - start > STATE_MS) resolve({ label, ...p, settled, ms: Math.round(performance.now() - start) }); else { last = p; requestAnimationFrame(poll); }
     };
     requestAnimationFrame(() => requestAnimationFrame(poll));
-  }), label);
+  }), [label, STATE_MS]);
   await drug.click();
   const options = await page.getByRole('option').evaluateAll(os => os.map(o => ({ label: (o.querySelector('span.flex-1') ?? o).textContent.trim(), selected: o.getAttribute('aria-selected') === 'true' })));
   const fromLabel = options.find(o => o.selected)?.label ?? null, toLabel = options[1]?.label ?? null;
@@ -1074,11 +1268,11 @@ async function interactions(page, tag, width) {
   const barTiles = await page.evaluate(() => [...document.querySelectorAll('#bars ol li')].map(li => ({ value: Number(li.firstElementChild.textContent.replace(/,/g, '')), unit: li.lastElementChild.textContent })));
   // A tree with no dataset to count draws no tiles.
   check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
-  // The primer is a section of its own above the eight numbered ones, under
+  // The primer is a section of its own above the ten numbered ones, under
   // the same hairline.
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
   const numbered = rules.filter(r => r.id !== 'primer');
-  check(tag + ' one hairline between findings', numbered.length === 8 && rules.length === 9 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
+  check(tag + ' one hairline between findings', numbered.length === 10 && rules.length === 11 && rules[0].id === 'primer' && rules.every(r => r.rule === 'solid'), rules);
   await page.goto(BASE);
   await page.locator('#corpus').waitFor();
   await headerCheck(page, tag + ' overview', 'What GRM found');
@@ -1088,7 +1282,9 @@ async function interactions(page, tag, width) {
   const marks = await page.evaluate(() => { const c = document.querySelector('#lineage svg circle[data-dataset]'); return c ? getComputedStyle(c).fill : null; });
   const blue = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--series-s'); document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
   check(tag + ' chart marks in the blue series', marks === blue, { marks, blue });
-  for (const id of ['lineage', 'learners', 'bars', 'catalog', 'panels', 'mic']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
+  for (const id of ['lineage', 'learners', 'bars', 'catalog', 'panels', 'mic', 'outside', 'inputs']) { await scrollTo(page, '#' + id); await shot(page, tag + '-overview-' + id); }
+  await outsideCheck(page, tag);
+  await inputsCheck(page, tag);
 
   const micId = expected.mic[0].id;
   const micReport = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'datasets', micId + '.json')));
@@ -1177,12 +1373,12 @@ async function present(page, tag, width, height) {
   await settle(page);
   await slideSelect.click();
   let slideCount = 0, previousCount = -1, stableCounts = 0;
-  // Title, five primer steps, seven findings, the rule: fourteen slides, plus
+  // Title, five primer steps, nine findings, the rule: sixteen slides, plus
   // the extra pages of any figure too dense for the viewport (the outline
   // labels each page "(k of n)"). Which figures continue depends on the
   // viewport and on the report's row counts, so the count is checked
   // against the labels the deck shows.
-  const BASE_SLIDES = 14;
+  const BASE_SLIDES = 16;
   for (let attempt = 0; attempt < 200; attempt++) {
     slideCount = await dialog.getByRole('option').count();
     if (slideCount === previousCount) stableCounts++;
@@ -1193,6 +1389,7 @@ async function present(page, tag, width, height) {
   await page.keyboard.press('Escape');
   const labels = [];
   const panelSeen = [];
+  const inputsSeen = [];
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
@@ -1255,6 +1452,21 @@ async function present(page, tag, width, height) {
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);
     }
+    if (title === 'Newly deposited genomes') {
+      // Both populations on one slide, or one on each page of two, never
+      // pooled: each plot draws one population's rows on one measure.
+      const plots = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section [role="listbox"]')].map(l => l.querySelectorAll('[data-outside]').length));
+      const shown = paged === null ? outsideExpected : [outsideExpected[Number(paged[1]) - 1]];
+      check(tag + ' slide ' + (slide + 1) + ' outside marks by population', JSON.stringify(plots) === JSON.stringify(shown.flatMap(p => [p.read, p.read])), { plots, page: paged?.[0] ?? null });
+    }
+    if (title === 'Input settings against the default') {
+      // The rows in order, a share on each page; the pages together show
+      // every row once, and no internal name.
+      const shownRows = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section tr[data-input]')].map(tr => tr.getAttribute('data-input')));
+      const text = await page.evaluate(() => document.querySelector('dialog.presentation-dialog main section')?.textContent ?? '');
+      inputsSeen.push(...shownRows);
+      check(tag + ' slide ' + (slide + 1) + ' input rows and no internal name', shownRows.length > 0 && !INTERNAL.test(text), { shownRows, page: paged?.[0] ?? null, internal: text.match(INTERNAL)?.[0] ?? null });
+    }
     const beats = await dialog.locator('[data-beats] span').evaluateAll(es => es.map(e => getComputedStyle(e).backgroundColor));
     const frameLabel = await slideSelect.textContent();
     const continuation = /\((\d+) of \d+\)/.exec(frameLabel ?? '');
@@ -1282,8 +1494,9 @@ async function present(page, tag, width, height) {
     runs[runs.length - 1].pages.push([Number(p[1]), Number(p[2])]);
   });
   const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
-  check(tag + ' expected slide count: fourteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
   check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
+  check(tag + ' input pages together show every row once, in order', JSON.stringify(inputsSeen) === JSON.stringify(inputsExpected.map(e => e.id)), { seen: inputsSeen });
   const closeButton = dialog.getByRole('button', { name: 'Close', exact: true });
   await closeButton.focus(); await page.keyboard.press('Home');
   check(tag + ' Home reaches the title slide', await slideNumber(dialog) === 1, await slideNumber(dialog));
@@ -1308,31 +1521,110 @@ async function present(page, tag, width, height) {
 }
 
 async function normalMotion(browser) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
-  const page = await context.newPage();
-  await page.goto(BASE); await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
-  check('normal motion media preference', await page.evaluate(() => !matchMedia('(prefers-reduced-motion: reduce)').matches), null);
-  await page.getByRole('button', { name: 'Present', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'GRM findings presentation' }); await dialog.waitFor();
-  await dialog.getByRole('button', { name: 'Close', exact: true }).focus();
-  await page.keyboard.press('ArrowRight');
-  check('normal motion: an arrow mid-reveal lands the beats first', await slideNumber(dialog) === 1, await slideNumber(dialog));
-  await page.keyboard.press('ArrowRight');
-  check('normal motion: the next arrow moves on', await slideNumber(dialog) === 2, await slideNumber(dialog));
-  await page.waitForTimeout(2600);
-  const landed = await dialog.locator('main').innerText();
-  await page.keyboard.press('Escape');
-  await context.close();
+  // The reduced-motion deck renders every slide's final text at once; read
+  // slide 2's first, so the normal-motion deck can be waited on until its
+  // staged beats land on that same text (up to STATE_MS), not for a fixed time.
   const reduced = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
   const page2 = await reduced.newPage();
   await page2.goto(BASE); await page2.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
   await page2.getByRole('button', { name: 'Present', exact: true }).click();
   const d2 = page2.getByRole('dialog', { name: 'GRM findings presentation' }); await d2.waitFor();
   await d2.getByRole('button', { name: 'Close', exact: true }).focus(); await page2.keyboard.press('ArrowRight');
-  check('normal motion: staged beats land on the reduced-motion final text', landed === await d2.locator('main').innerText(), null);
+  const final = await d2.locator('main').innerText();
   const still = await page2.evaluate(() => document.getAnimations().filter(a => a.effect?.target?.closest?.('.grm-mark') && a.playState === 'running').length);
   check('reduced motion: the mark rests', still === 0, still);
   await reduced.close();
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+  const page = await context.newPage();
+  await page.goto(BASE); await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
+  check('normal motion media preference', await page.evaluate(() => !matchMedia('(prefers-reduced-motion: reduce)').matches), null);
+  // The title slide's beats land TITLE_REVEAL_MS after it opens (the title
+  // delays in PresentMode.tsx). The first arrow must come before that to test
+  // anything, so the check times the span from the deck's insertion (a
+  // mutation observer) to the arrow's keydown; that span is never shorter
+  // than the app's own. An arrow that moved on is a failure, unless the span
+  // reached TITLE_REVEAL_MS: then the machine missed the reveal, and the
+  // check closes the deck and opens it again, up to three times.
+  const dialog = page.getByRole('dialog', { name: 'GRM findings presentation' });
+  const arrows = [];
+  for (;;) {
+    await page.evaluate(() => {
+      const t = window.__grmDeck = { open: null, key: null };
+      const mo = new MutationObserver(() => { if (document.querySelector('dialog.presentation-dialog[open]')) { t.open = performance.now(); mo.disconnect(); } });
+      mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
+      window.addEventListener('keydown', () => { if (t.key === null) t.key = performance.now(); }, { capture: true, once: true });
+    });
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+    await dialog.waitFor();
+    await dialog.getByRole('button', { name: 'Close', exact: true }).focus();
+    await page.keyboard.press('ArrowRight');
+    const t = await page.evaluate(() => window.__grmDeck);
+    const a = { slide: await slideNumber(dialog), ms: t.open !== null && t.key !== null ? Math.round(t.key - t.open) : null };
+    arrows.push(a);
+    if (a.slide === 1 || a.ms === null || a.ms < TITLE_REVEAL_MS || arrows.length === 3) break;
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'detached' });
+  }
+  check('normal motion: an arrow mid-reveal lands the beats first', arrows.at(-1).slide === 1, { revealMs: TITLE_REVEAL_MS, arrows });
+  await page.keyboard.press('ArrowRight');
+  check('normal motion: the next arrow moves on', await slideNumber(dialog) === 2, await slideNumber(dialog));
+  const t0 = Date.now();
+  await page.waitForFunction(want => document.querySelector('dialog.presentation-dialog main')?.innerText === want, final, { timeout: STATE_MS }).catch(() => {});
+  const landed = await dialog.locator('main').innerText();
+  check('normal motion: staged beats land on the reduced-motion final text', landed === final, { ms: Date.now() - t0 });
+  await page.keyboard.press('Escape');
+  await context.close();
+}
+
+/** The two results slides on a short wide screen (1280×560): on every page
+ *  of "Newly deposited genomes" and "Input settings against the default", no
+ *  text box overlaps another, no figure is drawn over text, and nothing runs
+ *  past the slide. The older slides that also crowd at this size are not
+ *  checked here. */
+async function shortSlides(browser) {
+  const SHORT = [1280, 560];
+  const TITLES = ['Newly deposited genomes', 'Input settings against the default'];
+  const context = await browser.newContext({ viewport: { width: SHORT[0], height: SHORT[1] }, colorScheme: 'light', reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  page.on('pageerror', error => errors.push({ width: SHORT[0], height: SHORT[1], message: error.message }));
+  try {
+    await page.goto(BASE); await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Present', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'GRM findings presentation' }); await dialog.waitFor();
+    await settle(page);
+    // The outline grows as figures measure their pages; read it once stable,
+    // with the slide chooser open (its options exist only then).
+    await dialog.getByRole('combobox', { name: /^Go to slide/ }).click();
+    let count = -1;
+    for (let attempt = 0, stable = 0; attempt < 200 && stable < 20; attempt++) { const n = await dialog.getByRole('option').count(); stable = n === count ? stable + 1 : 0; count = n; await page.waitForTimeout(50); }
+    await page.keyboard.press('Escape');
+    const seen = Object.fromEntries(TITLES.map(t => [t, 0]));
+    for (let slide = 0; slide < count; slide++) {
+      await goSlide(page, dialog, slide);
+      const r = await page.evaluate(titles => {
+        const main = document.querySelector('dialog.presentation-dialog main');
+        const title = titles.find(t => (main?.querySelector('h2')?.textContent ?? '').startsWith(t));
+        if (!title) return { skip: true };
+        const leaf = [...main.querySelectorAll('p, h1, h2, h3, span, th, td, li, figcaption')].filter(e => e.textContent.trim() !== '' && [...e.children].every(c => c.tagName.toLowerCase() === 'svg' || c.tagName === 'BR') && !e.closest('[inert], [aria-hidden="true"]') && getComputedStyle(e).visibility !== 'hidden');
+        const boxes = leaf.map(e => ({ e, t: e.textContent.trim().slice(0, 40), b: e.getBoundingClientRect() })).filter(x => x.b.width > 0 && x.b.height > 0);
+        const hit = (a, c) => a.left < c.right - 1 && c.left < a.right - 1 && a.top < c.bottom - 1 && c.top < a.bottom - 1;
+        const over = [];
+        for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) if (hit(boxes[i].b, boxes[j].b) && !boxes[i].e.contains(boxes[j].e) && !boxes[j].e.contains(boxes[i].e)) over.push([boxes[i].t, boxes[j].t]);
+        for (const g of main.querySelectorAll('svg')) {
+          const a = g.getBoundingClientRect();
+          if (g.closest('[inert]') || a.width <= 20 || a.height <= 20) continue;
+          for (const x of boxes) if (!x.e.contains(g) && hit(a, x.b)) over.push(['<svg>', x.t]);
+        }
+        const mb = main.getBoundingClientRect();
+        return { title, over, past: boxes.filter(x => x.b.bottom > mb.bottom + 1 || x.b.right > mb.right + 1).map(x => x.t) };
+      }, TITLES);
+      if (r.skip) continue;
+      seen[r.title]++;
+      check('1280x560 slide ' + (slide + 1) + ' (' + r.title + '): no text over text or figure, nothing past the slide', r.over.length === 0 && r.past.length === 0, { over: r.over.slice(0, 4), past: r.past.slice(0, 4) });
+    }
+    check('1280x560 both results slides reached', TITLES.every(t => seen[t] > 0), seen);
+  } catch (error) { errors.push({ width: SHORT[0], height: SHORT[1], message: error.stack }); }
+  await context.close();
 }
 
 async function boundaries(browser) {
@@ -1425,6 +1717,7 @@ async function boundaries(browser) {
       await context.close();
     }
     await boundaries(browser);
+    await shortSlides(browser);
     await normalMotion(browser);
   } finally { await browser.close(); }
   const receipt = { source: { fixture: FIXTURE, schema: manifest.schema, generated: manifest.generated_at, revision: manifest.evaluation_revision, datasets: expected.datasets, panelRows: manifest.panels.length }, independent: expected.stats, stateRows: stateRows.map(([d, w]) => [d.id, w]), skipped, checks, screenshots, errors, passed: checks.every(c => c.pass) && errors.length === 0 };

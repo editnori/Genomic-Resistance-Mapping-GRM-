@@ -1,6 +1,6 @@
 // What GRM found: a five-step primer for a reader new to the terms, then the
-// report in eight numbered sections. The data behind the reports, then the
-// six findings Present shares, each with its lead, a figure, a caption that
+// report in ten numbered sections. The data behind the reports, then the
+// eight findings Present shares, each with its lead, a figure, a caption that
 // says what a mark is, and short notes on coverage in view; last, the limits
 // every number shares. The panel section also holds every panel result;
 // /tests lands on it through the #panels anchor.
@@ -14,7 +14,7 @@ import { ViewHeader } from "../ui/ViewHeader";
 import { FOCUS_RING, PanelState, VIEW_SHELL } from "../ui/primitives";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PrimerSection } from "./primer";
-import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding } from "./findings";
+import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding, type FindingMore } from "./findings";
 
 /** The anchor of the panel section, where /tests redirects. */
 export const PANELS_ANCHOR = "panels";
@@ -27,11 +27,11 @@ const OVERVIEW_PURPOSE =
 
 /** Supporting evidence under one explicit control, open on arrival from a
  *  link that names it. */
-const More = ({ label, open: initial, children }: { label: string; open: boolean; children: ReactNode }) => {
+const More = ({ label, open: initial, first = true, children }: { label: string; open: boolean; first?: boolean; children: ReactNode }) => {
   const [open, setOpen] = useState(initial);
   const id = useId();
   return (
-    <div className="mt-6">
+    <div className={first ? "mt-6" : "mt-1"}>
       <button
         type="button"
         aria-expanded={open}
@@ -68,11 +68,11 @@ const ReportSection = ({ n, finding, open }: { n: number; finding: Finding; open
         <p className={`prose-measure text-note text-muted-text ${figure === null || figure === undefined ? "" : "mt-3"}`}>{finding.caption}</p>
         {finding.note}
       </div>
-      {finding.more === undefined ? null : (
-        <More label={finding.more.label} open={open}>
-          {finding.more.body}
+      {(finding.more === undefined ? [] : Array.isArray(finding.more) ? finding.more : [finding.more]).map((m: FindingMore, i: number) => (
+        <More key={m.label} label={m.label} open={open && i === 0} first={i === 0}>
+          {m.body}
         </More>
-      )}
+      ))}
     </section>
   );
 };
@@ -87,8 +87,8 @@ const Limits = ({ n, manifest, nav }: { n: number; manifest: Manifest; nav: Navi
       </SectionHeading>
       <ul className="prose-measure mt-3 list-disc space-y-2 pl-5 text-body text-ink">
         <li>
-          Every number here is internal cross-validation on public BV-BRC genomes: learners train on part of the genomes and are scored on the rest, against the resistant and
-          susceptible calls BV-BRC reports.
+          Every number here, except those on newly deposited genomes, is internal cross-validation on public BV-BRC genomes: learners train on part of the genomes and are scored on the
+          rest, against the resistant and susceptible calls BV-BRC reports.
         </li>
         <li>
           {capped
@@ -96,8 +96,8 @@ const Limits = ({ n, manifest, nav }: { n: number; manifest: Manifest; nav: Navi
             : "The genomes are a selection, reduced where genomes failed QC or had no FASTA file."}
         </li>
         <li>
-          No external, prospective, or clinical validation has been done: no test on another lab&apos;s genomes, on newly collected isolates or in a clinical study.{" "}
-          {AUDIT_READING}
+          No external, prospective, or clinical validation has been done: no test on another lab&apos;s genomes, on newly collected isolates or in a clinical study. The newly
+          deposited genomes come from the same database as the cohorts, so that test is not external validation either. {AUDIT_READING}
         </li>
       </ul>
       <p className="mt-3 text-control">

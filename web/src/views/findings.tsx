@@ -1,14 +1,15 @@
 // The report's findings, shared by Overview and Present: the data behind the
 // reports, what holding out whole lineages costs, the five learners side by
 // side, the two error rates against the test-device bars, GRM's known-gene
-// rules, the lead PCR panel, and MIC prediction. Each is a plain title, a
+// rules, the lead PCR panel, MIC prediction, and the reports' models on newly
+// deposited genomes. Each is a plain title, a
 // lead with its count and denominator, a figure that shows that number, and
 // a caption that says what a mark is; the page adds short notes on coverage,
 // visible inline. Every number comes from data/derive at render time.
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import type { CatalogRow, Manifest } from "../data/schema";
-import { LEARNER_NAME, datasetTitle, dateText, int, learnerInSentence, listWords, pct, plural, points } from "../data/format";
+import { LEARNER_NAME, datasetTitle, dateText, int, learnerInSentence, listWords, pct, plural, points, speciesName } from "../data/format";
 import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import {
   CATALOG_CUTOFF,
@@ -46,11 +47,28 @@ import { catalogWords } from "../app/ReportStatus";
 import { AxisX, LABEL_CLASS, linear, MarkListbox, PlacedText, placeLabels, RefLine, ticks, useWidth, type ListMark } from "../charts/kit";
 import { GapSwarm, MicStrip } from "../charts/DotStrip";
 import { CatalogScatter } from "../charts/CatalogScatter";
+import { InputRows, type InputGroup } from "../charts/InputRows";
+import { OutsideScatter, type OutsidePanel } from "../charts/OutsideScatter";
+import {
+  INPUT_COMPARISON,
+  INPUT_LEARNERS,
+  armById,
+  inputSummary,
+  namedRow,
+  prediction,
+  signPRange,
+  speciesIndex,
+  untunedLearners,
+  type InputArm,
+  type InputLearner,
+  type LearnerCounts,
+} from "../data/derive/inputs";
+import { ONE_STUDY_ALL, OUTSIDE_LEARNERS, OUTSIDE_STUDY, outsidePoints, populationById, populationSummary, type Learner as OutsideLearner, type PopulationSummary } from "../data/derive/outside";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
-export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic";
+export type FindingId = "corpus" | "lineage" | "learners" | "bars" | "catalog" | "panels" | "mic" | "outside" | "inputs";
 
 /** What a deck gives a figure that may continue onto further slides: the
  *  measured box, the page to draw and the page count, and, while the deck
@@ -63,6 +81,11 @@ export interface PagedFit extends Fit {
 }
 
 export type FindingFigure = ReactNode | ((fit: PagedFit) => ReactNode);
+
+export interface FindingMore {
+  label: string;
+  body: ReactNode;
+}
 
 export interface Finding {
   id: FindingId;
@@ -78,8 +101,9 @@ export interface Finding {
   /** Page only: a centered plot-and-legend unit, or a strip across the
    *  full width. */
   span: "unit" | "wide";
-  /** Page only: the evidence behind the figure, under one explicit control. */
-  more?: { label: string; body: ReactNode };
+  /** Page only: the evidence behind the figure, each part under one explicit
+   *  control of its own. */
+  more?: FindingMore | readonly FindingMore[];
   /** Deck only: the figure continues onto further slides when its rows do
    *  not fit at their minimum height. */
   continues?: boolean;
@@ -1111,4 +1135,360 @@ export const micFinding = (m: Manifest, opts: FindingOptions): Finding => {
   };
 };
 
-export const FINDINGS = [corpusFinding, lineageFinding, learnersFinding, barsFinding, catalogFinding, panelsFinding, micFinding] as const;
+// ---- newly deposited genomes ---------------------------------------------------------
+
+/** Each population in a reader's words: inside a sentence, and as a panel's
+ *  heading. The two are never added together. */
+const POPULATION_WORDS: Record<PopulationSummary["id"], { genomes: string; heading: string }> = {
+  primary: { genomes: "genomes from studies the cohorts do not hold", heading: "Genomes from studies the cohorts do not hold" },
+  "same-study": { genomes: "new genomes from studies the cohorts already hold", heading: "New genomes from studies the cohorts already hold" },
+};
+
+const OUTSIDE_LEARNER_NAME: Record<OutsideLearner, string> = {
+  scm: LEARNER_NAME.scm,
+  cart: LEARNER_NAME.cart,
+  lasso: `${LEARNER_NAME.lasso} (lasso)`,
+  known_gene: "Known-gene rule",
+};
+
+/** The datasets read for a learner, and where it holds, in each population. */
+const OutsideTable = ({ summaries }: { summaries: readonly PopulationSummary[] }) => (
+  <NumberTable
+    label="Datasets where each learner's figures hold"
+    head={["Learner or rule", "Holds", "Datasets read"]}
+    groups={summaries.map((s) => ({
+      title: POPULATION_WORDS[s.id].heading,
+      rows: OUTSIDE_LEARNERS.map((l) => ({ key: `${s.id}-${l}`, name: OUTSIDE_LEARNER_NAME[l], cells: [int(s.holds[l].holds), int(s.holds[l].read)] })),
+    }))}
+  />
+);
+
+export const outsideFinding = (m: Manifest, opts: FindingOptions): Finding => {
+  const study = OUTSIDE_STUDY;
+  const primary = populationSummary(populationById("primary"));
+  const same = populationSummary(populationById("same-study"));
+  const level = pct(study.confidence, 0);
+  const rev = int(study.evaluation_revision);
+  const index = new Map(m.datasets.map((d) => [d.id, d]));
+  const named = new Map(study.populations.flatMap((p) => p.datasets.map((d) => [d.id, d] as const)));
+  const titleOf = (id: string) => {
+    const row = index.get(id) ?? named.get(id);
+    return row === undefined ? id : datasetTitle(row);
+  };
+  const panels: OutsidePanel[] = [primary, same].map((s) => {
+    const p = populationById(s.id);
+    const n = s.holds.scm.read;
+    return {
+      key: s.id,
+      heading: `${POPULATION_WORDS[s.id].heading}: ${plural(n, "dataset")}`,
+      name: POPULATION_WORDS[s.id].genomes,
+      points: { sensitivity: outsidePoints(p, "sensitivity"), specificity: outsidePoints(p, "specificity") },
+    };
+  });
+  const hold = (s: PopulationSummary) => `${int(s.holds.scm.holds)} of ${int(s.holds.scm.read)}`;
+  const c = primary.scm;
+  return {
+    id: "outside",
+    title: "Newly deposited genomes",
+    result: opts.page
+      ? `Each report's final model was run, unchanged, on genomes newly added to the same public database. On ${int(primary.frozen)} ${POPULATION_WORDS.primary.genomes}, the set covering machine's sensitivity and specificity both hold on ${hold(primary)} datasets. On ${int(same.frozen)} ${POPULATION_WORDS["same-study"].genomes}, they hold on ${hold(same)}.`
+      : `The set covering machine holds, neither sensitivity nor specificity reading below its report, on ${hold(primary)} datasets in the first group and ${hold(same)} in the second.`,
+    figure: (fit: PagedFit) => (
+      <OutsideScatter
+        panels={panels}
+        height={fit.height}
+        titleOf={titleOf}
+        onOpen={opts.nav?.openDataset}
+        canOpen={opts.nav === undefined ? undefined : (id) => index.has(id)}
+        page={fit.page}
+        pages={fit.pages}
+        onPages={fit.onPages}
+      />
+    ),
+    caption: opts.page
+      ? `Each dot is one dataset and the set covering machine. Across is the report's figure with whole lineages held out. Up is the same model's figure on the new genomes, and the bar through the dot is its ${level} interval. A dot under the line scored lower on the new genomes than its report says. A figure reads below, and its dot is hollow, when its whole interval is under the line. A dataset holds when neither its sensitivity nor its specificity reads below.`
+      : `One dot per dataset: the report's figure with lineages held out, across, against the figure on the new genomes, up, with its ${level} interval. A hollow dot reads below: its whole interval is under the line. A retrospective test on newly deposited studies from the same database, not external validation and not an untouched held-out set. The two groups are scored apart; setting them side by side, and counting a dataset as holding, were added after the results were read.`,
+    note: opts.page ? (
+      <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+        <p>
+          This is a retrospective test on newly deposited studies from the same database. The batch&apos;s details and label totals were read before the rules were frozen, so it is
+          not an untouched held-out set. It is not external validation.
+        </p>
+        <p>
+          The first group has {int(primary.frozen)} genomes on {plural(primary.datasets, "dataset")} in {plural(primary.species, "species", "species")}, and {int(primary.holds.scm.read)} of the
+          datasets have a report figure to read. The second has {int(same.frozen)} genomes on {plural(same.datasets, "dataset")} in {plural(same.species, "species", "species")}, and{" "}
+          {int(same.scored)} of its genomes were scored. The two groups cover different species and datasets. The plan scores them apart, and they were set side by side only after both
+          results were read, so the page sets them side by side only to show each one, and draws no comparison between them. The plan reads sensitivity and specificity one at a
+          time. Counting a dataset as holding when neither reads below was added after the results were read.
+        </p>
+        <p>
+          The figures move both ways. For the set covering machine on the first group, sensitivity reads above the report on {int(c.sensitivityAbove)} of the {int(primary.holds.scm.read)}{" "}
+          datasets and below it on {int(c.sensitivityBelow)}. Specificity reads below on {int(c.specificityBelow)} datasets and above on {int(c.specificityAbove)}. Only specificity reads
+          below on {int(c.onlySpecificity)} datasets, only sensitivity on {int(c.onlySensitivity)}, and both on {int(c.both)}.
+        </p>
+        <p>
+          One study holds at least half of the resistant genomes on {int(primary.oneStudyHalf)} of the {int(primary.withEstimates)} datasets in the first group. A sensitivity estimate on
+          such a dataset is mostly that study&apos;s. The second group&apos;s batches are smaller, a median of {int(same.medianScored)} genomes scored on a dataset against{" "}
+          {int(primary.medianScored)} in the first, so its intervals are wider and read below less often. On {same.oneStudyAll === same.withEstimates ? "each" : int(same.oneStudyAll)} of
+          its {int(same.withEstimates)} datasets one study holds at least {pct(ONE_STUDY_ALL)} of the resistant genomes, so its result is mostly that of{" "}
+          {plural(same.oneStudyAllStudies, "study", "studies")}.
+        </p>
+        <OutsideTable summaries={[primary, same]} />
+        <p className="type-note">
+          A learner&apos;s report figure is its figure with whole lineages held out. The known-gene rule has no training, so its report figure is the fixed rule on the whole cohort.
+          Every report figure here, the lasso&apos;s included, is from the revision {rev} reports, the ones the test was frozen against. On {int(primary.ruleHoldsAtEdge)} of the {int(primary.holds.known_gene.holds)} datasets where the known-gene rule holds in the first
+          group, its report figure is exactly 0% or 100%, and such a figure can be read one way only.
+        </p>
+        <p>
+          The test shows that a figure moved. It does not say why, and it names no gene as a cause. It makes no claim that a model works, or fails, in a clinical lab.
+        </p>
+      </div>
+    ) : undefined,
+    span: "wide",
+    continues: true,
+  };
+};
+
+// ---- input settings against the default -----------------------------------------------
+
+/** Each changed input in a reader's words, keyed by the reading's own id,
+ *  which never reaches the page. The default: at most 2,000 genomes per
+ *  species by the label-weighted ranking, 31-letter k-mers only, 4,000
+ *  screened features per fit (docs/input-configuration.md). */
+const INPUT_WORDS: Record<string, string> = {
+  "cap-1000": "At most 1,000 genomes per species",
+  "cap-4000": "At most 4,000 genomes per species",
+  "grr-v1": "Genomes picked across sequence types",
+  k21: "21-letter k-mers",
+  k25: "25-letter k-mers",
+  "k-c": "Adding resistance-region probes",
+  "k-h": "Adding simulated PCR-panel calls",
+  "k-p": "Adding known-gene presence",
+  "k-c-h-p": "Adding all three",
+  "budget-1000": "1,000 screened features",
+  "budget-16000": "16,000 screened features",
+  "sentinel-seed-twin": "The default again, new learner seed",
+  "sentinel-tuning-twin": "The default again, tuning folds drawn again",
+};
+
+const inputWords = (a: InputArm): string => {
+  const w = INPUT_WORDS[a.id];
+  if (w === undefined) throw new Error(`no reader's words for ${a.id}`);
+  return w;
+};
+
+/** A learner's short name inside the input notes, as the notes name them. */
+const LEARNER_SHORT: Record<InputLearner, string> = { scm: "set covering machine", cart: "decision tree", rf: "random forest", gbt: "boosted trees", lasso: "lasso" };
+
+/** The count of changed settings opening a sentence: up to twelve in words. */
+const settingsWord = (n: number): string => [...WORDS, "Eleven", "Twelve"][n] ?? int(n);
+
+/** "(sign p 0.0293)", or nothing for a row with no non-zero change to test. */
+export const signP = (r: LearnerCounts): string => (r.p === null ? "" : ` (sign p ${r.p.toFixed(4)})`);
+
+const CHANGED_TITLE = "Each input changed once";
+const TWIN_TITLE = "The default run again, no input changed";
+
+const inputGroups = (): InputGroup[] => {
+  const s = inputSummary();
+  const rows = (arms: readonly InputArm[]) =>
+    arms.map((a) => ({ key: a.id, name: inputWords(a), better: a.all.better, worse: a.all.worse, datasets: a.all.datasets, p: a.all.p, median: a.all.median }));
+  return [
+    { title: CHANGED_TITLE, rows: rows(s.changed) },
+    { title: TWIN_TITLE, rows: rows(s.twins) },
+  ];
+};
+
+/** Datasets better, then worse, per species: the reading's table by species. */
+const InputSpeciesTable = () => {
+  const s = inputSummary();
+  const cell = (c: { better: number; worse: number; datasets: number }) => (c.datasets === 0 ? "none compared" : `${int(c.better)}, ${int(c.worse)} of ${int(c.datasets)}`);
+  const rows = (arms: readonly InputArm[]) => arms.map((a) => ({ key: a.id, name: inputWords(a), cells: [...a.species.map(cell), cell(a.all)] }));
+  return (
+    <NumberTable
+      label="Datasets better, then worse, by species"
+      head={["Change", ...INPUT_COMPARISON.species.map((x) => speciesName(x.name)), "All four"]}
+      groups={[
+        { title: CHANGED_TITLE, rows: rows(s.changed) },
+        { title: TWIN_TITLE, rows: rows(s.twins) },
+      ]}
+    />
+  );
+};
+
+/** Two shares of the summed calls, under the default and under the change. */
+const shareMove = ([was, now]: readonly number[]): string => `${pct(was)} → ${pct(now)}`;
+
+/** The reading by learner with whole lineages held out: one group per change,
+ *  in the order of the main rows, five learners each, with the datasets worse
+ *  and better and the shares of resistant and susceptible genomes called
+ *  right, from the summed calls. Under LEARNER_WIDE, measured on its own
+ *  frame, the datasets compared and the susceptible share leave the row, so
+ *  it reads without scrolling and a screen reader meets the same columns. */
+const LEARNER_WIDE = 600;
+
+const InputLearnerTable = () => {
+  const s = inputSummary();
+  const frame = useRef<HTMLDivElement | null>(null);
+  const wide = useWidth(frame) >= LEARNER_WIDE;
+  const head: readonly { text: string; wide?: boolean }[] = [
+    { text: "Learner" },
+    { text: "Worse" },
+    { text: "Better" },
+    { text: "Of", wide: true },
+    { text: "Resistant found, default → change" },
+    { text: "Susceptible called susceptible, default → change", wide: true },
+  ];
+  const cols = head.filter((h) => wide || h.wide !== true);
+  const table = (
+    <table className={`w-full border-collapse text-control ${wide ? "min-w-[40rem]" : ""}`}>
+      <thead>
+        <tr className="border-b border-hair">
+          {cols.map((h, i) => (
+            <th key={h.text} scope="col" className={`${TH} ${i === 0 ? "text-left" : "text-right"}`}>
+              {h.text}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      {[...s.changed, ...s.twins].map((a) => (
+        <tbody key={a.id} data-learner-group={inputWords(a)}>
+          <tr className="border-b border-hair">
+            <th scope="rowgroup" colSpan={cols.length} className="px-2 pb-1.5 pt-4 text-left text-tiny font-medium text-muted-text">
+              {inputWords(a)}
+            </th>
+          </tr>
+          {INPUT_LEARNERS.map((l) => {
+            const r = a.learners[l];
+            return (
+              <tr key={l} data-learner={l} className="border-b border-hair">
+                <th scope="row" className="px-2 py-1 text-left font-normal">
+                  {LEARNER_NAME[l]}
+                </th>
+                <td className="px-2 py-1 text-right tabular-nums">{int(r.worse)}</td>
+                <td className="px-2 py-1 text-right tabular-nums">{int(r.better)}</td>
+                {wide ? <td className="px-2 py-1 text-right tabular-nums">{int(r.datasets)}</td> : null}
+                <td className="whitespace-nowrap px-2 py-1 text-right tabular-nums">{shareMove(r.recall)}</td>
+                {wide ? <td className="whitespace-nowrap px-2 py-1 text-right tabular-nums">{shareMove(r.specificity)}</td> : null}
+              </tr>
+            );
+          })}
+        </tbody>
+      ))}
+    </table>
+  );
+  return (
+    <div ref={frame} className="max-w-[48rem]">
+      <ScrollFrame label="Each change by learner, whole lineages held out">{table}</ScrollFrame>
+      <p className="prose-measure mt-2 text-muted-text">
+        Worse and better count the datasets where the change&apos;s log loss for that learner was higher or lower than the default&apos;s. The shares come from the calls summed over
+        the datasets, with a genome counted once per repeat. This reading was designed after the results had been read, and it decides nothing.
+      </p>
+    </div>
+  );
+};
+
+export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
+  const c = INPUT_COMPARISON;
+  const s = inputSummary();
+  const cap1000 = armById("cap-1000").all;
+  const budget1000 = armById("budget-1000").all;
+  const cap4000 = armById("cap-4000");
+  const salmonella = cap4000.species[speciesIndex("Salmonella enterica")]!;
+  const told = prediction("cap-4000");
+  const unseen = listWords(c.predictions.species.map(speciesName));
+  const moved = (id: string) => {
+    const k = armById(id).contrasts;
+    return `${int(k.beyond)} of ${int(k.made)}`;
+  };
+  // The two species the document names as too small to decide anything alone.
+  const small = ["Neisseria gonorrhoeae", "Staphylococcus aureus"].map((n) => c.species[speciesIndex(n)]!);
+  const p4 = (v: number) => v.toFixed(4);
+  // The reading by learner, whole lineages held out.
+  const byLearner = cap4000.learners;
+  const others = signPRange(INPUT_LEARNERS.filter((l) => l !== "scm").map((l) => byLearner[l]));
+  const clofazimine = namedRow("mycobacterium_tuberculosis__clofazimine", "cap-4000", "scm");
+  const fewer = armById("cap-1000").learners;
+  const screen = armById("budget-1000").learners;
+  const screened = ["rf", "gbt", "lasso"] as const;
+  const untuned = untunedLearners();
+  // The median change of the two smaller settings, against the plan's margin.
+  const margin = (median: number) => (Math.abs(median) >= c.margin ? "more than" : "less than");
+  return {
+    id: "inputs",
+    title: "Input settings against the default",
+    result: opts.page
+      ? `${settingsWord(s.changed.length)} input settings were each changed once and scored against the default on ${plural(s.species, "species", "species")}, by log loss with whole lineages held out. By the plan's tests, no change beat the default across the ${int(s.species)} species. At most 1,000 genomes per species scored worse on ${int(cap1000.worse)} of ${int(cap1000.datasets)} datasets, by a median of ${p4(Math.abs(cap1000.median))} in log loss, ${margin(cap1000.median)} the plan's ${c.margin} margin; 1,000 screened features scored worse on ${int(budget1000.worse)} of ${int(budget1000.datasets)}, by a median of ${p4(Math.abs(budget1000.median))}, ${margin(budget1000.median)} the margin.`
+      : `By the plan's tests, no changed input beat the default across ${plural(s.species, "species", "species")}.`,
+    figure: (fit: PagedFit) => (
+      <InputRows
+        label="Each changed input against the default: datasets worse and better"
+        groups={inputGroups()}
+        slide={!opts.page}
+        height={fit.height}
+        page={fit.page}
+        pages={fit.pages}
+        onPages={fit.onPages}
+      />
+    ),
+    caption: opts.page
+      ? "Each row is one changed input. Worse and better count the datasets where the change's log loss, averaged over the learners, was higher or lower than the default's, with whole lineages held out. Sign p is a two-sided exact sign test over those datasets; a species' datasets share genomes, so it guides and does not decide. The last two rows run the default again with no input changed, so they show how far a score moves by chance."
+      : `Datasets where each change scored worse and better than the default, by log loss with whole lineages held out. Each dataset's change is averaged over the five learners; the page gives them by learner, with the resistant genomes found. Of: datasets compared; Median: the middle per-dataset change, above zero when better. Sign p guides and does not decide. The last two rows run the default again. ${plural(s.species, "species", "species")}, ${int(s.answered)} datasets with a result.`,
+    note: opts.page ? (
+      <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
+        <p>
+          The default is at most 2,000 genomes per species, picked by a ranking on their drug labels; 31-letter k-mers and nothing else; and 4,000 screened features per fit for the random
+          forest, the boosted trees and the lasso. The pipeline already tunes {spelledLower(INPUT_LEARNERS.length - untuned.length)} of the {spelledLower(INPUT_LEARNERS.length)} learners inside each training fold (
+          {listWords(untuned.map((l) => `the ${LEARNER_SHORT[l]}`))} {untuned.length === 1 ? "runs" : "run"} with set parameters), and the second repeat run draws those tuning folds again. The{" "}
+          {int(s.species)} species are {listWords(c.species.map((x) => x.name))}. They have {plural(s.datasets, "dataset")}, and {int(s.answered)} have a result with whole lineages held
+          out: {listWords(c.species.map((x) => `${speciesName(x.name)} ${int(x.answered)} of ${int(x.datasets)}`))}.
+        </p>
+        <p>
+          At most 4,000 genomes per species scored better on {int(cap4000.all.better)} of {int(cap4000.all.datasets)} datasets (sign p {p4(cap4000.all.p)}), and {int(salmonella.better)} of
+          the {int(cap4000.all.better)} are Salmonella&apos;s: it scored better on {int(salmonella.better)} of {int(salmonella.datasets)} Salmonella datasets. The plan predicted
+          it would score better on the two species it had not yet seen, {unseen}. There it scored better on {int(told.better)} of {int(told.of)} datasets, which a sign test can&apos;t tell from an even split, so the prediction failed.
+        </p>
+        <p>
+          Log loss scores the probabilities a learner gives. It can improve while the learner finds fewer resistant genomes, and the five learners&apos; log loss is not on one scale: the
+          set covering machine answers yes or no, and it carries {pct(byLearner.scm.share.units, 0)} of the five learners&apos; summed change for 4,000 genomes. By learner, 4,000 genomes
+          scored better on {int(byLearner.scm.better)} of {int(byLearner.scm.datasets)} datasets for the set covering machine{signP(byLearner.scm)} and showed no direction for the
+          other four{others === null ? "" : ` (sign p ${p4(others[0])} to ${p4(others[1])})`}. On TB clofazimine, 4,000 genomes improved the set covering machine&apos;s log loss while
+          its correct resistant calls fell from {int(clofazimine.default.tp)} to {int(clofazimine.arm_calls.tp)} of {int(clofazimine.default.tp + clofazimine.default.fn)} (calls summed
+          over {spelledLower(clofazimine.repeats)} repeats, so each genome counts {spelledLower(clofazimine.repeats)} times). 1,000 genomes scored worse on more datasets than better for
+          every learner, of {int(fewer.scm.datasets)}: {listWords(INPUT_LEARNERS.map((l) => `${LEARNER_SHORT[l]} ${int(fewer[l].worse)}`))}. 1,000 screened features cannot move the set
+          covering machine or the decision tree, which do not use the screen; for the other three it scored worse on {int(screen[screened[0]].worse)} of {int(screen.rf.datasets)}{" "}
+          datasets ({LEARNER_SHORT[screened[0]]}), {listWords(screened.slice(1).map((l) => `${int(screen[l].worse)} (${LEARNER_SHORT[l]})`))}.
+          The reading by learner was designed after the results had been read, and it decides nothing.
+        </p>
+        <p>
+          A count with no direction doesn&apos;t show that a change equals the default. 21-letter k-mers moved {moved("k21")} comparisons of one dataset and one learner by {c.margin} or
+          more in log loss, either way; 25-letter k-mers moved {moved("k25")}, and genomes picked across sequence types {moved("grr-v1")}. The default run again with its tuning folds
+          drawn again moved {moved("sentinel-tuning-twin")}.
+        </p>
+        <p>
+          Of {int(s.tested)} comparisons of one dataset and one learner that were tested, {int(s.firm)} were decided the same way inside their species and across the{" "}
+          {int(s.species)} species together: {int(s.firmBetter)} better and {int(s.firmWorse)} worse, {int(s.firmForest)} of them on the random forest.
+        </p>
+        <p>
+          {speciesName(small[0]!.name)} has {plural(small[0]!.answered, "dataset")} with a result and {speciesName(small[1]!.name)} {int(small[1]!.answered)}, too few to decide anything
+          alone. The plan for this reading was fixed after partial Salmonella and Gonorrhea results had been seen and before the other two species finished, and no public timestamp attests
+          it.
+        </p>
+        <p>
+          The score is log loss with whole lineages held out. The test does not show that the default is the best setting, or that the inputs do not matter: by the plan&apos;s tests, no
+          single change beat it across these {int(s.species)} species.
+        </p>
+      </div>
+    ) : undefined,
+    span: "wide",
+    continues: true,
+    more: opts.page
+      ? [
+          { label: "Each change by species", body: <InputSpeciesTable /> },
+          { label: "Each change by learner", body: <InputLearnerTable /> },
+        ]
+      : undefined,
+  };
+};
+
+export const FINDINGS = [corpusFinding, lineageFinding, learnersFinding, barsFinding, catalogFinding, panelsFinding, micFinding, outsideFinding, inputsFinding] as const;
