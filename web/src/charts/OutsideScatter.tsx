@@ -205,7 +205,7 @@ export const OutsideScatter = ({
             <h3 className="text-control text-muted-text">{panel.heading}</h3>
             <div className="mt-1 flex gap-x-6">
               {MEASURES.map((m) => (
-                <Plot key={m} panel={panel} measure={m} side={side} titleOf={titleOf} onOpen={onOpen} canOpen={canOpen} measuring={measuring} oneLine={aside} />
+                <Plot key={m} panel={panel} measure={m} side={side} titleOf={titleOf} onOpen={onOpen} canOpen={canOpen} measuring={measuring} oneLine={four} />
               ))}
             </div>
           </div>
