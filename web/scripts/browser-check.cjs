@@ -1563,6 +1563,12 @@ async function present(page, tag, width, height) {
       const text = await page.evaluate(() => document.querySelector('dialog.presentation-dialog main section')?.textContent ?? '');
       inputsSeen.push(...shownRows);
       check(tag + ' slide ' + (slide + 1) + ' input rows and no internal name', shownRows.length > 0 && !INTERNAL.test(text), { shownRows, page: paged?.[0] ?? null, internal: text.match(INTERNAL)?.[0] ?? null });
+      // The slide explains the datasets-compared and median columns exactly
+      // where the table shows them; a narrow table hides both.
+      const head = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main section thead th')].map(th => th.textContent.trim()));
+      // The legend's spans sit side by side, so its text runs on with no space.
+      const explained = { Of: /Of: datasets compared/.test(text), Median: /Median: the middle/.test(text) };
+      check(tag + ' slide ' + (slide + 1) + ' input slide explains only the columns its table shows', ['Of', 'Median'].every(c => explained[c] === head.includes(c)), { head, explained });
     }
     const beats = await dialog.locator('[data-beats] span').evaluateAll(es => es.map(e => getComputedStyle(e).backgroundColor));
     const frameLabel = await slideSelect.textContent();

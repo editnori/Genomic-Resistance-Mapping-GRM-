@@ -1479,7 +1479,7 @@ export const inputsFinding = (_m: Manifest, opts: FindingOptions): Finding => {
     ),
     caption: opts.page
       ? "Each row is one changed input. Worse and better count the datasets where the change's log loss, averaged over the learners, was higher or lower than the default's, with whole lineages held out. Sign p is a two-sided exact sign test over those datasets; a species' datasets share genomes, so it guides and does not decide. The last two rows run the default again with no input changed, so they show how far a score moves by chance."
-      : `Datasets where each change scored worse and better than the default, by log loss with whole lineages held out. Each dataset's change is averaged over the five learners; the page gives them by learner, with the resistant genomes found. Of: datasets compared; Median: the middle per-dataset change, above zero when better. Sign p guides and does not decide. The last two rows run the default again. ${plural(s.species, "species", "species")}, ${int(s.answered)} datasets with a result.`,
+      : `Datasets where each change scored worse and better than the default, by log loss with whole lineages held out. Each dataset's change is averaged over the five learners; the page gives them by learner, with the resistant genomes found. Sign p guides and does not decide. The last two rows run the default again. ${plural(s.species, "species", "species")}, ${int(s.answered)} datasets with a result.`,
     note: opts.page ? (
       <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
         <p>
