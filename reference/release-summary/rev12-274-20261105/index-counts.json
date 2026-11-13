@@ -1,0 +1,17 @@
+{
+ "revision": 12,
+ "rule": "no_call genomes left out",
+ "datasets": 274,
+ "files": 274,
+ "rows": 3212,
+ "learner_rows": 2710,
+ "rule_rows": 502,
+ "flagged_rows": 0,
+ "flagged_with_no_call": 0,
+ "unflagged_with_no_call": 122,
+ "rates_compared": 6424,
+ "rates_null_in_file": 0,
+ "mismatches": 0,
+ "examples": [],
+ "flag_keys_seen": {}
+}

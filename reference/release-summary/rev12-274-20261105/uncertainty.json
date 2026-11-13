@@ -1,0 +1,671 @@
+{
+ "revision": 12,
+ "generated_at": "2026-11-05T23:40:25Z",
+ "datasets": 274,
+ "species": 23,
+ "reps": 4000,
+ "seed": 20261111,
+ "checks": {
+  "intervals_files": 274,
+  "schemes": [
+   "lineage",
+   "random"
+  ],
+  "rows": 3212,
+  "problems": [],
+  "problem_count": 0
+ },
+ "medians": {
+  "scm:random": {
+   "n": 274,
+   "value": 0.9165,
+   "ci95_datasets": [
+    0.9064,
+    0.9245
+   ],
+   "ci95_species": [
+    0.8914,
+    0.933
+   ]
+  },
+  "scm:lineage": {
+   "n": 268,
+   "value": 0.8708,
+   "ci95_datasets": [
+    0.8517,
+    0.8876
+   ],
+   "ci95_species": [
+    0.8418,
+    0.9036
+   ]
+  },
+  "cart:random": {
+   "n": 274,
+   "value": 0.9092,
+   "ci95_datasets": [
+    0.8989,
+    0.9167
+   ],
+   "ci95_species": [
+    0.8846,
+    0.9281
+   ]
+  },
+  "cart:lineage": {
+   "n": 268,
+   "value": 0.8684,
+   "ci95_datasets": [
+    0.8429,
+    0.8871
+   ],
+   "ci95_species": [
+    0.8199,
+    0.8965
+   ]
+  },
+  "rf:random": {
+   "n": 274,
+   "value": 0.897,
+   "ci95_datasets": [
+    0.8803,
+    0.9049
+   ],
+   "ci95_species": [
+    0.8676,
+    0.9178
+   ]
+  },
+  "rf:lineage": {
+   "n": 268,
+   "value": 0.8124,
+   "ci95_datasets": [
+    0.7743,
+    0.8406
+   ],
+   "ci95_species": [
+    0.7558,
+    0.851
+   ]
+  },
+  "gbt:random": {
+   "n": 274,
+   "value": 0.9139,
+   "ci95_datasets": [
+    0.9007,
+    0.9245
+   ],
+   "ci95_species": [
+    0.8884,
+    0.9377
+   ]
+  },
+  "gbt:lineage": {
+   "n": 268,
+   "value": 0.8459,
+   "ci95_datasets": [
+    0.822,
+    0.8692
+   ],
+   "ci95_species": [
+    0.8131,
+    0.8924
+   ]
+  },
+  "lasso:random": {
+   "n": 274,
+   "value": 0.9161,
+   "ci95_datasets": [
+    0.9031,
+    0.9214
+   ],
+   "ci95_species": [
+    0.8944,
+    0.9335
+   ]
+  },
+  "lasso:lineage": {
+   "n": 268,
+   "value": 0.8567,
+   "ci95_datasets": [
+    0.8316,
+    0.879
+   ],
+   "ci95_species": [
+    0.8126,
+    0.903
+   ]
+  },
+  "best:random": {
+   "n": 274,
+   "value": 0.9293,
+   "ci95_datasets": [
+    0.9235,
+    0.9363
+   ],
+   "ci95_species": [
+    0.9056,
+    0.9487
+   ]
+  },
+  "best:lineage": {
+   "n": 268,
+   "value": 0.879,
+   "ci95_datasets": [
+    0.8617,
+    0.8932
+   ],
+   "ci95_species": [
+    0.8451,
+    0.9041
+   ]
+  }
+ },
+ "gaps": {
+  "scm:gap": {
+   "n": 268,
+   "value": 0.0242,
+   "ci95_datasets": [
+    0.0179,
+    0.0376
+   ],
+   "ci95_species": [
+    0.0116,
+    0.0436
+   ]
+  },
+  "cart:gap": {
+   "n": 268,
+   "value": 0.0293,
+   "ci95_datasets": [
+    0.0217,
+    0.0411
+   ],
+   "ci95_species": [
+    0.0134,
+    0.0489
+   ]
+  },
+  "rf:gap": {
+   "n": 268,
+   "value": 0.0504,
+   "ci95_datasets": [
+    0.0383,
+    0.0651
+   ],
+   "ci95_species": [
+    0.0297,
+    0.0782
+   ]
+  },
+  "gbt:gap": {
+   "n": 268,
+   "value": 0.0463,
+   "ci95_datasets": [
+    0.0336,
+    0.057
+   ],
+   "ci95_species": [
+    0.0247,
+    0.0735
+   ]
+  },
+  "lasso:gap": {
+   "n": 268,
+   "value": 0.0376,
+   "ci95_datasets": [
+    0.0274,
+    0.0457
+   ],
+   "ci95_species": [
+    0.0163,
+    0.0624
+   ]
+  },
+  "best:gap": {
+   "n": 268,
+   "value": 0.0371,
+   "ci95_datasets": [
+    0.0282,
+    0.0444
+   ],
+   "ci95_species": [
+    0.0177,
+    0.0552
+   ]
+  }
+ },
+ "paired_lineage": {
+  "scm-cart:lineage": {
+   "n": 268,
+   "value": 0.0026,
+   "ci95_datasets": [
+    0.0,
+    0.0059
+   ],
+   "ci95_species": [
+    0.0,
+    0.0085
+   ],
+   "first_at_least_second": 180
+  },
+  "scm-rf:lineage": {
+   "n": 268,
+   "value": 0.0247,
+   "ci95_datasets": [
+    0.015,
+    0.0335
+   ],
+   "ci95_species": [
+    0.0144,
+    0.0379
+   ],
+   "first_at_least_second": 191
+  },
+  "scm-gbt:lineage": {
+   "n": 268,
+   "value": 0.0046,
+   "ci95_datasets": [
+    0.0,
+    0.0111
+   ],
+   "ci95_species": [
+    0.0,
+    0.0124
+   ],
+   "first_at_least_second": 162
+  },
+  "scm-lasso:lineage": {
+   "n": 268,
+   "value": 0.002,
+   "ci95_datasets": [
+    0.0,
+    0.0073
+   ],
+   "ci95_species": [
+    0.0,
+    0.0082
+   ],
+   "first_at_least_second": 160
+  }
+ },
+ "selection": {
+  "note": "best = the learner with the highest random-split score; oracle = the highest lineage score of the five",
+  "median_lineage_of_best": {
+   "n": 268,
+   "value": 0.879,
+   "ci95_datasets": [
+    0.8617,
+    0.8932
+   ],
+   "ci95_species": [
+    0.8451,
+    0.9041
+   ]
+  },
+  "median_lineage_of_oracle": {
+   "n": 268,
+   "value": 0.8966,
+   "ci95_datasets": [
+    0.8838,
+    0.9071
+   ],
+   "ci95_species": [
+    0.8591,
+    0.9204
+   ]
+  },
+  "median_oracle_minus_best": {
+   "n": 268,
+   "value": 0.0024,
+   "ci95_datasets": [
+    0.0002,
+    0.0048
+   ],
+   "ci95_species": [
+    0.0002,
+    0.0047
+   ]
+  },
+  "best_is_also_lineage_best": 116,
+  "of": 268,
+  "median_best_minus_fixed_learner": {
+   "scm": {
+    "n": 268,
+    "value": 0.0,
+    "ci95_datasets": [
+     0.0,
+     0.0
+    ],
+    "ci95_species": [
+     0.0,
+     0.0
+    ],
+    "best_at_least_fixed": 189
+   },
+   "cart": {
+    "n": 268,
+    "value": 0.0017,
+    "ci95_datasets": [
+     0.0,
+     0.0064
+    ],
+    "ci95_species": [
+     0.0,
+     0.0085
+    ],
+    "best_at_least_fixed": 200
+   },
+   "rf": {
+    "n": 268,
+    "value": 0.0254,
+    "ci95_datasets": [
+     0.0173,
+     0.0367
+    ],
+    "ci95_species": [
+     0.0125,
+     0.0382
+    ],
+    "best_at_least_fixed": 222
+   },
+   "gbt": {
+    "n": 268,
+    "value": 0.0033,
+    "ci95_datasets": [
+     0.0,
+     0.0135
+    ],
+    "ci95_species": [
+     0.0,
+     0.0143
+    ],
+    "best_at_least_fixed": 209
+   },
+   "lasso": {
+    "n": 268,
+    "value": 0.0002,
+    "ci95_datasets": [
+     0.0,
+     0.0078
+    ],
+    "ci95_species": [
+     0.0,
+     0.0074
+    ],
+    "best_at_least_fixed": 206
+   }
+  },
+  "median_random_best_of_five": {
+   "n": 274,
+   "value": 0.9293,
+   "ci95_datasets": [
+    0.9235,
+    0.9363
+   ],
+   "ci95_species": [
+    0.9056,
+    0.9487
+   ]
+  },
+  "median_random_single_learners": {
+   "scm": 0.9165,
+   "cart": 0.9092,
+   "rf": 0.897,
+   "gbt": 0.9139,
+   "lasso": 0.9161
+  }
+ },
+ "shares": {
+  "best_ahead_of_catalog:random": {
+   "n": 253,
+   "value": 0.7787,
+   "ci95_datasets": [
+    0.7258,
+    0.8307
+   ],
+   "ci95_species": [
+    0.6906,
+    0.8529
+   ]
+  },
+  "best_ahead_of_catalog:lineage": {
+   "n": 249,
+   "value": 0.6104,
+   "ci95_datasets": [
+    0.548,
+    0.6721
+   ],
+   "ci95_species": [
+    0.5231,
+    0.683
+   ]
+  },
+  "catalog_ahead_or_within_2pt:lineage": {
+   "n": 249,
+   "value": 0.4177,
+   "ci95_datasets": [
+    0.3574,
+    0.4815
+   ],
+   "ci95_species": [
+    0.3411,
+    0.509
+   ]
+  },
+  "gap_over_5pt:best": {
+   "n": 268,
+   "value": 0.4179,
+   "ci95_datasets": [
+    0.3596,
+    0.4778
+   ],
+   "ci95_species": [
+    0.3102,
+    0.5114
+   ]
+  }
+ },
+ "catalog": {
+  "best-catalog:random": {
+   "n": 253,
+   "value": 0.207,
+   "ci95_datasets": [
+    0.1252,
+    0.2875
+   ],
+   "ci95_species": [
+    0.087,
+    0.3118
+   ]
+  },
+  "best-catalog:lineage": {
+   "n": 249,
+   "value": 0.085,
+   "ci95_datasets": [
+    0.0375,
+    0.1628
+   ],
+   "ci95_species": [
+    0.011,
+    0.2381
+   ]
+  }
+ },
+ "error_bars": {
+  "vme_bar": 0.015,
+  "me_bar": 0.03,
+  "rows": {
+   "best:random": {
+    "n": 274,
+    "point_meets_both": 13,
+    "shown_to_meet_both": 2,
+    "shown_to_miss_one": 216,
+    "not_decided": 56,
+    "shown_to_miss_vme": 208,
+    "shown_to_miss_me": 121,
+    "point_meets_vme": 19,
+    "point_meets_me": 95,
+    "median_resistant_scored": 209.5
+   },
+   "scm:random": {
+    "n": 274,
+    "point_meets_both": 10,
+    "shown_to_meet_both": 2,
+    "shown_to_miss_one": 232,
+    "not_decided": 40,
+    "shown_to_miss_vme": 224,
+    "shown_to_miss_me": 143,
+    "point_meets_vme": 17,
+    "point_meets_me": 73,
+    "median_resistant_scored": 209.5
+   },
+   "cart:random": {
+    "n": 274,
+    "point_meets_both": 10,
+    "shown_to_meet_both": 2,
+    "shown_to_miss_one": 235,
+    "not_decided": 37,
+    "shown_to_miss_vme": 228,
+    "shown_to_miss_me": 164,
+    "point_meets_vme": 16,
+    "point_meets_me": 63,
+    "median_resistant_scored": 209.5
+   },
+   "rf:random": {
+    "n": 274,
+    "point_meets_both": 7,
+    "shown_to_meet_both": 1,
+    "shown_to_miss_one": 250,
+    "not_decided": 23,
+    "shown_to_miss_vme": 225,
+    "shown_to_miss_me": 147,
+    "point_meets_vme": 20,
+    "point_meets_me": 89,
+    "median_resistant_scored": 209.5
+   },
+   "gbt:random": {
+    "n": 274,
+    "point_meets_both": 7,
+    "shown_to_meet_both": 1,
+    "shown_to_miss_one": 225,
+    "not_decided": 48,
+    "shown_to_miss_vme": 221,
+    "shown_to_miss_me": 147,
+    "point_meets_vme": 10,
+    "point_meets_me": 77,
+    "median_resistant_scored": 209.5
+   },
+   "lasso:random": {
+    "n": 274,
+    "point_meets_both": 8,
+    "shown_to_meet_both": 1,
+    "shown_to_miss_one": 231,
+    "not_decided": 42,
+    "shown_to_miss_vme": 226,
+    "shown_to_miss_me": 148,
+    "point_meets_vme": 12,
+    "point_meets_me": 73,
+    "median_resistant_scored": 206.5
+   },
+   "catalog:random": {
+    "n": 253,
+    "point_meets_both": 8,
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 235,
+    "not_decided": 18,
+    "shown_to_miss_vme": 165,
+    "shown_to_miss_me": 129,
+    "point_meets_vme": 70,
+    "point_meets_me": 99,
+    "median_resistant_scored": 217
+   },
+   "best:lineage": {
+    "n": 268,
+    "point_meets_both": 6,
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 239,
+    "not_decided": 29,
+    "shown_to_miss_vme": 233,
+    "shown_to_miss_me": 147,
+    "point_meets_vme": 11,
+    "point_meets_me": 77,
+    "median_resistant_scored": 225.5
+   },
+   "scm:lineage": {
+    "n": 268,
+    "point_meets_both": 5,
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 240,
+    "not_decided": 28,
+    "shown_to_miss_vme": 232,
+    "shown_to_miss_me": 151,
+    "point_meets_vme": 11,
+    "point_meets_me": 68,
+    "median_resistant_scored": 225.5
+   },
+   "cart:lineage": {
+    "n": 268,
+    "point_meets_both": 8,
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 238,
+    "not_decided": 30,
+    "shown_to_miss_vme": 231,
+    "shown_to_miss_me": 174,
+    "point_meets_vme": 14,
+    "point_meets_me": 53,
+    "median_resistant_scored": 225.5
+   },
+   "rf:lineage": {
+    "n": 268,
+    "point_meets_both": 3,
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 257,
+    "not_decided": 11,
+    "shown_to_miss_vme": 234,
+    "shown_to_miss_me": 146,
+    "point_meets_vme": 11,
+    "point_meets_me": 89,
+    "median_resistant_scored": 225.5
+   },
+   "gbt:lineage": {
+    "n": 268,
+    "point_meets_both": 6,
+    "shown_to_meet_both": 1,
+    "shown_to_miss_one": 244,
+    "not_decided": 23,
+    "shown_to_miss_vme": 236,
+    "shown_to_miss_me": 166,
+    "point_meets_vme": 10,
+    "point_meets_me": 51,
+    "median_resistant_scored": 215.0
+   },
+   "lasso:lineage": {
+    "n": 268,
+    "point_meets_both": 5,
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 241,
+    "not_decided": 27,
+    "shown_to_miss_vme": 233,
+    "shown_to_miss_me": 174,
+    "point_meets_vme": 9,
+    "point_meets_me": 58,
+    "median_resistant_scored": 208.0
+   },
+   "catalog:lineage": {
+    "n": 249,
+    "point_meets_both": 8,
+    "shown_to_meet_both": 0,
+    "shown_to_miss_one": 231,
+    "not_decided": 18,
+    "shown_to_miss_vme": 162,
+    "shown_to_miss_me": 128,
+    "point_meets_vme": 69,
+    "point_meets_me": 96,
+    "median_resistant_scored": 226
+   }
+  },
+  "resistant_needed_for_zero_misses_to_show_vme": 245,
+  "datasets_with_that_many_resistant": 132
+ }
+}
