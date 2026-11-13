@@ -1,6 +1,8 @@
 # Release summary: the main numbers of a GRM release
 
-Four scripts in `scripts/release-summary/` compute the main numbers of a GRM release from two of its public files: `index.json` and the directory `intervals/`. A fifth reads the same files by the acceptance wording of FDA's 2009 guidance for susceptibility test systems. A sixth script puts two releases side by side. Nothing is fitted and no genome is read. The outputs for revisions 12 and 14 are committed under `reference/release-summary/`. The README there names each release asset and the sha256 of each input and output.
+Four scripts in `scripts/release-summary/` compute the main numbers of a GRM release from two of its public files: `index.json` and the directory `intervals/`. A fifth reads the same files by the acceptance wording of FDA's 2009 guidance for susceptibility test systems. A sixth script puts two releases side by side. Nothing is fitted and no genome is read.
+
+The outputs for revisions 12 and 14 are committed under `reference/release-summary/`. The README there names each release asset and the sha256 of each input and output.
 
 These are retrospective analyses with internal cross-validation on one public database. Each release has 274 datasets in 23 species. A dataset is one species and one drug.
 
@@ -12,7 +14,9 @@ These are retrospective analyses with internal cross-validation on one public da
 
 The random split assigns genomes to folds at random. The lineage split holds out whole lineages, so it is the stricter of the two. The five learners are the set covering machine (`scm`), the decision tree (`cart`), the random forest (`rf`), boosted trees (`gbt`) and the lasso (`lasso`).
 
-The best learner of a dataset is the one of the five with the highest random-split balanced accuracy. The known-gene rule calls a genome resistant from the genes a catalog lists. It is fitted on nothing, so its one score answers for both splits.
+The best learner of a dataset is the release's own choice, named in the index. Of the five, it is the one with the highest random-split balanced accuracy among those scored on every genome on every split that ran. Revision 12 leaves a learner with a no-call out of that choice. In revision 14 a flagged learner is scored on every genome and competes ([equal-scoring.md](equal-scoring.md)).
+
+The known-gene rule calls a genome resistant from the genes a catalog lists. It is fitted on nothing, so its one score answers for both splits.
 
 Each script reads the release's revision from `evaluation_revision` in the index. Each understands revisions 12 and 14 and stops with a message on any other.
 
@@ -50,7 +54,7 @@ In revision 12, and on an unflagged row of revision 14, a learner row leaves out
 
 In revision 14, a learner row whose split entry carries `null_fits_scored: true` is scored on every genome ([equal-scoring.md](equal-scoring.md)). Each `n` is every genome of the class. In both cases `x` is the rate times `n`, rounded. The known-gene rule has no no-calls.
 
-**`guidance.json`** comes from `python3 -I scripts/release-summary/guidance.py INDEX.json INTERVALS_DIR`. It reads the release's error rates by the acceptance wording of FDA's 2009 guidance, beside the release's own screen. The section "The release read by the guidance's wording" below says what it holds.
+**`guidance.json`** comes from `python3 -I scripts/release-summary/guidance.py INDEX.json INTERVALS_DIR`. It reads the release's error rates by the acceptance wording of FDA's 2009 guidance, beside the release's own screen. The section "The guidance's wording" below says what it holds.
 
 **`compare.py`** takes two outputs: `python3 -I scripts/release-summary/compare.py A/uncertainty.json B/uncertainty.json` prints the numbers of two `uncertainty.json` files side by side, one line per statistic. It recomputes nothing.
 
@@ -151,13 +155,11 @@ In both releases the counts of all 6424 error rates of the 3212 intervals rows r
 
 Between the two releases, only rows that involve boosted trees, the lasso or the best learner change. Those are the two learners that can have a null fit, and the best learner can be one of them ([equal-scoring.md](equal-scoring.md)).
 
-## The release read by the guidance's wording
+## The guidance's wording
 
 The error limits above are adapted from FDA's 2009 guidance for antimicrobial susceptibility test systems: "Class II Special Controls Guidance Document: Antimicrobial Susceptibility Test (AST) Systems", issued August 28, 2009. The guidance's own acceptance wording is looser than the release's screen. `guidance.json` reads each release by that wording, beside the screen.
 
-### What the guidance says
-
-The guidance says: "FDA considers the following to be acceptable performance for the clinical data for AST devices for all organisms appropriate for testing". Two of the parts it lists concern the error rates:
+**The text.** The guidance says: "FDA considers the following to be acceptable performance for the clinical data for AST devices for all organisms appropriate for testing". Two of the parts it lists concern the error rates:
 
 > A maj rate of < 3% based on the number of susceptible organisms tested.
 
@@ -171,9 +173,7 @@ The guidance also says what it does not cover:
 
 > This document does not apply to devices detecting genomic features that confer antimicrobial resistances, …
 
-### What the script applies
-
-A row meets the guidance's wording when all three parts hold. Each part is strict, as the guidance writes it:
+**The rule.** A row meets the guidance's wording when all three parts hold. Each part is strict, as the guidance writes it:
 
 - the upper bound of the exact 95% interval of VME is under 7.5%;
 - the lower bound of that interval is under 1.5%;
@@ -181,13 +181,15 @@ A row meets the guidance's wording when all three parts hold. Each part is stric
 
 An upper bound of exactly 7.5%, a lower bound of exactly 1.5% or an ME rate of exactly 3% does not meet. The interval is the one the release serves: the exact (Clopper-Pearson) binomial interval, the kind Table 8 names.
 
-The script reads the same rows as the error-limit classes: each learner, the best learner and the known-gene rule on each split, over the datasets with both rates. For each it counts the datasets that meet each part, the two VME parts together, and all three. It gives that total again without the *M. tuberculosis* datasets. Beside it, it counts the release's three screen classes, which equal those of `uncertainty.json`. For the best learner on each split, it lists the datasets that meet the wording, with the learner, the VME count and interval and the ME count and rate. The output states the limits it applied as numbers.
+The script reads the same rows as the error-limit classes: each learner, the best learner and the known-gene rule on each split, over the datasets with both rates. For each it counts the datasets that meet each part, the two VME parts together, and all three. It gives that total again without the *M. tuberculosis* datasets.
 
-The wording asks less than the screen in two ways. The screen needs the upper bound of VME at or under 1.5%, and the wording needs it under 7.5%, with the lower bound under 1.5%. The screen needs the upper bound of ME at or under 3%, and the wording needs the rate itself under 3%. The guidance's other parts of acceptable performance, on essential and category agreement and on the growth failure rate, are not read.
+Beside these counts it gives the release's three screen classes, which equal those of `uncertainty.json`. For the best learner on each split, it lists the datasets that meet the wording, with the learner, the VME count and interval and the ME count and rate. The output states the limits it applied as numbers.
 
-### The numbers
+The wording asks less than the screen in two ways. The screen needs the upper bound of VME at or under 1.5%, and the wording needs it under 7.5%, with the lower bound under 1.5%. The screen needs the upper bound of ME at or under 3%, and the wording needs the rate itself under 3%.
 
-Every number here comes from the `guidance.json` files, and `tests/release_summary/test_document.py` checks each against them. A cell "a / b" gives revision 12, then revision 14. The last column is the screen's "shown to meet both", as in the error-limit table.
+The guidance's other parts of acceptable performance, on essential and category agreement and on the growth failure rate, are not read.
+
+**The counts.** Every number here comes from the `guidance.json` files, and `tests/release_summary/test_document.py` checks each against them. A cell "a / b" gives revision 12, then revision 14. The last column is the screen's "shown to meet both", as in the error-limit table.
 
 | Split | Learner | Datasets | Meet the guidance's wording | Shown to meet the release's screen |
 | --- | --- | --- | --- | --- |
@@ -208,16 +210,25 @@ Every number here comes from the `guidance.json` files, and `tests/release_summa
 
 By the guidance's wording, the best learner meets on 22 datasets of the random split and 14 of the lineage split, in both releases. By the release's screen, it is shown to meet on 2 and 0. On every row of the table, the count that meets the wording is the same in both releases. The best learner's lists of the datasets that meet are the same as well.
 
-### Limits of this reading
+**The limits of this reading.** It is not a regulatory test. The guidance does not apply to devices that detect genomic resistance features, and it does not apply to anti-mycobacterial agents. This is a reading of the release by the guidance's wording, and no more. Nothing is validated, and nothing passes or fails a regulatory test.
 
-- **This is not a regulatory test.** The guidance does not apply to devices that detect genomic resistance features, and it does not apply to anti-mycobacterial agents. This is a reading of the release by the guidance's wording, and no more. Nothing is validated, and nothing passes or fails a regulatory test.
-- **Neither reading is an FDA criterion for these models.** The release's screen stays an adapted research screen. The guidance's wording, as applied here, is not a criterion that applies to these models either.
-- **This reading was added after the results were read.** It was chosen after the numbers of both releases were known, so it is not a planned test.
-- **The counts are not over every organism tested.** The guidance divides each count by every organism tested: the major rate by the "Total # susceptible organisms by reference method", and the very major rate by the "Total # resistant organisms by reference method". In revision 12, a learner row leaves out its no-call genomes, from the folds where the fitted model learned nothing. Of the rows read here, 122 count fewer genomes than their class: boosted trees on 8 datasets of the random split and 57 of the lineage split, and the lasso on 10 and 47. None of them is the best learner's row: in revision 12, a learner with a no-call is left out of the choice ([equal-scoring.md](equal-scoring.md)). In revision 14, the 122 learner rows that carry the flag are scored on every genome, and every row read here counts every genome of its class. In both revisions, a genome's class is the label the public database reports, not the result of a reference method run for the study.
-- **The exact intervals treat related genomes as independent.** As the limits below say, each interval is narrower than the data support. Its upper bound is too low, which makes the upper part easier to meet, and its lower bound is too high.
-- **Table 8 starts at 48 resistant organisms.** With fewer, even zero very major errors give an exact upper bound of 7.5% or more, so the dataset cannot meet the wording. The best learner counts fewer than 48 resistant genomes on 37 datasets of the random split and 33 of the lineage split in both releases, and the known-gene rule on 34 and 32. The output gives the count for each row (`vme_n_under_table_8`).
-- **The *M. tuberculosis* datasets are outside the guidance.** They test anti-mycobacterial drugs. There are 22 of them on every learner row of both splits, and 9 on each split of the known-gene rule. None of them meets the wording on any row of either release, so each count without them equals the count with them.
-- **The best learner's random-split count carries its choice.** The best learner is chosen by its random-split score, and balanced accuracy is one minus the mean of VME and ME. The choice therefore favors low errors on the same folds, and the best learner's random-split count is biased upward, as its median is.
+Neither reading is an FDA criterion for these models. The release's screen stays an adapted research screen. The guidance's wording, as applied here, is not a criterion that applies to these models either.
+
+This reading was added after the results were read. It was chosen after the numbers of both releases were known, so it is not a planned test.
+
+The counts are not over every organism tested by a reference method. The guidance divides the major rate by the "Total # susceptible organisms by reference method", and the very major rate by the "Total # resistant organisms by reference method". In both revisions, a genome's class is the label the public database reports, not the result of a reference method run for the study.
+
+Revision 12 leaves a learner's no-call genomes out of its row. Of the rows read here, 122 count fewer genomes than their class: boosted trees on 8 datasets of the random split and 57 of the lineage split, and the lasso on 10 and 47. None of them is the best learner's row: a learner with a no-call is left out of the choice ([equal-scoring.md](equal-scoring.md)).
+
+In revision 14, the 122 learner rows that carry the flag are scored on every genome, and every row read here counts every genome of its class.
+
+The exact intervals treat related genomes as independent. As the limits below say, each interval is narrower than the data support. Its upper bound is too low, which makes the upper part easier to meet. Its lower bound is too high, which makes the lower part harder to meet.
+
+Table 8 starts at 48 resistant organisms. With fewer, even zero very major errors give an exact upper bound of 7.5% or more, so the dataset cannot meet the wording. The best learner counts fewer than 48 resistant genomes on 37 datasets of the random split and 33 of the lineage split in both releases, and the known-gene rule on 34 and 32. The output gives the count for each row (`vme_n_under_table_8`).
+
+The *M. tuberculosis* datasets are outside the guidance, because they test anti-mycobacterial drugs. There are 22 of them on every learner row of both splits, and 9 on each split of the known-gene rule. None of them meets the wording on any row of either release, so each count without them equals the count with them.
+
+The best learner's random-split count carries its choice. The best learner is chosen by its random-split score, and balanced accuracy is one minus the mean of VME and ME. The choice therefore favors low errors on the same folds, and the best learner's random-split count is biased upward, as its median is.
 
 ## Limits
 
