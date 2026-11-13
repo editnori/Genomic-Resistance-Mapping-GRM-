@@ -77,7 +77,8 @@ for s, v in sp.items():
     rows.append({"species": s, "datasets": len(v), "with_lineage": len(b),
                  "median_random": med([a for a, _ in b])[0], "median_lineage": med([x for _, x in b])[0],
                  "median_gap": round(st.median(a - x for a, x in b), 4) if b else None})
-out["per_species"] = sorted(rows, key=lambda r: -(r["median_gap"] or -1))
+# a species with no lineage score sorts last; a gap of 0.0 sorts by its value
+out["per_species"] = sorted(rows, key=lambda r: (r["median_gap"] is None, -(r["median_gap"] or 0)))
 # per drug class
 dc = {}
 for d in ds: dc.setdefault(d.get("drug_class") or "unclassified", []).append(d)
