@@ -396,8 +396,8 @@ const outsideExpected = OUTSIDE.populations.map(p => {
 
 /** Newly deposited genomes: the lead's two counts, one mark per set
  *  covering machine row read in each of the four plots, hollow where it
- *  reads below, each plot's above and below counts, and the populations in
- *  panels of their own. A pinned mark offers Open dataset only when the
+ *  reads below, each plot's above and below counts on the line above it and
+ *  clear of the drawn area, and the populations in panels of their own. A pinned mark offers Open dataset only when the
  *  loaded index has that dataset. */
 async function outsideCheck(page, tag) {
   const section = page.locator('#outside');
@@ -405,7 +405,20 @@ async function outsideCheck(page, tag) {
   const read = await section.evaluate(s => ({
     lead: s.querySelector('h2 + p')?.textContent ?? '',
     panels: [...s.querySelectorAll('h3')].map(h => h.textContent),
-    plots: [...s.querySelectorAll('[role="listbox"]')].map(l => ({ label: l.getAttribute('aria-label'), marks: [...l.querySelectorAll('[data-outside]')].map(g => [g.getAttribute('data-outside'), g.getAttribute('data-reading'), g.querySelector('circle').getAttribute('fill')]), text: [...l.querySelectorAll('svg text')].map(t => t.textContent) })),
+    plots: [...s.querySelectorAll('[role="listbox"]')].map(l => {
+      // The plot's counts line sits above its svg, outside the drawn area.
+      const plot = l.closest('[data-outside-plot]');
+      const counts = plot?.querySelector('[data-outside-counts]');
+      const box = el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; };
+      const c = counts ? box(counts) : null, v = box(l.querySelector('svg'));
+      return {
+        label: l.getAttribute('aria-label'),
+        marks: [...l.querySelectorAll('[data-outside]')].map(g => [g.getAttribute('data-outside'), g.getAttribute('data-reading'), g.querySelector('circle').getAttribute('fill')]),
+        counts: counts?.textContent ?? null,
+        apart: c !== null && (c.bottom <= v.top || c.top >= v.bottom || c.right <= v.left || c.left >= v.right),
+        svgText: [...l.querySelectorAll('svg text')].map(t => t.textContent).filter(t => /above|below/.test(t)),
+      };
+    }),
   }));
   const [primary, same] = outsideExpected;
   const fmt = n => n.toLocaleString('en-US');
@@ -416,8 +429,9 @@ async function outsideCheck(page, tag) {
     const plot = read.plots[i];
     return plot.marks.length === p.read && JSON.stringify(plot.marks.map(x => x[0]).sort()) === JSON.stringify([...p.ids].sort())
       && plot.marks.filter(x => x[1] === 'below').length === p.below[m] && plot.marks.every(x => (x[1] === 'below') === (x[2] === 'rgb(var(--paper-pure))'))
-      && plot.text.includes(p.above[m] + ' above') && plot.text.includes(p.below[m] + ' below') && plot.label.startsWith(m.charAt(0).toUpperCase() + m.slice(1));
-  }), read.plots.map(p => ({ label: p.label, marks: p.marks.length, text: p.text.filter(t => /above|below/.test(t)) })));
+      && plot.counts === p.above[m] + ' above, ' + p.below[m] + ' below' && plot.svgText.length === 0 && plot.label.startsWith(m.charAt(0).toUpperCase() + m.slice(1));
+  }), read.plots.map(p => ({ label: p.label, marks: p.marks.length, counts: p.counts, svgText: p.svgText })));
+  check(tag + ' outside counts sit above each plot, clear of its svg', read.plots.length === 4 && read.plots.every(p => p.apart), read.plots.map(p => ({ label: p.label, apart: p.apart })));
   // Pin the first mark by keyboard: Enter on the plot's listbox pins its
   // first mark, and the strip offers Open dataset only for a dataset the
   // index holds.

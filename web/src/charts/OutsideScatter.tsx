@@ -12,7 +12,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { int, pct } from "../data/format";
 import type { Measure, OutsidePoint } from "../data/derive/outside";
-import { AxisX, AxisY, HALO, LABEL_CLASS, linear, MarkListbox, ticks, useWidth, type ListMark } from "./kit";
+import { AxisX, AxisY, linear, MarkListbox, ticks, useWidth, type ListMark } from "./kit";
 
 export interface OutsidePanel {
   key: string;
@@ -26,8 +26,9 @@ export interface OutsidePanel {
 const MEASURES: readonly Measure[] = ["sensitivity", "specificity"];
 const MEASURE_NAME: Record<Measure, string> = { sensitivity: "Sensitivity", specificity: "Specificity" };
 const PAD = { l: 32, r: 14, t: 8, b: 22 };
-/** A panel's heading and a plot's measure line above each row of plots. */
-const HEAD_H = 48;
+/** A panel's heading, and a plot's measure line and its counts line, above
+ *  each row of plots, until the laid-out height replaces it. */
+const HEAD_H = 66;
 const GAP = 24;
 const GROUP_GAP = 40;
 const FOUR_FROM = 880;
@@ -103,8 +104,10 @@ const Plot = ({
       </MarkListbox>
     );
   return (
-    <div className="min-w-0" style={{ width: side }}>
+    <div className="min-w-0" style={{ width: side }} data-outside-plot={measure}>
       <p className="text-control font-medium text-ink">{MEASURE_NAME[measure]}</p>
+      {/* The counts sit above the plot, so no mark or bar is drawn over them. */}
+      <p data-outside-counts className="text-control text-muted-text">{`${int(above)} above, ${int(below)} below`}</p>
       {keyed(
         <svg aria-hidden="true" width={side} height={side} className="block overflow-visible">
           <AxisY y={y} x0={PAD.l} x1={PAD.l + plotW} values={values} format={(v) => `${Math.round(v * 100)}`} />
@@ -119,12 +122,6 @@ const Plot = ({
               </g>
             );
           })}
-          <text x={PAD.l + 4} y={PAD.t + 12} className={`${LABEL_CLASS} font-medium`} {...HALO}>
-            {`${int(above)} above`}
-          </text>
-          <text x={PAD.l + plotW - 4} y={PAD.t + plotH - 6} textAnchor="end" className={`${LABEL_CLASS} font-medium`} {...HALO}>
-            {`${int(below)} below`}
-          </text>
         </svg>,
       )}
     </div>
@@ -163,9 +160,19 @@ export const OutsideScatter = ({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+  // The laid-out height from a panel's top to its first plot, which replaces
+  // HEAD_H once the frame is drawn: text lines are the font's height, not ours.
+  const [headH, setHeadH] = useState(HEAD_H);
+  useLayoutEffect(() => {
+    const panel = frame.current?.querySelector<HTMLElement>("[data-outside-panel]");
+    const svg = panel?.querySelector("svg");
+    if (panel === undefined || panel === null || svg === undefined || svg === null) return;
+    const h = Math.ceil(svg.getBoundingClientRect().top - panel.getBoundingClientRect().top);
+    if (h > 0) setHeadH((was) => (was === h ? was : h));
+  });
   const four = width >= FOUR_FROM;
   const byWidth = Math.floor(four ? (width - 2 * GAP - GROUP_GAP) / 4 : (width - GAP) / 2);
-  const byHeight = (rows: number) => (height === undefined ? Infinity : Math.floor((height - legendH - rows * HEAD_H - (rows - 1) * 16) / rows));
+  const byHeight = (rows: number) => (height === undefined ? Infinity : Math.floor((height - legendH - rows * headH - (rows - 1) * 16) / rows));
   const needed = four || Math.min(byWidth, byHeight(panels.length)) >= MIN_SIDE ? 1 : panels.length;
   // An unlaid box measures nothing, so it reports nothing.
   useEffect(() => {
@@ -181,7 +188,7 @@ export const OutsideScatter = ({
     <div ref={frame} className="min-w-0">
       <div className={`flex ${four ? "flex-row gap-x-10" : "flex-col gap-y-4"}`}>
         {shown.map((panel) => (
-          <div key={panel.key} className="min-w-0">
+          <div key={panel.key} className="min-w-0" data-outside-panel>
             <h3 className="text-control text-muted-text">{panel.heading}</h3>
             <div className="mt-1 flex gap-x-6">
               {MEASURES.map((m) => (
