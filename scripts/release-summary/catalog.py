@@ -37,8 +37,12 @@ ds = index["datasets"]
 cat = [d for d in ds if d.get("catalog")]
 ba = lambda d: d["catalog"]["balanced_accuracy"]
 out = {"datasets": len(ds), "rule": {
-    "with_an_entry": len(cat), "calls_nothing_resistant": sum(d["catalog"]["sensitivity"] == 0 for d in cat),
-    "calls_everything_resistant": sum(d["catalog"]["specificity"] == 0 for d in cat),
+    # A rule that calls nothing resistant has sensitivity 0 and specificity 1; one that calls everything resistant has
+    # sensitivity 1 and specificity 0. Sensitivity 0 alone also holds for a rule that misses every resistant genome
+    # and calls some susceptible ones resistant, which is not a constant call.
+    "with_an_entry": len(cat),
+    "calls_nothing_resistant": sum(d["catalog"]["sensitivity"] == 0 and d["catalog"]["specificity"] == 1 for d in cat),
+    "calls_everything_resistant": sum(d["catalog"]["sensitivity"] == 1 and d["catalog"]["specificity"] == 0 for d in cat),
     "balanced_accuracy_exactly_half": sum(ba(d) == 0.5 for d in cat)}}
 
 
