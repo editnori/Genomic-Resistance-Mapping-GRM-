@@ -9,7 +9,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import type { CatalogRow, Manifest } from "../data/schema";
-import { LEARNER_NAME, datasetTitle, dateText, int, learnerInSentence, listWords, pct, plural, points, speciesName } from "../data/format";
+import { LEARNER_NAME, datasetTitle, dateText, int, learnerInSentence, limitPct, listWords, pct, plural, points, speciesName } from "../data/format";
 import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import {
   CATALOG_CUTOFF,
@@ -28,15 +28,18 @@ import {
 } from "../data/derive/overview";
 import {
   FITTED,
+  GUIDANCE_WORDING,
   ZERO_MISS_FLOOR,
   atZeroMissFloor,
   barSummary,
   learnerSummary,
   ruleBands,
+  wordingSummary,
   type BarSummary,
   type LearnerRow,
   type LearnerSummary,
   type RuleBand,
+  type WordingSummary,
   type Who,
 } from "../data/derive/evidence";
 import { leadPanel, panelsWithoutBest, pool, share, type PanelRowJoined } from "../data/derive/tests";
@@ -737,26 +740,62 @@ export const barsLead = (b: BarSummary): string => {
   return `The site reads VME against ${barWords(BARS.vme)} and ME against ${barWords(BARS.me)}, limits taken from FDA's 2009 guidance for growth-based susceptibility test systems. ${BARS_SCOPE} A rate counted on few genomes can sit under its bar by chance, so each rate is read with its 95% interval. With lineages held out, the best learner is shown to meet both bars on ${int(b.meets)} of ${plural(b.n, "dataset")} and shown to miss at least one on ${int(b.misses)}.${rest}`;
 };
 
-/** Every learner against the bars, on both tests. */
+/** The guidance's own acceptance wording, its limits computed from
+ *  GUIDANCE_WORDING: "a VME interval with its upper end under 7.5% and its
+ *  lower end under 1.5%, and an ME rate under 3%". */
+export const WORDING_LIMITS = `a VME interval with its upper end under ${limitPct(GUIDANCE_WORDING.vmeUpper)} and its lower end under ${limitPct(GUIDANCE_WORDING.vmeLower)}, and an ME rate under ${limitPct(GUIDANCE_WORDING.meRate)}`;
+
+/** The bars note's paragraph on the guidance's own wording: what it asks,
+ *  the best learner's count by it on each split, and the M. tuberculosis
+ *  datasets among those, whose anti-mycobacterial drugs the guidance
+ *  excludes. Null when neither split has a dataset with both rates. */
+export const wordingNote = (lineage: WordingSummary, random: WordingSummary): string | null => {
+  if (lineage.n === 0 && random.n === 0) return null;
+  const parts = [
+    lineage.n > 0 ? `${int(lineage.meets)} of ${plural(lineage.n, "dataset")} with lineages held out` : null,
+    random.n > 0 ? `${int(random.meets)} of ${lineage.n > 0 ? int(random.n) : plural(random.n, "dataset")} on random splits` : null,
+  ].filter((p): p is string => p !== null);
+  const meets = lineage.meets + random.meets;
+  const tb = lineage.tuberculosis + random.tuberculosis;
+  const tbWords = [lineage.n > 0 ? `${int(lineage.tuberculosis)} with lineages held out` : null, random.n > 0 ? `${int(random.tuberculosis)} on random splits` : null].filter(
+    (p): p is string => p !== null,
+  );
+  const among =
+    meets === 0
+      ? "."
+      : tb === 0
+        ? ", and no M. tuberculosis dataset is among them."
+        : `. Of those, ${listWords(tbWords)} ${tb === 1 ? "is an M. tuberculosis dataset" : "are M. tuberculosis datasets"}, and the guidance excludes anti-mycobacterial drugs.`;
+  return `The guidance's own acceptance wording asks less than this screen: ${WORDING_LIMITS}. Read that way, the best learner meets on ${parts.join(" and on ")}${among} This reading was added after the results were read. The guidance does not cover tests that read resistance from a genome, so neither reading is a regulatory test.`;
+};
+
+/** Every learner against the bars, on both tests, with the count by the
+ *  guidance's own wording beside the screen's three outcomes. */
 const BarsTable = ({ rows }: { rows: readonly CatalogRow[] }) => {
   const whos: readonly Who[] = ["best", ...FITTED];
   const group = (scheme: "lineage" | "random", title: string): TableGroup => ({
     title,
     rows: whos.map((who) => {
       const b = barSummary(rows, who, scheme);
-      return { key: `${scheme}-${who}`, name: who === "best" ? PICK_ROW : LEARNER_NAME[who], cells: [int(b.n), int(b.meets), int(b.misses), int(b.open)] };
+      const w = wordingSummary(rows, who, scheme);
+      return {
+        key: `${scheme}-${who}`,
+        name: who === "best" ? PICK_ROW : LEARNER_NAME[who],
+        cells: [int(b.n), int(b.meets), int(b.misses), int(b.open), int(w.meets)],
+      };
     }),
   });
   return (
     <>
       <NumberTable
         label="Each learner against the bars"
-        head={["Learner", "Datasets", "Shown to meet both", "Shown to miss at least one", "Too few genomes to tell"]}
+        head={["Learner", "Datasets", "Shown to meet both", "Shown to miss at least one", "Too few genomes to tell", "Meets the guidance's wording"]}
         groups={[group("lineage", "Lineages held out"), group("random", "Random split")]}
       />
       <p className="type-note mt-2">
         Datasets counts those where the learner has both error rates on that test. A rate is counted over the genomes the learner called, so a learner that gives no call for
-        some isolates is read on fewer.
+        some isolates is read on fewer. The last column reads the same counts by the guidance&apos;s own acceptance wording, given in the notes above; that reading was added
+        after the results were read.
       </p>
     </>
   );
@@ -767,6 +806,9 @@ export const barsFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const b = barSummary(rows, "best", "lineage");
   const random = barSummary(rows, "best", "random");
   const rule = barSummary(rows, "catalog", "lineage");
+  const wording = wordingSummary(rows, "best", "lineage");
+  const wordingRandom = wordingSummary(rows, "best", "random");
+  const guidance = wordingNote(wording, wordingRandom);
   const atFloor = atZeroMissFloor(rows);
   const bars = `VME ${barWords(BARS.vme)}, ME ${barWords(BARS.me)}`;
   return {
@@ -790,7 +832,9 @@ export const barsFinding = (m: Manifest, opts: FindingOptions): Finding => {
       ),
     caption: opts.page
       ? `Bars: ${bars}. A dataset is shown to meet both when the 95% interval of each rate lies at or under its bar, and shown to miss one when the interval of either rate lies over its bar. The interval is exact (Clopper-Pearson), counted over the dataset's resistant genomes for VME and its susceptible genomes for ME. It treats each genome as an independent draw, which related genomes are not, so the true interval is likely wider.`
-      : `Shown to meet: the exact 95% interval of each rate lies at or under its bar (${bars}). Shown to miss: the interval of either rate lies over its bar.`,
+      : `Shown to meet: the exact 95% interval of each rate lies at or under its bar (${bars}). Shown to miss: the interval of either rate lies over its bar.${
+          wording.n === 0 ? "" : ` By the guidance's own wording, read after the results, it meets on ${int(wording.meets)}.`
+        }`,
     note:
       opts.page && b.n > 0 ? (
         <div className="prose-measure mt-3 space-y-1.5 text-note text-ink">
@@ -816,6 +860,7 @@ export const barsFinding = (m: Manifest, opts: FindingOptions): Finding => {
               {int(rule.misses)}.
             </p>
           ) : null}
+          {guidance === null ? null : <p>{guidance}</p>}
         </div>
       ) : undefined,
     span: "unit",

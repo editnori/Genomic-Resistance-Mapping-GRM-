@@ -9,6 +9,10 @@ export const int = (n: number): string => grouped.format(Math.round(n));
 export const pct = (share: number | null | undefined, digits = 1): string =>
   share === null || share === undefined || !Number.isFinite(share) ? "–" : `${(share * 100).toFixed(digits)}%`;
 
+/** A limit as a percent, to one decimal with no trailing zero: 0.075 ->
+ *  "7.5%", 0.03 -> "3%". */
+export const limitPct = (limit: number): string => `${Number((limit * 100).toFixed(1))}%`;
+
 /** A difference of two shares in percentage points: 0.031 -> "3.1 points". */
 export const points = (diff: number, digits = 1): string => {
   const v = Math.abs(diff * 100).toFixed(digits);

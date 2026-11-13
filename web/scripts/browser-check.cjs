@@ -382,6 +382,73 @@ async function headerCheck(page, tag, title) {
   check(tag + ' plain status line with scope and report date', h.status.includes(CHIP) && h.status.includes('Report built') && !h.status.includes('BV-BRC lab records') && (bare ? h.scopeHref === null : isLimitsHref(h.scopeHref)), h);
 }
 
+// The guidance's own acceptance wording, read from the release summary
+// whose revision, generation time and dataset count match this tree:
+// reference/release-summary/<release>/guidance.json, written by
+// scripts/release-summary/guidance.py. A synthetic tree matches none, and
+// the checks that compare with it are skipped by name.
+const GUIDANCE = (() => {
+  const dir = path.join(__dirname, '../../reference/release-summary');
+  const names = fs.existsSync(dir) ? fs.readdirSync(dir).sort() : [];
+  for (const name of names) {
+    const file = path.join(dir, name, 'guidance.json');
+    if (!fs.existsSync(file)) continue;
+    const g = JSON.parse(fs.readFileSync(file));
+    if (g.revision === manifest.evaluation_revision && g.generated_at === manifest.generated_at && g.datasets === manifest.datasets.length) return { release: name, rows: g.rows };
+  }
+  return null;
+})();
+const GUIDANCE_MISSING = 'no reference/release-summary/*/guidance.json has this tree\'s revision ' + manifest.evaluation_revision + ', generation time ' + manifest.generated_at + ' and ' + manifest.datasets.length + ' datasets';
+/** One row of the release summary as the page counts it: datasets with both
+ *  rates, those that meet the wording, and the M. tuberculosis datasets
+ *  among those. */
+const guidanceRow = key => {
+  const r = GUIDANCE?.rows?.[key];
+  return r === undefined ? null : { n: r.n, meets: r.meets_wording, tuberculosis: r.meets_wording - r.without_tuberculosis.meets_wording };
+};
+const WORDING_WHO = { 'Best learner for each dataset': 'best', 'Set covering machine': 'scm', 'Decision tree (CART)': 'cart', 'Random forest': 'rf', 'Gradient boosted trees': 'gbt', 'L1 logistic regression': 'lasso' };
+const WORDING_SPLIT = { 'Lineages held out': 'lineage', 'Random split': 'random' };
+const toCount = s => (s === undefined || s === null ? null : Number(String(s).replace(/,/g, '')));
+
+/** Overview's bars section, its table open: the last column of "Each
+ *  learner against the bars" and its Datasets column, for each of the
+ *  twelve rows, and the counts in the note on the guidance's wording, all
+ *  equal to the release summary's rows["<who>:<split>"].meets_wording and
+ *  .n. */
+async function wordingCheck(page, tag) {
+  const tableName = tag + ' overview counts by the guidance\'s wording match the release summary, each learner and split';
+  const noteName = tag + ' overview note on the guidance\'s wording gives the release summary\'s counts';
+  if (GUIDANCE === null) { for (const name of [tableName, noteName]) skipped.push({ check: name, reason: GUIDANCE_MISSING }); return; }
+  const shown = await page.evaluate(() => {
+    const region = document.querySelector('#bars [role="region"][aria-label="Each learner against the bars"]');
+    const head = region === null ? [] : [...region.querySelectorAll('thead th')].map(t => t.textContent.trim());
+    const col = head.indexOf('Meets the guidance\'s wording');
+    const rows = [];
+    let group = null;
+    for (const tr of region === null ? [] : region.querySelectorAll('tbody tr')) {
+      const g = tr.querySelector('th[scope="rowgroup"]');
+      if (g !== null) { group = g.textContent.trim(); continue; }
+      const cells = [...tr.children].map(c => c.textContent.trim());
+      rows.push({ group, who: cells[0], n: cells[1], meets: col < 0 ? null : cells[col] });
+    }
+    const note = [...document.querySelectorAll('#bars p')].map(p => p.textContent.replace(/\s+/g, ' ').trim()).find(t => t.startsWith('The guidance\'s own acceptance wording')) ?? null;
+    return { head, col, rows, note };
+  });
+  const rows = shown.rows.map(r => {
+    const key = WORDING_WHO[r.who] + ':' + WORDING_SPLIT[r.group];
+    const want = guidanceRow(key);
+    return { key, n: toCount(r.n), meets: toCount(r.meets), want: want === null ? null : { n: want.n, meets: want.meets } };
+  });
+  check(tableName, shown.col > 0 && rows.length === 12 && new Set(rows.map(r => r.key)).size === 12 && rows.every(r => r.want !== null && r.n === r.want.n && r.meets === r.want.meets), { release: GUIDANCE.release, column: shown.col, rows });
+  const lineage = guidanceRow('best:lineage'), random = guidanceRow('best:random');
+  const t = shown.note ?? '';
+  const l = t.match(/meets on ([\d,]+) of ([\d,]+) datasets? with lineages held out/), r = t.match(/(?:meets|and) on ([\d,]+) of ([\d,]+)(?: datasets?)? on random splits/);
+  const tb = /no M\. tuberculosis dataset is among them/.test(t) ? [0, 0] : (m => (m === null ? null : [toCount(m[1]), toCount(m[2])]))(t.match(/Of those, ([\d,]+) with lineages held out and ([\d,]+) on random splits/));
+  const read = { lineage: l === null ? null : [toCount(l[1]), toCount(l[2])], random: r === null ? null : [toCount(r[1]), toCount(r[2])], tuberculosis: tb ?? (lineage.meets + random.meets === 0 ? [0, 0] : null) };
+  const want = { lineage: [lineage.meets, lineage.n], random: [random.meets, random.n], tuberculosis: [lineage.tuberculosis, random.tuberculosis] };
+  check(noteName, shown.note !== null && JSON.stringify(read) === JSON.stringify(want), { release: GUIDANCE.release, read, want, note: shown.note });
+}
+
 // The outside-study rows the app bundles (web/src/data/outside-study.json,
 // written by scripts/outside-study-results/site_data.py), read here by the
 // documents' rule: a row holds when neither reading is "below", and a row
@@ -1238,6 +1305,16 @@ async function interactions(page, tag, width) {
   await page.getByRole('heading', { name: /Models and evaluation/ }).waitFor();
   await headerCheck(page, tag + ' methods', 'Data & Methods');
   await edgeCheck(page, tag + ' methods', '[data-view-scroll] h1');
+  {
+    const name = tag + ' methods count by the guidance\'s wording matches the release summary';
+    if (GUIDANCE === null) skipped.push({ check: name, reason: GUIDANCE_MISSING });
+    else {
+      const def = await page.evaluate(() => { const dt = [...document.querySelectorAll('#m-scores dt')].find(d => d.textContent.trim() === 'VME and ME'); return dt?.nextElementSibling?.textContent.replace(/\s+/g, ' ') ?? null; });
+      const m = (def ?? '').match(/Read by that wording, over the isolates each learner called, the best learner meets on ([\d,]+) of ([\d,]+) datasets? with lineages held out\./);
+      const want = guidanceRow('best:lineage');
+      check(name, m !== null && toCount(m[1]) === want.meets && toCount(m[2]) === want.n, { release: GUIDANCE.release, read: m === null ? null : [toCount(m[1]), toCount(m[2])], want: [want.meets, want.n] });
+    }
+  }
   await controlCheck(page, tag + ' methods');
   const tracks = await page.evaluate(() => [...document.querySelectorAll('#m-funnel td span.relative')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)').length);
   check(tag + ' funnel bars sit on tracks', tracks >= 10, tracks);
@@ -1281,6 +1358,7 @@ async function interactions(page, tag, width) {
   const barTiles = await page.evaluate(() => [...document.querySelectorAll('#bars ol li')].map(li => ({ value: Number(li.firstElementChild.textContent.replace(/,/g, '')), unit: li.lastElementChild.textContent })));
   // A tree with no dataset to count draws no tiles.
   check(tag + ' overview bar outcomes add up', expected.stats.barsCounted === 0 ? barTiles.length === 0 : barTiles.length === 4 && barTiles[0].value === expected.stats.barsCounted && barTiles[1].value + barTiles[2].value + barTiles[3].value === barTiles[0].value, { barTiles, counted: expected.stats.barsCounted });
+  await wordingCheck(page, tag);
   // The primer is a section of its own above the ten numbered ones, under
   // the same hairline.
   const rules = await page.evaluate(() => { const blocks = [...document.querySelectorAll('[data-view-scroll] section[id]')]; return blocks.map(b => ({ id: b.id, rule: getComputedStyle(b).borderTopStyle })); });
@@ -1403,9 +1481,11 @@ async function present(page, tag, width, height) {
   const labels = [];
   const panelSeen = [];
   const inputsSeen = [];
+  const wordingSeen = [];
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
+    { const w = ((await dialog.locator('main').textContent()) ?? '').replace(/\s+/g, ' ').match(/By the guidance's own wording, read after the results, it meets on ([\d,]+)\./); if (w !== null) wordingSeen.push(toCount(w[1])); }
     labels.push(await slideSelect.textContent());
     await shot(page, tag + '-slide-' + (slide + 1));
     check(tag + ' slide ' + (slide + 1) + ' selected in the outline', await slideNumber(dialog) === slide + 1, await slideNumber(dialog));
@@ -1510,6 +1590,10 @@ async function present(page, tag, width, height) {
   check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
   check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
   check(tag + ' input pages together show every row once, in order', JSON.stringify(inputsSeen) === JSON.stringify(inputsExpected.map(e => e.id)), { seen: inputsSeen });
+  // The bars slide's caption gives the best learner's count by the
+  // guidance's own wording with lineages held out, once.
+  if (GUIDANCE === null) skipped.push({ check: tag + ' bars slide count by the guidance\'s wording matches the release summary', reason: GUIDANCE_MISSING });
+  else check(tag + ' bars slide count by the guidance\'s wording matches the release summary', wordingSeen.length === 1 && wordingSeen[0] === guidanceRow('best:lineage').meets, { release: GUIDANCE.release, seen: wordingSeen, want: guidanceRow('best:lineage').meets });
   const closeButton = dialog.getByRole('button', { name: 'Close', exact: true });
   await closeButton.focus(); await page.keyboard.press('Home');
   check(tag + ' Home reaches the title slide', await slideNumber(dialog) === 1, await slideNumber(dialog));

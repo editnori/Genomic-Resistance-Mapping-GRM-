@@ -125,6 +125,72 @@ export const barSummary = (rows: readonly CatalogRow[], who: Who, scheme: Scheme
   return s;
 };
 
+/** The acceptance wording of FDA's 2009 guidance for growth-based
+ *  susceptibility test systems ("Class II Special Controls Guidance Document:
+ *  Antimicrobial Susceptibility Test (AST) Systems"), which asks less than
+ *  the site's screen: the exact 95% interval of VME with its upper bound
+ *  under 7.5% and its lower bound under 1.5%, and an ME rate under 3%. Each
+ *  limit is strict, as the guidance writes it. The guidance does not cover
+ *  tests that read resistance from a genome or tests of anti-mycobacterial
+ *  drugs, so this is a reading by its wording, not a regulatory test.
+ *  scripts/release-summary/guidance.py applies the same rule. */
+export const GUIDANCE_WORDING = { vmeUpper: 0.075, vmeLower: 0.015, meRate: 0.03 } as const;
+
+/** The species whose datasets test anti-mycobacterial drugs, which the
+ *  guidance excludes by name. */
+export const TUBERCULOSIS = "mycobacterium_tuberculosis";
+
+/** The exact 95% upper bound of x events in n is under the limit exactly
+ *  when x or fewer events have probability under 2.5% at the limit. */
+export const upperUnder = (x: number, n: number, limit: number): boolean => n > 0 && lowerTail(x, n, limit) < TAIL;
+
+/** The exact 95% lower bound of x events in n is under the limit exactly
+ *  when x or more events have probability over 2.5% there. With no event
+ *  the lower bound is zero. */
+export const lowerUnder = (x: number, n: number, limit: number): boolean => n > 0 && (x === 0 || 1 - lowerTail(x - 1, n, limit) > TAIL);
+
+/** The guidance's three parts on one result, each read alone. */
+export interface WordingParts {
+  vmeUpper: boolean;
+  vmeLower: boolean;
+  me: boolean;
+}
+
+export const wordingParts = (c: RateCounts): WordingParts => ({
+  vmeUpper: upperUnder(c.vme.events, c.vme.n, GUIDANCE_WORDING.vmeUpper),
+  vmeLower: lowerUnder(c.vme.events, c.vme.n, GUIDANCE_WORDING.vmeLower),
+  me: c.me.n > 0 && c.me.events / c.me.n < GUIDANCE_WORDING.meRate,
+});
+
+/** A result meets the guidance's wording when all three parts hold. */
+export const meetsWording = (c: RateCounts): boolean => {
+  const p = wordingParts(c);
+  return p.vmeUpper && p.vmeLower && p.me;
+};
+
+export interface WordingSummary {
+  /** Datasets with both error rates for this result, as barSummary counts. */
+  n: number;
+  /** Of n, datasets whose result meets the guidance's wording. */
+  meets: number;
+  /** Of meets, M. tuberculosis datasets. */
+  tuberculosis: number;
+}
+
+/** The guidance's wording over the same rows and counts as barSummary. */
+export const wordingSummary = (rows: readonly CatalogRow[], who: Who, scheme: Scheme): WordingSummary => {
+  const s: WordingSummary = { n: 0, meets: 0, tuberculosis: 0 };
+  rows.forEach((row) => {
+    const c = rateCounts(row, resultOf(row, who, scheme));
+    if (c === null) return;
+    s.n += 1;
+    if (!meetsWording(c)) return;
+    s.meets += 1;
+    if (row.species_slug === TUBERCULOSIS) s.tuberculosis += 1;
+  });
+  return s;
+};
+
 /** The fewest resistant genomes at which a result with no missed resistant
  *  genome is shown to meet the VME bar: (1 - bar)^n <= 2.5%. */
 export const ZERO_MISS_FLOOR = Math.ceil(Math.log(TAIL) / Math.log1p(-REFERENCE_BARS.vme));

@@ -1,6 +1,27 @@
 import { describe, expect, it } from "vitest";
 import type { CatalogRow, Learner, LearnerLite, Lite, NoCall } from "../schema";
-import { FITTED, ZERO_MISS_FLOOR, atZeroMissFloor, barOutcome, barSummary, learnerSummary, leftOut, lowerTail, rateCounts, resultOf, ruleBands, shownAbove, shownAtMost } from "./evidence";
+import {
+  FITTED,
+  GUIDANCE_WORDING,
+  TUBERCULOSIS,
+  ZERO_MISS_FLOOR,
+  atZeroMissFloor,
+  barOutcome,
+  barSummary,
+  learnerSummary,
+  leftOut,
+  lowerTail,
+  lowerUnder,
+  meetsWording,
+  rateCounts,
+  resultOf,
+  ruleBands,
+  shownAbove,
+  shownAtMost,
+  upperUnder,
+  wordingParts,
+  wordingSummary,
+} from "./evidence";
 
 /** A learner's result on one split: balanced accuracy and the two error rates. */
 const fit = (ba: number | null, vme: number | null = 0, me: number | null = 0, noCall?: NoCall): LearnerLite => ({
@@ -166,6 +187,104 @@ describe("barSummary", () => {
     const withRule = [row("a", 200, 100, "gbt", both(null), rule(0.9, 0.9, 0.9)), row("b", 200, 100, null, {})];
     expect(resultOf(withRule[0]!, "catalog", "random")).toBe(resultOf(withRule[0]!, "catalog", "lineage"));
     expect(barSummary(withRule, "catalog", "lineage")).toEqual({ n: 1, meets: 0, misses: 1, open: 0, openAtBars: 0 });
+  });
+});
+
+describe("the guidance's wording", () => {
+  // Exact Clopper-Pearson 95% bounds, worked out in rational arithmetic by
+  // bisection on the binomial tail. No count gives a VME bound of exactly
+  // 7.5% or 1.5%, so each edge is read on the counts nearest it on either
+  // side; with no miss the upper bound is 1 - 0.025^(1/n) in closed form.
+  // An ME rate of exactly 3% is a count: 30 of 1,000.
+  const counts = (vme: [number, number], me: [number, number]) => ({ vme: { events: vme[0], n: vme[1] }, me: { events: me[0], n: me[1] } });
+  const ME_OK: [number, number] = [2, 200];
+
+  it("states its limits as the guidance writes them", () => {
+    expect(GUIDANCE_WORDING).toEqual({ vmeUpper: 0.075, vmeLower: 0.015, meRate: 0.03 });
+  });
+
+  it("needs the VME upper bound under 7.5%", () => {
+    // 0 of 47: 7.5486%; 0 of 48: 7.3973%. 2 of 93: 7.5533%; 2 of 94: 7.4752%.
+    expect([upperUnder(0, 47, 0.075), upperUnder(0, 48, 0.075)]).toEqual([false, true]);
+    expect([upperUnder(2, 93, 0.075), upperUnder(2, 94, 0.075)]).toEqual([false, true]);
+    expect(1 - 0.025 ** (1 / 47)).toBeGreaterThan(0.075);
+    expect(1 - 0.025 ** (1 / 48)).toBeLessThan(0.075);
+    // Every resistant genome missed: the upper bound is 100%.
+    expect(upperUnder(5, 5, 0.075)).toBe(false);
+  });
+
+  it("needs the VME lower bound under 1.5%", () => {
+    // 8 of 232: 1.500261%; 8 of 233: 1.493772%. 4 of 73: 1.5130%; 4 of 74: 1.4922%.
+    expect([lowerUnder(8, 232, 0.015), lowerUnder(8, 233, 0.015)]).toEqual([false, true]);
+    expect([lowerUnder(4, 73, 0.015), lowerUnder(4, 74, 0.015)]).toEqual([false, true]);
+    // No miss: the lower bound is zero.
+    expect(lowerUnder(0, 10, 0.015)).toBe(true);
+  });
+
+  it("needs the ME rate under 3%: exactly 3% does not meet", () => {
+    expect(wordingParts(counts([0, 48], [30, 1000])).me).toBe(false);
+    expect(wordingParts(counts([0, 48], [3, 100])).me).toBe(false);
+    expect(wordingParts(counts([0, 48], [29, 1000])).me).toBe(true);
+  });
+
+  it("meets only when all three parts hold, each just under its limit", () => {
+    expect(wordingParts(counts([0, 48], ME_OK))).toEqual({ vmeUpper: true, vmeLower: true, me: true });
+    expect(meetsWording(counts([0, 48], ME_OK))).toBe(true);
+    expect(meetsWording(counts([0, 47], ME_OK))).toBe(false);
+    // 8 of 233 and 8 of 232 both have upper bounds near 6.7%, under 7.5%.
+    expect(meetsWording(counts([8, 233], ME_OK))).toBe(true);
+    expect(wordingParts(counts([8, 232], ME_OK))).toEqual({ vmeUpper: true, vmeLower: false, me: true });
+    expect(meetsWording(counts([8, 232], ME_OK))).toBe(false);
+    expect(meetsWording(counts([0, 48], [30, 1000]))).toBe(false);
+    expect(meetsWording(counts([0, 48], [29, 1000]))).toBe(true);
+  });
+
+  it("asks less than the screen", () => {
+    // 0 of 48 cannot be shown under the 1.5% VME bar, which needs 245 genomes.
+    const c = counts([0, 48], [0, 300]);
+    expect(barOutcome(c)).toBe("open");
+    expect(meetsWording(c)).toBe(true);
+  });
+
+  describe("wordingSummary", () => {
+    const tb = (r: CatalogRow): CatalogRow => ({ ...r, species: "Mycobacterium tuberculosis", species_slug: TUBERCULOSIS });
+    const both = (lineage: LearnerLite | null): Fits => ({ gbt: { random: fit(0.9), lineage } });
+    // 48 resistant and 200 susceptible genomes: 0 of 48 missed, 2 of 200 false alarms.
+    const rows = [
+      row("meets", 248, 48, "gbt", both(fit(1, 0, 0.01))),
+      row("upper-over", 247, 47, "gbt", both(fit(1, 0, 0.01))),
+      row("me-at-3", 1048, 48, "gbt", both(fit(1, 0, 0.03))),
+      tb(row("tb-meets", 248, 48, "gbt", both(fit(1, 0, 0.01)))),
+      tb(row("tb-misses", 247, 47, "gbt", both(fit(1, 0, 0.01)))),
+      row("no-lineage", 248, 48, "gbt", both(null)),
+      row("no-best", 248, 48, null, both(fit(1, 0, 0.01))),
+    ];
+
+    it("counts the datasets read, those that meet, and the M. tuberculosis ones among them", () => {
+      expect(wordingSummary(rows, "best", "lineage")).toEqual({ n: 5, meets: 2, tuberculosis: 1 });
+    });
+
+    it("reads the same rows as the screen", () => {
+      expect(wordingSummary(rows, "best", "lineage").n).toBe(barSummary(rows, "best", "lineage").n);
+      expect(wordingSummary(rows, "gbt", "lineage")).toEqual({ n: 6, meets: 3, tuberculosis: 1 });
+      // Every random-split result misses nothing: 0 of 47 alone, twice, is over 7.5%.
+      expect(wordingSummary(rows, "gbt", "random")).toEqual({ n: 7, meets: 5, tuberculosis: 1 });
+      expect(wordingSummary(rows, "scm", "lineage")).toEqual({ n: 0, meets: 0, tuberculosis: 0 });
+    });
+
+    it("counts a rate over the genomes the learner called", () => {
+      // 1 of 49 resistant genomes has no call: 0 of 48 missed meets, where 0 of 49 counted would too.
+      const partial = [row("a", 248, 49, "gbt", both(fit(1, 0, 0.01, { resistant: 1, susceptible: 0 })))];
+      expect(rateCounts(partial[0]!, resultOf(partial[0]!, "gbt", "lineage"))).toEqual({ vme: { events: 0, n: 48 }, me: { events: 2, n: 199 } });
+      // 1 of 48 with no call leaves 0 of 47, whose upper bound is over 7.5%.
+      const short = [row("b", 248, 48, "gbt", both(fit(1, 0, 0.01, { resistant: 1, susceptible: 0 })))];
+      expect(wordingSummary(short, "gbt", "lineage")).toEqual({ n: 1, meets: 0, tuberculosis: 0 });
+      expect(wordingSummary(short.map((r) => ({ ...r, learners: r.learners.map((l) => ({ ...l, lineage: l.lineage === null ? null : scored(l.lineage) })) })), "gbt", "lineage")).toEqual({
+        n: 1,
+        meets: 1,
+        tuberculosis: 0,
+      });
+    });
   });
 });
 

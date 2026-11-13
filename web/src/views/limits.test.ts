@@ -13,6 +13,7 @@ import { fixtureFile } from "../dev/fixtures/files";
 import { parseManifest } from "../data/validate";
 import { BARS_SCOPE, BARS_SOURCE } from "../data/metrics";
 import type { Navigator } from "../app/router";
+import { wordingSummary } from "../data/derive/evidence";
 import { barsLead, FINDINGS } from "./findings";
 import { datasetColumns } from "./DatasetsView";
 import { MethodsView } from "./MethodsView";
@@ -61,6 +62,15 @@ describe("the Methods definition of VME and ME", () => {
     expect(def).toContain("its lower end under 1.5% and its upper end under 7.5%");
     expect(def).toContain("it has no category for a test that gives no call");
     expect(def).toContain("The site counts each rate over the isolates a learner called");
+    expect(def).toContain("it counts ME over every susceptible isolate tested and asks that rate be under 3%, and it has no category");
+  });
+
+  it("counts the best learner by the guidance's own wording, and says that reading came after the results", () => {
+    const w = wordingSummary(manifest.datasets, "best", "lineage");
+    expect(w.n).toBeGreaterThan(0);
+    expect(def).toContain(
+      `Read by that wording, over the isolates each learner called, the best learner meets on ${w.meets} of ${w.n} datasets with lineages held out. Overview gives the count for each learner. The reading was added after the results were read.`,
+    );
   });
 });
 
