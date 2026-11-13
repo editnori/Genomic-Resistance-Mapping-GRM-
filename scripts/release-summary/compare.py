@@ -1,6 +1,6 @@
 """compare.py A/uncertainty.json B/uncertainty.json
 
-The headline numbers of two releases side by side. Reads the two JSON documents uncertainty.py printed and prints one
+The main numbers of two releases side by side. Reads the two JSON documents uncertainty.py printed and prints one
 line per statistic. Nothing is recomputed.
 
 Revisions understood: 12 and 14, read from each document's "revision". Any other revision stops the script with a

@@ -10,7 +10,7 @@ with a message and exit status 1. The known-gene rule is fitted on nothing, so r
 The rule is not fitted, so its one score answers for both splits. On a dataset where it calls nothing resistant, or
 everything, its balanced accuracy is exactly 0.5 and "the learner is ahead" says little. The bands below sort the
 datasets by the rule's own balanced accuracy. That is a split on an outcome, so a rule that scored high by chance on a
-small dataset lands in a high band and looks better than it is; read the bands as a description, not as a test.
+small dataset is sorted into a high band and looks better than it is; read the bands as a description, not as a test.
 
   rule            datasets with a rule entry; those where it calls nothing resistant, everything resistant, or sits at
                   exactly 0.5

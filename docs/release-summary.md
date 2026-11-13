@@ -1,62 +1,56 @@
-# Release summary: the headline numbers of a GRM release
+# Release summary: the main numbers of a GRM release
 
-Four scripts in `scripts/release-summary/` compute the headline numbers of a GRM release from two of its public files: `index.json` and the folder `intervals/`. A fifth script puts two releases side by side. Nothing is fitted and no genome is read. The outputs for revisions 12 and 14 are committed under `reference/release-summary/`, with a README that names each release asset and the sha256 of each input and output.
+Four scripts in `scripts/release-summary/` compute the main numbers of a GRM release from two of its public files: `index.json` and the directory `intervals/`. A fifth script puts two releases side by side. Nothing is fitted and no genome is read. The outputs for revisions 12 and 14 are committed under `reference/release-summary/`. The README there names each release asset and the sha256 of each input and output.
 
 These are retrospective analyses with internal cross-validation on one public database. Each release has 274 datasets in 23 species. A dataset is one species and one drug.
 
 ## The inputs
 
-- `index.json` has one row per dataset. Each row gives each learner's balanced accuracy (the mean of sensitivity and specificity) on the random split and on the lineage split, its very major error (VME: the share of resistant genomes called susceptible) and its major error (ME: the share of susceptible genomes called resistant). The row also names the best learner and gives the known-gene rule's figures.
-- `intervals/<dataset>.json` gives, for each learner on each split and for the known-gene rule, the counts behind VME and ME (`x` errors out of `n` genomes) and an exact 95% interval on each (Clopper-Pearson).
+`index.json` has one row per dataset. Each row gives each learner's balanced accuracy (the mean of sensitivity and specificity) on the random split and on the lineage split. It gives the learner's very major error (VME: the share of resistant genomes called susceptible) and its major error (ME: the share of susceptible genomes called resistant). The row also names the best learner and gives the known-gene rule's figures.
 
-The random split assigns genomes to folds at random. The lineage split holds out whole lineages, so it is the stricter of the two. The five learners are the set covering machine (`scm`), the decision tree (`cart`), the random forest (`rf`), boosted trees (`gbt`) and the lasso (`lasso`). The best learner of a dataset is the one of the five with the highest random-split balanced accuracy. The known-gene rule calls a genome resistant from the genes a catalog lists; it is fitted on nothing, so its one score answers for both splits.
+`intervals/<dataset>.json` gives the counts behind VME and ME (`x` errors out of `n` genomes) for each learner on each split and for the known-gene rule. Each rate has an exact 95% interval (Clopper-Pearson).
+
+The random split assigns genomes to folds at random. The lineage split holds out whole lineages, so it is the stricter of the two. The five learners are the set covering machine (`scm`), the decision tree (`cart`), the random forest (`rf`), boosted trees (`gbt`) and the lasso (`lasso`).
+
+The best learner of a dataset is the one of the five with the highest random-split balanced accuracy. The known-gene rule calls a genome resistant from the genes a catalog lists. It is fitted on nothing, so its one score answers for both splits.
 
 Each script reads the release's revision from `evaluation_revision` in the index. Each understands revisions 12 and 14 and stops with a message on any other.
 
 ## The outputs
 
-### uncertainty.json
-
-`python3 -I scripts/release-summary/uncertainty.py INDEX.json INTERVALS_DIR [--reps N]`
+**`uncertainty.json`** comes from `python3 -I scripts/release-summary/uncertainty.py INDEX.json INTERVALS_DIR [--reps N]`. It has these parts:
 
 - **checks.** Every intervals file has the index's revision and names its dataset, and its counts reproduce the index's VME and ME.
 - **medians.** The median balanced accuracy of each learner on each split, over the datasets where the learner has a score.
-- **gaps.** For each learner, the median over datasets of the random-split score minus the lineage-split score (a paired difference: both scores come from the same dataset).
-- **paired_lineage.** The median paired difference on the lineage split between the set covering machine and each other learner, and the number of datasets where the set covering machine is at least as high.
-- **selection.** The best learner is chosen on the random split. Its lineage score is compared with the highest lineage score any of the five reaches on the same dataset (an oracle: no one can know it before scoring) and with each fixed learner.
+- **gaps.** For each learner, the median over datasets of the random-split score minus the lineage-split score. The difference is paired: both scores come from the same dataset.
+- **paired_lineage.** The median paired difference on the lineage split between the set covering machine and each other learner, with the number of datasets where the set covering machine is at least as high.
+- **selection.** The best learner's lineage score against each fixed learner, and against the highest lineage score any of the five reaches on the same dataset. That highest score is an oracle: no one can know it before scoring.
 - **shares** and **catalog.** The share of datasets where the best learner is ahead of the known-gene rule, and the median difference between them, on each split.
 - **error_bars.** The error-limit counts described below.
 
-Each median and share has two bootstrap 95% intervals (percentile intervals over resamples drawn with replacement). `ci95_datasets` resamples datasets as if they were independent. `ci95_species` resamples whole species: a resample draws 23 species with replacement and takes every dataset of each species drawn. Datasets of one species share genomes and lineages, so the species interval is the one to quote. Each interval leaves the same number of resamples outside each end. The output records the seed (20261111) and the number of repetitions (4000 by default), so a run is deterministic for a given input.
+Each median and share has two bootstrap 95% intervals, which are percentile intervals over resamples drawn with replacement. `ci95_datasets` resamples datasets as if they were independent. `ci95_species` resamples whole species: a resample draws 23 species with replacement and takes every dataset of each species drawn.
 
-### summary.json
+Datasets of one species share genomes and lineages, so the species interval is the one to quote. Each interval leaves the same number of resamples outside each end. The output records the seed (20261111) and the number of repetitions (4000 by default), so a run gives the same output for the same input.
 
-`python3 -I scripts/release-summary/summary.py INDEX.json INTERVALS_DIR`
+**`summary.json`** comes from `python3 -I scripts/release-summary/summary.py INDEX.json INTERVALS_DIR`. It holds the same medians without intervals, taken over the datasets where a learner has both splits. It counts the datasets where the best learner drops by more than 5 and by more than 10 points from the random to the lineage split, and how often each learner is the best. It gives the best learner against the known-gene rule on each split, and the best learner's error-limit counts from the index's point estimates.
 
-The same medians without intervals, taken over the datasets where a learner has both splits; the best learner's medians and how many datasets drop by more than 5 and 10 points from the random to the lineage split; how often each learner is the best; the best learner against the known-gene rule on each split; the best learner's error-limit counts from the index's point estimates; and the medians by species, by drug class (classes with at least 5 datasets) and by cohort size (thirds of the datasets by genome count). The script does not read the intervals folder; it takes it so that every script has the same command line.
+It also gives the medians by species, by drug class (classes with at least 5 datasets) and by cohort size (thirds of the datasets by genome count). The script does not read the intervals directory. It takes the argument so that every script has the same command line.
 
-### catalog.json
+**`catalog.json`** comes from `python3 -I scripts/release-summary/catalog.py INDEX.json INTERVALS_DIR`. It sorts the datasets into bands by the known-gene rule's own balanced accuracy: under 0.55, 0.55 to 0.70, 0.70 to 0.85, 0.85 and up. A band holds its lower edge and not its upper one, so a rule at exactly 0.70 is in "0.70 to 0.85".
 
-`python3 -I scripts/release-summary/catalog.py INDEX.json INTERVALS_DIR`
+For each band it gives the datasets, how often the best learner is ahead on each split, how often the rule is ahead or within 2 points on the lineage split, and the median lineage difference (best learner minus rule). It also counts the datasets where the rule makes a constant call.
 
-The best learner against the known-gene rule, sorted into bands by the rule's own balanced accuracy: under 0.55, 0.55 to 0.70, 0.70 to 0.85, 0.85 and up. A band holds its lower edge and not its upper one, so a rule at exactly 0.70 is in "0.70 to 0.85". For each band: the datasets, how often the best learner is ahead on each split, how often the rule is ahead or within 2 points on the lineage split, and the median lineage difference (best learner minus rule). The output also counts the datasets where the rule makes a constant call, and, where the rule sits under 0.55, says how it fails: it finds under 20% of the resistant genomes (sensitivity under 0.2), it calls over 80% of the susceptible genomes resistant (specificity under 0.2), or neither.
+Where the rule sits under 0.55, the output says how the rule fails. It finds under 20% of the resistant genomes (sensitivity under 0.2), or it calls over 80% of the susceptible genomes resistant (specificity under 0.2), or neither.
 
-The bands split the datasets on an outcome. A rule that scored high by chance on a small dataset lands in a high band, so the bands describe the data and are not a test.
+The bands split the datasets on an outcome. A rule that scored high by chance on a small dataset is sorted into a high band, so the bands describe the data and are not a test.
 
-### index-counts.json
+**`index-counts.json`** comes from `python3 -I scripts/release-summary/index_counts.py INDEX.json INTERVALS_DIR`. For each row of each intervals file it rebuilds the two denominators and the two error counts from index fields alone, and compares them with the file's `x` and `n`. The denominators follow the release's scoring rule.
 
-`python3 -I scripts/release-summary/index_counts.py INDEX.json INTERVALS_DIR`
+In revision 12, and on an unflagged row of revision 14, a learner row leaves out its `no_call` genomes. Those are the genomes of folds where the fitted model learned nothing. VME's `n` is the resistant genomes less the resistant no-calls, and ME's `n` is the susceptible genomes less the susceptible no-calls.
 
-Rebuilds, for each row of each intervals file, the two denominators and the two error counts from index fields alone, and compares them with the file's `x` and `n`. The denominators follow the release's scoring rule:
+In revision 14, a learner row whose split entry carries `null_fits_scored: true` is scored on every genome ([equal-scoring.md](equal-scoring.md)). Each `n` is every genome of the class. In both cases `x` is the rate times `n`, rounded. The known-gene rule has no no-calls.
 
-- Revision 12, and an unflagged row of revision 14: a learner row leaves out its `no_call` genomes, the genomes of folds where the fitted model learned nothing. VME's `n` is the resistant genomes less the resistant no-calls; ME's `n` is the susceptible genomes less the susceptible no-calls.
-- Revision 14, a learner row whose split entry carries `null_fits_scored: true`: the row is scored on every genome ([equal-scoring.md](equal-scoring.md)). Each `n` is every genome of the class.
-
-In both cases `x` is the rate times `n`, rounded. The known-gene rule has no no-calls.
-
-### compare.py
-
-`python3 -I scripts/release-summary/compare.py A/uncertainty.json B/uncertainty.json` prints the numbers of two `uncertainty.json` files side by side, one line per statistic. It recomputes nothing.
+**`compare.py`** takes two outputs: `python3 -I scripts/release-summary/compare.py A/uncertainty.json B/uncertainty.json` prints the numbers of two `uncertainty.json` files side by side, one line per statistic. It recomputes nothing.
 
 ## The error limits
 
@@ -70,7 +64,7 @@ For each learner, split and dataset, the script sorts the dataset into one of th
 
 The three classes add up to the datasets with both rates. The output also counts the datasets whose point estimates meet both limits. A dataset with no very major error can be shown to meet the VME limit only if it has enough resistant genomes for the exact upper bound to fall to 1.5% or below: a dataset needs at least 245 resistant genomes. 132 datasets of each release have that many.
 
-## The headline numbers
+## The numbers for revisions 12 and 14
 
 Every number in these tables comes from the files under `reference/release-summary/`. `tests/release_summary/test_document.py` rebuilds each table from those files and fails if the document differs. Values are rounded to 4 decimals as the files hold them. A cell "a / b" gives revision 12, then revision 14. Each interval is the species bootstrap interval.
 
@@ -157,24 +151,29 @@ Between the two releases, only rows that involve boosted trees, the lasso or the
 
 ## Limits
 
-- **The species intervals are rough.** The species bootstrap has 23 clusters, and some species hold many datasets. A percentile interval from so few clusters is approximate; read it to one decimal of a point at most.
-- **The exact intervals treat related genomes as independent.** The Clopper-Pearson interval on an error rate assumes each genome is an independent draw. Genomes of one lineage or one study are not, so the intervals are narrower than the data support, and the error-limit classes lean toward "shown".
-- **One fold draw per dataset.** Each report scores one assignment of genomes to folds. Another draw would move each score; the scripts cannot see by how much.
+- **The species intervals are rough.** The species bootstrap has 23 clusters, and some species hold many datasets. A percentile interval from so few clusters is approximate. Read it to one decimal of a point at most.
+- **The exact intervals treat related genomes as independent.** The Clopper-Pearson interval assumes each genome is an independent draw. Genomes of one lineage or one study are not. The intervals are therefore narrower than the data support, and too many datasets are counted as shown.
+- **One fold draw per dataset.** Each report scores one assignment of genomes to folds. Another draw would move each score, and the scripts cannot see by how much.
 - **The best of five is chosen on the folds that score it.** The best learner is the one with the highest random-split score, and that same score is reported for it. Its random-split median is therefore biased upward. Its lineage score is not used to choose it.
 - **The bands split on an outcome.** See catalog.json above.
 
 ## Changes against the earlier runs
 
-The scripts ran from outside the repository before they moved here. Two defects were fixed when they moved. Each changed the numbers named here and nothing else.
+The scripts ran from outside the repository before they moved here. Two defects were fixed when they moved. Each changed only the numbers named here.
 
-- **The bootstrap interval's lower end.** The earlier script took the lower end at the order statistic floor(0.025 (N - 1)) and the upper end at round(0.975 (N - 1)). With 4000 resamples that left 99 resamples below the interval and 100 above it. Both ends now leave round(0.025 (N - 1)) resamples outside, 100 at each end. Only lower ends moved, each by 0.0001 to 0.001: 15 intervals of revision 12 and 14 of revision 14. No point estimate, count or upper end changed.
-- **Constant calls of the known-gene rule.** `rule.calls_nothing_resistant` counted every entry with sensitivity 0, and `rule.calls_everything_resistant` every entry with specificity 0. Four entries are not constant calls: three miss every resistant genome but call some susceptible genomes resistant, and one calls every susceptible genome resistant but misses one resistant genome. The counts now need sensitivity 0 and specificity 1, or sensitivity 1 and specificity 0. In both releases 32 became 29 and 31 became 30.
+**The bootstrap interval's lower end.** The earlier script took the lower end at the order statistic floor(0.025 (N - 1)) and the upper end at round(0.975 (N - 1)). With 4000 resamples that left 99 resamples below the interval and 100 above it. Both ends now leave round(0.025 (N - 1)) resamples outside, 100 at each end.
 
-`summary.json` is byte-identical to the earlier runs. The earlier per-species sort put a median gap of exactly 0.0 after any negative gap; it now sorts by value. No species has a negative median gap, so no byte changed.
+Only lower ends moved, each by 0.0001 to 0.001: 15 intervals of revision 12 and 14 of revision 14. No point estimate, count or upper end changed.
+
+**Constant calls of the known-gene rule.** `rule.calls_nothing_resistant` counted every entry with sensitivity 0, and `rule.calls_everything_resistant` every entry with specificity 0. Four entries are not constant calls. Three miss every resistant genome but call some susceptible genomes resistant, and one calls every susceptible genome resistant but misses one resistant genome.
+
+The counts now need sensitivity 0 and specificity 1, or sensitivity 1 and specificity 0. In both releases 32 became 29 and 31 became 30.
+
+`summary.json` is byte-identical to the earlier runs. The earlier per-species sort put a median gap of exactly 0.0 after any negative gap, and it now sorts by value. No species has a negative median gap, so no byte changed.
 
 ## Commands
 
-From the repository root, with `R` an unpacked release folder (the one that holds `index.json`) and `OUT` an output folder. Python 3.12, standard library only.
+Run these from the repository root, with `R` an unpacked release directory (the one that holds `index.json`) and `OUT` an output directory. They need Python 3.12 and its standard library only.
 
 ```sh
 python3 -I scripts/release-summary/uncertainty.py  "$R/index.json" "$R/intervals" > "$OUT/uncertainty.json"

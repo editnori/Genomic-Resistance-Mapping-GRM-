@@ -1,6 +1,6 @@
 """uncertainty.py INDEX.json INTERVALS_DIR [--reps N]
 
-Uncertainty on the headline numbers of a GRM release, from two public files only: the release's index.json and its
+Uncertainty on the main numbers of a GRM release, from two public files only: the release's index.json and its
 per-dataset intervals files (intervals/<id>.json: confusion counts and Clopper-Pearson 95% bounds on the very major
 error VME and the major error ME). Nothing is fitted and no genome is read. Prints one JSON document on stdout.
 
