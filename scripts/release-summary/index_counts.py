@@ -1,6 +1,6 @@
 """index_counts.py INDEX.json INTERVALS_DIR
 
-Can the counts behind every served error-rate interval be rebuilt from the index alone? For each row of each
+Checks that the counts behind every served error-rate interval rebuild from the index alone. For each row of each
 intervals file (a learner on a split, or the known-gene rule) this rebuilds the two denominators and the two event
 counts from index fields and compares them with the file's x and n. Prints one JSON document on stdout.
 
