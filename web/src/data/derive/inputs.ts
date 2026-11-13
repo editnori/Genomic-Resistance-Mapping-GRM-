@@ -26,7 +26,8 @@ export type InputLearner = (typeof INPUT_LEARNERS)[number];
 /** One learner's datasets for one change, with the shares of its summed calls
  *  under the default and under the change, in that order. */
 export interface LearnerCounts extends DatasetCounts {
-  p: number;
+  /** The two-sided exact sign test's p; null when the learner has no non-zero change to test. */
+  p: number | null;
   /** Resistant genomes called resistant: [default, change]. */
   recall: readonly number[];
   /** Susceptible genomes called susceptible: [default, change]. */
@@ -68,7 +69,8 @@ export interface InputComparison {
     split: "lineage";
     exploratory: string;
     /** The rows the page names: one dataset, change and learner, with the log-loss change and the calls. */
-    named: readonly { dataset: string; arm: string; learner: InputLearner; estimate: number; default: Calls; arm_calls: Calls }[];
+    /** `repeats`: the repeat runs the calls are summed over, so a genome counts once per repeat. */
+    named: readonly { dataset: string; arm: string; learner: InputLearner; estimate: number; repeats: number; default: Calls; arm_calls: Calls }[];
   };
   predictions: {
     species: readonly string[];
@@ -132,4 +134,18 @@ export const namedRow = (dataset: string, arm: string, learner: InputLearner, c:
   const r = c.learner_reading.named.find((x) => x.dataset === dataset && x.arm === arm && x.learner === learner);
   if (r === undefined) throw new Error(`no ${dataset} ${arm} ${learner} in the reading by learner`);
   return r;
+};
+
+/** The smallest and largest sign p over some learners' rows, leaving out a
+ *  row with no non-zero change, which has no p; null when no row has one. */
+export const signPRange = (rows: readonly LearnerCounts[]): readonly [number, number] | null => {
+  const ps = rows.flatMap((r) => (r.p === null ? [] : [r.p]));
+  return ps.length === 0 ? null : [Math.min(...ps), Math.max(...ps)];
+};
+
+/** The learners whose log loss the default's tuning-fold repeat left unchanged
+ *  on every dataset: the ones the pipeline runs with set parameters. */
+export const untunedLearners = (c: InputComparison = INPUT_COMPARISON): InputLearner[] => {
+  const twin = armById("sentinel-tuning-twin", c).learners;
+  return INPUT_LEARNERS.filter((l) => twin[l].datasets > 0 && twin[l].unchanged === twin[l].datasets);
 };

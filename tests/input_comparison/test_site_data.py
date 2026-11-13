@@ -80,6 +80,8 @@ class BundledReading(unittest.TestCase):
         self.assertEqual(named["dataset"], "mycobacterium_tuberculosis__clofazimine")
         self.assertEqual((named["default"]["tp"], named["default"]["fn"], named["arm_calls"]["tp"], named["arm_calls"]["fn"]), (381, 198, 105, 474))
         self.assertEqual(round(named["estimate"], 4), 2.7935)
+        # The calls are summed over the repeats: 579 calls on 193 resistant genomes, three times each.
+        self.assertEqual((named["repeats"], (named["default"]["tp"] + named["default"]["fn"]) // named["repeats"]), (3, 193))
         self.assertIn("decides nothing", data["learner_reading"]["exploratory"])
 
     def test_bundled_counts_give_the_documents_by_dataset_table(self):

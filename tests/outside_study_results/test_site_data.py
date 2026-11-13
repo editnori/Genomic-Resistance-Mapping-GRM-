@@ -54,6 +54,18 @@ class BundledRows(unittest.TestCase):
             ids = {d["id"] for d in p["datasets"]}
             self.assertTrue(all(r["dataset"] in ids for r in p["rows"]))
             self.assertTrue(all(("figures" in r) == (r["learner"] == "scm") for r in p["rows"]))
+            self.assertTrue(all(("report_at_edge" in r) == (r["learner"] == "known_gene") for r in p["rows"]))
+
+    def test_bundled_rows_give_the_documents_limits(self):
+        # docs/outside-study-results.md: 12 of the 39 known-gene holds have a report figure at 0% or 100%;
+        # the same-study population is four studies, each at least 99.9% of a dataset's resistant genomes.
+        data = {p["id"]: p for p in json.loads(BUNDLED.read_text(encoding="utf-8"))["populations"]}
+        rule = [r for r in data["primary"]["rows"] if r["learner"] == "known_gene"]
+        held = [r for r in rule if {r["sensitivity"], r["specificity"]} <= {"consistent", "above"}]
+        self.assertEqual((len(held), sum(r["report_at_edge"] for r in held)), (39, 12))
+        same = [d for d in data["same-study"]["datasets"] if d["estimates"]]
+        self.assertEqual(sum(d["top_study_resistant_share"] >= 0.999 for d in same), 49)
+        self.assertEqual(len({d["top_study_resistant"] for d in same}), 4)
 
 
 if __name__ == "__main__":

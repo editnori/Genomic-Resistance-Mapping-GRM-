@@ -68,7 +68,7 @@ def by_learner(path, species):
         if len(found) != 1:
             raise SystemExit(f"{dataset} {arm} {learner_}: {len(found)} lineage rows")
         r = found[0]
-        rows.append({"dataset": dataset, "arm": arm, "learner": learner_, "estimate": r["estimate"], "default": r["calls_default"], "arm_calls": r["calls_arm"]})
+        rows.append({"dataset": dataset, "arm": arm, "learner": learner_, "estimate": r["estimate"], "repeats": r["repeats"], "default": r["calls_default"], "arm_calls": r["calls_arm"]})
 
     def entry(t):
         return {

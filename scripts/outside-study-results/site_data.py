@@ -5,10 +5,12 @@ reading rules (load, holds, frozen_and_scored) and writes, as JSON, what the
 site's "Newly deposited genomes" section counts and draws:
 
 - for each population, each run's frozen and scored genomes; its datasets with
-  their species and drug (tables.py's drug names), whether they have estimates
-  and the top study's share of the resistant genomes; and every row with
-  estimates for the learners the documents read: its dataset, its learner and
-  its two readings;
+  their species and drug (tables.py's drug names), whether they have estimates,
+  the top study of the resistant genomes and its share of them, and the
+  genomes scored resistant or susceptible; and every row with estimates for
+  the learners the documents read: its dataset, its learner and its two
+  readings, and for the known-gene rule whether its report figure is exactly
+  0 or 1 on a measure (metrics.tsv's reference_at_0_or_1);
 - for the set covering machine's rows, the report's lineage-split figures and
   the new estimates with their 95% intervals, as the files write them.
 
@@ -34,6 +36,8 @@ _spec.loader.exec_module(tables)
 
 # The learner the site draws, whose figures the rows carry.
 DRAWN = "scm"
+# The fixed rule, whose report figure can sit at exactly 0% or 100%.
+RULE = "known_gene"
 
 
 def number(text):
@@ -76,12 +80,18 @@ def build(root):
                         "antibiotic": tables.drug(d["dataset"]),
                         "estimates": d["reportable"] == "yes",
                         "top_study_resistant_share": float(d["top_study_resistant_share"]),
+                        "top_study_resistant": d["top_study_resistant"],
+                        "scored": int(d["scored_resistant"]) + int(d["scored_susceptible"]),
                     }
                 )
             for r in metrics:
                 if r["learner"] not in tables.LEARNERS or r["reportable"] != "yes":
                     continue
                 row = {"dataset": r["dataset"], "learner": r["learner"], "sensitivity": r["reading_sensitivity"], "specificity": r["reading_specificity"]}
+                if r["learner"] == RULE:
+                    if r["reference_at_0_or_1"] not in ("yes", "no"):
+                        raise SystemExit(f"{r['dataset']}: reference_at_0_or_1 is {r['reference_at_0_or_1']!r}")
+                    row["report_at_edge"] = r["reference_at_0_or_1"] == "yes"
                 if r["learner"] == DRAWN:
                     row["figures"] = {
                         k: {

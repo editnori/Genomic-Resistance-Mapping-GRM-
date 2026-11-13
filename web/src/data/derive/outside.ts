@@ -26,12 +26,24 @@ export interface OutsideRow {
   specificity: string;
   /** The set covering machine's rows only. */
   figures?: Record<Measure, Figure>;
+  /** The known-gene rule's rows only: its report figure is exactly 0 or 1 on a measure. */
+  report_at_edge?: boolean;
 }
 
 export interface Population {
   id: "primary" | "same-study";
   species: readonly { slug: string; frozen: number; scored: number }[];
-  datasets: readonly { id: string; species: string; antibiotic: string; estimates: boolean; top_study_resistant_share: number }[];
+  datasets: readonly {
+    id: string;
+    species: string;
+    antibiotic: string;
+    estimates: boolean;
+    top_study_resistant_share: number;
+    /** The study that holds the most resistant genomes. */
+    top_study_resistant: string;
+    /** Genomes scored resistant or susceptible. */
+    scored: number;
+  }[];
   rows: readonly OutsideRow[];
 }
 
@@ -63,12 +75,30 @@ export interface PopulationSummary {
   withEstimates: number;
   /** Datasets with estimates where one study holds at least half of the resistant genomes. */
   oneStudyHalf: number;
+  /** Datasets with estimates where one study holds at least ONE_STUDY_ALL of the resistant genomes. */
+  oneStudyAll: number;
+  /** The distinct studies that hold the most resistant genomes on those datasets. */
+  oneStudyAllStudies: number;
+  /** The median, over the datasets with estimates, of the genomes scored resistant or susceptible. */
+  medianScored: number;
+  /** Datasets where the known-gene rule holds and its report figure is exactly 0% or 100% on a measure. */
+  ruleHoldsAtEdge: number;
   /** Per learner: datasets where it holds, of the datasets read for it. */
   holds: Record<Learner, { holds: number; read: number }>;
   /** The set covering machine's readings over the rows read: each measure
    *  above and below the report's figure, and the two together. */
   scm: { sensitivityAbove: number; sensitivityBelow: number; specificityAbove: number; specificityBelow: number; onlySpecificity: number; onlySensitivity: number; both: number };
 }
+
+/** The share above which one study holds a dataset's resistant genomes all but wholly. */
+export const ONE_STUDY_ALL = 0.999;
+
+const median = (xs: readonly number[]): number => {
+  if (xs.length === 0) return Number.NaN;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 === 1 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+};
 
 const count = <T,>(xs: readonly T[], f: (x: T) => boolean): number => xs.reduce((n, x) => n + (f(x) ? 1 : 0), 0);
 
@@ -91,6 +121,10 @@ export const populationSummary = (p: Population): PopulationSummary => {
     datasets: p.datasets.length,
     withEstimates: est.length,
     oneStudyHalf: count(est, (d) => d.top_study_resistant_share >= 0.5),
+    oneStudyAll: count(est, (d) => d.top_study_resistant_share >= ONE_STUDY_ALL),
+    oneStudyAllStudies: new Set(est.filter((d) => d.top_study_resistant_share >= ONE_STUDY_ALL).map((d) => d.top_study_resistant)).size,
+    medianScored: median(est.map((d) => d.scored)),
+    ruleHoldsAtEdge: count(learner("known_gene"), (r) => holds(r) === true && r.report_at_edge === true),
     holds: tally,
     scm: {
       sensitivityAbove: count(read, (r) => r.sensitivity === "above"),

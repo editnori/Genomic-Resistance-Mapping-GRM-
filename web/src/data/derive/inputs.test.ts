@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INPUT_COMPARISON, INPUT_LEARNERS, armById, inputSummary, namedRow, prediction, speciesIndex } from "./inputs";
+import { INPUT_COMPARISON, INPUT_LEARNERS, armById, inputSummary, namedRow, prediction, signPRange, speciesIndex, untunedLearners } from "./inputs";
 
 const s = inputSummary();
 const p4 = (x: number) => x.toFixed(4);
@@ -57,7 +57,7 @@ describe("the reading by learner, whole lineages held out", () => {
 
   it("counts 4,000 genomes by learner, with the set covering machine's recall", () => {
     const scm = armById("cap-4000").learners.scm;
-    expect([scm.better, scm.worse, scm.unchanged, scm.datasets, p4(scm.p)]).toEqual([32, 16, 1, 49, "0.0293"]);
+    expect([scm.better, scm.worse, scm.unchanged, scm.datasets, scm.p === null ? null : p4(scm.p)]).toEqual([32, 16, 1, 49, "0.0293"]);
     expect(scm.recall.map(p3)).toEqual(["0.802", "0.809"]);
   });
 
@@ -89,5 +89,25 @@ describe("the reading by learner, whole lineages held out", () => {
       expect(Object.keys(a.learners)).toEqual([...INPUT_LEARNERS]);
       for (const l of INPUT_LEARNERS) expect(a.learners[l].better + a.learners[l].worse + a.learners[l].unchanged).toBe(a.learners[l].datasets);
     }
+  });
+
+  it("gives no sign p for a learner with no non-zero change, and leaves it out of a range", () => {
+    const screen = armById("budget-1000").learners;
+    expect([screen.scm.p, screen.cart.p]).toEqual([null, null]);
+    expect(signPRange([screen.scm, screen.cart])).toBeNull();
+    const range = signPRange(INPUT_LEARNERS.map((l) => screen[l]));
+    const tested = [screen.rf.p!, screen.gbt.p!, screen.lasso.p!];
+    expect(range).toEqual([Math.min(...tested), Math.max(...tested)]);
+    const others = signPRange((["cart", "rf", "gbt", "lasso"] as const).map((l) => armById("cap-4000").learners[l]));
+    expect(others?.map(p4)).toEqual(["0.2529", "0.5682"]);
+  });
+
+  it("finds the random forest the one learner the tuning-fold repeat leaves unchanged", () => {
+    expect(untunedLearners()).toEqual(["rf"]);
+  });
+
+  it("sums the clofazimine calls over three repeats, 193 resistant genomes each", () => {
+    const r = namedRow("mycobacterium_tuberculosis__clofazimine", "cap-4000", "scm");
+    expect([r.repeats, (r.default.tp + r.default.fn) / r.repeats]).toEqual([3, 193]);
   });
 });

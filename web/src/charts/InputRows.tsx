@@ -5,8 +5,9 @@
 // right, on one scale for every row; the numbers sit in their own cells, so
 // the table reads the same without the bars. The default's repeat runs are a
 // group of their own under the changed inputs. On a slide too short for every
-// row, the rows page (the deck's paging, as for the panel figure); on a narrow
-// slide the row keeps its name, its two counts and the sign test.
+// row, the rows page (the deck's paging, as for the panel figure), split as
+// evenly as they go (pageRows); under BARS_FROM, on a slide or on the page, a
+// row keeps its name, its two counts and the sign test.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { int } from "../data/format";
@@ -36,10 +37,15 @@ const ROW_H = 30;
 const HEAD_H = 40;
 const GROUP_H = 34;
 const PAGER_H = 24;
-/** The width under which a slide keeps the counts and the sign test only:
- *  no bars, and the datasets compared and the median stay on the page. */
+/** The width under which the table keeps the counts and the sign test only:
+ *  no bars, and on the page no datasets compared or median either. */
 const BARS_FROM = 560;
 const BAR_W = 140;
+
+/** Page `i` of `count` over `n` rows: rows floor(i·n/count) up to
+ *  floor((i+1)·n/count), so no page is more than one row short of another
+ *  and none is empty when count ≤ n. */
+export const pageRows = (n: number, count: number, i: number): readonly [number, number] => [Math.floor((i * n) / count), Math.floor(((i + 1) * n) / count)];
 
 /** A p value or a median as the document prints them, with a true minus sign. */
 export const fixed4 = (v: number): string => (v < 0 ? `−${(-v).toFixed(4)}` : v.toFixed(4));
@@ -90,19 +96,27 @@ export const InputRows = ({
   const [sizes, setSizes] = useState({ row: ROW_H, group: GROUP_H, head: HEAD_H });
   // Every row in order, each with its group, so a page can start a group anywhere.
   const all = groups.flatMap((g) => g.rows.map((r) => ({ group: g.title, row: r })));
-  const room = (continued: boolean) => (height ?? Infinity) - sizes.head - legendH - groups.length * sizes.group - (continued ? PAGER_H : 0);
-  const needed = height === undefined || room(false) >= all.length * sizes.row ? 1 : Math.ceil(all.length / Math.max(1, Math.floor(room(true) / sizes.row)));
+  // The fewest pages on which every page, split evenly, fits its rows, the
+  // group lines it shows, the head, the legend and (when paged) the pager.
+  const fits = (count: number) =>
+    Array.from({ length: count }, (_, i) => {
+      const [a, b] = pageRows(all.length, count, i);
+      const page = all.slice(a, b);
+      const lines = new Set(page.map((x) => x.group)).size;
+      return sizes.head + legendH + lines * sizes.group + page.length * sizes.row + (count > 1 ? PAGER_H : 0) <= (height ?? Infinity);
+    }).every(Boolean);
+  const needed = height === undefined ? 1 : (Array.from({ length: all.length }, (_, i) => i + 1).find(fits) ?? all.length);
   // An unlaid box measures nothing, so it reports nothing.
   useEffect(() => {
     if (height !== undefined && height > 0) onPages?.(needed);
   }, [onPages, needed, height]);
   const count = Math.max(1, Math.min(pages ?? 1, all.length));
-  const per = Math.ceil(all.length / count);
   const at = Math.min(Math.max(0, page ?? 0), count - 1);
-  const shown = count === 1 ? all : all.slice(at * per, at * per + per);
+  const [from, to] = pageRows(all.length, count, at);
+  const shown = all.slice(from, to);
   const shownGroups = groups.map((g) => ({ title: g.title, rows: shown.filter((s) => s.group === g.title).map((s) => s.row) })).filter((g) => g.rows.length > 0);
   const scale = Math.max(0, ...all.map((s) => Math.max(s.row.better, s.row.worse)));
-  const full = !slide || width >= BARS_FROM;
+  const full = width >= BARS_FROM;
   // The tallest row, group line and head of the whole table at this width;
   // only a copy that shows every row measures, so the pages it reports
   // never depend on the page it shows.
@@ -118,7 +132,7 @@ export const InputRows = ({
   }, [width, count, full, legendH]);
   const head = full ? ["Change", "Worse", "", "Better", "Of", "Sign p", "Median"] : ["Change", "Worse", "Better", "Sign p"];
   const table = (
-    <table ref={tableRef} aria-label={slide ? label : undefined} className={`w-full border-collapse ${slide ? "text-control sm:text-body" : "min-w-[38rem] text-control"}`}>
+    <table ref={tableRef} aria-label={slide ? label : undefined} className={`w-full border-collapse ${slide ? "text-control sm:text-body" : full ? "min-w-[38rem] text-control" : "text-control"}`}>
       <thead>
         <tr className="border-b border-hair">
           {head.map((h, i) => (
@@ -156,8 +170,8 @@ export const InputRows = ({
       ))}
     </table>
   );
-  const first = count === 1 ? 1 : at * per + 1;
-  const last = count === 1 ? all.length : at * per + shown.length;
+  const first = from + 1;
+  const last = to;
   return (
     <div ref={frame} className={slide ? "min-w-0" : "min-w-0 max-w-[52rem]"}>
       {count > 1 ? (
@@ -183,9 +197,9 @@ export const InputRows = ({
             </span>
           </>
         ) : null}
-        {full ? (
+        {full && !slide ? (
           <span className="text-muted-text">
-            Of: datasets compared; on any not counted worse or better, the score was exactly the same. Median: the change in log loss on the middle dataset, above zero when the change
+            Of: datasets compared; on any not counted worse or better, the score was exactly the same. Median: the middle value of the per-dataset change in log loss, above zero when the change
             scored better.
           </span>
         ) : null}

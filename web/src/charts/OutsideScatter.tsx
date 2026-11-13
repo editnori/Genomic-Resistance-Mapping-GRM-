@@ -5,9 +5,11 @@
 // whole interval is under the report's figure. Each population has its own
 // panel of two plots, sensitivity and specificity, and the panels are never
 // combined. Four plots stand in one row from 880px; narrower, each
-// population takes a row of its own. On a slide too short for both rows at
-// MIN_SIDE, each population gets a slide of its own (the deck's paging, as
-// for the panel figure).
+// population takes a row of its own. On a slide too short for its plots to
+// reach MIN_SIDE, each population gets a slide of its own (the deck's paging,
+// as for the panel figure); in the one-row layout that page sets the legend
+// beside the two plots, so they take its height. A plot never grows past the
+// height it is given, down to MIN_FLOOR.
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { int, pct } from "../data/format";
@@ -34,6 +36,10 @@ const GROUP_GAP = 40;
 const FOUR_FROM = 880;
 /** The smallest plot a slide draws both populations at; under it, they page. */
 const MIN_SIDE = 150;
+/** The smallest plot drawn at all, on a slide with no more room. */
+const MIN_FLOOR = 72;
+/** The legend's width when it stands beside one population's plots. */
+const LEGEND_ASIDE_W = 340;
 
 const readingWords = (p: OutsidePoint): string =>
   p.reading === "below"
@@ -57,6 +63,7 @@ const Plot = ({
   onOpen,
   canOpen,
   measuring,
+  oneLine = false,
 }: {
   panel: OutsidePanel;
   measure: Measure;
@@ -66,6 +73,8 @@ const Plot = ({
   canOpen?(id: string): boolean;
   /** A deck's off-screen measuring copy: the plot alone, with no keyboard layer. */
   measuring: boolean;
+  /** Keep the measure line and the counts line on one line each, wider than a small plot if need be. */
+  oneLine?: boolean;
 }) => {
   const points = panel.points[measure];
   const plotW = side - PAD.l - PAD.r;
@@ -104,10 +113,10 @@ const Plot = ({
       </MarkListbox>
     );
   return (
-    <div className="min-w-0" style={{ width: side }} data-outside-plot={measure}>
+    <div className={oneLine ? "whitespace-nowrap" : "min-w-0"} style={oneLine ? { minWidth: side } : { width: side }} data-outside-plot={measure}>
       <p className="text-control font-medium text-ink">{MEASURE_NAME[measure]}</p>
       {/* The counts sit above the plot, so no mark or bar is drawn over them. */}
-      <p data-outside-counts className="text-control text-muted-text">{`${int(above)} above, ${int(below)} below`}</p>
+      <p data-outside-counts className="text-control text-muted-text">{`${int(above)} read above, ${int(below)} read below`}</p>
       {keyed(
         <svg aria-hidden="true" width={side} height={side} className="block overflow-visible">
           <AxisY y={y} x0={PAD.l} x1={PAD.l + plotW} values={values} format={(v) => `${Math.round(v * 100)}`} />
@@ -172,8 +181,8 @@ export const OutsideScatter = ({
   });
   const four = width >= FOUR_FROM;
   const byWidth = Math.floor(four ? (width - 2 * GAP - GROUP_GAP) / 4 : (width - GAP) / 2);
-  const byHeight = (rows: number) => (height === undefined ? Infinity : Math.floor((height - legendH - rows * headH - (rows - 1) * 16) / rows));
-  const needed = four || Math.min(byWidth, byHeight(panels.length)) >= MIN_SIDE ? 1 : panels.length;
+  const byHeight = (rows: number, legend = legendH) => (height === undefined ? Infinity : Math.floor((height - legend - rows * headH - (rows - 1) * 16) / rows));
+  const needed = Math.min(byWidth, byHeight(four ? 1 : panels.length)) >= MIN_SIDE ? 1 : panels.length;
   // An unlaid box measures nothing, so it reports nothing.
   useEffect(() => {
     if (height !== undefined && height > 0) onPages?.(needed);
@@ -182,23 +191,31 @@ export const OutsideScatter = ({
   const at = Math.min(Math.max(0, page ?? 0), count - 1);
   const shown = count === 1 ? panels : panels.slice(at, at + 1);
   const rows = four ? 1 : shown.length;
-  const side = Math.max(120, Math.min(300, byWidth, byHeight(rows)));
+  // One population on a wide slide: the legend stands beside its plots.
+  const aside = four && count > 1;
+  const side = aside
+    ? Math.max(MIN_FLOOR, Math.min(300, Math.floor((width - GAP - GROUP_GAP - LEGEND_ASIDE_W) / 2), byHeight(1, 0)))
+    : Math.max(MIN_FLOOR, Math.min(300, byWidth, byHeight(rows)));
   const measuring = onPages !== undefined;
   return (
-    <div ref={frame} className="min-w-0">
+    <div ref={frame} className={aside ? "flex min-w-0 flex-row items-start gap-x-10" : "min-w-0"}>
       <div className={`flex ${four ? "flex-row gap-x-10" : "flex-col gap-y-4"}`}>
         {shown.map((panel) => (
           <div key={panel.key} className="min-w-0" data-outside-panel>
             <h3 className="text-control text-muted-text">{panel.heading}</h3>
             <div className="mt-1 flex gap-x-6">
               {MEASURES.map((m) => (
-                <Plot key={m} panel={panel} measure={m} side={side} titleOf={titleOf} onOpen={onOpen} canOpen={canOpen} measuring={measuring} />
+                <Plot key={m} panel={panel} measure={m} side={side} titleOf={titleOf} onOpen={onOpen} canOpen={canOpen} measuring={measuring} oneLine={aside} />
               ))}
             </div>
           </div>
         ))}
       </div>
-      <div ref={legendRef} className="flex flex-wrap gap-x-5 gap-y-1 pt-2 text-control text-ink">
+      <div
+        ref={legendRef}
+        className={aside ? "flex flex-col gap-y-1 pt-1 text-control text-ink" : "flex flex-wrap gap-x-5 gap-y-1 pt-2 text-control text-ink"}
+        style={aside ? { width: LEGEND_ASIDE_W } : undefined}
+      >
         <span className="inline-flex items-center gap-1.5">
           <svg aria-hidden="true" width={12} height={12}>
             <circle cx={6} cy={6} r={4} fill="var(--chart-mark)" />
@@ -211,6 +228,7 @@ export const OutsideScatter = ({
           </svg>
           Reads below: the whole interval is under the line
         </span>
+        <span>Reads above: the whole interval is over the line</span>
         <span className="text-muted-text">Across: the report&apos;s figure. Up: the new figure. Both in %.</span>
       </div>
     </div>

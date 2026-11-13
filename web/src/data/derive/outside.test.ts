@@ -27,6 +27,15 @@ describe("outside-study rows", () => {
     expect(primary.oneStudyHalf).toBe(69);
   });
 
+  it("give the known-gene rule's holds with a report figure at an edge, 12 of its 39", () => {
+    expect([primary.ruleHoldsAtEdge, primary.holds.known_gene.holds]).toEqual([12, 39]);
+  });
+
+  it("give the batch sizes and the one-study share that sit beside the two populations", () => {
+    expect([primary.medianScored, same.medianScored]).toEqual([595, 414]);
+    expect([same.oneStudyAll, same.withEstimates, same.oneStudyAllStudies]).toEqual([49, 49, 4]);
+  });
+
   it("give the same-study population apart", () => {
     expect([same.frozen, same.scored, same.datasets, same.species]).toEqual([3155, 3144, 49, 6]);
     expect(same.holds).toEqual({ scm: { holds: 36, read: 49 }, cart: { holds: 31, read: 49 }, lasso: { holds: 9, read: 15 }, known_gene: { holds: 30, read: 49 } });
