@@ -4,7 +4,7 @@ This plan audits association evidence for known catalog elements and the stabili
 
 A k-mer pattern or catalog family in this plan is a marker with an association to the reported lab call. Annotation does not establish mechanism. Every threshold here is an adapted research screen. Only public BV-BRC and NCBI data are used.
 
-The plan was fixed on 14 Nov 2026, before any association run on a revision 14 cohort. Nothing has been run under it. A run follows it as written, records its sha256 before reading any association statistic, and lists every deviation. Anything decided after a statistic is read is labelled exploratory.
+The plan was fixed on 14 Nov 2026, before any association run on a revision 14 cohort. Nothing has been run under it. A run follows it as written, records its sha256 before reading any association statistic, and lists every deviation. Anything decided after a statistic is read is labelled exploratory. A change to the plan is a dated section added at its end, before the run it applies to reads a statistic, and the text above it stays as it is.
 
 The first run under it reruns the October 2026 question on *E. coli* and tobramycin. That run does not reproduce the October numbers. The October row gives a cohort of 350 genomes and names no revision, no genome list of it survives, and no copy of its result file has been found (`docs/work-program-20261027.md`, entry of 2026-11-14 13:13 UTC).
 
@@ -432,7 +432,7 @@ Each passage quoted above was read in the full text or, where marked, the abstra
 - The labels are reported R and S calls from many laboratories. 391 of the 1,070 genomes have a MIC.
 - h² is fitted once for each scan, and the statistic treats a 0/1 label as continuous. Both are the tool's choices, checked here by permutation and not by theory.
 - 200 permutations cannot certify a 0.05 error rate. They can show a gross failure.
-- The restriction of λ to common features is the plan's own choice.
+- The restriction of λ to common features is the plan's own choice. So are the lower bound of 0.95 for λ, the band of 0.0008 to 0.00125 for the share of p-values at or below 0.001, the cut of 15 in 200 permutations, the four synthetic-marker sizes and the floor of 25 genomes for a country level. Only the upper bound of 1.05 has a source (Price et al. 2010).
 - A pattern in fewer than 16 resistant genomes cannot pass. An empty scan says little about markers of that size.
 - One species, one drug, one cohort. No replication set exists today.
 - Bonferroni over 2,288,621 correlated tests is conservative, so a pattern that does not pass has not been shown to be unassociated.
