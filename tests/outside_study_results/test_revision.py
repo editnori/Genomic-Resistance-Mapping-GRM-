@@ -1,0 +1,338 @@
+"""The outside-study estimates read against a later release's figures.
+
+scripts/outside-study-results/revision.py reads reference/outside-study against
+a figure file under reference/outside-study-figures. The suite checks the
+committed figure file against the runs' own rows, the reading rule against the
+kit's readings, and the tables of the page's section against the files. The
+reports a figure file is read from are not in the repository, so `--figures`
+is tested on made-up reports.
+"""
+
+import contextlib
+import csv
+import hashlib
+import importlib.util
+import io
+import json
+import pathlib
+import shutil
+import tempfile
+import unittest
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+RESULTS = ROOT / "reference" / "outside-study"
+FIGURES = ROOT / "reference" / "outside-study-figures" / "rev14-274-20261112.tsv"
+README = FIGURES.parent / "README.md"
+RELEASES = ROOT / "reference" / "release-summary" / "README.md"
+DOCUMENT = ROOT / "docs" / "outside-study-results.md"
+
+
+def load_revision():
+    spec = importlib.util.spec_from_file_location("outside_study_results_revision", ROOT / "scripts" / "outside-study-results" / "revision.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+R = load_revision()
+T = R.tables
+
+
+def run_rows(data):
+    """Every row of every run's metrics.tsv, read or not."""
+    return [r for runs in data.values() for _, _, metrics, _ in runs.values() for r in metrics]
+
+
+def metrics(n, tp, fn, fp, tn):
+    return {"n": n, "tp": tp, "fn": fn, "fp": fp, "tn": tn, "sensitivity": tp / (tp + fn), "specificity": tn / (tn + fp)}
+
+
+class FigureFile(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = T.load(RESULTS)
+        cls.revision, cls.figures = R.load_figures(FIGURES)
+
+    def test_one_row_for_each_dataset_and_learner_of_the_runs(self):
+        self.assertEqual(set(self.figures), {(r["dataset"], r["learner"]) for r in run_rows(self.data)})
+
+    def test_each_dataset_has_one_report_of_one_revision(self):
+        self.assertEqual(self.revision, 14)
+        digests = {}
+        for (dataset, _), f in self.figures.items():
+            self.assertRegex(f["report_sha256"], r"^[0-9a-f]{64}$")
+            self.assertEqual(digests.setdefault(dataset, f["report_sha256"]), f["report_sha256"], dataset)
+        # No two datasets share a report.
+        self.assertEqual(len(set(digests.values())), len(digests))
+
+    def test_each_figure_is_its_counts(self):
+        with_figure = 0
+        for key, f in self.figures.items():
+            if f["lineage_note"]:
+                self.assertEqual([f[c] for c in R.COLUMNS[4:11]], [""] * 7, key)
+                continue
+            with_figure += 1
+            n, tp, fn, fp, tn = (int(f[f"lineage_{k}"]) for k in R.COUNTS)
+            self.assertEqual(n, tp + fn + fp + tn, key)
+            self.assertAlmostEqual(float(f["lineage_sensitivity"]), tp / (tp + fn), places=12, msg=key)
+            self.assertAlmostEqual(float(f["lineage_specificity"]), tn / (tn + fp), places=12, msg=key)
+        self.assertGreater(with_figure, 0)
+
+    def test_a_dataset_with_no_lineage_split_has_the_kit_s_note_in_both(self):
+        noted = {key: f["lineage_note"] for key, f in self.figures.items() if f["lineage_note"]}
+        self.assertEqual(noted, {(r["dataset"], r["learner"]): r["lineage_note"] for r in run_rows(self.data) if r["lineage_note"]})
+        self.assertTrue(noted)
+
+    def test_a_dataset_in_both_populations_has_one_figure_in_the_runs(self):
+        seen = {}
+        for r in run_rows(self.data):
+            self.assertEqual(seen.setdefault((r["dataset"], r["learner"]), R.counts(r)), R.counts(r))
+
+    def test_the_readme_names_the_release_and_the_file(self):
+        text = README.read_text(encoding="utf-8")
+        self.assertIn(hashlib.sha256(FIGURES.read_bytes()).hexdigest(), text)
+        # The release is the one reference/release-summary names for this revision.
+        (row,) = [line for line in RELEASES.read_text(encoding="utf-8").split("\n") if line.startswith("| `rev14-274-20261112/` | `rev14-274-20261112.tar.zst`")]
+        asset = row.split("|")[3].strip().strip("`")
+        self.assertRegex(asset, r"^[0-9a-f]{64}$")
+        self.assertIn(asset, text)
+        self.assertIn(f"{len({d for d, _ in self.figures})} reports", text)
+        self.assertIn(f"{len(self.figures)} rows", text)
+
+
+class Rereading(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = T.load(RESULTS)
+        cls.revision, cls.figures = R.load_figures(FIGURES)
+        cls.later = R.later(cls.data, cls.figures)
+
+    def test_the_rule_on_the_printed_interval_gives_the_kit_s_reading_on_every_row_read(self):
+        """The control of the method: the run's own figure, read from the printed interval."""
+        checked = 0
+        for rows in self.later.values():
+            for r in rows:
+                tp, fn, fp, tn = (int(r[f"lineage_{k}"]) for k in ("tp", "fn", "fp", "tn"))
+                own = {"sensitivity": tp / (tp + fn), "specificity": tn / (tn + fp)}
+                for m in R.MEASURES:
+                    got = R.score.reading(own[m], float(r[m + "_lo"]), float(r[m + "_hi"]))
+                    self.assertEqual(got, r["reading_" + m], (r["dataset"], r["learner"], m))
+                    checked += 1
+        self.assertEqual(checked, 2 * sum(len(rows) for rows in self.later.values()))
+        self.assertGreater(checked, 0)
+
+    def test_the_rows_read_are_the_ones_the_pages_read(self):
+        for pop, runs in self.data.items():
+            want = [(r["dataset"], r["learner"]) for _, _, rows, _ in runs.values() for r in rows if r["learner"] in T.LEARNERS and T.holds(r) is not None]
+            self.assertEqual([(r["dataset"], r["learner"]) for r in self.later[pop]], want)
+
+    def test_a_row_with_the_run_s_counts_keeps_the_run_s_readings(self):
+        same = [r for rows in self.later.values() for r in rows if not r["differs"]]
+        self.assertTrue(same)
+        for r in same:
+            self.assertEqual(r["later"], {m: r["reading_" + m] for m in R.MEASURES})
+            self.assertEqual(R.holds_later(r), T.holds(r))
+
+    def test_a_row_whose_counts_differ_is_read_on_the_later_figure(self):
+        differing = [r for rows in self.later.values() for r in rows if r["differs"]]
+        self.assertTrue(differing)
+        for r in differing:
+            for m in R.MEASURES:
+                figure = float(r["figure"]["lineage_" + m])
+                lo, hi = float(r[m + "_lo"]), float(r[m + "_hi"])
+                want = "below" if figure > hi else "above" if figure < lo else "consistent"
+                self.assertEqual(r["later"][m], want, (r["dataset"], m))
+                # Far from the six decimals an interval end is printed to.
+                self.assertGreater(min(abs(figure - lo), abs(figure - hi)), 1000 * R.MARGIN)
+
+    def test_a_figure_at_a_printed_interval_end_is_refused(self):
+        r = next(r for rows in self.later.values() for r in rows if r["differs"])
+        hi = float(r["sensitivity_hi"])
+        # Six printed decimals leave an end known to half a millionth.
+        for figure in (hi, hi + 5e-7, hi - 5e-7, hi + 9e-7):
+            with self.assertRaises(SystemExit):
+                R.reread(r, "sensitivity", figure)
+        self.assertEqual(R.reread(r, "sensitivity", hi + 2e-6), "below")
+        self.assertEqual(R.reread(r, "sensitivity", hi - 2e-6), "consistent")
+
+    def test_a_row_read_by_a_run_with_no_later_figure_is_refused(self):
+        key = next((r["dataset"], r["learner"]) for rows in self.later.values() for r in rows)
+        blank = {**self.figures[key], "lineage_sensitivity": ""}
+        for figures in ({**self.figures, key: blank}, {k: f for k, f in self.figures.items() if k != key}):
+            with self.assertRaises(SystemExit):
+                R.later(self.data, figures)
+
+
+class Tables(unittest.TestCase):
+    def changed_figures(self, tmp):
+        """A figure file where the first row with `called_metrics` has those counts as its figure."""
+        with open(FIGURES, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f, delimiter="\t"))
+        row = next(r for r in rows if r["called_n"] != "")
+        for k in R.COUNTS:
+            row[f"lineage_{k}"] = row[f"called_{k}"]
+        row["lineage_sensitivity"] = repr(int(row["called_tp"]) / (int(row["called_tp"]) + int(row["called_fn"])))
+        row["lineage_specificity"] = repr(int(row["called_tn"]) / (int(row["called_tn"]) + int(row["called_fp"])))
+        path = pathlib.Path(tmp) / "figures.tsv"
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, R.COLUMNS, delimiter="\t", lineterminator="\n")
+            w.writeheader()
+            w.writerows(rows)
+        return path
+
+    def test_the_document_holds_the_tables_the_files_give(self):
+        self.assertTrue(R.check(RESULTS, FIGURES, DOCUMENT))
+        self.assertEqual(R.main(["revision.py", str(RESULTS), str(FIGURES), "--check", str(DOCUMENT)]), 0)
+
+    def test_the_figure_file_is_read_back_as_written(self):
+        """The csv reader and writer used here leave the committed file byte for byte."""
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(FIGURES, newline="", encoding="utf-8") as f:
+                rows = list(csv.DictReader(f, delimiter="\t"))
+            copy = pathlib.Path(tmp) / "copy.tsv"
+            with open(copy, "w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, R.COLUMNS, delimiter="\t", lineterminator="\n")
+                w.writeheader()
+                w.writerows(rows)
+            self.assertEqual(copy.read_bytes(), FIGURES.read_bytes())
+
+    def test_a_changed_figure_fails_the_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            changed = self.changed_figures(tmp)
+            self.assertFalse(R.check(RESULTS, changed, DOCUMENT))
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                self.assertEqual(R.main(["revision.py", str(RESULTS), str(changed), "--check", str(DOCUMENT)]), 1)
+            self.assertIn("differ", err.getvalue())
+            # The row is no longer one that differs, so the tables list two lines fewer.
+            lines = lambda path: [x for x in R.build(RESULTS, path).split("\n") if x.startswith("| ")]
+            self.assertLess(len(lines(changed)), len(lines(FIGURES)))
+
+    def test_a_changed_cell_in_the_document_fails_the_check(self):
+        text = DOCUMENT.read_text(encoding="utf-8")
+        begin, end = text.index(R.BEGIN), text.index(R.END)
+        block = text[begin:end]
+        self.assertIn(" consistent ", block)
+        with tempfile.TemporaryDirectory() as tmp:
+            changed = pathlib.Path(tmp) / "changed.md"
+            changed.write_text(text[:begin] + block.replace(" consistent ", " above ", 1) + text[end:], encoding="utf-8")
+            self.assertFalse(R.check(RESULTS, FIGURES, changed))
+            unmarked = pathlib.Path(tmp) / "unmarked.md"
+            unmarked.write_text(text.replace(R.BEGIN, ""), encoding="utf-8")
+            self.assertFalse(R.check(RESULTS, FIGURES, unmarked))
+
+    def test_a_changed_reading_in_a_listed_row_fails_the_check(self):
+        """The tables print the run's reading of each row whose figure differs."""
+        _, figures = R.load_figures(FIGURES)
+        later = R.later(T.load(RESULTS), figures)
+        pop, r = next((pop, r) for pop, rows in later.items() for r in rows if r["differs"] and "below" in (r["reading_sensitivity"], r["reading_specificity"]))
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = pathlib.Path(tmp) / "outside-study"
+            shutil.copytree(RESULTS, copy)
+            path = copy / pop / r["species"] / "metrics.tsv"
+            lines = path.read_text(encoding="utf-8").split("\n")
+            (i,) = [i for i, line in enumerate(lines) if line.startswith(f"{r['dataset']}\t{r['learner']}\t")]
+            self.assertIn("\tbelow\t", lines[i])
+            lines[i] = lines[i].replace("\tbelow\t", "\tabove\t", 1)
+            path.write_text("\n".join(lines), encoding="utf-8")
+            self.assertFalse(R.check(copy, FIGURES, DOCUMENT))
+
+    def test_each_differing_row_is_listed_measure_by_measure(self):
+        _, figures = R.load_figures(FIGURES)
+        differing = [r for rows in R.later(T.load(RESULTS), figures).values() for r in rows if r["differs"]]
+        block = R.build(RESULTS, FIGURES)
+        detail = block[block.index("**Rows read whose report figure differs**") :]
+        self.assertEqual(len([x for x in detail.split("\n") if x.startswith("| ") and not x.startswith("| Population")]), 2 * len(differing))
+        for r in differing:
+            for m in R.MEASURES:
+                self.assertIn(f"| {m} | {T.estimate(r, m)} | {R.figure_cell(r, m)} | {r['reading_' + m]} | {R.figure_cell(r['figure'], m)} | {r['later'][m]} |", detail)
+
+    def test_a_wrong_command_line_prints_the_usage(self):
+        for args in ([], [str(RESULTS)], [str(RESULTS), "--figures"], [str(RESULTS), str(FIGURES), "--check"], [str(RESULTS), str(FIGURES), "--chek", str(DOCUMENT)]):
+            with self.assertRaises(SystemExit) as stop:
+                R.main(["revision.py", *args])
+            self.assertEqual(stop.exception.code, R.__doc__)
+
+    def test_a_figure_file_with_other_columns_or_a_repeated_row_is_refused(self):
+        text = FIGURES.read_text(encoding="utf-8")
+        lines = text.split("\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "figures.tsv"
+            for changed in (text.replace("report_sha256", "sha256", 1), "\n".join(lines[:2] + lines[1:]), "\n".join(lines[:2] + [lines[2].replace("\t14\t", "\t15\t", 1)] + lines[3:])):
+                path.write_text(changed, encoding="utf-8")
+                with self.assertRaises(SystemExit):
+                    R.load_figures(path)
+
+
+class FiguresFromReports(unittest.TestCase):
+    """`--figures` on made-up reports. The numbers are not any dataset's."""
+
+    DATASET = "shigella_flexneri__ciprofloxacin"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        base = pathlib.Path(self.tmp.name)
+        self.root, self.reports = base / "outside-study", base / "datasets"
+        shutil.copytree(RESULTS / "primary" / "shigella_flexneri", self.root / "primary" / "shigella_flexneri")
+        self.reports.mkdir()
+
+    def write(self, report):
+        raw = json.dumps(report).encode()
+        (self.reports / f"{self.DATASET}.json").write_bytes(raw)
+        return hashlib.sha256(raw).hexdigest()
+
+    def rows(self):
+        text = R.figures(self.root, self.reports)
+        return {r["learner"]: r for r in csv.DictReader(io.StringIO(text), delimiter="\t")}
+
+    def report(self, lineage):
+        return {"id": self.DATASET, "evaluation": {"revision": 99}, "splits": [{"scheme": "random", "learners": []}, lineage]}
+
+    def test_a_row_is_the_report_s_lineage_row_with_its_hash(self):
+        learners = [
+            {"learner": "scm", "metrics": metrics(60, 20, 10, 5, 25)},
+            {"learner": "lasso", "metrics": metrics(60, 28, 2, 20, 10), "called_metrics": metrics(22, 8, 2, 2, 10)},
+            {"learner": "catalog", "metrics": metrics(60, 30, 0, 30, 0)},
+        ]
+        digest = self.write(self.report({"scheme": "lineage", "learners": learners}))
+        rows = self.rows()
+        self.assertEqual(sorted(rows), ["cart", "known_gene", "lasso", "scm"])
+        for r in rows.values():
+            self.assertEqual((r["dataset"], r["report_sha256"], r["evaluation_revision"]), (self.DATASET, digest, "99"))
+        self.assertEqual(R.counts(rows["scm"]), ("60", "20", "10", "5", "25"))
+        self.assertEqual((rows["scm"]["lineage_sensitivity"], rows["scm"]["lineage_specificity"]), (repr(20 / 30), repr(25 / 30)))
+        self.assertEqual([rows["scm"][f"called_{k}"] for k in R.COUNTS], [""] * 5)
+        # The known-gene rule is the report's `catalog` row.
+        self.assertEqual(R.counts(rows["known_gene"]), ("60", "30", "0", "30", "0"))
+        self.assertEqual([rows["lasso"][f"called_{k}"] for k in R.COUNTS], ["22", "8", "2", "2", "10"])
+        self.assertEqual(R.counts(rows["lasso"]), ("60", "28", "2", "20", "10"))
+        # A learner with no row has the kit's note and no figure.
+        self.assertEqual(rows["cart"]["lineage_note"], "no cart row in the lineage split")
+        self.assertEqual(rows["cart"]["lineage_n"], "")
+        # What it writes is a figure file this script reads.
+        path = pathlib.Path(self.tmp.name) / "figures.tsv"
+        path.write_text(R.figures(self.root, self.reports), encoding="utf-8")
+        revision, figures = R.load_figures(path)
+        self.assertEqual((revision, sorted(l for _, l in figures)), (99, ["cart", "known_gene", "lasso", "scm"]))
+
+    def test_an_unavailable_lineage_split_is_noted_for_every_learner(self):
+        self.write(self.report({"scheme": "lineage", "unavailable_reason": "made up"}))
+        for r in self.rows().values():
+            self.assertEqual((r["lineage_note"], r["lineage_n"], r["called_n"]), ("lineage split unavailable: made up", "", ""))
+
+    def test_a_report_of_another_dataset_is_refused(self):
+        self.write({**self.report({"scheme": "lineage", "learners": []}), "id": "shigella_flexneri__ampicillin"})
+        with self.assertRaises(SystemExit):
+            R.figures(self.root, self.reports)
+
+    def test_the_command_prints_the_figure_file(self):
+        self.write(self.report({"scheme": "lineage", "learners": [{"learner": "scm", "metrics": metrics(60, 20, 10, 5, 25)}]}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(R.main(["revision.py", str(self.root), "--figures", str(self.reports)]), 0)
+        self.assertEqual(out.getvalue(), R.figures(self.root, self.reports))
+
+
+if __name__ == "__main__":
+    unittest.main()
