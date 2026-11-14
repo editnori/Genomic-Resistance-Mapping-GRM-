@@ -172,6 +172,9 @@ jobs:
           # A synthetic release built in the test, and the committed outputs under reference/release-summary.
           - suite: tests/release_summary
             top: .
+          # Reads the committed result under reference/learner-crosscheck; it fits nothing and needs no reference library.
+          - suite: tests/learner_crosscheck
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
