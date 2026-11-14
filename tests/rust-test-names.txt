@@ -204,6 +204,7 @@ src/lib.rs learn::eval::tests::a_learner_with_every_fold_null_predicts_each_fold
 src/lib.rs learn::eval::tests::a_move_that_empties_a_class_from_a_random_fold_fails_the_dataset
 src/lib.rs learn::eval::tests::a_path_without_a_converged_candidate_fails_with_full_context
 src/lib.rs learn::eval::tests::a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers
+src/lib.rs learn::eval::tests::a_split_that_did_not_run_keeps_no_fold_models
 src/lib.rs learn::eval::tests::a_training_prevalence_of_exactly_one_half_is_a_resistant_call
 src/lib.rs learn::eval::tests::an_empty_lasso_path_is_a_null_fit_without_a_call
 src/lib.rs learn::eval::tests::an_unconverged_final_lasso_refit_fails_with_full_context
@@ -216,6 +217,9 @@ src/lib.rs learn::eval::tests::final_model_lasso_failures_name_the_final_fit
 src/lib.rs learn::eval::tests::final_models_tune_on_the_duplicate_groups
 src/lib.rs learn::eval::tests::final_tuning_keeps_each_duplicate_group_whole
 src/lib.rs learn::eval::tests::fitted_models_are_called_even_where_they_score_exactly_one_half
+src/lib.rs learn::eval::tests::fold_models_are_written_in_the_final_models_shapes_under_dataset_rows
+src/lib.rs learn::eval::tests::fold_models_give_each_folds_saved_scores_under_dataset_row_numbers
+src/lib.rs learn::eval::tests::folds_name_the_lowest_row_among_patterns_equal_on_their_training_samples
 src/lib.rs learn::eval::tests::forest_draws_follow_the_evaluation_seed_and_fold
 src/lib.rs learn::eval::tests::held_out_labels_cannot_change_any_training_fit
 src/lib.rs learn::eval::tests::held_out_presence_cannot_change_any_training_fit
