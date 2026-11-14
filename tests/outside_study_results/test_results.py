@@ -23,6 +23,9 @@ DOCUMENT = ROOT / "docs" / "outside-study-results.md"
 SPECIES_PAGE = ROOT / "docs" / "outside-study-results-by-species.md"
 # The figures of the release the site serves, read by the section "Revision 14".
 FIGURES = ROOT / "reference" / "outside-study-figures" / "rev14-274-20261112.tsv"
+# One digest of each final model in the reports the runs pinned and in the ones the site serves.
+MODELS = ROOT / "reference" / "outside-study-models"
+PINNED_MODELS, SERVED_MODELS = MODELS / "rev12-274-20261105.tsv", MODELS / "rev14-274-20261112.tsv"
 SCORING = ROOT / "docs" / "equal-scoring.md"
 FROZEN = ROOT / "scripts" / "outside-study" / "frozen"
 KIT = "e3e1c345a55412ac8f7d07b691ebb56573d2d3d8"
@@ -57,6 +60,7 @@ def load_script(name):
 
 T = load_script("tables")
 R = load_script("revision")
+M = load_script("models")
 
 
 def tsv(path):
@@ -446,6 +450,7 @@ class Prose(Rebuilt):
         self.has(f"Here the same new estimates are read against the revision {rev} figures.")
         self.has(f"The release notes of revision {rev} say that no fold, final model or known-gene baseline differs from revision {self.pinned} in any report.")
         datasets = {d for d, _ in self.figures}
+        self.same_models(datasets)
         self.has(f"`{FIGURES.relative_to(ROOT).as_posix()}` holds the lineage-split row of each revision {rev} report read here, {len(datasets)} reports in all.")
         # Every row of every run, read or not.
         rows = [r for runs_ in self.data.values() for _, _, metrics, _ in runs_.values() for r in metrics]
@@ -478,6 +483,32 @@ class Prose(Rebuilt):
         self.has(f"On all {len(differ)} datasets the counts of `called_metrics` are the ones the runs read.")
         self.has(f"`reference/outside-study-figures/` holds the figure file of the section Revision {rev}.")
         self.has(f"A second file there holds the release's own checksum line for each of the {len(datasets)} reports, and the suite compares the two.")
+
+    def same_models(self, datasets):
+        """The sentences on the final models, from the two digest files."""
+        rev = self.revision
+        (pinned, older), (served, later) = M.load(PINNED_MODELS), M.load(SERVED_MODELS)
+        self.assertEqual((pinned, served), (self.pinned, rev))
+        self.assertEqual(({d for d, _ in older}, {d for d, _ in later}), (datasets, datasets))
+        same, differ = M.compare(older, later)
+        learners = [key for key in same if key[1] != M.KNOWN]
+        rule = [key for key in same if key[1] == M.KNOWN]
+        self.assertEqual((differ, len(same)), ([], len(older)))
+        self.assertEqual(len(M.LEARNERS), 5)
+        self.has(f"For the final models and the known-gene rule, the repository checks this on the {len(datasets)} datasets read here.")
+        self.has(f"`{MODELS.relative_to(ROOT).as_posix()}/` holds one digest of each final model in each of the two releases, for the five learners.")
+        self.has(
+            f"The digest is the same in both revisions on {len(learners)} of the {len(M.LEARNERS) * len(datasets)} pairs of a dataset and a learner, "
+            f"and the known-gene rule's is the same on {len(rule)} of the {len(datasets)} datasets."
+        )
+        self.has("The suite fails if one differs.")
+        # The runs scored the three learners a report publishes whole, and the known-gene rule.
+        scored = {r["learner"] for runs_ in self.data.values() for _, _, metrics, _ in runs_.values() for r in metrics}
+        self.assertEqual(scored & {"rf", "gbt"}, set())
+        self.has("The runs scored neither of those two.")
+        self.has("Each new estimate is therefore an estimate for a model the site serves now.")
+        self.has(f"`{MODELS.relative_to(ROOT).as_posix()}/` holds the two digest files of the section Revision {rev}, one for each release.")
+        self.has(f"the kit's pins for revision {self.pinned}, and the checksum lines above for revision {rev}.")
 
     def test_the_lasso_s_count_against_the_served_revision(self):
         rev = self.revision

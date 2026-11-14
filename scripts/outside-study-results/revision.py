@@ -87,6 +87,20 @@ def called_row(report, learner):
     return None if row is None else row.get("called_metrics")
 
 
+def admitted(reports, dataset):
+    """(report, sha256 of its file) of a dataset in an unpacked release's `datasets/` directory.
+
+    Stops on a report of another dataset, of another schema than the kit's, or
+    with an evaluation marked invalid."""
+    raw = (pathlib.Path(reports) / f"{dataset}.json").read_bytes()
+    report = json.loads(raw)
+    if report.get("id") != dataset:
+        raise SystemExit(f"{dataset}.json is the report of {report.get('id')!r}")
+    if report.get("schema") != score.REPORT_SCHEMA or report["evaluation"].get("valid") is not True:
+        raise SystemExit(f"{dataset}.json: schema {report.get('schema')!r}, evaluation valid {report['evaluation'].get('valid')!r}")
+    return report, hashlib.sha256(raw).hexdigest()
+
+
 def figures(root, reports):
     """FIGURES as text: one row for each dataset and learner of ROOT's metrics files."""
     data = tables.load(pathlib.Path(root))
@@ -97,12 +111,8 @@ def figures(root, reports):
     loaded = report = digest = None
     for dataset, learner in wanted:
         if dataset != loaded:
-            raw = (pathlib.Path(reports) / f"{dataset}.json").read_bytes()
-            loaded, report, digest = dataset, json.loads(raw), hashlib.sha256(raw).hexdigest()
-            if report.get("id") != dataset:
-                raise SystemExit(f"{dataset}.json is the report of {report.get('id')!r}")
-            if report.get("schema") != score.REPORT_SCHEMA or report["evaluation"].get("valid") is not True:
-                raise SystemExit(f"{dataset}.json: schema {report.get('schema')!r}, evaluation valid {report['evaluation'].get('valid')!r}")
+            report, digest = admitted(reports, dataset)
+            loaded = dataset
         ref, note = score.reference_row(report, "lineage", learner)
         called = called_row(report, learner)
         w.writerow(

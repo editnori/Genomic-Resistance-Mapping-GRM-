@@ -338,7 +338,7 @@ The same-study genomes of the datasets with estimates in both populations, by th
 
 The site has served evaluation revision 14 since 13 Nov 2026. The runs of record pinned the revision 12 reports. Here the same new estimates are read against the revision 14 figures. Nothing was run again, and each new estimate and interval is the run's.
 
-**Same models.** The release notes of revision 14 say that no fold, final model or known-gene baseline differs from revision 12 in any report. Each new estimate is therefore an estimate for a model the site serves now. `reference/outside-study-figures/rev14-274-20261112.tsv` holds the lineage-split row of each revision 14 report read here, 97 reports in all. For the set covering machine, the decision tree and the known-gene rule, every row has the counts the runs read.
+**Same models.** The release notes of revision 14 say that no fold, final model or known-gene baseline differs from revision 12 in any report. For the final models and the known-gene rule, the repository checks this on the 97 datasets read here. `reference/outside-study-models/` holds one digest of each final model in each of the two releases, for the five learners. The digest is the same in both revisions on 485 of the 485 pairs of a dataset and a learner, and the known-gene rule's is the same on 97 of the 97 datasets. The suite fails if one differs. A digest covers every field a report publishes for the model. For the forest and the boosted trees a report publishes their largest importances and no tree, so their digests cover the importances only. The runs scored neither of those two. Each new estimate is therefore an estimate for a model the site serves now. No check in the repository covers the folds. `reference/outside-study-figures/rev14-274-20261112.tsv` holds the lineage-split row of each revision 14 report read here, 97 reports in all. For the set covering machine, the decision tree and the known-gene rule, every row has the counts the runs read.
 
 **The lasso's figure.** Revision 14 scores a null fit, a cross-validation fold where the lasso keeps no weight ([equal-scoring.md](equal-scoring.md)). From revision 7 to revision 13 that fold's genomes had no call and stayed out of the figure. Revision 14 scores each of them at the fold's training share of resistant genomes and calls it at the usual cutoff. The runs scored the lasso on 33 of the 97 datasets, and its lineage-split counts differ on 8 of them.
 
@@ -480,6 +480,13 @@ The second and third commands exit 1 unless a page's tables are exactly what the
 ```sh
 python3 -I scripts/outside-study-results/revision.py reference/outside-study reference/outside-study-figures/rev14-274-20261112.tsv
 python3 -I scripts/outside-study-results/revision.py reference/outside-study reference/outside-study-figures/rev14-274-20261112.tsv --check docs/outside-study-results.md
+```
+
+`reference/outside-study-models/` holds the two digest files of the section Revision 14, one for each release. Its README names the releases, the command that wrote the files and what a digest covers. The suite compares the two files. It also compares each file's report hashes with hashes the repository already holds: the kit's pins for revision 12, and the checksum lines above for revision 14. The repository does not hold the reports, so the suite cannot take a digest again from its report. The second command does that where a release is unpacked, with `R` its directory:
+
+```sh
+python3 -I scripts/outside-study-results/models.py reference/outside-study-models/rev12-274-20261105.tsv reference/outside-study-models/rev14-274-20261112.tsv
+python3 -I scripts/outside-study-results/models.py reference/outside-study-models/rev14-274-20261112.tsv --reports "$R/datasets"
 ```
 
 Two counts are outside that rule: the 46 files and the 79 FASTA files of the *S. aureus* repeat. They come from the run logs, which this repository does not hold, and the suite lists them as such.
