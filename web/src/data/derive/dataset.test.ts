@@ -117,7 +117,7 @@ describe("words", () => {
   it("places a feature by codon range or by its nearest gene", () => {
     expect(featurePlace(card({ gene: "gyrA", codons: [83, 87] }))).toBe("gyrA codons 83–87");
     expect(featurePlace(card({ gene: "gyrA", codons: [83, 83] }))).toBe("gyrA codon 83");
-    expect(featurePlace(card({ nearest: ["mgrB", 46] }))).toBe("intergenic, 46 bp from mgrB");
+    expect(featurePlace(card({ nearest: ["mgrB", 46] }))).toBe("outside protein-coding genes, 46 bp from mgrB");
     expect(featurePlace(card(null))).toBeNull();
   });
 
@@ -126,11 +126,11 @@ describe("words", () => {
     expect(termLabel(card({ gene: "mgrB", codons: [3, 12] }), 12)).toBe("mgrB");
     // Outside every gene the locus names the nearest one, and the term says so.
     const outside = card({ gene: "mgrB", product: "PhoP/PhoQ regulator MgrB", nearest: ["mgrB", 46] });
-    expect(termLabel(outside, 12)).toBe("k-mers 46 bp from the nearest annotated gene, mgrB");
-    expect(termLabel(card({ product: "hypothetical protein", nearest: ["hypothetical protein", -2502] }), 12)).toBe("k-mers 2,502 bp from the nearest annotated gene, hypothetical protein");
+    expect(termLabel(outside, 12)).toBe("k-mers 46 bp from the nearest annotated protein-coding gene, mgrB");
+    expect(termLabel(card({ product: "hypothetical protein", nearest: ["hypothetical protein", -2502] }), 12)).toBe("k-mers 2,502 bp from the nearest annotated protein-coding gene, hypothetical protein");
     const features = new Map([[12, outside]]);
-    expect(ruleWords({ feature: 12, presence: true }, features)).toBe("Presence of k-mers 46 bp from the nearest annotated gene, mgrB");
-    expect(ruleWords({ feature: 12, presence: false }, features)).toBe("Absence of k-mers 46 bp from the nearest annotated gene, mgrB");
+    expect(ruleWords({ feature: 12, presence: true }, features)).toBe("Presence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB");
+    expect(ruleWords({ feature: 12, presence: false }, features)).toBe("Absence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB");
     // A catalog family is named wherever the k-mers sit; no name leaves the number.
     expect(termLabel(card({ gene: "tnpA", nearest: ["tnpA", 120] }, ["blaKPC"]), 12)).toBe("blaKPC");
     expect(termLabel(card({ nearest: ["", 9] }), 12)).toBe("k-mer feature 12");
@@ -138,7 +138,7 @@ describe("words", () => {
     expect(termLabel(undefined, 12)).toBe("k-mer feature 12");
     // A table that prints the place in its own column keeps the short name.
     expect(featureLabel(outside, 12)).toBe("mgrB");
-    expect(featureWhere(outside, 12)).toBe("intergenic, 46 bp from mgrB");
+    expect(featureWhere(outside, 12)).toBe("outside protein-coding genes, 46 bp from mgrB");
   });
 
   it("counts a tied rule term among the features that separate the isolates equally well", () => {
@@ -218,7 +218,7 @@ describe("words", () => {
     expect(familiesNamed("absence of k-mers matching 12 catalog families (a, b); blaNDM counts for this drug's known-gene rule, but ble does not")).toBe(12);
     expect(familiesNamed("presence of blaKPC")).toBeNull();
     expect(familiesNamed("presence of blaKPC; blaKPC counts for this drug's known-gene rule")).toBeNull();
-    expect(familiesNamed("presence of k-mers 46 bp from the nearest annotated gene, mgrB")).toBeNull();
+    expect(familiesNamed("presence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB")).toBeNull();
     expect(familiesNamed("presence of feature 4")).toBeNull();
     expect(SEVERAL_FAMILIES_NOTE).toBe("Not a list of genes an isolate carries: one k-mer pattern matches all of these families.");
   });

@@ -273,7 +273,8 @@ export interface Locus {
   patric_id: string | null;
   gene_strand: string | null;
   codons: [number, number] | null;
-  /** [gene or product, signed distance in bp] when intergenic. */
+  /** [gene or product, signed distance in bp] when the span lies in no
+   *  protein-coding gene; no other kind of gene is read. */
   nearest: [string, number] | null;
   /** Contig sequence around the span; the span itself is uppercase. */
   context: string;

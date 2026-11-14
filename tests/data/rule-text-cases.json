@@ -3,7 +3,7 @@
  "rule_text_version": 3,
  "cases": {
   "outside_the_named_gene": {
-   "why": "Feature 1 lies inside mgrB (it has codons). Feature 2 lies in no gene, 46 bp from mgrB. Feature 3 lies 2,502 bp before a gene known by its product only. Feature 4 has a nearest gene with no name, so it keeps its number. Feature 5 matches a catalog family and keeps the family, wherever it sits.",
+   "why": "Feature 1 lies inside mgrB (it has codons). Feature 2 lies in no protein-coding gene, 46 bp from mgrB; the report holds coding genes only, so the words name that kind. Feature 3 lies 2,502 bp before a gene known by its product only. Feature 4 has a nearest gene with no name, so it keeps its number. Feature 5 matches a catalog family and keeps the family, wherever it sits.",
    "report": {
     "features": [
      {
@@ -105,8 +105,8 @@
    },
    "scm_rules": [
     "presence of mgrB",
-    "presence of k-mers 46 bp from the nearest annotated gene, mgrB",
-    "absence of k-mers 2,502 bp from the nearest annotated gene, hypothetical protein",
+    "presence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB",
+    "absence of k-mers 2,502 bp from the nearest annotated protein-coding gene, hypothetical protein",
     "presence of feature 4",
     "presence of blaKPC"
    ]
@@ -202,7 +202,7 @@
    "scm_rules": [
     "presence of blaKPC; one of 4 features that separate these isolates equally well",
     "presence of k-mers matching 2 catalog families (blaNDM, ble); one of 2 features that separate the isolates the earlier rules left undecided equally well",
-    "absence of k-mers 77 bp from the nearest annotated gene, ompK36; one of 21,524 features that separate the isolates the earlier rules left undecided equally well",
+    "absence of k-mers 77 bp from the nearest annotated protein-coding gene, ompK36; one of 21,524 features that separate the isolates the earlier rules left undecided equally well",
     "presence of gyrA",
     "absence of gyrA"
    ]

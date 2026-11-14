@@ -34,9 +34,10 @@ pub const SCHEMA: u32 = 2;
 ///   through evaluation revision 12; their index has no version field.
 /// - 2: a term names every catalog family its feature matches, after their
 ///   count (commit `3dde728`). Release rev14-274-20261112; no version field.
-/// - 3: a term also says how far its k-mers sit from the gene it is named
-///   after when they sit outside it, whether a named family's gene groups
-///   count for this drug's known-gene rule, and how many features tie it.
+/// - 3: a term also says how far its k-mers sit from the protein-coding
+///   gene it is named after when they sit outside it, whether a named
+///   family's gene groups count for this drug's known-gene rule, and how
+///   many features tie it. Not yet in a release.
 pub const RULE_TEXT_VERSION: u32 = 3;
 
 /// Replace a complete file so a dashboard request cannot read partial JSON.
@@ -293,10 +294,13 @@ fn grouped(n: u64) -> String {
 }
 
 /// The words a rule term's feature goes by: its catalog families, else the
-/// annotated gene or product its k-mers lie in, else its number. When the
-/// k-mers lie in no annotated gene of the reference contig, the locus names
-/// the nearest one (`Locus::nearest`), and the words say so with the
-/// distance, so the term does not read like one inside that gene. The web
+/// annotated gene or product its k-mers lie in, else its number. GRM reads
+/// the reference genome's protein-coding genes only (`bvbrc::fetch_features`
+/// asks for CDS features), so "gene" here never means an rRNA, tRNA or other
+/// RNA gene. When the k-mers lie in no annotated protein-coding gene of the
+/// reference contig, the locus names the nearest one (`Locus::nearest`), and
+/// the words say so with the distance, so the term does not read like one
+/// inside that gene, or like one that lies in no gene of any kind. The web
 /// app builds the same words in `termLabel`.
 fn term_label(card: Option<&Value>, id: u64) -> String {
     card.and_then(|f| {
@@ -311,7 +315,7 @@ fn term_label(card: Option<&Value>, id: u64) -> String {
                 .or_else(|| locus["product"].as_str())?;
             Some(match locus["nearest"][1].as_i64() {
                 Some(d) if locus["codons"].is_null() => format!(
-                    "k-mers {} bp from the nearest annotated gene, {name}",
+                    "k-mers {} bp from the nearest annotated protein-coding gene, {name}",
                     grouped(d.unsigned_abs())
                 ),
                 _ => name.to_string(),
@@ -1896,11 +1900,11 @@ mod tests {
         assert_eq!(words[0], "presence of mgrB");
         assert_eq!(
             words[1],
-            "presence of k-mers 46 bp from the nearest annotated gene, mgrB"
+            "presence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB"
         );
         assert_eq!(
             words[2],
-            "absence of k-mers 2,502 bp from the nearest annotated gene, hypothetical protein"
+            "absence of k-mers 2,502 bp from the nearest annotated protein-coding gene, hypothetical protein"
         );
         assert_eq!(words[3..], ["presence of feature 4", "presence of blaKPC"]);
         assert_eq!(grouped(0), "0");

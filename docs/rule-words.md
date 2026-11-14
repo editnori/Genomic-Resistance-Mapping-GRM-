@@ -21,9 +21,11 @@ The index writes a term as up to three clauses, joined by `; `. The app's `index
 
 1. **The name.** `presence of` or `absence of`, then the first of these that applies:
    - the catalog family the k-mers match, or `k-mers matching N catalog families (…)` when they match several;
-   - `k-mers N bp from the nearest annotated gene, NAME` when the k-mers lie in no annotated gene of the reference contig;
+   - `k-mers N bp from the nearest annotated protein-coding gene, NAME` when the k-mers lie in no annotated protein-coding gene of the reference contig;
    - the gene, or else the product, the k-mers lie in;
    - `feature N` when nothing is named.
+
+   "Gene" here means a protein-coding gene. `grm` reads only the coding genes of the reference genome's annotation (`fetch_features` in `src/bvbrc.rs` asks for CDS features), so a term worded by its distance can still lie in an rRNA, tRNA or other RNA gene, and the words claim nothing about those. For the same reason the inspector gives such a term's place as `outside protein-coding genes, N bp from NAME`, not as intergenic.
 2. **The drug's rule.** For a term that names catalog families: which of their gene groups count for this drug's known-gene rule and which do not, for example `blaNDM counts for this drug's known-gene rule, but ble does not`. The clause reads the report's own gene-group rows, which exist only for groups found in the dataset's genomes. A family with no row is left out, and a report without a catalog block gets no clause. The words then say nothing; they do not guess.
 3. **Ties.** `one of N features that separate these isolates equally well` when other features have the same covered and lost counts at the term's greedy step. For a later term the isolates are the ones the earlier rules left undecided, and the words say so.
 
@@ -37,7 +39,7 @@ The wording has changed without a change to the models, so the index numbers it 
 | --- | --- | --- |
 | 1 | A term names one catalog family, the first in byte order | through evaluation revision 12; the index has no version field |
 | 2 | A term names every catalog family its feature matches, after their count | `rev14-274-20261112`; the index has no version field |
-| 3 | A term also gives its place outside a gene, the drug's rule and its ties, as above | the next release |
+| 3 | A term also gives its place outside a protein-coding gene, the drug's rule and its ties, as above | the next release |
 
 A count of rule terms by the kind of gene they name is read from these words, so it holds for one wording only. Text that gives such a count names the evaluation revision and the wording version it read. The Methods page prints both under the set covering machine.
 

@@ -33,13 +33,16 @@ const NOTE = "Not a list of genes an isolate carries: one k-mer pattern matches 
 const CAVEAT = "A rule names k-mers that separate the lab calls in these isolates; they can travel with the cause on a plasmid or in a lineage without being the cause.";
 
 describe("a rule term's place", () => {
-  it("heads a rule whose k-mers sit outside every gene with their distance from the nearest one", () => {
+  it("heads a rule whose k-mers sit outside every protein-coding gene with their distance from the nearest one", () => {
     const outside = withCard((c) => ({ ...c, catalog_families: [], locus: { ...c.locus!, gene: "mgrB", product: "PhoP/PhoQ regulator MgrB", codons: null, nearest: ["mgrB", 46] } }));
     const page = render(outside);
-    expect(page).toContain(`Rule 1${base.models.scm.rules[0]!.presence ? "Presence" : "Absence"} of k-mers 46 bp from the nearest annotated gene, mgrB`);
+    expect(page).toContain(`Rule 1${base.models.scm.rules[0]!.presence ? "Presence" : "Absence"} of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB`);
+    // The place beneath the heading names the kind of gene too, and never says intergenic.
+    expect(page).toContain("outside protein-coding genes, 46 bp from mgrB");
+    expect(page).not.toContain("intergenic");
     const inside = withCard((c) => ({ ...c, catalog_families: [], locus: { ...c.locus!, gene: "mgrB", product: "PhoP/PhoQ regulator MgrB", codons: [3, 12], nearest: null } }));
     expect(render(inside)).toContain(`Rule 1${base.models.scm.rules[0]!.presence ? "Presence" : "Absence"} of mgrB`);
-    expect(render(inside)).not.toContain("from the nearest annotated gene");
+    expect(render(inside)).not.toContain("from the nearest annotated");
   });
 });
 

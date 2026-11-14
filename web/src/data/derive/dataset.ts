@@ -134,7 +134,10 @@ export const featureLabel = (card: FeatureCard | undefined, id: number): string 
   (card === undefined ? null : familyLabel(card.catalog_families)) ?? card?.locus?.gene ?? card?.locus?.product ?? `k-mer feature ${id}`;
 
 /** Where the feature sits: codon range inside a gene, or the distance to
- *  the nearest gene when intergenic. Null without a placed locus. */
+ *  the nearest gene when it lies in none. The report holds protein-coding
+ *  genes only, so the words say that and not "intergenic": the k-mers may
+ *  still lie in an rRNA, tRNA or other RNA gene. Null without a placed
+ *  locus. */
 export const featurePlace = (card: FeatureCard | undefined): string | null => {
   const locus = card?.locus;
   if (locus === null || locus === undefined) return null;
@@ -144,20 +147,22 @@ export const featurePlace = (card: FeatureCard | undefined): string | null => {
     const span = a === b ? `codon ${int(a)}` : `codons ${int(a)}–${int(b)}`;
     return gene === null ? span : `${gene} ${span}`;
   }
-  if (locus.nearest !== null) return `intergenic, ${int(Math.abs(locus.nearest[1]))} bp from ${locus.nearest[0]}`;
+  if (locus.nearest !== null) return `outside protein-coding genes, ${int(Math.abs(locus.nearest[1]))} bp from ${locus.nearest[0]}`;
   return null;
 };
 
-/** The words for k-mers that lie in no annotated gene of the reference
- *  contig: the locus then names the nearest one, and the words give the
- *  distance, so a term does not read like one inside that gene. Null when
- *  the k-mers lie inside a gene, or no gene is named. */
+/** The words for k-mers that lie in no annotated protein-coding gene of
+ *  the reference contig: the locus then names the nearest one, and the words
+ *  give the distance, so a term does not read like one inside that gene.
+ *  `grm` reads coding genes only, so the words name that kind and claim
+ *  nothing of RNA genes. Null when the k-mers lie inside a gene, or no gene
+ *  is named. */
 const outsideWords = (card: FeatureCard | undefined): string | null => {
   const locus = card?.locus;
   if (locus === null || locus === undefined) return null;
   const name = locus.gene ?? locus.product;
   if (name === null || locus.codons !== null || locus.nearest === null) return null;
-  return `k-mers ${int(Math.abs(locus.nearest[1]))} bp from the nearest annotated gene, ${name}`;
+  return `k-mers ${int(Math.abs(locus.nearest[1]))} bp from the nearest annotated protein-coding gene, ${name}`;
 };
 
 /** The words a rule term's feature goes by, as `grm report` writes them
