@@ -243,19 +243,20 @@ describe("continuation slides", () => {
     expect(labels.filter((t) => t.includes("Input settings against the default"))).toEqual([1, 2, 3, 4, 5, 6, 7].map((k) => expect.stringContaining(`(${k} of 7)`)));
   });
 
-  it("says on the rule slide what a list of families is, which gene groups GRM's known-gene rule for the drug uses, and how many features tie the rule", async () => {
+  it("says on the rule slide what a list of families is, which gene groups GRM's known-gene rule for the drug uses, how many features tie the rule, and how far a rule outside a gene lies from the nearest one", async () => {
     motion(true);
     restore = layout({ height: 2000 });
     // The synthetic fixture's showcase report under a new id, so the deck
     // fetches it afresh, with its first rule's card, its gene-group rows and
     // its ties set by hand, and a score that keeps it the showcase.
     const pick = ruleDataset(base)!;
-    type Raw = { id: string; features: { feature: number; catalog_families: string[] }[]; models: { scm: { rules: { feature: number }[]; steps: { n_equivalent: number }[] } }; catalog: { groups: unknown[] } | null };
+    type Card = { feature: number; catalog_families: string[]; locus: { gene: string | null; product: string | null; codons: [number, number] | null; nearest: [string, number] | null } | null };
+    type Raw = { id: string; features: Card[]; models: { scm: { rules: { feature: number; presence: boolean }[]; steps: { n_equivalent: number }[] } }; catalog: { groups: unknown[] } | null };
     const group = (name: string, counts: boolean) => ({ group: name, class: "BETA-LACTAM", subclass: "CARBAPENEM", n_resistant: 1, n_susceptible: 1, counts_for_rule: counts });
-    const slide = async (id: string, ties: number) => {
+    const slide = async (id: string, ties: number, change: (card: Card) => void = (card) => (card.catalog_families = ["blaNDM", "ble"])) => {
       const raw = structuredClone(fixtureFile(`/data/datasets/${pick.row.id}.json`)) as Raw;
       raw.id = id;
-      raw.features.find((f) => f.feature === raw.models.scm.rules[0]!.feature)!.catalog_families = ["blaNDM", "ble"];
+      change(raw.features.find((f) => f.feature === raw.models.scm.rules[0]!.feature)!);
       raw.models.scm.steps[0]!.n_equivalent = ties;
       raw.catalog = { ...(raw.catalog ?? { version: "2026-08-14.1", rule: [["S:CARBAPENEM"]], metrics: pick.row.catalog }), groups: [group("blaNDM", true), group("ble", false)] } as Raw["catalog"];
       const learners = pick.row.learners.map((l) => (l.learner === "scm" && l.random !== null ? { ...l, random: { ...l.random, balanced_accuracy: 0.9999 } } : l));
@@ -277,6 +278,20 @@ describe("continuation slides", () => {
     const untied = await slide("rule-words-untied", 0);
     expect(untied).toContain("Known-gene catalog families blaNDM, ble.");
     expect(untied).not.toContain("equally well");
+    expect(untied).toContain("of k-mers matching 2 catalog families (blaNDM, ble)");
+    act(() => root?.unmount());
+    root = null;
+    document.body.innerHTML = "";
+    // A first rule whose k-mers lie in no protein-coding gene: the heading words it as the index and the
+    // inspector do, by the distance from the nearest one, and never as the bare name of that gene.
+    const outside = await slide("rule-words-outside", 0, (card) => {
+      card.catalog_families = [];
+      expect(card.locus).not.toBeNull();
+      Object.assign(card.locus!, { gene: "mgrB", codons: null, nearest: ["mgrB", -46] });
+    });
+    expect(outside).toMatch(/(Presence|Absence) of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB/);
+    expect(outside).not.toMatch(/(Presence|Absence) of mgrB/);
+    expect(outside).toContain("outside protein-coding genes, 46 bp from mgrB");
   });
 
   it("moves the rule's sequence onto its own slide only when the two do not fit together", async () => {

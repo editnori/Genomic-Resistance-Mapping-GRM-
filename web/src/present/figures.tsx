@@ -6,7 +6,7 @@
 // next slide, so nothing opens a second dialog and nothing scrolls.
 import type { CatalogRow, Manifest } from "../data/schema";
 import { datasetTitle, int, pct } from "../data/format";
-import { familyNotes, featureIndex, featureLabel, featurePlace, tieWords } from "../data/derive/dataset";
+import { familyNotes, featureIndex, featurePlace, ruleWords, tieWords } from "../data/derive/dataset";
 import { loadErrorText, useDataset } from "../data/load";
 import { PanelState } from "../ui/primitives";
 import { Seq } from "../ui/Seq";
@@ -51,9 +51,9 @@ export const RuleFigure = ({ manifest, page = 0, pages }: { manifest: Manifest; 
       <p className="text-note text-muted-text">
         {datasetTitle(r)} · rule 1 of {r.models.scm.rules.length}
       </p>
-      <p className="mt-2 break-words text-headline font-semibold text-ink">
-        {rule.presence ? "Presence" : "Absence"} of {featureLabel(card, rule.feature)}
-      </p>
+      {/* The rule as the inspector words it (ruleWords, the index's termLabel): k-mers that lie in no
+          protein-coding gene are named by their distance from the nearest one, not by its bare name. */}
+      <p className="mt-2 break-words text-headline font-semibold text-ink">{ruleWords(rule, cards)}</p>
       {card.catalog_families.length === 0 ? null : (
         <p className="mt-2 text-note text-muted-text">
           Known-gene catalog {card.catalog_families.length === 1 ? "family" : "families"} {card.catalog_families.join(", ")}
