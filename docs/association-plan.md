@@ -436,3 +436,23 @@ Each passage quoted above was read in the full text or, where marked, the abstra
 - A pattern in fewer than 16 resistant genomes cannot pass. An empty scan says little about markers of that size.
 - One species, one drug, one cohort. No replication set exists today.
 - Bonferroni over 2,288,621 correlated tests is conservative, so a pattern that does not pass has not been shown to be unassociated.
+
+## Amendment 1, 14 Nov 2026
+
+This was added before any run under the plan read an association statistic. The text above stays as written. A review of the pull request that adds the plan found the error.
+
+**The design floor is the exact test's alone.** Section 5's table is right for the unadjusted exact two-sided test. Two sentences that lean on it are withdrawn. Section 5 says "A marker in fewer resistant genomes than that cannot pass, whatever it marks. The mixed model needs more." Section 16 says "A pattern in fewer than 16 resistant genomes cannot pass." Neither holds for the plan's own tests. M0 of section 3 is ordinary least squares with an F statistic, and it passes the threshold one or two genomes sooner, so the exact test's table overstates what a marker needs:
+
+| Susceptible genomes with the marker | Fewest resistant genomes, exact test | Fewest resistant genomes, M0 | M0's F at that count | M0's p at that count |
+|---:|---:|---:|---:|---:|
+| 0 | 16 | 15 | 33.18 | 1.095e-08 |
+| 1 | 18 | 17 | 33.69 | 8.527e-09 |
+| 5 | 24 | 22 | 31.94 | 2.043e-08 |
+| 10 | 30 | 28 | 32.23 | 1.761e-08 |
+| 20 | 40 | 38 | 32.42 | 1.603e-08 |
+
+The M0 column is arithmetic on the class counts, as section 5's table is. Of the 1,070 genomes, 343 are resistant and 727 susceptible. r² comes from the 2 by 2 table, F = r² (n − 2) / (1 − r²), and p is the upper tail of F with 1 and 1,068 degrees of freedom. A second script, written apart from the plan's, gave the exact test's column again.
+
+**M1 has no floor fixed here.** M1 allows h² = 0, and there it is M0. With h² above 0 its smallest passing marker depends on K and on which genomes hold the marker, so no count can be given before the run.
+
+**Reading an empty scan.** Section 12 already reads an empty scan against the synthetic markers of section 7, and that stays. A run quotes the exact test's column only with its test named, beside the M0 column, and gives neither as a floor for M1.
