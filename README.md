@@ -38,7 +38,7 @@ Read each learner's figures with their split and their evaluation revision. The 
 
 [Givens](https://github.com/editnori/givens) is a provisional shared browser of the definitions and assumptions that four projects use: GRM, SigDrug, KSD and CondEvent. Its repository is private for now. GRM's entries there cover evaluation terms only: dataset, split, evaluation revision, report figure, and how a figure reads on newly deposited genomes. They hold no sequence or gene content.
 
-The GRM entries are written by hand from this repository's documents at a named commit. GRM exports nothing to Givens and reads nothing from it when it runs. No repository reads from Givens today.
+GRM writes its entries to `reference/givens-export/grm.json` with `scripts/givens-export/export.py` ([docs/givens-export.md](docs/givens-export.md)). Each count there is read from a committed summary file or quoted from a document of this repository, and an entry GRM has not counted says so. Until Givens takes this file in, it shows entries written by hand. GRM reads nothing from Givens when it runs.
 
 ## Setup
 

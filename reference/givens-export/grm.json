@@ -1,0 +1,1069 @@
+{
+  "format": "grm-givens-export/1",
+  "id": "grm",
+  "namespace": "grm",
+  "name": "GRM",
+  "job": "Measures how well a genome predicts a laboratory susceptibility result. Only its evaluation terms, the assumptions a report figure rests on and aggregate counts are exported.",
+  "repo": "editnori/Genomic-Resistance-Mapping-GRM-",
+  "release": "data-rev14-274-20261112",
+  "binding": "typed_export",
+  "binding_note": "Written by GRM's scripts/givens-export/export.py from the repository's documents and committed summary files. Each count is read from a committed file or quoted from a document, and an entry GRM has not counted says so. The file names no dataset, species, antibiotic, sequence, variant or gene. GRM reads nothing from Givens.",
+  "sources": {
+    "program": "scripts/givens-export/export.py",
+    "spec": "scripts/givens-export/spec.json",
+    "files": [
+      {
+        "path": "reference/release-summary/rev12-274-20261105/guidance.json",
+        "sha256": "f0c0e4e99759b1a7b0b846e23948369adacb21d06b56f63233f1202c14bee55e"
+      },
+      {
+        "path": "reference/release-summary/rev12-274-20261105/index-counts.json",
+        "sha256": "7ce1ea63fb4a89abc8d39ed1991e47c467bc14057e9341cf17e61f9612b6e5fe"
+      },
+      {
+        "path": "reference/release-summary/rev12-274-20261105/summary.json",
+        "sha256": "c9de54d7987b891696ec5711bcaa4e677c11620ff729ffdb01a96cf1a9f0443d"
+      },
+      {
+        "path": "reference/release-summary/rev14-274-20261112/guidance.json",
+        "sha256": "abce2c7c4c5bf940606e747543eded4771a939715a4fdfd7f0bdc9190b6ce14f"
+      },
+      {
+        "path": "reference/release-summary/rev14-274-20261112/index-counts.json",
+        "sha256": "b0352b81ddf10dc3f5abaaea39baa1870c3bc54f93f8972603728e30b1d17d52"
+      },
+      {
+        "path": "reference/release-summary/rev14-274-20261112/summary.json",
+        "sha256": "7dfc2108b8e8853c438cd2e475703cd185c748bd7d03186c2aff71aced3282db"
+      },
+      {
+        "path": "web/src/data/outside-study.json",
+        "sha256": "f99962010afa0624915f2272fc20c3dbb675c6b643968d4a8fd3beedbfdec9fc"
+      }
+    ],
+    "documents": [
+      "README.md",
+      "docs/duplicate-isolation.md",
+      "docs/equal-scoring.md",
+      "docs/outside-study-results.md",
+      "docs/outside-study-test.md"
+    ]
+  },
+  "nodes": [
+    {
+      "id": "grm:dataset",
+      "kind": "concept",
+      "label": "Dataset",
+      "definition": "One species with one antibiotic, and the genomes that have a reported laboratory call for it.",
+      "source": "README.md",
+      "quotes": [
+        {
+          "path": "README.md",
+          "quote": "A dataset is one species and one antibiotic."
+        }
+      ],
+      "measured": [
+        {
+          "count": 274,
+          "of": 277,
+          "what": "curated datasets that have a report in the release the site serves",
+          "source": "README.md",
+          "basis": "document",
+          "evaluation_revision": 14,
+          "quote": "Of its 277 curated datasets, 274 have a report and 3 have none, because one class is under the minimum of 25 genomes."
+        }
+      ]
+    },
+    {
+      "id": "grm:report_figure",
+      "kind": "measure",
+      "label": "Report figure",
+      "definition": "A learner's sensitivity, specificity, balanced accuracy, very major error rate or major error rate from cross-validation, as a dataset report states it.",
+      "source": "docs/outside-study-results.md; README.md",
+      "quotes": [
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "Each dataset report gives a learner's sensitivity and specificity from cross-validation on the cohort."
+        },
+        {
+          "path": "README.md",
+          "quote": "The headline learner has the best random-split balanced accuracy (the mean of sensitivity and specificity) among learners scored on every isolate on every split that ran"
+        },
+        {
+          "path": "README.md",
+          "quote": "a two-sided 95% Clopper-Pearson (exact binomial) interval for VME, over the resistant isolates the row called"
+        }
+      ],
+      "measured": [
+        {
+          "count": 0,
+          "of": 6424,
+          "what": "error-rate counts in the release's interval files that differ from the count rebuilt from the released index",
+          "source": "reference/release-summary/rev14-274-20261112/index-counts.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "reference/release-summary/rev14-274-20261112/index-counts.json#/mismatches",
+            "of": "reference/release-summary/rev14-274-20261112/index-counts.json#/rates_compared"
+          }
+        }
+      ]
+    },
+    {
+      "id": "grm:split",
+      "kind": "concept",
+      "label": "Split",
+      "definition": "How a dataset's genomes are divided into folds for cross-validation. Each learner is cross-validated on two splits.",
+      "source": "README.md",
+      "quotes": [
+        {
+          "path": "README.md",
+          "quote": "Each learner is cross-validated on two splits."
+        }
+      ],
+      "measured": []
+    },
+    {
+      "id": "grm:split/random",
+      "kind": "state",
+      "label": "Random split",
+      "definition": "Stratified 5-fold cross-validation, with each fold keeping the dataset's mix of resistant and susceptible genomes.",
+      "source": "README.md",
+      "quotes": [
+        {
+          "path": "README.md",
+          "quote": "The random split is stratified 5-fold cross-validation, the scheme most published numbers use, with each fold keeping the dataset's R/S mix."
+        }
+      ],
+      "measured": [
+        {
+          "count": 274,
+          "of": 274,
+          "what": "datasets whose report has a random split",
+          "source": "reference/release-summary/rev14-274-20261112/guidance.json; reference/release-summary/rev14-274-20261112/summary.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "reference/release-summary/rev14-274-20261112/guidance.json#/rows/scm:random/n",
+            "of": "reference/release-summary/rev14-274-20261112/summary.json#/datasets"
+          }
+        }
+      ]
+    },
+    {
+      "id": "grm:split/lineage",
+      "kind": "state",
+      "label": "Lineage split",
+      "definition": "Folds that hold out whole lineage clusters, so a test genome has no near-identical relative in training. It is the stricter of the two splits.",
+      "source": "README.md; docs/outside-study-results.md",
+      "quotes": [
+        {
+          "path": "README.md",
+          "quote": "The lineage split holds out whole lineage clusters, so a test genome has no near-identical relative in training"
+        },
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "The lineage split is the stricter of the two splits, because it holds out whole lineages."
+        }
+      ],
+      "measured": [
+        {
+          "count": 268,
+          "of": 274,
+          "what": "datasets whose report has a lineage split",
+          "source": "reference/release-summary/rev14-274-20261112/summary.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "reference/release-summary/rev14-274-20261112/summary.json#/best/n_both",
+            "of": "reference/release-summary/rev14-274-20261112/summary.json#/datasets"
+          }
+        }
+      ]
+    },
+    {
+      "id": "grm:duplicate_group",
+      "kind": "concept",
+      "label": "Duplicate group",
+      "definition": "The genomes of one dataset that have the same k-mer set. From revision 10 the random split keeps each group whole in one test fold.",
+      "source": "docs/duplicate-isolation.md",
+      "quotes": [
+        {
+          "path": "docs/duplicate-isolation.md",
+          "quote": "From revision 10, the random split keeps each group of k-mer-identical genomes whole in one outer test fold"
+        }
+      ],
+      "measured": []
+    },
+    {
+      "id": "grm:evaluation_revision",
+      "kind": "concept",
+      "label": "Evaluation revision",
+      "definition": "The numbered version of the scoring rules a report was computed under. A figure is read with its split and its revision.",
+      "source": "README.md",
+      "quotes": [
+        {
+          "path": "README.md",
+          "quote": "Read each learner's figures with their split and their evaluation revision."
+        }
+      ],
+      "measured": []
+    },
+    {
+      "id": "grm:outside_population",
+      "kind": "concept",
+      "label": "Outside-study population",
+      "definition": "Newly deposited genomes from the same database, scored by a report's final model, unchanged. It is a retrospective test on newly deposited studies from the same database, and it is no external validation.",
+      "source": "docs/outside-study-results.md",
+      "quotes": [
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "This is the result of a retrospective test on newly deposited studies from the same database."
+        },
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "The test is not a lockbox, and it is not external validation."
+        }
+      ],
+      "measured": []
+    },
+    {
+      "id": "grm:outside_population/primary",
+      "kind": "state",
+      "label": "Studies the cohort does not hold",
+      "definition": "New genomes from studies the cohort does not hold. The plan's first population.",
+      "source": "docs/outside-study-results.md",
+      "quotes": [
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "The test asks whether the lineage-split figures hold when the report's final model is applied, unchanged, to genomes from studies the cohort does not hold."
+        }
+      ],
+      "measured": [
+        {
+          "count": 81,
+          "of": 82,
+          "what": "datasets of the population that can be read against a report figure",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population primary, learner scm, that are read",
+            "of": "web/src/data/outside-study.json: datasets of population primary"
+          }
+        },
+        {
+          "count": 7258,
+          "of": 7258,
+          "what": "genomes scored, of the genomes the population froze",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: genomes scored of population primary",
+            "of": "web/src/data/outside-study.json: genomes frozen of population primary"
+          }
+        },
+        {
+          "count": 7,
+          "of": null,
+          "what": "species in the population",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: species of population primary"
+          },
+          "note": "A total with no denominator. The export names no species."
+        }
+      ]
+    },
+    {
+      "id": "grm:outside_population/same_study",
+      "kind": "state",
+      "label": "Studies the cohort already holds",
+      "definition": "New genomes from studies the cohort already holds. The plan scores this population apart from the first.",
+      "source": "docs/outside-study-results.md",
+      "quotes": [
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "Its genomes are new, and they come from studies the cohort already holds."
+        },
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "The plan scores them apart and does not compare them, so setting them side by side was added after both results were read."
+        }
+      ],
+      "measured": [
+        {
+          "count": 49,
+          "of": 49,
+          "what": "datasets of the population that can be read against a report figure",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population same-study, learner scm, that are read",
+            "of": "web/src/data/outside-study.json: datasets of population same-study"
+          }
+        },
+        {
+          "count": 3144,
+          "of": 3155,
+          "what": "genomes scored, of the genomes the population froze",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: genomes scored of population same-study",
+            "of": "web/src/data/outside-study.json: genomes frozen of population same-study"
+          }
+        },
+        {
+          "count": 6,
+          "of": null,
+          "what": "species in the population",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: species of population same-study"
+          },
+          "note": "A total with no denominator. The export names no species."
+        }
+      ]
+    },
+    {
+      "id": "grm:reading",
+      "kind": "concept",
+      "label": "Reading",
+      "definition": "How a report figure compares with the estimate on new genomes: below, consistent or above. Sensitivity and specificity are read one at a time.",
+      "source": "docs/outside-study-results.md",
+      "quotes": [
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "The plan reads sensitivity and specificity one at a time."
+        }
+      ],
+      "measured": []
+    },
+    {
+      "id": "grm:reading/holds",
+      "kind": "state",
+      "label": "Holds",
+      "definition": "Neither the learner's sensitivity nor its specificity reads below on the dataset.",
+      "truth_state": "asserted",
+      "source": "docs/outside-study-results.md",
+      "quotes": [
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "This document also joins them: a learner holds on a dataset when neither its sensitivity nor its specificity reads below."
+        }
+      ],
+      "measured": []
+    },
+    {
+      "id": "grm:reading/below",
+      "kind": "state",
+      "label": "Below",
+      "definition": "The report's figure is above the whole 95% interval of the new estimate. It is a measured comparison, and figures move both ways.",
+      "truth_state": "asserted",
+      "source": "docs/outside-study-results.md",
+      "quotes": [
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "A reading is \"below\" when the report's figure is above the whole 95% interval of the new estimate."
+        },
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "For the set covering machine, sensitivity reads above the report's figure on 36 of the 81 datasets and below it on 27."
+        }
+      ],
+      "measured": [
+        {
+          "count": 36,
+          "of": 81,
+          "what": "datasets on which the set covering machine's sensitivity reads above the report's figure, on genomes from studies the cohort does not hold",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population primary, learner scm, whose sensitivity reads above",
+            "of": "web/src/data/outside-study.json: rows of population primary, learner scm, that are read"
+          }
+        },
+        {
+          "count": 27,
+          "of": 81,
+          "what": "datasets on which the set covering machine's sensitivity reads below the report's figure, same population",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population primary, learner scm, whose sensitivity reads below",
+            "of": "web/src/data/outside-study.json: rows of population primary, learner scm, that are read"
+          }
+        }
+      ]
+    },
+    {
+      "id": "grm:reading/not_readable",
+      "kind": "state",
+      "label": "Not readable",
+      "definition": "The report has no lineage-split figure to read against. The random split is not put in its place.",
+      "truth_state": "missing",
+      "source": "docs/outside-study-test.md",
+      "quotes": [
+        {
+          "path": "docs/outside-study-test.md",
+          "quote": "A report whose lineage split is unavailable has no lineage-split estimate."
+        },
+        {
+          "path": "docs/outside-study-test.md",
+          "quote": "Its reading is \"not read: no lineage-split estimate\", and the random split is not substituted."
+        }
+      ],
+      "measured": [
+        {
+          "count": 1,
+          "of": 82,
+          "what": "datasets that cannot be read, on genomes from studies the cohort does not hold",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "(web/src/data/outside-study.json: datasets of population primary) - (web/src/data/outside-study.json: rows of population primary, learner scm, that are read)",
+            "of": "web/src/data/outside-study.json: datasets of population primary"
+          }
+        }
+      ]
+    },
+    {
+      "id": "grm:antibiotic_vocabulary",
+      "kind": "artifact",
+      "label": "Antibiotic vocabulary",
+      "definition": "The names GRM resolves antibiotics through. GRM's bundled vocabulary works alone, a SigDrug vocabulary is an optional added file, and the report records which one was used.",
+      "source": "README.md",
+      "quotes": [
+        {
+          "path": "README.md",
+          "quote": "Antibiotic names resolve through GRM's bundled vocabulary."
+        },
+        {
+          "path": "README.md",
+          "quote": "the report records which vocabulary was used."
+        }
+      ],
+      "measured": []
+    },
+    {
+      "id": "grm:learner_row",
+      "kind": "concept",
+      "label": "Learner row",
+      "definition": "One learner's figures on one split of one dataset. From revision 14 each learner row covers every genome of the split.",
+      "source": "docs/equal-scoring.md",
+      "quotes": [
+        {
+          "path": "docs/equal-scoring.md",
+          "quote": "From evaluation revision 14, each learner row of a dataset report covers every genome of the split."
+        }
+      ],
+      "measured": [
+        {
+          "count": 2710,
+          "of": 2710,
+          "what": "learner rows in the release, of the rows that five learners on each split that ran would give",
+          "source": "reference/release-summary/rev14-274-20261112/index-counts.json; reference/release-summary/rev14-274-20261112/summary.json; reference/release-summary/rev14-274-20261112/guidance.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "reference/release-summary/rev14-274-20261112/index-counts.json#/learner_rows",
+            "of": "(length of reference/release-summary/rev14-274-20261112/summary.json#/per_learner) * (reference/release-summary/rev14-274-20261112/guidance.json#/rows/scm:random/n + reference/release-summary/rev14-274-20261112/guidance.json#/rows/scm:lineage/n)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "grm:best_learner",
+      "kind": "concept",
+      "label": "Best learner",
+      "definition": "The learner with the best random-split balanced accuracy among learners scored on every genome on every split that ran. A dataset report names it.",
+      "source": "docs/equal-scoring.md",
+      "quotes": [
+        {
+          "path": "docs/equal-scoring.md",
+          "quote": "`report::best_learner` picks the best random-split balanced accuracy among learners scored on every isolate on every split that ran."
+        }
+      ],
+      "measured": []
+    },
+    {
+      "id": "grm:called_metrics",
+      "kind": "measure",
+      "label": "Called metrics",
+      "definition": "A learner's figures over the genomes of fitted folds only. From revision 14 a row with a null-fit fold keeps this earlier figure beside the figure over every genome.",
+      "source": "docs/equal-scoring.md",
+      "quotes": [
+        {
+          "path": "docs/equal-scoring.md",
+          "quote": "It holds the revision-13 figure: the metrics over the genomes of fitted folds only, or `null` when every fold is null."
+        }
+      ],
+      "measured": []
+    },
+    {
+      "id": "grm:state/scored_at_prevalence",
+      "kind": "state",
+      "label": "Fold scored at prevalence",
+      "definition": "A fold whose fit learned nothing beyond the class balance. Revision 14 scores each of its test genomes at the fold's training prevalence.",
+      "truth_state": "inferred",
+      "source": "docs/equal-scoring.md",
+      "quotes": [
+        {
+          "path": "docs/equal-scoring.md",
+          "quote": "A null fit is an outer fold whose fitted model learned nothing beyond the class balance"
+        },
+        {
+          "path": "docs/equal-scoring.md",
+          "quote": "Each test genome of a null-fit fold gets that fold's training prevalence as its score"
+        }
+      ],
+      "measured": [
+        {
+          "count": 122,
+          "of": 2710,
+          "what": "learner rows that carry the flag for such a fold",
+          "source": "reference/release-summary/rev14-274-20261112/index-counts.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "reference/release-summary/rev14-274-20261112/index-counts.json#/flagged_rows",
+            "of": "reference/release-summary/rev14-274-20261112/index-counts.json#/learner_rows"
+          }
+        }
+      ]
+    },
+    {
+      "id": "grm:state/no_report",
+      "kind": "state",
+      "label": "No report",
+      "definition": "A curated dataset with no report, because one class is under the class minimum. The release lists each one with its reason.",
+      "truth_state": "missing",
+      "source": "README.md",
+      "quotes": [
+        {
+          "path": "README.md",
+          "quote": "Of its 277 curated datasets, 274 have a report and 3 have none, because one class is under the minimum of 25 genomes."
+        },
+        {
+          "path": "README.md",
+          "quote": "The published report lists them in `SKIPS.json`."
+        }
+      ],
+      "measured": [
+        {
+          "count": 3,
+          "of": 277,
+          "what": "curated datasets with no report in the release the site serves",
+          "source": "README.md",
+          "basis": "document",
+          "evaluation_revision": 14,
+          "quote": "Of its 277 curated datasets, 274 have a report and 3 have none, because one class is under the minimum of 25 genomes."
+        }
+      ]
+    },
+    {
+      "id": "grm:state/split_unavailable",
+      "kind": "state",
+      "label": "Split unavailable",
+      "definition": "A dataset whose lineage split could not be formed. The report records why.",
+      "truth_state": "missing",
+      "source": "README.md",
+      "quotes": [
+        {
+          "path": "README.md",
+          "quote": "The lineage split is unavailable when whole lineages cannot fill outer and inner folds that each hold both classes, and the report records why."
+        }
+      ],
+      "measured": [
+        {
+          "count": 6,
+          "of": 274,
+          "what": "datasets with no lineage split",
+          "source": "reference/release-summary/rev14-274-20261112/summary.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "length of reference/release-summary/rev14-274-20261112/summary.json#/no_lineage",
+            "of": "reference/release-summary/rev14-274-20261112/summary.json#/datasets"
+          }
+        }
+      ]
+    },
+    {
+      "id": "grm:state/label_from_mic_excluded",
+      "kind": "state",
+      "label": "Label inferred from a MIC and left out",
+      "definition": "A label inferred from a measured concentration. It stays in the curated data, marked, and no learner trains or is scored on it.",
+      "truth_state": "inferred",
+      "source": "README.md",
+      "quotes": [
+        {
+          "path": "README.md",
+          "quote": "Labels inferred from an MIC, using the MIC cutoff that best reproduces the reported calls, stay in the curated phenotypes, marked `label_from_mic`, and no learner trains or is scored on them."
+        }
+      ],
+      "measured": [],
+      "unmeasured": "No committed file counts the datasets that hold such labels. The released index has the field, and the repository keeps no count of it."
+    }
+  ],
+  "edges": [
+    {
+      "from": "grm:split/random",
+      "type": "value_of",
+      "to": "grm:split"
+    },
+    {
+      "from": "grm:split/lineage",
+      "type": "value_of",
+      "to": "grm:split"
+    },
+    {
+      "from": "grm:duplicate_group",
+      "type": "input_of",
+      "to": "grm:split/random"
+    },
+    {
+      "from": "grm:report_figure",
+      "type": "measured_by",
+      "to": "grm:split"
+    },
+    {
+      "from": "grm:report_figure",
+      "type": "part_of",
+      "to": "grm:dataset"
+    },
+    {
+      "from": "grm:evaluation_revision",
+      "type": "guards",
+      "to": "grm:report_figure"
+    },
+    {
+      "from": "grm:outside_population/primary",
+      "type": "value_of",
+      "to": "grm:outside_population"
+    },
+    {
+      "from": "grm:outside_population/same_study",
+      "type": "value_of",
+      "to": "grm:outside_population"
+    },
+    {
+      "from": "grm:reading/holds",
+      "type": "value_of",
+      "to": "grm:reading"
+    },
+    {
+      "from": "grm:reading/below",
+      "type": "value_of",
+      "to": "grm:reading"
+    },
+    {
+      "from": "grm:reading/not_readable",
+      "type": "value_of",
+      "to": "grm:reading"
+    },
+    {
+      "from": "grm:report_figure",
+      "type": "input_of",
+      "to": "grm:reading"
+    },
+    {
+      "from": "grm:outside_population",
+      "type": "input_of",
+      "to": "grm:reading"
+    },
+    {
+      "from": "grm:reading/holds",
+      "type": "contrasts_with",
+      "to": "grm:reading/below"
+    },
+    {
+      "from": "grm:report_figure",
+      "type": "part_of",
+      "to": "grm:learner_row"
+    },
+    {
+      "from": "grm:learner_row",
+      "type": "part_of",
+      "to": "grm:dataset"
+    },
+    {
+      "from": "grm:learner_row",
+      "type": "input_of",
+      "to": "grm:best_learner"
+    },
+    {
+      "from": "grm:best_learner",
+      "type": "part_of",
+      "to": "grm:dataset"
+    },
+    {
+      "from": "grm:called_metrics",
+      "type": "part_of",
+      "to": "grm:learner_row"
+    },
+    {
+      "from": "grm:state/scored_at_prevalence",
+      "type": "part_of",
+      "to": "grm:learner_row"
+    },
+    {
+      "from": "grm:evaluation_revision",
+      "type": "guards",
+      "to": "grm:state/scored_at_prevalence"
+    },
+    {
+      "from": "grm:state/no_report",
+      "type": "part_of",
+      "to": "grm:dataset"
+    },
+    {
+      "from": "grm:state/split_unavailable",
+      "type": "value_of",
+      "to": "grm:split/lineage"
+    },
+    {
+      "from": "grm:state/label_from_mic_excluded",
+      "type": "part_of",
+      "to": "grm:dataset"
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "grm:given/folds-hold-different-genomes",
+      "statement": "A genome in a test fold has no copy in the training folds.",
+      "under": [
+        "grm:split/random",
+        "grm:duplicate_group",
+        "grm:report_figure"
+      ],
+      "hidden_in": "Stratified random folds drawn without looking for identical genomes.",
+      "when_false": "A model is scored on a genome it trained on, and the figure reads better than the model is.",
+      "source": "docs/duplicate-isolation.md",
+      "quotes": [
+        {
+          "path": "docs/duplicate-isolation.md",
+          "quote": "Before revision 10 nothing kept copies apart. Stratified random folds could put one copy of a genome in training and the other in test."
+        }
+      ],
+      "measured": [
+        {
+          "count": 58,
+          "of": 277,
+          "what": "datasets with at least one duplicate group, on the cohorts of revision 9",
+          "source": "docs/duplicate-isolation.md",
+          "basis": "document",
+          "evaluation_revision": 9,
+          "quote": "Over the 277 datasets of the 23-species candidate, 58 have at least one group and 55 have a group that crossed the saved random folds."
+        },
+        {
+          "count": 55,
+          "of": 277,
+          "what": "datasets with a group that crossed the saved random folds, on the cohorts of revision 9, before groups were kept whole",
+          "source": "docs/duplicate-isolation.md",
+          "basis": "document",
+          "evaluation_revision": 9,
+          "quote": "Over the 277 datasets of the 23-species candidate, 58 have at least one group and 55 have a group that crossed the saved random folds."
+        }
+      ],
+      "unmeasured": "No committed file counts duplicate groups on the cohorts of revision 10 or later. The two counts are of the revision 9 cohorts, and the document says to count again after the revision 10 curation. How far a figure moved is given for named species only, so it is left out."
+    },
+    {
+      "id": "grm:given/figure-holds-on-new-studies",
+      "statement": "A cross-validated figure holds for genomes from a newly deposited study the cohort never saw.",
+      "under": [
+        "grm:report_figure",
+        "grm:split/lineage",
+        "grm:outside_population/primary",
+        "grm:reading"
+      ],
+      "hidden_in": "Reading a report's sensitivity as what the model will do next.",
+      "when_false": "The figure is trusted on new genomes where it reads below more often than it holds.",
+      "source": "docs/outside-study-results.md",
+      "quotes": [
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "The test asks whether the lineage-split figures hold when the report's final model is applied, unchanged, to genomes from studies the cohort does not hold."
+        },
+        {
+          "path": "docs/outside-study-results.md",
+          "quote": "Both sentences read each estimate against the report its run pinned, at evaluation revision 12."
+        }
+      ],
+      "measured": [
+        {
+          "count": 32,
+          "of": 81,
+          "what": "datasets on which the set covering machine holds, on genomes from studies the cohort does not hold",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population primary, learner scm, that hold",
+            "of": "web/src/data/outside-study.json: rows of population primary, learner scm, that are read"
+          }
+        },
+        {
+          "count": 23,
+          "of": 81,
+          "what": "datasets on which the decision tree holds, same population",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population primary, learner cart, that hold",
+            "of": "web/src/data/outside-study.json: rows of population primary, learner cart, that are read"
+          }
+        },
+        {
+          "count": 7,
+          "of": 25,
+          "what": "datasets on which the lasso holds, of the datasets it can be scored and read on, same population",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population primary, learner lasso, that hold",
+            "of": "web/src/data/outside-study.json: rows of population primary, learner lasso, that are read"
+          }
+        },
+        {
+          "count": 8,
+          "of": 25,
+          "what": "datasets on which the lasso holds against the revision 14 figure, same population and same new estimates",
+          "source": "docs/outside-study-results.md",
+          "basis": "document",
+          "evaluation_revision": 14,
+          "quote": "Against revision 14 the lasso holds on 8 of the 25 primary datasets read for it, where the runs read 7.",
+          "rebuilt_by": "tests/outside_study_results"
+        },
+        {
+          "count": 36,
+          "of": 49,
+          "what": "datasets on which the set covering machine holds, on new genomes from studies the cohort already holds",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population same-study, learner scm, that hold",
+            "of": "web/src/data/outside-study.json: rows of population same-study, learner scm, that are read"
+          },
+          "note": "A separate population. The plan scores the two apart, and the document set them side by side after both results were read."
+        },
+        {
+          "count": 31,
+          "of": 49,
+          "what": "datasets on which the decision tree holds, on new genomes from studies the cohort already holds",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population same-study, learner cart, that hold",
+            "of": "web/src/data/outside-study.json: rows of population same-study, learner cart, that are read"
+          },
+          "note": "A separate population. The plan scores the two apart, and the document set them side by side after both results were read."
+        },
+        {
+          "count": 9,
+          "of": 15,
+          "what": "datasets on which the lasso holds, of the datasets it can be scored and read on, on new genomes from studies the cohort already holds",
+          "source": "web/src/data/outside-study.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "web/src/data/outside-study.json: rows of population same-study, learner lasso, that hold",
+            "of": "web/src/data/outside-study.json: rows of population same-study, learner lasso, that are read"
+          },
+          "note": "A separate population. The plan scores the two apart, and the document set them side by side after both results were read."
+        },
+        {
+          "count": 7,
+          "of": 15,
+          "what": "datasets on which the lasso holds against the revision 14 figure, on new genomes from studies the cohort already holds",
+          "source": "docs/outside-study-results.md",
+          "basis": "document",
+          "evaluation_revision": 14,
+          "quote": "It holds on 7 of the 15 same-study datasets, where the runs read 9.",
+          "rebuilt_by": "tests/outside_study_results",
+          "note": "A separate population, and the same new estimates as the revision 12 line."
+        }
+      ]
+    },
+    {
+      "id": "grm:given/learners-scored-on-same-genomes",
+      "statement": "Every learner row of a dataset is scored on the same genomes.",
+      "under": [
+        "grm:learner_row",
+        "grm:best_learner",
+        "grm:report_figure",
+        "grm:state/scored_at_prevalence",
+        "grm:called_metrics"
+      ],
+      "hidden_in": "A table with one balanced-accuracy column for each learner, and the best-learner label.",
+      "when_false": "A row compares figures over different genomes, and the best learner is chosen among fewer learners.",
+      "source": "docs/equal-scoring.md",
+      "quotes": [
+        {
+          "path": "docs/equal-scoring.md",
+          "quote": "Before it, revisions 7 to 13 left the genomes of a null-fit fold without a call, so a learner with a null fold was scored on fewer genomes than the others, and its balanced accuracy could not be compared with theirs."
+        }
+      ],
+      "measured": [
+        {
+          "count": 122,
+          "of": 2710,
+          "what": "learner rows that left genomes without a call, in the revision 12 release",
+          "source": "reference/release-summary/rev12-274-20261105/index-counts.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "reference/release-summary/rev12-274-20261105/index-counts.json#/unflagged_with_no_call",
+            "of": "reference/release-summary/rev12-274-20261105/index-counts.json#/learner_rows"
+          }
+        },
+        {
+          "count": 65,
+          "of": 122,
+          "what": "of those rows, the boosted trees' rows on either split",
+          "source": "reference/release-summary/rev12-274-20261105/guidance.json; reference/release-summary/rev12-274-20261105/index-counts.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "reference/release-summary/rev12-274-20261105/guidance.json#/rows/gbt:random/fewer_than_every_genome + reference/release-summary/rev12-274-20261105/guidance.json#/rows/gbt:lineage/fewer_than_every_genome",
+            "of": "reference/release-summary/rev12-274-20261105/index-counts.json#/unflagged_with_no_call"
+          }
+        },
+        {
+          "count": 57,
+          "of": 122,
+          "what": "of those rows, the lasso's rows on either split",
+          "source": "reference/release-summary/rev12-274-20261105/guidance.json; reference/release-summary/rev12-274-20261105/index-counts.json",
+          "basis": "file",
+          "evaluation_revision": 12,
+          "read": {
+            "count": "reference/release-summary/rev12-274-20261105/guidance.json#/rows/lasso:random/fewer_than_every_genome + reference/release-summary/rev12-274-20261105/guidance.json#/rows/lasso:lineage/fewer_than_every_genome",
+            "of": "reference/release-summary/rev12-274-20261105/index-counts.json#/unflagged_with_no_call"
+          }
+        },
+        {
+          "count": 122,
+          "of": 2710,
+          "what": "learner rows scored on every genome under the flag, in the revision 14 release",
+          "source": "reference/release-summary/rev14-274-20261112/index-counts.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "reference/release-summary/rev14-274-20261112/index-counts.json#/flagged_rows",
+            "of": "reference/release-summary/rev14-274-20261112/index-counts.json#/learner_rows"
+          }
+        },
+        {
+          "count": 0,
+          "of": 2710,
+          "what": "learner rows that still count fewer genomes than their class, in the revision 14 release",
+          "source": "reference/release-summary/rev14-274-20261112/index-counts.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "reference/release-summary/rev14-274-20261112/index-counts.json#/unflagged_with_no_call",
+            "of": "reference/release-summary/rev14-274-20261112/index-counts.json#/learner_rows"
+          }
+        },
+        {
+          "count": 73,
+          "of": 274,
+          "what": "datasets whose revision 14 report differs from revision 12 in the rows of a learner with a null fit: 48 there only, and 25 there and in panel rows",
+          "source": "README.md",
+          "basis": "document",
+          "evaluation_revision": 14,
+          "quote": "Of the 274 reports, 162 differ from revision 12 only in the revision number and the run time, 39 in panel rows only, 48 only in the rows of a learner with a null fit, and 25 in both."
+        },
+        {
+          "count": 21,
+          "of": 274,
+          "what": "datasets whose best learner changed from revision 12 to revision 14",
+          "source": "README.md",
+          "basis": "document",
+          "evaluation_revision": 14,
+          "quote": "Of the 274 reports, 162 differ from revision 12 only in the revision number and the run time, 39 in panel rows only, 48 only in the rows of a learner with a null fit, and 25 in both. The best learner changed in 21 datasets."
+        },
+        {
+          "count": null,
+          "of": 268,
+          "what": "lineage splits over which the boosted trees' median balanced accuracy is taken, under each revision",
+          "source": "reference/release-summary/rev12-274-20261105/summary.json; reference/release-summary/rev14-274-20261112/summary.json",
+          "basis": "file",
+          "values": [
+            {
+              "evaluation_revision": 12,
+              "value": 0.8459,
+              "read": "reference/release-summary/rev12-274-20261105/summary.json#/per_learner/gbt/median_lineage"
+            },
+            {
+              "evaluation_revision": 14,
+              "value": 0.8409,
+              "read": "reference/release-summary/rev14-274-20261112/summary.json#/per_learner/gbt/median_lineage"
+            }
+          ],
+          "read": {
+            "of": "reference/release-summary/rev14-274-20261112/summary.json#/per_learner/gbt/n_both"
+          },
+          "note": "A median, so the line has no count."
+        },
+        {
+          "count": null,
+          "of": 268,
+          "what": "lineage splits over which the lasso's median balanced accuracy is taken, under each revision",
+          "source": "reference/release-summary/rev12-274-20261105/summary.json; reference/release-summary/rev14-274-20261112/summary.json",
+          "basis": "file",
+          "values": [
+            {
+              "evaluation_revision": 12,
+              "value": 0.8567,
+              "read": "reference/release-summary/rev12-274-20261105/summary.json#/per_learner/lasso/median_lineage"
+            },
+            {
+              "evaluation_revision": 14,
+              "value": 0.8565,
+              "read": "reference/release-summary/rev14-274-20261112/summary.json#/per_learner/lasso/median_lineage"
+            }
+          ],
+          "read": {
+            "of": "reference/release-summary/rev14-274-20261112/summary.json#/per_learner/lasso/n_both"
+          },
+          "note": "A median, so the line has no count."
+        }
+      ]
+    }
+  ],
+  "import_rule": [
+    "GRM writes this file with scripts/givens-export/export.py. Givens stores it unchanged and names the GRM commit it copied it from.",
+    "A count is over datasets, learner rows or genomes. The file names no dataset, species or antibiotic.",
+    "A line with basis file is read from a committed summary file, and the export lists that file's sha256.",
+    "A line with basis document is quoted from the repository's text. No committed file rebuilds it unless the line names a suite.",
+    "An entry with unmeasured has no count in GRM. Givens shows it as missing and fills in no number.",
+    "A figure is read with its split, its learner and its evaluation revision. A line of revision 12 is never shown as revision 14's.",
+    "GRM reads nothing from Givens."
+  ],
+  "left_out": [
+    "Dataset ids, species names and antibiotic names.",
+    "Rows for one species or one drug class.",
+    "GRM's features, models, panels and samples.",
+    "The known-gene rule's rows and its catalog.",
+    "MIC values and the MIC regression's figures.",
+    "Sequences, k-mers, variants and genes.",
+    "The error-limit screen's counts.",
+    "How far a figure moved where the document gives it for named species only."
+  ]
+}
