@@ -26,9 +26,16 @@ dataset the genomes of null-fit folds that the later figure counts.
 It estimates nothing. Each new estimate and interval is the run's. A row whose
 five lineage counts are the run's keeps the run's readings. A row whose counts
 differ is read with the kit's own rule (`reading`) on the later figure and the
-interval as `metrics.tsv` prints it, to six decimals. A later figure within
-one millionth of a printed interval end cannot be read that way, and the
-script stops there.
+interval as `metrics.tsv` prints it, to six decimals.
+
+Six decimals hide a reading in one case only, and the script stops there: a
+later figure strictly between 0 and 1 that is within one millionth of an end
+the kit computed. The kit computes no end at an estimate's limit. It sets the
+lower end to exactly 0 when the estimate is 0 of n and the upper end to
+exactly 1 when it is n of n (`clopper_pearson`), and that end is printed
+exactly. Every computed end lies strictly between 0 and 1, so a figure of
+exactly 0 is under it and a figure of exactly 1 is over it, whatever the six
+decimals show. The row's own counts say which ends are exact.
 
 With --check FILE it prints nothing and exits 1 unless FILE holds, between the
 lines `<!-- revision:begin -->` and `<!-- revision:end -->`, exactly the text
@@ -39,6 +46,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import math
 import pathlib
 import re
 import sys
@@ -67,6 +75,8 @@ COLUMNS = (
 )
 # metrics.tsv prints an interval end to six decimals.
 MARGIN = 1e-6
+# The least and the greatest number strictly between 0 and 1.
+INSIDE = (math.nextafter(0.0, 1.0), math.nextafter(1.0, 0.0))
 
 
 def called_row(report, learner):
@@ -123,11 +133,34 @@ def counts(row):
     return tuple(row[f"lineage_{k}"] for k in COUNTS)
 
 
+def exact_ends(r, measure):
+    """(the lower end is exactly 0, the upper end is exactly 1) of a run's interval, from the row's counts.
+
+    The kit sets the lower end to 0 when the estimate is 0 of n and the upper
+    end to 1 when it is n of n (`score.clopper_pearson`). It computes every
+    other end, and a computed end lies strictly between 0 and 1."""
+    hit, miss = ("tp", "fn") if measure == "sensitivity" else ("tn", "fp")
+    hit, miss = int(r[hit]), int(r[miss])
+    return hit == 0, miss == 0
+
+
 def reread(r, measure, figure):
-    """The kit's reading of a run's interval against another figure of the report."""
+    """The kit's reading of a run's interval against another figure of the report.
+
+    It stops where six printed decimals could hide the reading: on a figure
+    strictly between 0 and 1 that is within one millionth of a computed end."""
     lo, hi = float(r[measure + "_lo"]), float(r[measure + "_hi"])
-    if min(abs(figure - lo), abs(figure - hi)) < MARGIN:
-        raise SystemExit(f"{r['dataset']} {r['learner']} {measure}: the figure is within one millionth of a printed interval end")
+    where = f"{r['dataset']} {r['learner']} {measure}"
+    at_zero, at_one = exact_ends(r, measure)
+    if (at_zero and lo != 0.0) or (at_one and hi != 1.0):
+        raise SystemExit(f"{where}: a printed interval end is not the end the kit sets for the row's counts")
+    if 0.0 < figure < 1.0 and ((not at_zero and abs(figure - lo) < MARGIN) or (not at_one and abs(figure - hi) < MARGIN)):
+        raise SystemExit(f"{where}: the figure is within one millionth of a printed interval end the kit computed")
+    # A computed end is strictly between 0 and 1 even where six decimals print it as 0.000000 or 1.000000.
+    if not at_zero:
+        lo = max(lo, INSIDE[0])
+    if not at_one:
+        hi = min(hi, INSIDE[1])
     return score.reading(figure, lo, hi)
 
 
