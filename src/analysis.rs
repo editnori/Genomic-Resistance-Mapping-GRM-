@@ -993,6 +993,26 @@ pub fn evaluate_fold_file(
     let roles = file
         .roles(&spec.id, &sample_ids)
         .with_context(|| format!("fold file {}", fold_file.display()))?;
+    // The evaluator refuses a fold that tests a genome and trains on its
+    // copy, by sample number. Refuse it here first, by the ids the file uses.
+    for group in &e.duplicates {
+        for f in 0..file.folds() {
+            let tested = group.iter().find(|&&i| roles[i] == eval::Role::Test(f));
+            let trained = group.iter().find(|&&i| match roles[i] {
+                eval::Role::Test(g) => g != f,
+                eval::Role::Train => true,
+                eval::Role::Unused => false,
+            });
+            if let (Some(&a), Some(&b)) = (tested, trained) {
+                anyhow::bail!(
+                    "fold file {}: test fold {f} tests genome {} and trains on genome {}, its k-mer-identical copy; test both in one fold or list one under unused",
+                    fold_file.display(),
+                    sample_ids[a],
+                    sample_ids[b]
+                );
+            }
+        }
+    }
     let assigned = eval::evaluate_assigned(
         &spec.id,
         &file.scheme,
@@ -3207,6 +3227,66 @@ mod tests {
             named("first-public-past outer fold 0's test samples lack one or both classes")
         );
         assert!(refusal("{").starts_with(&named("parse")));
+    }
+
+    #[test]
+    fn a_fold_file_that_separates_a_genome_from_its_copy_is_refused_by_genome_id() {
+        // Synthetic: the scan fixture with g0 and g1, of one lineage, given
+        // one k-mer set digest, so they are k-mer-identical copies.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().join("data"));
+        let mut input = scan_inputs();
+        for digests in [
+            &mut input.matrix.summary.kset_digests,
+            &mut input.structure.kset_digests,
+        ] {
+            digests[1] = digests[0].clone();
+        }
+        write_inputs(&layout, &input, "");
+        let cfg = fold_file_config();
+        let file = dir.path().join("folds.json");
+        let out = dir.path().join("out");
+        let run = |test: &[Vec<usize>], train: &[usize], unused: &[usize]| {
+            std::fs::write(&file, fold_file_text(test, train, unused)).unwrap();
+            evaluate_fold_file(&layout, "fixture", &file, &out, true, &cfg)
+        };
+        let tested = |first: &[usize]| -> Vec<usize> {
+            first.iter().copied().chain((2..30).step_by(3)).collect()
+        };
+        let training: Vec<usize> = (2..150).filter(|i| !tested(&[]).contains(i)).collect();
+        // g0 tested, its copy g1 training.
+        let mut with_copy = training.clone();
+        with_copy.push(1);
+        let apart = format!(
+            "{:#}",
+            run(&[tested(&[0])], &with_copy, &[]).expect_err("the copy trains")
+        );
+        assert_eq!(
+            apart,
+            format!(
+                "fold file {}: test fold 0 tests genome g0 and trains on genome g1, its k-mer-identical copy; test both in one fold or list one under unused",
+                file.display()
+            )
+        );
+        assert!(!out.exists());
+        // The copy in another test fold still trains fold 0.
+        let folds = [tested(&[0]), vec![1, 30, 31, 32, 33, 34, 35]];
+        let others: Vec<usize> = training
+            .iter()
+            .copied()
+            .filter(|i| !(30..36).contains(i))
+            .collect();
+        let error = format!(
+            "{:#}",
+            run(&folds, &others, &[]).expect_err("the copy trains")
+        );
+        assert!(
+            error.contains("test fold 0 tests genome g0 and trains on genome g1"),
+            "{error}"
+        );
+        // Tested together, or one of them unused, the file is scored.
+        run(&[tested(&[0, 1])], &training, &[]).unwrap();
+        run(&[tested(&[0])], &training, &[1]).unwrap();
     }
 
     #[test]

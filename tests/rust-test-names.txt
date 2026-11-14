@@ -87,6 +87,7 @@ src/lib.rs ablate::plan::tests::verify_and_is_available_check_the_plan_structure
 src/lib.rs analysis::tests::a_fold_file_is_scored_as_written_and_its_result_records_the_files_sha256
 src/lib.rs analysis::tests::a_fold_file_that_does_not_fit_its_dataset_writes_no_result
 src/lib.rs analysis::tests::a_fold_file_that_repeats_the_random_split_gives_the_reports_random_rows
+src/lib.rs analysis::tests::a_fold_file_that_separates_a_genome_from_its_copy_is_refused_by_genome_id
 src/lib.rs analysis::tests::a_rebuild_in_reversed_genome_order_recomputes_and_a_new_map_alone_does_not
 src/lib.rs analysis::tests::a_report_with_a_locus_missing_its_annotation_is_recomputed
 src/lib.rs analysis::tests::an_invalid_report_is_kept_but_never_logged_done

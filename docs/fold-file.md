@@ -74,8 +74,9 @@ The command stops before any fit, and writes nothing, when:
   missing;
 - a test fold is empty, or a fold's test genomes or training genomes lack a
   class;
-- a fold tests a genome and trains on a k-mer-identical copy of it. Put the
-  copy in the same test fold or under `unused`;
+- a fold tests a genome and trains on a k-mer-identical copy of it. The
+  refusal names both genomes. Put the copy in the same test fold or under
+  `unused`;
 - an inner fold or a tuning holdout would lack a class;
 - the result file exists and `--force` was not given.
 
