@@ -84,6 +84,8 @@ src/lib.rs ablate::plan::tests::tuning_groups_and_holdout_shares_are_task_a_s
 src/lib.rs ablate::plan::tests::tuning_groups_give_composite_ids_only_to_random_splits_with_duplicates
 src/lib.rs ablate::plan::tests::unavailable_reasons_are_the_pipelines_words
 src/lib.rs ablate::plan::tests::verify_and_is_available_check_the_plan_structure
+src/lib.rs analysis::tests::a_drug_without_a_rule_records_no_rule_groups
+src/lib.rs analysis::tests::a_groups_flag_follows_its_first_genome_and_rule_groups_each_genomes_own_hit
 src/lib.rs analysis::tests::a_rebuild_in_reversed_genome_order_recomputes_and_a_new_map_alone_does_not
 src/lib.rs analysis::tests::a_report_with_a_locus_missing_its_annotation_is_recomputed
 src/lib.rs analysis::tests::an_invalid_report_is_kept_but_never_logged_done
@@ -99,6 +101,7 @@ src/lib.rs analysis::tests::fingerprint_ignores_rows_and_fields_the_evaluation_d
 src/lib.rs analysis::tests::fingerprint_tracks_every_evaluation_config_field
 src/lib.rs analysis::tests::fingerprint_tracks_mic_inferred_labels_added_on_a_matrix_genome
 src/lib.rs analysis::tests::fingerprint_tracks_the_dataset_class_minimum
+src/lib.rs analysis::tests::fold_patterns_cover_the_features_scm_cart_and_lasso_name_and_no_others
 src/lib.rs analysis::tests::gene_panels_score_the_drug_s_targets_and_list_uncovered_organisms
 src/lib.rs analysis::tests::kset_duplicates_group_samples_by_digest_in_sample_order
 src/lib.rs analysis::tests::learn_keeps_matching_reports_and_removes_those_of_datasets_that_no_longer_qualify
@@ -113,6 +116,7 @@ src/lib.rs analysis::tests::probe_panels_score_called_samples_and_count_no_calls
 src/lib.rs analysis::tests::renumbering_singleton_lineages_changes_the_key_and_not_the_matrix_digest
 src/lib.rs analysis::tests::report_writes_replace_the_whole_file
 src/lib.rs analysis::tests::reports_are_reused_only_at_the_current_revision_and_fingerprint
+src/lib.rs analysis::tests::reports_keep_each_available_splits_fold_models_and_their_patterns
 src/lib.rs analysis::tests::reports_use_the_reported_cohort_and_record_its_counts_and_k
 src/lib.rs analysis::tests::rows_follow_matrix_columns_rather_than_genome_ids
 src/lib.rs analysis::tests::swapping_genomes_with_identical_columns_changes_the_matrix_digest
@@ -121,12 +125,14 @@ src/lib.rs analysis::tests::the_log_names_the_best_learner_scored_on_every_isola
 src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason_without_ksets
 src/lib.rs analysis::tests::unsupported_assays_are_listed_with_their_reason_instead_of_a_panel
 src/lib.rs analysis::tests::write_lasso_scan_fixture_root [ignored]
+src/lib.rs analysis::tests::write_report_fields_fixture_root [ignored]
 src/lib.rs annotate::tests::a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached
 src/lib.rs annotate::tests::a_feature_matching_several_families_is_labelled_with_all_of_them_in_byte_order
 src/lib.rs annotate::tests::the_cached_feature_order_does_not_choose_the_gene
 src/lib.rs bits::tests::set_algebra_and_counts
 src/lib.rs bvbrc::tests::genome_dates_keep_only_their_three_fields
 src/lib.rs bvbrc::tests::parses_mixed_type_fields
+src/lib.rs catalog::tests::a_hit_counts_by_its_own_alleles_class_and_subclass
 src/lib.rs catalog::tests::catalog_loads_both_accessions_and_trims_the_version
 src/lib.rs catalog::tests::catalog_requires_a_nonblank_version
 src/lib.rs catalog::tests::catalog_requires_a_version_file

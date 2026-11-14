@@ -347,6 +347,17 @@ fn token_match(token: &str, class: &str, subclass: &str) -> bool {
     field.split('/').any(|t| t.trim() == want)
 }
 
+/// Whether `hit` counts for `rule`: its own allele's class or subclass has a
+/// token one of the rule's requirements names. Under a rule with one
+/// requirement a counting hit is the catalog's resistant call; under a rule
+/// with two, it meets one of them. The answer belongs to this genome's
+/// allele: another genome's hit in the same group can differ.
+pub fn counts_for(rule: &[Vec<&str>], hit: &FamilyHit) -> bool {
+    rule.iter()
+        .flatten()
+        .any(|t| token_match(t, &hit.class, &hit.subclass))
+}
+
 /// Families among `hits` that satisfy one of the rule's groups, and whether
 /// all groups are satisfied (the catalog's resistant call).
 pub fn explain(rule: &[Vec<&str>], hits: &[FamilyHit]) -> (bool, Vec<String>) {
@@ -531,6 +542,46 @@ mod tests {
             class: class.into(),
             subclass: subclass.into(),
         }
+    }
+
+    #[test]
+    fn a_hit_counts_by_its_own_alleles_class_and_subclass() {
+        let tobramycin = drug_rule("tobramycin").unwrap();
+        // Synthetic group names; the subclasses are the catalog's words.
+        let gentamicin = hit("fixA", "AMINOGLYCOSIDE", "GENTAMICIN");
+        let both = hit("fixA", "AMINOGLYCOSIDE", "GENTAMICIN/TOBRAMYCIN");
+        let whole_class = hit("fixB", "AMINOGLYCOSIDE", "AMINOGLYCOSIDE");
+        let quinolone = hit(
+            "fixQ",
+            "AMINOGLYCOSIDE/QUINOLONE",
+            "AMIKACIN/KANAMYCIN/QUINOLONE",
+        );
+        // The rule names subclasses: the class alone is not enough, and a
+        // token is a whole word between slashes.
+        assert!(!counts_for(&tobramycin, &gentamicin));
+        assert!(counts_for(&tobramycin, &both));
+        assert!(counts_for(&tobramycin, &whole_class));
+        assert!(!counts_for(&tobramycin, &quinolone));
+        assert!(counts_for(&drug_rule("amikacin").unwrap(), &quinolone));
+        assert!(counts_for(&drug_rule("ciprofloxacin").unwrap(), &quinolone));
+        // Two alleles of one group answer apart, and each as `explain`
+        // lists it for that genome.
+        let rules = ["tobramycin", "gentamicin", "ciprofloxacin", "meropenem"];
+        for rule in rules.map(|d| drug_rule(d).unwrap()) {
+            for h in [&gentamicin, &both, &whole_class, &quinolone] {
+                let used = explain(&rule, std::slice::from_ref(h)).1;
+                assert_eq!(counts_for(&rule, h), used.contains(&h.group));
+            }
+        }
+        // Under a rule with two requirements a hit counts when it meets
+        // one; the call needs both.
+        let folate = drug_rule("sulfamethoxazole/trimethoprim").unwrap();
+        let dfr = hit("fixD", "TRIMETHOPRIM", "TRIMETHOPRIM");
+        let sul = hit("fixS", "SULFONAMIDE", "SULFONAMIDE");
+        assert!(counts_for(&folate, &dfr) && counts_for(&folate, &sul));
+        assert!(!counts_for(&folate, &gentamicin));
+        assert!(!explain(&folate, std::slice::from_ref(&dfr)).0);
+        assert!(explain(&folate, &[dfr, sul]).0);
     }
 
     #[test]
