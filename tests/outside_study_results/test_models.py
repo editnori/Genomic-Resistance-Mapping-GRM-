@@ -115,9 +115,21 @@ class DigestFiles(unittest.TestCase):
         self.assertEqual(printed.split("\n")[0], f"revision {self.old_rev} and revision {self.new_rev}, {n} datasets")
         for learner in M.LEARNERS:
             self.assertIn(f"{learner}: the same final model on {n} of {n} datasets\n", printed)
-        self.assertIn(f"known_gene: the same rule on {n} of {n} datasets\n", printed)
+        ruled = self.with_rule()
+        self.assertIn(f"known_gene: the same rule on {len(ruled)} of {len(ruled)} datasets with a rule, and no rule in either release on {n - len(ruled)}\n", printed)
         self.assertIn(f"the five learners: {5 * n} of {5 * n} dataset and learner pairs\n", printed)
         self.assertNotIn("differs", printed)
+
+    def with_rule(self):
+        """The datasets whose reports publish a known-gene rule, by the digest files."""
+        ruled = [{d for d in self.datasets if rows[d, "known_gene"]["model_sha256"] != M.no_rule()} for rows in (self.older, self.later)]
+        self.assertEqual(ruled[0], ruled[1])
+        return ruled[0]
+
+    def test_the_runs_scored_the_known_gene_rule_where_a_report_publishes_one(self):
+        scored = {r["dataset"] for runs in T.load(RESULTS).values() for _, _, metrics, _ in runs.values() for r in metrics if r["learner"] == "known_gene"}
+        self.assertEqual(self.with_rule(), scored)
+        self.assertTrue(0 < len(scored) < len(self.datasets))
 
     def test_each_dataset_has_one_input_fingerprint_in_both_revisions(self):
         """An id of a feature a report does not list stands for one row of one matrix in both."""
@@ -239,7 +251,8 @@ class DigestFiles(unittest.TestCase):
         pairs = len(M.LEARNERS) * len(self.datasets)
         self.assertIn(
             f"On {len(same) - len(self.datasets)} of the {pairs} pairs of a dataset and a learner the two files have the same `model_sha256`, "
-            f"and on {len(self.datasets)} of the {len(self.datasets)} datasets the known-gene rule has.",
+            f"and on {len(self.with_rule())} of the {len(self.with_rule())} datasets whose reports publish a known-gene rule, the rule has. "
+            f"The other {len(self.datasets) - len(self.with_rule())} publish no rule in either release.",
             text,
         )
         self.assertIn(f"The two reports of a dataset have one `input_fingerprint` on {len(M.same_input(self.older, self.later))} of the {len(self.datasets)} datasets.", text)
@@ -626,7 +639,7 @@ class DigestsFromReports(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn("cart: the same final model on 0 of 1 datasets\n", printed)
         self.assertIn("scm: the same final model on 1 of 1 datasets\n", printed)
-        self.assertIn("known_gene: the same rule on 1 of 1 datasets\n", printed)
+        self.assertIn("known_gene: the same rule on 1 of 1 datasets with a rule, and no rule in either release on 0\n", printed)
         self.assertIn("the five learners: 4 of 5 dataset and learner pairs\n", printed)
         self.assertTrue(printed.endswith(f"input fingerprint: the same on 1 of 1 datasets\ndiffers: {self.DATASET} cart\n"))
         # A later release that changes the rule and no model.
@@ -635,8 +648,23 @@ class DigestsFromReports(unittest.TestCase):
         later_report["catalog"]["version"] = "made-up-2"
         status, printed = run_main(older, self.digest_file(later_report, "rev14.tsv"))
         self.assertEqual(status, 1)
-        self.assertIn("known_gene: the same rule on 0 of 1 datasets\n", printed)
+        self.assertIn("known_gene: the same rule on 0 of 1 datasets with a rule, and no rule in either release on 0\n", printed)
         self.assertIn("the five learners: 5 of 5 dataset and learner pairs\n", printed)
+        # No rule in either release, and then a rule in the later one only.
+        bare = copy.deepcopy(self.base)
+        bare["catalog"] = None
+        older_bare = self.digest_file(bare, "rev12-bare.tsv")
+        self.assertEqual(M.load(older_bare)[1][self.DATASET, "known_gene"]["model_sha256"], M.no_rule())
+        bare["evaluation"]["revision"] = 14
+        status, printed = run_main(older_bare, self.digest_file(bare, "rev14.tsv"))
+        self.assertEqual(status, 0)
+        self.assertIn("known_gene: the same rule on 0 of 0 datasets with a rule, and no rule in either release on 1\n", printed)
+        later_report = copy.deepcopy(self.base)
+        later_report["evaluation"]["revision"] = 14
+        status, printed = run_main(older_bare, self.digest_file(later_report, "rev14.tsv"))
+        self.assertEqual(status, 1)
+        self.assertIn("known_gene: the same rule on 0 of 1 datasets with a rule, and no rule in either release on 0\n", printed)
+        self.assertIn(f"\ndiffers: {self.DATASET} known_gene\n", printed)
         # A later release with other inputs and the same published fields.
         later_report = copy.deepcopy(self.base)
         later_report["evaluation"]["revision"] = 14

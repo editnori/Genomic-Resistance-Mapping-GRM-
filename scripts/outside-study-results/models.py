@@ -31,8 +31,9 @@ The cell is empty for the forest, the boosted trees and the known-gene rule.
 
 With two DIGESTS files it prints, learner by learner, on how many datasets
 the two releases have the same `model_sha256`, then on how many they have the
-same input fingerprint, then each row that differs. It exits 1 if a digest
-or a fingerprint differs.
+same input fingerprint, then each row that differs. A dataset whose reports
+publish no known-gene rule in either release is counted apart from the ones
+whose rule is the same. It exits 1 if a digest or a fingerprint differs.
 
 With --reports it reads every row of DIGESTS again from REPORTS and exits 1
 unless each row is the one the reports give.
@@ -140,6 +141,11 @@ def sha(value):
     return hashlib.sha256(text.encode("ascii")).hexdigest()
 
 
+def no_rule():
+    """The `model_sha256` of the known-gene row of a report that publishes no rule."""
+    return sha({"learner": KNOWN, "model": None, "features": []})
+
+
 def row(report, digest, learner):
     """One DIGESTS row as a dict."""
     read = read_features(report, learner)
@@ -232,9 +238,12 @@ def summary(older_path, later_path):
     same, differ = compare(older, later)
     n = len({d for d, _ in older})
     out = [f"revision {old_rev} and revision {new_rev}, {n} datasets"]
-    for learner in ROWS:
+    for learner in LEARNERS:
         kept = sum(1 for _, name in same if name == learner)
-        out.append(f"{learner}: the same {'rule' if learner == KNOWN else 'final model'} on {kept} of {n} datasets")
+        out.append(f"{learner}: the same final model on {kept} of {n} datasets")
+    neither = {d for d, name in same if name == KNOWN and older[d, name]["model_sha256"] == no_rule()}
+    kept = sum(1 for d, name in same if name == KNOWN and d not in neither)
+    out.append(f"{KNOWN}: the same rule on {kept} of {n - len(neither)} datasets with a rule, and no rule in either release on {len(neither)}")
     kept = sum(1 for _, name in same if name != KNOWN)
     out.append(f"the five learners: {kept} of {len(LEARNERS) * n} dataset and learner pairs")
     inputs = same_input(older, later)

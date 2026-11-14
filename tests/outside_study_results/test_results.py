@@ -497,9 +497,14 @@ class Prose(Rebuilt):
         self.assertEqual(len(M.LEARNERS), 5)
         self.has(f"For the final models and the known-gene rule, the repository checks this on the {len(datasets)} datasets read here.")
         self.has(f"`{MODELS.relative_to(ROOT).as_posix()}/` holds one digest of each final model in each of the two releases, for the five learners.")
+        self.has(f"The digest is the same in both revisions on {len(learners)} of the {len(M.LEARNERS) * len(datasets)} pairs of a dataset and a learner.")
+        # A report that publishes no rule has one fixed digest for it, and the runs scored the rule on the others.
+        ruled = {d for d, _ in rule if later[d, M.KNOWN]["model_sha256"] != M.no_rule()}
+        self.assertEqual(len(rule), len(datasets))
+        self.assertEqual(ruled, {d for d, learner in self.figures if learner == M.KNOWN})
         self.has(
-            f"The digest is the same in both revisions on {len(learners)} of the {len(M.LEARNERS) * len(datasets)} pairs of a dataset and a learner, "
-            f"and the known-gene rule's is the same on {len(rule)} of the {len(datasets)} datasets."
+            f"The known-gene rule's digest is the same on the {len(ruled)} datasets whose reports publish a rule, "
+            f"and the other {len(datasets) - len(ruled)} publish none in either revision."
         )
         self.has("The suite fails if one differs.")
         # The runs scored the three learners a report publishes whole, and the known-gene rule.

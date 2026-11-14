@@ -51,7 +51,7 @@ ff50f8eb0717e5621f15de09e13402d3cd069dc05aae0a51aafde20fb8d0e21e  rev12-274-2026
 
 ## Result
 
-On 485 of the 485 pairs of a dataset and a learner the two files have the same `model_sha256`, and on 97 of the 97 datasets the known-gene rule has. No final model of these datasets differs between revision 12 and revision 14.
+On 485 of the 485 pairs of a dataset and a learner the two files have the same `model_sha256`, and on 90 of the 90 datasets whose reports publish a known-gene rule, the rule has. The other 7 publish no rule in either release. No final model of these datasets differs between revision 12 and revision 14.
 
 The two reports of a dataset have one `input_fingerprint` on 97 of the 97 datasets.
 
@@ -76,7 +76,7 @@ What `model` holds for each row:
 | `lasso` | `models.lasso`: the intercept, every nonzero weight and the penalty. Also `models.lasso_fit` |
 | `rf` | `models.rf_importance` |
 | `gbt` | `models.gbt_importance` |
-| `known_gene` | `catalog.rule` and `catalog.version` |
+| `known_gene` | `catalog.rule` and `catalog.version`, or null where the report publishes no rule |
 
 ## Limits
 
