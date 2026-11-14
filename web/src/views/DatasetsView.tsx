@@ -158,10 +158,12 @@ const RULE_TOGGLE = `ui-control-target ui-target-24 inline-flex items-center jus
 const RuleCell = ({ rules }: { rules: readonly string[] }) => {
   const [open, setOpen] = useState(false);
   // Under a rule that names several catalog families: what the list is not.
-  // One line while the rule is, whole in a tooltip; in full once opened.
-  const note = (rule: string) =>
+  // `whole` prints it in full. Cut to one line, it is whole in a tooltip, and
+  // that is done only where something in the cell opens it: a tooltip alone
+  // reaches no touch screen and no keyboard.
+  const note = (rule: string, whole: boolean) =>
     familiesNamed(rule) === null ? null : (
-      <span data-rule-note="" title={open ? undefined : SEVERAL_FAMILIES_NOTE} className={`block text-tiny font-normal text-muted-text ${open ? "whitespace-normal break-words" : "truncate"}`}>
+      <span data-rule-note="" title={whole ? undefined : SEVERAL_FAMILIES_NOTE} className={`block text-tiny font-normal text-muted-text ${whole ? "whitespace-normal break-words" : "truncate"}`}>
         {SEVERAL_FAMILIES_NOTE}
       </span>
     );
@@ -198,7 +200,8 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
         ) : (
           line
         )}
-        {note(s.first)}
+        {/* A lone rule that fits has no button, so nothing would open the note: it wraps. */}
+        {note(s.first, open || !clipped)}
       </>
     );
   }
@@ -209,7 +212,7 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
           {rules.map((rule, i) => (
             <li key={`${i}-${rule}`} className="break-words">
               {rule}
-              {note(rule)}
+              {note(rule, true)}
             </li>
           ))}
         </ol>
@@ -218,7 +221,7 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
         // the count is the way in by keyboard.
         <span data-row-ignore="" className={`${HOLD_TARGET} min-w-0 cursor-pointer`} {...show}>
           {line}
-          {note(s.first)}
+          {note(s.first, false)}
         </span>
       )}
       <button type="button" aria-expanded={open} aria-label={open ? undefined : `Show all ${rules.length} rules`} onClick={() => setOpen(!open)} className={RULE_TOGGLE}>

@@ -141,6 +141,16 @@ describe("dataset catalog", () => {
       expect(cell.match(/data-rule-note/g)).toHaveLength(1);
       expect(text(cell).startsWith(`${several}${note}`)).toBe(true);
     }
+    // A lone rule that fits has no button, so nothing in the cell would open a note cut to one line:
+    // there the note wraps and has no tooltip. Under the first of several rules "+1" opens it, so it is
+    // cut to one line and whole in a tooltip.
+    const noteOf = (rules: string[]) => /<span data-rule-note=""[^>]*>/.exec(ruleCell(rules))![0];
+    expect(ruleCell([several])).not.toContain("<button");
+    expect(noteOf([several])).toContain("whitespace-normal");
+    expect(noteOf([several])).not.toMatch(/truncate|title=/);
+    expect(ruleCell([several, "absence of blaTEM"])).toContain("<button");
+    expect(noteOf([several, "absence of blaTEM"])).toContain("truncate");
+    expect(noteOf([several, "absence of blaTEM"])).toContain(`title="${note}"`);
     // The words the next release's index adds after the families keep the note.
     expect(ruleCell([`${several}; GRM's known-gene rule for this drug uses blaNDM but not ble`])).toContain(note);
     // A rule that names one family, a gene or a place has none, and neither has an empty model.
