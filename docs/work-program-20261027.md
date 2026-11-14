@@ -1060,3 +1060,24 @@ At 06:52 UTC, two independent candidate-research lanes were launched with initia
   - **Hosting:**
     - A48 (UD-6): serve from the laptop (WSL) behind a new outbound-only Cloudflare tunnel as the interim host, revision 9 first and revision 11 after its release passes, after the off-machine copy; a long-lived VM stays the permanent target. Layth holds the tunnel token and any VM account or spend.
   - **This ledger:** `origin/main`, `r11/integration` and `recovery/working-tree-20261028` (`fd166ea3`) each carried a copy of this file. `r11/integration` never changed it, and `fd166ea3` holds every record of `main`'s copy plus the later ones, so the merge of `main` into `r11/integration` (A45) carries `fd166ea3`'s text with this entry appended.
+- 2026-11-14 12:2x UTC: **the October AMRFinderPlus and association rows, and the stop on that lane.** Earlier entries stand; this one adds to them.
+  - **Evidence files.** In "Research and assurance ledger", the rows "AMRFinderPlus comparator/rules A–D/TB WHO" and "GWAS" each cite one file under `/root/grm-research/` and name no machine.
+    - A search on 2026-11-14 of every branch, remote branch and tag found neither file and no path under either directory name.
+    - The Boat controller has no directory of either name under the working account, and that account cannot read `/root`. Nobody searched the laptop.
+    - Until someone finds a copy, the figures in both rows are what thread `234bc2b6` reported on 28 Oct, and nothing in the repository checks them.
+  - **Rows.** Both describe revision 5.
+    - The comparator row gives 17,487 genomes, 210 of 213 pairs, and TBProfiler 6.6.3 with WHO catalogue v2. It gives no AMRFinderPlus program or database version, and no file in the repository defines its rules A to D.
+    - The association row gives a cohort of 350 *E. coli* tobramycin genomes and names no tool, model, test count or threshold.
+    - The revision 14 dataset `escherichia_coli__tobramycin` has 1,070 genomes, 343 of them resistant, so that row's cohort is not the served one.
+  - **Served baseline.** The known-gene rule of the revision 14 reports is GRM's own code, a different detector from the AMRFinderPlus program.
+    - It finds the acquired genes of the AMRFinderPlus database, version 2026-08-07.1, with its own k-mer matching and applies a fixed rule for each drug.
+    - The site's Methods view says it does not run the program and does not test the point changes the program also reports.
+    - The October row scored other rules on revision 5 and is no evidence about the served rule.
+  - **Stop.** "Hard stops and explicit exclusions" says of the AMRFinder repair and GWAS lane: "Do not restart, rephrase or reroute that lane."
+    - On 2026-11-13 the coordinator relayed Layth's instruction to continue the research and wrote: "The former hold on reference-tool evaluation is superseded by this user instruction."
+    - The same message keeps the work to diagnostic evaluation and statistical validity with no new purchase, and keeps the association work to an audit of the existing claims.
+    - Nobody restarted the stopped lane. Whether its preserved outputs still exist is unknown.
+  - **Runs.** On 13 Nov a research lane ran the AMRFinderPlus program, version 4.2.7 with database 2026-08-07.1, on the program's own test file and on made-up genomes.
+    - It ran the program on no project genome. It wrote a plan for a matched rerun on revision 14 and did not run it. It ran no association scan.
+    - Its files are outside this repository and are no release evidence.
+  - **Status.** A15 and A16 keep the decision of 5 Nov: closed as exploratory, with no validation claim. The repository cannot show the evidence behind them. Nobody has compared GRM's learners with the AMRFinderPlus program on revision 14.
