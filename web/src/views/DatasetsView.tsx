@@ -352,7 +352,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     tip: [
       {
         term: "Known-gene catalog",
-        text: "Balanced accuracy of a fixed rule: resistant when the genome carries a known resistance gene for the drug (AMRFinderPlus genes, found by k-mer containment). It does not train, so one number serves both splits.",
+        text: "A fixed rule's balanced accuracy: resistant when the genome carries a known resistance gene for the drug. GRM finds AMRFinderPlus database genes by k-mer containment; the AMRFinderPlus program is not run. Untrained, so one number serves both splits.",
       },
     ],
     align: "right",

@@ -120,6 +120,16 @@ describe("dataset catalog", () => {
     }
   });
 
+  it("says the catalog column reads the AMRFinderPlus database with GRM's own matching, and that the program is not run", () => {
+    const tip = datasetColumns(false, undefined).find((c) => c.id === "catalog")!.tip!;
+    expect(tip.map((l) => [l.term, l.text])).toEqual([
+      [
+        "Known-gene catalog",
+        "A fixed rule's balanced accuracy: resistant when the genome carries a known resistance gene for the drug. GRM finds AMRFinderPlus database genes by k-mer containment; the AMRFinderPlus program is not run. Untrained, so one number serves both splits.",
+      ],
+    ]);
+  });
+
   it("keeps the species whole with its separator and lets a combination drug break after its slash", () => {
     const base = { ...manifest.datasets[0]!, species: "Klebsiella pneumoniae", antibiotic: "sulfamethoxazole/trimethoprim" };
     const cell = firstRowHtml(render([base]))[0]!;

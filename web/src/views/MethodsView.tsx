@@ -251,8 +251,8 @@ const Models = ({ manifest }: { manifest: Manifest }) => (
       <Def term="Gradient-boosted trees" plain="A learner that adds small trees one at a time, each one fixing mistakes of the trees before it.">Trees added one at a time, each correcting the ones before; they score each isolate between 0 and 1.</Def>
       <Def term="L1 logistic regression (lasso)" plain="A learner that gives a weight to a small number of DNA pieces and ignores the rest.">A sparse linear model on screened features.</Def>
       <Def term="Known-gene rules" plain="A fixed rule with no training: call the genome resistant when it carries a catalog gene whose class matches the drug.">
-        GRM finds acquired genes of the AMRFinderPlus catalog ({manifest.amrfinder_version === "" ? "version not recorded" : manifest.amrfinder_version}) in each genome with its own k-mer
-        matching and applies its own fixed rule per drug: resistant when the genome carries a gene whose catalog class or subclass matches the drug. The rule does not train. It does not run
+        GRM finds acquired genes of the AMRFinderPlus catalog database ({manifest.amrfinder_version === "" ? "version not recorded" : manifest.amrfinder_version}) in each genome with its own
+        k-mer matching and applies its own fixed rule per drug: resistant when the genome carries a gene whose catalog class or subclass matches the drug. The rule does not train. It does not run
         the AMRFinderPlus program or test the point mutations AMRFinderPlus also describes, so mutational resistance counts against it.
       </Def>
       <Def term="Simulated PCR panels" plain={panelWords(manifest.evaluation_revision).panels.plain}>{panelWords(manifest.evaluation_revision).panels.detail}</Def>

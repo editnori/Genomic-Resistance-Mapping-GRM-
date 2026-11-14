@@ -18,6 +18,15 @@ describe("methods features", () => {
   });
 });
 
+describe("methods known-gene rules", () => {
+  it("gives the catalog version as the database's, and says the program is not run", () => {
+    const html = renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, amrfinder_version: "2026-08-07.1" } }));
+    expect(html).toContain("GRM finds acquired genes of the AMRFinderPlus catalog database (2026-08-07.1) in each genome with its own k-mer matching");
+    expect(html).toContain("It does not run the AMRFinderPlus program");
+    expect(renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, amrfinder_version: "" } }))).toContain("the AMRFinderPlus catalog database (version not recorded)");
+  });
+});
+
 describe("methods in plain words", () => {
   const el = document.createElement("div");
   el.innerHTML = renderToStaticMarkup(createElement(MethodsView, { manifest }));

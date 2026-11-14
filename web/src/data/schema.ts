@@ -461,6 +461,9 @@ export interface Manifest {
    *  predates the field, or none is published. Older manifests hard-code 31. */
   k: number | null;
   amr_records: number;
+  /** The version of the AMRFinderPlus reference gene database the catalog
+   *  came from, such as 2026-08-07.1. Not a program version: GRM reads the
+   *  database's sequences itself and does not run the AMRFinderPlus program. */
   amrfinder_version: string;
   name_vocabulary: string | null;
   funnel: Funnel;
