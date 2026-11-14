@@ -322,6 +322,9 @@ export interface DatasetReport {
   schema: number;
   id: string;
   evaluation?: EvaluationAudit;
+  /** A digest of what the fit read: the genomes, labels, catalog and
+   *  settings. Absent in reports written before it was recorded. */
+  input_fingerprint?: string;
   /** Absent in reports written before it was recorded. */
   eval_config?: EvalConfig;
   species: string;

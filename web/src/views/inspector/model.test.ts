@@ -1,0 +1,61 @@
+// The interpretable-model section's caveat about cause, and whether each
+// rule's association holds inside lineages. Every report here is the
+// synthetic fixture's, with verdict tables set by hand.
+
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { fixtureFile } from "../../dev/fixtures/files";
+import { parseDataset, parseManifest } from "../../data/validate";
+import type { DatasetReport } from "../../data/schema";
+import type { LineageControl } from "../../data/derive/lineage";
+import { ModelSection } from "./ModelSection";
+
+const manifest = parseManifest(fixtureFile("/data/index.json"));
+const several = manifest.datasets.find((d) => d.scm_rules.length >= 2 && d.catalog !== null)!;
+const base: DatasetReport = { ...parseDataset(fixtureFile(`/data/datasets/${several.id}.json`)), input_fingerprint: "f".repeat(16), evaluation: { revision: 14, valid: true, reasons: [] } };
+
+const text = (html: string): string =>
+  html
+    .replace(/<[^>]+>/g, "")
+    .replace(/&#x27;/g, "'")
+    .replace(/&amp;/g, "&");
+const render = (r: DatasetReport, lineageTable?: LineageControl) => text(renderToStaticMarkup(createElement(ModelSection, lineageTable === undefined ? { r } : { r, lineageTable })));
+const CAVEAT = "A rule names k-mers that separate the lab calls in these isolates; they can travel with the cause on a plasmid or in a lineage without being the cause.";
+
+describe("the causal caveat and the within-lineage result", () => {
+  const table = (verdicts: string[], over: Partial<LineageControl> = {}): LineageControl => ({
+    release: "synthetic",
+    evaluation_revision: 14,
+    min_strata: 5,
+    alpha: 0.05,
+    terms: verdicts.length,
+    counts: {},
+    datasets: { [base.id]: { fingerprint: base.input_fingerprint!, terms: base.models.scm.rules.map((r, i) => [r.feature, r.presence, verdicts[i]!]) } },
+    ...over,
+  });
+  const verdicts = base.models.scm.rules.map((_, i) => (i === 0 ? "seen" : "cannot_test"));
+  const later = base.models.scm.rules.length === 2 ? "rule 2" : `rules ${base.models.scm.rules.slice(1, -1).map((_, i) => i + 2).join(", ")} and ${base.models.scm.rules.length}`;
+
+  it("keeps the caveat and attaches each rule's result to it", () => {
+    const page = render(base, table(verdicts));
+    expect(page).toContain(
+      `${CAVEAT} For rule 1 the association also holds inside lineages. For ${later} these genomes do not have enough mixed lineages to separate this from lineage. Each rule was tested inside this report's lineage clusters, on the isolates the earlier rules left undecided, and needs 5 clusters that hold both lab calls and both states of the rule (release synthetic). An association that holds inside lineages is still an association, not a cause.`,
+    );
+  });
+
+  it("keeps the caveat alone on a report the table was not computed on", () => {
+    // The bundled table holds the release's datasets; the fixture's are not in it.
+    for (const page of [render(base), render({ ...base, input_fingerprint: "0".repeat(16) }, table(verdicts)), render(base, table(verdicts, { evaluation_revision: 15 }))]) {
+      expect(page).toContain(CAVEAT);
+      expect(page).not.toContain("inside lineages");
+      expect(page).not.toContain("mixed lineages");
+    }
+  });
+
+  it("says nothing of a rule whose verdict has no words", () => {
+    const page = render(base, table(base.models.scm.rules.map((_, i) => (i === 0 ? "reversed" : "seen"))));
+    expect(page).toContain(`For ${later} the association also holds inside lineages.`);
+    expect(page).not.toContain("For rule 1 ");
+  });
+});

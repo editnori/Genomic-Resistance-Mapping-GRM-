@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { CatalogRow, DatasetReport, FeatureCard, Rule } from "../../data/schema";
 import { int, pct, plural } from "../../data/format";
 import { featureIndex, featureLabel, featureWhere, ruleWords } from "../../data/derive/dataset";
+import { LINEAGE_CONTROL, lineageMethod, lineageSentences, lineageVerdicts, type LineageControl } from "../../data/derive/lineage";
 import { TreeDiagram } from "../../charts/TreeDiagram";
 import { Section, Segmented } from "../../ui/primitives";
 import { Seq } from "../../ui/Seq";
@@ -58,10 +59,14 @@ const RuleBlock = ({ index, rule, card, r }: { index: number; rule: Rule; card: 
   );
 };
 
-export const ModelSection = ({ r, row }: { r: DatasetReport; row?: CatalogRow }) => {
+/** `lineageTable` is the within-lineage verdict table to read; the bundled
+ *  one unless a test passes its own. */
+export const ModelSection = ({ r, row, lineageTable = LINEAGE_CONTROL }: { r: DatasetReport; row?: CatalogRow; lineageTable?: LineageControl }) => {
   const features = featureIndex(r);
   const scm = r.models.scm;
   const [deep, setDeep] = useState(false);
+  // The within-lineage test of each rule, when it was run on this report.
+  const lineage = scm.rules.length === 0 ? [] : lineageSentences(lineageVerdicts(r, lineageTable) ?? []);
   const shallow = Math.min(3, r.models.cart_depth);
   const root = r.models.cart.nodes[0];
   const split = root?.split ?? null;
@@ -86,6 +91,12 @@ export const ModelSection = ({ r, row }: { r: DatasetReport; row?: CatalogRow })
         <p className="type-note border-t border-hair pt-3">
           Rules were chosen greedily on all isolates for the final model, with the trade-off p = {scm.p} and the rule count picked by inner cross-validation (error {pct(scm.cv_error)}). A rule
           names k-mers that separate the lab calls in these isolates; they can travel with the cause on a plasmid or in a lineage without being the cause.
+          {lineage.length === 0 ? null : (
+            <span data-lineage-control="">
+              {" "}
+              {lineage.join(" ")} {lineageMethod(lineageTable)}
+            </span>
+          )}
         </p>
       </div>
 
