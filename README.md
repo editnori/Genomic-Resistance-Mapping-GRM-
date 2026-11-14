@@ -72,6 +72,7 @@ Every command takes `--data <directory>` (default `data`), and the output paths 
 | Structure | `grm structure --species <slug>` | `species/<slug>/structure.json` |
 | Features | `grm matrix --species <slug>` | `species/<slug>/matrix/` |
 | Evaluate | `grm learn --species <slug>` | `species/<slug>/results/<id>.json` |
+| Evaluate on supplied folds | `grm learn --species <slug> --fold-file <file> --fold-out <dir>` | `<dir>/<dataset>.<scheme>.json` ([docs/fold-file.md](docs/fold-file.md)) |
 | Report | `grm report` | `report/` |
 | Research | `grm research --revision5-reports <dir> --out <file>` | the `--out` file |
 | Intervals | `grm intervals` | `report/intervals/<id>.json` |

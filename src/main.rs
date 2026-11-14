@@ -119,6 +119,16 @@ enum Command {
         /// (`EvalConfig::screened_features`).
         #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
         screened_features: usize,
+        /// Score the one dataset this fold file names on the outer folds it
+        /// supplies, in place of the random and lineage splits
+        /// (docs/fold-file.md). Writes <fold-out>/<dataset>.<scheme>.json,
+        /// which records the file's SHA-256, and no report. Takes one
+        /// species; --force replaces an existing result.
+        #[arg(long, requires = "fold_out", conflicts_with = "only")]
+        fold_file: Option<PathBuf>,
+        /// Directory for the --fold-file result.
+        #[arg(long, requires = "fold_file")]
+        fold_out: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -327,9 +337,25 @@ fn run(cli: Cli) -> Result<()> {
             .try_for_each(|s| matrix(&layout, s, min_support)),
         Command::Learn {
             species,
+            force,
+            screened_features,
+            fold_file: Some(fold_file),
+            fold_out: Some(fold_out),
+            ..
+        } => learn_fold_file(
+            &layout,
+            &species,
+            &fold_file,
+            &fold_out,
+            force,
+            screened_features,
+        ),
+        Command::Learn {
+            species,
             only,
             force,
             screened_features,
+            ..
         } => species
             .iter()
             .try_for_each(|s| learn(&layout, s, &only, force, screened_features)),
@@ -598,6 +624,33 @@ fn learn(
     };
     let written = grm::analysis::analyze_species(layout, slug, only, force, &cfg)?;
     eprintln!("{slug}: {} dataset reports written", written.len());
+    Ok(())
+}
+
+/// `grm learn --fold-file`: one dataset of one species on the outer folds a
+/// file supplies (`analysis::evaluate_fold_file`).
+fn learn_fold_file(
+    layout: &Layout,
+    species: &[String],
+    fold_file: &std::path::Path,
+    fold_out: &std::path::Path,
+    force: bool,
+    screened_features: usize,
+) -> Result<()> {
+    let [slug] = species else {
+        anyhow::bail!(
+            "--fold-file names one dataset, so it takes one species, not {}",
+            species.len()
+        );
+    };
+    grm::species::ensure_selection_counted(layout, slug)?;
+    let cfg = grm::learn::eval::EvalConfig {
+        screened_features,
+        ..Default::default()
+    };
+    let written =
+        grm::analysis::evaluate_fold_file(layout, slug, fold_file, fold_out, force, &cfg)?;
+    eprintln!("{slug}: fold file result written to {}", written.display());
     Ok(())
 }
 
@@ -2052,12 +2105,70 @@ mod tests {
             "1000",
         ]);
         let Command::Learn {
-            screened_features, ..
+            screened_features,
+            fold_file,
+            fold_out,
+            ..
         } = learn.unwrap().command
         else {
             panic!("parsed another command");
         };
         assert_eq!(screened_features, 1000);
+        // Without --fold-file the command is the one it was.
+        assert_eq!((fold_file, fold_out), (None, None));
+    }
+
+    #[test]
+    fn learn_takes_a_fold_file_only_with_its_output_directory_and_one_species() {
+        let parse = |rest: &[&str]| {
+            Cli::try_parse_from(["grm", "learn", "--species", "s"].iter().chain(rest))
+        };
+        let Command::Learn {
+            fold_file,
+            fold_out,
+            force,
+            ..
+        } = parse(&["--fold-file", "f.json", "--fold-out", "o"])
+            .unwrap()
+            .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (fold_file, fold_out, force),
+            (Some("f.json".into()), Some("o".into()), false)
+        );
+        for bad in [
+            &["--fold-file", "f.json"][..],
+            &["--fold-out", "o"][..],
+            &[
+                "--fold-file",
+                "f.json",
+                "--fold-out",
+                "o",
+                "--only",
+                "meropenem",
+            ][..],
+        ] {
+            assert!(parse(bad).is_err(), "{bad:?}");
+        }
+        // The file names one dataset, so a second species is refused before
+        // anything is read.
+        let dir = tempfile::tempdir().unwrap();
+        let error = learn_fold_file(
+            &Layout::new(dir.path()),
+            &["a".into(), "b".into()],
+            &dir.path().join("f.json"),
+            &dir.path().join("o"),
+            false,
+            DEFAULT_SCREENED_FEATURES,
+        )
+        .unwrap_err();
+        assert_eq!(
+            format!("{error:#}"),
+            "--fold-file names one dataset, so it takes one species, not 2"
+        );
+        assert!(std::fs::read_dir(dir.path()).unwrap().next().is_none());
     }
 
     /// The pipeline's stages follow `--k`: counts, structure and matrix built
