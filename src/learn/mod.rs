@@ -6,6 +6,7 @@
 //! screening, which is why `screen` takes the mask.
 
 pub mod eval;
+pub mod foldfile;
 pub mod gbt;
 pub mod lasso;
 pub mod planned;
