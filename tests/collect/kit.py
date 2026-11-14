@@ -27,6 +27,7 @@ FILES = {
     "notes/alpha-copy.json": b'{"dataset": "alpha"}\n',  # 21, the content of reports/alpha.json again
     "notes/empty.txt": b"",  # 0
     "inputs/genome1.fna": b">g1\nACGT\n",  # 9
+    "build/target/CACHEDIR.TAG": b"Signature: 8a477f597d28d172789f06886806bc55\n",  # 44, as cargo writes it
     "build/target/debug/app": b"\x7fELF" + b"\0" * 96,  # 100
     "build/target/debug/deps/lib.rlib": b"r" * 50,  # 50
     "build/__pycache__/m.pyc": b"pyc",  # 3
@@ -42,7 +43,7 @@ RULES = ("# synthetic rules\n"
 # The list of the synthetic project: (path, bytes, hashed content or None, class), in the list's order.
 ROWS = [
     ("proj/build/__pycache__/", 3, None, "regenerable"),
-    ("proj/build/target/", 150, None, "regenerable"),  # 100 + 50, over two levels
+    ("proj/build/target/", 194, None, "regenerable"),  # 44 + 100 + 50, over two levels
     ("proj/env/", 11, None, "regenerable"),
     ("proj/inputs/genome1.fna", 9, FILES["inputs/genome1.fna"], "public-input"),
     ("proj/notes/alpha-copy.json", 21, FILES["notes/alpha-copy.json"], "internal-record"),

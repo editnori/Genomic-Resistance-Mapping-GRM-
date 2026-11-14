@@ -12,9 +12,9 @@ class TheList(unittest.TestCase):
         rc, out, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "list.tsv")
         self.assertEqual((rc, err), (0, ""))
         self.assertEqual((d / "list.tsv").read_text(encoding="utf-8"), kit.list_text())
-        # 21 + 20 public; 21 + 0 + 16 + 10 internal; 9 input; 3 + 150 + 11 + 3 regenerable
+        # 21 + 20 public; 21 + 0 + 16 + 10 internal; 9 input; 3 + 194 + 11 + 3 regenerable
         self.assertEqual(out, "class\tentries\tbytes\npublic-result\t2\t41\ninternal-record\t4\t47\n"
-                              "public-input\t1\t9\nregenerable\t4\t167\n"
+                              "public-input\t1\t9\nregenerable\t4\t211\n"
                               f"list: wrote 11 rows to {d / 'list.tsv'}\n")
 
     def test_the_list_does_not_depend_on_the_threads_or_on_where_the_project_lies(self):
@@ -48,6 +48,26 @@ class TheList(unittest.TestCase):
         rc, _, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "list.tsv")
         self.assertEqual((rc, err), (0, ""))
         self.assertEqual((d / "list.tsv").read_text(encoding="utf-8"), kit.list_text())
+
+    def test_a_directory_is_regenerable_by_a_marker_file_and_not_by_a_name_like_target(self):
+        d = kit.tmp(self)
+        kit.write(d / "proj", {
+            "a/target/plan.md": b"what we aim at",  # 14 bytes: a folder that is only named target
+            "a/.cargo/config.toml": b"[build]\n",  # 8: a tracked setting, not a cache
+            "b/target/CACHEDIR.TAG": b"Signature: 8a477f597d28d172789f06886806bc55\n", "b/target/x.o": b"o" * 6,
+            "c/np/pyvenv.cfg": b"home = /usr/bin\n", "c/np/lib/site.py": b"s" * 5,  # 16 + 5
+            "d/.pytest_cache/CACHEDIR.TAG": b"Signature: 8a477f597d28d172789f06886806bc55\n",  # 44
+        })
+        (d / "rules.tsv").write_text("internal-record\t*\n", encoding="utf-8")
+        rc, _, err = kit.run("list", "--rules", d / "rules.tsv", "--root", f"proj={d / 'proj'}", "--out", d / "l.tsv")
+        self.assertEqual((rc, err), (0, ""))
+        self.assertEqual((d / "l.tsv").read_text(encoding="utf-8"), kit.list_text([
+            ("proj/a/.cargo/config.toml", 8, b"[build]\n", "internal-record"),
+            ("proj/a/target/plan.md", 14, b"what we aim at", "internal-record"),
+            ("proj/b/target/", 50, None, "regenerable"),
+            ("proj/c/np/", 21, None, "regenerable"),
+            ("proj/d/.pytest_cache/", 44, None, "regenerable"),
+        ]))
 
     def test_the_first_matching_rule_gives_the_class(self):
         d, proj, rules = kit.project(self)
@@ -231,11 +251,17 @@ class ATableInPlaceOfAWalk(unittest.TestCase):
     def test_rows_take_their_class_from_the_rules(self):
         d, proj, rules = kit.project(self)
         rows = [("proj/reports/alpha.json", b"A"), ("proj/notes/n.md", b"note"),
-                ("proj/web/node_modules/pkg/index.js", b"js"), ("proj/env/lib/x.py", b"py"), ("proj/a.tmp", b"t")]
+                ("proj/web/node_modules/pkg/index.js", b"js"), ("proj/env/lib/x.py", b"py"), ("proj/a.tmp", b"t"),
+                ("proj/b/target/debug/x.o", b"obj"), ("proj/b/target/CACHEDIR.TAG", b"Signature"),
+                ("proj/c/target/plan.md", b"plan")]
         rc, out, err = kit.run("list", "--rules", rules, "--listing", self.table(d, rows), "--strip-prefix",
                                "/far/home/", "--out", d / "list.tsv")
         self.assertEqual((rc, err), (0, ""))
-        want = [("proj/a.tmp", 1, b"t", "regenerable"), ("proj/env/lib/x.py", 2, b"py", "regenerable"),
+        want = [("proj/a.tmp", 1, b"t", "regenerable"),
+                ("proj/b/target/CACHEDIR.TAG", 9, b"Signature", "regenerable"),  # the marker's own directory
+                ("proj/b/target/debug/x.o", 3, b"obj", "regenerable"),
+                ("proj/c/target/plan.md", 4, b"plan", "internal-record"),  # no marker: only named target
+                ("proj/env/lib/x.py", 2, b"py", "regenerable"),
                 ("proj/notes/n.md", 4, b"note", "internal-record"),
                 ("proj/reports/alpha.json", 1, b"A", "public-result"),
                 ("proj/web/node_modules/pkg/index.js", 2, b"js", "regenerable")]

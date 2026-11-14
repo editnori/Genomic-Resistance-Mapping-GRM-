@@ -24,12 +24,15 @@ run. Standard library only; run it as `python3 -I scripts/collect/collect.py ...
            Prints four tables and writes every row with its count to FILE.
 
 Classes. `public-result`, `internal-record` and `public-input` are packed. `regenerable` is listed and never packed:
-builds, caches, environments, and an unpacked copy of an archive that is itself listed. A directory named in
-REGENERABLE_DIRS, or matching a rules pattern that ends in "/", is one row with a trailing slash and the total size
-of its files, and no file in it is opened. `refused` is any path holding one of the words in BARRED, in any letter
-case. `list` names every such path and stops with status 3 before it writes anything; it never opens one and never
-enters one. With --record-refused it writes them as rows with no size and no hash, and goes on. `pack` and `check`
-stop on such a path too, and so does every command given one as an argument.
+builds, caches, environments, and an unpacked copy of an archive that is itself listed. Such a directory is one row
+with a trailing slash and the total size of its files, and no file in it is opened. It is known by its name
+(REGENERABLE_DIRS: node_modules, __pycache__), by a file it holds (REGENERABLE_MARKERS: CACHEDIR.TAG, which cargo,
+pytest and other tools write into their build and cache directories, or pyvenv.cfg, a Python environment), or by a
+rules pattern that ends in "/". A name such as target or .cargo alone does not make a directory regenerable.
+`refused` is any path holding one of the words in BARRED, in any letter case. `list` names every such path and stops
+with status 3 before it writes anything; it never opens one and never enters one. With --record-refused it writes
+them as rows with no size and no hash, and goes on. `pack` and `check` stop on such a path too, and so does every
+command given one as an argument.
 
 RULES gives the other classes: one line per rule, CLASS<TAB>PATTERN, the first match wins, "#" starts a comment.
 A pattern is matched against the whole list path with fnmatch, so "*" also crosses "/". A file that no rule matches
@@ -64,8 +67,8 @@ PACKABLE = ("public-result", "internal-record", "public-input")
 REGENERABLE, REFUSED = "regenerable", "refused"
 CLASSES = PACKABLE + (REGENERABLE, REFUSED)
 PUBLIC = "public-result"
-REGENERABLE_DIRS = ("target", "node_modules", ".venv", "venv", "__pycache__", ".cache", ".pytest_cache",
-                    ".mypy_cache", ".ruff_cache", ".cargo", ".rustup", ".npm")
+REGENERABLE_DIRS = ("node_modules", "__pycache__")
+REGENERABLE_MARKERS = ("CACHEDIR.TAG", "pyvenv.cfg")
 LIST_HEADER = ("path", "bytes", "sha256", "class")
 INNER_HEADER = LIST_HEADER + ("part",)
 INNER_LIST = "LIST.tsv"
@@ -143,7 +146,7 @@ def in_threads(work, items, threads):
 
 class Rules:
     def __init__(self, path):
-        self.files, self.dirs = [], []
+        self.files, self.dirs, self.marked = [], [], set()
         try:
             with open(path, encoding="utf-8") as f:
                 lines = f.read().split("\n")
@@ -168,9 +171,13 @@ class Rules:
             else:
                 self.files.append((cls, compiled))
 
-    def regenerable_dir(self, path):
-        """path is a directory's list path, without the trailing slash."""
-        return path.rsplit("/", 1)[-1] in REGENERABLE_DIRS or any(r.match(path + "/") for r in self.dirs)
+    def regenerable_dir(self, path, real=None):
+        """path is a directory's list path, without the trailing slash; real is where it lies, if it is on disk."""
+        if path.rsplit("/", 1)[-1] in REGENERABLE_DIRS or any(r.match(path + "/") for r in self.dirs):
+            return True
+        if real is None:
+            return path in self.marked
+        return any(os.path.lexists(os.path.join(real, m)) for m in REGENERABLE_MARKERS)
 
     def file_class(self, path):
         return next((cls for cls, r in self.files if r.match(path)), None)
@@ -328,7 +335,7 @@ class Walk:
             if not self.meet(child, e.path):
                 continue
             if e.is_dir(follow_symlinks=False):
-                if self.rules.regenerable_dir(child):
+                if self.rules.regenerable_dir(child, e.path):
                     self.rows.append((child + "/", self.size_below(e.path, child), "-", REGENERABLE))
                 else:
                     self.directory(e.path, child)
@@ -362,6 +369,12 @@ class Walk:
         if lines[-1] != "" or not {"path", "bytes", "sha256"} <= set(header):
             raise Stop(2, f"list: {file}: the first line must name path, bytes and sha256, and the last line must end")
         col = {k: header.index(k) for k in ("path", "bytes", "sha256")}
+        # A table has no directories to look into: a marker file among its rows marks its directory.
+        for line in lines[1:-1]:
+            given = (line.split("\t") + [""] * len(header))[col["path"]]
+            inside, _, name = given[len(strip):].rpartition("/")
+            if name in REGENERABLE_MARKERS and inside and given.startswith(strip):
+                self.rules.marked.add(inside)
         for n, line in enumerate(lines[1:-1], 2):
             cells = line.split("\t")
             if len(cells) != len(header):

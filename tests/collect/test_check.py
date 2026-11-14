@@ -138,7 +138,7 @@ class AnUnpackedArchive(unittest.TestCase):
     def test_a_list_of_a_class_that_is_never_packed_fails(self):
         d, top = self.unpacked()
         (top / "LIST.tsv").write_text("path\tbytes\tsha256\tclass\tpart\n"
-                                      "proj/build/target/\t150\t-\tregenerable\t001\n", encoding="utf-8")
+                                      "proj/build/target/\t194\t-\tregenerable\t001\n", encoding="utf-8")
         rc, out, _ = kit.run("check", top)
         self.assertEqual(rc, 1)
         self.assertIn("the list names the classes regenerable; an archive holds one packed class", out)
