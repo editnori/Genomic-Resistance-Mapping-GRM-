@@ -1,7 +1,7 @@
 // The interpretable-model section's words about a rule term: where its
 // k-mers sit, what a list of catalog families is, which named gene groups
 // GRM's known-gene rule for the drug uses, how many features tie it, and whether its
-// association holds inside lineages. Every report here is the synthetic
+// association is still seen inside lineage clusters. Every report here is the synthetic
 // fixture's, with cards, gene-group rows and verdict tables set by hand.
 
 import { createElement } from "react";
@@ -84,7 +84,7 @@ describe("the causal caveat and the within-lineage result", () => {
     min_strata: 5,
     alpha: 0.05,
     terms: verdicts.length,
-    counts: {},
+    counts: { seen: verdicts.filter((v) => v === "seen").length, not_shown: verdicts.filter((v) => v === "not_shown").length, cannot_test: verdicts.filter((v) => v === "cannot_test").length, reversed: verdicts.filter((v) => v === "reversed").length },
     datasets: { [base.id]: { fingerprint: base.input_fingerprint!, terms: base.models.scm.rules.map((r, i) => [r.feature, r.presence, verdicts[i]!]) } },
     ...over,
   });
@@ -94,22 +94,29 @@ describe("the causal caveat and the within-lineage result", () => {
   it("keeps the caveat and attaches each rule's result to it", () => {
     const page = render(base, table(verdicts));
     expect(page).toContain(
-      `${CAVEAT} For rule 1 the association also holds inside lineages. For ${later} these genomes do not have enough mixed lineages to separate this from lineage. Each rule was tested inside this report's lineage clusters, on the isolates the earlier rules left undecided, and needs 5 clusters that hold both lab calls and both states of the rule (release synthetic). The rules were chosen on these same isolates, so the test is not held-out evidence. An association that holds inside lineages is still an association, not a cause.`,
+      `${CAVEAT} For rule 1 the association is still seen when isolates are compared only inside their lineage cluster. For ${later} too few lineage clusters hold both lab calls and both states of the rule, so the test could not be run. Each rule was tested inside this report's lineage clusters, on the isolates the earlier rules left undecided, and needs 5 clusters that hold both lab calls and both states of the rule (release synthetic). One test pools the clusters; it does not show the association in each one. Of the 1 rule of this release that could be tested, 1 passed (adjusted p under 0.05). The clusters are MinHash clusters, not a phylogeny. The rules were chosen on these same isolates, so the test is not held-out evidence. An association seen inside lineage clusters is still an association, not a cause.`,
     );
+    // The synthetic table holds this one report, so its counts are this report's verdicts.
+    expect(page).not.toContain("holds inside lineages");
+  });
+
+  it("follows a test that did not pass with what it does not show", () => {
+    const page = render(base, table(base.models.scm.rules.map((_, i) => (i === 0 ? "not_shown" : "seen"))));
+    expect(page).toContain("For rule 1 the test did not show the association inside lineages. That is not a finding of no association.");
   });
 
   it("keeps the caveat alone on a report the table was not computed on", () => {
     // The bundled table holds the release's datasets; the fixture's are not in it.
     for (const page of [render(base), render({ ...base, input_fingerprint: "0".repeat(16) }, table(verdicts)), render(base, table(verdicts, { evaluation_revision: 15 }))]) {
       expect(page).toContain(CAVEAT);
-      expect(page).not.toContain("inside lineages");
-      expect(page).not.toContain("mixed lineages");
+      // No verdict, and none of the method text either.
+      for (const words of ["lineage cluster", "inside lineages", "MinHash", "could be tested", "the test"]) expect(page).not.toContain(words);
     }
   });
 
   it("says nothing of a rule whose verdict has no words", () => {
     const page = render(base, table(base.models.scm.rules.map((_, i) => (i === 0 ? "reversed" : "seen"))));
-    expect(page).toContain(`For ${later} the association also holds inside lineages.`);
+    expect(page).toContain(`For ${later} the association is still seen when isolates are compared only inside their lineage cluster.`);
     expect(page).not.toContain("For rule 1 ");
   });
 });

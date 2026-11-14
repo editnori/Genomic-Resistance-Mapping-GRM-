@@ -49,8 +49,16 @@ The version is a number for the words only. It is not part of the evaluation: `E
 
 Under the inspector's rules the app keeps the caveat that a rule's k-mers can travel with the cause without being the cause, and adds one of three sentences for each rule when the table holds a verdict for this exact report:
 
-- `the association also holds inside lineages`
-- `the test did not show the association inside lineages`
-- `these genomes do not have enough mixed lineages to separate this from lineage`
+- `the association is still seen when isolates are compared only inside their lineage cluster`
+- `the test did not show the association inside lineages. That is not a finding of no association.`
+- `too few lineage clusters hold both lab calls and both states of the rule, so the test could not be run`
 
-`reference/lineage-control/README.md` gives the test, its counts and its limits. An association that holds inside lineages is still an association, and the rules were chosen on the same isolates, so the test is not held-out evidence. The second sentence says the test did not reach its level; it does not say the association is absent. The third sentence is not a negative result.
+After them the app says how the test was run and what it does not show. The counts in that text are read from the table's own counts (`lineageTested` in `web/src/data/derive/lineage.ts`), so they move with the table and are typed nowhere:
+
+- One test pools the clusters. It does not show the association in each one, so the first sentence does not say the association holds in every lineage.
+- How many of the release's rules could be tested, how many of those passed, and the level.
+- The clusters are MinHash clusters, not a phylogeny.
+- The rules were chosen on the same isolates, so the test is not held-out evidence.
+- An association seen inside lineage clusters is still an association, not a cause.
+
+`reference/lineage-control/README.md` gives the test, its counts and its limits. The second sentence says the test did not reach its level; it does not say the association is absent. The third sentence is not a negative result.
