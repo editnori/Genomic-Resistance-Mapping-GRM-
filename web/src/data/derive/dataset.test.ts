@@ -199,11 +199,25 @@ describe("words", () => {
     const file = JSON.parse(fs.readFileSync(`${cwd}/../tests/data/rule-text-cases.json`, "utf8")) as { rule_text_version: number; cases: Record<string, { report: DatasetReport; scm_rules: string[] }> };
     expect(file.rule_text_version).toBe(RULE_TEXT_VERSION);
     const names = Object.keys(file.cases);
-    expect(names).toEqual(["outside_the_named_gene", "ties", "counts_for_the_drugs_rule", "no_catalog_block", "a_group_named_alone"]);
+    expect(names).toEqual(["outside_the_named_gene", "ties", "counts_for_the_drugs_rule", "no_catalog_block", "a_group_named_alone", "gene_groups_out_of_order", "a_row_without_the_flag"]);
+    const written = (r: DatasetReport) => r.models.scm.rules.map((_, i) => indexRuleWords(r, i));
     for (const name of names) {
       const { report: r, scm_rules: words } = file.cases[name]!;
-      expect([name, r.models.scm.rules.map((_, i) => indexRuleWords(r, i))]).toEqual([name, words]);
+      expect([name, written(r)]).toEqual([name, words]);
     }
+    // One case holds its gene-group rows out of name order on both sides of
+    // the clause; the index writer sorts the names, and so must these words,
+    // whatever order the rows come in.
+    const { report: shuffled, scm_rules: sortedWords } = file.cases.gene_groups_out_of_order!;
+    const rows = shuffled.catalog!.groups.map((g) => g.group);
+    expect(rows).not.toEqual([...rows].sort());
+    expect(sortedWords[0]).toBe("presence of blaOXA; GRM's known-gene rule for this drug uses blaOXA (OXA-23 family) and blaOXA (OXA-51 family)");
+    expect(written({ ...shuffled, catalog: { ...shuffled.catalog!, groups: [...shuffled.catalog!.groups].reverse() } })).toEqual(sortedWords);
+    // One case holds rows that do not say whether the rule uses their group:
+    // nothing is said of those groups.
+    const { report: silent, scm_rules: silentWords } = file.cases.a_row_without_the_flag!;
+    expect(silent.catalog!.groups.filter((g) => g.counts_for_rule === undefined).map((g) => g.group)).toEqual(["blaKPC", "sul1"]);
+    expect(silentWords[0]).toBe("presence of blaKPC");
   });
 
   it("writes the synthetic fixture's index in the same words, and numbers the wording", () => {

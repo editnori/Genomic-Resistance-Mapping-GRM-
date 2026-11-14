@@ -2024,6 +2024,45 @@ mod tests {
     }
 
     #[test]
+    fn a_rule_term_names_its_gene_groups_in_one_order_whatever_the_order_of_the_rows() {
+        // The shared case lists its gene-group rows out of name order on both
+        // sides of the clause. The app's copy sorts the names
+        // (`familyRuleWords`), so a writer here that kept the rows' order
+        // would put other words into the index than the app expects.
+        let (report, words) = rule_text_case("gene_groups_out_of_order");
+        let rows: Vec<&str> = report["catalog"]["groups"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|g| g["group"].as_str().unwrap())
+            .collect();
+        let mut sorted = rows.clone();
+        sorted.sort_unstable();
+        assert_ne!(rows, sorted, "the case must hold its rows out of order");
+        assert_eq!(rule_text(&report), words);
+        assert_eq!(
+            words[0],
+            "presence of blaOXA; GRM's known-gene rule for this drug uses blaOXA (OXA-23 family) and blaOXA (OXA-51 family)"
+        );
+        assert!(words[1].ends_with("uses blaKPC and blaNDM but not qacE or sul1"));
+        assert!(words[2].ends_with("does not use qacE or sul1"));
+        // The rows in any other order give the same words.
+        let mut reversed = report.clone();
+        reversed["catalog"]["groups"]
+            .as_array_mut()
+            .unwrap()
+            .reverse();
+        assert_eq!(rule_text(&reversed), words);
+        // A row that does not say whether the rule uses its group is read as
+        // no row, and never as a group the rule does not use.
+        let (silent, silent_words) = rule_text_case("a_row_without_the_flag");
+        assert!(silent["catalog"]["groups"][0]["counts_for_rule"].is_null());
+        assert_eq!(rule_text(&silent), silent_words);
+        assert_eq!(silent_words[0], "presence of blaKPC");
+        assert!(silent_words[1].ends_with("; GRM's known-gene rule for this drug uses blaNDM"));
+    }
+
+    #[test]
     fn the_index_numbers_the_wording_of_its_rule_text() {
         // The wording changed twice before the index held a number for it;
         // a change to `rule_text`'s words takes a new number.
@@ -2041,8 +2080,11 @@ mod tests {
 
     /// Every rule term of the reports in `GRM_REPORT_DIR/datasets`, in the
     /// words the next index would hold, one line per term on stdout as
-    /// `dataset<TAB>position<TAB>words`. It reads published reports, which CI
-    /// does not hold, so it is ignored there.
+    /// `dataset<TAB>position<TAB>words`. With `GRM_RULE_WORDS_OUT` set, the
+    /// same lines are written to that file, which the web app's
+    /// `realrules.test.ts` reads as `GRM_RULE_WORDS_RUST` and compares with
+    /// its own words for the same reports, term by term. It reads published
+    /// reports, which CI does not hold, so it is ignored there.
     #[test]
     #[ignore = "needs published dataset reports in GRM_REPORT_DIR"]
     fn the_rule_words_of_published_reports() {
@@ -2054,12 +2096,17 @@ mod tests {
             .collect();
         paths.sort();
         assert!(!paths.is_empty(), "no report in {dir}/datasets");
+        let mut lines = String::new();
         for path in paths {
             let report: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
             let id = report["id"].as_str().unwrap();
             for (i, words) in rule_text(&report).iter().enumerate() {
-                println!("{id}\t{}\t{words}", i + 1);
+                lines.push_str(&format!("{id}\t{}\t{words}\n", i + 1));
             }
+        }
+        print!("{lines}");
+        if let Ok(out) = std::env::var("GRM_RULE_WORDS_OUT") {
+            std::fs::write(&out, &lines).unwrap_or_else(|e| panic!("{out}: {e}"));
         }
     }
 }

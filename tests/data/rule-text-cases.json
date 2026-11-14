@@ -644,6 +644,214 @@
     "presence of armA; GRM's known-gene rule for this drug does not use armA",
     "presence of k-mers matching 2 catalog families (armA, rmtB); GRM's known-gene rule for this drug does not use armA or rmtB"
    ]
+  },
+  "gene_groups_out_of_order": {
+   "why": "A report lists its gene-group rows in no fixed order. Here each side of each clause has its rows out of name order: blaOXA (OXA-51 family) before blaOXA (OXA-23 family), blaNDM before blaKPC, sul1 before qacE. Both writers sort the names, so the words are the same whatever the order of the rows; a writer that kept the rows' order would give other words.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaOXA"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "sul1",
+       "blaNDM",
+       "qacE",
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [
+       "qacE",
+       "sul1"
+      ],
+      "locus": null
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       }
+      ],
+      "steps": []
+     }
+    },
+    "catalog": {
+     "version": "2026-08-07.1",
+     "rule": [
+      [
+       "S:CARBAPENEM"
+      ]
+     ],
+     "groups": [
+      {
+       "group": "sul1",
+       "class": "SULFONAMIDE",
+       "subclass": "SULFONAMIDE",
+       "counts_for_rule": false,
+       "n_resistant": 7,
+       "n_susceptible": 5
+      },
+      {
+       "group": "blaOXA (OXA-51 family)",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 9,
+       "n_susceptible": 8
+      },
+      {
+       "group": "blaNDM",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "qacE",
+       "class": "QUATERNARY AMMONIUM",
+       "subclass": "QUATERNARY AMMONIUM",
+       "counts_for_rule": false,
+       "n_resistant": 2,
+       "n_susceptible": 2
+      },
+      {
+       "group": "blaOXA (OXA-23 family)",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 6,
+       "n_susceptible": 1
+      },
+      {
+       "group": "blaKPC",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 9,
+       "n_susceptible": 1
+      }
+     ]
+    }
+   },
+   "scm_rules": [
+    "presence of blaOXA; GRM's known-gene rule for this drug uses blaOXA (OXA-23 family) and blaOXA (OXA-51 family)",
+    "presence of k-mers matching 4 catalog families (blaKPC, blaNDM, qacE, sul1); GRM's known-gene rule for this drug uses blaKPC and blaNDM but not qacE or sul1",
+    "absence of k-mers matching 2 catalog families (qacE, sul1); GRM's known-gene rule for this drug does not use qacE or sul1"
+   ]
+  },
+  "a_row_without_the_flag": {
+   "why": "A gene-group row that does not say whether the rule uses its group is read as no row: nothing is said of the group, and it is not read as one the rule does not use. Here blaKPC and sul1 have such rows, so the first term gets no clause and the second names blaNDM alone.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "blaNDM",
+       "sul1"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [
+       "ble",
+       "sul1"
+      ],
+      "locus": null
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": true
+       }
+      ],
+      "steps": []
+     }
+    },
+    "catalog": {
+     "version": "2026-08-07.1",
+     "rule": [
+      [
+       "S:CARBAPENEM"
+      ]
+     ],
+     "groups": [
+      {
+       "group": "blaKPC",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "n_resistant": 9,
+       "n_susceptible": 1
+      },
+      {
+       "group": "blaNDM",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "ble",
+       "class": "BLEOMYCIN",
+       "subclass": "BLEOMYCIN",
+       "counts_for_rule": false,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "sul1",
+       "class": "SULFONAMIDE",
+       "subclass": "SULFONAMIDE",
+       "n_resistant": 7,
+       "n_susceptible": 5
+      }
+     ]
+    }
+   },
+   "scm_rules": [
+    "presence of blaKPC",
+    "presence of k-mers matching 2 catalog families (blaNDM, sul1); GRM's known-gene rule for this drug uses blaNDM",
+    "presence of k-mers matching 2 catalog families (ble, sul1); GRM's known-gene rule for this drug does not use ble"
+   ]
   }
  }
 }

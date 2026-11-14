@@ -55,7 +55,15 @@ The web app's browser check, `web/scripts/browser-check.cjs`, is outside this wo
 - the feature-block registry's catalog name check, which runs `proxy_kind` over every gene group in the pinned AMRFinderPlus catalog, so that no real name trips the deny-list and drops the P block: the ignored test `ablate::blocks::tests::the_real_catalog_s_gene_groups_pass_the_deny_list`, run with `GRM_CATALOG_DIR` set to a `grm fetch catalog` folder;
 - `scripts/check-results.py` and `scripts/metric-audit/audit.py` on saved reports in `data/`;
 - the web suite's `src/charts/realdata.test.ts` and `src/data/derive/realrules.test.ts`, which read a published report from `GRM_REPORT_DIR` and skip without it;
-- the ignored test `report::tests::the_rule_words_of_published_reports`, which prints the index's words for every rule term of the reports in `GRM_REPORT_DIR`;
+- the ignored test `report::tests::the_rule_words_of_published_reports`, which prints the index's words for every rule term of the reports in `GRM_REPORT_DIR`, and writes them to the file `GRM_RULE_WORDS_OUT` names;
+- the cross-check of the two writers of the rule words on real reports. The Rust writer and the app's copy are held to the same synthetic cases in CI (`tests/data/rule-text-cases.json`). On a release, run the Rust test first and hand its file to the web test, which compares the two term by term. With `R` the unpacked release and `W` a new file:
+
+  ```sh
+  GRM_REPORT_DIR="$R" GRM_RULE_WORDS_OUT="$W" cargo test --release --locked --lib -- --ignored --exact report::tests::the_rule_words_of_published_reports
+  GRM_REPORT_DIR="$R" GRM_RULE_WORDS_RUST="$W" npm --prefix web test -- src/data/derive/realrules.test.ts
+  ```
+
+  Without `GRM_RULE_WORDS_RUST` the web test that makes the comparison is reported as skipped. It does not pass without comparing;
 - the ignored test `learn::lasso::tests::mtb_delamanid_fold0_reaches_the_certified_optima`, which reads a local diagnosis folder;
 - the deployment mutation check, `data/work/deployment-mutation-20261027/grm-mutate-v3.py`.
 

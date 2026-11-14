@@ -377,6 +377,7 @@ src/lib.rs report::tests::a_missing_lineage_learner_row_is_not_full_coverage
 src/lib.rs report::tests::a_missing_or_malformed_kover_comparison_refuses_before_writing
 src/lib.rs report::tests::a_rebuild_removes_files_for_datasets_and_species_it_no_longer_publishes
 src/lib.rs report::tests::a_rule_term_names_every_catalog_family_its_feature_matches
+src/lib.rs report::tests::a_rule_term_names_its_gene_groups_in_one_order_whatever_the_order_of_the_rows
 src/lib.rs report::tests::a_rule_term_outside_the_named_gene_says_how_far_from_it
 src/lib.rs report::tests::a_rule_term_says_which_named_gene_groups_count_for_the_drugs_rule
 src/lib.rs report::tests::a_tied_rule_term_says_how_many_features_separate_the_isolates_equally_well
