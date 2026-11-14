@@ -4,6 +4,8 @@ This page reads the result of [outside-study-results.md](outside-study-results.m
 
 Each figure here is a new estimate set against the report's figure, as in "98.9% against 90.3%". For a learner the report's figure is the lineage-split figure. For the known-gene rule it is the fixed rule's figure on the whole cohort.
 
+The report's figures on this page are the ones the runs pinned, at evaluation revision 12. [Revision 14](outside-study-results.md#revision-14) reads the same estimates against the figures the site serves now.
+
 A learner holds on a dataset when neither its sensitivity nor its specificity reads below. That count is not in the plan and was added after the results were read. The datasets a learner holds on are part of the species' datasets. The two populations are separate counts and are never added together.
 
 The rows named here are in the table "Rows cited in the text" below. Every dataset's row is in the species' `metrics.tsv`, and `reading.txt` gives the same rows in plain words.
@@ -26,7 +28,7 @@ Two facts limit this batch. One study, PRJNA841811, holds 71.6% to 90.6% of the 
 
 ***Salmonella enterica*, 2,107 genomes, 17 datasets.** This batch has the most studies, up to 39 on a dataset. On two drugs the set covering machine reads below where the known-gene rule does not. On sulfamethoxazole the set covering machine has 30.6% sensitivity against 87.0%, and the known-gene rule has 98.9%. On tetracycline the set covering machine's specificity is 43.0% against 96.1%, and the known-gene rule's is 98.5%.
 
-The other learners split. The lasso holds on sulfamethoxazole, with 93.0% sensitivity, and the decision tree reads below there, with 11.4% against 82.6%. On tetracycline the decision tree holds, with 96.6% sensitivity and 99.0% specificity.
+The other learners split. The lasso holds on sulfamethoxazole, with 93.0% sensitivity, and the decision tree reads below there, with 11.4% against 82.6%. On tetracycline the decision tree holds, with 96.6% sensitivity and 99.0% specificity. Revision 14 changes the lasso's report figures on sulfamethoxazole, and the lasso holds against them too.
 
 ***K. pneumoniae*, 2,014 genomes, 21 datasets.** No single study holds this batch: PRJEB29742 holds the most resistant genomes on 11 of the 21 datasets, with 24.0% to 90.6% of them. The set covering machine reads below on sensitivity on 11 datasets: meropenem has 61.3% against 85.6%, while the known-gene rule has 90.5%.
 
