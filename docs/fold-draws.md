@@ -30,7 +30,7 @@ A run at the release's seeds writes `<data>/species/<slug>/results/`, as before.
 
 `grm report`, `grm intervals` and `grm provenance` read `results/` alone, so a draw is never indexed or served, and it never replaces a released report. Each draw's report records its seed in `eval_config.seed`, and `eval_config.learner_seed` when one was set. The field is left out when it is not set, so a release report keeps its bytes and its input key.
 
-A draw needs what `grm learn` needs: the species counted and built, and its k-mer sets on disk for a species with a probe assay. A new draw can leave a fold or a tuning partition without a class on a small dataset. The lineage split is then recorded as unavailable in that draw's report, and an invalid random split stops the run on that dataset, as it does at seed 42 (docs/duplicate-isolation.md).
+A draw needs what `grm learn` needs: the species counted and built, and its k-mer sets on disk for a species with a probe assay. A new draw can leave a fold or a tuning partition without a class on a small dataset. The lineage split is then recorded as unavailable in that draw's report. An invalid random split is an error, as it is at seed 42 (docs/duplicate-isolation.md): the species' run stops at that dataset and writes no report for it. The datasets it had not reached can be run one at a time with `--only <id>` and the same seeds.
 
 ## Matching the input comparison
 
