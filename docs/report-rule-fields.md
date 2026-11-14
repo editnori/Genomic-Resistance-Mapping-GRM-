@@ -63,7 +63,18 @@ The forest's and boosting's features get no pattern, to bound the size. Those tw
 
 ### Size
 
-No released report has the field, so the cost is an estimate from each report's own shape: the fold models' sizes are exact (`fold_complexity`), the bytes of one rule, node, list entry and weight are measured on the report's final models, and the pattern length follows from the sample count. The number of distinct features the folds name is not in a released report, so the patterns are a range: from "every fold names the features of the fold that names most" to "no two fold models share a feature". On a synthetic report that has the field, the estimate is 13,671 bytes and the field is 13,532.
+**Measured on real reports.** The nine `enterobacter_cloacae` reports of `data-rev14-274-20261112` were rebuilt on 14 Nov 2026 from the public inputs (270 genomes), once with the source before this change and once with it. The earlier source's reports equal the released ones once wall-clock seconds are removed, so each new report is the released report plus the two fields.
+
+| | All nine | Smallest | Median | Largest |
+|---|---:|---:|---:|---:|
+| `fold_models`, bytes | 499,860 | 50,707 | 55,457 | 60,568 |
+| `rule_groups`, bytes | 17,075 | 1,587 | 1,915 | 2,281 |
+| growth of the file, bytes | 516,887 | 52,310 | 57,639 | 62,862 |
+| growth as a share of the report | 0.94% | 0.36% | 1.41% | 37.96% |
+
+The growth is close to constant, 52 to 63 kB, while these reports run from 164 kB to 17 MB, so the share is small on a report with many feature cards and large on a small one. Of the 499,860 bytes of `fold_models`, the forest's lists are 220,691, boosting's 139,152, the patterns 47,648 (906 features), the trees 41,452, the lasso refits 40,293 and the scm models 9,238. The two ranked lists are 72% of the field.
+
+**Estimated over the release.** No released report has the field, so for the other reports the cost is an estimate from each report's own shape: the fold models' sizes are exact (`fold_complexity`), the bytes of one rule, node, list entry and weight are measured on the report's final models, and the pattern length follows from the sample count. Two counts are not in a released report, so each is a range. The distinct features the folds name run from "every fold names the features of the fold that names most" to "no two fold models share a feature". A fold's boosting list runs from one entry to 50: in the nine real reports the fold lists held 0 to 50 entries beside final lists of 29 to 50. The real field lay inside the range in all nine, at 1.33 to 1.65 times the low end and 0.79 to 0.90 of the high end. The range was widened after seeing them, so that fit is not a test of it. The test came after, with the range fixed first: two large `pseudomonas_aeruginosa` reports rebuilt the same way (meropenem and tobramycin, 38.9 MB and 138.3 MB). Their fields are 106,649 and 106,609 bytes, inside the ranges 53,227 to 126,140 and 54,431 to 125,944, and the two files grew by 0.31% and 0.09%.
 
 Over the 274 reports of `data-rev14-274-20261112` (1,014,481,242 bytes; median report 678,123 bytes), counted on 14 Nov 2026:
 
@@ -73,13 +84,13 @@ Over the 274 reports of `data-rev14-274-20261112` (1,014,481,242 bytes; median r
 | `cart` fold models | 2.9 MB | 7.1 kB |
 | `lasso` fold models | 2.6 MB | 8.1 kB |
 | `rf` lists | 6.6 MB | 24.6 kB |
-| `gbt` lists | 5.7 to 6.0 MB | 22.9 to 23.0 kB |
+| `gbt` lists | 0.1 to 6.0 MB | 0.5 to 23.0 kB |
 | patterns of the scm, cart and lasso features | 3.5 to 21.3 MB | 8.1 to 50.6 kB |
-| `fold_models` in all | 21.7 to 39.9 MB | 73.5 to 116.8 kB |
+| `fold_models` in all | 16.2 to 39.9 MB | 51.6 to 116.8 kB |
 | `rule_groups` | 3.7 MB | 11.0 kB |
-| both fields | 25.5 to 43.6 MB | 86.4 to 129.9 kB |
+| both fields | 19.9 to 43.6 MB | 65.5 to 129.9 kB |
 
-That is 2.5% to 4.3% of the release's bytes, because a few reports with very many feature cards hold most of them. On a report of its own the share is larger: 16.5% to 26.6% at the median, and 26.9% to 73.7% on the report where it is largest. The two ranked lists are more than half of the fixed part; without them the fold models would cost 5.9 MB plus the patterns.
+That is 2.0% to 4.3% of the release's bytes, because a few reports with very many feature cards hold most of them. On a report of its own the share is larger: 12.6% to 26.6% at the median, and 23.4% to 73.7% on the report where it is largest. Without the two ranked lists the fold models would cost 5.9 MB plus the patterns.
 
 ## The known-gene rule: `counts_for_rule` and `rule_groups`
 
@@ -107,6 +118,8 @@ Under a rule with one requirement, `catalog_resistant` is true exactly when `rul
 
 On a synthetic dataset where one group's alleles differ (`a_groups_flag_follows_its_first_genome_and_rule_groups_each_genomes_own_hit`), the row says the group does not count while 19 of its 38 genomes' hits do; with the first genome's allele swapped the row says it counts while the other 19 do not. `rule_groups` names the same 19 genomes either way.
 
+On eleven real reports rebuilt with the field on 14 Nov 2026 (nine of `enterobacter_cloacae`, and meropenem and tobramycin of `pseudomonas_aeruginosa`; 2,437 samples, 22,789 hits), every sample's `rule_groups` equals the list worked out outside the tool from that genome's own calls in `counted.json`. A hit answers the rule differently from its group's row on 54 samples: in 40 hits the row says the group counts and the genome's allele does not, and in 14 the reverse. Only 20 of those samples have a call that a reader of the rows would get wrong, the 15 and 5 the release counts above include for the two `pseudomonas_aeruginosa` reports. The other 34 are the ones a released report cannot show.
+
 ## Schema and revision
 
 Neither changes.
@@ -122,6 +135,8 @@ One consequence follows from not bumping the revision. `grm learn` reuses a save
 - `src/analysis.rs`: `fold_patterns_cover_the_features_scm_cart_and_lasso_name_and_no_others`, `reports_keep_each_available_splits_fold_models_and_their_patterns`, `a_groups_flag_follows_its_first_genome_and_rule_groups_each_genomes_own_hit`, `a_drug_without_a_rule_records_no_rule_groups`.
 - `src/catalog.rs`: `a_hit_counts_by_its_own_alleles_class_and_subclass`.
 - **Before and after.** The ignored test `analysis::tests::write_report_fields_fixture_root` writes a synthetic data root (150 made-up genomes, a tobramycin dataset, three made-up catalog groups) that `grm learn --species fixture` runs on without the network. Run it with a build of the earlier source and a build of this one, on two copies of the root, and compare the two reports key by key.
+
+- **Real reports.** Eleven released reports were rebuilt from the public inputs with the source before this change and with it (see Size and `rule_groups`). In all eleven the earlier build's report equals the released one once wall-clock seconds are removed, and the new build's report differs from it by the two fields alone. They are 11 of 274 reports and 2 of 24 species.
 
 ## Limits
 
