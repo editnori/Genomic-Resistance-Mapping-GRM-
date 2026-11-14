@@ -243,7 +243,7 @@ describe("continuation slides", () => {
     expect(labels.filter((t) => t.includes("Input settings against the default"))).toEqual([1, 2, 3, 4, 5, 6, 7].map((k) => expect.stringContaining(`(${k} of 7)`)));
   });
 
-  it("says on the rule slide what a list of families is, which gene groups count for the drug's rule, and how many features tie the rule", async () => {
+  it("says on the rule slide what a list of families is, which gene groups GRM's known-gene rule for the drug uses, and how many features tie the rule", async () => {
     motion(true);
     restore = layout({ height: 2000 });
     // The synthetic fixture's showcase report under a new id, so the deck
@@ -268,7 +268,7 @@ describe("continuation slides", () => {
     };
     const tied = await slide("rule-words-tied", 3);
     expect(tied).toContain(
-      "Known-gene catalog families blaNDM, ble. Not a list of genes an isolate carries: one k-mer pattern matches all of these families. Of the gene groups found in these genomes, blaNDM counts for this drug's known-gene rule, but ble does not.",
+      "Known-gene catalog families blaNDM, ble. Not a list of genes an isolate carries: one k-mer pattern matches all of these families. Of the gene groups GRM found in these genomes, its known-gene rule for this drug uses blaNDM but not ble.",
     );
     expect(tied).toContain("This rule is one of 4 features that separate these isolates equally well.");
     act(() => root?.unmount());

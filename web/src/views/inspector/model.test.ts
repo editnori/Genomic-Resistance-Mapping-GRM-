@@ -1,6 +1,6 @@
 // The interpretable-model section's words about a rule term: where its
 // k-mers sit, what a list of catalog families is, which named gene groups
-// count for the drug's rule, how many features tie it, and whether its
+// GRM's known-gene rule for the drug uses, how many features tie it, and whether its
 // association holds inside lineages. Every report here is the synthetic
 // fixture's, with cards, gene-group rows and verdict tables set by hand.
 
@@ -49,18 +49,22 @@ describe("a rule term's place", () => {
 describe("a rule term's catalog families", () => {
   const catalog = { ...base.catalog!, groups: [group("blaNDM", true), group("ble", false), group("blaOXA (OXA-48 family)", true), group("blaOXA (OXA-1 family)", false)] };
 
-  it("says a list of several families is one pattern, and which of their gene groups count for the drug's rule", () => {
+  it("says a list of several families is one pattern, and which of their gene groups GRM's known-gene rule for the drug uses", () => {
     const page = render(withCard((c) => ({ ...c, catalog_families: ["blaNDM", "ble", "blaAFM"] }), { catalog }));
     expect(page).toContain(NOTE);
-    expect(page).toContain("Of the gene groups found in these genomes, blaNDM counts for this drug's known-gene rule, but ble does not.");
-    // blaAFM has no gene-group row: nothing is said of it.
-    expect(page).not.toContain("blaAFM counts");
-    expect(page).not.toContain("blaAFM does not");
+    expect(page).toContain("Of the gene groups GRM found in these genomes, its known-gene rule for this drug uses blaNDM but not ble.");
+    // blaAFM has no gene-group row: nothing is said of it. Its name stands
+    // only in the heading and in the list of families, never after "use".
+    expect(page).not.toMatch(/uses? [^.]*blaAFM/);
+    expect(page).not.toMatch(/but not [^.]*blaAFM/);
+    // The sentence is about GRM's rule; no gene is said to count.
+    expect(page).not.toContain(" counts for ");
+    expect(page).not.toContain(" does not count");
   });
 
-  it("names the groups of a family that has one counting and one not", () => {
+  it("names the groups of a family that has one the rule uses and one it does not", () => {
     const page = render(alone(withCard((c) => ({ ...c, catalog_families: ["blaOXA"] }), { catalog })));
-    expect(page).toContain("Of the gene groups found in these genomes, blaOXA (OXA-48 family) counts for this drug's known-gene rule, but blaOXA (OXA-1 family) does not.");
+    expect(page).toContain("Of the gene groups GRM found in these genomes, its known-gene rule for this drug uses blaOXA (OXA-48 family) but not blaOXA (OXA-1 family).");
     // One family is no list, so the note about lists stays out.
     expect(page).not.toContain(NOTE);
   });
@@ -68,7 +72,8 @@ describe("a rule term's catalog families", () => {
   it("says nothing of the drug's rule where the report holds no row for the family, or no catalog block", () => {
     expect(render(alone(withCard((c) => ({ ...c, catalog_families: ["tet(A)"] }), { catalog })))).not.toContain("known-gene rule");
     expect(render(alone(withCard((c) => ({ ...c, catalog_families: ["blaNDM"] }), { catalog: null })))).not.toContain("known-gene rule");
-    expect(render(alone(withCard((c) => ({ ...c, catalog_families: ["blaNDM"] }), { catalog })))).toContain("Of the gene groups found in these genomes, blaNDM counts for this drug's known-gene rule.");
+    expect(render(alone(withCard((c) => ({ ...c, catalog_families: ["blaNDM"] }), { catalog })))).toContain("Of the gene groups GRM found in these genomes, its known-gene rule for this drug uses blaNDM.");
+    expect(render(alone(withCard((c) => ({ ...c, catalog_families: ["ble"] }), { catalog })))).toContain("Of the gene groups GRM found in these genomes, its known-gene rule for this drug does not use ble.");
   });
 });
 

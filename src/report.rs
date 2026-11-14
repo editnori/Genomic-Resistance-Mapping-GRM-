@@ -35,8 +35,8 @@ pub const SCHEMA: u32 = 2;
 /// - 2: a term names every catalog family its feature matches, after their
 ///   count (commit `3dde728`). Release rev14-274-20261112; no version field.
 /// - 3: a term also says how far its k-mers sit from the protein-coding
-///   gene it is named after when they sit outside it, whether a named
-///   family's gene groups count for this drug's known-gene rule, and how
+///   gene it is named after when they sit outside it, which of a named
+///   family's gene groups GRM's known-gene rule for this drug uses, and how
 ///   many features tie it. Not yet in a release.
 pub const RULE_TEXT_VERSION: u32 = 3;
 
@@ -345,59 +345,87 @@ fn tie_words(n_equivalent: u64, position: usize) -> Option<String> {
     })
 }
 
-/// "a", "a and b", "a, b and c".
-fn list_words(items: &[&str]) -> String {
+/// "a", "a and b", "a, b and c", with `last` before the final item ("and",
+/// or "or" after a negative).
+fn list_words<S: AsRef<str>>(items: &[S], last: &str) -> String {
     match items {
         [] => String::new(),
-        [one] => one.to_string(),
-        [most @ .., last] => format!("{} and {last}", most.join(", ")),
+        [one] => one.as_ref().to_string(),
+        [most @ .., end] => format!(
+            "{} {last} {}",
+            most.iter()
+                .map(AsRef::as_ref)
+                .collect::<Vec<_>>()
+                .join(", "),
+            end.as_ref()
+        ),
     }
 }
 
-/// What the report's own gene-group rows say of a term's catalog families
-/// under this drug's known-gene rule, or None when they say nothing. A row
-/// exists for a gene group that GRM's catalog reader called in at least one
-/// genome of the dataset, and holds whether that group counts for the rule
-/// (`analysis::GroupRow::counts_for_rule`). A named family with no row is
-/// left out: the report does not hold its class, so nothing is said of it.
-/// The groups are named, since one family can have a group that counts and
-/// one that does not. A report without a catalog block says nothing: it has
-/// one neither when the drug has no rule nor when its genomes have no gene
-/// calls, and the report does not tell the two apart. The web app builds the
-/// same words in `familyRuleWords`.
+/// What GRM's known-gene rule for this drug does with a term's catalog
+/// families, read from the report's own gene-group rows, or None when they
+/// say nothing. A row exists for a gene group that GRM's catalog reader
+/// called in at least one genome of the dataset, and holds whether the rule
+/// uses that group (`analysis::GroupRow::counts_for_rule`).
+///
+/// GRM's rule is the subject of the clause, and the group is its object:
+/// "GRM's known-gene rule for this drug does not use armA". The rule reads
+/// the catalog's class and subclass for the group, so the clause describes
+/// GRM's rule; it is no statement about what the gene does.
+///
+/// A named family with no row is left out: the report does not hold its
+/// class, so nothing is said of it. The groups are named, since one family
+/// can have a group the rule uses and one it does not. When a family has a
+/// group with a subfamily and one without, the second carries the family's
+/// bare name, and is written "the group named X alone" so that one name does
+/// not stand on both sides of the clause. The names are sorted, so the words
+/// do not depend on the order of the report's rows. A report without a
+/// catalog block says nothing: it has one neither when the drug has no rule
+/// nor when its genomes have no gene calls, and the report does not tell the
+/// two apart. The web app builds the same words in `familyRuleWords`.
 fn family_rule_words(families: &[&str], catalog: &Value) -> Option<String> {
-    let (mut counts, mut does_not): (Vec<&str>, Vec<&str>) = (Vec::new(), Vec::new());
+    let (mut uses, mut not): (Vec<&str>, Vec<&str>) = (Vec::new(), Vec::new());
     for g in catalog["groups"].as_array()? {
         let (Some(group), Some(for_rule)) = (g["group"].as_str(), g["counts_for_rule"].as_bool())
         else {
             continue;
         };
         if families.contains(&crate::catalog::family_of_group(group)) {
-            if for_rule { &mut counts } else { &mut does_not }.push(group);
+            if for_rule { &mut uses } else { &mut not }.push(group);
         }
     }
-    counts.sort_unstable();
-    does_not.sort_unstable();
-    let verb = |n: usize, one: &'static str, many: &'static str| if n == 1 { one } else { many };
-    const RULE: &str = "for this drug's known-gene rule";
-    match (counts.is_empty(), does_not.is_empty()) {
+    uses.sort_unstable();
+    not.sort_unstable();
+    // The families that have a group with a subfamily among these rows.
+    let with_subfamily: Vec<&str> = uses
+        .iter()
+        .chain(&not)
+        .map(|group| (*group, crate::catalog::family_of_group(group)))
+        .filter(|(group, family)| group != family)
+        .map(|(_, family)| family)
+        .collect();
+    let named = |groups: &[&str]| -> Vec<String> {
+        groups
+            .iter()
+            .map(|group| {
+                if with_subfamily.contains(group) {
+                    format!("the group named {group} alone")
+                } else {
+                    group.to_string()
+                }
+            })
+            .collect()
+    };
+    let (uses, not) = (named(&uses), named(&not));
+    const RULE: &str = "GRM's known-gene rule for this drug";
+    match (uses.is_empty(), not.is_empty()) {
         (true, true) => None,
-        (false, true) => Some(format!(
-            "{} {} {RULE}",
-            list_words(&counts),
-            verb(counts.len(), "counts", "count")
-        )),
-        (true, false) => Some(format!(
-            "{} {} count {RULE}",
-            list_words(&does_not),
-            verb(does_not.len(), "does not", "do not")
-        )),
+        (false, true) => Some(format!("{RULE} uses {}", list_words(&uses, "and"))),
+        (true, false) => Some(format!("{RULE} does not use {}", list_words(&not, "or"))),
         (false, false) => Some(format!(
-            "{} {} {RULE}, but {} {}",
-            list_words(&counts),
-            verb(counts.len(), "counts", "count"),
-            list_words(&does_not),
-            verb(does_not.len(), "does not", "do not")
+            "{RULE} uses {} but not {}",
+            list_words(&uses, "and"),
+            list_words(&not, "or")
         )),
     }
 }
@@ -405,9 +433,9 @@ fn family_rule_words(families: &[&str], catalog: &Value) -> Option<String> {
 /// Each SCM rule term of a report in words, for the index's `scm_rules`. A
 /// term names a marker: k-mers whose presence or absence goes with the lab
 /// calls in these isolates. The words say where the k-mers sit when that is
-/// outside the gene they are named after, whether a named catalog family
-/// counts for this drug's known-gene rule, and how many features tie the
-/// term. `RULE_TEXT_VERSION` numbers this wording.
+/// outside the protein-coding gene they are named after, which gene groups
+/// of a named catalog family GRM's known-gene rule for this drug uses, and
+/// how many features tie the term. `RULE_TEXT_VERSION` numbers this wording.
 fn rule_text(report: &Value) -> Vec<String> {
     let feats: HashMap<u64, &Value> = report["features"]
         .as_array()
@@ -1943,7 +1971,7 @@ mod tests {
         assert_eq!(rule_text(&report), words);
         assert_eq!(
             words[3],
-            "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble); blaNDM counts for this drug's known-gene rule, but ble does not"
+            "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble); GRM's known-gene rule for this drug uses blaNDM but not ble"
         );
         // tet(A) has no gene-group row, so its term says nothing of the rule.
         assert_eq!(words[4], "presence of tet(A)");
@@ -1960,8 +1988,39 @@ mod tests {
             .unwrap()
             .remove("counts_for_rule");
         assert_eq!(rule_text(&silent)[0], "presence of blaKPC");
-        assert_eq!(list_words(&[]), "");
-        assert_eq!(list_words(&["a", "b", "c"]), "a, b and c");
+        // GRM's rule is the subject of every clause, and no clause says a
+        // gene "counts". A group that carries its family's bare name beside
+        // one with a subfamily is written apart from it.
+        let (alone, alone_words) = rule_text_case("a_group_named_alone");
+        assert_eq!(rule_text(&alone), alone_words);
+        assert_eq!(
+            alone_words[0],
+            "presence of aac(6')-Ib; GRM's known-gene rule for this drug uses aac(6')-Ib (AAC(6')-Ib family) but not the group named aac(6')-Ib alone"
+        );
+        assert_eq!(
+            alone_words[2..],
+            [
+                "presence of armA; GRM's known-gene rule for this drug does not use armA",
+                "presence of k-mers matching 2 catalog families (armA, rmtB); GRM's known-gene rule for this drug does not use armA or rmtB"
+            ]
+        );
+        for clause in words
+            .iter()
+            .chain(&alone_words)
+            .filter_map(|w| w.split_once("; "))
+            .map(|(_, rest)| rest)
+            .filter(|rest| rest.contains("known-gene rule"))
+        {
+            assert!(
+                clause.starts_with("GRM's known-gene rule for this drug "),
+                "{clause}"
+            );
+            assert!(!clause.contains("count"), "{clause}");
+        }
+        assert_eq!(list_words::<&str>(&[], "and"), "");
+        assert_eq!(list_words(&["a"], "or"), "a");
+        assert_eq!(list_words(&["a", "b"], "or"), "a or b");
+        assert_eq!(list_words(&["a", "b", "c"], "and"), "a, b and c");
     }
 
     #[test]

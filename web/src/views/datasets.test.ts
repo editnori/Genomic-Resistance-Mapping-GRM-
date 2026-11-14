@@ -142,7 +142,7 @@ describe("dataset catalog", () => {
       expect(text(cell).startsWith(`${several}${note}`)).toBe(true);
     }
     // The words the next release's index adds after the families keep the note.
-    expect(ruleCell([`${several}; blaNDM counts for this drug's known-gene rule, but ble does not`])).toContain(note);
+    expect(ruleCell([`${several}; GRM's known-gene rule for this drug uses blaNDM but not ble`])).toContain(note);
     // A rule that names one family, a gene or a place has none, and neither has an empty model.
     for (const rules of [["presence of blaKPC"], ["presence of blaKPC", several], ["absence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB"], []]) {
       expect(ruleCell(rules)).not.toContain("data-rule-note");

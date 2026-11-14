@@ -158,19 +158,31 @@ describe("words", () => {
     expect(familyOfGroup("x (two words family)")).toBe("x (two words family)");
   });
 
-  it("says which named gene groups count for the drug's rule, and nothing where the report has no row", () => {
+  it("says which named gene groups GRM's known-gene rule for the drug uses, and nothing where the report has no row", () => {
     // Synthetic gene-group rows: the groups called in the dataset's genomes.
     const group = (name: string, counts: boolean) => ({ group: name, class: "", subclass: "", n_resistant: 1, n_susceptible: 1, counts_for_rule: counts });
     const groups = [group("ble", false), group("blaKPC", true), group("blaNDM", true), group("blaOXA (OXA-48 family)", true), group("blaOXA (OXA-1 family)", false), group("qacE", false), group("sul1", false)];
     const catalog = { ...report.catalog!, groups };
-    const rule = "for this drug's known-gene rule";
-    expect(familyRuleWords(["blaKPC"], catalog)).toBe(`blaKPC counts ${rule}`);
-    expect(familyRuleWords(["sul1"], catalog)).toBe(`sul1 does not count ${rule}`);
-    expect(familyRuleWords(["qacE", "sul1"], catalog)).toBe(`qacE and sul1 do not count ${rule}`);
-    expect(familyRuleWords(["blaOXA"], catalog)).toBe(`blaOXA (OXA-48 family) counts ${rule}, but blaOXA (OXA-1 family) does not`);
-    expect(familyRuleWords(["sul1", "qacE", "blaKPC", "blaNDM"], catalog)).toBe(`blaKPC and blaNDM count ${rule}, but qacE and sul1 do not`);
+    // GRM's rule is the subject and the group its object: the clause is about
+    // GRM's rule, and never says that a gene "counts".
+    const rule = "GRM's known-gene rule for this drug";
+    expect(familyRuleWords(["blaKPC"], catalog)).toBe(`${rule} uses blaKPC`);
+    expect(familyRuleWords(["sul1"], catalog)).toBe(`${rule} does not use sul1`);
+    expect(familyRuleWords(["qacE", "sul1"], catalog)).toBe(`${rule} does not use qacE or sul1`);
+    expect(familyRuleWords(["blaOXA"], catalog)).toBe(`${rule} uses blaOXA (OXA-48 family) but not blaOXA (OXA-1 family)`);
+    expect(familyRuleWords(["sul1", "qacE", "blaKPC", "blaNDM"], catalog)).toBe(`${rule} uses blaKPC and blaNDM but not qacE or sul1`);
     // blaAFM has no row: nothing is said of it, and the rest still stands.
-    expect(familyRuleWords(["blaNDM", "ble", "blaAFM"], catalog)).toBe(`blaNDM counts ${rule}, but ble does not`);
+    expect(familyRuleWords(["blaNDM", "ble", "blaAFM"], catalog)).toBe(`${rule} uses blaNDM but not ble`);
+    // A group with the family's bare name beside one with a subfamily is
+    // written apart from it, on whichever side it falls; alone it keeps its name.
+    const split = { ...catalog, groups: [group("aac(6')-Ib (AAC(6')-Ib family)", true), group("aac(6')-Ib", false), group("blaOXA", true), group("blaOXA (OXA-1 family)", false), group("armA", false)] };
+    expect(familyRuleWords(["aac(6')-Ib"], split)).toBe(`${rule} uses aac(6')-Ib (AAC(6')-Ib family) but not the group named aac(6')-Ib alone`);
+    expect(familyRuleWords(["blaOXA"], split)).toBe(`${rule} uses the group named blaOXA alone but not blaOXA (OXA-1 family)`);
+    expect(familyRuleWords(["armA"], split)).toBe(`${rule} does not use armA`);
+    // A row that does not say whether the rule uses it is read as no row.
+    const silent = { ...catalog, groups: [{ ...group("sul1", false), counts_for_rule: undefined as unknown as boolean }, group("blaKPC", true)] };
+    expect(familyRuleWords(["sul1"], silent)).toBeNull();
+    expect(familyRuleWords(["blaKPC", "sul1"], silent)).toBe(`${rule} uses blaKPC`);
     // No row for any named family, no families, or no catalog block: nothing.
     expect(familyRuleWords(["tet(A)"], catalog)).toBeNull();
     expect(familyRuleWords(["blaAFM", "tet(A)"], catalog)).toBeNull();
@@ -187,7 +199,7 @@ describe("words", () => {
     const file = JSON.parse(fs.readFileSync(`${cwd}/../tests/data/rule-text-cases.json`, "utf8")) as { rule_text_version: number; cases: Record<string, { report: DatasetReport; scm_rules: string[] }> };
     expect(file.rule_text_version).toBe(RULE_TEXT_VERSION);
     const names = Object.keys(file.cases);
-    expect(names).toEqual(["outside_the_named_gene", "ties", "counts_for_the_drugs_rule", "no_catalog_block"]);
+    expect(names).toEqual(["outside_the_named_gene", "ties", "counts_for_the_drugs_rule", "no_catalog_block", "a_group_named_alone"]);
     for (const name of names) {
       const { report: r, scm_rules: words } = file.cases[name]!;
       expect([name, r.models.scm.rules.map((_, i) => indexRuleWords(r, i))]).toEqual([name, words]);
@@ -215,9 +227,9 @@ describe("words", () => {
 
   it("sees a term that names several catalog families in the index's words, and no other", () => {
     expect(familiesNamed("presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)")).toBe(3);
-    expect(familiesNamed("absence of k-mers matching 12 catalog families (a, b); blaNDM counts for this drug's known-gene rule, but ble does not")).toBe(12);
+    expect(familiesNamed("absence of k-mers matching 12 catalog families (a, b); GRM's known-gene rule for this drug uses blaNDM but not ble")).toBe(12);
     expect(familiesNamed("presence of blaKPC")).toBeNull();
-    expect(familiesNamed("presence of blaKPC; blaKPC counts for this drug's known-gene rule")).toBeNull();
+    expect(familiesNamed("presence of blaKPC; GRM's known-gene rule for this drug uses blaKPC")).toBeNull();
     expect(familiesNamed("presence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB")).toBeNull();
     expect(familiesNamed("presence of feature 4")).toBeNull();
     expect(SEVERAL_FAMILIES_NOTE).toBe("Not a list of genes an isolate carries: one k-mer pattern matches all of these families.");

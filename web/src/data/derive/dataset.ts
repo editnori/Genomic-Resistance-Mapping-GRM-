@@ -189,32 +189,51 @@ export const tieWords = (nEquivalent: number, position: number): string | null =
  *  group without its " (X family)" suffix. */
 export const familyOfGroup = (group: string): string => /^(.*) \(\S+ family\)$/.exec(group)?.[1] ?? group;
 
-/** What the report's own gene-group rows say of a term's catalog families
- *  under this drug's known-gene rule (`report::family_rule_words`), or null
- *  when they say nothing. A row exists for a gene group GRM's catalog
- *  reader called in at least one genome of the dataset. A named family with
- *  no row is left out: the report does not hold its class, so nothing is
- *  said of it. The groups are named, since one family can have a group that
- *  counts and one that does not. */
-export const familyRuleWords = (families: readonly string[], catalog: CatalogBaseline | null): string | null => {
+/** What GRM's known-gene rule for this drug does with a term's catalog
+ *  families, as a predicate: "uses blaNDM but not ble", "does not use armA".
+ *  Read from the report's own gene-group rows; null when they say nothing. A
+ *  row exists for a gene group GRM's catalog reader called in at least one
+ *  genome of the dataset. A named family with no row is left out: the report
+ *  does not hold its class, so nothing is said of it. A row that does not
+ *  say whether the rule uses it is read as no row. The groups are named,
+ *  since one family can have a group the rule uses and one it does not. When
+ *  a family has a group with a subfamily and one without, the second carries
+ *  the family's bare name and is written "the group named X alone", so that
+ *  one name does not stand on both sides. The names are sorted, so the words
+ *  do not depend on the order of the report's rows. */
+const ruleUseWords = (families: readonly string[], catalog: CatalogBaseline | null): string | null => {
   if (families.length === 0 || catalog === null) return null;
   const named = new Set(families);
-  const groups = (counts: boolean) => catalog.groups.flatMap((g) => (g.counts_for_rule === counts && named.has(familyOfGroup(g.group)) ? [g.group] : [])).sort();
-  const [counts, doesNot] = [groups(true), groups(false)];
-  const rule = "for this drug's known-gene rule";
-  const yes = `${listWords(counts)} ${counts.length === 1 ? "counts" : "count"} ${rule}`;
-  const no = `${listWords(doesNot)} ${doesNot.length === 1 ? "does not" : "do not"}`;
-  if (counts.length === 0) return doesNot.length === 0 ? null : `${no} count ${rule}`;
-  return doesNot.length === 0 ? yes : `${yes}, but ${no}`;
+  const rows = catalog.groups.filter((g) => typeof g.counts_for_rule === "boolean" && named.has(familyOfGroup(g.group)));
+  // The families that have a group with a subfamily among these rows.
+  const withSubfamily = new Set(rows.flatMap((g) => (familyOfGroup(g.group) === g.group ? [] : [familyOfGroup(g.group)])));
+  const groups = (used: boolean) =>
+    rows
+      .flatMap((g) => (g.counts_for_rule === used ? [g.group] : []))
+      .sort()
+      .map((group) => (withSubfamily.has(group) ? `the group named ${group} alone` : group));
+  const [uses, not] = [groups(true), groups(false)];
+  if (uses.length === 0) return not.length === 0 ? null : `does not use ${listWords(not, "or")}`;
+  return not.length === 0 ? `uses ${listWords(uses)}` : `uses ${listWords(uses)} but not ${listWords(not, "or")}`;
+};
+
+/** The clause the index gives a rule term that names catalog families
+ *  (`report::family_rule_words`), or null when the report's gene-group rows
+ *  say nothing of them. GRM's rule is the subject and the group its object,
+ *  so the clause describes GRM's rule, which reads the catalog's class and
+ *  subclass; it is no statement about what the gene does. */
+export const familyRuleWords = (families: readonly string[], catalog: CatalogBaseline | null): string | null => {
+  const use = ruleUseWords(families, catalog);
+  return use === null ? null : `GRM's known-gene rule for this drug ${use}`;
 };
 
 /** The wording `indexRuleWords` writes: `report::RULE_TEXT_VERSION`. */
 export const RULE_TEXT_VERSION = 3;
 
 /** A rule term as the index's `scm_rules` words it (`report::rule_text`):
- *  presence or absence of the term's label, then what the gene-group rows
- *  say of its catalog families, then its ties. `position` is the term's
- *  place in the model, from 0. */
+ *  presence or absence of the term's label, then which gene groups of its
+ *  catalog families GRM's known-gene rule for this drug uses, then its ties.
+ *  `position` is the term's place in the model, from 0. */
 export const indexRuleWords = (r: DatasetReport, position: number): string => {
   const rule = r.models.scm.rules[position]!;
   const card = r.features.find((f) => f.feature === rule.feature);
@@ -253,10 +272,11 @@ export const ruleWordingNote = (m: Pick<Manifest, "evaluation_revision" | "rule_
 
 /** The sentences beside a rule term whose feature matches catalog families,
  *  where the view has the report: the note when it matches several, then
- *  what the gene-group rows say of them. Empty when neither applies. */
+ *  which of their gene groups GRM's known-gene rule for this drug uses.
+ *  Empty when neither applies. */
 export const familyNotes = (families: readonly string[], catalog: CatalogBaseline | null): string[] => {
-  const rule = familyRuleWords(families, catalog);
-  return [...(new Set(families).size > 1 ? [SEVERAL_FAMILIES_NOTE] : []), ...(rule === null ? [] : [`Of the gene groups found in these genomes, ${rule}.`])];
+  const use = ruleUseWords(families, catalog);
+  return [...(new Set(families).size > 1 ? [SEVERAL_FAMILIES_NOTE] : []), ...(use === null ? [] : [`Of the gene groups GRM found in these genomes, its known-gene rule for this drug ${use}.`])];
 };
 
 const TOKEN_KIND: Record<string, string> = { "C:": "class", "S:": "subclass" };
