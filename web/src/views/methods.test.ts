@@ -32,7 +32,10 @@ describe("methods rule words", () => {
     const page = (m: typeof manifest) => renderToStaticMarkup(createElement(MethodsView, { manifest: m })).replace(/&#x27;/g, "'");
     const tail = "A later release can word the same rule differently, so a count of rules by what they name holds for one wording only.";
     expect(page({ ...manifest, evaluation_revision: 14, rule_text_version: 3 })).toContain(`is read as written. The rule words in the datasets table come from this release's index (evaluation revision 14, rule wording 3). ${tail}`);
-    expect(page({ ...manifest, evaluation_revision: 14, rule_text_version: undefined })).toContain(`come from this release's index (evaluation revision 14). ${tail}`);
+    // An index without the number says it has none, so the two wordings of revision 14 read differently.
+    expect(page({ ...manifest, evaluation_revision: 14, rule_text_version: undefined })).toContain(
+      `come from this release's index (evaluation revision 14, rule wording 2 or earlier: the index gives no number). ${tail}`,
+    );
   });
 });
 

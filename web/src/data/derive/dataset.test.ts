@@ -234,9 +234,13 @@ describe("words", () => {
   it("names the release's revision and rule wording beside a warning on counting rules by what they name", () => {
     const tail = " A later release can word the same rule differently, so a count of rules by what they name holds for one wording only.";
     expect(ruleWordingNote({ evaluation_revision: 14, rule_text_version: 3 })).toBe(`The rule words in the datasets table come from this release's index (evaluation revision 14, rule wording 3).${tail}`);
-    // The served release's index has no wording number: only its revision is named.
-    expect(ruleWordingNote({ evaluation_revision: 14 })).toBe(`The rule words in the datasets table come from this release's index (evaluation revision 14).${tail}`);
-    expect(ruleWordingNote({})).toBe(`The rule words in the datasets table come from this release's index.${tail}`);
+    // The served release's index has no wording number, and the note says so: the next release has the
+    // same evaluation revision, so the revision alone would not tell the two wordings apart.
+    expect(ruleWordingNote({ evaluation_revision: 14 })).toBe(
+      `The rule words in the datasets table come from this release's index (evaluation revision 14, rule wording 2 or earlier: the index gives no number).${tail}`,
+    );
+    expect(ruleWordingNote({})).toBe(`The rule words in the datasets table come from this release's index (rule wording 2 or earlier: the index gives no number).${tail}`);
+    expect(ruleWordingNote({ evaluation_revision: 14 })).not.toBe(ruleWordingNote({ evaluation_revision: 14, rule_text_version: 3 }));
   });
 
   it("sees a term that names several catalog families in the index's words, and no other", () => {

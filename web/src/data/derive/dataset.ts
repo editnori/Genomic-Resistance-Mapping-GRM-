@@ -261,13 +261,15 @@ export const SEVERAL_FAMILIES_NOTE = "Not a list of genes an isolate carries: on
 
 /** Which wording the index's rule words use, for the Methods page. The
  *  index writes the words when a release is built (`report::rule_text`) and
- *  numbers the wording from version 3 on (`rule_text_version`); an older
- *  index has no number, so only its evaluation revision is named. A count of
- *  rules by the kind of gene they name is taken from these words, and it
- *  moves when the wording does. */
+ *  numbers the wording from version 3 on (`rule_text_version`). An older
+ *  index has no number, and the note says so: two releases of one evaluation
+ *  revision can differ in wording, so the revision alone does not tell them
+ *  apart. A count of rules by the kind of gene they name is taken from these
+ *  words, and it moves when the wording does. */
 export const ruleWordingNote = (m: Pick<Manifest, "evaluation_revision" | "rule_text_version">): string => {
-  const named = [...(m.evaluation_revision === undefined ? [] : [`evaluation revision ${m.evaluation_revision}`]), ...(m.rule_text_version === undefined ? [] : [`rule wording ${m.rule_text_version}`])];
-  return `The rule words in the datasets table come from this release's index${named.length === 0 ? "" : ` (${named.join(", ")})`}. A later release can word the same rule differently, so a count of rules by what they name holds for one wording only.`;
+  const wording = m.rule_text_version === undefined ? "rule wording 2 or earlier: the index gives no number" : `rule wording ${m.rule_text_version}`;
+  const named = [...(m.evaluation_revision === undefined ? [] : [`evaluation revision ${m.evaluation_revision}`]), wording];
+  return `The rule words in the datasets table come from this release's index (${named.join(", ")}). A later release can word the same rule differently, so a count of rules by what they name holds for one wording only.`;
 };
 
 /** The sentences beside a rule term whose feature matches catalog families,
