@@ -13,12 +13,15 @@ it writes one row: the report's sha256 and evaluation revision, and the
 report's lineage-split row as the kit reads it (scripts/outside-study/score.py,
 `reference_row`), or the kit's note where the report has no such row. Where
 that row has `called_metrics`, the figure over the fitted folds only, its five
-counts follow.
+counts follow. It stops on a report of another dataset, of another schema than
+the kit's, or with an evaluation marked invalid. It checks no hash pin: the
+kit pins the reports of one revision only.
 
 Without --figures it prints the tables of the section "Revision 14" of
 docs/outside-study-results.md: for each population and learner, the datasets
 where the learner holds against the run's figure and against the later one,
-and every row read whose figure differs, measure by measure.
+every row read whose figure differs, measure by measure, and for each such
+dataset the genomes of null-fit folds that the later figure counts.
 
 It estimates nothing. Each new estimate and interval is the run's. A row whose
 five lineage counts are the run's keeps the run's readings. A row whose counts
@@ -88,6 +91,8 @@ def figures(root, reports):
             loaded, report, digest = dataset, json.loads(raw), hashlib.sha256(raw).hexdigest()
             if report.get("id") != dataset:
                 raise SystemExit(f"{dataset}.json is the report of {report.get('id')!r}")
+            if report.get("schema") != score.REPORT_SCHEMA or report["evaluation"].get("valid") is not True:
+                raise SystemExit(f"{dataset}.json: schema {report.get('schema')!r}, evaluation valid {report['evaluation'].get('valid')!r}")
         ref, note = score.reference_row(report, "lineage", learner)
         called = called_row(report, learner)
         w.writerow(
@@ -151,6 +156,26 @@ def holds_later(row):
     return all(row["later"][m] != "below" for m in MEASURES)
 
 
+def null_folds(rows):
+    """[(row, genomes, in null-fit folds, called resistant there, called susceptible there)]
+
+    One entry for each dataset and learner read whose FIGURES row has `called_`
+    counts, the smallest share of genomes first. The genomes of null-fit folds
+    are the ones the figure over every genome counts and the figure over the
+    fitted folds does not."""
+    out = {}
+    for pop, _ in tables.POPULATIONS:
+        for r in rows.get(pop, []):
+            f = r["figure"]
+            if f["called_n"] == "" or (r["dataset"], r["learner"]) in out:
+                continue
+            added = {k: int(f[f"lineage_{k}"]) - int(f[f"called_{k}"]) for k in COUNTS}
+            if min(added.values()) < 0 or added["n"] != added["tp"] + added["fn"] + added["fp"] + added["tn"]:
+                raise SystemExit(f"{r['dataset']} {r['learner']}: the figure over the fitted folds is no part of the figure over every genome")
+            out[r["dataset"], r["learner"]] = (r, int(f["lineage_n"]), added["n"], added["tp"] + added["fp"], added["fn"] + added["tn"])
+    return sorted(out.values(), key=lambda e: (e[2] / e[1], e[0]["dataset"], e[0]["learner"]))
+
+
 def figure_cell(row, measure):
     """'40.8%, 29 of 71': a report figure with its counts, from a metrics.tsv row or a FIGURES row."""
     hit, miss = ("tp", "fn") if measure == "sensitivity" else ("tn", "fp")
@@ -187,6 +212,16 @@ def build(root, figures_path):
                     f"| {pop} | {tables.title(r['species'])} | {tables.drug(r['dataset'])} | {tables.NAMES[r['learner']]} | {m} | {tables.estimate(r, m)} "
                     f"| {figure_cell(r, m)} | {r['reading_' + m]} | {figure_cell(r['figure'], m)} | {r['later'][m]} |"
                 )
+    out += ["", f"**Genomes of null-fit folds in the revision {revision} figure**", ""]
+    out.append("Each dataset read whose report keeps a second figure, over the fitted folds only. The calls are the ones the genomes of null-fit folds get.")
+    out.append("")
+    out.append("| Species | Drug | Learner | Genomes | In null-fit folds | Share | Called resistant | Called susceptible |")
+    out.append("|---|---|---|---:|---:|---:|---:|---:|")
+    for r, n, null, resistant, susceptible in null_folds(rows):
+        out.append(
+            f"| {tables.title(r['species'])} | {tables.drug(r['dataset'])} | {tables.NAMES[r['learner']]} | {tables.num(n)} | {tables.num(null)} "
+            f"| {tables.pct(null / n)} | {tables.num(resistant)} | {tables.num(susceptible)} |"
+        )
     return "\n".join(out).rstrip("\n") + "\n"
 
 

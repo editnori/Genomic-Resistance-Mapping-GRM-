@@ -12,7 +12,9 @@ On genomes from studies the cohort does not hold, each learner's figures hold on
 
 Those two sentences are about the three learners: the set covering machine, the decision tree and the lasso. The two populations cover different species and datasets. The plan scores them apart and does not compare them, so setting them side by side was added after both results were read.
 
-Both sentences read each estimate against the report its run pinned, at evaluation revision 12. The site has served revision 14 since 13 Nov 2026. Against the revision 14 figures the first sentence stands for each learner. The second stands for the set covering machine and the decision tree. It fails for the lasso, which then holds on 7 of the 15 same-study datasets read for it. [Revision 14](#revision-14) gives the rows.
+Both sentences read each estimate against the report its run pinned, at evaluation revision 12. The site has served revision 14 since 13 Nov 2026. A revision 14 report can hold two figures for the lasso. The plan chooses neither, because it reads the revision 12 reports only.
+
+Against either figure the first sentence stands for each learner. The second stands for the set covering machine and the decision tree. For the lasso it depends on the figure read. The lasso holds on 9 of the 15 same-study datasets read for it against the figure over fitted folds, which the runs read, and on 7 of the 15 against the figure over every genome. [Revision 14](#revision-14) gives the rows.
 
 The primary population is 7,258 genomes on 82 datasets in 7 species. Every genome was scored and none was excluded. One dataset has no lineage-split figure in its report, so 81 datasets can be read.
 
@@ -338,9 +340,9 @@ The site has served evaluation revision 14 since 13 Nov 2026. The runs of record
 
 **Same models.** The release notes of revision 14 say that no fold, final model or known-gene baseline differs from revision 12 in any report. Each new estimate is therefore an estimate for a model the site serves now. `reference/outside-study-figures/rev14-274-20261112.tsv` holds the lineage-split row of each revision 14 report read here, 97 reports in all. For the set covering machine, the decision tree and the known-gene rule, every row has the counts the runs read.
 
-**The lasso's figure.** Revision 14 scores a null fit, a cross-validation fold where the lasso keeps no weight ([equal-scoring.md](equal-scoring.md)). Up to revision 13 that fold's genomes had no call and stayed out of the figure. Revision 14 scores each of them at the fold's training share of resistant genomes and calls it at the usual cutoff. The lasso has a row on 33 of the 97 datasets, and its lineage-split counts differ on 8 of them.
+**The lasso's figure.** Revision 14 scores a null fit, a cross-validation fold where the lasso keeps no weight ([equal-scoring.md](equal-scoring.md)). From revision 7 to revision 13 that fold's genomes had no call and stayed out of the figure. Revision 14 scores each of them at the fold's training share of resistant genomes and calls it at the usual cutoff. The runs scored the lasso on 33 of the 97 datasets, and its lineage-split counts differ on 8 of them.
 
-`scripts/outside-study-results/revision.py` prints these two tables. A row whose counts are the runs' keeps the runs' readings. A row whose counts differ is read with the kit's own rule on the revision 14 figure and the run's interval.
+`scripts/outside-study-results/revision.py` prints these three tables. A row whose counts are the runs' keeps the runs' readings. A row whose counts differ is read with the kit's own rule on the revision 14 figure and the run's interval.
 
 <!-- revision:begin -->
 **Datasets where a learner holds, against each report figure**
@@ -382,6 +384,21 @@ Each new estimate is followed by its 95% interval and its counts, and each repor
 | same-study | *K. pneumoniae* | doripenem | Lasso | specificity | 50.0% (43.0% to 57.0%), 104 of 208 | 25.0%, 1 of 4 | above | 3.8%, 1 of 26 | above |
 | same-study | *S. enterica* | ceftazidime | Lasso | sensitivity | 94.1% (83.8% to 98.8%), 48 of 51 | 25.0%, 3 of 12 | above | 10.0%, 3 of 30 | above |
 | same-study | *S. enterica* | ceftazidime | Lasso | specificity | 95.6% (94.5% to 96.6%), 1,581 of 1,653 | 96.0%, 311 of 324 | consistent | 98.3%, 740 of 753 | below |
+
+**Genomes of null-fit folds in the revision 14 figure**
+
+Each dataset read whose report keeps a second figure, over the fitted folds only. The calls are the ones the genomes of null-fit folds get.
+
+| Species | Drug | Learner | Genomes | In null-fit folds | Share | Called resistant | Called susceptible |
+|---|---|---|---:|---:|---:|---:|---:|
+| *E. cloacae* | ciprofloxacin | Lasso | 110 | 13 | 11.8% | 13 | 0 |
+| *S. pneumoniae* | meropenem | Lasso | 1,808 | 357 | 19.7% | 0 | 357 |
+| *S. enterica* | cefazolin | Lasso | 185 | 80 | 43.2% | 80 | 0 |
+| *K. pneumoniae* | colistin | Lasso | 336 | 182 | 54.2% | 0 | 182 |
+| *S. enterica* | ceftazidime | Lasso | 783 | 447 | 57.1% | 0 | 447 |
+| *S. enterica* | sulfamethoxazole | Lasso | 275 | 179 | 65.1% | 113 | 66 |
+| *K. pneumoniae* | ceftazidime/avibactam | Lasso | 259 | 175 | 67.6% | 0 | 175 |
+| *K. pneumoniae* | doripenem | Lasso | 243 | 222 | 91.4% | 222 | 0 |
 <!-- revision:end -->
 
 **Three datasets move the count.** Against revision 14 the lasso holds on 8 of the 25 primary datasets read for it, where the runs read 7. It holds on 7 of the 15 same-study datasets, where the runs read 9.
@@ -392,9 +409,13 @@ Each new estimate is followed by its 95% interval and its counts, and each repor
 
 On 2 more primary datasets a reading changes and the lasso holds against neither figure: *K. pneumoniae* colistin and *S. pneumoniae* meropenem.
 
-**A constant call.** On these 8 datasets the revision 14 figure covers folds that fitted no model. For *K. pneumoniae* doripenem the runs' figure counted 21 of the cohort's 243 genomes, the ones a fitted fold called. The revision 14 figure counts all 243. It has 216 of the 217 resistant genomes called resistant and 1 of the 26 susceptible genomes called susceptible. A final model read against it is read mostly against one call for every genome.
+**Null-fit folds.** On these 8 datasets the revision 14 figure also counts the genomes of null-fit folds, and the third table gives their number. It runs from 13 of 110 genomes to 222 of 243, and it is more than half of the cohort on 5 of the 8. Each of those genomes is called from its fold's training share of resistant genomes, with no fitted lasso. On 7 of the 8 datasets they all get one call. On *S. enterica* sulfamethoxazole 113 are called resistant and 66 susceptible.
 
-**Two figures.** The plan reads the report's lineage-split figure (`score.reference_row`), and in a revision 14 report that is the figure over every genome. The report keeps the earlier figure as `called_metrics`, and on all 8 datasets its counts are the ones the runs read. So the lasso's count depends on the figure read: 7 or 8 of 25, and 9 or 7 of 15. The first sentence of the result stands against both figures.
+**One dataset.** For *K. pneumoniae* doripenem the runs' figure counted 21 of the cohort's 243 genomes, the ones a fitted fold called, and 19 of the 21 were called resistant. The revision 14 figure counts all 243. It has 216 of the 217 resistant genomes called resistant and 1 of the 26 susceptible genomes called susceptible. The 222 genomes it adds are all called resistant. So 222 of the 243 calls behind that figure come from a training share, and 21 from a fitted lasso.
+
+**Two figures.** The plan pins the revision 12 reports and reads no other, so it does not say which figure of a revision 14 report to read. A revision 12 report has one lineage-split figure for the lasso, over the genomes of fitted folds. A revision 14 report puts the figure over every genome in its place and keeps the earlier one as `called_metrics`. On all 8 datasets the counts of `called_metrics` are the ones the runs read.
+
+**Choice.** The tables above read the figure over every genome, the field the kit's code takes (`score.reference_row`). This page made that choice after the results were read. So the lasso's count depends on the figure read: 7 or 8 of 25, and 9 or 7 of 15. The first sentence of the result stands against both figures. The second stands for the lasso against the figure over fitted folds only.
 
 **Direction.** The second supported statement stands for the lasso against revision 14 too. In the primary population its sensitivity reads above on 11 datasets and below on 4, and its specificity reads below on 15 and above on 6.
 
@@ -410,7 +431,7 @@ On 2 more primary datasets a reading changes and the lasso holds against neither
 - **Few studies.** A study that holds most of a batch decides its estimate. On 20 of the 82 primary datasets, more than half of the resistant genomes come from one study and more than half of the susceptible genomes from another.
 - **Batch size.** A row reads below only when the report's figure is above the whole interval. A small batch has a wide interval, so it reads below less often. The same-study batches of *E. cloacae* and *E. coli* have 71 and 87 genomes.
 - **Two populations.** The populations differ in species and in datasets. Only the 34 datasets in both compare one model on two sets of genomes, and there the batches still differ in size and in study.
-- **Not in the plan.** The plan fixes the reading of each measure on each dataset. The count of datasets where a learner holds, and the comparison of the two populations, were added after the results were read. No genome is pooled.
+- **Not in the plan.** The plan fixes the reading of each measure on each dataset. The count of datasets where a learner holds, and the comparison of the two populations, were added after the results were read. So was the reading against revision 14, and with it the choice between the two figures of a revision 14 report. No genome is pooled.
 - **Two kinds of figure.** The report's figure is for models refitted in each fold. The new figure is for the one final model. For the known-gene rule the report's figure is the fixed rule on the whole cohort.
 - **Precision is not read.** It depends on the share of resistant genomes, which differs between the cohort and the new genomes.
 - **Three learners.** Random forests and boosted trees are not scored, and the lasso is scored on part of the datasets.
@@ -454,7 +475,7 @@ python3 -I -m unittest discover -s tests/outside_study_results -t . -v
 
 The second and third commands exit 1 unless a page's tables are exactly what the files give. The suite runs both in CI. It also rebuilds from the files each sentence of the two pages that carries a count written in digits, and it fails when the sentence is not in the text as written. Any other digit in a page's text fails the suite too, unless the suite lists it as a fixed term. The fixed terms are the level of the interval, the two ends a figure can sit at, the day of the runs, the day the site changed revision, the names of the revisions and a command's exit status.
 
-`reference/outside-study-figures/` holds the figure file of the section Revision 14. Its README names the release, the reports' hashes and the command that wrote the file. The suite checks that section's tables too:
+`reference/outside-study-figures/` holds the figure file of the section Revision 14. The file gives the hash of each report it was read from, and its README names the release and the command that wrote it. A second file there holds the release's own checksum line for each of the 97 reports, and the suite compares the two. The suite checks that section's tables too:
 
 ```sh
 python3 -I scripts/outside-study-results/revision.py reference/outside-study reference/outside-study-figures/rev14-274-20261112.tsv

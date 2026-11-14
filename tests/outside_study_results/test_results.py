@@ -23,6 +23,7 @@ DOCUMENT = ROOT / "docs" / "outside-study-results.md"
 SPECIES_PAGE = ROOT / "docs" / "outside-study-results-by-species.md"
 # The figures of the release the site serves, read by the section "Revision 14".
 FIGURES = ROOT / "reference" / "outside-study-figures" / "rev14-274-20261112.tsv"
+SCORING = ROOT / "docs" / "equal-scoring.md"
 FROZEN = ROOT / "scripts" / "outside-study" / "frozen"
 KIT = "e3e1c345a55412ac8f7d07b691ebb56573d2d3d8"
 NAME = "a retrospective test on newly deposited studies from the same database"
@@ -106,6 +107,12 @@ def pinned_revision():
     """The evaluation revision of the reports the runs of record pinned."""
     (revision,) = {record(run)["evaluation_revision"] for run in runs()}
     return revision
+
+
+def unscored_revisions():
+    """(first, last) of the revisions that left a null-fit fold's genomes without a call, as docs/equal-scoring.md gives them."""
+    (found,) = re.findall(r"revisions (\d+) to (\d+) left the genomes of a null-fit fold without a call", SCORING.read_text(encoding="utf-8"))
+    return int(found[0]), int(found[1])
 
 
 WORDS = {2: "two", 3: "three", 4: "four"}
@@ -392,24 +399,46 @@ class Prose(Rebuilt):
         got = [R.holds_later(r) for r in self.read_later(pop, learner)]
         return sum(got), len(got)
 
+    def held_fitted(self, pop, learner):
+        """Where a learner holds against the later report's figure over the fitted folds.
+
+        That figure is `called_metrics` where the report has it and the row's
+        only figure elsewhere. On every row read its counts are the run's, so
+        its readings are the run's."""
+        for r in self.read_later(pop, learner):
+            f = r["figure"]
+            fitted = tuple(f[f"called_{k}"] for k in R.COUNTS) if f["called_n"] else R.counts(f)
+            self.assertEqual(fitted, R.counts(r), (r["dataset"], learner))
+        return self.held(pop, learner)
+
     def test_the_headline_against_the_served_revision(self):
         rev = self.revision
         self.assertGreater(rev, self.pinned)
         self.has(f"Both sentences read each estimate against the report its run pinned, at evaluation revision {self.pinned}.")
         self.has(f"The site has served revision {rev} since 13 Nov 2026.")
-        for learner in ("scm", "cart", "lasso"):
-            h, n = self.held_later("primary", learner)
-            self.assertLess(2 * h, n, learner)
-        self.has(f"Against the revision {rev} figures the first sentence stands for each learner.")
-        for learner in ("scm", "cart"):
-            h, n = self.held_later("same-study", learner)
-            self.assertGreater(2 * h, n, learner)
+        self.has(f"A revision {rev} report can hold two figures for the lasso. The plan chooses neither, because it reads the revision {self.pinned} reports only.")
+        for held in (self.held_fitted, self.held_later):
+            for learner in ("scm", "cart", "lasso"):
+                h, n = held("primary", learner)
+                self.assertLess(2 * h, n, learner)
+            for learner in ("scm", "cart"):
+                h, n = held("same-study", learner)
+                self.assertGreater(2 * h, n, learner)
+        self.has("Against either figure the first sentence stands for each learner.")
         self.has("The second stands for the set covering machine and the decision tree.")
-        h, n = self.held_later("same-study", "lasso")
-        self.assertLess(2 * h, n)
-        self.has(f"It fails for the lasso, which then holds on {h} of the {n} same-study datasets read for it.")
+        (fitted, n), (every, m) = self.held_fitted("same-study", "lasso"), self.held_later("same-study", "lasso")
+        self.assertEqual(n, m)
+        self.assertGreater(2 * fitted, n)
+        self.assertLess(2 * every, n)
+        self.has("For the lasso it depends on the figure read.")
+        self.has(
+            f"The lasso holds on {fitted} of the {n} same-study datasets read for it against the figure over fitted folds, "
+            f"which the runs read, and on {every} of the {n} against the figure over every genome."
+        )
         self.has(f"[Revision {rev}](#revision-{rev}) gives the rows.")
         self.has(f"\n## Revision {rev}\n")
+        # The limit that says what the plan does not hold.
+        self.has(f"So was the reading against revision {rev}, and with it the choice between the two figures of a revision {rev} report.")
 
     def test_the_figures_of_the_served_revision(self):
         rev = self.revision
@@ -424,24 +453,31 @@ class Prose(Rebuilt):
         self.assertEqual({learner for _, learner in differ}, {"lasso"})
         self.has("For the set covering machine, the decision tree and the known-gene rule, every row has the counts the runs read.")
         self.has(f"Revision {rev} scores a null fit, a cross-validation fold where the lasso keeps no weight")
+        # The revisions whose figure left those genomes out end just before this one and hold the pinned one.
+        first, last = unscored_revisions()
+        self.assertEqual(last, rev - 1)
+        self.assertTrue(first <= self.pinned <= last)
         self.has(
-            f"Up to revision {rev - 1} that fold's genomes had no call and stayed out of the figure. "
+            f"From revision {first} to revision {last} that fold's genomes had no call and stayed out of the figure. "
             f"Revision {rev} scores each of them at the fold's training share of resistant genomes and calls it at the usual cutoff."
         )
-        lasso = {d for d, learner in self.figures if learner == "lasso"}
-        self.has(f"The lasso has a row on {len(lasso)} of the {len(datasets)} datasets, and its lineage-split counts differ on {len(differ)} of them.")
+        lasso = {r["dataset"] for r in rows if r["learner"] == "lasso"}
+        self.assertEqual({r["dataset"] for r in rows}, datasets)
+        self.has(f"The runs scored the lasso on {len(lasso)} of the {len(datasets)} datasets, and its lineage-split counts differ on {len(differ)} of them.")
+        block = R.build(RESULTS, FIGURES)
+        self.has(f"`scripts/outside-study-results/revision.py` prints these {WORDS[len(re.findall(r'^[*][*].+[*][*]$', block, re.M))]} tables.")
         self.has(f"A row whose counts differ is read with the kit's own rule on the revision {rev} figure and the run's interval.")
-        self.has(f"On these {len(differ)} datasets the revision {rev} figure covers folds that fitted no model.")
         # A report keeps the run's figure as `called_metrics` exactly on the rows that differ.
         for r in rows:
             f = self.figures[r["dataset"], r["learner"]]
             called = tuple(f[f"called_{k}"] for k in R.COUNTS)
             self.assertEqual(called, R.counts(r) if (r["dataset"], r["learner"]) in differ else ("",) * 5, r["dataset"])
-        self.has(
-            f"and in a revision {rev} report that is the figure over every genome. "
-            f"The report keeps the earlier figure as `called_metrics`, and on all {len(differ)} datasets its counts are the ones the runs read."
-        )
+        self.has(f"The plan pins the revision {self.pinned} reports and reads no other, so it does not say which figure of a revision {rev} report to read.")
+        self.has(f"A revision {self.pinned} report has one lineage-split figure for the lasso, over the genomes of fitted folds.")
+        self.has(f"A revision {rev} report puts the figure over every genome in its place and keeps the earlier one as `called_metrics`.")
+        self.has(f"On all {len(differ)} datasets the counts of `called_metrics` are the ones the runs read.")
         self.has(f"`reference/outside-study-figures/` holds the figure file of the section Revision {rev}.")
+        self.has(f"A second file there holds the release's own checksum line for each of the {len(datasets)} reports, and the suite compares the two.")
 
     def test_the_lasso_s_count_against_the_served_revision(self):
         rev = self.revision
@@ -469,22 +505,54 @@ class Prose(Rebuilt):
         self.has(f"So the lasso's count depends on the figure read: {p_run} or {p_later} of {p}, and {s_run} or {s_later} of {s}.")
         self.assertLess(2 * max(p_run, p_later), p)
         self.has("The first sentence of the result stands against both figures.")
+        self.assertGreater(2 * s_run, s)
+        self.assertLess(2 * s_later, s)
+        self.has("The second stands for the lasso against the figure over fitted folds only.")
         # No other learner's reading differs between the two figures.
         for pop in ("primary", "same-study"):
             for learner in ("scm", "cart", "known_gene"):
                 self.assertFalse(any(r["differs"] for r in self.read_later(pop, learner)), (pop, learner))
 
-    def test_a_later_figure_that_is_mostly_one_call(self):
+    def test_the_genomes_of_null_fit_folds(self):
         rev = self.revision
-        (r,) = [r for r in self.read_later("same-study", "lasso") if r["dataset"] == "klebsiella_pneumoniae__doripenem"]
+        rows = R.null_folds(self.later)
+        differ = {(r["dataset"], r["learner"]) for read in self.later.values() for r in read if r["differs"]}
+        self.assertEqual({(r["dataset"], r["learner"]) for r, *_ in rows}, differ)
+        self.assertEqual(len(rows), len(differ))
+        self.has(f"On these {len(rows)} datasets the revision {rev} figure also counts the genomes of null-fit folds, and the third table gives their number.")
+        (_, least_n, least, _, _), (_, most_n, most, _, _) = rows[0], rows[-1]
+        self.assertEqual(sorted(null / n for _, n, null, _, _ in rows), [null / n for _, n, null, _, _ in rows])
+        over_half = sum(1 for _, n, null, _, _ in rows if 2 * null > n)
+        self.has(
+            f"It runs from {T.num(least)} of {T.num(least_n)} genomes to {T.num(most)} of {T.num(most_n)}, "
+            f"and it is more than half of the cohort on {over_half} of the {len(rows)}."
+        )
+        one_call = [e for e in rows if 0 in e[3:]]
+        (both,) = [e for e in rows if 0 not in e[3:]]
+        self.has(f"On {len(one_call)} of the {len(rows)} datasets they all get one call.")
+        r, _, _, resistant, susceptible = both
+        self.has(f"On {T.title(r['species'])} {T.drug(r['dataset'])} {T.num(resistant)} are called resistant and {T.num(susceptible)} susceptible.")
+
+    def test_one_dataset_s_two_figures(self):
+        rev = self.revision
+        (e,) = [e for e in R.null_folds(self.later) if e[0]["dataset"] == "klebsiella_pneumoniae__doripenem"]
+        r, n, null, resistant, susceptible = e
         f = r["figure"]
         tp, fn, fp, tn = (int(f[f"lineage_{k}"]) for k in ("tp", "fn", "fp", "tn"))
-        self.assertEqual(int(f["lineage_n"]), tp + fn + fp + tn)
-        self.has(f"For *K. pneumoniae* doripenem the runs' figure counted {r['lineage_n']} of the cohort's {f['lineage_n']} genomes, the ones a fitted fold called.")
-        self.has(f"The revision {rev} figure counts all {f['lineage_n']}.")
+        self.assertEqual(n, tp + fn + fp + tn)
+        fitted = int(r["lineage_n"])
+        self.assertEqual(fitted, n - null)
+        name = f"{T.title(r['species'])} {T.drug(r['dataset'])}"
+        self.has(
+            f"For {name} the runs' figure counted {fitted} of the cohort's {n} genomes, the ones a fitted fold called, "
+            f"and {int(r['lineage_tp']) + int(r['lineage_fp'])} of the {fitted} were called resistant."
+        )
+        self.has(f"The revision {rev} figure counts all {n}.")
         self.has(f"It has {tp} of the {tp + fn} resistant genomes called resistant and {tn} of the {tn + fp} susceptible genomes called susceptible.")
-        # "Mostly one call": more than nine genomes in ten are called resistant.
-        self.assertGreater(10 * (tp + fp), 9 * int(f["lineage_n"]))
+        # Every genome the later figure adds is in a null-fit fold, and none of them is called susceptible.
+        self.assertEqual((resistant, susceptible), (null, 0))
+        self.has(f"The {null} genomes it adds are all called resistant.")
+        self.has(f"So {null} of the {n} calls behind that figure come from a training share, and {fitted} from a fitted lasso.")
 
     def test_the_direction_against_the_served_revision(self):
         read = self.read_later("primary", "lasso")

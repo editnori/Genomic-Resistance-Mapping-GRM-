@@ -15,6 +15,7 @@ import importlib.util
 import io
 import json
 import pathlib
+import re
 import shutil
 import tempfile
 import unittest
@@ -22,6 +23,8 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 RESULTS = ROOT / "reference" / "outside-study"
 FIGURES = ROOT / "reference" / "outside-study-figures" / "rev14-274-20261112.tsv"
+# The release's own checksum lines for the reports the figure file was read from.
+REPORT_LINES = FIGURES.parent / "rev14-274-20261112.reports.sha256"
 README = FIGURES.parent / "README.md"
 RELEASES = ROOT / "reference" / "release-summary" / "README.md"
 DOCUMENT = ROOT / "docs" / "outside-study-results.md"
@@ -65,6 +68,17 @@ class FigureFile(unittest.TestCase):
         # No two datasets share a report.
         self.assertEqual(len(set(digests.values())), len(digests))
 
+    def test_each_report_hash_is_its_line_in_the_release_s_checksum_list(self):
+        lines = REPORT_LINES.read_text(encoding="utf-8").split("\n")
+        self.assertEqual(lines.pop(), "")
+        listed = {}
+        for line in lines:
+            found = re.fullmatch(r"([0-9a-f]{64})  \./datasets/([a-z0-9_]+)\.json", line)
+            self.assertIsNotNone(found, line)
+            self.assertNotIn(found.group(2), listed)
+            listed[found.group(2)] = found.group(1)
+        self.assertEqual(listed, {dataset: f["report_sha256"] for (dataset, _), f in self.figures.items()})
+
     def test_each_figure_is_its_counts(self):
         with_figure = 0
         for key, f in self.figures.items():
@@ -90,7 +104,8 @@ class FigureFile(unittest.TestCase):
 
     def test_the_readme_names_the_release_and_the_file(self):
         text = README.read_text(encoding="utf-8")
-        self.assertIn(hashlib.sha256(FIGURES.read_bytes()).hexdigest(), text)
+        for path in (FIGURES, REPORT_LINES):
+            self.assertIn(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n", text)
         # The release is the one reference/release-summary names for this revision.
         (row,) = [line for line in RELEASES.read_text(encoding="utf-8").split("\n") if line.startswith("| `rev14-274-20261112/` | `rev14-274-20261112.tar.zst`")]
         asset = row.split("|")[3].strip().strip("`")
@@ -241,11 +256,47 @@ class Tables(unittest.TestCase):
         _, figures = R.load_figures(FIGURES)
         differing = [r for rows in R.later(T.load(RESULTS), figures).values() for r in rows if r["differs"]]
         block = R.build(RESULTS, FIGURES)
-        detail = block[block.index("**Rows read whose report figure differs**") :]
+        detail = block[block.index("**Rows read whose report figure differs**") : block.index("**Genomes of null-fit folds")]
         self.assertEqual(len([x for x in detail.split("\n") if x.startswith("| ") and not x.startswith("| Population")]), 2 * len(differing))
         for r in differing:
             for m in R.MEASURES:
                 self.assertIn(f"| {m} | {T.estimate(r, m)} | {R.figure_cell(r, m)} | {r['reading_' + m]} | {R.figure_cell(r['figure'], m)} | {r['later'][m]} |", detail)
+
+    def test_the_genomes_of_null_fit_folds_are_the_difference_of_the_two_figures(self):
+        _, figures = R.load_figures(FIGURES)
+        later = R.later(T.load(RESULTS), figures)
+        rows = R.null_folds(later)
+        kept = {(r["dataset"], r["learner"]) for read in later.values() for r in read if r["figure"]["called_n"] != ""}
+        self.assertEqual(sorted((r["dataset"], r["learner"]) for r, *_ in rows), sorted(kept))
+        self.assertTrue(rows)
+        block = R.build(RESULTS, FIGURES)
+        table = block[block.index("**Genomes of null-fit folds") :]
+        self.assertEqual(len([x for x in table.split("\n") if x.startswith("| *")]), len(rows))
+        for r, n, null, resistant, susceptible in rows:
+            f = r["figure"]
+            every, fitted = ({k: int(f[f"{part}_{k}"]) for k in R.COUNTS} for part in ("lineage", "called"))
+            self.assertEqual((n, null), (every["n"], every["n"] - fitted["n"]))
+            self.assertGreater(null, 0)
+            self.assertEqual(resistant, every["tp"] + every["fp"] - fitted["tp"] - fitted["fp"])
+            self.assertEqual(susceptible, every["fn"] + every["tn"] - fitted["fn"] - fitted["tn"])
+            self.assertEqual(resistant + susceptible, null)
+            self.assertIn(
+                f"| {T.title(r['species'])} | {T.drug(r['dataset'])} | {T.NAMES[r['learner']]} | {T.num(n)} | {T.num(null)} "
+                f"| {T.pct(null / n)} | {T.num(resistant)} | {T.num(susceptible)} |",
+                table,
+            )
+        shares = [null / n for _, n, null, _, _ in rows]
+        self.assertEqual(shares, sorted(shares))
+
+    def test_a_second_figure_that_is_no_part_of_the_first_is_refused(self):
+        _, figures = R.load_figures(FIGURES)
+        later = R.later(T.load(RESULTS), figures)
+        pop, r = next((pop, r) for pop, read in later.items() for r in read if r["figure"]["called_n"] != "")
+        f = r["figure"]
+        self.assertEqual(len(R.null_folds({pop: [r]})), 1)
+        for changed in ({"called_n": str(int(f["lineage_n"]) + 1)}, {"called_tp": str(int(f["lineage_tp"]) + 1)}, {"called_n": str(int(f["called_n"]) - 1)}):
+            with self.assertRaises(SystemExit):
+                R.null_folds({pop: [{**r, "figure": {**f, **changed}}]})
 
     def test_a_wrong_command_line_prints_the_usage(self):
         for args in ([], [str(RESULTS)], [str(RESULTS), "--figures"], [str(RESULTS), str(FIGURES), "--check"], [str(RESULTS), str(FIGURES), "--chek", str(DOCUMENT)]):
@@ -287,7 +338,12 @@ class FiguresFromReports(unittest.TestCase):
         return {r["learner"]: r for r in csv.DictReader(io.StringIO(text), delimiter="\t")}
 
     def report(self, lineage):
-        return {"id": self.DATASET, "evaluation": {"revision": 99}, "splits": [{"scheme": "random", "learners": []}, lineage]}
+        return {
+            "id": self.DATASET,
+            "schema": R.score.REPORT_SCHEMA,
+            "evaluation": {"revision": 99, "valid": True},
+            "splits": [{"scheme": "random", "learners": []}, lineage],
+        }
 
     def test_a_row_is_the_report_s_lineage_row_with_its_hash(self):
         learners = [
@@ -325,6 +381,20 @@ class FiguresFromReports(unittest.TestCase):
         self.write({**self.report({"scheme": "lineage", "learners": []}), "id": "shigella_flexneri__ampicillin"})
         with self.assertRaises(SystemExit):
             R.figures(self.root, self.reports)
+
+    def test_a_report_of_another_schema_or_an_invalid_evaluation_is_refused(self):
+        good = self.report({"scheme": "lineage", "learners": []})
+        self.write(good)
+        self.assertTrue(R.figures(self.root, self.reports))
+        for changed in (
+            {**good, "schema": R.score.REPORT_SCHEMA + 1},
+            {k: v for k, v in good.items() if k != "schema"},
+            {**good, "evaluation": {"revision": 99, "valid": False}},
+            {**good, "evaluation": {"revision": 99}},
+        ):
+            self.write(changed)
+            with self.assertRaises(SystemExit):
+                R.figures(self.root, self.reports)
 
     def test_the_command_prints_the_figure_file(self):
         self.write(self.report({"scheme": "lineage", "learners": [{"learner": "scm", "metrics": metrics(60, 20, 10, 5, 25)}]}))
