@@ -1,0 +1,514 @@
+{
+ "about": "Synthetic reports, cut down to the fields the rule words read, each with the words its rule terms take in the index's scm_rules. report::rule_text (src/report.rs) and indexRuleWords (web/src/data/derive/dataset.ts) must both give exactly these words, so the release's index and the app's copy of its wording cannot drift apart. No real dataset is in this file.",
+ "rule_text_version": 3,
+ "cases": {
+  "outside_the_named_gene": {
+   "why": "Feature 1 lies inside mgrB (it has codons). Feature 2 lies in no gene, 46 bp from mgrB. Feature 3 lies 2,502 bp before a gene known by its product only. Feature 4 has a nearest gene with no name, so it keeps its number. Feature 5 matches a catalog family and keeps the family, wherever it sits.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [],
+      "locus": {
+       "gene": "mgrB",
+       "product": "PhoP/PhoQ regulator MgrB",
+       "codons": [
+        3,
+        12
+       ],
+       "nearest": null
+      }
+     },
+     {
+      "feature": 2,
+      "catalog_families": [],
+      "locus": {
+       "gene": "mgrB",
+       "product": "PhoP/PhoQ regulator MgrB",
+       "codons": null,
+       "nearest": [
+        "mgrB",
+        46
+       ]
+      }
+     },
+     {
+      "feature": 3,
+      "catalog_families": [],
+      "locus": {
+       "gene": null,
+       "product": "hypothetical protein",
+       "codons": null,
+       "nearest": [
+        "hypothetical protein",
+        -2502
+       ]
+      }
+     },
+     {
+      "feature": 4,
+      "catalog_families": [],
+      "locus": {
+       "gene": null,
+       "product": null,
+       "codons": null,
+       "nearest": [
+        "",
+        9
+       ]
+      }
+     },
+     {
+      "feature": 5,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": {
+       "gene": "tnpA",
+       "product": "transposase",
+       "codons": null,
+       "nearest": [
+        "tnpA",
+        120
+       ]
+      }
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       },
+       {
+        "feature": 4,
+        "presence": true
+       },
+       {
+        "feature": 5,
+        "presence": true
+       }
+      ],
+      "steps": []
+     }
+    },
+    "catalog": null
+   },
+   "scm_rules": [
+    "presence of mgrB",
+    "presence of k-mers 46 bp from the nearest annotated gene, mgrB",
+    "absence of k-mers 2,502 bp from the nearest annotated gene, hypothetical protein",
+    "presence of feature 4",
+    "presence of blaKPC"
+   ]
+  },
+  "ties": {
+   "why": "n_equivalent counts the other rules, so a term with 3 is one of 4. A later term's ties are over the isolates the earlier terms left undecided. A term without ties, or without a step, says nothing about them.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "blaNDM",
+       "ble"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [],
+      "locus": {
+       "gene": "ompK36",
+       "product": "porin OmpK36",
+       "codons": null,
+       "nearest": [
+        "ompK36",
+        77
+       ]
+      }
+     },
+     {
+      "feature": 4,
+      "catalog_families": [],
+      "locus": {
+       "gene": "gyrA",
+       "product": "DNA gyrase subunit A",
+       "codons": [
+        83,
+        87
+       ],
+       "nearest": null
+      }
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       },
+       {
+        "feature": 4,
+        "presence": true
+       },
+       {
+        "feature": 4,
+        "presence": false
+       }
+      ],
+      "steps": [
+       {
+        "n_equivalent": 3
+       },
+       {
+        "n_equivalent": 1
+       },
+       {
+        "n_equivalent": 21523
+       },
+       {
+        "n_equivalent": 0
+       }
+      ]
+     }
+    },
+    "catalog": null
+   },
+   "scm_rules": [
+    "presence of blaKPC; one of 4 features that separate these isolates equally well",
+    "presence of k-mers matching 2 catalog families (blaNDM, ble); one of 2 features that separate the isolates the earlier rules left undecided equally well",
+    "absence of k-mers 77 bp from the nearest annotated gene, ompK36; one of 21,524 features that separate the isolates the earlier rules left undecided equally well",
+    "presence of gyrA",
+    "absence of gyrA"
+   ]
+  },
+  "counts_for_the_drugs_rule": {
+   "why": "The gene-group rows are the groups called in these genomes. blaKPC counts; sul1 does not; blaOXA has one group that counts and one that does not; blaAFM has no row, so nothing is said of it; tet(A) has no row at all, so its term says nothing.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "sul1"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [
+       "blaOXA"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 4,
+      "catalog_families": [
+       "blaNDM",
+       "ble",
+       "blaAFM"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 5,
+      "catalog_families": [
+       "tet(A)"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 6,
+      "catalog_families": [
+       "sul1",
+       "qacE",
+       "blaKPC",
+       "blaNDM"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 7,
+      "catalog_families": [],
+      "locus": {
+       "gene": "gyrA",
+       "product": "DNA gyrase subunit A",
+       "codons": [
+        83,
+        87
+       ],
+       "nearest": null
+      }
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       },
+       {
+        "feature": 4,
+        "presence": true
+       },
+       {
+        "feature": 5,
+        "presence": true
+       },
+       {
+        "feature": 6,
+        "presence": true
+       },
+       {
+        "feature": 7,
+        "presence": true
+       }
+      ],
+      "steps": [
+       {
+        "n_equivalent": 0
+       },
+       {
+        "n_equivalent": 2
+       }
+      ]
+     }
+    },
+    "catalog": {
+     "version": "2026-08-07.1",
+     "rule": [
+      [
+       "S:CARBAPENEM"
+      ]
+     ],
+     "groups": [
+      {
+       "group": "ble",
+       "class": "BLEOMYCIN",
+       "subclass": "BLEOMYCIN",
+       "counts_for_rule": false,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "blaKPC",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 9,
+       "n_susceptible": 1
+      },
+      {
+       "group": "blaNDM",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "blaOXA (OXA-48 family)",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 3,
+       "n_susceptible": 0
+      },
+      {
+       "group": "blaOXA (OXA-1 family)",
+       "class": "BETA-LACTAM",
+       "subclass": "BETA-LACTAM",
+       "counts_for_rule": false,
+       "n_resistant": 5,
+       "n_susceptible": 6
+      },
+      {
+       "group": "qacE",
+       "class": "QUATERNARY AMMONIUM",
+       "subclass": "QUATERNARY AMMONIUM",
+       "counts_for_rule": false,
+       "n_resistant": 2,
+       "n_susceptible": 2
+      },
+      {
+       "group": "sul1",
+       "class": "SULFONAMIDE",
+       "subclass": "SULFONAMIDE",
+       "counts_for_rule": false,
+       "n_resistant": 7,
+       "n_susceptible": 5
+      }
+     ]
+    }
+   },
+   "scm_rules": [
+    "presence of blaKPC; blaKPC counts for this drug's known-gene rule",
+    "presence of sul1; sul1 does not count for this drug's known-gene rule; one of 3 features that separate the isolates the earlier rules left undecided equally well",
+    "absence of blaOXA; blaOXA (OXA-48 family) counts for this drug's known-gene rule, but blaOXA (OXA-1 family) does not",
+    "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble); blaNDM counts for this drug's known-gene rule, but ble does not",
+    "presence of tet(A)",
+    "presence of k-mers matching 4 catalog families (blaKPC, blaNDM, qacE, sul1); blaKPC and blaNDM count for this drug's known-gene rule, but qacE and sul1 do not",
+    "presence of gyrA"
+   ]
+  },
+  "no_catalog_block": {
+   "why": "The same model in a report without a catalog block. The report cannot say which families count, so each term keeps its name and its ties alone.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "sul1"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [
+       "blaOXA"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 4,
+      "catalog_families": [
+       "blaNDM",
+       "ble",
+       "blaAFM"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 5,
+      "catalog_families": [
+       "tet(A)"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 6,
+      "catalog_families": [
+       "sul1",
+       "qacE",
+       "blaKPC",
+       "blaNDM"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 7,
+      "catalog_families": [],
+      "locus": {
+       "gene": "gyrA",
+       "product": "DNA gyrase subunit A",
+       "codons": [
+        83,
+        87
+       ],
+       "nearest": null
+      }
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       },
+       {
+        "feature": 4,
+        "presence": true
+       },
+       {
+        "feature": 5,
+        "presence": true
+       },
+       {
+        "feature": 6,
+        "presence": true
+       },
+       {
+        "feature": 7,
+        "presence": true
+       }
+      ],
+      "steps": [
+       {
+        "n_equivalent": 0
+       },
+       {
+        "n_equivalent": 2
+       }
+      ]
+     }
+    },
+    "catalog": null
+   },
+   "scm_rules": [
+    "presence of blaKPC",
+    "presence of sul1; one of 3 features that separate the isolates the earlier rules left undecided equally well",
+    "absence of blaOXA",
+    "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)",
+    "presence of tet(A)",
+    "presence of k-mers matching 4 catalog families (blaKPC, blaNDM, qacE, sul1)",
+    "presence of gyrA"
+   ]
+  }
+ }
+}
