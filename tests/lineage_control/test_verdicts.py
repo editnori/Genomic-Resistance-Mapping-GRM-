@@ -232,6 +232,19 @@ class Verdict(unittest.TestCase):
         many = [self.row(5, 1.0, 0.04)] + [self.row(5, 1.0, 0.5 + i / 100) for i in range(20)]
         self.assertEqual(V.judge(many)[0]["verdict"], "not_shown")
 
+    def test_an_adjusted_p_of_exactly_the_level_is_not_under_it(self):
+        # The rule is "adjusted p under 0.05". One assessable term is adjusted to its own p.
+        self.assertEqual(V.judge([self.row(5, 1.0, V.ALPHA)])[0]["verdict"], "not_shown")
+        self.assertEqual(V.judge([self.row(5, -1.0, V.ALPHA)])[0]["verdict"], "not_shown")
+        self.assertEqual(V.judge([self.row(5, 1.0, V.ALPHA - 1e-9)])[0]["verdict"], "seen")
+
+    def test_a_term_with_no_excess_has_p_1_so_it_is_never_under_the_level(self):
+        # With the continuity correction an excess of half an isolate or less gives a statistic of 0. A term
+        # whose excess is exactly 0 therefore never reaches the sign rule that tells seen from reversed.
+        row = V.report_terms(report([cluster(2, 2, 2, 2)] * 5), "sha")[0]
+        self.assertEqual((row["informative_strata"], row["excess"], row["p"]), (5, 0.0, 1.0))
+        self.assertEqual(V.judge([row])[0]["verdict"], "not_shown")
+
     def test_the_level_and_the_cluster_minimum_are_the_ones_fixed_before_the_results(self):
         self.assertEqual((V.MIN_STRATA, V.ALPHA), (5, 0.05))
         self.assertEqual(V.VERDICTS, ("seen", "not_shown", "cannot_test", "reversed"))
