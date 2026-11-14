@@ -256,7 +256,8 @@ jobs:
       - run: npm --prefix web ci --no-audit --no-fund
       - run: npm --prefix web run typecheck
       - run: npm --prefix web run build
-      # src/charts/realdata.test.ts skips: it needs GRM_REPORT_DIR, a published report.
+      # src/charts/realdata.test.ts and src/data/derive/realrules.test.ts skip: they need
+      # GRM_REPORT_DIR, a published report.
       - run: npm --prefix web test
       # The Worker's plain-Node tests: a stub bucket, no Miniflare and no packages. release.sh,
       # routes.py and ranges.py need Miniflare and grm serve, and run on Boat.

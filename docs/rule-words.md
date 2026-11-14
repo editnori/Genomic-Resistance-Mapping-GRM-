@@ -10,10 +10,12 @@ A term names a marker. Its k-mers go with the lab calls in the dataset's isolate
 | --- | --- | --- |
 | The Rule column of the datasets table, and its search text | `grm report`, into `scm_rules` of `index.json` (`report::rule_text` in `src/report.rs`) | a new release is built |
 | The note under a rule that names several catalog families | the web app, from the index's words | the app is deployed |
-| Each rule's heading and notes in the dataset inspector, and the rule slide | the web app, from the dataset's report (`web/src/data/derive/dataset.ts`) | the app is deployed |
+| Each rule's heading and notes in the dataset inspector, and the rule slide's heading and notes | the web app, from the dataset's report (`web/src/data/derive/dataset.ts`) | the app is deployed |
 | The within-lineage sentences under the inspector's rules | the web app, from `web/src/data/lineage-control.json` | the app is deployed, for the release the table was computed on |
 
 A site that serves an older release keeps that release's index words until the next release, whatever app it runs.
+
+The index's new words wait for a release under a new name. `grm report` stamps every index it writes with the time it ran (`generated_at`), so an index rebuilt in place from the same reports would differ from the published one in more than its words. The site's "Report built" date would move with no report changed, and `web/scripts/browser-check.cjs` would find no `reference/release-summary/*/guidance.json` for the tree, because it matches that file by the index's generation time. Do not rebuild the index of a served release to pick up a wording.
 
 ## The parts of a term's words
 
@@ -41,7 +43,7 @@ The wording has changed without a change to the models, so the index numbers it 
 | 2 | A term names every catalog family its feature matches, after their count | `rev14-274-20261112`; the index has no version field |
 | 3 | A term also gives its place outside a protein-coding gene, the drug's rule and its ties, as above | the next release |
 
-A count of rule terms by the kind of gene they name is read from these words, so it holds for one wording only. Text that gives such a count names the evaluation revision and the wording version it read. The Methods page prints both under the set covering machine.
+A count of rule terms by the kind of gene they name is read from these words, so it holds for one wording only. Text that gives such a count names the evaluation revision and the wording version it read. The Methods page prints both under the set covering machine. Where the index has no version field the page prints `rule wording 2 or earlier: the index gives no number`, because two releases of one evaluation revision can differ in wording and the revision alone does not tell them apart.
 
 The version is a number for the words only. It is not part of the evaluation: `EVALUATION_REVISION`, the report schema and the index schema do not change with it, and no dataset report changes.
 
