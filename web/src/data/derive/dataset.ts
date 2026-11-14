@@ -3,17 +3,19 @@
 
 import type {
   BinaryMetrics,
+  CatalogBaseline,
   DatasetReport,
   FeatureCard,
   Learner,
   LearnerResult,
+  Manifest,
   PanelResult,
   Rule,
   Scheme,
   SplitResult,
 } from "../schema";
 import { decodeBits } from "../bits";
-import { capitalize, int, learnerInSentence, pct } from "../format";
+import { capitalize, int, learnerInSentence, listWords, pct } from "../format";
 import { CATALOG_CUTOFF } from "./overview";
 import { EQUAL_SCORING_REVISION } from "./evaluation";
 
@@ -125,7 +127,9 @@ export const familyLabel = (families: readonly string[]): string | null => {
 };
 
 /** The words a feature goes by: its catalog families, else the gene or
- *  product on the reference assembly, else its id. */
+ *  product on the reference assembly, else its id. Views print where the
+ *  feature sits beside this name (featurePlace); a rule term, which stands
+ *  alone, takes termLabel. */
 export const featureLabel = (card: FeatureCard | undefined, id: number): string =>
   (card === undefined ? null : familyLabel(card.catalog_families)) ?? card?.locus?.gene ?? card?.locus?.product ?? `k-mer feature ${id}`;
 
@@ -144,8 +148,111 @@ export const featurePlace = (card: FeatureCard | undefined): string | null => {
   return null;
 };
 
+/** The words for k-mers that lie in no annotated gene of the reference
+ *  contig: the locus then names the nearest one, and the words give the
+ *  distance, so a term does not read like one inside that gene. Null when
+ *  the k-mers lie inside a gene, or no gene is named. */
+const outsideWords = (card: FeatureCard | undefined): string | null => {
+  const locus = card?.locus;
+  if (locus === null || locus === undefined) return null;
+  const name = locus.gene ?? locus.product;
+  if (name === null || locus.codons !== null || locus.nearest === null) return null;
+  return `k-mers ${int(Math.abs(locus.nearest[1]))} bp from the nearest annotated gene, ${name}`;
+};
+
+/** The words a rule term's feature goes by, as `grm report` writes them
+ *  into the index (`report::term_label`): its catalog families, else the
+ *  gene or product its k-mers lie in, or their distance from the nearest
+ *  one when they lie in none, else `unnamed`. */
+export const termLabel = (card: FeatureCard | undefined, id: number, unnamed = `k-mer feature ${id}`): string =>
+  (card === undefined ? null : familyLabel(card.catalog_families)) ?? outsideWords(card) ?? card?.locus?.gene ?? card?.locus?.product ?? unnamed;
+
 export const ruleWords = (rule: Rule, features: Map<number, FeatureCard>): string =>
-  `${rule.presence ? "Presence" : "Absence"} of ${featureLabel(features.get(rule.feature), rule.feature)}`;
+  `${rule.presence ? "Presence" : "Absence"} of ${termLabel(features.get(rule.feature), rule.feature)}`;
+
+/** What a rule term's ties add to its words (`report::tie_words`), or null
+ *  when nothing ties it. `nEquivalent` counts the other rules with the same
+ *  covered and lost counts at the term's greedy step, so the term is one of
+ *  that many and one more. A later term's step counts only the isolates the
+ *  earlier terms left undecided. */
+export const tieWords = (nEquivalent: number, position: number): string | null =>
+  nEquivalent > 0
+    ? `one of ${int(nEquivalent + 1)} features that separate ${position === 0 ? "these isolates" : "the isolates the earlier rules left undecided"} equally well`
+    : null;
+
+/** The family of a catalog gene group (`catalog::family_of_group`): the
+ *  group without its " (X family)" suffix. */
+export const familyOfGroup = (group: string): string => /^(.*) \(\S+ family\)$/.exec(group)?.[1] ?? group;
+
+/** What the report's own gene-group rows say of a term's catalog families
+ *  under this drug's known-gene rule (`report::family_rule_words`), or null
+ *  when they say nothing. A row exists for a gene group GRM's catalog
+ *  reader called in at least one genome of the dataset. A named family with
+ *  no row is left out: the report does not hold its class, so nothing is
+ *  said of it. The groups are named, since one family can have a group that
+ *  counts and one that does not. */
+export const familyRuleWords = (families: readonly string[], catalog: CatalogBaseline | null): string | null => {
+  if (families.length === 0 || catalog === null) return null;
+  const named = new Set(families);
+  const groups = (counts: boolean) => catalog.groups.flatMap((g) => (g.counts_for_rule === counts && named.has(familyOfGroup(g.group)) ? [g.group] : [])).sort();
+  const [counts, doesNot] = [groups(true), groups(false)];
+  const rule = "for this drug's known-gene rule";
+  const yes = `${listWords(counts)} ${counts.length === 1 ? "counts" : "count"} ${rule}`;
+  const no = `${listWords(doesNot)} ${doesNot.length === 1 ? "does not" : "do not"}`;
+  if (counts.length === 0) return doesNot.length === 0 ? null : `${no} count ${rule}`;
+  return doesNot.length === 0 ? yes : `${yes}, but ${no}`;
+};
+
+/** The wording `indexRuleWords` writes: `report::RULE_TEXT_VERSION`. */
+export const RULE_TEXT_VERSION = 3;
+
+/** A rule term as the index's `scm_rules` words it (`report::rule_text`):
+ *  presence or absence of the term's label, then what the gene-group rows
+ *  say of its catalog families, then its ties. `position` is the term's
+ *  place in the model, from 0. */
+export const indexRuleWords = (r: DatasetReport, position: number): string => {
+  const rule = r.models.scm.rules[position]!;
+  const card = r.features.find((f) => f.feature === rule.feature);
+  const clauses = [
+    `${rule.presence ? "presence of" : "absence of"} ${termLabel(card, rule.feature, `feature ${rule.feature}`)}`,
+    familyRuleWords(card?.catalog_families ?? [], r.catalog),
+    tieWords(r.models.scm.steps[position]?.n_equivalent ?? 0, position),
+  ];
+  return clauses.filter((c) => c !== null).join("; ");
+};
+
+/** How many catalog families an index rule term names, when it names
+ *  several (familyLabel's words); null for any other term. */
+export const familiesNamed = (ruleText: string): number | null => {
+  const n = /^(?:presence|absence) of k-mers matching (\d+) catalog families \(/.exec(ruleText)?.[1];
+  return n === undefined ? null : Number(n);
+};
+
+/** Beside a term that names several catalog families. A feature matches a
+ *  family when one of its sampled k-mers lies in any allele of it, so the
+ *  k-mers may lie in any one of the families or span them
+ *  (`annotate::family_label`): the term is one presence pattern, and the
+ *  list does not say which gene an isolate carries. */
+export const SEVERAL_FAMILIES_NOTE = "Not a list of genes an isolate carries: one k-mer pattern matches all of these families.";
+
+/** Which wording the index's rule words use, for the Methods page. The
+ *  index writes the words when a release is built (`report::rule_text`) and
+ *  numbers the wording from version 3 on (`rule_text_version`); an older
+ *  index has no number, so only its evaluation revision is named. A count of
+ *  rules by the kind of gene they name is taken from these words, and it
+ *  moves when the wording does. */
+export const ruleWordingNote = (m: Pick<Manifest, "evaluation_revision" | "rule_text_version">): string => {
+  const named = [...(m.evaluation_revision === undefined ? [] : [`evaluation revision ${m.evaluation_revision}`]), ...(m.rule_text_version === undefined ? [] : [`rule wording ${m.rule_text_version}`])];
+  return `The rule words in the datasets table come from this release's index${named.length === 0 ? "" : ` (${named.join(", ")})`}. A later release can word the same rule differently, so a count of rules by what they name holds for one wording only.`;
+};
+
+/** The sentences beside a rule term whose feature matches catalog families,
+ *  where the view has the report: the note when it matches several, then
+ *  what the gene-group rows say of them. Empty when neither applies. */
+export const familyNotes = (families: readonly string[], catalog: CatalogBaseline | null): string[] => {
+  const rule = familyRuleWords(families, catalog);
+  return [...(new Set(families).size > 1 ? [SEVERAL_FAMILIES_NOTE] : []), ...(rule === null ? [] : [`Of the gene groups found in these genomes, ${rule}.`])];
+};
 
 const TOKEN_KIND: Record<string, string> = { "C:": "class", "S:": "subclass" };
 
@@ -279,6 +386,9 @@ export const answerSentence = (r: DatasetReport): string => {
       : rules.length <= 2
         ? rules.map((rule, i) => (i === 0 ? ruleWords(rule, features) : lower(ruleWords(rule, features)))).join(join)
         : `A ${rules.length}-rule set covering machine led by ${lower(ruleWords(rules[0]!, features))}`;
+  // The sentence names the first rule alone, so it says when other features tie it.
+  const ties = rules.length === 0 ? null : tieWords(r.models.scm.steps[0]?.n_equivalent ?? 0, 0);
+  const tieSentence = ties === null ? "" : ` ${rules.length === 1 ? "The rule" : "The first rule"} is ${ties}.`;
   const lineageBa = (l: Learner) => learnerOf(r, "lineage", l)?.metrics?.balanced_accuracy;
   const bothSplits = (l: CalledLearner) => {
     const lin = lineageBa(l.learner);
@@ -287,7 +397,7 @@ export const answerSentence = (r: DatasetReport): string => {
   if (best === undefined) {
     const hasLearners = splitOf(r, "random")?.learners.some((l) => l.learner !== "catalog") ?? false;
     const reason = hasLearners ? `${NO_BEST_LEARNER} on every split it ran` : "No learner result is recorded for this dataset";
-    return ruleText === null ? `${reason}.` : `${ruleText} is the interpretable model; ${lower(reason)}.`;
+    return ruleText === null ? `${reason}.` : `${ruleText} is the interpretable model; ${lower(reason)}.${tieSentence}`;
   }
   const catalogBa = learnerOf(r, "random", "catalog")?.metrics?.balanced_accuracy;
   const scmBa = scm?.metrics?.balanced_accuracy;
@@ -299,7 +409,7 @@ export const answerSentence = (r: DatasetReport): string => {
       : ruleText !== null && scmBa !== undefined
         ? `${ruleText} calls ${r.antibiotic} resistance at ${pct(scmBa)} balanced accuracy; ${BEST_LEARNER_WORDS}, ${learnerInSentence(best.learner)}, reaches ${bothSplits(best)}`
         : `${capitalize(BEST_LEARNER_WORDS)}, ${learnerInSentence(best.learner)}, reaches ${bothSplits(best)}`;
-  return `${text}${catalogClause}.`;
+  return `${text}${catalogClause}.${tieSentence}`;
 };
 
 export interface SeqRun {

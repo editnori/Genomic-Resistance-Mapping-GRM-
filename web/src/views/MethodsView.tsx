@@ -15,6 +15,7 @@ import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import { loadErrorText, useCorpus } from "../data/load";
 import { EQUAL_SCORING_REVISION, manifestAudit, nullFitWords, panelWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
+import { ruleWordingNote } from "../data/derive/dataset";
 import { GUIDANCE_WORDING, ZERO_MISS_FLOOR, wordingSummary } from "../data/derive/evidence";
 import { notScored } from "../data/derive/tests";
 import { FOCUS_RING, PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitives";
@@ -245,7 +246,9 @@ const Models = ({ manifest }: { manifest: Manifest }) => (
           : `Each genome is counted into its ${manifest.k}-mers with GRM's own counter.`}{" "}
         K-mers with the same presence pattern across a species&apos; genomes are one feature, kept when enough isolates carry it.
       </Def>
-      <Def term="Set covering machine (SCM)" plain="A learner that writes a few short yes-or-no rules a person can read.">A short set of presence and absence rules, chosen greedily as Kover does; it calls resistant when its rules hold and is read as written.</Def>
+      <Def term="Set covering machine (SCM)" plain="A learner that writes a few short yes-or-no rules a person can read.">
+        A short set of presence and absence rules, chosen greedily as Kover does; it calls resistant when its rules hold and is read as written. {ruleWordingNote(manifest)}
+      </Def>
       <Def term="Decision tree (CART)" plain="A learner that asks one yes-or-no question after another, like a flowchart.">A class-balanced tree of presence and absence splits.</Def>
       <Def term="Random forest" plain="A learner that grows many different decision trees and lets them vote.">Many randomized trees whose votes score each isolate between 0 and 1.</Def>
       <Def term="Gradient-boosted trees" plain="A learner that adds small trees one at a time, each one fixing mistakes of the trees before it.">Trees added one at a time, each correcting the ones before; they score each isolate between 0 and 1.</Def>

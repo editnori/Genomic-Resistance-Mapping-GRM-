@@ -6,7 +6,7 @@
 // next slide, so nothing opens a second dialog and nothing scrolls.
 import type { CatalogRow, Manifest } from "../data/schema";
 import { datasetTitle, int, pct } from "../data/format";
-import { featureIndex, featureLabel, featurePlace } from "../data/derive/dataset";
+import { familyNotes, featureIndex, featureLabel, featurePlace, tieWords } from "../data/derive/dataset";
 import { loadErrorText, useDataset } from "../data/load";
 import { PanelState } from "../ui/primitives";
 import { Seq } from "../ui/Seq";
@@ -42,6 +42,9 @@ export const RuleFigure = ({ manifest, page = 0, pages }: { manifest: Manifest; 
   const rShare = card.n_resistant / Math.max(r.counts.resistant, 1);
   const sShare = card.n_susceptible / Math.max(r.counts.susceptible, 1);
   const context = card.locus?.context ?? "";
+  const notes = familyNotes(card.catalog_families, r.catalog);
+  // The slide shows the first rule alone, so it says when other features tie it.
+  const ties = tieWords(r.models.scm.steps[0]?.n_equivalent ?? 0, 0);
   const split = pages !== undefined && pages > 1 && context !== "";
   const header = (
     <>
@@ -54,9 +57,11 @@ export const RuleFigure = ({ manifest, page = 0, pages }: { manifest: Manifest; 
       {card.catalog_families.length === 0 ? null : (
         <p className="mt-2 text-note text-muted-text">
           Known-gene catalog {card.catalog_families.length === 1 ? "family" : "families"} {card.catalog_families.join(", ")}
+          {notes.length === 0 ? "" : `. ${notes.join(" ")}`}
         </p>
       )}
       <p className="mt-2 text-note text-ink">{featurePlace(card) ?? "Not placed on a reference assembly."}</p>
+      {ties === null ? null : <p className="mt-2 text-note text-ink">This rule is {ties}.</p>}
     </>
   );
   const sequence =

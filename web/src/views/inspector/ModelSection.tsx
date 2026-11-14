@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CatalogRow, DatasetReport, FeatureCard, Rule } from "../../data/schema";
 import { int, pct, plural } from "../../data/format";
-import { featureIndex, featureLabel, featureWhere, ruleWords } from "../../data/derive/dataset";
+import { familyNotes, featureIndex, featureLabel, featureWhere, ruleWords } from "../../data/derive/dataset";
 import { LINEAGE_CONTROL, lineageMethod, lineageSentences, lineageVerdicts, type LineageControl } from "../../data/derive/lineage";
 import { TreeDiagram } from "../../charts/TreeDiagram";
 import { Section, Segmented } from "../../ui/primitives";
@@ -34,6 +34,9 @@ const RuleBlock = ({ index, rule, card, r }: { index: number; rule: Rule; card: 
             Carried by {int(card.n_resistant)} of {int(r.counts.resistant)} resistant and {int(card.n_susceptible)} of {int(r.counts.susceptible)} susceptible isolates.
           </p>
         ) : null}
+        {familyNotes(card?.catalog_families ?? [], r.catalog).map((note) => (
+          <p key={note}>{note}</p>
+        ))}
         {importance !== undefined ? <p>Dropping this rule raises training balanced error by {(importance * 100).toFixed(1)} points.</p> : null}
         {step !== undefined && step.n_equivalent > 0 ? (
           <p>

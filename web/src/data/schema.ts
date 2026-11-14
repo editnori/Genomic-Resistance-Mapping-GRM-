@@ -423,7 +423,8 @@ export interface CatalogRow {
   learners: { learner: Learner; random: LearnerLite | null; lineage: LearnerLite | null }[];
   catalog: Lite | null;
   mic_essential_agreement: number | null;
-  /** Plain-words SCM rules, e.g. "presence of blaKPC". */
+  /** Plain-words SCM rules, e.g. "presence of blaKPC". The wording is
+   *  numbered by the manifest's rule_text_version. */
   scm_rules: string[];
   /** [panel id, metrics] */
   panels: [string, Lite][];
@@ -468,6 +469,13 @@ export interface Manifest {
    *  came from, such as 2026-08-07.1. Not a program version: GRM reads the
    *  database's sequences itself and does not run the AMRFinderPlus program. */
   amrfinder_version: string;
+  /** Which wording `scm_rules` uses (report.rs's RULE_TEXT_VERSION). Absent
+   *  in an index written before the field: one family per term through
+   *  revision 12, every family from release rev14-274-20261112. From 3 a
+   *  term also says when its k-mers sit outside the named gene, whether a
+   *  named family's gene groups count for the drug's known-gene rule, and
+   *  how many features tie it. */
+  rule_text_version?: number;
   name_vocabulary: string | null;
   funnel: Funnel;
   species: SpeciesRow[];

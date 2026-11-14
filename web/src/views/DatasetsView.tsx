@@ -19,7 +19,7 @@ import type { CatalogRow, Learner, LearnerLite, Manifest } from "../data/schema"
 import { capitalize, hasEverydayName, int, LEARNER_LABEL, LEARNER_NAME, pct, speciesName, speciesOption, speciesShort } from "../data/format";
 import { applyAxes, countBy, memberTest, rowsWithout, type Axis } from "../data/facets";
 import { BARS, BARS_SOURCE, verdictOf } from "../data/metrics";
-import { BEST_LEARNER_WORDS, NO_BEST_LEARNER, ruleSummary, splitReasonShort } from "../data/derive/dataset";
+import { BEST_LEARNER_WORDS, familiesNamed, NO_BEST_LEARNER, ruleSummary, SEVERAL_FAMILIES_NOTE, splitReasonShort } from "../data/derive/dataset";
 import { CATALOG_CUTOFF, catalogDiff } from "../data/derive/overview";
 import { auditOf, manifestAudit } from "../data/derive/evaluation";
 import { useKeptState, type Navigator } from "../app/router";
@@ -157,6 +157,14 @@ const RULE_TOGGLE = `ui-control-target ui-target-24 inline-flex items-center jus
  *  None of it opens the row. */
 const RuleCell = ({ rules }: { rules: readonly string[] }) => {
   const [open, setOpen] = useState(false);
+  // Under a rule that names several catalog families: what the list is not.
+  // One line while the rule is, whole in a tooltip; in full once opened.
+  const note = (rule: string) =>
+    familiesNamed(rule) === null ? null : (
+      <span data-rule-note="" title={open ? undefined : SEVERAL_FAMILIES_NOTE} className={`block text-tiny font-normal text-muted-text ${open ? "whitespace-normal break-words" : "truncate"}`}>
+        {SEVERAL_FAMILIES_NOTE}
+      </span>
+    );
   // Read only while the rule is cut to one line: shown whole it no longer
   // measures as clipped, and the button must stay to close it.
   const [textRef, clipped] = useClipped<HTMLSpanElement>(open);
@@ -176,17 +184,22 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
     </span>
   );
   if (s.more === 0) {
-    return open || clipped ? (
-      <button
-        type="button"
-        aria-expanded={open}
-        {...toggle}
-        className={`${HOLD_TARGET} ui-control-target block w-full rounded-sm text-left transition-colors duration-fast ease-out hover:text-blue ${FOCUS_RING}`}
-      >
-        {line}
-      </button>
-    ) : (
-      line
+    return (
+      <>
+        {open || clipped ? (
+          <button
+            type="button"
+            aria-expanded={open}
+            {...toggle}
+            className={`${HOLD_TARGET} ui-control-target block w-full rounded-sm text-left transition-colors duration-fast ease-out hover:text-blue ${FOCUS_RING}`}
+          >
+            {line}
+          </button>
+        ) : (
+          line
+        )}
+        {note(s.first)}
+      </>
     );
   }
   return (
@@ -196,6 +209,7 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
           {rules.map((rule, i) => (
             <li key={`${i}-${rule}`} className="break-words">
               {rule}
+              {note(rule)}
             </li>
           ))}
         </ol>
@@ -204,6 +218,7 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
         // the count is the way in by keyboard.
         <span data-row-ignore="" className={`${HOLD_TARGET} min-w-0 cursor-pointer`} {...show}>
           {line}
+          {note(s.first)}
         </span>
       )}
       <button type="button" aria-expanded={open} aria-label={open ? undefined : `Show all ${rules.length} rules`} onClick={() => setOpen(!open)} className={RULE_TOGGLE}>

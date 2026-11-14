@@ -27,6 +27,15 @@ describe("methods known-gene rules", () => {
   });
 });
 
+describe("methods rule words", () => {
+  it("names the revision and the wording the rule words were written in, under the set covering machine", () => {
+    const page = (m: typeof manifest) => renderToStaticMarkup(createElement(MethodsView, { manifest: m })).replace(/&#x27;/g, "'");
+    const tail = "A later release can word the same rule differently, so a count of rules by what they name holds for one wording only.";
+    expect(page({ ...manifest, evaluation_revision: 14, rule_text_version: 3 })).toContain(`is read as written. The rule words in the datasets table come from this release's index (evaluation revision 14, rule wording 3). ${tail}`);
+    expect(page({ ...manifest, evaluation_revision: 14, rule_text_version: undefined })).toContain(`come from this release's index (evaluation revision 14). ${tail}`);
+  });
+});
+
 describe("methods in plain words", () => {
   const el = document.createElement("div");
   el.innerHTML = renderToStaticMarkup(createElement(MethodsView, { manifest }));

@@ -130,6 +130,26 @@ describe("dataset catalog", () => {
     ]);
   });
 
+  it("says under a rule that names several catalog families that the list is one pattern, and under no other rule", () => {
+    const base = manifest.datasets[0]!;
+    const note = "Not a list of genes an isolate carries: one k-mer pattern matches all of these families.";
+    const several = "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)";
+    const ruleCell = (scm_rules: string[]) => firstRowHtml(render([{ ...base, scm_rules }])).at(-1)!;
+    // One rule, and the first of several: the note sits under the rule.
+    for (const rules of [[several], [several, "absence of blaTEM"]]) {
+      const cell = ruleCell(rules);
+      expect(cell.match(/data-rule-note/g)).toHaveLength(1);
+      expect(text(cell).startsWith(`${several}${note}`)).toBe(true);
+    }
+    // The words the next release's index adds after the families keep the note.
+    expect(ruleCell([`${several}; blaNDM counts for this drug's known-gene rule, but ble does not`])).toContain(note);
+    // A rule that names one family, a gene or a place has none, and neither has an empty model.
+    for (const rules of [["presence of blaKPC"], ["presence of blaKPC", several], ["absence of k-mers 46 bp from the nearest annotated gene, mgrB"], []]) {
+      expect(ruleCell(rules)).not.toContain("data-rule-note");
+      expect(ruleCell(rules)).not.toContain(note);
+    }
+  });
+
   it("keeps the species whole with its separator and lets a combination drug break after its slash", () => {
     const base = { ...manifest.datasets[0]!, species: "Klebsiella pneumoniae", antibiotic: "sulfamethoxazole/trimethoprim" };
     const cell = firstRowHtml(render([base]))[0]!;

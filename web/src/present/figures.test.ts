@@ -87,8 +87,8 @@ const motion = (reduced: boolean) =>
     removeEventListener: () => {},
   }));
 
-const open = async (manifest: Manifest = base) => {
-  vi.stubGlobal("fetch", async (path: string) => new Response(JSON.stringify(fixtureFile(path))));
+const open = async (manifest: Manifest = base, file: (path: string) => unknown = fixtureFile) => {
+  vi.stubGlobal("fetch", async (path: string) => new Response(JSON.stringify(file(path))));
   const host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -241,6 +241,42 @@ describe("continuation slides", () => {
     expect(labels).toHaveLength(SPLIT);
     expect(labels.filter((t) => t.includes("Newly deposited genomes"))).toEqual([expect.stringContaining("(1 of 2)"), expect.stringContaining("(2 of 2)")]);
     expect(labels.filter((t) => t.includes("Input settings against the default"))).toEqual([1, 2, 3, 4, 5, 6, 7].map((k) => expect.stringContaining(`(${k} of 7)`)));
+  });
+
+  it("says on the rule slide what a list of families is, which gene groups count for the drug's rule, and how many features tie the rule", async () => {
+    motion(true);
+    restore = layout({ height: 2000 });
+    // The synthetic fixture's showcase report under a new id, so the deck
+    // fetches it afresh, with its first rule's card, its gene-group rows and
+    // its ties set by hand, and a score that keeps it the showcase.
+    const pick = ruleDataset(base)!;
+    type Raw = { id: string; features: { feature: number; catalog_families: string[] }[]; models: { scm: { rules: { feature: number }[]; steps: { n_equivalent: number }[] } }; catalog: { groups: unknown[] } | null };
+    const group = (name: string, counts: boolean) => ({ group: name, class: "BETA-LACTAM", subclass: "CARBAPENEM", n_resistant: 1, n_susceptible: 1, counts_for_rule: counts });
+    const slide = async (id: string, ties: number) => {
+      const raw = structuredClone(fixtureFile(`/data/datasets/${pick.row.id}.json`)) as Raw;
+      raw.id = id;
+      raw.features.find((f) => f.feature === raw.models.scm.rules[0]!.feature)!.catalog_families = ["blaNDM", "ble"];
+      raw.models.scm.steps[0]!.n_equivalent = ties;
+      raw.catalog = { ...(raw.catalog ?? { version: "2026-08-14.1", rule: [["S:CARBAPENEM"]], metrics: pick.row.catalog }), groups: [group("blaNDM", true), group("ble", false)] } as Raw["catalog"];
+      const learners = pick.row.learners.map((l) => (l.learner === "scm" && l.random !== null ? { ...l, random: { ...l.random, balanced_accuracy: 0.9999 } } : l));
+      const manifest = { ...base, datasets: [...base.datasets, { ...pick.row, id, learners }] };
+      expect(ruleDataset(manifest)!.row.id).toBe(id);
+      const { dialog } = await open(manifest, (p) => (p === `/data/datasets/${id}.json` ? raw : fixtureFile(p)));
+      await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
+      await act(async () => {});
+      return dialog.querySelector("main section")?.textContent ?? "";
+    };
+    const tied = await slide("rule-words-tied", 3);
+    expect(tied).toContain(
+      "Known-gene catalog families blaNDM, ble. Not a list of genes an isolate carries: one k-mer pattern matches all of these families. Of the gene groups found in these genomes, blaNDM counts for this drug's known-gene rule, but ble does not.",
+    );
+    expect(tied).toContain("This rule is one of 4 features that separate these isolates equally well.");
+    act(() => root?.unmount());
+    root = null;
+    document.body.innerHTML = "";
+    const untied = await slide("rule-words-untied", 0);
+    expect(untied).toContain("Known-gene catalog families blaNDM, ble.");
+    expect(untied).not.toContain("equally well");
   });
 
   it("moves the rule's sequence onto its own slide only when the two do not fit together", async () => {
