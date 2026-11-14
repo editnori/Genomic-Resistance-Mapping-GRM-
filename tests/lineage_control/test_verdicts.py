@@ -133,10 +133,61 @@ class Context(unittest.TestCase):
         # Feature 2 holds for four isolates, so the second term is tested on the other four.
         self.assertEqual([r["context_isolates"] for r in rows], [8, 4])
 
-    def test_a_rule_whose_feature_has_no_card_holds_for_no_isolate(self):
-        rows = V.report_terms(report(self.clusters, "conjunction", [{"feature": 9, "presence": True}, {"feature": 1, "presence": True}]), "sha")
-        self.assertEqual((rows[0]["informative_strata"], rows[0]["p"]), (0, None))
-        self.assertEqual(rows[1]["context_isolates"], 0)
+    def split_clusters(self):
+        """Five clusters of ten isolates, and a second feature that covers the first eight of each.
+
+        Feature 1 goes with the lab calls among the eight isolates feature 2 covers (3 resistant and 1 susceptible
+        with it, 1 and 3 without). The two isolates feature 2 does not cover are susceptible and lack feature 1,
+        so among them feature 1 has one state and the lab call has one value.
+        """
+        clusters = [cluster(3, 1, 1, 5)] * 5
+        covers = {"feature": 2, "bits": bits(([True] * 8 + [False] * 2) * 5)}
+        return clusters, covers
+
+    def test_a_disjunction_does_not_test_a_later_term_on_isolates_an_earlier_term_covers(self):
+        # The second term's feature goes with the lab calls only among isolates the first term already covers.
+        # A disjunction tests it on the isolates no earlier term holds for, where it has nothing to show.
+        clusters, covers = self.split_clusters()
+        rules = [{"feature": 2, "presence": True}, {"feature": 1, "presence": True}]
+        rows = V.report_terms(report(clusters, "disjunction", rules, [covers]), "sha")
+        self.assertEqual([r["context_isolates"] for r in rows], [50, 10])
+        self.assertEqual((rows[1]["informative_strata"], rows[1]["excess"], rows[1]["p"]), (0, 0.0, None))
+        self.assertEqual(V.judge(rows)[1]["verdict"], "cannot_test")
+        # The same feature tested on all isolates, as a model's first term, has all five clusters informative:
+        # a script that ignored the context would give 5 above, and could call the term seen.
+        alone = V.report_terms(report(clusters), "sha")[0]
+        self.assertEqual((alone["context_isolates"], alone["informative_strata"]), (50, 5))
+        self.assertLess(alone["p"], 0.05)
+
+    def test_a_conjunction_tests_a_later_term_only_among_the_isolates_the_earlier_terms_hold_for(self):
+        # The mirror case: in a conjunction the second term is tested on the eight isolates a cluster the first
+        # term holds for, and there its feature goes with the lab calls in every cluster.
+        clusters, covers = self.split_clusters()
+        rules = [{"feature": 2, "presence": True}, {"feature": 1, "presence": True}]
+        rows = V.report_terms(report(clusters, "conjunction", rules, [covers]), "sha")
+        self.assertEqual([r["context_isolates"] for r in rows], [50, 40])
+        self.assertEqual(rows[1]["informative_strata"], 5)
+        # Inside the context each cluster is 3 and 1 with the term, 1 and 3 without: the hand-computed test
+        # of Statistic, and not the figures all fifty isolates give.
+        self.assertAlmostEqual(rows[1]["excess"], 5.0)
+        self.assertAlmostEqual(rows[1]["p"], 0.0077623456, places=9)
+        on_everyone = V.report_terms(report(clusters), "sha")[0]
+        self.assertNotAlmostEqual(on_everyone["excess"], rows[1]["excess"])
+        # The first term is absent from the two uncovered isolates of each cluster and present in the rest, and
+        # the uncovered ones are all susceptible, so it is informative in each cluster too.
+        self.assertEqual(rows[0]["informative_strata"], 5)
+
+    def test_a_rule_whose_feature_has_no_card_stops_the_run_and_names_the_dataset_and_the_feature(self):
+        rules = [{"feature": 1, "presence": True}, {"feature": 9, "presence": False}]
+        with self.assertRaises(SystemExit) as stopped:
+            V.report_terms(report(self.clusters, "conjunction", rules, dataset="made_up__drug"), "sha")
+        message = str(stopped.exception)
+        self.assertIn("made_up__drug", message)
+        self.assertIn("rule 2", message)
+        self.assertIn("feature 9", message)
+        # With its card the same model is tested.
+        card = {"feature": 9, "bits": bits([False] * 8)}
+        self.assertEqual(len(V.report_terms(report(self.clusters, "conjunction", rules, [card]), "sha")), 2)
 
     def test_another_kind_of_model_stops_the_run(self):
         with self.assertRaises(SystemExit):
@@ -205,6 +256,59 @@ class Table(unittest.TestCase):
         self.assertEqual([(r["revision"], r["input_fingerprint"], r["isolates"]) for r in rows], [("14", "0123456789abcdef", "72"), ("14", "0123456789abcdef", "16")])
         self.assertEqual(rows[1]["q"], "")
         self.assertTrue(all(len(r["report_sha256"]) == 64 for r in rows))
+
+    def release(self, tmp, reports):
+        """A synthetic release directory holding `reports`, and the rows the script prints for it."""
+        datasets = pathlib.Path(tmp) / "datasets"
+        datasets.mkdir()
+        for r in reports:
+            (datasets / f"{r['id']}.json").write_text(json.dumps(r), encoding="utf-8")
+        text = V.build(tmp)
+        lines = text.splitlines()
+        return text, [dict(zip(V.COLUMNS, line.split("\t"))) for line in lines[1:]]
+
+    def test_a_term_is_adjusted_over_the_release_and_not_inside_its_own_report(self):
+        # Two synthetic reports of one term each, both with five informative clusters. The first has a raw p
+        # between 0.025 and 0.05; the second has one above 0.05. Adjusted alone, inside its own report, the
+        # first would stay under the level and read `seen`. Adjusted over the two terms of the release it is
+        # at most twice its raw p, which is over the level.
+        near = report([cluster(3, 1, 1, 3)] * 4 + [cluster(2, 2, 2, 2)], dataset="a__drug")
+        far = report([cluster(3, 1, 1, 3)] * 3 + [cluster(2, 2, 2, 2)] * 2, dataset="b__drug")
+        with tempfile.TemporaryDirectory() as tmp:
+            _, rows = self.release(tmp, [near, far])
+        self.assertEqual([(r["dataset"], r["informative_strata"]) for r in rows], [("a__drug", "5"), ("b__drug", "5")])
+        p_near, p_far = float(rows[0]["p"]), float(rows[1]["p"])
+        self.assertTrue(0.025 < p_near < 0.05 < p_far, (p_near, p_far))
+        self.assertEqual([r["verdict"] for r in rows], ["not_shown", "not_shown"])
+        self.assertAlmostEqual(float(rows[0]["q"]), min(2 * p_near, p_far), places=6)
+        self.assertGreater(float(rows[0]["q"]), V.ALPHA)
+        # The same report as a release of its own: one term, so the adjusted p is the raw p, and it reads `seen`.
+        with tempfile.TemporaryDirectory() as tmp:
+            _, alone = self.release(tmp, [near])
+        self.assertEqual((alone[0]["verdict"], alone[0]["q"]), ("seen", alone[0]["p"]))
+
+    def test_check_passes_on_the_text_the_script_prints_and_fails_on_any_other(self):
+        strong = report([cluster(6, 0, 0, 6)] * 6, dataset="a__drug")
+        weak = report([cluster(3, 1, 1, 3)] * 2, dataset="b__drug")
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as other:
+            text, rows = self.release(tmp, [strong, weak])
+            table = pathlib.Path(other) / "table.tsv"
+            table.write_text(text, encoding="utf-8")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(V.main(["verdicts.py", tmp, "--check", str(table)]), 0)
+                # One verdict changed, a line dropped, and a line added: each is another text.
+                table.write_text(text.replace("\tseen\n", "\tnot_shown\n"), encoding="utf-8")
+                self.assertEqual(V.main(["verdicts.py", tmp, "--check", str(table)]), 1)
+                table.write_text("".join(text.splitlines(keepends=True)[:-1]), encoding="utf-8")
+                self.assertEqual(V.main(["verdicts.py", tmp, "--check", str(table)]), 1)
+                table.write_text(text + "\n", encoding="utf-8")
+                self.assertEqual(V.main(["verdicts.py", tmp, "--check", str(table)]), 1)
+            # A check prints nothing.
+            self.assertEqual(out.getvalue(), "")
+            self.assertEqual(len(rows), 2)
+            with self.assertRaises(SystemExit):
+                V.main(["verdicts.py", tmp, "--chek", str(table)])
 
     def test_a_directory_without_reports_stops_the_run(self):
         with tempfile.TemporaryDirectory() as tmp, self.assertRaises(SystemExit):

@@ -3,7 +3,14 @@
 The suite reads no release and tests no term again. It checks that the table
 holds one release's terms under the script's columns, that each verdict
 follows from the row's own figures, that each report hash is the release's
-own checksum line, and that the README gives the files' hashes and counts.
+own checksum line, and that the README gives the files' hashes and the
+table's counts. No count is typed here: each is counted from the table, and
+the table's bytes are held by the hash the README gives.
+
+`scripts/lineage-control/verdicts.py RELEASE_DIR --check TABLE` compares the
+table with what the script prints for the unpacked release (docs/ci.md, "Not
+in CI"); tests/lineage_control/test_verdicts.py tests that mode on a
+synthetic release.
 """
 
 import collections
@@ -36,12 +43,49 @@ def rows():
         return list(csv.DictReader(f, delimiter="\t"))
 
 
+def checksum_lines():
+    """The release's checksum line of each report: dataset id to sha256."""
+    lines = {}
+    for line in REPORTS.read_text(encoding="utf-8").splitlines():
+        digest, name = line.split("  ")
+        if not (name.startswith("./datasets/") and name.endswith(".json") and "/" not in name[len("./datasets/") :]):
+            raise AssertionError(f"{REPORTS.name}: {name!r} is not a report of the release")
+        lines[name[len("./datasets/") : -len(".json")]] = digest
+    return lines
+
+
+def count_lines(table):
+    """The README's lines that give a count, written from the table's rows."""
+    revisions = sorted({r["revision"] for r in table})
+    reports = len({r["dataset"] for r in table})
+    terms = collections.Counter(r["verdict"] for r in table)
+    leading = collections.Counter(r["verdict"] for r in table if r["position"] == "1")
+    verdicts = collections.defaultdict(set)
+    for r in table:
+        verdicts[r["dataset"]].add(r["verdict"])
+    untestable = sum(v == {"cannot_test"} for v in verdicts.values())
+    tested = len(table) - terms["cannot_test"]
+    return {
+        "input": f"| `{TABLE.name}` | `{RELEASE}.tar.zst` | `{{asset}}` | {', '.join(revisions)} | {reports} reports |",
+        "checked": f"On 2026-11-14 each of the {reports} equalled its line in the release's own checksum list, `{RELEASE}.sha256`.",
+        "kept": f"`{REPORTS.name}` holds those {reports} lines as the release wrote them",
+        "rows": f"One row for each rule term: {len(table)} rule terms of {reports} reports.",
+        "verdicts": [f"| `{v}` | {terms[v]} | {leading[v]} |" for v in V.VERDICTS],
+        "tested": f"Of the {tested} terms that could be tested, {terms['seen']} are `seen`.",
+        "untestable": f"No term of {untestable} datasets can be tested.",
+    }
+
+
 class Reference(unittest.TestCase):
     def test_the_table_holds_one_release_under_the_script_columns(self):
         with TABLE.open(encoding="utf-8") as f:
             self.assertEqual(f.readline().rstrip("\n").split("\t"), list(V.COLUMNS))
         table = rows()
-        self.assertEqual((len(table), len({r["dataset"] for r in table}), {r["revision"] for r in table}), (862, 274, {"14"}))
+        self.assertGreater(len(table), 0)
+        self.assertEqual(len({r["revision"] for r in table}), 1)
+        # One row a term and no empty report: as many datasets as the release's checksum list has reports.
+        self.assertEqual(len({r["dataset"] for r in table}), len(checksum_lines()))
+        self.assertEqual({r["verdict"] for r in table} - set(V.VERDICTS), set())
         # A dataset's terms are numbered from 1 in the model's order, under one fingerprint and one report.
         by_dataset = collections.defaultdict(list)
         for r in table:
@@ -51,16 +95,6 @@ class Reference(unittest.TestCase):
             self.assertEqual(len({(r["input_fingerprint"], r["report_sha256"], r["isolates"]) for r in terms}), 1, dataset)
             self.assertEqual(int(terms[0]["context_isolates"]), int(terms[0]["isolates"]), dataset)
         self.assertEqual(list(by_dataset), sorted(by_dataset))
-
-    def test_the_counts_are_the_ones_the_site_and_the_readme_give(self):
-        table = rows()
-        self.assertEqual(collections.Counter(r["verdict"] for r in table), {"seen": 327, "not_shown": 6, "cannot_test": 529})
-        leading = collections.Counter(r["verdict"] for r in table if r["position"] == "1")
-        self.assertEqual(leading, {"seen": 179, "not_shown": 1, "cannot_test": 94})
-        verdicts = collections.defaultdict(set)
-        for r in table:
-            verdicts[r["dataset"]].add(r["verdict"])
-        self.assertEqual(sum(v == {"cannot_test"} for v in verdicts.values()), 90)
 
     def test_each_verdict_follows_from_its_row(self):
         for r in rows():
@@ -75,12 +109,8 @@ class Reference(unittest.TestCase):
             self.assertEqual(r["verdict"], want, where)
 
     def test_each_report_hash_is_the_release_checksum_line(self):
-        lines = {}
-        for line in REPORTS.read_text(encoding="utf-8").splitlines():
-            digest, name = line.split("  ")
-            self.assertRegex(name, r"^\./datasets/[^/]+\.json$")
-            lines[name[len("./datasets/") : -len(".json")]] = digest
-        self.assertEqual(len(lines), 274)
+        lines = checksum_lines()
+        self.assertEqual(len(lines), len(REPORTS.read_text(encoding="utf-8").splitlines()))
         table = rows()
         self.assertEqual({r["dataset"] for r in table}, set(lines))
         for r in table:
@@ -94,10 +124,29 @@ class Reference(unittest.TestCase):
         for name in names:
             self.assertEqual(hashlib.sha256((REFERENCE / name).read_bytes()).hexdigest(), listed[name], name)
 
-    def test_the_readme_gives_the_counts(self):
+    def test_the_readme_gives_the_counts_the_table_gives(self):
+        # Every line of the README that holds a count is written again here from the table's rows and compared
+        # with the README's own, so a README left behind by a new table fails, and so does a count typed wrong.
         readme = (REFERENCE / "README.md").read_text(encoding="utf-8")
-        for words in ("862 rule terms of 274 reports", "| `seen` | 327 | 179 |", "| `not_shown` | 6 | 1 |", "| `cannot_test` | 529 | 94 |", "| `reversed` | 0 | 0 |", "90 datasets"):
-            self.assertIn(words, readme)
+        want = count_lines(rows())
+        asset = re.search(r"^\| `" + re.escape(TABLE.name) + r"` \| `[^`]+` \| `([0-9a-f]{64})` \|", readme, re.M)
+        self.assertIsNotNone(asset)
+        self.assertIn(want["input"].format(asset=asset.group(1)), readme.splitlines())
+        self.assertIn(want["checked"], readme)
+        self.assertIn(want["kept"], readme)
+        self.assertEqual(re.findall(r"^One row for each rule term: .*$", readme, re.M), [want["rows"]])
+        self.assertEqual(re.findall(r"^\| `\w+` \| \d+ \| \d+ \|", readme, re.M), want["verdicts"])
+        self.assertEqual(re.findall(r"^Of the \d+ terms that could be tested, .*$", readme, re.M), [want["tested"]])
+        self.assertEqual(re.findall(r"^No term of \d+ datasets can be tested\.$", readme, re.M), [want["untestable"]])
+
+    def test_the_readme_says_the_fourth_verdict_is_an_addition_and_what_the_site_does_with_it(self):
+        readme = (REFERENCE / "README.md").read_text(encoding="utf-8")
+        self.assertIn("`reversed`, is an addition to those rules", readme)
+        self.assertIn("The inspector has no words for `reversed`", readme)
+        # The page's own list of worded verdicts is the three fixed ones.
+        app = (ROOT / "web" / "src" / "data" / "derive" / "lineage.ts").read_text(encoding="utf-8")
+        self.assertIn('const WORDED: readonly string[] = ["seen", "not_shown", "cannot_test"];', app)
+        self.assertEqual(V.VERDICTS, ("seen", "not_shown", "cannot_test", "reversed"))
 
 
 if __name__ == "__main__":

@@ -64,6 +64,11 @@ The web app's browser check, `web/scripts/browser-check.cjs`, is outside this wo
   ```
 
   Without `GRM_RULE_WORDS_RUST` the web test that makes the comparison is reported as skipped. It does not pass without comparing;
+- the check of the within-lineage table against its release. `tests/lineage_control` reads the committed table and tests the script on synthetic reports, and it reads no release. Where the release is unpacked, this prints nothing and exits 1 unless the table is exactly what the script prints for it:
+
+  ```sh
+  python3 -I scripts/lineage-control/verdicts.py "$R" --check reference/lineage-control/rev14-274-20261112.tsv
+  ```
 - the ignored test `learn::lasso::tests::mtb_delamanid_fold0_reaches_the_certified_optima`, which reads a local diagnosis folder;
 - the deployment mutation check, `data/work/deployment-mutation-20261027/grm-mutate-v3.py`.
 

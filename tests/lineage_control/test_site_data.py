@@ -2,9 +2,13 @@
 
 The file must be exactly what scripts/lineage-control/site_data.py writes
 from the table under reference/lineage-control, so the site attaches the
-table's verdicts and no others.
+table's verdicts and no others. The counts the bundle gives are compared with
+the table's rows counted here; the one table whose expected bundle is typed
+out is a synthetic one of three rows.
 """
 
+import collections
+import csv
 import importlib.util
 import json
 import pathlib
@@ -67,12 +71,42 @@ class BundledVerdicts(unittest.TestCase):
 
     def test_the_bundle_names_its_release_and_keeps_each_term_in_the_models_order(self):
         data = json.loads(BUNDLED.read_text(encoding="utf-8"))
-        self.assertEqual((data["release"], data["evaluation_revision"], data["min_strata"], data["alpha"], data["terms"]), ("rev14-274-20261112", 14, 5, 0.05, 862))
-        self.assertEqual(data["counts"], {"seen": 327, "not_shown": 6, "cannot_test": 529, "reversed": 0})
-        self.assertEqual(len(data["datasets"]), 274)
-        first = data["datasets"]["acinetobacter_baumannii__amikacin"]
-        self.assertEqual(first["fingerprint"], "dd48cc69d891d65d")
-        self.assertEqual(first["terms"][:2], [[181099, True, "seen"], [47267, True, "cannot_test"]])
+        with TABLE.open(encoding="utf-8", newline="") as f:
+            table = list(csv.DictReader(f, delimiter="\t"))
+        level = (S.verdicts.MIN_STRATA, S.verdicts.ALPHA)
+        self.assertEqual((data["release"], data["evaluation_revision"], data["min_strata"], data["alpha"], data["terms"]), (TABLE.stem, int(table[0]["revision"]), *level, len(table)))
+        # The counts are the table's rows counted, every verdict of the script named, and they add up to the terms.
+        counted = collections.Counter(r["verdict"] for r in table)
+        self.assertEqual(data["counts"], {v: counted[v] for v in S.verdicts.VERDICTS})
+        self.assertEqual(sum(data["counts"].values()), data["terms"])
+        by_dataset = collections.defaultdict(list)
+        for r in table:
+            by_dataset[r["dataset"]].append(r)
+        self.assertEqual(list(data["datasets"]), sorted(by_dataset))
+        for dataset, terms in by_dataset.items():
+            entry = data["datasets"][dataset]
+            self.assertEqual(entry["fingerprint"], terms[0]["input_fingerprint"], dataset)
+            self.assertEqual(entry["terms"], [[int(r["feature"]), r["presence"] == "1", r["verdict"]] for r in terms], dataset)
+
+    def test_a_synthetic_table_of_three_rows_gives_the_bundle_typed_out_here(self):
+        # Synthetic: two made-up datasets, three terms. The expected text is typed by hand, so the script's
+        # layout is held by something other than the script.
+        head = "\t".join(S.verdicts.COLUMNS)
+        made_up = [
+            "b__drug\t14\t1\t7\t0\tffff000011112222\tsha-b\t40\t40\t2\t0.5\t0.4\t\tcannot_test",
+            "a__drug\t14\t1\t12\t1\t0123456789abcdef\tsha-a\t60\t60\t6\t9\t0.001\t0.002\tseen",
+            "a__drug\t14\t2\t3\t0\t0123456789abcdef\tsha-a\t60\t25\t5\t1\t0.3\t0.3\tnot_shown",
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "made-up-release.tsv"
+            path.write_text("\n".join([head, *made_up]) + "\n", encoding="utf-8")
+            self.assertEqual(
+                S.build(path),
+                '{"release":"made-up-release","evaluation_revision":14,"min_strata":5,"alpha":0.05,"terms":3,'
+                '"counts":{"seen":1,"not_shown":1,"cannot_test":1,"reversed":0},'
+                '"datasets":{"a__drug":{"fingerprint":"0123456789abcdef","terms":[[12,true,"seen"],[3,false,"not_shown"]]},'
+                '"b__drug":{"fingerprint":"ffff000011112222","terms":[[7,false,"cannot_test"]]}}}\n',
+            )
 
 
 if __name__ == "__main__":

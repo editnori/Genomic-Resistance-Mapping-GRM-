@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Whether each SCM rule term's association with the lab calls holds inside lineages.
+"""A test of each SCM rule term's association with the lab calls inside lineage clusters.
 
   python3 -I scripts/lineage-control/verdicts.py RELEASE_DIR > OUT.tsv
+  python3 -I scripts/lineage-control/verdicts.py RELEASE_DIR --check TABLE
 
 RELEASE_DIR is an unpacked release: `datasets/*.json`, one report each. The
 output has one row per rule term. Python 3.12, standard library only. It reads
-reports and fits nothing.
+reports and fits nothing. With --check it prints nothing and exits 1 unless
+TABLE is exactly the text the script prints for RELEASE_DIR; that is how a
+committed table is held to its release where the release is unpacked.
 
 The test, fixed on 2026-11-13 before any result was read (the interpretability
-review of that day), is run here without change:
+review of that day), is run here with one addition, the fourth verdict named
+after this list:
 
   Context     A term is tested on the isolates the earlier terms of its own
               model left undecided, the set the greedy search chose it on. In
@@ -22,15 +26,25 @@ review of that day), is run here without change:
   Assessable  At least MIN_STRATA informative strata.
   Verdict     Benjamini-Hochberg over the assessable terms of the release at
               ALPHA. `seen`: adjusted p under ALPHA and more resistant
-              isolates than expected where the term holds. `reversed`: under
-              ALPHA and fewer. `not_shown`: assessable and not under ALPHA.
-              `cannot_test`: not assessable.
+              isolates than expected where the term holds. `not_shown`:
+              assessable and not under ALPHA. `cannot_test`: not assessable.
+
+The rules fixed on 2026-11-13 give those three verdicts. This script adds a
+fourth, `reversed`: adjusted p under ALPHA and fewer resistant isolates than
+expected where the term holds. Without it such a term would have to be called
+`seen` or `not_shown`, and it is neither. No term of release
+rev14-274-20261112 has it.
+
+A rule whose feature has no card in its report stops the run, with the
+dataset and the feature named: the script will not test such a rule as one
+that holds for no isolate.
 
 A verdict is an association. `seen` says the association is not explained by
-the cut into lineage clusters; it says nothing about cause. The model and the
-order of its terms were chosen on all isolates, so the test is in-sample with
-respect to that choice. The clusters are MinHash clusters at one threshold
-per dataset; they are not a phylogeny.
+the cut into lineage clusters; it says nothing about cause. It is one test
+that pools the clusters, so it does not say the association is there in each
+cluster. The model and the order of its terms were chosen on all isolates, so
+the test is in-sample with respect to that choice. The clusters are MinHash
+clusters at one threshold per dataset; they are not a phylogeny.
 """
 import base64
 import hashlib
@@ -120,7 +134,9 @@ def report_terms(report, report_sha256):
     rows = []
     for position, rule in enumerate(scm["rules"], start=1):
         card = cards.get(rule["feature"])
-        bits = bitset(card["bits"], n) if card is not None else 0
+        if card is None:
+            raise SystemExit(f"{report['id']}: rule {position} names feature {rule['feature']}, which has no feature card in the report")
+        bits = bitset(card["bits"], n)
         t = bits if rule["presence"] else ~bits & everyone
         informative, excess, p = stratified(t, y, context, strata)
         rows.append({
@@ -165,21 +181,28 @@ def cell(value):
     return f"{value:.6g}" if isinstance(value, float) else str(value)
 
 
-def main(argv):
-    if len(argv) != 2:
-        raise SystemExit(__doc__)
-    paths = sorted((Path(argv[1]) / "datasets").glob("*.json"))
+def build(release):
+    """The table's text for one unpacked release: a header line, then one line per rule term."""
+    paths = sorted((Path(release) / "datasets").glob("*.json"))
     if not paths:
-        raise SystemExit(f"no report in {argv[1]}/datasets")
+        raise SystemExit(f"no report in {release}/datasets")
     rows = []
     for path in paths:
         raw = path.read_bytes()
         rows += report_terms(json.loads(raw), hashlib.sha256(raw).hexdigest())
     judge(rows)
-    print("\t".join(COLUMNS))
-    for r in rows:
-        print("\t".join(cell(r[c]) for c in COLUMNS))
+    lines = ["\t".join(COLUMNS)] + ["\t".join(cell(r[c]) for c in COLUMNS) for r in rows]
+    return "".join(line + "\n" for line in lines)
+
+
+def main(argv):
+    if len(argv) == 2:
+        sys.stdout.write(build(argv[1]))
+        return 0
+    if len(argv) == 4 and argv[2] == "--check":
+        return 0 if Path(argv[3]).read_bytes() == build(argv[1]).encode("utf-8") else 1
+    raise SystemExit(__doc__)
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    sys.exit(main(sys.argv))

@@ -19,6 +19,14 @@ python3 -I scripts/lineage-control/verdicts.py "$R" > reference/lineage-control/
 python3 -I scripts/lineage-control/site_data.py reference/lineage-control/rev14-274-20261112.tsv > web/src/data/lineage-control.json
 ```
 
+To check the committed table against the release without writing anything, run the script with `--check`. It prints nothing and exits 1 unless the table is exactly the text the script prints for `R`. CI does not run this, because CI has no release; `tests/lineage_control` tests the mode on a synthetic release.
+
+```sh
+python3 -I scripts/lineage-control/verdicts.py "$R" --check reference/lineage-control/rev14-274-20261112.tsv
+```
+
+A rule whose feature has no card in its report stops the run, with the dataset and the feature named. No report of this release has such a rule.
+
 The table was written on 2026-11-14 at the commit that added it. The second file is the release's checksum list cut down to its reports, with `L` the list:
 
 ```sh
@@ -36,13 +44,15 @@ de62860a2a559d5606411d26c74bbb245d466e8224a5c1b1a0576f47ff294589  rev14-274-2026
 
 ## The test
 
-The test was fixed on 2026-11-13, before any result was read, and the script runs it without change.
+The test was fixed on 2026-11-13, before any result was read. The script runs it with one addition, the fourth verdict named under the list.
 
 - **Context.** A term is tested on the isolates the earlier terms of its own model left undecided, the set the greedy search chose it on. In a conjunction those are the isolates every earlier term holds for; in a disjunction, the isolates no earlier term holds for.
 - **Strata.** The report's lineage clusters (`samples[].lineage`). A cluster is informative when it holds both states of the term and both lab calls.
 - **Statistic.** Cochran-Mantel-Haenszel over the clusters, with the continuity correction, one degree of freedom.
 - **Assessable.** At least 5 informative clusters.
 - **Verdict.** Benjamini-Hochberg over the assessable terms of the release at 0.05.
+
+The rules fixed on 2026-11-13 give three verdicts: `seen`, `not_shown` and `cannot_test`. The fourth, `reversed`, is an addition to those rules, made when the script was written: a term with an adjusted p under 0.05 and fewer resistant isolates than expected where it holds. Under the three fixed verdicts such a term would have to be called `seen` or `not_shown`, and it is neither. No term of this release has it.
 
 ## Columns
 
@@ -68,15 +78,20 @@ One row for each rule term: 862 rule terms of 274 reports.
 | `cannot_test` | 529 | 94 | Fewer than 5 informative clusters |
 | `reversed` | 0 | 0 | Adjusted p under 0.05, and fewer resistant isolates than expected |
 
+Of the 333 terms that could be tested, 327 are `seen`.
+
 No term of 90 datasets can be tested.
 
 ## What the site shows, and when
 
-`web/src/data/lineage-control.json` holds, for each dataset, the report's input fingerprint and each term's feature, presence flag and verdict. The inspector shows a verdict only on a report with the same dataset id, evaluation revision and input fingerprint whose rule at that position is the same. A later release therefore shows no verdict until its own table is written here. The site has no words for `reversed` and says nothing of such a term.
+`web/src/data/lineage-control.json` holds, for each dataset, the report's input fingerprint and each term's feature, presence flag and verdict. The inspector shows a verdict only on a report with the same dataset id, evaluation revision and input fingerprint whose rule at that position is the same. A later release therefore shows no verdict until its own table is written here.
+
+The inspector has no words for `reversed`. It writes no sentence about such a term, and names the term's rule number in none of the three sentences it does write. The count of rules that could be tested, which the page prints beside the verdicts, includes such a term, and the count of rules that passed does not.
 
 ## Limits
 
 - A verdict is an association. `seen` says the association is not explained by the cut into lineage clusters. It says nothing about cause, and annotation of the k-mers does not establish mechanism.
+- A verdict is one test that pools the clusters. `seen` does not say the association is there in each cluster.
 - The model and the order of its terms were chosen on all isolates, so the test is in-sample with respect to that choice. It is not held-out evidence.
 - The clusters are MinHash clusters at one threshold per dataset. They are not a phylogeny.
 - `cannot_test` is not a negative result. It says these genomes hold too few clusters with both lab calls and both states of the term.
