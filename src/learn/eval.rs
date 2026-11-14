@@ -4179,6 +4179,62 @@ mod tests {
     }
 
     #[test]
+    fn each_supplied_fold_chooses_candidates_and_fits_on_its_own_training_samples() {
+        // Synthetic: the 120-sample fixture and one more row, present in
+        // samples 0..4 only. Fold 0 tests 0..30 and fold 1 tests 30..60, so
+        // the row has no support among fold 0's training samples and four
+        // among fold 1's.
+        let (mut x, y, _) = assigned_fixture();
+        let n = x.cols;
+        x.push_row(Bits::from_indices(n, 0..4).words());
+        let roles: Vec<Role> = (0..n)
+            .map(|i| match i {
+                0..30 => Role::Test(0),
+                30..60 => Role::Test(1),
+                _ => Role::Train,
+            })
+            .collect();
+        let cfg = small_config();
+        let base = assigned(&x, &y, &[], &roles, 2, &cfg).unwrap();
+        let trains = [
+            Bits::from_indices(n, 30..n),
+            Bits::from_indices(n, (0..30).chain(60..n)),
+        ];
+        let expected: Vec<usize> = trains
+            .iter()
+            .map(|train| training_candidates(&x, train, 3).0.rows)
+            .collect();
+        assert_eq!(expected[1], expected[0] + 1);
+        let counted: Vec<usize> = base.folds.iter().map(|f| f.candidates).collect();
+        assert_eq!(counted, expected);
+        assert_eq!(base.tested, (0..60).collect::<Vec<_>>());
+
+        // Fold 0's test samples train fold 1 and nothing else. With half of
+        // them relabelled, fold 0 scores them as before, and fold 1, whose
+        // training samples they are, does not.
+        let y2 = Bits::from_indices(
+            n,
+            (0..n).filter(|&i| y.contains(i) != (i < 30 && i % 2 == 0)),
+        );
+        let relabelled = assigned(&x, &y2, &[], &roles, 2, &cfg).unwrap();
+        assert_eq!(
+            relabelled.folds[0].train_resistant,
+            base.folds[0].train_resistant
+        );
+        assert_eq!(
+            relabelled.folds[1].train_resistant,
+            base.folds[1].train_resistant + 5
+        );
+        let mut fold_1_moved = false;
+        for (a, b) in relabelled.result.learners.iter().zip(&base.result.learners) {
+            assert_eq!(a.scores[..30], b.scores[..30], "{}", a.learner);
+            assert_eq!(a.fold_complexity[0], b.fold_complexity[0], "{}", a.learner);
+            fold_1_moved |= a.scores[30..] != b.scores[30..];
+        }
+        assert!(fold_1_moved);
+    }
+
+    #[test]
     fn a_supplied_partition_that_cannot_be_scored_fairly_is_refused() {
         let (x, y, _) = assigned_fixture();
         let n = x.cols;
