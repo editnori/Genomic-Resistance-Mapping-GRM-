@@ -58,4 +58,4 @@ The web app's browser check, `web/scripts/browser-check.cjs`, is outside this wo
 - the ignored test `learn::lasso::tests::mtb_delamanid_fold0_reaches_the_certified_optima`, which reads a local diagnosis folder;
 - the deployment mutation check, `data/work/deployment-mutation-20261027/grm-mutate-v3.py`.
 
-The other 7 ignored tests are opt-in runs: the full synthetic-assurance runs (`scripts/synthetic-assurance/run-full.sh`), the lasso scan smoke test (`scripts/lasso-scan/smoke.sh`), the matrix merge benchmark with its two case tests, and the open-file probe, which a default test starts in its own process.
+The other 8 ignored tests are opt-in runs: the full synthetic-assurance runs (`scripts/synthetic-assurance/run-full.sh`), the lasso scan smoke test (`scripts/lasso-scan/smoke.sh`), the matrix merge benchmark with its two case tests, the open-file probe, which a default test starts in its own process, and `analysis::tests::write_report_fields_fixture_root`, which writes the synthetic data root for comparing a report built before and after a change (docs/report-rule-fields.md, Checks).

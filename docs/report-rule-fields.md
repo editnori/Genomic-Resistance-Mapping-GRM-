@@ -112,7 +112,7 @@ In the 274 reports of `data-rev14-274-20261112` (catalog 2026-08-07.1), counted 
 
 The flag is left as it is. Its rows keep their six keys and their values, because the frozen outside-study kit rebuilds the whole `catalog.groups` table and compares it with the report's (`scripts/outside-study/score.py`, `known_gene_replay`).
 
-The per-hit answer is a new field on each sample: `rule_groups`, the indices into `catalog_groups` of the genome's groups whose own hit counts for the rule, in the order of `groups`. It is an empty list when none counts. It is absent when the drug has no rule, where `catalog_resistant` is null, and on reports written before the field.
+The per-hit answer is a new field on each sample: `rule_groups`, the indices into `catalog_groups` of the genome's groups whose own hit counts for the rule, in the order of `groups`. It is an empty list when none counts. It is absent when the drug has no rule, where `catalog_resistant` is null, and on reports written before the field. It is the set the outside-study kit already writes by name, under the same column name, in its `known-gene/calls.tsv`.
 
 Under a rule with one requirement, `catalog_resistant` is true exactly when `rule_groups` is not empty. Under the two-requirement rule a listed group met one of the two, and the list does not say which.
 
