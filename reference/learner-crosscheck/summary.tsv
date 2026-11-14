@@ -1,0 +1,81 @@
+panel	samples	features	fit_samples	learner	check	outcome	units	compared	matched	explained	unexplained
+campylobacter_jejuni__ciprofloxacin_lineage_fold0	508	128	397	scm	fits	matched	fits	14	14	0	0
+campylobacter_jejuni__ciprofloxacin_lineage_fold0	508	128	397	cart	nodes	explained	nodes	51	50	1	0
+campylobacter_jejuni__ciprofloxacin_lineage_fold0	508	128	397	rf	trees	explained	trees	200	109	91	0
+campylobacter_jejuni__ciprofloxacin_lineage_fold0	508	128	397	gbt	tree by tree	explained	trees	400	383	17	0
+campylobacter_jejuni__ciprofloxacin_lineage_fold0	508	128	397	gbt	end to end	matched	panels	1	1	0	0
+campylobacter_jejuni__ciprofloxacin_random_fold0	508	128	406	scm	fits	matched	fits	14	14	0	0
+campylobacter_jejuni__ciprofloxacin_random_fold0	508	128	406	cart	nodes	explained	nodes	67	65	2	0
+campylobacter_jejuni__ciprofloxacin_random_fold0	508	128	406	rf	trees	explained	trees	200	133	67	0
+campylobacter_jejuni__ciprofloxacin_random_fold0	508	128	406	gbt	tree by tree	explained	trees	400	385	15	0
+campylobacter_jejuni__ciprofloxacin_random_fold0	508	128	406	gbt	end to end	explained	panels	1	0	1	0
+constant_balanced	80	4	60	scm	fits	matched	fits	14	14	0	0
+constant_balanced	80	4	60	cart	nodes	matched	nodes	1	1	0	0
+constant_balanced	80	4	60	rf	trees	matched	trees	200	200	0	0
+constant_balanced	80	4	60	gbt	tree by tree	matched	trees	0	0	0	0
+constant_balanced	80	4	60	gbt	end to end	explained	panels	1	0	1	0
+constant_imbalanced	80	4	60	scm	fits	matched	fits	14	14	0	0
+constant_imbalanced	80	4	60	cart	nodes	matched	nodes	1	1	0	0
+constant_imbalanced	80	4	60	rf	trees	matched	trees	200	200	0	0
+constant_imbalanced	80	4	60	gbt	tree by tree	matched	trees	0	0	0	0
+constant_imbalanced	80	4	60	gbt	end to end	explained	panels	1	0	1	0
+enterobacter_cloacae__tobramycin_lineage_fold0	99	128	69	scm	fits	matched	fits	14	14	0	0
+enterobacter_cloacae__tobramycin_lineage_fold0	99	128	69	cart	nodes	explained	nodes	25	24	1	0
+enterobacter_cloacae__tobramycin_lineage_fold0	99	128	69	rf	trees	explained	trees	200	180	20	0
+enterobacter_cloacae__tobramycin_lineage_fold0	99	128	69	gbt	tree by tree	matched	trees	400	400	0	0
+enterobacter_cloacae__tobramycin_lineage_fold0	99	128	69	gbt	end to end	matched	panels	1	1	0	0
+enterobacter_cloacae__tobramycin_random_fold0	99	128	79	scm	fits	matched	fits	14	14	0	0
+enterobacter_cloacae__tobramycin_random_fold0	99	128	79	cart	nodes	matched	nodes	27	27	0	0
+enterobacter_cloacae__tobramycin_random_fold0	99	128	79	rf	trees	explained	trees	200	178	22	0
+enterobacter_cloacae__tobramycin_random_fold0	99	128	79	gbt	tree by tree	explained	trees	400	396	4	0
+enterobacter_cloacae__tobramycin_random_fold0	99	128	79	gbt	end to end	matched	panels	1	1	0	0
+imbalanced_5pct	200	16	150	scm	fits	explained	fits	14	8	6	0
+imbalanced_5pct	200	16	150	cart	nodes	matched	nodes	27	27	0	0
+imbalanced_5pct	200	16	150	rf	trees	explained	trees	200	193	7	0
+imbalanced_5pct	200	16	150	gbt	tree by tree	matched	trees	400	400	0	0
+imbalanced_5pct	200	16	150	gbt	end to end	matched	panels	1	1	0	0
+marker_dup_constant	120	12	90	scm	fits	matched	fits	14	14	0	0
+marker_dup_constant	120	12	90	cart	nodes	matched	nodes	21	21	0	0
+marker_dup_constant	120	12	90	rf	trees	explained	trees	200	195	5	0
+marker_dup_constant	120	12	90	gbt	tree by tree	matched	trees	400	400	0	0
+marker_dup_constant	120	12	90	gbt	end to end	matched	panels	1	1	0	0
+one_class_train	60	4	40	scm	fits	matched	fits	14	14	0	0
+one_class_train	60	4	40	cart	nodes	matched	nodes	1	1	0	0
+one_class_train	60	4	40	rf	trees	matched	trees	200	200	0	0
+one_class_train	60	4	40	gbt	tree by tree	explained	trees	400	32	368	0
+one_class_train	60	4	40	gbt	end to end	not applicable	panels	0	0	0	0
+planted_logistic	300	40	225	scm	fits	explained	fits	14	6	8	0
+planted_logistic	300	40	225	cart	nodes	matched	nodes	75	75	0	0
+planted_logistic	300	40	225	rf	trees	explained	trees	200	134	66	0
+planted_logistic	300	40	225	gbt	tree by tree	explained	trees	400	399	1	0
+planted_logistic	300	40	225	gbt	end to end	matched	panels	1	1	0	0
+staphylococcus_haemolyticus__fusidic_acid_lineage_fold0	114	128	90	scm	fits	matched	fits	14	14	0	0
+staphylococcus_haemolyticus__fusidic_acid_lineage_fold0	114	128	90	cart	nodes	matched	nodes	31	31	0	0
+staphylococcus_haemolyticus__fusidic_acid_lineage_fold0	114	128	90	rf	trees	explained	trees	200	156	44	0
+staphylococcus_haemolyticus__fusidic_acid_lineage_fold0	114	128	90	gbt	tree by tree	explained	trees	400	386	14	0
+staphylococcus_haemolyticus__fusidic_acid_lineage_fold0	114	128	90	gbt	end to end	matched	panels	1	1	0	0
+staphylococcus_haemolyticus__fusidic_acid_random_fold0	114	128	91	scm	fits	matched	fits	14	14	0	0
+staphylococcus_haemolyticus__fusidic_acid_random_fold0	114	128	91	cart	nodes	matched	nodes	31	31	0	0
+staphylococcus_haemolyticus__fusidic_acid_random_fold0	114	128	91	rf	trees	explained	trees	200	153	47	0
+staphylococcus_haemolyticus__fusidic_acid_random_fold0	114	128	91	gbt	tree by tree	explained	trees	400	388	12	0
+staphylococcus_haemolyticus__fusidic_acid_random_fold0	114	128	91	gbt	end to end	matched	panels	1	1	0	0
+streptococcus_agalactiae__clindamycin_lineage_fold0	141	128	101	scm	fits	matched	fits	14	14	0	0
+streptococcus_agalactiae__clindamycin_lineage_fold0	141	128	101	cart	nodes	explained	nodes	15	14	1	0
+streptococcus_agalactiae__clindamycin_lineage_fold0	141	128	101	rf	trees	explained	trees	200	175	25	0
+streptococcus_agalactiae__clindamycin_lineage_fold0	141	128	101	gbt	tree by tree	explained	trees	400	399	1	0
+streptococcus_agalactiae__clindamycin_lineage_fold0	141	128	101	gbt	end to end	matched	panels	1	1	0	0
+streptococcus_agalactiae__clindamycin_random_fold0	141	128	112	scm	fits	matched	fits	14	14	0	0
+streptococcus_agalactiae__clindamycin_random_fold0	141	128	112	cart	nodes	matched	nodes	15	15	0	0
+streptococcus_agalactiae__clindamycin_random_fold0	141	128	112	rf	trees	explained	trees	200	172	28	0
+streptococcus_agalactiae__clindamycin_random_fold0	141	128	112	gbt	tree by tree	explained	trees	400	398	2	0
+streptococcus_agalactiae__clindamycin_random_fold0	141	128	112	gbt	end to end	matched	panels	1	1	0	0
+tied_counts	100	3	86	scm	fits	explained	fits	14	10	4	0
+tied_counts	100	3	86	cart	nodes	matched	nodes	11	11	0	0
+tied_counts	100	3	86	rf	trees	explained	trees	200	199	1	0
+tied_counts	100	3	86	gbt	tree by tree	matched	trees	400	400	0	0
+tied_counts	100	3	86	gbt	end to end	explained	panels	1	0	1	0
+xor_balanced	80	2	80	scm	fits	explained	fits	14	2	12	0
+xor_balanced	80	2	80	cart	nodes	matched	nodes	1	1	0	0
+xor_balanced	80	2	80	rf	trees	explained	trees	200	197	3	0
+xor_balanced	80	2	80	gbt	tree by tree	matched	trees	0	0	0	0
+xor_balanced	80	2	80	gbt	end to end	matched	panels	1	1	0	0

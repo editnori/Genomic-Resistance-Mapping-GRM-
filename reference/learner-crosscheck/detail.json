@@ -1,0 +1,1288 @@
+{
+ "campylobacter_jejuni__ciprofloxacin_lineage_fold0": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 69,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 5,
+   "free_tree_nodes_same_feature": 23,
+   "free_tree_parts_at_exact_ties": 2,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 65,
+   "free_tree_same": false,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 65,
+   "nodes_both_leaf": 19,
+   "nodes_other_member_of_a_tie": 7,
+   "nodes_same_feature": 24,
+   "nodes_searched": 51,
+   "nodes_with_an_exact_tie": 12,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 338,
+   "grm_trees": 87,
+   "grm_trees_at_production_colsample": 69,
+   "largest_probability_gap": 1.0245511072870528e-07,
+   "validation_samples": 59,
+   "xgboost_rounds_run": 112,
+   "xgboost_trees": 87
+  },
+  "gbt tree by tree": {
+   "causes": {
+    "equal split": 17
+   },
+   "features_per_tree": 64,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 12,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 19,
+   "library_forest_mean_abs_score_gap": 0.07961281371618979,
+   "library_forest_seed_to_seed_calls_differing": 8,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.02167967906506739,
+   "nodes": 21384,
+   "nodes_agree": 21263,
+   "nodes_both_leaf": 10792,
+   "nodes_other_member_of_a_tie": 1259,
+   "nodes_same_feature": 9212,
+   "nodes_searched": 21384,
+   "nodes_with_an_exact_tie": 2163,
+   "subsample_size": 251
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 13,
+   "library_free_same_rules": 10,
+   "rules": 48,
+   "steps_certified": 48,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 48
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.3324631459851586,
+    "kind": "disjunction",
+    "n_rules": 6,
+    "p": 1.0
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.26921899437622704,
+    "depth": 8
+   }
+  }
+ },
+ "campylobacter_jejuni__ciprofloxacin_random_fold0": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 85,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 7,
+   "free_tree_nodes_same_feature": 22,
+   "free_tree_parts_at_exact_ties": 2,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 79,
+   "free_tree_same": false,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 79,
+   "nodes_both_leaf": 28,
+   "nodes_other_member_of_a_tie": 6,
+   "nodes_same_feature": 31,
+   "nodes_searched": 67,
+   "nodes_with_an_exact_tie": 14,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "first_tree_not_identical": 0,
+   "fitting_samples": 345,
+   "grm_trees": 15,
+   "grm_trees_at_production_colsample": 19,
+   "largest_probability_gap": 0.08431604490633171,
+   "validation_samples": 61,
+   "xgboost_rounds_run": 40,
+   "xgboost_trees": 15
+  },
+  "gbt tree by tree": {
+   "causes": {
+    "equal split": 15
+   },
+   "features_per_tree": 64,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 12,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 29,
+   "library_forest_mean_abs_score_gap": 0.08239962118390763,
+   "library_forest_seed_to_seed_calls_differing": 2,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.018059999267443567,
+   "nodes": 22696,
+   "nodes_agree": 22611,
+   "nodes_both_leaf": 11448,
+   "nodes_other_member_of_a_tie": 1154,
+   "nodes_same_feature": 10009,
+   "nodes_searched": 22696,
+   "nodes_with_an_exact_tie": 2007,
+   "subsample_size": 257
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 12,
+   "library_free_same_rules": 6,
+   "rules": 40,
+   "steps_certified": 40,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 40
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.37731356693620843,
+    "kind": "conjunction",
+    "n_rules": 4,
+    "p": 3.162
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.395717280622941,
+    "depth": 3
+   }
+  }
+ },
+ "constant_balanced": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 1,
+   "default_floor_same": true,
+   "free_tree_nodes_equal_split": 0,
+   "free_tree_nodes_same_feature": 0,
+   "free_tree_parts_at_exact_ties": 0,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 1,
+   "free_tree_same": true,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 1,
+   "nodes_both_leaf": 1,
+   "nodes_other_member_of_a_tie": 0,
+   "nodes_same_feature": 0,
+   "nodes_searched": 1,
+   "nodes_with_an_exact_tie": 0,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "first_tree_not_identical": null,
+   "fitting_samples": 50,
+   "grm_trees": 0,
+   "grm_trees_at_production_colsample": 0,
+   "largest_probability_gap": 0.0,
+   "validation_samples": 10,
+   "xgboost_rounds_run": 26,
+   "xgboost_trees": 1
+  },
+  "gbt tree by tree": {
+   "causes": {},
+   "features_per_tree": null,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 0
+  },
+  "rf trees": {
+   "features_drawn_per_node": 2,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 0,
+   "library_forest_mean_abs_score_gap": 0.0,
+   "library_forest_seed_to_seed_calls_differing": 0,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.0,
+   "nodes": 200,
+   "nodes_agree": 200,
+   "nodes_both_leaf": 200,
+   "nodes_other_member_of_a_tie": 0,
+   "nodes_same_feature": 0,
+   "nodes_searched": 200,
+   "nodes_with_an_exact_tie": 0,
+   "subsample_size": 38
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 12,
+   "library_free_same_rules": 0,
+   "rules": 6,
+   "steps_certified": 6,
+   "steps_certified_same_effect_only": 6,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 6
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.5,
+    "kind": "conjunction",
+    "n_rules": 1,
+    "p": 0.1
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.5,
+    "depth": 1
+   }
+  }
+ },
+ "constant_imbalanced": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 1,
+   "default_floor_same": true,
+   "free_tree_nodes_equal_split": 0,
+   "free_tree_nodes_same_feature": 0,
+   "free_tree_parts_at_exact_ties": 0,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 1,
+   "free_tree_same": true,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 1,
+   "nodes_both_leaf": 1,
+   "nodes_other_member_of_a_tie": 0,
+   "nodes_same_feature": 0,
+   "nodes_searched": 1,
+   "nodes_with_an_exact_tie": 0,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "first_tree_not_identical": null,
+   "fitting_samples": 51,
+   "grm_trees": 0,
+   "grm_trees_at_production_colsample": 0,
+   "largest_probability_gap": 0.0,
+   "validation_samples": 9,
+   "xgboost_rounds_run": 26,
+   "xgboost_trees": 1
+  },
+  "gbt tree by tree": {
+   "causes": {},
+   "features_per_tree": null,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 0
+  },
+  "rf trees": {
+   "features_drawn_per_node": 2,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 0,
+   "library_forest_mean_abs_score_gap": 0.0,
+   "library_forest_seed_to_seed_calls_differing": 0,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.0,
+   "nodes": 200,
+   "nodes_agree": 200,
+   "nodes_both_leaf": 200,
+   "nodes_other_member_of_a_tie": 0,
+   "nodes_same_feature": 0,
+   "nodes_searched": 200,
+   "nodes_with_an_exact_tie": 0,
+   "subsample_size": 38
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 14,
+   "library_free_same_rules": 7,
+   "rules": 7,
+   "steps_certified": 7,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 7
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.5,
+    "kind": "conjunction",
+    "n_rules": 1,
+    "p": 0.1
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.5,
+    "depth": 1
+   }
+  }
+ },
+ "enterobacter_cloacae__tobramycin_lineage_fold0": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 25,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 1,
+   "free_tree_nodes_same_feature": 6,
+   "free_tree_parts_at_exact_ties": 1,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 25,
+   "free_tree_same": false,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 27,
+   "nodes_both_leaf": 12,
+   "nodes_other_member_of_a_tie": 5,
+   "nodes_same_feature": 7,
+   "nodes_searched": 25,
+   "nodes_with_an_exact_tie": 7,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 58,
+   "grm_trees": 26,
+   "grm_trees_at_production_colsample": 84,
+   "largest_probability_gap": 5.250138401802218e-08,
+   "validation_samples": 11,
+   "xgboost_rounds_run": 51,
+   "xgboost_trees": 26
+  },
+  "gbt tree by tree": {
+   "causes": {},
+   "features_per_tree": 64,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 12,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 6,
+   "library_forest_mean_abs_score_gap": 0.038264163195292654,
+   "library_forest_seed_to_seed_calls_differing": 6,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.033148013107906146,
+   "nodes": 5232,
+   "nodes_agree": 5212,
+   "nodes_both_leaf": 2716,
+   "nodes_other_member_of_a_tie": 408,
+   "nodes_same_feature": 2088,
+   "nodes_searched": 5232,
+   "nodes_with_an_exact_tie": 690,
+   "subsample_size": 44
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 14,
+   "library_free_same_rules": 8,
+   "rules": 47,
+   "steps_certified": 47,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 47
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.29615384615384616,
+    "kind": "disjunction",
+    "n_rules": 2,
+    "p": 3.162
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.2473776223776224,
+    "depth": 4
+   }
+  }
+ },
+ "enterobacter_cloacae__tobramycin_random_fold0": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 29,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 3,
+   "free_tree_nodes_same_feature": 10,
+   "free_tree_parts_at_exact_ties": 0,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 27,
+   "free_tree_same": true,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 27,
+   "nodes_both_leaf": 14,
+   "nodes_other_member_of_a_tie": 3,
+   "nodes_same_feature": 10,
+   "nodes_searched": 27,
+   "nodes_with_an_exact_tie": 6,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 68,
+   "grm_trees": 115,
+   "grm_trees_at_production_colsample": 157,
+   "largest_probability_gap": 1.1379204301054102e-07,
+   "validation_samples": 11,
+   "xgboost_rounds_run": 140,
+   "xgboost_trees": 115
+  },
+  "gbt tree by tree": {
+   "causes": {
+    "equal split": 4
+   },
+   "features_per_tree": 64,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 12,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 0,
+   "library_forest_mean_abs_score_gap": 0.03263742165155197,
+   "library_forest_seed_to_seed_calls_differing": 0,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.01997966679784862,
+   "nodes": 5734,
+   "nodes_agree": 5711,
+   "nodes_both_leaf": 2967,
+   "nodes_other_member_of_a_tie": 416,
+   "nodes_same_feature": 2328,
+   "nodes_searched": 5734,
+   "nodes_with_an_exact_tie": 648,
+   "subsample_size": 50
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 14,
+   "library_free_same_rules": 8,
+   "rules": 44,
+   "steps_certified": 44,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 44
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.1865079365079365,
+    "kind": "disjunction",
+    "n_rules": 5,
+    "p": 10.0
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.20753968253968252,
+    "depth": 4
+   }
+  }
+ },
+ "imbalanced_5pct": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 35,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 0,
+   "free_tree_nodes_same_feature": 10,
+   "free_tree_parts_at_exact_ties": 1,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 29,
+   "free_tree_same": false,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 29,
+   "nodes_both_leaf": 13,
+   "nodes_other_member_of_a_tie": 2,
+   "nodes_same_feature": 12,
+   "nodes_searched": 27,
+   "nodes_with_an_exact_tie": 3,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 128,
+   "grm_trees": 47,
+   "grm_trees_at_production_colsample": 96,
+   "largest_probability_gap": 9.313030557844826e-08,
+   "validation_samples": 22,
+   "xgboost_rounds_run": 72,
+   "xgboost_trees": 47
+  },
+  "gbt tree by tree": {
+   "causes": {},
+   "features_per_tree": 8,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 4,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 1,
+   "library_forest_mean_abs_score_gap": 0.02106974601433421,
+   "library_forest_seed_to_seed_calls_differing": 2,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.01002263157894737,
+   "nodes": 5064,
+   "nodes_agree": 5057,
+   "nodes_both_leaf": 2632,
+   "nodes_other_member_of_a_tie": 108,
+   "nodes_same_feature": 2317,
+   "nodes_searched": 5064,
+   "nodes_with_an_exact_tie": 290,
+   "subsample_size": 95
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 10,
+   "library_free_same_rules": 1,
+   "rules": 24,
+   "steps_certified": 18,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 6,
+   "steps_other": 0,
+   "steps_read_against_library": 24
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.1600916075650118,
+    "kind": "conjunction",
+    "n_rules": 3,
+    "p": 3.162
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.17065602836879432,
+    "depth": 1
+   }
+  }
+ },
+ "marker_dup_constant": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 25,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 0,
+   "free_tree_nodes_same_feature": 7,
+   "free_tree_parts_at_exact_ties": 2,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 23,
+   "free_tree_same": false,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 23,
+   "nodes_both_leaf": 10,
+   "nodes_other_member_of_a_tie": 2,
+   "nodes_same_feature": 9,
+   "nodes_searched": 21,
+   "nodes_with_an_exact_tie": 4,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 77,
+   "grm_trees": 39,
+   "grm_trees_at_production_colsample": 40,
+   "largest_probability_gap": 8.904549808619322e-08,
+   "validation_samples": 13,
+   "xgboost_rounds_run": 64,
+   "xgboost_trees": 39
+  },
+  "gbt tree by tree": {
+   "causes": {},
+   "features_per_tree": 6,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 4,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 2,
+   "library_forest_mean_abs_score_gap": 0.01977877822957907,
+   "library_forest_seed_to_seed_calls_differing": 1,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.014625261415487433,
+   "nodes": 3322,
+   "nodes_agree": 3317,
+   "nodes_both_leaf": 1761,
+   "nodes_other_member_of_a_tie": 90,
+   "nodes_same_feature": 1466,
+   "nodes_searched": 3322,
+   "nodes_with_an_exact_tie": 167,
+   "subsample_size": 57
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 14,
+   "library_free_same_rules": 6,
+   "rules": 13,
+   "steps_certified": 13,
+   "steps_certified_same_effect_only": 1,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 13
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.037037037037037035,
+    "kind": "conjunction",
+    "n_rules": 1,
+    "p": 0.316
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.037037037037037035,
+    "depth": 1
+   }
+  }
+ },
+ "one_class_train": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 1,
+   "default_floor_same": true,
+   "free_tree_nodes_equal_split": 0,
+   "free_tree_nodes_same_feature": 0,
+   "free_tree_parts_at_exact_ties": 0,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 1,
+   "free_tree_same": true,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 1,
+   "nodes_both_leaf": 1,
+   "nodes_other_member_of_a_tie": 0,
+   "nodes_same_feature": 0,
+   "nodes_searched": 1,
+   "nodes_with_an_exact_tie": 0,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "reason": "production's two-class gate on the tuning holdout: tuning partition lacks one or both classes"
+  },
+  "gbt tree by tree": {
+   "causes": {
+    "leaf set to 0": 368
+   },
+   "features_per_tree": 2,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 2,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 0,
+   "library_forest_mean_abs_score_gap": 0.0,
+   "library_forest_seed_to_seed_calls_differing": 0,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.0,
+   "nodes": 200,
+   "nodes_agree": 200,
+   "nodes_both_leaf": 200,
+   "nodes_other_member_of_a_tie": 0,
+   "nodes_same_feature": 0,
+   "nodes_searched": 200,
+   "nodes_with_an_exact_tie": 0,
+   "subsample_size": 25
+  },
+  "scm fits": {
+   "fits_library_refuses": 14,
+   "independent_same": 14,
+   "library_free_fits": 0,
+   "library_free_same_calls": 0,
+   "library_free_same_rules": 0,
+   "rules": 14,
+   "steps_certified": 0,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 0
+  },
+  "selected": {
+   "error": "fold 0 training lacks one or both classes"
+  }
+ },
+ "planted_logistic": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 97,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 4,
+   "free_tree_nodes_same_feature": 22,
+   "free_tree_parts_at_exact_ties": 7,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 89,
+   "free_tree_same": false,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 89,
+   "nodes_both_leaf": 31,
+   "nodes_other_member_of_a_tie": 13,
+   "nodes_same_feature": 31,
+   "nodes_searched": 75,
+   "nodes_with_an_exact_tie": 20,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 191,
+   "grm_trees": 45,
+   "grm_trees_at_production_colsample": 74,
+   "largest_probability_gap": 3.1575890749868663e-06,
+   "validation_samples": 34,
+   "xgboost_rounds_run": 70,
+   "xgboost_trees": 45
+  },
+  "gbt tree by tree": {
+   "causes": {
+    "equal split": 1
+   },
+   "features_per_tree": 20,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 7,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 4,
+   "library_forest_mean_abs_score_gap": 0.04855448806500702,
+   "library_forest_seed_to_seed_calls_differing": 2,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.028089123200742912,
+   "nodes": 18096,
+   "nodes_agree": 18007,
+   "nodes_both_leaf": 9148,
+   "nodes_other_member_of_a_tie": 1633,
+   "nodes_same_feature": 7226,
+   "nodes_searched": 18096,
+   "nodes_with_an_exact_tie": 2274,
+   "subsample_size": 142
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 6,
+   "library_free_same_rules": 1,
+   "rules": 29,
+   "steps_certified": 21,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 8,
+   "steps_other": 0,
+   "steps_read_against_library": 29
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.286823521503782,
+    "kind": "disjunction",
+    "n_rules": 3,
+    "p": 3.162
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.21647608428327975,
+    "depth": 3
+   }
+  }
+ },
+ "staphylococcus_haemolyticus__fusidic_acid_lineage_fold0": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 37,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 4,
+   "free_tree_nodes_same_feature": 10,
+   "free_tree_parts_at_exact_ties": 1,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 33,
+   "free_tree_same": false,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 33,
+   "nodes_both_leaf": 15,
+   "nodes_other_member_of_a_tie": 6,
+   "nodes_same_feature": 10,
+   "nodes_searched": 31,
+   "nodes_with_an_exact_tie": 7,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 76,
+   "grm_trees": 9,
+   "grm_trees_at_production_colsample": 86,
+   "largest_probability_gap": 5.8635833966036444e-08,
+   "validation_samples": 14,
+   "xgboost_rounds_run": 34,
+   "xgboost_trees": 9
+  },
+  "gbt tree by tree": {
+   "causes": {
+    "equal split": 14
+   },
+   "features_per_tree": 64,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 12,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 4,
+   "library_forest_mean_abs_score_gap": 0.041733647605589154,
+   "library_forest_seed_to_seed_calls_differing": 3,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.02340386143718113,
+   "nodes": 7402,
+   "nodes_agree": 7356,
+   "nodes_both_leaf": 3801,
+   "nodes_other_member_of_a_tie": 575,
+   "nodes_same_feature": 2980,
+   "nodes_searched": 7402,
+   "nodes_with_an_exact_tie": 982,
+   "subsample_size": 57
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 13,
+   "library_free_same_rules": 9,
+   "rules": 42,
+   "steps_certified": 42,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 42
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.26770334928229667,
+    "kind": "conjunction",
+    "n_rules": 5,
+    "p": 3.162
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.37484051036682614,
+    "depth": 4
+   }
+  }
+ },
+ "staphylococcus_haemolyticus__fusidic_acid_random_fold0": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 37,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 5,
+   "free_tree_nodes_same_feature": 12,
+   "free_tree_parts_at_exact_ties": 0,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 35,
+   "free_tree_same": true,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 35,
+   "nodes_both_leaf": 14,
+   "nodes_other_member_of_a_tie": 5,
+   "nodes_same_feature": 12,
+   "nodes_searched": 31,
+   "nodes_with_an_exact_tie": 7,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 77,
+   "grm_trees": 15,
+   "grm_trees_at_production_colsample": 16,
+   "largest_probability_gap": 6.980377503412738e-05,
+   "validation_samples": 14,
+   "xgboost_rounds_run": 40,
+   "xgboost_trees": 15
+  },
+  "gbt tree by tree": {
+   "causes": {
+    "equal split": 12
+   },
+   "features_per_tree": 64,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 12,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 3,
+   "library_forest_mean_abs_score_gap": 0.04799522120608074,
+   "library_forest_seed_to_seed_calls_differing": 4,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.02760675257206644,
+   "nodes": 7960,
+   "nodes_agree": 7908,
+   "nodes_both_leaf": 4080,
+   "nodes_other_member_of_a_tie": 655,
+   "nodes_same_feature": 3173,
+   "nodes_searched": 7960,
+   "nodes_with_an_exact_tie": 1085,
+   "subsample_size": 58
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 14,
+   "library_free_same_rules": 9,
+   "rules": 38,
+   "steps_certified": 38,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 38
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.18181818181818182,
+    "kind": "conjunction",
+    "n_rules": 4,
+    "p": 3.162
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.23863636363636365,
+    "depth": 3
+   }
+  }
+ },
+ "streptococcus_agalactiae__clindamycin_lineage_fold0": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 15,
+   "default_floor_same": true,
+   "free_tree_nodes_equal_split": 2,
+   "free_tree_nodes_same_feature": 5,
+   "free_tree_parts_at_exact_ties": 0,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 15,
+   "free_tree_same": true,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 15,
+   "nodes_both_leaf": 8,
+   "nodes_other_member_of_a_tie": 2,
+   "nodes_same_feature": 4,
+   "nodes_searched": 15,
+   "nodes_with_an_exact_tie": 4,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 86,
+   "grm_trees": 28,
+   "grm_trees_at_production_colsample": 31,
+   "largest_probability_gap": 3.8978092642416584e-08,
+   "validation_samples": 15,
+   "xgboost_rounds_run": 53,
+   "xgboost_trees": 28
+  },
+  "gbt tree by tree": {
+   "causes": {
+    "float32 rounding": 1
+   },
+   "features_per_tree": 64,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 12,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 1,
+   "library_forest_mean_abs_score_gap": 0.0278361176009455,
+   "library_forest_seed_to_seed_calls_differing": 0,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.011088635294260204,
+   "nodes": 4526,
+   "nodes_agree": 4501,
+   "nodes_both_leaf": 2363,
+   "nodes_other_member_of_a_tie": 286,
+   "nodes_same_feature": 1852,
+   "nodes_searched": 4526,
+   "nodes_with_an_exact_tie": 456,
+   "subsample_size": 64
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 14,
+   "library_free_same_rules": 7,
+   "rules": 27,
+   "steps_certified": 27,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 27
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.023809523809523808,
+    "kind": "disjunction",
+    "n_rules": 2,
+    "p": 1.778
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.023809523809523808,
+    "depth": 2
+   }
+  }
+ },
+ "streptococcus_agalactiae__clindamycin_random_fold0": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 17,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 1,
+   "free_tree_nodes_same_feature": 4,
+   "free_tree_parts_at_exact_ties": 1,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 15,
+   "free_tree_same": false,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 15,
+   "nodes_both_leaf": 8,
+   "nodes_other_member_of_a_tie": 3,
+   "nodes_same_feature": 4,
+   "nodes_searched": 15,
+   "nodes_with_an_exact_tie": 4,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 95,
+   "grm_trees": 163,
+   "grm_trees_at_production_colsample": 189,
+   "largest_probability_gap": 2.0713416992723666e-07,
+   "validation_samples": 17,
+   "xgboost_rounds_run": 188,
+   "xgboost_trees": 163
+  },
+  "gbt tree by tree": {
+   "causes": {
+    "equal split": 1,
+    "float32 rounding": 1
+   },
+   "features_per_tree": 64,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 12,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 0,
+   "library_forest_mean_abs_score_gap": 0.02220265308756141,
+   "library_forest_seed_to_seed_calls_differing": 0,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.008236164802004533,
+   "nodes": 3686,
+   "nodes_agree": 3656,
+   "nodes_both_leaf": 1943,
+   "nodes_other_member_of_a_tie": 239,
+   "nodes_same_feature": 1474,
+   "nodes_searched": 3686,
+   "nodes_with_an_exact_tie": 408,
+   "subsample_size": 71
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 14,
+   "library_free_same_rules": 7,
+   "rules": 21,
+   "steps_certified": 21,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 0,
+   "steps_other": 0,
+   "steps_read_against_library": 21
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.051587301587301584,
+    "kind": "conjunction",
+    "n_rules": 1,
+    "p": 0.562
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.0988479262672811,
+    "depth": 3
+   }
+  }
+ },
+ "tied_counts": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 15,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 0,
+   "free_tree_nodes_same_feature": 0,
+   "free_tree_parts_at_exact_ties": 1,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 11,
+   "free_tree_same": false,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 11,
+   "nodes_both_leaf": 6,
+   "nodes_other_member_of_a_tie": 1,
+   "nodes_same_feature": 4,
+   "nodes_searched": 11,
+   "nodes_with_an_exact_tie": 1,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "first_tree_not_identical": 1,
+   "fitting_samples": 73,
+   "grm_trees": 399,
+   "grm_trees_at_production_colsample": 399,
+   "largest_probability_gap": 0.00023352400047937927,
+   "validation_samples": 13,
+   "xgboost_rounds_run": 400,
+   "xgboost_trees": 400
+  },
+  "gbt tree by tree": {
+   "causes": {},
+   "features_per_tree": 2,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 400
+  },
+  "rf trees": {
+   "features_drawn_per_node": 2,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 0,
+   "library_forest_mean_abs_score_gap": 0.018952993966744353,
+   "library_forest_seed_to_seed_calls_differing": 0,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.009922301171554767,
+   "nodes": 1980,
+   "nodes_agree": 1979,
+   "nodes_both_leaf": 1090,
+   "nodes_other_member_of_a_tie": 3,
+   "nodes_same_feature": 886,
+   "nodes_searched": 1980,
+   "nodes_with_an_exact_tie": 5,
+   "subsample_size": 54
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 10,
+   "library_free_same_rules": 5,
+   "rules": 21,
+   "steps_certified": 17,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 4,
+   "steps_other": 0,
+   "steps_read_against_library": 21
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.09523809523809523,
+    "kind": "disjunction",
+    "n_rules": 2,
+    "p": 0.1
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.09523809523809523,
+    "depth": 2
+   }
+  }
+ },
+ "xor_balanced": {
+  "cart nodes": {
+   "default_floor_reference_nodes": 7,
+   "default_floor_same": false,
+   "free_tree_nodes_equal_split": 0,
+   "free_tree_nodes_same_feature": 0,
+   "free_tree_parts_at_exact_ties": 0,
+   "free_tree_parts_elsewhere": 0,
+   "free_tree_reference_nodes": 1,
+   "free_tree_same": true,
+   "largest_score_gap": 0.0,
+   "node_record_failures": 0,
+   "nodes": 1,
+   "nodes_both_leaf": 1,
+   "nodes_other_member_of_a_tie": 0,
+   "nodes_same_feature": 0,
+   "nodes_searched": 1,
+   "nodes_with_an_exact_tie": 0,
+   "stop_rule_failures": 0
+  },
+  "gbt end to end": {
+   "fitting_samples": 68,
+   "grm_trees": 38,
+   "grm_trees_at_production_colsample": 0,
+   "largest_probability_gap": 4.1277666285033376e-08,
+   "validation_samples": 12,
+   "xgboost_rounds_run": 63,
+   "xgboost_trees": 38
+  },
+  "gbt tree by tree": {
+   "causes": {},
+   "features_per_tree": null,
+   "largest_margin_gap": 0.0,
+   "rounds_grown": 400,
+   "trees_kept": 0
+  },
+  "rf trees": {
+   "features_drawn_per_node": 2,
+   "largest_score_gap": 0.0,
+   "library_forest_calls_differing": 0,
+   "library_forest_mean_abs_score_gap": 0.0,
+   "library_forest_seed_to_seed_calls_differing": 0,
+   "library_forest_seed_to_seed_mean_abs_score_gap": 0.0,
+   "nodes": 1400,
+   "nodes_agree": 1397,
+   "nodes_both_leaf": 800,
+   "nodes_other_member_of_a_tie": 45,
+   "nodes_same_feature": 552,
+   "nodes_searched": 1400,
+   "nodes_with_an_exact_tie": 61,
+   "subsample_size": 51
+  },
+  "scm fits": {
+   "fits_library_refuses": 0,
+   "independent_same": 14,
+   "library_free_fits": 14,
+   "library_free_same_calls": 2,
+   "library_free_same_rules": 2,
+   "rules": 28,
+   "steps_certified": 16,
+   "steps_certified_same_effect_only": 0,
+   "steps_dominated": 12,
+   "steps_other": 0,
+   "steps_read_against_library": 28
+  },
+  "selected": {
+   "inner_folds": 3,
+   "scm": {
+    "cv_error": 0.26282051282051283,
+    "kind": "conjunction",
+    "n_rules": 2,
+    "p": 0.1
+   },
+   "seed": 42,
+   "tree": {
+    "cv_error": 0.0,
+    "depth": 2
+   }
+  }
+ }
+}
