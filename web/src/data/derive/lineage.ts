@@ -52,11 +52,11 @@ export const lineageSentences = (verdicts: readonly (LineageVerdict | null)[]): 
   const [seen, notShown, cannotTest] = [at("seen"), at("not_shown"), at("cannot_test")];
   return [
     ...(seen.length > 0 ? [`For ${rulesNamed(seen)} the association also holds inside lineages.`] : []),
-    ...(notShown.length > 0 ? [`For ${rulesNamed(notShown)} the association is not shown inside lineages.`] : []),
+    ...(notShown.length > 0 ? [`For ${rulesNamed(notShown)} the test did not show the association inside lineages.`] : []),
     ...(cannotTest.length > 0 ? [`For ${rulesNamed(cannotTest)} these genomes do not have enough mixed lineages to separate this from lineage.`] : []),
   ];
 };
 
 /** How the verdicts were reached, and what they do not show. */
 export const lineageMethod = (table: LineageControl = LINEAGE_CONTROL): string =>
-  `Each rule was tested inside this report's lineage clusters, on the isolates the earlier rules left undecided, and needs ${int(table.min_strata)} clusters that hold both lab calls and both states of the rule (release ${table.release}). An association that holds inside lineages is still an association, not a cause.`;
+  `Each rule was tested inside this report's lineage clusters, on the isolates the earlier rules left undecided, and needs ${int(table.min_strata)} clusters that hold both lab calls and both states of the rule (release ${table.release}). The rules were chosen on these same isolates, so the test is not held-out evidence. An association that holds inside lineages is still an association, not a cause.`;

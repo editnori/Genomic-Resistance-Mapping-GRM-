@@ -86,7 +86,7 @@ describe("the causal caveat and the within-lineage result", () => {
   it("keeps the caveat and attaches each rule's result to it", () => {
     const page = render(base, table(verdicts));
     expect(page).toContain(
-      `${CAVEAT} For rule 1 the association also holds inside lineages. For ${later} these genomes do not have enough mixed lineages to separate this from lineage. Each rule was tested inside this report's lineage clusters, on the isolates the earlier rules left undecided, and needs 5 clusters that hold both lab calls and both states of the rule (release synthetic). An association that holds inside lineages is still an association, not a cause.`,
+      `${CAVEAT} For rule 1 the association also holds inside lineages. For ${later} these genomes do not have enough mixed lineages to separate this from lineage. Each rule was tested inside this report's lineage clusters, on the isolates the earlier rules left undecided, and needs 5 clusters that hold both lab calls and both states of the rule (release synthetic). The rules were chosen on these same isolates, so the test is not held-out evidence. An association that holds inside lineages is still an association, not a cause.`,
     );
   });
 

@@ -87,10 +87,10 @@ describe("the verdicts in sentences", () => {
   it("name each rule by its number and keep to association", () => {
     expect(lineageSentences(["seen"])).toEqual(["For rule 1 the association also holds inside lineages."]);
     expect(lineageSentences(["cannot_test"])).toEqual(["For rule 1 these genomes do not have enough mixed lineages to separate this from lineage."]);
-    expect(lineageSentences(["not_shown"])).toEqual(["For rule 1 the association is not shown inside lineages."]);
+    expect(lineageSentences(["not_shown"])).toEqual(["For rule 1 the test did not show the association inside lineages."]);
     expect(lineageSentences(["seen", "cannot_test", "seen", "not_shown", "seen", null])).toEqual([
       "For rules 1, 3 and 5 the association also holds inside lineages.",
-      "For rule 4 the association is not shown inside lineages.",
+      "For rule 4 the test did not show the association inside lineages.",
       "For rule 2 these genomes do not have enough mixed lineages to separate this from lineage.",
     ]);
     expect(lineageSentences([])).toEqual([]);
@@ -99,7 +99,7 @@ describe("the verdicts in sentences", () => {
 
   it("say how the test was run and that it shows no cause", () => {
     expect(lineageMethod()).toBe(
-      "Each rule was tested inside this report's lineage clusters, on the isolates the earlier rules left undecided, and needs 5 clusters that hold both lab calls and both states of the rule (release rev14-274-20261112). An association that holds inside lineages is still an association, not a cause.",
+      "Each rule was tested inside this report's lineage clusters, on the isolates the earlier rules left undecided, and needs 5 clusters that hold both lab calls and both states of the rule (release rev14-274-20261112). The rules were chosen on these same isolates, so the test is not held-out evidence. An association that holds inside lineages is still an association, not a cause.",
     );
     expect(lineageMethod(tableFor(report, verdictsFor, { min_strata: 7, release: "other" }))).toContain("needs 7 clusters that hold both lab calls and both states of the rule (release other).");
   });
