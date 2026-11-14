@@ -999,9 +999,27 @@ fn cohort<'a>(spec: &DatasetSpec, phenotypes: &'a [Phenotype], genomes: &[String
     }
 }
 
+/// Where `analyze_species` keeps a species' reports under `cfg`. The
+/// release's seeds (`EvalConfig::default()`'s `seed` and no `learner_seed`)
+/// keep `results/`, the one folder `grm report`, `grm intervals` and
+/// `grm provenance` read. Any other seeds get
+/// `draws/seed-<seed>[-learner-<learner_seed>]/` beside it, so a report of
+/// another fold draw never replaces a released report and is never indexed.
+pub fn reports_dir(layout: &Layout, slug: &str, cfg: &EvalConfig) -> std::path::PathBuf {
+    let release = EvalConfig::default();
+    if (cfg.seed, cfg.learner_seed) == (release.seed, release.learner_seed) {
+        return layout.results_dir(slug);
+    }
+    let name = match cfg.learner_seed {
+        None => format!("seed-{}", cfg.seed),
+        Some(learner) => format!("seed-{}-learner-{learner}", cfg.seed),
+    };
+    layout.species_dir(slug).join("draws").join(name)
+}
+
 /// Runs the species' datasets (or the named subset), largest minority class
 /// first, skipping datasets whose saved report is still current (see
-/// `stale_reason`) unless `force`.
+/// `stale_reason`) unless `force`. Reports go to `reports_dir`.
 pub fn analyze_species(
     layout: &Layout,
     slug: &str,
@@ -1012,7 +1030,7 @@ pub fn analyze_species(
     let (input, catalog) = load_inputs(layout, slug)?;
     let digest = matrix_digest(&input.matrix);
     let client = Client::new();
-    let dir = layout.results_dir(slug);
+    let dir = reports_dir(layout, slug, cfg);
     std::fs::create_dir_all(&dir)?;
     let mut specs: Vec<&DatasetSpec> = input
         .datasets
@@ -1209,6 +1227,7 @@ fn input_fingerprint(
         screened_features,
         lasso_lambdas,
         seed,
+        learner_seed,
     } = cfg;
     for n in [
         *folds,
@@ -1236,6 +1255,12 @@ fn input_fingerprint(
     }
     for n in [*seed, *forest_seed, *gbt_seed] {
         h.u64(n);
+    }
+    // Hashed only when set, so a report written without one, every release
+    // report among them, keeps its key.
+    if let Some(n) = learner_seed {
+        h.bytes(&[1]);
+        h.u64(*n);
     }
     let Cohort {
         rows,
@@ -2475,6 +2500,7 @@ mod tests {
             ("screened_features", |c| c.screened_features += 1),
             ("lasso_lambdas", |c| c.lasso_lambdas += 1),
             ("seed", |c| c.seed += 1),
+            ("learner_seed", |c| c.learner_seed = Some(c.seed)),
         ];
         for (field, edit) in changes {
             assert_ne!(changed(*edit), base, "{field}");
@@ -2699,6 +2725,70 @@ mod tests {
         std::fs::write(&patterns, bytes).unwrap();
         learn(&layout).unwrap();
         assert!(!current.exists());
+    }
+
+    /// The release's seeds keep `results/`; any other evaluation seed or a
+    /// learner seed gets a folder of its own under `draws/`.
+    #[test]
+    fn reports_of_another_draw_get_a_folder_outside_results() {
+        let layout = Layout::new("root");
+        let dir = |seed, learner_seed| {
+            let cfg = EvalConfig {
+                seed,
+                learner_seed,
+                ..Default::default()
+            };
+            reports_dir(&layout, "fixture", &cfg)
+        };
+        let species = layout.species_dir("fixture");
+        assert_eq!(dir(42, None), layout.results_dir("fixture"));
+        assert_eq!(dir(43, None), species.join("draws/seed-43"));
+        assert_eq!(dir(42, Some(42)), species.join("draws/seed-42-learner-42"));
+        assert_eq!(dir(43, Some(7)), species.join("draws/seed-43-learner-7"));
+        // Settings other than the seeds do not move the folder.
+        let budget = EvalConfig {
+            screened_features: 16000,
+            ..Default::default()
+        };
+        assert_eq!(
+            reports_dir(&layout, "fixture", &budget),
+            layout.results_dir("fixture")
+        );
+    }
+
+    /// A run at another seed reads and writes its own folder: the report in
+    /// `results/` keeps its bytes, and a stale report in the draw's folder is
+    /// the one removed. (Neither fixture dataset has 25 genomes per class,
+    /// so a recompute removes the file; see `save_report`.)
+    #[test]
+    fn a_run_at_another_seed_leaves_the_released_reports_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let input = inputs();
+        write_inputs(&layout, &input, "");
+        let (released, saved) = save_report(&layout, &input, None, "meropenem");
+        let draw = EvalConfig {
+            seed: 43,
+            ..Default::default()
+        };
+        // The release's key is not the draw's: at seed 43 the released
+        // report would read as stale and be recomputed if it were looked at.
+        let spec = dataset("meropenem");
+        let digest = matrix_digest(&input.matrix);
+        assert_ne!(
+            input_fingerprint(&input, &spec, None, &draw, digest),
+            key(&input, &spec, None)
+        );
+        let folder = reports_dir(&layout, "fixture", &draw);
+        std::fs::create_dir_all(&folder).unwrap();
+        let stale = folder.join("fixture__meropenem.json");
+        std::fs::write(&stale, &saved).unwrap();
+        analyze_species(&layout, "fixture", &[], false, &draw).unwrap();
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+        assert!(!stale.exists());
+        // And the release's own run still finds its report current.
+        assert!(learn(&layout).unwrap().is_empty());
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
     }
 
     #[test]

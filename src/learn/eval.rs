@@ -28,6 +28,8 @@
 //! Every random draw in an outer fold (inner folds, tuning holdouts, boosting
 //! column samples, forest subsamples and node features) is seeded from
 //! `EvalConfig::seed` and the fold, so `fit_fold` rebuilds any held-out fit.
+//! `EvalConfig::learner_seed`, when set, seeds the forest's and boosting's
+//! own draws in its place and leaves every partition as `seed` draws it.
 //!
 //! A boosted model that keeps no tree, or a lasso that keeps no weight, is a
 //! null fit. A null fit is still a model: it predicts its training
@@ -70,7 +72,17 @@ pub struct EvalConfig {
     /// forest, screened on each fit's own fitting samples.
     pub screened_features: usize,
     pub lasso_lambdas: usize,
+    /// Seeds every partition (both splits' outer folds, each fit's inner
+    /// folds and tuning holdouts, the MIC regression's folds) and, unless
+    /// `learner_seed` is set, the learners' own draws.
     pub seed: u64,
+    /// Seeds the learners' own draws in place of `seed`: the forest's
+    /// subsamples and node features and boosting's column samples, in every
+    /// outer fold, the final models and the MIC regression. No partition
+    /// reads it. None, the default and every release's setting, is left out
+    /// of a report's `eval_config`, so such a report is unchanged.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub learner_seed: Option<u64>,
 }
 
 impl Default for EvalConfig {
@@ -85,6 +97,7 @@ impl Default for EvalConfig {
             screened_features: 4000,
             lasso_lambdas: 30,
             seed: 42,
+            learner_seed: None,
         }
     }
 }
@@ -453,6 +466,10 @@ pub(crate) const GBT_HOLDOUT: f64 = 0.15;
 /// The share of training samples the lasso holds out to choose its penalty.
 pub(crate) const LASSO_HOLDOUT: f64 = 0.2;
 
+/// `seed` draws the early-stopping holdout, a partition; `draws` seeds
+/// boosting's column samples. They are equal unless
+/// `EvalConfig::learner_seed` is set.
+#[allow(clippy::too_many_arguments)]
 fn fit_gbt(
     x: &BitMatrix,
     y: &Bits,
@@ -461,6 +478,7 @@ fn fit_gbt(
     unit: &str,
     cfg: &EvalConfig,
     seed: u64,
+    draws: u64,
 ) -> Result<(Scored, gbt::Gbt)> {
     let (fit_m, val) = tuning_holdout(train, y, groups, unit, GBT_HOLDOUT, seed)?;
     let feats = screen(x, y, &fit_m, cfg.screened_features);
@@ -470,7 +488,10 @@ fn fit_gbt(
         &fit_m,
         &val,
         &feats,
-        &GbtParams { seed, ..cfg.gbt },
+        &GbtParams {
+            seed: draws,
+            ..cfg.gbt
+        },
     );
     Ok((
         Scored {
@@ -643,9 +664,24 @@ pub(crate) fn fit_lasso_from_path(
     ))
 }
 
-/// The seed of every random draw in outer fold `fold`.
+/// The seed of every partition drawn inside outer fold `fold` (its inner
+/// folds and tuning holdouts) and, unless `EvalConfig::learner_seed` is set,
+/// of the learners' own draws there.
 fn fold_seed(cfg: &EvalConfig, fold: usize) -> u64 {
     cfg.seed + fold as u64 * 101
+}
+
+/// The base seed of the learners' own draws: `EvalConfig::learner_seed`, or
+/// `EvalConfig::seed` when it is not set.
+fn draw_seed(cfg: &EvalConfig) -> u64 {
+    cfg.learner_seed.unwrap_or(cfg.seed)
+}
+
+/// The seed of the forest's and boosting's own draws in outer fold `fold`:
+/// `fold_seed` on `draw_seed`, so it is `fold_seed` unless
+/// `EvalConfig::learner_seed` is set.
+fn fold_draw_seed(cfg: &EvalConfig, fold: usize) -> u64 {
+    draw_seed(cfg).wrapping_add(fold as u64 * 101)
 }
 
 /// One learner's fit on outer fold `fold`'s training samples, scoring every
@@ -661,12 +697,14 @@ fn fit_fold(
 ) -> Result<Scored> {
     let fold = context.outer_fold.expect("an outer fit needs its fold");
     let seed = fold_seed(cfg, fold);
+    let draws = fold_draw_seed(cfg, fold);
     let inner = || training_folds(y, train, groups, cfg.inner_folds, seed);
+    let unit = tuning_unit(context.scheme);
     Ok(match learner {
         "scm" => fit_scm(x, y, train, &inner(), cfg),
         "cart" => fit_cart(x, y, train, &inner(), cfg),
-        "rf" => fit_rf(x, y, train, cfg, seed).0,
-        "gbt" => fit_gbt(x, y, train, groups, tuning_unit(context.scheme), cfg, seed)?.0,
+        "rf" => fit_rf(x, y, train, cfg, draws).0,
+        "gbt" => fit_gbt(x, y, train, groups, unit, cfg, seed, draws)?.0,
         "lasso" => fit_lasso(x, y, train, groups, cfg, seed, context)?.0,
         _ => unreachable!(),
     })
@@ -1275,8 +1313,18 @@ fn final_models(
         &mut LassoTrace::default(),
         &mut |_, _| {},
     )?;
-    let (_, rf_importance) = fit_rf(x, y, &all, cfg, cfg.seed + 17);
-    let (_, gbt_model) = fit_gbt(x, y, &all, tuning, "group", cfg, cfg.seed + 13)?;
+    let draws = draw_seed(cfg);
+    let (_, rf_importance) = fit_rf(x, y, &all, cfg, draws.wrapping_add(17));
+    let (_, gbt_model) = fit_gbt(
+        x,
+        y,
+        &all,
+        tuning,
+        "group",
+        cfg,
+        cfg.seed + 13,
+        draws.wrapping_add(13),
+    )?;
     Ok(FinalModels {
         scm: FinalScm {
             kind: model.kind,
@@ -1407,7 +1455,7 @@ fn evaluate_mic(
             &val,
             &feats,
             &GbtParams {
-                seed: cfg.seed + fi as u64,
+                seed: draw_seed(cfg).wrapping_add(fi as u64),
                 ..cfg.gbt
             },
         );
@@ -2090,6 +2138,7 @@ mod tests {
             "group",
             &cfg,
             cfg.seed + 13,
+            cfg.seed + 13,
         )
         .unwrap();
         assert_eq!(
@@ -2390,7 +2439,7 @@ mod tests {
                     [
                         fit_scm(&cx, &y, &train, &inner, &cfg),
                         fit_cart(&cx, &y, &train, &inner, &cfg),
-                        fit_gbt(&cx, &y, &train, ids, "group", &cfg, seed)
+                        fit_gbt(&cx, &y, &train, ids, "group", &cfg, seed, seed)
                             .unwrap()
                             .0,
                         penalized,
@@ -3049,7 +3098,8 @@ mod tests {
         let (fit, val) = tuning_holdout(&all, &y, None, "group", 0.15, 42).unwrap();
         let mut x = BitMatrix::with_cols(n);
         x.push_row(fit.and(&y).or(&val.and_not(&y)).words());
-        let (scored, model) = fit_gbt(&x, &y, &all, None, "group", &small_config(), 42).unwrap();
+        let (scored, model) =
+            fit_gbt(&x, &y, &all, None, "group", &small_config(), 42, 42).unwrap();
         assert!(model.trees.is_empty());
         assert!(scored.scores.is_none());
         assert_eq!(scored.complexity, 0.0);
@@ -3180,6 +3230,153 @@ mod tests {
         assert_eq!(saved["gbt"]["rounds"], 400);
         assert!(saved["forest"].get("seed").is_none());
         assert!(saved["gbt"].get("seed").is_none());
+        // Not set, the learner seed is left out, so a release report's
+        // `eval_config` keeps its bytes; set, it is recorded.
+        assert!(saved.get("learner_seed").is_none());
+        let twin = EvalConfig {
+            learner_seed: Some(7),
+            ..Default::default()
+        };
+        assert_eq!(serde_json::to_value(twin).unwrap()["learner_seed"], 7);
+    }
+
+    /// Synthetic: 120 genomes in 24 lineages of five, a third resistant,
+    /// two features that follow the label with noise and four of noise.
+    fn draw_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let n = 120;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let groups: Vec<u32> = (0..n as u32).map(|i| i / 5).collect();
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(20261114);
+        let mut x = BitMatrix::with_cols(n);
+        for f in 0..6 {
+            let present: Vec<usize> = (0..n)
+                .filter(|&i| {
+                    if f < 2 {
+                        y.contains(i) != rng.random_bool(0.15)
+                    } else {
+                        rng.random_bool(0.4)
+                    }
+                })
+                .collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        (x, y, groups)
+    }
+
+    fn draw_config() -> EvalConfig {
+        EvalConfig {
+            folds: 3,
+            inner_folds: 2,
+            forest: ForestParams {
+                n_trees: 8,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 12,
+                ..Default::default()
+            },
+            screened_features: 6,
+            lasso_lambdas: 6,
+            ..Default::default()
+        }
+    }
+
+    fn learner_scores(out: &EvalOutput, scheme: &str, learner: &str) -> Vec<f64> {
+        let split = out.splits.iter().find(|s| s.scheme == scheme).unwrap();
+        let row = split.learners.iter().find(|l| l.learner == learner);
+        row.unwrap().scores.clone()
+    }
+
+    fn test_folds(out: &EvalOutput) -> Vec<Vec<usize>> {
+        out.splits.iter().map(|s| s.test_fold.clone()).collect()
+    }
+
+    /// Another evaluation seed is another fold draw of the same dataset:
+    /// both splits' outer folds are the ones `fold_plan` draws for that
+    /// seed, they differ from the release seed's, and nothing about the
+    /// dataset (its samples, labels and lineage count) moves with it.
+    #[test]
+    fn another_seed_redraws_both_splits_outer_folds_on_the_same_dataset() {
+        use crate::ablate::plan::{GroupIds, Scheme, fold_plan};
+        let (x, y, groups) = draw_fixture();
+        let run = |seed| {
+            let cfg = EvalConfig {
+                seed,
+                ..draw_config()
+            };
+            evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 1, None, &cfg).unwrap()
+        };
+        let (base, other) = (run(42), run(43));
+        assert_eq!(base.splits.len(), 2);
+        assert!(base.splits.iter().all(|s| s.unavailable_reason.is_none()));
+        assert!(other.splits.iter().all(|s| s.unavailable_reason.is_none()));
+        for (a, b) in base.splits.iter().zip(&other.splits) {
+            assert_eq!((&a.scheme, a.n_groups), (&b.scheme, b.n_groups));
+            assert_eq!(a.test_fold.len(), x.cols);
+            assert_ne!(a.test_fold, b.test_fold, "{}", a.scheme);
+        }
+        let ids = GroupIds::new(groups.clone(), vec![], None).unwrap();
+        for (seed, out) in [(42, &base), (43, &other)] {
+            for (scheme, split) in [Scheme::Random, Scheme::Lineage]
+                .into_iter()
+                .zip(&out.splits)
+            {
+                let plan = fold_plan(&y, &ids, scheme, 3, 2, seed, 0).unwrap();
+                assert_eq!(plan.outer, split.test_fold, "seed {seed} {}", split.scheme);
+            }
+        }
+    }
+
+    /// The learner seed moves the forest's and boosting's own draws and
+    /// nothing else: every outer fold, and so every score of the SCM, CART
+    /// and the lasso, is the one the evaluation seed alone gives. Set to the
+    /// evaluation seed it changes no score at all.
+    #[test]
+    fn the_learner_seed_moves_the_forest_and_boosting_and_no_partition() {
+        let (x, y, groups) = draw_fixture();
+        let run = |learner_seed| {
+            let cfg = EvalConfig {
+                learner_seed,
+                ..draw_config()
+            };
+            evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 1, None, &cfg).unwrap()
+        };
+        let (base, same, twin) = (run(None), run(Some(42)), run(Some(4242)));
+        assert_eq!(test_folds(&base), test_folds(&twin));
+        for scheme in ["random", "lineage"] {
+            for learner in LEARNERS {
+                assert_eq!(
+                    learner_scores(&base, scheme, learner),
+                    learner_scores(&same, scheme, learner),
+                    "{scheme} {learner}"
+                );
+            }
+            for learner in ["scm", "cart", "lasso"] {
+                assert_eq!(
+                    learner_scores(&base, scheme, learner),
+                    learner_scores(&twin, scheme, learner),
+                    "{scheme} {learner}"
+                );
+            }
+            assert_ne!(
+                learner_scores(&base, scheme, "rf"),
+                learner_scores(&twin, scheme, "rf"),
+                "{scheme}"
+            );
+        }
+        // Boosting draws column samples only when it has columns to drop;
+        // its seed still reaches the fit.
+        assert_eq!(
+            fold_draw_seed(&draw_config(), 2),
+            fold_seed(&draw_config(), 2)
+        );
+        let cfg = EvalConfig {
+            learner_seed: Some(4242),
+            ..draw_config()
+        };
+        assert_eq!(fold_seed(&cfg, 2), 42 + 202);
+        assert_eq!(fold_draw_seed(&cfg, 2), 4242 + 202);
     }
 
     #[test]
