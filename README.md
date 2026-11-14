@@ -1,6 +1,44 @@
-# Genomic Resistance Mapping
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/wordmark-dark.svg">
+  <img src="assets/wordmark-light.svg" width="322" height="80" alt="GRM, Genomic Resistance Mapping. The mark is a cube seen from one corner. Each side face is a stack of three tiles in two blues that swap from row to row, and the top face is coral.">
+</picture>
 
-GRM measures how well a bacterial isolate's genome predicts its laboratory antimicrobial susceptibility result. It uses public assemblies from BV-BRC (the Bacterial and Viral Bioinformatics Resource Center) that have a reported resistant (R) or susceptible (S) call. The Rust pipeline downloads and curates them, extracts each genome's 31-base DNA substrings (k-mers), groups the genomes into lineages, builds a feature matrix per species, cross-validates five learners on each species and antibiotic, and writes a report per dataset. The React dashboard shows each dataset's gene and panel evidence, MIC (minimum inhibitory concentration) predictions, and model performance.
+GRM measures how well a bacterial isolate's genome predicts its laboratory antimicrobial susceptibility result. It uses public assemblies from BV-BRC (the Bacterial and Viral Bioinformatics Resource Center) that have a reported resistant (R) or susceptible (S) call.
+
+A Rust pipeline builds one dataset per species and antibiotic, cross-validates five learners on it, and writes a report. A React dashboard shows each report's model performance, gene and panel evidence, and MIC (minimum inhibitory concentration) predictions. The site is [genomicresistance.com](https://genomicresistance.com).
+
+## Flow
+
+| Step | Reads | Writes |
+|---|---|---|
+| Collect | BV-BRC | lab records, genome metadata, assemblies, and the AMRFinderPlus reference gene catalog |
+| Curate | the lab records and genome metadata | one dataset per species and antibiotic where each class has enough genomes with a reported call |
+| Describe | each genome's assembly | its 31-base DNA substrings (k-mers), its lineage, and one feature matrix per species |
+| Evaluate | the matrix and the reported calls | scores for five learners and GRM's known-gene rule, on a random split and on a lineage split |
+| Report | the saved scores | one report per dataset, and the index the dashboard reads |
+
+[Stages](#stages) gives each step's command and output path.
+
+## Use
+
+- **Read the results.** Open the site, or download the reports from the [`data-rev14-274-20261112` release](https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/tag/data-rev14-274-20261112).
+- **Run it.** [Setup](#setup) builds the pipeline and the dashboard. [Run](#run) scores one species and serves the result on your machine.
+- **Check a number.** [Checks](#checks) recomputes each learner's counts and balanced accuracy from the saved scores, apart from the code that wrote them.
+- **Reuse the name.** `assets/` holds the name beside the mark, for light and dark pages. The mark alone is `web/public/favicon.svg`.
+
+## Status
+
+The site serves evaluation revision 14. Of its 277 curated datasets, 274 have a report and 3 have none, because one class is under the minimum of 25 genomes. The 274 reports cover 23 species. [Results](#results) names the three and compares revision 14 with revision 12.
+
+Every figure is internal validation: cross-validation on public BV-BRC genomes, scored against their reported calls. No external, prospective, or clinical validation has been done. [docs/outside-study-results.md](docs/outside-study-results.md) adds one retrospective test on newly deposited studies from the same database.
+
+Read each learner's figures with their split and their evaluation revision. The lineage split holds out whole lineages, and a report records why when that split could not be formed. From revision 14 every learner's figures cover every isolate of the split ([docs/equal-scoring.md](docs/equal-scoring.md)).
+
+## Givens
+
+[Givens](https://github.com/editnori/givens) is a provisional shared browser of the definitions and assumptions that four projects use: GRM, SigDrug, KSD and CondEvent. Its repository is private for now. GRM's entries there cover evaluation terms only: dataset, split, evaluation revision, report figure, and how a figure reads on newly deposited genomes. They hold no sequence or gene content.
+
+The GRM entries are written by hand from this repository's documents at a named commit. GRM exports nothing to Givens and reads nothing from it when it runs. No repository reads from Givens today.
 
 ## Setup
 
@@ -156,7 +194,7 @@ It verifies the revision-5 reports against the snapshot hash list pinned in the 
 
 [docs/research/genotype-to-phenotype.md](docs/research/genotype-to-phenotype.md) covers diagnostic and surveillance uses, the published evidence, and the validation a clinical claim would still need.
 
-[docs/outside-study-results.md](docs/outside-study-results.md) gives the result of a retrospective test on newly deposited studies from the same database: each revision-12 report's final model, applied unchanged to BV-BRC genomes added after the cohort was built. [docs/outside-study-results-by-species.md](docs/outside-study-results-by-species.md) reads it one species at a time. [docs/outside-study-test.md](docs/outside-study-test.md) is the plan, frozen before any of those genomes was fetched. The output files are in `reference/outside-study/`. The result's section Revision 14 reads the same estimates against the figures the site serves now, from `reference/outside-study-figures/`.
+[docs/outside-study-results.md](docs/outside-study-results.md) gives the result of a retrospective test on newly deposited studies from the same database: each revision-12 report's final model, applied unchanged to BV-BRC genomes added after the cohort was built. [docs/outside-study-results-by-species.md](docs/outside-study-results-by-species.md) reads it one species at a time. [docs/outside-study-test.md](docs/outside-study-test.md) is the plan, frozen before any of those genomes was fetched. The output files are in `reference/outside-study/`. The result's section Revision 14 reads the same estimates against the figures the site serves now, from `reference/outside-study-figures/`. `reference/outside-study-models/` holds a digest of each final model in both revisions, and the suite fails if one differs.
 
 ## Checks
 
