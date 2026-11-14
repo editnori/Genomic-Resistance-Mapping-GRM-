@@ -52,7 +52,7 @@ The sizes agree with what the report already says: a fold's `scm` has `fold_comp
 
 ### Feature numbers
 
-A `feature` is a row of the dataset's matrix, the numbering `models` and the `features` cards use. A fold does not fit on that matrix directly. It fits on the rows that differ on its own training samples (`learn::training_candidates`), numbered from 0, and the fold's features are renamed back to dataset rows before they are kept. The planted fault "keep the fold's own numbering" fails four tests.
+A `feature` is a row of the dataset's matrix, the numbering `models` and the `features` cards use. A fold does not fit on that matrix directly. It fits on the rows that differ on its own training samples (`learn::training_candidates`), numbered from 0, and the fold's features are renamed back to dataset rows before they are kept. A planted fault that keeps the fold's own numbering fails two tests, `fold_models_are_written_in_the_final_models_shapes_under_dataset_rows` and `fold_models_give_each_folds_saved_scores_under_dataset_row_numbers`.
 
 One consequence matters for counting agreement. Where several rows agree on a fold's training samples, the fold sees one candidate and names the lowest row. Two folds, or a fold and the final model, can therefore name different rows for patterns that differ only on samples one of them did not train on. The test `folds_name_the_lowest_row_among_patterns_equal_on_their_training_samples` shows a fold naming row 0 and the other fold row 1 for one pattern on the first fold's training samples. So:
 

@@ -3477,8 +3477,10 @@ mod tests {
                 lambda: 0.1,
             })],
         };
+        // Each of the three learners names a row no other model names: the
+        // lasso row 2, a tree row 3 and an scm row 4. Row 1 is named twice.
         let kept = fold_models(
-            vec![split("random", 4, 1, Some(4)), split("lineage", 1, 3, None)],
+            vec![split("random", 4, 1, Some(2)), split("lineage", 1, 3, None)],
             &x,
         );
         let schemes: Vec<&str> = kept.splits.iter().map(|s| s.scheme.as_str()).collect();
@@ -3488,7 +3490,7 @@ mod tests {
             .iter()
             .map(|f| (f.feature, f.bits.as_str()))
             .collect();
-        let expected: Vec<(u32, String)> = [1, 3, 4]
+        let expected: Vec<(u32, String)> = [1, 2, 3, 4]
             .into_iter()
             .map(|f| (f, base64(x.row(f as usize))))
             .collect();
