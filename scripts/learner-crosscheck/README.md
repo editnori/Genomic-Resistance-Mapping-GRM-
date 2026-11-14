@@ -58,6 +58,8 @@ scripts/learner-crosscheck/run.sh ENV OUT
 
 `OUT` must be a new folder. `run.sh` checks the environment, builds the harness, runs it with 1 and with 8 threads and requires the same bytes from both, runs `compare.py` and `exploratory.py`, and writes `OUT/run.json` with the commit, the tree of `src/`, the compiler and the times. On 14 November 2026 this took 18 seconds with the harness already built, on 8 threads.
 
+XGBoost's wheel prints a warning about an old glibc each time it loads. That is the wheel's own note about how it was built, and it changes no result.
+
 ## What it writes
 
 | File | Content |

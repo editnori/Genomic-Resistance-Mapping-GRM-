@@ -18,6 +18,8 @@ This is a software check on small test panels. It says nothing about clinical pe
 
 The harness wrote the same bytes with 1 and with 8 threads. A first run at 17:28 UTC, in another environment built from the same pinned files, gave the same bytes in `summary.tsv`, `differences.tsv`, `totals.json`, `detail.json` and `versions.json`.
 
+The harness file, `main.rs`, was reformatted with `cargo fmt` after that run: white space, trailing commas and one pair of braces. With the kit committed, the whole check ran again from the committed files, from 17:53:09 to 17:53:25 UTC, and wrote the same bytes in every file here that `run.sh` writes except `run.json`, which holds the commit and the times.
+
 ## The plan
 
 `PLAN.md` was fixed at 17:09:18 UTC, before any learner was fitted on a panel. It names the panels, the settings, each reference, the rule by which a unit matches, and the causes a difference may be given. It sets no pass mark. `PLAN-clarifications.md` was fixed at 17:28:21 UTC, before the first run, and settles 16 places where the plan's words left a choice. Both are here as they were hashed; their sha256 values are at the end of this page. `exploratory.py` and its counts came after the first comparison was read. They are labelled exploratory and no outcome depends on them.
