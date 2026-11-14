@@ -69,10 +69,10 @@ The forest's and boosting's features get no pattern, to bound the size. Those tw
 |---|---:|---:|---:|---:|
 | `fold_models`, bytes | 499,860 | 50,707 | 55,457 | 60,568 |
 | `rule_groups`, bytes | 17,075 | 1,587 | 1,915 | 2,281 |
-| growth of the file, bytes | 516,887 | 52,310 | 57,639 | 62,862 |
-| growth as a share of the report | 0.94% | 0.36% | 1.41% | 37.96% |
+| both fields, bytes | 516,935 | 52,311 | 57,633 | 62,849 |
+| both as a share of the released report | 0.94% | 0.36% | 1.41% | 37.96% |
 
-The growth is close to constant, 52 to 63 kB, while these reports run from 164 kB to 17 MB, so the share is small on a report with many feature cards and large on a small one. Of the 499,860 bytes of `fold_models`, the forest's lists are 220,691, boosting's 139,152, the patterns 47,648 (906 features), the trees 41,452, the lasso refits 40,293 and the scm models 9,238. The two ranked lists are 72% of the field.
+The fields' bytes are the same in every rebuild. A rebuilt file's own size also moves by a few tens of bytes from run to run, because wall-clock seconds are written with a varying number of digits, so the cost is given as the fields' bytes and not as a difference of two file sizes. The growth is close to constant, 52 to 63 kB, while these reports run from 164 kB to 17 MB, so the share is small on a report with many feature cards and large on a small one. Of the 499,860 bytes of `fold_models`, the forest's lists are 220,691, boosting's 139,152, the patterns 47,648 (906 features), the trees 41,452, the lasso refits 40,293 and the scm models 9,238. The two ranked lists are 72% of the field.
 
 **Estimated over the release.** No released report has the field, so for the other reports the cost is an estimate from each report's own shape: the fold models' sizes are exact (`fold_complexity`), the bytes of one rule, node, list entry and weight are measured on the report's final models, and the pattern length follows from the sample count. Two counts are not in a released report, so each is a range. The distinct features the folds name run from "every fold names the features of the fold that names most" to "no two fold models share a feature". A fold's boosting list runs from one entry to 50: in the nine real reports the fold lists held 0 to 50 entries beside final lists of 29 to 50. The real field lay inside the range in all nine, at 1.33 to 1.65 times the low end and 0.79 to 0.90 of the high end. The range was widened after seeing them, so that fit is not a test of it. The test came after, with the range fixed first: two large `pseudomonas_aeruginosa` reports rebuilt the same way (meropenem and tobramycin, 38.9 MB and 138.3 MB). Their fields are 106,649 and 106,609 bytes, inside the ranges 53,227 to 126,140 and 54,431 to 125,944, and the two files grew by 0.31% and 0.09%.
 
@@ -136,7 +136,7 @@ One consequence follows from not bumping the revision. `grm learn` reuses a save
 - `src/catalog.rs`: `a_hit_counts_by_its_own_alleles_class_and_subclass`.
 - **Before and after.** The ignored test `analysis::tests::write_report_fields_fixture_root` writes a synthetic data root (150 made-up genomes, a tobramycin dataset, three made-up catalog groups) that `grm learn --species fixture` runs on without the network. Run it with a build of the earlier source and a build of this one, on two copies of the root, and compare the two reports key by key.
 
-- **Real reports.** Eleven released reports were rebuilt from the public inputs with the source before this change and with it (see Size and `rule_groups`). In all eleven the earlier build's report equals the released one once wall-clock seconds are removed, and the new build's report differs from it by the two fields alone. They are 11 of 274 reports and 2 of 24 species.
+- **Real reports.** Eleven released reports were rebuilt from the public inputs with the source before this change and with it (see Size and `rule_groups`). In all eleven the earlier build's report equals the released one once wall-clock seconds are removed, and the new build's report differs from it by the two fields alone. They are 11 of 274 reports and 2 of 23 species.
 
 ## Limits
 
