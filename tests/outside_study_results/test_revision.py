@@ -46,6 +46,10 @@ def run_rows(data):
     return [r for runs in data.values() for _, _, metrics, _ in runs.values() for r in metrics]
 
 
+# The least and the greatest figure strictly between 0 and 1.
+INSIDE_LOW, INSIDE_HIGH = R.INSIDE
+
+
 def metrics(n, tp, fn, fp, tn):
     return {"n": n, "tp": tp, "fn": fn, "fp": fp, "tn": tn, "sensitivity": tp / (tp + fn), "specificity": tn / (tn + fp)}
 
@@ -132,9 +136,44 @@ class Rereading(unittest.TestCase):
                 for m in R.MEASURES:
                     got = R.score.reading(own[m], float(r[m + "_lo"]), float(r[m + "_hi"]))
                     self.assertEqual(got, r["reading_" + m], (r["dataset"], r["learner"], m))
+                    # The script's own reading stops on none of them and gives the same.
+                    self.assertEqual(R.reread(r, m, own[m]), r["reading_" + m], (r["dataset"], r["learner"], m))
                     checked += 1
         self.assertEqual(checked, 2 * sum(len(rows) for rows in self.later.values()))
         self.assertGreater(checked, 0)
+
+    def test_a_run_s_figure_of_exactly_0_or_1_at_a_printed_end_is_read_as_the_kit_read_it(self):
+        """The runs' own rows where a report figure of exactly 0 or 1 sits on an end printed as 0.000000 or 1.000000.
+
+        In each the new estimate is at its limit too, 0 of n or n of n, so the
+        kit set that end itself and the reading is certain."""
+        met = 0
+        for rows in self.later.values():
+            for r in rows:
+                for m, hit, miss in (("sensitivity", "tp", "fn"), ("specificity", "tn", "fp")):
+                    figure = int(r["lineage_" + hit]) / (int(r["lineage_" + hit]) + int(r["lineage_" + miss]))
+                    lo, hi = float(r[m + "_lo"]), float(r[m + "_hi"])
+                    if figure not in (0.0, 1.0) or min(abs(figure - lo), abs(figure - hi)) >= R.MARGIN:
+                        continue
+                    met += 1
+                    self.assertEqual(R.exact_ends(r, m), (figure == 0.0, figure == 1.0), (r["dataset"], r["learner"], m))
+                    self.assertEqual((R.reread(r, m, figure), r["reading_" + m]), ("consistent", "consistent"), (r["dataset"], r["learner"], m))
+        self.assertGreater(met, 0)
+
+    def test_no_run_scored_a_class_large_enough_for_a_computed_end_to_print_at_the_limit(self):
+        """From `least` genomes of a class on, the kit's computed end for 1 of n prints as 0.000000."""
+        fmt, interval = R.score.fmt, R.score.clopper_pearson
+        least = 50636
+        self.assertEqual((fmt(interval(1, least)[0]), fmt(interval(1, least - 1)[0])), ("0.000000", "0.000001"))
+        self.assertEqual((fmt(interval(least - 1, least)[1]), fmt(interval(least - 2, least - 1)[1])), ("1.000000", "0.999999"))
+        largest = max(int(r[k]) for rows in self.later.values() for r in rows for k in ("scored_resistant", "scored_susceptible"))
+        self.assertLess(largest, least)
+        for rows in self.later.values():
+            for r in rows:
+                for m in R.MEASURES:
+                    at_zero, at_one = R.exact_ends(r, m)
+                    # An end printed at the limit is one the kit set, on every row read.
+                    self.assertEqual((float(r[m + "_lo"]) == 0.0, float(r[m + "_hi"]) == 1.0), (at_zero, at_one), (r["dataset"], r["learner"], m))
 
     def test_the_rows_read_are_the_ones_the_pages_read(self):
         for pop, runs in self.data.items():
@@ -163,6 +202,9 @@ class Rereading(unittest.TestCase):
     def test_a_figure_at_a_printed_interval_end_is_refused(self):
         r = next(r for rows in self.later.values() for r in rows if r["differs"])
         hi = float(r["sensitivity_hi"])
+        # The kit computed this end: the estimate is not at its limit.
+        self.assertEqual(R.exact_ends(r, "sensitivity"), (False, False))
+        self.assertTrue(0.0 < hi - 2e-6 and hi + 2e-6 < 1.0)
         # Six printed decimals leave an end known to half a millionth.
         for figure in (hi, hi + 5e-7, hi - 5e-7, hi + 9e-7):
             with self.assertRaises(SystemExit):
@@ -176,6 +218,124 @@ class Rereading(unittest.TestCase):
         for figures in ({**self.figures, key: blank}, {k: f for k, f in self.figures.items() if k != key}):
             with self.assertRaises(SystemExit):
                 R.later(self.data, figures)
+
+
+class PrintedEnds(unittest.TestCase):
+    """The stop at a printed interval end, on made-up rows. The counts are no dataset's.
+
+    Each row is one measure of a made-up `metrics.tsv` row: some genomes of a
+    class called right, and the kit's own interval for that count as the kit
+    prints it. A class here has more genomes than any run scored, because only
+    then does a computed end print as 0.000000 or 1.000000."""
+
+    N = 60000
+    MANY = 8000000
+
+    def row(self, measure, right, n):
+        """(the made-up row, the kit's interval before it is printed)."""
+        lo, hi = R.score.clopper_pearson(right, n)
+        hit, miss = ("tp", "fn") if measure == "sensitivity" else ("tn", "fp")
+        row = {"dataset": "made_up__drug", "learner": "lasso", hit: str(right), miss: str(n - right)}
+        row[measure + "_lo"], row[measure + "_hi"] = R.score.fmt(lo), R.score.fmt(hi)
+        return row, (lo, hi)
+
+    def kit(self, figure, interval):
+        """The kit's reading on the interval it computed, before printing."""
+        return R.score.reading(figure, *interval)
+
+    def test_a_figure_of_exactly_0_is_read_from_the_counts_on_both_sides(self):
+        for m in R.MEASURES:
+            # The kit set the lower end to 0: the figure is not under it.
+            exact, interval = self.row(m, 0, self.N)
+            self.assertEqual((exact[m + "_lo"], interval[0]), ("0.000000", 0.0))
+            self.assertEqual((R.reread(exact, m, 0.0), self.kit(0.0, interval)), ("consistent", "consistent"))
+            # The kit computed the lower end, above 0, and it prints the same six decimals: the figure is under it.
+            computed, interval = self.row(m, 1, self.N)
+            self.assertEqual(computed[m + "_lo"], "0.000000")
+            self.assertGreater(interval[0], 0.0)
+            self.assertEqual((R.reread(computed, m, 0.0), self.kit(0.0, interval)), ("above", "above"))
+            # The rule on the printed digits alone would read the second row as it reads the first.
+            self.assertEqual(R.score.reading(0.0, float(computed[m + "_lo"]), float(computed[m + "_hi"])), "consistent")
+
+    def test_a_figure_of_exactly_1_is_read_from_the_counts_on_both_sides(self):
+        for m in R.MEASURES:
+            exact, interval = self.row(m, self.N, self.N)
+            self.assertEqual((exact[m + "_hi"], interval[1]), ("1.000000", 1.0))
+            self.assertEqual((R.reread(exact, m, 1.0), self.kit(1.0, interval)), ("consistent", "consistent"))
+            computed, interval = self.row(m, self.N - 1, self.N)
+            self.assertEqual(computed[m + "_hi"], "1.000000")
+            self.assertLess(interval[1], 1.0)
+            self.assertEqual((R.reread(computed, m, 1.0), self.kit(1.0, interval)), ("below", "below"))
+            self.assertEqual(R.score.reading(1.0, float(computed[m + "_lo"]), float(computed[m + "_hi"])), "consistent")
+
+    def test_a_figure_at_its_limit_is_never_beyond_the_far_end(self):
+        """A computed upper end that prints as 0.000000, and a computed lower end that prints as 1.000000."""
+        for m in R.MEASURES:
+            low, interval = self.row(m, 0, self.MANY)
+            self.assertEqual((low[m + "_hi"], interval[1] > 0.0), ("0.000000", True))
+            self.assertEqual((R.reread(low, m, 0.0), self.kit(0.0, interval)), ("consistent", "consistent"))
+            self.assertEqual((R.reread(low, m, 1.0), self.kit(1.0, interval)), ("below", "below"))
+            high, interval = self.row(m, self.MANY, self.MANY)
+            self.assertEqual((high[m + "_lo"], interval[0] < 1.0), ("1.000000", True))
+            self.assertEqual((R.reread(high, m, 1.0), self.kit(1.0, interval)), ("consistent", "consistent"))
+            self.assertEqual((R.reread(high, m, 0.0), self.kit(0.0, interval)), ("above", "above"))
+
+    def test_the_stop_stays_where_the_printed_digits_could_hide_the_reading(self):
+        for m in R.MEASURES:
+            # A computed lower end of about 4.2e-07, printed 0.000000.
+            low, interval = self.row(m, 1, self.N)
+            self.assertTrue(4e-7 < interval[0] < 5e-7)
+            # The kit reads one of these two figures above and the other consistent, and the printed digits are the same.
+            self.assertEqual((self.kit(3e-7, interval), self.kit(4.5e-7, interval)), ("above", "consistent"))
+            for figure in (3e-7, 4.5e-7, 9e-7, INSIDE_LOW):
+                with self.assertRaises(SystemExit) as stop:
+                    R.reread(low, m, figure)
+                self.assertIn("within one millionth", str(stop.exception))
+            self.assertEqual((R.reread(low, m, 2e-6), self.kit(2e-6, interval)), ("consistent", "consistent"))
+            # The mirror: a computed upper end printed 1.000000.
+            high, interval = self.row(m, self.N - 1, self.N)
+            self.assertEqual((self.kit(1 - 3e-7, interval), self.kit(1 - 4.5e-7, interval)), ("below", "consistent"))
+            for figure in (1 - 3e-7, 1 - 4.5e-7, 1 - 9e-7, INSIDE_HIGH):
+                with self.assertRaises(SystemExit):
+                    R.reread(high, m, figure)
+            self.assertEqual((R.reread(high, m, 1 - 2e-6), self.kit(1 - 2e-6, interval)), ("consistent", "consistent"))
+
+    def test_no_stop_at_an_end_the_kit_set(self):
+        """An end the kit set is printed exactly, so a figure beside it is read with no margin."""
+        for m in R.MEASURES:
+            low, interval = self.row(m, 0, self.N)
+            for figure in (INSIDE_LOW, 3e-7, 9e-7):
+                self.assertEqual((R.reread(low, m, figure), self.kit(figure, interval)), ("consistent", "consistent"))
+            high, interval = self.row(m, self.N, self.N)
+            for figure in (INSIDE_HIGH, 1 - 3e-7, 1 - 9e-7):
+                self.assertEqual((R.reread(high, m, figure), self.kit(figure, interval)), ("consistent", "consistent"))
+            # The other end of the same row is computed, and the stop holds there.
+            with self.assertRaises(SystemExit):
+                R.reread(low, m, float(low[m + "_hi"]) + 3e-7)
+            with self.assertRaises(SystemExit):
+                R.reread(high, m, float(high[m + "_lo"]) - 3e-7)
+
+    def test_a_printed_end_that_is_not_the_kit_s_for_the_counts_is_refused(self):
+        for m in R.MEASURES:
+            low, _ = self.row(m, 0, self.N)
+            high, _ = self.row(m, self.N, self.N)
+            for row, end, wrong in ((low, "_lo", "0.000001"), (high, "_hi", "0.999999")):
+                # A report figure of one half is over the first row's interval and under the second's.
+                self.assertEqual(R.reread(row, m, 0.5), "below" if row is low else "above")
+                with self.assertRaises(SystemExit) as stop:
+                    R.reread({**row, m + end: wrong}, m, 0.5)
+                self.assertIn("not the end the kit sets", str(stop.exception))
+
+    def test_the_counts_of_a_measure_say_which_ends_the_kit_set(self):
+        self.assertEqual(R.exact_ends({"tp": "0", "fn": "7", "fp": "3", "tn": "4"}, "sensitivity"), (True, False))
+        self.assertEqual(R.exact_ends({"tp": "7", "fn": "0", "fp": "3", "tn": "4"}, "sensitivity"), (False, True))
+        self.assertEqual(R.exact_ends({"tp": "0", "fn": "7", "fp": "3", "tn": "4"}, "specificity"), (False, False))
+        self.assertEqual(R.exact_ends({"tp": "2", "fn": "7", "fp": "3", "tn": "0"}, "specificity"), (True, False))
+        self.assertEqual(R.exact_ends({"tp": "2", "fn": "7", "fp": "0", "tn": "4"}, "specificity"), (False, True))
+        for n in (1, 25, 1000, self.N):
+            self.assertEqual((R.score.clopper_pearson(0, n)[0], R.score.clopper_pearson(n, n)[1]), (0.0, 1.0))
+            lo, hi = R.score.clopper_pearson(1, n + 1)[0], R.score.clopper_pearson(n, n + 1)[1]
+            self.assertTrue(0.0 < lo and hi < 1.0, n)
 
 
 class Tables(unittest.TestCase):
