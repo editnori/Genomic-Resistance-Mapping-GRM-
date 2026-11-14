@@ -204,6 +204,7 @@ src/lib.rs learn::eval::tests::a_learner_with_every_fold_null_predicts_each_fold
 src/lib.rs learn::eval::tests::a_move_that_empties_a_class_from_a_random_fold_fails_the_dataset
 src/lib.rs learn::eval::tests::a_path_without_a_converged_candidate_fails_with_full_context
 src/lib.rs learn::eval::tests::a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers
+src/lib.rs learn::eval::tests::a_supplied_partition_that_cannot_be_scored_fairly_is_refused
 src/lib.rs learn::eval::tests::a_training_prevalence_of_exactly_one_half_is_a_resistant_call
 src/lib.rs learn::eval::tests::an_empty_lasso_path_is_a_null_fit_without_a_call
 src/lib.rs learn::eval::tests::an_unconverged_final_lasso_refit_fails_with_full_context
@@ -234,7 +235,9 @@ src/lib.rs learn::eval::tests::pooling_refuses_a_missing_or_impossible_training_
 src/lib.rs learn::eval::tests::random_tuning_keeps_each_duplicate_group_whole_inside_outer_training
 src/lib.rs learn::eval::tests::random_tuning_that_cannot_keep_duplicates_whole_fails_before_any_fit
 src/lib.rs learn::eval::tests::random_tuning_without_duplicates_is_revision_10s_stratified_tuning
+src/lib.rs learn::eval::tests::roles_that_repeat_a_drawn_split_give_that_splits_scores
 src/lib.rs learn::eval::tests::rows_written_before_revision_14_read_back_unchanged
+src/lib.rs learn::eval::tests::samples_outside_a_supplied_folds_training_set_cannot_change_its_fits
 src/lib.rs learn::eval::tests::saved_scores_are_held_out_fits_that_reproduce_every_reported_metric
 src/lib.rs learn::eval::tests::scm_cart_boosting_and_lasso_tune_on_the_splits_tuning_groups
 src/lib.rs learn::eval::tests::serialized_scores_preserve_threshold_calls_and_ranks
