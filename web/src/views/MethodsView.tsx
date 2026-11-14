@@ -502,17 +502,34 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
       </Part>
       <Part title="Learner cross-check">
         <P>
-          GRM runs its own code for each learner. In October 2026 a check compared each learner with a standard version of the same method on 16 small test cases, under revision 7 of
-          the evaluation. Nobody has repeated the check on the revision shown here.
+          GRM runs its own code for each learner. On 14 November 2026 a check compared each learner with a standard version of the same method on 16 small test panels, at revision 14
+          of the evaluation (commit c435000). It was a software check on small test panels, and it says nothing about clinical performance. Its plan was fixed before any comparison was
+          read. The kit and the result table are in the repository, under scripts/learner-crosscheck and reference/learner-crosscheck.
         </P>
         <p className="prose-measure text-note text-ink">
-          The set covering machine, the decision tree and the random forest matched their reference on all 16 cases. The check set the boosted trees against XGBoost 3.0.5: most trees
-          were identical, and it traced each tree that differed to a known difference in rounding or in settings. GRM keeps one difference on purpose. When its boosting keeps no tree
-          it gives no call, and XGBoost always keeps at least one.
+          No difference was left without a shown cause. The set covering machine gave the same model as an independent implementation on all 224 fits. pyscm-ml 1.1.2 was asked for its
+          best rules at 435 of the steps GRM took, and GRM&apos;s rule was among them at 405. At the other 30 the library preferred a rule GRM does not have, one that rejects every
+          sample or none.
         </p>
         <p className="prose-measure text-note text-ink">
-          The check showed that the L1 logistic regression solver stopped early on some cases. Revision 8 replaced that solver, and its tests now require each saved case to converge
-          on the best known fit.
+          The decision tree agreed with scikit-learn 1.7.2 on 395 of 400 nodes: both made a leaf, or both split on a feature of the largest gain, GRM on the lowest-numbered one. Of the
+          3,200 forest trees, 2,774 agreed on every node. On the other 5 nodes, and on at least one node of each of the other 426 trees, several features had exactly equal gain and GRM
+          did not split on the lowest-numbered one. Its code gives equal gains to the lowest-numbered feature, but rounding in its own arithmetic made these equal gains differ in the
+          last digits.
+        </p>
+        <p className="prose-measure text-note text-ink">
+          Set against XGBoost 3.0.5 one tree at a time, 4,766 of 5,200 boosted trees were identical. Of the other 434, 368 came from the one panel with a single class in training, where
+          XGBoost sets a leaf below its minimum weight to zero and GRM does not. Another 64 divided the samples into the same two groups with another feature, and 2 followed from
+          XGBoost&apos;s single-precision arithmetic. Run end to end on the 15 panels with both classes in training, the two gave the same number of trees and probabilities within
+          0.0001 of each other on 11. On 2 panels GRM kept no tree and XGBoost kept one, and the probabilities were equal. GRM keeps that difference on purpose: a model with no tree
+          gives no call. On the other 2 the first tree that differed did so in one of the two ways above, and the later trees followed from it. The largest difference in a probability
+          was 0.084.
+        </p>
+        <p className="prose-measure text-note text-ink">
+          The L1 logistic regression was not compared again. Its own tests ran at the same commit and 28 passed; they require each saved case to converge on the best known fit. One more
+          of its tests needs files that are not in the repository and did not run. An earlier check, in October 2026 under revision 7, reported that the set covering machine, the
+          decision tree and the random forest matched their reference on all 16 cases. It also showed that the L1 solver of that time stopped early on some cases, and revision 8
+          replaced that solver. The files of that check are lost, so that statement cannot be checked, and it stays here only as history.
         </p>
       </Part>
       {unsupported.length > 0 ? (
