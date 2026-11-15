@@ -10,6 +10,8 @@ grm learn --species SLUG --only DATASET[,DATASET...] --force --exp-null-refit FI
 
 With `--exp-null-refit FILE`, `grm learn` writes the same reports as without it, as long as FILE takes every line: the same fits, the same scores. In addition, for each boosting or lasso outer fold whose fit is null, it refits the fold's training samples under the fallback settings below and appends one JSON line to FILE. The evaluator calls the experiment after the fold's production fit and outside its timer (`learn::eval::fit_outer_folds`, which `evaluate` calls for each split), only for a null fit, and with the fold's own seeds: `--seed` for every partition, and `--learner-seed`, when given, for boosting's column samples.
 
+The flag is refused beside `--fold-file` ([fold-file.md](fold-file.md)): the argument parser stops before FILE is opened, and `learn::eval::evaluate_assigned` refuses to run while the experiment is on. A record names every sample outside a fold's training samples as its test samples, which a fold file's unused genomes would make wrong, and the records are read against the drawn splits of the dataset reports.
+
 `EVALUATION_REVISION` and the report schema do not change, because no report field changes. `tests/null_fold_refit.rs` checks that an evaluation with the flag equals one without it on every field except wall-clock `seconds`, and that FILE keeps the lines it held. A test in `learn::eval` checks that each record is what the fallbacks fit when called directly with that fold's candidates, seeds and tuning groups.
 
 ## FILE

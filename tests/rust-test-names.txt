@@ -235,6 +235,7 @@ src/lib.rs learn::eval::tests::a_move_that_empties_a_class_from_a_random_fold_fa
 src/lib.rs learn::eval::tests::a_path_without_a_converged_candidate_fails_with_full_context
 src/lib.rs learn::eval::tests::a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers
 src/lib.rs learn::eval::tests::a_split_that_did_not_run_keeps_no_fold_models
+src/lib.rs learn::eval::tests::a_supplied_partition_is_refused_while_the_null_fold_refit_is_on
 src/lib.rs learn::eval::tests::a_supplied_partition_that_cannot_be_scored_fairly_is_refused
 src/lib.rs learn::eval::tests::a_tested_sample_takes_its_own_score_wherever_it_sits_in_the_sample_order
 src/lib.rs learn::eval::tests::a_training_prevalence_of_exactly_one_half_is_a_resistant_call
@@ -547,6 +548,7 @@ src/main.rs tests::learn_ends_with_the_release_line_and_a_draw_with_a_line_of_it
 src/main.rs tests::learn_evaluates_with_the_budget_and_seeds_its_flags_give
 src/main.rs tests::learn_refuses_a_fold_file_beside_either_seed_flag
 src/main.rs tests::learn_refuses_a_structure_and_matrix_built_from_other_ksets
+src/main.rs tests::learn_refuses_the_null_fold_refit_beside_a_fold_file
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told

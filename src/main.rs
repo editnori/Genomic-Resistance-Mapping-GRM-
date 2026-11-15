@@ -132,10 +132,12 @@ enum Command {
         /// which records the file's SHA-256, and no report. Takes one
         /// species; --force replaces an existing result. It runs at the
         /// release's seeds, so --seed and --learner-seed are refused with it.
+        /// --exp-null-refit is refused with it too: it records the folds
+        /// grm learn draws.
         #[arg(
             long,
             requires = "fold_out",
-            conflicts_with_all = ["only", "seed", "learner_seed"]
+            conflicts_with_all = ["only", "seed", "learner_seed", "exp_null_refit"]
         )]
         fold_file: Option<PathBuf>,
         /// Directory for the --fold-file result.
@@ -162,7 +164,7 @@ enum Command {
         /// file. While the file takes every line, the reports equal those of
         /// a run without it. A line it does not take ends the learn with an
         /// error naming the file and the fold, before that dataset's report
-        /// is written.
+        /// is written. Refused beside --fold-file.
         #[arg(long)]
         exp_null_refit: Option<PathBuf>,
     },
@@ -2436,6 +2438,47 @@ mod tests {
             (fold_file, seed, learner_seed),
             (Some("f.json".into()), RELEASE_SEED, None)
         );
+    }
+
+    /// The null-fold experiment records the folds `grm learn` draws, so the
+    /// parser refuses `--exp-null-refit` beside `--fold-file`, before FILE is
+    /// opened, in either order. Without `--fold-file` the flag parses as it
+    /// did.
+    #[test]
+    fn learn_refuses_the_null_fold_refit_beside_a_fold_file() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let refit = ["--exp-null-refit", "r.jsonl"];
+        let fold = ["--fold-file", "f.json", "--fold-out", "o"];
+        for bad in [
+            [&refit[..], &fold[..]].concat(),
+            [&fold[..], &refit[..]].concat(),
+        ] {
+            let error = parse(&bad)
+                .err()
+                .unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::ArgumentConflict,
+                "{bad:?}"
+            );
+            let message = error.to_string();
+            assert!(
+                message.contains("--exp-null-refit") && message.contains("--fold-file"),
+                "{message}"
+            );
+        }
+        let Command::Learn {
+            fold_file,
+            exp_null_refit,
+            ..
+        } = parse(&refit).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((fold_file, exp_null_refit), (None, Some("r.jsonl".into())));
     }
 
     /// `grm learn` draws at the release's seed unless told otherwise, and

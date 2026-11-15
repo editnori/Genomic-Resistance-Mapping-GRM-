@@ -1390,7 +1390,7 @@ struct OuterFits {
 /// is fitted exactly as a drawn one. With the null-fold experiment on
 /// (`null_refit::enabled`), each boosting or lasso fold that comes out null
 /// is refitted after its timer with these same inputs and seeds and recorded
-/// (`null_refit::record_fold`).
+/// (`null_refit::record_fold`); `evaluate_assigned` refuses to run then.
 #[allow(clippy::too_many_arguments)]
 fn fit_outer_folds(
     dataset: &str,
@@ -1527,6 +1527,13 @@ pub const DRAWN_SCHEMES: [&str; 2] = ["random", "lineage"];
 /// give no candidate feature, or when an inner fold or tuning holdout lacks
 /// a class. `cfg.folds` is not read: `folds` is the count.
 /// Final models and the MIC regression are not fitted.
+///
+/// It refuses to run while the null-fold experiment is on
+/// (`null_refit::enabled`): a record names a fold's test samples as every
+/// sample outside its training ones, which a partition with unused samples
+/// would make wrong, and the records are read against the drawn splits of a
+/// dataset report. `grm learn` refuses `--exp-null-refit` beside
+/// `--fold-file` for the same reason.
 #[allow(clippy::too_many_arguments)]
 pub fn evaluate_assigned(
     dataset: &str,
@@ -1539,6 +1546,10 @@ pub fn evaluate_assigned(
     folds: usize,
     cfg: &EvalConfig,
 ) -> Result<AssignedSplit> {
+    ensure!(
+        !null_refit::enabled(),
+        "the null-fold refit records the folds grm learn draws; it does not run on a supplied partition"
+    );
     let min_support = supplied_support_floor(roles);
     check_inputs(x, y, groups, duplicates, min_support, cfg)?;
     let n = x.cols;
@@ -5711,6 +5722,51 @@ mod tests {
             lasso_lambdas: 8,
             ..Default::default()
         }
+    }
+
+    /// The null-fold experiment beside a supplied partition (the merge of
+    /// `main` after #119). `evaluate_assigned` fits through
+    /// `fit_outer_folds`, as `evaluate` does, but a record names every sample
+    /// outside a fold's training ones as tested, which an unused sample would
+    /// make wrong. So with the experiment on it is refused before any fit
+    /// and no record is written; with it off the same call scores the
+    /// partition, on which a boosting or lasso fold is null.
+    #[test]
+    fn a_supplied_partition_is_refused_while_the_null_fold_refit_is_on() {
+        let (x, y, groups) = null_fold_fixture();
+        let cfg = null_fold_config();
+        let [(scheme, random), _] = outer_splits(&y, &groups, &[], &cfg);
+        assert_eq!(scheme, "random");
+        let roles: Vec<Role> = random.iter().map(|&f| Role::Test(f)).collect();
+        let run = || {
+            evaluate_assigned(
+                "fixture__fixturemycin",
+                "supplied",
+                &x,
+                &y,
+                &groups,
+                &[],
+                &roles,
+                cfg.folds,
+                &cfg,
+            )
+        };
+        let scored = run().unwrap();
+        assert!(
+            scored
+                .result
+                .learners
+                .iter()
+                .filter(|l| l.learner == "gbt" || l.learner == "lasso")
+                .any(|l| l.fold_complexity.contains(&0.0))
+        );
+        let (refused, lines) = null_refit::capture(run);
+        let error = refused.err().expect("refused while the experiment is on");
+        assert_eq!(
+            format!("{error:#}"),
+            "the null-fold refit records the folds grm learn draws; it does not run on a supplied partition"
+        );
+        assert!(lines.is_empty(), "{lines:?}");
     }
 
     /// The call site of the null-fold experiment (S2 of the review of 15 Nov
