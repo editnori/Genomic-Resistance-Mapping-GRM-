@@ -64,6 +64,11 @@ impl Layout {
         self.species_dir(slug).join("matrix")
     }
 
+    /// Scratch for `grm matrix --column-blocks`, removed when it ends.
+    pub fn partials_dir(&self, slug: &str) -> PathBuf {
+        self.species_dir(slug).join("matrix-partials")
+    }
+
     pub fn results_dir(&self, slug: &str) -> PathBuf {
         self.species_dir(slug).join("results")
     }

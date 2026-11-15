@@ -1,0 +1,12 @@
+{
+ "started_utc": "2026-11-15T14:30:06+00:00",
+ "binary": "/home/user/scratch/lassoscan/target/release/examples/lasso-scan",
+ "binary_sha256": "469f0f0196e0aa8a9456c9c21eaf4eed46ec32fe4c2d4852b58089a1b7909eff",
+ "nproc": 16,
+ "threads": 16,
+ "cpu": "AMD Ryzen 9 9950X 16-Core Processor",
+ "order": [
+  "mycobacterium_tuberculosis__delamanid"
+ ],
+ "dump": null
+}

@@ -569,6 +569,23 @@ class LogLines(Case):
                                       "c__z": "inputs changed since the report was written"})
         self.assertEqual(audit.species_finished, {"fixture_species"})
 
+    def test_a_draw_end_line_does_not_finish_its_species(self):
+        # `grm learn` at another seed ends with the draw lines below, pinned by
+        # src/main.rs's learn_ends_with_the_release_line_and_a_draw_with_a_line_of_its_own.
+        # In a log that mixes draws with a release run, only the release line finishes a species.
+        with tempfile.TemporaryDirectory() as tmp:
+            log = os.path.join(tmp, "log")
+            with open(log, "w") as f:
+                f.write("\n".join([
+                    "fixture_species: 3 draw reports written to root/species/fixture_species/draws/seed-43",
+                    "fixture_species: 3 draw reports written to root/species/fixture_species/draws/seed-42-learner-7",
+                    "other_species: 3 dataset reports written",
+                ]) + "\n")
+            audit.LOG = log
+            audit.species_finished.clear()
+            audit.done_datasets()
+        self.assertEqual(audit.species_finished, {"other_species"})
+
 
 class Provenance(Case):
     def test_a_file_older_than_launch(self):

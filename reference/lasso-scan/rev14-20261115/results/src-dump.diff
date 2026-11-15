@@ -1,0 +1,120 @@
+diff -ru src/src/learn/eval.rs src-dump/src/learn/eval.rs
+--- src/src/learn/eval.rs	2026-11-15 03:49:24.000000000 +0000
++++ src-dump/src/learn/eval.rs	2026-11-15 14:08:14.517338663 +0000
+@@ -553,13 +553,114 @@
+             progress("path", p)
+         });
+     trace.path = path.iter().map(|f| f.convergence).collect();
+-    fit_lasso_from_path(x, y, &val, path, context, |lambdas| {
++    // lassoscan dump (scratch instrumentation, not in the repository): with
++    // GRM_LASSO_DUMP set to a directory, write this fit's partition, path,
++    // refit and scores there. It reads the fit's values and changes none.
++    let dump_dir = std::env::var_os("GRM_LASSO_DUMP");
++    let path_copy = dump_dir.as_ref().map(|_| path.clone());
++    let mut refit_copy: Option<Vec<lasso::LassoFit>> = None;
++    let result = fit_lasso_from_path(x, y, &val, path, context, |lambdas| {
+         let refit = lasso::refit_path_with_status(x, y, train, &feats, lambdas, &mut |p| {
+             progress("refit", p)
+         });
+         trace.refit = refit.iter().map(|f| f.convergence).collect();
++        if dump_dir.is_some() {
++            refit_copy = Some(refit.clone());
++        }
+         refit
+-    })
++    });
++    if let Some(dir) = dump_dir {
++        lassoscan_dump(
++            std::path::Path::new(&dir),
++            context,
++            seed,
++            x,
++            y,
++            train,
++            &fit_m,
++            &val,
++            &feats,
++            path_copy.unwrap_or_default(),
++            refit_copy.unwrap_or_default(),
++            &result,
++        );
++    }
++    result
++}
++
++#[allow(clippy::too_many_arguments)]
++fn lassoscan_dump(
++    dir: &std::path::Path,
++    context: LassoContext<'_>,
++    seed: u64,
++    x: &BitMatrix,
++    y: &Bits,
++    train: &Bits,
++    fit_m: &Bits,
++    val: &Bits,
++    feats: &[u32],
++    path: Vec<lasso::LassoFit>,
++    refit: Vec<lasso::LassoFit>,
++    result: &Result<(Scored, Option<lasso::LassoModel>)>,
++) {
++    let fold = context
++        .outer_fold
++        .map_or("final".to_string(), |f| f.to_string());
++    let fits = |v: &[lasso::LassoFit]| -> Vec<serde_json::Value> {
++        v.iter()
++            .map(|f| serde_json::json!({"model": f.model, "convergence": f.convergence}))
++            .collect()
++    };
++    let ones = |b: &Bits| b.iter_ones().collect::<Vec<usize>>();
++    let (scores, complexity, audit) = match result {
++        Ok((s, _)) => (s.scores.clone(), Some(s.complexity), s.lasso_fit.clone()),
++        Err(_) => (None, None, None),
++    };
++    let mut v = serde_json::json!({
++        "dataset": context.dataset,
++        "scheme": context.scheme,
++        "outer_fold": context.outer_fold,
++        "seed": seed,
++        "n": x.cols,
++        "y": ones(y),
++        "train": ones(train),
++        "fit": ones(fit_m),
++        "val": ones(val),
++        "features": feats,
++        "path": fits(&path),
++        "refit": fits(&refit),
++        "scores": scores,
++        "complexity": complexity,
++        "audit": audit,
++        "error": result.as_ref().err().map(|e| format!("{e:#}")),
++    });
++    let full = std::env::var("GRM_LASSO_DUMP_FULL").ok()
++        == Some(format!("{}|{}|{}", context.dataset, context.scheme, fold));
++    if full {
++        let columns: Vec<Vec<usize>> = feats
++            .iter()
++            .map(|&f| {
++                let row = x.row(f as usize);
++                let mut c = Vec::new();
++                for (wi, &word) in row.iter().enumerate() {
++                    let mut w = word;
++                    while w != 0 {
++                        let i = wi * 64 + w.trailing_zeros() as usize;
++                        if i < x.cols {
++                            c.push(i);
++                        }
++                        w &= w - 1;
++                    }
++                }
++                c
++            })
++            .collect();
++        v["columns"] = serde_json::json!(columns);
++    }
++    let name = format!("{}__{}__{}.json", context.dataset, context.scheme, fold);
++    if let Err(e) = std::fs::write(dir.join(&name), v.to_string()) {
++        eprintln!("lassoscan dump: cannot write {name}: {e}");
++    }
+ }
+ 
+ /// Select and refit one already-solved path. Keeping this separate lets the

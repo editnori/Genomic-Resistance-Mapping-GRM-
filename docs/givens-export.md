@@ -6,7 +6,7 @@ The file covers evaluation terms, the assumptions a report figure rests on and a
 
 ## Contents
 
-It holds 22 definitions, 24 links between them and 3 assumptions. Its 36 measured lines split into 28 read from a file and 8 quoted from a document. It marks 2 entries with what GRM has not counted.
+It holds 22 definitions, 24 links between them and 3 assumptions. Its 37 measured lines split into 29 read from a file and 8 quoted from a document. It marks 1 entry with what GRM has not counted.
 
 The three assumptions:
 
@@ -47,7 +47,7 @@ The files read:
 | `reference/release-summary/rev12-274-20261105/index-counts.json` | learner rows that left genomes without a call |
 | `reference/release-summary/rev12-274-20261105/guidance.json` | those rows, by learner |
 | `reference/release-summary/rev12-274-20261105/summary.json` | two learners' median balanced accuracy on the lineage split |
-| `reference/release-summary/rev14-274-20261112/index-counts.json` | learner rows, the rows that carry the flag, the error-rate counts compared |
+| `reference/release-summary/rev14-274-20261112/index-counts.json` | learner rows, the rows that carry the flag, the error-rate counts compared, the datasets that hold labels inferred from a MIC |
 | `reference/release-summary/rev14-274-20261112/guidance.json` | datasets that have each split |
 | `reference/release-summary/rev14-274-20261112/summary.json` | datasets, lineage splits, the same two medians |
 | `web/src/data/outside-study.json` | the outside-study readings, against revision 12 reports |
@@ -67,7 +67,6 @@ The lines quoted from a document:
 
 The export marks what GRM has not measured.
 
-- **Labels inferred from a MIC.** The released index has the field. No committed file counts the datasets that hold such labels, so the entry carries `unmeasured` and no number.
 - **Duplicate groups after revision 9.** The two counts of duplicate groups are of the revision 9 cohorts. No committed file counts them again on a later revision.
 - **Six document lines.** The first three rows of the table above have no committed file behind them. The repository states them, and no test can rebuild them.
 - **Three empty report fields.** A report field can be empty because a measure does not apply to a learner, because a denominator is zero, or because an older report lacks the field. GRM keeps no count of any of the three, and the export has no entry for them.
@@ -82,6 +81,8 @@ The file names no dataset, species or antibiotic. It also leaves out:
 - MIC values and the MIC regression's figures;
 - sequences, k-mers, variants and genes;
 - the error-limit screen's counts.
+
+The entry on labels inferred from a MIC counts datasets. It reads the datasets where the released index records at least one such label, of the datasets whose entry records the count, from the block `labels_from_mic_excluded` of `index-counts.json` ([release-summary.md](release-summary.md)). It holds no MIC value, and a dataset whose entry lacks the count is never read as zero.
 
 The script enforces this with two lists and one screen. It reads numbers from the seven files above only. In each it reads only the named count fields, and it counts the datasets that have no lineage split without reading their ids.
 
@@ -115,7 +116,7 @@ The page leaves out the quoted sentences and each sha256, which stay in the file
 - a line's revision differs from the revision its files name;
 - an entry with no count lacks `unmeasured`.
 
-It also plants faults in a copy of the spec, and each must stop the script: a species, an antibiotic, a dataset or a sequence in a string, a quote its document does not hold, a file or a field outside the lists, an unknown field, a count above its denominator, and a number written by hand.
+It also plants faults in a copy of the spec, and each must stop the script: a species, an antibiotic, a dataset or a sequence in a string, a quote its document does not hold, a file or a field outside the lists, an unknown field, a count above its denominator, and a number written by hand. A copy of `index-counts.json` whose count of labels inferred from a MIC is missing or null must stop it too, so such a count is never written as zero.
 
 The suite tries every name the screen has from the vocabulary alone, and each one stops the script. It also renames each table of a copy of the vocabulary. The script must then stop, because a table it cannot read would shrink the screen.
 

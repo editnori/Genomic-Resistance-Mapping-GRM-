@@ -2,7 +2,31 @@ import { describe, expect, it } from "vitest";
 import { fixtureFile } from "../../dev/fixtures/files";
 import { parseDataset, parseManifest } from "../validate";
 import type { DatasetReport, FeatureCard, Learner, LearnerResult, Scheme } from "../schema";
-import { answerSentence, bestLearner, catalogRuleWords, contextRuns, familyLabel, featureLabel, featurePlace, featureWhere, NO_BEST_LEARNER, oofErrors, outscoringPartial, panelCalls, ruleWords, unexplained } from "./dataset";
+import {
+  answerSentence,
+  bestLearner,
+  catalogRuleWords,
+  contextRuns,
+  familiesNamed,
+  familyLabel,
+  familyOfGroup,
+  familyRuleWords,
+  featureLabel,
+  featurePlace,
+  featureWhere,
+  indexRuleWords,
+  NO_BEST_LEARNER,
+  RULE_TEXT_VERSION,
+  ruleWordingNote,
+  oofErrors,
+  outscoringPartial,
+  panelCalls,
+  ruleWords,
+  SEVERAL_FAMILIES_NOTE,
+  termLabel,
+  tieWords,
+  unexplained,
+} from "./dataset";
 import { encodeBits } from "../bits";
 
 const manifest = parseManifest(fixtureFile("/data/index.json"));
@@ -93,8 +117,140 @@ describe("words", () => {
   it("places a feature by codon range or by its nearest gene", () => {
     expect(featurePlace(card({ gene: "gyrA", codons: [83, 87] }))).toBe("gyrA codons 83–87");
     expect(featurePlace(card({ gene: "gyrA", codons: [83, 83] }))).toBe("gyrA codon 83");
-    expect(featurePlace(card({ nearest: ["mgrB", 46] }))).toBe("intergenic, 46 bp from mgrB");
+    expect(featurePlace(card({ nearest: ["mgrB", 46] }))).toBe("outside protein-coding genes, 46 bp from mgrB");
     expect(featurePlace(card(null))).toBeNull();
+  });
+
+  it("says how far a rule term's k-mers sit from the gene it is named after when they sit outside it", () => {
+    // Synthetic cards. Inside a gene the term keeps the gene's name.
+    expect(termLabel(card({ gene: "mgrB", codons: [3, 12] }), 12)).toBe("mgrB");
+    // Outside every gene the locus names the nearest one, and the term says so.
+    const outside = card({ gene: "mgrB", product: "PhoP/PhoQ regulator MgrB", nearest: ["mgrB", 46] });
+    expect(termLabel(outside, 12)).toBe("k-mers 46 bp from the nearest annotated protein-coding gene, mgrB");
+    expect(termLabel(card({ product: "hypothetical protein", nearest: ["hypothetical protein", -2502] }), 12)).toBe("k-mers 2,502 bp from the nearest annotated protein-coding gene, hypothetical protein");
+    const features = new Map([[12, outside]]);
+    expect(ruleWords({ feature: 12, presence: true }, features)).toBe("Presence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB");
+    expect(ruleWords({ feature: 12, presence: false }, features)).toBe("Absence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB");
+    // A catalog family is named wherever the k-mers sit; no name leaves the number.
+    expect(termLabel(card({ gene: "tnpA", nearest: ["tnpA", 120] }, ["blaKPC"]), 12)).toBe("blaKPC");
+    expect(termLabel(card({ nearest: ["", 9] }), 12)).toBe("k-mer feature 12");
+    expect(termLabel(card(null), 12, "feature 12")).toBe("feature 12");
+    expect(termLabel(undefined, 12)).toBe("k-mer feature 12");
+    // A table that prints the place in its own column keeps the short name.
+    expect(featureLabel(outside, 12)).toBe("mgrB");
+    expect(featureWhere(outside, 12)).toBe("outside protein-coding genes, 46 bp from mgrB");
+  });
+
+  it("counts a tied rule term among the features that separate the isolates equally well", () => {
+    // n_equivalent counts the other rules, so 3 of them make 4 features.
+    expect(tieWords(3, 0)).toBe("one of 4 features that separate these isolates equally well");
+    expect(tieWords(1, 1)).toBe("one of 2 features that separate the isolates the earlier rules left undecided equally well");
+    expect(tieWords(21523, 2)).toBe("one of 21,524 features that separate the isolates the earlier rules left undecided equally well");
+    expect(tieWords(0, 0)).toBeNull();
+    expect(tieWords(0, 3)).toBeNull();
+  });
+
+  it("reads a gene group's family back from its name", () => {
+    expect(familyOfGroup("blaOXA (OXA-48 family)")).toBe("blaOXA");
+    expect(familyOfGroup("blaKPC")).toBe("blaKPC");
+    expect(familyOfGroup("aac(6')-Ib")).toBe("aac(6')-Ib");
+    expect(familyOfGroup("tet(A)")).toBe("tet(A)");
+    expect(familyOfGroup("x (two words family)")).toBe("x (two words family)");
+  });
+
+  it("says which named gene groups GRM's known-gene rule for the drug uses, and nothing where the report has no row", () => {
+    // Synthetic gene-group rows: the groups called in the dataset's genomes.
+    const group = (name: string, counts: boolean) => ({ group: name, class: "", subclass: "", n_resistant: 1, n_susceptible: 1, counts_for_rule: counts });
+    const groups = [group("ble", false), group("blaKPC", true), group("blaNDM", true), group("blaOXA (OXA-48 family)", true), group("blaOXA (OXA-1 family)", false), group("qacE", false), group("sul1", false)];
+    const catalog = { ...report.catalog!, groups };
+    // GRM's rule is the subject and the group its object: the clause is about
+    // GRM's rule, and never says that a gene "counts".
+    const rule = "GRM's known-gene rule for this drug";
+    expect(familyRuleWords(["blaKPC"], catalog)).toBe(`${rule} uses blaKPC`);
+    expect(familyRuleWords(["sul1"], catalog)).toBe(`${rule} does not use sul1`);
+    expect(familyRuleWords(["qacE", "sul1"], catalog)).toBe(`${rule} does not use qacE or sul1`);
+    expect(familyRuleWords(["blaOXA"], catalog)).toBe(`${rule} uses blaOXA (OXA-48 family) but not blaOXA (OXA-1 family)`);
+    expect(familyRuleWords(["sul1", "qacE", "blaKPC", "blaNDM"], catalog)).toBe(`${rule} uses blaKPC and blaNDM but not qacE or sul1`);
+    // blaAFM has no row: nothing is said of it, and the rest still stands.
+    expect(familyRuleWords(["blaNDM", "ble", "blaAFM"], catalog)).toBe(`${rule} uses blaNDM but not ble`);
+    // A group with the family's bare name beside one with a subfamily is
+    // written apart from it, on whichever side it falls; alone it keeps its name.
+    const split = { ...catalog, groups: [group("aac(6')-Ib (AAC(6')-Ib family)", true), group("aac(6')-Ib", false), group("blaOXA", true), group("blaOXA (OXA-1 family)", false), group("armA", false)] };
+    expect(familyRuleWords(["aac(6')-Ib"], split)).toBe(`${rule} uses aac(6')-Ib (AAC(6')-Ib family) but not the group named aac(6')-Ib alone`);
+    expect(familyRuleWords(["blaOXA"], split)).toBe(`${rule} uses the group named blaOXA alone but not blaOXA (OXA-1 family)`);
+    expect(familyRuleWords(["armA"], split)).toBe(`${rule} does not use armA`);
+    // A row that does not say whether the rule uses it is read as no row.
+    const silent = { ...catalog, groups: [{ ...group("sul1", false), counts_for_rule: undefined as unknown as boolean }, group("blaKPC", true)] };
+    expect(familyRuleWords(["sul1"], silent)).toBeNull();
+    expect(familyRuleWords(["blaKPC", "sul1"], silent)).toBe(`${rule} uses blaKPC`);
+    // No row for any named family, no families, or no catalog block: nothing.
+    expect(familyRuleWords(["tet(A)"], catalog)).toBeNull();
+    expect(familyRuleWords(["blaAFM", "tet(A)"], catalog)).toBeNull();
+    expect(familyRuleWords([], catalog)).toBeNull();
+    expect(familyRuleWords(["blaKPC"], null)).toBeNull();
+    expect(familyRuleWords(["blaKPC"], { ...catalog, groups: [] })).toBeNull();
+  });
+
+  it("writes each rule term as the index does, on the cases the index writer is held to", async () => {
+    // tests/data/rule-text-cases.json: synthetic reports and the words
+    // report::rule_text must give them (src/report.rs reads the same file).
+    const fs = (await import(/* @vite-ignore */ `node:${"fs"}`)) as { readFileSync(path: string, encoding: string): string };
+    const cwd = (globalThis as unknown as { process: { cwd(): string } }).process.cwd();
+    const file = JSON.parse(fs.readFileSync(`${cwd}/../tests/data/rule-text-cases.json`, "utf8")) as { rule_text_version: number; cases: Record<string, { report: DatasetReport; scm_rules: string[] }> };
+    expect(file.rule_text_version).toBe(RULE_TEXT_VERSION);
+    const names = Object.keys(file.cases);
+    expect(names).toEqual(["outside_the_named_gene", "ties", "counts_for_the_drugs_rule", "no_catalog_block", "a_group_named_alone", "gene_groups_out_of_order", "a_row_without_the_flag"]);
+    const written = (r: DatasetReport) => r.models.scm.rules.map((_, i) => indexRuleWords(r, i));
+    for (const name of names) {
+      const { report: r, scm_rules: words } = file.cases[name]!;
+      expect([name, written(r)]).toEqual([name, words]);
+    }
+    // One case holds its gene-group rows out of name order on both sides of
+    // the clause; the index writer sorts the names, and so must these words,
+    // whatever order the rows come in.
+    const { report: shuffled, scm_rules: sortedWords } = file.cases.gene_groups_out_of_order!;
+    const rows = shuffled.catalog!.groups.map((g) => g.group);
+    expect(rows).not.toEqual([...rows].sort());
+    expect(sortedWords[0]).toBe("presence of blaOXA; GRM's known-gene rule for this drug uses blaOXA (OXA-23 family) and blaOXA (OXA-51 family)");
+    expect(written({ ...shuffled, catalog: { ...shuffled.catalog!, groups: [...shuffled.catalog!.groups].reverse() } })).toEqual(sortedWords);
+    // One case holds rows that do not say whether the rule uses their group:
+    // nothing is said of those groups.
+    const { report: silent, scm_rules: silentWords } = file.cases.a_row_without_the_flag!;
+    expect(silent.catalog!.groups.filter((g) => g.counts_for_rule === undefined).map((g) => g.group)).toEqual(["blaKPC", "sul1"]);
+    expect(silentWords[0]).toBe("presence of blaKPC");
+  });
+
+  it("writes the synthetic fixture's index in the same words, and numbers the wording", () => {
+    expect(manifest.rule_text_version).toBe(RULE_TEXT_VERSION);
+    let terms = 0;
+    for (const row of manifest.datasets) {
+      const r = parseDataset(fixtureFile(`/data/datasets/${row.id}.json`));
+      expect([row.id, row.scm_rules]).toEqual([row.id, r.models.scm.rules.map((_, i) => indexRuleWords(r, i))]);
+      terms += row.scm_rules.length;
+    }
+    expect(terms).toBeGreaterThan(0);
+  });
+
+  it("names the release's revision and rule wording beside a warning on counting rules by what they name", () => {
+    const tail = " A later release can word the same rule differently, so a count of rules by what they name holds for one wording only.";
+    expect(ruleWordingNote({ evaluation_revision: 14, rule_text_version: 3 })).toBe(`The rule words in the datasets table come from this release's index (evaluation revision 14, rule wording 3).${tail}`);
+    // The served release's index has no wording number, and the note says so: the next release has the
+    // same evaluation revision, so the revision alone would not tell the two wordings apart.
+    expect(ruleWordingNote({ evaluation_revision: 14 })).toBe(
+      `The rule words in the datasets table come from this release's index (evaluation revision 14, rule wording 2 or earlier: the index gives no number).${tail}`,
+    );
+    expect(ruleWordingNote({})).toBe(`The rule words in the datasets table come from this release's index (rule wording 2 or earlier: the index gives no number).${tail}`);
+    expect(ruleWordingNote({ evaluation_revision: 14 })).not.toBe(ruleWordingNote({ evaluation_revision: 14, rule_text_version: 3 }));
+  });
+
+  it("sees a term that names several catalog families in the index's words, and no other", () => {
+    expect(familiesNamed("presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)")).toBe(3);
+    expect(familiesNamed("absence of k-mers matching 12 catalog families (a, b); GRM's known-gene rule for this drug uses blaNDM but not ble")).toBe(12);
+    expect(familiesNamed("presence of blaKPC")).toBeNull();
+    expect(familiesNamed("presence of blaKPC; GRM's known-gene rule for this drug uses blaKPC")).toBeNull();
+    expect(familiesNamed("presence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB")).toBeNull();
+    expect(familiesNamed("presence of feature 4")).toBeNull();
+    expect(SEVERAL_FAMILIES_NOTE).toBe("Not a list of genes an isolate carries: one k-mer pattern matches all of these families.");
   });
 });
 
@@ -141,6 +297,20 @@ describe("answer sentence", () => {
     const rules = Array.from({ length: 5 }, () => report.models.scm.rules[0]!);
     const text = answerSentence({ ...report, models: { ...report.models, scm: { ...report.models.scm, rules } } });
     expect(text.startsWith("A 5-rule set covering machine led by presence of")).toBe(true);
+  });
+
+  it("says when other features tie the rule it names, and nothing when none does", () => {
+    // The fixture report with its first step's ties set by hand.
+    const tied = (rules: number, nEquivalent: number) => {
+      const scm = report.models.scm;
+      const first = { ...scm.steps[0]!, n_equivalent: nEquivalent };
+      return answerSentence({ ...report, models: { ...report.models, scm: { ...scm, rules: Array.from({ length: rules }, () => scm.rules[0]!), steps: [first, ...scm.steps.slice(1)] } } });
+    };
+    expect(tied(1, 3).endsWith(". The rule is one of 4 features that separate these isolates equally well.")).toBe(true);
+    expect(tied(5, 3).endsWith(". The first rule is one of 4 features that separate these isolates equally well.")).toBe(true);
+    expect(tied(2, 21523).endsWith(". The first rule is one of 21,524 features that separate these isolates equally well.")).toBe(true);
+    expect(tied(1, 0)).not.toContain("equally well");
+    expect(tied(5, 0)).not.toContain("equally well");
   });
 });
 

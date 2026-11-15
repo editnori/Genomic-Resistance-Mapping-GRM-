@@ -1,0 +1,44 @@
+with vs release: sample ids equal and in the same order: True (release 389, refit 389)
+with vs release: samples[].resistant equal: True
+with vs release: samples[].catalog_resistant equal: True
+with vs release: samples[].lineage equal: True
+with vs release: input_fingerprint equal: True (5d008abcd7f3e222 / 5d008abcd7f3e222)
+with vs release: eval_config equal: True
+with vs release: lineage/scm: scores differing 0 of 389, max abs diff 0
+with vs release: lineage/cart: scores differing 0 of 389, max abs diff 0
+with vs release: lineage/rf: scores differing 0 of 389, max abs diff 0
+with vs release: lineage/gbt: scores differing 0 of 389, max abs diff 0
+with vs release: lineage/lasso: scores differing 0 of 389, max abs diff 0
+with vs release: lineage/catalog: scores differing 0 of 389, max abs diff 0
+with vs release: random/scm: scores differing 0 of 389, max abs diff 0
+with vs release: random/cart: scores differing 0 of 389, max abs diff 0
+with vs release: random/rf: scores differing 0 of 389, max abs diff 0
+with vs release: random/gbt: scores differing 0 of 389, max abs diff 0
+with vs release: random/lasso: scores differing 0 of 389, max abs diff 0
+with vs release: random/catalog: scores differing 0 of 389, max abs diff 0
+with vs release: every out-of-fold score equal: True
+cutoff check: released tp, fn, tn, fp recomputed from released scores at >= 0.5: True
+catalog row scores equal samples[].catalog_resistant: True
+without vs with: sample ids = with minus the removed genomes, same order: True (without 308, expected 308, removed listed 81, removed present in with 81)
+without vs with: samples[].resistant equal on every remaining sample: True
+without vs with: samples[].catalog_resistant equal on every remaining sample: True
+without vs with: samples[].lineage equal on every remaining sample: True
+without vs with: eval_config equal: True
+counts.samples: with 389 without 308
+counts.resistant: with 94 without 60
+counts.susceptible: with 295 without 248
+counts.min_support: with 3 without 3
+counts.lineages: with 226 without 180
+counts.k: with 31 without 31
+counts.features: with 219971 without 163069
+counts.patterns: with 221113 without 202892
+placebo placebo-1.ids: sample ids = with minus its removal: True; eval_config equal: True
+placebo placebo-2.ids: sample ids = with minus its removal: True; eval_config equal: True
+placebo placebo-3.ids: sample ids = with minus its removal: True; eval_config equal: True
+placebo placebo-4.ids: sample ids = with minus its removal: True; eval_config equal: True
+placebo placebo-5.ids: sample ids = with minus its removal: True; eval_config equal: True
+placebo placebo-6.ids: sample ids = with minus its removal: True; eval_config equal: True
+placebo placebo-7.ids: sample ids = with minus its removal: True; eval_config equal: True
+placebo placebo-8.ids: sample ids = with minus its removal: True; eval_config equal: True
+placebo placebo-9.ids: sample ids = with minus its removal: True; eval_config equal: True
+placebo placebo-10.ids: sample ids = with minus its removal: True; eval_config equal: True

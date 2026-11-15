@@ -314,6 +314,10 @@ class Numbers(unittest.TestCase):
         self.assertEqual((reported, reported + of("grm:state/no_report", "no report")[0]), (datasets, curated))
         read, held = of("grm:outside_population/primary", "can be read")
         self.assertEqual(read + of("grm:reading/not_readable", "cannot be read")[0], held)
+        mic, with_field = of("grm:state/label_from_mic_excluded", "inferred from a MIC")
+        self.assertEqual(with_field, datasets)
+        self.assertLess(0, mic)
+        self.assertLess(mic, datasets)
 
     def test_the_counts_are_the_documents(self):
         new = "grm:given/figure-holds-on-new-studies"
@@ -353,6 +357,10 @@ class Numbers(unittest.TestCase):
         flagged = of(same_genomes, "scored on every genome under the flag")[0]
         self.assertIn(f"In revision 14, the {flagged} learner rows that carry the flag are scored on every genome",
                       text("docs/release-summary.md"))
+        mic, datasets = of("grm:state/label_from_mic_excluded", "inferred from a MIC")
+        self.assertIn(f"the index records `labels_from_mic_excluded` on {datasets} of its {datasets} datasets. On {mic} "
+                      f"of them GRM inferred at least one label from a MIC and left it out of training and scoring",
+                      " ".join(text("docs/release-summary.md").split()))
         for name in ("boosted trees", "lasso"):
             values = line(same_genomes, f"{name}' median" if name.endswith("s") else f"{name}'s median")["values"]
             self.assertNotEqual(values[0]["value"], values[1]["value"], name)
@@ -388,15 +396,32 @@ class Numbers(unittest.TestCase):
 
 class Missing(unittest.TestCase):
     def test_what_grm_has_not_counted_says_so(self):
-        mic = ENTRIES["grm:state/label_from_mic_excluded"]
-        self.assertEqual(mic["measured"], [])
-        self.assertIn("No committed file counts", mic["unmeasured"])
         folds = ENTRIES["grm:given/folds-hold-different-genomes"]
         self.assertIn("No committed file counts duplicate groups on the cohorts of revision 10 or later",
                       folds["unmeasured"])
         self.assertEqual({x["evaluation_revision"] for x in folds["measured"]}, {9})
         self.assertEqual(sorted(i for i, x in ENTRIES.items() if "unmeasured" in x),
-                         ["grm:given/folds-hold-different-genomes", "grm:state/label_from_mic_excluded"])
+                         ["grm:given/folds-hold-different-genomes"])
+
+    def test_the_labels_inferred_from_a_mic_are_counted_from_the_summary_file(self):
+        # The entry said "not counted" until index-counts.json counted the index's labels_from_mic_excluded.
+        mic = ENTRIES["grm:state/label_from_mic_excluded"]
+        self.assertNotIn("unmeasured", mic)
+        self.assertEqual(len(mic["measured"]), 1)
+        x = mic["measured"][0]
+        path = SPEC["files"]["index14"]
+        block = json.loads(text(path))["labels_from_mic_excluded"]
+        self.assertEqual((x["basis"], x["evaluation_revision"], x["source"]), ("file", 14, path))
+        self.assertEqual(x["read"], {"count": f"{path}#/labels_from_mic_excluded/datasets_above_zero",
+                                     "of": f"{path}#/labels_from_mic_excluded/datasets_with_field"})
+        self.assertEqual((x["count"], x["of"]), (block["datasets_above_zero"], block["datasets_with_field"]))
+        # every dataset of the release holds the field, so the denominator is the release's datasets
+        self.assertEqual(block["datasets_without_field"], 0)
+        self.assertEqual(x["of"], of("grm:split/random", "random split")[1])
+        # the line uses only the field names a measured line had before it: Givens' importer refuses any other
+        self.assertEqual(list(x), ["count", "of", "what", "source", "basis", "evaluation_revision", "read", "note"])
+        self.assertEqual(list(x["read"]), ["count", "of"])
+        self.assertIn("says nothing about how any isolate should be treated", x["note"])
 
     def test_a_number_stands_in_a_measured_line_only(self):
         # 5-fold, a 95% interval, and the revisions 9, 10, 12, 13 and 14 are the only numbers the words may hold.
@@ -605,6 +630,37 @@ class Limits(unittest.TestCase):
         self.refused("and the line says 12", lambda s: given(s, "learners-scored-on-same-genomes")["measured"][7][
             "values"][0].update(value={"file": "summary14", "at": ["per_learner", "gbt", "median_lineage"]}))
 
+    def test_a_missing_mic_count_stops_the_script(self):
+        # A summary file whose count of labels inferred from a MIC is gone or null never gives a line of zero.
+        path = SPEC["files"]["index14"]
+        cases = {
+            "no block": (lambda doc: doc.pop("labels_from_mic_excluded"), "is not in the file"),
+            "no count": (lambda doc: doc["labels_from_mic_excluded"].pop("datasets_above_zero"), "is not in the file"),
+            "null count": (lambda doc: doc["labels_from_mic_excluded"].update(datasets_above_zero=None),
+                           "is not a number"),
+            "null denominator": (lambda doc: doc["labels_from_mic_excluded"].update(datasets_with_field=None),
+                                 "is not a number"),
+            "a field that holds nothing": (lambda doc: doc["labels_from_mic_excluded"].update(
+                datasets_with_field=0, datasets_without_field=274, datasets_above_zero=None, labels=None),
+                "is not a number"),
+        }
+        for case, (edit, message) in cases.items():
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
+                root = copied(tmp)
+                doc = json.loads((root / path).read_text(encoding="utf-8"))
+                edit(doc)
+                (root / path).write_text(json.dumps(doc), encoding="utf-8")
+                with self.assertRaisesRegex(E.Fault, message):
+                    E.build_module(SPEC, root)
+        # the line reads two counts of the block and nothing else of it
+        for at in (["labels_from_mic_excluded"], ["labels_from_mic_excluded", "labels"],
+                   ["labels_from_mic_excluded", "datasets_without_field"]):
+            with self.subTest(field=at):
+                self.refused("not a field the export may read", lambda s, at=at: node(
+                    s, "grm:state/label_from_mic_excluded")["measured"][0].update(count={"file": "index14", "at": at}))
+        self.refused("and the line says 14", lambda s: node(s, "grm:state/label_from_mic_excluded")["measured"][0].update(
+            count={"file": "index12", "at": ["labels_from_mic_excluded", "datasets_above_zero"]}))
+
     def test_the_graph_must_close(self):
         self.refused("both ends of an edge", lambda s: s["edges"][0].update(to="grm:model"))
         self.refused("unknown edge type", lambda s: s["edges"][0].update(type="causes"))
@@ -746,7 +802,9 @@ class Page(unittest.TestCase):
         sentence = (f"The page holds {len(MODULE['nodes'])} terms, {len(MODULE['edges'])} links between them and "
                     f"{len(MODULE['assumptions'])} assumptions. Their {len(LINES)} rows of counts split into "
                     f"{len(LINES) - documents} read from a file and {documents} quoted from a document. In {unmeasured} "
-                    f"entries GRM says what it has not counted, after the words Not counted.")
+                    f"{'entry' if unmeasured == 1 else 'entries'} GRM says what it has not counted, after the words Not "
+                    f"counted.")
+        self.assertEqual(unmeasured, 1)
         self.assertEqual(page.count(sentence), 1)
         # Outside that sentence and the rows, a digit stands only inside words the page took from the file.
         prose = "\n".join(r for r in page.replace(sentence, "").split("\n") if not r.startswith("|"))
@@ -861,7 +919,7 @@ class Wiring(unittest.TestCase):
             f"{len(MODULE['assumptions'])} assumptions.",
             f"Its {len(LINES)} measured lines split into {len(LINES) - documents} read from a file and {documents} "
             f"quoted from a document.",
-            f"It marks {unmeasured} entries with what GRM has not counted.",
+            f"It marks {unmeasured} {'entry' if unmeasured == 1 else 'entries'} with what GRM has not counted.",
         ):
             with self.subTest(sentence=sentence):
                 self.assertIn(sentence, page)
@@ -874,7 +932,7 @@ class Wiring(unittest.TestCase):
         documents = {(x["count"], x["of"]) for _, x in LINES if x["basis"] == "document"}
         self.assertEqual(stated, documents)
         self.assertLessEqual(E._numbers(re.sub(r"`[^`]*`|\d+ of \d+|\(https[^)]*\)", "", page)),
-                             {"22", "24", "3", "36", "28", "8", "2", "9", "12", "14", "1", "3.12", "2026", "256"})
+                             {"22", "24", "3", "37", "29", "8", "9", "12", "14", "1", "3.12", "2026", "256"})
 
 
 if __name__ == "__main__":
