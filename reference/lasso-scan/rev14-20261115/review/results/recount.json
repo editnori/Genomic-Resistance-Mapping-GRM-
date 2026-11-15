@@ -1,0 +1,1832 @@
+{
+ "datasets": [
+  {
+   "id": "mycobacterium_tuberculosis__delamanid",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "59dd7e9b37cd5a74",
+   "release_fingerprint": "59dd7e9b37cd5a74",
+   "samples": 1248,
+   "release_samples": 1248,
+   "features": 115113,
+   "release_features": 115113,
+   "resistant": 448,
+   "release_resistant": 448,
+   "points": 359,
+   "path_points": 312,
+   "refit_points": 47,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 3,
+   "irls_total": 977,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 16.672796903,
+   "final_seconds": 1.263043524,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1248,
+     "bit_identical": 1248,
+     "from_binary": 1248,
+     "from_binary_identical": 1248,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.46651785714285715,
+      "log_loss": 0.6681803619832025,
+      "balanced_accuracy": 0.5795089285714285,
+      "auroc": 0.6036118861607143
+     },
+     "release": {
+      "recall": 0.46651785714285715,
+      "log_loss": 0.6681803619832025,
+      "balanced_accuracy": 0.5795089285714285,
+      "auroc": 0.6036118861607143
+     },
+     "release_field": {
+      "recall": 0.46651785714285715,
+      "balanced_accuracy": 0.5795089285714285,
+      "auroc": 0.6036118861607143,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1248,
+     "bit_identical": 1248,
+     "from_binary": 1248,
+     "from_binary_identical": 1248,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.45089285714285715,
+      "log_loss": 0.6664856697573587,
+      "balanced_accuracy": 0.5585714285714286,
+      "auroc": 0.5953655133928571
+     },
+     "release": {
+      "recall": 0.45089285714285715,
+      "log_loss": 0.6664856697573587,
+      "balanced_accuracy": 0.5585714285714286,
+      "auroc": 0.5953655133928571
+     },
+     "release_field": {
+      "recall": 0.45089285714285715,
+      "balanced_accuracy": 0.5585714285714286,
+      "auroc": 0.5953655133928571,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "mycobacterium_tuberculosis__linezolid",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "4c1e71be51e0aceb",
+   "release_fingerprint": "4c1e71be51e0aceb",
+   "samples": 1248,
+   "release_samples": 1248,
+   "features": 115113,
+   "release_features": 115113,
+   "resistant": 202,
+   "release_resistant": 202,
+   "points": 372,
+   "path_points": 330,
+   "refit_points": 42,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 4,
+   "irls_total": 1036,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 6.347323104,
+   "final_seconds": 0.856811419,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1248,
+     "bit_identical": 1248,
+     "from_binary": 1248,
+     "from_binary_identical": 1248,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.36633663366336633,
+      "log_loss": 0.6212643100537155,
+      "balanced_accuracy": 0.5837419305984135,
+      "auroc": 0.6353174753421805
+     },
+     "release": {
+      "recall": 0.36633663366336633,
+      "log_loss": 0.6212643100537155,
+      "balanced_accuracy": 0.5837419305984135,
+      "auroc": 0.6353174753421805
+     },
+     "release_field": {
+      "recall": 0.36633663366336633,
+      "balanced_accuracy": 0.5837419305984135,
+      "auroc": 0.6353174753421805,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1248,
+     "bit_identical": 1248,
+     "from_binary": 998,
+     "from_binary_identical": 998,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.49504950495049505,
+      "log_loss": 0.6223760228252085,
+      "balanced_accuracy": 0.5759186339284024,
+      "auroc": 0.5885859379436987
+     },
+     "release": {
+      "recall": 0.49504950495049505,
+      "log_loss": 0.6223760228252085,
+      "balanced_accuracy": 0.5759186339284024,
+      "auroc": 0.5885859379436987
+     },
+     "release_field": {
+      "recall": 0.49504950495049505,
+      "balanced_accuracy": 0.5759186339284024,
+      "auroc": 0.5885859379436987,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "salmonella_enterica__ampicillin",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "2f9ca169d88ef66f",
+   "release_fingerprint": "2f9ca169d88ef66f",
+   "samples": 1997,
+   "release_samples": 1997,
+   "features": 1062824,
+   "release_features": 1062824,
+   "resistant": 1406,
+   "release_resistant": 1406,
+   "points": 545,
+   "path_points": 330,
+   "refit_points": 215,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 4,
+   "irls_total": 1562,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 17.306246978,
+   "final_seconds": 1.658317506,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1997,
+     "bit_identical": 1997,
+     "from_binary": 1997,
+     "from_binary_identical": 1997,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.9423897581792319,
+      "log_loss": 0.19851534761623124,
+      "balanced_accuracy": 0.926355623590462,
+      "auroc": 0.9686020511561522
+     },
+     "release": {
+      "recall": 0.9423897581792319,
+      "log_loss": 0.19851534761623124,
+      "balanced_accuracy": 0.926355623590462,
+      "auroc": 0.9686020511561522
+     },
+     "release_field": {
+      "recall": 0.9423897581792319,
+      "balanced_accuracy": 0.926355623590462,
+      "auroc": 0.9686020511561522,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1997,
+     "bit_identical": 1997,
+     "from_binary": 1997,
+     "from_binary_identical": 1997,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8577524893314367,
+      "log_loss": 0.36526256757435727,
+      "balanced_accuracy": 0.8155090703848384,
+      "auroc": 0.9036417528936899
+     },
+     "release": {
+      "recall": 0.8577524893314367,
+      "log_loss": 0.36526256757435727,
+      "balanced_accuracy": 0.8155090703848384,
+      "auroc": 0.9036417528936899
+     },
+     "release_field": {
+      "recall": 0.8577524893314367,
+      "balanced_accuracy": 0.8155090703848384,
+      "auroc": 0.9036417528936899,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "mycobacterium_tuberculosis__clofazimine",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "e00e3023054359ba",
+   "release_fingerprint": "e00e3023054359ba",
+   "samples": 1303,
+   "release_samples": 1303,
+   "features": 118205,
+   "release_features": 118205,
+   "resistant": 193,
+   "release_resistant": 193,
+   "points": 357,
+   "path_points": 330,
+   "refit_points": 27,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 3,
+   "irls_total": 990,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 8.858751858,
+   "final_seconds": 1.6029509210000001,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1303,
+     "bit_identical": 1303,
+     "from_binary": 1042,
+     "from_binary_identical": 1042,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.17098445595854922,
+      "log_loss": 0.6151574881346739,
+      "balanced_accuracy": 0.5170237595108061,
+      "auroc": 0.528558091770527
+     },
+     "release": {
+      "recall": 0.17098445595854922,
+      "log_loss": 0.6151574881346739,
+      "balanced_accuracy": 0.5170237595108061,
+      "auroc": 0.528558091770527
+     },
+     "release_field": {
+      "recall": 0.17098445595854922,
+      "balanced_accuracy": 0.5170237595108061,
+      "auroc": 0.528558091770527,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1303,
+     "bit_identical": 1303,
+     "from_binary": 1042,
+     "from_binary_identical": 1042,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.031088082901554404,
+      "log_loss": 0.6299567596585997,
+      "balanced_accuracy": 0.5020305279372637,
+      "auroc": 0.5046328712131821
+     },
+     "release": {
+      "recall": 0.031088082901554404,
+      "log_loss": 0.6299567596585997,
+      "balanced_accuracy": 0.5020305279372637,
+      "auroc": 0.5046328712131821
+     },
+     "release_field": {
+      "recall": 0.031088082901554404,
+      "balanced_accuracy": 0.5020305279372637,
+      "auroc": 0.5046328712131821,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "mycobacterium_tuberculosis__rifampin",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "2974791c98dd739d",
+   "release_fingerprint": "2974791c98dd739d",
+   "samples": 1967,
+   "release_samples": 1967,
+   "features": 149368,
+   "release_features": 149368,
+   "resistant": 1365,
+   "release_resistant": 1365,
+   "points": 525,
+   "path_points": 330,
+   "refit_points": 195,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 5,
+   "irls_total": 1427,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 17.750339307,
+   "final_seconds": 1.9890859490000001,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1967,
+     "bit_identical": 1967,
+     "from_binary": 1967,
+     "from_binary_identical": 1967,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8989010989010989,
+      "log_loss": 0.31761711504930074,
+      "balanced_accuracy": 0.888819320214669,
+      "auroc": 0.9230921348861548
+     },
+     "release": {
+      "recall": 0.8989010989010989,
+      "log_loss": 0.31761711504930074,
+      "balanced_accuracy": 0.888819320214669,
+      "auroc": 0.9230921348861548
+     },
+     "release_field": {
+      "recall": 0.8989010989010989,
+      "balanced_accuracy": 0.888819320214669,
+      "auroc": 0.9230921348861548,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1967,
+     "bit_identical": 1967,
+     "from_binary": 1967,
+     "from_binary_identical": 1967,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8989010989010989,
+      "log_loss": 0.3340807710364591,
+      "balanced_accuracy": 0.8871581906465628,
+      "auroc": 0.9182839862241856
+     },
+     "release": {
+      "recall": 0.8989010989010989,
+      "log_loss": 0.3340807710364591,
+      "balanced_accuracy": 0.8871581906465628,
+      "auroc": 0.9182839862241856
+     },
+     "release_field": {
+      "recall": 0.8989010989010989,
+      "balanced_accuracy": 0.8871581906465628,
+      "auroc": 0.9182839862241856,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "staphylococcus_aureus__erythromycin",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "cc45bb5523eaca7a",
+   "release_fingerprint": "cc45bb5523eaca7a",
+   "samples": 1957,
+   "release_samples": 1957,
+   "features": 687376,
+   "release_features": 687376,
+   "resistant": 948,
+   "release_resistant": 948,
+   "points": 477,
+   "path_points": 330,
+   "refit_points": 147,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 5,
+   "irls_total": 1349,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 9.998139352,
+   "final_seconds": 1.158534983,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1957,
+     "bit_identical": 1957,
+     "from_binary": 1957,
+     "from_binary_identical": 1957,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8934599156118144,
+      "log_loss": 0.2542713789533389,
+      "balanced_accuracy": 0.909068907260813,
+      "auroc": 0.9588476914520372
+     },
+     "release": {
+      "recall": 0.8934599156118144,
+      "log_loss": 0.2542713789533389,
+      "balanced_accuracy": 0.909068907260813,
+      "auroc": 0.9588476914520372
+     },
+     "release_field": {
+      "recall": 0.8934599156118144,
+      "balanced_accuracy": 0.909068907260813,
+      "auroc": 0.9588476914520372,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1957,
+     "bit_identical": 1957,
+     "from_binary": 1957,
+     "from_binary_identical": 1957,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.23417721518987342,
+      "log_loss": 0.6442991115498432,
+      "balanced_accuracy": 0.5640658127485542,
+      "auroc": 0.7568309267227861
+     },
+     "release": {
+      "recall": 0.23417721518987342,
+      "log_loss": 0.6442991115498432,
+      "balanced_accuracy": 0.5640658127485542,
+      "auroc": 0.7568309267227861
+     },
+     "release_field": {
+      "recall": 0.23417721518987342,
+      "balanced_accuracy": 0.5640658127485542,
+      "auroc": 0.7568309267227861,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "salmonella_enterica__tetracycline",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "65b53387782ff1f9",
+   "release_fingerprint": "65b53387782ff1f9",
+   "samples": 1869,
+   "release_samples": 1869,
+   "features": 1033594,
+   "release_features": 1033594,
+   "resistant": 1118,
+   "release_resistant": 1118,
+   "points": 487,
+   "path_points": 330,
+   "refit_points": 157,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 4,
+   "irls_total": 1379,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 10.018128133,
+   "final_seconds": 2.851371329,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1869,
+     "bit_identical": 1869,
+     "from_binary": 1869,
+     "from_binary_identical": 1869,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.889087656529517,
+      "log_loss": 0.27995605091572756,
+      "balanced_accuracy": 0.8986050799292059,
+      "auroc": 0.9508967173166845
+     },
+     "release": {
+      "recall": 0.889087656529517,
+      "log_loss": 0.27995605091572756,
+      "balanced_accuracy": 0.8986050799292059,
+      "auroc": 0.9508967173166845
+     },
+     "release_field": {
+      "recall": 0.889087656529517,
+      "balanced_accuracy": 0.8986050799292059,
+      "auroc": 0.9508967173166845,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1869,
+     "bit_identical": 1869,
+     "from_binary": 1869,
+     "from_binary_identical": 1869,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.6771019677996423,
+      "log_loss": 0.5534327015182878,
+      "balanced_accuracy": 0.7972726882939623,
+      "auroc": 0.8184186141793054
+     },
+     "release": {
+      "recall": 0.6771019677996423,
+      "log_loss": 0.5534327015182878,
+      "balanced_accuracy": 0.7972726882939623,
+      "auroc": 0.8184186141793054
+     },
+     "release_field": {
+      "recall": 0.6771019677996423,
+      "balanced_accuracy": 0.7972726882939623,
+      "auroc": 0.8184186141793054,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "klebsiella_pneumoniae__ciprofloxacin",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "c4971ce72865342c",
+   "release_fingerprint": "c4971ce72865342c",
+   "samples": 1706,
+   "release_samples": 1706,
+   "features": 2171671,
+   "release_features": 2171671,
+   "resistant": 1096,
+   "release_resistant": 1096,
+   "points": 532,
+   "path_points": 330,
+   "refit_points": 202,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 5,
+   "irls_total": 1531,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 8.053278192,
+   "final_seconds": 1.150220635,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1706,
+     "bit_identical": 1706,
+     "from_binary": 1706,
+     "from_binary_identical": 1706,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.9315693430656934,
+      "log_loss": 0.17591919691930002,
+      "balanced_accuracy": 0.9452928682541581,
+      "auroc": 0.978439481871485
+     },
+     "release": {
+      "recall": 0.9315693430656934,
+      "log_loss": 0.17591919691930002,
+      "balanced_accuracy": 0.9452928682541581,
+      "auroc": 0.978439481871485
+     },
+     "release_field": {
+      "recall": 0.9315693430656934,
+      "balanced_accuracy": 0.9452928682541581,
+      "auroc": 0.978439481871485,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1706,
+     "bit_identical": 1706,
+     "from_binary": 1706,
+     "from_binary_identical": 1706,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8996350364963503,
+      "log_loss": 0.2527733165067204,
+      "balanced_accuracy": 0.916210960871126,
+      "auroc": 0.9632531111642934
+     },
+     "release": {
+      "recall": 0.8996350364963503,
+      "log_loss": 0.2527733165067204,
+      "balanced_accuracy": 0.916210960871126,
+      "auroc": 0.9632531111642934
+     },
+     "release_field": {
+      "recall": 0.8996350364963503,
+      "balanced_accuracy": 0.916210960871126,
+      "auroc": 0.9632531111642934,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "staphylococcus_aureus__clindamycin",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "93777c20612ae5e4",
+   "release_fingerprint": "93777c20612ae5e4",
+   "samples": 1543,
+   "release_samples": 1543,
+   "features": 599652,
+   "release_features": 599652,
+   "resistant": 693,
+   "release_resistant": 693,
+   "points": 475,
+   "path_points": 330,
+   "refit_points": 145,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 4,
+   "irls_total": 1338,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 6.929408699,
+   "final_seconds": 0.953844941,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1543,
+     "bit_identical": 1543,
+     "from_binary": 1543,
+     "from_binary_identical": 1543,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8268398268398268,
+      "log_loss": 0.36889265352824935,
+      "balanced_accuracy": 0.8569493251846193,
+      "auroc": 0.9139258127493421
+     },
+     "release": {
+      "recall": 0.8268398268398268,
+      "log_loss": 0.36889265352824935,
+      "balanced_accuracy": 0.8569493251846193,
+      "auroc": 0.9139258127493421
+     },
+     "release_field": {
+      "recall": 0.8268398268398268,
+      "balanced_accuracy": 0.8569493251846193,
+      "auroc": 0.9139258127493421,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1543,
+     "bit_identical": 1543,
+     "from_binary": 1270,
+     "from_binary_identical": 1270,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.1471861471861472,
+      "log_loss": 0.7305518083495155,
+      "balanced_accuracy": 0.5159460147695443,
+      "auroc": 0.5725184619302266
+     },
+     "release": {
+      "recall": 0.1471861471861472,
+      "log_loss": 0.7305518083495155,
+      "balanced_accuracy": 0.5159460147695443,
+      "auroc": 0.5725184619302266
+     },
+     "release_field": {
+      "recall": 0.1471861471861472,
+      "balanced_accuracy": 0.5159460147695443,
+      "auroc": 0.5725184619302266,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "klebsiella_pneumoniae__piperacillin_tazobactam",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "7d5039a9462ca34a",
+   "release_fingerprint": "7d5039a9462ca34a",
+   "samples": 1452,
+   "release_samples": 1452,
+   "features": 2097371,
+   "release_features": 2097371,
+   "resistant": 868,
+   "release_resistant": 868,
+   "points": 511,
+   "path_points": 330,
+   "refit_points": 181,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 3,
+   "irls_total": 1453,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 5.658025155,
+   "final_seconds": 1.135580879,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1452,
+     "bit_identical": 1452,
+     "from_binary": 1452,
+     "from_binary_identical": 1452,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8317972350230415,
+      "log_loss": 0.33397970644012487,
+      "balanced_accuracy": 0.8559671106622057,
+      "auroc": 0.9310521352818635
+     },
+     "release": {
+      "recall": 0.8317972350230415,
+      "log_loss": 0.33397970644012487,
+      "balanced_accuracy": 0.8559671106622057,
+      "auroc": 0.9310521352818635
+     },
+     "release_field": {
+      "recall": 0.8317972350230415,
+      "balanced_accuracy": 0.8559671106622057,
+      "auroc": 0.9310521352818635,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1452,
+     "bit_identical": 1452,
+     "from_binary": 1452,
+     "from_binary_identical": 1452,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.7569124423963134,
+      "log_loss": 0.4111106481477726,
+      "balanced_accuracy": 0.8116753992803485,
+      "auroc": 0.9040050344043936
+     },
+     "release": {
+      "recall": 0.7569124423963134,
+      "log_loss": 0.4111106481477726,
+      "balanced_accuracy": 0.8116753992803485,
+      "auroc": 0.9040050344043936
+     },
+     "release_field": {
+      "recall": 0.7569124423963134,
+      "balanced_accuracy": 0.8116753992803485,
+      "auroc": 0.9040050344043936,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "klebsiella_pneumoniae__sulfamethoxazole_trimethoprim",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "6c6deefb1dcd75d2",
+   "release_fingerprint": "6c6deefb1dcd75d2",
+   "samples": 1546,
+   "release_samples": 1546,
+   "features": 1992856,
+   "release_features": 1992856,
+   "resistant": 1042,
+   "release_resistant": 1042,
+   "points": 516,
+   "path_points": 330,
+   "refit_points": 186,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 3,
+   "irls_total": 1467,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 8.676177931,
+   "final_seconds": 1.367070229,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1546,
+     "bit_identical": 1546,
+     "from_binary": 1546,
+     "from_binary_identical": 1546,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.9404990403071017,
+      "log_loss": 0.2081815115344716,
+      "balanced_accuracy": 0.9265987265027572,
+      "auroc": 0.9665183331810011
+     },
+     "release": {
+      "recall": 0.9404990403071017,
+      "log_loss": 0.2081815115344716,
+      "balanced_accuracy": 0.9265987265027572,
+      "auroc": 0.9665183331810011
+     },
+     "release_field": {
+      "recall": 0.9404990403071017,
+      "balanced_accuracy": 0.9265987265027572,
+      "auroc": 0.9665183331810011,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1546,
+     "bit_identical": 1546,
+     "from_binary": 1546,
+     "from_binary_identical": 1546,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8992322456813819,
+      "log_loss": 0.26064345539259104,
+      "balanced_accuracy": 0.9129097736343418,
+      "auroc": 0.9588988666483867
+     },
+     "release": {
+      "recall": 0.8992322456813819,
+      "log_loss": 0.26064345539259104,
+      "balanced_accuracy": 0.9129097736343418,
+      "auroc": 0.9588988666483867
+     },
+     "release_field": {
+      "recall": 0.8992322456813819,
+      "balanced_accuracy": 0.9129097736343418,
+      "auroc": 0.9588988666483867,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "salmonella_enterica__chloramphenicol",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "4e43d9149f490f9b",
+   "release_fingerprint": "4e43d9149f490f9b",
+   "samples": 1989,
+   "release_samples": 1989,
+   "features": 1060849,
+   "release_features": 1060849,
+   "resistant": 713,
+   "release_resistant": 713,
+   "points": 544,
+   "path_points": 330,
+   "refit_points": 214,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 4,
+   "irls_total": 1559,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 14.364960992,
+   "final_seconds": 3.8672820850000003,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1989,
+     "bit_identical": 1989,
+     "from_binary": 1989,
+     "from_binary_identical": 1989,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8976157082748948,
+      "log_loss": 0.21310562708265346,
+      "balanced_accuracy": 0.9162843431656605,
+      "auroc": 0.9688685715793129
+     },
+     "release": {
+      "recall": 0.8976157082748948,
+      "log_loss": 0.21310562708265346,
+      "balanced_accuracy": 0.9162843431656605,
+      "auroc": 0.9688685715793129
+     },
+     "release_field": {
+      "recall": 0.8976157082748948,
+      "balanced_accuracy": 0.9162843431656605,
+      "auroc": 0.9688685715793129,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1989,
+     "bit_identical": 1989,
+     "from_binary": 1989,
+     "from_binary_identical": 1989,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.7363253856942497,
+      "log_loss": 0.36977122065761664,
+      "balanced_accuracy": 0.8172222539756515,
+      "auroc": 0.9085682598583407
+     },
+     "release": {
+      "recall": 0.7363253856942497,
+      "log_loss": 0.36977122065761664,
+      "balanced_accuracy": 0.8172222539756515,
+      "auroc": 0.9085682598583407
+     },
+     "release_field": {
+      "recall": 0.7363253856942497,
+      "balanced_accuracy": 0.8172222539756515,
+      "auroc": 0.9085682598583407,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "escherichia_coli__ceftazidime",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "13efa27ce786740e",
+   "release_fingerprint": "13efa27ce786740e",
+   "samples": 1466,
+   "release_samples": 1466,
+   "features": 2756803,
+   "release_features": 2756803,
+   "resistant": 601,
+   "release_resistant": 601,
+   "points": 504,
+   "path_points": 330,
+   "refit_points": 174,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 3,
+   "irls_total": 1432,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 5.3783793,
+   "final_seconds": 0.700217582,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1466,
+     "bit_identical": 1466,
+     "from_binary": 1466,
+     "from_binary_identical": 1466,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.9001663893510815,
+      "log_loss": 0.20984739142364361,
+      "balanced_accuracy": 0.9136670097044425,
+      "auroc": 0.9716888038240697
+     },
+     "release": {
+      "recall": 0.9001663893510815,
+      "log_loss": 0.20984739142364361,
+      "balanced_accuracy": 0.9136670097044425,
+      "auroc": 0.9716888038240697
+     },
+     "release_field": {
+      "recall": 0.9001663893510815,
+      "balanced_accuracy": 0.9136670097044425,
+      "auroc": 0.9716888038240697,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1466,
+     "bit_identical": 1466,
+     "from_binary": 1466,
+     "from_binary_identical": 1466,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8419301164725458,
+      "log_loss": 0.24760490007675756,
+      "balanced_accuracy": 0.8961095669067931,
+      "auroc": 0.9606253546593827
+     },
+     "release": {
+      "recall": 0.8419301164725458,
+      "log_loss": 0.24760490007675756,
+      "balanced_accuracy": 0.8961095669067931,
+      "auroc": 0.9606253546593827
+     },
+     "release_field": {
+      "recall": 0.8419301164725458,
+      "balanced_accuracy": 0.8961095669067931,
+      "auroc": 0.9606253546593827,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "escherichia_coli__ampicillin",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "a01f750fd4a06500",
+   "release_fingerprint": "a01f750fd4a06500",
+   "samples": 1965,
+   "release_samples": 1965,
+   "features": 3078562,
+   "release_features": 3078562,
+   "resistant": 1596,
+   "release_resistant": 1596,
+   "points": 516,
+   "path_points": 330,
+   "refit_points": 186,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 5,
+   "irls_total": 1471,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 4.985390838,
+   "final_seconds": 0.710301544,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1965,
+     "bit_identical": 1965,
+     "from_binary": 1965,
+     "from_binary_identical": 1965,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.9379699248120301,
+      "log_loss": 0.1856409799206985,
+      "balanced_accuracy": 0.9378196507528985,
+      "auroc": 0.97402975596172
+     },
+     "release": {
+      "recall": 0.9379699248120301,
+      "log_loss": 0.1856409799206985,
+      "balanced_accuracy": 0.9378196507528985,
+      "auroc": 0.97402975596172
+     },
+     "release_field": {
+      "recall": 0.9379699248120301,
+      "balanced_accuracy": 0.9378196507528985,
+      "auroc": 0.97402975596172,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1965,
+     "bit_identical": 1965,
+     "from_binary": 1965,
+     "from_binary_identical": 1965,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.9241854636591479,
+      "log_loss": 0.20816740974127107,
+      "balanced_accuracy": 0.9255073659759154,
+      "auroc": 0.9689501531606795
+     },
+     "release": {
+      "recall": 0.9241854636591479,
+      "log_loss": 0.20816740974127107,
+      "balanced_accuracy": 0.9255073659759154,
+      "auroc": 0.9689501531606795
+     },
+     "release_field": {
+      "recall": 0.9241854636591479,
+      "balanced_accuracy": 0.9255073659759154,
+      "auroc": 0.9689501531606795,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "staphylococcus_aureus__penicillin",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "17b54708fb3a7ee3",
+   "release_fingerprint": "17b54708fb3a7ee3",
+   "samples": 1508,
+   "release_samples": 1508,
+   "features": 632991,
+   "release_features": 632991,
+   "resistant": 1252,
+   "release_resistant": 1252,
+   "points": 504,
+   "path_points": 330,
+   "refit_points": 174,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 4,
+   "irls_total": 1432,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 4.4625958610000005,
+   "final_seconds": 0.780763418,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1508,
+     "bit_identical": 1508,
+     "from_binary": 1508,
+     "from_binary_identical": 1508,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.9472843450479234,
+      "log_loss": 0.1961784218990713,
+      "balanced_accuracy": 0.9287202975239617,
+      "auroc": 0.9568814896166135
+     },
+     "release": {
+      "recall": 0.9472843450479234,
+      "log_loss": 0.1961784218990713,
+      "balanced_accuracy": 0.9287202975239617,
+      "auroc": 0.9568814896166135
+     },
+     "release_field": {
+      "recall": 0.9472843450479234,
+      "balanced_accuracy": 0.9287202975239617,
+      "auroc": 0.9568814896166135,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1508,
+     "bit_identical": 1508,
+     "from_binary": 1508,
+     "from_binary_identical": 1508,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.9384984025559105,
+      "log_loss": 0.23171318745637878,
+      "balanced_accuracy": 0.9145617012779552,
+      "auroc": 0.9373689596645367
+     },
+     "release": {
+      "recall": 0.9384984025559105,
+      "log_loss": 0.23171318745637878,
+      "balanced_accuracy": 0.9145617012779552,
+      "auroc": 0.9373689596645367
+     },
+     "release_field": {
+      "recall": 0.9384984025559105,
+      "balanced_accuracy": 0.9145617012779552,
+      "auroc": 0.9373689596645367,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "escherichia_coli__amoxicillin_clavulanate",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "e24638b7554481ea",
+   "release_fingerprint": "e24638b7554481ea",
+   "samples": 1115,
+   "release_samples": 1115,
+   "features": 2489374,
+   "release_features": 2489374,
+   "resistant": 548,
+   "release_resistant": 548,
+   "points": 477,
+   "path_points": 330,
+   "refit_points": 147,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 3,
+   "irls_total": 1346,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 3.8230262280000002,
+   "final_seconds": 0.617159257,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1115,
+     "bit_identical": 1115,
+     "from_binary": 1115,
+     "from_binary_identical": 1115,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8138686131386861,
+      "log_loss": 0.3270077552685866,
+      "balanced_accuracy": 0.8540242536592901,
+      "auroc": 0.9310190012744757
+     },
+     "release": {
+      "recall": 0.8138686131386861,
+      "log_loss": 0.3270077552685866,
+      "balanced_accuracy": 0.8540242536592901,
+      "auroc": 0.9310190012744757
+     },
+     "release_field": {
+      "recall": 0.8138686131386861,
+      "balanced_accuracy": 0.8540242536592901,
+      "auroc": 0.9310190012744757,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1115,
+     "bit_identical": 1115,
+     "from_binary": 1115,
+     "from_binary_identical": 1115,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.6405109489051095,
+      "log_loss": 0.5156738109198199,
+      "balanced_accuracy": 0.7911549453520257,
+      "auroc": 0.8216071911327386
+     },
+     "release": {
+      "recall": 0.6405109489051095,
+      "log_loss": 0.5156738109198199,
+      "balanced_accuracy": 0.7911549453520257,
+      "auroc": 0.8216071911327386
+     },
+     "release_field": {
+      "recall": 0.6405109489051095,
+      "balanced_accuracy": 0.7911549453520257,
+      "auroc": 0.8216071911327386,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "klebsiella_pneumoniae__gentamicin",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "76dd757a2a50fc89",
+   "release_fingerprint": "76dd757a2a50fc89",
+   "samples": 1842,
+   "release_samples": 1842,
+   "features": 2200061,
+   "release_features": 2200061,
+   "resistant": 689,
+   "release_resistant": 689,
+   "points": 525,
+   "path_points": 330,
+   "refit_points": 195,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 3,
+   "irls_total": 1498,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 7.609379937,
+   "final_seconds": 1.2203261890000001,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1842,
+     "bit_identical": 1842,
+     "from_binary": 1842,
+     "from_binary_identical": 1842,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.9245283018867925,
+      "log_loss": 0.18150126072035913,
+      "balanced_accuracy": 0.9427498404490338,
+      "auroc": 0.9726919237629608
+     },
+     "release": {
+      "recall": 0.9245283018867925,
+      "log_loss": 0.18150126072035913,
+      "balanced_accuracy": 0.9427498404490338,
+      "auroc": 0.9726919237629608
+     },
+     "release_field": {
+      "recall": 0.9245283018867925,
+      "balanced_accuracy": 0.9427498404490338,
+      "auroc": 0.9726919237629608,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1842,
+     "bit_identical": 1842,
+     "from_binary": 1842,
+     "from_binary_identical": 1842,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.8345428156748912,
+      "log_loss": 0.2470878762547513,
+      "balanced_accuracy": 0.9033945648192323,
+      "auroc": 0.9523014990867517
+     },
+     "release": {
+      "recall": 0.8345428156748912,
+      "log_loss": 0.2470878762547513,
+      "balanced_accuracy": 0.9033945648192323,
+      "auroc": 0.9523014990867517
+     },
+     "release_field": {
+      "recall": 0.8345428156748912,
+      "balanced_accuracy": 0.9033945648192323,
+      "auroc": 0.9523014990867517,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "klebsiella_pneumoniae__amikacin",
+   "fits": 11,
+   "starts": 11,
+   "fingerprint": "976ca93d3db84b06",
+   "release_fingerprint": "976ca93d3db84b06",
+   "samples": 1588,
+   "release_samples": 1588,
+   "features": 2201610,
+   "release_features": 2201610,
+   "resistant": 318,
+   "release_resistant": 318,
+   "points": 491,
+   "path_points": 330,
+   "refit_points": 161,
+   "unconverged_points": 0,
+   "short_solve_points": 0,
+   "max_irls": 4,
+   "irls_total": 1408,
+   "outer_fits": 10,
+   "release_outer_fits": 10,
+   "has_final": true,
+   "bad_fits": [],
+   "converged": true,
+   "lasso_seconds_outer": 4.730000561,
+   "final_seconds": 1.043652349,
+   "final_model_equal": true,
+   "splits": [
+    {
+     "scheme": "random",
+     "n": 1588,
+     "bit_identical": 1588,
+     "from_binary": 1588,
+     "from_binary_identical": 1588,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.889937106918239,
+      "log_loss": 0.24111706710635789,
+      "balanced_accuracy": 0.9071732778685684,
+      "auroc": 0.9547801218243946
+     },
+     "release": {
+      "recall": 0.889937106918239,
+      "log_loss": 0.24111706710635789,
+      "balanced_accuracy": 0.9071732778685684,
+      "auroc": 0.9547801218243946
+     },
+     "release_field": {
+      "recall": 0.889937106918239,
+      "balanced_accuracy": 0.9071732778685684,
+      "auroc": 0.9547801218243946,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    },
+    {
+     "scheme": "lineage",
+     "n": 1588,
+     "bit_identical": 1588,
+     "from_binary": 1588,
+     "from_binary_identical": 1588,
+     "calls_changed": 0,
+     "scan": {
+      "recall": 0.6698113207547169,
+      "log_loss": 0.3779076674123905,
+      "balanced_accuracy": 0.7919922745505867,
+      "auroc": 0.8661479225474175
+     },
+     "release": {
+      "recall": 0.6698113207547169,
+      "log_loss": 0.3779076674123905,
+      "balanced_accuracy": 0.7919922745505867,
+      "auroc": 0.8661479225474175
+     },
+     "release_field": {
+      "recall": 0.6698113207547169,
+      "balanced_accuracy": 0.7919922745505867,
+      "auroc": 0.8661479225474175,
+      "log_loss": null
+     },
+     "my_code_vs_release_fields": {
+      "tp_fn_fp_tn": true,
+      "recall": 0.0,
+      "balanced_accuracy": 0.0,
+      "auroc": 0.0
+     }
+    }
+   ]
+  }
+ ],
+ "totals": {
+  "datasets": 18,
+  "converged": 18,
+  "fits": 198,
+  "points": 8717,
+  "path_points": 5922,
+  "refit_points": 2795,
+  "unconverged_points": 0,
+  "short_solve_points": 0,
+  "max_irls": 5,
+  "irls_total": 24655,
+  "scores_compared": 58618,
+  "scores_bit_identical": 58618,
+  "scores_from_binary": 57573,
+  "scores_from_binary_identical": 57573,
+  "null_fold_scores": 1045,
+  "calls_changed": 0,
+  "audit_mismatch": 0,
+  "weights_mismatch": 0,
+  "final_mismatch": 0,
+  "trace_audit_mismatch": 0
+ },
+ "null_folds": [
+  {
+   "id": "mycobacterium_tuberculosis__linezolid",
+   "scheme": "lineage",
+   "fold": 1,
+   "weights": 0,
+   "complexity": 0.0,
+   "train": 998,
+   "train_resistant": 161,
+   "prevalence": 0.16132264529058116,
+   "test": 250,
+   "release_scores_all_equal_prevalence": true,
+   "release_called_metrics_present": true,
+   "audit": {
+    "path_points": 30,
+    "path_unconverged": 0,
+    "refit_convergence": {
+     "converged": true,
+     "irls_steps": 0,
+     "sweep_cap_hits": 0
+    },
+    "selected_convergence": {
+     "converged": true,
+     "irls_steps": 0,
+     "sweep_cap_hits": 0
+    },
+    "selected_point": 0
+   }
+  },
+  {
+   "id": "mycobacterium_tuberculosis__clofazimine",
+   "scheme": "random",
+   "fold": 1,
+   "weights": 0,
+   "complexity": 0.0,
+   "train": 1042,
+   "train_resistant": 154,
+   "prevalence": 0.14779270633397312,
+   "test": 261,
+   "release_scores_all_equal_prevalence": true,
+   "release_called_metrics_present": true,
+   "audit": {
+    "path_points": 30,
+    "path_unconverged": 0,
+    "refit_convergence": {
+     "converged": true,
+     "irls_steps": 0,
+     "sweep_cap_hits": 0
+    },
+    "selected_convergence": {
+     "converged": true,
+     "irls_steps": 0,
+     "sweep_cap_hits": 0
+    },
+    "selected_point": 0
+   }
+  },
+  {
+   "id": "mycobacterium_tuberculosis__clofazimine",
+   "scheme": "lineage",
+   "fold": 0,
+   "weights": 0,
+   "complexity": 0.0,
+   "train": 1042,
+   "train_resistant": 154,
+   "prevalence": 0.14779270633397312,
+   "test": 261,
+   "release_scores_all_equal_prevalence": true,
+   "release_called_metrics_present": true,
+   "audit": {
+    "path_points": 30,
+    "path_unconverged": 0,
+    "refit_convergence": {
+     "converged": true,
+     "irls_steps": 0,
+     "sweep_cap_hits": 0
+    },
+    "selected_convergence": {
+     "converged": true,
+     "irls_steps": 0,
+     "sweep_cap_hits": 0
+    },
+    "selected_point": 0
+   }
+  },
+  {
+   "id": "staphylococcus_aureus__clindamycin",
+   "scheme": "lineage",
+   "fold": 3,
+   "weights": 0,
+   "complexity": 0.0,
+   "train": 1270,
+   "train_resistant": 591,
+   "prevalence": 0.4653543307086614,
+   "test": 273,
+   "release_scores_all_equal_prevalence": true,
+   "release_called_metrics_present": true,
+   "audit": {
+    "path_points": 30,
+    "path_unconverged": 0,
+    "refit_convergence": {
+     "converged": true,
+     "irls_steps": 0,
+     "sweep_cap_hits": 0
+    },
+    "selected_convergence": {
+     "converged": true,
+     "irls_steps": 0,
+     "sweep_cap_hits": 0
+    },
+    "selected_point": 0
+   }
+  }
+ ]
+}

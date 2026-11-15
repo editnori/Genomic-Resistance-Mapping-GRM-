@@ -119,6 +119,21 @@ enum Command {
         /// (`EvalConfig::screened_features`).
         #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
         screened_features: usize,
+        /// Score the one dataset this fold file names on the outer folds it
+        /// supplies, in place of the random and lineage splits
+        /// (docs/fold-file.md). Writes <fold-out>/<dataset>.<scheme>.json,
+        /// which records the file's SHA-256, and no report. Takes one
+        /// species; --force replaces an existing result. It runs at the
+        /// release's seeds, so --seed and --learner-seed are refused with it.
+        #[arg(
+            long,
+            requires = "fold_out",
+            conflicts_with_all = ["only", "seed", "learner_seed"]
+        )]
+        fold_file: Option<PathBuf>,
+        /// Directory for the --fold-file result.
+        #[arg(long, requires = "fold_file")]
+        fold_out: Option<PathBuf>,
         /// Seed of the evaluation's random draws (`EvalConfig::seed`): both
         /// splits' outer folds, each fit's inner folds and tuning holdouts,
         /// and the forest's and boosting's own draws. The species matrix,
@@ -247,6 +262,28 @@ enum Command {
         #[arg(long, default_value = KOVER_RESULTS)]
         kover: PathBuf,
     },
+    /// Write each dataset's projected matrix, its random and lineage fold
+    /// plans, and the forest's screened rows of each outer fold under
+    /// --out/<dataset id>/, for a learner outside GRM
+    /// (docs/dataset-export.md). Fits nothing. The species must be counted
+    /// and built (count, structure, matrix).
+    Export {
+        #[arg(long)]
+        species: String,
+        /// Only these antibiotics or dataset ids. A name that matches no
+        /// dataset of the species stops the export.
+        #[arg(long, value_delimiter = ',')]
+        only: Vec<String>,
+        /// Retained-feature budget (see `grm learn`).
+        #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
+        screened_features: usize,
+        #[arg(long)]
+        out: PathBuf,
+        /// Replace matrix.bin and dataset.json in dataset directories that
+        /// already exist under --out, instead of stopping.
+        #[arg(long)]
+        force: bool,
+    },
     /// Write offline 95% Clopper-Pearson intervals for each learner row's
     /// VME and ME under <data>/report/intervals/, one file per dataset report
     /// that index.json lists, each pinned to its report's SHA-256 and counts.
@@ -349,11 +386,27 @@ fn run(cli: Cli) -> Result<()> {
             .try_for_each(|s| matrix(&layout, s, min_support)),
         Command::Learn {
             species,
+            force,
+            screened_features,
+            fold_file: Some(fold_file),
+            fold_out: Some(fold_out),
+            ..
+        } => learn_fold_file(
+            &layout,
+            &species,
+            &fold_file,
+            &fold_out,
+            force,
+            screened_features,
+        ),
+        Command::Learn {
+            species,
             only,
             force,
             screened_features,
             seed,
             learner_seed,
+            ..
         } => {
             let cfg = learn_config(screened_features, seed, learner_seed);
             species
@@ -464,6 +517,31 @@ fn run(cli: Cli) -> Result<()> {
             out,
         } => predict(&report, &fasta, &kset, matrix.as_deref(), &learners, out),
         Command::Report { kover } => report(&layout, &kover),
+        Command::Export {
+            species,
+            only,
+            screened_features,
+            out,
+            force,
+        } => {
+            let cfg = grm::learn::eval::EvalConfig {
+                screened_features,
+                ..Default::default()
+            };
+            let done = grm::export::export_species(&layout, &species, &only, &out, &cfg, force)?;
+            let replaced = done.iter().filter(|d| d.replaced).count();
+            eprintln!(
+                "{species}: {} datasets exported to {}{}",
+                done.len(),
+                out.display(),
+                if replaced > 0 {
+                    format!(", {replaced} of them replacing an earlier export")
+                } else {
+                    String::new()
+                }
+            );
+            Ok(())
+        }
         Command::Intervals => {
             let n = grm::intervals::write(&layout.root.join("report"))?;
             eprintln!("intervals written for {n} dataset reports");
@@ -677,6 +755,35 @@ fn learn_end_line(
             dir.display()
         )
     }
+}
+
+/// `grm learn --fold-file`: one dataset of one species on the outer folds a
+/// file supplies (`analysis::evaluate_fold_file`), at the release's seeds
+/// (the parser refuses `--seed` and `--learner-seed` beside it). It ends
+/// with its own line, not `learn_end_line`.
+fn learn_fold_file(
+    layout: &Layout,
+    species: &[String],
+    fold_file: &std::path::Path,
+    fold_out: &std::path::Path,
+    force: bool,
+    screened_features: usize,
+) -> Result<()> {
+    let [slug] = species else {
+        anyhow::bail!(
+            "--fold-file names one dataset, so it takes one species, not {}",
+            species.len()
+        );
+    };
+    grm::species::ensure_selection_counted(layout, slug)?;
+    let cfg = grm::learn::eval::EvalConfig {
+        screened_features,
+        ..Default::default()
+    };
+    let written =
+        grm::analysis::evaluate_fold_file(layout, slug, fold_file, fold_out, force, &cfg)?;
+    eprintln!("{slug}: fold file result written to {}", written.display());
+    Ok(())
 }
 
 fn report(layout: &Layout, kover: &std::path::Path) -> Result<()> {
@@ -2130,12 +2237,112 @@ mod tests {
             "1000",
         ]);
         let Command::Learn {
-            screened_features, ..
+            screened_features,
+            fold_file,
+            fold_out,
+            ..
         } = learn.unwrap().command
         else {
             panic!("parsed another command");
         };
         assert_eq!(screened_features, 1000);
+        // Without --fold-file the command is the one it was.
+        assert_eq!((fold_file, fold_out), (None, None));
+    }
+
+    #[test]
+    fn learn_takes_a_fold_file_only_with_its_output_directory_and_one_species() {
+        let parse = |rest: &[&str]| {
+            Cli::try_parse_from(["grm", "learn", "--species", "s"].iter().chain(rest))
+        };
+        let Command::Learn {
+            fold_file,
+            fold_out,
+            force,
+            ..
+        } = parse(&["--fold-file", "f.json", "--fold-out", "o"])
+            .unwrap()
+            .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (fold_file, fold_out, force),
+            (Some("f.json".into()), Some("o".into()), false)
+        );
+        for bad in [
+            &["--fold-file", "f.json"][..],
+            &["--fold-out", "o"][..],
+            &[
+                "--fold-file",
+                "f.json",
+                "--fold-out",
+                "o",
+                "--only",
+                "meropenem",
+            ][..],
+        ] {
+            assert!(parse(bad).is_err(), "{bad:?}");
+        }
+        // The file names one dataset, so a second species is refused before
+        // anything is read.
+        let dir = tempfile::tempdir().unwrap();
+        let error = learn_fold_file(
+            &Layout::new(dir.path()),
+            &["a".into(), "b".into()],
+            &dir.path().join("f.json"),
+            &dir.path().join("o"),
+            false,
+            DEFAULT_SCREENED_FEATURES,
+        )
+        .unwrap_err();
+        assert_eq!(
+            format!("{error:#}"),
+            "--fold-file names one dataset, so it takes one species, not 2"
+        );
+        assert!(std::fs::read_dir(dir.path()).unwrap().next().is_none());
+    }
+
+    /// A fold file run stays at the release's seeds: the parser refuses
+    /// `--seed` and `--learner-seed` beside `--fold-file`, even at the
+    /// release's own value, and without them it parses the release's seeds.
+    #[test]
+    fn learn_refuses_a_fold_file_beside_either_seed_flag() {
+        let parse = |rest: &[&str]| {
+            let all = [
+                &["grm", "learn", "--species", "s"][..],
+                &["--fold-file", "f.json", "--fold-out", "o"][..],
+                rest,
+            ]
+            .concat();
+            Cli::try_parse_from(all)
+        };
+        for bad in [
+            &["--seed", "43"][..],
+            &["--seed", "42"][..],
+            &["--learner-seed", "7"][..],
+            &["--seed", "42", "--learner-seed", "7"][..],
+        ] {
+            let error = parse(bad).err().unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::ArgumentConflict,
+                "{bad:?}"
+            );
+        }
+        let Command::Learn {
+            fold_file,
+            seed,
+            learner_seed,
+            ..
+        } = parse(&[]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (fold_file, seed, learner_seed),
+            (Some("f.json".into()), RELEASE_SEED, None)
+        );
     }
 
     /// `grm learn` draws at the release's seed unless told otherwise, and
@@ -2569,6 +2776,73 @@ mod tests {
         (layout, ids)
     }
 
+    /// `grm learn --fold-file` passes `--screened-features` on: the result
+    /// records the value the command was given. The fold file repeats the
+    /// random split the fixture's own report drew, so it is a fair partition.
+    #[test]
+    fn learn_with_a_fold_file_screens_as_many_features_as_it_is_told() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, _) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap())
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        grm(&["learn", "--species", SLUG]).unwrap();
+        let report: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(
+                layout
+                    .results_dir(SLUG)
+                    .join(format!("{SLUG}__fixturemycin.json")),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let random = &report["splits"][0];
+        assert_eq!(random["scheme"], "random");
+        let mut test = vec![Vec::new(); random["folds"].as_u64().unwrap() as usize];
+        for (sample, fold) in report["samples"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(random["test_fold"].as_array().unwrap())
+        {
+            test[fold.as_u64().unwrap() as usize].push(sample["id"].clone());
+        }
+        let file = dir.path().join("folds.json");
+        let text = serde_json::json!({
+            "format": "grm-fold-file-v1",
+            "dataset": format!("{SLUG}__fixturemycin"),
+            "scheme": "own-random",
+            "test": test,
+            "train": [],
+            "unused": [],
+        });
+        std::fs::write(&file, serde_json::to_vec(&text).unwrap()).unwrap();
+        let out = dir.path().join("fold-out");
+        grm(&[
+            "learn",
+            "--species",
+            SLUG,
+            "--fold-file",
+            file.to_str().unwrap(),
+            "--fold-out",
+            out.to_str().unwrap(),
+            "--screened-features",
+            "7",
+        ])
+        .unwrap();
+        let result: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(out.join(format!("{SLUG}__fixturemycin.own-random.json"))).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(result["eval_config"]["screened_features"], 7);
+        assert_eq!(result["counts"]["tested"], 60);
+    }
+
     /// The acceptance check of docs/prediction-contract.md: `grm predict`,
     /// from the report `grm learn` wrote and each cohort genome's FASTA,
     /// gives every feature the genome's bit in the report and every genome
@@ -2723,5 +2997,824 @@ mod tests {
             strands.insert(text.contains(&kmer));
         }
         assert_eq!(strands, BTreeSet::from([false, true]));
+    }
+
+    const EXPORT_SLUG: &str = "escherichia_coli";
+    const MEROPENEM: &str = "escherichia_coli__meropenem";
+    const CIPROFLOXACIN: &str = "escherichia_coli__ciprofloxacin";
+
+    /// A synthetic species for `grm export`, curated and built as
+    /// `grm curate` and the pipeline's count, structure and matrix leave it.
+    /// Its 60 genomes ("562.400" to "562.459") sit in 20 lineages of three,
+    /// each lineage with its own copy of one random core, 2% of its bases
+    /// drawn again. Each genome also carries short random blocks, each on its
+    /// own contig, so each block is one matrix row for the genomes that hold it:
+    /// - 24 blocks in three genomes each, the datasets' support floor, so an
+    ///   outer fold that holds out one of the three leaves the block in two
+    ///   training genomes;
+    /// - 12 blocks in one set of eight genomes and one other genome each,
+    ///   which differ from each other only on that genome;
+    /// - 40 blocks in random sets.
+    ///
+    /// Genome 2 is a copy of genome 1, and genome 5 of genome 4: two
+    /// k-mer-identical duplicate groups. Meropenem calls one genome of each
+    /// lineage resistant (20 of 60), ciprofloxacin every fourth (15 of 60).
+    fn export_fixture(root: &Path) -> Layout {
+        let layout = Layout::new(root);
+        let mut rng = ChaCha8Rng::seed_from_u64(21);
+        let random = |rng: &mut ChaCha8Rng, n: usize| -> Vec<u8> {
+            (0..n).map(|_| b"ACGT"[rng.random_range(0..4)]).collect()
+        };
+        let n = 60;
+        let core = random(&mut rng, 6000);
+        let lineage_cores: Vec<Vec<u8>> = (0..n / 3)
+            .map(|_| {
+                core.iter()
+                    .map(|&b| {
+                        if rng.random_bool(0.02) {
+                            b"ACGT"[rng.random_range(0..4)]
+                        } else {
+                            b
+                        }
+                    })
+                    .collect()
+            })
+            .collect();
+        let copy_of = |g: usize| match g {
+            2 => 1,
+            5 => 4,
+            g => g,
+        };
+        let units: Vec<usize> = (0..n).filter(|&g| copy_of(g) == g).collect();
+        // Genomes with no copy, so a block they alone carry keeps its count.
+        let single: Vec<usize> = units
+            .iter()
+            .copied()
+            .filter(|&g| g != 1 && g != 4)
+            .collect();
+        let mut holders: Vec<Vec<usize>> = Vec::new();
+        for _ in 0..24 {
+            let mut set = BTreeSet::new();
+            while set.len() < 3 {
+                set.insert(single[rng.random_range(0..single.len())]);
+            }
+            holders.push(set.into_iter().collect());
+        }
+        let shared: Vec<usize> = (1..=8).map(|i| 6 * i).collect();
+        for &extra in single.iter().filter(|g| !shared.contains(g)).take(12) {
+            holders.push(shared.iter().copied().chain([extra]).collect());
+        }
+        for _ in 0..40 {
+            holders.push(
+                units
+                    .iter()
+                    .copied()
+                    .filter(|_| rng.random_bool(0.4))
+                    .collect(),
+            );
+        }
+        let blocks: Vec<Vec<u8>> = holders.iter().map(|_| random(&mut rng, 80)).collect();
+        std::fs::create_dir_all(layout.fasta_dir()).unwrap();
+        std::fs::create_dir_all(root.join("bvbrc")).unwrap();
+        let (mut amr, mut meta) = (String::new(), String::new());
+        for g in 0..n {
+            let id = format!("562.{}", 400 + g);
+            let unit = copy_of(g);
+            let mut fasta = b">core\n".to_vec();
+            fasta.extend(&lineage_cores[unit / 3]);
+            for (j, (set, block)) in holders.iter().zip(&blocks).enumerate() {
+                if set.contains(&unit) {
+                    fasta.extend(format!("\n>b{j}\n").into_bytes());
+                    fasta.extend(block);
+                }
+            }
+            fasta.push(b'\n');
+            std::fs::write(bvbrc::fasta_path(&layout.fasta_dir(), &id), fasta).unwrap();
+            for (antibiotic, resistant) in
+                [("meropenem", g % 3 == 0), ("ciprofloxacin", g % 4 == 0)]
+            {
+                let call = if resistant {
+                    "Resistant"
+                } else {
+                    "Susceptible"
+                };
+                let record = serde_json::json!({
+                    "genome_id": id, "antibiotic": antibiotic, "resistant_phenotype": call,
+                    "laboratory_typing_method": "Broth dilution",
+                });
+                amr += &format!("{record}\n");
+            }
+            let genome = serde_json::json!({
+                "genome_id": id, "species": "Escherichia coli", "genome_length": "6000",
+            });
+            meta += &format!("{genome}\n");
+        }
+        std::fs::write(layout.amr(), amr).unwrap();
+        std::fs::write(layout.genomes(), meta).unwrap();
+        run_curate(&layout, 100, 5, None).unwrap();
+        count_to_matrix(&layout, EXPORT_SLUG, PIPELINE_K).unwrap();
+        layout
+    }
+
+    /// `grm --data <root> export --species escherichia_coli --out <out>`
+    /// followed by `args`, with an error as `{:#}` prints it.
+    fn run_export(root: &Path, out: &Path, args: &[&str]) -> Result<(), String> {
+        let (data, out) = (root.to_str().unwrap(), out.to_str().unwrap());
+        let base = [
+            "grm",
+            "--data",
+            data,
+            "export",
+            "--species",
+            EXPORT_SLUG,
+            "--out",
+            out,
+        ];
+        let cli = Cli::try_parse_from(base.iter().chain(args)).unwrap();
+        run(cli).map_err(|e| format!("{e:#}"))
+    }
+
+    /// The bytes of a dataset directory's two files.
+    fn export_files(dir: &Path) -> [Vec<u8>; 2] {
+        ["matrix.bin", "dataset.json"].map(|f| std::fs::read(dir.join(f)).unwrap())
+    }
+
+    /// Candidate rows of a `matrix.bin` on the training samples, counted
+    /// apart from `learn::training_candidates`: the distinct training
+    /// patterns whose training support lies in [floor, |train| - floor].
+    fn candidates_in(bytes: &[u8], words: usize, train: &[bool], floor: usize) -> usize {
+        let n_train = train.iter().filter(|&&t| t).count();
+        let rows = bytes.len() / (words * 8);
+        let mut seen = std::collections::HashSet::new();
+        for r in 0..rows {
+            let pattern: Vec<bool> = (0..train.len())
+                .filter(|&c| train[c])
+                .map(|c| {
+                    let w = (r * words + c / 64) * 8;
+                    let word = u64::from_le_bytes(bytes[w..w + 8].try_into().unwrap());
+                    (word >> (c % 64)) & 1 == 1
+                })
+                .collect();
+            let support = pattern.iter().filter(|&&b| b).count();
+            if support >= floor && support + floor <= n_train {
+                seen.insert(pattern);
+            }
+        }
+        seen.len()
+    }
+
+    /// `grm export` on a synthetic species, read back from the files it
+    /// wrote, against what `grm learn` reads and evaluates for the same
+    /// dataset at a non-default `--screened-features`: the evaluation
+    /// revision, the input fingerprint, the cohort, the matrix, the outer
+    /// folds `evaluate` scores with the duplicate groups, and per outer fold
+    /// the training samples and the candidate rows at the dataset's own
+    /// support floor.
+    #[test]
+    fn export_files_hold_what_learn_evaluates_on_a_synthetic_species() {
+        use grm::learn::eval::EvalConfig;
+        let dir = tempfile::tempdir().unwrap();
+        let layout = export_fixture(dir.path());
+        let out = dir.path().join("export");
+        let cfg = EvalConfig {
+            screened_features: 7,
+            ..Default::default()
+        };
+        let only = ["meropenem".to_string()];
+        let done =
+            grm::export::export_species(&layout, EXPORT_SLUG, &only, &out, &cfg, false).unwrap();
+        assert_eq!(done.len(), 1);
+        assert_eq!((done[0].id.as_str(), done[0].replaced), (MEROPENEM, false));
+        let [bytes, json] = export_files(&out.join(MEROPENEM));
+        let d: serde_json::Value = serde_json::from_slice(&json).unwrap();
+
+        let (input, catalog) = grm::analysis::load_inputs(&layout, EXPORT_SLUG).unwrap();
+        let spec = input.datasets.iter().find(|s| s.id == MEROPENEM).unwrap();
+        let e = grm::analysis::arm_inputs(&input, spec).unwrap().unwrap();
+        assert_eq!(d["format"], grm::export::EXPORT_FORMAT);
+        assert_eq!(d["evaluation_revision"], grm::analysis::EVALUATION_REVISION);
+        // The fingerprint `grm learn` computes at this budget, which differs
+        // from the default budget's.
+        let digest = grm::analysis::species_digest(&input);
+        let fingerprint = |cfg: &EvalConfig| {
+            grm::analysis::dataset_fingerprint(&input, spec, catalog.as_ref(), cfg, digest)
+        };
+        assert_eq!(d["input_fingerprint"], fingerprint(&cfg));
+        assert_ne!(fingerprint(&cfg), fingerprint(&EvalConfig::default()));
+        assert_eq!(d["screened_features"], 7);
+
+        let n = e.sample_ids.len();
+        assert_eq!(n, 60);
+        assert_eq!(d["samples"], serde_json::json!(e.sample_ids));
+        let resistant: Vec<bool> = (0..n).map(|i| e.y.contains(i)).collect();
+        assert_eq!(d["resistant"], serde_json::json!(resistant));
+        assert_eq!(d["lineage"], serde_json::json!(e.lineage));
+        let groups: BTreeSet<BTreeSet<&str>> = e
+            .duplicates
+            .iter()
+            .map(|g| g.iter().map(|&i| e.sample_ids[i].as_str()).collect())
+            .collect();
+        let want = [["562.401", "562.402"], ["562.404", "562.405"]];
+        assert_eq!(groups, want.map(BTreeSet::from).into());
+        assert_eq!(d["duplicates"], serde_json::json!(e.duplicates));
+        assert_eq!(e.min_support, 3);
+        assert_eq!(d["min_support"], 3);
+        assert_eq!(bytes, grm::export::matrix_bytes(&e.x));
+        assert_eq!(
+            (d["rows"].as_u64(), d["cols"].as_u64(), d["words"].as_u64()),
+            (
+                Some(e.x.rows as u64),
+                Some(n as u64),
+                Some(e.x.words as u64)
+            )
+        );
+
+        let scored = grm::learn::eval::evaluate(
+            MEROPENEM,
+            &e.x,
+            &e.y,
+            &e.lineage,
+            &e.duplicates,
+            e.min_support,
+            None,
+            &cfg,
+        )
+        .unwrap();
+        let splits = d["splits"].as_array().unwrap();
+        assert_eq!(splits.len(), scored.splits.len());
+        let (mut below_floor, mut on_test_samples, mut folds) = (false, false, 0);
+        for (split, s) in splits.iter().zip(&scored.splits) {
+            let plan = &split["plan"];
+            assert_eq!(plan["scheme"], s.scheme.as_str());
+            assert!(plan["unavailable_reason"].is_null(), "{}", s.scheme);
+            assert!(s.unavailable_reason.is_none(), "{}", s.scheme);
+            let outer: Vec<usize> = serde_json::from_value(plan["outer"].clone()).unwrap();
+            assert_eq!(outer, s.test_fold, "{} outer folds", s.scheme);
+            for g in &e.duplicates {
+                assert!(
+                    g.iter().all(|&i| outer[i] == outer[g[0]]),
+                    "{} {g:?}",
+                    s.scheme
+                );
+            }
+            let screens = split["screens"].as_array().unwrap();
+            assert_eq!(screens.len(), cfg.folds);
+            for (f, screen) in screens.iter().enumerate() {
+                assert_eq!(screen["fold"], f);
+                let train: Vec<bool> = outer.iter().map(|&o| o != f).collect();
+                let mask = grm::bits::Bits::from_indices(n, (0..n).filter(|&i| train[i]));
+                assert_eq!(screen["n_train"], train.iter().filter(|&&t| t).count());
+                let (cx, rows) = grm::learn::training_candidates(&e.x, &mask, e.min_support);
+                let candidates = candidates_in(&bytes, e.x.words, &train, 3);
+                assert_eq!(screen["n_candidates"], cx.rows, "{} fold {f}", s.scheme);
+                assert_eq!(screen["n_candidates"], candidates, "{} fold {f}", s.scheme);
+                let want: Vec<u32> = grm::learn::screen(&cx, &e.y, &mask, 7)
+                    .into_iter()
+                    .map(|r| rows[r as usize])
+                    .collect();
+                assert_eq!(screen["screened_rows"], serde_json::json!(want));
+                // The fixture is one where a floor of 2, or candidates taken
+                // on every sample, give other counts.
+                below_floor |= candidates_in(&bytes, e.x.words, &train, 2) != candidates;
+                on_test_samples |= candidates_in(&bytes, e.x.words, &[true; 60], 3) != candidates;
+                folds += 1;
+            }
+        }
+        assert_eq!(folds, 2 * cfg.folds);
+        assert!(below_floor && on_test_samples);
+    }
+
+    /// An export stops at a dataset directory that exists, names it and
+    /// writes nothing for any dataset; `--force` replaces the two files.
+    #[test]
+    fn export_stops_at_a_dataset_directory_that_exists_unless_forced() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = export_fixture(dir.path());
+        let out = dir.path().join("export");
+        let (mero, cipro) = (out.join(MEROPENEM), out.join(CIPROFLOXACIN));
+        run_export(dir.path(), &out, &["--only", "meropenem"]).unwrap();
+        let first = export_files(&mero);
+        std::fs::write(mero.join("dataset.json"), "earlier").unwrap();
+        std::fs::write(mero.join("notes.txt"), "kept").unwrap();
+
+        let err = run_export(dir.path(), &out, &[]).unwrap_err();
+        assert!(err.contains(&mero.display().to_string()), "{err}");
+        assert!(err.contains("--force"), "{err}");
+        assert!(!cipro.exists(), "a refused export wrote another dataset");
+        assert_eq!(
+            std::fs::read(mero.join("dataset.json")).unwrap(),
+            b"earlier"
+        );
+
+        run_export(dir.path(), &out, &["--force"]).unwrap();
+        assert_eq!(export_files(&mero), first);
+        assert_eq!(std::fs::read(mero.join("notes.txt")).unwrap(), b"kept");
+        assert!(cipro.join("dataset.json").exists());
+        let cfg = grm::learn::eval::EvalConfig::default();
+        let done =
+            grm::export::export_species(&layout, EXPORT_SLUG, &[], &out, &cfg, true).unwrap();
+        assert_eq!(done.len(), 2);
+        assert!(done.iter().all(|d| d.replaced), "{done:?}");
+        assert_eq!(export_files(&mero), first);
+
+        // Anything at a dataset's path stops the export before it writes
+        // any dataset, a file or a broken link too, whichever dataset's
+        // path it is.
+        for (n, (id, rest, link)) in [
+            (CIPROFLOXACIN, MEROPENEM, false),
+            (MEROPENEM, CIPROFLOXACIN, false),
+            (CIPROFLOXACIN, MEROPENEM, true),
+            (MEROPENEM, CIPROFLOXACIN, true),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let other = dir.path().join(format!("other-{n}"));
+            std::fs::create_dir_all(&other).unwrap();
+            if link {
+                std::os::unix::fs::symlink(dir.path().join("nowhere"), other.join(id)).unwrap();
+            } else {
+                std::fs::write(other.join(id), "a file").unwrap();
+            }
+            let err = run_export(dir.path(), &other, &[]).unwrap_err();
+            let want = format!(
+                "1 dataset directory already exists: {}.",
+                other.join(id).display()
+            );
+            assert!(err.contains(&want), "{id} link {link}: {err}");
+            assert!(
+                !other.join(rest).exists(),
+                "{id} link {link}: {rest} written"
+            );
+        }
+    }
+
+    /// Each file is written under a temporary name and renamed, after the
+    /// earlier `dataset.json` is removed and before the new one is renamed
+    /// into place: a write that fails names its file and leaves a directory
+    /// without `dataset.json`, which the next export without `--force`
+    /// refuses.
+    #[test]
+    fn an_export_that_fails_to_write_names_the_file_and_leaves_no_dataset_json() {
+        let dir = tempfile::tempdir().unwrap();
+        export_fixture(dir.path());
+        let out = dir.path().join("export");
+        let mero = out.join(MEROPENEM);
+        let args = ["--only", "meropenem", "--force"];
+        run_export(dir.path(), &out, &args).unwrap();
+        let first = export_files(&mero);
+        for blocked in ["matrix.bin.tmp", "dataset.json.tmp"] {
+            // A directory at the temporary name makes its write fail.
+            std::fs::create_dir(mero.join(blocked)).unwrap();
+            let err = run_export(dir.path(), &out, &args).unwrap_err();
+            assert!(
+                err.contains(&mero.join(blocked).display().to_string()),
+                "{err}"
+            );
+            assert!(
+                !mero.join("dataset.json").exists(),
+                "{blocked}: dataset.json left"
+            );
+            assert!(mero.join("matrix.bin").exists());
+            std::fs::remove_dir(mero.join(blocked)).unwrap();
+        }
+        let err = run_export(dir.path(), &out, &["--only", "meropenem"]).unwrap_err();
+        assert!(err.contains(&mero.display().to_string()), "{err}");
+        run_export(dir.path(), &out, &args).unwrap();
+        assert_eq!(export_files(&mero), first);
+        let names: BTreeSet<String> = std::fs::read_dir(&mero)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .collect();
+        assert_eq!(
+            names,
+            BTreeSet::from(["dataset.json".into(), "matrix.bin".into()])
+        );
+    }
+
+    /// `--only` names that match no dataset of the species stop the export
+    /// before it writes anything, and the message lists them.
+    #[test]
+    fn export_stops_on_an_only_name_that_matches_no_dataset() {
+        let dir = tempfile::tempdir().unwrap();
+        export_fixture(dir.path());
+        let out = dir.path().join("export");
+        for (only, unmatched) in [
+            ("meropenem,ciprofloxacn", "ciprofloxacn"),
+            ("nitrofurantoin", "nitrofurantoin"),
+            (
+                "klebsiella_oxytoca__meropenem",
+                "klebsiella_oxytoca__meropenem",
+            ),
+            (
+                "tetracycline,meropenem,ampicilin",
+                "tetracycline, ampicilin",
+            ),
+        ] {
+            let err = run_export(dir.path(), &out, &["--only", only]).unwrap_err();
+            let want = format!("--only names no dataset of {EXPORT_SLUG}: {unmatched}.");
+            assert!(err.contains(&want), "{only}: {err}");
+            assert!(
+                err.contains(MEROPENEM) && err.contains(CIPROFLOXACIN),
+                "{err}"
+            );
+            assert!(!out.exists(), "{only}: something was written");
+        }
+        // An antibiotic and a dataset id both match.
+        run_export(
+            dir.path(),
+            &out,
+            &["--only", &format!("meropenem,{CIPROFLOXACIN}")],
+        )
+        .unwrap();
+        assert!(out.join(MEROPENEM).join("dataset.json").exists());
+        assert!(out.join(CIPROFLOXACIN).join("dataset.json").exists());
+    }
+
+    /// A genomes.txt changed after counting stops the export with the
+    /// message `grm learn` gives, before anything is written.
+    #[test]
+    fn export_stops_as_learn_does_when_genomes_txt_changed_after_counting() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = export_fixture(dir.path());
+        let path = layout.species_dir(EXPORT_SLUG).join("genomes.txt");
+        let mut ids = read_lines(&path).unwrap();
+        ids.swap(0, 1);
+        std::fs::write(&path, ids.join("\n") + "\n").unwrap();
+        let data = dir.path().to_str().unwrap();
+        let learn = ["grm", "--data", data, "learn", "--species", EXPORT_SLUG];
+        let learn_err = format!(
+            "{:#}",
+            run(Cli::try_parse_from(learn).unwrap()).unwrap_err()
+        );
+        let out = dir.path().join("export");
+        let err = run_export(dir.path(), &out, &[]).unwrap_err();
+        assert_eq!(err, learn_err);
+        assert!(
+            err.contains("rerun `grm count --species escherichia_coli`"),
+            "{err}"
+        );
+        assert!(!out.exists());
+    }
+
+    /// A species without a matrix: the message names the three commands
+    /// that build it, and a slug with no species folder is called out too.
+    #[test]
+    fn export_of_a_species_without_a_matrix_names_the_commands_to_run() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let out = dir.path().join("export");
+        let export = |slug: &str| {
+            let args = ["grm", "--data", data, "export", "--species", slug, "--out"];
+            let cli = Cli::try_parse_from(args.iter().copied().chain([out.to_str().unwrap()]));
+            format!("{:#}", run(cli.unwrap()).unwrap_err())
+        };
+        let err = export(SLUG);
+        for step in ["count", "structure", "matrix"] {
+            assert!(
+                err.contains(&format!("`grm {step} --species {SLUG}`")),
+                "{err}"
+            );
+        }
+        assert!(
+            err.contains(&layout.matrix_dir(SLUG).display().to_string()),
+            "{err}"
+        );
+        assert!(!err.contains("check the species slug"), "{err}");
+        let err = export("fixtur");
+        assert!(err.contains("`grm count --species fixtur`"), "{err}");
+        assert!(err.contains("check the species slug"), "{err}");
+        assert!(!out.exists());
+    }
+
+    /// Every file under `dir`, by its path below `dir`.
+    fn files_below(dir: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
+        let mut out = BTreeMap::new();
+        let mut todo = vec![dir.to_path_buf()];
+        while let Some(d) = todo.pop() {
+            for entry in std::fs::read_dir(&d).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    todo.push(path);
+                } else {
+                    let bytes = std::fs::read(&path).unwrap();
+                    out.insert(path.strip_prefix(dir).unwrap().to_path_buf(), bytes);
+                }
+            }
+        }
+        out
+    }
+
+    /// A report file with its run clocks set to zero: `generated_at` in
+    /// `index.json` and each learner's `seconds` in a dataset report. Both
+    /// differ between two runs of one build on one root.
+    fn without_clocks(bytes: &[u8]) -> serde_json::Value {
+        fn zero(v: &mut serde_json::Value) {
+            match v {
+                serde_json::Value::Object(map) => {
+                    for (key, value) in map.iter_mut() {
+                        if key == "generated_at" || key == "seconds" {
+                            *value = serde_json::Value::Null;
+                        } else {
+                            zero(value);
+                        }
+                    }
+                }
+                serde_json::Value::Array(items) => items.iter_mut().for_each(zero),
+                _ => {}
+            }
+        }
+        let mut v: serde_json::Value = serde_json::from_slice(bytes).unwrap();
+        zero(&mut v);
+        v
+    }
+
+    /// Ledger action 11: a data root fetched before `GENOME_FIELDS` asked
+    /// for `collection_date` reads as before, and adding the field to every
+    /// genome's metadata changes no report byte. `grm learn` keeps the
+    /// reports it fitted as current; a forced refit and `grm report` give
+    /// the same files, apart from the two run clocks.
+    #[test]
+    fn collection_dates_leave_every_report_file_as_it_was() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, ids) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap())
+        };
+        // `grm report` finds a species' files under the slug of its name, so
+        // the fixture's species is named for its folder.
+        for file in ["datasets.json", "phenotypes.jsonl"] {
+            let path = layout.curated().join(file);
+            let text = std::fs::read_to_string(&path).unwrap();
+            std::fs::write(&path, text.replace(r#""Fixture species""#, r#""Fixture""#)).unwrap();
+        }
+        std::fs::write(
+            layout.curated().join("funnel.json"),
+            serde_json::to_vec(&curate::Funnel::default()).unwrap(),
+        )
+        .unwrap();
+        std::fs::write(layout.amr(), "").unwrap();
+        let kover = dir.path().join("kover.json");
+        std::fs::write(&kover, "[]").unwrap();
+        let kover = kover.to_str().unwrap();
+        // Synthetic metadata, in the form `grm fetch genomes` wrote before
+        // the field (`bvbrc::tests::genome_lines_fetched_before_collection_date_read_and_write_as_before`).
+        let genomes: Vec<GenomeRecord> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, id)| GenomeRecord {
+                genome_id: id.clone(),
+                collection_year: (i % 4 != 3).then(|| format!("{}", 2010 + i % 7)),
+                isolation_country: Some(["Kenya", "Peru", "Viet Nam"][i % 3].into()),
+                host_name: Some("Human, Homo sapiens".into()),
+                mlst: Some(format!("MLST.Fixture.{}", i % 5)),
+                ..Default::default()
+            })
+            .collect();
+        let write_genomes = |records: &[GenomeRecord]| {
+            let lines: Vec<String> = records
+                .iter()
+                .map(|g| serde_json::to_string(g).unwrap())
+                .collect();
+            std::fs::write(layout.genomes(), lines.join("\n") + "\n").unwrap();
+        };
+        write_genomes(&genomes);
+        assert!(
+            !std::fs::read_to_string(layout.genomes())
+                .unwrap()
+                .contains("collection_date")
+        );
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        grm(&["learn", "--species", SLUG]).unwrap();
+        grm(&["report", "--kover", kover]).unwrap();
+        let report_dir = layout.root.join("report");
+        let before = files_below(&report_dir);
+        let results_before = files_below(&layout.results_dir(SLUG));
+        assert!(before.contains_key(Path::new("index.json")));
+        assert!(before.contains_key(Path::new("corpus.json")));
+        assert!(before.contains_key(Path::new("species/fixture.json")));
+        assert!(before.contains_key(Path::new("datasets/fixture__fixturemycin.json")));
+        let species: serde_json::Value =
+            serde_json::from_slice(&before[Path::new("species/fixture.json")]).unwrap();
+        assert_eq!(species["genomes"][0]["year"], "2010");
+
+        // The same genomes with a collection date of every kind.
+        let texts = ["2015-03-12", "2014-05", "2013", "2015-2016", "2017-02-30"];
+        let dated: Vec<GenomeRecord> = genomes
+            .iter()
+            .enumerate()
+            .map(|(i, g)| GenomeRecord {
+                collection_date: match texts.get(i % 6) {
+                    Some(text) => bvbrc::CollectionDate::parse(text),
+                    None => bvbrc::CollectionDate::Missing,
+                },
+                ..g.clone()
+            })
+            .collect();
+        write_genomes(&dated);
+        let read: Vec<GenomeRecord> = bvbrc::read_jsonl(&layout.genomes()).unwrap();
+        let unparsed = read
+            .iter()
+            .filter(|g| g.collection_date.is_unparsed())
+            .count();
+        assert_eq!(unparsed, 20);
+
+        // Learn keeps its reports as current, and the report is rebuilt
+        // byte for byte apart from the index's build time.
+        grm(&["learn", "--species", SLUG]).unwrap();
+        assert_eq!(files_below(&layout.results_dir(SLUG)), results_before);
+        grm(&["report", "--kover", kover]).unwrap();
+        let after = files_below(&report_dir);
+        assert_eq!(
+            after.keys().collect::<Vec<_>>(),
+            before.keys().collect::<Vec<_>>()
+        );
+        for (path, bytes) in &after {
+            if path == Path::new("index.json") {
+                assert_eq!(without_clocks(bytes), without_clocks(&before[path]));
+            } else {
+                assert!(bytes == &before[path], "{} changed", path.display());
+            }
+        }
+
+        // A forced refit reads the dated metadata and fits the same models.
+        grm(&["learn", "--species", SLUG, "--force"]).unwrap();
+        grm(&["report", "--kover", kover]).unwrap();
+        let refit = files_below(&report_dir);
+        assert_eq!(
+            refit.keys().collect::<Vec<_>>(),
+            before.keys().collect::<Vec<_>>()
+        );
+        for (path, bytes) in &refit {
+            assert_eq!(
+                without_clocks(bytes),
+                without_clocks(&before[path]),
+                "{}",
+                path.display()
+            );
+        }
+    }
+
+    /// Ledger action 11: `grm curate` reads `genomes.jsonl` for species, QC
+    /// and MLST groups. Run on a synthetic raw root before and after every
+    /// genome gets a collection date, with each selection rule, it writes the
+    /// same curated files and species files. The one allowance is the key
+    /// order of `qc.json`'s failure map, a `HashMap` written as it iterates,
+    /// which differs between two runs of `main` too; it is compared as JSON.
+    /// No curated file holds the word `collection` or a date text of the
+    /// fixture.
+    #[test]
+    fn collection_dates_leave_every_curated_file_as_it_was() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let data = dir.path().to_str().unwrap();
+        std::fs::create_dir_all(dir.path().join("bvbrc")).unwrap();
+        // Synthetic: 44 genomes of one species with a meropenem call each,
+        // 22 resistant, three that fail QC, and one AST record whose genome
+        // has no metadata line. The label dates are 2019 to 2021, apart
+        // from every collection date below.
+        let ids: Vec<String> = (0..44).map(|i| format!("9990006.{}", 100 + i)).collect();
+        let mut amr = String::new();
+        for (i, id) in ids
+            .iter()
+            .chain(["9990006.999".to_string()].iter())
+            .enumerate()
+        {
+            let record = serde_json::json!({
+                "genome_id": id, "antibiotic": "meropenem",
+                "resistant_phenotype": if i % 2 == 0 { "Resistant" } else { "Susceptible" },
+                "laboratory_typing_method": "Broth dilution", "testing_standard": "CLSI",
+                "testing_standard_year": 2019 + i % 3, "pmid": 30000000 + i % 4,
+                "date_inserted": format!("{}-0{}-1{}T08:00:00Z", 2019 + i % 3, 1 + i % 9, i % 10),
+            });
+            amr += &format!("{record}\n");
+        }
+        std::fs::write(layout.amr(), amr).unwrap();
+        let genomes: Vec<GenomeRecord> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, id)| GenomeRecord {
+                genome_id: id.clone(),
+                species: Some("Escherichia coli".into()),
+                genome_quality: Some(if i == 5 { "Poor" } else { "Good" }.into()),
+                genome_length: (i != 6).then(|| format!("{}", 100_000 + 37 * i)),
+                contigs: Some(if i == 7 { "5000" } else { "80" }.into()),
+                collection_year: (i % 4 != 3).then(|| format!("{}", 2010 + i % 7)),
+                mlst: (i % 5 != 4).then(|| format!("MLST.Escherichia_coli_1.{}", i % 6)),
+                ..Default::default()
+            })
+            .collect();
+        let write_genomes = |records: &[GenomeRecord]| {
+            let lines: Vec<String> = records
+                .iter()
+                .map(|g| serde_json::to_string(g).unwrap())
+                .collect();
+            std::fs::write(layout.genomes(), lines.join("\n") + "\n").unwrap();
+        };
+        // Every kind of collection date: day, month, year, a range, a day
+        // that does not exist, a cut range, and no value.
+        let texts = [
+            "2015-03-12",
+            "2014-05",
+            "1987",
+            "2015-2016",
+            "2017-02-30",
+            "2004-20",
+        ];
+        let dated: Vec<GenomeRecord> = genomes
+            .iter()
+            .enumerate()
+            .map(|(i, g)| GenomeRecord {
+                collection_date: match texts.get(i % 7) {
+                    Some(text) => bvbrc::CollectionDate::parse(text),
+                    None => bvbrc::CollectionDate::Missing,
+                },
+                ..g.clone()
+            })
+            .collect();
+        let curated_and_species = || {
+            let mut files = files_below(&layout.curated());
+            for (path, bytes) in files_below(&dir.path().join("species")) {
+                files.insert(Path::new("species").join(path), bytes);
+            }
+            files
+        };
+        let rules: [&[&str]; 2] = [
+            &[],
+            &[
+                "--selection",
+                "group-round-robin-v1",
+                "--selection-seed",
+                "7",
+            ],
+        ];
+        for rule in rules {
+            let curate = || {
+                let args = [
+                    &[
+                        "grm",
+                        "--data",
+                        data,
+                        "curate",
+                        "--cap",
+                        "30",
+                        "--min-class",
+                        "10",
+                    ][..],
+                    rule,
+                ]
+                .concat();
+                run(Cli::try_parse_from(args).unwrap()).unwrap();
+            };
+            write_genomes(&genomes);
+            assert!(
+                !std::fs::read_to_string(layout.genomes())
+                    .unwrap()
+                    .contains("collection_date")
+            );
+            curate();
+            let before = curated_and_species();
+            write_genomes(&dated);
+            let lines = std::fs::read_to_string(layout.genomes()).unwrap();
+            assert!(lines.lines().all(|l| l.contains(r#""collection_date":"#)));
+            curate();
+            let after = curated_and_species();
+
+            // The fixture reaches every curated file: one dataset, a
+            // selection under the cap, and the three QC failures. The group
+            // rule also writes its plan, `selection.json`.
+            let plan = usize::from(!rule.is_empty());
+            assert_eq!(after.len(), 7 + 1 + plan, "{:?}", after.keys());
+            let datasets: serde_json::Value =
+                serde_json::from_slice(&after[Path::new("datasets.json")]).unwrap();
+            assert_eq!(datasets.as_array().unwrap().len(), 1);
+            let selected = &after[Path::new("species/escherichia_coli/genomes.txt")];
+            assert_eq!(selected.iter().filter(|&&b| b == b'\n').count(), 30);
+            let (_, qc): (serde_json::Value, BTreeMap<String, String>) =
+                serde_json::from_slice(&after[Path::new("qc.json")]).unwrap();
+            assert_eq!(qc.len(), 3, "{qc:?}");
+
+            assert_eq!(
+                after.keys().collect::<Vec<_>>(),
+                before.keys().collect::<Vec<_>>()
+            );
+            for (path, bytes) in &after {
+                if path == Path::new("qc.json") {
+                    let value = |b: &[u8]| serde_json::from_slice::<serde_json::Value>(b).unwrap();
+                    assert_eq!(value(bytes), value(&before[path]), "qc.json");
+                } else {
+                    assert!(bytes == &before[path], "{} changed", path.display());
+                }
+                let text = String::from_utf8_lossy(bytes);
+                for word in texts.iter().chain(&["collection"]) {
+                    assert!(!text.contains(word), "{} holds {word}", path.display());
+                }
+            }
+        }
     }
 }

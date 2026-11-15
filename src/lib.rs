@@ -12,6 +12,7 @@ pub mod cluster;
 pub mod curate;
 pub mod dna;
 pub mod drugs;
+pub mod export;
 pub mod fasta;
 mod fnv;
 pub mod intervals;

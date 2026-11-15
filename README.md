@@ -34,6 +34,8 @@ Every figure is internal validation: cross-validation on public BV-BRC genomes, 
 
 Read each learner's figures with their split and their evaluation revision. The lineage split holds out whole lineages, and a report records why when that split could not be formed. From revision 14 every learner's figures cover every isolate of the split ([docs/equal-scoring.md](docs/equal-scoring.md)).
 
+In each of the six clindamycin datasets one deposited study holds most or a large share of the disagreements between GRM's known-gene rule and the reported phenotype, and the datasets are of four kinds: measured dependence for `staphylococcus_aureus__clindamycin` and `campylobacter_coli__clindamycin`, one study for `enterococcus_faecium__clindamycin`, class balance with dependence not measured for `campylobacter_jejuni__clindamycin` and `streptococcus_agalactiae__clindamycin`, and no dependence under the plan's rule for `streptococcus_pneumoniae__clindamycin`. [docs/clindamycin-labels.md](docs/clindamycin-labels.md) says what each released clindamycin figure rests on.
+
 ## Givens
 
 [Givens](https://github.com/editnori/givens) is a provisional shared browser of the definitions and assumptions that four projects use: GRM, SigDrug, KSD and CondEvent. Its repository is private for now. GRM's entries there cover evaluation terms only: dataset, split, evaluation revision, report figure, and how a figure reads on newly deposited genomes. They hold no sequence or gene content.
@@ -110,12 +112,14 @@ Every command takes `--data <directory>` (default `data`), and the output paths 
 | Structure | `grm structure --species <slug>` | `species/<slug>/structure.json` |
 | Features | `grm matrix --species <slug>` | `species/<slug>/matrix/` |
 | Evaluate | `grm learn --species <slug>` | `species/<slug>/results/<id>.json` |
+| Evaluate on supplied folds | `grm learn --species <slug> --fold-file <file> --fold-out <dir>` | `<dir>/<dataset>.<scheme>.json` ([docs/fold-file.md](docs/fold-file.md)) |
 | Report | `grm report` | `report/` |
 | Research | `grm research --revision5-reports <dir> --out <file>` | the `--out` file |
 | Intervals | `grm intervals` | `report/intervals/<id>.json` |
 | Baselines | `grm baselines` | `report/baselines/<id>.json` |
 | Provenance | `grm fetch genome-dates`, then `grm provenance` | `bvbrc/genome_dates.jsonl` and its manifest, `report/provenance/<id>.json` |
 | Predict | `grm predict --report <file> --fasta <files>` | JSON lines on standard output, or `--out` ([docs/prediction-contract.md](docs/prediction-contract.md)) |
+| Export | `grm export --species <slug> --out <dir>` | `<dir>/<id>/matrix.bin` and `dataset.json`, for a learner outside GRM ([docs/dataset-export.md](docs/dataset-export.md)) |
 
 `--species` takes comma-separated slugs; `grm pipeline` and `grm fetch fasta` use every curated species without it. `grm learn --species <slug> --only meropenem` learns one antibiotic (`--only` also takes dataset ids), and `--force` recomputes reports even when their inputs have not changed.
 
@@ -206,6 +210,8 @@ The saved inputs are not published, so the command cannot be run from public fil
 [docs/rule-words.md](docs/rule-words.md) says what a set covering machine rule's words claim on the site, which of them the release's index writes and which the app writes, and how the wording is numbered.
 
 [docs/outside-study-results.md](docs/outside-study-results.md) gives the result of a retrospective test on newly deposited studies from the same database: each revision-12 report's final model, applied unchanged to BV-BRC genomes added after the cohort was built. [docs/outside-study-results-by-species.md](docs/outside-study-results-by-species.md) reads it one species at a time. [docs/outside-study-test.md](docs/outside-study-test.md) is the plan, frozen before any of those genomes was fetched. The output files are in `reference/outside-study/`. The result's section Revision 14 reads the same estimates against the figures the site serves now, from `reference/outside-study-figures/`. `reference/outside-study-models/` holds a digest of each final model in both revisions, and the suite fails if one differs.
+
+[docs/lasso-stopping.md](docs/lasso-stopping.md) gives the lasso's stopping rule and the large-species scan it registered. Its section Revision 14 scan reports the scan of 15 November 2026: the release's lasso code fitted again on the list's 18 datasets, each fit compared with the released reports. The released lasso figures of those datasets are reproduced bit for bit and every fit met the solver's convergence test, which says nothing about accuracy or calibration: recall ranges from 0.1710 to 0.9473 on the random split and from 0.0311 to 0.9385 on the lineage split, lowest for `mycobacterium_tuberculosis__clofazimine` in both. The plan, the result files, the scripts and an independent review of the scan are in `reference/lasso-scan/rev14-20261115/`.
 
 [docs/data-collection.md](docs/data-collection.md) shows how to keep one checked copy of the project's files: `scripts/collect/collect.py` lists them with a size, a sha256 and a class, packs one class into archives of at most 1.9 GB, and checks an archive against the list it carries.
 

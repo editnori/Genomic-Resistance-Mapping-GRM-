@@ -1,0 +1,17 @@
+default seed, arm with: c1f36fc scores vs lane clinda's report: compared 18516, differing 0; sample ids equal True; eval_config.seed 42
+default seed, arm without: c1f36fc scores vs lane clinda's report: compared 10608, differing 0; sample ids equal True; eval_config.seed 42
+seed 42: eval_config.seed with 42 without 42; n with 1543 without 884
+seed 1: eval_config.seed with 1 without 1; n with 1543 without 884
+seed 2: eval_config.seed with 2 without 2; n with 1543 without 884
+seed 3: eval_config.seed with 3 without 3; n with 1543 without 884
+seed 4: eval_config.seed with 4 without 4; n with 1543 without 884
+seed 5: eval_config.seed with 5 without 5; n with 1543 without 884
+seed 6: eval_config.seed with 6 without 6; n with 1543 without 884
+seed 7: eval_config.seed with 7 without 7; n with 1543 without 884
+seed 8: eval_config.seed with 8 without 8; n with 1543 without 884
+seed 9: eval_config.seed with 9 without 9; n with 1543 without 884
+seed 10: eval_config.seed with 10 without 10; n with 1543 without 884
+arm with split random: distinct fold plans over 11 seeds: 11
+arm with split lineage: distinct fold plans over 11 seeds: 11
+arm without split random: distinct fold plans over 11 seeds: 11
+arm without split lineage: distinct fold plans over 11 seeds: 11
