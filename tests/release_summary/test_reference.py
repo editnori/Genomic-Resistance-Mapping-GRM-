@@ -3,7 +3,8 @@
 The suite recomputes nothing from a release. It checks that each output parses, names its release's revision and 274
 datasets, that its counts partition as they must, and that the README lists the sha256 of each output. guidance.json must
 read the same rows as uncertainty.json, sort them into the same screen classes, and count the no-call rows that
-index-counts.json finds."""
+index-counts.json finds. index-counts.json must count the labels inferred from a MIC over the datasets that hold the
+field, and count a dataset without it apart."""
 
 import hashlib
 import json
@@ -120,6 +121,16 @@ class Reference(unittest.TestCase):
                     self.assertEqual(c["flagged_with_no_call"], c["flagged_rows"])
                     self.assertEqual(c["unflagged_with_no_call"], 0)
                     self.assertEqual(c["flag_keys_seen"], {"split:true": 122})
+                # labels inferred from a MIC: a dataset without the field is counted apart, never as zero
+                m = c["labels_from_mic_excluded"]
+                self.assertEqual(list(m), ["datasets_with_field", "datasets_without_field", "datasets_above_zero", "labels"])
+                self.assertEqual(m["datasets_with_field"] + m["datasets_without_field"], c["datasets"])
+                if m["datasets_with_field"]:
+                    self.assertLessEqual(m["datasets_above_zero"], m["datasets_with_field"])
+                    self.assertGreaterEqual(m["labels"], m["datasets_above_zero"])
+                    self.assertEqual(m["labels"] == 0, m["datasets_above_zero"] == 0)
+                else:
+                    self.assertEqual((m["datasets_above_zero"], m["labels"]), (None, None))
 
     def test_guidance_criteria(self):
         for release in RELEASES:
