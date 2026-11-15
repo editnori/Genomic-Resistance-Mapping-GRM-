@@ -1380,6 +1380,52 @@ mod tests {
         assert_eq!(column_blocks, None);
     }
 
+    /// `grm matrix` from its parsed arguments through `run`: the switch and
+    /// `--min-support` reach the block merge. Only `main`'s `Cli::parse` of
+    /// the process arguments and the printing of an error are left out.
+    #[test]
+    fn matrix_column_blocks_reach_the_block_merge_through_run() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let run_grm = |args: &[&str]| {
+            let cli = Cli::try_parse_from(["grm", "--data", data].iter().chain(args)).unwrap();
+            run(cli).map_err(|e| format!("{e:#}"))
+        };
+        run_grm(&["count", "--species", SLUG]).unwrap();
+        let mx = layout.matrix_dir(SLUG);
+        let files = || {
+            [
+                "matrix.json",
+                "patterns.bin",
+                "support.bin",
+                "kmer_offsets.bin",
+                "kmers.bin",
+            ]
+            .map(|f| std::fs::read(mx.join(f)).unwrap())
+        };
+        // The block merge removes a partials folder it finds; the default
+        // merge leaves it alone. So the folder shows which merge ran.
+        let partials = layout.partials_dir(SLUG);
+        let mut written = Vec::new();
+        for min_support in ["1", "2"] {
+            std::fs::create_dir_all(&partials).unwrap();
+            std::fs::write(partials.join("left.txt"), "a stopped run").unwrap();
+            let plain = ["matrix", "--species", SLUG, "--min-support", min_support];
+            run_grm(&plain).unwrap();
+            assert!(partials.join("left.txt").exists(), "{min_support}");
+            let want = files();
+            run_grm(&[&plain[..], &["--column-blocks", "64"]].concat()).unwrap();
+            assert!(
+                !partials.exists(),
+                "--min-support {min_support} --column-blocks 64 ran the default merge"
+            );
+            assert!(files() == want, "--min-support {min_support}");
+            written.push(want);
+        }
+        assert!(written[0] != written[1]);
+    }
+
     const SLUG: &str = "fixture";
     const GENE: &str = "ATGAAACGTTACGGCATTGCAGGCTTACCGATAGCTTGACCTAGGCATCGATCGGATCCATGCAAGCTTGG";
 
