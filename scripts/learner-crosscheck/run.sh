@@ -20,8 +20,11 @@ if [ "$#" -ne 2 ]; then
 fi
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
-python=$1/bin/python
-out=$2
+# ENV and OUT are made absolute as the caller gave them, because this script
+# changes directory before it uses them again.
+case "$1" in /*) env_dir=$1 ;; *) env_dir=$PWD/$1 ;; esac
+case "$2" in /*) out=$2 ;; *) out=$PWD/$2 ;; esac
+python=$env_dir/bin/python
 fixtures=$root/tests/data/lasso-stopping-fixtures.txt
 jobs=${CROSSCHECK_JOBS:-8}
 

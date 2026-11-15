@@ -451,6 +451,18 @@ class RunSh(unittest.TestCase):
         self.assertEqual([(match.group(1), match.group(3)) for match in listed], [("$1", None)])
         self.assertEqual(listed[0].group(2), written[0][1].group(2))
 
+    def test_it_makes_env_and_out_absolute_before_it_changes_directory(self):
+        # a relative ENV or OUT, given from outside the checkout, named another place after the cd: the harness and the
+        # comparison then read and wrote where the checks at the top had not looked
+        code = [line for line in self.lines if not line.startswith("#")]
+        env = code.index('case "$1" in /*) env_dir=$1 ;; *) env_dir=$PWD/$1 ;; esac')
+        out = code.index('case "$2" in /*) out=$2 ;; *) out=$PWD/$2 ;; esac')
+        first_use = min(at for at, line in enumerate(code) if "$out" in line or "$python" in line or "$env_dir/" in line)
+        self.assertLess(max(env, out), first_use)
+        self.assertLess(first_use, code.index('cd "$root"'))
+        # the two arguments are read on those two lines and on no other
+        self.assertEqual([at for at, line in enumerate(code) if re.search(r"\$[12@*]|\$\{[12@*]", line)], [env, out])
+
 
 class CheckFits(unittest.TestCase):
     """check_fits.sh, run in a copy of the folders it reads, with a stand-in for cargo and one for the harness, which writes
