@@ -131,12 +131,19 @@ enum Command {
         /// (docs/fold-file.md). Writes <fold-out>/<dataset>.<scheme>.json,
         /// which records the file's SHA-256, and no report. Takes one
         /// species; --force replaces an existing result. It runs at the
-        /// release's seeds and tie rule, so --seed, --learner-seed,
-        /// --exp-tie-rule and --exp-tie-trace are refused with it.
+        /// release's seeds and tie rule, so --seed, --learner-seed and the
+        /// --exp-tie-* options are refused with it.
         #[arg(
             long,
             requires = "fold_out",
-            conflicts_with_all = ["only", "seed", "learner_seed", "exp_tie_rule", "exp_tie_trace"]
+            conflicts_with_all = [
+                "only",
+                "seed",
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+            ]
         )]
         fold_file: Option<PathBuf>,
         /// Directory for the --fold-file result.
@@ -170,6 +177,12 @@ enum Command {
         /// same as without it.
         #[arg(long)]
         exp_tie_trace: Option<PathBuf>,
+        /// Experiment: write this run's reports to this folder in place of
+        /// results/ or the draw's folder. An --exp-tie-rule exact run at the
+        /// release's seeds needs it: it refuses results/, the folder
+        /// production writes and `grm report` indexes.
+        #[arg(long)]
+        exp_tie_out: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -423,16 +436,21 @@ fn run(cli: Cli) -> Result<()> {
             learner_seed,
             exp_tie_rule,
             exp_tie_trace,
+            exp_tie_out,
             ..
         } => {
+            let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
+            // Every species is checked before the first fit or trace line.
+            for s in &species {
+                refuse_exact_in_results(&layout, s, &cfg, exp_tie_out.as_deref())?;
+            }
             if let Some(path) = &exp_tie_trace {
                 grm::learn::tie::start_trace(path)
                     .with_context(|| format!("create {}", path.display()))?;
             }
-            let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
             species
                 .iter()
-                .try_for_each(|s| learn(&layout, s, &only, force, &cfg))
+                .try_for_each(|s| learn_in(&layout, s, &only, force, &cfg, exp_tie_out.as_deref()))
         }
         Command::Pipeline {
             species,
@@ -760,9 +778,64 @@ fn learn(
     force: bool,
     cfg: &grm::learn::eval::EvalConfig,
 ) -> Result<()> {
+    learn_in(layout, slug, only, force, cfg, None)
+}
+
+/// `learn`, with the reports in `out` when `grm learn --exp-tie-out` names
+/// it. That run ends with a line of its own, which does not begin with the
+/// release line `scripts/metric-audit/audit.py` reads.
+fn learn_in(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &grm::learn::eval::EvalConfig,
+    out: Option<&std::path::Path>,
+) -> Result<()> {
     grm::species::ensure_selection_counted(layout, slug)?;
-    let written = grm::analysis::analyze_species(layout, slug, only, force, cfg)?;
-    eprintln!("{}", learn_end_line(layout, slug, written.len(), cfg));
+    let line = match out {
+        None => {
+            let written = grm::analysis::analyze_species(layout, slug, only, force, cfg)?;
+            learn_end_line(layout, slug, written.len(), cfg)
+        }
+        Some(dir) => {
+            let written = grm::analysis::analyze_species_in(layout, slug, only, force, cfg, dir)?;
+            format!(
+                "{slug}: {} experiment reports written to {}",
+                written.len(),
+                dir.display()
+            )
+        }
+    };
+    eprintln!("{line}");
+    Ok(())
+}
+
+/// An `--exp-tie-rule exact` run stops before any fit when its reports would
+/// go to `results/`, the folder production reports are written to and
+/// `grm report` indexes: by default at the release's seeds, or because
+/// `--exp-tie-out` names that folder.
+fn refuse_exact_in_results(
+    layout: &Layout,
+    slug: &str,
+    cfg: &grm::learn::eval::EvalConfig,
+    out: Option<&std::path::Path>,
+) -> Result<()> {
+    if cfg.tie_rule.is_float() {
+        return Ok(());
+    }
+    let results = layout.results_dir(slug);
+    let dir = out.map_or_else(|| grm::analysis::reports_dir(layout, slug, cfg), Into::into);
+    let same = dir == results
+        || matches!(
+            (std::fs::canonicalize(&dir), std::fs::canonicalize(&results)),
+            (Ok(a), Ok(b)) if a == b
+        );
+    anyhow::ensure!(
+        !same,
+        "--exp-tie-rule exact would write {slug}'s reports to {}, the folder production reports are written to and `grm report` indexes; name another folder with --exp-tie-out DIR",
+        results.display()
+    );
     Ok(())
 }
 
@@ -2411,6 +2484,17 @@ mod tests {
         ] {
             assert!(parse(bad).is_err(), "{bad:?}");
         }
+        // A fold file runs at production's tie rule: the experiment's
+        // options are refused beside it, `float` named explicitly too.
+        for extra in [
+            &["--exp-tie-rule", "exact"][..],
+            &["--exp-tie-rule", "float"][..],
+            &["--exp-tie-trace", "t.jsonl"][..],
+            &["--exp-tie-out", "x"][..],
+        ] {
+            let args = [&["--fold-file", "f.json", "--fold-out", "o"][..], extra].concat();
+            assert!(parse(&args).is_err(), "{extra:?}");
+        }
         // The file names one dataset, so a second species is refused before
         // anything is read.
         let dir = tempfile::tempdir().unwrap();
@@ -2543,6 +2627,7 @@ mod tests {
                 screened_features,
                 seed,
                 learner_seed,
+                exp_tie_rule,
                 ..
             } = Cli::try_parse_from(all).unwrap().command
             else {
@@ -2552,7 +2637,7 @@ mod tests {
                 screened_features,
                 seed,
                 learner_seed,
-                Default::default(),
+                exp_tie_rule.into(),
             ))
             .unwrap()
         };
@@ -2589,6 +2674,15 @@ mod tests {
                 ..release()
             })
         );
+        assert_eq!(
+            config(&["--exp-tie-rule", "exact", "--seed", "43"]),
+            expected(EvalConfig {
+                seed: 43,
+                tie_rule: grm::learn::tie::TieRule::Exact,
+                ..release()
+            })
+        );
+        assert_eq!(config(&["--exp-tie-rule", "float"]), expected(release()));
     }
 
     /// The pipeline's stages follow `--k`: counts, structure and matrix built
@@ -2974,6 +3068,56 @@ mod tests {
         .unwrap();
         assert_eq!(result["eval_config"]["screened_features"], 7);
         assert_eq!(result["counts"]["tested"], 60);
+    }
+
+    /// `grm learn --exp-tie-rule exact` through the command's own path. At
+    /// the release's seeds it would write to results/, so it stops before
+    /// any fit and names --exp-tie-out; naming results/ itself stops it too.
+    /// With another folder the report lands there and records the rule the
+    /// fits ran under, and results/ is not written. A run without the flag
+    /// still writes results/ with no tie rule recorded.
+    #[test]
+    fn an_exact_learn_refuses_results_and_writes_the_rule_to_the_folder_it_names() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, _) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap()).map_err(|e| format!("{e:#}"))
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        let file = format!("{SLUG}__fixturemycin.json");
+        let results = layout.results_dir(SLUG);
+        let exact = ["learn", "--species", SLUG, "--exp-tie-rule", "exact"];
+        let err = grm(&exact).unwrap_err();
+        assert_eq!(
+            err,
+            format!(
+                "--exp-tie-rule exact would write {SLUG}'s reports to {}, the folder production reports are written to and `grm report` indexes; name another folder with --exp-tie-out DIR",
+                results.display()
+            )
+        );
+        assert!(!results.exists());
+        std::fs::create_dir_all(&results).unwrap();
+        let named = [&exact[..], &["--exp-tie-out", results.to_str().unwrap()]].concat();
+        assert!(grm(&named).unwrap_err().contains("--exp-tie-out DIR"));
+        let out = dir.path().join("exact");
+        let named = [&exact[..], &["--exp-tie-out", out.to_str().unwrap()]].concat();
+        grm(&named).unwrap();
+        let read = |p: std::path::PathBuf| -> serde_json::Value {
+            serde_json::from_slice(&std::fs::read(p).unwrap()).unwrap()
+        };
+        assert_eq!(read(out.join(&file))["eval_config"]["tie_rule"], "exact");
+        assert!(!results.join(&file).exists());
+        grm(&["learn", "--species", SLUG]).unwrap();
+        let production = read(results.join(&file));
+        assert!(production["eval_config"].get("tie_rule").is_none());
+        assert_ne!(
+            production["input_fingerprint"],
+            read(out.join(&file))["input_fingerprint"]
+        );
     }
 
     /// The acceptance check of docs/prediction-contract.md: `grm predict`,

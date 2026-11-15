@@ -1311,11 +1311,30 @@ pub fn analyze_species(
     force: bool,
     cfg: &EvalConfig,
 ) -> Result<Vec<String>> {
+    analyze_species_in(
+        layout,
+        slug,
+        only,
+        force,
+        cfg,
+        &reports_dir(layout, slug, cfg),
+    )
+}
+
+/// `analyze_species` with its reports kept in `dir`, the folder
+/// `grm learn --exp-tie-out` names, in place of `reports_dir`.
+pub fn analyze_species_in(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &EvalConfig,
+    dir: &std::path::Path,
+) -> Result<Vec<String>> {
     let (input, catalog) = load_inputs(layout, slug)?;
     let digest = matrix_digest(&input.matrix);
     let client = Client::new();
-    let dir = reports_dir(layout, slug, cfg);
-    std::fs::create_dir_all(&dir)?;
+    std::fs::create_dir_all(dir)?;
     let mut specs: Vec<&DatasetSpec> = input
         .datasets
         .iter()
