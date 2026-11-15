@@ -20,7 +20,9 @@ import {
   clindamycinRowEntry,
   kindCounts,
   kindOf,
+  noPmidContrast,
   parseClindamycinLabels,
+  type ClindamycinDataset,
   type ClindamycinLabels,
 } from "./clindamycin";
 import bundled from "../clindamycin-labels.json";
@@ -176,13 +178,65 @@ describe("the note's words", () => {
     expect(words(SA)).not.toMatch(/\bfalls?\b/);
   });
 
-  it("says, where most samples carry no PMID, that the study stands out only against those", () => {
-    for (const id of Object.keys(file.datasets)) {
-      const d = file.datasets[id]!;
-      expect(words(id).includes("stands out only against those")).toBe(2 * d.no_pmid_samples > d.samples);
-    }
-    expect(words(CC)).toContain("stands out only against those");
-    expect(words(CJ)).toContain("stands out only against those");
+  it("says the study's share stands out only against the samples with no PMID by the writer's rule, for the two Campylobacter datasets alone", () => {
+    const said = "and the study's share of the disagreements stands out only against those samples.";
+    for (const id of Object.keys(file.datasets)) expect(words(id).includes(said), id).toBe(noPmidContrast(file.datasets[id]!));
+    expect(Object.keys(file.datasets).filter((id) => noPmidContrast(file.datasets[id]!)).sort()).toEqual([CC, CJ]);
+    expect(words(CC)).toContain(`294 of the 389 samples carry no PMID, ${said}`);
+    expect(words(CJ)).toContain(`475 of the 508 samples carry no PMID, ${said}`);
+    // Each of the rule's three parts is needed.
+    const coli = file.datasets[CC]!;
+    expect(noPmidContrast({ ...coli, no_pmid_samples: Math.floor(coli.samples / 2) })).toBe(false);
+    expect(noPmidContrast({ ...coli, no_pmid_disagreements: coli.no_pmid_samples })).toBe(false);
+    expect(noPmidContrast({ ...coli, other_pmid_disagreements: 0 })).toBe(false);
+  });
+
+  it("names the figures that pass by their count, and says the others do not pass", () => {
+    expect(clindamycinNote(reportAs(CC))!.reading).toBe(
+      "Those 9 figures are associated with that one study's labels or genomes. The other 24 do not pass the rule, and neither result shows which reading is wrong.",
+    );
+    expect(clindamycinNote(reportAs(SA))!.reading).toBe(
+      "Those 19 figures are associated with that one study's labels or genomes. The other 14 do not pass the rule, and neither result shows which reading is wrong.",
+    );
+    for (const id of [CC, SA]) expect(words(id)).not.toContain("The released figure");
+  });
+
+  it("does not read no passing figure as no dependence", () => {
+    const reading = clindamycinNote(reportAs(SP))!.reading;
+    expect(reading).toBe("This does not show that the figures do not depend on that study: some intervals are wide, and the fold plans of this dataset were not varied.");
+    expect(words(SP)).toContain("none of the 33 distinct figures tested changes by 0.05 or more");
+    expect(words(SP)).not.toMatch(/barely move|do not depend on that study\./);
+  });
+
+  it("says one passing figure, and one other, in the singular", () => {
+    const one = (d: Partial<ClindamycinDataset>, id = CC): ClindamycinLabels => ({ ...file, datasets: { ...file.datasets, [id]: { ...file.datasets[id]!, ...d } } });
+    const falls = clindamycinNote(reportAs(CC), one({ rows_passing: 1, distinct_passing: 1 }))!;
+    expect(falls.counts.join(" ")).toContain("1 of the 33 distinct figures tested falls by 0.05 or more");
+    expect(falls.reading).toBe("That figure is associated with that one study's labels or genomes. The other 32 do not pass the rule, and neither result shows which reading is wrong.");
+    const rises = clindamycinNote(reportAs(SA), one({ rows_passing: 1, distinct_passing: 1 }, SA))!;
+    expect(rises.counts.join(" ")).toContain("1 of the 33 distinct figures tested rises by 0.05 or more");
+    expect(clindamycinNote(reportAs(SA), one({ rows_passing: 32, distinct_passing: 32 }, SA))!.reading).toContain("The other 1 does not pass the rule");
+    expect(clindamycinNote(reportAs(SA), one({ rows_passing: 36, distinct_passing: 33 }, SA))!.reading).toBe(
+      "Those 33 figures are associated with that one study's labels or genomes, and the result does not show which reading is wrong.",
+    );
+  });
+
+  it("says the class minimum is the release's, with the file's number", () => {
+    expect(words(CJ)).toContain(`Without it 8 reported resistant samples remain, under the class minimum of ${file.min_class} this release uses, so`);
+    expect(words(SG)).toContain(`Without it 18 reported susceptible samples remain, under the class minimum of ${file.min_class} this release uses, so`);
+    expect(words(CJ)).not.toContain("GRM needs");
+  });
+
+  it("holds the one-study reading to the page's sentences for that dataset, word for word", async () => {
+    const fs = (await import(/* @vite-ignore */ `node:${"fs"}`)) as { readFileSync(path: string, encoding: string): string };
+    const cwd = (globalThis as unknown as { process: { cwd(): string } }).process.cwd();
+    const page = fs.readFileSync(`${cwd}/../${file.page}`, "utf8");
+    const line = page.split("\n").find((l) => l.startsWith(`- **\`${EF}\`: one study.**`));
+    expect(line).toBeDefined();
+    // "... so the figures describe that study's genomes and labels alone. No figure without that study can exist."
+    const [first, second] = clindamycinNote(reportAs(EF))!.reading.replace(/\.$/, "").split(", and ");
+    expect(line).toContain(`${first!.charAt(0).toLowerCase()}${first!.slice(1)}.`);
+    expect(line).toContain(`${second!.charAt(0).toUpperCase()}${second!.slice(1)}.`);
   });
 
   it("calls the threshold a research screen, and uses none of the barred words", () => {
@@ -201,6 +255,8 @@ describe("the Methods paragraph", () => {
     expect(text).toContain(`measured dependence (${counts.measured_dependence} datasets); one study (${counts.one_study}); class balance, dependence not measured (${counts.class_balance}); and no dependence under the rule (${counts.no_dependence})`);
     expect(text).toContain(`release ${file.release}`);
     expect(text).toContain("neither is called the error");
+    expect(text).toContain("The page sorts the 6 datasets into four kinds");
+    expect(text).not.toContain("The check sorts");
     expect(clindamycinMethods({ evaluation_revision: file.evaluation_revision + 1 })).toBeNull();
     expect(clindamycinMethods({ evaluation_revision: undefined })).toBeNull();
   });
