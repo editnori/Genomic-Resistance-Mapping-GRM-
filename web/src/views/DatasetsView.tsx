@@ -245,7 +245,7 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     firstDir: "asc",
     cell: (r) => (
       <span className="block">
-        <span className="flex items-baseline gap-x-2">
+        <span className="flex flex-wrap items-baseline gap-x-2">
           <span className="min-w-0">
             <DrugName name={r.antibiotic} />
           </span>

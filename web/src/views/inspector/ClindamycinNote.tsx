@@ -17,9 +17,14 @@ const PageLink = ({ page }: { page: string }) => (
 );
 
 /** One note under the learner comparison of each of the six datasets: the
- *  kind, the counts behind it, what the figure can be read as, and the page. */
-export const ClindamycinNote = ({ r, file = CLINDAMYCIN_LABELS }: { r: DatasetReport; file?: ClindamycinLabels | null }) => {
-  const note = clindamycinNote(r, file);
+ *  kind, the counts behind it, what the figure can be read as, and the page.
+ *  A caller that passes `digest`, the loaded report's sha256 (undefined
+ *  until it is read, null when none exists), gets the note only when it is
+ *  the file's report_sha256; a caller that passes none gets the pin by
+ *  dataset, revision and sample count. */
+export const ClindamycinNote = (props: { r: DatasetReport; file?: ClindamycinLabels | null; digest?: string | null | undefined }) => {
+  const { r, file = CLINDAMYCIN_LABELS } = props;
+  const note = clindamycinNote(r, file, Object.hasOwn(props, "digest") ? { digest: props.digest } : undefined);
   if (note === null) return null;
   return (
     <div role="note" data-clindamycin-note={note.kind} className="border-y border-hair py-3">
@@ -40,7 +45,7 @@ export const ClindamycinMark = ({ row, file = CLINDAMYCIN_LABELS }: { row: Catal
   if (tip === null) return null;
   return (
     <span data-clindamycin-mark="" title={tip} className="shrink-0 cursor-help text-tiny font-medium text-muted-text underline decoration-dotted underline-offset-2">
-      Label check<span className="sr-only">. {tip}</span>
+      Labels by study<span className="sr-only">. {tip}</span>
     </span>
   );
 };

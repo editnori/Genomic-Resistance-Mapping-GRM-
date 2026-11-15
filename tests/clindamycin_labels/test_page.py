@@ -28,6 +28,9 @@ COUNTS = (
     "disagreements",
     "study_disagreements",
     "no_pmid_samples",
+    "no_pmid_disagreements",
+    "other_pmid_samples",
+    "other_pmid_disagreements",
     "left_resistant",
     "left_susceptible",
     "rows_passing",
@@ -82,6 +85,11 @@ def read_page():
         d = dataset_of(row["Dataset"])
         study_disagreements, disagreements = of(row["Its disagreements"])
         study_samples, samples = of(row["Its samples"])
+        # The two cells over the samples with a PMID: the study's part, of all of them.
+        pmid_study_disagreements, pmid_disagreements = of(row["Its disagreements, samples with a PMID"])
+        pmid_study_samples, pmid_samples = of(row["Its samples, samples with a PMID"])
+        if (pmid_study_disagreements, pmid_study_samples, samples - pmid_samples) != (study_disagreements, study_samples, int(row["Samples with no PMID"])):
+            raise AssertionError(f"{d}: the page's cells over samples with a PMID do not fit its other cells")
         page[d] = {
             "pmid": row["PMID the plan picks"],
             "samples": samples,
@@ -89,6 +97,9 @@ def read_page():
             "disagreements": disagreements,
             "study_disagreements": study_disagreements,
             "no_pmid_samples": int(row["Samples with no PMID"]),
+            "no_pmid_disagreements": disagreements - pmid_disagreements,
+            "other_pmid_samples": pmid_samples - study_samples,
+            "other_pmid_disagreements": pmid_disagreements - study_disagreements,
         }
     for row in table(six, "| Dataset | Left without it, R / S |"):
         d = dataset_of(row["Dataset"])
@@ -193,6 +204,20 @@ class PageAndBundle(unittest.TestCase):
         for p in self.page.values():
             from_page[p["kind_in_opening"]] += 1
         self.assertEqual(counted, from_page)
+
+    def test_the_no_pmid_counts_of_the_campylobacter_datasets_are_the_pages_sentence(self):
+        # "... most samples carry no PMID (294 of 389 and 475 of 508), and those disagree less often (44 of 294, 15.0%, and 6 of 475, 1.3%)."
+        m = re.search(r"most samples carry no PMID \((\d+) of (\d+) and (\d+) of (\d+)\), and those disagree less often \((\d+) of (\d+), [\d.]+%, and (\d+) of (\d+), [\d.]+%\)", self.text)
+        self.assertIsNotNone(m)
+        n = [int(x) for x in m.groups()]
+        coli, jejuni = self.data["datasets"]["campylobacter_coli__clindamycin"], self.data["datasets"]["campylobacter_jejuni__clindamycin"]
+        self.assertEqual(n, [coli["no_pmid_samples"], coli["samples"], jejuni["no_pmid_samples"], jejuni["samples"], coli["no_pmid_disagreements"], coli["no_pmid_samples"], jejuni["no_pmid_disagreements"], jejuni["no_pmid_samples"]])
+
+    def test_the_datasets_where_the_page_reads_the_contrast_against_no_pmid_are_the_rules(self):
+        # The page says it of "the two Campylobacter datasets"; the writer's rule must give those two and no other.
+        self.assertIn("So the Campylobacter contrast is between one study and samples with no PMID, not between studies.", self.text)
+        holds = sorted(d for d, entry in self.data["datasets"].items() if S.no_pmid_contrast(entry))
+        self.assertEqual(holds, sorted(d for d in self.page if d.startswith("campylobacter_")))
 
     def test_the_release_is_the_pages(self):
         self.assertIn(f"The release `{self.data['release']}` (evaluation revision {self.data['evaluation_revision']})", self.text)
