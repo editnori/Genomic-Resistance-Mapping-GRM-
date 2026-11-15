@@ -182,6 +182,10 @@ src/lib.rs dna::tests::mixer_round_trips_and_stays_in_range
 src/lib.rs dna::tests::window_breaks_on_non_acgt
 src/lib.rs drugs::tests::classes_combinations_by_component
 src/lib.rs drugs::tests::resolves_submitter_variants
+src/lib.rs export::tests::an_unavailable_lineage_plan_exports_no_screens
+src/lib.rs export::tests::matrix_bytes_keep_every_bit_in_row_and_column_order
+src/lib.rs export::tests::plans_are_the_outer_folds_evaluate_scores
+src/lib.rs export::tests::screens_are_matrix_rows_ranked_on_training_samples_only
 src/lib.rs fasta::tests::gzip_reads_every_member_and_rejects_truncation
 src/lib.rs fasta::tests::reads_fastq
 src/lib.rs fasta::tests::reads_multiline_fasta_and_gzip
