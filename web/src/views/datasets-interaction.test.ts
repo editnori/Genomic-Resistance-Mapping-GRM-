@@ -152,6 +152,19 @@ describe("rule cells", () => {
     expect(opened).toHaveBeenCalledTimes(1);
   });
 
+  it("show the several-families note under each opened rule that names several, and under no other", () => {
+    const base = manifest.datasets[0]!;
+    const several = "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)";
+    draw({ ...manifest, datasets: [{ ...base, scm_rules: ["presence of blaKPC", several, "absence of gyrA", `absence of ${several.slice("presence of ".length)}`] }] });
+    const cell = table().querySelector("tbody tr")!.lastElementChild!;
+    // Closed, only the first rule shows, and it names one family.
+    expect(cell.querySelectorAll("[data-rule-note]")).toHaveLength(0);
+    act(() => cell.querySelector<HTMLButtonElement>("button[aria-label='Show all 4 rules']")!.click());
+    const notes = [...cell.querySelectorAll("li")].map((li) => li.querySelector("[data-rule-note]")?.textContent ?? null);
+    const note = "Not a list of genes an isolate carries: one k-mer pattern matches all of these families.";
+    expect(notes).toEqual([null, note, null, note]);
+  });
+
   it("make a single cut-off rule its own button for the whole text, and leave a rule that fits as text", () => {
     const base = manifest.datasets[0]!;
     const long = "presence of Aminoglycoside N(6')-acetyltransferase (EC 2.3.1.82) => AAC(6')-Ib/AAC(6')-II";

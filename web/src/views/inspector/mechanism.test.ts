@@ -88,7 +88,7 @@ describe("catalog baseline wording", () => {
   it("names GRM's catalog-containment rule and gives the AMRFinderPlus catalog only as its source", () => {
     const version = report.catalog!.version;
     const html = render(report);
-    expect(html).toContain(`Catalog-containment rule · AMRFinderPlus catalog ${version}`);
+    expect(html).toContain(`Catalog-containment rule · AMRFinderPlus catalog database ${version}`);
     expect(html).not.toContain(`>AMRFinderPlus ${version}<`);
   });
 });
