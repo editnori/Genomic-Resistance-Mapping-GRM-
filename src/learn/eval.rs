@@ -4387,6 +4387,35 @@ mod tests {
     }
 
     #[test]
+    fn a_tested_sample_takes_its_own_score_wherever_it_sits_in_the_sample_order() {
+        // Synthetic: the 120-sample fixture and one more row that is the
+        // label itself, so a one-rule SCM scores every sample by its own
+        // label. Samples 80..110 are tested: they are not the first samples
+        // of the cohort, and their labels are not those of samples 0..30.
+        let (mut x, y, _) = assigned_fixture();
+        let n = x.cols;
+        x.push_row(y.words());
+        let roles: Vec<Role> = (0..n)
+            .map(|i| match i {
+                80..110 => Role::Test(0),
+                20..80 => Role::Train,
+                _ => Role::Unused,
+            })
+            .collect();
+        let split = assigned(&x, &y, &[], &roles, 1, &small_config()).unwrap();
+        assert_eq!(split.tested, (80..110).collect::<Vec<_>>());
+        let label = |i: usize| if i % 3 == 0 { 1.0 } else { 0.0 };
+        let own: Vec<f64> = (80..110).map(label).collect();
+        let first: Vec<f64> = (0..30).map(label).collect();
+        assert_ne!(own, first);
+        let scm = &split.result.learners[0];
+        assert_eq!(scm.learner, "scm");
+        assert_eq!(scm.scores, own);
+        let m = scm.metrics.as_ref().unwrap();
+        assert_eq!((m.tp, m.tn, m.fp, m.fn_), (10, 20, 0, 0));
+    }
+
+    #[test]
     fn a_supplied_partition_that_cannot_be_scored_fairly_is_refused() {
         let (x, y, _) = assigned_fixture();
         let n = x.cols;

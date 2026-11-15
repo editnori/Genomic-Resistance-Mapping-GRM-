@@ -212,6 +212,7 @@ src/lib.rs learn::eval::tests::a_move_that_empties_a_class_from_a_random_fold_fa
 src/lib.rs learn::eval::tests::a_path_without_a_converged_candidate_fails_with_full_context
 src/lib.rs learn::eval::tests::a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers
 src/lib.rs learn::eval::tests::a_supplied_partition_that_cannot_be_scored_fairly_is_refused
+src/lib.rs learn::eval::tests::a_tested_sample_takes_its_own_score_wherever_it_sits_in_the_sample_order
 src/lib.rs learn::eval::tests::a_training_prevalence_of_exactly_one_half_is_a_resistant_call
 src/lib.rs learn::eval::tests::an_empty_lasso_path_is_a_null_fit_without_a_call
 src/lib.rs learn::eval::tests::an_unconverged_final_lasso_refit_fails_with_full_context
