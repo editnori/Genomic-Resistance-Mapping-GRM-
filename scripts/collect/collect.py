@@ -46,7 +46,7 @@ one and never enters one. A refused path is in no archive, so look at each by ha
 them as rows with no size and no hash, and goes on, unless a refused path holds no barred word in its list path (a
 link or a root that leads to a barred place, or a word that --strip-prefix cut off): a refused row must hold its
 word, so that it cannot be told from a row edited by hand to hide a file. `pack` and `check` stop on such
-a path too, and so does every command given one as an argument.
+a path too, and so does every command given one as an argument, or given a relative path from inside one.
 
 RULES gives the other classes: one line per rule, CLASS<TAB>PATTERN, the first match wins, "#" starts a comment.
 A pattern is matched against the whole list path with fnmatch, so "*" also crosses "/". A file that no rule matches
@@ -125,9 +125,11 @@ def barred_word(path):
 
 
 def barred_on_disk(path):
-    """barred_word over the path as given, then made absolute, then with its links resolved. The text as given comes
-    first, so a path such as sealed/../x is refused before anything on disk is looked at."""
-    return barred_word(path) or barred_word(os.path.abspath(path)) or barred_word(os.path.realpath(path))
+    """barred_word over the path as given, then, for a relative path, over the working folder, which `..` takes out of
+    the other spellings (../x from inside sealed/), then made absolute, then with its links resolved. The text as
+    given comes first, so a path such as sealed/../x is refused before anything on disk is looked at."""
+    return (barred_word(path) or (not os.path.isabs(path) and barred_word(os.getcwd()))
+            or barred_word(os.path.abspath(path)) or barred_word(os.path.realpath(path)))
 
 
 def unsafe(path):

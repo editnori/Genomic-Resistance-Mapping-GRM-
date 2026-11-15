@@ -410,6 +410,29 @@ class BarredWords(unittest.TestCase):
                 self.assertIn(f"pack: refused: the root {root} holds the barred word {word!r}", err)
         self.assertEqual(sorted(p.name for p in d.iterdir()), ["list.tsv", "proj", "release.sha256", "rules.tsv"])
 
+    def test_a_relative_path_from_a_barred_working_folder_stops_every_command(self):
+        """Run from inside d/ks50, ../l.tsv holds no barred word as given, made absolute or resolved: `..` takes the
+        word out of all three. The working folder is judged too. d/ks50 is empty and stays so."""
+        d, proj, lst = kit.listed(self)
+        published = kit.published(d, proj)
+        (d / "ks50").mkdir()
+        for args in (("list", "--rules", "../rules.tsv", "--root", "proj=../proj", "--out", "../l.tsv"),
+                     ("list", "--rules", d / "rules.tsv", "--root", "proj=../proj", "--out", d / "l.tsv"),
+                     ("pack", "--list", "../list.tsv", "--class", "internal-record", "--name", "demo",
+                      "--root", f"proj={proj}", "--out", d / "out"),
+                     ("pack", "--list", lst, "--class", "public-result", "--name", "demo", "--root", f"proj={proj}",
+                      "--published", "../release.sha256", "--out", d / "out"),
+                     ("check", "../out/demo.internal-record"),
+                     ("summary", "--place", "here=../list.tsv")):
+            with self.subTest(args=args):
+                rc, out, err = kit.run(*args, cwd=d / "ks50")
+                self.assertEqual((rc, out), (3, ""), err)
+                said = "\n  proj  (ks50)\n" if d / "rules.tsv" in args else "holds the barred word 'ks50'"
+                self.assertIn(said, err)
+        self.assertEqual(list((d / "ks50").iterdir()), [])
+        self.assertEqual(sorted(p.name for p in d.iterdir()),
+                         ["ks50", "list.tsv", "proj", "release.sha256", "rules.tsv"])
+
 
 class TheFileSystemEncoding(unittest.TestCase):
     """Names are read through the file system encoding, so the tool runs only where it is UTF-8."""
