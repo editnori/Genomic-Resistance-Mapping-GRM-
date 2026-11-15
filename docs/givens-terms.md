@@ -88,7 +88,7 @@ A term names its kind in brackets. A state may add a truth state, one of the val
 |---|---|---|---|
 | 1 of 82 | datasets that cannot be read, on genomes from studies the cohort does not hold | 12 | `outside-study.json` |
 
-**Antibiotic vocabulary** (artifact). The names GRM resolves antibiotics through. GRM's bundled vocabulary works alone, a SigDrug vocabulary is an optional added file, and the report records which one was used. Stated in `README.md`.
+**Antibiotic vocabulary** (artifact). The names GRM resolves antibiotics through. GRM has its own vocabulary and needs no other, SigDrug's reviewed vocabulary can be added to it, and the report records which one was used. Stated in `README.md`.
 
 **Learner row** (concept). One learner's figures on one split of one dataset. From revision 14 each learner row covers every genome of the split. It is part of Dataset and is an input of Best learner. Stated in `docs/equal-scoring.md`.
 
@@ -98,13 +98,13 @@ A term names its kind in brackets. A state may add a truth state, one of the val
 
 **Best learner** (concept). The learner with the best random-split balanced accuracy among learners scored on every genome on every split that ran. A dataset report names it. It is part of Dataset. Stated in `docs/equal-scoring.md`.
 
-**Called metrics** (measure). A learner's figures over the genomes of fitted folds only. From revision 14 a row with a null-fit fold keeps this earlier figure beside the figure over every genome. It is part of Learner row. Stated in `docs/equal-scoring.md`.
+**Called metrics** (measure). A learner's figures over the genomes of fitted folds only. From revision 14 a learner row with a fold whose fit learned nothing beyond the class balance keeps this earlier figure beside the figure over every genome. It is part of Learner row. Stated in `docs/equal-scoring.md`.
 
 **Fold scored at prevalence** (state, inferred). A fold whose fit learned nothing beyond the class balance. Revision 14 scores each of its test genomes at the fold's training prevalence. It is part of Learner row. Stated in `docs/equal-scoring.md`.
 
 | Count | Counted | Revision | Source |
 |---|---|---|---|
-| 122 of 2,710 | learner rows that carry the flag for such a fold | 14 | `index-counts.json` |
+| 122 of 2,710 | learner rows with at least one such fold | 14 | `index-counts.json` |
 
 **No report** (state, missing). A curated dataset with no report, because one class is under the class minimum. The release lists each one with its reason. It is part of Dataset. Stated in `README.md`.
 
@@ -182,9 +182,9 @@ A term names its kind in brackets. A state may add a truth state, one of the val
 | 122 of 2,710 | learner rows that left genomes without a call, in the revision 12 release | 12 | `index-counts.json` |
 | 65 of 122 | of those rows, the boosted trees' rows on either split | 12 | `guidance.json` and `index-counts.json` |
 | 57 of 122 | of those rows, the lasso's rows on either split | 12 | `guidance.json` and `index-counts.json` |
-| 122 of 2,710 | learner rows scored on every genome under the flag, in the revision 14 release | 14 | `index-counts.json` |
+| 122 of 2,710 | learner rows with a fold whose fit learned nothing beyond the class balance, each scored on every genome, in the revision 14 release | 14 | `index-counts.json` |
 | 0 of 2,710 | learner rows that still count fewer genomes than their class, in the revision 14 release | 14 | `index-counts.json` |
-| 73 of 274 | datasets whose revision 14 report differs from revision 12 in the rows of a learner with a null fit: 48 there only, and 25 there and in panel rows | 14 | `README.md` |
+| 73 of 274 | datasets whose revision 14 report differs from revision 12 in the rows of a learner with a fold whose fit learned nothing beyond the class balance: 48 there only, and 25 there and in the rows of the simulated molecular panels | 14 | `README.md` |
 | 21 of 274 | datasets whose best learner changed from revision 12 to revision 14 | 14 | `README.md` |
 | 0.8459 and 0.8409, over 268 | lineage splits over which the boosted trees' median balanced accuracy is taken, under each revision (a) | 12 and 14 | `summary.json` |
 | 0.8567 and 0.8565, over 268 | lineage splits over which the lasso's median balanced accuracy is taken, under each revision (a) | 12 and 14 | `summary.json` |

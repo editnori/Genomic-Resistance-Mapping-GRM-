@@ -442,7 +442,7 @@
       "id": "grm:antibiotic_vocabulary",
       "kind": "artifact",
       "label": "Antibiotic vocabulary",
-      "definition": "The names GRM resolves antibiotics through. GRM's bundled vocabulary works alone, a SigDrug vocabulary is an optional added file, and the report records which one was used.",
+      "definition": "The names GRM resolves antibiotics through. GRM has its own vocabulary and needs no other, SigDrug's reviewed vocabulary can be added to it, and the report records which one was used.",
       "source": "README.md",
       "quotes": [
         {
@@ -501,7 +501,7 @@
       "id": "grm:called_metrics",
       "kind": "measure",
       "label": "Called metrics",
-      "definition": "A learner's figures over the genomes of fitted folds only. From revision 14 a row with a null-fit fold keeps this earlier figure beside the figure over every genome.",
+      "definition": "A learner's figures over the genomes of fitted folds only. From revision 14 a learner row with a fold whose fit learned nothing beyond the class balance keeps this earlier figure beside the figure over every genome.",
       "source": "docs/equal-scoring.md",
       "quotes": [
         {
@@ -532,7 +532,7 @@
         {
           "count": 122,
           "of": 2710,
-          "what": "learner rows that carry the flag for such a fold",
+          "what": "learner rows with at least one such fold",
           "source": "reference/release-summary/rev14-274-20261112/index-counts.json",
           "basis": "file",
           "evaluation_revision": 14,
@@ -972,7 +972,7 @@
         {
           "count": 122,
           "of": 2710,
-          "what": "learner rows scored on every genome under the flag, in the revision 14 release",
+          "what": "learner rows with a fold whose fit learned nothing beyond the class balance, each scored on every genome, in the revision 14 release",
           "source": "reference/release-summary/rev14-274-20261112/index-counts.json",
           "basis": "file",
           "evaluation_revision": 14,
@@ -996,7 +996,7 @@
         {
           "count": 73,
           "of": 274,
-          "what": "datasets whose revision 14 report differs from revision 12 in the rows of a learner with a null fit: 48 there only, and 25 there and in panel rows",
+          "what": "datasets whose revision 14 report differs from revision 12 in the rows of a learner with a fold whose fit learned nothing beyond the class balance: 48 there only, and 25 there and in the rows of the simulated molecular panels",
           "source": "README.md",
           "basis": "document",
           "evaluation_revision": 14,
