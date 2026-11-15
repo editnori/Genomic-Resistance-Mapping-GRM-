@@ -192,6 +192,9 @@ jobs:
           # Reads the committed files under reference/clindamycin-labels and docs/clindamycin-labels.md; it scores nothing.
           - suite: tests/clindamycin_labels
             top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/other-database and docs/other-database-test.md.
+          - suite: tests/other_database
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
