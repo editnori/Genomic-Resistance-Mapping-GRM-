@@ -8,17 +8,19 @@ The files this page quotes are in [`reference/tie-rule/`](../reference/tie-rule/
 
 ## The two rules
 
-**The present rule**, in production. A candidate split's gain is a 64-bit float. The larger gain wins, and two bit-equal gains go to the lower feature number. One side's class sums are counted and the other's are taken by subtraction, so two splits of exactly equal gain can differ in the last bits, and rounding then decides which one is kept. In the code at commit `3e5b9a2`:
+**The present rule**, in production. A candidate split's gain is a 64-bit float. The larger gain wins, and two bit-equal gains go to the lower feature number. One side's class sums are counted and the other's are taken by subtraction, so two splits of exactly equal gain can differ in the last bits, and rounding then decides which one is kept. In the code:
 
-- cart: `fit_tree` in `src/learn/tree.rs`, whose closure `better` compares two candidates.
-- rf: `fit_forest` in `src/learn/tree.rs` calls `fit_tree` with the features it draws at each node (`max_features`), so the same closure decides among them.
+- cart: `grow_tree` in `src/learn/tree.rs`, which `fit_tree` calls, keeps the better of two candidates with `tie::better_pair`. The comparison itself is `better_float` in `src/learn/tie.rs`.
+- rf: `fit_forest` in `src/learn/tree.rs` calls `grow_tree` with the features it draws at each node (`max_features`), so the same comparison decides among them.
 - gbt: `grow` in `src/learn/gbt.rs`, whose `reduce_with` compares two candidates the same way.
 
 **The exact rule**, an experiment only. For cart and rf, a candidate's class-weighted Gini impurity of its two sides is an exact fraction of counts. The lower impurity wins, compared in integers with no rounding, and equal fractions go to the lower feature number.
 
 For gbt the gain is a sum of real-valued gradients with no exact form, so the rule takes the present pick and moves the split to the lowest-numbered candidate that divides the node's fitting samples into the same two groups, with the sides the same or swapped. Under both rules the same 64-bit test of the gain decides which candidates may be picked.
 
-The exact rule is the flag `--exp-tie-rule exact` of branch `exp/tie-rule-exact`, which is not on `main`. Arm A ran `main`'s binary at `852ebc9`, and arms B to E the branch's binary at `88af130`. The branch's later commits, up to its head `35e1ae2`, came during the runs and change tests only; the plan asked for a restart on a new binary, and the review's reruns of the exact arm from `35e1ae2` equal these reports on every dataset it reran.
+The exact rule is the flag `--exp-tie-rule exact` of `grm learn`, off by default. The runs came first, on branch `exp/tie-rule-exact` before it was merged. Arm A ran `main`'s binary at `852ebc9`, and arms B to E the branch's binary at `88af130`.
+
+The branch's later commits up to `35e1ae2`, its head when the record was written, came during the runs and change tests only. The plan asked for a restart on a new binary, and the review's reruns of the exact arm from `35e1ae2` equal these reports on every dataset it reran. The flag was merged afterwards with the changes the review asked for, which [The flag](#the-flag) lists.
 
 Feature numbers are each learner's own: cart's is the row of the training matrix, rf's the position in the chi-square screen, and gbt's the candidate's row.
 
@@ -109,25 +111,46 @@ So the experiment measures where rounding departs from the exact order. It does 
 
 For gbt, the exact rule moves a split only to a lower feature with the same two groups. It moves 10,602 of the 997,991 nodes searched in the logistic models, in 1,593 of 1,829 fits, and 7,044 of 343,562 in the MIC models, in 364 of 365 fits (`traces.tsv`).
 
-Two gbt candidates with equal gains and different groups still follow rounding. In the first round of a logistic fit every sample of a class has the same gradient, so two candidates on equal numbers of resistant and susceptible samples have equal gains whatever samples they hold. The review built such a case, and both rules split on the higher feature number. So for gbt the exact rule does not make the stated rule true.
+The move is decided on the two groups alone. A split needs each side's summed weight to reach a floor, and rounding can put one of two features with the same groups under it. A synthetic test in `src/learn/gbt.rs` holds such a case: the present rule turns the lower feature away and splits on the higher, and the exact rule takes the lower. The exact rule moves a split the present rule makes and adds none.
+
+Two gbt candidates with equal gains and different groups still follow rounding. In the first round of a logistic fit every sample of a class has the same gradient, so two candidates on equal numbers of resistant and susceptible samples have equal gains whatever samples they hold. The review built such a case, and both rules split on the higher feature number. So for gbt the exact rule does not make the stated rule true. The case is now a test in `src/learn/gbt.rs`.
+
+## The flag
+
+`grm learn --exp-tie-rule exact` fits cart, rf and gbt under the exact rule. Without it a run takes the present rule, and so does `grm pipeline`, the release's command. Both rules are in `src/learn/tie.rs`.
+
+A report fitted under the exact rule carries `eval_config.tie_rule: "exact"`, and its input fingerprint hashes the rule, so a later `grm learn` refits it and the metric audit flags it. Two guards keep such a report apart from production's:
+
+- At the release's seeds `grm learn` writes to `species/<slug>/results/`, the directory `grm report` indexes. An exact run refuses that directory before any fit, unless `--exp-tie-out DIR` names another one.
+- `grm report` stops at a report whose `eval_config.tie_rule` is not production's, and names its file.
+
+The first guard compares the two directories as places. A relative path, a link or a `..` names the same directory, whether or not it exists yet.
+
+`--exp-tie-trace FILE` writes one JSON line per tree-learner fit: its nodes searched, the nodes where the two rules pick different features, and a digest of each tree. The fits are the same as without it. A cart or rf fit that is exact or traced first checks that each class has fewer than `2^31` fitting samples, the bound its integer arithmetic needs.
+
+`--fold-file` runs at the release's seeds and the present rule, and the null-fold refit ([null-fold-refit.md](null-fold-refit.md)) fits its fallbacks under the present rule. Each refuses the experiment's options beside it.
+
+Two gaps are left. The other commands that read `results/` do not check the rule; `grm intervals` is one. A `grm report` that stops at an exact report leaves the dataset files it had already published, with the previous `index.json`.
 
 ## The options
 
-The review gives five options, the last two of them its own. This page recommends none.
+The review gives five options, the last two of them its own. This page recommends none. The flag has since been merged, off by default. That holds under every option but the second, and it settles no rule.
 
-- **Keep the present rule and merge the flag.** Needs a Methods sentence on ties, tests for the code that passes the rule and the counts to the fits, and exact reports kept out of results directories.
-- **Keep the present rule and leave the branch unmerged.** Needs the Methods sentence only. The measurement stays in this record.
+- **Keep the present rule, with the flag merged.** Needed a Methods sentence on ties, tests for the code that passes the rule and the counts to the fits, and exact reports kept out of results directories. The tests and the guards are done; the sentence is not written.
+- **Keep the present rule and leave the branch unmerged.** The flag is merged, so this option no longer applies as worded. The measurement stays in this record.
 - **Adopt the exact rule at a later revision.** Needs `EVALUATION_REVISION` raised and all 274 datasets fitted again, the 105 not run included, a decision on gbt candidates with equal gains and different groups, and the time cost measured on an idle machine.
 - **Keep the present rule and report the tie effect as a stated sensitivity**, beside the gap between the two best learners. Needs a Methods paragraph and a field or table per dataset (`splits.tsv` holds one for the datasets run), and no refit.
 - **A rule that does not depend on feature numbers.** Both rules take the lowest number at 73.8% of cart and 33.0% of rf nodes searched. Needs its own design and experiment.
 
-The Methods sentence would say that ties are broken on 64-bit gains, so the lower feature number wins only when two gains are equal to the last bit. The flag needs those tests because the review planted faults in that code that every test passed and that change real reports.
+The Methods sentence would say that ties are broken on 64-bit gains, so the lower feature number wins only when two gains are equal to the last bit. The flag needed those tests because the review planted faults in that code that every test passed and that change real reports.
 
 Exact reports stay out of results directories because the site and the index read neither `tie_rule` nor the input fingerprint. For the same cause, adopting the exact rule needs both to show `tie_rule` wherever exact and present reports can be read side by side.
 
 On the run's shared machine the exact rule took 1.18 (cart), 1.11 (rf) and 1.25 (gbt) times the present rule's seconds, median per dataset. With the flag off the branch's binary writes `main`'s reports, but took a median of 3.02 times `main`'s lasso seconds per dataset, and 1.17 times its cart seconds (`seconds.tsv`). The review measured the lasso slowdown again on an idle machine.
 
 The branch changes no lasso source. Outside this record, `main` itself showed a lasso slowdown on one dataset later the same day, between `7020d4c` and `41cd616`, two commits with the same lasso source and equal reports. So the flag is not shown to cause the slowdown, and the lasso's time is worked on apart from this choice.
+
+The cart cost with the flag off came from the class counts each candidate carried. Before the merge, a fit with the flag off and no trace went back to candidates of gain and feature alone, as `main` had them. On the review's three timing datasets, on an idle machine, its cart seconds then fell inside the run-to-run range of `main`'s.
 
 ## Limits
 
@@ -143,4 +166,5 @@ The branch changes no lasso source. Outside this record, `main` itself showed a 
 
 - [`reference/tie-rule/README.md`](../reference/tie-rule/README.md) lists each file of the record, what it holds and how it was written.
 - `python3 -I scripts/tie-rule/record.py RUNS RELEASE PLAN_DIR --check reference/tie-rule` checks the record against the reports where they are unpacked. CI does not have them.
+- `src/learn/tie.rs` holds both rules, the trace and the count check, with their tests.
 - `tests/tie_rule` runs the script on SYNTHETIC reports written in the test, holds every figure of this page to the record, and checks the record's files against each other and against `SHA256SUMS`.

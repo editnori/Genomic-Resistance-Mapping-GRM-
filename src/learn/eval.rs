@@ -54,6 +54,7 @@ use super::gbt::{self, GbtParams, Objective};
 use super::lasso;
 use super::null_refit;
 use super::scm::{self, Kind, Rule};
+use super::tie::TieRule;
 use super::tree::{self, ForestParams, TreeParams};
 use super::{
     BinaryMetrics, NoCall, any_training_candidate, binary_metrics, fold_masks, grouped_folds,
@@ -90,6 +91,10 @@ pub struct EvalConfig {
     /// of a report's `eval_config`, so such a report is unchanged.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub learner_seed: Option<u64>,
+    /// The tree learners' tie rule. `TieRule::Exact` is an experiment, off by
+    /// default; a report records the field only when it is on.
+    #[serde(skip_serializing_if = "TieRule::is_float")]
+    pub tie_rule: TieRule,
 }
 
 impl Default for EvalConfig {
@@ -105,6 +110,7 @@ impl Default for EvalConfig {
             lasso_lambdas: 30,
             seed: 42,
             learner_seed: None,
+            tie_rule: TieRule::Float,
         }
     }
 }
@@ -551,7 +557,15 @@ pub(crate) fn fit_cart(
     inner: &[usize],
     cfg: &EvalConfig,
 ) -> (Scored, tree::Tree) {
-    let (depth, _) = tree::select_depth(x, y, train, inner, cfg.inner_folds, cfg.cart_max_depth);
+    let (depth, _) = tree::select_depth(
+        x,
+        y,
+        train,
+        inner,
+        cfg.inner_folds,
+        cfg.cart_max_depth,
+        cfg.tie_rule,
+    );
     let t = tree::fit_tree(
         x,
         y,
@@ -561,6 +575,7 @@ pub(crate) fn fit_cart(
             min_leaf: 1,
             max_features: None,
             seed: 0,
+            tie: cfg.tie_rule,
         },
     );
     let leaves = t.nodes.iter().filter(|n| n.split.is_none()).count();
@@ -589,7 +604,12 @@ pub(crate) fn fit_rf(
     for &f in &feats {
         screened.push_row(x.row(f as usize));
     }
-    let forest = tree::fit_forest(&screened, y, train, &ForestParams { seed, ..cfg.forest });
+    let params = ForestParams {
+        seed,
+        tie: cfg.tie_rule,
+        ..cfg.forest
+    };
+    let forest = tree::fit_forest(&screened, y, train, &params);
     let importance = forest
         .importance()
         .into_iter()
@@ -648,6 +668,7 @@ fn fit_gbt(
         &feats,
         &GbtParams {
             seed: draws,
+            tie: cfg.tie_rule,
             ..cfg.gbt
         },
     );
@@ -1843,7 +1864,15 @@ fn final_models(
     let choice = scm::select(x, y, &all, cfg.scm_max_rules, &inner, cfg.inner_folds);
     let model = scm::fit(x, y, &all, choice.kind, choice.p, choice.n_rules, true);
     let importance = scm::rule_importance(&model, x, y, &all);
-    let (depth, _) = tree::select_depth(x, y, &all, &inner, cfg.inner_folds, cfg.cart_max_depth);
+    let (depth, _) = tree::select_depth(
+        x,
+        y,
+        &all,
+        &inner,
+        cfg.inner_folds,
+        cfg.cart_max_depth,
+        cfg.tie_rule,
+    );
     let cart = tree::fit_tree(
         x,
         y,
@@ -1853,6 +1882,7 @@ fn final_models(
             min_leaf: 1,
             max_features: None,
             seed: 0,
+            tie: cfg.tie_rule,
         },
     );
     let (lasso_scored, lasso_model) = final_lasso(
@@ -2007,6 +2037,7 @@ fn evaluate_mic(
             &feats,
             &GbtParams {
                 seed: draw_seed(cfg).wrapping_add(fi as u64),
+                tie: cfg.tie_rule,
                 ..cfg.gbt
             },
         );
@@ -2072,6 +2103,23 @@ fn mic_categorical(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_report_records_the_tie_rule_only_when_the_experiment_is_on() {
+        let off = serde_json::to_value(EvalConfig::default()).unwrap();
+        assert!(off.get("tie_rule").is_none());
+        assert!(off["forest"].get("tie").is_none() && off["gbt"].get("tie").is_none());
+        let on = serde_json::to_value(EvalConfig {
+            tie_rule: TieRule::Exact,
+            ..Default::default()
+        })
+        .unwrap();
+        assert_eq!(on["tie_rule"], "exact");
+        assert_eq!(
+            off.as_object().unwrap().len() + 1,
+            on.as_object().unwrap().len()
+        );
+    }
 
     fn small_config() -> EvalConfig {
         EvalConfig {
@@ -2678,8 +2726,15 @@ mod tests {
             ),
             (choice.kind, choice.p, choice.cv_error)
         );
-        let (depth, _) =
-            tree::select_depth(&x, &y, &all, &inner, cfg.inner_folds, cfg.cart_max_depth);
+        let (depth, _) = tree::select_depth(
+            &x,
+            &y,
+            &all,
+            &inner,
+            cfg.inner_folds,
+            cfg.cart_max_depth,
+            cfg.tie_rule,
+        );
         assert_eq!(out.finals.cart_depth, depth);
         let (_, gbt) = fit_gbt(
             &x,
@@ -3961,6 +4016,63 @@ mod tests {
     /// early-stopping holdout and the learner seed's column samples gives
     /// the fits `evaluate` made, in each outer fold and in the final model,
     /// and a holdout drawn from the learner seed would not.
+    /// The MIC regression's boosted models take the tie rule too: on this
+    /// synthetic fixture (`wide_fixture(120, 40, 1)`, `draw_mic`) their
+    /// out-of-fold predictions differ between the two rules.
+    #[test]
+    fn the_tie_rule_reaches_the_mic_regression() {
+        let (x, y, groups) = wide_fixture(120, 40, 1);
+        let mic = draw_mic(&y);
+        let predicted = |tie_rule| {
+            let cfg = EvalConfig {
+                tie_rule,
+                screened_features: 40,
+                ..draw_config()
+            };
+            let input = MicInput {
+                mic: &mic,
+                breakpoint: None,
+            };
+            let out = evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                &[],
+                1,
+                Some(input),
+                &cfg,
+            )
+            .unwrap();
+            value(&out.mic.unwrap().predicted)
+        };
+        assert_ne!(predicted(TieRule::Exact), predicted(TieRule::Float));
+    }
+
+    /// `draw_fixture` with `features` features, all but the first two
+    /// present at random on half the samples: with many candidates, small
+    /// boosting nodes meet features that divide them into the same groups.
+    fn wide_fixture(n: usize, features: usize, seed: u64) -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let groups: Vec<u32> = (0..n as u32).map(|i| i / 5).collect();
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
+        let mut x = BitMatrix::with_cols(n);
+        for f in 0..features {
+            let present: Vec<usize> = (0..n)
+                .filter(|&i| {
+                    if f < 2 {
+                        y.contains(i) != rng.random_bool(0.15)
+                    } else {
+                        rng.random_bool(0.5)
+                    }
+                })
+                .collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        (x, y, groups)
+    }
+
     #[test]
     fn the_learner_seed_reaches_boosting_the_final_models_and_the_mic_regression() {
         use crate::ablate::plan::fold_seed as seed_of_fold;

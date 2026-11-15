@@ -276,6 +276,8 @@ pub(crate) fn gbt_arms(
 /// Called by evaluation only when `enabled`, with the fold's seeds as
 /// `fit_fold` derives them: `seed` for every partition, `draws` for
 /// boosting's column samples (equal unless `EvalConfig::learner_seed` is set).
+/// It refuses a config of the tie rule experiment; `grm learn` refuses
+/// `--exp-null-refit` beside the `--exp-tie-*` options for the same reason.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn record_fold(
     learner: &str,
@@ -288,6 +290,12 @@ pub(crate) fn record_fold(
     draws: u64,
     context: LassoContext<'_>,
 ) -> Result<()> {
+    // The fallbacks are fitted under production's tie rule, so a fold of the
+    // tie rule experiment (`learn::tie`) would get arms of another rule.
+    anyhow::ensure!(
+        cfg.tie_rule.is_float(),
+        "the null-fold refit fits its fallbacks under production's tie rule; it does not run beside the tie rule experiment"
+    );
     let test: Vec<usize> = (0..x.cols).filter(|&i| !train.contains(i)).collect();
     let fold = context.outer_fold.expect("a null fold is an outer fold");
     let key = format!(
@@ -740,6 +748,28 @@ mod tests {
             assert!(
                 message.contains("tuning needs at least two training"),
                 "{message}"
+            );
+            assert!(lines.is_empty());
+        }
+    }
+
+    /// The fallbacks are fitted under production's tie rule, so a fold of
+    /// the tie rule experiment is refused before any refit, and no line is
+    /// written.
+    #[test]
+    fn a_fold_of_the_tie_rule_experiment_is_refused() {
+        let (x, y, train, _) = null_lasso_fixture();
+        let cfg = EvalConfig {
+            tie_rule: crate::learn::tie::TieRule::Exact,
+            ..config()
+        };
+        for learner in ["lasso", "gbt"] {
+            let context = fixture_context("random");
+            let (done, lines) =
+                capture(|| record_fold(learner, &x, &y, &train, None, &cfg, 42, 42, context));
+            assert_eq!(
+                format!("{:#}", done.unwrap_err()),
+                "the null-fold refit fits its fallbacks under production's tie rule; it does not run beside the tie rule experiment"
             );
             assert!(lines.is_empty());
         }

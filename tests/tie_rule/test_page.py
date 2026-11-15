@@ -32,10 +32,12 @@ R = load_record()
 # line number, so a change elsewhere in those files moves nothing here.
 CODE = (
     ("src/learn/tree.rs", "pub fn fit_tree("),
-    ("src/learn/tree.rs", "let better = |a: (f64, u32), b: (f64, u32)| {"),
+    ("src/learn/tree.rs", "fn grow_tree("),
     ("src/learn/tree.rs", "pub fn fit_forest("),
     ("src/learn/gbt.rs", "fn grow("),
     ("src/learn/gbt.rs", ".reduce_with(|a, b| {"),
+    ("src/learn/tie.rs", "pub(crate) fn better_float<"),
+    ("src/learn/tie.rs", "pub(crate) fn better_pair("),
 )
 COMPARISON = "if a.0 > b.0 || (a.0 == b.0 && a.1 < b.1) {"
 # Phrases that carry a number and no figure of the record.
@@ -93,8 +95,8 @@ def page_lines():
     run, release, lineage = s["datasets.run"], s["datasets.release"], s["datasets.lineage"]
     lines = []
 
-    lines.append("- cart: `fit_tree` in `src/learn/tree.rs`, whose closure `better` compares two candidates.")
-    lines.append("- rf: `fit_forest` in `src/learn/tree.rs` calls `fit_tree` with the features it draws at each node (`max_features`), so the same closure decides among them.")
+    lines.append("- cart: `grow_tree` in `src/learn/tree.rs`, which `fit_tree` calls, keeps the better of two candidates with `tie::better_pair`. The comparison itself is `better_float` in `src/learn/tie.rs`.")
+    lines.append("- rf: `fit_forest` in `src/learn/tree.rs` calls `grow_tree` with the features it draws at each node (`max_features`), so the same comparison decides among them.")
     lines.append("- gbt: `grow` in `src/learn/gbt.rs`, whose `reduce_with` compares two candidates the same way.")
 
     rep = [s[f"reproduction.{k}"] for k in ("main_equals_release", "present_equals_main", "traced_present_equals_present", "traced_exact_equals_exact")]
@@ -308,18 +310,36 @@ class Page(unittest.TestCase):
             found = [i for i, line in enumerate(source) if line.strip().startswith(start)]
             self.assertEqual(len(found), 1, f"{path} has {len(found)} lines that start with {start!r}")
             at.append(found[0])
-        # The closure stands between fit_tree and fit_forest, and the reduction after grow.
-        self.assertTrue(at[0] < at[1] < at[2], at)
-        self.assertTrue(at[3] < at[4], at)
-        # Both comparisons are the present rule: the larger gain, and a bit-equal gain to the lower feature.
+        fit_tree, grow_tree, fit_forest, grow, reduction, better_float, better_pair = at
+        # fit_tree and fit_forest both grow their trees with grow_tree, which stands between them, and gbt's
+        # reduction comes after grow.
+        self.assertTrue(fit_tree < grow_tree < fit_forest, at)
+        self.assertTrue(grow < reduction, at)
         tree = (ROOT / "src/learn/tree.rs").read_text(encoding="utf-8").splitlines()
         gbt = (ROOT / "src/learn/gbt.rs").read_text(encoding="utf-8").splitlines()
-        self.assertEqual(tree[at[1] + 1].strip(), COMPARISON)
-        self.assertEqual(gbt[at[4] + 1].strip(), COMPARISON)
-        # fit_forest's trees take a drawn feature set, so the same closure decides among them.
-        forest = "\n".join(tree[at[2] : at[2] + 31])
-        self.assertIn("fit_tree(", forest)
+        tie = (ROOT / "src/learn/tie.rs").read_text(encoding="utf-8").splitlines()
+        # Both comparisons are the present rule: the larger gain, and a bit-equal gain to the lower feature.
+        self.assertEqual(tie[better_float + 1].strip(), COMPARISON)
+        self.assertEqual(gbt[reduction + 1].strip(), COMPARISON)
+        # better_pair is better_float on (gain, feature) pairs.
+        self.assertIn("better_float(", "\n".join(tie[better_pair : better_pair + 4]))
+        # With the flag off and no trace, grow_tree keeps the better of two candidates with better_pair, whether
+        # the node's features are drawn or all of them.
+        grown = "\n".join(tree[grow_tree:fit_forest])
+        self.assertEqual(grown.count(".reduce(tie::better_pair)"), 1)
+        self.assertEqual(grown.count(".reduce_with(tie::better_pair)"), 1)
+        self.assertIn("(TieRule::Float, Some(m)) =>", grown)
+        self.assertIn("(TieRule::Float, None) =>", grown)
+        # fit_tree grows its one tree with grow_tree, and fit_forest's trees take a drawn feature set, so the
+        # same comparison decides among them.
+        self.assertIn("grow_tree(", "\n".join(tree[fit_tree + 1 : grow_tree]))
+        forest = "\n".join(tree[fit_forest : fit_forest + 31])
+        self.assertIn("grow_tree(", forest)
         self.assertIn("max_features: Some(max_features)", forest)
+        # The flag is off unless it is given: the command's default and the evaluation's are the present rule.
+        command = (ROOT / "src/main.rs").read_text(encoding="utf-8")
+        self.assertIn("#[arg(long, value_enum, default_value_t = TieRuleArg::Float)]\n        exp_tie_rule: TieRuleArg,", command)
+        self.assertIn("tie_rule: TieRule::Float,", (ROOT / "src/learn/eval.rs").read_text(encoding="utf-8"))
         # The index's best learner keeps the last of equal maxima, so a tie goes to the later learner.
         report = (ROOT / "src/report.rs").read_text(encoding="utf-8")
         self.assertIn(".max_by(|a, b| a.1.total_cmp(&b.1))", report)
@@ -329,7 +349,8 @@ class Page(unittest.TestCase):
         st = settings()
         for key in ("main_commit_runs", "branch_commit_runs", "branch_commit_head"):
             self.assertIn(f"`{st[key][:7]}`", page, key)
-        self.assertIn(f"branch `{st['branch']}`, which is not on `main`", page)
+        self.assertIn("The exact rule is the flag `--exp-tie-rule exact` of `grm learn`, off by default.", page)
+        self.assertIn(f"on branch `{st['branch']}` before it was merged", page)
         self.assertIn("The present rule stays the production rule of evaluation revision 14.", page)
         self.assertIn("recommends none", page)
 
