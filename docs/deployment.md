@@ -123,6 +123,42 @@ tar --zstd -xf $R/rev14-274-20261112.tar.zst -C $R/report --strip-components=1
 
 On 15 November 2026 these steps ran with the release's own file, already on the host with the sha256 above, in place of the two downloads: the tree check passed, and `grm serve`, built at `852ebc9`, answered 200 for `index.json`, `corpus.json`, `SKIPS.json` and all 274 dataset reports the index lists, each byte for byte the release's file. The web app was not built for that check; a one-line page stood in for `web/dist` (`grm serve --app`).
 
+### Browser check on a tree with baselines files
+
+The release holds no baselines files. To check the pages that read them, write them into a copy of the tree with `grm baselines` ([docs/baselines.md](baselines.md)), then serve the copy and run the check on it. `P` is a folder holding `playwright-core` installed outside the app, and `GRM_CHROMIUM` names the Chromium or Chrome to launch.
+
+```bash
+D=$(mktemp -d) && mkdir -p $D/report && cp -a $R/report/. $D/report
+unshare -rn ./target/release/grm --data $D baselines
+(cd web && GRM_REPORT_DIR=$D/report npm run preview -- --host 127.0.0.1 --port 4173 --strictPort) &
+GRM_CHROMIUM=/usr/bin/google-chrome node web/scripts/browser-check.cjs $P/node_modules/playwright-core <out-dir> http://127.0.0.1:4173 $D/report
+```
+
+The synthetic `full` shape (`web/scripts/synthetic-report.mts --shape full`) has baselines files of its own: fixture values, not `grm baselines` output, with one model level with its constant, one below it, one file with `confirmed: false`, and one MIC dataset with no file. The other three shapes and the release have none, so between them the check reads both cases.
+
+The check's last block, `baselineChecks`, reads the baselines files, the summary and the bundled `web/src/data/clindamycin-labels.json`, applies the pins this page and [docs/clindamycin-labels.md](clindamycin-labels.md) give, and checks the pages against them:
+
+- the overview, the datasets table and the methods page request the summary once and no dataset's file;
+- each MIC constant and clindamycin mark in the datasets table, and the overview's and the methods page's figures;
+- on each dataset report, the MIC sentence, the line under the heatmap, the lineage baseline in the learner table, each row's lead with its words for a screen reader, and the clindamycin note;
+- the same pages with `index.json` or a report served with one byte more, which must show no constant, baseline or note;
+- the width of the MIC text column beside the heatmap on every MIC dataset: 300 px or more at 1024 px and 500 px or more at 1440 px (at `1721a08` the narrowest was 310 and 536 px, on P. aeruginosa vs meropenem).
+
+A 404 for `baselines.json` or `baselines/<id>.json` is the tree without them, not an error. `GRM_CHECK_PART=baselines` runs that block alone, for a quick pass on one page change; its result file says `part: "baselines"`, and only a run of every part stands for the check.
+
+On 15 November 2026 the check at `e9732c1` ran this way on six trees, with Chrome 151.0.7922.108, playwright-core 1.56.1 and Node 22.23.2, the preview and the browser in one network namespace with loopback only. Checks passed of those run, each with 0 script errors:
+
+| Tree | Passed | Skipped |
+|---|---|---|
+| synthetic `base` | 2201 of 2201 | 69 |
+| synthetic `r11` | 2213 of 2213 | 57 |
+| synthetic `wide` | 2223 of 2223 | 57 |
+| synthetic `full` | 2249 of 2251 | 40 |
+| rev14 as released | 2352 of 2352 | 6 |
+| rev14 after `grm baselines` | 2360 of 2362 | 3 |
+
+Each skip names what the tree lacks, such as a release summary for a synthetic revision or a file with `confirmed: false` in the release, or, on the release, the 138 reports with neither an MIC model nor a clindamycin entry, left out to bound the run. The two failures on each tree with `baselines.json` are one page defect: at 390 px, in both themes, the MIC slide's longer headline and caption leave its strip less height than it draws, so the axis prints over the caption (`slide 13` or `slide 14 figure above caption`). It is not fixed.
+
 ## Publish a released tree
 
 `publish.sh` takes a report tree and a list of its files' hashes in the form `SHA256  ./path`. A release's `.sha256` file has that form, so a tree checked as above can be published as it is. On a host, copy `$R/report` and `$R/rev14-274-20261112.sha256` there first.
