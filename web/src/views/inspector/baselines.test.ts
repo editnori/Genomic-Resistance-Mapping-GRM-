@@ -209,7 +209,15 @@ describe("the overview's MIC finding beside the constant (synthetic files)", () 
     expect(f.result).toBe(micLead(micSummary(rows)));
     expect(f.caption).not.toContain("constant");
     expect(f.caption).toContain("as a research screen");
-    expect(micFinding(m, { page: true, micConstants: new Map() }).result).not.toContain("constant");
+    // With every file missing the loader gives an empty map, which reads as
+    // no file on the page, on the slide and in the caption.
+    for (const page of [true, false]) {
+      const none = micFinding(m, { page });
+      const empty = micFinding(m, { page, micConstants: new Map() });
+      expect(empty.result).toBe(none.result);
+      expect(empty.caption).toBe(none.caption);
+      expect(empty.result).not.toContain("constant");
+    }
   });
 });
 
