@@ -3,7 +3,9 @@
 Every archive here is packed from the synthetic project of kit.py. The internal-record archive holds 4 files and
 47 bytes (21 + 0 + 16 + 10)."""
 
+import gzip
 import io
+import lzma
 import os
 import shutil
 import tarfile
@@ -195,7 +197,8 @@ class ThePartsWhereTheyLie(unittest.TestCase):
         whole = part.read_bytes()
         part.write_bytes(whole[:len(whole) // 2])
         out = self.fails(sums, f"the part {part.name} has the sha256 ")
-        self.assertIn("cannot be read to its end", out)
+        self.assertIn(f"the part {part.name} fails when read to the end of its gzip stream: the stream stops before "
+                      f"its end", out)
         part.unlink()
         self.fails(sums, f"the part {part.name} is not beside {sums.name}", "no list could be read")
 
@@ -259,6 +262,7 @@ class ThePartsWhereTheyLie(unittest.TestCase):
         kit.resum(sums)
         self.fails(sums, "holds no demo.internal-record/LIST.tsv", "no list could be read")
 
+
     def test_a_list_of_another_class_inside_this_archive_is_found(self):
         d, proj, sums = kit.packed(self)
         kit.rewrite(kit.parts_of(sums)[0], lambda n, data: [(n, data.replace(b"internal-record", b"public-input")
@@ -319,3 +323,82 @@ class ThePartsWhereTheyLie(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EachPartIsReadToItsEnd(unittest.TestCase):
+    """check --parts reads each part to the end of its gzip or xz stream, so the stream's own check is read, and
+    after the tar end mark nothing but zero bytes may follow. The parts file is rewritten to match each change, as
+    someone hiding it would, so only the reading of the stream can find it."""
+
+    STREAM = {"gz": "gzip", "xz": "xz", "none": "tar"}
+
+    def changed(self, compress, change):
+        """Packs the project, changes its one part's bytes through change(bytes) -> bytes, and checks it."""
+        d, proj, sums = kit.packed(self, "internal-record", compress)
+        part = kit.parts_of(sums)[0]
+        part.write_bytes(change(part.read_bytes()))
+        kit.resum(sums)
+        rc, out, err = kit.run("check", "--parts", sums)
+        self.assertEqual((rc, err), (1, ""), out)
+        self.assertIn(f"check: the part {part.name} fails when read to the end of its {self.STREAM[compress]} "
+                      f"stream: ", out)
+        self.assertIn("check: FAILED demo.internal-record", out)
+        self.assertNotIn("has the sha256", out)
+        return out
+
+    @staticmethod
+    def tar_inside(compress, data):
+        return gzip.decompress(data) if compress == "gz" else lzma.decompress(data) if compress == "xz" else data
+
+    @staticmethod
+    def packed_again(compress, data):
+        return (gzip.compress(data, mtime=0) if compress == "gz" else
+                lzma.compress(data, format=lzma.FORMAT_XZ) if compress == "xz" else data)
+
+    @staticmethod
+    def end_mark_at(tar_bytes):
+        with tarfile.open(fileobj=io.BytesIO(tar_bytes), mode="r|") as tar:
+            for _ in tar:
+                pass
+            return tar.offset
+
+    def test_a_damaged_check_at_the_end_of_the_stream_is_found(self):
+        def flip(at):
+            return lambda data: data[:at] + bytes([data[at] ^ 1]) + data[at + 1:]
+        cases = (("gz", -8, "the gzip CRC"), ("gz", -4, "the gzip length"), ("xz", -12, "the xz stream footer"))
+        for compress, at, name in cases:
+            with self.subTest(name):
+                self.changed(compress, flip(at))
+
+    def test_bytes_after_the_compressed_stream_are_found(self):
+        cases = (("gz", b"x", "a byte"), ("gz", gzip.compress(b"more", mtime=0), "a second gzip member"),
+                 ("xz", b"x", "a byte"), ("xz", lzma.compress(b"more"), "a second xz stream"),
+                 ("xz", b"\0" * 4, "xz stream padding"))
+        for compress, more, name in cases:
+            with self.subTest(compress=compress, case=name):
+                out = self.changed(compress, lambda data: data + more)
+                self.assertIn("bytes follow the end of the stream", out)
+
+    def test_bytes_after_the_tar_end_mark_are_found(self):
+        second = io.BytesIO()
+        with tarfile.open(fileobj=second, mode="w", format=tarfile.PAX_FORMAT) as tar:
+            info = tarfile.TarInfo("demo.internal-record/files/proj/notes/hidden.md")
+            info.size = 6
+            tar.addfile(info, io.BytesIO(b"hidden"))
+        for compress in ("gz", "xz", "none"):
+            for more, name in ((b"x", "a byte"), (second.getvalue(), "a second tar")):
+                with self.subTest(compress=compress, case=name):
+                    out = self.changed(compress, lambda data: self.packed_again(
+                        compress, self.tar_inside(compress, data) + more))
+                    self.assertIn("bytes that are not zero follow its last member", out)
+                    self.assertNotIn("hidden.md", out)
+
+    def test_a_missing_or_cut_tar_end_mark_is_found(self):
+        for compress in ("gz", "xz", "none"):
+            for keep, name in ((0, "no end mark"), (tarfile.BLOCKSIZE, "one zero block")):
+                with self.subTest(compress=compress, case=name):
+                    def cut(data):
+                        tar = self.tar_inside(compress, data)
+                        return self.packed_again(compress, tar[:self.end_mark_at(tar) + keep])
+                    out = self.changed(compress, cut)
+                    self.assertIn("the tar end mark is missing or cut short", out)

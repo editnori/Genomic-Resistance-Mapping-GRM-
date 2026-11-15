@@ -17,7 +17,9 @@ run. Standard library only; run it as `python3 -I scripts/collect/collect.py ...
   check    DIR | --parts NAME.CLASS.parts.sha256   [--threads N]
            DIR is an unpacked NAME.CLASS folder. Every row of LIST.tsv must be a regular file of that size and sha256
            under files/, and files/ must hold nothing else. --parts checks the packed parts where they lie, without
-           unpacking: each part's sha256, then every file inside it, read as a stream.
+           unpacking: each part's sha256, then every file inside it, read as a stream. Each part is read to the end of
+           its gzip or xz stream, so the stream's own check (gzip's CRC and length, xz's check) is read too; after the
+           last member only the tar end mark, zero bytes, may follow, and nothing may follow the compressed stream.
   summary  --place NAME=LIST... [--hashes NAME=SHA256FILE]... [--out FILE]
            Reads the lists of several places and counts, by sha256, how many places hold each content. A --hashes
            file (sha256sum format) is a place known by its hashes only, such as the checksum file of a release.
@@ -80,6 +82,7 @@ BLOCK = 1 << 20
 TAR_END = 2 * tarfile.BLOCKSIZE + tarfile.RECORDSIZE  # the two closing blocks, and the padding to a whole record
 MTIME_MAX = 8 ** 11 - 1  # the largest time a plain tar header holds
 EXTENSION = {"gz": ".tar.gz", "xz": ".tar.xz", "none": ".tar"}
+STREAM = {"gz": "gzip", "xz": "xz", "none": "tar"}
 SHOWN = 20  # names printed per kind of problem
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -88,6 +91,10 @@ class Stop(Exception):
     def __init__(self, status, message):
         super().__init__(message)
         self.status = status
+
+
+class Damaged(Exception):
+    """A part whose stream is not whole."""
 
 
 def barred_word(path):
@@ -657,28 +664,98 @@ def find_in_folder(top, threads):
     return found
 
 
+class TarBytes:
+    """The tar bytes of one part, for tarfile's stream mode: its one gzip or xz stream decompressed, or the part as it
+    is. The stream is read to its end, where zlib and lzma read its check, and Damaged is raised if it stops short or
+    if any byte follows it. The bytes last given out are kept, so what follows tarfile's last member can be read."""
+
+    KEEP = 4 * BLOCK
+
+    def __init__(self, raw, compress):
+        self.raw, self.compress = raw, compress
+        self.unz = (zlib.decompressobj(16 + zlib.MAX_WBITS) if compress == "gz"
+                    else lzma.LZMADecompressor(lzma.FORMAT_XZ) if compress == "xz" else None)
+        self.full = False  # zlib gave a whole block last time, so it may hold more output
+        self.pending, self.kept, self.kept_at = b"", bytearray(), 0
+
+    def raw_block(self):
+        data = self.raw.read(BLOCK)
+        if not data:
+            raise Damaged("the stream stops before its end")
+        return data
+
+    def more(self):
+        """The next bytes of tar, b"" at the end."""
+        unz = self.unz
+        if unz is None:
+            return self.raw.read(BLOCK)
+        while not unz.eof:
+            if self.compress == "gz":
+                data = unz.unconsumed_tail or (b"" if self.full else self.raw_block())
+                out = unz.decompress(data, BLOCK)
+                self.full = len(out) == BLOCK
+            else:
+                out = unz.decompress(self.raw_block() if unz.needs_input else b"", BLOCK)
+            if out:
+                return out
+        if unz.unused_data or getattr(unz, "unconsumed_tail", b"") or self.raw.read(1):
+            raise Damaged("bytes follow the end of the stream")
+        return b""
+
+    def read(self, n=BLOCK):
+        if n is None or n < 0:
+            n = BLOCK
+        data = self.pending or self.more()
+        data, self.pending = data[:n], data[n:]
+        self.kept += data
+        if len(self.kept) > 2 * self.KEEP:
+            cut = len(self.kept) - self.KEEP
+            del self.kept[:cut]
+            self.kept_at += cut
+        return data
+
+    def end(self, offset):
+        """Reads from offset, where tarfile found no next member, to the end: only zero bytes, at least the two
+        blocks of the tar end mark."""
+        if offset < self.kept_at:
+            raise Damaged("its last member could not be found again")
+        data, zeros = bytes(self.kept[offset - self.kept_at:]), 0
+        while data:
+            if data.count(0) != len(data):
+                raise Damaged("bytes that are not zero follow its last member")
+            zeros += len(data)
+            data = self.read(BLOCK)
+        if zeros < 2 * tarfile.BLOCKSIZE:
+            raise Damaged("the tar end mark is missing or cut short")
+
+
 def read_part(job):
     """One packed part, read as a stream and never unpacked: its sha256, its list, and each file's size and sha256."""
-    file, top = job
+    file, top, compress = job
     out = {"sha256": None, "list": None, "files": [], "faults": [], "refused": [], "odd": [], "stray": []}
     under = f"{top}/files/"
     try:
         out["sha256"] = sha256_file(file)[0]
-        with tarfile.open(file, mode="r|*", bufsize=BLOCK) as tar:
-            for m in tar:
-                if m.name == f"{top}/{INNER_LIST}" and m.isreg() and out["list"] is None:
-                    out["list"] = tar.extractfile(m).read().decode("utf-8")
-                elif not m.name.startswith(under):
-                    out["stray"].append(m.name)
-                elif barred_word(m.name):
-                    out["refused"].append(m.name[len(under):])
-                elif not m.isreg():
-                    out["odd"].append(m.name[len(under):])
-                else:
-                    digest, size = sha256_stream(tar.extractfile(m))
-                    out["files"].append((m.name[len(under):], size, digest))
-    except (OSError, EOFError, UnicodeDecodeError, tarfile.TarError, zlib.error, lzma.LZMAError) as e:
-        out["faults"].append(f"the part {os.path.basename(file)} cannot be read to its end: {type(e).__name__}: {e}")
+        with open(file, "rb") as raw:
+            stream = TarBytes(raw, compress)
+            with tarfile.open(fileobj=stream, mode="r|", bufsize=BLOCK) as tar:
+                for m in tar:
+                    if m.name == f"{top}/{INNER_LIST}" and m.isreg() and out["list"] is None:
+                        out["list"] = tar.extractfile(m).read().decode("utf-8")
+                    elif not m.name.startswith(under):
+                        out["stray"].append(m.name)
+                    elif barred_word(m.name):
+                        out["refused"].append(m.name[len(under):])
+                    elif not m.isreg():
+                        out["odd"].append(m.name[len(under):])
+                    else:
+                        digest, size = sha256_stream(tar.extractfile(m))
+                        out["files"].append((m.name[len(under):], size, digest))
+                stream.end(tar.offset)
+    except (Damaged, OSError, EOFError, UnicodeDecodeError, tarfile.TarError, zlib.error, lzma.LZMAError) as e:
+        why = str(e) if isinstance(e, Damaged) else f"{type(e).__name__}: {e}"
+        out["faults"].append(f"the part {os.path.basename(file)} fails when read to the end of its "
+                             f"{STREAM[compress]} stream: {why}")
     return out
 
 
@@ -690,16 +767,17 @@ def find_in_parts(sums, threads):
     top = base[:-len(PARTS_SUFFIX)]
     parts = {}
     for digest, name in read_hashes(sums):
-        number = re.fullmatch(re.escape(top) + r"\.part([0-9]{3})\.tar(?:\.gz|\.xz)?", name)
+        number = re.fullmatch(re.escape(top) + r"\.part([0-9]{3})\.tar(\.gz|\.xz)?", name)
         if not number or number.group(1) in parts:
             raise Stop(2, f"check: {sums}: {name!r} is not one part of {top}, or its number is there twice")
-        parts[number.group(1)] = (os.path.join(os.path.dirname(sums), name), digest)
+        compress = {".gz": "gz", ".xz": "xz", None: "none"}[number.group(2)]
+        parts[number.group(1)] = (os.path.join(os.path.dirname(sums), name), digest, compress)
     if not parts:
         raise Stop(2, f"check: {sums} names no part")
     present = {n: p for n, p in parts.items() if os.path.isfile(p[0]) and not os.path.islink(p[0])}
     for n in sorted(set(parts) - set(present)):
         found.faults.append(f"the part {os.path.basename(parts[n][0])} is not beside {base}")
-    results = in_threads(read_part, [(present[n][0], top) for n in sorted(present)], threads)
+    results = in_threads(read_part, [(present[n][0], top, present[n][2]) for n in sorted(present)], threads)
     for n, r in zip(sorted(present), results):
         name = os.path.basename(present[n][0])
         found.faults += r["faults"]
