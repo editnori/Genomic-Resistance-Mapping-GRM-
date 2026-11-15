@@ -116,6 +116,7 @@ Every command takes `--data <directory>` (default `data`), and the output paths 
 | Intervals | `grm intervals` | `report/intervals/<id>.json` |
 | Provenance | `grm fetch genome-dates`, then `grm provenance` | `bvbrc/genome_dates.jsonl` and its manifest, `report/provenance/<id>.json` |
 | Predict | `grm predict --report <file> --fasta <files>` | JSON lines on standard output, or `--out` ([docs/prediction-contract.md](docs/prediction-contract.md)) |
+| Export | `grm export --species <slug> --out <dir>` | `<dir>/<id>/matrix.bin` and `dataset.json`, for a learner outside GRM ([docs/dataset-export.md](docs/dataset-export.md)) |
 
 `--species` takes comma-separated slugs; `grm pipeline` and `grm fetch fasta` use every curated species without it. `grm learn --species <slug> --only meropenem` learns one antibiotic (`--only` also takes dataset ids), and `--force` recomputes reports even when their inputs have not changed.
 

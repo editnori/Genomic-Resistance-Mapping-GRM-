@@ -1440,6 +1440,24 @@ fn stale_reason(report: &serde_json::Value, fingerprint: &str) -> Option<&'stati
     }
 }
 
+/// The digest of a species' loaded matrix that every dataset fingerprint
+/// starts from (`dataset_fingerprint`).
+pub fn species_digest(input: &SpeciesInputs) -> u64 {
+    matrix_digest(&input.matrix)
+}
+
+/// The `input_fingerprint` `grm learn` records in a dataset's report for
+/// these inputs and settings; `digest` is `species_digest(input)`.
+pub fn dataset_fingerprint(
+    input: &SpeciesInputs,
+    spec: &DatasetSpec,
+    catalog: Option<&Catalog>,
+    cfg: &EvalConfig,
+    digest: u64,
+) -> String {
+    input_fingerprint(input, spec, catalog, cfg, digest)
+}
+
 /// Identifies what a dataset's evaluation reads apart from code: the species
 /// matrix (`matrix`, from `matrix_digest`, which covers every genome's kset
 /// digest), the antibiotic, its class minimum and breakpoint, the lineage

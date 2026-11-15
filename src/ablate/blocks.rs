@@ -1877,7 +1877,12 @@ mod tests {
             ),
             (
                 CollectionDate,
-                &["Collection Date", "collection_year", "collectionDate"],
+                &[
+                    "Collection Date",
+                    "collection_year",
+                    "collection_date",
+                    "collectionDate",
+                ],
             ),
             (InsertionDate, &["Date Inserted", "insertion_date"]),
             (
