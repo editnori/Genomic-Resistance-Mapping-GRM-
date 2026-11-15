@@ -1067,15 +1067,19 @@ The record contains no label and no prediction per genome. A reader can fetch th
 
 ## Rules
 
-- **Labels.** An NCBI antibiotic name maps to a release drug by exact equality, then by the data root's `curated/drug_names.json`, then by the plan's fixed table. One label per BioSample and drug: R and S together is a conflict, then R, then S; intermediate alone gives no label.
+- **Drug names.** An NCBI antibiotic name maps to a release drug by exact equality, then by the data root's `curated/drug_names.json`, then by the plan's fixed table.
+- **Labels.** One label per BioSample and drug: R and S together is a conflict, then R, then S; intermediate alone gives no label.
 - **Measures.** As `plan/PLAN.md` section 6 fixes them. A bootstrap draws the labelled genomes with a call in the order of their assembly accessions.
-- **Readings.** L, C and D are those of `plan/ADDENDUM2.md` section B2, fixed in advance for the eight species and exploratory for the pilot. T is the two-sample reading of the pilot's review, exploratory, and the pilot's L, C and D are that review's readings too.
-- **Class mix.** With s the dataset's resistant share, `lineage_error_rate_at_share` is s times one minus the lineage recall, plus one minus s times one minus the lineage specificity. `lineage_log_loss_at_share` weights the lineage split's mean loss on resistant and on susceptible genomes by s and one minus s.
+- **Readings.** L, C and D are those of `plan/ADDENDUM2.md` section B2, fixed in advance for the eight species and exploratory for the pilot.
+- **Pilot readings.** T is the two-sample reading of the pilot's review and is exploratory. The pilot's L, C and D are that review's readings too.
+- **Class mix.** With s the dataset's resistant share, `lineage_error_rate_at_share` is s times one minus the lineage recall, plus one minus s times one minus the lineage specificity.
+- **Loss at share.** `lineage_log_loss_at_share` weights the lineage split's mean loss on resistant and on susceptible genomes by s and one minus s.
 - **Seeds.** `seeds.tsv` repeats the plan's log loss bootstrap at seeds 2 to 6. It lists each dataset whose result under the rule differs from seed 1 at any of them, and each species result that differs.
 - **Ties.** A tie on the largest BioProject goes to the lower accession: letters first, then the lower number, so PRJNA717739 comes before PRJNA1160997. A field that names several BioProjects, or a genome with none, comes after every single accession.
 - **Words.** `meets` in `learners.tsv` and `totals.tsv` means the learner meets the plan's rule in the species: it holds on more than half of at least 3 estimable datasets. `margin` is how many datasets would have to change for the other result.
 - **Pre-plan requests.** `unrecorded_before_plan` in `order.tsv` counts the pilot's requests before `PLAN.md` was fixed that the request log gives with no parameters.
-- **Accession gap.** `no_accession_share` in `species.tsv` is read from the eight species' part, `outside2/results/no-accession-share.tsv`. The script checks only that the file has a row for each of the nine species and that no row counts more genomes with neither accession than labelled genomes; it does not count them again from the data root.
+- **Accession gap.** `no_accession_share` in `species.tsv` is read from the eight species' part, `outside2/results/no-accession-share.tsv`. The script does not count those genomes again from the data root.
+- **Gap check.** The script checks only that the file has a row for each of the nine species, and that no row counts more genomes with neither accession than labelled genomes.
 
 ## Plan files
 
