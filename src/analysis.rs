@@ -3540,8 +3540,21 @@ mod tests {
         for f in &kept.features {
             assert_eq!(f.bits, base64(e.ds.x.row(f.feature as usize)));
         }
-        // The field sits beside the final models, and the splits' rows keep
-        // the keys they had.
+        // The field sits beside the final models, after `features` and
+        // before `seconds`, in the text as written; `rule_groups` is a
+        // sample's last key.
+        let text = serde_json::to_string(&report).unwrap();
+        let top = key_order(&text);
+        assert_eq!(
+            top[top.len() - 4..],
+            ["models", "features", "fold_models", "seconds"]
+        );
+        let sample = key_order(&serde_json::to_string(&report.samples[0]).unwrap());
+        assert_eq!(
+            sample[sample.len() - 3..],
+            ["groups", "catalog_resistant", "rule_groups"]
+        );
+        // And the splits' rows keep the keys they had.
         let json = serde_json::to_value(&report).unwrap();
         let keys = |v: &serde_json::Value| -> Vec<String> {
             v.as_object().unwrap().keys().cloned().collect()
@@ -3557,6 +3570,34 @@ mod tests {
         );
         assert_eq!((json["schema"].as_u64(), REPORT_SCHEMA), (Some(2), 2));
         assert_eq!(json["evaluation"]["revision"], 14);
+    }
+
+    /// The keys of the JSON object `text`, in the order the text writes
+    /// them. `serde_json::Value` sorts keys (no `preserve_order`), so it
+    /// cannot show where a key sits.
+    fn key_order(text: &str) -> Vec<String> {
+        struct Keys(Vec<String>);
+        struct Visit;
+        impl<'de> serde::de::Visitor<'de> for Visit {
+            type Value = Keys;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a JSON object")
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Keys, A::Error> {
+                let mut keys = Vec::new();
+                while let Some(key) = map.next_key::<String>()? {
+                    map.next_value::<serde::de::IgnoredAny>()?;
+                    keys.push(key);
+                }
+                Ok(Keys(keys))
+            }
+        }
+        impl<'de> serde::Deserialize<'de> for Keys {
+            fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Keys, D::Error> {
+                d.deserialize_map(Visit)
+            }
+        }
+        serde_json::from_str::<Keys>(text).unwrap().0
     }
 
     /// What a report says of fixA under the tobramycin rule when the first
