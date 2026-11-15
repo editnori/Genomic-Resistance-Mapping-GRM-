@@ -52,6 +52,7 @@
 
 use super::gbt::{self, GbtParams, Objective};
 use super::lasso;
+use super::null_refit;
 use super::scm::{self, Kind, Rule};
 use super::tree::{self, ForestParams, TreeParams};
 use super::{
@@ -740,6 +741,39 @@ fn fit_lasso_traced(
     })
 }
 
+/// `fit_lasso` for other modules' tests: its scores and selected point.
+#[cfg(test)]
+pub(crate) fn fit_lasso_for_tests(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    cfg: &EvalConfig,
+    seed: u64,
+    context: LassoContext<'_>,
+) -> (Option<Vec<f64>>, Option<usize>) {
+    let (scored, _) = fit_lasso(x, y, train, None, cfg, seed, context).unwrap();
+    (
+        scored.scores,
+        scored.lasso_fit.and_then(|a| a.selected_point),
+    )
+}
+
+/// `fit_gbt` for other modules' tests: its scores, None for a null fit.
+/// `seed` draws both the holdout and the column samples.
+#[cfg(test)]
+pub(crate) fn fit_gbt_for_tests(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    cfg: &EvalConfig,
+    seed: u64,
+) -> Option<Vec<f64>> {
+    fit_gbt(x, y, train, None, "group", cfg, seed, seed)
+        .unwrap()
+        .0
+        .scores
+}
+
 /// Select and refit one already-solved path. Keeping this separate lets the
 /// negative tests inject capped statuses without changing solver limits.
 pub(crate) fn fit_lasso_from_path(
@@ -1353,7 +1387,10 @@ struct OuterFits {
 /// model is the one that scored it. `evaluate` fits the folds it draws
 /// through this and keeps the models as `fold_models`; `evaluate_assigned`
 /// fits the folds it is handed and keeps no model, so a supplied partition
-/// is fitted exactly as a drawn one.
+/// is fitted exactly as a drawn one. With the null-fold experiment on
+/// (`null_refit::enabled`), each boosting or lasso fold that comes out null
+/// is refitted after its timer with these same inputs and seeds and recorded
+/// (`null_refit::record_fold`); `evaluate_assigned` refuses to run then.
 #[allow(clippy::too_many_arguments)]
 fn fit_outer_folds(
     dataset: &str,
@@ -1376,20 +1413,28 @@ fn fit_outer_folds(
         candidates.push(cx.rows);
         for (li, learner) in LEARNERS.iter().enumerate() {
             let t0 = Instant::now();
-            let (fit, model) = fit_fold(
-                learner,
-                &cx,
-                y,
-                train,
-                tuning,
-                cfg,
-                LassoContext {
-                    dataset,
-                    scheme,
-                    outer_fold: Some(fi),
-                },
-            )?;
+            let context = LassoContext {
+                dataset,
+                scheme,
+                outer_fold: Some(fi),
+            };
+            let (fit, model) = fit_fold(learner, &cx, y, train, tuning, cfg, context)?;
             seconds[li] += t0.elapsed().as_secs_f64();
+            // The null-fold experiment, off by default, writes only its
+            // own file and changes no fit, score or fold model.
+            if fit.scores.is_none() && null_refit::enabled() {
+                null_refit::record_fold(
+                    learner,
+                    &cx,
+                    y,
+                    train,
+                    tuning,
+                    cfg,
+                    fold_seed(cfg, fi),
+                    fold_draw_seed(cfg, fi),
+                    context,
+                )?;
+            }
             fits[li].push(fit);
             // The fold fitted on its candidates; the report names
             // dataset rows.
@@ -1482,6 +1527,13 @@ pub const DRAWN_SCHEMES: [&str; 2] = ["random", "lineage"];
 /// give no candidate feature, or when an inner fold or tuning holdout lacks
 /// a class. `cfg.folds` is not read: `folds` is the count.
 /// Final models and the MIC regression are not fitted.
+///
+/// It refuses to run while the null-fold experiment is on
+/// (`null_refit::enabled`): a record names a fold's test samples as every
+/// sample outside its training ones, which a partition with unused samples
+/// would make wrong, and the records are read against the drawn splits of a
+/// dataset report. `grm learn` refuses `--exp-null-refit` beside
+/// `--fold-file` for the same reason.
 #[allow(clippy::too_many_arguments)]
 pub fn evaluate_assigned(
     dataset: &str,
@@ -1494,6 +1546,10 @@ pub fn evaluate_assigned(
     folds: usize,
     cfg: &EvalConfig,
 ) -> Result<AssignedSplit> {
+    ensure!(
+        !null_refit::enabled(),
+        "the null-fold refit records the folds grm learn draws; it does not run on a supplied partition"
+    );
     let min_support = supplied_support_floor(roles);
     check_inputs(x, y, groups, duplicates, min_support, cfg)?;
     let n = x.cols;
@@ -5616,5 +5672,213 @@ mod tests {
         assert_eq!(named(1 - without), [1]);
         let (train, _) = fold_masks(&split.test_fold, cfg.folds).swap_remove(without);
         assert!(train.iter_ones().all(|i| x.get(0, i) == x.get(1, i)));
+    }
+
+    /// Synthetic: 120 genomes in 30 lineages of four, every third lineage
+    /// resistant, and rows of noise: eight drawn at random, a copy of row 0
+    /// with the four genomes of lineage 12 flipped, and a row in three
+    /// genomes of three lineages. The matrix is filtered and collapsed at
+    /// `min_support` 3, as `evaluate` requires. A fold that tests one of the
+    /// three genomes drops the last row from its candidates, and the lineage
+    /// fold that tests lineage 12 keeps one copy only, so a fold's
+    /// candidates are not the matrix. The noise seed is one under which both
+    /// boosting and the lasso have null folds on both splits.
+    fn null_fold_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let n = 120;
+        let groups: Vec<u32> = (0..n as u32).map(|i| i / 4).collect();
+        let y = Bits::from_indices(n, (0..n).filter(|&i| groups[i].is_multiple_of(3)));
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(20261117);
+        let mut x = BitMatrix::with_cols(n);
+        for _ in 0..8 {
+            let present: Vec<usize> = (0..n).filter(|_| rng.random_bool(0.3)).collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        let copy = (0..n).filter(|&i| x.get(0, i) != (groups[i] == 12));
+        x.push_row(Bits::from_indices(n, copy.collect::<Vec<_>>()).words());
+        x.push_row(Bits::from_indices(n, [5, 47, 77]).words());
+        assert_eq!(training_candidates(&x, &Bits::ones(n), 3).1.len(), x.rows);
+        (x, y, groups)
+    }
+
+    fn null_fold_config() -> EvalConfig {
+        EvalConfig {
+            folds: 3,
+            inner_folds: 2,
+            scm_max_rules: 1,
+            cart_max_depth: 1,
+            forest: ForestParams {
+                n_trees: 2,
+                max_depth: 2,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 30,
+                max_depth: 2,
+                patience: 3,
+                ..Default::default()
+            },
+            screened_features: 6,
+            lasso_lambdas: 8,
+            ..Default::default()
+        }
+    }
+
+    /// The null-fold experiment beside a supplied partition (the merge of
+    /// `main` after #119). `evaluate_assigned` fits through
+    /// `fit_outer_folds`, as `evaluate` does, but a record names every sample
+    /// outside a fold's training ones as tested, which an unused sample would
+    /// make wrong. So with the experiment on it is refused before any fit
+    /// and no record is written; with it off the same call scores the
+    /// partition, on which a boosting or lasso fold is null.
+    #[test]
+    fn a_supplied_partition_is_refused_while_the_null_fold_refit_is_on() {
+        let (x, y, groups) = null_fold_fixture();
+        let cfg = null_fold_config();
+        let [(scheme, random), _] = outer_splits(&y, &groups, &[], &cfg);
+        assert_eq!(scheme, "random");
+        let roles: Vec<Role> = random.iter().map(|&f| Role::Test(f)).collect();
+        let run = || {
+            evaluate_assigned(
+                "fixture__fixturemycin",
+                "supplied",
+                &x,
+                &y,
+                &groups,
+                &[],
+                &roles,
+                cfg.folds,
+                &cfg,
+            )
+        };
+        let scored = run().unwrap();
+        assert!(
+            scored
+                .result
+                .learners
+                .iter()
+                .filter(|l| l.learner == "gbt" || l.learner == "lasso")
+                .any(|l| l.fold_complexity.contains(&0.0))
+        );
+        let (refused, lines) = null_refit::capture(run);
+        let error = refused.err().expect("refused while the experiment is on");
+        assert_eq!(
+            format!("{error:#}"),
+            "the null-fold refit records the folds grm learn draws; it does not run on a supplied partition"
+        );
+        assert!(lines.is_empty(), "{lines:?}");
+    }
+
+    /// The call site of the null-fold experiment (S2 of the review of 15 Nov
+    /// 2026). Each record `evaluate` writes is the arms `null_refit` fits
+    /// when called directly with that outer fold's training candidates, its
+    /// seed (`fold_seed`), its draws seed (`fold_draw_seed`) and its split's
+    /// tuning groups; its counts are the fold's; and there is one record per
+    /// null boosting or lasso fold. The test also shows that each of those
+    /// inputs moves some record, so a wrong one at the call site fails it.
+    #[test]
+    fn each_null_fold_record_is_the_arms_of_that_folds_candidates_seeds_and_groups() {
+        let (x, y, groups) = null_fold_fixture();
+        let min_support = 3;
+        let mut moved = [false; 4];
+        for learner_seed in [None, Some(4242)] {
+            let cfg = EvalConfig {
+                learner_seed,
+                ..null_fold_config()
+            };
+            let run = || {
+                let dataset = "fixture__fixturemycin";
+                evaluate(dataset, &x, &y, &groups, &[], min_support, None, &cfg).unwrap()
+            };
+            let (out, lines) = null_refit::capture(run);
+            let records: Vec<serde_json::Value> = lines
+                .iter()
+                .map(|l| serde_json::from_str(l).unwrap())
+                .collect();
+            let mut null_folds = vec![];
+            for split in &out.splits {
+                for l in split
+                    .learners
+                    .iter()
+                    .filter(|l| l.learner == "gbt" || l.learner == "lasso")
+                {
+                    for (fold, c) in l.fold_complexity.iter().enumerate() {
+                        if *c == 0.0 {
+                            null_folds.push((split.scheme.clone(), fold, l.learner.clone()));
+                        }
+                    }
+                }
+            }
+            let mut keys: Vec<(String, usize, String)> = records
+                .iter()
+                .map(|r| {
+                    let s = |k: &str| r[k].as_str().unwrap().to_string();
+                    (
+                        s("scheme"),
+                        r["fold"].as_u64().unwrap() as usize,
+                        s("learner"),
+                    )
+                })
+                .collect();
+            null_folds.sort();
+            keys.sort();
+            assert_eq!(keys, null_folds, "learner seed {learner_seed:?}");
+            for (scheme, folds) in outer_splits(&y, &groups, &[], &cfg) {
+                let tuning = tuning_groups(scheme, &groups, &[]);
+                let unit = tuning_unit(scheme);
+                for (fi, (train, _)) in fold_masks(&folds, cfg.folds).into_iter().enumerate() {
+                    let (cx, _) = training_candidates(&x, &train, min_support);
+                    let test: Vec<usize> = (0..x.cols).filter(|&i| !train.contains(i)).collect();
+                    let (seed, draws) = (fold_seed(&cfg, fi), fold_draw_seed(&cfg, fi));
+                    let context = test_context(scheme, fi);
+                    let lasso = |x: &BitMatrix, groups: Option<&[u32]>, seed| {
+                        let arms = null_refit::lasso_arms(
+                            x, &y, &train, groups, &cfg, seed, context, &test,
+                        );
+                        value(&arms.unwrap())
+                    };
+                    let gbt = |x: &BitMatrix, groups: Option<&[u32]>, seed, draws| {
+                        let arms = null_refit::gbt_arms(
+                            x, &y, &train, groups, unit, &cfg, seed, draws, &test,
+                        );
+                        value(&arms.unwrap())
+                    };
+                    let here = records
+                        .iter()
+                        .filter(|r| r["scheme"] == scheme && r["fold"] == fi);
+                    for r in here {
+                        let at = format!(
+                            "{scheme} fold {fi} {} learner seed {learner_seed:?}",
+                            r["learner"]
+                        );
+                        assert_eq!(r["dataset"], "fixture__fixturemycin", "{at}");
+                        assert_eq!(r["train_n"], train.count(), "{at}");
+                        assert_eq!(r["train_resistant"], train.and(&y).count(), "{at}");
+                        assert_eq!(r["test"], value(&test), "{at}");
+                        let other = fold_seed(&cfg, fi + 1);
+                        if r["learner"] == "lasso" {
+                            assert!(r["gbt"].is_null(), "{at}");
+                            let want = lasso(&cx, tuning.as_deref(), seed);
+                            assert_eq!(r["lasso"], want, "{at}");
+                            moved[0] |= lasso(&cx, tuning.as_deref(), other) != want;
+                            moved[1] |= lasso(&cx, None, seed) != want;
+                            moved[2] |= lasso(&x, tuning.as_deref(), seed) != want;
+                        } else {
+                            assert_eq!(r["learner"], "gbt", "{at}");
+                            assert!(r["lasso"].is_null(), "{at}");
+                            let want = gbt(&cx, tuning.as_deref(), seed, draws);
+                            assert_eq!(r["gbt"], want, "{at}");
+                            moved[0] |= gbt(&cx, tuning.as_deref(), other, draws) != want;
+                            moved[1] |= gbt(&cx, None, seed, draws) != want;
+                            moved[2] |= gbt(&x, tuning.as_deref(), seed, draws) != want;
+                            moved[3] |= gbt(&cx, tuning.as_deref(), seed, seed) != want;
+                        }
+                    }
+                }
+            }
+        }
+        // The seed, the tuning groups, the candidates and the draws seed
+        // each move some record.
+        assert_eq!(moved, [true; 4]);
     }
 }

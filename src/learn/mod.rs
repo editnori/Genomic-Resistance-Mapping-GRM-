@@ -9,6 +9,7 @@ pub mod eval;
 pub mod foldfile;
 pub mod gbt;
 pub mod lasso;
+pub mod null_refit;
 pub mod planned;
 pub mod scm;
 pub mod tree;

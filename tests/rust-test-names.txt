@@ -235,6 +235,7 @@ src/lib.rs learn::eval::tests::a_move_that_empties_a_class_from_a_random_fold_fa
 src/lib.rs learn::eval::tests::a_path_without_a_converged_candidate_fails_with_full_context
 src/lib.rs learn::eval::tests::a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers
 src/lib.rs learn::eval::tests::a_split_that_did_not_run_keeps_no_fold_models
+src/lib.rs learn::eval::tests::a_supplied_partition_is_refused_while_the_null_fold_refit_is_on
 src/lib.rs learn::eval::tests::a_supplied_partition_that_cannot_be_scored_fairly_is_refused
 src/lib.rs learn::eval::tests::a_tested_sample_takes_its_own_score_wherever_it_sits_in_the_sample_order
 src/lib.rs learn::eval::tests::a_training_prevalence_of_exactly_one_half_is_a_resistant_call
@@ -245,6 +246,7 @@ src/lib.rs learn::eval::tests::another_seed_redraws_both_splits_outer_folds_on_t
 src/lib.rs learn::eval::tests::conformal_trades_coverage_for_error
 src/lib.rs learn::eval::tests::duplicate_groups_already_whole_in_their_folds_change_only_random_tuning
 src/lib.rs learn::eval::tests::duplicate_groups_sit_whole_in_one_outer_fold_of_every_split
+src/lib.rs learn::eval::tests::each_null_fold_record_is_the_arms_of_that_folds_candidates_seeds_and_groups
 src/lib.rs learn::eval::tests::each_supplied_fold_chooses_candidates_and_fits_on_its_own_training_samples
 src/lib.rs learn::eval::tests::evaluation_rejects_invalid_folds_and_emits_only_held_out_scores
 src/lib.rs learn::eval::tests::final_forest_importance_names_dataset_rows
@@ -329,6 +331,14 @@ src/lib.rs learn::lasso::tests::the_line_search_stops_where_a_coefficient_reache
 src/lib.rs learn::lasso::tests::the_saved_real_paths_are_the_same_at_any_thread_count
 src/lib.rs learn::lasso::tests::vibrio_cholerae_fold0_converges_at_every_point
 src/lib.rs learn::lasso::tests::violators_tie_to_the_lowest_column
+src/lib.rs learn::null_refit::tests::a_null_lasso_fold_records_every_points_refit_and_both_arms
+src/lib.rs learn::null_refit::tests::a_record_counts_the_training_genomes_and_names_the_test_genomes
+src/lib.rs learn::null_refit::tests::a_refit_that_fails_names_the_dataset_split_learner_and_fold
+src/lib.rs learn::null_refit::tests::best_round_is_the_last_round_that_lowers_the_loss_by_more_than_1e_9
+src/lib.rs learn::null_refit::tests::each_points_holdout_balanced_accuracy_is_read_on_the_holdout
+src/lib.rs learn::null_refit::tests::the_best_round_arm_keeps_best_round_trees_and_scores_with_them
+src/lib.rs learn::null_refit::tests::the_gbt_fit_with_early_stopping_is_the_production_fit_and_off_keeps_every_round
+src/lib.rs learn::null_refit::tests::the_lasso_arms_screen_features_on_the_fitting_part_alone
 src/lib.rs learn::planned::tests::a_cohort_arm_never_trains_on_a_copy_of_a_scored_genome
 src/lib.rs learn::planned::tests::a_cohort_arm_never_trains_on_a_test_lineage_on_the_lineage_split
 src/lib.rs learn::planned::tests::a_cohort_plan_scores_a_class_balanced_common_set_and_trains_on_the_rest
@@ -538,6 +548,7 @@ src/main.rs tests::learn_ends_with_the_release_line_and_a_draw_with_a_line_of_it
 src/main.rs tests::learn_evaluates_with_the_budget_and_seeds_its_flags_give
 src/main.rs tests::learn_refuses_a_fold_file_beside_either_seed_flag
 src/main.rs tests::learn_refuses_a_structure_and_matrix_built_from_other_ksets
+src/main.rs tests::learn_refuses_the_null_fold_refit_beside_a_fold_file
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
@@ -556,3 +567,5 @@ tests/foldmask_extended.rs extended_foldmask_smoke
 tests/foldmask_extended.rs extended_foldmask_vectors [ignored]
 tests/kmer_space_extended.rs multi_k_mixer_bijection_large [ignored]
 tests/kmer_space_extended.rs multi_k_space_vectors
+tests/null_fold_refit.rs the_flag_changes_no_output_and_records_each_null_fold_once
+tests/null_fold_refit_full.rs a_file_that_takes_no_line_stops_the_evaluation_and_the_error_names_the_fold

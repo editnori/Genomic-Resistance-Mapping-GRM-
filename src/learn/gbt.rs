@@ -323,6 +323,22 @@ pub fn fit(
     features: &[u32],
     params: &GbtParams,
 ) -> Gbt {
+    fit_traced(x, obj, fit_mask, valid, features, params, true).0
+}
+
+/// `fit`, with the validation loss of the unboosted prior and after each
+/// round. With `early_stop` false, the null-fold experiment's setting
+/// (`learn::null_refit`, off by default), it grows every one of
+/// `params.rounds` trees and keeps them all; `fit` always stops early.
+pub(crate) fn fit_traced(
+    x: &BitMatrix,
+    obj: &Objective,
+    fit_mask: &Bits,
+    valid: &Bits,
+    features: &[u32],
+    params: &GbtParams,
+    early_stop: bool,
+) -> (Gbt, Vec<f64>) {
     let weight = sample_weights(obj, fit_mask);
     let base = match obj {
         Objective::Logistic { .. } => 0.0, // balanced weights put the prior at 1:1
@@ -340,6 +356,7 @@ pub fn fit(
     let mut rng = ChaCha8Rng::seed_from_u64(params.seed);
     let mut trees = Vec::new();
     let (mut best_loss, mut best_len, mut since_best) = (loss(obj, &f, valid, &weight), 0, 0);
+    let mut trace = vec![best_loss];
     let per_tree = ((features.len() as f64 * params.colsample).ceil() as usize).max(1);
 
     for _ in 0..params.rounds {
@@ -350,23 +367,44 @@ pub fn fit(
         tree.add_to(x, &mut f);
         trees.push(tree);
         let l = loss(obj, &f, valid, &weight);
+        trace.push(l);
         if l < best_loss - 1e-9 {
             best_loss = l;
             best_len = trees.len();
             since_best = 0;
         } else {
             since_best += 1;
-            if since_best >= params.patience {
+            if early_stop && since_best >= params.patience {
                 break;
             }
         }
     }
-    trees.truncate(best_len);
-    Gbt {
-        base,
-        trees,
-        logistic: matches!(obj, Objective::Logistic { .. }),
+    if early_stop {
+        trees.truncate(best_len);
     }
+    (
+        Gbt {
+            base,
+            trees,
+            logistic: matches!(obj, Objective::Logistic { .. }),
+        },
+        trace,
+    )
+}
+
+/// The number of leading trees early stopping with no patience limit keeps,
+/// from a `fit_traced` loss trace: the last round that lowered the
+/// validation loss by more than 1e-9 below every earlier one, as `fit` does,
+/// or 0 when none did.
+pub(crate) fn best_round(trace: &[f64]) -> usize {
+    let (mut best_loss, mut best_len) = (trace[0], 0);
+    for (round, &l) in trace.iter().enumerate().skip(1) {
+        if l < best_loss - 1e-9 {
+            best_loss = l;
+            best_len = round;
+        }
+    }
+    best_len
 }
 
 #[cfg(test)]
