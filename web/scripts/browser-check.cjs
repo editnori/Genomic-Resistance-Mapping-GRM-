@@ -16,10 +16,16 @@
 // checks. So do Present's whole deck title and outline label, its footer rows
 // and fixed-figure gap, the primer's split tracks, and every species'
 // population map (compact below seven blocks).
+// The no-genome baselines (#124) and the clindamycin labels (#125) have
+// their own block, baselineChecks, after the rest. GRM_CHECK_PART=baselines
+// runs that block alone, for a quick pass on one page change; the receipt
+// then says part "baselines", and only a run of every part (part "all")
+// stands for the check.
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(process.argv[2]);
 const OUT = process.argv[3], BASE = process.argv[4], FIXTURE = process.argv[5];
+const PART = process.env.GRM_CHECK_PART === 'baselines' ? 'baselines' : 'all';
 fs.mkdirSync(OUT, { recursive: true });
 const manifest = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'index.json')));
 const checks = [], screenshots = [], errors = [];
@@ -1813,12 +1819,293 @@ async function boundaries(browser) {
   await context.close();
 }
 
+// ---- No-genome baselines (#124) and the clindamycin labels (#125) ---------
+// Expectations come from the tree's own files and the bundled labels file,
+// never from app code: index.json's bytes, baselines.json, each
+// baselines/<id>.json and each report's bytes, read with the pins
+// docs/baselines.md gives ("The file", "The summary"), and
+// web/src/data/clindamycin-labels.json, read with the pins
+// docs/clindamycin-labels.md gives. The files are taken as valid; the check
+// applies the pins, not the parser. Wording is the merged descriptions':
+// a share to one decimal, a lead in signed points ("+18.3", "−2.1", "0.0")
+// and in words ("12.6 points above it", "level with it" at a lead that
+// shows as 0.0).
+const sha256 = bytes => require('node:crypto').createHash('sha256').update(bytes).digest('hex');
+const pctText = v => (v * 100).toFixed(1) + '%';
+const intText = n => Math.round(n).toLocaleString('en-US');
+const signedPointsText = lead => { const v = (Math.abs(lead) * 100).toFixed(1); return Number(v) === 0 ? '0.0' : (lead > 0 ? '+' : '−') + v; };
+const leadText = (lead, from) => { const v = (Math.abs(lead) * 100).toFixed(1); return signedPointsText(lead) === '0.0' ? 'level with ' + from : v + (v === '1.0' ? ' point ' : ' points ') + (lead > 0 ? 'above ' : 'below ') + from; };
+const LEARNER_WORDS = { scm: 'Set covering machine', cart: 'Decision tree (CART)', rf: 'Random forest', gbt: 'Gradient boosted trees', lasso: 'L1 logistic regression', catalog: 'Known-gene catalog' };
+const CLINDAMYCIN = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/clindamycin-labels.json')));
+// The datasets table pins a mark by dataset, revision and sample count; the
+// dataset report pins its note by the same and the report's SHA-256 too.
+const clindamycinRow = d => { const e = CLINDAMYCIN.datasets[d.id]; return e !== undefined && d.evaluation?.revision === CLINDAMYCIN.evaluation_revision && d.n === e.samples ? e : null; };
+const TREE = (() => {
+  const summaryFile = path.join(FIXTURE, 'baselines.json');
+  const summary = fs.existsSync(summaryFile) ? JSON.parse(fs.readFileSync(summaryFile)) : null;
+  // micConstantsShown applies the summary's pins; own is whether it holds.
+  const constants = micConstantsShown, own = constants.size > 0;
+  const covered = expected.mic.map(d => constants.get(d.id)).filter(e => e !== undefined);
+  const dir = path.join(FIXTURE, 'baselines');
+  const files = new Set(fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => n.endsWith('.json')).map(n => n.slice(0, -5)).filter(id => byId.has(id)) : []);
+  const words = covered.length === 0 ? null : {
+    covered: covered.length, n: expected.mic.length,
+    medianModel: median(covered.map(e => e.model)), medianConstant: median(covered.map(e => e.constant)),
+    notAbove: covered.filter(e => e.model - e.constant <= 0).length, unconfirmed: covered.filter(e => !e.confirmed).length,
+    constantAt90: covered.filter(e => e.constant >= 0.9).length, modelAt90: covered.filter(e => e.model >= 0.9).length,
+  };
+  return { summary, own, constants, files, words, any: summary !== null || files.size > 0 };
+})();
+// What a dataset report should show, from its bytes and its baselines file.
+const reportExpect = id => {
+  const bytes = fs.readFileSync(path.join(FIXTURE, 'datasets', id + '.json'));
+  const r = JSON.parse(bytes), digest = sha256(bytes);
+  let file = null;
+  if (TREE.files.has(id)) {
+    const f = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'baselines', id + '.json')));
+    if (f.dataset === id && f.evaluation_revision === r.evaluation?.revision && f.report_sha256 === digest) file = f;
+  }
+  const mic = file?.mic != null && r.mic !== null && file.mic.n_exact === r.mic.n_exact && file.mic.model.essential_agreement === r.mic.essential_agreement && file.mic.median !== null ? file.mic : null;
+  const random = r.splits.find(s => s.scheme === 'random');
+  const base = random === undefined ? undefined : file?.lineage.find(s => s.scheme === 'random' && s.folds === random.folds && s.n === r.samples.length);
+  const learners = (random?.learners ?? []).map(l => ({ name: LEARNER_WORDS[l.learner] ?? l.learner, ba: l.metrics?.balanced_accuracy ?? null }));
+  const c = CLINDAMYCIN.datasets[id];
+  const note = c !== undefined && r.evaluation?.revision === CLINDAMYCIN.evaluation_revision && r.counts.samples === c.samples && digest === c.report_sha256 ? c.kind : null;
+  return { id, hasMic: r.mic !== null, filePinned: file !== null, mic, base, learners, note };
+};
+const OPTIONAL_404 = [/\/data\/intervals\//, /\/data\/baselines\.json$/, /\/data\/baselines\//];
+// A response the check counts as an error: 400 or above, except
+// research.json, and a 404 for an optional file the pages read as not
+// published (intervals/, and since #124 baselines.json and baselines/).
+const responseError = r => r.status() >= 400 && !r.url().endsWith('/data/research.json') && !(r.status() === 404 && OPTIONAL_404.some(re => re.test(new URL(r.url()).pathname)));
+// The text column beside the MIC heatmap, at each width: the floor every
+// MIC dataset must keep. At 1721a08 the narrowest was 310 px at 1024 and
+// 536 px at 1440 (rev14 with baselines files, P. aeruginosa vs meropenem);
+// with w-0 min-w-full taken off the line under the heatmap's key, that
+// line's text sets the figure's column and the narrowest falls to 248 and
+// 474 px. The floors sit between. A column under 240 px is a page defect in
+// its own right, listed apart.
+const MIC_TEXT_FLOORS = { 1024: 300, 1440: 500 };
+
+async function baselineContext(browser, width, height, theme, consoleErrors) {
+  const context = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion: 'reduce' });
+  await context.addInitScript(t => { if (/^https?:$/.test(location.protocol)) localStorage.setItem('grm-theme', t); }, theme);
+  const page = await context.newPage();
+  page.on('pageerror', error => errors.push({ part: 'baselines', theme, width, message: error.message }));
+  page.on('response', r => { if (responseError(r)) errors.push({ part: 'baselines', theme, width, url: r.url(), status: r.status() }); });
+  page.on('console', m => { if (m.type() === 'error') consoleErrors.push({ text: m.text(), url: m.location()?.url ?? '' }); });
+  return { context, page };
+}
+
+// One page load of an index page, with every /data request it made.
+async function loadCounting(page, route, ready) {
+  const seen = [];
+  const onRequest = q => { const p = new URL(q.url()).pathname; if (p.startsWith('/data/')) seen.push(p); };
+  page.on('request', onRequest);
+  await page.goto(BASE + route, { waitUntil: 'networkidle', timeout: 120000 });
+  await ready();
+  await page.waitForLoadState('networkidle');
+  await settle(page);
+  page.off('request', onRequest);
+  return { summary: seen.filter(p => p === '/data/baselines.json').length, perDataset: seen.filter(p => p.startsWith('/data/baselines/')).length, reports: seen.filter(p => p.startsWith('/data/datasets/')).length };
+}
+
+// The overview, the datasets table and the methods page: one request for
+// the summary and none per dataset, each MIC constant and clindamycin mark
+// as the files give them, and the summary's sentences. `own` is whether the
+// summary should hold: false for a tree without one, and for the index
+// served with other bytes.
+async function indexPages(page, tag, own) {
+  const rows = manifest.datasets.length;
+  const counts = {};
+  counts.overview = await loadCounting(page, '/', () => page.locator('#corpus').waitFor());
+  const overview = await page.evaluate(() => document.querySelector('[data-view-scroll]')?.textContent ?? document.body.textContent);
+  counts.datasets = await loadCounting(page, '/datasets', () => page.getByRole('region', { name: 'Datasets', exact: true }).waitFor());
+  // Show all is kept for the session, so a second visit may have no button.
+  const showAll = page.getByRole('button', { name: 'Show all ' + rows.toLocaleString('en-US'), exact: true });
+  if (rows > 25 && await showAll.count() > 0) { await showAll.click(); await settle(page); }
+  const table = await page.getByRole('region', { name: 'Datasets', exact: true }).evaluate(region => [...region.querySelectorAll('tbody tr[data-row-key]')].map(tr => {
+    const c = tr.querySelector('[data-baseline="mic-constant"]');
+    const shown = c === null ? null : (() => { const x = c.cloneNode(true); x.querySelectorAll('.sr-only').forEach(s => s.remove()); return x.textContent; })();
+    return { id: tr.getAttribute('data-row-key'), mark: tr.querySelectorAll('[data-clindamycin-mark]').length, markText: tr.querySelector('[data-clindamycin-mark]')?.textContent ?? null, shown, sr: c === null ? null : [...c.querySelectorAll('.sr-only')].map(s => s.textContent).join('|') };
+  }));
+  counts.methods = await loadCounting(page, '/methods', () => page.getByRole('heading', { name: /Models and evaluation/ }).waitFor());
+  const methods = await page.evaluate(() => document.querySelector('[data-view-scroll]')?.textContent ?? document.body.textContent);
+  for (const [key, c] of Object.entries(counts)) check(tag + ' ' + key + ' requests the baselines summary once and no dataset file', c.summary === 1 && c.perDataset === 0, c);
+
+  const wantMarks = manifest.datasets.filter(d => clindamycinRow(d) !== null).map(d => d.id).sort();
+  const marks = table.filter(t => t.mark > 0);
+  check(tag + ' clindamycin mark on exactly the rows the bundled file pins', table.length === rows && JSON.stringify(marks.map(t => t.id).sort()) === JSON.stringify(wantMarks) && marks.every(t => t.mark === 1 && t.markText.startsWith('Labels by study')), { rows: table.length, want: wantMarks, got: marks.map(t => t.id) });
+  const wantConstant = id => { const e = own ? TREE.constants.get(id) : undefined; return e === undefined ? null : { shown: pctText(e.constant) + (e.confirmed ? ' c' : ' c†'), sr: 'constant MIC ' + (e.confirmed ? '' : '|, folds not confirmed by the held-out predictions') }; };
+  const wrong = table.filter(t => { const w = wantConstant(t.id); return w === null ? t.shown !== null : t.shown !== w.shown || t.sr !== w.sr; });
+  const shownN = table.filter(t => t.shown !== null).length;
+  check(tag + ' MIC constant cells equal baselines.json' + (own ? '' : ' (none: the summary does not hold)'), wrong.length === 0 && shownN === (own ? TREE.constants.size : 0), { shown: shownN, wrong: wrong.slice(0, 5).map(t => ({ ...t, want: wantConstant(t.id) })) });
+  const unconfirmed = own ? [...TREE.constants.values()].filter(e => !e.confirmed).map(e => e.dataset) : [];
+  if (unconfirmed.length > 0) check(tag + ' unconfirmed folds marked c† with their words in the table', unconfirmed.every(id => { const t = table.find(x => x.id === id); return t?.shown?.endsWith(' c†') && t.sr.includes('folds not confirmed by the held-out predictions'); }), unconfirmed);
+  else if (own) skipped.push({ check: tag + ' unconfirmed folds marked c† in the table', reason: 'every dataset in baselines.json is confirmed' });
+
+  const w = own ? TREE.words : null;
+  const sentence = overview.includes('Set beside a constant MIC');
+  if (w === null) check(tag + ' overview shows no MIC constant', !sentence && !overview.includes('constant MIC from the training folds'), sentence);
+  else {
+    const over = w.covered === w.n ? `over the ${intText(w.n)} datasets` : `over ${intText(w.covered)} of the ${intText(w.n)} datasets, the ones with a baselines file,`;
+    const parts = [over, `the median agreement is ${pctText(w.medianModel)} for the model and ${pctText(w.medianConstant)} for the constant`, `the model is not above the constant on ${intText(w.notAbove)} of ${intText(w.covered)}`];
+    const unc = `On ${intText(w.unconfirmed)} of them the held-out predictions do not confirm the rebuilt folds.`;
+    check(tag + ' overview MIC constant sentence gives the summary\'s medians and counts', sentence && parts.every(p => overview.includes(p)) && overview.includes(unc) === (w.unconfirmed > 0), { parts, missing: parts.filter(p => !overview.includes(p)), unconfirmed: w.unconfirmed });
+  }
+  const at90 = methods.includes('Read after the scores, as a description');
+  if (w === null) check(tag + ' methods shows no MIC constant count', !at90, at90);
+  else check(tag + ' methods counts datasets at 90% as the summary gives them', at90 && methods.includes(`the constant reaches 90% on ${intText(w.constantAt90)}, the model on ${intText(w.modelAt90)}`), { constantAt90: w.constantAt90, modelAt90: w.modelAt90 });
+}
+
+// One dataset report: the MIC sentence and the band under the heatmap, the
+// learner table's lineage baseline and leads, the clindamycin note, and the
+// width of the MIC text column at 1440 and then 1024 px.
+async function reportPage(page, want, tag, widths) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(BASE + '/datasets?dataset=' + want.id, { waitUntil: 'networkidle', timeout: 180000 });
+  await page.locator('#ds-learners').waitFor({ timeout: 60000 });
+  if (want.hasMic) await page.getByRole('region', { name: 'Measured and predicted MIC' }).waitFor({ timeout: 60000 });
+  if (want.mic !== null) await page.locator('[data-baseline="band"]').waitFor({ timeout: 15000 }).catch(() => {});
+  if (want.base !== undefined) await page.locator('[data-baseline="lineage-header"]').waitFor({ timeout: 15000 }).catch(() => {});
+  if (want.note !== null) await page.locator('[data-clindamycin-note]').waitFor({ timeout: 15000 }).catch(() => {});
+  await page.waitForLoadState('networkidle');
+  await settle(page); await page.waitForTimeout(150);
+  // The report opens as a dialog over the datasets table, whose own MIC
+  // constants are not the report's: read inside the dialog only.
+  const got = await page.evaluate(() => {
+    const root = document.querySelector('#ds-learners')?.closest('dialog') ?? document;
+    const q = s => root.querySelector(s);
+    const table = [...root.querySelectorAll('#ds-learners table')].find(t => [...t.querySelectorAll('thead th')].some(th => th.textContent.startsWith('Random')));
+    const rows = [...(table?.querySelectorAll('tbody tr') ?? [])].map(tr => {
+      const lead = tr.querySelector('[data-baseline="lineage-lead"]');
+      return { name: tr.querySelector('th[scope="row"]')?.childNodes[0]?.textContent?.trim() ?? null, shown: lead?.querySelector('[aria-hidden="true"]')?.textContent ?? null, sr: lead?.querySelector('.sr-only')?.textContent ?? null };
+    });
+    return { marks: root.querySelectorAll('[data-baseline]').length, header: q('[data-baseline="lineage-header"]')?.textContent ?? null, rows, mic: q('[data-baseline="mic"]')?.textContent ?? null, dagger: q('[data-baseline="mic"] sup') !== null, daggerNote: (q('#ds-mic')?.textContent ?? '').includes('† The held-out predictions do not confirm the rebuilt MIC folds'), band: q('[data-baseline="band"]')?.textContent?.trim() ?? null, notes: [...root.querySelectorAll('[data-clindamycin-note]')].map(n => n.getAttribute('data-clindamycin-note')) };
+  });
+  const out = { id: want.id, ok: true, problems: [], note: want.note };
+  const fail = (what, detail) => { out.ok = false; out.problems.push({ what, ...detail }); };
+  if (want.mic === null) { if (got.mic !== null || got.band !== null) fail('MIC constant shown without a pinned file', { mic: got.mic, band: got.band }); }
+  else {
+    const m = want.mic, lead = m.model.essential_agreement - m.median.essential_agreement;
+    const band = `Between the dashed lines: ${pctText(m.model.essential_agreement)} of ${intText(m.n_exact)} exact MICs for the model, ${pctText(m.median.essential_agreement)} for a constant MIC from the training folds.`;
+    const parts = [`agrees on ${pctText(m.median.essential_agreement)} of the same ${intText(m.n_exact)} exact MICs (${intText(m.median.agree)} of ${intText(m.median.n)})`, `the model agrees on ${pctText(m.model.essential_agreement)} (${intText(m.model.agree)} of ${intText(m.model.n)}), ${leadText(lead, 'it')}.`];
+    if (got.band !== band) fail('band', { want: band, got: got.band });
+    if (got.mic === null || !parts.every(p => got.mic.includes(p))) fail('MIC sentence', { want: parts, got: got.mic });
+    if (got.dagger !== !m.prediction_check.confirmed || got.daggerNote !== !m.prediction_check.confirmed) fail('unconfirmed mark', { confirmed: m.prediction_check.confirmed, dagger: got.dagger, note: got.daggerNote });
+    out.level = signedPointsText(lead) === '0.0';
+    out.unconfirmed = !m.prediction_check.confirmed;
+  }
+  if (want.base === undefined) {
+    if (got.header !== null || got.rows.some(r => r.shown !== null)) fail('lineage baseline shown without a pinned file', { header: got.header });
+  } else {
+    if (got.header !== 'lineage ' + pctText(want.base.balanced_accuracy)) fail('lineage header', { want: 'lineage ' + pctText(want.base.balanced_accuracy), got: got.header });
+    const named = got.rows.filter(r => Object.values(LEARNER_WORDS).includes(r.name));
+    for (const l of want.learners) {
+      const row = named.find(r => r.name === l.name);
+      const lead = l.ba === null ? null : l.ba - want.base.balanced_accuracy;
+      const w = lead === null ? { shown: null, sr: null } : { shown: signedPointsText(lead), sr: ' ' + leadText(lead, 'lineage identity alone') };
+      if (row === undefined || row.shown !== w.shown || row.sr !== w.sr) fail('lineage lead', { learner: l.name, want: w, got: row ?? null });
+      if (lead !== null && signedPointsText(lead) === '0.0') out.levelLineage = true;
+    }
+  }
+  if (!want.filePinned && got.marks > 0) fail('baseline marks without a pinned file', { marks: got.marks });
+  if (JSON.stringify(got.notes) !== JSON.stringify(want.note === null ? [] : [want.note])) fail('clindamycin note', { want: want.note, got: got.notes });
+  if (widths !== undefined && want.hasMic) {
+    const column = () => page.evaluate(() => {
+      const grid = document.querySelector('#ds-mic .grid');
+      const text = grid === null ? null : [...grid.children].find(c => c.querySelector('[aria-label="Heatmap key"]') === null && !c.matches('[aria-label="Heatmap key"]'));
+      return text ? Math.round(text.getBoundingClientRect().width * 10) / 10 : null;
+    });
+    widths[1440].push({ id: want.id, width: await column() });
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await settle(page); await page.waitForTimeout(100);
+    widths[1024].push({ id: want.id, width: await column() });
+  }
+  return out;
+}
+
+async function baselineChecks(browser) {
+  const consoleErrors = [];
+  const { context, page } = await baselineContext(browser, 1440, 900, 'light', consoleErrors);
+  const tag = 'baselines';
+  try {
+    await indexPages(page, tag, TREE.own);
+    // A summary pinned to another index: the same index.json with one more
+    // byte, so its SHA-256 differs and the pages must refuse the summary.
+    if (TREE.summary !== null) {
+      await page.route('**/data/index.json', async route => { const res = await route.fetch(); await route.fulfill({ response: res, body: Buffer.concat([await res.body(), Buffer.from('\n')]) }); });
+      await indexPages(page, tag + ' index with other bytes', false);
+      await page.unroute('**/data/index.json');
+    } else skipped.push({ check: tag + ' a summary pinned to another index shows no constant', reason: 'no baselines.json in this tree' });
+
+    // Every dataset on a tree of 60 or fewer; on a larger one, every dataset
+    // with an MIC model and every one the clindamycin file names.
+    const small = manifest.datasets.length <= 60;
+    const visit = manifest.datasets.filter(d => small || d.mic_essential_agreement !== null || CLINDAMYCIN.datasets[d.id] !== undefined).map(d => d.id);
+    if (!small) skipped.push({ check: tag + ' lineage baseline on datasets with no MIC model and no clindamycin entry', reason: `not opened on a tree of ${manifest.datasets.length} datasets: ${manifest.datasets.length - visit.length} reports left out to bound the run` });
+    const widths = { 1024: [], 1440: [] }, results = [];
+    for (const id of visit) results.push(await reportPage(page, reportExpect(id), tag, widths).catch(e => ({ id, ok: false, problems: [{ what: 'error', message: String(e).slice(0, 300) }] })));
+    const bad = results.filter(r => !r.ok);
+    const pinned = results.filter(r => r.level !== undefined).length;
+    check(tag + ' dataset reports: MIC sentence, band, lineage header and leads, clindamycin note equal the files', bad.length === 0, { opened: results.length, withMicFile: pinned, bad: bad.slice(0, 8) });
+    const level = results.filter(r => r.level === true).map(r => r.id), levelLineage = results.filter(r => r.levelLineage === true).map(r => r.id);
+    if (level.length > 0) check(tag + ' "level with it" at an MIC lead of 0', level.every(id => !bad.some(b => b.id === id)), level);
+    else skipped.push({ check: tag + ' "level with it" at an MIC lead of 0', reason: 'no pinned MIC file in this tree has a lead that shows as 0.0' });
+    if (levelLineage.length > 0) check(tag + ' "level with lineage identity alone" at a lineage lead of 0', levelLineage.every(id => !bad.some(b => b.id === id)), levelLineage);
+    else skipped.push({ check: tag + ' "level with lineage identity alone" at a lineage lead of 0', reason: 'no learner in this tree is level with its pinned lineage baseline' });
+    const unconfirmed = results.filter(r => r.unconfirmed === true).map(r => r.id);
+    if (unconfirmed.length > 0) check(tag + ' unconfirmed folds marked † with the note on the report', unconfirmed.every(id => !bad.some(b => b.id === id)), unconfirmed);
+    else skipped.push({ check: tag + ' unconfirmed folds marked † on the report', reason: 'no pinned MIC file in this tree has confirmed: false' });
+    const notes = results.filter(r => CLINDAMYCIN.datasets[r.id] !== undefined).map(r => r.id);
+    if (notes.length === 0) skipped.push({ check: tag + ' clindamycin note on the reports the bundled file names', reason: 'this tree has none of the ' + Object.keys(CLINDAMYCIN.datasets).length + ' datasets the file names' });
+
+    // The MIC text column: the narrowest dataset at each width.
+    for (const width of [1024, 1440]) {
+      const all = widths[width].filter(w => w.width !== null);
+      const least = all.reduce((a, w) => (a === null || w.width < a.width ? w : a), null);
+      if (least === null) { skipped.push({ check: tag + ' MIC text column width at ' + width + 'px', reason: 'no dataset with an MIC model in this tree' }); continue; }
+      const floor = MIC_TEXT_FLOORS[width];
+      check(tag + ' MIC text column at ' + width + 'px keeps ' + floor + 'px on every MIC dataset', all.length === widths[width].length && least.width >= floor, { datasets: all.length, narrowest: least, under: all.filter(w => w.width < floor), under240: all.filter(w => w.width < 240) });
+    }
+    const narrow = widths[1024].filter(w => w.width !== null).sort((a, b) => a.width - b.width)[0];
+    if (narrow !== undefined) { await page.setViewportSize({ width: 1024, height: 900 }); await page.goto(BASE + '/datasets?dataset=' + narrow.id, { waitUntil: 'networkidle', timeout: 180000 }); await page.getByRole('region', { name: 'Measured and predicted MIC' }).waitFor({ timeout: 60000 }); await scrollTo(page, '#ds-mic'); await shot(page, '1024-baselines-narrowest-mic'); }
+
+    // Report bytes other than those pinned: the clindamycin note and the
+    // baselines file must both drop.
+    const firstNote = results.find(r => r.ok && r.note !== null)?.id;
+    const firstFile = results.find(r => r.ok && r.level !== undefined)?.id;
+    const altered = [...new Set([firstNote, firstFile].filter(Boolean))];
+    if (firstNote === undefined) skipped.push({ check: tag + ' clindamycin note drops for report bytes other than those pinned', reason: 'no report in this tree has the note' });
+    if (firstFile === undefined) skipped.push({ check: tag + ' baselines drop for report bytes other than those pinned', reason: 'no report in this tree has a pinned baselines file' });
+    for (const id of altered) {
+      const glob = '**/data/datasets/' + id + '.json';
+      await page.route(glob, async route => { const res = await route.fetch(); await route.fulfill({ response: res, body: Buffer.concat([await res.body(), Buffer.from('\n')]) }); });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(BASE + '/datasets?dataset=' + id, { waitUntil: 'networkidle', timeout: 180000 });
+      await page.locator('#ds-learners').waitFor({ timeout: 60000 });
+      await page.waitForLoadState('networkidle'); await settle(page); await page.waitForTimeout(300);
+      const got = await page.evaluate(() => { const root = document.querySelector('#ds-learners')?.closest('dialog') ?? document; return { notes: root.querySelectorAll('[data-clindamycin-note]').length, marks: root.querySelectorAll('[data-baseline]').length }; });
+      check(tag + ' report bytes other than those pinned show no clindamycin note and no baseline: ' + id, got.notes === 0 && got.marks === 0, got);
+      await page.unroute(glob);
+    }
+  } catch (error) { errors.push({ part: 'baselines', message: error.stack }); }
+  await context.close();
+  // With no baselines files the pages show none, and the console holds
+  // nothing but the browser's own line for each 404 of an optional file.
+  const optional = e => /^Failed to load resource: the server responded with a status of 404/.test(e.text) && [/\/data\/research\.json$/, ...OPTIONAL_404].some(re => re.test(new URL(e.url || BASE).pathname));
+  const byPath = {};
+  for (const e of consoleErrors) { const k = optional(e) ? '404 ' + new URL(e.url).pathname.replace(/^(\/data\/(?:baselines|intervals)\/)[^/]+$/, '$1*') : 'other'; byPath[k] = (byPath[k] ?? 0) + 1; }
+  const extra = consoleErrors.filter(e => !optional(e));
+  check('baselines console errors are only 404s of optional files' + (TREE.any ? '' : ' (a tree with no baselines files)'), extra.length === 0, { all: consoleErrors.length, byPath, extra: extra.slice(0, 5) });
+}
+
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.GRM_CHROMIUM || undefined, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   try {
     const favicon = await fetch(BASE + '/favicon.svg');
     check('favicon is the mark', favicon.ok && (favicon.headers.get('content-type') ?? '').includes('svg') && (await favicon.text()).includes('#ff8c66'), favicon.status);
-    for (const [width, height] of [[1280, 720], [1440, 900], [390, 844]]) for (const theme of ['light', 'dark']) {
+    for (const [width, height] of PART === 'all' ? [[1280, 720], [1440, 900], [390, 844]] : []) for (const theme of ['light', 'dark']) {
       const context = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion: 'reduce' });
       // Init scripts also run on each new page's first about:blank, which has
       // no storage, so touching localStorage there is a page error. Every
@@ -1828,12 +2115,7 @@ async function boundaries(browser) {
       const cdp = await context.newCDPSession(page);
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       page.on('pageerror', error => errors.push({ theme, width, message: error.message }));
-      // research.json, intervals/ and, since #124, baselines.json and
-      // baselines/<id>.json are optional (docs/baselines.md: "The dashboard
-      // reads the files and the summary as optional"; each index page
-      // requests the summary and each dataset report its own file), so a
-      // 404 for one is the tree without it, not an error.
-      page.on('response', r => { if (r.status() >= 400 && !r.url().endsWith('/data/research.json') && !(r.status() === 404 && /^\/data\/(intervals\/|baselines\.json$|baselines\/)/.test(new URL(r.url()).pathname))) errors.push({ theme, width, url: r.url(), status: r.status() }); });
+      page.on('response', r => { if (responseError(r)) errors.push({ theme, width, url: r.url(), status: r.status() }); });
       const tag = width + '-' + theme;
       try {
         await page.goto(BASE);
@@ -1866,11 +2148,14 @@ async function boundaries(browser) {
       } catch (error) { errors.push({ theme, width, message: error.stack }); }
       await context.close();
     }
-    await boundaries(browser);
-    await shortSlides(browser);
-    await normalMotion(browser);
+    if (PART === 'all') {
+      await boundaries(browser);
+      await shortSlides(browser);
+      await normalMotion(browser);
+    }
+    await baselineChecks(browser);
   } finally { await browser.close(); }
-  const receipt = { source: { fixture: FIXTURE, schema: manifest.schema, generated: manifest.generated_at, revision: manifest.evaluation_revision, datasets: expected.datasets, panelRows: manifest.panels.length }, independent: expected.stats, stateRows: stateRows.map(([d, w]) => [d.id, w]), skipped, checks, screenshots, errors, passed: checks.every(c => c.pass) && errors.length === 0 };
+  const receipt = { part: PART, source: { fixture: FIXTURE, schema: manifest.schema, generated: manifest.generated_at, revision: manifest.evaluation_revision, datasets: expected.datasets, panelRows: manifest.panels.length }, independent: expected.stats, stateRows: stateRows.map(([d, w]) => [d.id, w]), skipped, checks, screenshots, errors, passed: checks.every(c => c.pass) && errors.length === 0 };
   fs.writeFileSync(path.join(OUT, 'receipt.json'), JSON.stringify(receipt, null, 2));
   console.log(JSON.stringify({ passed: receipt.passed, checks: checks.length, skipped, failures: checks.filter(c => !c.pass).map(c => ({ name: c.name, actual: c.actual })), errors, screenshots: screenshots.length }, null, 2));
   process.exitCode = receipt.passed ? 0 : 1;
