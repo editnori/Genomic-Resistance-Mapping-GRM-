@@ -1,6 +1,6 @@
 # Species identity check (revision 10)
 
-Status: implemented on branch `r9/species-check` (code reviewed at `3a39fa3`, review approved 2026-10-30) and released in evaluation revision 10, merged on `r10/integration`. Revisions 8 and 9 do not include it. The "revision 9" counts below were measured for the revision-9 rerun and describe the cohorts revision 10 starts from.
+Status: implemented on branch `r9/species-check` (code reviewed at `3a39fa3`, review approved 2026-10-30) and released in evaluation revision 10, merged on `r10/integration`. Revisions 8 and 9 do not include it. The "revision 9" counts below were measured for the revision-9 rerun and describe the cohorts revision 10 starts from. The file they come from is lost, so they stay as history, beside a recount of the public data root's file ("The public data root's file", under Results).
 
 ## Why
 
@@ -62,9 +62,11 @@ GC alone never fails a genome, since contaminating contigs and plasmids also mov
 
 **The E. coli/Shigella genomic group.** *E. coli* and every *Shigella* are one genomic species split by taxonomy. 532 of 2,000 *E. coli* (26.6%) are nearer the *S. sonnei* reference than their own, and 30 *S. sonnei* are nearer the *E. coli* reference. Rule 2 never applies between any two members of the group (`Escherichia coli` and `Shigella *`), in any direction. Rule 1 still applies to each against its own reference. Genomes rule 2 would have failed within the group are borderline, which is why *E. coli* shows 536 borderline genomes (532 plus 4 past its own boundary). The 20 *S. flexneri* nearer the *S. sonnei* reference sit 0.0151 to 0.0159 from it and 0.0193 to 0.0205 from their own reference 623.1307. For comparison, the own distances of all 1,984 *S. sonnei* to 624.3489 are min 0.0000, median 0.0013, p99 0.0201 and max 0.0305. 1,937 of its 1,984 genomes (97.6%) are within 0.015, so the 20 sit outside the bulk of the clone but inside its tail. The 20 also look like 10 duplicate pairs. Those go to the outer-fold duplicate-isolation lane, not this check.
 
-**Coverage for revision 9.** 25,761 genomes checked, none unchecked: the 23,761 genomes of the frozen 23-species candidate (`/root/grm-extra-species-analysis-20261027/data/species/*/genomes.txt`, whose BV-BRC inputs match `frozen-inputs.json` of the MTB 4k pilot), with MTB checked on the 4k list (`grm-mtb-4k-pilot-opus-20261029/run/cohorts/full`, whose first 2,000 lines are the frozen 2k), which adds 2,000 genomes. The laptop sketched 18,909 genomes and Vast sketched the 6,852 held only there (16 threads, nice 10, read-only, 118 MB scratch in `/tmp/grm-r9-species-check`). `species_check.json` sha256 `25df721ee5d902a3a43a44bfb3f15bf67cb75a2ec6cc497cd69625f962fa2d71`. The `/root/` and `/tmp/` folders named here are historical: they were on the Vast host, which was destroyed on 2026-10-31, and are no longer available.
+**Coverage for revision 9, kept as history.** 25,761 genomes checked, none unchecked: the 23,761 genomes of the frozen 23-species candidate (`/root/grm-extra-species-analysis-20261027/data/species/*/genomes.txt`, whose BV-BRC inputs match `frozen-inputs.json` of the MTB 4k pilot), with MTB checked on the 4k list (`grm-mtb-4k-pilot-opus-20261029/run/cohorts/full`, whose first 2,000 lines are the frozen 2k), which adds 2,000 genomes. The laptop sketched 18,909 genomes and Vast sketched the 6,852 held only there (16 threads, nice 10, read-only, 118 MB scratch in `/tmp/grm-r9-species-check`). `species_check.json` sha256 `25df721ee5d902a3a43a44bfb3f15bf67cb75a2ec6cc497cd69625f962fa2d71`. That file is lost: the public data root's hash list names a different `species_check.json`, and neither the revision 9 nor the revision 14 release holds one. The `/root/` and `/tmp/` folders named here are historical: they were on the Vast host, which was destroyed on 2026-10-31, and are no longer available.
 
 ## Results
+
+The tables of this part are the October file's, kept as history: that file is lost (see "Coverage for revision 9"). "The public data root's file" below recounts the file that can be read today and lists where the two differ.
 
 | Species | Reference (medoid) | Checked | Failed | Borderline | GC median | Own distance p50 / p99 / max of passing |
 |---|---|--:|--:|--:|--:|---|
@@ -92,6 +94,27 @@ GC alone never fails a genome, since contaminating contigs and plasmids also mov
 | *Streptococcus pneumoniae* | 1313.46229 | 2000 | 0 | 0 | 39.6% | 0.0097 / 0.0118 / 0.0196 |
 | *Vibrio cholerae* | 666.4954 | 91 | 0 | 0 | 47.5% | 0.0009 / 0.0367 / 0.0367 |
 | **Total** | | 25761 | 79 | 751 | | |
+
+### The public data root's file
+
+Read on 15 Nov 2026: `species-check/species_check.json` of the public data root, sha256 `c2e7c389779e6aa009800a9d327a3b036a14a01153429c62b51cdd7b66c942ef`, the hash the data root's list gives. It has the same config and the same 23 references as the table above. Counted by verdict, it judges 35,231 genomes: 34,349 pass, 96 fail and 786 borderline, none unchecked and none with `kept_fail`. Its species blocks give the same counts. In 17 of the 23 rows, the checked, failed and borderline counts equal the table above. Six differ:
+
+| Species | October file (lost): checked / failed / borderline | Data root file: checked / failed / borderline | Data root file: own distance p50 / p99 / max of passing |
+|---|--:|--:|---|
+| *Escherichia coli* | 2000 / 4 / 536 | 2004 / 4 / 538 | 0.0277 / 0.0341 / 0.0371, as above |
+| *Klebsiella pneumoniae* | 2000 / 68 / 2 | 2069 / 69 / 2 | 0.0097 / 0.0447 / 0.0493, as above |
+| *Mycobacterium tuberculosis* | 4000 / 2 / 6 | 5655 / 2 / 7 | 0.0005 / 0.0015 / 0.0033 |
+| *Neisseria gonorrhoeae* | 2000 / 0 / 0 | 4633 / 0 / 0 | 0.0029 / 0.0046 / 0.0052 |
+| *Salmonella enterica* | 2000 / 1 / 0 | 4920 / 17 / 32 | 0.0108 / 0.0189 / 0.0479 |
+| *Staphylococcus aureus* | 2000 / 0 / 0 | 4189 / 0 / 0 | 0.0113 / 0.0200 / 0.0235 |
+| **Total, 23 species** | 25761 / 79 / 751 | 35231 / 96 / 786 | |
+
+The GC medians are those of the table above in all 23 rows, and the own distances in the other 17.
+
+- The revision 14 cohorts are in the file. Each species' `species/<slug>/genomes.txt` in the data root holds exactly the genomes of that species' revision 14 report, 23,757 in all, and the file judges every one: 23,005 pass and 752 borderline. None fails.
+- The other 11,474 genomes of the file are in no `genomes.txt`. They are the 96 that fail, which curation dropped, and 11,378 more (11,344 pass, 34 borderline) of *M. tuberculosis*, *N. gonorrhoeae*, *S. enterica* and *S. aureus*. The file does not record which runs judged them.
+- The listed verdicts hold. All 79 genomes of "Dropped genomes" fail in the file, and all 169 of "Borderline genomes outside the E. coli/Shigella group" are borderline. The file adds 17 failed genomes and 33 borderline ones outside the group. The failed are one *K. pneumoniae* by rule 2 (`573.26239`, 0.035 from the *K. quasipneumoniae* reference) and 16 *S. enterica* by rule 1 (own distance 0.150 to 0.171). The borderline are 32 *S. enterica* and one *M. tuberculosis*. None of the 50 is in a `genomes.txt`, so none is in a revision 14 cohort.
+- In the nearer-species pairs, the file counts 534 *E. coli* nearer the *S. sonnei* reference (26.65%) and 68 *K. pneumoniae* nearer the *K. quasipneumoniae* reference (3.29%), against 532 and 67 below. The *S. flexneri* and *S. sonnei* pairs are the same.
 
 ### Nearer-species pairs
 
@@ -371,7 +394,7 @@ GC alone never fails a genome, since contaminating contigs and plasmids also mov
 
 ### Selection after the drop (measured 2026-10-30)
 
-`grm curate` at `3a39fa3` (binary sha256 `789c02d0…c3b6`) on the frozen BV-BRC inputs with the frozen SigDrug vocabulary, run one at a time in `grm-r9-curate/` on the laptop, outside the repository. Without a species check, it reproduces every frozen selection: all 23 species at cap 2000, and the MTB 4k list at cap 4000 (sha256 `80faef89…4eaf`). With the check (`species_check.json` sha256 `25df721e…2d71`):
+`grm curate` at `3a39fa3` (binary sha256 `789c02d0…c3b6`) on the frozen BV-BRC inputs with the frozen SigDrug vocabulary, run one at a time in `grm-r9-curate/` on the laptop, outside the repository. Without a species check, it reproduces every frozen selection: all 23 species at cap 2000, and the MTB 4k list at cap 4000 (sha256 `80faef89…4eaf`). With the October check (`species_check.json` sha256 `25df721e…2d71`, the lost file):
 
 - Every dataset survives at both caps (277), with the same 22 MTB datasets. Labelled MTB genomes go from 32,060 to 32,058.
 - MTB at cap 2000: 2,000 genomes (sha256 `b104d8bd…9a64`). `1773.41701` and `1773.40949` leave, and `1773.42018` and `1773.42548` from the added 2k enter at positions 1,999 and 2,000. The check had judged both, so `selected_unchecked` is 0. The selection is fresh: 458 positions differ from the old list minus the two drops, because dropped labels shift the class weights.

@@ -4,11 +4,10 @@ From revision 10, the random split keeps each group of k-mer-identical genomes w
 
 ## Why
 
-Before revision 10 nothing kept copies apart. Stratified random folds could put one copy of a genome in training and the other in test. The 2026-10-27 lane reran the evaluation with copies isolated:
+Before revision 10 nothing kept copies apart. Stratified random folds could put one copy of a genome in training and the other in test. The 2026-10-27 lane reran the evaluation with copies isolated. Its result files are lost: they are in no release and on no machine this project's lanes can reach. Its figures stay here as history, beside what the released reports show.
 
-- *S. flexneri* ampicillin, azithromycin and ciprofloxacin lost 0.04 to 0.13 balanced accuracy. Every correct-to-wrong flip fell on a genome whose copy had been in training.
-- Ciprofloxacin VME went from 0.00 to 0.30 on 33 resistant genomes.
-- Elsewhere the effect was near zero: same-BioSample duplicates moved the median by 0.000, and lineage folds already hold copies together.
+- **The lost October figures.** *S. flexneri* ampicillin, azithromycin and ciprofloxacin lost 0.04 to 0.13 balanced accuracy, and every correct-to-wrong flip fell on a genome whose copy had been in training. Ciprofloxacin VME went from 0.00 to 0.30 on 33 resistant genomes. Elsewhere the effect was near zero: same-BioSample duplicates moved the median by 0.000, and lineage folds already hold copies together.
+- **The released reports.** The same three datasets have the same genomes, labels and inputs in the revision 9 release, with no isolation, and the revision 14 release, with it ([Revision 9 against revision 14](#revision-9-against-revision-14)). On the random split, balanced accuracy fell in 14 of the 15 learner rows, by 0.009 to 0.155, and rose in one. Ciprofloxacin VME was 0.00 for every learner at revision 9 and 0.00 to 0.30 at revision 14, on the same 33 resistant genomes. 162 of the 172 calls that went from correct to wrong fell on a genome whose copy had been in training. This is the joint difference of the fold move and grouped tuning, not a rerun of the October lane.
 
 ## The rule
 
@@ -45,7 +44,42 @@ Over the 277 datasets of the 23-species candidate, 58 have at least one group an
 
 The other 17 species, *M. tuberculosis* included, have none. These counts describe the revision-9 cohorts. None of the genomes the species check drops is in a group, but replacements refill capped species, so recount after the revision-10 curation; the audit rebuilds each report's groups from counted.json either way.
 
-On the revision-8 learners, isolating *S. flexneri* ciprofloxacin moved random-split VME from 0.000 to 0.24 to 0.30 across the five learners and balanced accuracy down by 0.11 to 0.16. The three *S. haemolyticus* datasets, which have no group, gave byte-identical results.
+A lost October figure, kept as history: on the revision-8 learners, isolating *S. flexneri* ciprofloxacin moved random-split VME from 0.000 to 0.24 to 0.30 across the five learners and balanced accuracy down by 0.11 to 0.16, and the three *S. haemolyticus* datasets, which have no group, gave byte-identical results. The released reports bear out the *S. haemolyticus* part, and the rest for three of the five learners only. From revision 9 to revision 14, ciprofloxacin VME went from 0.000 to 0.303 for the random forest, 0.242 for boosted trees and the lasso, and 0.061 for scm, and stayed 0.000 for CART. Balanced accuracy fell by 0.155, 0.130, 0.123, 0.042 and 0.009 in the same order (next section).
+
+## Revision 9 against revision 14
+
+A read of released files on 15 Nov 2026, with no fit. The revision 9 reports are in the `data-rev9-275-20261030` release (`grm-release-rev9-275-20261030.tar.gz`), and the revision 14 reports in `data-rev14-274-20261112`.
+
+**Same cohort.** For each of the three datasets, both reports list the same genomes in the same order with the same labels and record the same input fingerprint, so neither the cohort nor the matrix changed. The species check dropped no *S. flexneri* genome. Revision 9's random-split rows equal revision 8's (the revision 9 release notes), so they stand for the revision-8 learners above.
+
+**The rows.** Random split, each learner. VME is the resistant genomes called susceptible over all resistant genomes. Log loss is not a report field: it is computed here from each learner's published held-out scores, clipped to [1e-4, 1 - 1e-4].
+
+| Dataset | Learner | Balanced accuracy, rev 9 | Rev 14 | VME, rev 9 | Rev 14 | Log loss, rev 9 | Rev 14 |
+|---|---|--:|--:|--:|--:|--:|--:|
+| ampicillin (318 R of 358) | scm | 0.906 | 0.919 | 0.038 (12/318) | 0.038 (12/318) | 0.463 | 0.437 |
+|  | cart | 0.944 | 0.856 | 0.038 (12/318) | 0.063 (20/318) | 0.153 | 0.364 |
+|  | rf | 0.997 | 0.869 | 0.006 (2/318) | 0.013 (4/318) | 0.033 | 0.097 |
+|  | gbt | 0.981 | 0.887 | 0.013 (4/318) | 0.025 (8/318) | 0.050 | 0.154 |
+|  | lasso | 0.991 | 0.934 | 0.019 (6/318) | 0.031 (10/318) | 0.052 | 0.181 |
+| azithromycin (186 R of 361) | scm | 0.973 | 0.945 | 0.043 (8/186) | 0.075 (14/186) | 0.255 | 0.510 |
+|  | cart | 0.962 | 0.951 | 0.054 (10/186) | 0.065 (12/186) | 0.159 | 0.201 |
+|  | rf | 1.000 | 0.956 | 0.000 (0/186) | 0.054 (10/186) | 0.052 | 0.165 |
+|  | gbt | 0.995 | 0.970 | 0.011 (2/186) | 0.043 (8/186) | 0.021 | 0.123 |
+|  | lasso | 1.000 | 0.950 | 0.000 (0/186) | 0.054 (10/186) | 0.015 | 0.152 |
+| ciprofloxacin (33 R of 361) | scm | 0.979 | 0.936 | 0.000 (0/33) | 0.061 (2/33) | 0.357 | 0.612 |
+|  | cart | 0.963 | 0.954 | 0.000 (0/33) | 0.000 (0/33) | 0.186 | 0.234 |
+|  | rf | 1.000 | 0.845 | 0.000 (0/33) | 0.303 (10/33) | 0.026 | 0.117 |
+|  | gbt | 0.997 | 0.867 | 0.000 (0/33) | 0.242 (8/33) | 0.025 | 0.239 |
+|  | lasso | 0.995 | 0.873 | 0.000 (0/33) | 0.242 (8/33) | 0.028 | 0.294 |
+
+**What it shows.**
+
+- Every revision 14 group is a pair held in one test fold: 132, 134 and 134 pairs, of which 107, 107 and 108 sat across two revision 9 test folds. So 107, 107 and 108 genomes changed fold. With trimethoprim's 134 pairs, 114 of them split, the four datasets give the 534 groups and 436 crossings of the table above.
+- Balanced accuracy fell in 14 of the 15 rows, by 0.009 to 0.155, and rose in one, scm on ampicillin (0.906 to 0.919). Log loss rose in 14 rows and fell in that same one.
+- 172 calls went from correct to wrong, and 162 of them fell on a genome whose copy sat in another revision 9 test fold, and so in that fold's training set. The other 10 did not, so the October claim that every flip fell on such a genome does not hold for this read. 20 calls went from wrong to correct.
+- **Control.** The three *S. haemolyticus* datasets have no group and the same input fingerprint in both releases. Their test folds, held-out scores and metrics are equal on both splits for all five learners. So the other changes of revisions 10 to 14, and the other build, left a dataset with no group unchanged.
+
+**What it cannot show.** Revisions 9 and 14 differ in the fold move (revision 10) and in grouped inner tuning (revision 11) together. Final-model tuning (revision 12) changes no held-out score, and no row here has a null fit (revision 14). So the read gives the joint difference of the move and the grouped tuning. It does not reproduce the October run, which isolated copies with tuning by class, and it cannot split the two parts. The October lane put grouped tuning alone at about 0.013 lower balanced accuracy, another figure whose files are lost. Splitting them needs a fit, not run here: `grm` at revision 10 (`a4ba77d`), which moves groups and still tunes by class, run as `grm learn --species shigella_flexneri --only ampicillin,azithromycin,ciprofloxacin --force` on a data root that holds the 362 *S. flexneri* genomes of these reports, counted and built into a matrix, compared with these revision 9 rows. `grm` at revision 14 has no switch for tuning by class.
 
 ## Limits
 

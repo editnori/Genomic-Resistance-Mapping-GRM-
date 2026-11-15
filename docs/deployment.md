@@ -103,33 +103,39 @@ bash $G/status.sh                   # read-only: state, live release, live healt
 
 ## Local preview
 
+Serve a released report tree. The site's tree is the [`data-rev14-274-20261112` release](https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/tag/data-rev14-274-20261112): `rev14-274-20261112.tar.zst` (179,708,807 bytes) holds its 575 files under one folder, `rev14-274-20261112/`, and `rev14-274-20261112.sha256` lists each of them as `SHA256  ./path`.
+
 ```bash
 cargo build --release --locked
 npm --prefix web ci && npm --prefix web run build
-./target/release/grm --data data/backups/revision7-published-20261025 serve --port 8641
+U=https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/download/data-rev14-274-20261112
+R=data/releases/rev14-274-20261112
+mkdir -p $R/report
+curl -fL -o $R/rev14-274-20261112.tar.zst $U/rev14-274-20261112.tar.zst
+curl -fL -o $R/rev14-274-20261112.sha256 $U/rev14-274-20261112.sha256
+echo "c67155f598dbb1ebe1a4ab908e793124ebc058430a33c1c67d7e2058910256de  $R/rev14-274-20261112.tar.zst" | sha256sum --strict -c
+tar --zstd -xf $R/rev14-274-20261112.tar.zst -C $R/report --strip-components=1
+(cd $R/report && sha256sum --quiet --strict -c ../rev14-274-20261112.sha256)
+./target/release/grm --data $R serve --port 8641
 ```
 
-`--data` names a root that contains `report/`; the verified backup has that layout. Open <http://127.0.0.1:8641>. For the Vite dev server, set `GRM_REPORT_DIR=data/backups/revision7-published-20261025/report`.
+`--data` names a root that contains `report/`, and `--strip-components=1` puts the release's folder there. Open <http://127.0.0.1:8641>. For the Vite dev server, set `GRM_REPORT_DIR=$R/report`. `tar --zstd` needs GNU tar 1.31 or newer and `zstd`. Other releases are laid out differently, so list one with `tar -tf` before unpacking it. The revision 9 tree, `grm-release-rev9-275-20261030.tar.gz` in the [`data-rev9-275-20261030` release](https://github.com/editnori/Genomic-Resistance-Mapping-GRM-/releases/tag/data-rev9-275-20261030), holds `data/report/` with the hash list `SOURCE.sha256` beside `data/`: unpack it into its own folder with `tar -xzf`, check it from `data/report` with `sha256sum --quiet --strict -c ../../SOURCE.sha256`, and serve it with `--data <folder>/data`.
 
-## Verified backup
+On 15 November 2026 these steps ran with the release's own file, already on the host with the sha256 above, in place of the two downloads: the tree check passed, and `grm serve`, built at `852ebc9`, answered 200 for `index.json`, `corpus.json`, `SKIPS.json` and all 274 dataset reports the index lists, each byte for byte the release's file. The web app was not built for that check; a one-line page stood in for `web/dist` (`grm serve --app`).
 
-`data/backups/revision7-published-20261025` holds the published revision-7 report (252 files: index, corpus, 237 dataset and 13 species reports) with `SOURCE.sha256`, plus the curated inputs, logs and receipts that validate it; its `README.md` describes the checks. Do not modify it. Verify it before use:
+## Publish a released tree
+
+`publish.sh` takes a report tree and a list of its files' hashes in the form `SHA256  ./path`. A release's `.sha256` file has that form, so a tree checked as above can be published as it is. On a host, copy `$R/report` and `$R/rev14-274-20261112.sha256` there first.
 
 ```bash
-B=data/backups/revision7-published-20261025
-(cd $B/report && sha256sum --quiet --strict -c ../SOURCE.sha256)
-python3 -I -B $B/validation/run-check-results.py
+export GRM_EXPECT_REVISION=14 GRM_EXPECT_DATASETS=274
+bash $G/publish.sh $R/report $R/rev14-274-20261112.sha256 rev14-274-20261112          # dry run
+bash $G/publish.sh $R/report $R/rev14-274-20261112.sha256 rev14-274-20261112 --apply
 ```
 
-To make a publication from it on a host, copy `report/` and `SOURCE.sha256` there, then:
+The dry run passed on 15 November 2026 on the tree checked above, and wrote nothing under the root; with `GRM_EXPECT_DATASETS=275` it refused the tree (exit 1).
 
-```bash
-rsync -a $B/report $B/SOURCE.sha256 vast:/root/grm-incoming-rev7/
-# on the host
-export GRM_EXPECT_REVISION=7 GRM_EXPECT_DATASETS=237
-bash $G/publish.sh /root/grm-incoming-rev7/report /root/grm-incoming-rev7/SOURCE.sha256 rev7-restored          # dry run
-bash $G/publish.sh /root/grm-incoming-rev7/report /root/grm-incoming-rev7/SOURCE.sha256 rev7-restored --apply
-```
+History: until the Vast host was destroyed, this page previewed and published from `data/backups/revision7-published-20261025`, a copy of the published revision-7 report (237 dataset reports) with the files that validated it. That copy was on the laptop only, and no release holds the revision-7 reports, so no command here reads it.
 
 `publish.sh` verifies the source tree and checks its index against `GRM_EXPECT_*` first, refuses an existing name, copies into `published/NAME.partial`, verifies the copy, makes it read-only and renames it into place. `GRM_EXPECT_REVISION` and `GRM_EXPECT_DATASETS` are required for `publish.sh`, `stage.sh` and `approve-legacy.sh`: set them to the report's revision and dataset count (for example 11 and 275).
 
