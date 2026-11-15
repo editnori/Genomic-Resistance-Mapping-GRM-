@@ -231,6 +231,55 @@ class BarredWords(unittest.TestCase):
         self.assertEqual((d / "list.tsv").read_text(encoding="utf-8"), kit.list_text(sorted(rows, key=lambda r: r[0])))
         self.assertIn("refused\t2\t0\n", out)  # the 5 bytes of vumc.o are not counted in target/ either
 
+    def test_refused_paths_are_counted_by_top_folder_with_and_without_record_refused(self):
+        d, proj, rules = kit.project(self)
+        kit.write(d / "other", {"ksd-a.txt": b"a", "b/private.txt": b"b", "c.txt": b"c"})
+        kit.write(proj, {"notes/ks30.txt": b"x"})
+        for more in ((), ("--record-refused",)):
+            with self.subTest(more=more):
+                rc, out, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}",
+                                       "--root", f"other={d / 'other'}", "--out", d / "l.tsv", *more)
+                self.assertEqual(rc, 0 if more else 3, err)
+                self.assertIn("3 paths hold a barred word; none was opened:\n", err)
+                self.assertIn("list: refused paths by top folder; a refused path is in no archive, so look at it "
+                              "by hand:\n  other  2\n  proj  1\n", err)
+
+    def test_a_list_written_with_record_refused_is_taken_by_its_own_pack_and_summary(self):
+        d, proj, rules = kit.project(self)
+        kit.write(proj, {"notes/ks30/table.tsv": b"x", "notes/Sealed.md": b"y"})
+        os.chmod(proj / "notes" / "ks30", 0)
+        os.chmod(proj / "notes" / "Sealed.md", 0)
+        rc, out, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "list.tsv",
+                               "--record-refused")
+        self.assertEqual(rc, 0, err)
+        rc, out, err = kit.run("pack", "--list", d / "list.tsv", "--class", "internal-record", "--name", "demo",
+                               "--out", d / "out", "--root", f"proj={proj}")
+        self.assertEqual((rc, err), (0, ""), out)
+        rc, out, err = kit.run("check", "--parts", d / "out" / "demo.internal-record.parts.sha256")
+        self.assertEqual((rc, err), (0, ""), out)
+        rc, out, err = kit.run("summary", "--place", f"here={d / 'list.tsv'}")
+        self.assertEqual((rc, err), (0, ""), out)
+        self.assertIn("refused", out)
+
+    def test_a_refused_path_whose_list_path_holds_no_word_stops_record_refused_too(self):
+        d, proj, rules = kit.project(self)
+        kit.write(d / "sigdrug-data", {"table.tsv": b"x"})
+        os.symlink(d / "sigdrug-data", proj / "notes" / "tables")
+        table = d / "table.tsv"
+        table.write_text(f"path\tbytes\tsha256\nx/held-out/proj/a.tsv\t1\t{kit.sha(b'a')}\n", encoding="utf-8")
+        cases = (("a link with a clean name", ("--root", f"proj={proj}"), "proj/notes/tables"),
+                 ("a root with a clean label", ("--root", f"clean={d / 'sigdrug-data'}"), "clean"),
+                 ("a word --strip-prefix cuts off", ("--listing", table, "--strip-prefix", "x/held-out/"),
+                  "proj/a.tsv"))
+        for name, args, path in cases:
+            with self.subTest(name):
+                rc, out, err = kit.run("list", "--rules", rules, *args, "--out", d / "l.tsv", "--record-refused")
+                self.assertEqual((rc, out), (3, ""), err)
+                self.assertIn("list: 1 of them hold no barred word in their list path (their place on disk does, "
+                              "through a link or the root, or --strip-prefix cut it off), and a refused row must "
+                              f"hold its word; nothing was written:\n  {path}\n", err)
+                self.assertFalse((d / "l.tsv").exists())
+
     def test_a_root_or_a_link_that_leads_to_a_barred_place_is_refused(self):
         d, proj, rules = kit.project(self)
         kit.write(d / "sigdrug-data", {"table.tsv": b"x"})

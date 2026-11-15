@@ -35,8 +35,11 @@ rules pattern that ends in "/". A name such as target or .cargo alone does not m
 and letter width do not matter, and the four joined words held-out, ks30, ks50 and sigdrug match with any run of
 characters that are not letters or digits between their halves, or none: held_out, KS-30, sig drug and ks/50 are
 refused. The other five match as written; nothing is dropped from the whole path, so tasks/data is not ksd. `list`
-names every such path and stops with status 3 before it writes anything; it never opens one and never enters one.
-With --record-refused it writes them as rows with no size and no hash, and goes on. `pack` and `check` stop on such
+names every such path, counts them by top folder, and stops with status 3 before it writes anything; it never opens
+one and never enters one. A refused path is in no archive, so look at each by hand. With --record-refused it writes
+them as rows with no size and no hash, and goes on, unless a refused path holds no barred word in its list path (a
+link or a root that leads to a barred place, or a word that --strip-prefix cut off): a refused row must hold its
+word, so that it cannot be told from a row edited by hand to hide a file. `pack` and `check` stop on such
 a path too, and so does every command given one as an argument.
 
 RULES gives the other classes: one line per rule, CLASS<TAB>PATTERN, the first match wins, "#" starts a comment.
@@ -436,9 +439,20 @@ def cmd_list(a):
     if walk.refused:
         lines = "\n".join(f"  {p}  ({w})" for p, w in sorted(walk.refused.items())[:SHOWN])
         more = f"\n  ... and {len(walk.refused) - SHOWN} more" if len(walk.refused) > SHOWN else ""
-        text = f"{len(walk.refused)} paths hold a barred word; none was opened:\n{lines}{more}"
+        tops = {}
+        for p in walk.refused:
+            tops[p.split("/", 1)[0]] = tops.get(p.split("/", 1)[0], 0) + 1
+        text = (f"{len(walk.refused)} paths hold a barred word; none was opened:\n{lines}{more}\n"
+                f"list: refused paths by top folder; a refused path is in no archive, so look at it by hand:\n"
+                + "\n".join(f"  {top}  {n}" for top, n in sorted(tops.items())))
         if not a.record_refused:
             raise Stop(3, f"list: refused: {text}\nlist: nothing was written")
+        # A refused row must hold its word, so that it cannot be told from a row edited by hand to hide a file.
+        hidden = sorted(p for p in walk.refused if not barred_word(p))
+        if hidden:
+            raise Stop(3, f"list: refused: {text}\nlist: {len(hidden)} of them hold no barred word in their list "
+                          f"path (their place on disk does, through a link or the root, or --strip-prefix cut it "
+                          f"off), and a refused row must hold its word; nothing was written:\n{shown(hidden)}")
         print(f"list: {text}", file=sys.stderr)
         walk.rows += [(p, None, "-", REFUSED) for p in walk.refused]
     if walk.special:
