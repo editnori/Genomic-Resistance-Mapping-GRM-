@@ -134,6 +134,7 @@ src/lib.rs bits::tests::set_algebra_and_counts
 src/lib.rs bvbrc::tests::a_synthetic_genome_response_is_written_with_its_collection_dates
 src/lib.rs bvbrc::tests::collection_date_stays_off_every_label_record
 src/lib.rs bvbrc::tests::collection_dates_parse_at_their_stated_precision_and_nothing_else
+src/lib.rs bvbrc::tests::collection_dates_read_from_a_genome_line_are_their_value_text
 src/lib.rs bvbrc::tests::genome_dates_keep_only_their_three_fields
 src/lib.rs bvbrc::tests::genome_lines_fetched_before_collection_date_read_and_write_as_before
 src/lib.rs bvbrc::tests::parses_mixed_type_fields

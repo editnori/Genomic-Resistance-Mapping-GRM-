@@ -126,16 +126,22 @@ Block X, genome context, stays unavailable because "the context fields in genome
 
 ## Collection date (ledger action 11)
 
-`grm fetch genomes` also asks BV-BRC for `collection_date`, next to `collection_year` in `GENOME_FIELDS`, and `GenomeRecord` holds it as `bvbrc::CollectionDate`. The text is read strictly each time a line is read:
+`grm fetch genomes` also asks BV-BRC for `collection_date`, next to `collection_year` in `GENOME_FIELDS`, and `GenomeRecord` holds it as `bvbrc::CollectionDate`.
+
+Each time a line is read, fetch's or a later reader's, the value is first taken as text through `value_text`, as every other genome field is. That text is the value trimmed of outer whitespace (a no-break space too), a number written as its text, and a list's values joined with `;`. A boolean or an object becomes its JSON text, and null, blank text and a list with no text are no value. What is written back is that text, so it is not always the value BV-BRC sent: `" 2015"`, `2015` and `["2015"]` all write back as `"2015"`, and `["2015","2016"]` as `"2015;2016"` (`bvbrc::tests::collection_dates_read_from_a_genome_line_are_their_value_text`). The saved BV-BRC records of 11 Nov send every value as a string with no outer whitespace, so on them the text is the value.
+
+The text is then read strictly:
 
 | Text | Reading | Examples |
 |---|---|---|
 | `YYYY-MM-DD`, a day that exists | a date at day precision | `2015-03-12`, `2016-02-29` |
 | `YYYY-MM`, month 01 to 12 | a date at month precision, with no day | `2014-05` |
 | `YYYY` | a date at year precision, with no month | `2013` |
-| any other text | `Unparsed`: kept as written, with no date | `2015-2016`, `2004-20`, `2017-02-30`, `2015-03-12T00:00:00Z`, `12/03/2015`, `missing` |
+| any other text | `Unparsed`: kept as that text, with no date | `2015-2016`, `2004-20`, `2017-02-30`, `2015-03-12T00:00:00Z`, `12/03/2015`, `missing` |
 | no value from BV-BRC | `Missing`, written as null | |
 | no key, in a line fetched before this change | `NotFetched`, written back without the key | |
+
+A value is trimmed before it is parsed, so `" 2015-03-12 "` on a genome line reads as a day. The parse test's case `"2015-03-12 "`, which reads as unparsed, describes `CollectionDate::parse` called directly, which trims nothing, and not fetch.
 
 Nothing is guessed. A range is not cut to one of its years, a day that does not exist is not moved to one that does, a month out of range is not read as its year, and neither year field fills in the other. The year is not checked against a range: whether a stated year is plausible is for the analysis that reads it. `grm fetch genomes` prints how many genomes had each kind.
 

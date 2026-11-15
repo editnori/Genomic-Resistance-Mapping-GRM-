@@ -140,13 +140,22 @@ sequencing_platform,assembly_method,biosample_accession,assembly_accession";
 /// `curate::PairProvenance`), nor when BV-BRC stored the genome
 /// (`GenomeDate`). No lab record and no curated file carries it.
 ///
-/// The text is read strictly. Only `YYYY-MM-DD` (a real calendar day),
-/// `YYYY-MM` (month 01 to 12) and `YYYY` are dates, at day, month and year
-/// precision. Any other text, such as a range (`2015-2016`), a truncated
-/// range (`2004-20`), a time stamp, a slash or month-name form, or a day
-/// that does not exist (`2015-02-30`), is `Unparsed`: kept as written and
-/// never turned into a date. The year is not checked against any range;
-/// whether a stated year is plausible is for the analysis that reads it.
+/// A genome line's value is first read as text through `value_text`, as
+/// every other genome field is: a string with its outer whitespace trimmed
+/// (a no-break space too), a number as its JSON text, a list as its
+/// values' texts joined with `;`, and a boolean or an object as its JSON
+/// text. Null, blank text and a list with no text are `Missing`. So the
+/// text kept is not always the value BV-BRC sent: `" 2015"`, `2015` and
+/// `["2015"]` all read and write back as `"2015"`.
+///
+/// That text is then read strictly. Only `YYYY-MM-DD` (a real calendar
+/// day), `YYYY-MM` (month 01 to 12) and `YYYY` are dates, at day, month and
+/// year precision. Any other text, such as a range (`2015-2016`), a
+/// truncated range (`2004-20`), a time stamp, a slash or month-name form,
+/// or a day that does not exist (`2015-02-30`), is `Unparsed`: kept as that
+/// text and never turned into a date. The year is not checked against any
+/// range; whether a stated year is plausible is for the analysis that reads
+/// it.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum CollectionDate {
     /// The record comes from a file fetched before `GENOME_FIELDS` asked for
@@ -158,7 +167,8 @@ pub enum CollectionDate {
     Missing,
     /// A day, month or year, at the precision the text states.
     Stated(StatedDate),
-    /// Text that is none of the three forms, as BV-BRC wrote it (trimmed).
+    /// Text that is none of the three forms: the value's text after
+    /// `value_text` (trimmed, a number as its text, a list joined).
     Unparsed(String),
 }
 
@@ -207,8 +217,9 @@ impl StatedDate {
     }
 }
 
-/// The date in the one form it was read from, so a stated date is written
-/// back exactly as BV-BRC wrote it.
+/// The date in the one form it was parsed from, with a four-digit year, so
+/// a stated date is written back as the text that was parsed: the value's
+/// text after `value_text`, not always the value BV-BRC sent.
 impl std::fmt::Display for StatedDate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
@@ -220,7 +231,10 @@ impl std::fmt::Display for StatedDate {
 }
 
 impl CollectionDate {
-    /// Reads one `collection_date` text, which fetch has already trimmed.
+    /// Reads one `collection_date` text as given; it trims nothing. A value
+    /// read from a genome line has been through `value_text` first, which
+    /// trims it, so text with outer whitespace reaches this only when called
+    /// directly.
     pub fn parse(text: &str) -> Self {
         match stated_date(text) {
             Some(date) => CollectionDate::Stated(date),
@@ -240,7 +254,9 @@ impl CollectionDate {
         self.stated().map(StatedDate::precision)
     }
 
-    /// The text BV-BRC wrote, whether or not it parsed.
+    /// The text that was parsed, whether or not it parsed: for a value read
+    /// from a genome line, its text after `value_text` (trimmed, a number as
+    /// its text, a list joined), not always the value BV-BRC sent.
     pub fn text(&self) -> Option<String> {
         match self {
             CollectionDate::Stated(date) => Some(date.to_string()),
@@ -305,7 +321,8 @@ fn days_in_month(year: u16, month: u8) -> u8 {
 }
 
 /// `CollectionDate` is stored as its text: a stated date in the form it was
-/// read from, an unparsed one as written, and no value as null.
+/// parsed from, an unparsed one as the text that was parsed, and no value
+/// as null.
 impl Serialize for CollectionDate {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         match self {
@@ -701,7 +718,10 @@ fn opt_text<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error>
     Ok(value_text(serde_json::Value::deserialize(d)?))
 }
 
-/// Called only when the key is present: null or empty text is `Missing`.
+/// Called only when the key is present. The value is read through
+/// `value_text`, as every genome field is, and its text is parsed: trimmed,
+/// a number as its text, a list joined with `;`. Null, blank text and a list
+/// with no text are `Missing`.
 fn collection_date<'de, D: Deserializer<'de>>(d: D) -> Result<CollectionDate, D::Error> {
     Ok(match value_text(serde_json::Value::deserialize(d)?) {
         Some(text) => CollectionDate::parse(&text),
@@ -775,6 +795,9 @@ mod tests {
             ("2015-2016", None),
             ("2015/2016", None),
             ("2015-03-12T00:00:00Z", None),
+            // Outer space: `parse` trims nothing. Read from a genome line,
+            // the value is trimmed first and this text reads as a day
+            // (`collection_dates_read_from_a_genome_line_are_their_value_text`).
             ("2015-03-12 ", None),
             ("2015/03/12", None),
             ("12/03/2015", None),
@@ -805,7 +828,7 @@ mod tests {
                 "{text:?}"
             );
             assert_eq!(date.is_unparsed(), want.is_none(), "{text:?}");
-            // Parsed or not, the text is what BV-BRC wrote.
+            // Parsed or not, the text is the text `parse` was given.
             assert_eq!(date.text().as_deref(), Some(text), "{text:?}");
             assert_eq!(
                 serde_json::to_string(&date).unwrap(),
@@ -901,6 +924,65 @@ mod tests {
         // Written back, each line is the line that was read.
         for (record, line) in read.iter().zip(&lines) {
             assert_eq!(&serde_json::to_string(record).unwrap(), line);
+        }
+    }
+
+    /// The path fetch and every reader take: a genome line's value goes
+    /// through `value_text` before it is parsed. Each synthetic value gives
+    /// its reading and the exact bytes written back in its place, and the
+    /// written line reads again to the same reading and bytes.
+    #[test]
+    fn collection_dates_read_from_a_genome_line_are_their_value_text() {
+        use CollectionDate::{Missing, Unparsed};
+        let stated = |text: &str| CollectionDate::Stated(stated_date(text).unwrap());
+        let cases: &[(&str, CollectionDate, &str)] = &[
+            // Outer whitespace is trimmed, a no-break space and an
+            // ideographic space too, and the rest is parsed.
+            (r#"" 2015""#, stated("2015"), r#""2015""#),
+            (
+                r#""\u00a02015-03-12 ""#,
+                stated("2015-03-12"),
+                r#""2015-03-12""#,
+            ),
+            (r#""2014-05\u3000""#, stated("2014-05"), r#""2014-05""#),
+            (
+                r#""\t2015-2016 ""#,
+                Unparsed("2015-2016".into()),
+                r#""2015-2016""#,
+            ),
+            (r#""\u00a0""#, Missing, "null"),
+            // A number is read as its JSON text.
+            (r#"2013"#, stated("2013"), r#""2013""#),
+            (r#"2015.0"#, Unparsed("2015.0".into()), r#""2015.0""#),
+            // A list's texts are joined with `;`, and its nulls and blanks
+            // are dropped.
+            (r#"["2012-07-04"]"#, stated("2012-07-04"), r#""2012-07-04""#),
+            (
+                r#"["2015","2016"]"#,
+                Unparsed("2015;2016".into()),
+                r#""2015;2016""#,
+            ),
+            (r#"["2015",null," "]"#, stated("2015"), r#""2015""#),
+            (r#"[]"#, Missing, "null"),
+            // A boolean and an object are read as their JSON text.
+            (r#"true"#, Unparsed("true".into()), r#""true""#),
+            (
+                r#"{"start":"2015"}"#,
+                Unparsed(r#"{"start":"2015"}"#.into()),
+                r#""{\"start\":\"2015\"}""#,
+            ),
+        ];
+        for (sent, reading, written) in cases {
+            let line = format!(r#"{{"genome_id":"9990004.1","collection_date":{sent}}}"#);
+            let record: GenomeRecord = serde_json::from_str(&line).unwrap();
+            assert_eq!(&record.collection_date, reading, "{sent}");
+            let out = serde_json::to_string(&record).unwrap();
+            let around =
+                format!(r#""collection_year":null,"collection_date":{written},"host_name":null"#);
+            assert!(out.contains(&around), "{sent}: {out}");
+            let again: GenomeRecord = serde_json::from_str(&out).unwrap();
+            assert_eq!(&again.collection_date, reading, "{sent}");
+            assert_eq!(serde_json::to_string(&again).unwrap(), out, "{sent}");
         }
     }
 
