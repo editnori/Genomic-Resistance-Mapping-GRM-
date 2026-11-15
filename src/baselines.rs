@@ -681,6 +681,21 @@ pub struct Written {
     pub refused: Vec<Refused>,
 }
 
+impl Written {
+    /// How the run ends: an error that counts the files written and the
+    /// datasets refused when any dataset was refused, so the command exits
+    /// nonzero once the others are written.
+    pub fn outcome(&self) -> Result<()> {
+        ensure!(
+            self.refused.is_empty(),
+            "baselines written for {} dataset reports and refused for {}",
+            self.files,
+            self.refused.len()
+        );
+        Ok(())
+    }
+}
+
 /// An index id is a file name: not empty, with no path separator and no
 /// `..`, so `<id>.json` stays inside `datasets/` and `baselines/`.
 fn plain_id(id: &str) -> bool {
@@ -1469,6 +1484,7 @@ mod tests {
         .unwrap();
         std::fs::write(dir.join("baselines/gone__drug.json"), b"{}").unwrap();
         let written = write(dir).unwrap();
+        assert!(written.outcome().is_ok());
         assert_eq!(
             written,
             Written {
@@ -1680,6 +1696,10 @@ mod tests {
         assert_eq!((written.files, written.confirmed), (1, 1));
         assert_eq!(written.refused.len(), 1);
         assert_eq!(written.refused[0].dataset, "one__fitmycin");
+        assert_eq!(
+            written.outcome().unwrap_err().to_string(),
+            "baselines written for 1 dataset reports and refused for 1"
+        );
         assert_eq!(names_in(&dir.join("baselines")), ["noise__fitmycin.json"]);
         let summary: Value =
             serde_json::from_slice(&std::fs::read(dir.join(SUMMARY)).unwrap()).unwrap();

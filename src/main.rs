@@ -560,13 +560,7 @@ fn run(cli: Cli) -> Result<()> {
                 "baselines written for {} dataset reports: {} with an MIC model, {} of them with folds their held-out predictions confirm; {} exact-MIC test isolates on {} datasets have a k-mer-identical copy in their training fold",
                 w.files, w.mic, w.confirmed, w.copies, w.copy_datasets
             );
-            anyhow::ensure!(
-                w.refused.is_empty(),
-                "baselines written for {} dataset reports and refused for {}",
-                w.files,
-                w.refused.len()
-            );
-            Ok(())
+            w.outcome()
         }
         Command::Provenance { check: false } => {
             let n = grm::provenance::write(&layout)?;
