@@ -1,6 +1,8 @@
 # Lasso stopping fix and revision-8 migration prerequisites
 
-Status: the solver change is approved, the code/test/checker prerequisites are implemented and independently reviewed, and the review's findings are closed. The large-species scan harness is prepared and its stop rule is registered below. The first registered scan stopped on its first fit, and the coordinate-descent solver it ran has since been replaced by an exact active-set solver (below), which still needs its independent review. **The rerun of the large-species scan and the full 275-report revision-8 evaluation have not run.** No scan, biological evaluation, report rebuild, deployment, or publication is authorized by this document.
+Status on 28 October 2026 (commit `4b87633`): the solver change is approved, the code/test/checker prerequisites are implemented and independently reviewed, and the review's findings are closed. The large-species scan harness is prepared and its stop rule is registered below. The first registered scan stopped on its first fit, and the coordinate-descent solver it ran has since been replaced by an exact active-set solver (below), which still needs its independent review. **The rerun of the large-species scan and the full 275-report revision-8 evaluation had not run then.** No scan, biological evaluation, report rebuild, deployment, or publication is authorized by this document.
+
+Since then, by the work program's record ([work-program-20261027.md](work-program-20261027.md), lines 54 and 497), the large-species scan was rerun on 29 October 2026 on Vast with the registered list and rule, on revision 8's active-set solver and the revision-7 inputs, and gave GO: worst ratio 0.234, median 0.176, projected 3.19 h, 0 of 8,784 points capped. The 275-report revision-8 evaluation was launched at 20:42:53 UTC that day (line 508), stopped twice on a solver weakness and led to revision 9 (see "Revision 9: a step that rounding hides"). The rerun's files were on the Vast host, destroyed on 2026-10-31, and cannot be rechecked. On 15 November 2026 the scan's 18 datasets ran again at revision 14 (see "Revision 14 scan").
 
 The blocking review that set these prerequisites wrote its verdict to `data/research/grm-lasso-stopping-fix-20261027-r8kq3v/MIGRATION-REVIEW.md`. That file was lost in the 2026-10-28 deletion and is not on Vast either, so its findings survive only in the review's thread and in this summary: it approved the solver change and required evaluator enforcement, a revision bump, schema/checker migration, edge guards, and stronger tests before any revision-8 run. The guards were then reviewed independently; that review, its mutation logs and the revision-7 timing tables it measured are in [`data/research/grm-lasso-r8-review-20261028/`](../data/research/grm-lasso-r8-review-20261028/README.md).
 
@@ -70,7 +72,7 @@ The path still stops after the first point with more than `max_nonzero` (400) no
 
 On MTB delamanid random fold 0, the fit that stopped the scan, the 30-point tuning path took 13.4 s and 11.5 s in two release-build runs on the diagnosis machine (i5-10400, 12 threads, with other lanes holding the load average at 13 to 21), and the refit 0.7 s and 1.0 s. Each point took 0 to 4 IRLS steps and each least-squares solve at most 44 active-set iterations. On the same machine revision 7's capped coordinate descent took 51 to 153 s for this path depending on load, the numpy prototype 35 to 67 s, and revision 8's coordinate descent was stopped at its 2-hour limit after 7,166 s at point 27.
 
-Every point is within 8.4e-9 above the diagnosis's certified optimum (point 28, KKT 8.6e-7). Revision 8's coordinate descent was within 1.7e-8 at the points it finished, and revision 7 was up to 1.9e-4 above. The selection, refit and calls match revision 7: point 3, 53 refit weights, and none of the 251 test calls changed (largest score change 1.7e-5, test log loss 0.68618 for both).
+Every point is within 8.4e-9 above the diagnosis's certified optimum (point 28, KKT 8.6e-7). Revision 8's coordinate descent was within 1.7e-8 at the points it finished, and revision 7 was up to 1.9e-4 above. The selection, refit and calls match revision 7: point 3, 53 refit weights, and none of the 251 test calls changed (largest score change 1.7e-5, test log loss 0.68618 for both). October's recall for these calls was not recorded. At revision 14, on MTB delamanid random fold 0 of the revision-14 cohort, none of the 250 test calls changed between grm's solve and an independent one; test recall 0.411 (37 of 90 resistant) and test log loss 0.670 for both solves (see "Revision 14 scan").
 
 | Point | Revision 7 above optimum | Revision 8 above optimum | Active-set solver above optimum | Active-set KKT |
 |---:|---:|---:|---:|---:|
@@ -82,7 +84,7 @@ Every point is within 8.4e-9 above the diagnosis's certified optimum (point 28, 
 
 Revision 7's and revision 8's columns are from the diagnosis's per-point table; revision 7's path stopped after point 20 and revision 8's run was killed during point 27.
 
-Each IRLS step costs a pass over the screened columns' carriers for the KKT residual (2.36 million on fold 0), the warm-started active set's Gram matrix and factor (about n m²/2 and m³/6 multiply-adds for n fitting samples and m active columns: 53 million and 8 million at fold 0's largest set, 366 columns), and per active-set change one Gram row (n m), a forward solve (m²/2) and a gradient pass for the next check. Cost grows with the active set and the number of IRLS steps. Near twins cost no more than distinct columns, because each solve is exact whatever their correlation. Only fold 0 has been measured; the scan measures the rest.
+Each IRLS step costs a pass over the screened columns' carriers for the KKT residual (2.36 million on fold 0), the warm-started active set's Gram matrix and factor (about n m²/2 and m³/6 multiply-adds for n fitting samples and m active columns: 53 million and 8 million at fold 0's largest set, 366 columns), and per active-set change one Gram row (n m), a forward solve (m²/2) and a gradient pass for the next check. Cost grows with the active set and the number of IRLS steps. Each solve is exact whatever the columns' correlation, so near twins are not expected to cost more than distinct columns; this has not been measured. Only the twins of MTB delamanid random fold 0 have been counted; the scan measures each fit's total cost and convergence, not the twins' share of it.
 
 ### One-class and non-finite edges
 
@@ -258,7 +260,9 @@ SCM, CART, forest, boosting, MIC, catalog, and probe outputs should remain ident
 
 ## Large-species lasso scan
 
-The scan measures large-species lasso cost under the rule registered here before any 275-report run. Its first run, with coordinate descent, stopped on its first fit (see "Why coordinate descent was replaced"). The active-set solver's only large measurement so far is that same fit, MTB delamanid random fold 0 (see "Costs"); the other ten fits of that dataset and the other 17 datasets have not been run with it. The rerun uses the same list, rule and budgets. **Running it needs separate user approval.**
+The scan measures large-species lasso cost under the rule registered here before any 275-report run. Its first run, with coordinate descent, stopped on its first fit (see "Why coordinate descent was replaced"). When this paragraph was written on 28 October 2026 (commit `4b87633`), the active-set solver's only large measurement was that same fit, MTB delamanid random fold 0 (see "Costs"), and the other ten fits of that dataset and the other 17 datasets had not been run with it. The rerun was to use the same list, rule and budgets, and running it needed separate user approval.
+
+The rerun of 29 October 2026 ran all 18 datasets with the active-set solver, launched with that approval (work program, line 487); the status at the top gives its recorded result. On 15 November 2026 a scan of the same 18 datasets at revision 14, on matrices rebuilt from the public data root, with a different driver at 16 threads, found all 198 fits converged by the registered test (8,717 penalty points, none unconverged) and every out-of-fold score equal to the release's; h was not measured, so its budgets were checked at h = 1 only. "Revision 14 scan" below gives what ran, what it found and its limits.
 
 ### The harness
 
@@ -305,7 +309,7 @@ That gives 18 datasets. They cover cost ranks 1–4, 9, 11, 13 and 14 of all 275
 
 ### Registered scan stop rule
 
-`r7_fit` is a dataset's revision-7 lasso seconds divided by its outer fits, which number 10 for every listed dataset. `h` scales every budget: it is the scan host's time for a fixed piece of work divided by the revision-7 host's. It is 1 on the Vast host class that ran revision 7, where the scan is to run.
+`r7_fit` is a dataset's revision-7 lasso seconds divided by its outer fits, which number 10 for every listed dataset. `h` scales every budget: it is the scan host's time for a fixed piece of work divided by the revision-7 host's. It is 1 on the Vast host class that ran revision 7, where the scan was to run when this rule was registered on 28 October 2026, and where the rerun of 29 October 2026 ran.
 
 | Limit | Rule | Registered value at h = 1 |
 |---|---|---|
@@ -314,7 +318,7 @@ That gives 18 datasets. They cover cost ranks 1–4, 9, 11, 13 and 14 of all 275
 | Whole scan (wall-clock from launch, loading included) | the sum of the dataset budgets | 20,026 s (5.56 h) |
 | Disk | free space on the output filesystem, minus what the scan still has to write, stays at or above 30 GiB | estimate below |
 
-The 1.92× in "What revision 8 can change" was coordinate descent on four small datasets and does not predict the rerun. On MTB delamanid fold 0, the active-set path took less time on the laptop than revision 7's path did there (see "Costs").
+The 1.92× in "What revision 8 can change" was coordinate descent on four small datasets and was not a prediction for the rerun; the status at the top gives what the rerun of 29 October 2026 measured. On MTB delamanid fold 0, the active-set path took less time on the laptop than revision 7's path did there (see "Costs").
 
 The scan stops at once on any of the following. It kills the binary, keeps every log and partial output, and runs no further dataset:
 
@@ -350,7 +354,7 @@ Each fit line it writes holds at most 30 tuning and 30 refit statuses and one we
 
 ### Inputs on Vast
 
-**The Vast host is gone.** This section and the launch procedure below name the Vast host, which was destroyed on 2026-10-31 along with its `/root/` input roots, so neither runs as written; they stay as the record of the planned launch. When the scan is rescheduled, the procedure must be redone for the new host before the scan runs, including everything that assumed Vast: the input roots and staging directory, the glibc 2.39 and `znver2` build, the 2026-10-28 free-space figure, and h, registered as 1 for the Vast host class.
+**The Vast host is gone.** This section and the launch procedure below name the Vast host, which was destroyed on 2026-10-31 along with its `/root/` input roots, so neither runs as written; they stay as the record of the planned launch. When the scan is rescheduled, the procedure must be redone for the new host before the scan runs, including everything that assumed Vast: the input roots and staging directory, the glibc 2.39 and `znver2` build, the 2026-10-28 free-space figure, and h, registered as 1 for the Vast host class. The scan of 15 November 2026 did not use this procedure: it ran at revision 14 on another machine with a driver of its own (see "Revision 14 scan").
 
 The revision-7 candidate root, `/root/grm-extra-species-analysis-20261027/data`, holds no matrices for the five scan species. They are in `/root/grm-revision7-preflight/data`. The candidate copied that root's counts, structures and reports for the 13 original species hash-equal, and its reports carry the same input fingerprints (M. tuberculosis delamanid: `275e461dec002050` in both). The scan reads that root.
 
@@ -358,7 +362,7 @@ Its `catalog` is a symlink to `/root/grm/data/catalog`. If that catalog has chan
 
 ### Launch procedure
 
-The launch needs separate user approval. Build the binary from a clean export of the frozen commit, on Ubuntu 24.04 with glibc 2.39 as on Vast, so nothing is compiled on Vast.
+On 28 October 2026 the launch needed separate user approval; the work program records the launch of 29 October 2026 with it (line 487). Build the binary from a clean export of the frozen commit, on Ubuntu 24.04 with glibc 2.39 as on Vast, so nothing is compiled on Vast.
 
 `.cargo/config.toml` then built for the build machine's CPU (`target-cpu=native`), and revision 7 was built on Vast for its AMD EPYC 7K62, which LLVM calls `znver2`. So set `RUSTFLAGS` to build for that CPU instead. Rust does not contract or reorder floating-point operations for a target CPU, so the fits are the same; the timing is comparable with revision 7's.
 
@@ -380,6 +384,8 @@ nohup nice -n 10 python3 -I -B scan.py --input-root "$ROOT" --out "$SCAN/scan" -
 
 ### Still gated
 
+This list is as it stood on 28 October 2026. The work program records what happened to items 1 and 3: the independent review of the active-set solver gave APPROVE_FOR_RESCAN on 28 October 2026 (line 485), the r8kq3v `xcheck.sh` ran again on 29 October 2026 (line 486), the scan was rerun that day and gave GO (lines 54 and 497), and the 275-report revision-8 evaluation was launched at 20:42:53 UTC the same day (line 508). That run stopped twice and led to revision 9, the published release from 2026-10-30 (see "Revision 9: a step that rounding hides" and "Deployment settings and downstream work"). This page does not trace items 2 and 4 to 6.
+
 1. Before the scan: an independent review of the active-set solver (its math, termination and duplicate handling, `EVALUATION_REVISION` staying 8, and this document). Then rerun the release lasso tests, including the MTB delamanid fold-0 test, and the r8kq3v `xcheck.sh` on the frozen commit, with a separate Python interpreter rather than the hard-stopped GWAS lane's. Then run and review the scan under this rule.
 2. Decide how to respond if a lasso error or an invalid report stops `grm learn` for a species, since no downstream consumer handles fewer than 275 reports.
 3. Only after the scan passes, run the full 275-report evaluation with revision-8 source into a **new data root**, leaving revision-7 candidate, backup, and published roots untouched.
@@ -388,6 +394,73 @@ nohup nice -n 10 python3 -I -B scan.py --input-root "$ROOT" --out "$SCAN/scan" -
 6. Rebuild and review the report/web bundle. Publication is a further explicit decision.
 
 `models.lasso_fit` sits between `models.lasso` and `rf_importance`, so whole revision-8 files will not be byte-identical to revision-7 ones. The migration diff has to compare non-lasso fields field by field.
+
+## Revision 14 scan
+
+On 15 November 2026 the 18 datasets of the scan list were fitted again at revision 14's settings, every fit of each, and compared with the reports of the revision-14 release, `rev14-274-20261112`. The plan, with the comparison, the measures and when a released figure would need a caveat, was fixed at 14:11:00 UTC, before any result was read. The plan, the result files and the scripts are in [`reference/lasso-scan/rev14-20261115/`](../reference/lasso-scan/rev14-20261115/README.md). An independent review on the same machine the same day recounted every figure of this section from the scan's files with code of its own, refitted 3 of the datasets with its own build of the same commit with equal results, and narrowed some of the scan's sentences. This section carries the narrower reading, and the review's files are in [`review/`](../reference/lasso-scan/rev14-20261115/review/README.md).
+
+Fixed before the results and applied as planned: the scan's convergence test, the comparison with the release and its measures, and for MTB delamanid random fold 0 the near-twin count, the two path timings, grm's gap to an independent solve, the planned duality bound and the held-out calls. The budgets and the go/no-go at h = 1 were planned as exploratory. The plan's reading of that fold, that every bound is at most 1e-6 and no held-out call differs, failed. Chosen after a result, and so exploratory: the certificate that replaced the planned bound (14:55 UTC), the check of exact copies (15:31 UTC), and reading the gap to the independent solve over its 26 `optimal` points. The review's figures quoted below (the two parts of the scores, the fold's test recall and the certificate after its shrink) are recounts of the scan's own files, made after its results were read; the review's plan fixed only its replication, at 16:35:52 UTC, before that replication ran.
+
+### What ran
+
+- **Binary.** The Cargo example `lasso-scan`, built with Rust 1.98.1 from `main` at `852ebc9`. There `src/`, `Cargo.lock`, `Cargo.toml`, `.cargo/` and `scripts/lasso-scan/` are the same as at `469a4f9`, the source of the revision-14 release, so the scan ran the release's lasso code. `src/learn/lasso.rs` and `scripts/lasso-scan/` are also the same at `c1f36fc`, the commit this section was written on. Other files, `src/learn/eval.rs` among them, changed between `852ebc9` and `c1f36fc`, and the scan does not cover those changes.
+- **Datasets.** The 18 of `scan-list.json` over its five species: M. tuberculosis (4 datasets), S. enterica (3), S. aureus (3), K. pneumoniae (5) and E. coli (3). The matrices were rebuilt from the public BV-BRC data root the release names, and each dataset's input fingerprint, samples and features equal its released report's.
+- **Machine and threads.** One dataset per binary call with `RAYON_NUM_THREADS=16`, on a 16-core AMD Ryzen 9 9950X with 31 GiB. The timed pass ran from 14:21:15 to 14:30:05 UTC. A second pass, with a copy of the binary that adds one function to `src/learn/eval.rs` to write each fit's scores, gave the same fits as the first and supplied the scores compared below.
+
+### What it found
+
+Converged means that a fit passes the registered scan's convergence test, the test `scan.py` applies to each fit (`unconverged(audit)`), here applied by a different driver: no lasso error, no unconverged path point, and a converged selected point and refit. Reproduced means equal to the release. Neither word says anything about accuracy.
+
+- 18 of 18 datasets pass the registered scan's convergence test, applied by a different driver; `scan.py` itself did not run (see "Limits of the revision 14 scan"). Their 198 fits have 8,717 penalty points, tuning paths and refits together, with 0 unconverged points, 0 points with a short solve (`sweep_cap_hits`) and at most 5 IRLS steps at any point.
+- Every fit's audit, weight count and final model equal the release's. Of the 58,618 out-of-fold lasso scores of the 36 splits, the 57,573 from the 176 outer fits that keep a weight are bit-identical to the release's, and the 1,045 of the four folds that keep none equal their training prevalence in both. Those four, with folds counted from 0, are `mycobacterium_tuberculosis__linezolid` lineage fold 1 (250 scores), `mycobacterium_tuberculosis__clofazimine` random fold 1 and lineage fold 0 (261 each) and `staphylococcus_aureus__clindamycin` lineage fold 3 (273); their scores check the folds and the prevalence arithmetic, not a fit. No call changed, so recall, balanced accuracy, VME, ME and AUROC are unchanged, and log loss, computed from the identical scores (below), is equal.
+- The released lasso figures of these 18 datasets are reproduced bit for bit by a rerun of the same code on rebuilt inputs, and every fit met the solver's convergence test. That says nothing about the lasso's accuracy or calibration. The table's own recall ranges from 0.1710 (`mycobacterium_tuberculosis__clofazimine`) to 0.9473 on the random split and from 0.0311 (`mycobacterium_tuberculosis__clofazimine`) to 0.9385 on the lineage split. On that lowest row the balanced accuracy is 0.5020 and the AUROC 0.5046, near chance. The recall and log loss below are the release's own figures, recomputed from the scan's scores.
+
+Log loss is the mean binary log loss of each split's pooled out-of-fold scores, with probabilities clipped to [1e-15, 1 - 1e-15] as in `scripts/hyperopt/canaries.py`. The release has no log loss field, so both sides were computed the same way from the scores. Lasso seconds are the binary's fit times of the 10 outer fits.
+
+| Dataset | Converged (scan rule) | Fits | Penalty points | Largest IRLS steps at a point | Lasso s, 10 outer fits | Recall, random | Log loss, random | Recall, lineage | Log loss, lineage | Largest change in a released measure |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `mycobacterium_tuberculosis__delamanid` | yes | 11 | 359 | 3 | 16.67 | 0.4665 | 0.6682 | 0.4509 | 0.6665 | 0 |
+| `mycobacterium_tuberculosis__linezolid` | yes | 11 | 372 | 4 | 6.35 | 0.3663 | 0.6213 | 0.4950 | 0.6224 | 0 |
+| `mycobacterium_tuberculosis__clofazimine` | yes | 11 | 357 | 3 | 8.86 | 0.1710 | 0.6152 | 0.0311 | 0.6300 | 0 |
+| `mycobacterium_tuberculosis__rifampin` | yes | 11 | 525 | 5 | 17.75 | 0.8989 | 0.3176 | 0.8989 | 0.3341 | 0 |
+| `salmonella_enterica__ampicillin` | yes | 11 | 545 | 4 | 17.31 | 0.9424 | 0.1985 | 0.8578 | 0.3653 | 0 |
+| `salmonella_enterica__tetracycline` | yes | 11 | 487 | 4 | 10.02 | 0.8891 | 0.2800 | 0.6771 | 0.5534 | 0 |
+| `salmonella_enterica__chloramphenicol` | yes | 11 | 544 | 4 | 14.36 | 0.8976 | 0.2131 | 0.7363 | 0.3698 | 0 |
+| `staphylococcus_aureus__erythromycin` | yes | 11 | 477 | 5 | 10.00 | 0.8935 | 0.2543 | 0.2342 | 0.6443 | 0 |
+| `staphylococcus_aureus__clindamycin` | yes | 11 | 475 | 4 | 6.93 | 0.8268 | 0.3689 | 0.1472 | 0.7306 | 0 |
+| `staphylococcus_aureus__penicillin` | yes | 11 | 504 | 4 | 4.46 | 0.9473 | 0.1962 | 0.9385 | 0.2317 | 0 |
+| `klebsiella_pneumoniae__ciprofloxacin` | yes | 11 | 532 | 5 | 8.05 | 0.9316 | 0.1759 | 0.8996 | 0.2528 | 0 |
+| `klebsiella_pneumoniae__piperacillin_tazobactam` | yes | 11 | 511 | 3 | 5.66 | 0.8318 | 0.3340 | 0.7569 | 0.4111 | 0 |
+| `klebsiella_pneumoniae__sulfamethoxazole_trimethoprim` | yes | 11 | 516 | 3 | 8.68 | 0.9405 | 0.2082 | 0.8992 | 0.2606 | 0 |
+| `klebsiella_pneumoniae__gentamicin` | yes | 11 | 525 | 3 | 7.61 | 0.9245 | 0.1815 | 0.8345 | 0.2471 | 0 |
+| `klebsiella_pneumoniae__amikacin` | yes | 11 | 491 | 4 | 4.73 | 0.8899 | 0.2411 | 0.6698 | 0.3779 | 0 |
+| `escherichia_coli__ceftazidime` | yes | 11 | 504 | 3 | 5.38 | 0.9002 | 0.2098 | 0.8419 | 0.2476 | 0 |
+| `escherichia_coli__ampicillin` | yes | 11 | 516 | 5 | 4.99 | 0.9380 | 0.1856 | 0.9242 | 0.2082 | 0 |
+| `escherichia_coli__amoxicillin_clavulanate` | yes | 11 | 477 | 3 | 3.82 | 0.8139 | 0.3270 | 0.6405 | 0.5157 | 0 |
+
+At h = 1, no fit and no dataset passed its registered budget, and the registered go/no-go reads GO: worst ratio to revision 7's lasso seconds 0.0899 (`salmonella_enterica__chloramphenicol`), median 0.0401, projected 275-report run 2.57 h, and 0 of 8,717 points with a short solve. The 10 outer fits of the 18 datasets took 161.6 s of lasso time and the final fits 24.9 s. These budget figures are exploratory (see "Limits of the revision 14 scan").
+
+### MTB delamanid random fold 0 beside October
+
+The fit that stopped the first scan was measured again in depth. At revision 14 the fold has 1,248 samples: 998 training, of which 798 fitting and 200 tuning-holdout, and 250 test. Its path is fitted on 4,000 screened columns, none of them present on every fitting sample or on none. October's figures are those of "Why coordinate descent was replaced" and "Costs" above. They are a record whose files are lost, from the revision-7 cohort and from the solver before revision 9's change to its line search, and nothing here checks them.
+
+| Figure | MTB delamanid random fold 0 at revision 14, 15 November 2026 | October 2026: a record whose files are lost, on another cohort and code |
+|---|---|---|
+| Screened columns with a twin differing in at most one fitting sample | 2,756 of 4,000, on 798 fitting samples. 831 have an exact copy, and 474 of those are redundant copies that the collapse skips | 2,820 of 4,000, on 798 fitting samples; 410 redundant copies |
+| Time of the 30-point tuning path | 1.30 s and 1.82 s, refit 0.07 s and 0.08 s; 16 threads on the AMD Ryzen 9 9950X, load average 9.99 and 1.60 at the start | 13.4 s and 11.5 s, refit 0.7 s and 1.0 s; 12 threads on an i5-10400, load average 13 to 21 |
+| How far grm's objective is above the optimum | The planned check is not met: the duality bound was to be at most 1e-6 at every point, and it is 1.10e-6 at point 11 and cannot be built at points 16 to 29. Against an independent interior-point solve (Clarabel) at the 26 of 30 points it reported `optimal`, grm is at most 1.30e-9 above (point 29), and below it at points 0 to 22; that figure rests on one solver. Exploratory certificate, chosen after the planned bound failed: at most 1.30e-9 above the certified optimum at all 30 points (point 29); after its dual point is shrunk into the dual box, as the review found it must be, the largest bound is 1.29906e-9. grm's KKT residual is at most 1.6e-7 | Within 8.4e-9 above the diagnosis's certified optimum at every point (point 28, KKT 8.6e-7) |
+| Selection, refit and held-out calls | grm and the independent solve both select point 3, and both refits keep 54 weights. 0 of the 250 test calls differ between them; test recall 0.4111 (37 of 90 resistant) and test log loss 0.670059 for both; largest test score change 5.3e-8 | Point 3 and 53 refit weights, as revision 7; none of the 251 test calls changed against revision 7; largest score change 1.7e-5; test log loss 0.68618 for both; October's recall for these calls was not recorded |
+
+### Limits of the revision 14 scan
+
+- **`scan.py` itself did not run.** It refuses unless each dataset's revision-7 report is present with its revision-7 input fingerprint, and the revision-14 cohorts differ. The driver `scan14.py` runs the same binary one dataset per call and applies the same per-fit test. Its input check is a different check of the same field: it compares each dataset's input fingerprint with the revision-14 report's after the run and stops nothing, where `scan.py` refuses to start. It computes the budgets after the run, at h = 1, and records where the registered rule would have stopped instead of stopping. It would have stopped nowhere.
+- **Budgets at h = 1.** h cannot be measured, because the revision-7 host is gone, so the budgets and the go/no-go above are computed at h = 1 and are exploratory. Revision 7 and the registered rule used 64 threads; this scan used 16. The timed pass started at load average 9.99, left by the scan's own matrix builds, which had ended 4 s before.
+- **One fold in depth.** Only random fold 0 of MTB delamanid was measured at this depth, as in October. The other folds and the lineage split were not.
+- **The planned bound was not met, and its replacement is exploratory.** On the one fold measured, MTB delamanid random fold 0, the planned dual construction gave no bound at the 14 smallest penalties (points 16 to 29) and one bound above 1e-6 (1.10e-6 at point 11). The bounds it did give do not grow steadily as the penalty falls (4.4e-10 at point 1, 7.7e-13 at point 2), so this fold does not show that the construction loosens as the penalty falls. The exploratory construction (`item5-polish.py`) solves each point exactly, starting from grm's active set, and bounded every point of that fold after a final shrink into the dual box: its dual point lay outside the box at 13 of the 30 points, by a factor of at most 1 + 3.18e-13, and the shrink changes the bound by at most 4.3e-15. A second certificate, which the review built from zero rather than from grm's solution, gives the same largest bound, 1.29906e-9 at point 29. The exploratory construction was chosen at 14:55 UTC, after point 11's planned bound was read. Its bound rests on weak duality alone, and Clarabel's 26 accurate points lie 1.5e-12 to 8.8e-10 above its certified optimum, as they must.
+- **Independent solvers.** Clarabel 0.9.0 reported `optimal_inaccurate` at 4 of the 30 points (4, 8, 11 and 14), where its solution is worse than grm's, so the comparison uses its 26 `optimal` points. That choice was made after the statuses were seen; the largest gap over all 30 points is the same 1.30e-9, because grm is below Clarabel at those 4. So on MTB delamanid random fold 0 the figure of at most 1.30e-9 above an independent solve rests on one solver at 26 points, and at the other 4 only the certificates stand. The second solver, scikit-learn 1.5.2's saga, finished only point 0 in its 30-minute box.
+- **Timings.** Each path time is a sum of per-point lines printed to 0.01 s, so it is uncertain by up to 0.15 s; the binary's own timer gives 1.41 s and 1.94 s for each whole fit, path and refit. On MTB delamanid random fold 0 the two runs of the same code on the same machine differ by 40% (1.30 s and 1.82 s), and the first started at load average 9.99. October's times come from another machine, thread count, load, code and cohort, so the two columns are not a speed comparison.
+- **Cohort.** Revision 14's fold has 250 test and 200 tuning-holdout samples on the species-checked cohort, with 115,113 features; October's had 251 and 199 on the revision-7 cohort, with 138,448. Both have 1,248 samples and 798 fitting samples.
+- **Binary.** The `grm` binary built for the scan's matrices differs in sha256 from the release's, although the source is the same. The review found that the build path enters the binary: the same source built at different paths gives different hashes, with the same code and read-only data sections and different debug strings and local symbol names. A build of the release's commit at the release box's path still differs from the release's binary, so a second cause remains, most likely the build image's C compiler, linker or C library, or the Cargo home folder. Settling it needs the release's `grm` or the stage box's build log, and neither was on the machine. The scan ran the `lasso-scan` binary, not `grm`, and every compared output is bit-identical.
 
 ## Deployment settings and downstream work
 
@@ -406,7 +479,7 @@ Those are operation-time requirements, not changes to the current defaults and n
 
 ### Downstream consumers
 
-The consumer map in [`data/research/grm-lasso-consumers-20261028/`](../data/research/grm-lasso-consumers-20261028/README.md) traced every reader of lasso output from code and saved artifacts, locally and on Vast. Follow its minimum rerun set once the 275-report revision-8 candidate exists.
+The consumer map in [`data/research/grm-lasso-consumers-20261028/`](../data/research/grm-lasso-consumers-20261028/README.md) traced every reader of lasso output from code and saved artifacts, locally and on Vast. On 28 October 2026 this page said to follow its minimum rerun set once the 275-report revision-8 candidate existed; this page does not trace whether that was done.
 
 Two lanes refit lasso and must be ported before they rerun: the temporal/study held-out lane (`grm-research-temporal-study-splits-rev7cand-r1`) and the duplicate-isolated lane (`grm-research-dup-leakage-all23-r1`). Each runs a probe that carries its own copy of the revision-7 `fit_lasso`, and that copy still selects among all path points. Rebuilding a probe on revision-8 source is therefore not enough: its unconverged points could still win, silently.
 

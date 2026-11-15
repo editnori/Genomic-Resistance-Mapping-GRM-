@@ -886,6 +886,7 @@ struct EvalInputs<'a> {
     cohort: Cohort<'a>,
     /// Each cohort row's reported call.
     resistant: Vec<bool>,
+    /// The support floor `ds` was projected at.
     min_support: u32,
     ds: Dataset,
     /// Each sample's lineage.
@@ -902,8 +903,17 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
     if !c.meets_min_class {
         return Ok(None);
     }
+    let min_support = eval::support_floor(c.rows.len());
+    project_cohort(input, c, min_support).map(Some)
+}
+
+/// `eval_inputs` for a cohort already drawn, projected at `min_support`.
+fn project_cohort<'a>(
+    input: &'a SpeciesInputs,
+    c: Cohort<'a>,
+    min_support: u32,
+) -> Result<EvalInputs<'a>> {
     let resistant: Vec<bool> = c.rows.iter().map(|p| p.reported == Some(Call::R)).collect();
-    let min_support = (c.rows.len() as u32 / 200).max(3);
     // Per-fit candidates are a subset of the projection only when the species
     // matrix kept every k-mer that min_support could admit.
     anyhow::ensure!(
@@ -918,14 +928,14 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
         .map(|&col| input.structure.lineages.labels[col])
         .collect();
     let duplicates = kset_duplicates(&c.columns, &input.matrix.summary.kset_digests);
-    Ok(Some(EvalInputs {
+    Ok(EvalInputs {
         cohort: c,
         resistant,
         min_support,
         ds,
         groups,
         duplicates,
-    }))
+    })
 }
 
 /// One dataset's cohort as `analyze_dataset` evaluates it, for an arm of an
@@ -961,6 +971,197 @@ pub fn arm_inputs(input: &SpeciesInputs, spec: &DatasetSpec) -> Result<Option<Ar
         lineage: e.groups,
         duplicates: e.duplicates,
     }))
+}
+
+/// The `format` of every `FoldFileResult`.
+pub const FOLD_RESULT_FORMAT: &str = "grm-fold-file-result-v1";
+
+/// One sample a fold file's partition scored.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct TestedSample {
+    pub genome_id: String,
+    pub resistant: bool,
+    /// The outer fold whose fits scored it.
+    pub fold: usize,
+}
+
+/// A dataset's cohort as a fold file divides it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct FoldFileCounts {
+    pub samples: usize,
+    pub resistant: usize,
+    /// Samples in a test fold.
+    pub tested: usize,
+    /// Samples that train in every fold and are never scored.
+    pub train: usize,
+    /// Samples in no fold.
+    pub unused: usize,
+}
+
+/// What `grm learn --fold-file` writes: one dataset's learners scored on the
+/// outer partition a fold file supplies (`learn::foldfile`, docs/fold-file.md).
+/// It is not a dataset report. It holds no lineage split, catalog baseline,
+/// MIC regression or final model, `grm report` does not read it, and it
+/// scores only the samples the file tests.
+#[derive(Serialize)]
+pub struct FoldFileResult {
+    /// `FOLD_RESULT_FORMAT`.
+    pub format: String,
+    pub evaluation_revision: u32,
+    /// SHA-256 of the fold file's bytes (`foldfile::LoadedFoldFile::sha256`).
+    pub fold_file_sha256: String,
+    /// `input_fingerprint`, as the dataset's report records it for the same
+    /// inputs and settings.
+    pub input_fingerprint: String,
+    pub eval_config: EvalConfig,
+    pub id: String,
+    pub species_slug: String,
+    pub antibiotic: String,
+    /// The fold file's name for its partition.
+    pub scheme: String,
+    /// The per-fit support floor: `eval::support_floor` of the samples the
+    /// file tests or trains (`eval::supplied_support_floor`).
+    pub min_support: u32,
+    pub counts: FoldFileCounts,
+    /// Each outer fold as counts, in fold order.
+    pub folds: Vec<eval::FoldCounts>,
+    /// The scored samples. `split.test_fold` and every learner's `scores`
+    /// are in this order.
+    pub samples: Vec<TestedSample>,
+    pub split: SplitResult,
+    pub seconds: f64,
+}
+
+/// Where `evaluate_fold_file` writes the result for a dataset and scheme.
+pub fn fold_result_path(out: &std::path::Path, dataset: &str, scheme: &str) -> std::path::PathBuf {
+    out.join(format!("{dataset}.{scheme}.json"))
+}
+
+/// Scores the dataset a fold file names on the file's outer partition
+/// (`eval::evaluate_assigned`), on the cohort, lineages and duplicate groups
+/// `analyze_dataset` evaluates, projected at the support floor of the
+/// samples the file tests or trains, and writes a `FoldFileResult` under
+/// `out`. Samples the file leaves unused reach no fit. It writes nothing else: the dataset's
+/// report, if it has one, is neither read nor changed. An existing result is
+/// replaced only with `force`.
+pub fn evaluate_fold_file(
+    layout: &Layout,
+    slug: &str,
+    fold_file: &std::path::Path,
+    out: &std::path::Path,
+    force: bool,
+    cfg: &EvalConfig,
+) -> Result<std::path::PathBuf> {
+    let started = Instant::now();
+    // The file's own faults are reported before the species' inputs load.
+    let loaded = crate::learn::foldfile::load(fold_file)?;
+    let (input, catalog) = load_inputs(layout, slug)?;
+    let file = &loaded.file;
+    let spec = input
+        .datasets
+        .iter()
+        .find(|d| d.id == file.dataset)
+        .with_context(|| {
+            format!(
+                "fold file {}: {:?} is not a dataset of {slug}",
+                fold_file.display(),
+                file.dataset
+            )
+        })?;
+    let path = fold_result_path(out, &spec.id, &file.scheme);
+    anyhow::ensure!(
+        force || !path.exists(),
+        "{} exists; pass --force to replace it",
+        path.display()
+    );
+    let fingerprint = input_fingerprint(
+        &input,
+        spec,
+        catalog.as_ref(),
+        cfg,
+        matrix_digest(&input.matrix),
+    );
+    let c = cohort(spec, &input.phenotypes, &input.matrix.summary.genomes);
+    anyhow::ensure!(
+        c.meets_min_class,
+        "{}: too few labeled genomes after download",
+        spec.id
+    );
+    let sample_ids: Vec<String> = c.rows.iter().map(|p| p.genome_id.clone()).collect();
+    let roles = file
+        .roles(&spec.id, &sample_ids)
+        .with_context(|| format!("fold file {}", fold_file.display()))?;
+    // Projected at the floor of the genomes the file tests or trains, so
+    // the genomes it leaves unused set no candidate (`evaluate_assigned`).
+    let e = project_cohort(&input, c, eval::supplied_support_floor(&roles))?;
+    // The evaluator refuses a fold that tests a genome and trains on its
+    // copy, by sample number. Refuse it here first, by the ids the file uses.
+    for group in &e.duplicates {
+        for f in 0..file.folds() {
+            let tested = group.iter().find(|&&i| roles[i] == eval::Role::Test(f));
+            let trained = group.iter().find(|&&i| match roles[i] {
+                eval::Role::Test(g) => g != f,
+                eval::Role::Train => true,
+                eval::Role::Unused => false,
+            });
+            if let (Some(&a), Some(&b)) = (tested, trained) {
+                anyhow::bail!(
+                    "fold file {}: test fold {f} tests genome {} and trains on genome {}, its k-mer-identical copy; test both in one fold or list one under unused",
+                    fold_file.display(),
+                    sample_ids[a],
+                    sample_ids[b]
+                );
+            }
+        }
+    }
+    let assigned = eval::evaluate_assigned(
+        &spec.id,
+        &file.scheme,
+        &e.ds.x,
+        &e.ds.y,
+        &e.groups,
+        &e.duplicates,
+        &roles,
+        file.folds(),
+        cfg,
+    )
+    .with_context(|| format!("fold file {}", fold_file.display()))?;
+    let samples: Vec<TestedSample> = assigned
+        .tested
+        .iter()
+        .zip(&assigned.result.test_fold)
+        .map(|(&i, &fold)| TestedSample {
+            genome_id: sample_ids[i].clone(),
+            resistant: e.resistant[i],
+            fold,
+        })
+        .collect();
+    let result = FoldFileResult {
+        format: FOLD_RESULT_FORMAT.into(),
+        evaluation_revision: EVALUATION_REVISION,
+        fold_file_sha256: loaded.sha256.clone(),
+        input_fingerprint: fingerprint,
+        eval_config: cfg.clone(),
+        id: spec.id.clone(),
+        species_slug: slug.to_string(),
+        antibiotic: spec.antibiotic.clone(),
+        scheme: file.scheme.clone(),
+        min_support: assigned.min_support,
+        counts: FoldFileCounts {
+            samples: sample_ids.len(),
+            resistant: e.resistant.iter().filter(|&&r| r).count(),
+            tested: samples.len(),
+            train: roles.iter().filter(|r| **r == eval::Role::Train).count(),
+            unused: roles.iter().filter(|r| **r == eval::Role::Unused).count(),
+        },
+        folds: assigned.folds,
+        samples,
+        split: assigned.result,
+        seconds: started.elapsed().as_secs_f64(),
+    };
+    std::fs::create_dir_all(out).with_context(|| format!("create {}", out.display()))?;
+    write_atomic(&path, &serde_json::to_vec(&result)?)?;
+    Ok(path)
 }
 
 /// The samples whose genomes have the same kset digest, that is the same
@@ -1081,9 +1282,27 @@ fn cohort<'a>(spec: &DatasetSpec, phenotypes: &'a [Phenotype], genomes: &[String
     }
 }
 
+/// Where `analyze_species` keeps a species' reports under `cfg`. The
+/// release's seeds (`EvalConfig::default()`'s `seed` and no `learner_seed`)
+/// keep `results/`, the one folder `grm report`, `grm intervals` and
+/// `grm provenance` read. Any other seeds get
+/// `draws/seed-<seed>[-learner-<learner_seed>]/` beside it, so a report of
+/// another fold draw never replaces a released report and is never indexed.
+pub fn reports_dir(layout: &Layout, slug: &str, cfg: &EvalConfig) -> std::path::PathBuf {
+    let release = EvalConfig::default();
+    if (cfg.seed, cfg.learner_seed) == (release.seed, release.learner_seed) {
+        return layout.results_dir(slug);
+    }
+    let name = match cfg.learner_seed {
+        None => format!("seed-{}", cfg.seed),
+        Some(learner) => format!("seed-{}-learner-{learner}", cfg.seed),
+    };
+    layout.species_dir(slug).join("draws").join(name)
+}
+
 /// Runs the species' datasets (or the named subset), largest minority class
 /// first, skipping datasets whose saved report is still current (see
-/// `stale_reason`) unless `force`.
+/// `stale_reason`) unless `force`. Reports go to `reports_dir`.
 pub fn analyze_species(
     layout: &Layout,
     slug: &str,
@@ -1094,7 +1313,7 @@ pub fn analyze_species(
     let (input, catalog) = load_inputs(layout, slug)?;
     let digest = matrix_digest(&input.matrix);
     let client = Client::new();
-    let dir = layout.results_dir(slug);
+    let dir = reports_dir(layout, slug, cfg);
     std::fs::create_dir_all(&dir)?;
     let mut specs: Vec<&DatasetSpec> = input
         .datasets
@@ -1221,6 +1440,24 @@ fn stale_reason(report: &serde_json::Value, fingerprint: &str) -> Option<&'stati
     }
 }
 
+/// The digest of a species' loaded matrix that every dataset fingerprint
+/// starts from (`dataset_fingerprint`).
+pub fn species_digest(input: &SpeciesInputs) -> u64 {
+    matrix_digest(&input.matrix)
+}
+
+/// The `input_fingerprint` `grm learn` records in a dataset's report for
+/// these inputs and settings; `digest` is `species_digest(input)`.
+pub fn dataset_fingerprint(
+    input: &SpeciesInputs,
+    spec: &DatasetSpec,
+    catalog: Option<&Catalog>,
+    cfg: &EvalConfig,
+    digest: u64,
+) -> String {
+    input_fingerprint(input, spec, catalog, cfg, digest)
+}
+
 /// Identifies what a dataset's evaluation reads apart from code: the species
 /// matrix (`matrix`, from `matrix_digest`, which covers every genome's kset
 /// digest), the antibiotic, its class minimum and breakpoint, the lineage
@@ -1291,6 +1528,7 @@ fn input_fingerprint(
         screened_features,
         lasso_lambdas,
         seed,
+        learner_seed,
     } = cfg;
     for n in [
         *folds,
@@ -1318,6 +1556,12 @@ fn input_fingerprint(
     }
     for n in [*seed, *forest_seed, *gbt_seed] {
         h.u64(n);
+    }
+    // Hashed only when set, so a report written without one, every release
+    // report among them, keeps its key.
+    if let Some(n) = learner_seed {
+        h.bytes(&[1]);
+        h.u64(*n);
     }
     let Cohort {
         rows,
@@ -2557,6 +2801,7 @@ mod tests {
             ("screened_features", |c| c.screened_features += 1),
             ("lasso_lambdas", |c| c.lasso_lambdas += 1),
             ("seed", |c| c.seed += 1),
+            ("learner_seed", |c| c.learner_seed = Some(c.seed)),
         ];
         for (field, edit) in changes {
             assert_ne!(changed(*edit), base, "{field}");
@@ -2783,6 +3028,70 @@ mod tests {
         assert!(!current.exists());
     }
 
+    /// The release's seeds keep `results/`; any other evaluation seed or a
+    /// learner seed gets a folder of its own under `draws/`.
+    #[test]
+    fn reports_of_another_draw_get_a_folder_outside_results() {
+        let layout = Layout::new("root");
+        let dir = |seed, learner_seed| {
+            let cfg = EvalConfig {
+                seed,
+                learner_seed,
+                ..Default::default()
+            };
+            reports_dir(&layout, "fixture", &cfg)
+        };
+        let species = layout.species_dir("fixture");
+        assert_eq!(dir(42, None), layout.results_dir("fixture"));
+        assert_eq!(dir(43, None), species.join("draws/seed-43"));
+        assert_eq!(dir(42, Some(42)), species.join("draws/seed-42-learner-42"));
+        assert_eq!(dir(43, Some(7)), species.join("draws/seed-43-learner-7"));
+        // Settings other than the seeds do not move the folder.
+        let budget = EvalConfig {
+            screened_features: 16000,
+            ..Default::default()
+        };
+        assert_eq!(
+            reports_dir(&layout, "fixture", &budget),
+            layout.results_dir("fixture")
+        );
+    }
+
+    /// A run at another seed reads and writes its own folder: the report in
+    /// `results/` keeps its bytes, and a stale report in the draw's folder is
+    /// the one removed. (Neither fixture dataset has 25 genomes per class,
+    /// so a recompute removes the file; see `save_report`.)
+    #[test]
+    fn a_run_at_another_seed_leaves_the_released_reports_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let input = inputs();
+        write_inputs(&layout, &input, "");
+        let (released, saved) = save_report(&layout, &input, None, "meropenem");
+        let draw = EvalConfig {
+            seed: 43,
+            ..Default::default()
+        };
+        // The release's key is not the draw's: at seed 43 the released
+        // report would read as stale and be recomputed if it were looked at.
+        let spec = dataset("meropenem");
+        let digest = matrix_digest(&input.matrix);
+        assert_ne!(
+            input_fingerprint(&input, &spec, None, &draw, digest),
+            key(&input, &spec, None)
+        );
+        let folder = reports_dir(&layout, "fixture", &draw);
+        std::fs::create_dir_all(&folder).unwrap();
+        let stale = folder.join("fixture__meropenem.json");
+        std::fs::write(&stale, &saved).unwrap();
+        analyze_species(&layout, "fixture", &[], false, &draw).unwrap();
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+        assert!(!stale.exists());
+        // And the release's own run still finds its report current.
+        assert!(learn(&layout).unwrap().is_empty());
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+    }
+
     #[test]
     fn learn_recomputes_a_current_report_whose_audit_is_invalid() {
         let dir = tempfile::tempdir().unwrap();
@@ -2804,7 +3113,12 @@ mod tests {
     /// 150 genomes in 30 lineages of five. Meropenem calls every third
     /// genome resistant; two features mark resistance and three are noise.
     fn scan_inputs() -> SpeciesInputs {
-        let n = 150;
+        scan_inputs_of(150, &[])
+    }
+
+    /// The scan fixture's rules over `n` genomes in lineages of five, with a
+    /// sixth feature present in the genomes `rare` when it names any.
+    fn scan_inputs_of(n: usize, rare: &[usize]) -> SpeciesInputs {
         let genomes: Vec<String> = (0..n).map(|i| format!("g{i}")).collect();
         let kset_digests: Vec<String> = genomes.iter().map(|g| format!("kset of {g}")).collect();
         let rules: [fn(usize) -> bool; 5] = [
@@ -2821,23 +3135,29 @@ mod tests {
             support.push(row.count());
             patterns.push_row(row.words());
         }
+        if !rare.is_empty() {
+            let row = Bits::from_indices(n, rare.iter().copied());
+            support.push(row.count());
+            patterns.push_row(row.words());
+        }
+        let rows = patterns.rows;
         SpeciesInputs {
             matrix: FeatureMatrix {
                 summary: MatrixSummary {
                     k: 7,
                     genomes: genomes.clone(),
                     min_support: 1,
-                    n_patterns: rules.len(),
-                    kmers_distinct: 5,
-                    kmers_kept: 5,
+                    n_patterns: rows,
+                    kmers_distinct: rows as u64,
+                    kmers_kept: rows as u64,
                     kmers_rare: 0,
                     kmers_core: 0,
                     kset_digests: kset_digests.clone(),
                 },
                 patterns,
                 support,
-                kmer_offsets: (0..=5).collect(),
-                kmers: (0x21..0x26).collect(),
+                kmer_offsets: (0..=rows as u64).collect(),
+                kmers: (0x21..0x21 + rows as u64).collect(),
             },
             structure: Structure {
                 genomes: genomes.clone(),
@@ -2846,8 +3166,8 @@ mod tests {
                 lineages: crate::cluster::Lineages {
                     threshold: 0.005,
                     labels: (0..n).map(|i| (i / 5) as u32).collect(),
-                    n_clusters: 30,
-                    largest_share: 1.0 / 30.0,
+                    n_clusters: n / 5,
+                    largest_share: 5.0 / n as f64,
                 },
                 merges: vec![],
                 leaf_order: vec![],
@@ -2893,6 +3213,390 @@ mod tests {
         }
         out.sort();
         out
+    }
+
+    /// The scan fixture's settings, small enough for a test.
+    fn fold_file_config() -> EvalConfig {
+        EvalConfig {
+            forest: ForestParams {
+                n_trees: 4,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 5,
+                ..Default::default()
+            },
+            lasso_lambdas: 10,
+            ..Default::default()
+        }
+    }
+
+    /// A fold file for the synthetic scan fixture's meropenem dataset, as the
+    /// text a user would write: genomes by index into `g0..g149`.
+    fn fold_file_text(test: &[Vec<usize>], train: &[usize], unused: &[usize]) -> String {
+        let list = |ids: &[usize]| {
+            let quoted: Vec<String> = ids.iter().map(|i| format!("\"g{i}\"")).collect();
+            quoted.join(",")
+        };
+        let folds: Vec<String> = test.iter().map(|f| format!("[{}]", list(f))).collect();
+        format!(
+            "{{\"format\":\"grm-fold-file-v1\",\"dataset\":\"fixture__meropenem\",\"scheme\":\"first-public-past\",\"test\":[{}],\"train\":[{}],\"unused\":[{}]}}\n",
+            folds.join(","),
+            list(train),
+            list(unused)
+        )
+    }
+
+    /// A result's `split` without its fit timings.
+    fn timeless_split(result: &serde_json::Value) -> serde_json::Value {
+        let mut split = result["split"].clone();
+        for learner in split["learners"].as_array_mut().unwrap() {
+            learner.as_object_mut().unwrap().remove("seconds");
+        }
+        split
+    }
+
+    #[test]
+    fn a_fold_file_is_scored_as_written_and_its_result_records_the_files_sha256() {
+        // Synthetic: the scan fixture's 150 genomes. Every fifth is tested,
+        // three in five train, and one in five is in no fold.
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("data");
+        let layout = Layout::new(&root);
+        let input = scan_inputs();
+        write_inputs(&layout, &input, "");
+        let cfg = fold_file_config();
+        let pick = |keep: fn(usize) -> bool| (0..150).filter(|&i| keep(i)).collect::<Vec<_>>();
+        let (test, train, unused) = (
+            pick(|i| i % 5 == 0),
+            pick(|i| (1..4).contains(&(i % 5))),
+            pick(|i| i % 5 == 4),
+        );
+        let file = dir.path().join("folds.json");
+        let text = fold_file_text(std::slice::from_ref(&test), &train, &unused);
+        std::fs::write(&file, &text).unwrap();
+        let out = dir.path().join("out");
+        let before = tree(&root);
+        let run = |force: bool| evaluate_fold_file(&layout, "fixture", &file, &out, force, &cfg);
+        let read = |path: &std::path::Path| -> serde_json::Value {
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
+        };
+
+        let path = run(false).unwrap();
+        assert_eq!(path, out.join("fixture__meropenem.first-public-past.json"));
+        // The data root is read and not written: no report, nothing changed.
+        assert_eq!(tree(&root), before);
+        assert!(!layout.results_dir("fixture").exists());
+        let result = read(&path);
+        // `sha256sum` of the same bytes, taken outside this code.
+        assert_eq!(
+            result["fold_file_sha256"],
+            "5407b930b255a57cba6c13cdd0c3ba13dfd451bf75496474831c50e4a4f4e210"
+        );
+        assert_eq!(result["format"], FOLD_RESULT_FORMAT);
+        assert_eq!(result["evaluation_revision"], EVALUATION_REVISION);
+        let spec = dataset("meropenem");
+        assert_eq!(
+            result["input_fingerprint"],
+            input_fingerprint(&input, &spec, None, &cfg, matrix_digest(&input.matrix))
+        );
+        assert_eq!(result["eval_config"], serde_json::to_value(&cfg).unwrap());
+        assert_eq!(
+            (
+                &result["id"],
+                &result["species_slug"],
+                &result["antibiotic"]
+            ),
+            (
+                &serde_json::json!("fixture__meropenem"),
+                &serde_json::json!("fixture"),
+                &serde_json::json!("meropenem")
+            )
+        );
+        assert_eq!(result["scheme"], "first-public-past");
+        assert_eq!(result["min_support"], 3);
+        assert_eq!(
+            result["counts"],
+            serde_json::json!({
+                "samples": 150, "resistant": 50, "tested": 30, "train": 90, "unused": 30
+            })
+        );
+        let e = eval_inputs(&input, &spec).unwrap().unwrap();
+        let role = |i: usize| match i % 5 {
+            0 => eval::Role::Test(0),
+            4 => eval::Role::Unused,
+            _ => eval::Role::Train,
+        };
+        let roles: Vec<eval::Role> = e
+            .cohort
+            .rows
+            .iter()
+            .map(|p| role(p.genome_id[1..].parse().unwrap()))
+            .collect();
+        let direct = eval::evaluate_assigned(
+            &spec.id,
+            "first-public-past",
+            &e.ds.x,
+            &e.ds.y,
+            &e.groups,
+            &e.duplicates,
+            &roles,
+            1,
+            &cfg,
+        )
+        .unwrap();
+        assert_eq!(
+            result["folds"],
+            serde_json::json!([{
+                "train": 90, "train_resistant": 30, "test": 30, "test_resistant": 10,
+                "candidates": direct.folds[0].candidates,
+            }])
+        );
+        let samples = result["samples"].as_array().unwrap();
+        assert_eq!(samples.len(), 30);
+        for (sample, &i) in samples.iter().zip(&test) {
+            assert_eq!(
+                *sample,
+                serde_json::json!({"genome_id": format!("g{i}"), "resistant": i % 3 == 0, "fold": 0})
+            );
+        }
+        // The file's partition reaches the evaluator as written.
+        let mut expected = serde_json::json!({"split": direct.result});
+        expected = timeless_split(&expected);
+        assert_eq!(timeless_split(&result), expected);
+        let learners = result["split"]["learners"].as_array().unwrap();
+        assert_eq!(learners.len(), eval::LEARNERS.len());
+        for learner in learners {
+            assert_eq!(learner["scores"].as_array().unwrap().len(), 30);
+            assert_eq!(learner["metrics"]["n"], 30);
+        }
+
+        // A result is replaced only on request, and the rerun is the same.
+        let refused = format!("{:#}", run(false).unwrap_err());
+        assert!(
+            refused.ends_with("exists; pass --force to replace it"),
+            "{refused}"
+        );
+        run(true).unwrap();
+        assert_eq!(timeless_split(&read(&path)), timeless_split(&result));
+
+        // One more byte in the file is another hash and the same partition.
+        std::fs::write(&file, format!("{text}\n")).unwrap();
+        run(true).unwrap();
+        let respaced = read(&path);
+        assert_eq!(
+            respaced["fold_file_sha256"],
+            "530cb135cbd9a8d8bee7d26fddb68c2c0966a822f3207c2f9bee38151bbc5d07"
+        );
+        assert_eq!(timeless_split(&respaced), timeless_split(&result));
+        assert_eq!(tree(&root), before);
+    }
+
+    #[test]
+    fn genomes_a_fold_file_leaves_unused_set_neither_the_support_floor_nor_the_tuning_groups() {
+        // Synthetic: the scan fixture's 150 genomes with a sixth feature in
+        // g1, g2 and g3, all three training. Every fifth genome is tested and
+        // the rest train. The same file is then scored on a cohort of 800,
+        // whose 650 more genomes, g150 to g799, are unused, and two of them,
+        // g700 and g701 of one lineage, are k-mer-identical copies. A floor
+        // from the whole cohort would be 4 (800 / 200) and drop the sixth
+        // feature, whose training support is 3; a copy group among unused
+        // genomes would move every fold onto grouped tuning draws.
+        let rare = [1, 2, 3];
+        let tested: Vec<usize> = (0..150).filter(|i| i % 5 == 0).collect();
+        let train: Vec<usize> = (0..150).filter(|i| i % 5 != 0).collect();
+        let cfg = fold_file_config();
+        let run = |input: &SpeciesInputs, unused: &[usize]| -> serde_json::Value {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = Layout::new(dir.path().join("data"));
+            write_inputs(&layout, input, "");
+            let file = dir.path().join("folds.json");
+            let text = fold_file_text(std::slice::from_ref(&tested), &train, unused);
+            std::fs::write(&file, text).unwrap();
+            let out = dir.path().join("out");
+            let path = evaluate_fold_file(&layout, "fixture", &file, &out, false, &cfg).unwrap();
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let alone = run(&scan_inputs_of(150, &rare), &[]);
+        let mut wide = scan_inputs_of(800, &rare);
+        for digests in [
+            &mut wide.matrix.summary.kset_digests,
+            &mut wide.structure.kset_digests,
+        ] {
+            digests[701] = digests[700].clone();
+        }
+        let unused: Vec<usize> = (150..800).collect();
+        let among = run(&wide, &unused);
+        assert_eq!(among["counts"]["samples"], 800);
+        assert_eq!(among["counts"]["unused"], 650);
+        assert_eq!(
+            (&alone["min_support"], &among["min_support"]),
+            (&3.into(), &3.into())
+        );
+        // The sixth feature is a candidate at floor 3.
+        let without = run(&scan_inputs_of(150, &[]), &[]);
+        assert_eq!(
+            alone["folds"][0]["candidates"].as_u64().unwrap(),
+            without["folds"][0]["candidates"].as_u64().unwrap() + 1
+        );
+        assert_eq!(among["folds"], alone["folds"]);
+        assert_eq!(among["split"]["n_groups"], 30);
+        assert_eq!(timeless_split(&among), timeless_split(&alone));
+    }
+
+    #[test]
+    fn a_fold_file_that_does_not_fit_its_dataset_writes_no_result() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("data");
+        let layout = Layout::new(&root);
+        write_inputs(&layout, &scan_inputs(), "");
+        let cfg = fold_file_config();
+        let file = dir.path().join("folds.json");
+        let out = dir.path().join("out");
+        let refusal = |text: &str| {
+            std::fs::write(&file, text).unwrap();
+            let error = evaluate_fold_file(&layout, "fixture", &file, &out, false, &cfg)
+                .expect_err("the fold file is refused");
+            assert!(
+                !out.exists(),
+                "a refused file wrote under {}",
+                out.display()
+            );
+            format!("{error:#}")
+        };
+        let all: Vec<usize> = (0..150).collect();
+        let named = |words: &str| format!("fold file {}: {words}", file.display());
+
+        // One genome short: g149 is under no role.
+        assert_eq!(
+            refusal(&fold_file_text(&[all[..30].to_vec()], &all[30..149], &[])),
+            named(
+                "the fold file leaves out 1 of the 150 samples of fixture__meropenem, first g149; list every sample under test, train or unused"
+            )
+        );
+        // A genome the cohort does not hold.
+        let mut foreign = all[30..].to_vec();
+        foreign.push(150);
+        assert_eq!(
+            refusal(&fold_file_text(&[all[..30].to_vec()], &foreign, &[])),
+            named("train names genome g150, which is not a sample of fixture__meropenem")
+        );
+        // Another dataset's file.
+        let other = fold_file_text(&[all[..30].to_vec()], &all[30..], &[])
+            .replace("fixture__meropenem", "fixture__colistin");
+        assert_eq!(
+            refusal(&other),
+            named("\"fixture__colistin\" is not a dataset of fixture")
+        );
+        // A partition the evaluator refuses: g0, g3, ... g27 are the only
+        // resistant test genomes, so a test fold of the rest lacks a class.
+        let susceptible: Vec<usize> = (0..30).filter(|i| i % 3 != 0).collect();
+        let rest: Vec<usize> = (0..150).filter(|i| !susceptible.contains(i)).collect();
+        assert_eq!(
+            refusal(&fold_file_text(&[susceptible], &rest, &[])),
+            named("first-public-past outer fold 0's test samples lack one or both classes")
+        );
+        assert!(refusal("{").starts_with(&named("parse")));
+    }
+
+    #[test]
+    fn a_fold_file_that_separates_a_genome_from_its_copy_is_refused_by_genome_id() {
+        // Synthetic: the scan fixture with g0 and g1, of one lineage, given
+        // one k-mer set digest, so they are k-mer-identical copies.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().join("data"));
+        let mut input = scan_inputs();
+        for digests in [
+            &mut input.matrix.summary.kset_digests,
+            &mut input.structure.kset_digests,
+        ] {
+            digests[1] = digests[0].clone();
+        }
+        write_inputs(&layout, &input, "");
+        let cfg = fold_file_config();
+        let file = dir.path().join("folds.json");
+        let out = dir.path().join("out");
+        let run = |test: &[Vec<usize>], train: &[usize], unused: &[usize]| {
+            std::fs::write(&file, fold_file_text(test, train, unused)).unwrap();
+            evaluate_fold_file(&layout, "fixture", &file, &out, true, &cfg)
+        };
+        let tested = |first: &[usize]| -> Vec<usize> {
+            first.iter().copied().chain((2..30).step_by(3)).collect()
+        };
+        let training: Vec<usize> = (2..150).filter(|i| !tested(&[]).contains(i)).collect();
+        // g0 tested, its copy g1 training.
+        let mut with_copy = training.clone();
+        with_copy.push(1);
+        let apart = format!(
+            "{:#}",
+            run(&[tested(&[0])], &with_copy, &[]).expect_err("the copy trains")
+        );
+        assert_eq!(
+            apart,
+            format!(
+                "fold file {}: test fold 0 tests genome g0 and trains on genome g1, its k-mer-identical copy; test both in one fold or list one under unused",
+                file.display()
+            )
+        );
+        assert!(!out.exists());
+        // The copy in another test fold still trains fold 0.
+        let folds = [tested(&[0]), vec![1, 30, 31, 32, 33, 34, 35]];
+        let others: Vec<usize> = training
+            .iter()
+            .copied()
+            .filter(|i| !(30..36).contains(i))
+            .collect();
+        let error = format!(
+            "{:#}",
+            run(&folds, &others, &[]).expect_err("the copy trains")
+        );
+        assert!(
+            error.contains("test fold 0 tests genome g0 and trains on genome g1"),
+            "{error}"
+        );
+        // Tested together, or one of them unused, the file is scored.
+        run(&[tested(&[0, 1])], &training, &[]).unwrap();
+        run(&[tested(&[0])], &training, &[1]).unwrap();
+    }
+
+    #[test]
+    fn a_fold_file_that_repeats_the_random_split_gives_the_reports_random_rows() {
+        // The scan fixture's random split, as `analyze_dataset` draws it,
+        // written to a fold file and read back through `grm learn --fold-file`.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path().join("data"));
+        let input = scan_inputs();
+        write_inputs(&layout, &input, "");
+        let cfg = fold_file_config();
+        let spec = dataset("meropenem");
+        let e = eval_inputs(&input, &spec).unwrap().unwrap();
+        let drawn = eval::evaluate(
+            &spec.id,
+            &e.ds.x,
+            &e.ds.y,
+            &e.groups,
+            &e.duplicates,
+            e.min_support,
+            None,
+            &cfg,
+        )
+        .unwrap();
+        let random = &drawn.splits[0];
+        assert_eq!(random.scheme, "random");
+        let mut test = vec![Vec::new(); cfg.folds];
+        for (row, &fold) in e.cohort.rows.iter().zip(&random.test_fold) {
+            test[fold].push(row.genome_id[1..].parse::<usize>().unwrap());
+        }
+        let file = dir.path().join("folds.json");
+        std::fs::write(&file, fold_file_text(&test, &[], &[])).unwrap();
+        let out = dir.path().join("out");
+        let path = evaluate_fold_file(&layout, "fixture", &file, &out, false, &cfg).unwrap();
+        let result: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let mut expected = serde_json::json!({"split": random});
+        expected["split"]["scheme"] = "first-public-past".into();
+        assert_eq!(timeless_split(&result), timeless_split(&expected));
+        assert_eq!(result["counts"]["tested"], 150);
     }
 
     #[test]
@@ -3243,12 +3947,12 @@ mod tests {
         assert_eq!(std::fs::read(&report).unwrap(), saved);
     }
 
-    #[test]
-    fn reports_use_the_reported_cohort_and_record_its_counts_and_k() {
-        let dir = tempfile::tempdir().unwrap();
-        let layout = Layout::new(dir.path());
-        // The default minimum admits 25 reported resistant and 25 reported
-        // susceptible genomes. One MIC-only matrix row stays out.
+    /// Synthetic: 51 genomes, 25 reported resistant and 25 reported
+    /// susceptible to meropenem (the default minimum admits them) and one
+    /// whose label comes from its MIC alone, in ten lineages, with each
+    /// genome's reference assembly and cached features written under
+    /// `layout`.
+    fn reported_inputs(layout: &Layout) -> SpeciesInputs {
         let genomes: Vec<String> = (0..51).map(|i| format!("g{i}")).collect();
         for g in &genomes {
             // Annotation reads a reference assembly and its cached features.
@@ -3268,7 +3972,7 @@ mod tests {
             })
             .collect();
         phenotypes.push(inferred("g50", "meropenem", Call::R));
-        let input = SpeciesInputs {
+        SpeciesInputs {
             matrix: FeatureMatrix {
                 summary: MatrixSummary {
                     k: 21,
@@ -3313,11 +4017,23 @@ mod tests {
             phenotypes,
             genomes: HashMap::new(),
             datasets: vec![],
-        };
-        let spec = DatasetSpec {
+        }
+    }
+
+    fn reported_dataset() -> DatasetSpec {
+        DatasetSpec {
             breakpoint: None,
             ..dataset("meropenem")
-        };
+        }
+    }
+
+    #[test]
+    fn reports_use_the_reported_cohort_and_record_its_counts_and_k() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        // One MIC-only matrix row stays out.
+        let input = reported_inputs(&layout);
+        let spec = reported_dataset();
         let report = analyze_dataset(
             &layout,
             &Client::new(),
@@ -3339,6 +4055,81 @@ mod tests {
         assert_eq!(report.counts.labels_from_mic_excluded, 1);
         assert!(report.samples.iter().all(|s| s.id != "g50" && !s.from_mic));
         assert_eq!(report.input_fingerprint, "fixture key");
+    }
+
+    /// The release's input key does not move with the seed flags: the
+    /// default key of both fixture datasets is the one `main` (852ebc9)
+    /// computes, taken from a build of it. A key that hashed an unset
+    /// learner seed, or any new field at its default, would move every
+    /// released report's key and recompute it.
+    #[test]
+    fn the_default_input_key_is_the_one_main_computes() {
+        let input = inputs();
+        assert_eq!(key(&input, &dataset("meropenem"), None), "4979e60d3c8b1d6a");
+        assert_eq!(
+            key(&input, &dataset("ciprofloxacin"), None),
+            "31fe6bb8b9591f63"
+        );
+    }
+
+    /// A run at another seed on a dataset large enough to report writes the
+    /// draw's report to `draws/seed-43/<id>.json`, and the released
+    /// `results/<id>.json` keeps its bytes.
+    #[test]
+    fn a_draw_that_writes_a_report_writes_it_under_draws_and_not_results() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let mut input = reported_inputs(&layout);
+        input.contigs = input
+            .matrix
+            .summary
+            .genomes
+            .iter()
+            .map(|g| (g.clone(), 1))
+            .collect();
+        input.datasets = vec![reported_dataset()];
+        write_inputs(&layout, &input, "");
+        let id = "fixture__meropenem";
+        assert_eq!(learn(&layout).unwrap(), [id]);
+        let results = layout.results_dir("fixture");
+        let released = results.join(format!("{id}.json"));
+        let saved = std::fs::read(&released).unwrap();
+        let draw = EvalConfig {
+            seed: 43,
+            ..Default::default()
+        };
+        assert_eq!(
+            analyze_species(&layout, "fixture", &[], false, &draw).unwrap(),
+            [id]
+        );
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+        let names = |dir: &std::path::Path| {
+            let mut names: Vec<String> = std::fs::read_dir(dir)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().into_string().unwrap())
+                .collect();
+            names.sort();
+            names
+        };
+        assert_eq!(names(&results), [format!("{id}.json")]);
+        let folder = layout.species_dir("fixture").join("draws/seed-43");
+        assert_eq!(names(&folder), [format!("{id}.json")]);
+        let read = |path: &std::path::Path| {
+            serde_json::from_slice::<serde_json::Value>(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let (release, drawn) = (read(&released), read(&folder.join(format!("{id}.json"))));
+        assert_eq!(release["eval_config"]["seed"], 42);
+        assert_eq!(drawn["eval_config"]["seed"], 43);
+        assert_ne!(drawn["input_fingerprint"], release["input_fingerprint"]);
+        assert_eq!(drawn["samples"], release["samples"]);
+        // Each run then finds its own report current.
+        assert!(learn(&layout).unwrap().is_empty());
+        assert!(
+            analyze_species(&layout, "fixture", &[], false, &draw)
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
     }
 
     /// A hit of a synthetic aminoglycoside-class group whose allele has
