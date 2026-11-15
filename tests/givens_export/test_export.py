@@ -3,7 +3,8 @@
 The file must be exactly what scripts/givens-export/export.py writes from the committed sources. The suite then holds
 the file to the rules Givens' own check applies to a module, to the documents' sentences, and to the export's limits:
 a number is read from a file or quoted from a document, a missing count says so, and no dataset, species, antibiotic
-or sequence is named. The planted faults run the script on a changed copy of its spec or of its source files.
+or sequence is named. The planted faults run the script on a changed copy of its spec or of its source files. The
+tests name a few species and antibiotics, because each of those names must stop the script.
 """
 
 import contextlib
@@ -21,6 +22,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 KIT = ROOT / "scripts" / "givens-export"
 FILE = ROOT / "reference" / "givens-export" / "grm.json"
+SUMS = ROOT / "reference" / "givens-export" / "SHA256SUMS"
 
 
 def load_export():
@@ -64,6 +66,25 @@ def node(spec, node_id):
     return next(n for n in spec["nodes"] if n["id"] == node_id)
 
 
+def copied(tmp):
+    """A directory that holds a copy of every committed file the script reads, and nothing else of the repository."""
+    root = pathlib.Path(tmp)
+    for p in list(SPEC["files"].values()) + MODULE["sources"]["documents"] + [E.VOCABULARY]:
+        (root / p).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / p, root / p)
+    (root / "tests" / "outside_study_results").mkdir(parents=True)
+    (root / "reference" / "givens-export").mkdir(parents=True)
+    return root
+
+
+def data_names():
+    """The names the screen takes from the files the export reads."""
+    sources = E.Sources(ROOT, SPEC["files"])
+    for alias in SPEC["files"]:
+        sources.data(alias)
+    return E._barred(ROOT, sources)
+
+
 def given(spec, tail):
     return next(g for g in spec["assumptions"] if g["id"] == f"grm:given/{tail}")
 
@@ -72,11 +93,17 @@ class Committed(unittest.TestCase):
     def test_the_file_is_what_the_script_writes(self):
         self.assertEqual(FILE.read_text(encoding="utf-8"), E.build())
         self.assertEqual(E.main(["export.py", "--check", str(FILE)]), 0)
+        self.assertEqual(E.main(["export.py", "--check"]), 0)
         self.assertEqual(MODULE, E.build_module(SPEC))
 
-    def test_the_reference_readme_lists_the_file_s_sha256(self):
+    def test_the_hash_list_is_the_file_s(self):
+        # One line, as sha256sum prints it from the repository root, so Givens can store the list as it is.
         digest = hashlib.sha256(FILE.read_bytes()).hexdigest()
-        self.assertIn(f"| `grm.json` | `{digest}` |", text("reference/givens-export/README.md"))
+        self.assertEqual(SUMS.read_text(encoding="utf-8"), f"{digest}  reference/givens-export/grm.json\n")
+        self.assertEqual(SUMS.read_text(encoding="utf-8"), E.sums(FILE.read_text(encoding="utf-8")))
+        readme = text("reference/givens-export/README.md")
+        self.assertIn("`SHA256SUMS`", readme)
+        self.assertIsNone(re.search(r"[0-9a-f]{64}", readme), "the hash stands in SHA256SUMS alone")
 
     def test_every_source_file_is_listed_with_its_sha256(self):
         files = MODULE["sources"]["files"]
@@ -254,11 +281,7 @@ class Numbers(unittest.TestCase):
                                         (SPEC["files"]["index14"], one_less, "grm:state/scored_at_prevalence",
                                          "carry the flag")):
             with self.subTest(file=path), tempfile.TemporaryDirectory() as tmp:
-                root = pathlib.Path(tmp)
-                for p in list(SPEC["files"].values()) + MODULE["sources"]["documents"]:
-                    (root / p).parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copyfile(ROOT / p, root / p)
-                (root / "tests" / "outside_study_results").mkdir(parents=True)
+                root = copied(tmp)
                 doc = json.loads((root / path).read_text(encoding="utf-8"))
                 edit(doc)
                 (root / path).write_text(json.dumps(doc), encoding="utf-8")
@@ -322,15 +345,75 @@ class Limits(unittest.TestCase):
             E.build_module(changed(edit))
 
     def test_the_file_as_committed_passes_the_screen(self):
-        sources = E.Sources(ROOT, SPEC["files"])
-        for alias in SPEC["files"]:
-            sources.data(alias)
-        barred = E._barred(ROOT, sources)
+        barred = data_names()
         self.assertGreater(len(barred), 250)
         for name in ("escherichia coli", "e. coli", "klebsiella_pneumoniae", "meropenem", "carbapenem",
                      "escherichia_coli__amikacin"):
             self.assertIn(name, barred)
-        E.screen(MODULE, barred)
+        vocabulary = E._vocabulary(ROOT)
+        self.assertGreater(len(vocabulary - barred), 250)
+        E.screen(MODULE, barred | vocabulary)
+
+    def test_a_name_of_the_vocabulary_is_refused(self):
+        # Names the files read do not hold: the screen has them from src/drugs.rs alone.
+        only = E._vocabulary(ROOT) - data_names()
+        cases = {
+            "an antibiotic of no outside-study dataset": "tylosin",
+            "a spelling the vocabulary folds": "rifampicin",
+            "a brand": "synercid",
+            "one component of a combination": "quinupristin",
+            "a drug class": "glycopeptide",
+            "a drug class in the plural": "glycopeptides",
+            "a class label in the singular": "fluoroquinolone",
+            "a class of several words": "siderophore cephalosporin",
+        }
+        for case, name in cases.items():
+            with self.subTest(case=case):
+                self.assertIn(name, only)
+                self.refused("may not name", lambda s, name=name: s["left_out"].append(f"Rows for {name.title()}."))
+                self.refused("may not name", lambda s, name=name: node(s, "grm:antibiotic_vocabulary").update(
+                    definition=f"The names GRM resolves antibiotics through, such as {name}."))
+        for name in sorted(only):
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(E.Fault, "may not name"):
+                    E.screen({"left_out": [f"Rows for {name}."]}, only)
+
+    def test_a_name_has_its_spellings(self):
+        self.assertEqual(E._forms("Trimethoprim/Sulfamethoxazole"),
+                         {"trimethoprim/sulfamethoxazole", "trimethoprim", "trimethoprims", "sulfamethoxazole",
+                          "sulfamethoxazoles"})
+        self.assertEqual(E._forms("fluoroquinolones"), {"fluoroquinolones", "fluoroquinolone"})
+        self.assertEqual(E._forms("escherichia_coli__amikacin"), {"escherichia_coli__amikacin",
+                                                                  "escherichia coli  amikacin"})
+        # A name is refused as a word of its own, and passes inside a longer word.
+        E.screen({"left_out": ["An antipenicillinase row."]}, {"penicillin"})
+        with self.assertRaisesRegex(E.Fault, "may not name 'penicillin'"):
+            E.screen({"left_out": ["A penicillin-binding row."]}, {"penicillin"})
+        # A name of three letters or fewer is too short to bar: it would stop the script on ordinary words.
+        with tempfile.TemporaryDirectory() as tmp:
+            root, source, head = copied(tmp), text(E.VOCABULARY), "const AMBIGUOUS: &[&str] = &["
+            self.assertEqual(source.count(head), 1)
+            (root / E.VOCABULARY).write_text(source.replace(head, head + '"abc", "abcd", '), encoding="utf-8")
+            self.assertEqual(E._vocabulary(root) - E._vocabulary(ROOT), {"abcd", "abcds"})
+
+    def test_the_vocabulary_must_be_readable(self):
+        # A table the screen can no longer read stops the script. It never passes with fewer names.
+        source = text(E.VOCABULARY)
+        edits = [(f"const {table}: ", f"const {table}_OLD: ") for table in E.VOCABULARY_TABLES]
+        edits.append((f"fn {E.VOCABULARY_CLASSES}(", f"fn {E.VOCABULARY_CLASSES}_old("))
+        for old, new in edits:
+            with self.subTest(renamed=old), tempfile.TemporaryDirectory() as tmp:
+                root = copied(tmp)
+                self.assertEqual(source.count(old), 1)
+                (root / E.VOCABULARY).write_text(source.replace(old, new), encoding="utf-8")
+                with self.assertRaisesRegex(E.Fault, "holds no name"):
+                    E.build_module(SPEC, root)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copied(tmp)
+            (root / E.VOCABULARY).unlink()
+            with self.assertRaisesRegex(E.Fault, "src/drugs.rs: no such committed file"):
+                E.build_module(SPEC, root)
+            self.assertEqual(E.build_module(SPEC, copied(tempfile.mkdtemp(dir=tmp))), MODULE)
 
     def test_a_name_is_refused(self):
         cases = [
@@ -449,6 +532,29 @@ class Limits(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()) as said:
                 self.assertEqual(E.main(["export.py", "--check", str(other)]), 1)
             self.assertIn("the file differs", said.getvalue())
+
+    def test_the_command_writes_and_checks_both_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copied(tmp)
+            export, sums = root / E.EXPORT, root / E.SUMS
+            with contextlib.redirect_stderr(io.StringIO()) as said:
+                self.assertEqual(E.main(["export.py", "--check"], root), 1)
+            self.assertEqual(said.getvalue().count("the file differs"), 2)
+            self.assertEqual(E.main(["export.py", "--write"], root), 0)
+            self.assertEqual((export.read_bytes(), sums.read_bytes()), (FILE.read_bytes(), SUMS.read_bytes()))
+            self.assertEqual(E.main(["export.py", "--check"], root), 0)
+            for path, other in ((sums, sums.read_text(encoding="utf-8").replace("  ", " ")),
+                                (export, export.read_text(encoding="utf-8").replace('"count": 32,', '"count": 33,'))):
+                with self.subTest(changed=path.name):
+                    kept = path.read_bytes()
+                    path.write_text(other, encoding="utf-8")
+                    self.assertNotEqual(path.read_bytes(), kept)
+                    with contextlib.redirect_stderr(io.StringIO()) as said:
+                        self.assertEqual(E.main(["export.py", "--check"], root), 1)
+                    self.assertEqual(said.getvalue(), f"{path}: the file differs from what the committed sources give\n")
+                    path.write_bytes(kept)
+            with self.assertRaises(SystemExit):
+                E.main(["export.py", "--write", str(export)], root)
 
 
 class Wiring(unittest.TestCase):

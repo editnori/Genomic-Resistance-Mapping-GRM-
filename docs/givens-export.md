@@ -83,24 +83,26 @@ The file names no dataset, species or antibiotic. It also leaves out:
 - sequences, k-mers, variants and genes;
 - the error-limit screen's counts.
 
-The script enforces this with two lists and one screen. It opens only the seven files above. In each it reads only the named count fields, and it counts the datasets that have no lineage split without reading their ids. It then stops if any string it would write names a dataset, a species, an antibiotic or a drug class of those files.
+The script enforces this with two lists and one screen. It reads numbers from the seven files above only. In each it reads only the named count fields, and it counts the datasets that have no lineage split without reading their ids.
+
+The screen stops the script if any string it would write names a dataset, a species, an antibiotic or a drug class. It takes those names from the seven files and from GRM's antibiotic vocabulary in `src/drugs.rs`: every antibiotic, each spelling and brand the vocabulary folds, and every drug class. It refuses a class word in the singular and in the plural. The script writes none of these names.
 
 ## Use
 
 Run from the repository root, with Python 3.12 and the standard library only:
 
 ```sh
-python3 -I scripts/givens-export/export.py > reference/givens-export/grm.json
-python3 -I scripts/givens-export/export.py --check reference/givens-export/grm.json
+python3 -I scripts/givens-export/export.py --write
+python3 -I scripts/givens-export/export.py --check
 ```
 
-The second command prints nothing and exits 1 unless the file is exactly what the script writes. Write the file again after a change to a quoted sentence or to a summary file, and put its new sha256 in `reference/givens-export/README.md`.
+The first command writes `reference/givens-export/grm.json` and `SHA256SUMS` beside it. That list holds the file's sha256 on one line, as `sha256sum` prints it, so Givens can store it unchanged. The second command prints nothing and exits 1 unless both files are exactly what the script writes. Run the first again after a change to a quoted sentence, to a summary file or to the spec.
 
 ## Checks
 
 `tests/givens_export` runs in CI and fits nothing. It fails if:
 
-- the committed file differs from what the script writes, or from the sha256 its README lists;
+- the committed file differs from what the script writes, or `SHA256SUMS` differs from the file;
 - the file breaks a rule that Givens' own check applies to a module;
 - a count of the export differs from the sentence of `docs/outside-study-results.md` or `docs/release-summary.md` that states it;
 - a line's revision differs from the revision its files name;
@@ -108,11 +110,13 @@ The second command prints nothing and exits 1 unless the file is exactly what th
 
 It also plants faults in a copy of the spec, and each must stop the script: a species, an antibiotic, a dataset or a sequence in a string, a quote its document does not hold, a file or a field outside the lists, an unknown field, a count above its denominator, and a number written by hand.
 
+The suite tries every name the screen has from the vocabulary alone, and each one stops the script. It also renames each table of a copy of the vocabulary. The script must then stop, because a table it cannot read would shrink the screen.
+
 ## Limits
 
 - The file names no commit, because a committed file cannot name its own. Givens records the GRM commit it copied the file from.
-- Givens showed GRM entries written by hand on 14 November 2026. The export changes nothing there until Givens takes it in.
+- The export changes nothing in Givens by itself. Givens takes the file in with its own importer, which records the GRM commit.
 - A quote shows that the repository states a sentence. It does not show that the sentence is right.
-- The screen knows the names in the seven files: every species of the release, the drug classes, and the antibiotics of the outside-study datasets. An antibiotic of no outside-study dataset would pass it, so a change to the spec's words still needs a read.
+- The screen knows the names in the seven files and in GRM's antibiotic vocabulary. It knows no gene or variant, and it misses a name the vocabulary lacks, such as a new brand. A change to the spec's words still needs a read.
 - The outside-study lines come from a retrospective test on newly deposited studies from the same database. It is no external validation. They read revision 12 reports, and the site serves revision 14.
 - The export is a documentation and software change. It has no clinical effect.
