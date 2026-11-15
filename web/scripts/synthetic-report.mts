@@ -48,7 +48,14 @@
 //   390px. One of them also has a catalog rule below 50%, so the Overview's
 //   catalog figure starts under 50% and draws its 50% line. The check's
 //   state rows then find all four states, and it asserts the unscored assay,
-//   the clipped rule and the 50% line.
+//   the clipped rule and the 50% line. The full tree also carries no-genome
+//   baselines in the format docs/baselines.md gives: baselines/<id>.json for
+//   34 of its 35 datasets and baselines.json pinned to its index.json. They
+//   are fixture values, not `grm baselines` output (see the baselines block):
+//   one model level with its constant, one below it, one dataset whose MIC
+//   folds the predictions do not confirm, and one MIC dataset with no file.
+//   The other three shapes carry none, so the check also reads a tree
+//   without them.
 //
 // The tree is written to an empty or new directory, with SYNTHETIC.txt and
 // SOURCE.sha256 (sha256sum lines for every JSON file, sorted by path).
@@ -339,20 +346,103 @@ for (const [name, value] of files) {
   }
 }
 
+// The bytes of every file, as written: JSON and a final newline.
+const texts = new Map<string, string>([...files].map(([name, value]) => [name, `${JSON.stringify(value)}\n`]));
+const sha256 = (text: string): string => createHash("sha256").update(text).digest("hex");
+
+if (shape === "full") {
+  // SYNTHETIC no-genome baselines (docs/baselines.md, "The file" and "The
+  // summary"): baselines/<id>.json for every dataset but one, and
+  // baselines.json beside the index. `grm baselines` cannot write them here:
+  // it rebuilds the MIC folds and checks them against the held-out
+  // predictions, which the seeded generator does not draw the way a fit
+  // does. So this block writes the documented fields itself, as fixture
+  // values: the model's count is the report's own, and every other count
+  // is chosen here. Each file pins its report's bytes and revision, and the
+  // summary pins the bytes of index.json, so the pages take them as they
+  // would take the command's. The choices give the cases the browser check
+  // reads: a model level with its constant and a learner level with the
+  // lineage baseline (a2 meropenem), a model below its constant (a3
+  // meropenem), folds the predictions do not confirm (a4 meropenem), folds
+  // where the model predicts only its start value (a5 ciprofloxacin), copies
+  // in training (the first meropenem dataset), and one MIC dataset with no
+  // file, so the summary covers 11 of 12 (C ciprofloxacin).
+  const NO_FILE = "synthetic_species_c__ciprofloxacin";
+  const LEVEL = "synthetic_species_a2__meropenem";
+  const ABOVE = "synthetic_species_a3__meropenem";
+  const UNCONFIRMED = "synthetic_species_a4__meropenem";
+  const START_VALUE = "synthetic_species_a5__ciprofloxacin";
+  const COPIES = "klebsiella_pneumoniae__meropenem";
+  // Compact JSON, keys sorted, no final newline; a whole float keeps its point.
+  const FLOATS = new Set(["essential_agreement", "sensitivity", "specificity", "balanced_accuracy", "unseen_share", "model", "constant"]);
+  const compact = (v: unknown, key?: string): string => {
+    if (Array.isArray(v)) return `[${v.map((x) => compact(x)).join(",")}]`;
+    if (v !== null && typeof v === "object") {
+      const o = v as Record<string, unknown>;
+      return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${compact(o[k], k)}`).join(",")}}`;
+    }
+    if (typeof v === "number" && key !== undefined && FLOATS.has(key) && Number.isInteger(v)) return v.toFixed(1);
+    return JSON.stringify(v);
+  };
+  const ratio = (x: number, n: number) => (n === 0 ? 0 : x / n);
+  const agreement = (agree: number, n: number) => ({ agree, n, essential_agreement: agree / Math.max(n, 1) });
+  const lineageEntry = (scheme: string, folds: number, n: number, [tp, fn, tn, fp]: number[], unseen: number) => {
+    const sensitivity = ratio(tp!, tp! + fn!), specificity = ratio(tn!, tn! + fp!);
+    return { scheme, folds, n, tp, fn, tn, fp, sensitivity, specificity, balanced_accuracy: (sensitivity + specificity) / 2, unseen, unseen_share: unseen / Math.max(n, 1) };
+  };
+  type Report = DatasetJson & { evaluation: { revision: number }; mic: { n_exact: number; essential_agreement: number } | null; samples: { resistant: boolean; mic: unknown }[] };
+  const entries: { confirmed: boolean; constant: number; dataset: string; model: number; report_sha256: string }[] = [];
+  for (const row of manifest.datasets) {
+    if (row.id === NO_FILE) continue;
+    const r = datasets.get(row.id) as unknown as Report;
+    const reportSha = sha256(texts.get(`datasets/${row.id}.json`)!);
+    const n = r.samples.length, resistant = r.samples.filter((x) => x.resistant).length, susceptible = n - resistant;
+    const lineage = r.splits.filter((x) => typeof x.folds === "number").map((x) => {
+      if (x.scheme !== "random") return lineageEntry(x.scheme, x.folds, n, [0, resistant, susceptible, 0], n);
+      const scm = x.learners.find((l) => l.learner === "scm")?.metrics;
+      const counts = row.id === LEVEL && scm ? [scm.tp!, scm.fn!, scm.tn!, scm.fp!] : [Math.round(resistant * 0.62), resistant - Math.round(resistant * 0.62), Math.round(susceptible * 0.74), susceptible - Math.round(susceptible * 0.74)];
+      return lineageEntry("random", x.folds, n, counts, Math.round(n * 0.09));
+    });
+    let mic = null;
+    if (r.mic !== null) {
+      const nExact = r.mic.n_exact, modelAgree = Math.round(r.mic.essential_agreement * nExact);
+      if (modelAgree / nExact !== r.mic.essential_agreement) throw new Error(`${row.id}: the report's MIC figure is not a count over its exact MICs`);
+      const constantAgree = row.id === LEVEL ? modelAgree : row.id === ABOVE ? Math.min(nExact, modelAgree + 4) : modelAgree - (row.antibiotic === "meropenem" ? 15 : 9);
+      const folds = 5, withMic = r.samples.filter((x) => x.mic !== null).length;
+      const tests = Array.from({ length: folds }, (_, i) => Math.floor(nExact / folds) + (i < nExact % folds ? 1 : 0));
+      const confirmed = row.id !== UNCONFIRMED;
+      mic = {
+        folds, seed: 42,
+        prediction_check: { confirmed, groups: confirmed ? 4 : 3, isolates: confirmed ? 9 : 7, spanning: confirmed ? 0 : 1, constant_folds: row.id === START_VALUE ? [2] : [] },
+        threshold_check: { confirmed: true, checked: folds },
+        exact_with_training_copy: row.id === COPIES ? 2 : 0,
+        n: withMic, n_exact: nExact,
+        model: agreement(modelAgree, nExact), median: agreement(constantAgree, nExact), mode: agreement(Math.max(0, constantAgree - 3), nExact),
+        fold_constants: tests.map((t, i) => ({ train_exact: nExact - t, test_exact: t, median: i % 2, upper_median_differs: false, mode: i % 2, mode_tied: false })),
+      };
+      entries.push({ confirmed, constant: mic.median.essential_agreement, dataset: row.id, model: mic.model.essential_agreement, report_sha256: reportSha });
+    }
+    texts.set(`baselines/${row.id}.json`, compact({ schema: 1, dataset: row.id, report_sha256: reportSha, evaluation_revision: r.evaluation.revision, mic, lineage }));
+  }
+  texts.set("baselines.json", compact({ schema: 1, evaluation_revision: manifest.evaluation_revision, index_sha256: sha256(texts.get("index.json")!), datasets: entries }));
+  mkdirSync(join(out, "baselines"), { recursive: true });
+}
+
 mkdirSync(join(out, "species"), { recursive: true });
 mkdirSync(join(out, "datasets"), { recursive: true });
 const sums: string[] = [];
 // Byte order, as `LC_ALL=C sort` lists them.
-for (const [name, value] of [...files].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) {
-  const text = `${JSON.stringify(value)}\n`;
+for (const [name, text] of [...texts].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))) {
   writeFileSync(join(out, name), text);
-  sums.push(`${createHash("sha256").update(text).digest("hex")}  ./${name}`);
+  sums.push(`${sha256(text)}  ./${name}`);
 }
+const baselineFiles = [...texts.keys()].filter((name) => name.startsWith("baselines")).length;
 writeFileSync(
   join(out, "SYNTHETIC.txt"),
   `Synthetic GRM report tree, shape ${shape}, from web/src/dev/fixtures/generate.ts (seeded; nothing here is a measurement).\n` +
     `Genome, contig and feature identifiers are generic (SYN-*). Not a release, not real data.\n` +
-    `Files: ${files.size}; genomes renamed: ${genomeIds.size}; contigs: ${contigIds.size}; feature ids: ${featureN}.\n`,
+    (baselineFiles === 0 ? "" : `The ${baselineFiles} baselines files are fixture values written by web/scripts/synthetic-report.mts, not the output of grm baselines.\n`) +
+    `Files: ${texts.size}; genomes renamed: ${genomeIds.size}; contigs: ${contigIds.size}; feature ids: ${featureN}.\n`,
 );
 writeFileSync(join(out, "SOURCE.sha256"), `${sums.join("\n")}\n`);
-console.log(`wrote ${files.size} files to ${relative(process.cwd(), out) || "."} (shape ${shape}; ${genomeIds.size} genomes, ${manifest.datasets.length} datasets, ${manifest.panels.length} panel rows)`);
+console.log(`wrote ${texts.size} files to ${relative(process.cwd(), out) || "."} (shape ${shape}; ${genomeIds.size} genomes, ${manifest.datasets.length} datasets, ${manifest.panels.length} panel rows${baselineFiles === 0 ? "" : `, ${baselineFiles} baselines files`})`);
