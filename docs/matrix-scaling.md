@@ -256,7 +256,7 @@ genome, where the default path builds from it. On ksets that match
 `counted.json` both paths write the same five files.
 
 Tests in `src/species.rs`: the five files at widths 64, 128 and 4,096;
-one partial and receipt per block at the expected columns; a run under
+one partial and one result file per block at the expected columns; a run under
 `ulimit -Sn 96` where the default path fails with its hint and blocks of
 64 write the default path's files; and failures in the first, second and
 last block that keep the old matrix and leave no partials.
