@@ -9,6 +9,7 @@ rebuilt line for line, and its sha256 lines are checked against the files."""
 import hashlib
 import html
 import re
+import sys
 import unittest
 
 from . import kit
@@ -278,6 +279,13 @@ class KitReadme(unittest.TestCase):
         workflow = (kit.ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         self.assertTrue("          - suite: tests/learner_crosscheck\n            top: .\n" in workflow, "the python matrix of ci.yml lacks the suite")
         self.assertTrue("`tests/learner_crosscheck`" in (kit.ROOT / "docs" / "ci.md").read_text(encoding="utf-8"), "docs/ci.md does not name the suite")
+
+    def test_docs_ci_gives_the_suite_s_count(self):
+        from . import test_kit, test_table
+
+        loader = unittest.TestLoader()
+        tests = sum(loader.loadTestsFromModule(module).countTestCases() for module in (test_kit, test_table, sys.modules[__name__]))
+        self.assertIn(f"`tests/learner_crosscheck` {tests},", (kit.ROOT / "docs" / "ci.md").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
