@@ -5,7 +5,10 @@
 #   1. budget guard (Budget row, 5 Nov, with main's L9 ruling): the run's ledger (RUN_DIR/budget.tsv, xlarge-hours
 #      from boat usage, or wall time x the type's multiplier when usage fails) at or past BUDGET_STOP (25) is a
 #      report-and-continue checkpoint, logged and printed loudly; ledger + this stage's slow-host estimate past
-#      BUDGET_CAP (35) is refused, and two slow hosts in a row stop the run. Exit 78.
+#      BUDGET_CAP (35) is refused, and two slow hosts in a row stop the run. Exit 78. KIT13: that stop stays the
+#      default. SLOW_PAIR_PASS=1 (from the run file, or from a restart script's environment) lets a stage whose row
+#      is SLOW_OK pass it with a note; a stage that isn't SLOW_OK still stops, and the cap still refuses. Any value
+#      but 0 or 1 is refused with 2 before any box.
 #   2. order: the binary gate (D14 as main replaced it, 5 Nov), one reference per source commit C (M3 ruling).
 #      Revision N (KIND=r11): REF_BOX (R1) is the first box; its grm sha256 becomes RUN_DIR/BINARY-REF-C.sha at its
 #      host step, and its g1a (CANARY_SPECIES) reports, once back and hashed, make RUN_DIR/BINARY-REF-C. No other r11
@@ -117,6 +120,11 @@ case "${DATA_SNAPSHOT_PRUNE:-0}" in
        { echo "drive: DATA_SNAPSHOT_PRUNE=1 needs DATA_SNAPSHOT_DIR directly under /home/user: $DATA_SNAPSHOT_DIR" >&2; exit 2; };;
   *) echo "drive: DATA_SNAPSHOT_PRUNE is 0 or 1, not ${DATA_SNAPSHOT_PRUNE}" >&2; exit 2;;
 esac
+# KIT13: SLOW_PAIR_PASS=1 lets a SLOW_OK stage pass the two-slow-hosts stop (step 1); unset or 0 keeps the stop
+case "${SLOW_PAIR_PASS:-0}" in
+  0|1) ;;
+  *) echo "drive: SLOW_PAIR_PASS is 0 or 1, not ${SLOW_PAIR_PASS}" >&2; exit 2;;
+esac
 # I-g: SRC must be the top of a git worktree with a commit, and clean (a plain archive extract has no commit key)
 [ "$(git -C "$SRC" rev-parse --show-toplevel 2> /dev/null)" = "$(readlink -f "$SRC")" ] &&
   [[ "$(git -C "$SRC" rev-parse HEAD 2> /dev/null)" =~ ^[0-9a-f]{40}$ ]] || { echo "drive: $SRC is not a git worktree with a commit" >&2; exit 2; }
@@ -175,7 +183,14 @@ if awk -v u="$used" -v s="$BUDGET_STOP" 'BEGIN { exit !(u >= s) }'; then
   [ -e "$RUN_DIR/BUDGET-CHECKPOINT-$BUDGET_STOP" ] || printf '%s %s\n' "$(now)" "$msg" > "$RUN_DIR/BUDGET-CHECKPOINT-$BUDGET_STOP"
 fi
 awk -v u="$used" -v e="$EST_SLOW" -v c="$BUDGET_CAP" 'BEGIN { exit !(u + e > c) }' && die 78 "budget: $used used + $EST_SLOW (slow-host estimate) passes the $BUDGET_CAP cap; refused"
-[ "$(awk -F'\t' 'NR > 1 {print $5}' "$LEDGER" | tail -n 2 | grep -c '^slow$')" = 2 ] && die 78 "budget: the last two boxes had slow hosts; stop and report"
+if [ "$(awk -F'\t' 'NR > 1 {print $5}' "$LEDGER" | tail -n 2 | grep -c '^slow$')" = 2 ]; then
+  # KIT13: the stop is the default; a restart script may pass it for a SLOW_OK stage only (LEDGER C16)
+  if [ "${SLOW_PAIR_PASS:-0}" = 1 ] && [ "$SLOW_OK" = 1 ]; then
+    say "budget: the last two boxes had slow hosts; SLOW_PAIR_PASS=1 and stage $BOX is SLOW_OK, so this drive goes on"
+  else
+    die 78 "budget: the last two boxes had slow hosts; stop and report"
+  fi
+fi
 say "budget ok: $used xlarge-hours used, stage estimate $EST_FAST fast / $EST_SLOW slow, checkpoint $BUDGET_STOP, cap $BUDGET_CAP"
 
 # ---- 2. order

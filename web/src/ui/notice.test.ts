@@ -49,7 +49,7 @@ describe("report status line", () => {
   it("prints the build date, the catalog version and the audit scope as plain words linked to the limits", () => {
     const html = line();
     expect(text(html)).toContain("Report built");
-    expect(text(html)).toContain(`AMRFinderPlus ${manifest.amrfinder_version}`);
+    expect(text(html)).toContain(`Known-gene catalog: AMRFinderPlus database ${manifest.amrfinder_version}`);
     expect(html).toMatch(new RegExp(`<a[^>]*href="${LIMITS_HREF}"[^>]*>Tested within one public database only</a>`));
     expect(html).not.toContain('role="tooltip"');
     expect(text(html)).not.toContain("BV-BRC lab records");

@@ -206,8 +206,8 @@ pub fn evaluate_plan(
         for (li, learner) in LEARNERS.iter().enumerate() {
             let t0 = Instant::now();
             let fit = match *learner {
-                "scm" => eval::fit_scm(&x, y, &train, &inner, cfg),
-                "cart" => eval::fit_cart(&x, y, &train, &inner, cfg),
+                "scm" => eval::fit_scm(&x, y, &train, &inner, cfg).0,
+                "cart" => eval::fit_cart(&x, y, &train, &inner, cfg).0,
                 "rf" => eval::fit_rf(&x, y, &train, cfg, seed).0,
                 "gbt" => fit_gbt(&x, y, &train, &gbt_val, cfg, seed),
                 "lasso" => fit_lasso(&x, y, &train, &lasso_val, cfg, context)?,

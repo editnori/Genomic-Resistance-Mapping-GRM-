@@ -18,7 +18,7 @@
       },
       {
         "path": "reference/release-summary/rev12-274-20261105/index-counts.json",
-        "sha256": "7ce1ea63fb4a89abc8d39ed1991e47c467bc14057e9341cf17e61f9612b6e5fe"
+        "sha256": "c4088f29538ccb75dc31147e3ba78b22fd51258905ac414eae21ab374e216880"
       },
       {
         "path": "reference/release-summary/rev12-274-20261105/summary.json",
@@ -30,7 +30,7 @@
       },
       {
         "path": "reference/release-summary/rev14-274-20261112/index-counts.json",
-        "sha256": "b0352b81ddf10dc3f5abaaea39baa1870c3bc54f93f8972603728e30b1d17d52"
+        "sha256": "307935431d2ecdf66274a65e1778ee59cfde9143e028a42f9b0c3898dd13f828"
       },
       {
         "path": "reference/release-summary/rev14-274-20261112/summary.json",
@@ -613,8 +613,21 @@
           "quote": "Labels inferred from an MIC, using the MIC cutoff that best reproduces the reported calls, stay in the curated phenotypes, marked `label_from_mic`, and no learner trains or is scored on them."
         }
       ],
-      "measured": [],
-      "unmeasured": "No committed file counts the datasets that hold such labels. The released index has the field, and the repository keeps no count of it."
+      "measured": [
+        {
+          "count": 64,
+          "of": 274,
+          "what": "datasets with at least one genome whose label GRM inferred from a MIC and left out of training and scoring, of the datasets whose index entry records that count",
+          "source": "reference/release-summary/rev14-274-20261112/index-counts.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "reference/release-summary/rev14-274-20261112/index-counts.json#/labels_from_mic_excluded/datasets_above_zero",
+            "of": "reference/release-summary/rev14-274-20261112/index-counts.json#/labels_from_mic_excluded/datasets_with_field"
+          },
+          "note": "A count of datasets, read from the released index. A label is one genome and one antibiotic, so one genome can count in several datasets. The count says nothing about how any isolate should be treated."
+        }
+      ]
     }
   ],
   "edges": [

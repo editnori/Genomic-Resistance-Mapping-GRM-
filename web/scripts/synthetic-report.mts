@@ -79,6 +79,10 @@ const generator = pathToFileURL(resolve(webDir, "src/dev/fixtures/generate.ts"))
 const { buildFixture } = (await import(generator)) as typeof import("../src/dev/fixtures/generate");
 const stats = pathToFileURL(resolve(webDir, "src/dev/fixtures/stats.ts")).href;
 const { binaryMetrics } = (await import(stats)) as typeof import("../src/dev/fixtures/stats");
+// The app's copy of the index's rule words (report.rs's rule_text), so a rule
+// this script changes is worded as the index of this tree's wording words it.
+const derive = pathToFileURL(resolve(webDir, "src/data/derive/dataset.ts")).href;
+const { indexRuleWords } = (await import(derive)) as typeof import("../src/data/derive/dataset");
 const fixture = buildFixture();
 
 // Generic identifiers, assigned in first-seen order so reruns match.
@@ -272,7 +276,10 @@ if (shape === "full") {
   }
   // A single rule long enough to clip at 390px: the set covering machine's
   // first rule alone, on a feature named by a long product and no gene or
-  // catalog family, so report.rs's rule_text names it by the product.
+  // catalog family, so report.rs's rule_text names it by the product. The
+  // words are indexRuleWords' for the changed report, so they carry what the
+  // tree's wording adds (the step's ties) and match the index's
+  // rule_text_version.
   {
     const { row, d } = at(C.rows, "meropenem");
     const scm = d.models.scm;
@@ -286,7 +293,8 @@ if (shape === "full") {
     scm.steps = scm.steps.slice(0, 1);
     scm.importance = scm.importance.slice(0, 1);
     scm.kind = "conjunction";
-    row.scm_rules = [`${rule.presence ? "presence of" : "absence of"} ${product}`];
+    row.scm_rules = [indexRuleWords(d as unknown as Parameters<typeof indexRuleWords>[0], 0)];
+    if (!row.scm_rules[0]!.includes(product)) throw new Error(`the long rule does not name its product: ${row.scm_rules[0]}`);
   }
   // A catalog rule below 50%, on the same meropenem copy: a too-broad rule,
   // any gene of the BETA-LACTAM subclass, which the intrinsic SHV gives
