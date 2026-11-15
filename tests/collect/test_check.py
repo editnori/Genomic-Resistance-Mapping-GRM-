@@ -38,6 +38,15 @@ class AnUnpackedArchive(unittest.TestCase):
         self.assertEqual((rc, out), (0, f"check: OK {top}: 2 files, 41 bytes, class public-result, every size and "
                                         "sha256 as listed, nothing else under files/\n"))
 
+    def test_a_folder_named_for_another_class_is_found(self):
+        d, top = self.unpacked()
+        rc, out, err = kit.run("check", f"{top}/")
+        self.assertEqual((rc, err, out), (0, "", f"check: OK {top}/: " + OK_FOLDER))
+        renamed = top.parent / "demo.public-result"
+        os.rename(top, renamed)
+        self.fails(renamed, "the list is of class internal-record and the folder is named demo.public-result",
+                   good=4)
+
     def test_one_changed_byte_of_the_same_size_is_found(self):
         d, top = self.unpacked()
         (top / "files/proj/notes/ledger.md").write_bytes(b"# Ledger\n\nrow 2\n")

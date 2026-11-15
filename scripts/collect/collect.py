@@ -15,11 +15,13 @@ run. Standard library only; run it as `python3 -I scripts/collect/collect.py ...
            default), and NAME.CLASS.parts.sha256 beside them. Every part holds the class's whole list as
            NAME.CLASS/LIST.tsv, with the part of each file, and its own files under NAME.CLASS/files/.
   check    DIR | --parts NAME.CLASS.parts.sha256   [--threads N]
-           DIR is an unpacked NAME.CLASS folder. Every row of LIST.tsv must be a regular file of that size and sha256
-           under files/, and files/ must hold nothing else. --parts checks the packed parts where they lie, without
-           unpacking: each part's sha256, then every file inside it, read as a stream. Each part is read to the end of
-           its gzip or xz stream, so the stream's own check (gzip's CRC and length, xz's check) is read too; after the
-           last member only the tar end mark, zero bytes, may follow, and nothing may follow the compressed stream.
+           DIR is an unpacked NAME.CLASS folder. Every row of LIST.tsv must be a regular file of that size and
+           sha256 under files/, and files/ must hold nothing else, and DIR's name must end in the list's class.
+           --parts checks the packed parts where they lie, without unpacking: each part's sha256, then every file
+           inside it, read as a stream.
+           Each part is read to the end of its gzip or xz stream, so the stream's own check (gzip's CRC and length,
+           xz's check) is read too; after the last member only the tar end mark, zero bytes, may follow, and nothing
+           may follow the compressed stream.
   summary  --place NAME=LIST... [--hashes NAME=SHA256FILE]... [--out FILE]
            Reads the lists of several places and counts, by sha256, how many places hold each content. A --hashes
            file (sha256sum format) is a place known by its hashes only, such as the checksum file of a release.
@@ -846,6 +848,9 @@ def cmd_check(a):
         faults.append(f"the list names the classes {', '.join(classes) or 'none'}; an archive holds one packed class")
     elif parts is not None and not where.endswith("." + classes[0]):
         faults.append(f"the list is of class {classes[0]} and the archive is named {where}")
+    elif parts is None and not os.path.basename(os.path.normpath(where)).endswith("." + classes[0]):
+        faults.append(f"the list is of class {classes[0]} and the folder is named "
+                      f"{os.path.basename(os.path.normpath(where))}")
     if parts is not None:
         unnamed = sorted({r[4] for r in rows} - set(parts))
         if unnamed:
