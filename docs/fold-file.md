@@ -39,7 +39,9 @@ Without `--fold-file`, `grm learn` is unchanged.
 
 Fold f trains on `train` and on every other fold's test genomes. A file with
 one test fold is a plain train and test split. A file with five test folds and
-empty `train` and `unused` is a five-fold cross-validation.
+empty `train` and `unused` is a five-fold cross-validation. The number of test
+folds has no cap, and the run's cost grows with it, since each fold fits all
+five learners.
 
 Every genome of the dataset's cohort must be listed exactly once. The cohort
 is the set of genomes `grm learn` evaluates for the dataset: the genomes in the
