@@ -1,13 +1,14 @@
-"""export.py [--check FILE]: GRM's entries for Givens, written from committed files.
+"""export.py [--write | --check [FILE]]: GRM's entries for Givens, written from committed files.
 
 Givens is a shared browser of the definitions and assumptions of four projects. This script writes GRM's part of it:
 evaluation terms, the assumptions a report figure rests on, and aggregate counts. docs/givens-export.md describes the
 file.
 
-  python3 -I scripts/givens-export/export.py > reference/givens-export/grm.json
-  python3 -I scripts/givens-export/export.py --check reference/givens-export/grm.json
+  python3 -I scripts/givens-export/export.py            prints the export
+  python3 -I scripts/givens-export/export.py --write    writes reference/givens-export/grm.json and its SHA256SUMS
+  python3 -I scripts/givens-export/export.py --check    exits 1 unless both committed files are what --write gives
 
-With --check it prints nothing and exits 1 unless FILE is exactly the text it would write.
+With --check FILE it compares that one file with the export's text. A check prints nothing when the files agree.
 
 The words come from spec.json beside this script. Every number comes from one of two places:
 
@@ -20,9 +21,11 @@ An entry GRM has no count for carries "unmeasured" with the reason. The script f
 
 It is an allow-list. It stops with a message when the spec holds a key it does not know, reads a file or a field
 outside the lists below, quotes a sentence its document does not hold, or writes a string that names a dataset, a
-species, an antibiotic or a drug class. Standard library only.
+species, an antibiotic or a drug class. The screen takes those names from the files read and from GRM's antibiotic
+vocabulary in src/drugs.rs, and writes none of them. Standard library only.
 """
 
+import functools
 import hashlib
 import json
 import pathlib
@@ -32,6 +35,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SPEC = pathlib.Path(__file__).resolve().with_name("spec.json")
 FORMAT = "grm-givens-export/1"
+EXPORT = "reference/givens-export/grm.json"
+SUMS = "reference/givens-export/SHA256SUMS"
 
 LEARNERS = ("scm", "cart", "rf", "gbt", "lasso")
 SPLITS = ("random", "lineage")
@@ -53,6 +58,12 @@ FIELDS = {
 SUMMARY_DIR = re.compile(r"reference/release-summary/rev(\d+)-[0-9a-z-]+/")
 OUTSIDE = "web/src/data/outside-study.json"
 DOCUMENT = re.compile(r"README\.md|docs/[a-z0-9-]+\.md")
+
+# GRM's antibiotic vocabulary. The screen reads the names of these tables and of this function, and no number.
+VOCABULARY = "src/drugs.rs"
+VOCABULARY_TABLES = ("INHIBITORS", "OVERRIDES", "CLASS_LABELS", "AMBIGUOUS", "GRM_VOCABULARY")
+VOCABULARY_CLASSES = "single_class"
+_LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
 MODULE_KEYS = ["id", "namespace", "name", "job", "repo", "release", "binding", "binding_note", "files", "nodes",
                "edges", "assumptions", "import_rule", "left_out"]
@@ -289,6 +300,35 @@ def _entry(at, spec, src, out):
     return out
 
 
+def _forms(name):
+    """The spellings of one name: the name, each component of a combination, and a single word's other number."""
+    forms = set()
+    for part in [name] + name.split("/"):
+        low = part.strip().lower()
+        spaced = low.replace("_", " ")
+        forms |= {low, spaced}
+        if spaced.isalpha() and len(spaced) > 3:
+            forms.add(spaced[:-1] if spaced.endswith("s") else spaced + "s")
+    return forms
+
+
+def _vocabulary(root):
+    """Every name, spelling and drug class of GRM's antibiotic vocabulary. Read for the screen and never written."""
+    full = pathlib.Path(root) / VOCABULARY
+    if not full.is_file():
+        raise Fault(f"{VOCABULARY}: no such committed file")
+    text = full.read_text(encoding="utf-8")
+    blocks = [(table, re.search(rf"\nconst {table}: [^=\n]+= &\[(.*?)\];", text, re.S)) for table in VOCABULARY_TABLES]
+    blocks.append((f"fn {VOCABULARY_CLASSES}", re.search(rf"\nfn {VOCABULARY_CLASSES}\((.*?)\n}}\n", text, re.S)))
+    names = set()
+    for what, found in blocks:
+        literals = _LITERAL.findall(found.group(1)) if found else []
+        if not literals:
+            raise Fault(f"{VOCABULARY}: {what} holds no name, and the screen reads its names")
+        names |= set(literals)
+    return {form for name in names for form in _forms(name) if len(form) > 3}
+
+
 def _barred(root, src):
     """The names the export must never hold: datasets, species, antibiotics and drug classes of the files read."""
     names = set()
@@ -305,7 +345,7 @@ def _barred(root, src):
     barred = set()
     for name in names:
         low = name.lower()
-        barred |= {low, low.replace("_", " ")}
+        barred |= _forms(name)
         words = low.replace("_", " ").split()
         if len(words) == 2 and "/" not in low and "__" not in low and all(w.isalpha() for w in words):
             barred.add(f"{words[0][0]}. {words[1]}")  # the short form of a species name
@@ -324,13 +364,20 @@ def _strings(value):
             yield from _strings(v)
 
 
+@functools.lru_cache(maxsize=8)
+def _names(barred):
+    """One pattern for every barred name, the longest first, as a word of its own."""
+    longest_first = sorted(barred, key=lambda name: (-len(name), name))
+    return re.compile(rf"(?<![a-z])(?:{'|'.join(map(re.escape, longest_first))})(?![a-z])")
+
+
 def screen(module, barred):
     """Fails when a string of the export names what the export must leave out."""
+    names = _names(frozenset(barred)) if barred else None
     for text in _strings(module):
-        low = text.lower()
-        hit = next((b for b in sorted(barred) if re.search(rf"(?<![a-z]){re.escape(b)}(?![a-z])", low)), None)
+        hit = names.search(text.lower()) if names else None
         if hit:
-            raise Fault(f"the export may not name {hit!r}: {text!r}")
+            raise Fault(f"the export may not name {hit.group(0)!r}: {text!r}")
         if re.search(r"[ACGTacgt]{12,}", text):
             raise Fault(f"the export holds no sequence: {text!r}")
 
@@ -400,7 +447,7 @@ def build_module(spec, root=ROOT):
         raise Fault(f"files names {', '.join(unused)}, and no line reads it")
     module.update(nodes=nodes, edges=edges, assumptions=givens, import_rule=list(spec["import_rule"]),
                   left_out=list(spec["left_out"]))
-    screen(module, _barred(root, src))
+    screen(module, _barred(root, src) | _vocabulary(root))
     return module
 
 
@@ -410,22 +457,34 @@ def build(root=ROOT, spec_path=SPEC):
     return json.dumps(build_module(spec, root), indent=2, ensure_ascii=False) + "\n"
 
 
-def main(argv):
-    args = argv[1:]
-    if args and (len(args) != 2 or args[0] != "--check"):
+def sums(text):
+    """The line of SHA256SUMS for the export's text, as sha256sum prints it from the repository root."""
+    return f"{hashlib.sha256(text.encode('utf-8')).hexdigest()}  {EXPORT}\n"
+
+
+def main(argv, root=ROOT):
+    args, root = argv[1:], pathlib.Path(root)
+    if args not in ([], ["--write"], ["--check"]) and not (len(args) == 2 and args[0] == "--check"):
         raise SystemExit(__doc__)
     try:
-        text = build()
+        text = build(root)
     except Fault as fault:
         print(f"givens export: {fault}", file=sys.stderr)
         return 1
-    if args:
-        if pathlib.Path(args[1]).read_text(encoding="utf-8") == text:
-            return 0
-        print("the file differs from what the committed sources give", file=sys.stderr)
-        return 1
-    sys.stdout.write(text)
-    return 0
+    if not args:
+        sys.stdout.write(text)
+        return 0
+    wanted = {root / EXPORT: text, root / SUMS: sums(text)} if len(args) == 1 else {pathlib.Path(args[1]): text}
+    if args == ["--write"]:
+        for path, want in wanted.items():
+            path.write_bytes(want.encode("utf-8"))
+        return 0
+    status = 0
+    for path, want in wanted.items():
+        if not path.is_file() or path.read_bytes() != want.encode("utf-8"):
+            print(f"{path}: the file differs from what the committed sources give", file=sys.stderr)
+            status = 1
+    return status
 
 
 if __name__ == "__main__":
