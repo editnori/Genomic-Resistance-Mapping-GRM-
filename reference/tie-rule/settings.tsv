@@ -1,0 +1,20 @@
+key	value
+arm_A	main's binary, built at commit 852ebc91c3f649d3980b1d9a6844e1daec5df2d2
+arm_B	the branch's binary, flag off (the present rule)
+arm_C	arm B with --exp-tie-trace
+arm_D	the branch's binary, --exp-tie-rule exact (the exact rule)
+arm_E	arm D with --exp-tie-trace
+binary_branch_sha256	f2423e4f2186ef7a38602e79c5e6d484ad1373c03c85bb5577621f3afafaf8b5
+binary_main_sha256	8ab7cbff1145cc0f4c4cc51dfa659fdf00bf51d6bf127a9d947d3c29c71fb5e9
+branch	exp/tie-rule-exact
+branch_commit_head	35e1ae246a7f6806175ad66210f54670b967fd8f
+branch_commit_runs	88af13052b8e66e34faea4172a8f63ddb81c91e9
+call_threshold	0.5
+evaluation_revision	14
+log_loss_clamp	1e-12
+main_commit_runs	852ebc91c3f649d3980b1d9a6844e1daec5df2d2
+paired_draws	4000
+paired_interval	the 101st and 3900th of the 4000 sorted draw means
+paired_resample	species
+paired_seed	20261115
+release	rev14-274-20261112
