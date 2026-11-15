@@ -37,6 +37,7 @@ class SyntheticRecord(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.tmp.cleanup)
         cls.root = cls.tmp.name
         cls.tree = synthetic.make(os.path.join(cls.root, "in"))
         cls.out = os.path.join(cls.root, "out")
@@ -46,10 +47,6 @@ class SyntheticRecord(unittest.TestCase):
         cls.rd = {(r["dataset"], r["learner"]): r for r in read_tsv(os.path.join(cls.out, "readings.tsv"))}
         cls.sp = {r["species"]: r for r in read_tsv(os.path.join(cls.out, "species.tsv"))}
         cls.order = {r["species"]: r for r in read_tsv(os.path.join(cls.out, "order.tsv"))}
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.tmp.cleanup()
 
     def test_scm_cells_by_hand(self):
         # SYNTHETIC: 27 of 30 R called resistant and 28 of 30 S called susceptible.
