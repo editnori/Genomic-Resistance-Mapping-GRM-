@@ -172,6 +172,9 @@ jobs:
           # A synthetic release built in the test, and the committed outputs under reference/release-summary.
           - suite: tests/release_summary
             top: .
+          # A synthetic project built in the test; the commands of docs/data-collection.md run on it.
+          - suite: tests/collect
+            top: .
           # Synthetic reports written in the test, and the committed table under reference/lineage-control.
           - suite: tests/lineage_control
             top: .

@@ -202,6 +202,8 @@ The saved inputs are not published, so the command cannot be run from public fil
 
 [docs/outside-study-results.md](docs/outside-study-results.md) gives the result of a retrospective test on newly deposited studies from the same database: each revision-12 report's final model, applied unchanged to BV-BRC genomes added after the cohort was built. [docs/outside-study-results-by-species.md](docs/outside-study-results-by-species.md) reads it one species at a time. [docs/outside-study-test.md](docs/outside-study-test.md) is the plan, frozen before any of those genomes was fetched. The output files are in `reference/outside-study/`. The result's section Revision 14 reads the same estimates against the figures the site serves now, from `reference/outside-study-figures/`. `reference/outside-study-models/` holds a digest of each final model in both revisions, and the suite fails if one differs.
 
+[docs/data-collection.md](docs/data-collection.md) shows how to keep one checked copy of the project's files: `scripts/collect/collect.py` lists them with a size, a sha256 and a class, packs one class into archives of at most 1.9 GB, and checks an archive against the list it carries.
+
 ## Checks
 
 `.github/workflows/ci.yml` runs the Rust, Python, deployment-toolkit and web checks on every push and pull request. [docs/ci.md](docs/ci.md) lists its jobs and what it leaves out, such as the web app's browser check.
