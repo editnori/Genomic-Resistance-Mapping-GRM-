@@ -258,6 +258,7 @@ src/lib.rs learn::eval::tests::unsupported_lineage_plan_preserves_the_random_eva
 src/lib.rs learn::foldfile::tests::a_file_for_another_dataset_or_with_a_drawn_split_name_is_refused
 src/lib.rs learn::foldfile::tests::a_file_is_refused_unless_it_lists_every_cohort_sample_exactly_once
 src/lib.rs learn::foldfile::tests::a_file_with_an_unknown_or_missing_key_is_refused
+src/lib.rs learn::foldfile::tests::a_scheme_that_could_name_a_path_is_refused
 src/lib.rs learn::foldfile::tests::load_names_the_file_it_could_not_read_or_parse
 src/lib.rs learn::foldfile::tests::roles_follow_the_sample_order_whatever_order_the_file_lists
 src/lib.rs learn::foldfile::tests::the_hash_is_of_the_files_bytes_not_of_its_parsed_content

@@ -316,6 +316,27 @@ mod tests {
     }
 
     #[test]
+    fn a_scheme_that_could_name_a_path_is_refused() {
+        // The scheme becomes part of the result's file name
+        // (`analysis::fold_result_path`), so nothing but a-z, 0-9 and the
+        // hyphen may pass: no separator, no dot, no underscore, no NUL.
+        let good = file(&[&["g0"]], &["g1", "g2"], &[]);
+        for name in [
+            "../escape",
+            "a/b",
+            "a.b",
+            "a\\b",
+            "past_only",
+            "a\0b",
+            "\u{e9}",
+        ] {
+            let mut named = good.clone();
+            named.scheme = name.to_string();
+            assert!(named.check().is_err(), "{name:?}");
+        }
+    }
+
+    #[test]
     fn a_file_with_an_unknown_or_missing_key_is_refused() {
         let extra = br#"{"format":"grm-fold-file-v1","dataset":"d","scheme":"s","test":[["a"]],"train":["b"],"unused":[],"seed":7}"#;
         assert!(format!("{:#}", parse(extra).unwrap_err()).contains("unknown field `seed`"));
