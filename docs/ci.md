@@ -9,7 +9,7 @@ Each job runs on GitHub's hosted `ubuntu-24.04` runner. The counts are this tree
 | Job | Runs | Result |
 |---|---|---|
 | `rust-lint` | `cargo fmt --check`, then `cargo clippy --locked --all-targets -- -D warnings` | pass |
-| `rust-test` | `cargo test --release --locked`, then `bash scripts/ci/rust-test-names.sh --check` | 466 passed, 0 failed, 10 ignored; the 476 names match `tests/rust-test-names.txt` |
+| `rust-test` | `cargo test --release --locked`, then `bash scripts/ci/rust-test-names.sh --check` | 479 passed, 0 failed, 11 ignored; the 490 names match `tests/rust-test-names.txt` |
 | `rust-doc` | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked` | pass |
 | `metric-audit` | `cargo build --locked --release` in `scripts/metric-audit/foldgen`, then `python3 -I -B -W error <file> -v` for each test file | `test_check_results.py` 122, `test_audit.py` 111, `test_scripts.py` 3; `scripts/lasso-scan/test_scan.py` 26 with 4 skipped |
 | `python`, one job per suite | `python3 -s -P -B -W error -m unittest discover -s <suite> -t . -v` under `env -i` at `PYTHONHASHSEED` 0, 1 and 4242, then once with `-I` in place of `-s -P` | `tests/hyperopt` 351, `scripts/sampling-audit/tests` 34, `tests/ablation` 280, `tests/temporal` 163, `tests/multitask` 72, `tests/input_comparison` 198 with 31 skipped, `tests/outside_study` 224, `tests/outside_study_results` 120, `tests/release_summary` 46, `tests/lineage_control` 33, `tests/givens_export` 48 |
@@ -72,4 +72,4 @@ The web app's browser check, `web/scripts/browser-check.cjs`, is outside this wo
 - the ignored test `learn::lasso::tests::mtb_delamanid_fold0_reaches_the_certified_optima`, which reads a local diagnosis folder;
 - the deployment mutation check, `data/work/deployment-mutation-20261027/grm-mutate-v3.py`.
 
-The other 7 ignored tests are opt-in runs: the full synthetic-assurance runs (`scripts/synthetic-assurance/run-full.sh`), the lasso scan smoke test (`scripts/lasso-scan/smoke.sh`), the matrix merge benchmark with its two case tests, and the open-file probe, which a default test starts in its own process.
+The other 8 ignored tests are opt-in runs: the full synthetic-assurance runs (`scripts/synthetic-assurance/run-full.sh`), the lasso scan smoke test (`scripts/lasso-scan/smoke.sh`), the matrix merge benchmark with its two case tests, the open-file probe, which a default test starts in its own process, and `analysis::tests::write_report_fields_fixture_root`, which writes the synthetic data root for comparing a report built before and after a change (docs/report-rule-fields.md, Checks).
