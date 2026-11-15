@@ -123,3 +123,33 @@ This trace proposes no field and no predictor. H, the ablation task that wrote t
 That is `src/ablate/blocks.rs:20-25`. `check_spec` applies it to a block's id and version (`:376`) and `check_block` to its column names (`:903`). `admit` (`:843-860`) is the only way to make a predictor block, and its sealed bound accepts only that module's adapters (`:30-32`).
 
 Block X, genome context, stays unavailable because "the context fields in genome metadata are source proxies and are refused" (`:205`, `:253`). The deny-list's test names `collection_year`, `Date Inserted` and `sequencing_platform` among the refused names (`:1750`, `:1794-1802`). The module doc states the limits of a name check and names the seal on `admit` as the real guard (`:44-48`).
+
+## Collection date (ledger action 11)
+
+`grm fetch genomes` also asks BV-BRC for `collection_date`, next to `collection_year` in `GENOME_FIELDS`, and `GenomeRecord` holds it as `bvbrc::CollectionDate`. The text is read strictly each time a line is read:
+
+| Text | Reading | Examples |
+|---|---|---|
+| `YYYY-MM-DD`, a day that exists | a date at day precision | `2015-03-12`, `2016-02-29` |
+| `YYYY-MM`, month 01 to 12 | a date at month precision, with no day | `2014-05` |
+| `YYYY` | a date at year precision, with no month | `2013` |
+| any other text | `Unparsed`: kept as written, with no date | `2015-2016`, `2004-20`, `2017-02-30`, `2015-03-12T00:00:00Z`, `12/03/2015`, `missing` |
+| no value from BV-BRC | `Missing`, written as null | |
+| no key, in a line fetched before this change | `NotFetched`, written back without the key | |
+
+Nothing is guessed. A range is not cut to one of its years, a day that does not exist is not moved to one that does, a month out of range is not read as its year, and neither year field fills in the other. The year is not checked against a range: whether a stated year is plausible is for the analysis that reads it. `grm fetch genomes` prints how many genomes had each kind.
+
+It is a genome field and says when the isolate was taken. It is kept apart from every date tied to a label: the AST record's `date_inserted`, the pair's `date_inserted_first` and `date_inserted_last`, `testing_standard_year` and the papers of `pmid`. No AST record, `Phenotype` or `PairProvenance` row has it (`bvbrc::tests::collection_date_stays_off_every_label_record`). It is also apart from `genome_dates.jsonl`, the days BV-BRC stored the genome.
+
+Data already fetched reads as before:
+
+- A `genomes.jsonl` line written before this change has no `collection_date` key. It reads as `NotFetched` and writes back byte for byte (`genome_lines_fetched_before_collection_date_read_and_write_as_before`).
+- No curated file changes: `grm curate` does not read the field.
+- No report field changes. `samples[].year`, the species files' `genomes[].year` and `corpus.json`'s `years` still read `collection_year`, and nothing in a report reads `collection_date`. The input fingerprint of `grm learn` leaves genome metadata out, so a report fitted before stays current. `collection_dates_leave_every_report_file_as_it_was` (`src/main.rs`) builds a report on a synthetic root, then gives every genome a collection date of one kind or another: `grm learn` keeps its reports, `grm report` writes the same files byte for byte apart from the index's `generated_at`, and a forced refit gives the same files apart from that and each learner's `seconds`.
+- `EVALUATION_REVISION` and the report schema do not change.
+
+A new `grm fetch genomes` writes the key on every line, null when BV-BRC has no value, so a file fetched after this change tells a genome with no date apart from a file fetched before it.
+
+The proxy check refuses `collection_date` under the collection-date rule, as it refuses `collection_year`; the deny-list test names both.
+
+This change has no effect on any result by itself. It makes a later split by collection time possible from GRM's own fetch. Joining it to `scripts/temporal/splits.py`, which takes a full ISO day as `collection_date`, is left to that split, which will also decide how a month or a year that straddles a cutoff is counted.

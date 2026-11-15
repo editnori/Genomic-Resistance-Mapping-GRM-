@@ -125,7 +125,11 @@ src/lib.rs annotate::tests::a_failed_annotation_download_is_recorded_on_the_locu
 src/lib.rs annotate::tests::a_feature_matching_several_families_is_labelled_with_all_of_them_in_byte_order
 src/lib.rs annotate::tests::the_cached_feature_order_does_not_choose_the_gene
 src/lib.rs bits::tests::set_algebra_and_counts
+src/lib.rs bvbrc::tests::a_synthetic_genome_response_is_written_with_its_collection_dates
+src/lib.rs bvbrc::tests::collection_date_stays_off_every_label_record
+src/lib.rs bvbrc::tests::collection_dates_parse_at_their_stated_precision_and_nothing_else
 src/lib.rs bvbrc::tests::genome_dates_keep_only_their_three_fields
+src/lib.rs bvbrc::tests::genome_lines_fetched_before_collection_date_read_and_write_as_before
 src/lib.rs bvbrc::tests::parses_mixed_type_fields
 src/lib.rs catalog::tests::catalog_loads_both_accessions_and_trims_the_version
 src/lib.rs catalog::tests::catalog_requires_a_nonblank_version
@@ -446,6 +450,7 @@ src/main.rs tests::a_selected_genome_is_counted_once_its_fasta_is_downloaded
 src/main.rs tests::a_structure_from_before_kset_digests_is_rebuilt_beside_a_current_matrix
 src/main.rs tests::another_genome_selection_recounts_and_rebuilds_structure_and_matrix
 src/main.rs tests::changed_ksets_rebuild_structure_and_matrix
+src/main.rs tests::collection_dates_leave_every_report_file_as_it_was
 src/main.rs tests::count_takes_only_a_k_the_kmer_space_supports
 src/main.rs tests::counting_and_building_the_matrix_by_hand_leave_an_old_structure_refused
 src/main.rs tests::counting_stops_when_the_catalog_does_not_load_unless_allowed

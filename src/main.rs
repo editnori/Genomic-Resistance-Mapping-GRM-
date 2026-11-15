@@ -2533,4 +2533,176 @@ mod tests {
         }
         assert_eq!(strands, BTreeSet::from([false, true]));
     }
+
+    /// Every file under `dir`, by its path below `dir`.
+    fn files_below(dir: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
+        let mut out = BTreeMap::new();
+        let mut todo = vec![dir.to_path_buf()];
+        while let Some(d) = todo.pop() {
+            for entry in std::fs::read_dir(&d).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    todo.push(path);
+                } else {
+                    let bytes = std::fs::read(&path).unwrap();
+                    out.insert(path.strip_prefix(dir).unwrap().to_path_buf(), bytes);
+                }
+            }
+        }
+        out
+    }
+
+    /// A report file with its run clocks set to zero: `generated_at` in
+    /// `index.json` and each learner's `seconds` in a dataset report. Both
+    /// differ between two runs of one build on one root.
+    fn without_clocks(bytes: &[u8]) -> serde_json::Value {
+        fn zero(v: &mut serde_json::Value) {
+            match v {
+                serde_json::Value::Object(map) => {
+                    for (key, value) in map.iter_mut() {
+                        if key == "generated_at" || key == "seconds" {
+                            *value = serde_json::Value::Null;
+                        } else {
+                            zero(value);
+                        }
+                    }
+                }
+                serde_json::Value::Array(items) => items.iter_mut().for_each(zero),
+                _ => {}
+            }
+        }
+        let mut v: serde_json::Value = serde_json::from_slice(bytes).unwrap();
+        zero(&mut v);
+        v
+    }
+
+    /// Ledger action 11: a data root fetched before `GENOME_FIELDS` asked
+    /// for `collection_date` reads as before, and adding the field to every
+    /// genome's metadata changes no report byte. `grm learn` keeps the
+    /// reports it fitted as current; a forced refit and `grm report` give
+    /// the same files, apart from the two run clocks.
+    #[test]
+    fn collection_dates_leave_every_report_file_as_it_was() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, ids) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap())
+        };
+        // `grm report` finds a species' files under the slug of its name, so
+        // the fixture's species is named for its folder.
+        for file in ["datasets.json", "phenotypes.jsonl"] {
+            let path = layout.curated().join(file);
+            let text = std::fs::read_to_string(&path).unwrap();
+            std::fs::write(&path, text.replace(r#""Fixture species""#, r#""Fixture""#)).unwrap();
+        }
+        std::fs::write(
+            layout.curated().join("funnel.json"),
+            serde_json::to_vec(&curate::Funnel::default()).unwrap(),
+        )
+        .unwrap();
+        std::fs::write(layout.amr(), "").unwrap();
+        let kover = dir.path().join("kover.json");
+        std::fs::write(&kover, "[]").unwrap();
+        let kover = kover.to_str().unwrap();
+        // Synthetic metadata, in the form `grm fetch genomes` wrote before
+        // the field (`bvbrc::tests::genome_lines_fetched_before_collection_date_read_and_write_as_before`).
+        let genomes: Vec<GenomeRecord> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, id)| GenomeRecord {
+                genome_id: id.clone(),
+                collection_year: (i % 4 != 3).then(|| format!("{}", 2010 + i % 7)),
+                isolation_country: Some(["Kenya", "Peru", "Viet Nam"][i % 3].into()),
+                host_name: Some("Human, Homo sapiens".into()),
+                mlst: Some(format!("MLST.Fixture.{}", i % 5)),
+                ..Default::default()
+            })
+            .collect();
+        let write_genomes = |records: &[GenomeRecord]| {
+            let lines: Vec<String> = records
+                .iter()
+                .map(|g| serde_json::to_string(g).unwrap())
+                .collect();
+            std::fs::write(layout.genomes(), lines.join("\n") + "\n").unwrap();
+        };
+        write_genomes(&genomes);
+        assert!(
+            !std::fs::read_to_string(layout.genomes())
+                .unwrap()
+                .contains("collection_date")
+        );
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        grm(&["learn", "--species", SLUG]).unwrap();
+        grm(&["report", "--kover", kover]).unwrap();
+        let report_dir = layout.root.join("report");
+        let before = files_below(&report_dir);
+        let results_before = files_below(&layout.results_dir(SLUG));
+        assert!(before.contains_key(Path::new("index.json")));
+        assert!(before.contains_key(Path::new("corpus.json")));
+        assert!(before.contains_key(Path::new("species/fixture.json")));
+        assert!(before.contains_key(Path::new("datasets/fixture__fixturemycin.json")));
+        let species: serde_json::Value =
+            serde_json::from_slice(&before[Path::new("species/fixture.json")]).unwrap();
+        assert_eq!(species["genomes"][0]["year"], "2010");
+
+        // The same genomes with a collection date of every kind.
+        let texts = ["2015-03-12", "2014-05", "2013", "2015-2016", "2017-02-30"];
+        let dated: Vec<GenomeRecord> = genomes
+            .iter()
+            .enumerate()
+            .map(|(i, g)| GenomeRecord {
+                collection_date: match texts.get(i % 6) {
+                    Some(text) => bvbrc::CollectionDate::parse(text),
+                    None => bvbrc::CollectionDate::Missing,
+                },
+                ..g.clone()
+            })
+            .collect();
+        write_genomes(&dated);
+        let read: Vec<GenomeRecord> = bvbrc::read_jsonl(&layout.genomes()).unwrap();
+        let unparsed = read
+            .iter()
+            .filter(|g| g.collection_date.is_unparsed())
+            .count();
+        assert_eq!(unparsed, 20);
+
+        // Learn keeps its reports as current, and the report is rebuilt
+        // byte for byte apart from the index's build time.
+        grm(&["learn", "--species", SLUG]).unwrap();
+        assert_eq!(files_below(&layout.results_dir(SLUG)), results_before);
+        grm(&["report", "--kover", kover]).unwrap();
+        let after = files_below(&report_dir);
+        assert_eq!(
+            after.keys().collect::<Vec<_>>(),
+            before.keys().collect::<Vec<_>>()
+        );
+        for (path, bytes) in &after {
+            if path == Path::new("index.json") {
+                assert_eq!(without_clocks(bytes), without_clocks(&before[path]));
+            } else {
+                assert!(bytes == &before[path], "{} changed", path.display());
+            }
+        }
+
+        // A forced refit reads the dated metadata and fits the same models.
+        grm(&["learn", "--species", SLUG, "--force"]).unwrap();
+        grm(&["report", "--kover", kover]).unwrap();
+        let refit = files_below(&report_dir);
+        assert_eq!(
+            refit.keys().collect::<Vec<_>>(),
+            before.keys().collect::<Vec<_>>()
+        );
+        for (path, bytes) in &refit {
+            assert_eq!(
+                without_clocks(bytes),
+                without_clocks(&before[path]),
+                "{}",
+                path.display()
+            );
+        }
+    }
 }
