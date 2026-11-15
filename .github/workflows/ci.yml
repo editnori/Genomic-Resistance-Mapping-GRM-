@@ -175,6 +175,9 @@ jobs:
           # Reads the committed result under reference/learner-crosscheck; it fits nothing and needs no reference library.
           - suite: tests/learner_crosscheck
             top: .
+          # Reads the committed export under reference/givens-export and the files it is written from; it fits nothing.
+          - suite: tests/givens_export
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
