@@ -303,6 +303,7 @@ src/lib.rs learn::gbt::tests::a_boosted_tree_digest_changes_with_any_node_field
 src/lib.rs learn::gbt::tests::a_traced_tree_is_the_untraced_tree_and_counts_the_moved_split
 src/lib.rs learn::gbt::tests::censored_regression_respects_bounds
 src/lib.rs learn::gbt::tests::early_stopping_can_keep_the_unboosted_baseline
+src/lib.rs learn::gbt::tests::equal_counts_on_other_samples_follow_the_rounded_gain_under_both_rules
 src/lib.rs learn::gbt::tests::logistic_boosting_learns_an_interaction
 src/lib.rs learn::gbt::tests::pure_xor_keeps_no_tree
 src/lib.rs learn::gbt::tests::rounding_puts_the_mirrored_feature_first_unless_the_rule_is_exact
@@ -361,6 +362,7 @@ src/lib.rs learn::tests::ranking_metrics_handle_ties_and_reject_invalid_inputs
 src/lib.rs learn::tests::screening_ranks_the_separating_feature_first
 src/lib.rs learn::tests::training_candidates_filter_and_collapse_on_training_samples_only
 src/lib.rs learn::tie::tests::a_split_and_its_mirror_have_equal_exact_impurity
+src/lib.rs learn::tie::tests::counts_just_under_the_bound_compare_exactly
 src/lib.rs learn::tie::tests::exact_choice_takes_the_lower_feature_of_equal_fractions
 src/lib.rs learn::tie::tests::exact_impurity_orders_splits_as_the_weighted_gini_does
 src/lib.rs learn::tie::tests::large_counts_compare_without_overflow
@@ -368,6 +370,7 @@ src/lib.rs learn::tie::tests::mul_wide_is_the_full_product
 src/lib.rs learn::tie::tests::same_partition_sees_equal_and_mirrored_sides_only
 src/lib.rs learn::tie::tests::tally_counts_ties_at_the_best_exact_impurity
 src/lib.rs learn::tie::tests::tally_sorts_differences_into_ties_and_rounding_order
+src/lib.rs learn::tie::tests::the_count_bound_stops_a_fit_at_two_to_the_31
 src/lib.rs learn::tree::tests::a_traced_fit_is_the_untraced_fit_and_counts_its_nodes
 src/lib.rs learn::tree::tests::a_tree_digest_changes_with_any_node_field
 src/lib.rs learn::tree::tests::a_tree_draws_node_features_independently_of_its_subsample

@@ -166,9 +166,13 @@ enum Command {
         learner_seed: Option<u64>,
         /// Experiment, off by default: how the decision tree, the forest and
         /// the boosted trees break ties between equally good features
-        /// (`grm::learn::tie`). `float` is production's rule. A report fitted
-        /// with `exact` says so in `eval_config.tie_rule`, and its input
-        /// fingerprint differs from production's.
+        /// (`grm::learn::tie`). `float` is production's rule. `exact` makes
+        /// the stated tie rule true for cart and rf; for gbt, only between
+        /// splits with the same two groups. A report fitted with `exact` says
+        /// so in `eval_config.tie_rule` and its input fingerprint hashes it,
+        /// so `grm learn` refits it and the metric audit flags it. The site
+        /// reads neither field: `grm report` stops at such a report, and at
+        /// the release's seeds an exact run needs --exp-tie-out.
         #[arg(long, value_enum, default_value_t = TieRuleArg::Float)]
         exp_tie_rule: TieRuleArg,
         /// Experiment: write one JSON line per tree-learner fit to this file,

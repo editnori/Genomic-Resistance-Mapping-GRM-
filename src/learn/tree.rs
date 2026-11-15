@@ -19,7 +19,8 @@
 //!
 //! Among candidates of equal 64-bit gain a node splits on the lowest-numbered
 //! feature. `TieRule::Exact`, an experiment that is off by default, compares
-//! the gains as exact fractions instead (`tie`).
+//! the gains as exact fractions instead, which makes that rule true for the
+//! decision tree and the forest (`tie`).
 
 use super::tie::{self, SplitImpurity, Tally, TieRule};
 use super::{fold_masks, sample_indices};
@@ -108,6 +109,9 @@ fn grow_tree(
 ) -> Tree {
     let fit_pos = train.and(y).count();
     let fit_counts = (fit_pos, train.count() - fit_pos);
+    if traced || params.tie == TieRule::Exact {
+        tie::check_counts(fit_counts);
+    }
     let n_pos = fit_pos as f64;
     let n_neg = train.count() as f64 - n_pos;
     let total = n_pos + n_neg;

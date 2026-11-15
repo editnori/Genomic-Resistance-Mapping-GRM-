@@ -9,16 +9,30 @@
 //! that differ in the last digits, and then the larger rounded gain wins
 //! whatever its number.
 //!
-//! `Exact`, the experiment (`grm learn --exp-tie-rule exact`):
+//! `Exact`, the experiment (`grm learn --exp-tie-rule exact`), makes the
+//! stated tie rule true for cart and rf; for gbt, only between splits with
+//! the same two groups.
 //! - Decision tree and forest: a candidate's gain is a fraction of integer
 //!   counts (`SplitImpurity`), compared exactly; equal fractions go to the
 //!   lowest-numbered feature. Which candidates may split (gain above 1e-12)
-//!   is still decided on the 64-bit gain, as in production.
-//! - Boosted trees: gains are sums of real-valued gradients, so they have no
-//!   exact form. Two features are equal when they divide the node's fitting
-//!   samples into the same two groups (one's present side is the other's
-//!   present or absent side). The node takes the production pick, then the
-//!   lowest-numbered of the tree's candidates equal to it in that sense.
+//!   is still decided on the 64-bit gain, as in production. A fit checks
+//!   once, before its first node, that its counts are inside the bound this
+//!   arithmetic needs (`check_counts`).
+//! - Boosted trees: the rule moves a split only to a lower feature with the
+//!   same two groups. The node takes the production pick, then the
+//!   lowest-numbered of the tree's candidates that divides the node's
+//!   fitting samples into the same two groups as that pick (one's present
+//!   side is the other's present or absent side). Candidates with equal
+//!   gains and different groups still follow rounding: in the first round
+//!   of a logistic fit the gradients are equal within a class, so gbt
+//!   candidates with equal counts have equal gains; this rule does not treat
+//!   them as equal (`gbt::tests::equal_counts_on_other_samples_follow_the_rounded_gain_under_both_rules`).
+//!
+//! With `--exp-tie-rule exact` a report adds `eval_config.tie_rule:
+//! "exact"` and the input fingerprint hashes it, so `grm learn` refits it
+//! and the metric audit flags it. The site reads neither field, so such a
+//! report is kept out of `results/`: `grm report` stops at it, and an exact
+//! run at the release's seeds needs `--exp-tie-out` to name another folder.
 //!
 //! A feature is a column number in the learner's own candidate matrix.
 //!
@@ -69,11 +83,11 @@ pub struct SplitImpurity {
 
 impl SplitImpurity {
     /// `present` and `absent` are (resistant, susceptible) counts of the two
-    /// sides; `fit` is the fit's (resistant, susceptible) counts.
+    /// sides; `fit` is the fit's (resistant, susceptible) counts, which the
+    /// fit has passed through `check_counts` once before its first node.
     pub fn new(present: (u32, u32), absent: (u32, u32), fit: (u32, u32)) -> Self {
         let (p_all, n_all) = (u64::from(fit.0), u64::from(fit.1));
-        // Every product below stays in range for counts below 2^31.
-        debug_assert!(fit.0 < 1 << 31 && fit.1 < 1 << 31);
+        // Every product below stays in range for counts below `COUNT_BOUND`.
         let side = |(p, q): (u32, u32)| -> (u128, u128) {
             let (p, q) = (u64::from(p), u64::from(q));
             ((p * q) as u128, (p * n_all + q * p_all) as u128)
@@ -96,6 +110,24 @@ impl SplitImpurity {
     pub fn cmp_exact(&self, other: &Self) -> Ordering {
         mul_wide(self.num, other.den).cmp(&mul_wide(other.num, self.den))
     }
+}
+
+/// Each class count of a fit must be below this for `SplitImpurity`'s
+/// products to stay in range: a side's denominator is then below 2^63 and
+/// each fraction's terms below 2^126.
+pub const COUNT_BOUND: u32 = 1 << 31;
+
+/// Stops a fit whose (resistant, susceptible) counts are not both below
+/// `COUNT_BOUND`. A fit under the exact rule calls it once, before its first
+/// node, in release builds too; no candidate is checked.
+pub fn check_counts(fit: (u32, u32)) {
+    assert!(
+        fit.0 < COUNT_BOUND && fit.1 < COUNT_BOUND,
+        "the exact tie rule needs fewer than {COUNT_BOUND} resistant and \
+         {COUNT_BOUND} susceptible fitting samples; this fit has {} and {}",
+        fit.0,
+        fit.1
+    );
 }
 
 /// The 256-bit product of two 128-bit numbers, as (high, low) halves, which
@@ -296,6 +328,29 @@ mod tests {
             }
         };
         side(present) + side(absent)
+    }
+
+    #[test]
+    #[should_panic(expected = "the exact tie rule needs fewer than 2147483648 resistant")]
+    fn the_count_bound_stops_a_fit_at_two_to_the_31() {
+        check_counts((COUNT_BOUND - 1, COUNT_BOUND));
+    }
+
+    #[test]
+    fn counts_just_under_the_bound_compare_exactly() {
+        let b = COUNT_BOUND - 1;
+        check_counts((b, b));
+        let fit = (b, b);
+        let pure = SplitImpurity::new((b, 0), (0, b), fit);
+        let one_off = SplitImpurity::new((b, 1), (0, b - 1), fit);
+        let mirrored = SplitImpurity::new((0, b), (b, 0), fit);
+        assert_eq!(pure.cmp_exact(&one_off), Ordering::Less);
+        assert_eq!(one_off.cmp_exact(&pure), Ordering::Greater);
+        assert_eq!(pure.cmp_exact(&mirrored), Ordering::Equal);
+        // Both are one half: b^2 / (2 b^2), and h / (2 b) + (b - h) / (2 b).
+        let mixed = SplitImpurity::new((b, b), (0, 0), fit);
+        let half = SplitImpurity::new((b / 2, b / 2), (b - b / 2, b - b / 2), fit);
+        assert_eq!(mixed.cmp_exact(&half), Ordering::Equal);
     }
 
     #[test]
