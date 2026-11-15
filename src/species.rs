@@ -1105,7 +1105,7 @@ mod tests {
         let err = build_matrix(&layout, "s", 2, None).err().unwrap();
         let msg = format!("{err:#}");
         assert!(
-            msg.contains("raise the open-file limit (ulimit -n) above 150"),
+            msg.contains("raise the open-file limit (ulimit -n) above 150, or merge in column blocks with grm matrix --column-blocks 64"),
             "{msg}"
         );
         assert!(!layout.matrix_dir("s").exists());

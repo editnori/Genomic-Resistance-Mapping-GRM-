@@ -438,10 +438,10 @@ Out-of-core integrity and scaling:
   leaves only partials/receipts, and matches stock `build`.
 - `partials_merge_under_an_open_file_limit_that_stops_build`: reruns the
   test binary under `ulimit -Sn 96`. There, `build` on 200 genomes fails
-  with the `ulimit -n` hint and points to `write_partial`, a 200-genome
-  `write_partial` fails with a hint to write narrower blocks and leaves no
-  file, and 64-genome partials complete. The child's matrix digest equals
-  `build`'s digest from the parent, which has no limit.
+  with the `ulimit -n` hint and points to `grm matrix --column-blocks 64`,
+  a 200-genome `write_partial` fails with a hint to write narrower blocks
+  and leaves no file, and 64-genome partials complete. The child's matrix
+  digest equals `build`'s digest from the parent, which has no limit.
 
 Tests that hold thousands of ksets open take turns behind a mutex and check
 `/proc/self/limits` first. They need a soft open-file limit of at least
