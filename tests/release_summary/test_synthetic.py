@@ -1,8 +1,9 @@
 """The release summary scripts (scripts/release-summary) on a small synthetic release.
 
 The release is built here, in a temporary folder: 3 species (alpha with 5 datasets, beta with 5, gamma with 2), 12
-datasets, both splits, the five learners, a known-gene rule on 8 datasets, and one learner row with genomes in null-fit
-folds. Each expected value below is worked out by hand from the tables in this file; the comment beside it shows how.
+datasets, both splits, the five learners, a known-gene rule on 8 datasets, one learner row with genomes in null-fit
+folds, and labels inferred from a MIC on 4 datasets. Each expected value below is worked out by hand from the tables in
+this file; the comment beside it shows how.
 """
 
 import json
@@ -25,6 +26,9 @@ SCM_LINEAGE = [0.80, 0.80, 0.66, 0.58, 0.75, 0.75, 0.75, 0.58, 0.86, 0.78, 0.71,
 NO_LASSO = 9  # beta__drug9 has no lasso entry
 N_RESISTANT = [200] * 11 + [245]  # gamma__drug11 has 245 resistant genomes
 N_SUSCEPTIBLE = 200
+# labels_from_mic_excluded of each dataset's index entry: above zero on drug1, drug4, drug9 and drug11, 3 + 7 + 1 + 12 = 23
+MIC_EXCLUDED = [0, 3, 0, 0, 7, 0, 0, 0, 0, 1, 0, 12]
+ABSENT = object()  # in a mic list: the index entry has no labels_from_mic_excluded
 
 # The known-gene rule: balanced accuracy, sensitivity, specificity. The values sit on the band edges.
 CATALOG = {
@@ -65,8 +69,10 @@ def learner_values(i):
     return v
 
 
-def build(folder, revision, flag=None, scored_on=None):
+def build(folder, revision, flag=None, scored_on=None, mic=MIC_EXCLUDED):
     """Write index.json and intervals/ for the synthetic release into folder.
+
+    mic gives each dataset's labels_from_mic_excluded, or ABSENT to leave the field out of its index entry.
 
     One learner row has genomes in null-fit folds: lasso, lineage split, gamma__drug10, with 4 resistant and 6
     susceptible. flag says whether its index entry carries null_fits_scored: true; by default it does from revision
@@ -124,6 +130,8 @@ def build(folder, revision, flag=None, scored_on=None):
             "best_random": values[best][0], "best_lineage": values[best][1], "catalog": catalog,
             "mic_essential_agreement": None,
         })
+        if mic[i] is not ABSENT:
+            datasets[-1]["labels_from_mic_excluded"] = mic[i]
         intervals = {"dataset": ident, "evaluation_revision": revision, "method": "clopper-pearson",
                      "splits": [{"scheme": s, "learners": rows} for s, rows in splits.items()]}
         (folder / "intervals" / f"{ident}.json").write_text(json.dumps(intervals))
@@ -274,6 +282,42 @@ class Synthetic(unittest.TestCase):
             self.assertEqual(wrong12["flag_keys_seen"], {"split:true": 1})
             self.assertIn("gamma__drug10 lineage lasso vme: index 2/196, file 2/200", wrong12["examples"])
             self.assertIn("gamma__drug10 lineage lasso me: index 4/194, file 4/200", wrong12["examples"])
+
+    def test_labels_inferred_from_a_mic_are_counted(self):
+        for folder in (self.rev12, self.rev14):
+            out = run_json("index_counts.py", folder)
+            with self.subTest(revision=out["revision"]):
+                # every entry holds the field; drug1, drug4, drug9 and drug11 are above zero: 3 + 7 + 1 + 12
+                self.assertEqual(out["labels_from_mic_excluded"], {"datasets_with_field": 12, "datasets_without_field": 0,
+                                                                   "datasets_above_zero": 4, "labels": 23})
+                self.assertEqual(list(out)[-1], "labels_from_mic_excluded")
+        with tempfile.TemporaryDirectory() as tmp:
+            zero = run_json("index_counts.py", build(pathlib.Path(tmp) / "zero", 14, mic=[0] * 12))
+        # zero on every entry is a count of zero, and it is not the same as no field
+        self.assertEqual(zero["labels_from_mic_excluded"], {"datasets_with_field": 12, "datasets_without_field": 0,
+                                                            "datasets_above_zero": 0, "labels": 0})
+
+    def test_a_missing_field_is_never_counted_as_zero(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            none = run_json("index_counts.py", build(pathlib.Path(tmp) / "none", 12, mic=[ABSENT] * 12))
+            # drug1 and drug3 have no field: 10 hold it, and drug4, drug9 and drug11 are above zero, 7 + 1 + 12
+            some = [ABSENT if i in (1, 3) else v for i, v in enumerate(MIC_EXCLUDED)]
+            part = run_json("index_counts.py", build(pathlib.Path(tmp) / "part", 14, mic=some))
+        self.assertEqual(none["labels_from_mic_excluded"], {"datasets_with_field": 0, "datasets_without_field": 12,
+                                                            "datasets_above_zero": None, "labels": None})
+        self.assertEqual(part["labels_from_mic_excluded"], {"datasets_with_field": 10, "datasets_without_field": 2,
+                                                            "datasets_above_zero": 3, "labels": 20})
+        # the field changes no other count of the file
+        self.assertEqual({k: v for k, v in none.items() if k != "labels_from_mic_excluded"},
+                         {k: v for k, v in run_json("index_counts.py", self.rev12).items() if k != "labels_from_mic_excluded"})
+
+    def test_a_mic_value_that_is_not_a_count_is_refused(self):
+        for value in (None, -1, True, 1.5, "3"):
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as tmp:
+                folder = build(pathlib.Path(tmp) / "bad", 14, mic=[value if i == 4 else v for i, v in enumerate(MIC_EXCLUDED)])
+                p = run("index_counts.py", folder / "index.json", folder / "intervals", check=False)
+                self.assertEqual((p.returncode, p.stdout), (1, ""))
+                self.assertIn(f"alpha__drug4 has labels_from_mic_excluded {value!r}, which is not a count", p.stderr)
 
     def test_unknown_revision_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
