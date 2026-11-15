@@ -3,8 +3,12 @@
 Nothing here is data. Every species gets one synthetic dataset of 60 scored
 genomes (30 labelled R, 30 labelled S) and one genome removed at D3; the
 pilot species gets a second dataset and four genomes whose labels test the
-consolidation rule. The figures are chosen so that the cells can be worked
-by hand (see test_script.py).
+consolidation rule. S. aureus gets two more datasets on the class line:
+edgemycin with exactly 25 R, then five genomes labelled only by the
+intermediate wordings, then 30 S; underedgemycin with 24 R. In A. baumannii
+the predictions are written and the first label request is made in the
+second ADDENDUM2.md was fixed. The figures are chosen so that the cells can
+be worked by hand (see test_script.py).
 
 make(root, fault=None) writes the tree under root and returns (lanes,
 release, data_root). A fault name breaks one input the way a test of a stop
@@ -34,6 +38,9 @@ ADD1_TIME = "2026-01-01T01:00:00Z"
 ADD2_TIME = "2026-01-01T02:00:00Z"
 PRED_TIME = "2026-01-01T03:00:00Z"
 LABEL_TIME = "2026-01-01T03:00:05Z"
+SAME_SECOND = "acinetobacter_baumannii"  # predictions and first label request in ADDENDUM2.md's own second
+# The wordings parse_call reads as intermediate, given in turn to genomes 25 to 29 of edgemycin.
+INTERMEDIATE = ("intermediate", "susceptible-dose dependent", "reduced susceptibility")
 
 
 def write(path, text, mode="w"):
@@ -77,6 +84,23 @@ def cart_score(i):
     return f"{0.5 + 0.01 * i:.2f}" if i < 30 else f"{0.01 * (i - 29):.2f}"
 
 
+def phenotype(drug, i):
+    """The label of scored genome i for a drug: 30 R then 30 S, except on the class line."""
+    if drug == "edgemycin":
+        return "resistant" if i < 25 else INTERMEDIATE[(i - 25) % len(INTERMEDIATE)] if i < 30 else "susceptible"
+    if drug == "underedgemycin":
+        return "resistant" if i < 24 else "not defined" if i < 30 else "susceptible"
+    return "resistant" if i < 30 else "susceptible"
+
+
+def chain_log(written, fetched, fault):
+    """A run's log: the prediction step, then the label step; the fault log_order writes them the other way."""
+    steps = [f"predictions written {written}", f"labels fetched {fetched}"]
+    if fault == "log_order":
+        steps.reverse()
+    return "SYNTHETIC\n" + "\n".join(steps) + "\n"
+
+
 def lineage(fault):
     """The release's lineage split: 20 R and 20 S samples; SCM recall 16 of 20 and specificity 18 of 20.
 
@@ -114,6 +138,8 @@ def make(root, fault=None):
         drugs = [("synthomycin", "Synthomycin B")]
         if slug == PILOT:
             drugs.append(("amoxicillin/clavulanate", "amoxicillin-clavulanic acid"))
+        if slug == "staphylococcus_aureus":
+            drugs += [("edgemycin", "edgemycin"), ("underedgemycin", "underedgemycin")]
         # Selected, filter and training files.
         sel = []
         for i, (asm, bs) in enumerate(gs):
@@ -171,7 +197,7 @@ def make(root, fault=None):
                     # The lasso on a third of the genomes: 10 R and 10 S, too few for the class line.
                     preds.append({"dataset": ds, "genome": asm, "learner": "lasso", "call": "resistant" if i < 30 else "susceptible",
                                   "score": "0.7" if i < 30 else "0.2", "report_sha256": digest})
-                labels.append({"antibiotic": ncbi_name, "biosample_acc": bs.lower() if i == 0 else bs, "phenotype": "resistant" if i < 30 else "susceptible"})
+                labels.append({"antibiotic": ncbi_name, "biosample_acc": bs.lower() if i == 0 else bs, "phenotype": phenotype(drug, i)})
         if slug == PILOT:
             # Four more scored genomes for the consolidation rule: R and S (conflict), intermediate only, "not defined" only, no row.
             extra = [(f"GCA_9{k:02d}{9000 + j:04d}.1", f"SAMS{k:02d}{9000 + j:04d}") for j in range(4)]
@@ -211,7 +237,7 @@ def make(root, fault=None):
         # The order of predictions and label requests.
         scored_bs = [bs for _, bs in scored] + ([f"SAMS{k:02d}{9000 + j:04d}" for j in range(4)] if slug == PILOT else [])
         if slug == PILOT:
-            write(os.path.join(lanes, "outside", "results", "logs", "chain.log"), f"SYNTHETIC\npredictions written {PRED_TIME}\n")
+            write(os.path.join(lanes, "outside", "results", "logs", "chain.log"), chain_log(PRED_TIME, LABEL_TIME, fault))
             probes = [
                 {"utc": "2025-12-31T23:00:00Z", "label": "debug-a", "http": "200", "bytes": "67", "curl_rc": "0", "url": "https://example.invalid/", "error": "POST-test"},
                 {"utc": "2025-12-31T23:00:02Z", "label": "debug-b", "http": "200", "bytes": "304", "curl_rc": "0", "url": "https://example.invalid/", "error": "POST-test"},
@@ -220,10 +246,11 @@ def make(root, fault=None):
             ]
             write(os.path.join(lanes, "outside", "results", "probes.tsv"), tsv(list(probes[0]), probes))
         else:
-            write(os.path.join(lanes, "outside2", "results", "logs", slug + ".chain.log"), f"SYNTHETIC\npredictions written {PRED_TIME}\n")
+            written, asked = (ADD2_TIME, ADD2_TIME) if slug == SAME_SECOND else (PRED_TIME, LABEL_TIME)
+            write(os.path.join(lanes, "outside2", "results", "logs", slug + ".chain.log"), chain_log(written, asked, fault))
             fq = "biosample_acc==[" + ",".join(f'"{b}"' for b in scored_bs) + "]"
             params = json.dumps({"action": "retrieve", "collection": "ast", "fq": fq})
-            requests.append([LABEL_TIME, "labels 0", "POST", "https://example.invalid/", "200", "100", params])
+            requests.append([asked, "labels 0", "POST", "https://example.invalid/", "200", "100", params])
             requests.append([LABEL_TIME, "train-iso x 0", "POST", "https://example.invalid/", "200", "100", "{}"])
     write(os.path.join(lanes, "outside2", "results", "requests.tsv"), "".join("\t".join(r) + "\n" for r in requests))
     write(os.path.join(lanes, "outside2", "results", "no-accession-share.tsv"), tsv(["species", "labelled_genomes", "neither_biosample_nor_assembly"], noacc))

@@ -61,6 +61,8 @@ CUTOFF = 0.5
 EPS = 1e-4
 DRAWS = 2000
 SEED = 1
+# The plan's log loss bootstrap is run again at these seeds; seeds.tsv lists what differs from seed 1.
+OTHER_SEEDS = (2, 3, 4, 5, 6)
 LEVEL = 0.95
 Z = 1.96
 # The plan's fixed name table (outside/scripts/survey_overlap.py, MANUAL), used after
@@ -250,9 +252,9 @@ def ranks(count):
     return -(-count * 25 // 1000) - 1, -(-count * 975 // 1000) - 1
 
 
-def bootstrap(losses):
-    """Percentile interval of the mean loss over genome resamples, seed 1."""
-    rng = random.Random(SEED)
+def bootstrap(losses, seed=SEED):
+    """Percentile interval of the mean loss over genome resamples, seed 1 unless another is given."""
+    rng = random.Random(seed)
     n = len(losses)
     means = sorted(sum(rng.choices(losses, k=n)) / n for _ in range(DRAWS))
     i, j = ranks(DRAWS)
@@ -329,11 +331,24 @@ def lineage_figure(report, learner):
         "tp": tp,
         "r": r,
         "balanced": (sum(res) / len(res) + sum(sus) / len(sus)) / 2,
+        "resistant_loss": sum(res) / len(res),
+        "susceptible_loss": sum(sus) / len(sus),
     }
 
 
+def at_share(lin, share):
+    """The lineage split's error rate and log loss with its resistant and susceptible genomes weighted to `share`.
+
+    The error rate is share (1 - recall) + (1 - share) (1 - specificity). The log loss weights the lineage
+    split's mean loss on its resistant and on its susceptible genomes the same way; for SCM, whose p is its
+    call, that is the error rate times -ln(1e-4) plus the rest times -ln(1 - 1e-4)."""
+    error = share * (1 - lin["recall"]) + (1 - share) * (1 - lin["specificity"])
+    return error, share * lin["resistant_loss"] + (1 - share) * lin["susceptible_loss"]
+
+
 def score_dataset(task):
-    """All rows of one dataset: one datasets.tsv row per learner scored, one readings.tsv row per estimable one."""
+    """All rows of one dataset: one datasets.tsv row per learner scored, one readings.tsv row per estimable one,
+    and per estimable one whether it holds at seed 1 and at each of OTHER_SEEDS."""
     with open(task["report"], encoding="utf-8") as f:
         report = json.load(f)
     need(report["id"] == task["dataset"], f"{task['report']} holds {report['id']}")
@@ -347,7 +362,7 @@ def score_dataset(task):
     labels, bioproject = task["labels"], task["bioprojects"]
     genomes = sorted(labels)
     tally = Counter(labels.values())
-    rows, readings = [], []
+    rows, readings, seeds = [], [], []
     for learner in LEARNERS:
         if learner not in task["predictions"]:
             continue
@@ -414,7 +429,8 @@ def score_dataset(task):
             "largest_bioproject": "" if top is None else top,
             "largest_bioproject_share": "" if top is None else f3(len(groups[top]) / len(pairs)),
         }
-        for k in ("recall", "recall_lo", "recall_hi", "specificity", "log_loss", "log_loss_lo", "log_loss_hi", "recall_reading", "log_loss_reading", "holds"):
+        for k in ("recall", "recall_lo", "recall_hi", "specificity", "log_loss", "log_loss_lo", "log_loss_hi", "recall_reading", "log_loss_reading", "holds",
+                  "lineage_error_rate_at_share", "lineage_log_loss_at_share"):
             row[k] = ""
         rows.append(row)
         if not estimable:
@@ -426,6 +442,13 @@ def score_dataset(task):
         llo, lhi = bootstrap(losses)
         rr = "below" if hi < lin["recall"] else ("above" if lo > lin["recall"] else "consistent")
         lr = "worse" if llo > lin["log_loss"] else ("better" if lhi < lin["log_loss"] else "consistent")
+        # The plan's bootstrap at the other seeds: only the log loss interval depends on the seed.
+        held = ["yes" if rr != "below" and lr != "worse" else "no"]
+        for seed in OTHER_SEEDS:
+            slo, _ = bootstrap(losses, seed)
+            held.append("yes" if rr != "below" and slo <= lin["log_loss"] else "no")
+        seeds.append({"species": task["species"], "part": task["part"], "dataset": task["dataset"], "learner": learner, "holds": held})
+        error_at, loss_at = at_share(lin, nr / len(pairs))
         row.update(
             {
                 "recall": f4(recall),
@@ -438,6 +461,8 @@ def score_dataset(task):
                 "recall_reading": rr,
                 "log_loss_reading": lr,
                 "holds": "yes" if rr != "below" and lr != "worse" else "no",
+                "lineage_error_rate_at_share": f4(error_at),
+                "lineage_log_loss_at_share": f4(loss_at),
             }
         )
         # Reading L: the lineage figure with its own interval.
@@ -506,7 +531,7 @@ def score_dataset(task):
             t_l = "worse" if dl - Z * se_l > 0 else ("better" if dl + Z * se_l < 0 else "consistent")
             reading.update({"T_recall": t_r, "T_log_loss": t_l, "T_holds": "yes" if t_r != "below" and t_l != "worse" else "no"})
         readings.append(reading)
-    return rows, readings
+    return rows, readings, seeds
 
 
 # ---------------------------------------------------------------- one species
@@ -650,10 +675,13 @@ def read_species(lanes, release, slug, all_drugs, rawmap, drug_of, inputs):
 
 
 def chain_times(path):
+    """The time a run's log gives for the predictions written; the log must give the label step after it."""
     with open(path, encoding="utf-8") as f:
         text = f.read()
     m = re.search(r"predictions written (\S+)", text)
     need(m is not None, f"{path}: no 'predictions written' line")
+    labels = text.find("\nlabels fetched ")
+    need(labels >= m.end(), f"{path}: the label step is not written after the predictions")
     return m.group(1)
 
 
@@ -687,7 +715,7 @@ def order_rows(lanes, species_of, scored_bs, plans, inputs):
             probe_rows = read_tsv(probes)
             reqs = [(r["utc"], r["http"]) for r in probe_rows if r["label"].startswith("labels ")]
             assigned, n_asked, n_scored, equal, plan_file = "by time", "", "", "", "PLAN.md"
-            # Requests before the plan that the log holds with no parameters (the pilot review's S5).
+            # Requests before the plan that the log gives with no parameters.
             bare = sorted((r["utc"], r["bytes"]) for r in probe_rows if r.get("error") == "POST-test" and r["utc"] < fixed[plan_file])
             need(bare, f"{probes}: no request logged without parameters")
             unrecorded = {"unrecorded_before_plan": str(len(bare)), "unrecorded_first": bare[0][0], "unrecorded_last": bare[-1][0],
@@ -726,6 +754,24 @@ def order_rows(lanes, species_of, scored_bs, plans, inputs):
 
 
 # ---------------------------------------------------------------- derived files
+
+
+def seed_rows(held):
+    """seeds.tsv: each estimable dataset whose result under the plan's rule differs between the seeds, then each species result that differs."""
+    rows = []
+    for h in held:
+        if len(set(h["holds"])) > 1:
+            rows.append({"level": "dataset", "species": h["species"], "dataset": h["dataset"], "learner": h["learner"], "part": h["part"],
+                         **{f"seed_{s}": v for s, v in zip(SEED_NAMES, h["holds"])}})
+    by = defaultdict(list)
+    for h in held:
+        by[(h["species"], h["learner"], h["part"])].append(h["holds"])
+    for (slug, ln, part), hs in sorted(by.items()):
+        results = [rule(sum(x[i] == "yes" for x in hs), len(hs)) for i in range(len(SEED_NAMES))]
+        if len(set(results)) > 1:
+            rows.append({"level": "species", "species": slug, "dataset": "", "learner": ln, "part": part,
+                         **{f"seed_{s}": v for s, v in zip(SEED_NAMES, results)}})
+    return rows
 
 
 def margin(holds, estimable):
@@ -851,7 +897,7 @@ DATASET_COLS = [
     "labels_conflict", "null_calls", "R", "S", "TP", "FN", "TN", "FP", "estimable", "note", "recall", "recall_lo", "recall_hi",
     "specificity", "log_loss", "log_loss_lo", "log_loss_hi", "lineage_figure", "lineage_recall", "lineage_specificity",
     "lineage_log_loss", "recall_reading", "log_loss_reading", "holds", "resistant_share", "cohort_resistant_share",
-    "bioprojects", "largest_bioproject", "largest_bioproject_share",
+    "bioprojects", "largest_bioproject", "largest_bioproject_share", "lineage_error_rate_at_share", "lineage_log_loss_at_share",
 ]
 READING_COLS = [
     "species", "dataset", "learner", "part", "status", "L_lineage_recall_lo", "L_lineage_recall_hi", "L_lineage_recall_source",
@@ -884,6 +930,8 @@ ORDER_COLS = [
     "unrecorded_before_plan", "unrecorded_first", "unrecorded_last", "unrecorded_bytes",
 ]
 PLAN_COLS = ["file", "lane", "sha256", "fixed", "time_from"]
+SEED_NAMES = (str(SEED),) + tuple(str(s) for s in OTHER_SEEDS)
+SEED_COLS = ["level", "species", "dataset", "learner", "part"] + [f"seed_{s}" for s in SEED_NAMES]
 # The leading columns each TSV is sorted by.
 KEYS = {
     "species.tsv": ("species",),
@@ -896,6 +944,7 @@ KEYS = {
     "order.tsv": ("species",),
     "plans.tsv": ("file",),
     "settings.tsv": ("key",),
+    "seeds.tsv": ("level", "species", "dataset", "learner"),
 }
 COLUMNS = {
     "species.tsv": SPECIES_COLS,
@@ -908,6 +957,7 @@ COLUMNS = {
     "order.tsv": ORDER_COLS,
     "plans.tsv": PLAN_COLS,
     "settings.tsv": ["key", "value"],
+    "seeds.tsv": SEED_COLS,
 }
 
 
@@ -984,7 +1034,7 @@ def readme(files, rows_of, settings):
 DESCRIBE = {
     "README.md": "this list",
     "species.tsv": "one row per species: each funnel step to the scored genomes, the overlap counts (each a lower bound), and the largest BioProject",
-    "datasets.tsv": "one row per dataset and learner scored: labels, recall, specificity and log loss with intervals, the lineage figures, the plan's reading, the class mix",
+    "datasets.tsv": "one row per dataset and learner scored: labels, recall, specificity and log loss with intervals, the lineage figures, the plan's reading, the class mix, and the lineage figures at its resistant share",
     "readings.tsv": "one row per estimable dataset and learner: readings L, C and D (and T for the pilot), and the errors in the largest BioProject",
     "learners.tsv": "derived: one row per species and learner, under the plan's rule and each reading, with the margin",
     "totals.tsv": "derived: per learner, the counts over the eight species",
@@ -994,32 +1044,44 @@ DESCRIBE = {
     "plans.tsv": "the three plan files with their sha256 and the time each was fixed",
     "settings.tsv": "the release, the class line, the pass rule, and the seed and draws of every bootstrap",
     "inputs.sha256": "the sha256 of every input file the script read",
-    "plan/PLAN.md": "the pilot's plan, as lane outside fixed it",
-    "plan/ADDENDUM.md": "the eight species' addendum, as lane outside2 fixed it",
-    "plan/ADDENDUM2.md": "the second addendum with readings L, C and D, as lane outside2 fixed it",
+    "plan/PLAN.md": "the pilot's plan, as fixed before the pilot ran",
+    "plan/ADDENDUM.md": "the eight species' addendum, as fixed before their labels were read",
+    "plan/ADDENDUM2.md": "the second addendum with readings L, C and D, as fixed before the eight species' labels were read",
+    "seeds.tsv": "the plan's log loss bootstrap at seeds 2 to 6: each dataset and each species result whose result under the rule differs from seed 1",
     "SHA256SUMS": "the sha256 of every other file of this directory",
 }
 
 README = """# The test on data from another public database: the record
 
-This directory is the record behind [`docs/other-database-test.md`](../../docs/other-database-test.md). `scripts/other-database/record.py` writes every file of it from the saved files of lanes `outside` and `outside2`, the reports and interval files of release `{release}`, and the data root's drug name list. It fits nothing, runs no `grm` and downloads nothing. It recomputes every measure from the saved predictions and labels.
+This directory is the record behind [`docs/other-database-test.md`](../../docs/other-database-test.md). `scripts/other-database/record.py` writes every file of it from the saved files of the test's two parts, `outside` for the *E. coli* pilot and `outside2` for eight more species, the reports and interval files of release `{release}`, and the data root's drug name list. It fits nothing, runs no `grm` and downloads nothing. It recomputes every measure from the saved predictions and labels.
 
 ## Files
 
-| File | Rows | Holds |
+| File | Rows | Contents |
 |---|---|---|
 {table}
 
 Every file is plain text. Each TSV has a header row and is sorted by its first columns. The script writes the same bytes on every run and at any hash seed.
 
+The record contains no label and no prediction per genome. A reader can fetch the scored genomes by the accessions in `genomes.tsv` and redo the overlap, and cannot recompute a cell.
+
 ## Rules
 
 - **Labels.** An NCBI antibiotic name maps to a release drug by exact equality, then by the data root's `curated/drug_names.json`, then by the plan's fixed table. One label per BioSample and drug: R and S together is a conflict, then R, then S; intermediate alone gives no label.
 - **Measures.** As `plan/PLAN.md` section 6 fixes them. A bootstrap draws the labelled genomes with a call in the order of their assembly accessions.
-- **Readings.** L, C and D are those of `plan/ADDENDUM2.md` section B2, fixed in advance for the eight species and exploratory for the pilot. T is the pilot review's two-sample reading, exploratory, and the pilot's L, C and D are that review's readings too.
-- **Ties.** A tie on the largest BioProject goes to the lower accession: letters first, then the lower number, so PRJNA717739 comes before PRJNA1160997. A field that holds several BioProjects, or a genome with none, comes after every single accession.
+- **Readings.** L, C and D are those of `plan/ADDENDUM2.md` section B2, fixed in advance for the eight species and exploratory for the pilot. T is the two-sample reading of the pilot's review, exploratory, and the pilot's L, C and D are that review's readings too.
+- **Class mix.** With s the dataset's resistant share, `lineage_error_rate_at_share` is s times one minus the lineage recall, plus one minus s times one minus the lineage specificity. `lineage_log_loss_at_share` weights the lineage split's mean loss on resistant and on susceptible genomes by s and one minus s.
+- **Seeds.** `seeds.tsv` repeats the plan's log loss bootstrap at seeds 2 to 6. It lists each dataset whose result under the rule differs from seed 1 at any of them, and each species result that differs.
+- **Ties.** A tie on the largest BioProject goes to the lower accession: letters first, then the lower number, so PRJNA717739 comes before PRJNA1160997. A field that names several BioProjects, or a genome with none, comes after every single accession.
 - **Words.** `meets` in `learners.tsv` and `totals.tsv` means the learner meets the plan's rule in the species: it holds on more than half of at least 3 estimable datasets. `margin` is how many datasets would have to change for the other result.
-- **Pre-plan requests.** `unrecorded_before_plan` in `order.tsv` counts the pilot's requests before `PLAN.md` was fixed that the request log holds with no parameters.
+- **Pre-plan requests.** `unrecorded_before_plan` in `order.tsv` counts the pilot's requests before `PLAN.md` was fixed that the request log gives with no parameters.
+- **Accession gap.** `no_accession_share` in `species.tsv` is read from the eight species' part, `outside2/results/no-accession-share.tsv`. The script checks only that the file has a row for each of the nine species and that no row counts more genomes with neither accession than labelled genomes; it does not count them again from the data root.
+
+## Plan files
+
+The three plan files are copied byte for byte, as their sha256 fixed them, so they keep their own words. The machine path in `PLAN.md` is where the data root's BV-BRC tables lay on the machine the test ran on, and scratch is that machine's working space. `ADDENDUM2.md` was fixed after "the owner's note", a note of 15 Nov 2026 to the people who ran the test, which is not public; the addendum gives what the note changed.
+
+The two scripts that `ADDENDUM2.md` section B2 names by sha256 belong to the pilot's review and are not in this repository; `record.py` computes readings L, C and D as section B2 defines them.
 
 ## Commands
 
@@ -1028,7 +1090,7 @@ python3 -I scripts/other-database/record.py --lanes "$LANES" --release "$R" --da
 python3 -I scripts/other-database/record.py --lanes "$LANES" --release "$R" --data-root "$ROOT" --check reference/other-database
 ```
 
-`LANES` holds the lanes' output directories `outside/` and `outside2/`, `R` is the unpacked release and `ROOT` is the public data root. `--check` exits 0 only when this directory is what the script writes from them.
+`LANES` is the directory that contains the two parts' output directories, `outside/` and `outside2/`, `R` is the unpacked release and `ROOT` is the public data root. `--check` exits 0 only when this directory is what the script writes from them. Neither output directory is public, so only a machine that has them can run these two commands.
 """
 
 
@@ -1074,8 +1136,9 @@ def build(lanes, release, root, jobs):
             results = pool.map(score_dataset, tasks, chunksize=1)
     else:
         results = [score_dataset(t) for t in tasks]
-    datasets = [r for rows, _ in results for r in rows]
-    readings = [r for _, rs in results for r in rs]
+    datasets = [r for rows, _, _ in results for r in rows]
+    readings = [r for _, rs, _ in results for r in rs]
+    held = [h for _, _, hs in results for h in hs]
 
     settings = settings_rows(os.path.basename(os.path.normpath(release)), index["evaluation_revision"])
     learners, totals, differences = derive(datasets, readings)
@@ -1090,6 +1153,7 @@ def build(lanes, release, root, jobs):
         "order.tsv": tsv("order.tsv", order),
         "plans.tsv": tsv("plans.tsv", plans),
         "settings.tsv": tsv("settings.tsv", settings),
+        "seeds.tsv": tsv("seeds.tsv", seed_rows(held)),
     }
     roots = [(os.path.normpath(lanes), "lanes"), (os.path.normpath(release), "release"), (os.path.normpath(root), "data-root")]
 

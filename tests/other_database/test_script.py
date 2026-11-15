@@ -9,6 +9,7 @@ import io
 import math
 import os
 import pathlib
+import random
 import subprocess
 import sys
 import tempfile
@@ -88,6 +89,56 @@ class SyntheticRecord(unittest.TestCase):
         # The NCBI name reaches the release name through the plan's fixed table; one BioSample is lower case.
         r = self.ds[("escherichia_coli__amoxicillin_clavulanate", "scm")]
         self.assertEqual([r[k] for k in ("labels_R", "labels_S", "labels_no_call")], ["30", "30", "4"])
+
+    def test_class_line_at_25(self):
+        # SYNTHETIC S. aureus: edgemycin has exactly 25 R and 30 S, underedgemycin 24 R and 30 S.
+        for ln in ("scm", "cart"):
+            r = self.ds[("staphylococcus_aureus__edgemycin", ln)]
+            self.assertEqual((r["R"], r["S"], r["estimable"], r["note"]), ("25", "30", "yes", ""))
+            self.assertIn(("staphylococcus_aureus__edgemycin", ln), self.rd)
+            r = self.ds[("staphylococcus_aureus__underedgemycin", ln)]
+            self.assertEqual((r["R"], r["S"], r["estimable"], r["note"]), ("24", "30", "no", "fewer than 25 R or 25 S"))
+            self.assertNotIn(("staphylococcus_aureus__underedgemycin", ln), self.rd)
+
+    def test_each_intermediate_wording_gives_no_label(self):
+        # SYNTHETIC edgemycin: genomes 25 to 29 are labelled only by the wordings of synthetic.INTERMEDIATE, in turn.
+        r = self.ds[("staphylococcus_aureus__edgemycin", "scm")]
+        self.assertEqual([r[k] for k in ("scored", "labels_R", "labels_S", "labels_I_only", "labels_no_call", "labels_conflict")],
+                         ["60", "25", "30", "5", "0", "0"])
+        for wording in synthetic.INTERMEDIATE:
+            self.assertEqual(record.parse_call(wording), "I", wording)
+            self.assertEqual(record.parse_call(wording.title()), "I", wording)
+        r = self.ds[("staphylococcus_aureus__underedgemycin", "scm")]
+        self.assertEqual((r["labels_I_only"], r["labels_no_call"]), ("0", "6"))
+
+    def test_lineage_at_share_by_hand(self):
+        clip, keep = -math.log(1e-4), -math.log(1 - 1e-4)
+        # SCM: the lineage split's recall 0.8 and specificity 0.9 at the test's share 30 of 60.
+        r = self.ds[("salmonella_enterica__synthomycin", "scm")]
+        self.assertEqual(r["lineage_error_rate_at_share"], f"{0.5 * 0.2 + 0.5 * 0.1:.4f}")
+        self.assertEqual(r["lineage_log_loss_at_share"], f"{0.15 * clip + 0.85 * keep:.4f}")
+        # The same at edgemycin's share, 25 of 55.
+        r = self.ds[("staphylococcus_aureus__edgemycin", "scm")]
+        self.assertEqual(r["lineage_error_rate_at_share"], f"{25 / 55 * 0.2 + 30 / 55 * 0.1:.4f}")
+        # CART: no lineage error; the loss of its 20 R (19 at 0.8, 1 at 0.5) and 20 S (at 0.3), weighted half and half.
+        r = self.ds[("salmonella_enterica__synthomycin", "cart")]
+        res = (-19 * math.log(0.8) - math.log(0.5)) / 20
+        self.assertEqual(r["lineage_error_rate_at_share"], "0.0000")
+        self.assertEqual(r["lineage_log_loss_at_share"], f"{0.5 * res + 0.5 * -math.log(0.7):.4f}")
+        # Blank where the dataset is not estimable.
+        r = self.ds[("escherichia_coli__synthomycin", "lasso")]
+        self.assertEqual((r["lineage_error_rate_at_share"], r["lineage_log_loss_at_share"]), ("", ""))
+
+    def test_label_request_in_the_plans_second_is_not_after_it(self):
+        # SYNTHETIC A. baumannii: predictions written and first label request both at the second ADDENDUM2.md was fixed.
+        a = self.order[synthetic.SAME_SECOND]
+        self.assertEqual((a["predictions_written"], a["first_label_request"]), (synthetic.ADD2_TIME, synthetic.ADD2_TIME))
+        self.assertEqual((a["first_at_or_after_predictions"], a["first_after_plan_file"]), ("yes", "no"))
+        s = self.order["salmonella_enterica"]
+        self.assertEqual((s["first_at_or_after_predictions"], s["first_after_plan_file"]), ("yes", "yes"))
+
+    def test_seeds_file_on_synthetic_inputs(self):
+        self.assertEqual(pathlib.Path(self.out, "seeds.tsv").read_text(encoding="utf-8"), "\t".join(record.SEED_COLS) + "\n")
 
     def test_too_few_is_not_estimable(self):
         r = self.ds[("escherichia_coli__synthomycin", "lasso")]
@@ -185,6 +236,7 @@ class Stops(unittest.TestCase):
         "stray_genome": "which is not selected",
         "plan_sha": "its sha256 differs",
         "lineage_metric": "differs from the report's",
+        "log_order": "the label step is not written after the predictions",
     }
 
     def test_faults_stop(self):
@@ -217,6 +269,40 @@ class Pieces(unittest.TestCase):
     def test_bootstrap_of_constant_losses(self):
         self.assertEqual(record.bootstrap([0.25] * 30), (0.25, 0.25))
 
+    def test_bootstrap_seeds(self):
+        x = [0.11, 0.23, 0.37, 0.52, 0.68, 0.85, 1.3, 0.04, 0.09, 0.16, 0.27, 2.1]
+        self.assertEqual((record.SEED, record.OTHER_SEEDS), (1, (2, 3, 4, 5, 6)))
+        self.assertEqual(record.bootstrap(x), record.bootstrap(x, 1))
+        self.assertEqual(record.bootstrap(x), (0.2733333333333334, 0.915))
+        self.assertEqual(record.bootstrap(x, 2), (0.26916666666666667, 0.93))
+
+    def test_reading_C_draws_resistant_then_susceptible(self):
+        res, sus = [0.11, 0.23, 0.37, 0.52, 0.68, 0.85, 1.3], [0.04, 0.09, 0.16, 0.27, 2.1]
+        # Written in by hand from a run of the plan's code; drawing the susceptible genomes first gives 0.2577 to 0.9746.
+        self.assertEqual(record.stratified(res, sus), (0.2648571428571429, 0.9787142857142858))
+        rng = random.Random(1)
+        vals = []
+        for _ in range(2000):
+            r = sum(rng.choices(res, k=len(res))) / len(res)
+            s = sum(rng.choices(sus, k=len(sus))) / len(sus)
+            vals.append((r + s) / 2)
+        vals.sort()
+        self.assertEqual(record.stratified(res, sus), (vals[49], vals[1949]))
+
+    def test_seed_rows(self):
+        def h(dataset, holds):
+            return {"species": "a", "part": "eight", "dataset": dataset, "learner": "scm", "holds": holds}
+
+        flip = ["no", "yes", "yes", "no", "yes", "yes"]
+        rows = record.seed_rows([h("a__d1", flip), h("a__d2", ["yes"] * 6), h("a__d3", ["no"] * 6)])
+        seeds = [f"seed_{s}" for s in record.SEED_NAMES]
+        self.assertEqual(rows, [
+            {"level": "dataset", "species": "a", "dataset": "a__d1", "learner": "scm", "part": "eight", **dict(zip(seeds, flip))},
+            {"level": "species", "species": "a", "dataset": "", "learner": "scm", "part": "eight",
+             **dict(zip(seeds, ["fails", "meets", "meets", "fails", "meets", "meets"]))},
+        ])
+        self.assertEqual(record.seed_rows([h("a__d2", ["yes"] * 6)]), [])
+
     def test_rule_and_margin(self):
         # meets: holds - floor(e / 2); fails: floor(e / 2) + 1 - holds; under 3 datasets nothing.
         cases = [(5, 8, "meets", "1"), (4, 8, "fails", "1"), (8, 8, "meets", "4"), (0, 7, "fails", "4"), (2, 3, "meets", "1"), (2, 2, "not assessable", "")]
@@ -231,8 +317,9 @@ class Pieces(unittest.TestCase):
         self.assertEqual(record.loss(1, 0.5), -math.log(0.5))
 
     def test_parse_and_consolidate(self):
-        self.assertEqual([record.parse_call(x) for x in ("Resistant", "nonsusceptible", "susceptible", "intermediate", "not defined", None)],
-                         ["R", "R", "S", "I", None, None])
+        self.assertEqual([record.parse_call(x) for x in ("Resistant", "nonsusceptible", "susceptible", "intermediate", "susceptible-dose dependent",
+                                                         "reduced susceptibility", "not defined", None)],
+                         ["R", "R", "S", "I", "I", "I", None, None])
         self.assertEqual([record.consolidate(c) for c in ({"R", "S"}, {"R", "I"}, {"S"}, {"I"}, set())], ["conflict", "R", "S", "I only", "no call"])
 
 
