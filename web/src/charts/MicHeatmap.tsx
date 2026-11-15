@@ -95,7 +95,10 @@ export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, n
       </svg>
       </MarkListbox>
       </ScrollFrame>
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-tiny text-muted-text" aria-label="Heatmap key">
+      {/* The key wraps at the chart's width (w-0 min-w-full): unwrapped, its
+          one line set the figure's column at about 925 px and left the text
+          beside it 0 px wide at a 1024 px window. */}
+      <div className="mt-3 flex w-0 min-w-full flex-wrap items-center gap-x-4 gap-y-2 text-tiny text-muted-text" aria-label="Heatmap key">
         {cuts.map((cut, i) => <span key={cut} className="inline-flex items-center gap-1.5"><span className="size-4" aria-hidden="true" style={{ background: fill(cut) }} />{i === 0 ? 1 : cuts[i - 1]! + 1}–{cut} isolates</span>)}
         <span className="inline-flex items-center gap-1.5">
           <svg aria-hidden="true" width={16} height={12} className="shrink-0">
@@ -107,7 +110,7 @@ export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, n
       {band === undefined ? null : (
         // Its own line under the key, at zero width to the grid's column
         // sizing (w-0 min-w-full), so the figure's column keeps the width the
-        // chart and its key give it and the text beside it keeps its measure.
+        // chart gives it and the text beside it keeps its measure.
         <p className="mt-2 w-0 min-w-full text-tiny text-muted-text" data-baseline="band">
           Between the dashed lines: {pct(band.model)} of {int(band.n)} exact MICs for the model, {pct(band.constant)} for a constant MIC from the training folds.
         </p>
