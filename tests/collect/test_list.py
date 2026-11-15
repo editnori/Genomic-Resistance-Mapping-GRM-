@@ -177,6 +177,37 @@ class BarredWords(unittest.TestCase):
                     self.assertIn("nothing was written", err)
                     self.assertFalse((d / "l.tsv").exists())
 
+    def test_a_barred_word_in_another_form_or_split_by_a_separator_stops_the_list(self):
+        refused = {"\uff2b\uff33\uff24-notes.txt": "ksd",  # full width
+                   "\u212asd.txt": "ksd",  # the Kelvin sign
+                   "\u017fealed.txt": "sealed",  # the long s
+                   "Held_Out.tsv": "held-out", "held out.tsv": "held-out", "held.out.tsv": "held-out",
+                   "heldout.tsv": "held-out", "KS-30.tsv": "ks30", "ks_50.tsv": "ks50", "ks - 30.tsv": "ks30",
+                   "Sig-Drug.tsv": "sigdrug", "sig__drug.tsv": "sigdrug", "\uff33\uff29\uff27drug.tsv": "sigdrug",
+                   "ks/50.tsv": "ks50", "held/out/x.tsv": "held-out"}
+        kept = ("tasks/data.tsv", "ks-3-0.tsv", "sealing.txt", "sig-dru-g.tsv", "k-s-d.txt")
+        d, proj, rules = kit.project(self)
+        kit.write(proj / "notes", {name: b"x" for name in list(refused) + list(kept)})
+        for name in refused:
+            os.chmod(proj / "notes" / name, 0)  # opening it would fail with status 2
+        rc, out, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "l.tsv")
+        self.assertEqual((rc, out), (3, ""), err)
+        self.assertIn(f"refused: {len(refused)} paths hold a barred word; none was opened:", err)
+        for name, word in refused.items():
+            shown = "proj/notes/held/out" if name.startswith("held/") else f"proj/notes/{name}"
+            self.assertIn(f"  {shown}  ({word})\n", err)
+        for name in kept:
+            self.assertNotIn(name, err)
+        for name in refused:
+            os.chmod(proj / "notes" / name, 0o600)
+            os.unlink(proj / "notes" / name)
+        os.removedirs(proj / "notes" / "held" / "out")
+        rc, out, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "l.tsv")
+        self.assertEqual((rc, err), (0, ""), out)
+        listed = (d / "l.tsv").read_text(encoding="utf-8")
+        for name in kept:
+            self.assertIn(f"proj/notes/{name}\t1\t{kit.sha(b'x')}\tinternal-record\n", listed)
+
     def test_a_barred_name_under_a_regenerable_directory_stops_the_list_too(self):
         d, proj, rules = kit.project(self)
         kit.write(proj, {"build/target/debug/private/key.bin": b"k"})

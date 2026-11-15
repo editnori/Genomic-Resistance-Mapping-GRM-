@@ -31,10 +31,13 @@ with a trailing slash and the total size of its files, and no file in it is open
 (REGENERABLE_DIRS: node_modules, __pycache__), by a file it holds (REGENERABLE_MARKERS: CACHEDIR.TAG, which cargo,
 pytest and other tools write into their build and cache directories, or pyvenv.cfg, a Python environment), or by a
 rules pattern that ends in "/". A name such as target or .cargo alone does not make a directory regenerable.
-`refused` is any path holding one of the words in BARRED, in any letter case. `list` names every such path and stops
-with status 3 before it writes anything; it never opens one and never enters one. With --record-refused it writes
-them as rows with no size and no hash, and goes on. `pack` and `check` stop on such a path too, and so does every
-command given one as an argument.
+`refused` is any path holding one of the words in BARRED. The path is read after NFKC and casefold, so letter case
+and letter width do not matter, and the four joined words held-out, ks30, ks50 and sigdrug match with any run of
+characters that are not letters or digits between their halves, or none: held_out, KS-30, sig drug and ks/50 are
+refused. The other five match as written; nothing is dropped from the whole path, so tasks/data is not ksd. `list`
+names every such path and stops with status 3 before it writes anything; it never opens one and never enters one.
+With --record-refused it writes them as rows with no size and no hash, and goes on. `pack` and `check` stop on such
+a path too, and so does every command given one as an argument.
 
 RULES gives the other classes: one line per rule, CLASS<TAB>PATTERN, the first match wins, "#" starts a comment.
 A pattern is matched against the whole list path with fnmatch, so "*" also crosses "/". A file that no rule matches
@@ -64,9 +67,14 @@ import re
 import stat
 import sys
 import tarfile
+import unicodedata
 import zlib
 
 BARRED = ("sealed", "held-out", "ks30", "ks50", "vumc", "clinical", "private", "ksd", "sigdrug")
+# The two halves of each joined word; any run of characters that are not letters or digits may stand between them.
+JOINED = {"held-out": ("held", "out"), "ks30": ("ks", "30"), "ks50": ("ks", "50"), "sigdrug": ("sig", "drug")}
+BARRED_RE = tuple((w, re.compile(r"[\W_]*".join(map(re.escape, JOINED[w])) if w in JOINED else re.escape(w)))
+                  for w in BARRED)
 PACKABLE = ("public-result", "internal-record", "public-input")
 REGENERABLE, REFUSED = "regenerable", "refused"
 CLASSES = PACKABLE + (REGENERABLE, REFUSED)
@@ -98,9 +106,9 @@ class Damaged(Exception):
 
 
 def barred_word(path):
-    """The first barred word in the path, in any letter case, or None."""
-    low = path.lower()
-    return next((w for w in BARRED if w in low), None)
+    """The first barred word in the path, read after NFKC and casefold, or None."""
+    folded = unicodedata.normalize("NFKC", path).casefold()
+    return next((w for w, r in BARRED_RE if r.search(folded)), None)
 
 
 def barred_on_disk(path):

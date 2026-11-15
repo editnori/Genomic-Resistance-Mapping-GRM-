@@ -7,15 +7,18 @@ import hashlib
 import io
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
+import unicodedata
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 TOOL = ROOT / "scripts" / "collect" / "collect.py"
 BARRED = ("sealed", "held-out", "ks30", "ks50", "vumc", "clinical", "private", "ksd", "sigdrug")
+JOINED = {"held-out": ("held", "out"), "ks30": ("ks", "30"), "ks50": ("ks", "50"), "sigdrug": ("sig", "drug")}
 EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 # The synthetic project. The sizes in the comments are counted by hand and the tests use them as written.
@@ -73,11 +76,18 @@ def list_text(rows=ROWS):
     return "\n".join(lines) + "\n"
 
 
+def barred(text):
+    """The tool's rule, written again here: NFKC and casefold, and any run of characters that are not letters or digits
+    between the halves of a joined word."""
+    folded = unicodedata.normalize("NFKC", text).casefold()
+    return any(re.search(r"[\W_]*".join(JOINED[w]) if w in JOINED else re.escape(w), folded) for w in BARRED)
+
+
 def tmp(case):
     """A new empty folder, removed when the test ends. A random name could hold a barred word, so it is redrawn."""
     while True:
         d = os.path.realpath(tempfile.mkdtemp(prefix="collect-"))
-        if not any(w in d.lower() for w in BARRED):
+        if not barred(d):
             break
         os.rmdir(d)
     case.addCleanup(restore_and_remove, d)
