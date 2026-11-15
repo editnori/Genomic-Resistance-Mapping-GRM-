@@ -119,6 +119,12 @@ enum Command {
         /// (`EvalConfig::screened_features`).
         #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
         screened_features: usize,
+        /// Experiment, off by default (docs/null-fold-refit.md): also refit
+        /// every boosting and lasso outer fold whose fit is null under the
+        /// fallback settings, and append each one's scores to this JSON-lines
+        /// file. Reports are written exactly as without it.
+        #[arg(long)]
+        exp_null_refit: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -330,9 +336,15 @@ fn run(cli: Cli) -> Result<()> {
             only,
             force,
             screened_features,
-        } => species
-            .iter()
-            .try_for_each(|s| learn(&layout, s, &only, force, screened_features)),
+            exp_null_refit,
+        } => {
+            if let Some(path) = &exp_null_refit {
+                grm::learn::null_refit::enable(path)?;
+            }
+            species
+                .iter()
+                .try_for_each(|s| learn(&layout, s, &only, force, screened_features))
+        }
         Command::Pipeline {
             species,
             workers,

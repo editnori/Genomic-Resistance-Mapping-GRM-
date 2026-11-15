@@ -44,6 +44,7 @@
 
 use super::gbt::{self, GbtParams, Objective};
 use super::lasso;
+use super::null_refit;
 use super::scm::{self, Kind, Rule};
 use super::tree::{self, ForestParams, TreeParams};
 use super::{
@@ -562,6 +563,38 @@ fn fit_lasso_traced(
     })
 }
 
+/// `fit_lasso` for other modules' tests: its scores and selected point.
+#[cfg(test)]
+pub(crate) fn fit_lasso_for_tests(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    cfg: &EvalConfig,
+    seed: u64,
+    context: LassoContext<'_>,
+) -> (Option<Vec<f64>>, Option<usize>) {
+    let (scored, _) = fit_lasso(x, y, train, None, cfg, seed, context).unwrap();
+    (
+        scored.scores,
+        scored.lasso_fit.and_then(|a| a.selected_point),
+    )
+}
+
+/// `fit_gbt` for other modules' tests: its scores, None for a null fit.
+#[cfg(test)]
+pub(crate) fn fit_gbt_for_tests(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    cfg: &EvalConfig,
+    seed: u64,
+) -> Option<Vec<f64>> {
+    fit_gbt(x, y, train, None, "group", cfg, seed)
+        .unwrap()
+        .0
+        .scores
+}
+
 /// Select and refit one already-solved path. Keeping this separate lets the
 /// negative tests inject capped statuses without changing solver limits.
 pub(crate) fn fit_lasso_from_path(
@@ -889,20 +922,28 @@ pub fn evaluate(
             let (cx, _) = training_candidates(x, &train, min_support);
             for (li, learner) in LEARNERS.iter().enumerate() {
                 let t0 = Instant::now();
-                fits[li].push(fit_fold(
-                    learner,
-                    &cx,
-                    y,
-                    &train,
-                    tuning.as_deref(),
-                    cfg,
-                    LassoContext {
-                        dataset,
-                        scheme,
-                        outer_fold: Some(fi),
-                    },
-                )?);
+                let context = LassoContext {
+                    dataset,
+                    scheme,
+                    outer_fold: Some(fi),
+                };
+                let fit = fit_fold(learner, &cx, y, &train, tuning.as_deref(), cfg, context)?;
                 seconds[li] += t0.elapsed().as_secs_f64();
+                // The null-fold experiment, off by default, writes only its
+                // own file and changes no fit or score.
+                if fit.scores.is_none() && null_refit::enabled() {
+                    null_refit::record_fold(
+                        learner,
+                        &cx,
+                        y,
+                        &train,
+                        tuning.as_deref(),
+                        cfg,
+                        fold_seed(cfg, fi),
+                        context,
+                    )?;
+                }
+                fits[li].push(fit);
             }
         }
         let learners = LEARNERS
