@@ -276,6 +276,9 @@ src/lib.rs learn::lasso::tests::the_line_search_stops_where_a_coefficient_reache
 src/lib.rs learn::lasso::tests::the_saved_real_paths_are_the_same_at_any_thread_count
 src/lib.rs learn::lasso::tests::vibrio_cholerae_fold0_converges_at_every_point
 src/lib.rs learn::lasso::tests::violators_tie_to_the_lowest_column
+src/lib.rs learn::null_refit::tests::a_null_lasso_fold_records_every_points_refit_and_both_arms
+src/lib.rs learn::null_refit::tests::best_round_is_the_last_round_that_lowers_the_loss_by_more_than_1e_9
+src/lib.rs learn::null_refit::tests::the_gbt_fit_with_early_stopping_is_the_production_fit_and_off_keeps_every_round
 src/lib.rs learn::planned::tests::a_cohort_arm_never_trains_on_a_copy_of_a_scored_genome
 src/lib.rs learn::planned::tests::a_cohort_arm_never_trains_on_a_test_lineage_on_the_lineage_split
 src/lib.rs learn::planned::tests::a_cohort_plan_scores_a_class_balanced_common_set_and_trains_on_the_rest
@@ -469,3 +472,4 @@ tests/foldmask_extended.rs extended_foldmask_smoke
 tests/foldmask_extended.rs extended_foldmask_vectors [ignored]
 tests/kmer_space_extended.rs multi_k_mixer_bijection_large [ignored]
 tests/kmer_space_extended.rs multi_k_space_vectors
+tests/null_fold_refit.rs the_flag_changes_no_output_and_records_each_null_fold_once
