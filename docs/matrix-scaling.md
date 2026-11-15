@@ -19,6 +19,11 @@ durable matrix save. Those fixes still need a fresh independent review.
 The cap-4000 cohort is now frozen, but the MTB follow-up also waits for a
 reviewed disk-sparse wiring change.
 
+Since 15 Nov 2026 one command calls the out-of-core path:
+`grm matrix --column-blocks N` (below, "The column-block switch"). It
+keeps every kset, so it is not the disk-sparse sequence, and
+`grm pipeline` still calls `build`.
+
 The wide key removes the packed **algorithmic** ceiling, not the downstream
 safety gate. Every public build/merge entry point, and `FeatureMatrix::load`,
 refuses more than `REVIEWED_COLUMNS` (4,096) columns. `Dataset::project`, the
@@ -216,6 +221,86 @@ Resume must reconstruct the same expected list and k, and rewrite every
 missing or stale block. Receipts make that decision explicit; they do not
 replace the caller's counted-manifest bookkeeping.
 
+### The column-block switch (`grm matrix --column-blocks N`)
+
+`species::build_matrix` with `Some(N)` takes the expected names and kset
+digests from `counted.json` and the k from its `k`, writes one partial per
+N genomes in counted order to `species/<slug>/matrix-partials/` (block
+`b` holds columns `b * N` onward), merges them with
+`build_from_partials`, saves the matrix as the default path does, and
+then removes the folder. Each block prints one line, and the run prints
+the partial bytes in total. Without the switch, `build_matrix` calls
+`build` exactly as before and leaves `matrix-partials/` alone.
+
+The switch refuses, before anything is read or written:
+
+- a width N that is not a positive multiple of 64;
+- a `matrix-partials` that is a symbolic link. The blocks would be
+  written at its target, and the removal would remove only the link. The
+  message says it is a link, and the link and its target are left as
+  they are.
+
+Once `counted.json` is read, and before any block is written, it refuses
+more than `REVIEWED_COLUMNS` (4,096) genomes with the default path's
+message.
+
+It is the smallest wiring that lets one species' matrix be built both
+ways with the repository's own command and the five files compared. It is
+not the disk-sparse sequence:
+
+- Every kset stays on disk, so it saves no disk; it adds the partials
+  until they are removed.
+- It passes a reserve of 0 to `write_partial`, so only the plain
+  free-space check applies. A full disk stops the run at the block being
+  written, and the error names that block and its file. On a small
+  tmpfs that held block 0 (synthetic cohort):
+
+      Error: write column block 1 (columns 64..128) to .../matrix-partials/block-0001.kpart
+
+      Caused by:
+          No space left on device (os error 28)
+
+  When the free-space check sees the shortfall first, the cause reads
+  `.../matrix-partials has F bytes free: writing B more would cut into the
+  0-byte reserve`. Either way the old matrix stands and the partials are
+  removed.
+- It rewrites every block on each run and has no resume. With the ksets
+  kept, nothing is lost that a rerun cannot write again.
+- It saves the matrix first and removes the partials after. If the merge
+  or the save fails, the partials are removed and the run reports that
+  error. If only the removal fails, the merged matrix is kept, and the run
+  still ends with an error and a nonzero exit: the message says the matrix
+  was saved and names the folder to remove by hand. A folder that is
+  already gone counts as removed.
+- There is no lock file. Two runs at once on one species can stop each
+  other, with an I/O error or a block check.
+- A run that is stopped leaves `matrix-partials/`; the next run with the
+  switch removes what it finds there, and a run without it leaves it
+  alone.
+
+It refuses inputs the default path accepts. `write_partial` checks each
+kset's genome name and digest against `counted.json`, while `build` takes
+the names from the kset headers and does not compare digests. A kset that
+was replaced after the count therefore stops the switch, naming the
+genome, where the default path builds from it. On ksets that match
+`counted.json` both paths write the same five files.
+
+Tests in `src/species.rs`, on synthetic cohorts: the five files at widths
+64, 128 and 4,096 and at min-support 1 and 2; the same on 128 genomes,
+which widths 64 and 128 divide, and on 70 genomes counted at k = 21; one
+partial and one result file per block at the expected columns; a run
+under `ulimit -Sn 96` where the default path fails with its hint and
+blocks of 64 write the default path's files; failures in the first,
+second and last block, among them a block file that cannot be created,
+that keep the old matrix, leave no partials and name the block; a run
+without the switch that leaves `matrix-partials/` alone; a failed removal
+that keeps the new matrix and names the folder, and a folder another run
+removed first, which counts as removed; a linked
+`matrix-partials` refused before `counted.json` is read; and 4,097
+genomes refused before any block is written. In `src/main.rs`, a test
+runs `grm matrix --column-blocks 64` through the command's own `run`, so
+a `run` that dropped the switch would fail.
+
 ### Resource model
 
 - Temporary disk: about W x (kset size) for the block being folded, plus
@@ -393,10 +478,10 @@ Out-of-core integrity and scaling:
   leaves only partials/receipts, and matches stock `build`.
 - `partials_merge_under_an_open_file_limit_that_stops_build`: reruns the
   test binary under `ulimit -Sn 96`. There, `build` on 200 genomes fails
-  with the `ulimit -n` hint and points to `write_partial`, a 200-genome
-  `write_partial` fails with a hint to write narrower blocks and leaves no
-  file, and 64-genome partials complete. The child's matrix digest equals
-  `build`'s digest from the parent, which has no limit.
+  with the `ulimit -n` hint and points to `grm matrix --column-blocks 64`,
+  a 200-genome `write_partial` fails with a hint to write narrower blocks
+  and leaves no file, and 64-genome partials complete. The child's matrix
+  digest equals `build`'s digest from the parent, which has no limit.
 
 Tests that hold thousands of ksets open take turns behind a mutex and check
 `/proc/self/limits` first. They need a soft open-file limit of at least
@@ -526,7 +611,8 @@ out a difference of a few percent.
 Fresh independent review of this integrity/scaling change comes before any
 biological run. After that, at minimum:
 
-- **Pipeline integration (not built).** Nothing calls the partial path.
+- **Pipeline integration (not built).** Only `grm matrix --column-blocks`
+  calls the partial path, with every kset kept, and `grm pipeline` does not.
   The count -> partial -> delete loop belongs in `species.rs` / `main.rs`
   and needs its own change and review. It must persist and reconstruct the
   expected names and kset digests and pass the config's k, use the

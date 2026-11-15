@@ -103,6 +103,13 @@ enum Command {
         /// from at least this many).
         #[arg(long, default_value_t = PIPELINE_MIN_SUPPORT)]
         min_support: u32,
+        /// Merge this many genomes at a time through column-block partials
+        /// instead of opening every kset at once. A multiple of 64. The
+        /// matrix files are the same; the ksets are kept. Unlike the default
+        /// merge, it refuses a kset whose genome or digest differs from
+        /// counted.json (docs/matrix-scaling.md).
+        #[arg(long, value_parser = parse_column_blocks)]
+        column_blocks: Option<usize>,
     },
     /// Cross-validate every learner on each species x drug dataset, fit the
     /// final models, annotate their features, and write one report each.
@@ -119,6 +126,31 @@ enum Command {
         /// (`EvalConfig::screened_features`).
         #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
         screened_features: usize,
+        /// Score the one dataset this fold file names on the outer folds it
+        /// supplies, in place of the random and lineage splits
+        /// (docs/fold-file.md). Writes <fold-out>/<dataset>.<scheme>.json,
+        /// which records the file's SHA-256, and no report. Takes one
+        /// species; --force replaces an existing result. It runs at the
+        /// release's seeds and tie rule, so --seed, --learner-seed and the
+        /// --exp-tie-* options are refused with it. --exp-null-refit is
+        /// refused with it too: it records the folds grm learn draws.
+        #[arg(
+            long,
+            requires = "fold_out",
+            conflicts_with_all = [
+                "only",
+                "seed",
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+            ]
+        )]
+        fold_file: Option<PathBuf>,
+        /// Directory for the --fold-file result.
+        #[arg(long, requires = "fold_file")]
+        fold_out: Option<PathBuf>,
         /// Seed of the evaluation's random draws (`EvalConfig::seed`): both
         /// splits' outer folds, each fit's inner folds and tuning holdouts,
         /// and the forest's and boosting's own draws. The species matrix,
@@ -134,6 +166,40 @@ enum Command {
         /// Reports go under draws/seed-<seed>-learner-<learner-seed>/.
         #[arg(long)]
         learner_seed: Option<u64>,
+        /// Experiment, off by default: how the decision tree, the forest and
+        /// the boosted trees break ties between equally good features
+        /// (`grm::learn::tie`). `float` is production's rule. `exact` makes
+        /// the stated tie rule true for cart and rf; for gbt, only between
+        /// splits with the same two groups. A report fitted with `exact` says
+        /// so in `eval_config.tie_rule` and its input fingerprint hashes it,
+        /// so `grm learn` refits it and the metric audit flags it. The site
+        /// reads neither field: `grm report` stops at such a report, and at
+        /// the release's seeds an exact run needs --exp-tie-out.
+        #[arg(long, value_enum, default_value_t = TieRuleArg::Float)]
+        exp_tie_rule: TieRuleArg,
+        /// Experiment: write one JSON line per tree-learner fit to this file,
+        /// with its nodes searched, the nodes where the two tie rules pick
+        /// different features, and a digest of each tree. The fits are the
+        /// same as without it.
+        #[arg(long)]
+        exp_tie_trace: Option<PathBuf>,
+        /// Experiment: write this run's reports to this folder in place of
+        /// results/ or the draw's folder. An --exp-tie-rule exact run at the
+        /// release's seeds needs it: it refuses results/, the folder
+        /// production writes and `grm report` indexes.
+        #[arg(long)]
+        exp_tie_out: Option<PathBuf>,
+        /// Experiment, off by default (docs/null-fold-refit.md): also refit
+        /// every boosting and lasso outer fold whose fit is null under the
+        /// fallback settings, and append each one's scores to this JSON-lines
+        /// file. While the file takes every line, the reports equal those of
+        /// a run without it. A line it does not take ends the learn with an
+        /// error naming the file and the fold, before that dataset's report
+        /// is written. Refused beside --fold-file, and beside the --exp-tie-*
+        /// options: its refits take production's tie rule and would add
+        /// fits to a tie trace.
+        #[arg(long, conflicts_with_all = ["exp_tie_rule", "exp_tie_trace", "exp_tie_out"])]
+        exp_null_refit: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -247,11 +313,44 @@ enum Command {
         #[arg(long, default_value = KOVER_RESULTS)]
         kover: PathBuf,
     },
+    /// Write each dataset's projected matrix, its random and lineage fold
+    /// plans, and the forest's screened rows of each outer fold under
+    /// --out/<dataset id>/, for a learner outside GRM
+    /// (docs/dataset-export.md). Fits nothing. The species must be counted
+    /// and built (count, structure, matrix).
+    Export {
+        #[arg(long)]
+        species: String,
+        /// Only these antibiotics or dataset ids. A name that matches no
+        /// dataset of the species stops the export.
+        #[arg(long, value_delimiter = ',')]
+        only: Vec<String>,
+        /// Retained-feature budget (see `grm learn`).
+        #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
+        screened_features: usize,
+        #[arg(long)]
+        out: PathBuf,
+        /// Replace matrix.bin and dataset.json in dataset directories that
+        /// already exist under --out, instead of stopping.
+        #[arg(long)]
+        force: bool,
+    },
     /// Write offline 95% Clopper-Pearson intervals for each learner row's
     /// VME and ME under <data>/report/intervals/, one file per dataset report
     /// that index.json lists, each pinned to its report's SHA-256 and counts.
     /// No report file changes.
     Intervals,
+    /// Write what two predictors that read no genome reach on each dataset
+    /// report's own folds under <data>/report/baselines/, one file per
+    /// dataset report that index.json lists, each pinned to its report's
+    /// SHA-256 and evaluation revision: constants at the training folds'
+    /// median and mode MIC beside the MIC model, and lineage identity beside
+    /// each split; and <data>/report/baselines.json for the pages that show
+    /// many datasets, pinned to index.json's SHA-256. A dataset whose rebuilt
+    /// MIC folds contradict its report is refused alone, and the command
+    /// then exits nonzero. Run it after `grm report`. Fits nothing; no report
+    /// file changes.
+    Baselines,
     /// Write each indexed dataset report's provenance under
     /// <data>/report/provenance/: its samples' BV-BRC dates (`grm fetch
     /// genome-dates`) and record details (curated/provenance.jsonl), pinned to
@@ -337,9 +436,25 @@ fn run(cli: Cli) -> Result<()> {
         Command::Matrix {
             species,
             min_support,
+            column_blocks,
         } => species
             .iter()
-            .try_for_each(|s| matrix(&layout, s, min_support)),
+            .try_for_each(|s| matrix_with(&layout, s, min_support, column_blocks)),
+        Command::Learn {
+            species,
+            force,
+            screened_features,
+            fold_file: Some(fold_file),
+            fold_out: Some(fold_out),
+            ..
+        } => learn_fold_file(
+            &layout,
+            &species,
+            &fold_file,
+            &fold_out,
+            force,
+            screened_features,
+        ),
         Command::Learn {
             species,
             only,
@@ -347,11 +462,27 @@ fn run(cli: Cli) -> Result<()> {
             screened_features,
             seed,
             learner_seed,
+            exp_tie_rule,
+            exp_tie_trace,
+            exp_tie_out,
+            exp_null_refit,
+            ..
         } => {
-            let cfg = learn_config(screened_features, seed, learner_seed);
+            let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
+            // Every species is checked before the first fit or trace line.
+            for s in &species {
+                refuse_exact_in_results(&layout, s, &cfg, exp_tie_out.as_deref())?;
+            }
+            if let Some(path) = &exp_tie_trace {
+                grm::learn::tie::start_trace(path)
+                    .with_context(|| format!("create {}", path.display()))?;
+            }
+            if let Some(path) = &exp_null_refit {
+                grm::learn::null_refit::enable(path)?;
+            }
             species
                 .iter()
-                .try_for_each(|s| learn(&layout, s, &only, force, &cfg))
+                .try_for_each(|s| learn_in(&layout, s, &only, force, &cfg, exp_tie_out.as_deref()))
         }
         Command::Pipeline {
             species,
@@ -369,7 +500,7 @@ fn run(cli: Cli) -> Result<()> {
                 species
             };
             // The pipeline is the release's command: it always draws at the
-            // release's seed.
+            // release's seed and breaks ties by production's rule.
             let cfg = grm::learn::eval::EvalConfig {
                 screened_features,
                 ..Default::default()
@@ -457,10 +588,46 @@ fn run(cli: Cli) -> Result<()> {
             out,
         } => predict(&report, &fasta, &kset, matrix.as_deref(), &learners, out),
         Command::Report { kover } => report(&layout, &kover),
+        Command::Export {
+            species,
+            only,
+            screened_features,
+            out,
+            force,
+        } => {
+            let cfg = grm::learn::eval::EvalConfig {
+                screened_features,
+                ..Default::default()
+            };
+            let done = grm::export::export_species(&layout, &species, &only, &out, &cfg, force)?;
+            let replaced = done.iter().filter(|d| d.replaced).count();
+            eprintln!(
+                "{species}: {} datasets exported to {}{}",
+                done.len(),
+                out.display(),
+                if replaced > 0 {
+                    format!(", {replaced} of them replacing an earlier export")
+                } else {
+                    String::new()
+                }
+            );
+            Ok(())
+        }
         Command::Intervals => {
             let n = grm::intervals::write(&layout.root.join("report"))?;
             eprintln!("intervals written for {n} dataset reports");
             Ok(())
+        }
+        Command::Baselines => {
+            let w = grm::baselines::write(&layout.root.join("report"))?;
+            for r in &w.refused {
+                eprintln!("{r}");
+            }
+            eprintln!(
+                "baselines written for {} dataset reports: {} with an MIC model, {} of them with folds their held-out predictions confirm; {} exact-MIC test isolates on {} datasets have a k-mer-identical copy in their training fold",
+                w.files, w.mic, w.confirmed, w.copies, w.copy_datasets
+            );
+            w.outcome()
         }
         Command::Provenance { check: false } => {
             let n = grm::provenance::write(&layout)?;
@@ -496,16 +663,18 @@ const DEFAULT_SCREENED_FEATURES: usize = 4000;
 const RELEASE_SEED: u64 = 42;
 
 /// The evaluation `grm learn` runs: the release's settings, with the
-/// screening budget and the seeds its flags give.
+/// screening budget, the seeds and the tie rule its flags give.
 fn learn_config(
     screened_features: usize,
     seed: u64,
     learner_seed: Option<u64>,
+    tie_rule: grm::learn::tie::TieRule,
 ) -> grm::learn::eval::EvalConfig {
     grm::learn::eval::EvalConfig {
         screened_features,
         seed,
         learner_seed,
+        tie_rule,
         ..Default::default()
     }
 }
@@ -613,9 +782,25 @@ fn structure(layout: &Layout, slug: &str) -> Result<()> {
     Ok(())
 }
 
+/// `grm matrix --column-blocks`: a width `build_matrix` accepts.
+fn parse_column_blocks(s: &str) -> std::result::Result<usize, String> {
+    let width = s.parse::<usize>().map_err(|e| e.to_string())?;
+    grm::species::check_column_blocks(width).map_err(|e| e.to_string())?;
+    Ok(width)
+}
+
 fn matrix(layout: &Layout, slug: &str, min_support: u32) -> Result<()> {
+    matrix_with(layout, slug, min_support, None)
+}
+
+fn matrix_with(
+    layout: &Layout,
+    slug: &str,
+    min_support: u32,
+    column_blocks: Option<usize>,
+) -> Result<()> {
     let started = std::time::Instant::now();
-    let s = grm::species::build_matrix(layout, slug, min_support)?;
+    let s = grm::species::build_matrix(layout, slug, min_support, column_blocks)?;
     eprintln!(
         "{slug}: {} genomes, {} distinct k-mers, {} kept in {} patterns ({} rare, {} core) in {:.0}s",
         s.genomes.len(),
@@ -636,10 +821,86 @@ fn learn(
     force: bool,
     cfg: &grm::learn::eval::EvalConfig,
 ) -> Result<()> {
+    learn_in(layout, slug, only, force, cfg, None)
+}
+
+/// `learn`, with the reports in `out` when `grm learn --exp-tie-out` names
+/// it. That run ends with a line of its own, which does not begin with the
+/// release line `scripts/metric-audit/audit.py` reads.
+fn learn_in(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &grm::learn::eval::EvalConfig,
+    out: Option<&std::path::Path>,
+) -> Result<()> {
     grm::species::ensure_selection_counted(layout, slug)?;
-    let written = grm::analysis::analyze_species(layout, slug, only, force, cfg)?;
-    eprintln!("{}", learn_end_line(layout, slug, written.len(), cfg));
+    let line = match out {
+        None => {
+            let written = grm::analysis::analyze_species(layout, slug, only, force, cfg)?;
+            learn_end_line(layout, slug, written.len(), cfg)
+        }
+        Some(dir) => {
+            let written = grm::analysis::analyze_species_in(layout, slug, only, force, cfg, dir)?;
+            format!(
+                "{slug}: {} experiment reports written to {}",
+                written.len(),
+                dir.display()
+            )
+        }
+    };
+    eprintln!("{line}");
     Ok(())
+}
+
+/// An `--exp-tie-rule exact` run stops before any fit when its reports would
+/// go to `results/`, the folder production reports are written to and
+/// `grm report` indexes: by default at the release's seeds, or because
+/// `--exp-tie-out` names that folder.
+fn refuse_exact_in_results(
+    layout: &Layout,
+    slug: &str,
+    cfg: &grm::learn::eval::EvalConfig,
+    out: Option<&std::path::Path>,
+) -> Result<()> {
+    if cfg.tie_rule.is_float() {
+        return Ok(());
+    }
+    let results = layout.results_dir(slug);
+    let dir = out.map_or_else(|| grm::analysis::reports_dir(layout, slug, cfg), Into::into);
+    let same = resolved(&dir) == resolved(&results);
+    anyhow::ensure!(
+        !same,
+        "--exp-tie-rule exact would write {slug}'s reports to {}, the folder production reports are written to and `grm report` indexes; name another folder with --exp-tie-out DIR",
+        results.display()
+    );
+    Ok(())
+}
+
+/// `path` made absolute, each part that exists resolved through the file
+/// system, and a `..` after a missing part taken off in the text. Two
+/// spellings of one folder then compare equal before the folder exists,
+/// when `canonicalize` has nothing to resolve.
+fn resolved(path: &std::path::Path) -> PathBuf {
+    let absolute = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
+    let mut out = PathBuf::new();
+    let mut exists = true;
+    for part in absolute.components() {
+        if !exists && part == std::path::Component::ParentDir {
+            out.pop();
+            exists = out.exists();
+            continue;
+        }
+        out.push(part);
+        if exists {
+            match std::fs::canonicalize(&out) {
+                Ok(real) => out = real,
+                Err(_) => exists = false,
+            }
+        }
+    }
+    out
 }
 
 /// The line `grm learn` ends a species with. A run that writes `results/`
@@ -662,6 +923,35 @@ fn learn_end_line(
             dir.display()
         )
     }
+}
+
+/// `grm learn --fold-file`: one dataset of one species on the outer folds a
+/// file supplies (`analysis::evaluate_fold_file`), at the release's seeds
+/// (the parser refuses `--seed` and `--learner-seed` beside it). It ends
+/// with its own line, not `learn_end_line`.
+fn learn_fold_file(
+    layout: &Layout,
+    species: &[String],
+    fold_file: &std::path::Path,
+    fold_out: &std::path::Path,
+    force: bool,
+    screened_features: usize,
+) -> Result<()> {
+    let [slug] = species else {
+        anyhow::bail!(
+            "--fold-file names one dataset, so it takes one species, not {}",
+            species.len()
+        );
+    };
+    grm::species::ensure_selection_counted(layout, slug)?;
+    let cfg = grm::learn::eval::EvalConfig {
+        screened_features,
+        ..Default::default()
+    };
+    let written =
+        grm::analysis::evaluate_fold_file(layout, slug, fold_file, fold_out, force, &cfg)?;
+    eprintln!("{slug}: fold file result written to {}", written.display());
+    Ok(())
 }
 
 fn report(layout: &Layout, kover: &std::path::Path) -> Result<()> {
@@ -817,6 +1107,21 @@ impl From<PairingArg> for grm::ablate::arm::Pairing {
             PairingArg::SamePlan => Self::SamePlan,
             PairingArg::K31Groups => Self::K31Groups,
             PairingArg::CommonOuterTestSetBalanced => Self::CommonOuterTestSetBalanced,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum TieRuleArg {
+    Float,
+    Exact,
+}
+
+impl From<TieRuleArg> for grm::learn::tie::TieRule {
+    fn from(t: TieRuleArg) -> Self {
+        match t {
+            TieRuleArg::Float => Self::Float,
+            TieRuleArg::Exact => Self::Exact,
         }
     }
 }
@@ -1394,6 +1699,77 @@ mod tests {
         }
     }
 
+    #[test]
+    fn matrix_takes_only_a_column_block_width_of_whole_words() {
+        let parse = |w: &str| {
+            Cli::try_parse_from(["grm", "matrix", "--species", "s", "--column-blocks", w])
+        };
+        for w in ["0", "32", "96", "100", "x"] {
+            let err = parse(w).err().unwrap();
+            assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation, "{w}");
+        }
+        // clap reads a leading minus as another flag.
+        assert!(parse("-64").is_err());
+        for w in [64, 128, 4096] {
+            let Command::Matrix { column_blocks, .. } = parse(&w.to_string()).unwrap().command
+            else {
+                panic!("parsed another command");
+            };
+            assert_eq!(column_blocks, Some(w));
+        }
+        let plain = Cli::try_parse_from(["grm", "matrix", "--species", "s"]).unwrap();
+        let Command::Matrix { column_blocks, .. } = plain.command else {
+            panic!("parsed another command");
+        };
+        assert_eq!(column_blocks, None);
+    }
+
+    /// `grm matrix` from its parsed arguments through `run`: the switch and
+    /// `--min-support` reach the block merge. Only `main`'s `Cli::parse` of
+    /// the process arguments and the printing of an error are left out.
+    #[test]
+    fn matrix_column_blocks_reach_the_block_merge_through_run() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let run_grm = |args: &[&str]| {
+            let cli = Cli::try_parse_from(["grm", "--data", data].iter().chain(args)).unwrap();
+            run(cli).map_err(|e| format!("{e:#}"))
+        };
+        run_grm(&["count", "--species", SLUG]).unwrap();
+        let mx = layout.matrix_dir(SLUG);
+        let files = || {
+            [
+                "matrix.json",
+                "patterns.bin",
+                "support.bin",
+                "kmer_offsets.bin",
+                "kmers.bin",
+            ]
+            .map(|f| std::fs::read(mx.join(f)).unwrap())
+        };
+        // The block merge removes a partials folder it finds; the default
+        // merge leaves it alone. So the folder shows which merge ran.
+        let partials = layout.partials_dir(SLUG);
+        let mut written = Vec::new();
+        for min_support in ["1", "2"] {
+            std::fs::create_dir_all(&partials).unwrap();
+            std::fs::write(partials.join("left.txt"), "a stopped run").unwrap();
+            let plain = ["matrix", "--species", SLUG, "--min-support", min_support];
+            run_grm(&plain).unwrap();
+            assert!(partials.join("left.txt").exists(), "{min_support}");
+            let want = files();
+            run_grm(&[&plain[..], &["--column-blocks", "64"]].concat()).unwrap();
+            assert!(
+                !partials.exists(),
+                "--min-support {min_support} --column-blocks 64 ran the default merge"
+            );
+            assert!(files() == want, "--min-support {min_support}");
+            written.push(want);
+        }
+        assert!(written[0] != written[1]);
+    }
+
     const SLUG: &str = "fixture";
     const GENE: &str = "ATGAAACGTTACGGCATTGCAGGCTTACCGATAGCTTGACCTAGGCATCGATCGGATCCATGCAAGCTTGG";
 
@@ -1726,7 +2102,7 @@ mod tests {
         // The re-save rewrites three binaries, then cannot create kmers.bin.
         std::fs::remove_file(mx.join("kmers.bin")).unwrap();
         std::fs::create_dir(mx.join("kmers.bin")).unwrap();
-        assert!(grm::species::build_matrix(&layout, SLUG, 2).is_err());
+        assert!(grm::species::build_matrix(&layout, SLUG, 2, None).is_err());
         std::fs::remove_dir(mx.join("kmers.bin")).unwrap();
         count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let rebuilt = FeatureMatrix::load(&mx).unwrap();
@@ -2115,12 +2491,205 @@ mod tests {
             "1000",
         ]);
         let Command::Learn {
-            screened_features, ..
+            screened_features,
+            exp_tie_rule,
+            exp_tie_trace,
+            fold_file,
+            fold_out,
+            ..
         } = learn.unwrap().command
         else {
             panic!("parsed another command");
         };
         assert_eq!(screened_features, 1000);
+        // The tie-rule experiment is off unless asked for.
+        assert_eq!((exp_tie_rule, exp_tie_trace), (TieRuleArg::Float, None));
+        let learn =
+            Cli::try_parse_from(["grm", "learn", "--species", "s", "--exp-tie-rule", "exact"]);
+        let Command::Learn { exp_tie_rule, .. } = learn.unwrap().command else {
+            panic!("parsed another command");
+        };
+        assert_eq!(exp_tie_rule, TieRuleArg::Exact);
+        // Without --fold-file the command is the one it was.
+        assert_eq!((fold_file, fold_out), (None, None));
+    }
+
+    #[test]
+    fn learn_takes_a_fold_file_only_with_its_output_directory_and_one_species() {
+        let parse = |rest: &[&str]| {
+            Cli::try_parse_from(["grm", "learn", "--species", "s"].iter().chain(rest))
+        };
+        let Command::Learn {
+            fold_file,
+            fold_out,
+            force,
+            ..
+        } = parse(&["--fold-file", "f.json", "--fold-out", "o"])
+            .unwrap()
+            .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (fold_file, fold_out, force),
+            (Some("f.json".into()), Some("o".into()), false)
+        );
+        for bad in [
+            &["--fold-file", "f.json"][..],
+            &["--fold-out", "o"][..],
+            &[
+                "--fold-file",
+                "f.json",
+                "--fold-out",
+                "o",
+                "--only",
+                "meropenem",
+            ][..],
+        ] {
+            assert!(parse(bad).is_err(), "{bad:?}");
+        }
+        // A fold file runs at production's tie rule: the experiment's
+        // options are refused beside it, `float` named explicitly too.
+        for extra in [
+            &["--exp-tie-rule", "exact"][..],
+            &["--exp-tie-rule", "float"][..],
+            &["--exp-tie-trace", "t.jsonl"][..],
+            &["--exp-tie-out", "x"][..],
+        ] {
+            let args = [&["--fold-file", "f.json", "--fold-out", "o"][..], extra].concat();
+            assert!(parse(&args).is_err(), "{extra:?}");
+        }
+        // The file names one dataset, so a second species is refused before
+        // anything is read.
+        let dir = tempfile::tempdir().unwrap();
+        let error = learn_fold_file(
+            &Layout::new(dir.path()),
+            &["a".into(), "b".into()],
+            &dir.path().join("f.json"),
+            &dir.path().join("o"),
+            false,
+            DEFAULT_SCREENED_FEATURES,
+        )
+        .unwrap_err();
+        assert_eq!(
+            format!("{error:#}"),
+            "--fold-file names one dataset, so it takes one species, not 2"
+        );
+        assert!(std::fs::read_dir(dir.path()).unwrap().next().is_none());
+    }
+
+    /// A fold file run stays at the release's seeds: the parser refuses
+    /// `--seed` and `--learner-seed` beside `--fold-file`, even at the
+    /// release's own value, and without them it parses the release's seeds.
+    #[test]
+    fn learn_refuses_a_fold_file_beside_either_seed_flag() {
+        let parse = |rest: &[&str]| {
+            let all = [
+                &["grm", "learn", "--species", "s"][..],
+                &["--fold-file", "f.json", "--fold-out", "o"][..],
+                rest,
+            ]
+            .concat();
+            Cli::try_parse_from(all)
+        };
+        for bad in [
+            &["--seed", "43"][..],
+            &["--seed", "42"][..],
+            &["--learner-seed", "7"][..],
+            &["--seed", "42", "--learner-seed", "7"][..],
+        ] {
+            let error = parse(bad).err().unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::ArgumentConflict,
+                "{bad:?}"
+            );
+        }
+        let Command::Learn {
+            fold_file,
+            seed,
+            learner_seed,
+            ..
+        } = parse(&[]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (fold_file, seed, learner_seed),
+            (Some("f.json".into()), RELEASE_SEED, None)
+        );
+    }
+
+    /// The null-fold experiment records the folds `grm learn` draws, so the
+    /// parser refuses `--exp-null-refit` beside `--fold-file`, before FILE is
+    /// opened, in either order. Without `--fold-file` the flag parses as it
+    /// did.
+    #[test]
+    fn learn_refuses_the_null_fold_refit_beside_a_fold_file() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let refit = ["--exp-null-refit", "r.jsonl"];
+        let fold = ["--fold-file", "f.json", "--fold-out", "o"];
+        for bad in [
+            [&refit[..], &fold[..]].concat(),
+            [&fold[..], &refit[..]].concat(),
+        ] {
+            let error = parse(&bad)
+                .err()
+                .unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::ArgumentConflict,
+                "{bad:?}"
+            );
+            let message = error.to_string();
+            assert!(
+                message.contains("--exp-null-refit") && message.contains("--fold-file"),
+                "{message}"
+            );
+        }
+        let Command::Learn {
+            fold_file,
+            exp_null_refit,
+            ..
+        } = parse(&refit).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((fold_file, exp_null_refit), (None, Some("r.jsonl".into())));
+    }
+
+    /// The null-fold experiment fits its fallbacks under production's tie
+    /// rule, and those fits would add lines to a tie trace, so the parser
+    /// refuses `--exp-null-refit` beside each option of the tie rule
+    /// experiment, in either order, `float` named explicitly too.
+    #[test]
+    fn learn_refuses_the_null_fold_refit_beside_the_tie_rule_experiment() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let refit = ["--exp-null-refit", "r.jsonl"];
+        for tie in [
+            &["--exp-tie-rule", "exact"][..],
+            &["--exp-tie-rule", "float"][..],
+            &["--exp-tie-trace", "t.jsonl"][..],
+            &["--exp-tie-out", "x"][..],
+        ] {
+            for bad in [[&refit[..], tie].concat(), [tie, &refit[..]].concat()] {
+                let error = parse(&bad)
+                    .err()
+                    .unwrap_or_else(|| panic!("{bad:?} parsed"));
+                assert_eq!(
+                    error.kind(),
+                    clap::error::ErrorKind::ArgumentConflict,
+                    "{bad:?}"
+                );
+                assert!(error.to_string().contains("--exp-null-refit"), "{bad:?}");
+            }
+        }
     }
 
     /// `grm learn` draws at the release's seed unless told otherwise, and
@@ -2166,7 +2735,7 @@ mod tests {
     fn learn_ends_with_the_release_line_and_a_draw_with_a_line_of_its_own() {
         let layout = Layout::new("root");
         let line = |screened_features, seed, learner_seed| {
-            let cfg = learn_config(screened_features, seed, learner_seed);
+            let cfg = learn_config(screened_features, seed, learner_seed, Default::default());
             learn_end_line(&layout, "fixture_species", 3, &cfg)
         };
         let release = "fixture_species: 3 dataset reports written";
@@ -2194,12 +2763,19 @@ mod tests {
                 screened_features,
                 seed,
                 learner_seed,
+                exp_tie_rule,
                 ..
             } = Cli::try_parse_from(all).unwrap().command
             else {
                 panic!("parsed another command");
             };
-            serde_json::to_value(learn_config(screened_features, seed, learner_seed)).unwrap()
+            serde_json::to_value(learn_config(
+                screened_features,
+                seed,
+                learner_seed,
+                exp_tie_rule.into(),
+            ))
+            .unwrap()
         };
         let release = || EvalConfig::default();
         let expected = |cfg: EvalConfig| serde_json::to_value(cfg).unwrap();
@@ -2234,6 +2810,15 @@ mod tests {
                 ..release()
             })
         );
+        assert_eq!(
+            config(&["--exp-tie-rule", "exact", "--seed", "43"]),
+            expected(EvalConfig {
+                seed: 43,
+                tie_rule: grm::learn::tie::TieRule::Exact,
+                ..release()
+            })
+        );
+        assert_eq!(config(&["--exp-tie-rule", "float"]), expected(release()));
     }
 
     /// The pipeline's stages follow `--k`: counts, structure and matrix built
@@ -2554,6 +3139,164 @@ mod tests {
         (layout, ids)
     }
 
+    /// `grm learn --fold-file` passes `--screened-features` on: the result
+    /// records the value the command was given. The fold file repeats the
+    /// random split the fixture's own report drew, so it is a fair partition.
+    #[test]
+    fn learn_with_a_fold_file_screens_as_many_features_as_it_is_told() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, _) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap())
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        grm(&["learn", "--species", SLUG]).unwrap();
+        let report: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(
+                layout
+                    .results_dir(SLUG)
+                    .join(format!("{SLUG}__fixturemycin.json")),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let random = &report["splits"][0];
+        assert_eq!(random["scheme"], "random");
+        let mut test = vec![Vec::new(); random["folds"].as_u64().unwrap() as usize];
+        for (sample, fold) in report["samples"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(random["test_fold"].as_array().unwrap())
+        {
+            test[fold.as_u64().unwrap() as usize].push(sample["id"].clone());
+        }
+        let file = dir.path().join("folds.json");
+        let text = serde_json::json!({
+            "format": "grm-fold-file-v1",
+            "dataset": format!("{SLUG}__fixturemycin"),
+            "scheme": "own-random",
+            "test": test,
+            "train": [],
+            "unused": [],
+        });
+        std::fs::write(&file, serde_json::to_vec(&text).unwrap()).unwrap();
+        let out = dir.path().join("fold-out");
+        grm(&[
+            "learn",
+            "--species",
+            SLUG,
+            "--fold-file",
+            file.to_str().unwrap(),
+            "--fold-out",
+            out.to_str().unwrap(),
+            "--screened-features",
+            "7",
+        ])
+        .unwrap();
+        let result: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(out.join(format!("{SLUG}__fixturemycin.own-random.json"))).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(result["eval_config"]["screened_features"], 7);
+        assert_eq!(result["counts"]["tested"], 60);
+    }
+
+    /// `grm learn --exp-tie-rule exact` through the command's own path. At
+    /// the release's seeds it would write to results/, so it stops before
+    /// any fit and names --exp-tie-out; naming results/ itself stops it too.
+    /// With another folder the report lands there and records the rule the
+    /// fits ran under, and results/ is not written. A run without the flag
+    /// still writes results/ with no tie rule recorded.
+    #[test]
+    fn an_exact_learn_refuses_results_and_writes_the_rule_to_the_folder_it_names() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, _) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap()).map_err(|e| format!("{e:#}"))
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        let file = format!("{SLUG}__fixturemycin.json");
+        let results = layout.results_dir(SLUG);
+        let exact = ["learn", "--species", SLUG, "--exp-tie-rule", "exact"];
+        let err = grm(&exact).unwrap_err();
+        assert_eq!(
+            err,
+            format!(
+                "--exp-tie-rule exact would write {SLUG}'s reports to {}, the folder production reports are written to and `grm report` indexes; name another folder with --exp-tie-out DIR",
+                results.display()
+            )
+        );
+        assert!(!results.exists());
+        // results/ is not made yet, and another spelling of it is refused all
+        // the same: through a folder that is missing, and through a link.
+        let species = layout.species_dir(SLUG);
+        let mut spellings = vec![species.join("missing").join("..").join("results")];
+        #[cfg(unix)]
+        {
+            let link = dir.path().join("link");
+            std::os::unix::fs::symlink(&species, &link).unwrap();
+            spellings.push(link.join("results"));
+        }
+        for spelling in spellings {
+            let named = [&exact[..], &["--exp-tie-out", spelling.to_str().unwrap()]].concat();
+            assert!(grm(&named).unwrap_err().contains("--exp-tie-out DIR"));
+            assert!(!results.exists() && !species.join("missing").exists());
+        }
+        std::fs::create_dir_all(&results).unwrap();
+        let named = [&exact[..], &["--exp-tie-out", results.to_str().unwrap()]].concat();
+        assert!(grm(&named).unwrap_err().contains("--exp-tie-out DIR"));
+        let out = dir.path().join("exact");
+        let named = [&exact[..], &["--exp-tie-out", out.to_str().unwrap()]].concat();
+        grm(&named).unwrap();
+        let read = |p: std::path::PathBuf| -> serde_json::Value {
+            serde_json::from_slice(&std::fs::read(p).unwrap()).unwrap()
+        };
+        assert_eq!(read(out.join(&file))["eval_config"]["tie_rule"], "exact");
+        assert!(!results.join(&file).exists());
+        grm(&["learn", "--species", SLUG]).unwrap();
+        let production = read(results.join(&file));
+        assert!(production["eval_config"].get("tie_rule").is_none());
+        assert_ne!(
+            production["input_fingerprint"],
+            read(out.join(&file))["input_fingerprint"]
+        );
+    }
+
+    /// From the review of pull request 128: with a relative --data and
+    /// results/ not yet made, an absolute --exp-tie-out naming results/
+    /// passed the guard, since the two spellings differ and neither folder
+    /// could be resolved. The guard now compares the folders themselves.
+    #[test]
+    fn an_exact_learn_refuses_results_under_another_spelling_before_it_exists() {
+        let layout = Layout::new("no-such-data-root");
+        let cfg = grm::learn::eval::EvalConfig {
+            tie_rule: grm::learn::tie::TieRule::Exact,
+            seed: 7,
+            ..Default::default()
+        };
+        let results = std::env::current_dir()
+            .unwrap()
+            .join(layout.results_dir(SLUG));
+        assert!(!results.exists());
+        let refused = |out: &Path| refuse_exact_in_results(&layout, SLUG, &cfg, Some(out)).is_err();
+        assert!(refused(&results));
+        assert!(refused(&results.join("..").join("results")));
+        assert!(refused(&layout.results_dir(SLUG)));
+        assert!(!refused(&results.with_file_name("exact")));
+        // At a seed of its own the run writes to draws/, which the guard
+        // lets through with no folder named.
+        refuse_exact_in_results(&layout, SLUG, &cfg, None).unwrap();
+    }
+
     /// The acceptance check of docs/prediction-contract.md: `grm predict`,
     /// from the report `grm learn` wrote and each cohort genome's FASTA,
     /// gives every feature the genome's bit in the report and every genome
@@ -2708,6 +3451,495 @@ mod tests {
             strands.insert(text.contains(&kmer));
         }
         assert_eq!(strands, BTreeSet::from([false, true]));
+    }
+
+    const EXPORT_SLUG: &str = "escherichia_coli";
+    const MEROPENEM: &str = "escherichia_coli__meropenem";
+    const CIPROFLOXACIN: &str = "escherichia_coli__ciprofloxacin";
+
+    /// A synthetic species for `grm export`, curated and built as
+    /// `grm curate` and the pipeline's count, structure and matrix leave it.
+    /// Its 60 genomes ("562.400" to "562.459") sit in 20 lineages of three,
+    /// each lineage with its own copy of one random core, 2% of its bases
+    /// drawn again. Each genome also carries short random blocks, each on its
+    /// own contig, so each block is one matrix row for the genomes that hold it:
+    /// - 24 blocks in three genomes each, the datasets' support floor, so an
+    ///   outer fold that holds out one of the three leaves the block in two
+    ///   training genomes;
+    /// - 12 blocks in one set of eight genomes and one other genome each,
+    ///   which differ from each other only on that genome;
+    /// - 40 blocks in random sets.
+    ///
+    /// Genome 2 is a copy of genome 1, and genome 5 of genome 4: two
+    /// k-mer-identical duplicate groups. Meropenem calls one genome of each
+    /// lineage resistant (20 of 60), ciprofloxacin every fourth (15 of 60).
+    fn export_fixture(root: &Path) -> Layout {
+        let layout = Layout::new(root);
+        let mut rng = ChaCha8Rng::seed_from_u64(21);
+        let random = |rng: &mut ChaCha8Rng, n: usize| -> Vec<u8> {
+            (0..n).map(|_| b"ACGT"[rng.random_range(0..4)]).collect()
+        };
+        let n = 60;
+        let core = random(&mut rng, 6000);
+        let lineage_cores: Vec<Vec<u8>> = (0..n / 3)
+            .map(|_| {
+                core.iter()
+                    .map(|&b| {
+                        if rng.random_bool(0.02) {
+                            b"ACGT"[rng.random_range(0..4)]
+                        } else {
+                            b
+                        }
+                    })
+                    .collect()
+            })
+            .collect();
+        let copy_of = |g: usize| match g {
+            2 => 1,
+            5 => 4,
+            g => g,
+        };
+        let units: Vec<usize> = (0..n).filter(|&g| copy_of(g) == g).collect();
+        // Genomes with no copy, so a block they alone carry keeps its count.
+        let single: Vec<usize> = units
+            .iter()
+            .copied()
+            .filter(|&g| g != 1 && g != 4)
+            .collect();
+        let mut holders: Vec<Vec<usize>> = Vec::new();
+        for _ in 0..24 {
+            let mut set = BTreeSet::new();
+            while set.len() < 3 {
+                set.insert(single[rng.random_range(0..single.len())]);
+            }
+            holders.push(set.into_iter().collect());
+        }
+        let shared: Vec<usize> = (1..=8).map(|i| 6 * i).collect();
+        for &extra in single.iter().filter(|g| !shared.contains(g)).take(12) {
+            holders.push(shared.iter().copied().chain([extra]).collect());
+        }
+        for _ in 0..40 {
+            holders.push(
+                units
+                    .iter()
+                    .copied()
+                    .filter(|_| rng.random_bool(0.4))
+                    .collect(),
+            );
+        }
+        let blocks: Vec<Vec<u8>> = holders.iter().map(|_| random(&mut rng, 80)).collect();
+        std::fs::create_dir_all(layout.fasta_dir()).unwrap();
+        std::fs::create_dir_all(root.join("bvbrc")).unwrap();
+        let (mut amr, mut meta) = (String::new(), String::new());
+        for g in 0..n {
+            let id = format!("562.{}", 400 + g);
+            let unit = copy_of(g);
+            let mut fasta = b">core\n".to_vec();
+            fasta.extend(&lineage_cores[unit / 3]);
+            for (j, (set, block)) in holders.iter().zip(&blocks).enumerate() {
+                if set.contains(&unit) {
+                    fasta.extend(format!("\n>b{j}\n").into_bytes());
+                    fasta.extend(block);
+                }
+            }
+            fasta.push(b'\n');
+            std::fs::write(bvbrc::fasta_path(&layout.fasta_dir(), &id), fasta).unwrap();
+            for (antibiotic, resistant) in
+                [("meropenem", g % 3 == 0), ("ciprofloxacin", g % 4 == 0)]
+            {
+                let call = if resistant {
+                    "Resistant"
+                } else {
+                    "Susceptible"
+                };
+                let record = serde_json::json!({
+                    "genome_id": id, "antibiotic": antibiotic, "resistant_phenotype": call,
+                    "laboratory_typing_method": "Broth dilution",
+                });
+                amr += &format!("{record}\n");
+            }
+            let genome = serde_json::json!({
+                "genome_id": id, "species": "Escherichia coli", "genome_length": "6000",
+            });
+            meta += &format!("{genome}\n");
+        }
+        std::fs::write(layout.amr(), amr).unwrap();
+        std::fs::write(layout.genomes(), meta).unwrap();
+        run_curate(&layout, 100, 5, None).unwrap();
+        count_to_matrix(&layout, EXPORT_SLUG, PIPELINE_K).unwrap();
+        layout
+    }
+
+    /// `grm --data <root> export --species escherichia_coli --out <out>`
+    /// followed by `args`, with an error as `{:#}` prints it.
+    fn run_export(root: &Path, out: &Path, args: &[&str]) -> Result<(), String> {
+        let (data, out) = (root.to_str().unwrap(), out.to_str().unwrap());
+        let base = [
+            "grm",
+            "--data",
+            data,
+            "export",
+            "--species",
+            EXPORT_SLUG,
+            "--out",
+            out,
+        ];
+        let cli = Cli::try_parse_from(base.iter().chain(args)).unwrap();
+        run(cli).map_err(|e| format!("{e:#}"))
+    }
+
+    /// The bytes of a dataset directory's two files.
+    fn export_files(dir: &Path) -> [Vec<u8>; 2] {
+        ["matrix.bin", "dataset.json"].map(|f| std::fs::read(dir.join(f)).unwrap())
+    }
+
+    /// Candidate rows of a `matrix.bin` on the training samples, counted
+    /// apart from `learn::training_candidates`: the distinct training
+    /// patterns whose training support lies in [floor, |train| - floor].
+    fn candidates_in(bytes: &[u8], words: usize, train: &[bool], floor: usize) -> usize {
+        let n_train = train.iter().filter(|&&t| t).count();
+        let rows = bytes.len() / (words * 8);
+        let mut seen = std::collections::HashSet::new();
+        for r in 0..rows {
+            let pattern: Vec<bool> = (0..train.len())
+                .filter(|&c| train[c])
+                .map(|c| {
+                    let w = (r * words + c / 64) * 8;
+                    let word = u64::from_le_bytes(bytes[w..w + 8].try_into().unwrap());
+                    (word >> (c % 64)) & 1 == 1
+                })
+                .collect();
+            let support = pattern.iter().filter(|&&b| b).count();
+            if support >= floor && support + floor <= n_train {
+                seen.insert(pattern);
+            }
+        }
+        seen.len()
+    }
+
+    /// `grm export` on a synthetic species, read back from the files it
+    /// wrote, against what `grm learn` reads and evaluates for the same
+    /// dataset at a non-default `--screened-features`: the evaluation
+    /// revision, the input fingerprint, the cohort, the matrix, the outer
+    /// folds `evaluate` scores with the duplicate groups, and per outer fold
+    /// the training samples and the candidate rows at the dataset's own
+    /// support floor.
+    #[test]
+    fn export_files_hold_what_learn_evaluates_on_a_synthetic_species() {
+        use grm::learn::eval::EvalConfig;
+        let dir = tempfile::tempdir().unwrap();
+        let layout = export_fixture(dir.path());
+        let out = dir.path().join("export");
+        let cfg = EvalConfig {
+            screened_features: 7,
+            ..Default::default()
+        };
+        let only = ["meropenem".to_string()];
+        let done =
+            grm::export::export_species(&layout, EXPORT_SLUG, &only, &out, &cfg, false).unwrap();
+        assert_eq!(done.len(), 1);
+        assert_eq!((done[0].id.as_str(), done[0].replaced), (MEROPENEM, false));
+        let [bytes, json] = export_files(&out.join(MEROPENEM));
+        let d: serde_json::Value = serde_json::from_slice(&json).unwrap();
+
+        let (input, catalog) = grm::analysis::load_inputs(&layout, EXPORT_SLUG).unwrap();
+        let spec = input.datasets.iter().find(|s| s.id == MEROPENEM).unwrap();
+        let e = grm::analysis::arm_inputs(&input, spec).unwrap().unwrap();
+        assert_eq!(d["format"], grm::export::EXPORT_FORMAT);
+        assert_eq!(d["evaluation_revision"], grm::analysis::EVALUATION_REVISION);
+        // The fingerprint `grm learn` computes at this budget, which differs
+        // from the default budget's.
+        let digest = grm::analysis::species_digest(&input);
+        let fingerprint = |cfg: &EvalConfig| {
+            grm::analysis::dataset_fingerprint(&input, spec, catalog.as_ref(), cfg, digest)
+        };
+        assert_eq!(d["input_fingerprint"], fingerprint(&cfg));
+        assert_ne!(fingerprint(&cfg), fingerprint(&EvalConfig::default()));
+        assert_eq!(d["screened_features"], 7);
+
+        let n = e.sample_ids.len();
+        assert_eq!(n, 60);
+        assert_eq!(d["samples"], serde_json::json!(e.sample_ids));
+        let resistant: Vec<bool> = (0..n).map(|i| e.y.contains(i)).collect();
+        assert_eq!(d["resistant"], serde_json::json!(resistant));
+        assert_eq!(d["lineage"], serde_json::json!(e.lineage));
+        let groups: BTreeSet<BTreeSet<&str>> = e
+            .duplicates
+            .iter()
+            .map(|g| g.iter().map(|&i| e.sample_ids[i].as_str()).collect())
+            .collect();
+        let want = [["562.401", "562.402"], ["562.404", "562.405"]];
+        assert_eq!(groups, want.map(BTreeSet::from).into());
+        assert_eq!(d["duplicates"], serde_json::json!(e.duplicates));
+        assert_eq!(e.min_support, 3);
+        assert_eq!(d["min_support"], 3);
+        assert_eq!(bytes, grm::export::matrix_bytes(&e.x));
+        assert_eq!(
+            (d["rows"].as_u64(), d["cols"].as_u64(), d["words"].as_u64()),
+            (
+                Some(e.x.rows as u64),
+                Some(n as u64),
+                Some(e.x.words as u64)
+            )
+        );
+
+        let scored = grm::learn::eval::evaluate(
+            MEROPENEM,
+            &e.x,
+            &e.y,
+            &e.lineage,
+            &e.duplicates,
+            e.min_support,
+            None,
+            &cfg,
+        )
+        .unwrap();
+        let splits = d["splits"].as_array().unwrap();
+        assert_eq!(splits.len(), scored.splits.len());
+        let (mut below_floor, mut on_test_samples, mut folds) = (false, false, 0);
+        for (split, s) in splits.iter().zip(&scored.splits) {
+            let plan = &split["plan"];
+            assert_eq!(plan["scheme"], s.scheme.as_str());
+            assert!(plan["unavailable_reason"].is_null(), "{}", s.scheme);
+            assert!(s.unavailable_reason.is_none(), "{}", s.scheme);
+            let outer: Vec<usize> = serde_json::from_value(plan["outer"].clone()).unwrap();
+            assert_eq!(outer, s.test_fold, "{} outer folds", s.scheme);
+            for g in &e.duplicates {
+                assert!(
+                    g.iter().all(|&i| outer[i] == outer[g[0]]),
+                    "{} {g:?}",
+                    s.scheme
+                );
+            }
+            let screens = split["screens"].as_array().unwrap();
+            assert_eq!(screens.len(), cfg.folds);
+            for (f, screen) in screens.iter().enumerate() {
+                assert_eq!(screen["fold"], f);
+                let train: Vec<bool> = outer.iter().map(|&o| o != f).collect();
+                let mask = grm::bits::Bits::from_indices(n, (0..n).filter(|&i| train[i]));
+                assert_eq!(screen["n_train"], train.iter().filter(|&&t| t).count());
+                let (cx, rows) = grm::learn::training_candidates(&e.x, &mask, e.min_support);
+                let candidates = candidates_in(&bytes, e.x.words, &train, 3);
+                assert_eq!(screen["n_candidates"], cx.rows, "{} fold {f}", s.scheme);
+                assert_eq!(screen["n_candidates"], candidates, "{} fold {f}", s.scheme);
+                let want: Vec<u32> = grm::learn::screen(&cx, &e.y, &mask, 7)
+                    .into_iter()
+                    .map(|r| rows[r as usize])
+                    .collect();
+                assert_eq!(screen["screened_rows"], serde_json::json!(want));
+                // The fixture is one where a floor of 2, or candidates taken
+                // on every sample, give other counts.
+                below_floor |= candidates_in(&bytes, e.x.words, &train, 2) != candidates;
+                on_test_samples |= candidates_in(&bytes, e.x.words, &[true; 60], 3) != candidates;
+                folds += 1;
+            }
+        }
+        assert_eq!(folds, 2 * cfg.folds);
+        assert!(below_floor && on_test_samples);
+    }
+
+    /// An export stops at a dataset directory that exists, names it and
+    /// writes nothing for any dataset; `--force` replaces the two files.
+    #[test]
+    fn export_stops_at_a_dataset_directory_that_exists_unless_forced() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = export_fixture(dir.path());
+        let out = dir.path().join("export");
+        let (mero, cipro) = (out.join(MEROPENEM), out.join(CIPROFLOXACIN));
+        run_export(dir.path(), &out, &["--only", "meropenem"]).unwrap();
+        let first = export_files(&mero);
+        std::fs::write(mero.join("dataset.json"), "earlier").unwrap();
+        std::fs::write(mero.join("notes.txt"), "kept").unwrap();
+
+        let err = run_export(dir.path(), &out, &[]).unwrap_err();
+        assert!(err.contains(&mero.display().to_string()), "{err}");
+        assert!(err.contains("--force"), "{err}");
+        assert!(!cipro.exists(), "a refused export wrote another dataset");
+        assert_eq!(
+            std::fs::read(mero.join("dataset.json")).unwrap(),
+            b"earlier"
+        );
+
+        run_export(dir.path(), &out, &["--force"]).unwrap();
+        assert_eq!(export_files(&mero), first);
+        assert_eq!(std::fs::read(mero.join("notes.txt")).unwrap(), b"kept");
+        assert!(cipro.join("dataset.json").exists());
+        let cfg = grm::learn::eval::EvalConfig::default();
+        let done =
+            grm::export::export_species(&layout, EXPORT_SLUG, &[], &out, &cfg, true).unwrap();
+        assert_eq!(done.len(), 2);
+        assert!(done.iter().all(|d| d.replaced), "{done:?}");
+        assert_eq!(export_files(&mero), first);
+
+        // Anything at a dataset's path stops the export before it writes
+        // any dataset, a file or a broken link too, whichever dataset's
+        // path it is.
+        for (n, (id, rest, link)) in [
+            (CIPROFLOXACIN, MEROPENEM, false),
+            (MEROPENEM, CIPROFLOXACIN, false),
+            (CIPROFLOXACIN, MEROPENEM, true),
+            (MEROPENEM, CIPROFLOXACIN, true),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let other = dir.path().join(format!("other-{n}"));
+            std::fs::create_dir_all(&other).unwrap();
+            if link {
+                std::os::unix::fs::symlink(dir.path().join("nowhere"), other.join(id)).unwrap();
+            } else {
+                std::fs::write(other.join(id), "a file").unwrap();
+            }
+            let err = run_export(dir.path(), &other, &[]).unwrap_err();
+            let want = format!(
+                "1 dataset directory already exists: {}.",
+                other.join(id).display()
+            );
+            assert!(err.contains(&want), "{id} link {link}: {err}");
+            assert!(
+                !other.join(rest).exists(),
+                "{id} link {link}: {rest} written"
+            );
+        }
+    }
+
+    /// Each file is written under a temporary name and renamed, after the
+    /// earlier `dataset.json` is removed and before the new one is renamed
+    /// into place: a write that fails names its file and leaves a directory
+    /// without `dataset.json`, which the next export without `--force`
+    /// refuses.
+    #[test]
+    fn an_export_that_fails_to_write_names_the_file_and_leaves_no_dataset_json() {
+        let dir = tempfile::tempdir().unwrap();
+        export_fixture(dir.path());
+        let out = dir.path().join("export");
+        let mero = out.join(MEROPENEM);
+        let args = ["--only", "meropenem", "--force"];
+        run_export(dir.path(), &out, &args).unwrap();
+        let first = export_files(&mero);
+        for blocked in ["matrix.bin.tmp", "dataset.json.tmp"] {
+            // A directory at the temporary name makes its write fail.
+            std::fs::create_dir(mero.join(blocked)).unwrap();
+            let err = run_export(dir.path(), &out, &args).unwrap_err();
+            assert!(
+                err.contains(&mero.join(blocked).display().to_string()),
+                "{err}"
+            );
+            assert!(
+                !mero.join("dataset.json").exists(),
+                "{blocked}: dataset.json left"
+            );
+            assert!(mero.join("matrix.bin").exists());
+            std::fs::remove_dir(mero.join(blocked)).unwrap();
+        }
+        let err = run_export(dir.path(), &out, &["--only", "meropenem"]).unwrap_err();
+        assert!(err.contains(&mero.display().to_string()), "{err}");
+        run_export(dir.path(), &out, &args).unwrap();
+        assert_eq!(export_files(&mero), first);
+        let names: BTreeSet<String> = std::fs::read_dir(&mero)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .collect();
+        assert_eq!(
+            names,
+            BTreeSet::from(["dataset.json".into(), "matrix.bin".into()])
+        );
+    }
+
+    /// `--only` names that match no dataset of the species stop the export
+    /// before it writes anything, and the message lists them.
+    #[test]
+    fn export_stops_on_an_only_name_that_matches_no_dataset() {
+        let dir = tempfile::tempdir().unwrap();
+        export_fixture(dir.path());
+        let out = dir.path().join("export");
+        for (only, unmatched) in [
+            ("meropenem,ciprofloxacn", "ciprofloxacn"),
+            ("nitrofurantoin", "nitrofurantoin"),
+            (
+                "klebsiella_oxytoca__meropenem",
+                "klebsiella_oxytoca__meropenem",
+            ),
+            (
+                "tetracycline,meropenem,ampicilin",
+                "tetracycline, ampicilin",
+            ),
+        ] {
+            let err = run_export(dir.path(), &out, &["--only", only]).unwrap_err();
+            let want = format!("--only names no dataset of {EXPORT_SLUG}: {unmatched}.");
+            assert!(err.contains(&want), "{only}: {err}");
+            assert!(
+                err.contains(MEROPENEM) && err.contains(CIPROFLOXACIN),
+                "{err}"
+            );
+            assert!(!out.exists(), "{only}: something was written");
+        }
+        // An antibiotic and a dataset id both match.
+        run_export(
+            dir.path(),
+            &out,
+            &["--only", &format!("meropenem,{CIPROFLOXACIN}")],
+        )
+        .unwrap();
+        assert!(out.join(MEROPENEM).join("dataset.json").exists());
+        assert!(out.join(CIPROFLOXACIN).join("dataset.json").exists());
+    }
+
+    /// A genomes.txt changed after counting stops the export with the
+    /// message `grm learn` gives, before anything is written.
+    #[test]
+    fn export_stops_as_learn_does_when_genomes_txt_changed_after_counting() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = export_fixture(dir.path());
+        let path = layout.species_dir(EXPORT_SLUG).join("genomes.txt");
+        let mut ids = read_lines(&path).unwrap();
+        ids.swap(0, 1);
+        std::fs::write(&path, ids.join("\n") + "\n").unwrap();
+        let data = dir.path().to_str().unwrap();
+        let learn = ["grm", "--data", data, "learn", "--species", EXPORT_SLUG];
+        let learn_err = format!(
+            "{:#}",
+            run(Cli::try_parse_from(learn).unwrap()).unwrap_err()
+        );
+        let out = dir.path().join("export");
+        let err = run_export(dir.path(), &out, &[]).unwrap_err();
+        assert_eq!(err, learn_err);
+        assert!(
+            err.contains("rerun `grm count --species escherichia_coli`"),
+            "{err}"
+        );
+        assert!(!out.exists());
+    }
+
+    /// A species without a matrix: the message names the three commands
+    /// that build it, and a slug with no species folder is called out too.
+    #[test]
+    fn export_of_a_species_without_a_matrix_names_the_commands_to_run() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let out = dir.path().join("export");
+        let export = |slug: &str| {
+            let args = ["grm", "--data", data, "export", "--species", slug, "--out"];
+            let cli = Cli::try_parse_from(args.iter().copied().chain([out.to_str().unwrap()]));
+            format!("{:#}", run(cli.unwrap()).unwrap_err())
+        };
+        let err = export(SLUG);
+        for step in ["count", "structure", "matrix"] {
+            assert!(
+                err.contains(&format!("`grm {step} --species {SLUG}`")),
+                "{err}"
+            );
+        }
+        assert!(
+            err.contains(&layout.matrix_dir(SLUG).display().to_string()),
+            "{err}"
+        );
+        assert!(!err.contains("check the species slug"), "{err}");
+        let err = export("fixtur");
+        assert!(err.contains("`grm count --species fixtur`"), "{err}");
+        assert!(err.contains("check the species slug"), "{err}");
+        assert!(!out.exists());
     }
 
     /// Every file under `dir`, by its path below `dir`.

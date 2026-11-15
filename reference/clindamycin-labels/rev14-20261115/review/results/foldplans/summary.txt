@@ -1,0 +1,2 @@
+random: lane's passing rows (balanced accuracy, recall) 6; meet test 1 (total) 6; meet test 2 (training) 3
+lineage: lane's passing rows (balanced accuracy, recall) 10; meet test 1 (total) 8; meet test 2 (training) 6

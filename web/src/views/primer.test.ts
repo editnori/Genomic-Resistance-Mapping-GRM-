@@ -7,7 +7,7 @@
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fixtureFile } from "../dev/fixtures/files";
 import { parseManifest } from "../data/validate";
 import type { CatalogRow, Manifest } from "../data/schema";
@@ -142,6 +142,13 @@ describe("the primer's example report", () => {
 });
 
 let root: Root | null = null;
+// The views read the optional baselines files on mount; with no server
+// here each answers 404, so the views show no constant. A test that serves
+// files stubs fetch itself.
+beforeEach(() => {
+  vi.stubGlobal("fetch", async () => new Response("", { status: 404 }));
+});
+
 afterEach(() => {
   act(() => root?.unmount());
   root = null;

@@ -6,10 +6,13 @@
 //! screening, which is why `screen` takes the mask.
 
 pub mod eval;
+pub mod foldfile;
 pub mod gbt;
 pub mod lasso;
+pub mod null_refit;
 pub mod planned;
 pub mod scm;
+pub mod tie;
 pub mod tree;
 
 use crate::bits::{self, BitMatrix, Bits};
@@ -465,6 +468,18 @@ pub fn training_candidates(x: &BitMatrix, train: &Bits, min_support: u32) -> (Bi
         rows.push(f as u32);
     }
     (sub, rows)
+}
+
+/// Whether `training_candidates` keeps any row of `x` for `train`: some
+/// row's support among training samples lies in
+/// [min_support, |train| - min_support].
+pub fn any_training_candidate(x: &BitMatrix, train: &Bits, min_support: u32) -> bool {
+    assert_eq!(x.cols, train.len());
+    let max = train.count().saturating_sub(min_support);
+    (0..x.rows).any(|f| {
+        let s = bits::and_count(x.row(f), train.words());
+        s >= min_support && s <= max
+    })
 }
 
 /// Ranks features by the chi-square statistic of the 2x2 presence-by-class

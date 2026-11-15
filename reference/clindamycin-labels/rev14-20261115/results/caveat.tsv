@@ -1,0 +1,7 @@
+dataset	chosen_pmid	existence	dependence	rows_passing	rows_tested	caveat	note
+campylobacter_coli__clindamycin	26519386	no	yes	9	36	yes	lineage clusters 226; placebo arms 10
+campylobacter_jejuni__clindamycin	26519386	yes	NA	NA	NA	yes	not refit: removal leaves reported R 8, S 469, under min_class 25
+enterococcus_faecium__clindamycin	38219758	yes	NA	NA	NA	yes	not refit: removal leaves reported R 0, S 0, under min_class 25
+staphylococcus_aureus__clindamycin	34100643	no	yes	22	36	yes	lineage clusters 43; placebo arms 0
+streptococcus_agalactiae__clindamycin	26135871	yes	NA	NA	NA	yes	not refit: removal leaves reported R 38, S 18, under min_class 25
+streptococcus_pneumoniae__clindamycin	37823632	no	no	0	36	no	lineage clusters 103; placebo arms 0

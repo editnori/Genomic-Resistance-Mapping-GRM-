@@ -1,10 +1,11 @@
 // One fetch cache for the report files. Each path is fetched once, parsed at
 // the edge, and shared by every view that asks for it.
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { Corpus, DatasetReport, Manifest, Research, SpeciesReport } from "./schema";
 import { ShapeError, parseCorpus, parseDataset, parseManifest, parseResearch, parseSpecies } from "./validate";
 import { parseIntervals, type Intervals } from "./intervals";
+import { micSummaryFor, parseBaselines, parseMicSummary, type Baselines, type MicSummary } from "./baselines";
 
 export type LoadError =
   | { kind: "missing"; path: string }
@@ -37,8 +38,70 @@ const entryFor = (path: string): Entry => {
   return entry;
 };
 
-/** Raw JSON for a /data path, or the error that stopped it. */
+// ---- report digests ------------------------------------------------------------------
+
+interface DigestEntry {
+  /** Undefined until the report has been read; null when no digest exists. */
+  value: string | null | undefined;
+  listeners: Set<() => void>;
+}
+
+const digests = new Map<string, DigestEntry>();
+
+const digestEntry = (path: string): DigestEntry => {
+  let entry = digests.get(path);
+  if (entry === undefined) {
+    entry = { value: undefined, listeners: new Set() };
+    digests.set(path, entry);
+  }
+  return entry;
+};
+
+const settleDigest = (path: string, value: string | null): void => {
+  const entry = digestEntry(path);
+  if (entry.value !== undefined) return;
+  entry.value = value;
+  entry.listeners.forEach((l) => l());
+};
+
+/** SHA-256 of bytes as lowercase hex, or null where the page has no Web
+ *  Crypto (a page served over plain HTTP from another host than localhost)
+ *  or the digest fails. */
+export async function sha256Hex(bytes: ArrayBuffer): Promise<string | null> {
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle === undefined) return null;
+  try {
+    const digest = await subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return null;
+  }
+}
+
+/** A dataset report's bytes are hashed as they are read, for the optional
+ *  files pinned to them (baselines/<id>.json), and so are index.json's, for
+ *  the summary pinned to it (baselines.json). */
+const isHashedPath = (path: string): boolean => path === "/data/index.json" || path.startsWith("/data/datasets/");
+
+/** Raw JSON for a /data path, or the error that stopped it. The SHA-256 of
+ *  a dataset report or of the index is computed from the same bytes, beside
+ *  the parse, and settles to null when the file cannot be read. */
 async function fetchRaw(path: string): Promise<{ ok: true; raw: unknown } | { ok: false; error: LoadError }> {
+  const got = await fetchBytes(path);
+  if (isHashedPath(path)) {
+    if (got.ok) void sha256Hex(got.bytes).then((d) => settleDigest(path, d));
+    else settleDigest(path, null);
+  }
+  if (!got.ok) return got;
+  try {
+    // What response.json() does: UTF-8 without a byte-order mark, then JSON.
+    return { ok: true, raw: JSON.parse(new TextDecoder("utf-8").decode(got.bytes)) as unknown };
+  } catch (e) {
+    return { ok: false, error: { kind: "parse", path, message: e instanceof Error ? e.message : String(e) } };
+  }
+}
+
+async function fetchBytes(path: string): Promise<{ ok: true; bytes: ArrayBuffer } | { ok: false; error: LoadError }> {
   let response: Response;
   try {
     response = await fetch(path, { headers: { Accept: "application/json" } });
@@ -52,9 +115,9 @@ async function fetchRaw(path: string): Promise<{ ok: true; raw: unknown } | { ok
   // with HTML; that is a missing file, not a parse failure.
   if (type.includes("text/html")) return { ok: false, error: { kind: "missing", path } };
   try {
-    return { ok: true, raw: await response.json() };
+    return { ok: true, bytes: await response.arrayBuffer() };
   } catch (e) {
-    return { ok: false, error: { kind: "parse", path, message: e instanceof Error ? e.message : String(e) } };
+    return { ok: false, error: { kind: "network", path, message: e instanceof Error ? e.message : String(e) } };
   }
 }
 
@@ -112,6 +175,9 @@ export const PATHS = {
   dataset: (id: string) => `/data/datasets/${encodeURIComponent(id)}.json`,
   research: "/data/research.json",
   intervals: (id: string) => `/data/intervals/${encodeURIComponent(id)}.json`,
+  baselines: (id: string) => `/data/baselines/${encodeURIComponent(id)}.json`,
+  /** The MIC constants of every dataset, beside index.json. */
+  micBaselines: "/data/baselines.json",
 } as const;
 
 export const useManifest = (): Resource<Manifest> => useResource(PATHS.manifest, parseManifest);
@@ -126,6 +192,45 @@ export const useResearch = (): Resource<Research> => useResource(PATHS.research,
 /** Optional, like research.json: a missing or invalid intervals file reads
  *  as no intervals (intervalsFor). */
 export const useIntervals = (id: string): Resource<Intervals> => useResource(PATHS.intervals(id), parseIntervals);
+/** Optional too: a missing or invalid baselines file reads as no baselines
+ *  (baselinesFor). */
+export const useBaselines = (id: string): Resource<Baselines> => useResource(PATHS.baselines(id), parseBaselines);
+
+/** The SHA-256 of a hashed file as this page read it: undefined until it
+ *  has been read and hashed, null when it could not be. */
+function useDigest(path: string): string | null | undefined {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const entry = digestEntry(path);
+      entry.listeners.add(onChange);
+      return () => entry.listeners.delete(onChange);
+    },
+    [path],
+  );
+  const snapshot = useCallback(() => digestEntry(path).value, [path]);
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
+}
+
+/** The SHA-256 of dataset `id`'s report as this page read it: undefined
+ *  until it has been read and hashed, null when it could not be. */
+export function useReportDigest(id: string): string | null | undefined {
+  return useDigest(PATHS.dataset(id));
+}
+
+/** The MIC constants of every dataset with an MIC model, from the one
+ *  summary file beside the index (baselines.json), as pinned to `manifest`
+ *  and to the bytes of index.json this page read (micSummaryFor). Ready with
+ *  null when the file is missing or invalid, or describes another index, and
+ *  the pages then show no constant; loading until both the file and the
+ *  index's digest are known, so the pages draw once. */
+export function useMicBaselines(manifest: Manifest): Resource<MicSummary | null> {
+  const file = useResource(PATHS.micBaselines, parseMicSummary);
+  const digest = useDigest(PATHS.manifest);
+  return useMemo(() => {
+    if (file.status === "loading" || digest === undefined) return LOADING;
+    return { status: "ready", data: file.status === "ready" ? micSummaryFor(file.data, manifest, digest) : null };
+  }, [file, digest, manifest]);
+}
 
 /** A load failure in words a visitor can act on. Where the cause is a
  *  report that was never built or was built by another version, the last

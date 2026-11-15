@@ -276,7 +276,11 @@ fn fit_gbt(
         &fit_m,
         val,
         &feats,
-        &GbtParams { seed, ..cfg.gbt },
+        &GbtParams {
+            seed,
+            tie: cfg.tie_rule,
+            ..cfg.gbt
+        },
     );
     Scored {
         scores: eval::gbt_scores(&m, x),

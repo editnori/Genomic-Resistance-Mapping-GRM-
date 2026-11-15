@@ -210,7 +210,8 @@ fn selected(p: &Panel, y: &Bits, train: &Bits, cfg: &EvalConfig) -> Value {
         return json!({ "error": format!("{e:#}") });
     }
     let c = scm::select(&p.x, y, train, cfg.scm_max_rules, &folds, k);
-    let (depth, tree_error) = tree::select_depth(&p.x, y, train, &folds, k, cfg.cart_max_depth);
+    let (depth, tree_error) =
+        tree::select_depth(&p.x, y, train, &folds, k, cfg.cart_max_depth, cfg.tie_rule);
     json!({
         "inner_folds": k,
         "seed": cfg.seed,
@@ -229,6 +230,7 @@ fn decision_tree(p: &Panel, y: &Bits, train: &Bits, cfg: &EvalConfig) -> Value {
             min_leaf: 1,
             max_features: None,
             seed: 0,
+            tie: cfg.tie_rule,
         },
     );
     json!({
@@ -303,6 +305,7 @@ fn forest(p: &Panel, y: &Bits, train: &Bits, cfg: &EvalConfig) -> Result<Value> 
                 min_leaf: params.min_leaf,
                 max_features: Some(m),
                 seed,
+                tie: params.tie,
             },
         );
         ensure!(
