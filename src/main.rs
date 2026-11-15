@@ -869,17 +869,38 @@ fn refuse_exact_in_results(
     }
     let results = layout.results_dir(slug);
     let dir = out.map_or_else(|| grm::analysis::reports_dir(layout, slug, cfg), Into::into);
-    let same = dir == results
-        || matches!(
-            (std::fs::canonicalize(&dir), std::fs::canonicalize(&results)),
-            (Ok(a), Ok(b)) if a == b
-        );
+    let same = resolved(&dir) == resolved(&results);
     anyhow::ensure!(
         !same,
         "--exp-tie-rule exact would write {slug}'s reports to {}, the folder production reports are written to and `grm report` indexes; name another folder with --exp-tie-out DIR",
         results.display()
     );
     Ok(())
+}
+
+/// `path` made absolute, each part that exists resolved through the file
+/// system, and a `..` after a missing part taken off in the text. Two
+/// spellings of one folder then compare equal before the folder exists,
+/// when `canonicalize` has nothing to resolve.
+fn resolved(path: &std::path::Path) -> PathBuf {
+    let absolute = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
+    let mut out = PathBuf::new();
+    let mut exists = true;
+    for part in absolute.components() {
+        if !exists && part == std::path::Component::ParentDir {
+            out.pop();
+            exists = out.exists();
+            continue;
+        }
+        out.push(part);
+        if exists {
+            match std::fs::canonicalize(&out) {
+                Ok(real) => out = real,
+                Err(_) => exists = false,
+            }
+        }
+    }
+    out
 }
 
 /// The line `grm learn` ends a species with. A run that writes `results/`
@@ -3215,6 +3236,21 @@ mod tests {
             )
         );
         assert!(!results.exists());
+        // results/ is not made yet, and another spelling of it is refused all
+        // the same: through a folder that is missing, and through a link.
+        let species = layout.species_dir(SLUG);
+        let mut spellings = vec![species.join("missing").join("..").join("results")];
+        #[cfg(unix)]
+        {
+            let link = dir.path().join("link");
+            std::os::unix::fs::symlink(&species, &link).unwrap();
+            spellings.push(link.join("results"));
+        }
+        for spelling in spellings {
+            let named = [&exact[..], &["--exp-tie-out", spelling.to_str().unwrap()]].concat();
+            assert!(grm(&named).unwrap_err().contains("--exp-tie-out DIR"));
+            assert!(!results.exists() && !species.join("missing").exists());
+        }
         std::fs::create_dir_all(&results).unwrap();
         let named = [&exact[..], &["--exp-tie-out", results.to_str().unwrap()]].concat();
         assert!(grm(&named).unwrap_err().contains("--exp-tie-out DIR"));
@@ -3233,6 +3269,32 @@ mod tests {
             production["input_fingerprint"],
             read(out.join(&file))["input_fingerprint"]
         );
+    }
+
+    /// From the review of pull request 128: with a relative --data and
+    /// results/ not yet made, an absolute --exp-tie-out naming results/
+    /// passed the guard, since the two spellings differ and neither folder
+    /// could be resolved. The guard now compares the folders themselves.
+    #[test]
+    fn an_exact_learn_refuses_results_under_another_spelling_before_it_exists() {
+        let layout = Layout::new("no-such-data-root");
+        let cfg = grm::learn::eval::EvalConfig {
+            tie_rule: grm::learn::tie::TieRule::Exact,
+            seed: 7,
+            ..Default::default()
+        };
+        let results = std::env::current_dir()
+            .unwrap()
+            .join(layout.results_dir(SLUG));
+        assert!(!results.exists());
+        let refused = |out: &Path| refuse_exact_in_results(&layout, SLUG, &cfg, Some(out)).is_err();
+        assert!(refused(&results));
+        assert!(refused(&results.join("..").join("results")));
+        assert!(refused(&layout.results_dir(SLUG)));
+        assert!(!refused(&results.with_file_name("exact")));
+        // At a seed of its own the run writes to draws/, which the guard
+        // lets through with no folder named.
+        refuse_exact_in_results(&layout, SLUG, &cfg, None).unwrap();
     }
 
     /// The acceptance check of docs/prediction-contract.md: `grm predict`,

@@ -309,6 +309,11 @@ fn grow(
                 tally.searched += 1;
                 tally.differ_partition += (lowest != best.map(|b| b.1)) as u64;
             }
+            // The move is decided on the two groups alone. A lower feature
+            // with the same groups has the same child sums in exact
+            // arithmetic, so it meets the floors above exactly when the pick
+            // does, and it is taken even where its rounded sums fell short.
+            // A node with no pick stays whole under both rules.
             match (p.tie, best, lowest) {
                 (TieRule::Exact, Some((_, f)), Some(g)) if g != f => {
                     let (gl, hl) = masked_sums(mask.words(), x.row(g as usize), grad);
@@ -666,6 +671,59 @@ mod tests {
         // With feature 0 drawn as well, the split moves to it.
         let (exact, _) = stump(&[2, 1, 0], TieRule::Exact, false);
         assert_eq!(exact.nodes[0].feature, Some(0));
+    }
+
+    /// The exact rule's move is decided on the two groups alone. Synthetic,
+    /// from the review of pull request 128: 12 fit samples, 3 of them
+    /// resistant, in the first round of a logistic fit. Feature 0 is present
+    /// on 6 susceptible samples and feature 1 on the other 6, so both make
+    /// the same two groups. Added one by one, the 6 susceptible Hessians come
+    /// to 0.9999999999999999, under the floor of 1 (`min_child_weight`), and
+    /// production turns feature 0 away; feature 1's sides are 2.0 and
+    /// 3.0 - 2.0, and it splits. In exact arithmetic the two meet the floor
+    /// together, so the exact rule takes the lower. It moves a split
+    /// production makes and adds none: with feature 0 alone the node stays
+    /// whole under both rules.
+    #[test]
+    fn the_exact_rule_takes_the_same_groups_where_rounding_turns_them_away() {
+        let n = 12;
+        let y = Bits::from_indices(n, [5, 10, 11]);
+        let fit = Bits::ones(n);
+        let obj = Objective::Logistic { y: &y };
+        let w = sample_weights(&obj, &fit);
+        let grad = gradients(&obj, &vec![0.0; n], &w);
+        let low = vec![0, 1, 2, 4, 7, 8];
+        let high: Vec<usize> = (0..n).filter(|i| !low.contains(i)).collect();
+        let x = matrix(&[low, high], n);
+        let present = |f: usize| masked_sums(fit.words(), x.row(f), &grad).1;
+        assert_eq!((present(0), present(1)), (0.9999999999999999, 2.0));
+        let tree = |candidates: &[u32], tie| {
+            let params = GbtParams {
+                max_depth: 1,
+                tie,
+                ..Default::default()
+            };
+            grow(
+                &x,
+                &fit,
+                &grad,
+                candidates,
+                &params,
+                false,
+                &mut Tally::default(),
+            )
+        };
+        let (float, exact) = (tree(&[0, 1], TieRule::Float), tree(&[0, 1], TieRule::Exact));
+        assert_eq!(float.nodes[0].feature, Some(1));
+        assert_eq!(exact.nodes[0].feature, Some(0));
+        // The same samples reach each leaf, so every sample scores the same.
+        let (mut a, mut b) = (vec![0.0; n], vec![0.0; n]);
+        float.add_to(&x, &mut a);
+        exact.add_to(&x, &mut b);
+        assert_eq!(a, b);
+        for tie in [TieRule::Float, TieRule::Exact] {
+            assert_eq!(tree(&[0], tie).nodes[0].feature, None);
+        }
     }
 
     /// The exact rule moves a boosted split only to a lower feature with the

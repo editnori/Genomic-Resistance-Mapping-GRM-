@@ -111,6 +111,8 @@ So the experiment measures where rounding departs from the exact order. It does 
 
 For gbt, the exact rule moves a split only to a lower feature with the same two groups. It moves 10,602 of the 997,991 nodes searched in the logistic models, in 1,593 of 1,829 fits, and 7,044 of 343,562 in the MIC models, in 364 of 365 fits (`traces.tsv`).
 
+The move is decided on the two groups alone. A split needs each side's summed weight to reach a floor, and rounding can put one of two features with the same groups under it. A synthetic test in `src/learn/gbt.rs` holds such a case: the present rule turns the lower feature away and splits on the higher, and the exact rule takes the lower. The exact rule moves a split the present rule makes and adds none.
+
 Two gbt candidates with equal gains and different groups still follow rounding. In the first round of a logistic fit every sample of a class has the same gradient, so two candidates on equal numbers of resistant and susceptible samples have equal gains whatever samples they hold. The review built such a case, and both rules split on the higher feature number. So for gbt the exact rule does not make the stated rule true. The case is now a test in `src/learn/gbt.rs`.
 
 ## The flag
@@ -121,6 +123,8 @@ A report fitted under the exact rule carries `eval_config.tie_rule: "exact"`, an
 
 - At the release's seeds `grm learn` writes to `species/<slug>/results/`, the directory `grm report` indexes. An exact run refuses that directory before any fit, unless `--exp-tie-out DIR` names another one.
 - `grm report` stops at a report whose `eval_config.tie_rule` is not production's, and names its file.
+
+The first guard compares the two directories as places. A relative path, a link or a `..` names the same directory, whether or not it exists yet.
 
 `--exp-tie-trace FILE` writes one JSON line per tree-learner fit: its nodes searched, the nodes where the two rules pick different features, and a digest of each tree. The fits are the same as without it. A cart or rf fit that is exact or traced first checks that each class has fewer than `2^31` fitting samples, the bound its integer arithmetic needs.
 

@@ -339,6 +339,7 @@ src/lib.rs learn::gbt::tests::logistic_boosting_learns_an_interaction
 src/lib.rs learn::gbt::tests::pure_xor_keeps_no_tree
 src/lib.rs learn::gbt::tests::rounding_puts_the_mirrored_feature_first_unless_the_rule_is_exact
 src/lib.rs learn::gbt::tests::the_exact_rule_moves_a_split_only_to_the_same_two_groups
+src/lib.rs learn::gbt::tests::the_exact_rule_takes_the_same_groups_where_rounding_turns_them_away
 src/lib.rs learn::lasso::tests::a_coefficient_warm_started_with_the_wrong_sign_crosses_zero
 src/lib.rs learn::lasso::tests::a_coefficient_within_rounding_of_zero_does_not_stall_the_solve
 src/lib.rs learn::lasso::tests::a_column_dependent_on_the_active_set_is_exchanged_in
@@ -582,6 +583,7 @@ src/main.rs tests::a_reset_check_stops_on_a_recorded_failure_it_cannot_judge
 src/main.rs tests::a_selected_genome_is_counted_once_its_fasta_is_downloaded
 src/main.rs tests::a_structure_from_before_kset_digests_is_rebuilt_beside_a_current_matrix
 src/main.rs tests::an_exact_learn_refuses_results_and_writes_the_rule_to_the_folder_it_names
+src/main.rs tests::an_exact_learn_refuses_results_under_another_spelling_before_it_exists
 src/main.rs tests::an_export_that_fails_to_write_names_the_file_and_leaves_no_dataset_json
 src/main.rs tests::another_genome_selection_recounts_and_rebuilds_structure_and_matrix
 src/main.rs tests::changed_ksets_rebuild_structure_and_matrix
