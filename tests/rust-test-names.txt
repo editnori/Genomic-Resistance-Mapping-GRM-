@@ -212,6 +212,7 @@ src/lib.rs learn::eval::tests::a_path_without_a_converged_candidate_fails_with_f
 src/lib.rs learn::eval::tests::a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers
 src/lib.rs learn::eval::tests::a_split_that_did_not_run_keeps_no_fold_models
 src/lib.rs learn::eval::tests::a_training_prevalence_of_exactly_one_half_is_a_resistant_call
+src/lib.rs learn::eval::tests::a_weightless_lasso_fold_scored_its_test_samples_at_its_training_prevalence
 src/lib.rs learn::eval::tests::an_empty_lasso_path_is_a_null_fit_without_a_call
 src/lib.rs learn::eval::tests::an_unconverged_final_lasso_refit_fails_with_full_context
 src/lib.rs learn::eval::tests::conformal_trades_coverage_for_error

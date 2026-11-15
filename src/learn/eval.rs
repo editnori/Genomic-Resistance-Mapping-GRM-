@@ -358,8 +358,9 @@ pub struct FoldScm {
 }
 
 /// The outer-fold models of one split, each learner's by fold id: the model
-/// whose scores the split's row holds for the samples `test_fold` gives
-/// that fold. Each has the shape of the final model it stands beside:
+/// fitted for the samples `test_fold` gives that fold, whose scores the
+/// split's row holds for them unless the fit was null. Each has the shape
+/// of the final model it stands beside:
 ///
 /// - `scm`: as `FinalModels::scm`'s kind, p and rules;
 /// - `cart`: the tree, as `FinalModels::cart`, grown to its selected depth;
@@ -368,6 +369,10 @@ pub struct FoldScm {
 ///   kept no tree has none;
 /// - `lasso`: the scored refit, as `FinalModels::lasso`; None when the
 ///   tuning path was empty, and without weights when the refit kept none.
+///   A lasso fold model that is None or has no weights, like a boosting
+///   fold with an empty list, is a null fit: its fold scored each test
+///   sample at the fold's training prevalence (`pool_folds`,
+///   docs/equal-scoring.md), not at the sigmoid of its intercept.
 ///
 /// A feature is a row of the dataset matrix, the numbering of the final
 /// models and of a report's feature cards. A fold chooses among the rows
@@ -4100,6 +4105,73 @@ mod tests {
                 "{name}: {shifted:?}"
             );
         }
+    }
+
+    /// Synthetic: 90 samples, a third resistant, and twelve rows of noise
+    /// present in about 40% of samples whatever the label, so the lasso has
+    /// little to keep.
+    fn noise_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let n = 90;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(29);
+        let mut x = BitMatrix::with_cols(n);
+        for _ in 0..12 {
+            let present: Vec<usize> = (0..n).filter(|_| rng.random_bool(0.4)).collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        (x, y, (0..n).map(|i| (i % 30) as u32).collect())
+    }
+
+    #[test]
+    fn a_weightless_lasso_fold_scored_its_test_samples_at_its_training_prevalence() {
+        // docs/report-rule-fields.md: a lasso fold model that is null or has
+        // no weights scored its fold's test samples at the fold's training
+        // prevalence, read from `test_fold` and the labels alone, and not at
+        // the sigmoid of its intercept.
+        let (x, y, groups) = noise_fixture();
+        let n = x.cols;
+        let cfg = EvalConfig {
+            screened_features: 12,
+            lasso_lambdas: 10,
+            ..small_config()
+        };
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
+        let (mut weightless, mut other_call) = (0, 0);
+        for (split, models) in out.splits.iter().zip(&out.fold_models) {
+            assert_eq!(models.scheme, split.scheme);
+            let row = split
+                .learners
+                .iter()
+                .find(|l| l.learner == "lasso")
+                .unwrap();
+            for (f, model) in models.lasso.iter().enumerate() {
+                if model.as_ref().is_some_and(|m| !m.coef.is_empty()) {
+                    continue;
+                }
+                weightless += 1;
+                assert_eq!(row.fold_complexity[f], 0.0);
+                let train: Vec<usize> = (0..n).filter(|&i| split.test_fold[i] != f).collect();
+                let resistant = train.iter().filter(|&&i| y.contains(i)).count();
+                let prevalence = resistant as f64 / train.len() as f64;
+                assert_ne!(prevalence, 0.5);
+                let literal = model.as_ref().map(|m| m.predict_proba(&x));
+                for i in (0..n).filter(|&i| split.test_fold[i] == f) {
+                    // By the rule: the saved score, exactly.
+                    assert_eq!(row.scores[i], prevalence);
+                    // Read as written: another score, and here another call.
+                    if let Some(literal) = &literal {
+                        assert_ne!(row.scores[i], literal[i]);
+                        other_call += usize::from((literal[i] >= 0.5) != (prevalence >= 0.5));
+                    }
+                }
+            }
+        }
+        assert!(weightless > 0, "the fixture has no weightless lasso fold");
+        assert!(
+            other_call > 0,
+            "no weightless fold's intercept gives another call"
+        );
     }
 
     #[test]
