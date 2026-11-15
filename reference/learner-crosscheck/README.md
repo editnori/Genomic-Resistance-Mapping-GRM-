@@ -39,6 +39,15 @@ On 15 November 2026 the kit gained the record and the rule that `PLAN-note-2026-
 
 A unit is what the check counts: a fit of the set covering machine, a searched node of the decision tree, a tree of the forest or of the boosted model, or a panel. A difference with a shown cause is one that the plan's rules class and that the numbers in `differences.tsv` show. A difference with no shown cause would be a finding of its own; there is none.
 
+A unit matches by the plan's rules, and some of those rules let a match hold a difference or compare nothing. Counted on 15 November 2026, from the files here, at the review's suggestion:
+
+| Learner and check | Matched | Of those | In which |
+|---|---|---:|---|
+| Decision tree | 395 nodes | 55 | scikit-learn split on another feature of the same exact tie for the largest gain |
+| Random forest | 108,575 nodes that agreed | 6,871 | scikit-learn split on another feature of the same exact tie for the largest gain |
+| Boosted trees, tree by tree | 7 panels | 3 | neither side kept a tree, so no tree was compared |
+| Boosted trees, end to end | 11 panels | 4 | 20 of the 612 trees that both sides keep there are not identical (`end-to-end-trees.tsv`) |
+
 By panel, the units that matched of those compared:
 
 | Panel | Samples | Features | Set covering machine | Decision tree | Random forest | Boosted trees, tree by tree | Boosted trees, end to end |

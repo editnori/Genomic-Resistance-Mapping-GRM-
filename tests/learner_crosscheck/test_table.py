@@ -244,6 +244,16 @@ class Counts(unittest.TestCase):
                 self.assertEqual(fit == [], same_count and end["largest_probability_gap"] <= 1e-4)
         self.assertEqual([name for name in PANELS if "reason" in self.detail[name]["gbt end to end"]], ["one_class_train"])
 
+    def test_what_a_match_holds_is_the_measured(self):
+        # the README's table of what a match holds although the two sides differ, as counted on 15 November 2026
+        self.assertEqual(kit.detail_sum("cart nodes", "nodes_other_member_of_a_tie"), 55)
+        self.assertEqual((kit.detail_sum("rf trees", "nodes_other_member_of_a_tie"), kit.detail_sum("rf trees", "nodes_agree")), (6871, 108575))
+        matched = [row["panel"] for row in self.summary if row["check"] == "end to end" and row["outcome"] == "matched"]
+        record = [row for row in kit.trees() if row["panel"] in matched]
+        explored = kit.load("exploratory.json")["end_to_end_trees"]
+        self.assertEqual((len(matched), len({row["panel"] for row in record}), len(record)), (11, 4, 20))
+        self.assertEqual(sum(explored[panel]["trees_both_keep"] for panel in matched), 612)
+
     def test_a_panel_with_no_tree_kept_compares_no_tree(self):
         empty = [row["panel"] for row in self.summary if row["check"] == "tree by tree" and row["compared"] == 0]
         self.assertEqual(empty, ["constant_balanced", "constant_imbalanced", "xor_balanced"])

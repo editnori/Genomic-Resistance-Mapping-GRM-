@@ -97,6 +97,31 @@ def totals_table():
     return lines
 
 
+def match_table():
+    """The README's table of what a match holds although the two sides differ, from the result files."""
+    totals = {(row["learner"], row["check"]): row for row in load("totals.json")}
+    matched = collections.defaultdict(list)
+    for row in summary():
+        if row["outcome"] == "matched":
+            matched[(row["learner"], row["check"])].append(row)
+    end = [row["panel"] for row in matched[("gbt", "end to end")]]
+    record = [row for row in trees() if row["panel"] in end]
+    kept = sum(load("exploratory.json")["end_to_end_trees"][panel]["trees_both_keep"] for panel in end)
+    tie = "scikit-learn split on another feature of the same exact tie for the largest gain"
+    rows = (
+        ("cart", "nodes", f"{totals[('cart', 'nodes')]['units_matched']:,} nodes", detail_sum("cart nodes", "nodes_other_member_of_a_tie"), tie),
+        ("rf", "trees", f"{detail_sum('rf trees', 'nodes_agree'):,} nodes that agreed", detail_sum("rf trees", "nodes_other_member_of_a_tie"), tie),
+        ("gbt", "tree by tree", f"{len(matched[('gbt', 'tree by tree')])} panels", sum(row["compared"] == 0 for row in matched[("gbt", "tree by tree")]),
+         "neither side kept a tree, so no tree was compared"),
+        ("gbt", "end to end", f"{len(end)} panels", len({row["panel"] for row in record}),
+         f"{len(record)} of the {kept:,} trees that both sides keep there are not identical (`end-to-end-trees.tsv`)"),
+    )  # fmt: skip
+    lines = ["| Learner and check | Matched | Of those | In which |", "|---|---|---:|---|"]
+    for learner, check, units, count, what in rows:
+        lines.append(f"| {NAMES[(learner, check)]} | {units} | {count:,} | {what} |")
+    return lines
+
+
 def panel_table():
     """The README's table by panel, from summary.tsv: the units that matched of those compared."""
     lines = ["| Panel | Samples | Features | " + " | ".join(NAMES[check[:2]] for check in table.CHECKS) + " |", "|---|---:|---:|" + "---:|" * len(table.CHECKS)]
@@ -204,7 +229,7 @@ def tree_record_table():
     return lines
 
 
-TABLES = (totals_table, panel_table, cause_table, tree_record_table, further_table, exploratory_table)
+TABLES = (totals_table, match_table, panel_table, cause_table, tree_record_table, further_table, exploratory_table)
 
 if __name__ == "__main__":
     for make in TABLES:
