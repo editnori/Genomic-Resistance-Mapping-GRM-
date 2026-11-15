@@ -22,7 +22,7 @@ The deployment suites run offline, in temporary roots, with loopback ports only.
 
 ## Rust test names
 
-`cargo test` still passes when a module's tests leave the build. Put a `#[cfg(...)]` that is never true on a module's `mod tests`, and its tests are no longer compiled, so nothing runs them and nothing fails: doing that to `src/ablate/plan.rs`'s tests drops 21 tests.
+`cargo test` still passes when a module's tests leave the build. Put a `#[cfg(...)]` that is never true on a module's `mod tests`, and its tests are no longer compiled, so nothing runs them and nothing fails: doing that to `src/ablate/plan.rs`'s tests drops 27 tests.
 
 The `rust-test` job therefore compares the tests it built with `tests/rust-test-names.txt`. That file lists every test, sorted, as its crate root and name, for example `src/lib.rs ablate::encode::tests::…` or `tests/foldmask_extended.rs …`. `scripts/ci/rust-test-names.sh --check` reads the names from `cargo test --release --locked -- --list` and fails on any difference, printed as a diff: a `-` line is a test that left the build, and a `+` line is a new one.
 
