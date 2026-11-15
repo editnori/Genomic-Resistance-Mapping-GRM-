@@ -155,3 +155,5 @@ Every row of the dataset, with recall beside log loss and balanced accuracy, is 
 ## Files and commands
 
 [`reference/clindamycin-labels/rev14-20261115/README.md`](../reference/clindamycin-labels/rev14-20261115/README.md) lists each file, the command that wrote it and its sha256, and [`review/README.md`](../reference/clindamycin-labels/rev14-20261115/review/README.md) does the same for the review's files. The check ran on 15 November 2026 on a machine that holds the public data root and the release, with the scripts there. The per-sample tables and the lists of removed genome ids are not in the repository.
+
+`scripts/clindamycin-labels/site_data.py` writes `web/src/data/clindamycin-labels.json` from the reference directory's files alone, the web app shows each of the six datasets' kind with the counts behind it on that dataset's report from that file, and `tests/clindamycin_labels` fails if the file differs from what the script writes or if one of its counts differs from this page.
