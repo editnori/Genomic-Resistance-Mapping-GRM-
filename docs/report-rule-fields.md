@@ -114,7 +114,7 @@ The flag is left as it is. Its rows keep their six keys and their values, becaus
 
 The per-hit answer is a new field on each sample: `rule_groups`, the indices into `catalog_groups` of the genome's groups whose own hit counts for the rule, in the order of `groups`. It is an empty list when none counts. It is absent when the drug has no rule, where `catalog_resistant` is null, and on reports written before the field. It is the set the outside-study kit already writes by name, under the same column name, in its `known-gene/calls.tsv`.
 
-Under a rule with one requirement, `catalog_resistant` is true exactly when `rule_groups` is not empty. Under the two-requirement rule a listed group met one of the two, and the list does not say which.
+Under a rule with one requirement, `catalog_resistant` is true exactly when `rule_groups` is not empty. Under the two-requirement rule a listed group met one of the two, and the list does not say which. So a genome can list groups and still be called susceptible: on the release's `staphylococcus_aureus__sulfamethoxazole_trimethoprim`, rebuilt with the field on 15 Nov 2026, 388 of 1,389 genomes list a group and none is called resistant. To explain a call, check each requirement against the listed groups' own hits.
 
 On a synthetic dataset where one group's alleles differ (`a_groups_flag_follows_its_first_genome_and_rule_groups_each_genomes_own_hit`), the row says the group does not count while 19 of its 38 genomes' hits do; with the first genome's allele swapped the row says it counts while the other 19 do not. `rule_groups` names the same 19 genomes either way.
 

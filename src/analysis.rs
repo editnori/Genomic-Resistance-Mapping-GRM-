@@ -153,7 +153,8 @@ pub struct Sample {
     /// Under a rule with one requirement, `catalog_resistant` is true
     /// exactly when this list is not empty. A rule with two requirements
     /// (trimethoprim with a sulfonamide) needs a counting group for each,
-    /// and the list does not say which requirement a group met.
+    /// and the list does not say which requirement a group met, so a
+    /// genome called susceptible can list groups.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rule_groups: Option<Vec<u16>>,
 }
