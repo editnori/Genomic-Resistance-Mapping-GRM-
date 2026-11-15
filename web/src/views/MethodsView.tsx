@@ -15,6 +15,7 @@ import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
 import { loadErrorText, useCorpus } from "../data/load";
 import { EQUAL_SCORING_REVISION, manifestAudit, nullFitWords, panelWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
+import { ruleWordingNote } from "../data/derive/dataset";
 import { GUIDANCE_WORDING, ZERO_MISS_FLOOR, wordingSummary } from "../data/derive/evidence";
 import { notScored } from "../data/derive/tests";
 import { FOCUS_RING, PanelState, ScrollFrame, VIEW_SHELL } from "../ui/primitives";
@@ -245,14 +246,16 @@ const Models = ({ manifest }: { manifest: Manifest }) => (
           : `Each genome is counted into its ${manifest.k}-mers with GRM's own counter.`}{" "}
         K-mers with the same presence pattern across a species&apos; genomes are one feature, kept when enough isolates carry it.
       </Def>
-      <Def term="Set covering machine (SCM)" plain="A learner that writes a few short yes-or-no rules a person can read.">A short set of presence and absence rules, chosen greedily as Kover does; it calls resistant when its rules hold and is read as written.</Def>
+      <Def term="Set covering machine (SCM)" plain="A learner that writes a few short yes-or-no rules a person can read.">
+        A short set of presence and absence rules, chosen greedily as Kover does; it calls resistant when its rules hold and is read as written. {ruleWordingNote(manifest)}
+      </Def>
       <Def term="Decision tree (CART)" plain="A learner that asks one yes-or-no question after another, like a flowchart.">A class-balanced tree of presence and absence splits.</Def>
       <Def term="Random forest" plain="A learner that grows many different decision trees and lets them vote.">Many randomized trees whose votes score each isolate between 0 and 1.</Def>
       <Def term="Gradient-boosted trees" plain="A learner that adds small trees one at a time, each one fixing mistakes of the trees before it.">Trees added one at a time, each correcting the ones before; they score each isolate between 0 and 1.</Def>
       <Def term="L1 logistic regression (lasso)" plain="A learner that gives a weight to a small number of DNA pieces and ignores the rest.">A sparse linear model on screened features.</Def>
       <Def term="Known-gene rules" plain="A fixed rule with no training: call the genome resistant when it carries a catalog gene whose class matches the drug.">
-        GRM finds acquired genes of the AMRFinderPlus catalog ({manifest.amrfinder_version === "" ? "version not recorded" : manifest.amrfinder_version}) in each genome with its own k-mer
-        matching and applies its own fixed rule per drug: resistant when the genome carries a gene whose catalog class or subclass matches the drug. The rule does not train. It does not run
+        GRM finds acquired genes of the AMRFinderPlus catalog database ({manifest.amrfinder_version === "" ? "version not recorded" : manifest.amrfinder_version}) in each genome with its own
+        k-mer matching and applies its own fixed rule per drug: resistant when the genome carries a gene whose catalog class or subclass matches the drug. The rule does not train. It does not run
         the AMRFinderPlus program or test the point mutations AMRFinderPlus also describes, so mutational resistance counts against it.
       </Def>
       <Def term="Simulated PCR panels" plain={panelWords(manifest.evaluation_revision).panels.plain}>{panelWords(manifest.evaluation_revision).panels.detail}</Def>

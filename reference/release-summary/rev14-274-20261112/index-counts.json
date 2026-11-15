@@ -15,5 +15,11 @@
  "examples": [],
  "flag_keys_seen": {
   "split:true": 122
+ },
+ "labels_from_mic_excluded": {
+  "datasets_with_field": 274,
+  "datasets_without_field": 0,
+  "datasets_above_zero": 64,
+  "labels": 1010
  }
 }

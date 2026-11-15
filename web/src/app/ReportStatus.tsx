@@ -19,11 +19,15 @@ export const StatusItems = ({ items }: { items: readonly ReactNode[] }) => (
 );
 
 /** The status line's catalog fact: which list of known resistance genes
- *  the report used, by name and version. */
-export const catalogWords = (m: Manifest): string => `Known-gene catalog: AMRFinderPlus ${m.amrfinder_version === "" ? "version not recorded" : m.amrfinder_version}`;
+ *  the report used. The version is the AMRFinderPlus reference gene
+ *  database's, and the words say database: GRM reads that database with its
+ *  own k-mer matching and does not run the AMRFinderPlus program, so there
+ *  is no program version to give. */
+export const catalogWords = (m: Manifest): string =>
+  `Known-gene catalog: AMRFinderPlus database${m.amrfinder_version === "" ? ", version not recorded" : ` ${m.amrfinder_version}`}`;
 
 /** The one quiet status line, in plain words: when the report was built,
- *  the catalog version it used, and the audit's scope (AUDIT_SCOPE, or
+ *  the catalog database version it used, and the audit's scope (AUDIT_SCOPE, or
  *  bold "Provisional metrics"), which links to the Overview's limits; then
  *  view facts. */
 export const ReportStatus = ({ manifest, children }: { manifest: Manifest; children?: ReactNode }) => {

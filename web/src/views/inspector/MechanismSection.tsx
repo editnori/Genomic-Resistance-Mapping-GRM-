@@ -121,7 +121,7 @@ export const MechanismSection = ({ r }: { r: DatasetReport }) => {
           : catalogRuleWords(cat.rule)
       }
     >
-      {cat === null ? null : <p className="type-note">Catalog-containment rule · AMRFinderPlus catalog {cat.version}</p>}
+      {cat === null ? null : <p className="type-note">Catalog-containment rule · AMRFinderPlus catalog database {cat.version}</p>}
       {tests.length === 0 ? null : (
         <ScrollFrame label="Gene and panel results">
           <table className="mt-3 w-full border-collapse text-control">
