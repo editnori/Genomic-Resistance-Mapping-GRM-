@@ -299,14 +299,29 @@ pub fn check_column_blocks(width: usize) -> Result<()> {
 
 /// Merges ksets in counted order, which becomes the matrix column order.
 /// `column_blocks` of None opens every kset at once (`matrix::build`).
-/// Some(width) merges through partials of `width` genomes each, which
-/// writes the same matrix files with `width` ksets open at a time (see
-/// docs/matrix-scaling.md). The ksets are kept either way.
+/// Some(width) merges through partials of `width` genomes each in
+/// `Layout::partials_dir`, which writes the same matrix files with `width`
+/// ksets open at a time, saves the matrix, and then removes the partials
+/// (see docs/matrix-scaling.md). The ksets are kept either way.
 pub fn build_matrix(
     layout: &Layout,
     slug: &str,
     min_support: u32,
     column_blocks: Option<usize>,
+) -> Result<matrix::MatrixSummary> {
+    build_matrix_with(layout, slug, min_support, column_blocks, &|dir| {
+        std::fs::remove_dir_all(dir)
+    })
+}
+
+/// `build_matrix`, with the removal of the partials folder passed in so
+/// that a test can make it fail.
+fn build_matrix_with(
+    layout: &Layout,
+    slug: &str,
+    min_support: u32,
+    column_blocks: Option<usize>,
+    remove_partials: &dyn Fn(&Path) -> std::io::Result<()>,
 ) -> Result<matrix::MatrixSummary> {
     // A bad width or a linked partials folder is refused before anything
     // is read, written or removed.
@@ -324,47 +339,57 @@ pub fn build_matrix(
         .map(|g| kdir.join(format!("{}.kset", g.genome_id)))
         .collect();
     let threads_chunk = rayon::current_num_threads() * 2;
-    let mut m = match column_blocks {
-        None => matrix::build(&paths, min_support, threads_chunk)?,
-        Some(width) => {
-            // The column cap, before any block is written, as
-            // `matrix::build` checks it before any kset is opened.
-            matrix::ensure_reviewed(paths.len(), matrix::REVIEWED_COLUMNS)?;
-            let columns: Vec<matrix::Column> = counted
-                .genomes
-                .iter()
-                .zip(&digests)
-                .map(|(g, d)| matrix::Column {
-                    name: g.genome_id.clone(),
-                    kset_digest: d.clone(),
-                })
-                .collect();
-            let built = build_in_blocks(
-                &paths,
-                &columns,
-                counted.k,
-                width,
-                &dir,
-                min_support,
-                threads_chunk,
-            );
-            // The ksets are kept, so the partials are scratch: a rerun
-            // writes them again. A failed merge reports its own error.
-            let removed = std::fs::remove_dir_all(&dir);
-            let (m, receipts) = built?;
-            removed.with_context(|| format!("remove {}", dir.display()))?;
-            eprintln!(
-                "  {slug}: {} genomes merged from {} column blocks of up to {width}, {} partial bytes, removed",
-                columns.len(),
-                receipts.len(),
-                receipts.iter().map(|r| r.bytes).sum::<u64>()
-            );
-            m
-        }
+    let Some(width) = column_blocks else {
+        let mut m = matrix::build(&paths, min_support, threads_chunk)?;
+        m.summary.kset_digests = digests;
+        m.save(&layout.matrix_dir(slug))?;
+        return Ok(m.summary);
     };
-    m.summary.kset_digests = digests;
-    m.save(&layout.matrix_dir(slug))?;
-    Ok(m.summary)
+    // The column cap, before any block is written, as `matrix::build`
+    // checks it before any kset is opened.
+    matrix::ensure_reviewed(paths.len(), matrix::REVIEWED_COLUMNS)?;
+    let columns: Vec<matrix::Column> = counted
+        .genomes
+        .iter()
+        .zip(&digests)
+        .map(|(g, d)| matrix::Column {
+            name: g.genome_id.clone(),
+            kset_digest: d.clone(),
+        })
+        .collect();
+    let saved = build_in_blocks(
+        &paths,
+        &columns,
+        counted.k,
+        width,
+        &dir,
+        min_support,
+        threads_chunk,
+    )
+    .and_then(|(mut m, receipts)| {
+        m.summary.kset_digests = digests;
+        m.save(&layout.matrix_dir(slug))?;
+        Ok((m.summary, receipts))
+    });
+    // The ksets are kept, so the partials are scratch: a rerun writes them
+    // again. They go once the matrix is saved, or once the merge or the
+    // save has failed, which then reports its own error.
+    let removed = remove_partials(&dir);
+    let (summary, receipts) = saved?;
+    removed.with_context(|| {
+        format!(
+            "the matrix was saved in {}, but its column-block partials could not be removed: remove {} by hand",
+            layout.matrix_dir(slug).display(),
+            dir.display()
+        )
+    })?;
+    eprintln!(
+        "  {slug}: {} genomes merged from {} column blocks of up to {width}, {} partial bytes, removed",
+        columns.len(),
+        receipts.len(),
+        receipts.iter().map(|r| r.bytes).sum::<u64>()
+    );
+    Ok(summary)
 }
 
 /// Refuses a partials folder that is a symbolic link: the blocks would be
@@ -815,6 +840,49 @@ mod tests {
         assert!(partials.join("left.txt").exists());
         // The next run with the switch removes what it finds.
         build_matrix(&layout, "s", 2, Some(64)).unwrap();
+        assert!(!partials.exists());
+    }
+
+    #[test]
+    fn a_failed_removal_after_the_save_keeps_the_new_matrix_and_names_the_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = block_cohort_of(dir.path(), 70, 31);
+        build_matrix(&layout, "s", 1, None).unwrap();
+        let new = matrix_files(&layout);
+        build_matrix(&layout, "s", 2, None).unwrap();
+        let old = matrix_files(&layout);
+        assert!(new != old);
+        let (mx, partials) = (layout.matrix_dir("s"), layout.partials_dir("s"));
+        let fails = |_: &Path| Err(std::io::Error::other("planted removal failure"));
+        let err = build_matrix_with(&layout, "s", 1, Some(64), &fails)
+            .err()
+            .unwrap();
+        let msg = format!("{err:#}");
+        for part in [
+            format!("the matrix was saved in {}", mx.display()),
+            format!("remove {} by hand", partials.display()),
+            "planted removal failure".to_string(),
+        ] {
+            assert!(msg.contains(&part), "{msg}");
+        }
+        // The merge is not thrown away for a cleanup error: the saved
+        // matrix is the new one, and the partials wait for a hand removal.
+        assert!(matrix_files(&layout) == new);
+        for b in 0..2 {
+            assert!(partials.join(format!("block-{b:04}.kpart")).exists());
+        }
+        // The next run with the switch removes what it finds.
+        build_matrix(&layout, "s", 2, Some(64)).unwrap();
+        assert!(matrix_files(&layout) == old);
+        assert!(!partials.exists());
+
+        // A failed save reports its own error and still removes the
+        // partials. The save rewrites three binaries, then cannot create
+        // kmers.bin.
+        std::fs::remove_file(mx.join("kmers.bin")).unwrap();
+        std::fs::create_dir(mx.join("kmers.bin")).unwrap();
+        let err = build_matrix(&layout, "s", 2, Some(64)).err().unwrap();
+        assert!(format!("{err:#}").contains("kmers.bin"), "{err:#}");
         assert!(!partials.exists());
     }
 

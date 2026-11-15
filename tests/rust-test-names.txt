@@ -435,6 +435,7 @@ src/lib.rs serve::tests::rejects_methods_other_than_get_and_head
 src/lib.rs serve::tests::serves_bounded_single_byte_ranges
 src/lib.rs serve::tests::symlinks_cannot_escape_either_root
 src/lib.rs species::tests::a_failed_column_block_merge_leaves_the_old_matrix_and_no_partials
+src/lib.rs species::tests::a_failed_removal_after_the_save_keeps_the_new_matrix_and_names_the_folder
 src/lib.rs species::tests::a_recount_never_leaves_the_old_sidecar_beside_a_new_kset
 src/lib.rs species::tests::a_run_without_column_blocks_leaves_the_partials_folder_alone
 src/lib.rs species::tests::a_sidecar_from_before_digests_beside_a_kset_of_another_k_takes_the_ksets_count
