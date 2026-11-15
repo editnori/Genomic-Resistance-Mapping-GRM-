@@ -2,9 +2,11 @@
 """site_data.py REFERENCE [--check FILE]: the clindamycin kinds the web app bundles.
 
 REFERENCE is reference/clindamycin-labels/rev14-20261115, the files behind
-docs/clindamycin-labels.md. The script reads those files alone and writes, as
-JSON, what the dataset report needs to show each of the six clindamycin
-datasets' kind with the counts behind it:
+docs/clindamycin-labels.md. The script reads those files and one file beside
+that directory, the release's checksum line of each report
+(reference/lineage-control/<release>.reports.sha256), and writes, as JSON,
+what the dataset report needs to show each of the six clindamycin datasets'
+kind with the counts behind it:
 
 - the release the check read and its evaluation revision (PLAN.md and
   results/count-checks.txt, which must agree), the plan's threshold for a
@@ -13,11 +15,14 @@ datasets' kind with the counts behind it:
 - for each dataset: its kind, the PMID the plan picks, the dataset's samples
   and the study's, the disagreements between GRM's known-gene rule and the
   reported phenotype in the dataset and in the study, the samples with no
-  PMID, the reported resistant and susceptible samples left without the
-  study, whether the dataset was scored without it, and where it was, the
-  rows and the distinct tests that pass of those tested and whether the
-  passing changes are rises or falls; and the released report's sha256 where
-  results/logs/released-reports.sha256 holds it, null where it does not.
+  PMID and their disagreements, the samples and disagreements under other
+  PMIDs (results/by-study.tsv), the reported resistant and susceptible
+  samples left without the study, whether the dataset was scored without
+  it, and where it was, the rows and the distinct tests that pass of those
+  tested and whether the passing changes are rises or falls; and the
+  released report's sha256, from the release's checksum lines. The script
+  refuses a line of results/logs/released-reports.sha256 that differs from
+  the release's.
 
 It holds no row per sample and no genome id.
 
@@ -35,13 +40,37 @@ and the page adds the kind. The script derives it by this rule:
 A distinct test is a split, a row and a measure of
 results/scores/<dataset>/caveat.tsv, with the known-gene rule's rows counted
 once, because they are the same on both splits; the script refuses a file
-where they differ. The passing changes are "rises" when every one is above 0
-and "falls" when every one is below; the script refuses a dataset whose
-passing changes go both ways, since the site has no words for it. It also
-refuses files that do not agree with each other: a dataset scored without its
-study must leave both classes at the class minimum or more, and the caveat
-table's study, existence part, dependence part, verdict and rows passing must
-be what the other files give.
+where they differ, and a row that appears twice within one split. A row
+passes when its change is at least the plan's threshold in absolute value
+and its interval (cluster_low to cluster_high) excludes 0; the script
+recomputes this for every row and refuses a `passes` cell that differs. The
+passing changes are "rises" when every one is above 0 and "falls" when every
+one is below; the script refuses a dataset whose passing changes go both
+ways, since the site has no words for it. It refuses a dataset where only
+the known-gene rule's rows pass, since the page's words for measured
+dependence are about the learners' figures. It also refuses files that do
+not agree with each other: a dataset scored without its study must leave
+both classes at the class minimum or more, the caveat table's study,
+existence part, dependence part, verdict and rows passing must be what the
+other files give, and the study, the samples with no PMID and the other
+PMIDs of results/by-study.tsv must add up to its TOTAL row.
+
+The dataset report says that the study's share of the disagreements stands
+out only against the samples with no PMID when all three of these hold, in
+the counts of the file (no_pmid_contrast below):
+
+1. most samples carry no PMID: 2 * no_pmid_samples > samples;
+2. the study disagrees more often than the samples with no PMID:
+   study_disagreements * no_pmid_samples > no_pmid_disagreements * study_samples;
+3. among the samples that carry a PMID, the study holds at most one
+   disagreement more than its share of those samples gives (the page's
+   "close or reversed"): (study_disagreements - 1) * (study_samples +
+   other_pmid_samples) <= (study_disagreements + other_pmid_disagreements) *
+   study_samples.
+
+For release rev14-274-20261112 the rule holds for
+campylobacter_coli__clindamycin and campylobacter_jejuni__clindamycin and
+for no other dataset; tests/clindamycin_labels checks that.
 
 It tests nothing beyond that: the counts are the files'.
 
@@ -68,6 +97,19 @@ SPLITS = ("random", "lineage")
 PLAN_RELEASE = re.compile(r"Release read: `([^`]+)` \(evaluation revision (\d+)\)\.")
 PLAN_THRESHOLD = re.compile(r"is at least (0\.\d+) in absolute value and its 95% interval excludes 0")
 INDEX_LINE = re.compile(r"^index: evaluation_revision=(\d+) datasets=(\d+) clindamycin datasets=(\d+)$", re.M)
+
+
+def no_pmid_contrast(d):
+    """Whether the study's share of the disagreements stands out only against
+    the samples with no PMID, by the rule of the module's docstring; `d` is a
+    dataset entry of the bundle."""
+    pmid_samples = d["study_samples"] + d["other_pmid_samples"]
+    pmid_disagreements = d["study_disagreements"] + d["other_pmid_disagreements"]
+    return (
+        2 * d["no_pmid_samples"] > d["samples"]
+        and d["study_disagreements"] * d["no_pmid_samples"] > d["no_pmid_disagreements"] * d["study_samples"]
+        and (d["study_disagreements"] - 1) * pmid_samples <= pmid_disagreements * d["study_samples"]
+    )
 
 
 def kind_of(scored, left_resistant, left_susceptible, distinct_passing):
@@ -103,25 +145,37 @@ def count(cell, where):
     return int(cell)
 
 
-def tests_of(rows, dataset, where):
+def passes_rule(change, low, high, threshold):
+    """The plan's rule for one row: the change is at least the threshold in
+    absolute value and its interval excludes 0."""
+    return abs(change) >= threshold and (low > 0 or high < 0)
+
+
+def tests_of(rows, dataset, where, threshold):
     """The distinct tests of one score table: (passes, change) for each, the
-    known-gene rule's rows once. Also the rows passing and the rows tested."""
+    known-gene rule's rows once. Also the rows passing and the rows tested,
+    and whether a row other than the known-gene rule's passes."""
     distinct = {}
+    seen = set()
     for r in rows:
         if r["dataset"] != dataset:
             refuse(where, f"a row of {r['dataset']}")
         if r["split"] not in SPLITS or r["passes"] not in ("yes", "no"):
             refuse(where, f"row {r['split']} {r['row']} {r['measure']} has split {r['split']!r} and passes {r['passes']!r}")
+        if (r["split"], r["row"], r["measure"]) in seen:
+            refuse(where, f"row {r['split']} {r['row']} {r['measure']} appears twice")
+        seen.add((r["split"], r["row"], r["measure"]))
+        if (r["passes"] == "yes") != passes_rule(float(r["total"]), float(r["cluster_low"]), float(r["cluster_high"]), threshold):
+            refuse(where, f"row {r['split']} {r['row']} {r['measure']} has passes {r['passes']!r}, and the plan's rule gives the other")
         key = (r["row"], r["measure"]) if r["row"] == RULE_ROW else (r["split"], r["row"], r["measure"])
         value = (r["passes"] == "yes", float(r["total"]), r["cluster_low"], r["cluster_high"])
         if key in distinct and distinct[key] != value:
             refuse(where, f"the known-gene rule's {r['measure']} differs between the splits")
-        if key in distinct and r["row"] != RULE_ROW:
-            refuse(where, f"row {r['split']} {r['row']} {r['measure']} appears twice")
         distinct[key] = value
     passing_rows = sum(r["passes"] == "yes" for r in rows)
     passing = [change for passes, change, _, _ in distinct.values() if passes]
-    return passing_rows, len(rows), len(passing), len(distinct), passing
+    learner_passes = any(r["passes"] == "yes" and r["row"] != RULE_ROW for r in rows)
+    return passing_rows, len(rows), len(passing), len(distinct), passing, learner_passes
 
 
 def direction_of(changes, where):
@@ -159,6 +213,17 @@ def build(reference):
         if not (re.fullmatch(r"[0-9a-f]{64}", digest) and name.endswith(".json") and "/" not in name):
             refuse("results/logs/released-reports.sha256", f"{line!r} is not a report's sha256 line")
         hashes[name[: -len(".json")]] = digest
+    # The release's own checksum line of each report, in the directory beside this one.
+    release_rel = f"../../lineage-control/{release}.reports.sha256"
+    released = {}
+    for line in read.text(release_rel).splitlines():
+        m = re.fullmatch(r"([0-9a-f]{64})  \./datasets/([a-z0-9_]+)\.json", line)
+        if m is None:
+            refuse(release_rel, f"{line!r} is not a report's sha256 line")
+        released[m.group(2)] = m.group(1)
+    for d, digest in hashes.items():
+        if released.get(d) != digest:
+            refuse("results/logs/released-reports.sha256", f"the sha256 of {d} is not its line in {release_rel}")
 
     if len(chosen) != int(i.group(3)) or sorted(caveats) != sorted(r["dataset"] for r in chosen):
         refuse("results/chosen.tsv", "does not hold the clindamycin datasets of the index and of results/caveat.tsv")
@@ -168,6 +233,9 @@ def build(reference):
     if len(min_classes) != 1:
         refuse("results/chosen.tsv", f"class minimums {sorted(min_classes)}")
     min_class = count(min_classes.pop(), "results/chosen.tsv")
+    missing = sorted(r["dataset"] for r in chosen if r["dataset"] not in released)
+    if missing:
+        refuse(release_rel, f"has no line for {', '.join(missing)}")
 
     datasets = {}
     for r in sorted(chosen, key=lambda r: r["dataset"]):
@@ -180,6 +248,17 @@ def build(reference):
         samples = count(r["samples_in_dataset"], where)
         if count(totals[0]["samples"], f"results/by-study.tsv {d}") != samples:
             refuse(f"results/by-study.tsv {d}", "its TOTAL is not the dataset's samples")
+        study_rows = [s for s in by_study if s["dataset"] == d and s["study"] == r["chosen_pmid"]]
+        others = [s for s in by_study if s["dataset"] == d and s["study"] not in ("TOTAL", "no-pmid", r["chosen_pmid"])]
+        if len(study_rows) != 1 or any(not re.fullmatch(r"\d+(\+\d+)*", s["study"]) for s in others):
+            refuse(f"results/by-study.tsv {d}", "needs one row of the study the plan picks, and one or more PMIDs in every other row")
+        parts = {}
+        for name, group in (("study", study_rows), ("no_pmid", no_pmid), ("other", others)):
+            parts[name] = tuple(sum(count(s[k], f"results/by-study.tsv {d}") for s in group) for k in ("samples", "disagreements"))
+        if tuple(map(sum, zip(*parts.values()))) != (samples, count(totals[0]["disagreements"], f"results/by-study.tsv {d}")):
+            refuse(f"results/by-study.tsv {d}", "the study, the samples with no PMID and the other PMIDs do not add up to its TOTAL")
+        if parts["study"] != (count(r["samples_in_study"], where), count(r["disagreements_in_study"], where)) or parts["study"][1] + parts["no_pmid"][1] + parts["other"][1] != count(r["disagreements_in_dataset"], where):
+            refuse(f"results/by-study.tsv {d}", "its study or its disagreements are not chosen.tsv's")
         left_resistant = count(r["reported_R_left"], where)
         left_susceptible = count(r["reported_S_left"], where)
         scored = r["refit"] == "yes"
@@ -191,8 +270,10 @@ def build(reference):
             refuse(f"results/caveat.tsv {d}", "its study or existence part is not chosen.tsv's")
         if scored:
             rel = f"results/scores/{d}/caveat.tsv"
-            rows_passing, rows_tested, distinct_passing, distinct_tested, changes = tests_of(read.table(rel), d, rel)
+            rows_passing, rows_tested, distinct_passing, distinct_tested, changes, learner_passes = tests_of(read.table(rel), d, rel, threshold)
             direction = direction_of(changes, rel)
+            if distinct_passing and not learner_passes:
+                refuse(rel, "only the known-gene rule's rows pass, and the page's words for measured dependence are about the learners' figures")
             if (c["dependence"], c["rows_passing"], c["rows_tested"]) != ("yes" if distinct_passing else "no", str(rows_passing), str(rows_tested)):
                 refuse(f"results/caveat.tsv {d}", f"its dependence part is not what {rel} gives")
         else:
@@ -210,6 +291,9 @@ def build(reference):
             "disagreements": count(r["disagreements_in_dataset"], where),
             "study_disagreements": count(r["disagreements_in_study"], where),
             "no_pmid_samples": count(no_pmid[0]["samples"], f"results/by-study.tsv {d}") if no_pmid else 0,
+            "no_pmid_disagreements": parts["no_pmid"][1],
+            "other_pmid_samples": parts["other"][0],
+            "other_pmid_disagreements": parts["other"][1],
             "left_resistant": left_resistant,
             "left_susceptible": left_susceptible,
             "scored_without": scored,
@@ -218,7 +302,7 @@ def build(reference):
             "distinct_passing": distinct_passing,
             "distinct_tested": distinct_tested,
             "direction": direction,
-            "report_sha256": hashes.get(d),
+            "report_sha256": released[d],
         }
 
     data = {

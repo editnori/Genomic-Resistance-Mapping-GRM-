@@ -3,8 +3,9 @@
 // PMID, holds most or a large share of the samples on which GRM's known-gene
 // rule and the reported phenotype disagree, and the page sorts the six into
 // four kinds. scripts/clindamycin-labels/site_data.py writes
-// data/clindamycin-labels.json from reference/clindamycin-labels: each
-// dataset's kind and the counts behind it.
+// data/clindamycin-labels.json from reference/clindamycin-labels and the
+// release's report checksums: each dataset's kind, the counts behind it and
+// the released report's sha256.
 //
 // A note is given only for a report the check read: one of the six, at the
 // file's evaluation revision, with the file's sample count. The app parses
@@ -45,6 +46,10 @@ export interface ClindamycinDataset {
   disagreements: number;
   study_disagreements: number;
   no_pmid_samples: number;
+  no_pmid_disagreements: number;
+  /** Samples, and their disagreements, under a PMID other than the study's. */
+  other_pmid_samples: number;
+  other_pmid_disagreements: number;
   /** Reported resistant and susceptible samples outside the study. */
   left_resistant: number;
   left_susceptible: number;
@@ -56,8 +61,8 @@ export interface ClindamycinDataset {
   distinct_tested: number | null;
   /** Whether the passing changes are rises or falls; null when none passes. */
   direction: "rises" | "falls" | null;
-  /** The released report's sha256, where the check recorded it. */
-  report_sha256: string | null;
+  /** The released report's sha256, from the release's checksum lines. */
+  report_sha256: string;
 }
 
 export interface ClindamycinLabels {
@@ -81,6 +86,9 @@ const FIELDS = [
   "disagreements",
   "study_disagreements",
   "no_pmid_samples",
+  "no_pmid_disagreements",
+  "other_pmid_samples",
+  "other_pmid_disagreements",
   "left_resistant",
   "left_susceptible",
   "scored_without",
@@ -125,10 +133,12 @@ const checkDataset = (id: string, d: unknown, file: { min_class: number }): void
   need(isObj(d) && sameKeys(d, FIELDS), `${where} should hold exactly ${FIELDS.join(", ")}, in that order, and no field per sample`);
   need(typeof d.kind === "string" && (CLINDAMYCIN_KINDS as readonly string[]).includes(d.kind), `${where}.kind is not one of the four kinds`);
   need(typeof d.pmid === "string" && /^\d+$/.test(d.pmid), `${where}.pmid should be a PMID`);
-  for (const k of ["samples", "study_samples", "disagreements", "study_disagreements", "no_pmid_samples", "left_resistant", "left_susceptible"] as const) need(isCount(d[k]), `${where}.${k} should be a count`);
-  const [samples, study, dis, studyDis, noPmid, leftR, leftS] = [d.samples, d.study_samples, d.disagreements, d.study_disagreements, d.no_pmid_samples, d.left_resistant, d.left_susceptible] as number[];
+  for (const k of ["samples", "study_samples", "disagreements", "study_disagreements", "no_pmid_samples", "no_pmid_disagreements", "other_pmid_samples", "other_pmid_disagreements", "left_resistant", "left_susceptible"] as const)
+    need(isCount(d[k]), `${where}.${k} should be a count`);
+  const [samples, study, dis, studyDis, noPmid, noPmidDis, other, otherDis, leftR, leftS] = [d.samples, d.study_samples, d.disagreements, d.study_disagreements, d.no_pmid_samples, d.no_pmid_disagreements, d.other_pmid_samples, d.other_pmid_disagreements, d.left_resistant, d.left_susceptible] as number[];
   need(samples! > 0 && study! + leftR! + leftS! === samples, `${where}: the study's samples and those left should add up to the dataset's`);
-  need(studyDis! <= dis! && dis! <= samples! && studyDis! <= study! && noPmid! + study! <= samples!, `${where}: a part is larger than its whole`);
+  need(study! + noPmid! + other! === samples && studyDis! + noPmidDis! + otherDis! === dis, `${where}: the study, the samples with no PMID and the other PMIDs should add up to the dataset's samples and disagreements`);
+  need(studyDis! <= study! && noPmidDis! <= noPmid! && otherDis! <= other!, `${where}: a part is larger than its whole`);
   need(typeof d.scored_without === "boolean" && d.scored_without === Math.min(leftR!, leftS!) >= file.min_class, `${where}.scored_without should say whether both classes keep the class minimum`);
   if (d.scored_without) {
     for (const k of TESTS) need(isCount(d[k]), `${where}.${k} should be a count`);
@@ -138,7 +148,7 @@ const checkDataset = (id: string, d: unknown, file: { min_class: number }): void
   } else {
     need(TESTS.every((k) => d[k] === null) && d.direction === null, `${where}: a dataset not scored without its study has no tests`);
   }
-  need(d.report_sha256 === null || isSha(d.report_sha256), `${where}.report_sha256 should be null or a sha256`);
+  need(isSha(d.report_sha256), `${where}.report_sha256 should be a sha256`);
   need(d.kind === kindOf(d as unknown as ClindamycinDataset), `${where}.kind is ${String(d.kind)}, and its counts give ${kindOf(d as unknown as ClindamycinDataset)}`);
 };
 

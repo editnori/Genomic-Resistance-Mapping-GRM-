@@ -90,6 +90,27 @@ describe("the bundled clindamycin file", () => {
     expect(() => parseClindamycinLabels(top)).toThrow(/expected exactly/);
   });
 
+  it("refuses a dataset scored without its study when a class falls under the class minimum, and one not scored when both keep it", () => {
+    // jejuni keeps 8 reported resistant samples without its study: made out to be scored, with tests and a kind that fit them.
+    const scored = copy();
+    Object.assign(datasetsOf(scored)[CJ]!, { scored_without: true, rows_passing: 0, rows_tested: 36, distinct_passing: 0, distinct_tested: 33, direction: null, kind: "no_dependence" });
+    expect(() => parseClindamycinLabels(scored)).toThrow(/scored_without should say whether both classes keep the class minimum/);
+    // pneumoniae keeps 41 and 392: made out to be not scored, with no tests and the kind that fits.
+    const unscored = copy();
+    Object.assign(datasetsOf(unscored)[SP]!, { scored_without: false, rows_passing: null, rows_tested: null, distinct_passing: null, distinct_tested: null, direction: null, kind: "class_balance" });
+    expect(() => parseClindamycinLabels(unscored)).toThrow(/scored_without should say whether both classes keep the class minimum/);
+  });
+
+  it("refuses a released report's sha256 that is null, and parts by PMID that do not add up", () => {
+    const sha = copy();
+    datasetsOf(sha)[CJ]!.report_sha256 = null;
+    expect(() => parseClindamycinLabels(sha)).toThrow(/report_sha256 should be a sha256/);
+    const parts = copy();
+    datasetsOf(parts)[CC]!.other_pmid_disagreements = (datasetsOf(parts)[CC]!.other_pmid_disagreements as number) - 1;
+    expect(() => parseClindamycinLabels(parts)).toThrow(/other PMIDs should add up/);
+    expect(Object.values(file.datasets).every((d) => /^[0-9a-f]{64}$/.test(d.report_sha256))).toBe(true);
+  });
+
   it("refuses a source without its sha256, a passing test with no direction, and a not-scored dataset with tests", () => {
     const sources = copy();
     (sources.sources as Record<string, string>)["results/chosen.tsv"] = "not a hash";
