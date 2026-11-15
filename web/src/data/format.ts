@@ -22,9 +22,10 @@ export const points = (diff: number, digits = 1): string => {
 /** Plural noun for a count: plural(1, "dataset") -> "1 dataset". */
 export const plural = (n: number, one: string, many = `${one}s`): string => `${int(n)} ${n === 1 ? one : many}`;
 
-/** ["a", "b", "c"] -> "a, b and c". */
-export const listWords = (items: readonly string[]): string =>
-  items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+/** ["a", "b", "c"] -> "a, b and c"; `last` is the word before the final
+ *  item, "or" after a negative. */
+export const listWords = (items: readonly string[], last: "and" | "or" = "and"): string =>
+  items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} ${last} ${items[items.length - 1]}`;
 
 /** "Klebsiella pneumoniae" -> "K. pneumoniae", joined by a non-breaking
  *  space so the abbreviation never ends a line. */

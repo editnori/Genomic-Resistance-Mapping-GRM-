@@ -18,6 +18,27 @@ describe("methods features", () => {
   });
 });
 
+describe("methods known-gene rules", () => {
+  it("gives the catalog version as the database's, and says the program is not run", () => {
+    const html = renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, amrfinder_version: "2026-08-07.1" } }));
+    expect(html).toContain("GRM finds acquired genes of the AMRFinderPlus catalog database (2026-08-07.1) in each genome with its own k-mer matching");
+    expect(html).toContain("It does not run the AMRFinderPlus program");
+    expect(renderToStaticMarkup(createElement(MethodsView, { manifest: { ...manifest, amrfinder_version: "" } }))).toContain("the AMRFinderPlus catalog database (version not recorded)");
+  });
+});
+
+describe("methods rule words", () => {
+  it("names the revision and the wording the rule words were written in, under the set covering machine", () => {
+    const page = (m: typeof manifest) => renderToStaticMarkup(createElement(MethodsView, { manifest: m })).replace(/&#x27;/g, "'");
+    const tail = "A later release can word the same rule differently, so a count of rules by what they name holds for one wording only.";
+    expect(page({ ...manifest, evaluation_revision: 14, rule_text_version: 3 })).toContain(`is read as written. The rule words in the datasets table come from this release's index (evaluation revision 14, rule wording 3). ${tail}`);
+    // An index without the number says it has none, so the two wordings of revision 14 read differently.
+    expect(page({ ...manifest, evaluation_revision: 14, rule_text_version: undefined })).toContain(
+      `come from this release's index (evaluation revision 14, rule wording 2 or earlier: the index gives no number). ${tail}`,
+    );
+  });
+});
+
 describe("methods in plain words", () => {
   const el = document.createElement("div");
   el.innerHTML = renderToStaticMarkup(createElement(MethodsView, { manifest }));

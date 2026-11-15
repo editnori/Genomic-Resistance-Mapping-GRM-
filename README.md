@@ -194,6 +194,8 @@ It verifies the revision-5 reports against the snapshot hash list pinned in the 
 
 [docs/research/genotype-to-phenotype.md](docs/research/genotype-to-phenotype.md) covers diagnostic and surveillance uses, the published evidence, and the validation a clinical claim would still need.
 
+[docs/rule-words.md](docs/rule-words.md) says what a set covering machine rule's words claim on the site, which of them the release's index writes and which the app writes, and how the wording is numbered.
+
 [docs/outside-study-results.md](docs/outside-study-results.md) gives the result of a retrospective test on newly deposited studies from the same database: each revision-12 report's final model, applied unchanged to BV-BRC genomes added after the cohort was built. [docs/outside-study-results-by-species.md](docs/outside-study-results-by-species.md) reads it one species at a time. [docs/outside-study-test.md](docs/outside-study-test.md) is the plan, frozen before any of those genomes was fetched. The output files are in `reference/outside-study/`. The result's section Revision 14 reads the same estimates against the figures the site serves now, from `reference/outside-study-figures/`. `reference/outside-study-models/` holds a digest of each final model in both revisions, and the suite fails if one differs.
 
 ## Checks
