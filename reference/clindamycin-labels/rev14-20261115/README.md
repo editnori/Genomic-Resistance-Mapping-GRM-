@@ -4,7 +4,7 @@ This folder holds the files behind [docs/clindamycin-labels.md](../../../docs/cl
 
 It is a check of labels and scores on public BV-BRC records. A change when a study leaves is an association with that study's labels or genomes. The check names no gene.
 
-Every file here but this README and `SHA256SUMS` is copied unchanged from the check's own output, and `SHA256SUMS` gives the sha256 of each. To check them, run from this folder:
+Every file here but this README, `review/README.md` and `SHA256SUMS` is copied unchanged: the files under `review/` from the output of the check's independent review, every other one from the check's own output. `SHA256SUMS` gives the sha256 of each. To check them, run from this folder:
 
 ```sh
 sha256sum -c SHA256SUMS
@@ -48,6 +48,7 @@ Every `grm` call ran with no network. The scripts name the paths of the machine 
 | `scripts/run_all.sh` | Every fit, in order; it calls `arms.sh` | |
 | `scripts/score_arms.py` | Scores the arms of one dataset | |
 | `scripts/collect.py` | Gathers the scored datasets into `results/refit-table.tsv` and `results/caveat.tsv` | |
+| `review/` | The review's plan for its fold-plan runs, the tables the page quotes from the review and the scripts that wrote them; [`review/README.md`](review/README.md) lists each | the review, 15 November 2026, 16:29Z to 16:52Z |
 
 The three lines of `results/logs/released-reports.sha256` equal the lines of the same reports in [`reference/lineage-control/rev14-274-20261112.reports.sha256`](../../lineage-control/rev14-274-20261112.reports.sha256), the release's own checksum lines.
 
@@ -60,6 +61,6 @@ The check also wrote one row per sample with its label (`results/membership/`), 
 ## Limits
 
 - The change when a study leaves is an association with that study's labels or genomes. It does not show which label is wrong. It does not separate label quality from the study's lineages, testing method or sampling. It is no statement about any gene.
-- Each arm draws its own fold plan over its own samples, and the bootstrap intervals do not cover that change. Placebo arms could be drawn for `campylobacter_coli__clindamycin` only.
+- Each arm draws its own fold plan over its own samples, and the bootstrap intervals do not cover that change. The review fitted `staphylococcus_aureus__clindamycin` at 11 fold plans per arm (exploratory, `review/`). Placebo arms could be drawn for `campylobacter_coli__clindamycin` only.
 - The 0.05 threshold and the words "most" and "a large share" are adapted research screens fixed in the plan.
 - The scripts read files that are not in the repository: the release and a copy of the public data root.
