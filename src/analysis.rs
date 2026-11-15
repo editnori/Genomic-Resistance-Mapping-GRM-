@@ -2502,6 +2502,20 @@ mod tests {
     }
 
     #[test]
+    fn the_default_fingerprint_is_the_one_main_computes() {
+        // Pinned from main at 852ebc9 on the same fixture, so a flag that is
+        // off cannot move a production fingerprint. Rewrite the value only
+        // with a change that moves the fingerprint on purpose.
+        let input = inputs();
+        let spec = dataset("meropenem");
+        let cfg = EvalConfig::default();
+        assert_eq!(
+            input_fingerprint(&input, &spec, None, &cfg, matrix_digest(&input.matrix)),
+            "4979e60d3c8b1d6a"
+        );
+    }
+
+    #[test]
     fn fingerprint_ignores_rows_and_fields_the_evaluation_does_not_read() {
         let input = inputs();
         let meropenem = dataset("meropenem");

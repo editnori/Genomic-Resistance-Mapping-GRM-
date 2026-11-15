@@ -116,6 +116,7 @@ src/lib.rs analysis::tests::reports_are_reused_only_at_the_current_revision_and_
 src/lib.rs analysis::tests::reports_use_the_reported_cohort_and_record_its_counts_and_k
 src/lib.rs analysis::tests::rows_follow_matrix_columns_rather_than_genome_ids
 src/lib.rs analysis::tests::swapping_genomes_with_identical_columns_changes_the_matrix_digest
+src/lib.rs analysis::tests::the_default_fingerprint_is_the_one_main_computes
 src/lib.rs analysis::tests::the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does
 src/lib.rs analysis::tests::the_log_names_the_best_learner_scored_on_every_isolate
 src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason_without_ksets
