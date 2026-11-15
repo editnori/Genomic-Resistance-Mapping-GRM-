@@ -184,7 +184,8 @@ pub(crate) fn lasso_arms(
     })
 }
 
-/// The boosting fallbacks for one outer fold, from `fit_gbt`'s own steps.
+/// The boosting fallbacks for one outer fold, from `fit_gbt`'s own steps:
+/// `seed` draws the early-stopping holdout and `draws` the column samples.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn gbt_arms(
     x: &BitMatrix,
@@ -194,6 +195,7 @@ pub(crate) fn gbt_arms(
     unit: &str,
     cfg: &EvalConfig,
     seed: u64,
+    draws: u64,
     test: &[usize],
 ) -> Result<GbtArms> {
     let (fit_m, val) = tuning_holdout(train, y, groups, unit, GBT_HOLDOUT, seed)?;
@@ -204,7 +206,10 @@ pub(crate) fn gbt_arms(
         &fit_m,
         &val,
         &feats,
-        &GbtParams { seed, ..cfg.gbt },
+        &GbtParams {
+            seed: draws,
+            ..cfg.gbt
+        },
         false,
     );
     let best = gbt::best_round(&trace);
@@ -226,7 +231,9 @@ pub(crate) fn gbt_arms(
 }
 
 /// Fits `learner`'s fallbacks on one null outer fold and appends its line.
-/// Called by evaluation only when `enabled`.
+/// Called by evaluation only when `enabled`, with the fold's seeds as
+/// `fit_fold` derives them: `seed` for every partition, `draws` for
+/// boosting's column samples (equal unless `EvalConfig::learner_seed` is set).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn record_fold(
     learner: &str,
@@ -236,6 +243,7 @@ pub(crate) fn record_fold(
     groups: Option<&[u32]>,
     cfg: &EvalConfig,
     seed: u64,
+    draws: u64,
     context: LassoContext<'_>,
 ) -> Result<()> {
     let test: Vec<usize> = (0..x.cols).filter(|&i| !train.contains(i)).collect();
@@ -260,6 +268,7 @@ pub(crate) fn record_fold(
                 tuning_unit(context.scheme),
                 cfg,
                 seed,
+                draws,
                 &test,
             )?),
             _ => None,
@@ -415,7 +424,7 @@ mod tests {
                 ..full.clone()
             };
             assert_eq!(json(&kept), json(&production));
-            let arms = gbt_arms(x, &y, &all, None, "group", &cfg, 42, &[0, 1, 2]).unwrap();
+            let arms = gbt_arms(x, &y, &all, None, "group", &cfg, 42, 42, &[0, 1, 2]).unwrap();
             assert_eq!(arms.holdout_loss, full_trace);
             let best = gbt::best_round(&full_trace);
             assert_eq!(arms.best_round, best);

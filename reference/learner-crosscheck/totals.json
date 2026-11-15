@@ -1,0 +1,77 @@
+[
+ {
+  "check": "fits",
+  "compared": 224,
+  "learner": "scm",
+  "panels": {
+   "explained": 4,
+   "matched": 12,
+   "not applicable": 0,
+   "unexplained": 0
+  },
+  "units": "fits",
+  "units_explained": 30,
+  "units_matched": 194,
+  "units_unexplained": 0
+ },
+ {
+  "check": "nodes",
+  "compared": 400,
+  "learner": "cart",
+  "panels": {
+   "explained": 4,
+   "matched": 12,
+   "not applicable": 0,
+   "unexplained": 0
+  },
+  "units": "nodes",
+  "units_explained": 5,
+  "units_matched": 395,
+  "units_unexplained": 0
+ },
+ {
+  "check": "trees",
+  "compared": 3200,
+  "learner": "rf",
+  "panels": {
+   "explained": 13,
+   "matched": 3,
+   "not applicable": 0,
+   "unexplained": 0
+  },
+  "units": "trees",
+  "units_explained": 426,
+  "units_matched": 2774,
+  "units_unexplained": 0
+ },
+ {
+  "check": "tree by tree",
+  "compared": 5200,
+  "learner": "gbt",
+  "panels": {
+   "explained": 9,
+   "matched": 7,
+   "not applicable": 0,
+   "unexplained": 0
+  },
+  "units": "trees",
+  "units_explained": 434,
+  "units_matched": 4766,
+  "units_unexplained": 0
+ },
+ {
+  "check": "end to end",
+  "compared": 15,
+  "learner": "gbt",
+  "panels": {
+   "explained": 4,
+   "matched": 11,
+   "not applicable": 1,
+   "unexplained": 0
+  },
+  "units": "panels",
+  "units_explained": 4,
+  "units_matched": 11,
+  "units_unexplained": 0
+ }
+]

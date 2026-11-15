@@ -77,6 +77,11 @@ jobs:
       # module whose `pub mod` line is dropped, though the run above still passes.
       - name: Compare the test names with tests/rust-test-names.txt
         run: bash scripts/ci/rust-test-names.sh --check
+      # The committed learner cross-check result is of this tree's code: the
+      # harness built here writes, with 1 and with 8 threads, the files
+      # reference/learner-crosscheck/grm.sha256 lists (docs/ci.md).
+      - name: Check the learner cross-check's fits
+        run: bash scripts/learner-crosscheck/check_fits.sh
 
   rust-doc:
     name: Rust docs
@@ -177,6 +182,9 @@ jobs:
             top: .
           # Synthetic reports written in the test, and the committed table under reference/lineage-control.
           - suite: tests/lineage_control
+            top: .
+          # Reads the committed result under reference/learner-crosscheck; it fits nothing and needs no reference library.
+          - suite: tests/learner_crosscheck
             top: .
           # Reads the committed export under reference/givens-export and the files it is written from; it fits nothing.
           - suite: tests/givens_export
