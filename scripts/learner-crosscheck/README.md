@@ -49,7 +49,7 @@ ENV/bin/pip wheel --no-deps --require-hashes --no-build-isolation --no-binary py
 ENV/bin/pip install --no-deps --no-index ENV/built/pyscm_ml-1.1.2-*.whl
 ```
 
-pyscm-ml 1.1.2 has no Linux wheel, so the third command builds one from its source archive with the setuptools and wheel of the first, and needs a C++ compiler. The wheel stays in `ENV/built`, and the fourth command installs it with no index. `check_env.py` writes the wheel's sha256 and the compiler its extension module names into `environment.tsv`, with the version of the environment's pip, which no file pins, and it stops if the installed pyscm-ml is not that wheel. The wheel's bytes depend on the compiler and on the folder `ENV`, so its sha256 records one build and pins nothing. pyscm-ml is under the GPL, version 3. The kit installs it and calls it; no code of it is in this repository.
+pyscm-ml 1.1.2 has no Linux wheel, so the third command builds one from its source archive with the setuptools and wheel of the first, and needs a C++ compiler. The wheel stays in `ENV/built`, and the fourth command installs it with no index. `check_env.py` writes the wheel's sha256 and the compiler its extension module names into `environment.tsv`, with the version of the environment's pip, which no file pins, and it stops if the installed pyscm-ml is not that wheel. The wheel holds the time of its build, and its extension module the name of pip's temporary build folder, so two builds in one environment give two sha256 values: the sha256 names the build that was installed and pins nothing. pyscm-ml is under the GPL, version 3. The kit installs it and calls it; no code of it is in this repository.
 
 Then, with Rust 1.98.1:
 

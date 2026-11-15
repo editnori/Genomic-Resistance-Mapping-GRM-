@@ -261,7 +261,16 @@ class Record(unittest.TestCase):
     def test_the_environment_held_the_pinned_versions(self):
         pins = kit.module("check_env").pins()
         want = [f"{name}\t{version}\t{version}" for file in pins.values() for name, version, _ in file]
-        self.assertEqual((kit.REFERENCE / "environment.tsv").read_text(encoding="utf-8").splitlines(), want)
+        lines = (kit.REFERENCE / "environment.tsv").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(lines[: len(want)], want)
+        # then the environment's pip, which no file pins, and the pyscm-ml wheel built from its pinned archive:
+        # the wheel's sha256 and the compiler its extension module names
+        version = dict((name, version) for file in pins.values() for name, version, _ in file)["pyscm-ml"]
+        self.assertEqual(len(lines), len(want) + 3)
+        self.assertRegex(lines[-3], r"^pip\tnot pinned\t\d+(\.\d+)+$")
+        wheel = rf"^pyscm-ml wheel\tbuilt from the pinned archive\tpyscm_ml-{re.escape(version)}-cp312-cp312-linux_x86_64\.whl sha256 [0-9a-f]{{64}}$"
+        self.assertRegex(lines[-2], wheel)
+        self.assertRegex(lines[-1], r"^pyscm-ml compiler\tbuilt from the pinned archive\tGCC: \S.*$")
 
     def test_the_panel_file_is_the_one_that_was_read(self):
         versions = kit.load("versions.json")

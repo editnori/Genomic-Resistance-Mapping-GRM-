@@ -13,7 +13,7 @@ This is a software check on small test panels. It says nothing about clinical pe
 | GRM | `main` at commit `c4350006b1406bf480e5885cf9501b7dd3584324`, evaluation revision 14, `src/` tree `8858b8eb434e5ca0a2ba02457ef1bcc12ed3325f`, unchanged by the kit |
 | Compiler | rustc 1.98.1 (48a229cea 2026-09-01), release build |
 | Panels | the 16 of `tests/data/lasso-stopping-fixtures.txt`, sha256 `7f354884a5dec09bb7e87672d56842f0c3ebd1aa5ef785e4479a83c9a1f99550` |
-| References | Python 3.12.3 with scikit-learn 1.7.2, XGBoost 3.0.5 (the CPU wheel) and pyscm-ml 1.1.2, on numpy 1.26.4 and scipy 1.15.3, each installed from a file named by its sha256 (`environment.tsv`, `versions.json`) |
+| References | Python 3.12.3 with scikit-learn 1.7.2, XGBoost 3.0.5 (the CPU wheel) and pyscm-ml 1.1.2, on numpy 1.26.4 and scipy 1.15.3, each installed from a file named by its sha256; pyscm-ml, which has no Linux wheel, built from that file (`environment.tsv`, `versions.json`) |
 | Command | `scripts/learner-crosscheck/run.sh ENV OUT`, from 17:32:43 to 17:33:01 UTC on 14 November 2026 (`run.json`) |
 | Run again | `scripts/learner-crosscheck/run.sh ENV OUT` at commit `4e5738868ddb379fc090f49f4f04ee97c1f9ae30`, from 12:36:48 to 12:37:04 UTC on 15 November 2026, in another environment built from the same pinned files (`rerun.json`) |
 
@@ -21,7 +21,7 @@ The harness wrote the same bytes with 1 and with 8 threads. A first run at 17:28
 
 The harness file, `main.rs`, was reformatted with `cargo fmt` after that run: white space, trailing commas and one pair of braces. With the kit committed, the whole check ran again from the committed files, from 17:53:09 to 17:53:25 UTC, and wrote the same bytes in every file here that `run.sh` writes except `run.json`, which holds the commit and the times.
 
-On 15 November 2026 the kit gained the record and the rule that `PLAN-note-2026-11-15.md` lists, and `run.sh` ran again (`rerun.json`). It wrote `summary.tsv`, `differences.tsv`, `totals.json`, `versions.json` and `exploratory.json` byte for byte as on 14 November, and `detail.json` the same apart from one added key for each panel run end to end, `largest_probability_gap_on_the_fitting_samples`. `end-to-end-trees.tsv` is new. `run.json` stays the record of the run of 14 November.
+On 15 November 2026 the kit gained the record and the rule that `PLAN-note-2026-11-15.md` lists, and `run.sh` ran again (`rerun.json`). It wrote `summary.tsv`, `differences.tsv`, `totals.json`, `versions.json` and `exploratory.json` byte for byte as on 14 November, `detail.json` the same apart from one added key for each panel run end to end, `largest_probability_gap_on_the_fitting_samples`, and `environment.tsv` the same apart from three added rows: the environment's pip, the sha256 of the pyscm-ml wheel it built, and the compiler that wheel's extension module names. `end-to-end-trees.tsv` is new. `run.json` stays the record of the run of 14 November.
 
 ## The plan
 
@@ -202,7 +202,7 @@ cd4d1044c3c6659d18d0d44e15e1df59ec5b39b087ed378e6d2db3091a8e38d5  PLAN-note-2026
 4a6f2d85942a8f85212ba37b8b0fea2c35a7baffe12daea8fcd9a25997a025d4  detail.json
 19eae122edbc1c998ead379aa80002cdac8883c483c1caf5f3ea3efc9ecc4f4b  differences.tsv
 15b6458a609d9ea76d7636a392d381348600577df3b33ab58c2db9ae91ca6b90  end-to-end-trees.tsv
-1f32f76a24d3b94f77b9e0581295ed1e34ff25e4d6dc7e75ccf2432a4ff0da6f  environment.tsv
+f65b24233768d98e20e812de8fbc0786c7e50b3647ceb277d35a39df1e24bc56  environment.tsv
 f18c073c8e12328550cf7a8292fedbaf740bbe4f6738fd408402deefd902f74b  exploratory.json
 a7228320cb88696be1d7d1e7f0b6400326b05efcc971a5bb98ea089a538df402  lasso-suite.txt
 3f8d8df5e1004fce421ca9621c26a397313011666884333e703917c6ab09e570  rerun.json
