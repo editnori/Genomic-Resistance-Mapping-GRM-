@@ -1,0 +1,5 @@
+Registered go/no-go of scripts/lasso-scan/scan.py (decide), computed at h = 1 on this host; exploratory (host differs from revision 7's).
+worst ratio 0.0899 (salmonella_enterica__chloramphenicol), median ratio 0.0401, projected 275-report run 2.57 h, capped points 0 of 8717
+rule: worst <= 5, median <= 3, projected <= 16 h, capped share <= 5%: GO
+scan lasso seconds, 10 outer fits, all 18: 161.6; final fits: 24.9; wall per dataset call: 529.6
+over fit budget at h=1: 0; over dataset budget: 0; registered rule would stop: []

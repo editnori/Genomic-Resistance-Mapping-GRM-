@@ -243,6 +243,7 @@ The best learner's random-split count carries its choice. The best learner is ch
 - **One fold draw per dataset.** Each report scores one assignment of genomes to folds. Another draw would move each score, and the scripts cannot see by how much.
 - **The best of five is chosen on the folds that score it.** The best learner is the one with the highest random-split score, and that same score is reported for it. Its random-split median is therefore biased upward. Its lineage score is not used to choose it.
 - **The bands split on an outcome.** See catalog.json above.
+- **Clindamycin: one study per dataset, four kinds.** In revision 14, one deposited study holds most or a large share of each clindamycin dataset's disagreements between the known-gene rule and the reported phenotype. The figures of `staphylococcus_aureus__clindamycin` and `campylobacter_coli__clindamycin` move when that study leaves (measured dependence), `enterococcus_faecium__clindamycin` is one study, `campylobacter_jejuni__clindamycin` and `streptococcus_agalactiae__clindamycin` cannot be scored without theirs, so their dependence was not measured (class balance), and `streptococcus_pneumoniae__clindamycin` shows no dependence under the plan's rule. [clindamycin-labels.md](clindamycin-labels.md) gives the counts, the refits and what each released clindamycin figure can be read as.
 
 ## Changes against the earlier runs
 
