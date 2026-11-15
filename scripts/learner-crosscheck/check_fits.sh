@@ -6,7 +6,8 @@
 # on the 16 saved panels with 1 and with 8 threads, and sets the sha256 of
 # every file each run writes against reference/learner-crosscheck/grm.sha256,
 # the list run.sh wrote with the committed result. It needs Rust and none of
-# the reference libraries, and it reads no genome data.
+# the reference libraries, and it reads no genome data. CI runs it in the
+# rust-test job (docs/ci.md).
 #
 # It exits 0 when both runs wrote exactly the listed files, byte for byte.
 # Otherwise it names each file that has other bytes, is missing or is not

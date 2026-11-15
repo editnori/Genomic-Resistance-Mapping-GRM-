@@ -4,7 +4,7 @@ GRM runs its own code for each learner. This kit fits each learner on 16 small t
 
 It is a software check on small test panels. It says nothing about clinical performance and nothing about how well a learner predicts resistance. It reads no genome data.
 
-The result of the run of 14 November 2026 is in [`reference/learner-crosscheck`](../../reference/learner-crosscheck/README.md), with the plan that was fixed before any comparison was read. `tests/learner_crosscheck` checks that result's shape and counts and needs none of the libraries below. `check_fits.sh` checks that the result is of the code under test: it needs Rust and none of the libraries.
+The result of the run of 14 November 2026 is in [`reference/learner-crosscheck`](../../reference/learner-crosscheck/README.md), with the plan that was fixed before any comparison was read. `tests/learner_crosscheck` checks that result's shape and counts and needs none of the libraries below. `check_fits.sh` checks that the result is of the code under test: it needs Rust and none of the libraries, and CI runs it.
 
 ## What is compared
 
@@ -68,7 +68,7 @@ The reference libraries' side of the comparison does not depend on GRM's code; G
 scripts/learner-crosscheck/check_fits.sh
 ```
 
-builds the harness from the working tree with `cargo build --release --locked --example learner-crosscheck`, runs it on the 16 panels with 1 and with 8 threads, and sets each run's files against that list. It prints one line and exits 0 when both runs wrote exactly the listed files, byte for byte. Otherwise it names each file that has other bytes, is missing or is not listed, and exits 1. A change under `src/` that moves no fit passes: a new report string, a new catalog reader. A change that moves a fit fails, whether it is in a learner, in the harness, in `Cargo.lock` or in the panel file, until `run.sh` runs again with the reference libraries and its files are committed. So does a new `EVALUATION_REVISION`, which `index.json` records.
+builds the harness from the working tree with `cargo build --release --locked --example learner-crosscheck`, runs it on the 16 panels with 1 and with 8 threads, and sets each run's files against that list. It prints one line and exits 0 when both runs wrote exactly the listed files, byte for byte. Otherwise it names each file that has other bytes, is missing or is not listed, and exits 1. A change under `src/` that moves no fit passes: a new report string, a new catalog reader. A change that moves a fit fails, whether it is in a learner, in the harness, in `Cargo.lock` or in the panel file, until `run.sh` runs again with the reference libraries and its files are committed. So does a new `EVALUATION_REVISION`, which `index.json` records. CI runs it in the `rust-test` job (`docs/ci.md`).
 
 XGBoost's wheel prints a warning about an old glibc each time it loads. That is the wheel's own note about how it was built, and it changes no result.
 
@@ -101,3 +101,4 @@ To replace the committed result, copy the ten files of the table above, without 
 - The harness uses the production defaults. It does not run `grm evaluate`, so the settings production selects inside each fit are recorded but not compared.
 - The L1 logistic regression is not fitted here.
 - The same bytes at 1 and 8 threads, and from run to run, were shown on x86-64 Linux only. The boosted trees take `exp` and `ln` from the platform's math library. The decision tree, the forest and the set covering machine use only arithmetic that IEEE 754 rounds the same way everywhere: the four operations, one square root and comparisons. So another platform could change the last bits of the boosted fits, and with them which feature wins a tie that rounding decides. No other platform was tried.
+- `grm.sha256` was written on x86-64 Linux, and CI's runners are x86-64 Linux too, but no run has shown that a runner's processor and C library give the same bytes. If they do not, `check_fits.sh` fails in CI at a commit where it passes on the machine that wrote the list, and names the files: through `exp` and `ln` in the boosted trees, which every panel file holds, that would be panel files and not `index.json`. That is a difference of platform, not of code. The failure prints each such file's sha256 on the runner; run `check_fits.sh` at the same commit where the list was written to confirm that it passes there, and then decide between a list written on the runner and keeping the step out of CI.

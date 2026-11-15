@@ -280,6 +280,25 @@ class KitReadme(unittest.TestCase):
         self.assertTrue("          - suite: tests/learner_crosscheck\n            top: .\n" in workflow, "the python matrix of ci.yml lacks the suite")
         self.assertTrue("`tests/learner_crosscheck`" in (kit.ROOT / "docs" / "ci.md").read_text(encoding="utf-8"), "docs/ci.md does not name the suite")
 
+    def test_ci_runs_check_fits_in_the_rust_test_job(self):
+        workflow = (kit.ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        jobs = re.split(r"\n  (?=[a-z][a-z-]*:\n)", workflow.split("\njobs:\n", 1)[1])
+        job = [text for text in jobs if text.startswith("rust-test:\n")]
+        self.assertEqual(len(job), 1, "ci.yml has no job rust-test")
+        # the job's steps, each its lines without comments and blank lines; the step is these two lines and no other
+        steps = []
+        for line in job[0].splitlines()[1:]:
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            if line.startswith("      - "):
+                steps.append([line])
+            elif steps and line.startswith("        "):
+                steps[-1].append(line)
+        step = ["      - name: Check the learner cross-check's fits", "        run: bash scripts/learner-crosscheck/check_fits.sh"]
+        self.assertIn(step, steps, "the rust-test job of ci.yml does not run check_fits.sh")
+        self.assertNotRegex(job[0], r"\n    (if|continue-on-error):")
+        self.assertIn("`bash scripts/learner-crosscheck/check_fits.sh`", (kit.ROOT / "docs" / "ci.md").read_text(encoding="utf-8"))
+
     def test_docs_ci_gives_the_suite_s_count(self):
         from . import test_kit, test_table
 
