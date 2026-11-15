@@ -473,9 +473,21 @@ src/lib.rs serve::tests::refuses_paths_that_leave_the_root
 src/lib.rs serve::tests::rejects_methods_other_than_get_and_head
 src/lib.rs serve::tests::serves_bounded_single_byte_ranges
 src/lib.rs serve::tests::symlinks_cannot_escape_either_root
+src/lib.rs species::tests::a_failed_column_block_merge_leaves_the_old_matrix_and_no_partials
+src/lib.rs species::tests::a_failed_removal_after_the_save_keeps_the_new_matrix_and_names_the_folder
+src/lib.rs species::tests::a_partials_folder_another_run_removed_counts_as_removed
 src/lib.rs species::tests::a_recount_never_leaves_the_old_sidecar_beside_a_new_kset
+src/lib.rs species::tests::a_run_without_column_blocks_leaves_the_partials_folder_alone
 src/lib.rs species::tests::a_sidecar_from_before_digests_beside_a_kset_of_another_k_takes_the_ksets_count
 src/lib.rs species::tests::a_sidecar_without_a_kset_digest_takes_it_from_the_stored_kset
+src/lib.rs species::tests::column_blocks_merge_at_the_k_counted_json_records
+src/lib.rs species::tests::column_blocks_merge_under_an_open_file_limit_that_stops_the_stock_build
+src/lib.rs species::tests::column_blocks_open_file_limit_probe [ignored]
+src/lib.rs species::tests::column_blocks_refuse_a_partials_folder_that_is_a_symbolic_link
+src/lib.rs species::tests::column_blocks_refuse_more_genomes_than_the_column_cap_before_writing_a_block
+src/lib.rs species::tests::column_blocks_write_one_merge_s_files_when_the_width_divides_the_genome_count
+src/lib.rs species::tests::column_blocks_write_one_partial_per_block_at_its_columns
+src/lib.rs species::tests::column_blocks_write_the_matrix_files_one_merge_writes
 src/lib.rs species::tests::counts_go_stale_when_genomes_txt_selects_other_genomes_with_fasta
 src/lib.rs species::tests::kset_digests_tell_ksets_of_one_size_apart_and_a_recount_repeats_them
 src/lib.rs species::tests::learning_takes_only_the_catalog_the_gene_calls_came_from
@@ -529,6 +541,8 @@ src/main.rs tests::learn_refuses_a_structure_and_matrix_built_from_other_ksets
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
+src/main.rs tests::matrix_column_blocks_reach_the_block_merge_through_run
+src/main.rs tests::matrix_takes_only_a_column_block_width_of_whole_words
 src/main.rs tests::pipeline_and_learn_take_a_k_and_a_retained_feature_budget
 src/main.rs tests::pipeline_refuses_a_missing_kover_file_with_its_own_remedy
 src/main.rs tests::predict_replays_the_final_models_on_their_own_cohort
