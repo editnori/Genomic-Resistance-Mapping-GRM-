@@ -429,6 +429,17 @@ class RunSh(unittest.TestCase):
     def setUp(self):
         self.lines = (kit.KIT / "run.sh").read_text(encoding="utf-8").splitlines()
 
+    def test_it_requires_the_same_bytes_at_1_and_at_8_threads(self):
+        # the review's F4: with this diff replaced by true, a fit that changes with the thread count would go into the result unseen
+        self.assertIn("set -euo pipefail", self.lines)
+        at = self.lines.index('RAYON_NUM_THREADS=1 "$harness" "$fixtures" "$out/grm"')
+        self.assertEqual(self.lines[at : at + 4], [
+            'RAYON_NUM_THREADS=1 "$harness" "$fixtures" "$out/grm"',
+            'RAYON_NUM_THREADS=8 "$harness" "$fixtures" "$out/grm-8-threads"',
+            'diff -r "$out/grm" "$out/grm-8-threads"',
+            'rm -r "$out/grm-8-threads"',
+        ])  # fmt: skip
+
     def test_it_writes_the_list_as_check_fits_sh_reads_it(self):
         # grm.sha256 is written from the 1-thread run that compare.py reads, with the command check_fits.sh lists a run with
         written = [(at, LISTING.match(line)) for at, line in enumerate(self.lines) if LISTING.match(line)]
