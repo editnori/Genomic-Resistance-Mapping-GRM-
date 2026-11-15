@@ -472,8 +472,8 @@ fn run(cli: Cli) -> Result<()> {
         Command::Baselines => {
             let w = grm::baselines::write(&layout.root.join("report"))?;
             eprintln!(
-                "baselines written for {} dataset reports: {} with an MIC model, {} of them with folds a stored threshold confirms",
-                w.files, w.mic, w.confirmed
+                "baselines written for {} dataset reports: {} with an MIC model, {} of them with folds their held-out predictions confirm; {} exact-MIC test isolates on {} datasets have a k-mer-identical copy in their training fold",
+                w.files, w.mic, w.confirmed, w.copies, w.copy_datasets
             );
             Ok(())
         }

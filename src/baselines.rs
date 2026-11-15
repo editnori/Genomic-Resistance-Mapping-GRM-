@@ -9,13 +9,32 @@
 //!   folds are rebuilt as `evaluate_mic` draws them: `training_folds` over the
 //!   isolates with an MIC, stratified by reported label, with the report's
 //!   fold count and seed. These are random folds with no lineage split, and
-//!   they are not the random split's folds. Each rebuilt fold's training
-//!   isolates give the threshold `infer_breakpoint` fits, and that must equal
-//!   the threshold the report stores for the fold (`mic.fold_breakpoints`,
-//!   every field, agreement bit for bit); one that differs stops the command.
-//!   The folds are `confirmed` when at least one fold has a stored threshold
-//!   and every fold matches; with no stored threshold to check they are
-//!   still rebuilt the same way, and `confirmed` is false. Each fold's exact
+//!   they are not the random split's folds. Two checks compare the rebuilt
+//!   folds with what the fit left in the report, and a contradiction in
+//!   either stops the command and names the dataset:
+//!   - Prediction check (`prediction_check`): each fold's predictions
+//!     come from one boosted model, so isolates with bit-identical held-out
+//!     predictions must lie in one rebuilt fold. The rule has one
+//!     exception: a fold where every isolate gets the same prediction, as
+//!     when early stopping keeps no tree and the model predicts its start
+//!     value (the upper median of its fit part's exact MICs). Such folds can
+//!     share that value, so a group that spans only such folds is left out;
+//!     a group that spans folds and touches any other fold is a
+//!     contradiction. The folds count as `confirmed` when at least one
+//!     group of two or more isolates lies inside one fold that is not such a
+//!     fold. This is the check a dataset is confirmed by.
+//!   - Threshold check (`threshold_check`): each rebuilt fold's training
+//!     isolates give the
+//!     threshold `infer_breakpoint` fits, and that must equal the
+//!     threshold the report stores for the fold (`mic.fold_breakpoints`,
+//!     every field, agreement bit for bit). It is written beside the
+//!     prediction check and confirms nothing on its own: where every stored
+//!     threshold has agreement 1, any stratified draw with the same fold
+//!     sizes matches it.
+//!
+//!   The file also counts the exact-MIC test isolates that have a
+//!   k-mer-identical copy (`kset_duplicates`) in their training fold: the
+//!   MIC folds are random and can split such a group. Each fold's exact
 //!   training MICs give two constants, their lower median and their mode
 //!   (`lower_median`, `mode`), and each is scored on the same isolates as the
 //!   model: the fold's test isolates with an exact MIC, agreeing when the
@@ -73,6 +92,9 @@ struct Report {
     splits: Vec<Split>,
     #[serde(default)]
     mic: Option<MicResult>,
+    /// Groups of sample indices with the same k-mer set; absent when none.
+    #[serde(default)]
+    kset_duplicates: Vec<Vec<usize>>,
 }
 
 #[derive(Deserialize)]
@@ -210,6 +232,93 @@ pub fn mic_constants(
         .collect()
 }
 
+/// What the held-out MIC predictions say about the rebuilt folds.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PredictionCheck {
+    /// Groups of two or more isolates with bit-identical predictions, each
+    /// inside one rebuilt fold that is not a constant fold.
+    pub groups: usize,
+    /// The isolates in those groups.
+    pub isolates: usize,
+    /// Rebuilt folds where every isolate gets the same prediction.
+    pub constant_folds: Vec<usize>,
+}
+
+/// A group of isolates with one bit-identical prediction that spans rebuilt
+/// folds, at least one of them not a constant fold.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Contradiction {
+    pub value: f64,
+    pub isolates: usize,
+    pub folds: Vec<usize>,
+}
+
+/// Checks the rebuilt MIC folds against the held-out predictions. Each
+/// fold's predictions come from one boosted model, so isolates with
+/// bit-identical predictions lie in one fold. A fold where every isolate
+/// gets the same prediction (a constant fold, as when early stopping keeps
+/// no tree and the model predicts its start value) is the exception: such
+/// folds can share that value, so a group that spans only constant folds is
+/// left out, and so is a group inside one constant fold. Any other group
+/// that spans folds is a contradiction. `folds` gives each isolate's MIC
+/// fold, `usize::MAX` for an isolate without an MIC, which is not read.
+pub fn prediction_check(
+    predicted: &[f64],
+    folds: &[usize],
+    k: usize,
+) -> std::result::Result<PredictionCheck, Contradiction> {
+    let mut values: Vec<BTreeSet<u64>> = vec![BTreeSet::new(); k];
+    let mut by_value: BTreeMap<u64, Vec<usize>> = BTreeMap::new();
+    for (i, &f) in folds.iter().enumerate().filter(|&(_, &f)| f < k) {
+        let bits = predicted[i].to_bits();
+        values[f].insert(bits);
+        by_value.entry(bits).or_default().push(i);
+    }
+    let constant: Vec<bool> = values.iter().map(|v| v.len() == 1).collect();
+    let mut check = PredictionCheck {
+        groups: 0,
+        isolates: 0,
+        constant_folds: (0..k).filter(|&f| constant[f]).collect(),
+    };
+    for (bits, members) in by_value.iter().filter(|(_, m)| m.len() >= 2) {
+        let spans: BTreeSet<usize> = members.iter().map(|&i| folds[i]).collect();
+        if spans.iter().all(|&f| constant[f]) {
+            continue;
+        }
+        if spans.len() > 1 {
+            return Err(Contradiction {
+                value: f64::from_bits(*bits),
+                isolates: members.len(),
+                folds: spans.into_iter().collect(),
+            });
+        }
+        check.groups += 1;
+        check.isolates += members.len();
+    }
+    Ok(check)
+}
+
+/// The exact-MIC isolates with a k-mer-identical copy in their training
+/// fold: another member of their `kset_duplicates` group that has an MIC
+/// and lies in another rebuilt MIC fold. `folds` is as for
+/// `prediction_check`.
+pub fn exact_with_training_copy(
+    mics: &[Option<Mic>],
+    folds: &[usize],
+    groups: &[Vec<usize>],
+) -> usize {
+    let has = |i: usize| folds[i] != usize::MAX;
+    groups
+        .iter()
+        .flat_map(|g| {
+            g.iter().filter(move |&&i| {
+                mics[i].is_some_and(|m| m.censor == Censor::Exact)
+                    && g.iter().any(|&j| j != i && has(j) && folds[j] != folds[i])
+            })
+        })
+        .count()
+}
+
 /// The same threshold in every field, agreement bit for bit.
 fn same_threshold(a: &Option<Breakpoint>, b: &Option<Breakpoint>) -> bool {
     match (a, b) {
@@ -229,7 +338,13 @@ fn agreement(agree: usize, n: usize) -> Value {
 /// The MIC part of a baselines file, or an error naming the dataset when the
 /// rebuilt folds contradict a stored threshold or the saved predictions do
 /// not give the report's own agreement.
-fn mic_part(id: &str, samples: &[Sample], cfg: &FoldConfig, mic: &MicResult) -> Result<Value> {
+fn mic_part(
+    id: &str,
+    samples: &[Sample],
+    cfg: &FoldConfig,
+    mic: &MicResult,
+    duplicates: &[Vec<usize>],
+) -> Result<Value> {
     let n = samples.len();
     let k = cfg.folds;
     let mics: Vec<Option<Mic>> = samples.iter().map(|s| s.mic).collect();
@@ -254,10 +369,23 @@ fn mic_part(id: &str, samples: &[Sample], cfg: &FoldConfig, mic: &MicResult) -> 
         "{id}: the report stores {} MIC training-fold thresholds for {k} folds",
         mic.fold_breakpoints.len()
     );
+    ensure!(
+        duplicates.iter().flatten().all(|&i| i < n),
+        "{id}: the report's kset_duplicates name a sample beyond its {n}"
+    );
     let y = Bits::from_indices(n, (0..n).filter(|&i| samples[i].resistant));
     let with_mic = Bits::from_indices(n, has.iter().copied());
     // The draw `evaluate_mic` makes.
     let folds = training_folds(&y, &with_mic, None, k, cfg.seed);
+    let ties = prediction_check(&mic.predicted, &folds, k).map_err(|c| {
+        anyhow::anyhow!(
+            "{id}: the MIC folds rebuilt at seed {} contradict the report's held-out predictions: {} isolates predicted {} lie in rebuilt folds {:?}, and one model per fold cannot give them that one value; no baselines file was written",
+            cfg.seed,
+            c.isolates,
+            c.value,
+            c.folds
+        )
+    })?;
     let mut checked = 0;
     for (f, (train, _)) in fold_masks(&folds, k).into_iter().enumerate() {
         let pairs: Vec<(Mic, Call)> = train
@@ -306,8 +434,17 @@ fn mic_part(id: &str, samples: &[Sample], cfg: &FoldConfig, mic: &MicResult) -> 
     Ok(json!({
         "folds": k,
         "seed": cfg.seed,
-        "confirmed": checked > 0,
-        "thresholds_checked": checked,
+        "prediction_check": {
+            "confirmed": ties.groups > 0,
+            "groups": ties.groups,
+            "isolates": ties.isolates,
+            "constant_folds": ties.constant_folds,
+        },
+        "threshold_check": {
+            "confirmed": checked > 0,
+            "checked": checked,
+        },
+        "exact_with_training_copy": exact_with_training_copy(&mics, &folds, duplicates),
         "n": has.len(),
         "n_exact": n_exact,
         "model": agreement(model, n_exact),
@@ -416,7 +553,7 @@ pub fn for_report(bytes: &[u8]) -> Result<Value> {
                 .eval_config
                 .as_ref()
                 .with_context(|| format!("{id}: the report records no eval_config"))?;
-            mic_part(id, &report.samples, cfg, mic)?
+            mic_part(id, &report.samples, cfg, mic, &report.kset_duplicates)?
         }
     };
     Ok(json!({
@@ -435,8 +572,13 @@ pub struct Written {
     pub files: usize,
     /// Files with an MIC part.
     pub mic: usize,
-    /// Of those, the ones whose rebuilt folds a stored threshold confirms.
+    /// Of those, the ones whose rebuilt folds the held-out predictions
+    /// confirm (`prediction_check`).
     pub confirmed: usize,
+    /// Exact-MIC test isolates with a k-mer-identical copy in their training
+    /// fold, over every file, and the datasets that have one.
+    pub copies: usize,
+    pub copy_datasets: usize,
 }
 
 /// Writes `baselines/<id>.json` under `report_dir` for every dataset that
@@ -472,13 +614,20 @@ pub fn write(report_dir: &Path) -> Result<Written> {
         files: 0,
         mic: 0,
         confirmed: 0,
+        copies: 0,
+        copy_datasets: 0,
     };
     for (name, file) in files {
         crate::report::publish(&out.join(&name), &serde_json::to_vec(&file)?)?;
         written.files += 1;
         if !file["mic"].is_null() {
             written.mic += 1;
-            written.confirmed += (file["mic"]["confirmed"] == true) as usize;
+            written.confirmed += (file["mic"]["prediction_check"]["confirmed"] == true) as usize;
+            let copies = file["mic"]["exact_with_training_copy"]
+                .as_u64()
+                .unwrap_or(0) as usize;
+            written.copies += copies;
+            written.copy_datasets += (copies > 0) as usize;
         }
         kept.insert(name);
     }
@@ -598,38 +747,41 @@ mod tests {
 
     const N_MIC: usize = 200;
 
+    /// The 4 isolates whose label disagrees with their MIC in `synthetic`.
+    const FLIPS: [usize; 4] = [3, 50, 101, 177];
+
     /// A synthetic report: `N_MIC` isolates with an MIC (exact, except every
-    /// 7th with a low MIC, which is a bound "at most") and 20 without. An MIC above 2 is resistant,
-    /// except 4 isolates whose label disagrees, so each training fold's
-    /// threshold has an agreement that depends on which isolates it holds.
-    /// The model predicts each MIC exactly, except every 5th isolate, which
-    /// it misses by two dilutions. Lineages run in blocks of 10 isolates;
-    /// the random split deals isolates round robin into 5 folds and the
-    /// lineage split holds out whole blocks.
+    /// 7th with a low MIC, which is a bound "at most") and 20 without. An
+    /// MIC above 2 is resistant, except the 4 `FLIPS`, so each training
+    /// fold's threshold has an agreement that depends on which isolates it
+    /// holds.
     fn synthetic(seed: u64) -> Value {
+        build(seed, &|i, log2| {
+            log2.map_or(i % 2 == 0, |v| (v > 2) != FLIPS.contains(&i))
+        })
+    }
+
+    /// A synthetic report with labels from `resistant(isolate, log2 MIC)`.
+    /// The model predicts each MIC exactly, except every 5th isolate, which
+    /// it misses by two dilutions, plus a hundredth of a dilution for each
+    /// step of its MIC fold at the report's seed: as one boosted model per
+    /// fold gives, isolates with the same prediction share a fold. Lineages
+    /// run in blocks of 10 isolates; the random split deals isolates round
+    /// robin into 5 folds and the lineage split holds out whole blocks.
+    fn build(seed: u64, resistant: &dyn Fn(usize, Option<i32>) -> bool) -> Value {
         let n = N_MIC + 20;
         let mut samples = Vec::new();
-        let mut predicted = Vec::new();
         for i in 0..n {
-            let (mic, pred, resistant) = if i < N_MIC {
-                let log2 = (i % 8) as i32 - 1;
-                let censor = if i % 7 == 6 && log2 <= 1 {
+            let log2 = (i < N_MIC).then(|| (i % 8) as i32 - 1);
+            let mic = log2.map_or(Value::Null, |v| {
+                let censor = if i % 7 == 6 && v <= 1 {
                     "AtMost"
                 } else {
                     "Exact"
                 };
-                let flip = [3, 50, 101, 177].contains(&i);
-                let pred = if i % 5 == 0 { log2 + 2 } else { log2 };
-                (
-                    json!({ "log2": log2, "censor": censor }),
-                    json!(pred as f64),
-                    (log2 > 2) != flip,
-                )
-            } else {
-                (Value::Null, Value::Null, i % 2 == 0)
-            };
-            samples.push(json!({ "id": format!("g{i}"), "resistant": resistant, "mic": mic, "lineage": i / 10 }));
-            predicted.push(pred);
+                json!({ "log2": v, "censor": censor })
+            });
+            samples.push(json!({ "id": format!("g{i}"), "resistant": resistant(i, log2), "mic": mic, "lineage": i / 10 }));
         }
         let mut report = json!({
             "id": "synthetic__fixturemycin",
@@ -644,33 +796,46 @@ mod tests {
             "mic": {
                 "n": N_MIC, "n_exact": 0, "essential_agreement": 0.0, "essential_agreement_all": 0.0,
                 "categorical": null, "breakpoint": null, "fold_breakpoints": [],
-                "confusion": [], "predicted": predicted,
+                "confusion": [], "predicted": [],
             },
         });
-        // Store what the fit would have stored: thresholds from the folds
-        // drawn at the report's seed, and the model's agreement.
-        let thresholds = stored_thresholds(&report, seed);
-        let mics: Vec<Option<Mic>> = parse_mics(&report);
-        let n_exact = mics
-            .iter()
-            .flatten()
-            .filter(|m| m.censor == Censor::Exact)
-            .count();
-        let agree = mics
+        let folds = folds_at(&report, seed);
+        report["mic"]["predicted"] = (0..n)
+            .map(|i| {
+                if i < N_MIC {
+                    let v = (i % 8) as f64 - 1.0;
+                    let miss = if i % 5 == 0 { 2.0 } else { 0.0 };
+                    json!(v + miss + 0.01 * (folds[i] + 1) as f64)
+                } else {
+                    Value::Null
+                }
+            })
+            .collect();
+        report["mic"]["fold_breakpoints"] = json!(stored_thresholds(&report, seed));
+        stamp(&mut report);
+        report
+    }
+
+    /// Stores the model's agreement, as the fit would, from the report's
+    /// predictions.
+    fn stamp(report: &mut Value) {
+        let mics = parse_mics(report);
+        let exact: Vec<(usize, i32)> = mics
             .iter()
             .enumerate()
-            .filter(|(_, m)| m.is_some_and(|m| m.censor == Censor::Exact))
-            .filter(|&(i, m)| {
+            .filter_map(|(i, m)| m.filter(|m| m.censor == Censor::Exact).map(|m| (i, m.log2)))
+            .collect();
+        let agree = exact
+            .iter()
+            .filter(|&&(i, v)| {
                 within_one(
                     report["mic"]["predicted"][i].as_f64().unwrap().round() as i32,
-                    m.unwrap().log2,
+                    v,
                 )
             })
             .count();
-        report["mic"]["n_exact"] = json!(n_exact);
-        report["mic"]["essential_agreement"] = json!(agree as f64 / n_exact as f64);
-        report["mic"]["fold_breakpoints"] = json!(thresholds);
-        report
+        report["mic"]["n_exact"] = json!(exact.len());
+        report["mic"]["essential_agreement"] = json!(agree as f64 / exact.len() as f64);
     }
 
     fn parse_mics(report: &Value) -> Vec<Option<Mic>> {
@@ -682,14 +847,28 @@ mod tests {
             .collect()
     }
 
+    fn labels(report: &Value) -> Bits {
+        let samples = report["samples"].as_array().unwrap();
+        Bits::from_indices(
+            samples.len(),
+            (0..samples.len()).filter(|&i| samples[i]["resistant"] == true),
+        )
+    }
+
+    /// The MIC folds `evaluate_mic` draws for the report at `seed`.
+    fn folds_at(report: &Value, seed: u64) -> Vec<usize> {
+        let mics = parse_mics(report);
+        let with_mic =
+            Bits::from_indices(mics.len(), (0..mics.len()).filter(|&i| mics[i].is_some()));
+        training_folds(&labels(report), &with_mic, None, 5, seed)
+    }
+
     fn stored_thresholds(report: &Value, seed: u64) -> Vec<Option<Breakpoint>> {
         let mics = parse_mics(report);
-        let n = mics.len();
-        let samples = report["samples"].as_array().unwrap();
-        let y = Bits::from_indices(n, (0..n).filter(|&i| samples[i]["resistant"] == true));
-        let with_mic = Bits::from_indices(n, (0..n).filter(|&i| mics[i].is_some()));
-        let folds = training_folds(&y, &with_mic, None, 5, seed);
-        fold_masks(&folds, 5)
+        let y = labels(report);
+        let with_mic =
+            Bits::from_indices(mics.len(), (0..mics.len()).filter(|&i| mics[i].is_some()));
+        fold_masks(&folds_at(report, seed), 5)
             .into_iter()
             .map(|(train, _)| {
                 let pairs: Vec<(Mic, Call)> = train
@@ -707,6 +886,27 @@ mod tests {
             .collect()
     }
 
+    /// Groups of two or more isolates in folds that `keep` keeps, by fold
+    /// and predicted dilution as `build` predicts it, and their isolates.
+    fn groups_by_fold(folds: &[usize], keep: impl Fn(usize) -> bool) -> (usize, usize) {
+        let mut count: BTreeMap<(usize, usize), usize> = BTreeMap::new();
+        for i in (0..N_MIC).filter(|&i| keep(folds[i])) {
+            let dilution = i % 8 + if i % 5 == 0 { 2 } else { 0 };
+            *count.entry((folds[i], dilution)).or_default() += 1;
+        }
+        let groups = count.values().filter(|&&c| c >= 2);
+        (groups.clone().count(), groups.sum())
+    }
+
+    fn predictions(report: &Value) -> Vec<f64> {
+        report["mic"]["predicted"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_f64().unwrap_or(f64::NAN))
+            .collect()
+    }
+
     fn bytes(v: &Value) -> Vec<u8> {
         serde_json::to_vec(v).unwrap()
     }
@@ -721,10 +921,22 @@ mod tests {
         assert_eq!(file["report_sha256"], crate::research::sha256(&raw));
         assert_eq!(file["evaluation_revision"], EVALUATION_REVISION);
         let mic = &file["mic"];
+        // Isolates with one prediction share a fold: each predicted
+        // dilution in each of the five folds is one group, counted here
+        // from the folds and dilutions rather than the predictions' bits.
+        let (groups, isolates) = groups_by_fold(&folds_at(&report, 42), |_| true);
+        assert!(groups >= 40, "{groups}");
+        assert_eq!(
+            mic["prediction_check"],
+            json!({ "confirmed": true, "groups": groups, "isolates": isolates, "constant_folds": [] })
+        );
         // Every fold's training isolates support a threshold, so all five
         // stored thresholds are checked.
-        assert_eq!(mic["confirmed"], true);
-        assert_eq!(mic["thresholds_checked"], 5);
+        assert_eq!(
+            mic["threshold_check"],
+            json!({ "confirmed": true, "checked": 5 })
+        );
+        assert_eq!(mic["exact_with_training_copy"], 0);
         assert_eq!(
             (mic["folds"].as_u64(), mic["seed"].as_u64()),
             (Some(5), Some(42))
@@ -769,8 +981,8 @@ mod tests {
 
     #[test]
     fn the_folds_are_rebuilt_at_the_report_s_seed_and_a_contradiction_stops_the_command() {
-        // The thresholds were stored from the folds of seed 42. Read as a
-        // report of seed 43, the rebuilt folds contradict them.
+        // The predictions and thresholds come from the folds of seed 42.
+        // Read as a report of seed 43, the rebuilt folds contradict them.
         let mut report = synthetic(42);
         report["eval_config"]["seed"] = json!(43);
         let err = for_report(&bytes(&report)).unwrap_err().to_string();
@@ -795,20 +1007,11 @@ mod tests {
     }
 
     #[test]
-    fn folds_with_no_stored_threshold_are_written_unconfirmed() {
+    fn folds_with_no_stored_threshold_are_still_confirmed_by_the_predictions() {
         // Synthetic: every label resistant but 9, so no training fold has the
         // 10 susceptible isolates a threshold needs and every stored
         // threshold is none, which the rebuilt folds reproduce.
-        let mut report = synthetic(42);
-        for (i, s) in report["samples"]
-            .as_array_mut()
-            .unwrap()
-            .iter_mut()
-            .enumerate()
-        {
-            s["resistant"] = json!(i >= 9);
-        }
-        report["mic"]["fold_breakpoints"] = json!(stored_thresholds(&report, 42));
+        let report = build(42, &|i, _| i >= 9);
         assert!(
             report["mic"]["fold_breakpoints"]
                 .as_array()
@@ -817,9 +1020,148 @@ mod tests {
                 .all(Value::is_null)
         );
         let file = for_report(&bytes(&report)).unwrap();
-        assert_eq!(file["mic"]["confirmed"], false);
-        assert_eq!(file["mic"]["thresholds_checked"], 0);
+        assert_eq!(
+            file["mic"]["threshold_check"],
+            json!({ "confirmed": false, "checked": 0 })
+        );
+        assert_eq!(file["mic"]["prediction_check"]["confirmed"], true);
         assert!(file["mic"]["median"]["agree"].is_u64());
+    }
+
+    #[test]
+    fn a_wrong_seed_fails_the_prediction_check_where_it_passes_the_threshold_check() {
+        // Synthetic: no label disagrees with its MIC, so every training
+        // fold's threshold separates its isolates without error, and any
+        // stratified draw with the same fold sizes fits the same thresholds.
+        let report = build(42, &|i, log2| log2.map_or(i % 2 == 0, |v| v > 2));
+        let stored = stored_thresholds(&report, 42);
+        assert!(stored.iter().all(|b| b.is_some_and(|b| b.agreement == 1.0)));
+        assert_eq!(stored_thresholds(&report, 43), stored);
+        // The held-out predictions tell the two draws apart.
+        let predicted = predictions(&report);
+        assert!(prediction_check(&predicted, &folds_at(&report, 42), 5).is_ok());
+        assert!(prediction_check(&predicted, &folds_at(&report, 43), 5).is_err());
+        let mut wrong = report.clone();
+        wrong["eval_config"]["seed"] = json!(43);
+        let err = for_report(&bytes(&wrong)).unwrap_err().to_string();
+        assert!(
+            err.contains("synthetic__fixturemycin") && err.contains("held-out predictions"),
+            "{err}"
+        );
+        assert_eq!(
+            for_report(&bytes(&report)).unwrap()["mic"]["prediction_check"]["confirmed"],
+            true
+        );
+    }
+
+    #[test]
+    fn prediction_check_keeps_each_group_in_one_fold_except_across_constant_folds() {
+        // Synthetic. Two groups inside folds 0 and 1, and two singletons;
+        // isolates without an MIC are not read.
+        let folds = [0, 0, 0, 1, 1, 1, usize::MAX, usize::MAX];
+        let predicted = [0.5, 0.5, 0.6, 0.7, 0.7, 0.9, f64::NAN, f64::NAN];
+        assert_eq!(
+            prediction_check(&predicted, &folds, 2),
+            Ok(PredictionCheck {
+                groups: 2,
+                isolates: 4,
+                constant_folds: vec![]
+            })
+        );
+        // One value in two folds that each predict more than one value.
+        let err = prediction_check(&[0.5, 0.6, 0.5, 0.7], &[0, 0, 1, 1], 2).unwrap_err();
+        assert_eq!((err.value, err.isolates, err.folds), (0.5, 2, vec![0, 1]));
+        // Folds 0 and 1 predict one start value each, the same: no tree.
+        // Their group is left out, and fold 2's group counts.
+        let folds = [0, 0, 1, 1, 2, 2, 2];
+        let predicted = [-1.0, -1.0, -1.0, -1.0, 0.25, 0.25, 1.5];
+        assert_eq!(
+            prediction_check(&predicted, &folds, 3),
+            Ok(PredictionCheck {
+                groups: 1,
+                isolates: 2,
+                constant_folds: vec![0, 1]
+            })
+        );
+        // The same value in fold 2, which keeps trees: a contradiction.
+        let predicted = [-1.0, -1.0, -1.0, -1.0, -1.0, 0.25, 1.5];
+        let err = prediction_check(&predicted, &folds, 3).unwrap_err();
+        assert_eq!(err.folds, vec![0, 1, 2]);
+        // A group inside one constant fold is left out too; fold 1's counts.
+        let check = prediction_check(&[2.0, 2.0, 3.0, 3.0, 4.0], &[0, 0, 1, 1, 1], 2);
+        assert_eq!(
+            check.map(|c| (c.groups, c.constant_folds)),
+            Ok((1, vec![0]))
+        );
+        // Only constant folds: nothing confirms the draw.
+        let check = prediction_check(&[2.0, 2.0, 2.0, 2.0], &[0, 0, 1, 1], 2);
+        assert_eq!(
+            check,
+            Ok(PredictionCheck {
+                groups: 0,
+                isolates: 0,
+                constant_folds: vec![0, 1]
+            })
+        );
+    }
+
+    #[test]
+    fn folds_that_predict_one_start_value_are_left_out_and_unconfirmed_without_another_group() {
+        // Synthetic: folds 0 and 1 kept no tree and predict -1.0 for every
+        // isolate; the other three keep their groups.
+        let mut report = synthetic(42);
+        let folds = folds_at(&report, 42);
+        for (i, &f) in folds.iter().enumerate() {
+            if f < 2 {
+                report["mic"]["predicted"][i] = json!(-1.0);
+            }
+        }
+        stamp(&mut report);
+        let file = for_report(&bytes(&report)).unwrap();
+        let check = &file["mic"]["prediction_check"];
+        assert_eq!(check["constant_folds"], json!([0, 1]));
+        let (groups, _) = groups_by_fold(&folds, |f| f >= 2);
+        assert_eq!(
+            (check["groups"].as_u64(), check["confirmed"].as_bool()),
+            (Some(groups as u64), Some(true))
+        );
+        // An isolate of fold 2 predicted -1.0 too joins the constant folds'
+        // group and stops the command.
+        let i = folds.iter().position(|&f| f == 2).unwrap();
+        report["mic"]["predicted"][i] = json!(-1.0);
+        stamp(&mut report);
+        let err = for_report(&bytes(&report)).unwrap_err().to_string();
+        assert!(
+            err.contains("held-out predictions") && err.contains("[0, 1, 2]"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn copies_in_training_count_exact_test_isolates_whose_copy_has_an_mic_in_another_fold() {
+        let mut report = synthetic(42);
+        let folds = folds_at(&report, 42);
+        let mics = parse_mics(&report);
+        let is_exact = |i: usize| mics[i].is_some_and(|m| m.censor == Censor::Exact);
+        let exact_in = |f: usize| -> Vec<usize> {
+            (0..N_MIC)
+                .filter(|&i| folds[i] == f && is_exact(i))
+                .collect()
+        };
+        let (a, b) = (exact_in(0)[0], exact_in(1)[0]);
+        let same = exact_in(2)[..2].to_vec();
+        let censored = (0..N_MIC).find(|&i| !is_exact(i) && folds[i] != 3).unwrap();
+        let other = exact_in(3)[0];
+        // Synthetic groups: a pair split over folds 0 and 1 (both count), a
+        // pair inside fold 2 (neither), an exact isolate whose copy has no
+        // MIC (none), and an exact isolate whose copy has a censored MIC in
+        // another fold (the exact one counts).
+        report["kset_duplicates"] =
+            json!([[a, b], same, [exact_in(4)[0], N_MIC + 1], [censored, other]]);
+        let file = for_report(&bytes(&report)).unwrap();
+        assert_eq!(file["mic"]["exact_with_training_copy"], 3);
+        report["kset_duplicates"] = json!([[0, N_MIC + 20]]);
+        assert!(for_report(&bytes(&report)).is_err());
     }
 
     #[test]
@@ -946,7 +1288,9 @@ mod tests {
             Written {
                 files: 1,
                 mic: 1,
-                confirmed: 1
+                confirmed: 1,
+                copies: 0,
+                copy_datasets: 0
             }
         );
         assert_eq!(
