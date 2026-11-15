@@ -25,6 +25,7 @@ const row = manifest.datasets[0]!;
 const base = parseDataset(fixtureFile(`/data/datasets/${row.id}.json`));
 const file = CLINDAMYCIN_LABELS!;
 const SA = "staphylococcus_aureus__clindamycin";
+const CC = "campylobacter_coli__clindamycin";
 
 const reportAs = (id: string, revision = file.evaluation_revision): DatasetReport => ({
   ...base,
@@ -67,6 +68,15 @@ describe("the note on a dataset report", () => {
     for (const [id, expected] of Object.entries(NOTES)) {
       expect(text(renderToStaticMarkup(createElement(ClindamycinNote, { r: reportAs(id) }))), id).toBe(expected);
     }
+  });
+
+  it("with a digest prop, renders only when it is the file's report_sha256; without one, as before", () => {
+    const sha = file.datasets[SA]!.report_sha256;
+    const note = (props: Record<string, unknown>) => renderToStaticMarkup(createElement(ClindamycinNote, { r: reportAs(SA), ...props }));
+    const plain = note({});
+    expect(plain).toContain('data-clindamycin-note="measured_dependence"');
+    expect(note({ digest: sha })).toBe(plain);
+    for (const digest of [undefined, null, file.datasets[CC]!.report_sha256]) expect(note({ digest }), String(digest)).toBe("");
   });
 
   it("renders nothing for a report outside the six or of another revision", () => {

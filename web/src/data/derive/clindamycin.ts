@@ -8,12 +8,15 @@
 // the released report's sha256.
 //
 // A note is given only for a report the check read: one of the six, at the
-// file's evaluation revision, with the file's sample count. The app parses
-// each report as JSON and keeps no bytes of it, so it cannot compare the
-// loaded report's sha256 with the one the file carries. The intervals file
-// is pinned more tightly, by revision and each row's confusion counts. Any
-// other report, and any report at all when the bundled file does not
-// validate, gets nothing.
+// file's evaluation revision, with the file's sample count. A caller that has
+// a digest of the loaded report's bytes passes it, and the note then also
+// needs it to equal the file's report_sha256; a caller with none (the app
+// parses each report as JSON and keeps no bytes of it today) gets the pin by
+// dataset, revision and sample count alone. The intervals file is pinned more
+// tightly, by revision and each row's confusion counts. The datasets table
+// reads the index, which holds no report bytes, so its mark keeps the pin by
+// dataset, revision and sample count. Any other report, and any report at
+// all when the bundled file does not validate, gets nothing.
 //
 // A disagreement is a difference between two readings, and neither is
 // called the error. A change when a study leaves is an association with that
@@ -175,19 +178,29 @@ export const CLINDAMYCIN_LABELS: ClindamycinLabels | null = (() => {
   }
 })();
 
+/** A digest of the loaded report's bytes, given by a caller that has one:
+ *  undefined until the report is read, null when no digest exists. */
+export interface ReportDigest {
+  digest: string | null | undefined;
+}
+
 /** The file's entry for a dataset the check read: the same dataset id,
- *  evaluation revision and sample count. Null for any other. */
-const entryFor = (file: ClindamycinLabels | null, id: string, revision: number | undefined, samples: number): ClindamycinDataset | null => {
+ *  evaluation revision and sample count, and, when the caller gives a
+ *  digest, the file's report_sha256. Null for any other. */
+const entryFor = (file: ClindamycinLabels | null, id: string, revision: number | undefined, samples: number, read?: ReportDigest): ClindamycinDataset | null => {
   if (file === null || !Object.hasOwn(file.datasets, id)) return null;
   const entry = file.datasets[id]!;
+  if (read !== undefined && (typeof read.digest !== "string" || read.digest !== entry.report_sha256)) return null;
   return revision === file.evaluation_revision && samples === entry.samples ? entry : null;
 };
 
-/** The entry for a loaded dataset report, or null. */
-export const clindamycinEntry = (r: DatasetReport, file: ClindamycinLabels | null = CLINDAMYCIN_LABELS): ClindamycinDataset | null =>
-  entryFor(file, r.id, r.evaluation?.revision, r.counts.samples);
+/** The entry for a loaded dataset report, or null. With `read`, the
+ *  report's digest must also be the file's report_sha256. */
+export const clindamycinEntry = (r: DatasetReport, file: ClindamycinLabels | null = CLINDAMYCIN_LABELS, read?: ReportDigest): ClindamycinDataset | null =>
+  entryFor(file, r.id, r.evaluation?.revision, r.counts.samples, read);
 
-/** The entry for a row of the datasets table, pinned the same way, or null. */
+/** The entry for a row of the datasets table, by dataset, revision and
+ *  sample count, or null: the index holds no report bytes to digest. */
 export const clindamycinRowEntry = (row: CatalogRow, file: ClindamycinLabels | null = CLINDAMYCIN_LABELS): ClindamycinDataset | null =>
   entryFor(file, row.id, row.evaluation?.revision, row.n);
 
@@ -271,9 +284,10 @@ const READING: Record<ClindamycinKind, (d: ClindamycinDataset) => string> = {
 };
 
 /** The note for a loaded dataset report, or null when the check did not
- *  read this report. */
-export const clindamycinNote = (r: DatasetReport, file: ClindamycinLabels | null = CLINDAMYCIN_LABELS): ClindamycinNote | null => {
-  const d = clindamycinEntry(r, file);
+ *  read this report. With `read`, the note shows only when its digest is
+ *  the file's report_sha256; a null or undefined digest gives none. */
+export const clindamycinNote = (r: DatasetReport, file: ClindamycinLabels | null = CLINDAMYCIN_LABELS, read?: ReportDigest): ClindamycinNote | null => {
+  const d = clindamycinEntry(r, file, read);
   if (d === null || file === null) return null;
   return {
     kind: d.kind,

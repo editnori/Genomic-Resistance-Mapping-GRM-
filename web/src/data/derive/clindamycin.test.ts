@@ -146,6 +146,23 @@ describe("when a note shows", () => {
     expect(clindamycinRowEntry(rowAs(SA))).toBe(file.datasets[SA]);
   });
 
+  it("with a digest of the loaded report, shows only when it is the file's report_sha256", () => {
+    const sha = file.datasets[SA]!.report_sha256;
+    expect(clindamycinNote(reportAs(SA), file, { digest: sha })).toEqual(clindamycinNote(reportAs(SA)));
+    expect(clindamycinEntry(reportAs(SA), file, { digest: sha })).toBe(file.datasets[SA]);
+    for (const digest of [null, undefined, file.datasets[CC]!.report_sha256, sha.toUpperCase(), ""]) {
+      expect(clindamycinNote(reportAs(SA), file, { digest }), String(digest)).toBeNull();
+    }
+    // The digest adds to the pin by revision and sample count; it does not replace it.
+    expect(clindamycinNote(reportAs(SA, { revision: file.evaluation_revision + 1 }), file, { digest: sha })).toBeNull();
+    expect(clindamycinNote(reportAs(SA, { samples: file.datasets[SA]!.samples - 1 }), file, { digest: sha })).toBeNull();
+  });
+
+  it("without a digest, keeps the pin by dataset, revision and sample count", () => {
+    for (const id of Object.keys(file.datasets)) expect(clindamycinNote(reportAs(id))?.kind).toBe(file.datasets[id]!.kind);
+    expect(clindamycinNote(reportAs(SA), file, undefined)).not.toBeNull();
+  });
+
   it("shows nothing when there is no valid file", () => {
     expect(clindamycinNote(reportAs(SA), null)).toBeNull();
     expect(clindamycinMarkTip(rowAs(SA), null)).toBeNull();
