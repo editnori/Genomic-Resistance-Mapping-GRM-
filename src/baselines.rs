@@ -11,26 +11,30 @@
 //!   fold count and seed. These are random folds with no lineage split, and
 //!   they are not the random split's folds. Two checks compare the rebuilt
 //!   folds with what the fit left in the report, and a contradiction in
-//!   either stops the command and names the dataset:
-//!   - Prediction check (`prediction_check`): each fold's predictions
-//!     come from one boosted model, so isolates with bit-identical held-out
-//!     predictions must lie in one rebuilt fold. The rule has one
-//!     exception: a fold where every isolate gets the same prediction, as
-//!     when early stopping keeps no tree and the model predicts its start
-//!     value (the upper median of its fit part's exact MICs). Such folds can
-//!     share that value, so a group that spans only such folds is left out;
-//!     a group that spans folds and touches any other fold is a
-//!     contradiction. The folds count as `confirmed` when at least one
-//!     group of two or more isolates lies inside one fold that is not such a
-//!     fold. This is the check a dataset is confirmed by.
+//!   either refuses that dataset alone (`Refused`):
+//!   - Prediction check (`prediction_check`): on the report's own folds,
+//!     groups of isolates with bit-identical held-out predictions lie inside
+//!     one fold, and a wrong rebuild splits them. Correct folds can also give
+//!     one value to isolates of two folds (a shared start value, or
+//!     identical models), so a group that spans folds is evidence, not
+//!     proof, of a wrong rebuild. A fold where every isolate gets the same
+//!     prediction (a constant fold, as when early stopping keeps no tree and
+//!     the model predicts its start value, the upper median of its fit
+//!     part's exact MICs) is left out. The check counts the groups of two or
+//!     more inside one fold that is not constant (I, `groups`) and the
+//!     groups that span folds, at least one of them not constant (X,
+//!     `spanning`). X = 0 and I >= 1: the folds are `confirmed`. X > I: the
+//!     spanning groups outnumber the others, and the dataset is refused.
+//!     Otherwise (0 < X <= I, or no group at all) the file is written
+//!     unconfirmed. The rule has no cut read off a release: it asks only
+//!     whether the spanning groups outnumber the others.
 //!   - Threshold check (`threshold_check`): each rebuilt fold's training
 //!     isolates give the
 //!     threshold `infer_breakpoint` fits, and that must equal the
 //!     threshold the report stores for the fold (`mic.fold_breakpoints`,
-//!     every field, agreement bit for bit). It is written beside the
-//!     prediction check and confirms nothing on its own: where every stored
-//!     threshold has agreement 1, any stratified draw with the same fold
-//!     sizes matches it.
+//!     every field, agreement bit for bit). It confirms nothing on its own:
+//!     where every stored threshold has agreement 1, any stratified draw with
+//!     the same fold sizes matches it.
 //!
 //!   The file also counts the exact-MIC test isolates that have a
 //!   k-mer-identical copy (`kset_duplicates`) in their training fold: the
@@ -41,7 +45,8 @@
 //!   constant is within one doubling dilution of the measured value. The
 //!   model's own count is recounted from `mic.predicted` under the same rule
 //!   (`evaluate_mic` rounds a prediction half away from zero) and must give
-//!   the report's `mic.essential_agreement` exactly.
+//!   the report's `mic.essential_agreement` exactly, or the dataset is
+//!   refused.
 //! - **Lineage identity.** For each split with folds, inside each of the
 //!   report's own outer folds a test genome scores the resistant share of its
 //!   lineage among that fold's training genomes, or the fold's training
@@ -57,9 +62,15 @@
 //!   prevalence: the baseline has nothing of the lineage to read there.
 //!
 //! The command fits nothing, reads no network and changes no report file,
-//! and a second run writes the same bytes. It refuses a report of another
-//! evaluation revision than this binary's. Every file is computed before any
-//! is written, so a refusal leaves the folder as it was.
+//! and a second run writes the same bytes. A refused dataset gets no file,
+//! and a file it had is removed; every other dataset is written, and the
+//! command then fails, naming each refused dataset with its I and X. A
+//! report it cannot read, a report of another evaluation revision than this
+//! binary's, or an index id that is not a plain file name stops the whole
+//! run before anything is written. It also writes `baselines.json` beside
+//! `index.json` (`summary`): for the pages that show many datasets, each
+//! written dataset's model figure, constant and confirmation, pinned to the
+//! SHA-256 of the `index.json` bytes it read and to each report's SHA-256.
 //!
 //! A baseline says what a predictor reaches without the genome on these
 //! cross-validated folds of public data. It does not say why a model does
@@ -235,38 +246,52 @@ pub fn mic_constants(
 /// What the held-out MIC predictions say about the rebuilt folds.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PredictionCheck {
-    /// Groups of two or more isolates with bit-identical predictions, each
-    /// inside one rebuilt fold that is not a constant fold.
+    /// I: groups of two or more isolates with bit-identical predictions,
+    /// each inside one rebuilt fold that is not a constant fold.
     pub groups: usize,
     /// The isolates in those groups.
     pub isolates: usize,
+    /// X: groups of two or more isolates with bit-identical predictions that
+    /// span rebuilt folds, at least one of them not a constant fold.
+    pub spanning: usize,
     /// Rebuilt folds where every isolate gets the same prediction.
     pub constant_folds: Vec<usize>,
 }
 
-/// A group of isolates with one bit-identical prediction that spans rebuilt
-/// folds, at least one of them not a constant fold.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Contradiction {
-    pub value: f64,
-    pub isolates: usize,
-    pub folds: Vec<usize>,
+/// What the prediction check makes of a dataset's rebuilt folds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Verdict {
+    /// X = 0 and I >= 1: the file is written with `confirmed: true`.
+    Confirmed,
+    /// 0 < X <= I, or no group at all: written with `confirmed: false`.
+    Unconfirmed,
+    /// X > I: the spanning groups outnumber the others; no file is written.
+    Refused,
 }
 
-/// Checks the rebuilt MIC folds against the held-out predictions. Each
-/// fold's predictions come from one boosted model, so isolates with
-/// bit-identical predictions lie in one fold. A fold where every isolate
-/// gets the same prediction (a constant fold, as when early stopping keeps
-/// no tree and the model predicts its start value) is the exception: such
-/// folds can share that value, so a group that spans only constant folds is
-/// left out, and so is a group inside one constant fold. Any other group
-/// that spans folds is a contradiction. `folds` gives each isolate's MIC
-/// fold, `usize::MAX` for an isolate without an MIC, which is not read.
-pub fn prediction_check(
-    predicted: &[f64],
-    folds: &[usize],
-    k: usize,
-) -> std::result::Result<PredictionCheck, Contradiction> {
+impl PredictionCheck {
+    /// The rule asks only whether the spanning groups outnumber the others.
+    pub fn verdict(&self) -> Verdict {
+        if self.spanning > self.groups {
+            Verdict::Refused
+        } else if self.spanning == 0 && self.groups > 0 {
+            Verdict::Confirmed
+        } else {
+            Verdict::Unconfirmed
+        }
+    }
+}
+
+/// Checks the rebuilt MIC folds against the held-out predictions. On the
+/// report's own folds, groups of isolates with bit-identical predictions lie
+/// inside one fold; correct folds can also give one value to isolates of two
+/// folds, so a group that spans folds is counted, not taken as proof. A fold
+/// where every isolate gets the same prediction (a constant fold, as when
+/// early stopping keeps no tree and the model predicts its start value) is
+/// left out: a group inside one constant fold or spanning only constant
+/// folds counts neither way. `folds` gives each isolate's MIC fold,
+/// `usize::MAX` for an isolate without an MIC, which is not read.
+pub fn prediction_check(predicted: &[f64], folds: &[usize], k: usize) -> PredictionCheck {
     let mut values: Vec<BTreeSet<u64>> = vec![BTreeSet::new(); k];
     let mut by_value: BTreeMap<u64, Vec<usize>> = BTreeMap::new();
     for (i, &f) in folds.iter().enumerate().filter(|&(_, &f)| f < k) {
@@ -278,25 +303,50 @@ pub fn prediction_check(
     let mut check = PredictionCheck {
         groups: 0,
         isolates: 0,
+        spanning: 0,
         constant_folds: (0..k).filter(|&f| constant[f]).collect(),
     };
-    for (bits, members) in by_value.iter().filter(|(_, m)| m.len() >= 2) {
+    for members in by_value.values().filter(|m| m.len() >= 2) {
         let spans: BTreeSet<usize> = members.iter().map(|&i| folds[i]).collect();
         if spans.iter().all(|&f| constant[f]) {
             continue;
         }
         if spans.len() > 1 {
-            return Err(Contradiction {
-                value: f64::from_bits(*bits),
-                isolates: members.len(),
-                folds: spans.into_iter().collect(),
-            });
+            check.spanning += 1;
+            continue;
         }
         check.groups += 1;
         check.isolates += members.len();
     }
-    Ok(check)
+    check
 }
+
+/// A dataset refused alone: its rebuilt MIC folds contradict the report (the
+/// prediction check's spanning groups outnumber the others, or a stored
+/// threshold differs), or its saved predictions do not give the report's own
+/// figure. No file is written for it, a file it had is removed, and the
+/// other datasets are written.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Refused {
+    pub dataset: String,
+    /// I and X of the prediction check.
+    pub inside: usize,
+    pub spanning: usize,
+    /// What disagrees, with the seed the folds were rebuilt at.
+    pub reason: String,
+}
+
+impl std::fmt::Display for Refused {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}: refused, no baselines file written (I = {} groups inside one fold, X = {} groups spanning folds): {}",
+            self.dataset, self.inside, self.spanning, self.reason
+        )
+    }
+}
+
+impl std::error::Error for Refused {}
 
 /// The exact-MIC isolates with a k-mer-identical copy in their training
 /// fold: another member of their `kset_duplicates` group that has an MIC
@@ -335,9 +385,10 @@ fn agreement(agree: usize, n: usize) -> Value {
     json!({ "agree": agree, "n": n, "essential_agreement": agree as f64 / n.max(1) as f64 })
 }
 
-/// The MIC part of a baselines file, or an error naming the dataset when the
-/// rebuilt folds contradict a stored threshold or the saved predictions do
-/// not give the report's own agreement.
+/// The MIC part of a baselines file. A `Refused` error names the dataset
+/// when the rebuilt folds contradict the held-out predictions or a stored
+/// threshold, or the saved predictions do not give the report's own
+/// agreement; any other error is a report this command cannot read.
 fn mic_part(
     id: &str,
     samples: &[Sample],
@@ -377,15 +428,22 @@ fn mic_part(
     let with_mic = Bits::from_indices(n, has.iter().copied());
     // The draw `evaluate_mic` makes.
     let folds = training_folds(&y, &with_mic, None, k, cfg.seed);
-    let ties = prediction_check(&mic.predicted, &folds, k).map_err(|c| {
-        anyhow::anyhow!(
-            "{id}: the MIC folds rebuilt at seed {} contradict the report's held-out predictions: {} isolates predicted {} lie in rebuilt folds {:?}, and one model per fold cannot give them that one value; no baselines file was written",
-            cfg.seed,
-            c.isolates,
-            c.value,
-            c.folds
-        )
-    })?;
+    let ties = prediction_check(&mic.predicted, &folds, k);
+    let refuse = |reason: String| -> anyhow::Error {
+        Refused {
+            dataset: id.to_string(),
+            inside: ties.groups,
+            spanning: ties.spanning,
+            reason,
+        }
+        .into()
+    };
+    if ties.verdict() == Verdict::Refused {
+        return Err(refuse(format!(
+            "the MIC folds rebuilt at seed {} contradict the report's held-out predictions: more groups of isolates with one bit-identical prediction span rebuilt folds than lie inside one",
+            cfg.seed
+        )));
+    }
     let mut checked = 0;
     for (f, (train, _)) in fold_masks(&folds, k).into_iter().enumerate() {
         let pairs: Vec<(Mic, Call)> = train
@@ -401,10 +459,10 @@ fn mic_part(
         let rebuilt = infer_breakpoint(&pairs);
         let stored = &mic.fold_breakpoints[f];
         if !same_threshold(&rebuilt, stored) {
-            bail!(
-                "{id}: the MIC folds rebuilt at seed {} contradict the report's stored training-fold threshold of fold {f} (stored {stored:?}, rebuilt {rebuilt:?}); no baselines file was written",
+            return Err(refuse(format!(
+                "the MIC folds rebuilt at seed {} contradict the report's stored training-fold threshold of fold {f} (stored {stored:?}, rebuilt {rebuilt:?})",
                 cfg.seed
-            );
+            )));
         }
         checked += stored.is_some() as usize;
     }
@@ -412,11 +470,12 @@ fn mic_part(
     let total = |pick: fn(&FoldConstants) -> usize| per_fold.iter().map(pick).sum::<usize>();
     let model = total(|f| f.agree_model);
     let model_share = model as f64 / n_exact.max(1) as f64;
-    ensure!(
-        model_share.to_bits() == mic.essential_agreement.to_bits(),
-        "{id}: the saved MIC predictions put {model} of {n_exact} exact MICs within one dilution ({model_share}), and the report says {}",
-        mic.essential_agreement
-    );
+    if model_share.to_bits() != mic.essential_agreement.to_bits() {
+        return Err(refuse(format!(
+            "the saved MIC predictions put {model} of {n_exact} exact MICs within one dilution ({model_share}), and the report says {}",
+            mic.essential_agreement
+        )));
+    }
     let defined =
         |pick: fn(&FoldConstants) -> Option<i32>| per_fold.iter().all(|f| pick(f).is_some());
     // A fold whose training isolates hold no exact MIC has no constant, and
@@ -435,9 +494,10 @@ fn mic_part(
         "folds": k,
         "seed": cfg.seed,
         "prediction_check": {
-            "confirmed": ties.groups > 0,
+            "confirmed": ties.verdict() == Verdict::Confirmed,
             "groups": ties.groups,
             "isolates": ties.isolates,
+            "spanning": ties.spanning,
             "constant_folds": ties.constant_folds,
         },
         "threshold_check": {
@@ -566,6 +626,44 @@ pub fn for_report(bytes: &[u8]) -> Result<Value> {
     }))
 }
 
+/// The summary file for the pages that show many datasets, written beside
+/// `index.json` rather than in `baselines/`: no dataset id can name it (an
+/// id is a file name inside `baselines/`), and the removal step, which reads
+/// `baselines/` alone, never reaches it.
+pub const SUMMARY: &str = "baselines.json";
+
+/// Version of the summary file's layout.
+pub const SUMMARY_SCHEMA: u32 = 1;
+
+/// The summary of one run: per written dataset with a constant MIC, only
+/// what the overview, the datasets table, the methods page and the slide
+/// show (the model's figure, the constant's and whether the held-out
+/// predictions confirm the folds), with the report's SHA-256, pinned to the
+/// SHA-256 of the `index.json` bytes the run read. A new index makes it
+/// stale, and the pages then refuse it whole.
+pub fn summary(index_bytes: &[u8], files: &[Value]) -> Value {
+    let datasets: Vec<Value> = files
+        .iter()
+        .filter(|f| !f["mic"].is_null() && !f["mic"]["median"].is_null())
+        .map(|f| {
+            let m = &f["mic"];
+            json!({
+                "dataset": f["dataset"],
+                "report_sha256": f["report_sha256"],
+                "model": m["model"]["essential_agreement"],
+                "constant": m["median"]["essential_agreement"],
+                "confirmed": m["prediction_check"]["confirmed"],
+            })
+        })
+        .collect();
+    json!({
+        "schema": SUMMARY_SCHEMA,
+        "evaluation_revision": EVALUATION_REVISION,
+        "index_sha256": crate::research::sha256(index_bytes),
+        "datasets": datasets,
+    })
+}
+
 /// What one run wrote.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Written {
@@ -579,36 +677,94 @@ pub struct Written {
     /// fold, over every file, and the datasets that have one.
     pub copies: usize,
     pub copy_datasets: usize,
+    /// The datasets refused alone, in index order.
+    pub refused: Vec<Refused>,
+}
+
+/// An index id is a file name: not empty, with no path separator and no
+/// `..`, so `<id>.json` stays inside `datasets/` and `baselines/`.
+fn plain_id(id: &str) -> bool {
+    !id.is_empty() && !id.contains(['/', '\\', '\0']) && !id.contains("..")
+}
+
+/// Writes `bytes` to `path` through a pending file beside it, as
+/// `report::publish` does, and removes the pending file when the write or
+/// the rename fails, so a failed run leaves no pending file of its own. The
+/// error names the path.
+fn publish(path: &Path, bytes: &[u8]) -> Result<()> {
+    let pending = path.with_extension(format!("json.{}.tmp", std::process::id()));
+    if let Err(e) = std::fs::write(&pending, bytes).and_then(|()| std::fs::rename(&pending, path)) {
+        let _ = std::fs::remove_file(&pending);
+        return Err(e).with_context(|| format!("write {}", path.display()));
+    }
+    Ok(())
 }
 
 /// Writes `baselines/<id>.json` under `report_dir` for every dataset that
-/// its `index.json` lists and removes any other file there. Every file is
-/// computed first, so a refused report leaves the folder as it was. It holds
-/// the report directory's lock, as `grm report` does, so it never reads a
-/// build half done.
+/// its `index.json` lists and the command does not refuse, then `SUMMARY`
+/// beside `index.json`, then removes every other regular `*.json` and
+/// `*.tmp` file in `baselines/`, as `grm report`'s prune removes its own
+/// (a refused dataset's old file among them); a link, a directory or any
+/// other entry stays. It refuses a `baselines/` that is a symbolic link or
+/// not a directory, and an index id that is not a plain file name, before
+/// any report is read or any file written. Every file is computed before
+/// any is written, so a report the command cannot read leaves the folder as
+/// it was. It holds the report directory's lock, as `grm report` does, so it
+/// never reads a build half done.
 pub fn write(report_dir: &Path) -> Result<Written> {
     let lock = std::fs::File::open(report_dir)
         .with_context(|| format!("open {}", report_dir.display()))?;
     lock.lock()
         .with_context(|| format!("lock {}", report_dir.display()))?;
-    let index: Value = serde_json::from_slice(
-        &std::fs::read(report_dir.join("index.json")).context("run `grm report` first")?,
-    )?;
-    let mut files = Vec::new();
+    let out = report_dir.join("baselines");
+    let exists = match std::fs::symlink_metadata(&out) {
+        Ok(m) if m.file_type().is_dir() => true,
+        Ok(_) => bail!(
+            "{} is a symbolic link or not a directory; nothing was read or written",
+            out.display()
+        ),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+        Err(e) => return Err(e).with_context(|| format!("read {}", out.display())),
+    };
+    let index_path = report_dir.join("index.json");
+    let index_bytes = std::fs::read(&index_path)
+        .with_context(|| format!("read {}; run `grm report` first", index_path.display()))?;
+    let index: Value = serde_json::from_slice(&index_bytes)
+        .with_context(|| format!("parse {}", index_path.display()))?;
+    let mut ids = Vec::new();
     for row in index["datasets"].as_array().into_iter().flatten() {
         let id = row["id"]
             .as_str()
             .context("index.json lists a dataset with no id")?;
+        ensure!(
+            plain_id(id),
+            "index.json lists the dataset id {id:?}, which holds a path separator or `..`; nothing was written"
+        );
+        ids.push(id);
+    }
+    let mut files = Vec::new();
+    let mut refused = Vec::new();
+    for id in ids {
         let path = report_dir.join("datasets").join(format!("{id}.json"));
         let bytes = std::fs::read(&path).with_context(|| format!("read {}", path.display()))?;
-        let file = for_report(&bytes)?;
+        let file = match for_report(&bytes) {
+            Ok(file) => file,
+            Err(e) => match e.downcast::<Refused>() {
+                Ok(r) => {
+                    refused.push(r);
+                    continue;
+                }
+                Err(e) => return Err(e.context(format!("read {}", path.display()))),
+            },
+        };
         if file["dataset"] != id {
             bail!("{} records the id {}", path.display(), file["dataset"]);
         }
         files.push((format!("{id}.json"), file));
     }
-    let out = report_dir.join("baselines");
-    std::fs::create_dir_all(&out)?;
+    if !exists {
+        std::fs::create_dir(&out).with_context(|| format!("create {}", out.display()))?;
+    }
     let mut kept = BTreeSet::new();
     let mut written = Written {
         files: 0,
@@ -616,9 +772,10 @@ pub fn write(report_dir: &Path) -> Result<Written> {
         confirmed: 0,
         copies: 0,
         copy_datasets: 0,
+        refused,
     };
-    for (name, file) in files {
-        crate::report::publish(&out.join(&name), &serde_json::to_vec(&file)?)?;
+    for (name, file) in &files {
+        publish(&out.join(name), &serde_json::to_vec(file)?)?;
         written.files += 1;
         if !file["mic"].is_null() {
             written.mic += 1;
@@ -629,11 +786,24 @@ pub fn write(report_dir: &Path) -> Result<Written> {
             written.copies += copies;
             written.copy_datasets += (copies > 0) as usize;
         }
-        kept.insert(name);
+        kept.insert(name.clone());
     }
-    for entry in std::fs::read_dir(&out)? {
-        let entry = entry?;
-        if !entry.file_name().to_str().is_some_and(|n| kept.contains(n)) {
+    let shown: Vec<Value> = files.into_iter().map(|(_, f)| f).collect();
+    publish(
+        &report_dir.join(SUMMARY),
+        &serde_json::to_vec(&summary(&index_bytes, &shown))?,
+    )?;
+    for entry in std::fs::read_dir(&out).with_context(|| format!("read {}", out.display()))? {
+        let entry = entry.with_context(|| format!("read {}", out.display()))?;
+        let regular = entry
+            .file_type()
+            .with_context(|| format!("read {}", entry.path().display()))?
+            .is_file();
+        let stale = entry
+            .file_name()
+            .to_str()
+            .is_some_and(|n| (n.ends_with(".json") || n.ends_with(".tmp")) && !kept.contains(n));
+        if regular && stale {
             std::fs::remove_file(entry.path())
                 .with_context(|| format!("remove {}", entry.path().display()))?;
         }
@@ -928,7 +1098,7 @@ mod tests {
         assert!(groups >= 40, "{groups}");
         assert_eq!(
             mic["prediction_check"],
-            json!({ "confirmed": true, "groups": groups, "isolates": isolates, "constant_folds": [] })
+            json!({ "confirmed": true, "groups": groups, "isolates": isolates, "spanning": 0, "constant_folds": [] })
         );
         // Every fold's training isolates support a threshold, so all five
         // stored thresholds are checked.
@@ -980,12 +1150,17 @@ mod tests {
     }
 
     #[test]
-    fn the_folds_are_rebuilt_at_the_report_s_seed_and_a_contradiction_stops_the_command() {
+    fn the_folds_are_rebuilt_at_the_report_s_seed_and_a_contradiction_refuses_the_dataset() {
         // The predictions and thresholds come from the folds of seed 42.
-        // Read as a report of seed 43, the rebuilt folds contradict them.
+        // Read as a report of seed 43, the rebuilt folds contradict them,
+        // and the error is the dataset's own refusal, not a stop of the run.
         let mut report = synthetic(42);
         report["eval_config"]["seed"] = json!(43);
-        let err = for_report(&bytes(&report)).unwrap_err().to_string();
+        let err = for_report(&bytes(&report)).unwrap_err();
+        let refused = err.downcast_ref::<Refused>().expect("a refusal");
+        assert_eq!(refused.dataset, "synthetic__fixturemycin");
+        assert!(refused.spanning > refused.inside, "{refused}");
+        let err = err.to_string();
         assert!(err.contains("synthetic__fixturemycin"), "{err}");
         assert!(err.contains("contradict"), "{err}");
         // A stored threshold one dilution off.
@@ -994,12 +1169,10 @@ mod tests {
             .as_i64()
             .unwrap();
         report["mic"]["fold_breakpoints"][2]["r_above"] = json!(r + 1);
-        assert!(
-            for_report(&bytes(&report))
-                .unwrap_err()
-                .to_string()
-                .contains("fold 2")
-        );
+        let err = for_report(&bytes(&report)).unwrap_err();
+        let refused = err.downcast_ref::<Refused>().expect("a refusal");
+        assert!(refused.reason.contains("fold 2"), "{refused}");
+        assert_eq!(refused.spanning, 0);
         // A threshold stored as none where the rebuilt fold fits one.
         let mut report = synthetic(42);
         report["mic"]["fold_breakpoints"][0] = Value::Null;
@@ -1039,8 +1212,10 @@ mod tests {
         assert_eq!(stored_thresholds(&report, 43), stored);
         // The held-out predictions tell the two draws apart.
         let predicted = predictions(&report);
-        assert!(prediction_check(&predicted, &folds_at(&report, 42), 5).is_ok());
-        assert!(prediction_check(&predicted, &folds_at(&report, 43), 5).is_err());
+        let right = prediction_check(&predicted, &folds_at(&report, 42), 5);
+        let wrong = prediction_check(&predicted, &folds_at(&report, 43), 5);
+        assert_eq!((right.verdict(), right.spanning), (Verdict::Confirmed, 0));
+        assert_eq!(wrong.verdict(), Verdict::Refused, "{wrong:?}");
         let mut wrong = report.clone();
         wrong["eval_config"]["seed"] = json!(43);
         let err = for_report(&bytes(&wrong)).unwrap_err().to_string();
@@ -1060,49 +1235,58 @@ mod tests {
         // isolates without an MIC are not read.
         let folds = [0, 0, 0, 1, 1, 1, usize::MAX, usize::MAX];
         let predicted = [0.5, 0.5, 0.6, 0.7, 0.7, 0.9, f64::NAN, f64::NAN];
+        let check = prediction_check(&predicted, &folds, 2);
         assert_eq!(
-            prediction_check(&predicted, &folds, 2),
-            Ok(PredictionCheck {
+            check,
+            PredictionCheck {
                 groups: 2,
                 isolates: 4,
+                spanning: 0,
                 constant_folds: vec![]
-            })
+            }
         );
-        // One value in two folds that each predict more than one value.
-        let err = prediction_check(&[0.5, 0.6, 0.5, 0.7], &[0, 0, 1, 1], 2).unwrap_err();
-        assert_eq!((err.value, err.isolates, err.folds), (0.5, 2, vec![0, 1]));
+        assert_eq!(check.verdict(), Verdict::Confirmed);
+        // One value in two folds that each predict more than one value: a
+        // spanning group and no group inside a fold, so X > I.
+        let check = prediction_check(&[0.5, 0.6, 0.5, 0.7], &[0, 0, 1, 1], 2);
+        assert_eq!((check.groups, check.spanning), (0, 1));
+        assert_eq!(check.verdict(), Verdict::Refused);
         // Folds 0 and 1 predict one start value each, the same: no tree.
         // Their group is left out, and fold 2's group counts.
         let folds = [0, 0, 1, 1, 2, 2, 2];
         let predicted = [-1.0, -1.0, -1.0, -1.0, 0.25, 0.25, 1.5];
         assert_eq!(
             prediction_check(&predicted, &folds, 3),
-            Ok(PredictionCheck {
+            PredictionCheck {
                 groups: 1,
                 isolates: 2,
+                spanning: 0,
                 constant_folds: vec![0, 1]
-            })
+            }
         );
-        // The same value in fold 2, which keeps trees: a contradiction.
+        // The same value in fold 2, which keeps trees: a spanning group.
         let predicted = [-1.0, -1.0, -1.0, -1.0, -1.0, 0.25, 1.5];
-        let err = prediction_check(&predicted, &folds, 3).unwrap_err();
-        assert_eq!(err.folds, vec![0, 1, 2]);
+        let check = prediction_check(&predicted, &folds, 3);
+        assert_eq!((check.groups, check.spanning), (0, 1));
         // A group inside one constant fold is left out too; fold 1's counts.
         let check = prediction_check(&[2.0, 2.0, 3.0, 3.0, 4.0], &[0, 0, 1, 1, 1], 2);
         assert_eq!(
-            check.map(|c| (c.groups, c.constant_folds)),
-            Ok((1, vec![0]))
+            (check.groups, check.spanning, check.constant_folds),
+            (1, 0, vec![0])
         );
-        // Only constant folds: nothing confirms the draw.
+        // Only constant folds: no group either way, so the folds are
+        // unconfirmed and the file is still written.
         let check = prediction_check(&[2.0, 2.0, 2.0, 2.0], &[0, 0, 1, 1], 2);
         assert_eq!(
             check,
-            Ok(PredictionCheck {
+            PredictionCheck {
                 groups: 0,
                 isolates: 0,
+                spanning: 0,
                 constant_folds: vec![0, 1]
-            })
+            }
         );
+        assert_eq!(check.verdict(), Verdict::Unconfirmed);
     }
 
     #[test]
@@ -1126,14 +1310,16 @@ mod tests {
             (Some(groups as u64), Some(true))
         );
         // An isolate of fold 2 predicted -1.0 too joins the constant folds'
-        // group and stops the command.
+        // group: one spanning group beside the inside ones, so the file is
+        // written unconfirmed.
         let i = folds.iter().position(|&f| f == 2).unwrap();
         report["mic"]["predicted"][i] = json!(-1.0);
         stamp(&mut report);
-        let err = for_report(&bytes(&report)).unwrap_err().to_string();
-        assert!(
-            err.contains("held-out predictions") && err.contains("[0, 1, 2]"),
-            "{err}"
+        let file = for_report(&bytes(&report)).unwrap();
+        let check = &file["mic"]["prediction_check"];
+        assert_eq!(
+            (check["spanning"].as_u64(), check["confirmed"].as_bool()),
+            (Some(1), Some(false))
         );
     }
 
@@ -1290,7 +1476,8 @@ mod tests {
                 mic: 1,
                 confirmed: 1,
                 copies: 0,
-                copy_datasets: 0
+                copy_datasets: 0,
+                refused: vec![]
             }
         );
         assert_eq!(
@@ -1337,5 +1524,457 @@ mod tests {
             .map(|e| e.unwrap().file_name().into_string().unwrap())
             .collect();
         assert_eq!(names, ["kept__drug.json"]);
+        assert!(!dir.join(SUMMARY).exists());
+    }
+
+    // ------------------------------------------- the rule, the files, the folder
+
+    /// A report tree in a temporary folder: `datasets/<id>.json` for each
+    /// report and an `index.json` listing them in order.
+    fn tree(reports: &[(&str, &Value)]) -> tempfile::TempDir {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = temp.path();
+        std::fs::create_dir_all(dir.join("datasets")).unwrap();
+        let mut rows = Vec::new();
+        for (id, report) in reports {
+            let mut report = (*report).clone();
+            report["id"] = json!(id);
+            std::fs::write(dir.join(format!("datasets/{id}.json")), bytes(&report)).unwrap();
+            rows.push(json!({ "id": id }));
+        }
+        std::fs::write(dir.join("index.json"), bytes(&json!({ "datasets": rows }))).unwrap();
+        temp
+    }
+
+    fn names_in(dir: &Path) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn one_spanning_group_beside_three_inside_groups_is_written_unconfirmed() {
+        // Synthetic, three folds: three groups inside one fold each (0.25 in
+        // fold 0, 0.5 in fold 1, 0.75 in fold 2) and one value, 1.5, shared
+        // by fold 0 and fold 1. X = 1 <= I = 3.
+        let folds = [0, 0, 0, 1, 1, 1, 2, 2, 2];
+        let predicted = [0.25, 0.25, 1.5, 0.5, 0.5, 1.5, 0.75, 0.75, 2.0];
+        let check = prediction_check(&predicted, &folds, 3);
+        assert_eq!((check.groups, check.spanning), (3, 1));
+        assert_eq!(check.verdict(), Verdict::Unconfirmed);
+        // Two spanning groups beside one inside: X > I, refused.
+        let predicted = [0.25, 0.25, 1.5, 0.5, 2.0, 1.5, 0.75, 2.0, 3.0];
+        let check = prediction_check(&predicted, &folds, 3);
+        assert_eq!((check.groups, check.spanning), (1, 2));
+        assert_eq!(check.verdict(), Verdict::Refused);
+        // X = I is not more: written unconfirmed.
+        let predicted = [0.25, 0.25, 1.5, 0.5, 0.6, 1.5, 0.75, 0.8, 3.0];
+        let check = prediction_check(&predicted, &folds, 3);
+        assert_eq!((check.groups, check.spanning), (1, 1));
+        assert_eq!(check.verdict(), Verdict::Unconfirmed);
+        // On a whole synthetic report: one isolate of fold 1 given the
+        // prediction of an isolate of fold 0 makes one spanning group beside
+        // the many inside groups, and the file is written with X = 1 and
+        // confirmed false.
+        let mut report = synthetic(42);
+        let f = folds_at(&report, 42);
+        let a = (0..N_MIC).find(|&i| f[i] == 0).unwrap();
+        let b = (0..N_MIC).find(|&i| f[i] == 1 && i % 8 != a % 8).unwrap();
+        report["mic"]["predicted"][b] = report["mic"]["predicted"][a].clone();
+        stamp(&mut report);
+        let file = for_report(&bytes(&report)).unwrap();
+        let check = &file["mic"]["prediction_check"];
+        assert_eq!(check["spanning"], 1);
+        assert!(check["groups"].as_u64().unwrap() >= 3, "{check}");
+        assert_eq!(check["confirmed"], false);
+    }
+
+    /// A synthetic dataset run through the repository's own fit
+    /// (`learn::eval::evaluate`, default settings, as the review's helper
+    /// runs it), written as the report fields this command reads. 200
+    /// made-up isolates, not BV-BRC data: 140 susceptible at exact log2 MIC
+    /// 0 and 60 resistant at exact log2 MIC 2, lineage `i % 20`, and one
+    /// feature present exactly in the resistant ones; with `noise`, five
+    /// more features spread over both classes.
+    fn fitted(noise: bool) -> Value {
+        use crate::bits::BitMatrix;
+        use crate::learn::eval::{EvalConfig, MicInput, evaluate};
+        let n = 200;
+        let resistant = |i: usize| i % 10 < 3;
+        let y = Bits::from_indices(n, (0..n).filter(|&i| resistant(i)));
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(y.words());
+        if noise {
+            for (a, b) in [(7, 11), (5, 13), (3, 17), (11, 19), (13, 23)] {
+                let row = Bits::from_indices(n, (0..n).filter(|&i| (i * a) % b < b / 3));
+                x.push_row(row.words());
+            }
+        }
+        let mics: Vec<Option<Mic>> = (0..n)
+            .map(|i| exact(if resistant(i) { 2 } else { 0 }))
+            .collect();
+        let lineage: Vec<u32> = (0..n).map(|i| (i % 20) as u32).collect();
+        let cfg = EvalConfig::default();
+        let input = MicInput {
+            mic: &mics,
+            breakpoint: None,
+        };
+        let out = evaluate(
+            "synthetic__fitmycin",
+            &x,
+            &y,
+            &lineage,
+            &[],
+            3,
+            Some(input),
+            &cfg,
+        )
+        .unwrap();
+        let samples: Vec<Value> = (0..n)
+            .map(|i| json!({ "id": format!("s{i}"), "resistant": resistant(i), "mic": mics[i], "lineage": lineage[i] }))
+            .collect();
+        let splits: Vec<Value> = out
+            .splits
+            .iter()
+            .map(|s| json!({ "scheme": s.scheme, "folds": s.folds, "test_fold": s.test_fold }))
+            .collect();
+        json!({
+            "id": "synthetic__fitmycin",
+            "evaluation": { "revision": EVALUATION_REVISION },
+            "eval_config": cfg,
+            "samples": samples,
+            "splits": splits,
+            "mic": out.mic.expect("an MIC model"),
+        })
+    }
+
+    #[test]
+    fn the_repository_s_own_fit_can_give_one_value_to_two_folds_and_only_that_dataset_is_refused() {
+        // With one feature, every fold of the repository's own fit predicts
+        // its start value for the susceptible isolates and one shared value
+        // for the resistant ones: correct folds, I = 0 and X = 2.
+        let one = fitted(false);
+        let err = for_report(&bytes(&one)).unwrap_err();
+        let refused = err.downcast_ref::<Refused>().expect("a refusal");
+        assert_eq!((refused.inside, refused.spanning), (0, 2), "{refused}");
+        // With noise features the fit gives each fold its own values, and the
+        // same check confirms the same folds.
+        let noise = fitted(true);
+        let file = for_report(&bytes(&noise)).unwrap();
+        let check = &file["mic"]["prediction_check"];
+        assert_eq!(
+            (check["confirmed"].as_bool(), check["spanning"].as_u64()),
+            (Some(true), Some(0))
+        );
+        assert!(check["groups"].as_u64().unwrap() >= 3, "{check}");
+        // In one tree, the refused dataset gets no file and loses the one it
+        // had, the other dataset is written, and the run reports the refusal.
+        let temp = tree(&[("noise__fitmycin", &noise), ("one__fitmycin", &one)]);
+        let dir = temp.path();
+        std::fs::create_dir_all(dir.join("baselines")).unwrap();
+        std::fs::write(dir.join("baselines/one__fitmycin.json"), b"{}").unwrap();
+        let written = write(dir).unwrap();
+        assert_eq!((written.files, written.confirmed), (1, 1));
+        assert_eq!(written.refused.len(), 1);
+        assert_eq!(written.refused[0].dataset, "one__fitmycin");
+        assert_eq!(names_in(&dir.join("baselines")), ["noise__fitmycin.json"]);
+        let summary: Value =
+            serde_json::from_slice(&std::fs::read(dir.join(SUMMARY)).unwrap()).unwrap();
+        let ids: Vec<&str> = summary["datasets"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|d| d["dataset"].as_str().unwrap())
+            .collect();
+        assert_eq!(ids, ["noise__fitmycin"]);
+    }
+
+    #[test]
+    fn constants_and_the_model_score_exact_test_mics_only_and_round_half_away_from_zero() {
+        // Synthetic, two folds. Fold 0 holds exact 2, 4, 7 and the censored
+        // values "at most 3" and "above 4"; fold 1 holds exact 3, 3, 4 and
+        // three values "at most -5".
+        let at_most = |log2| {
+            Some(Mic {
+                log2,
+                censor: Censor::AtMost,
+            })
+        };
+        let mics = vec![
+            exact(2),
+            exact(4),
+            exact(7),
+            at_most(3),
+            Some(Mic {
+                log2: 4,
+                censor: Censor::Above,
+            }),
+            exact(3),
+            exact(3),
+            exact(4),
+            at_most(-5),
+            at_most(-5),
+            at_most(-5),
+        ];
+        let folds = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1];
+        // 0.5 and 2.5 round away from zero to 1 and 3, within one of 2 and
+        // of 4; rounded half to even they give 0 and 2, two steps away.
+        let predicted = [0.5, 2.5, 7.0, 3.0, 4.0, 3.0, 3.0, 4.0, -5.0, -5.0, -5.0];
+        let got = mic_constants(&mics, &predicted, &folds, 2);
+        // Fold 0 trains on fold 1's exact 3, 3, 4 (the censored -5s left
+        // out, which would move the median to -5): median 3, mode 3. Of its
+        // exact test MICs 2, 4 and 7, two are within one of 3; the censored
+        // "at most 3" and "above 4" would agree too, and are not scored.
+        assert_eq!(
+            got[0],
+            FoldConstants {
+                train_exact: 3,
+                test_exact: 3,
+                median: Some(3),
+                upper_median_differs: false,
+                mode: Some(3),
+                mode_tied: false,
+                agree_model: 3,
+                agree_median: 2,
+                agree_mode: 2,
+            }
+        );
+        // Fold 1 trains on fold 0's exact 2, 4, 7 (the censored 3 and 4 left
+        // out, which would make 4 the mode): median 4, mode 2 by the tie to
+        // the lowest. Its exact test MICs 3, 3, 4 are all within one of 4,
+        // and two of them of 2.
+        assert_eq!(
+            got[1],
+            FoldConstants {
+                train_exact: 3,
+                test_exact: 3,
+                median: Some(4),
+                upper_median_differs: false,
+                mode: Some(2),
+                mode_tied: true,
+                agree_model: 3,
+                agree_median: 3,
+                agree_mode: 2,
+            }
+        );
+    }
+
+    #[test]
+    fn a_lineage_share_of_exactly_one_half_is_a_resistant_call() {
+        // Synthetic, two outer folds. Genome 0 (fold 0, lineage 1, R) shares
+        // its lineage with genomes 2 (R) and 3 (S) of fold 1: share 1 in 2,
+        // called resistant. Genome 1 (fold 0, lineage 2, S) is unseen and
+        // takes fold 1's prevalence, also 1 in 2. Fold 1's genomes share
+        // lineage 1 with genome 0 alone: share 1.
+        let sample = |resistant, lineage| Sample {
+            resistant,
+            mic: None,
+            lineage,
+        };
+        let samples = [
+            sample(true, 1),
+            sample(false, 2),
+            sample(true, 1),
+            sample(false, 1),
+        ];
+        let splits = [Split {
+            scheme: "random".into(),
+            folds: 2,
+            test_fold: vec![0, 0, 1, 1],
+        }];
+        let part = lineage_part("synthetic__halfmycin", &samples, &splits).unwrap();
+        let random = &part[0];
+        assert_eq!(
+            (
+                random["tp"].as_u64(),
+                random["fp"].as_u64(),
+                random["tn"].as_u64(),
+                random["fn"].as_u64()
+            ),
+            (Some(2), Some(2), Some(0), Some(0))
+        );
+        assert_eq!(random["sensitivity"], 1.0);
+        assert_eq!(random["specificity"], 0.0);
+        assert_eq!(random["balanced_accuracy"], 0.5);
+        assert_eq!(random["unseen"], 1);
+    }
+
+    #[test]
+    fn write_waits_while_another_writer_holds_the_report_directory_s_lock() {
+        let report = synthetic(42);
+        let temp = tree(&[("a__drug", &report)]);
+        let dir = temp.path().to_path_buf();
+        // The lock `grm report` and `grm intervals` take on the directory.
+        let held = std::fs::File::open(&dir).unwrap();
+        held.lock().unwrap();
+        let (done, finished) = std::sync::mpsc::channel();
+        let path = dir.clone();
+        let writer = std::thread::spawn(move || {
+            let written = write(&path).map(|w| w.files);
+            done.send(()).unwrap();
+            written
+        });
+        // While the lock is held, the second writer waits and writes nothing.
+        assert!(
+            finished
+                .recv_timeout(std::time::Duration::from_millis(700))
+                .is_err()
+        );
+        assert!(!dir.join("baselines").exists() && !dir.join(SUMMARY).exists());
+        held.unlock().unwrap();
+        finished
+            .recv_timeout(std::time::Duration::from_secs(60))
+            .unwrap();
+        assert_eq!(writer.join().unwrap().unwrap(), 1);
+        assert_eq!(names_in(&dir.join("baselines")), ["a__drug.json"]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_baselines_folder_is_refused_before_anything_is_read_or_written() {
+        let report = synthetic(42);
+        let temp = tree(&[("a__drug", &report)]);
+        let dir = temp.path();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("notes.txt"), b"kept").unwrap();
+        std::fs::write(outside.path().join("data.json"), b"kept").unwrap();
+        std::os::unix::fs::symlink(outside.path(), dir.join("baselines")).unwrap();
+        let err = write(dir).unwrap_err().to_string();
+        assert!(
+            err.contains("baselines") && err.contains("symbolic link"),
+            "{err}"
+        );
+        assert_eq!(names_in(outside.path()), ["data.json", "notes.txt"]);
+        assert_eq!(
+            std::fs::read(outside.path().join("data.json")).unwrap(),
+            b"kept"
+        );
+        assert!(!dir.join(SUMMARY).exists());
+        // A plain file under that name is refused the same way.
+        std::fs::remove_file(dir.join("baselines")).unwrap();
+        std::fs::write(dir.join("baselines"), b"").unwrap();
+        assert!(
+            write(dir)
+                .unwrap_err()
+                .to_string()
+                .contains("not a directory")
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn removal_takes_only_regular_json_and_tmp_files() {
+        let report = synthetic(42);
+        let temp = tree(&[("a__drug", &report)]);
+        let dir = temp.path();
+        let out = dir.join("baselines");
+        std::fs::create_dir_all(out.join("old__drug.json")).unwrap();
+        std::fs::write(out.join("gone__drug.json"), b"{}").unwrap();
+        std::fs::write(out.join("gone__drug.json.4242.tmp"), b"{").unwrap();
+        std::fs::write(out.join("notes.txt"), b"kept").unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("x.json"), b"kept").unwrap();
+        std::os::unix::fs::symlink(outside.path().join("x.json"), out.join("link__drug.json"))
+            .unwrap();
+        write(dir).unwrap();
+        // The stale file and the pending write go; the directory, the link
+        // and the other file stay, and nothing outside is touched.
+        assert_eq!(
+            names_in(&out),
+            [
+                "a__drug.json",
+                "link__drug.json",
+                "notes.txt",
+                "old__drug.json"
+            ]
+        );
+        assert_eq!(
+            std::fs::read(outside.path().join("x.json")).unwrap(),
+            b"kept"
+        );
+    }
+
+    #[test]
+    fn an_index_id_with_a_path_separator_or_dot_dot_is_refused_before_any_write() {
+        for bad in ["../escape", "a/b", "a\\b", "..", ""] {
+            let temp = tree(&[]);
+            let dir = temp.path();
+            std::fs::write(
+                dir.join("index.json"),
+                bytes(&json!({ "datasets": [{ "id": "a__drug" }, { "id": bad }] })),
+            )
+            .unwrap();
+            let mut report = synthetic(42);
+            report["id"] = json!("a__drug");
+            std::fs::write(dir.join("datasets/a__drug.json"), bytes(&report)).unwrap();
+            let err = write(dir).unwrap_err().to_string();
+            assert!(err.contains(&format!("{bad:?}")), "{err}");
+            assert_eq!(names_in(dir), ["datasets", "index.json"], "{bad}");
+        }
+    }
+
+    #[test]
+    fn a_failed_write_names_its_path_and_leaves_no_pending_file() {
+        let a = synthetic(42);
+        let temp = tree(&[("a__drug", &a), ("b__drug", &a)]);
+        let dir = temp.path();
+        // A non-empty directory where b's file goes: the rename fails.
+        std::fs::create_dir_all(dir.join("baselines/b__drug.json/inside")).unwrap();
+        let err = format!("{:#}", write(dir).unwrap_err());
+        assert!(err.contains("b__drug.json"), "{err}");
+        assert!(
+            names_in(&dir.join("baselines"))
+                .iter()
+                .all(|n| !n.ends_with(".tmp")),
+            "{:?}",
+            names_in(&dir.join("baselines"))
+        );
+    }
+
+    #[test]
+    fn the_summary_pins_the_index_bytes_and_each_report_and_holds_the_median_constant() {
+        let mic = synthetic(42);
+        let mut plain = synthetic(42);
+        plain["mic"] = Value::Null;
+        let temp = tree(&[("a__drug", &mic), ("b__drug", &plain)]);
+        let dir = temp.path();
+        write(dir).unwrap();
+        let index = std::fs::read(dir.join("index.json")).unwrap();
+        let raw = std::fs::read(dir.join(SUMMARY)).unwrap();
+        let summary: Value = serde_json::from_slice(&raw).unwrap();
+        let file: Value =
+            serde_json::from_slice(&std::fs::read(dir.join("baselines/a__drug.json")).unwrap())
+                .unwrap();
+        let m = &file["mic"];
+        // The fixture's median and mode differ, so a constant read from the
+        // mode would show.
+        assert_ne!(
+            m["median"]["essential_agreement"],
+            m["mode"]["essential_agreement"]
+        );
+        assert_eq!(
+            summary,
+            json!({
+                "schema": SUMMARY_SCHEMA,
+                "evaluation_revision": EVALUATION_REVISION,
+                "index_sha256": crate::research::sha256(&index),
+                "datasets": [{
+                    "dataset": "a__drug",
+                    "report_sha256": crate::research::sha256(&std::fs::read(dir.join("datasets/a__drug.json")).unwrap()),
+                    "model": m["model"]["essential_agreement"],
+                    "constant": m["median"]["essential_agreement"],
+                    "confirmed": true,
+                }],
+            })
+        );
+        // Compact, keys sorted, no final newline; the same bytes again.
+        assert_eq!(raw, serde_json::to_vec(&summary).unwrap());
+        write(dir).unwrap();
+        assert_eq!(std::fs::read(dir.join(SUMMARY)).unwrap(), raw);
+        // The removal step never takes it: it lives beside index.json.
+        assert!(dir.join(SUMMARY).exists());
     }
 }
