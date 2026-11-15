@@ -237,6 +237,50 @@ class BarredWords(unittest.TestCase):
         self.assertIn("the name KSD-set holds the barred word 'ksd'", err)
         self.assertEqual(sorted(p.name for p in d.iterdir()), ["proj", "rules.tsv"])
 
+    def test_a_barred_word_before_dot_dot_stops_every_command(self):
+        """The path is judged as given: d/sealed/../l.tsv names d/l.tsv, but it holds a barred word. None of the
+        barred folders below exists, and none is made."""
+        d, proj, lst = kit.listed(self)
+        published = kit.published(d, proj)
+        rules = d / "rules.tsv"
+        cut = d / "out" / "demo.internal-record"
+        sums = d / "out" / "demo.internal-record.parts.sha256"
+
+        def via(word, path):
+            return f"{d}/{word}/../{path.relative_to(d)}"
+        pack = ("pack", "--list", lst, "--class", "public-result", "--name", "demo", "--root", f"proj={proj}",
+                "--published", published, "--out", d / "out")
+        arguments = (
+            (("list", "--rules", via("ks50", rules), "--root", f"proj={proj}", "--out", d / "l.tsv"), "ks50"),
+            (("list", "--rules", rules, "--root", f"proj={proj}", "--out", via("Sealed", d / "l.tsv")), "sealed"),
+            (("list", "--rules", rules, "--listing", via("vumc", lst), "--out", d / "l.tsv"), "vumc"),
+            (("pack", "--list", via("KS30", lst)) + pack[3:], "ks30"),
+            (pack[:-1] + (via("clinical", d / "out"),), "clinical"),
+            (pack[:9] + ("--published", via("sigdrug", published), "--out", d / "out"), "sigdrug"),
+            (("check", via("private", cut)), "private"),
+            (("check", "--parts", via("held-out", sums)), "held-out"),
+            (("summary", "--place", f"here={via('ksd', lst)}"), "ksd"),
+            (("summary", "--place", f"here={lst}", "--hashes", f"rel={via('ks50', published)}"), "ks50"),
+            (("summary", "--place", f"here={lst}", "--out", via("sealed", d / "s.tsv")), "sealed"),
+        )
+        for args, word in arguments:
+            with self.subTest(args=args[:3], word=word):
+                rc, out, err = kit.run(*args)
+                self.assertEqual((rc, out), (3, ""), err)
+                self.assertIn(f"refused: the argument {d}/", err)
+                self.assertIn(f"holds the barred word {word!r}", err)
+        with self.subTest("a root of list"):
+            rc, out, err = kit.run("list", "--rules", rules, "--root", f"proj={via('held-out', proj)}",
+                                   "--out", d / "l.tsv")
+            self.assertEqual((rc, out), (3, ""), err)
+            self.assertIn("refused: 1 paths hold a barred word; none was opened:\n  proj  (held-out)\n", err)
+        for root, word in ((f"proj={via('ksd', proj)}", "ksd"), (f"spare={via('Private', proj)}", "private")):
+            with self.subTest("a root of pack", root=root):
+                rc, out, err = kit.run(*pack[:7], "--root", root, *pack[9:])
+                self.assertEqual((rc, out), (3, ""), err)
+                self.assertIn(f"pack: refused: the root {root} holds the barred word {word!r}", err)
+        self.assertEqual(sorted(p.name for p in d.iterdir()), ["list.tsv", "proj", "release.sha256", "rules.tsv"])
+
 
 class ATableInPlaceOfAWalk(unittest.TestCase):
     """--listing: the rows of a table made elsewhere, classed by the same rules. Only the table is opened."""

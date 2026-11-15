@@ -104,8 +104,9 @@ def barred_word(path):
 
 
 def barred_on_disk(path):
-    """barred_word over the path as given, made absolute, and with its links resolved."""
-    return barred_word(os.path.abspath(path) + os.sep + os.path.realpath(path))
+    """barred_word over the path as given, then made absolute, then with its links resolved. The text as given comes
+    first, so a path such as sealed/../x is refused before anything on disk is looked at."""
+    return barred_word(path) or barred_word(os.path.abspath(path)) or barred_word(os.path.realpath(path))
 
 
 def unsafe(path):
@@ -541,10 +542,14 @@ def cmd_pack(a):
         raise Stop(2, f"pack: --name must be one plain path component, read {name!r}")
     if barred_word(name):
         raise Stop(3, f"pack: refused: the name {name} holds the barred word {barred_word(name)!r}")
+    roots = parse_named(a.root, "--root", nested=True)
+    for label, top in roots.items():
+        word = barred_word(label) or barred_on_disk(top)
+        if word:
+            raise Stop(3, f"pack: refused: the root {label}={top} holds the barred word {word!r}")
     rows = [r for r in read_list(a.list, LIST_HEADER) if r[3] == cls]
     if not rows:
         raise Stop(2, f"pack: {a.list} holds no row of class {cls}")
-    roots = parse_named(a.root, "--root", nested=True)
     members = []
     for path, size, digest, _ in sorted(rows):
         label = max((r for r in roots if path == r or path.startswith(r + "/")), key=len, default=None)

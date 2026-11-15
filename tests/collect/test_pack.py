@@ -100,7 +100,18 @@ class OneClassPerArchive(unittest.TestCase):
         rc, _, err = kit.run("pack", "--list", lst, "--class", "internal-record", "--name", "demo",
                              "--out", d / "out", "--root", f"proj={d / 'vumc-copy'}")
         self.assertEqual(rc, 3)
-        self.assertIn("which holds the barred word 'vumc'", err)
+        self.assertIn(f"pack: refused: the root proj={d / 'vumc-copy'} holds the barred word 'vumc'", err)
+        self.assertFalse((d / "out").exists())
+
+    def test_a_folder_of_the_root_that_leads_to_a_barred_place_stops_the_pack(self):
+        d, proj, lst = kit.listed(self)
+        os.rename(proj / "notes", d / "sigdrug-notes")
+        os.symlink(d / "sigdrug-notes", proj / "notes")
+        rc, _, err = kit.run("pack", "--list", lst, "--class", "internal-record", "--name", "demo",
+                             "--out", d / "out", "--root", f"proj={proj}")
+        self.assertEqual(rc, 3)
+        self.assertIn(f"pack: refused: proj/notes/alpha-copy.json is at {proj / 'notes' / 'alpha-copy.json'}, which "
+                      f"holds the barred word 'sigdrug'", err)
         self.assertFalse((d / "out").exists())
 
 
