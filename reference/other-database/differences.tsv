@@ -1,0 +1,28 @@
+species	learner_a	learner_b	a	b	differs_in_all_four
+acinetobacter_baumannii	cart	lasso	meets;meets;meets;meets	not assessable;not assessable;not assessable;not assessable	no
+acinetobacter_baumannii	cart	scm	meets;meets;meets;meets	meets;meets;meets;meets	no
+acinetobacter_baumannii	lasso	scm	not assessable;not assessable;not assessable;not assessable	meets;meets;meets;meets	no
+campylobacter_coli	cart	lasso	meets;meets;meets;meets	fails;meets;fails;meets	no
+campylobacter_coli	cart	scm	meets;meets;meets;meets	fails;meets;meets;meets	no
+campylobacter_coli	lasso	scm	fails;meets;fails;meets	fails;meets;meets;meets	no
+campylobacter_jejuni	cart	lasso	meets;meets;meets;meets	meets;meets;meets;meets	no
+campylobacter_jejuni	cart	scm	meets;meets;meets;meets	meets;meets;meets;meets	no
+campylobacter_jejuni	lasso	scm	meets;meets;meets;meets	meets;meets;meets;meets	no
+count over the eight species	cart	lasso	3 of 4;4 of 4;3 of 4;4 of 4	3 of 4;4 of 4;3 of 4;4 of 4	no
+count over the eight species	cart	scm	5 of 8;7 of 8;5 of 8;7 of 8	6 of 8;7 of 8;7 of 8;8 of 8	no
+count over the eight species	lasso	scm	3 of 4;4 of 4;3 of 4;4 of 4	3 of 4;4 of 4;4 of 4;4 of 4	no
+klebsiella_pneumoniae	cart	lasso	fails;meets;fails;meets	meets;meets;meets;meets	no
+klebsiella_pneumoniae	cart	scm	fails;meets;fails;meets	meets;meets;meets;meets	no
+klebsiella_pneumoniae	lasso	scm	meets;meets;meets;meets	meets;meets;meets;meets	no
+neisseria_gonorrhoeae	cart	lasso	fails;fails;fails;fails	not assessable;not assessable;not assessable;not assessable	no
+neisseria_gonorrhoeae	cart	scm	fails;fails;fails;fails	fails;fails;fails;meets	no
+neisseria_gonorrhoeae	lasso	scm	not assessable;not assessable;not assessable;not assessable	fails;fails;fails;meets	no
+pseudomonas_aeruginosa	cart	lasso	meets;meets;meets;meets	meets;meets;meets;meets	no
+pseudomonas_aeruginosa	cart	scm	meets;meets;meets;meets	meets;meets;meets;meets	no
+pseudomonas_aeruginosa	lasso	scm	meets;meets;meets;meets	meets;meets;meets;meets	no
+salmonella_enterica	cart	lasso	fails;meets;fails;meets	not assessable;not assessable;not assessable;not assessable	no
+salmonella_enterica	cart	scm	fails;meets;fails;meets	meets;meets;meets;meets	no
+salmonella_enterica	lasso	scm	not assessable;not assessable;not assessable;not assessable	meets;meets;meets;meets	no
+staphylococcus_aureus	cart	lasso	meets;meets;meets;meets	not assessable;not assessable;not assessable;not assessable	no
+staphylococcus_aureus	cart	scm	meets;meets;meets;meets	meets;meets;meets;meets	no
+staphylococcus_aureus	lasso	scm	not assessable;not assessable;not assessable;not assessable	meets;meets;meets;meets	no

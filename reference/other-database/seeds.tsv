@@ -1,0 +1,2 @@
+level	species	dataset	learner	part	seed_1	seed_2	seed_3	seed_4	seed_5	seed_6
+dataset	pseudomonas_aeruginosa	pseudomonas_aeruginosa__ceftazidime	scm	eight	no	yes	yes	no	yes	yes

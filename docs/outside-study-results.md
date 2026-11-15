@@ -2,6 +2,8 @@
 
 This is the result of a retrospective test on newly deposited studies from the same database. The plan is [outside-study-test.md](outside-study-test.md). It was frozen at commit `e3e1c34` before any of these genomes was fetched. The test is not a lockbox, and it is not external validation. The plan says why.
 
+A different test, on data from another public database that shares isolates with the training database, is in [other-database-test.md](other-database-test.md).
+
 ## The question
 
 Each dataset report gives a learner's sensitivity and specificity from cross-validation on the cohort. The lineage split is the stricter of the two splits, because it holds out whole lineages. The test asks whether the lineage-split figures hold when the report's final model is applied, unchanged, to genomes from studies the cohort does not hold.

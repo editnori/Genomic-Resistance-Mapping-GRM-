@@ -195,6 +195,9 @@ jobs:
           # Synthetic reports written in the test, and the committed record under reference/tie-rule; it fits nothing.
           - suite: tests/tie_rule
             top: .
+          # SYNTHETIC inputs built in the test, the committed record under reference/other-database and docs/other-database-test.md.
+          - suite: tests/other_database
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
