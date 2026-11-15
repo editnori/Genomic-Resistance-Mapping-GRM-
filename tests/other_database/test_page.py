@@ -1,4 +1,4 @@
-"""docs/other-database-test.md: every line that carries a number is rebuilt from the record, once, and the page's form."""
+"""docs/other-database-test.md: every line that carries a number is rebuilt from the record, once; the number-free limits and definitions are held word for word; and the page's form."""
 
 import re
 import unittest
@@ -57,6 +57,7 @@ class Page(unittest.TestCase):
         cls.lines = cls.text.split("\n")
         cls.blocks = blocks(cls.text)
         cls.built = builder.lines()
+        cls.held = builder.held()
 
     def test_every_numbered_line_is_built(self):
         built = set(self.built)
@@ -73,8 +74,29 @@ class Page(unittest.TestCase):
             self.assertIn(line, self.lines)
 
     def test_built_lines_in_page_order(self):
-        at = [self.lines.index(x) for x in self.built if builder.carries_number(x)]
-        self.assertEqual(at, sorted(at))
+        # Each built line after the one before it; a table's header row may stand on the page more than once.
+        at = -1
+        for x in self.built:
+            self.assertIn(x, self.lines[at + 1:], x)
+            at = self.lines.index(x, at + 1)
+
+    def test_number_free_lines_held_word_for_word(self):
+        # The opening's denial of external validation, the Plan opener, the rule's limit, the reading of the kept sentences,
+        # the definitions of readings L, C and D and the number-free limits: each on the page once, as lines.py words it.
+        self.assertEqual(len(self.held), len(set(self.held)))
+        for line in self.held:
+            self.assertEqual(self.lines.count(line), 1, line)
+            self.assertFalse(builder.carries_number(line), line)
+        self.assertTrue(any("It is not external validation." in x and x.startswith("It is " + builder.NAME) for x in self.held))
+        self.assertTrue(any(x.startswith("Reading L keeps") and "D resamples whole BioProjects" in x for x in self.held))
+
+    def test_limits_whole(self):
+        # The Limits list: its count and each item, in order, and nothing more.
+        record_ = builder.Record()
+        at = self.lines.index("## Limits")
+        block = next(ls for kind, ls in blocks("\n".join(self.lines[at + 1:])) if kind == "list")
+        self.assertEqual(block, builder.limits(record_))
+        self.assertEqual(len(block), 10)
 
     def test_headers(self):
         heads = [b[1][0] for b in self.blocks if b[0] == "header"]
@@ -123,7 +145,7 @@ class Page(unittest.TestCase):
                 self.assertEqual(at, list(range(at[0], at[0] + 3)), ls[0])
         self.assertEqual(seen, 4)
 
-    def test_code_named_by_file_and_function(self):
+    def test_no_line_numbers(self):
         self.assertNotRegex(self.text, r"\.(py|rs|md|yml|tsv):\d")
         self.assertNotRegex(self.text, r"\bline \d")
 
@@ -145,7 +167,7 @@ class Page(unittest.TestCase):
         # The status of the readings: the pilot's chosen after its results, the eight's fixed by ADDENDUM2.md.
         status = {part: {r["status"] for r in read_tsv(RECORD / "readings.tsv") if r["part"] == part} for part in ("pilot", "eight")}
         self.assertEqual(status, {"pilot": {"exploratory"}, "eight": {"fixed in advance"}})
-        self.assertIn("The pilot's readings other than the plan's rule are exploratory: its review chose them after", self.text)
+        self.assertIn("The pilot's readings other than the plan's rule are exploratory: the pilot's review chose them after its results were seen.", self.text)
         self.assertIn("Each reading of the pilot other than the plan's rule is exploratory.", self.text)
         self.assertIn("`ADDENDUM2.md` fixed readings L, C and D before any of their labels was read.", self.text)
         # "SCM, CART and the lasso are scored; RF and GBT are not"

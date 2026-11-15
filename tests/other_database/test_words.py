@@ -5,7 +5,11 @@ import unittest
 
 from tests.other_database.common import PAGE, RECORD
 
-BANNED = r"\b(validated|generalis|generaliz|robust|reliab|real-world|real world|carrier|provenance|receipt|folder|safe)"
+BANNED = r"\b(validated|generalis|generaliz|robust|reliab|real-world|real world|carrier|provenance|receipt|folder|safe|scope|notice|under review|transfer)"
+# "The reports work on genomes from another database", and the like.
+WORKS = r"\bwork(s|ed)?\s+(\w+\s+){0,3}?(data|genomes?)\b"
+# Labels of the reviews' findings and notes, which a public reader cannot look up.
+LABEL = r"\b(S|N|SF)\d{1,2}\b"
 LEARNER = r"\b(SCM|CART|lasso|Lasso)\b"
 
 
@@ -36,6 +40,27 @@ class Words(unittest.TestCase):
     def test_banned_words(self):
         for name, text in self.texts.items():
             self.assertIsNone(re.search(BANNED, text, re.I), name)
+            self.assertIsNone(re.search(WORKS, text, re.I), name)
+
+    def test_no_lane_and_no_review_label(self):
+        for name, text in self.texts.items():
+            self.assertIsNone(re.search(r"\blanes?\b", prose(text), re.I), name)
+            # Funnel steps (C2, D3, F1, O1, P2, Q1, Q2) are named in the page; review labels never are.
+            self.assertIsNone(re.search(LABEL, prose(text)), name)
+
+    def test_owner_only_in_the_one_quotation(self):
+        self.assertNotIn("owner", self.texts["page"].lower())
+        readme = self.texts["README"]
+        self.assertEqual(readme.lower().count("owner"), 1)
+        self.assertEqual(readme.count('"the owner\'s note"'), 1)
+
+    def test_holds_only_for_the_rule(self):
+        # What a BioProject or a dataset has, it contains; "holds" is the rule's word. The kept sentence of the review keeps its own.
+        kept = "most scored genomes come from a BioProject that also holds training genomes. It is not external validation."
+        for name, text in self.texts.items():
+            body = prose(text).replace(kept, "")
+            self.assertIsNone(re.search(r"\b(BioProjects?|datasets?|record|which|that|it|they)( also)? holds? (a |\d|training|few|no |every)", body), name)
+            self.assertIsNone(re.search(r"\bhold (a median|\d+ BioProjects)", body), name)
 
     def test_external_validation_only_denied(self):
         found = 0
@@ -46,8 +71,11 @@ class Words(unittest.TestCase):
                     self.assertRegex(s[: m.start()], r"(?i)\b(no|not|never)\b", s)
         self.assertGreaterEqual(found, 1)
 
-    def test_called_a_test_on_data_from_another_public_database(self):
-        self.assertIn("a test on data from another public database", self.texts["page"])
+    def test_called_by_its_full_name(self):
+        # ADDENDUM2.md B4's words, in the opening and in the first limit.
+        self.assertGreaterEqual(self.texts["page"].count("a test on data from another public database that shares isolates with the training database"), 2)
+
+    def test_calls_are_an_adapted_research_screen(self):
         self.assertIn("an adapted research screen", self.texts["page"])
 
     def test_carries_over_never(self):
@@ -64,9 +92,11 @@ class Words(unittest.TestCase):
             for s in sentences(text):
                 self.assertIsNone(re.search(r",\s*not\s+[^,]*$", s.rstrip(".:;")), s)
 
-    def test_pages_give_list_show_or_hold(self):
+    def test_no_file_is_the_subject_of_a_verb_of_speech(self):
+        speech = r"(says?|speaks?|thinks?|tells?|claims?|argues?|believes?|states?|explains?|mentions?|notes?)"
         for name, text in self.texts.items():
-            self.assertIsNone(re.search(r"\b(page|file|table|test|record|review|suite)s? (says?|speaks?|thinks?|tells?|claims?|argues?|believes?)\b", text, re.I), name)
+            self.assertIsNone(re.search(rf"\b(page|file|table|test|record|review|suite|README|addendum|plan)s? {speech}\b", text, re.I), name)
+            self.assertIsNone(re.search(rf"\.(md|tsv|py)`? {speech}\b", text), name)
 
     def test_no_learner_ranked_above_another(self):
         for s in sentences(self.texts["page"]):

@@ -1,9 +1,17 @@
-"""Every line of docs/other-database-test.md that carries a number, rebuilt from reference/other-database.
+"""Every line of docs/other-database-test.md that carries a number, and the number-free lines it holds, rebuilt from reference/other-database.
 
 lines(record) gives the lines in page order. The page test holds each line of
 the page that carries a number to this list, and each line of this list to
 the page, once. Words around the figures are typed here; every figure comes
 from a cell of the record.
+
+held(record) gives the lines with no number that the page test also holds
+word for word, once and in order: the opening's second paragraph, the Plan
+section's first paragraph, the specificity paragraph of the Rule section, the
+paragraph that reads the kept sentences with three limits, the definitions
+of readings L, C and D, and every item of the Limits list. limits(record)
+gives the Limits list itself, which the page must give whole and in this
+order. Rewording one of these lines means rewording it here too.
 """
 
 import math
@@ -18,7 +26,7 @@ EIGHT = [
 ]
 PILOT = "escherichia_coli"
 LEARNERS = [("scm", "SCM"), ("cart", "CART"), ("lasso", "Lasso")]
-# The datasets the review's table under SF2 lists, in its order.
+# The datasets the review of the eight species lists as clear failures, in its order.
 CLEAR = [
     ("salmonella_enterica__ciprofloxacin", "scm"), ("salmonella_enterica__ciprofloxacin", "cart"),
     ("klebsiella_pneumoniae__ceftazidime_avibactam", "scm"), ("klebsiella_pneumoniae__ceftazidime_avibactam", "cart"),
@@ -26,6 +34,7 @@ CLEAR = [
     ("salmonella_enterica__nalidixic_acid", "scm"), ("acinetobacter_baumannii__ampicillin_sulbactam", "scm"),
     ("acinetobacter_baumannii__ampicillin_sulbactam", "cart"),
 ]
+NAME = "a test on data from another public database that shares isolates with the training database"
 NUMBER = re.compile(r"(?<![A-Za-z0-9_])\d")
 
 
@@ -73,7 +82,9 @@ class Record:
         self.order = {r["species"]: r for r in common.read_tsv(d / "order.tsv")}
         self.plans = {r["file"]: r for r in common.read_tsv(d / "plans.tsv")}
         self.settings = {r["key"]: r["value"] for r in common.read_tsv(d / "settings.tsv")}
+        self.seeds = common.read_tsv(d / "seeds.tsv")
         self.genome_columns = common.read_tsv(d / "species.tsv", header_only=True)
+        self.seed_columns = common.read_tsv(d / "seeds.tsv", header_only=True)
 
     def est(self, slug, ln):
         return sorted((r for r in self.datasets.values() if r["species"] == slug and r["learner"] == ln and r["estimable"] == "yes"), key=lambda r: r["dataset"])
@@ -94,47 +105,113 @@ def band_edges(columns):
     return lo, hi
 
 
-def lines(rec=None):
+def most_shared(rec):
+    """The species where most scored genomes are in a BioProject that also contains training genomes."""
+    return [sp for sp in [PILOT] + EIGHT if 2 * int(rec.species[sp]["shared_bioproject"]) > int(rec.species[sp]["scored"])]
+
+
+def limits(rec):
+    """The Limits list, whole and in page order."""
+    s, t = rec.settings, rec.totals
+    eight_low = [r for sp in EIGHT for ln, _ in LEARNERS for r in rec.est(sp, ln) if r["holds"] == "yes" and float(r["specificity"]) < 0.5]
+    pilot_low = [r for r in rec.est(PILOT, "scm") + rec.est(PILOT, "cart") + rec.est(PILOT, "lasso")
+                 if r["holds"] == "yes" and float(r["specificity"]) < 0.5]
+    pilot_above = [r for r in pilot_low if float(r["lineage_specificity"]) > 0.5]
+    assert pilot_above == pilot_low, "every pilot result that holds with specificity under 0.5 has a lineage split above it"
+    shares = [float(rec.species[sp]["no_accession_share"]) for sp in [PILOT] + EIGHT]
+    sa = sorted({r["dataset"] for r in rec.datasets.values() if r["species"] == "staphylococcus_aureus" and r["lineage_figure"] == "no"})
+    return [
+        f"- It is {NAME}. It is not external validation, and it is not the outside-study test.",
+        f"- The rule does not read specificity: in the eight species {len(eight_low)} dataset results hold with specificity under 0.5, "
+        f"and in the pilot {len(pilot_above)} more hold with specificity under 0.5 where the lineage split is above it.",
+        f"- Every overlap count is a lower bound: {min(shares):.3f} to {max(shares):.3f} of labelled BV-BRC genomes have no accession, and "
+        "isolates BV-BRC took in after the data root's copy are not excluded.",
+        f"- In {joined(short(sp) for sp in most_shared(rec))} most scored genomes share a BioProject with training genomes.",
+        "- The class mix differs from the training cohorts, and log loss depends on it.",
+        "- The calls are an adapted research screen.",
+        f"- RF and GBT are not scored, and the lasso cannot be read in {t['lasso']['plan_not_assessable']} species.",
+        f"- {len(sa)} {short('staphylococcus_aureus')} reports have no lineage figure in the release, so no learner is read on them.",
+        "- Reading D shows little where a dataset contains few BioProjects.",
+        "- Intervals over genomes treat genomes as independent, and genomes cluster by BioProject.",
+    ]
+
+
+def held(rec=None):
+    """The number-free lines the page test holds word for word."""
     rec = rec or Record()
+    out = []
+    build(rec, out)
+    return out
+
+
+def lines(rec=None):
+    return build(rec or Record(), [])
+
+
+def build(rec, kept):
+    """The page's built lines in order; number-free lines held word for word are also put in `kept`."""
     s = rec.settings
     out = []
+
+    def hold(line):
+        assert not carries_number(line), line
+        out.append(line)
+        kept.append(line)
+
     eight_scored = sum(int(rec.species[sp]["scored"]) for sp in EIGHT)
     pilot_scored = int(rec.species[PILOT]["scored"])
     scored_sets = sorted(s["learners_scored"].split(";"))
 
-    # ---- the test in one paragraph
+    # ---- the test in two paragraphs
     out.append(
         f"The released reports of `{s['release']}` (evaluation revision {s['evaluation_revision']}) were scored on "
         f"{n(pilot_scored + eight_scored)} NCBI Pathogen Detection genomes with antibiogram records: {n(pilot_scored)} {short(PILOT)} genomes "
-        f"in a pilot and {n(eight_scored)} in {len(EIGHT)} more species. The genomes are outside BV-BRC's labelled set by BioSample and "
-        "assembly accession. SCM, CART and the lasso are scored; RF and GBT are not, as the release holds their importances only. "
-        "It is a test on data from another public database and no external validation."
+        f"in a pilot and {n(eight_scored)} in {len(EIGHT)} more species. SCM, CART and the lasso are scored; RF and GBT are not, as the release "
+        "contains their importances only."
     )
     assert scored_sets == ["cart", "lasso", "scm"]
+    hold(
+        f"It is {NAME}. The genomes are outside BV-BRC's labelled set by BioSample and assembly accession, yet in "
+        f"{joined(short(sp) for sp in most_shared(rec))} most scored genomes come from a BioProject that also contains training genomes. "
+        "It is not external validation."
+    )
 
     # ---- plan and order
+    hold(
+        "The test ran in two parts, `outside` for the *E. coli* pilot and `outside2` for eight more species, and a review recomputed each "
+        "part from its saved files. Neither the parts' output directories nor the reviews' reports are public; the record contains every "
+        "figure this page takes from them, and `--check` needs those directories."
+    )
     p, a1, a2 = rec.plans["PLAN.md"], rec.plans["ADDENDUM.md"], rec.plans["ADDENDUM2.md"]
+    op = rec.order[PILOT]
+    assert op["plan_file"] == "PLAN.md" and op["predictions_written"] > p["fixed"] and op["first_after_plan_file"] == "yes"
+    assert p["fixed"] < a1["fixed"] < a2["fixed"]
     out.append(
-        f"Lane `outside` fixed `PLAN.md` at {p['fixed']} and then ran the pilot. Lane `outside2` fixed `ADDENDUM.md` at {a1['fixed']} "
-        f"and `ADDENDUM2.md`, which adds readings L, C and D, at {a2['fixed']}. Each time is the one in the lane's sha256 file, "
-        "and `plans.tsv` in the record gives each file's sha256."
+        f"The pilot's plan, `PLAN.md`, was fixed at {p['fixed']}, before the pilot ran. The eight species' addenda were fixed after it: "
+        f"`ADDENDUM.md` at {a1['fixed']} and `ADDENDUM2.md`, which adds readings L, C and D, at {a2['fixed']}. Each time is the one written "
+        "in the sha256 file beside the plan file, and `plans.tsv` in the record gives each file's sha256."
     )
     o8 = [rec.order[sp] for sp in EIGHT]
     assert all(r["asked_equals_scored"] == "yes" and r["first_at_or_after_predictions"] == "yes" and r["first_after_plan_file"] == "yes" for r in o8)
     out.append(
         f"The review of the eight species assigned each of the {sum(int(r['label_requests']) for r in o8)} label requests "
-        f"({sum(int(r['answered_200']) for r in o8)} answered with status 200) to a species by the BioSamples it names (note N1). "
+        f"({sum(int(r['answered_200']) for r in o8)} answered with status 200) to a species by the BioSamples it names. "
         f"In all {len(o8)} species the BioSamples asked equal the scored BioSamples, and the first label request came at or after the time "
         "the species' predictions were written, and after `ADDENDUM2.md` was fixed."
     )
-    op = rec.order[PILOT]
-    assert op["first_at_or_after_predictions"] == "yes" and op["first_after_plan_file"] == "yes"
+    assert op["first_at_or_after_predictions"] == "yes"
     out.append(
         f"The pilot's {op['label_requests']} label requests ran from {time_of(op['first_label_request'])} to {time_of(op['last_label_request'])}, "
         f"at or after its predictions were written ({time_of(op['predictions_written'])}). Before `PLAN.md` was fixed, "
-        f"{op['unrecorded_before_plan']} requests of the pilot went to NCBI's AST service between {time_of(op['unrecorded_first'])} and "
-        f"{time_of(op['unrecorded_last'])} with no parameters saved, and answered {joined(op['unrecorded_bytes'].split(';'))} bytes. "
-        "Whether any carried a phenotype cannot be shown (the pilot review's S5)."
+        f"{op['unrecorded_before_plan']} requests of the pilot went to NCBI Pathogen Detection's search service between "
+        f"{time_of(op['unrecorded_first'])} and {time_of(op['unrecorded_last'])} with no parameters saved, and answered "
+        f"{joined(op['unrecorded_bytes'].split(';'))} bytes. Whether any carried a phenotype cannot be shown."
+    )
+    every = [rec.order[sp] for sp in [PILOT] + EIGHT]
+    same = sum(r["first_label_request"] == r["predictions_written"] for r in every)
+    out.append(
+        f"In {same} of the {len(every)} species the first label request came in the same second as the predictions were written, so the clock "
+        "alone cannot order the two. Each run's log shows the label step starting after the prediction step ended."
     )
 
     # ---- genomes
@@ -150,8 +227,8 @@ def lines(rec=None):
         cells = [n(r["C1"])] + [n(r[c]) if r[c] != "" else "" for c in ("C2", "C3", "C4", "O1", "P2", "Q1", "D3")] + [n(r["scored"])]
         out.append(f"| {short(sp)} | " + " | ".join(cells) + " |")
     out.append(
-        "Share is the largest BioProject's part of the scored genomes and Training the training genomes it holds. Overlap counts scored "
-        f"genomes in a BioProject that also holds a training genome, Neighbours those within {hi} of a training genome, and Accession gap the "
+        "Share is the largest BioProject's part of the scored genomes and Training the training genomes it contains. Overlap counts scored "
+        f"genomes in a BioProject that also contains a training genome, Neighbours those within {hi} of a training genome, and Accession gap the "
         "share of BV-BRC's labelled genomes with neither a BioSample nor an assembly accession. Each overlap count is a lower bound."
     )
     out.append("| Species | Genomes | BioProject | Share | Training | Overlap | Neighbours | Accession gap |")
@@ -165,23 +242,39 @@ def lines(rec=None):
     assert cc["largest_bioproject"] == cj["largest_bioproject"]
     out.append(
         f"In {short('salmonella_enterica')}, {n(se['largest_bioproject_scored'])} of {n(se['scored'])} scored genomes are in "
-        f"{se['largest_bioproject']}, which also holds {se['largest_bioproject_training']} of the {n(se['training_genomes'])} training genomes. "
+        f"{se['largest_bioproject']}, which also contains {se['largest_bioproject_training']} of the {n(se['training_genomes'])} training genomes. "
         f"In {short('campylobacter_coli')}, {n(cc['largest_bioproject_scored'])} of {n(cc['scored'])} are in {cc['largest_bioproject']}, "
-        f"which holds {cc['largest_bioproject_training']} of its {n(cc['training_genomes'])} training genomes. So in these two species the scored "
-        "genomes are different isolates, most of them from BioProjects that also hold training genomes."
+        f"which contains {cc['largest_bioproject_training']} of its {n(cc['training_genomes'])} training genomes. So in these two species the scored "
+        "genomes are different isolates, most of them from BioProjects that also contain training genomes."
     )
     out.append(
         f"In {short('campylobacter_jejuni')}, {n(cj['largest_bioproject_scored'])} of {n(cj['scored'])} scored genomes are in the same "
-        f"{cj['largest_bioproject']}, which holds {cj['largest_bioproject_training']} of its {n(cj['training_genomes'])} training genomes. So the "
+        f"{cj['largest_bioproject']}, which contains {cj['largest_bioproject_training']} of its {n(cj['training_genomes'])} training genomes. So the "
         f"difference between its overlap count and that of {short('campylobacter_coli')} turns on a single training genome."
     )
 
     # ---- rule
+    lr = rec.learners
     out.append(
         f"A dataset is estimable for a learner when it has at least {s['min_class']} resistant and {s['min_class']} susceptible labelled "
         "genomes with a call, and the release has a lineage figure for it. It holds when recall is not below and log loss is not worse "
         f"than the release's lineage split: recall by a {round(float(s['level']) * 100)}% Clopper-Pearson interval, log loss by a "
         f"{round(float(s['level']) * 100)}% bootstrap of {n(s['bootstrap_draws'])} genome resamples with seed {s['bootstrap_seed']}."
+    )
+    sa = "staphylococcus_aureus"
+    no_lineage = sorted({r["dataset"] for r in rec.datasets.values() if r["species"] == sa and r["lineage_figure"] == "no"})
+    both = [r for r in rec.datasets.values() if r["species"] == sa and r["learner"] == "lasso"
+            and int(r["R"]) >= int(s["min_class"]) and int(r["S"]) >= int(s["min_class"])]
+    held_sa = sum(r["holds"] == "yes" for r in both)
+    unread = sum(r["estimable"] == "no" for r in both)
+    assert lr[(sa, "lasso")]["rule"] == "not assessable" and unread > 0
+    # Without the condition the unread datasets would count, holding or not; the result is the same either way.
+    from_rule = {rule_of(held_sa, len(both)), rule_of(held_sa + unread, len(both))}
+    assert from_rule == {"meets"}, from_rule
+    out.append(
+        f"The plan's rule asks for {s['min_class']} of each class; the condition that the release has a lineage figure was added after the "
+        f"{short(sa)} labels were read, when {len(no_lineage)} of its reports were found to have none, and it moves the lasso in "
+        f"{short(sa)} from meeting the rule to not assessable."
     )
     m = re.fullmatch(r"meets when it holds on more than half of at least (\d+) estimable datasets; not assessable under (\d+)", s["pass_rule"])
     out.append(
@@ -190,9 +283,17 @@ def lines(rec=None):
         f"1 or 0, and CART and the lasso call a genome resistant at p {s['cutoff']} or more. Log loss clips p at {s['clip']}, "
         f"so SCM's log loss is its error rate times {-math.log(float(s['clip'])):.2f}."
     )
+    assert "specificity" not in s["holds"] and "recall" in s["holds"] and "log loss" in s["holds"]
+    hold(
+        "The rule reads recall and log loss only. Specificity is not part of it, so a dataset can hold while its learner calls every "
+        "susceptible genome resistant."
+    )
 
     # ---- results: the review's sentences, kept whole
-    lr = rec.learners
+    hold(
+        "Read them with three limits given in full below: the rule does not read specificity, intervals over genomes treat genomes as "
+        "independent although genomes cluster by BioProject, and log loss depends on the class mix."
+    )
     out.append(
         "This is a test on data from another public database: NCBI Pathogen Detection genomes outside BV-BRC's labelled set by BioSample "
         f"and assembly accession, scored with the released reports of `{s['release']}`. In {short('salmonella_enterica')} "
@@ -263,7 +364,8 @@ def lines(rec=None):
     assert {pc["holds"], pl["holds"], ps["holds"]} == {"yes"}
     out.append(
         f"In {short(kp)}, polymyxin B holds for all three learners with specificity {ps['specificity']} for SCM, {pc['specificity']} for CART and "
-        f"{pl['specificity']} for the lasso. SCM calls all {ps['S']} susceptible genomes resistant, and the dataset holds because its log loss, "
+        f"{pl['specificity']} for the lasso, against {ps['lineage_specificity']}, {pc['lineage_specificity']} and {pl['lineage_specificity']} in the "
+        f"lineage split. SCM calls all {ps['S']} susceptible genomes resistant, and the dataset holds because its log loss, "
         f"{ps['log_loss']}, is under the lineage figure, {ps['lineage_log_loss']}. With SCM on {of(lr[(kp, 'scm')]['holds'], lr[(kp, 'scm')]['estimable'])} "
         f"and the lasso on {of(lr[(kp, 'lasso')]['holds'], lr[(kp, 'lasso')]['estimable'])}, polymyxin B decides both results."
     )
@@ -272,8 +374,8 @@ def lines(rec=None):
     assert ca["specificity"] == cs["specificity"] and ca["holds"] == cs["holds"] == "yes"
     assert int(lr[(pa, "scm")]["margin"]) > 1 and int(lr[(pa, "cart")]["margin"]) > 1
     out.append(
-        f"{short(pa)} cefepime also holds with specificity {cs['specificity']} for SCM and CART, and decides neither result "
-        f"(margins {lr[(pa, 'scm')]['margin']} and {lr[(pa, 'cart')]['margin']})."
+        f"{short(pa)} cefepime also holds with specificity {cs['specificity']} for SCM and CART, against {cs['lineage_specificity']} and "
+        f"{ca['lineage_specificity']} in the lineage split, and decides neither result (margins {lr[(pa, 'scm')]['margin']} and {lr[(pa, 'cart')]['margin']})."
     )
     close = [(ln, name, sp) for ln, name in LEARNERS for sp in EIGHT if lr[(sp, ln)]["margin"] == "1"]
     assessable = sum(lr[(sp, ln)]["rule"] != "not assessable" for ln, _ in LEARNERS for sp in EIGHT)
@@ -287,6 +389,20 @@ def lines(rec=None):
         + joined_comma(f"{named[name]} in {joined(cells)}" for name, cells in by.items())
         + "."
     )
+    seed_cols = [c for c in rec.seed_columns if c.startswith("seed_")]
+    first, others = seed_cols[0], seed_cols[1:]
+    assert first == f"seed_{s['bootstrap_seed']}"
+    moved = [r for r in rec.seeds if r["level"] == "dataset"]
+    assert len(moved) == 1, moved
+    mv = moved[0]
+    mr = rec.datasets[(mv["dataset"], mv["learner"])]
+    assert mv[first] == mr["holds"] == "no"
+    out.append(
+        f"At seeds {others[0].split('_')[1]} to {others[-1].split('_')[1]} in place of the plan's seed {s['bootstrap_seed']}, one "
+        f"{dict(LEARNERS)[mv['learner']]} dataset, {short(mv['species'])} {mr['antibiotic']}, holds at "
+        f"{sum(mv[c] == 'yes' for c in others)} of the {len(others)}, and "
+        + ("no species result changes." if not any(r["level"] == "species" for r in rec.seeds) else "a species result changes.")
+    )
 
     # ---- clear failures
     out.append("| Dataset | Learner | Recall | Specificity | Log loss |")
@@ -298,6 +414,13 @@ def lines(rec=None):
         )
 
     # ---- readings
+    assert "own interval" in s["reading_L"] and "class-balanced" in s["reading_C"] and "stratified" in s["reading_C"]
+    assert s["reading_D"].startswith("BioProject cluster bootstrap")
+    hold(
+        "Reading L keeps the lineage figure with its own interval, C uses a class-balanced log loss with a stratified bootstrap, and D "
+        "resamples whole BioProjects. Each keeps the rest of the rule."
+    )
+
     def counts(ln):
         return ", ".join(t[ln][f"{v}_meets"] for v in ("plan", "L", "C", "D")[:-1]) + " and " + t[ln]["D_meets"]
 
@@ -316,7 +439,7 @@ def lines(rec=None):
     cc_scm = rec.est("campylobacter_coli", "scm")
     floor = sum(float(rec.readings[(r["dataset"], "scm")]["D_log_loss_lo"]) <= float(s["clip"]) for r in cc_scm)
     out.append(
-        "Reading D cannot show a difference where a dataset holds few BioProjects. The median count of BioProjects over SCM's estimable "
+        "Reading D cannot show a difference where a dataset contains few BioProjects. The median count of BioProjects over SCM's estimable "
         f"datasets is {joined(meds)}."
     )
     ccl = lr[("campylobacter_coli", "scm")]
@@ -335,23 +458,36 @@ def lines(rec=None):
         out.append(f"| {short(sp)} | " + " | ".join(cells) + " |")
     sel = lr[("salmonella_enterica", "scm")]
     out.append(
-        f"SCM's log loss counts its errors, which favours a species with few resistant genomes (note N7). In {short('salmonella_enterica')} the "
+        f"SCM's log loss counts its errors, which favours a species with few resistant genomes. In {short('salmonella_enterica')} the "
         f"resistant share is below the cohort's in {of(sel['share_below_cohort'], sel['estimable'])} SCM datasets; under reading C, which "
         f"balances the classes, SCM still holds on {of(sel['C_holds'], sel['estimable'])}."
     )
     ng = "neisseria_gonorrhoeae"
     tet, cip, azi = (rec.datasets[(f"{ng}__{x}", "scm")] for x in ("tetracycline", "ciprofloxacin", "azithromycin"))
+    assert lr[(ng, "scm")]["rule"] == "fails"
     assert tet["FP"] == tet["S"] and int(cip["FP"]) > int(cip["FN"]) and int(azi["FN"]) > int(azi["FP"])
+    # The mix does not explain tetracycline and ciprofloxacin: their log loss is above the lineage split's at their own share.
+    assert all(float(r["log_loss"]) > float(r["lineage_log_loss_at_share"]) for r in (tet, cip))
     out.append(
-        f"In {short(ng)} SCM fails through its errors, and the mix does not explain them. In tetracycline SCM calls all {tet['S']} susceptible "
-        f"genomes resistant: specificity {tet['specificity']}, against {tet['lineage_specificity']} in the lineage split, and log loss "
-        f"{tet['log_loss']}. In ciprofloxacin {cip['FP']} of its {int(cip['FP']) + int(cip['FN'])} errors are false resistant calls."
+        f"In {short(ng)} SCM fails. In tetracycline and ciprofloxacin its errors are false resistant calls, which the mix does not explain. "
+        f"In tetracycline SCM calls all {tet['S']} susceptible genomes resistant: specificity {tet['specificity']}, against "
+        f"{tet['lineage_specificity']} in the lineage split, and log loss {tet['log_loss']}. In ciprofloxacin {cip['FP']} of its "
+        f"{int(cip['FP']) + int(cip['FN'])} errors are false resistant calls."
     )
     out.append(
         f"In azithromycin {azi['FN']} of its {int(azi['FN']) + int(azi['FP'])} errors are false susceptible calls, with recall "
         f"{azi['recall']} against {azi['lineage_recall']} in the lineage split. The resistant share is "
         + joined(f"{r['resistant_share']} against {r['cohort_resistant_share']} in {r['antibiotic']}" for r in (azi, cip, tet))
         + "."
+    )
+    # The mix explains azithromycin: at the lineage split's own rates and this share, log loss is above the one measured.
+    azi_c = rec.readings[(azi["dataset"], "scm")]
+    assert azi["log_loss_reading"] == "worse" and float(azi["lineage_log_loss_at_share"]) > float(azi["log_loss"]) and azi_c["C_holds"] == "yes"
+    out.append(
+        f"In azithromycin the mix does explain the worse log loss. At the lineage split's recall, {azi['lineage_recall']}, and specificity, "
+        f"{azi['lineage_specificity']}, a resistant share of {azi['resistant_share']} gives an error rate of "
+        f"{float(azi['lineage_error_rate_at_share']):.3f} and a log loss of {float(azi['lineage_log_loss_at_share']):.2f}, above the "
+        f"{azi['log_loss']} measured. Under reading C, which balances the classes, SCM holds on azithromycin."
     )
 
     # ---- pilot
@@ -382,17 +518,21 @@ def lines(rec=None):
         out.append(f"| {label} | " + " | ".join(of(lr[(PILOT, ln)][key], lr[(PILOT, ln)]["estimable"]) for ln, _ in LEARNERS) + " |")
     bps = [int(r["bioprojects"]) for r in scm_est]
     out.append(
-        f"SCM's estimable pilot datasets hold a median of {lr[(PILOT, 'scm')]['median_bioprojects']} BioProjects, at least {min(bps)}, and the "
-        f"pilot's resistant share is below the cohort's in {ps_['share_below_cohort']} of the {ps_['estimable']} (the pilot review's S2 and S3)."
+        f"SCM's estimable pilot datasets contain a median of {lr[(PILOT, 'scm')]['median_bioprojects']} BioProjects, at least {min(bps)}, and the "
+        f"pilot's resistant share is below the cohort's in {ps_['share_below_cohort']} of the {ps_['estimable']}."
     )
 
     # ---- limits
-    shares = [float(rec.species[sp]["no_accession_share"]) for sp in [PILOT] + EIGHT]
-    out.append(
-        f"- Every overlap count is a lower bound: {min(shares):.3f} to {max(shares):.3f} of labelled BV-BRC genomes have no accession, and "
-        "isolates BV-BRC took in after the data root's copy are not excluded."
-    )
-    out.append(f"- RF and GBT are not scored, and the lasso cannot be read in {t['lasso']['plan_not_assessable']} species.")
-    sa = sorted({r["dataset"] for r in rec.datasets.values() if r["species"] == "staphylococcus_aureus" and r["lineage_figure"] == "no"})
-    out.append(f"- {len(sa)} {short('staphylococcus_aureus')} reports have no lineage figure in the release, so no learner is read on them.")
+    for item in limits(rec):
+        if carries_number(item):
+            out.append(item)
+        else:
+            hold(item)
     return out
+
+
+def rule_of(holds, estimable):
+    """The plan's pass rule, as record.py's rule() gives it."""
+    if estimable < 3:
+        return "not assessable"
+    return "meets" if 2 * holds > estimable else "fails"
