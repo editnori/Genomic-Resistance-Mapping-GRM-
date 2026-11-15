@@ -373,8 +373,13 @@ fn build_matrix_with(
     });
     // The ksets are kept, so the partials are scratch: a rerun writes them
     // again. They go once the matrix is saved, or once the merge or the
-    // save has failed, which then reports its own error.
-    let removed = remove_partials(&dir);
+    // save has failed, which then reports its own error. A folder that is
+    // already gone, as when another run with the switch on this species
+    // removed it, counts as removed.
+    let removed = match remove_partials(&dir) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        r => r,
+    };
     let (summary, receipts) = saved?;
     removed.with_context(|| {
         format!(
@@ -884,6 +889,24 @@ mod tests {
         let err = build_matrix(&layout, "s", 2, Some(64)).err().unwrap();
         assert!(format!("{err:#}").contains("kmers.bin"), "{err:#}");
         assert!(!partials.exists());
+    }
+
+    #[test]
+    fn a_partials_folder_another_run_removed_counts_as_removed() {
+        // Two runs at once on one species: the other run removes the
+        // folder between this run's save and its removal.
+        let dir = tempfile::tempdir().unwrap();
+        let layout = block_cohort_of(dir.path(), 70, 31);
+        build_matrix(&layout, "s", 1, None).unwrap();
+        let want = matrix_files(&layout);
+        build_matrix(&layout, "s", 2, None).unwrap();
+        let removed_first = |d: &Path| {
+            std::fs::remove_dir_all(d)?;
+            std::fs::remove_dir_all(d)
+        };
+        build_matrix_with(&layout, "s", 1, Some(64), &removed_first).unwrap();
+        assert!(matrix_files(&layout) == want);
+        assert!(!layout.partials_dir("s").exists());
     }
 
     #[test]

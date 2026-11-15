@@ -270,7 +270,10 @@ not the disk-sparse sequence:
   or the save fails, the partials are removed and the run reports that
   error. If only the removal fails, the merged matrix is kept, and the run
   still ends with an error and a nonzero exit: the message says the matrix
-  was saved and names the folder to remove by hand.
+  was saved and names the folder to remove by hand. A folder that is
+  already gone counts as removed.
+- There is no lock file. Two runs at once on one species can stop each
+  other, with an I/O error or a block check.
 - A run that is stopped leaves `matrix-partials/`; the next run with the
   switch removes what it finds there, and a run without it leaves it
   alone.
@@ -291,7 +294,8 @@ blocks of 64 write the default path's files; failures in the first,
 second and last block, among them a block file that cannot be created,
 that keep the old matrix, leave no partials and name the block; a run
 without the switch that leaves `matrix-partials/` alone; a failed removal
-that keeps the new matrix and names the folder; a linked
+that keeps the new matrix and names the folder, and a folder another run
+removed first, which counts as removed; a linked
 `matrix-partials` refused before `counted.json` is read; and 4,097
 genomes refused before any block is written. In `src/main.rs`, a test
 runs `grm matrix --column-blocks 64` through the command's own `run`, so
