@@ -2743,6 +2743,16 @@ mod tests {
     }
 
     #[test]
+    fn column_sum_adds_in_row_order() {
+        // 2^53 + 1 rounds back to 2^53, so the ones are lost when the large
+        // row comes first and kept when they come first.
+        let big = 2f64.powi(53);
+        let q = [big, 1.0, 1.0];
+        assert_eq!(column_sum(&[0, 1, 2], &q), big);
+        assert_eq!(column_sum(&[1, 2, 0], &q), big + 2.0);
+    }
+
+    #[test]
     fn violators_tie_to_the_lowest_column() {
         // 64 disjoint columns of 4 samples. The even ones hold 3 resistant
         // samples and the odd ones 4, so at zero every even column has the
