@@ -119,6 +119,21 @@ enum Command {
         /// (`EvalConfig::screened_features`).
         #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
         screened_features: usize,
+        /// Score the one dataset this fold file names on the outer folds it
+        /// supplies, in place of the random and lineage splits
+        /// (docs/fold-file.md). Writes <fold-out>/<dataset>.<scheme>.json,
+        /// which records the file's SHA-256, and no report. Takes one
+        /// species; --force replaces an existing result. It runs at the
+        /// release's seeds, so --seed and --learner-seed are refused with it.
+        #[arg(
+            long,
+            requires = "fold_out",
+            conflicts_with_all = ["only", "seed", "learner_seed"]
+        )]
+        fold_file: Option<PathBuf>,
+        /// Directory for the --fold-file result.
+        #[arg(long, requires = "fold_file")]
+        fold_out: Option<PathBuf>,
         /// Seed of the evaluation's random draws (`EvalConfig::seed`): both
         /// splits' outer folds, each fit's inner folds and tuning holdouts,
         /// and the forest's and boosting's own draws. The species matrix,
@@ -364,11 +379,27 @@ fn run(cli: Cli) -> Result<()> {
             .try_for_each(|s| matrix(&layout, s, min_support)),
         Command::Learn {
             species,
+            force,
+            screened_features,
+            fold_file: Some(fold_file),
+            fold_out: Some(fold_out),
+            ..
+        } => learn_fold_file(
+            &layout,
+            &species,
+            &fold_file,
+            &fold_out,
+            force,
+            screened_features,
+        ),
+        Command::Learn {
+            species,
             only,
             force,
             screened_features,
             seed,
             learner_seed,
+            ..
         } => {
             let cfg = learn_config(screened_features, seed, learner_seed);
             species
@@ -709,6 +740,35 @@ fn learn_end_line(
             dir.display()
         )
     }
+}
+
+/// `grm learn --fold-file`: one dataset of one species on the outer folds a
+/// file supplies (`analysis::evaluate_fold_file`), at the release's seeds
+/// (the parser refuses `--seed` and `--learner-seed` beside it). It ends
+/// with its own line, not `learn_end_line`.
+fn learn_fold_file(
+    layout: &Layout,
+    species: &[String],
+    fold_file: &std::path::Path,
+    fold_out: &std::path::Path,
+    force: bool,
+    screened_features: usize,
+) -> Result<()> {
+    let [slug] = species else {
+        anyhow::bail!(
+            "--fold-file names one dataset, so it takes one species, not {}",
+            species.len()
+        );
+    };
+    grm::species::ensure_selection_counted(layout, slug)?;
+    let cfg = grm::learn::eval::EvalConfig {
+        screened_features,
+        ..Default::default()
+    };
+    let written =
+        grm::analysis::evaluate_fold_file(layout, slug, fold_file, fold_out, force, &cfg)?;
+    eprintln!("{slug}: fold file result written to {}", written.display());
+    Ok(())
 }
 
 fn report(layout: &Layout, kover: &std::path::Path) -> Result<()> {
@@ -2162,12 +2222,112 @@ mod tests {
             "1000",
         ]);
         let Command::Learn {
-            screened_features, ..
+            screened_features,
+            fold_file,
+            fold_out,
+            ..
         } = learn.unwrap().command
         else {
             panic!("parsed another command");
         };
         assert_eq!(screened_features, 1000);
+        // Without --fold-file the command is the one it was.
+        assert_eq!((fold_file, fold_out), (None, None));
+    }
+
+    #[test]
+    fn learn_takes_a_fold_file_only_with_its_output_directory_and_one_species() {
+        let parse = |rest: &[&str]| {
+            Cli::try_parse_from(["grm", "learn", "--species", "s"].iter().chain(rest))
+        };
+        let Command::Learn {
+            fold_file,
+            fold_out,
+            force,
+            ..
+        } = parse(&["--fold-file", "f.json", "--fold-out", "o"])
+            .unwrap()
+            .command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (fold_file, fold_out, force),
+            (Some("f.json".into()), Some("o".into()), false)
+        );
+        for bad in [
+            &["--fold-file", "f.json"][..],
+            &["--fold-out", "o"][..],
+            &[
+                "--fold-file",
+                "f.json",
+                "--fold-out",
+                "o",
+                "--only",
+                "meropenem",
+            ][..],
+        ] {
+            assert!(parse(bad).is_err(), "{bad:?}");
+        }
+        // The file names one dataset, so a second species is refused before
+        // anything is read.
+        let dir = tempfile::tempdir().unwrap();
+        let error = learn_fold_file(
+            &Layout::new(dir.path()),
+            &["a".into(), "b".into()],
+            &dir.path().join("f.json"),
+            &dir.path().join("o"),
+            false,
+            DEFAULT_SCREENED_FEATURES,
+        )
+        .unwrap_err();
+        assert_eq!(
+            format!("{error:#}"),
+            "--fold-file names one dataset, so it takes one species, not 2"
+        );
+        assert!(std::fs::read_dir(dir.path()).unwrap().next().is_none());
+    }
+
+    /// A fold file run stays at the release's seeds: the parser refuses
+    /// `--seed` and `--learner-seed` beside `--fold-file`, even at the
+    /// release's own value, and without them it parses the release's seeds.
+    #[test]
+    fn learn_refuses_a_fold_file_beside_either_seed_flag() {
+        let parse = |rest: &[&str]| {
+            let all = [
+                &["grm", "learn", "--species", "s"][..],
+                &["--fold-file", "f.json", "--fold-out", "o"][..],
+                rest,
+            ]
+            .concat();
+            Cli::try_parse_from(all)
+        };
+        for bad in [
+            &["--seed", "43"][..],
+            &["--seed", "42"][..],
+            &["--learner-seed", "7"][..],
+            &["--seed", "42", "--learner-seed", "7"][..],
+        ] {
+            let error = parse(bad).err().unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::ArgumentConflict,
+                "{bad:?}"
+            );
+        }
+        let Command::Learn {
+            fold_file,
+            seed,
+            learner_seed,
+            ..
+        } = parse(&[]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (fold_file, seed, learner_seed),
+            (Some("f.json".into()), RELEASE_SEED, None)
+        );
     }
 
     /// `grm learn` draws at the release's seed unless told otherwise, and
@@ -2599,6 +2759,73 @@ mod tests {
         )
         .unwrap();
         (layout, ids)
+    }
+
+    /// `grm learn --fold-file` passes `--screened-features` on: the result
+    /// records the value the command was given. The fold file repeats the
+    /// random split the fixture's own report drew, so it is a fair partition.
+    #[test]
+    fn learn_with_a_fold_file_screens_as_many_features_as_it_is_told() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, _) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap())
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        grm(&["learn", "--species", SLUG]).unwrap();
+        let report: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(
+                layout
+                    .results_dir(SLUG)
+                    .join(format!("{SLUG}__fixturemycin.json")),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let random = &report["splits"][0];
+        assert_eq!(random["scheme"], "random");
+        let mut test = vec![Vec::new(); random["folds"].as_u64().unwrap() as usize];
+        for (sample, fold) in report["samples"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(random["test_fold"].as_array().unwrap())
+        {
+            test[fold.as_u64().unwrap() as usize].push(sample["id"].clone());
+        }
+        let file = dir.path().join("folds.json");
+        let text = serde_json::json!({
+            "format": "grm-fold-file-v1",
+            "dataset": format!("{SLUG}__fixturemycin"),
+            "scheme": "own-random",
+            "test": test,
+            "train": [],
+            "unused": [],
+        });
+        std::fs::write(&file, serde_json::to_vec(&text).unwrap()).unwrap();
+        let out = dir.path().join("fold-out");
+        grm(&[
+            "learn",
+            "--species",
+            SLUG,
+            "--fold-file",
+            file.to_str().unwrap(),
+            "--fold-out",
+            out.to_str().unwrap(),
+            "--screened-features",
+            "7",
+        ])
+        .unwrap();
+        let result: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(out.join(format!("{SLUG}__fixturemycin.own-random.json"))).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(result["eval_config"]["screened_features"], 7);
+        assert_eq!(result["counts"]["tested"], 60);
     }
 
     /// The acceptance check of docs/prediction-contract.md: `grm predict`,
