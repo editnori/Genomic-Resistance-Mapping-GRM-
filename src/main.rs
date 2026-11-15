@@ -252,6 +252,13 @@ enum Command {
     /// that index.json lists, each pinned to its report's SHA-256 and counts.
     /// No report file changes.
     Intervals,
+    /// Write what two predictors that read no genome reach on each dataset
+    /// report's own folds under <data>/report/baselines/, one file per
+    /// dataset report that index.json lists, each pinned to its report's
+    /// SHA-256 and evaluation revision: constants at the training folds'
+    /// median and mode MIC beside the MIC model, and lineage identity beside
+    /// each split. Fits nothing; no report file changes.
+    Baselines,
     /// Write each indexed dataset report's provenance under
     /// <data>/report/provenance/: its samples' BV-BRC dates (`grm fetch
     /// genome-dates`) and record details (curated/provenance.jsonl), pinned to
@@ -460,6 +467,14 @@ fn run(cli: Cli) -> Result<()> {
         Command::Intervals => {
             let n = grm::intervals::write(&layout.root.join("report"))?;
             eprintln!("intervals written for {n} dataset reports");
+            Ok(())
+        }
+        Command::Baselines => {
+            let w = grm::baselines::write(&layout.root.join("report"))?;
+            eprintln!(
+                "baselines written for {} dataset reports: {} with an MIC model, {} of them with folds a stored threshold confirms",
+                w.files, w.mic, w.confirmed
+            );
             Ok(())
         }
         Command::Provenance { check: false } => {
