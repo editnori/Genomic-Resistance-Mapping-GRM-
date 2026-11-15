@@ -450,17 +450,16 @@ def cmd_list(a):
     if a.strip_prefix and not a.strip_prefix.endswith("/"):
         raise Stop(2, f"list: --strip-prefix must end in '/', so that it cuts whole folders off; read "
                       f"{a.strip_prefix!r}")
-    out = os.path.realpath(a.out)
-    for label, top in roots.items():
-        if barred_word(label) or barred_on_disk(top):
-            continue  # the walk refuses it, and nothing more is looked at here
-        real = os.path.realpath(top)
-        if out == real or out.startswith(real.rstrip(os.sep) + os.sep):
-            raise Stop(2, f"list: --out {a.out} lies under the root {label}={top}, so the list would list itself; "
-                          f"nothing was written")
     walk = Walk(rules)
     for label, top in roots.items():
         walk.root(label, top)
+    # After the walk, so that a root it refused is not looked at again; before any file is read.
+    out = os.path.realpath(a.out)
+    for label, top in roots.items():
+        real = None if label in walk.refused else os.path.realpath(top)
+        if real is not None and (out == real or out.startswith(real.rstrip(os.sep) + os.sep)):
+            raise Stop(2, f"list: --out {a.out} lies under the root {label}={top}, so the list would list itself; "
+                          f"nothing was written")
     for file in a.listing or []:
         walk.table(file, a.strip_prefix)
     if walk.unnamed:
