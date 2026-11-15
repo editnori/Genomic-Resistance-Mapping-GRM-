@@ -119,6 +119,21 @@ enum Command {
         /// (`EvalConfig::screened_features`).
         #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
         screened_features: usize,
+        /// Seed of the evaluation's random draws (`EvalConfig::seed`): both
+        /// splits' outer folds, each fit's inner folds and tuning holdouts,
+        /// and the forest's and boosting's own draws. The species matrix,
+        /// the cohort, the lineages and the screening rule do not depend on
+        /// it. Every release ran at the default. Another value scores
+        /// another fold draw and writes its reports under
+        /// <data>/species/<slug>/draws/seed-<seed>/, which `grm report`
+        /// does not read (docs/fold-draws.md).
+        #[arg(long, default_value_t = RELEASE_SEED)]
+        seed: u64,
+        /// Seed the forest's and boosting's own draws with this instead of
+        /// --seed, every partition unchanged (`EvalConfig::learner_seed`).
+        /// Reports go under draws/seed-<seed>-learner-<learner-seed>/.
+        #[arg(long)]
+        learner_seed: Option<u64>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -352,9 +367,14 @@ fn run(cli: Cli) -> Result<()> {
             only,
             force,
             screened_features,
-        } => species
-            .iter()
-            .try_for_each(|s| learn(&layout, s, &only, force, screened_features)),
+            seed,
+            learner_seed,
+        } => {
+            let cfg = learn_config(screened_features, seed, learner_seed);
+            species
+                .iter()
+                .try_for_each(|s| learn(&layout, s, &only, force, &cfg))
+        }
         Command::Pipeline {
             species,
             workers,
@@ -370,6 +390,12 @@ fn run(cli: Cli) -> Result<()> {
             } else {
                 species
             };
+            // The pipeline is the release's command: it always draws at the
+            // release's seed.
+            let cfg = grm::learn::eval::EvalConfig {
+                screened_features,
+                ..Default::default()
+            };
             for slug in &slugs {
                 // Annotation reads reference assemblies, so the FASTA files
                 // are fetched even when the matrix is already built.
@@ -381,14 +407,14 @@ fn run(cli: Cli) -> Result<()> {
                     },
                 )?;
                 count_to_matrix(&layout, slug, k)?;
-                if let Err(e) = learn(&layout, slug, &[], false, screened_features) {
+                if let Err(e) = learn(&layout, slug, &[], false, &cfg) {
                     if !e.is::<grm::probes::KsetsUnreadable>() {
                         return Err(e);
                     }
                     eprintln!("{slug}: recounting ksets: {e:#}");
                     count(&layout, slug, k)?;
                     count_to_matrix(&layout, slug, k)?;
-                    learn(&layout, slug, &[], false, screened_features)?;
+                    learn(&layout, slug, &[], false, &cfg)?;
                 }
                 if drop_ksets {
                     let dir = layout.kset_dir(slug);
@@ -511,6 +537,25 @@ const PIPELINE_MIN_SUPPORT: u32 = 2;
 
 /// The `--screened-features` default: `EvalConfig::default()`'s budget.
 const DEFAULT_SCREENED_FEATURES: usize = 4000;
+
+/// The `grm learn --seed` default: `EvalConfig::default()`'s seed, which
+/// every release's folds were drawn from.
+const RELEASE_SEED: u64 = 42;
+
+/// The evaluation `grm learn` runs: the release's settings, with the
+/// screening budget and the seeds its flags give.
+fn learn_config(
+    screened_features: usize,
+    seed: u64,
+    learner_seed: Option<u64>,
+) -> grm::learn::eval::EvalConfig {
+    grm::learn::eval::EvalConfig {
+        screened_features,
+        seed,
+        learner_seed,
+        ..Default::default()
+    }
+}
 
 /// Count, structure, and matrix at `k`, each rerun only when `stale_stages`
 /// finds its output out of date.
@@ -636,16 +681,34 @@ fn learn(
     slug: &str,
     only: &[String],
     force: bool,
-    screened_features: usize,
+    cfg: &grm::learn::eval::EvalConfig,
 ) -> Result<()> {
     grm::species::ensure_selection_counted(layout, slug)?;
-    let cfg = grm::learn::eval::EvalConfig {
-        screened_features,
-        ..Default::default()
-    };
-    let written = grm::analysis::analyze_species(layout, slug, only, force, &cfg)?;
-    eprintln!("{slug}: {} dataset reports written", written.len());
+    let written = grm::analysis::analyze_species(layout, slug, only, force, cfg)?;
+    eprintln!("{}", learn_end_line(layout, slug, written.len(), cfg));
     Ok(())
+}
+
+/// The line `grm learn` ends a species with. A run that writes `results/`
+/// ends with the release's own line, which `scripts/metric-audit/audit.py`
+/// reads as the species finished. A draw names its folder, in words that
+/// line's pattern cannot match, so a log that mixes a draw with a release
+/// run never marks the species finished on the draw's line.
+fn learn_end_line(
+    layout: &Layout,
+    slug: &str,
+    written: usize,
+    cfg: &grm::learn::eval::EvalConfig,
+) -> String {
+    let dir = grm::analysis::reports_dir(layout, slug, cfg);
+    if dir == layout.results_dir(slug) {
+        format!("{slug}: {written} dataset reports written")
+    } else {
+        format!(
+            "{slug}: {written} draw reports written to {}",
+            dir.display()
+        )
+    }
 }
 
 fn report(layout: &Layout, kover: &std::path::Path) -> Result<()> {
@@ -1569,7 +1632,7 @@ mod tests {
             write_genome_list(&layout, selection);
             let err = format!(
                 "{:#}",
-                learn(&layout, SLUG, &[], false, DEFAULT_SCREENED_FEATURES).unwrap_err()
+                learn(&layout, SLUG, &[], false, &Default::default()).unwrap_err()
             );
             assert!(
                 err.contains("genomes.txt adds, removes, or reorders"),
@@ -2105,6 +2168,119 @@ mod tests {
             panic!("parsed another command");
         };
         assert_eq!(screened_features, 1000);
+    }
+
+    /// `grm learn` draws at the release's seed unless told otherwise, and
+    /// `grm pipeline`, the release's command, takes no seed at all.
+    #[test]
+    fn learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither() {
+        assert_eq!(RELEASE_SEED, grm::learn::eval::EvalConfig::default().seed);
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            let Command::Learn {
+                seed, learner_seed, ..
+            } = Cli::try_parse_from(all)?.command
+            else {
+                panic!("parsed another command");
+            };
+            Ok::<_, clap::Error>((seed, learner_seed))
+        };
+        assert_eq!(parse(&[]).unwrap(), (42, None));
+        assert_eq!(
+            parse(&["--seed", "10622993013839509822"]).unwrap(),
+            (10622993013839509822, None)
+        );
+        assert_eq!(
+            parse(&["--learner-seed", "7"]).unwrap(),
+            (RELEASE_SEED, Some(7))
+        );
+        assert!(parse(&["--seed", "-1"]).is_err());
+        assert!(parse(&["--seed"]).is_err());
+        for flag in ["--seed", "--learner-seed"] {
+            assert!(
+                Cli::try_parse_from(["grm", "pipeline", flag, "43"]).is_err(),
+                "{flag}"
+            );
+        }
+    }
+
+    /// At the release's seeds `grm learn` ends with `main`'s line, byte for
+    /// byte, whatever the budget; a draw's line names its folder and does not
+    /// begin with `<slug>: <n> dataset reports written`, the release line
+    /// `scripts/metric-audit/audit.py` reads (its suite tests the pattern
+    /// on the draw lines below).
+    #[test]
+    fn learn_ends_with_the_release_line_and_a_draw_with_a_line_of_its_own() {
+        let layout = Layout::new("root");
+        let line = |screened_features, seed, learner_seed| {
+            let cfg = learn_config(screened_features, seed, learner_seed);
+            learn_end_line(&layout, "fixture_species", 3, &cfg)
+        };
+        let release = "fixture_species: 3 dataset reports written";
+        assert_eq!(line(DEFAULT_SCREENED_FEATURES, RELEASE_SEED, None), release);
+        assert_eq!(line(16000, RELEASE_SEED, None), release);
+        assert_eq!(
+            line(DEFAULT_SCREENED_FEATURES, 43, None),
+            "fixture_species: 3 draw reports written to root/species/fixture_species/draws/seed-43"
+        );
+        assert_eq!(
+            line(DEFAULT_SCREENED_FEATURES, RELEASE_SEED, Some(7)),
+            "fixture_species: 3 draw reports written to root/species/fixture_species/draws/seed-42-learner-7"
+        );
+    }
+
+    /// The evaluation `grm learn` runs, built from its parsed flags as the
+    /// command builds it: the release's at the defaults, and otherwise the
+    /// release's with the budget and both seeds the flags give.
+    #[test]
+    fn learn_evaluates_with_the_budget_and_seeds_its_flags_give() {
+        use grm::learn::eval::EvalConfig;
+        let config = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            let Command::Learn {
+                screened_features,
+                seed,
+                learner_seed,
+                ..
+            } = Cli::try_parse_from(all).unwrap().command
+            else {
+                panic!("parsed another command");
+            };
+            serde_json::to_value(learn_config(screened_features, seed, learner_seed)).unwrap()
+        };
+        let release = || EvalConfig::default();
+        let expected = |cfg: EvalConfig| serde_json::to_value(cfg).unwrap();
+        assert_eq!(config(&[]), expected(release()));
+        assert_eq!(
+            config(&["--seed", "43"]),
+            expected(EvalConfig {
+                seed: 43,
+                ..release()
+            })
+        );
+        assert_eq!(
+            config(&["--learner-seed", "7"]),
+            expected(EvalConfig {
+                learner_seed: Some(7),
+                ..release()
+            })
+        );
+        assert_eq!(
+            config(&[
+                "--seed",
+                "18446744073709551615",
+                "--learner-seed",
+                "0",
+                "--screened-features",
+                "1000",
+            ]),
+            expected(EvalConfig {
+                seed: u64::MAX,
+                learner_seed: Some(0),
+                screened_features: 1000,
+                ..release()
+            })
+        );
     }
 
     /// The pipeline's stages follow `--k`: counts, structure and matrix built
@@ -3068,5 +3244,335 @@ mod tests {
         assert!(err.contains("`grm count --species fixtur`"), "{err}");
         assert!(err.contains("check the species slug"), "{err}");
         assert!(!out.exists());
+    }
+
+    /// Every file under `dir`, by its path below `dir`.
+    fn files_below(dir: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
+        let mut out = BTreeMap::new();
+        let mut todo = vec![dir.to_path_buf()];
+        while let Some(d) = todo.pop() {
+            for entry in std::fs::read_dir(&d).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    todo.push(path);
+                } else {
+                    let bytes = std::fs::read(&path).unwrap();
+                    out.insert(path.strip_prefix(dir).unwrap().to_path_buf(), bytes);
+                }
+            }
+        }
+        out
+    }
+
+    /// A report file with its run clocks set to zero: `generated_at` in
+    /// `index.json` and each learner's `seconds` in a dataset report. Both
+    /// differ between two runs of one build on one root.
+    fn without_clocks(bytes: &[u8]) -> serde_json::Value {
+        fn zero(v: &mut serde_json::Value) {
+            match v {
+                serde_json::Value::Object(map) => {
+                    for (key, value) in map.iter_mut() {
+                        if key == "generated_at" || key == "seconds" {
+                            *value = serde_json::Value::Null;
+                        } else {
+                            zero(value);
+                        }
+                    }
+                }
+                serde_json::Value::Array(items) => items.iter_mut().for_each(zero),
+                _ => {}
+            }
+        }
+        let mut v: serde_json::Value = serde_json::from_slice(bytes).unwrap();
+        zero(&mut v);
+        v
+    }
+
+    /// Ledger action 11: a data root fetched before `GENOME_FIELDS` asked
+    /// for `collection_date` reads as before, and adding the field to every
+    /// genome's metadata changes no report byte. `grm learn` keeps the
+    /// reports it fitted as current; a forced refit and `grm report` give
+    /// the same files, apart from the two run clocks.
+    #[test]
+    fn collection_dates_leave_every_report_file_as_it_was() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, ids) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap())
+        };
+        // `grm report` finds a species' files under the slug of its name, so
+        // the fixture's species is named for its folder.
+        for file in ["datasets.json", "phenotypes.jsonl"] {
+            let path = layout.curated().join(file);
+            let text = std::fs::read_to_string(&path).unwrap();
+            std::fs::write(&path, text.replace(r#""Fixture species""#, r#""Fixture""#)).unwrap();
+        }
+        std::fs::write(
+            layout.curated().join("funnel.json"),
+            serde_json::to_vec(&curate::Funnel::default()).unwrap(),
+        )
+        .unwrap();
+        std::fs::write(layout.amr(), "").unwrap();
+        let kover = dir.path().join("kover.json");
+        std::fs::write(&kover, "[]").unwrap();
+        let kover = kover.to_str().unwrap();
+        // Synthetic metadata, in the form `grm fetch genomes` wrote before
+        // the field (`bvbrc::tests::genome_lines_fetched_before_collection_date_read_and_write_as_before`).
+        let genomes: Vec<GenomeRecord> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, id)| GenomeRecord {
+                genome_id: id.clone(),
+                collection_year: (i % 4 != 3).then(|| format!("{}", 2010 + i % 7)),
+                isolation_country: Some(["Kenya", "Peru", "Viet Nam"][i % 3].into()),
+                host_name: Some("Human, Homo sapiens".into()),
+                mlst: Some(format!("MLST.Fixture.{}", i % 5)),
+                ..Default::default()
+            })
+            .collect();
+        let write_genomes = |records: &[GenomeRecord]| {
+            let lines: Vec<String> = records
+                .iter()
+                .map(|g| serde_json::to_string(g).unwrap())
+                .collect();
+            std::fs::write(layout.genomes(), lines.join("\n") + "\n").unwrap();
+        };
+        write_genomes(&genomes);
+        assert!(
+            !std::fs::read_to_string(layout.genomes())
+                .unwrap()
+                .contains("collection_date")
+        );
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        grm(&["learn", "--species", SLUG]).unwrap();
+        grm(&["report", "--kover", kover]).unwrap();
+        let report_dir = layout.root.join("report");
+        let before = files_below(&report_dir);
+        let results_before = files_below(&layout.results_dir(SLUG));
+        assert!(before.contains_key(Path::new("index.json")));
+        assert!(before.contains_key(Path::new("corpus.json")));
+        assert!(before.contains_key(Path::new("species/fixture.json")));
+        assert!(before.contains_key(Path::new("datasets/fixture__fixturemycin.json")));
+        let species: serde_json::Value =
+            serde_json::from_slice(&before[Path::new("species/fixture.json")]).unwrap();
+        assert_eq!(species["genomes"][0]["year"], "2010");
+
+        // The same genomes with a collection date of every kind.
+        let texts = ["2015-03-12", "2014-05", "2013", "2015-2016", "2017-02-30"];
+        let dated: Vec<GenomeRecord> = genomes
+            .iter()
+            .enumerate()
+            .map(|(i, g)| GenomeRecord {
+                collection_date: match texts.get(i % 6) {
+                    Some(text) => bvbrc::CollectionDate::parse(text),
+                    None => bvbrc::CollectionDate::Missing,
+                },
+                ..g.clone()
+            })
+            .collect();
+        write_genomes(&dated);
+        let read: Vec<GenomeRecord> = bvbrc::read_jsonl(&layout.genomes()).unwrap();
+        let unparsed = read
+            .iter()
+            .filter(|g| g.collection_date.is_unparsed())
+            .count();
+        assert_eq!(unparsed, 20);
+
+        // Learn keeps its reports as current, and the report is rebuilt
+        // byte for byte apart from the index's build time.
+        grm(&["learn", "--species", SLUG]).unwrap();
+        assert_eq!(files_below(&layout.results_dir(SLUG)), results_before);
+        grm(&["report", "--kover", kover]).unwrap();
+        let after = files_below(&report_dir);
+        assert_eq!(
+            after.keys().collect::<Vec<_>>(),
+            before.keys().collect::<Vec<_>>()
+        );
+        for (path, bytes) in &after {
+            if path == Path::new("index.json") {
+                assert_eq!(without_clocks(bytes), without_clocks(&before[path]));
+            } else {
+                assert!(bytes == &before[path], "{} changed", path.display());
+            }
+        }
+
+        // A forced refit reads the dated metadata and fits the same models.
+        grm(&["learn", "--species", SLUG, "--force"]).unwrap();
+        grm(&["report", "--kover", kover]).unwrap();
+        let refit = files_below(&report_dir);
+        assert_eq!(
+            refit.keys().collect::<Vec<_>>(),
+            before.keys().collect::<Vec<_>>()
+        );
+        for (path, bytes) in &refit {
+            assert_eq!(
+                without_clocks(bytes),
+                without_clocks(&before[path]),
+                "{}",
+                path.display()
+            );
+        }
+    }
+
+    /// Ledger action 11: `grm curate` reads `genomes.jsonl` for species, QC
+    /// and MLST groups. Run on a synthetic raw root before and after every
+    /// genome gets a collection date, with each selection rule, it writes the
+    /// same curated files and species files. The one allowance is the key
+    /// order of `qc.json`'s failure map, a `HashMap` written as it iterates,
+    /// which differs between two runs of `main` too; it is compared as JSON.
+    /// No curated file holds the word `collection` or a date text of the
+    /// fixture.
+    #[test]
+    fn collection_dates_leave_every_curated_file_as_it_was() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let data = dir.path().to_str().unwrap();
+        std::fs::create_dir_all(dir.path().join("bvbrc")).unwrap();
+        // Synthetic: 44 genomes of one species with a meropenem call each,
+        // 22 resistant, three that fail QC, and one AST record whose genome
+        // has no metadata line. The label dates are 2019 to 2021, apart
+        // from every collection date below.
+        let ids: Vec<String> = (0..44).map(|i| format!("9990006.{}", 100 + i)).collect();
+        let mut amr = String::new();
+        for (i, id) in ids
+            .iter()
+            .chain(["9990006.999".to_string()].iter())
+            .enumerate()
+        {
+            let record = serde_json::json!({
+                "genome_id": id, "antibiotic": "meropenem",
+                "resistant_phenotype": if i % 2 == 0 { "Resistant" } else { "Susceptible" },
+                "laboratory_typing_method": "Broth dilution", "testing_standard": "CLSI",
+                "testing_standard_year": 2019 + i % 3, "pmid": 30000000 + i % 4,
+                "date_inserted": format!("{}-0{}-1{}T08:00:00Z", 2019 + i % 3, 1 + i % 9, i % 10),
+            });
+            amr += &format!("{record}\n");
+        }
+        std::fs::write(layout.amr(), amr).unwrap();
+        let genomes: Vec<GenomeRecord> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, id)| GenomeRecord {
+                genome_id: id.clone(),
+                species: Some("Escherichia coli".into()),
+                genome_quality: Some(if i == 5 { "Poor" } else { "Good" }.into()),
+                genome_length: (i != 6).then(|| format!("{}", 100_000 + 37 * i)),
+                contigs: Some(if i == 7 { "5000" } else { "80" }.into()),
+                collection_year: (i % 4 != 3).then(|| format!("{}", 2010 + i % 7)),
+                mlst: (i % 5 != 4).then(|| format!("MLST.Escherichia_coli_1.{}", i % 6)),
+                ..Default::default()
+            })
+            .collect();
+        let write_genomes = |records: &[GenomeRecord]| {
+            let lines: Vec<String> = records
+                .iter()
+                .map(|g| serde_json::to_string(g).unwrap())
+                .collect();
+            std::fs::write(layout.genomes(), lines.join("\n") + "\n").unwrap();
+        };
+        // Every kind of collection date: day, month, year, a range, a day
+        // that does not exist, a cut range, and no value.
+        let texts = [
+            "2015-03-12",
+            "2014-05",
+            "1987",
+            "2015-2016",
+            "2017-02-30",
+            "2004-20",
+        ];
+        let dated: Vec<GenomeRecord> = genomes
+            .iter()
+            .enumerate()
+            .map(|(i, g)| GenomeRecord {
+                collection_date: match texts.get(i % 7) {
+                    Some(text) => bvbrc::CollectionDate::parse(text),
+                    None => bvbrc::CollectionDate::Missing,
+                },
+                ..g.clone()
+            })
+            .collect();
+        let curated_and_species = || {
+            let mut files = files_below(&layout.curated());
+            for (path, bytes) in files_below(&dir.path().join("species")) {
+                files.insert(Path::new("species").join(path), bytes);
+            }
+            files
+        };
+        let rules: [&[&str]; 2] = [
+            &[],
+            &[
+                "--selection",
+                "group-round-robin-v1",
+                "--selection-seed",
+                "7",
+            ],
+        ];
+        for rule in rules {
+            let curate = || {
+                let args = [
+                    &[
+                        "grm",
+                        "--data",
+                        data,
+                        "curate",
+                        "--cap",
+                        "30",
+                        "--min-class",
+                        "10",
+                    ][..],
+                    rule,
+                ]
+                .concat();
+                run(Cli::try_parse_from(args).unwrap()).unwrap();
+            };
+            write_genomes(&genomes);
+            assert!(
+                !std::fs::read_to_string(layout.genomes())
+                    .unwrap()
+                    .contains("collection_date")
+            );
+            curate();
+            let before = curated_and_species();
+            write_genomes(&dated);
+            let lines = std::fs::read_to_string(layout.genomes()).unwrap();
+            assert!(lines.lines().all(|l| l.contains(r#""collection_date":"#)));
+            curate();
+            let after = curated_and_species();
+
+            // The fixture reaches every curated file: one dataset, a
+            // selection under the cap, and the three QC failures. The group
+            // rule also writes its plan, `selection.json`.
+            let plan = usize::from(!rule.is_empty());
+            assert_eq!(after.len(), 7 + 1 + plan, "{:?}", after.keys());
+            let datasets: serde_json::Value =
+                serde_json::from_slice(&after[Path::new("datasets.json")]).unwrap();
+            assert_eq!(datasets.as_array().unwrap().len(), 1);
+            let selected = &after[Path::new("species/escherichia_coli/genomes.txt")];
+            assert_eq!(selected.iter().filter(|&&b| b == b'\n').count(), 30);
+            let (_, qc): (serde_json::Value, BTreeMap<String, String>) =
+                serde_json::from_slice(&after[Path::new("qc.json")]).unwrap();
+            assert_eq!(qc.len(), 3, "{qc:?}");
+
+            assert_eq!(
+                after.keys().collect::<Vec<_>>(),
+                before.keys().collect::<Vec<_>>()
+            );
+            for (path, bytes) in &after {
+                if path == Path::new("qc.json") {
+                    let value = |b: &[u8]| serde_json::from_slice::<serde_json::Value>(b).unwrap();
+                    assert_eq!(value(bytes), value(&before[path]), "qc.json");
+                } else {
+                    assert!(bytes == &before[path], "{} changed", path.display());
+                }
+                let text = String::from_utf8_lossy(bytes);
+                for word in texts.iter().chain(&["collection"]) {
+                    assert!(!text.contains(word), "{} holds {word}", path.display());
+                }
+            }
+        }
     }
 }
