@@ -14,6 +14,15 @@ Notation for section 3: trial *c*'s score on inner fold *j* is *x_cj* = *ν_c* +
 
 These figures were recomputed from the archived run A outputs (`selection.json`, `outer.json`, `history.jsonl`, `diagnose.json`, `summary.json`), with no refitting. All 25 selections match `select.py`'s, and every pooled balanced accuracy (BA) below equals the archived value exactly.
 
+**The run A outputs are lost, and this section is kept as history.** None of the five files above is on a machine the 15 Nov 2026 program could reach (row S24 of its record of lost results), and run A was not run again. Neither this table nor the fold figures below can be recomputed. The 15 Nov measurement in section 4 bears on some of the section's direction claims. Its design is different: 200 synthetic cohorts of 400 genomes rather than run A's one cohort, the crate's learners, the one-SE rule of section 1, and the loss read as a mean of cohort means. Its one-SE picks equal those of `select.py` as it stood before 5 Nov (commit b3d1bf6) in all 10,000 selections. It reads directions, not run A's values:
+
+- It supports one claim: on the random split, the best inner mean beat the GBT default (gain 0.0101, 95% CI 0.0077 to 0.0125).
+- It weakens three. On the random split, the one-SE pick beat the GBT default where run A had it losing (gain 0.0065, CI 0.0043 to 0.0087), and lost to the RF default where run A had it winning (loss 0.0034, CI 0.0011 to 0.0057). On the lineage split, the one-SE pick beat the CART default where run A had it losing (gain 0.0049, CI 0.0023 to 0.0074).
+- It gives no direction on four. On the random split: the one-SE pick against the CART default (gain 0.0021, CI -0.0003 to 0.0045) and against the SCM default (loss 0.0016, CI -0.0001 to 0.0032), and the best inner mean against the CART default (loss 0.0002, CI -0.0025 to 0.0029). On the lineage split: the one-SE pick against the GBT default (gain 0.0018, CI -0.0010 to 0.0046).
+- It does not bear on the fold-level figures (window sizes, complexities, inner-outer gaps and Spearman correlations), which it did not measure.
+
+So F4's finding stands as what happened on run A's one cohort. Over 200 synthetic cohorts, the one-SE pick lost on average to neither the CART nor the GBT default on either split. Its mean was a gain in all four cells, with a 95% interval clear of zero in two.
+
 | family | default | one-SE selection | best inner mean (no one-SE) | static |
 |---|---|---|---|---|
 | CART | 0.8742 | 0.7948 | 0.8518 | 0.8962 |
