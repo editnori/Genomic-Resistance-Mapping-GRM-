@@ -804,6 +804,7 @@ struct EvalInputs<'a> {
     cohort: Cohort<'a>,
     /// Each cohort row's reported call.
     resistant: Vec<bool>,
+    /// The support floor `ds` was projected at.
     min_support: u32,
     ds: Dataset,
     /// Each sample's lineage.
@@ -820,8 +821,17 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
     if !c.meets_min_class {
         return Ok(None);
     }
+    let min_support = eval::support_floor(c.rows.len());
+    project_cohort(input, c, min_support).map(Some)
+}
+
+/// `eval_inputs` for a cohort already drawn, projected at `min_support`.
+fn project_cohort<'a>(
+    input: &'a SpeciesInputs,
+    c: Cohort<'a>,
+    min_support: u32,
+) -> Result<EvalInputs<'a>> {
     let resistant: Vec<bool> = c.rows.iter().map(|p| p.reported == Some(Call::R)).collect();
-    let min_support = (c.rows.len() as u32 / 200).max(3);
     // Per-fit candidates are a subset of the projection only when the species
     // matrix kept every k-mer that min_support could admit.
     anyhow::ensure!(
@@ -836,14 +846,14 @@ fn eval_inputs<'a>(input: &'a SpeciesInputs, spec: &DatasetSpec) -> Result<Optio
         .map(|&col| input.structure.lineages.labels[col])
         .collect();
     let duplicates = kset_duplicates(&c.columns, &input.matrix.summary.kset_digests);
-    Ok(Some(EvalInputs {
+    Ok(EvalInputs {
         cohort: c,
         resistant,
         min_support,
         ds,
         groups,
         duplicates,
-    }))
+    })
 }
 
 /// One dataset's cohort as `analyze_dataset` evaluates it, for an arm of an
@@ -927,7 +937,8 @@ pub struct FoldFileResult {
     pub antibiotic: String,
     /// The fold file's name for its partition.
     pub scheme: String,
-    /// The dataset's per-fit support floor.
+    /// The per-fit support floor: `eval::support_floor` of the samples the
+    /// file tests or trains (`eval::supplied_support_floor`).
     pub min_support: u32,
     pub counts: FoldFileCounts,
     /// Each outer fold as counts, in fold order.
@@ -945,9 +956,10 @@ pub fn fold_result_path(out: &std::path::Path, dataset: &str, scheme: &str) -> s
 }
 
 /// Scores the dataset a fold file names on the file's outer partition
-/// (`eval::evaluate_assigned`), on the cohort, projection, lineages and
-/// duplicate groups `analyze_dataset` evaluates, and writes a
-/// `FoldFileResult` under `out`. It writes nothing else: the dataset's
+/// (`eval::evaluate_assigned`), on the cohort, lineages and duplicate groups
+/// `analyze_dataset` evaluates, projected at the support floor of the
+/// samples the file tests or trains, and writes a `FoldFileResult` under
+/// `out`. Samples the file leaves unused reach no fit. It writes nothing else: the dataset's
 /// report, if it has one, is neither read nor changed. An existing result is
 /// replaced only with `force`.
 pub fn evaluate_fold_file(
@@ -987,12 +999,19 @@ pub fn evaluate_fold_file(
         cfg,
         matrix_digest(&input.matrix),
     );
-    let e = eval_inputs(&input, spec)?
-        .with_context(|| format!("{}: too few labeled genomes after download", spec.id))?;
-    let sample_ids: Vec<String> = e.cohort.rows.iter().map(|p| p.genome_id.clone()).collect();
+    let c = cohort(spec, &input.phenotypes, &input.matrix.summary.genomes);
+    anyhow::ensure!(
+        c.meets_min_class,
+        "{}: too few labeled genomes after download",
+        spec.id
+    );
+    let sample_ids: Vec<String> = c.rows.iter().map(|p| p.genome_id.clone()).collect();
     let roles = file
         .roles(&spec.id, &sample_ids)
         .with_context(|| format!("fold file {}", fold_file.display()))?;
+    // Projected at the floor of the genomes the file tests or trains, so
+    // the genomes it leaves unused set no candidate (`evaluate_assigned`).
+    let e = project_cohort(&input, c, eval::supplied_support_floor(&roles))?;
     // The evaluator refuses a fold that tests a genome and trains on its
     // copy, by sample number. Refuse it here first, by the ids the file uses.
     for group in &e.duplicates {
@@ -1020,7 +1039,6 @@ pub fn evaluate_fold_file(
         &e.ds.y,
         &e.groups,
         &e.duplicates,
-        e.min_support,
         &roles,
         file.folds(),
         cfg,
@@ -1046,7 +1064,7 @@ pub fn evaluate_fold_file(
         species_slug: slug.to_string(),
         antibiotic: spec.antibiotic.clone(),
         scheme: file.scheme.clone(),
-        min_support: e.min_support,
+        min_support: assigned.min_support,
         counts: FoldFileCounts {
             samples: sample_ids.len(),
             resistant: e.resistant.iter().filter(|&&r| r).count(),
@@ -2905,7 +2923,12 @@ mod tests {
     /// 150 genomes in 30 lineages of five. Meropenem calls every third
     /// genome resistant; two features mark resistance and three are noise.
     fn scan_inputs() -> SpeciesInputs {
-        let n = 150;
+        scan_inputs_of(150, &[])
+    }
+
+    /// The scan fixture's rules over `n` genomes in lineages of five, with a
+    /// sixth feature present in the genomes `rare` when it names any.
+    fn scan_inputs_of(n: usize, rare: &[usize]) -> SpeciesInputs {
         let genomes: Vec<String> = (0..n).map(|i| format!("g{i}")).collect();
         let kset_digests: Vec<String> = genomes.iter().map(|g| format!("kset of {g}")).collect();
         let rules: [fn(usize) -> bool; 5] = [
@@ -2922,23 +2945,29 @@ mod tests {
             support.push(row.count());
             patterns.push_row(row.words());
         }
+        if !rare.is_empty() {
+            let row = Bits::from_indices(n, rare.iter().copied());
+            support.push(row.count());
+            patterns.push_row(row.words());
+        }
+        let rows = patterns.rows;
         SpeciesInputs {
             matrix: FeatureMatrix {
                 summary: MatrixSummary {
                     k: 7,
                     genomes: genomes.clone(),
                     min_support: 1,
-                    n_patterns: rules.len(),
-                    kmers_distinct: 5,
-                    kmers_kept: 5,
+                    n_patterns: rows,
+                    kmers_distinct: rows as u64,
+                    kmers_kept: rows as u64,
                     kmers_rare: 0,
                     kmers_core: 0,
                     kset_digests: kset_digests.clone(),
                 },
                 patterns,
                 support,
-                kmer_offsets: (0..=5).collect(),
-                kmers: (0x21..0x26).collect(),
+                kmer_offsets: (0..=rows as u64).collect(),
+                kmers: (0x21..0x21 + rows as u64).collect(),
             },
             structure: Structure {
                 genomes: genomes.clone(),
@@ -2947,8 +2976,8 @@ mod tests {
                 lineages: crate::cluster::Lineages {
                     threshold: 0.005,
                     labels: (0..n).map(|i| (i / 5) as u32).collect(),
-                    n_clusters: 30,
-                    largest_share: 1.0 / 30.0,
+                    n_clusters: n / 5,
+                    largest_share: 5.0 / n as f64,
                 },
                 merges: vec![],
                 leaf_order: vec![],
@@ -3121,7 +3150,6 @@ mod tests {
             &e.ds.y,
             &e.groups,
             &e.duplicates,
-            e.min_support,
             &roles,
             1,
             &cfg,
@@ -3172,6 +3200,58 @@ mod tests {
         );
         assert_eq!(timeless_split(&respaced), timeless_split(&result));
         assert_eq!(tree(&root), before);
+    }
+
+    #[test]
+    fn genomes_a_fold_file_leaves_unused_set_neither_the_support_floor_nor_the_tuning_groups() {
+        // Synthetic: the scan fixture's 150 genomes with a sixth feature in
+        // g1, g2 and g3, all three training. Every fifth genome is tested and
+        // the rest train. The same file is then scored on a cohort of 800,
+        // whose 650 more genomes, g150 to g799, are unused, and two of them,
+        // g700 and g701 of one lineage, are k-mer-identical copies. A floor
+        // from the whole cohort would be 4 (800 / 200) and drop the sixth
+        // feature, whose training support is 3; a copy group among unused
+        // genomes would move every fold onto grouped tuning draws.
+        let rare = [1, 2, 3];
+        let tested: Vec<usize> = (0..150).filter(|i| i % 5 == 0).collect();
+        let train: Vec<usize> = (0..150).filter(|i| i % 5 != 0).collect();
+        let cfg = fold_file_config();
+        let run = |input: &SpeciesInputs, unused: &[usize]| -> serde_json::Value {
+            let dir = tempfile::tempdir().unwrap();
+            let layout = Layout::new(dir.path().join("data"));
+            write_inputs(&layout, input, "");
+            let file = dir.path().join("folds.json");
+            let text = fold_file_text(std::slice::from_ref(&tested), &train, unused);
+            std::fs::write(&file, text).unwrap();
+            let out = dir.path().join("out");
+            let path = evaluate_fold_file(&layout, "fixture", &file, &out, false, &cfg).unwrap();
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let alone = run(&scan_inputs_of(150, &rare), &[]);
+        let mut wide = scan_inputs_of(800, &rare);
+        for digests in [
+            &mut wide.matrix.summary.kset_digests,
+            &mut wide.structure.kset_digests,
+        ] {
+            digests[701] = digests[700].clone();
+        }
+        let unused: Vec<usize> = (150..800).collect();
+        let among = run(&wide, &unused);
+        assert_eq!(among["counts"]["samples"], 800);
+        assert_eq!(among["counts"]["unused"], 650);
+        assert_eq!(
+            (&alone["min_support"], &among["min_support"]),
+            (&3.into(), &3.into())
+        );
+        // The sixth feature is a candidate at floor 3.
+        let without = run(&scan_inputs_of(150, &[]), &[]);
+        assert_eq!(
+            alone["folds"][0]["candidates"].as_u64().unwrap(),
+            without["folds"][0]["candidates"].as_u64().unwrap() + 1
+        );
+        assert_eq!(among["folds"], alone["folds"]);
+        assert_eq!(among["split"]["n_groups"], 30);
+        assert_eq!(timeless_split(&among), timeless_split(&alone));
     }
 
     #[test]

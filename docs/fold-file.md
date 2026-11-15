@@ -64,6 +64,18 @@ random-split learner rows. Two tests hold this
 (`roles_that_repeat_a_drawn_split_give_that_splits_scores`,
 `a_fold_file_that_repeats_the_random_split_gives_the_reports_random_rows`).
 
+Genomes under `unused` reach no fit. The support floor, the fewest training
+genomes a candidate feature must be present in and absent from, is the
+larger of 3 and `n / 200` rounded down, with `n` the genomes the file tests
+or trains; a report takes `n` from its whole cohort. A group of
+k-mer-identical genomes keeps only its tested and training members before
+tuning reads it, so a group of unused genomes does not move tuning onto
+grouped draws. The candidates, the floor and the tuning draws therefore come
+from the tested and training genomes alone, and listing more genomes under
+`unused` changes no score. Two tests hold this
+(`genomes_a_fold_file_leaves_unused_set_neither_the_support_floor_nor_the_tuning_groups`,
+`a_copy_pair_among_unused_samples_cannot_change_a_folds_fits`).
+
 ## What is refused
 
 The command stops before any fit, and writes nothing, when:
@@ -92,11 +104,11 @@ The command stops before any fit, and writes nothing, when:
 | `input_fingerprint` | The fingerprint the dataset's report records for the same inputs and settings |
 | `eval_config` | The settings of the fits |
 | `id`, `species_slug`, `antibiotic`, `scheme` | The dataset and the partition's name |
-| `min_support` | The dataset's per-fit support floor |
+| `min_support` | The per-fit support floor: the larger of 3 and `n / 200` rounded down, with `n` the genomes the file tests or trains. It is the report's floor when nothing is unused |
 | `counts` | Cohort genomes, resistant genomes, and how many are tested, train only, or are unused |
 | `folds` | Per outer fold: training and test genomes, the resistant ones among each, and candidate features |
 | `samples` | The scored genomes in order: id, reported class, outer fold |
-| `split` | The learner rows, in the shape of a report's split. `test_fold` and each learner's `scores` follow `samples` |
+| `split` | The learner rows, in the shape of a report's split. `test_fold` and each learner's `scores` follow `samples`, and `n_groups` counts the lineages of the tested and training genomes |
 | `seconds` | Wall-clock time of the run |
 
 The hash is of the file as it is on disk, so the same partition written with

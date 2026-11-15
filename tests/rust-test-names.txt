@@ -104,6 +104,7 @@ src/lib.rs analysis::tests::fingerprint_tracks_every_evaluation_config_field
 src/lib.rs analysis::tests::fingerprint_tracks_mic_inferred_labels_added_on_a_matrix_genome
 src/lib.rs analysis::tests::fingerprint_tracks_the_dataset_class_minimum
 src/lib.rs analysis::tests::gene_panels_score_the_drug_s_targets_and_list_uncovered_organisms
+src/lib.rs analysis::tests::genomes_a_fold_file_leaves_unused_set_neither_the_support_floor_nor_the_tuning_groups
 src/lib.rs analysis::tests::kset_duplicates_group_samples_by_digest_in_sample_order
 src/lib.rs analysis::tests::learn_keeps_matching_reports_and_removes_those_of_datasets_that_no_longer_qualify
 src/lib.rs analysis::tests::learn_recomputes_a_current_report_whose_audit_is_invalid
@@ -201,6 +202,7 @@ src/lib.rs kset::tests::radix_sort_matches_std_sort
 src/lib.rs kset::tests::read_bucket_rejects_a_repeated_kmer
 src/lib.rs kset::tests::read_bucket_rejects_corrupt_payload
 src/lib.rs learn::eval::tests::a_boosted_model_that_keeps_no_tree_is_a_null_fit_without_a_call
+src/lib.rs learn::eval::tests::a_copy_pair_among_unused_samples_cannot_change_a_folds_fits
 src/lib.rs learn::eval::tests::a_failed_lasso_fit_is_reported_with_its_trace_before_it_is_returned
 src/lib.rs learn::eval::tests::a_grouped_holdout_that_fails_after_its_inner_folds_pass_stops_the_plan
 src/lib.rs learn::eval::tests::a_lasso_refit_that_keeps_no_feature_is_a_null_fit_without_a_call
@@ -242,10 +244,10 @@ src/lib.rs learn::eval::tests::random_tuning_that_cannot_keep_duplicates_whole_f
 src/lib.rs learn::eval::tests::random_tuning_without_duplicates_is_revision_10s_stratified_tuning
 src/lib.rs learn::eval::tests::roles_that_repeat_a_drawn_split_give_that_splits_scores
 src/lib.rs learn::eval::tests::rows_written_before_revision_14_read_back_unchanged
-src/lib.rs learn::eval::tests::samples_outside_a_supplied_folds_training_set_cannot_change_its_fits
 src/lib.rs learn::eval::tests::saved_scores_are_held_out_fits_that_reproduce_every_reported_metric
 src/lib.rs learn::eval::tests::scm_cart_boosting_and_lasso_tune_on_the_splits_tuning_groups
 src/lib.rs learn::eval::tests::serialized_scores_preserve_threshold_calls_and_ranks
+src/lib.rs learn::eval::tests::the_features_and_labels_of_unused_samples_and_the_labels_of_tested_ones_cannot_change_a_folds_scores
 src/lib.rs learn::eval::tests::the_recorded_config_leaves_out_seeds_each_fit_replaces
 src/lib.rs learn::eval::tests::tuning_holdout_names_lineages_in_revision_10s_words
 src/lib.rs learn::eval::tests::two_training_groups_are_enough_for_a_grouped_holdout

@@ -1200,6 +1200,25 @@ pub struct AssignedSplit {
     /// The scored samples, in sample order.
     pub tested: Vec<usize>,
     pub folds: Vec<FoldCounts>,
+    /// The support floor every fold's candidates were chosen at
+    /// (`supplied_support_floor`).
+    pub min_support: u32,
+}
+
+/// The per-fit support floor of a cohort of `samples` samples: a candidate
+/// feature is present in, and absent from, at least this many of a fold's
+/// training samples (`training_candidates`). A report takes it from its
+/// whole cohort, a supplied partition from the samples it uses
+/// (`supplied_support_floor`).
+pub fn support_floor(samples: usize) -> u32 {
+    (samples as u32 / 200).max(3)
+}
+
+/// The support floor of a supplied partition: `support_floor` of the samples
+/// it tests or trains. Unused samples do not count, so listing more of them
+/// cannot change a fit.
+pub fn supplied_support_floor(roles: &[Role]) -> u32 {
+    support_floor(roles.iter().filter(|r| **r != Role::Unused).count())
 }
 
 /// The split names `evaluate` writes, which a supplied partition may not take.
@@ -1215,6 +1234,14 @@ pub const DRAWN_SCHEMES: [&str; 2] = ["random", "lineage"];
 /// does (`tuning_groups`). So roles that repeat a split `evaluate` drew give
 /// that split's scores.
 ///
+/// Unused samples reach no fit. The support floor is that of the tested and
+/// training samples alone (`supplied_support_floor`), a duplicate group keeps
+/// only its tested and training members before the tuning groups are made,
+/// and `n_groups` counts the lineages of those samples. `x` must hold every
+/// feature whose support among them lies inside that floor, as a projection
+/// of the cohort at that floor does (`matrix::Dataset::project`). Learners
+/// read only their training samples, and only tested samples are scored.
+///
 /// A partition is refused before any fit when a fold tests no sample, when a
 /// fold's test or training samples lack a class, when a fold tests a sample
 /// and trains on its k-mer-identical copy, or when an inner fold or tuning
@@ -1228,14 +1255,28 @@ pub fn evaluate_assigned(
     y: &Bits,
     groups: &[u32],
     duplicates: &[Vec<usize>],
-    min_support: u32,
     roles: &[Role],
     folds: usize,
     cfg: &EvalConfig,
 ) -> Result<AssignedSplit> {
+    let min_support = supplied_support_floor(roles);
     check_inputs(x, y, groups, duplicates, min_support, cfg)?;
     let n = x.cols;
     ensure!(roles.len() == n, "{} roles for {n} samples", roles.len());
+    let used = |i: usize| roles[i] != Role::Unused;
+    let duplicates: Vec<Vec<usize>> = duplicates
+        .iter()
+        .map(|group| {
+            group
+                .iter()
+                .copied()
+                .filter(|&i| used(i))
+                .collect::<Vec<_>>()
+        })
+        .filter(|group| group.len() > 1)
+        .collect();
+    let duplicates = duplicates.as_slice();
+    let used_groups: Vec<u32> = (0..n).filter(|&i| used(i)).map(|i| groups[i]).collect();
     ensure!(
         !scheme.is_empty() && !DRAWN_SCHEMES.contains(&scheme),
         "a supplied partition needs a name of its own, not {scheme:?}"
@@ -1335,13 +1376,14 @@ pub fn evaluate_assigned(
         result: SplitResult {
             scheme: scheme.to_string(),
             folds,
-            n_groups: count_groups(groups),
+            n_groups: count_groups(&used_groups),
             test_fold,
             learners,
             unavailable_reason: None,
         },
         tested,
         folds: counts,
+        min_support,
     })
 }
 
@@ -3983,7 +4025,6 @@ mod tests {
             y,
             &groups,
             duplicates,
-            3,
             roles,
             folds,
             cfg,
@@ -4047,7 +4088,6 @@ mod tests {
                 &y,
                 &groups,
                 duplicates,
-                3,
                 &roles,
                 cfg.folds,
                 &cfg,
@@ -4074,7 +4114,6 @@ mod tests {
                     &y,
                     &groups,
                     &[],
-                    3,
                     &roles,
                     cfg.folds,
                     &cfg,
@@ -4093,7 +4132,8 @@ mod tests {
     }
 
     #[test]
-    fn samples_outside_a_supplied_folds_training_set_cannot_change_its_fits() {
+    fn the_features_and_labels_of_unused_samples_and_the_labels_of_tested_ones_cannot_change_a_folds_scores()
+     {
         // One fold: samples 0..30 are tested, 30..90 train, 90..120 are in
         // no fold.
         let (x, y, _) = assigned_fixture();
@@ -4121,7 +4161,9 @@ mod tests {
         assert!(base.folds[0].candidates > 0);
         assert_eq!(base.tested, (0..30).collect::<Vec<_>>());
         assert_eq!(base.result.test_fold, vec![0; 30]);
-        assert_eq!((base.result.folds, base.result.n_groups), (1, 30));
+        // The lineages of the 90 tested and training samples, 0..90 in
+        // lineages of four; the unused ones add none.
+        assert_eq!((base.result.folds, base.result.n_groups), (1, 23));
         for learner in &base.result.learners {
             assert_eq!(learner.scores.len(), 30, "{}", learner.learner);
             assert_eq!(learner.metrics.as_ref().unwrap().n, 30);
@@ -4176,6 +4218,69 @@ mod tests {
             metrics_moved |= a.metrics != b.metrics;
         }
         assert!(metrics_moved);
+    }
+
+    #[test]
+    fn a_copy_pair_among_unused_samples_cannot_change_a_folds_fits() {
+        // One fold: samples 0..30 are tested, 30..90 train, 90..120 are in
+        // no fold. Samples 92 and 93 are unused and share a lineage. Naming
+        // them a k-mer-identical pair changes no training and no test sample,
+        // so no fit may change: a copy group made of unused samples alone
+        // must not move the fold onto grouped tuning draws.
+        let (x, y, _) = assigned_fixture();
+        let n = x.cols;
+        let roles: Vec<Role> = (0..n)
+            .map(|i| match i {
+                0..30 => Role::Test(0),
+                30..90 => Role::Train,
+                _ => Role::Unused,
+            })
+            .collect();
+        let cfg = EvalConfig {
+            forest: ForestParams {
+                n_trees: 8,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let base = assigned(&x, &y, &[], &roles, 1, &cfg).unwrap();
+        let copies = assigned(&x, &y, &[vec![92, 93]], &roles, 1, &cfg).unwrap();
+        assert_eq!(copies.folds, base.folds);
+        let row = |l: &LearnerResult| {
+            let mut v = serde_json::to_value(l).unwrap();
+            v.as_object_mut().unwrap().remove("seconds");
+            v
+        };
+        let moved: Vec<&str> = base
+            .result
+            .learners
+            .iter()
+            .zip(&copies.result.learners)
+            .filter(|(a, b)| row(a) != row(b))
+            .map(|(a, _)| a.learner.as_str())
+            .collect();
+        let scores_moved: Vec<&str> = base
+            .result
+            .learners
+            .iter()
+            .zip(&copies.result.learners)
+            .filter(|(a, b)| a.scores != b.scores)
+            .map(|(a, _)| a.learner.as_str())
+            .collect();
+        assert!(
+            moved.is_empty(),
+            "an unused copy pair moved the rows of {moved:?} and the scores of {scores_moved:?}"
+        );
+        // The same pair among training samples does move a fit, so the
+        // equality above is not a fixture too dull to show the switch.
+        let trained = assigned(&x, &y, &[vec![32, 33]], &roles, 1, &cfg).unwrap();
+        assert!(
+            base.result
+                .learners
+                .iter()
+                .zip(&trained.result.learners)
+                .any(|(a, b)| row(a) != row(b))
+        );
     }
 
     #[test]
@@ -4270,7 +4375,6 @@ mod tests {
                 &y,
                 &groups,
                 &[],
-                3,
                 &good,
                 1,
                 &cfg,
