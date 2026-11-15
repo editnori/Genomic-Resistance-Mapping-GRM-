@@ -13,7 +13,7 @@
 // click, tap, keyboard or a touch hold, and names its whole text to a
 // resting pointer in a native tooltip.
 
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
 import type { CatalogRow, Learner, LearnerLite, Manifest } from "../data/schema";
 import { capitalize, hasEverydayName, int, LEARNER_LABEL, LEARNER_NAME, pct, speciesName, speciesOption, speciesShort } from "../data/format";
@@ -28,11 +28,14 @@ import { ViewHeader } from "../ui/ViewHeader";
 import { Dropdown } from "../ui/Dropdown";
 import { DataTable, type Column, type SortState } from "../ui/DataTable";
 import { FilterRail, FiltersButton, railGrid, RailCheck, RailChecks, RailControl, RailField, RailGroup, useRailState } from "../ui/FilterRail";
-import { FOCUS_RING, GhostButton, MeetsMark, VIEW_SHELL } from "../ui/primitives";
+import { BarValue, FOCUS_RING, GhostButton, MeetsMark, VIEW_SHELL } from "../ui/primitives";
+import { useMicBaselines } from "../data/load";
+import { micConstants, type MicConstant } from "../data/baselines";
 import { useClipped } from "../ui/useClipped";
 import { HOLD_TARGET, useHold } from "../ui/useHold";
 import { useCountUp } from "../ui/useCountUp";
 import { byFamily, ClassGlyph, ClassKey, ClassName } from "../ui/drugClass";
+import { ClindamycinMark } from "./inspector/ClindamycinNote";
 
 const MIN_N = [
   { id: "0", label: "Any size" },
@@ -234,7 +237,29 @@ const RuleCell = ({ rules }: { rules: readonly string[] }) => {
 /** Rows carry a provisional marker only when the report mixes audit states;
  *  when every row shares one, the status line says it once. Header hints
  *  are optional; the key over the table prints what each mark means. */
-export const datasetColumns = (markProvisional: boolean, current: number | undefined): Column<CatalogRow>[] => [
+/** The MIC column's cell: the model's agreement against the 90% screen,
+ *  and beneath it, with a baselines file, the constant's on the same exact
+ *  MICs, marked † when the held-out predictions do not confirm the folds. */
+const MicCell = ({ r, constant }: { r: CatalogRow; constant: MicConstant | undefined }) => {
+  if (r.mic_essential_agreement === null) return <Muted>No MIC</Muted>;
+  const value = <BarValue value={r.mic_essential_agreement} bar={BARS.mic} />;
+  if (constant === undefined) return value;
+  return (
+    <Two
+      top={value}
+      below={
+        <span data-baseline="mic-constant">
+          <span className="sr-only">constant MIC </span>
+          {pct(constant.constant)}
+          <span aria-hidden="true">{constant.confirmed ? " c" : " c†"}</span>
+          {constant.confirmed ? null : <span className="sr-only">, folds not confirmed by the held-out predictions</span>}
+        </span>
+      }
+    />
+  );
+};
+
+export const datasetColumns = (markProvisional: boolean, current: number | undefined, constants?: ReadonlyMap<string, MicConstant>): Column<CatalogRow>[] => [
   {
     id: "dataset",
     header: "Dataset",
@@ -244,11 +269,12 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     firstDir: "asc",
     cell: (r) => (
       <span className="block">
-        <span className="flex items-baseline gap-x-2">
+        <span className="flex flex-wrap items-baseline gap-x-2">
           <span className="min-w-0">
             <DrugName name={r.antibiotic} />
           </span>
           {markProvisional && !auditOf(r, current).valid ? <strong className="shrink-0 text-tiny font-semibold text-coral-text">Provisional</strong> : null}
+          <ClindamycinMark row={r} />
         </span>
         {/* Species and class wrap to two lines at most; the class, last, is
             what an ellipsis cuts, and the separator stays with the species.
@@ -398,11 +424,18 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
         term: "MIC essential agreement",
         text: `Share of exact MICs (the lowest drug level that stops growth) predicted within one doubling dilution. Needs 100 isolates with an MIC, 50 exact. ${BARS_SOURCE}`,
       },
+      ...(constants === undefined || constants.size === 0
+        ? []
+        : [
+            {
+              term: "Constant MIC (c)",
+              text: "The line beneath: a constant MIC taken from each training fold, the lower median of its exact MICs, scored on the same exact MICs and folds as the model. † marks a dataset whose held-out predictions do not confirm the rebuilt folds.",
+            },
+          ]),
     ],
     align: "right",
     sortValue: (r) => r.mic_essential_agreement,
-    status: (r) => (r.mic_essential_agreement === null ? null : { value: r.mic_essential_agreement, bar: BARS.mic }),
-    cell: () => <Muted>No MIC</Muted>,
+    cell: (r) => <MicCell r={r} constant={constants?.get(r.id)} />,
   },
   {
     id: "rule",
@@ -455,6 +488,9 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
   const [all, setAll] = useKeptState("datasets.all", false);
   const rows = manifest.datasets;
   const audit = manifestAudit(manifest);
+  // Optional: with no baselines files the MIC column shows the model alone.
+  const files = useMicBaselines(manifest);
+  const constants = useMemo(() => (files.status === "ready" ? micConstants(rows, files.data, manifest.evaluation_revision) : undefined), [files, rows, manifest.evaluation_revision]);
 
   const q = query.trim().toLowerCase();
   const axes = axesFor(f, q);
@@ -569,7 +605,7 @@ export const DatasetsView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
             <DataTable
               label="Datasets"
               rows={shown}
-              columns={datasetColumns(audit.invalid > 0 && audit.invalid < audit.total, manifest.evaluation_revision)}
+              columns={datasetColumns(audit.invalid > 0 && audit.invalid < audit.total, manifest.evaluation_revision, constants)}
               rowKey={(r) => r.id}
               onOpen={(r) => nav.openDataset(r.id)}
               initialSort={sort}

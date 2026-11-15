@@ -5,9 +5,47 @@ import { int, mgL, pct, plural } from "../../data/format";
 import { BARS } from "../../data/metrics";
 import { MicHeatmap } from "../../charts/MicHeatmap";
 import { verdictWords, PanelState, ScrollFrame, Section } from "../../ui/primitives";
+import { leadOver, leadWords, type Agreement, type Baselines, type MicBaseline } from "../../data/baselines";
 
-export const MicSection = ({ r, research }: { r: DatasetReport; research: Resource<Research> }) => {
+/** "58 of 96". */
+const ofText = (a: Agreement): string => `${int(a.agree)} of ${int(a.n)}`;
+
+
+/** The model beside a constant MIC from the training folds, from the
+ *  dataset's baselines file: the model's figure, the constant's and the
+ *  difference in one sentence, with the folds where the model predicts only
+ *  its start value, then the mode, the copies in training, and a mark when
+ *  the held-out predictions do not confirm the rebuilt folds. */
+const MicConstant = ({ b }: { b: MicBaseline }) => {
+  const median = b.median;
+  if (median === null) return null;
+  const confirmed = b.prediction_check.confirmed;
+  const copies = b.exact_with_training_copy;
+  const constantFolds = b.prediction_check.constant_folds.length;
+  return (
+    <>
+      <p data-baseline="mic">
+        A constant MIC taken from each training fold, the lower median of its exact MICs, agrees on {pct(median.essential_agreement)} of the same {int(b.n_exact)} exact MICs ({ofText(median)})
+        {confirmed ? "" : <sup aria-hidden="true">†</sup>}; the model agrees on {pct(b.model.essential_agreement)} ({ofText(b.model)}), {leadWords(leadOver(b.model.essential_agreement, median.essential_agreement))}.
+        {constantFolds === 0
+          ? ""
+          : ` On ${int(constantFolds)} of the ${int(b.folds)} folds the model predicts only its start value, one MIC for every isolate, so on ${constantFolds === 1 ? "that fold" : "those folds"} it is a constant MIC too.`}
+      </p>
+      <p className="type-note">
+        {b.mode === null ? "" : `At the mode of each training fold's exact MICs instead, the constant agrees on ${pct(b.mode.essential_agreement)} (${ofText(b.mode)}). `}
+        Each constant is fitted on the fold's training isolates only and scored on its test isolates, on the model's own folds.{" "}
+        {copies === 0
+          ? "No exact-MIC test isolate here has a k-mer-identical copy in its training fold."
+          : `${plural(copies, "exact-MIC test isolate")} here ${copies === 1 ? "has" : "have"} a k-mer-identical copy in ${copies === 1 ? "its" : "their"} training fold.`}
+        {confirmed ? "" : " † The held-out predictions do not confirm the rebuilt MIC folds for this dataset, so the constant's folds may differ from the model's."}
+      </p>
+    </>
+  );
+};
+
+export const MicSection = ({ r, research, baselines }: { r: DatasetReport; research: Resource<Research>; baselines?: Baselines | null }) => {
   const mic = r.mic;
+  const constant = baselines?.mic ?? null;
   const withMic = r.samples.filter((s) => s.mic !== null);
   const exact = withMic.filter((s) => s.mic?.censor === "Exact").length;
   return (
@@ -32,8 +70,12 @@ export const MicSection = ({ r, research }: { r: DatasetReport; research: Resour
         // the heatmap sizes itself from its frame, and an auto column would grow
         // to the heatmap's own width and keep it there.
         <div className="grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,auto)_minmax(0,1fr)]">
-          <MicHeatmap confusion={mic.confusion} />
+          <MicHeatmap
+            confusion={mic.confusion}
+            band={constant?.median == null ? undefined : { model: constant.model.essential_agreement, constant: constant.median.essential_agreement, n: constant.n_exact }}
+          />
           <div className="space-y-3 text-body text-ink">
+            {constant === null ? null : <MicConstant b={constant} />}
             <p>
               Counting censored values too, {pct(mic.essential_agreement_all)} of {int(mic.n)} isolates agree: a value reported as at most X agrees when the prediction is at most one step above X, and a value above X agrees when the prediction is at least X.
             </p>
@@ -57,7 +99,7 @@ export const MicSection = ({ r, research }: { r: DatasetReport; research: Resour
               <p>No categorical calls: at least one training fold had too few isolates to fit a threshold, and the pipeline does not score a subset.</p>
             ) : null}
             <p className="type-note">
-              Censored gradient-boosted regression on log2 dilution steps, predicted out of fold on the random split.
+              Censored gradient-boosted regression on log2 dilution steps, predicted out of fold on its own stratified random folds, which differ from the random split&apos;s and hold no lineage out.
               {mic.categorical === null ? "" : " The VME and ME limits are a screen adapted from FDA's 2009 guidance for growth-based susceptibility test systems."}
             </p>
           </div>

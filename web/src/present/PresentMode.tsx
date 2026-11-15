@@ -28,6 +28,8 @@ import { FINDINGS, type PagedFit } from "../views/findings";
 import { Reveal, useSlideTimeline, type SlideTimeline } from "./motion";
 import { RuleFigure, ruleDataset, ruleLineageScore } from "./figures";
 import { primerSteps } from "../views/primer";
+import { useMicBaselines } from "../data/load";
+import { micConstants } from "../data/baselines";
 
 const COLUMN = "mx-auto w-full max-w-[72rem] px-4 sm:px-8";
 /** A fixed figure's box, live and measuring alike: top-aligned, one gap
@@ -255,6 +257,8 @@ const SlideView = ({
 };
 
 export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose(): void }) => {
+  const files = useMicBaselines(manifest);
+  const constants = useMemo(() => (files.status === "ready" ? micConstants(manifest.datasets, files.data, manifest.evaluation_revision) : undefined), [files, manifest]);
   const slides: Slide[] = useMemo(() => {
     const pick = ruleDataset(manifest);
     const lineage = pick === null ? null : ruleLineageScore(pick.row);
@@ -264,7 +268,7 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
         (s): Slide => ({ kind: "figure", id: s.id, title: s.title, result: s.lead, caption: s.caption, fixed: () => s.figure, continues: false }),
       ),
       ...FINDINGS.map((build): Slide => {
-        const f = build(manifest, { page: false });
+        const f = build(manifest, { page: false, micConstants: constants });
         const figure = f.figure;
         return {
           kind: "figure",
@@ -290,7 +294,7 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
         continues: true,
       },
     ];
-  }, [manifest]);
+  }, [manifest, constants]);
 
   // Pages per continuing slide, as the off-screen copies measure them.
   const [measured, setMeasured] = useState<Record<string, number>>({});

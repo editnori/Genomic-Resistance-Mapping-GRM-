@@ -5,10 +5,18 @@
 
 import { useRef } from "react";
 import { ScrollFrame } from "../ui/primitives";
-import { int, mgL } from "../data/format";
+import { int, mgL, pct } from "../data/format";
 import { MarkListbox, TICK_CLASS, useSvgId, useWidth } from "./kit";
 
-export const MicHeatmap = ({ confusion }: { confusion: readonly [number, number, number][] }) => {
+/** The band's share of exact MICs for the model and for a constant MIC from
+ *  the training folds, when a baselines file gives the constant. */
+export interface BandShares {
+  model: number;
+  constant: number;
+  n: number;
+}
+
+export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, number, number][]; band?: BandShares }) => {
   const frame = useRef<HTMLDivElement | null>(null);
   const avail = useWidth(frame);
   const clip = useSvgId("mic-grid");
@@ -87,7 +95,10 @@ export const MicHeatmap = ({ confusion }: { confusion: readonly [number, number,
       </svg>
       </MarkListbox>
       </ScrollFrame>
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-tiny text-muted-text" aria-label="Heatmap key">
+      {/* The key wraps at the chart's width (w-0 min-w-full): unwrapped, its
+          one line set the figure's column at about 925 px and left the text
+          beside it 0 px wide at a 1024 px window. */}
+      <div className="mt-3 flex w-0 min-w-full flex-wrap items-center gap-x-4 gap-y-2 text-tiny text-muted-text" aria-label="Heatmap key">
         {cuts.map((cut, i) => <span key={cut} className="inline-flex items-center gap-1.5"><span className="size-4" aria-hidden="true" style={{ background: fill(cut) }} />{i === 0 ? 1 : cuts[i - 1]! + 1}–{cut} isolates</span>)}
         <span className="inline-flex items-center gap-1.5">
           <svg aria-hidden="true" width={16} height={12} className="shrink-0">
@@ -96,6 +107,14 @@ export const MicHeatmap = ({ confusion }: { confusion: readonly [number, number,
           Between the dashed lines: predicted within one doubling dilution of the measured MIC
         </span>
       </div>
+      {band === undefined ? null : (
+        // Its own line under the key, at zero width to the grid's column
+        // sizing (w-0 min-w-full), so the figure's column keeps the width the
+        // chart gives it and the text beside it keeps its measure.
+        <p className="mt-2 w-0 min-w-full text-tiny text-muted-text" data-baseline="band">
+          Between the dashed lines: {pct(band.model)} of {int(band.n)} exact MICs for the model, {pct(band.constant)} for a constant MIC from the training folds.
+        </p>
+      )}
     </div>
   );
 };

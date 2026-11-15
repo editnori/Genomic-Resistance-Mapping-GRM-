@@ -132,7 +132,8 @@ enum Command {
         /// which records the file's SHA-256, and no report. Takes one
         /// species; --force replaces an existing result. It runs at the
         /// release's seeds and tie rule, so --seed, --learner-seed and the
-        /// --exp-tie-* options are refused with it.
+        /// --exp-tie-* options are refused with it. --exp-null-refit is
+        /// refused with it too: it records the folds grm learn draws.
         #[arg(
             long,
             requires = "fold_out",
@@ -143,6 +144,7 @@ enum Command {
                 "exp_tie_rule",
                 "exp_tie_trace",
                 "exp_tie_out",
+                "exp_null_refit",
             ]
         )]
         fold_file: Option<PathBuf>,
@@ -187,6 +189,17 @@ enum Command {
         /// production writes and `grm report` indexes.
         #[arg(long)]
         exp_tie_out: Option<PathBuf>,
+        /// Experiment, off by default (docs/null-fold-refit.md): also refit
+        /// every boosting and lasso outer fold whose fit is null under the
+        /// fallback settings, and append each one's scores to this JSON-lines
+        /// file. While the file takes every line, the reports equal those of
+        /// a run without it. A line it does not take ends the learn with an
+        /// error naming the file and the fold, before that dataset's report
+        /// is written. Refused beside --fold-file, and beside the --exp-tie-*
+        /// options: its refits take production's tie rule and would add
+        /// fits to a tie trace.
+        #[arg(long, conflicts_with_all = ["exp_tie_rule", "exp_tie_trace", "exp_tie_out"])]
+        exp_null_refit: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -327,6 +340,17 @@ enum Command {
     /// that index.json lists, each pinned to its report's SHA-256 and counts.
     /// No report file changes.
     Intervals,
+    /// Write what two predictors that read no genome reach on each dataset
+    /// report's own folds under <data>/report/baselines/, one file per
+    /// dataset report that index.json lists, each pinned to its report's
+    /// SHA-256 and evaluation revision: constants at the training folds'
+    /// median and mode MIC beside the MIC model, and lineage identity beside
+    /// each split; and <data>/report/baselines.json for the pages that show
+    /// many datasets, pinned to index.json's SHA-256. A dataset whose rebuilt
+    /// MIC folds contradict its report is refused alone, and the command
+    /// then exits nonzero. Run it after `grm report`. Fits nothing; no report
+    /// file changes.
+    Baselines,
     /// Write each indexed dataset report's provenance under
     /// <data>/report/provenance/: its samples' BV-BRC dates (`grm fetch
     /// genome-dates`) and record details (curated/provenance.jsonl), pinned to
@@ -441,6 +465,7 @@ fn run(cli: Cli) -> Result<()> {
             exp_tie_rule,
             exp_tie_trace,
             exp_tie_out,
+            exp_null_refit,
             ..
         } => {
             let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
@@ -451,6 +476,9 @@ fn run(cli: Cli) -> Result<()> {
             if let Some(path) = &exp_tie_trace {
                 grm::learn::tie::start_trace(path)
                     .with_context(|| format!("create {}", path.display()))?;
+            }
+            if let Some(path) = &exp_null_refit {
+                grm::learn::null_refit::enable(path)?;
             }
             species
                 .iter()
@@ -589,6 +617,17 @@ fn run(cli: Cli) -> Result<()> {
             let n = grm::intervals::write(&layout.root.join("report"))?;
             eprintln!("intervals written for {n} dataset reports");
             Ok(())
+        }
+        Command::Baselines => {
+            let w = grm::baselines::write(&layout.root.join("report"))?;
+            for r in &w.refused {
+                eprintln!("{r}");
+            }
+            eprintln!(
+                "baselines written for {} dataset reports: {} with an MIC model, {} of them with folds their held-out predictions confirm; {} exact-MIC test isolates on {} datasets have a k-mer-identical copy in their training fold",
+                w.files, w.mic, w.confirmed, w.copies, w.copy_datasets
+            );
+            w.outcome()
         }
         Command::Provenance { check: false } => {
             let n = grm::provenance::write(&layout)?;
@@ -2558,6 +2597,78 @@ mod tests {
             (fold_file, seed, learner_seed),
             (Some("f.json".into()), RELEASE_SEED, None)
         );
+    }
+
+    /// The null-fold experiment records the folds `grm learn` draws, so the
+    /// parser refuses `--exp-null-refit` beside `--fold-file`, before FILE is
+    /// opened, in either order. Without `--fold-file` the flag parses as it
+    /// did.
+    #[test]
+    fn learn_refuses_the_null_fold_refit_beside_a_fold_file() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let refit = ["--exp-null-refit", "r.jsonl"];
+        let fold = ["--fold-file", "f.json", "--fold-out", "o"];
+        for bad in [
+            [&refit[..], &fold[..]].concat(),
+            [&fold[..], &refit[..]].concat(),
+        ] {
+            let error = parse(&bad)
+                .err()
+                .unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::ArgumentConflict,
+                "{bad:?}"
+            );
+            let message = error.to_string();
+            assert!(
+                message.contains("--exp-null-refit") && message.contains("--fold-file"),
+                "{message}"
+            );
+        }
+        let Command::Learn {
+            fold_file,
+            exp_null_refit,
+            ..
+        } = parse(&refit).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((fold_file, exp_null_refit), (None, Some("r.jsonl".into())));
+    }
+
+    /// The null-fold experiment fits its fallbacks under production's tie
+    /// rule, and those fits would add lines to a tie trace, so the parser
+    /// refuses `--exp-null-refit` beside each option of the tie rule
+    /// experiment, in either order, `float` named explicitly too.
+    #[test]
+    fn learn_refuses_the_null_fold_refit_beside_the_tie_rule_experiment() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let refit = ["--exp-null-refit", "r.jsonl"];
+        for tie in [
+            &["--exp-tie-rule", "exact"][..],
+            &["--exp-tie-rule", "float"][..],
+            &["--exp-tie-trace", "t.jsonl"][..],
+            &["--exp-tie-out", "x"][..],
+        ] {
+            for bad in [[&refit[..], tie].concat(), [tie, &refit[..]].concat()] {
+                let error = parse(&bad)
+                    .err()
+                    .unwrap_or_else(|| panic!("{bad:?} parsed"));
+                assert_eq!(
+                    error.kind(),
+                    clap::error::ErrorKind::ArgumentConflict,
+                    "{bad:?}"
+                );
+                assert!(error.to_string().contains("--exp-null-refit"), "{bad:?}");
+            }
+        }
     }
 
     /// `grm learn` draws at the release's seed unless told otherwise, and

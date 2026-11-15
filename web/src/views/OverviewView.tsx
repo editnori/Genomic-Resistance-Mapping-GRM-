@@ -5,7 +5,7 @@
 // every number shares. The panel section also holds every panel result;
 // /tests lands on it through the #panels anchor.
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Manifest } from "../data/schema";
 import { int, plural } from "../data/format";
@@ -14,6 +14,8 @@ import { ViewHeader } from "../ui/ViewHeader";
 import { FOCUS_RING, PanelState, VIEW_SHELL } from "../ui/primitives";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PrimerSection } from "./primer";
+import { useMicBaselines } from "../data/load";
+import { micConstants } from "../data/baselines";
 import { AuditReasons, FINDINGS, inApp, LINK, methodsHref, openMethodsAt, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK, type Finding, type FindingMore } from "./findings";
 
 /** The anchor of the panel section, where /tests redirects. */
@@ -118,7 +120,10 @@ export const OverviewView = ({ manifest, nav }: { manifest: Manifest; nav: Navig
   useEffect(() => {
     if (hash !== "") document.getElementById(hash)?.scrollIntoView?.({ block: "start" });
   }, [hash]);
-  const findings = FINDINGS.map((build) => build(manifest, { page: true, nav }));
+  // Optional: with no baselines files the MIC finding shows the model alone.
+  const files = useMicBaselines(manifest);
+  const constants = useMemo(() => (files.status === "ready" ? micConstants(manifest.datasets, files.data, manifest.evaluation_revision) : undefined), [files, manifest]);
+  const findings = FINDINGS.map((build) => build(manifest, { page: true, nav, micConstants: constants }));
 
   return (
     <div className={`${VIEW_SHELL} pb-16 pt-8`}>

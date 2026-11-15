@@ -4,6 +4,7 @@
 pub mod ablate;
 pub mod analysis;
 pub mod annotate;
+pub mod baselines;
 pub mod bits;
 pub mod bvbrc;
 pub mod catalog;
