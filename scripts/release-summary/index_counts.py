@@ -19,7 +19,14 @@ call, so the row is scored on every genome. The known-gene rule's index entry ha
 
 The output counts the rows that carry the flag, how many of them have a non-zero no_call, and where each
 null_fits_scored key was seen ("split:true" is a split entry with the value true). A flag anywhere else, or in a
-revision-12 index, is counted there and does not change the rule."""
+revision-12 index, is counted there and does not change the rule.
+
+It also counts the index's labels_from_mic_excluded, aggregates only, under the key of that name. A dataset's value is
+the number of genomes of its species' matrix whose resistant or susceptible label for the drug GRM inferred from a MIC,
+because no call was reported; no learner trains or is scored on them (src/analysis.rs). The block gives the datasets
+whose index entry holds the field, the datasets without it, the datasets where it is above zero and the total of such
+labels. The last two are over the datasets that hold the field, and they are null when none does: a dataset without
+the field is counted as without it, never as zero. A value that is not a count stops the script with exit status 1."""
 import json
 import sys
 from pathlib import Path
@@ -76,4 +83,15 @@ for d in index["datasets"]:
                     if len(out["examples"]) < 10:
                         out["examples"].append(f"{d['id']} {s['scheme']} {r['learner']} {key}: index {x}/{n}, "
                                                f"file {r[key]['x']}/{r[key]['n']}")
+MIC_FIELD = "labels_from_mic_excluded"
+held = []
+for d in index["datasets"]:
+    if MIC_FIELD in d:
+        v = d[MIC_FIELD]
+        if isinstance(v, bool) or not isinstance(v, int) or v < 0:
+            sys.exit(f"index_counts.py: {sys.argv[1]}: {d['id']} has {MIC_FIELD} {v!r}, which is not a count")
+        held.append(v)
+out[MIC_FIELD] = {"datasets_with_field": len(held), "datasets_without_field": len(index["datasets"]) - len(held),
+                  "datasets_above_zero": sum(v > 0 for v in held) if held else None,
+                  "labels": sum(held) if held else None}
 json.dump(out, sys.stdout, indent=1)

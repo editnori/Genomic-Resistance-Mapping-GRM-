@@ -377,6 +377,10 @@ src/lib.rs report::tests::a_missing_lineage_learner_row_is_not_full_coverage
 src/lib.rs report::tests::a_missing_or_malformed_kover_comparison_refuses_before_writing
 src/lib.rs report::tests::a_rebuild_removes_files_for_datasets_and_species_it_no_longer_publishes
 src/lib.rs report::tests::a_rule_term_names_every_catalog_family_its_feature_matches
+src/lib.rs report::tests::a_rule_term_names_its_gene_groups_in_one_order_whatever_the_order_of_the_rows
+src/lib.rs report::tests::a_rule_term_outside_the_named_gene_says_how_far_from_it
+src/lib.rs report::tests::a_rule_term_says_which_named_gene_groups_count_for_the_drugs_rule
+src/lib.rs report::tests::a_tied_rule_term_says_how_many_features_separate_the_isolates_equally_well
 src/lib.rs report::tests::index_rows_carry_the_kover_row_for_their_species_and_antibiotic
 src/lib.rs report::tests::iso_dates_match_known_days
 src/lib.rs report::tests::manifest_k_is_the_one_k_every_report_records
@@ -392,6 +396,8 @@ src/lib.rs report::tests::revision_14_rows_with_null_fits_compete_for_best_learn
 src/lib.rs report::tests::the_best_learner_calls_every_random_split_sample
 src/lib.rs report::tests::the_best_learner_needs_full_coverage_on_every_available_split
 src/lib.rs report::tests::the_index_is_schema_2_and_reads_schema_1_reports_beside_schema_2_ones
+src/lib.rs report::tests::the_index_numbers_the_wording_of_its_rule_text
+src/lib.rs report::tests::the_rule_words_of_published_reports [ignored]
 src/lib.rs report::tests::unreadable_result_preserves_the_published_file_and_manifest
 src/lib.rs report::tests::unreadable_structure_preserves_the_published_file_and_manifest
 src/lib.rs research::tests::builds_guarded_entries_from_lane_outputs

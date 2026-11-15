@@ -1,0 +1,857 @@
+{
+ "about": "Synthetic reports, cut down to the fields the rule words read, each with the words its rule terms take in the index's scm_rules. report::rule_text (src/report.rs) and indexRuleWords (web/src/data/derive/dataset.ts) must both give exactly these words, so the release's index and the app's copy of its wording cannot drift apart. No real dataset is in this file: the gene names are real catalog names, and every report, class, flag and count beside them is made up for the test.",
+ "rule_text_version": 3,
+ "cases": {
+  "outside_the_named_gene": {
+   "why": "Feature 1 lies inside mgrB (it has codons). Feature 2 lies in no protein-coding gene, 46 bp from mgrB; the report holds coding genes only, so the words name that kind. Feature 3 lies 2,502 bp before a gene known by its product only. Feature 4 has a nearest gene with no name, so it keeps its number. Feature 5 matches a catalog family and keeps the family, wherever it sits.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [],
+      "locus": {
+       "gene": "mgrB",
+       "product": "PhoP/PhoQ regulator MgrB",
+       "codons": [
+        3,
+        12
+       ],
+       "nearest": null
+      }
+     },
+     {
+      "feature": 2,
+      "catalog_families": [],
+      "locus": {
+       "gene": "mgrB",
+       "product": "PhoP/PhoQ regulator MgrB",
+       "codons": null,
+       "nearest": [
+        "mgrB",
+        46
+       ]
+      }
+     },
+     {
+      "feature": 3,
+      "catalog_families": [],
+      "locus": {
+       "gene": null,
+       "product": "hypothetical protein",
+       "codons": null,
+       "nearest": [
+        "hypothetical protein",
+        -2502
+       ]
+      }
+     },
+     {
+      "feature": 4,
+      "catalog_families": [],
+      "locus": {
+       "gene": null,
+       "product": null,
+       "codons": null,
+       "nearest": [
+        "",
+        9
+       ]
+      }
+     },
+     {
+      "feature": 5,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": {
+       "gene": "tnpA",
+       "product": "transposase",
+       "codons": null,
+       "nearest": [
+        "tnpA",
+        120
+       ]
+      }
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       },
+       {
+        "feature": 4,
+        "presence": true
+       },
+       {
+        "feature": 5,
+        "presence": true
+       }
+      ],
+      "steps": []
+     }
+    },
+    "catalog": null
+   },
+   "scm_rules": [
+    "presence of mgrB",
+    "presence of k-mers 46 bp from the nearest annotated protein-coding gene, mgrB",
+    "absence of k-mers 2,502 bp from the nearest annotated protein-coding gene, hypothetical protein",
+    "presence of feature 4",
+    "presence of blaKPC"
+   ]
+  },
+  "ties": {
+   "why": "n_equivalent counts the other rules, so a term with 3 is one of 4. A later term's ties are over the isolates the earlier terms left undecided. A term without ties, or without a step, says nothing about them.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "blaNDM",
+       "ble"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [],
+      "locus": {
+       "gene": "ompK36",
+       "product": "porin OmpK36",
+       "codons": null,
+       "nearest": [
+        "ompK36",
+        77
+       ]
+      }
+     },
+     {
+      "feature": 4,
+      "catalog_families": [],
+      "locus": {
+       "gene": "gyrA",
+       "product": "DNA gyrase subunit A",
+       "codons": [
+        83,
+        87
+       ],
+       "nearest": null
+      }
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       },
+       {
+        "feature": 4,
+        "presence": true
+       },
+       {
+        "feature": 4,
+        "presence": false
+       }
+      ],
+      "steps": [
+       {
+        "n_equivalent": 3
+       },
+       {
+        "n_equivalent": 1
+       },
+       {
+        "n_equivalent": 21523
+       },
+       {
+        "n_equivalent": 0
+       }
+      ]
+     }
+    },
+    "catalog": null
+   },
+   "scm_rules": [
+    "presence of blaKPC; one of 4 features that separate these isolates equally well",
+    "presence of k-mers matching 2 catalog families (blaNDM, ble); one of 2 features that separate the isolates the earlier rules left undecided equally well",
+    "absence of k-mers 77 bp from the nearest annotated protein-coding gene, ompK36; one of 21,524 features that separate the isolates the earlier rules left undecided equally well",
+    "presence of gyrA",
+    "absence of gyrA"
+   ]
+  },
+  "counts_for_the_drugs_rule": {
+   "why": "The gene-group rows are the groups GRM's catalog reader called in these genomes. GRM's known-gene rule for this drug is the subject of the clause and a group is its object, so the words describe GRM's rule and say nothing of what a gene does. The rule uses blaKPC; it does not use sul1; blaOXA has one group the rule uses and one it does not; blaAFM has no row, so nothing is said of it; tet(A) has no row at all, so its term says nothing.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "sul1"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [
+       "blaOXA"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 4,
+      "catalog_families": [
+       "blaNDM",
+       "ble",
+       "blaAFM"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 5,
+      "catalog_families": [
+       "tet(A)"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 6,
+      "catalog_families": [
+       "sul1",
+       "qacE",
+       "blaKPC",
+       "blaNDM"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 7,
+      "catalog_families": [],
+      "locus": {
+       "gene": "gyrA",
+       "product": "DNA gyrase subunit A",
+       "codons": [
+        83,
+        87
+       ],
+       "nearest": null
+      }
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       },
+       {
+        "feature": 4,
+        "presence": true
+       },
+       {
+        "feature": 5,
+        "presence": true
+       },
+       {
+        "feature": 6,
+        "presence": true
+       },
+       {
+        "feature": 7,
+        "presence": true
+       }
+      ],
+      "steps": [
+       {
+        "n_equivalent": 0
+       },
+       {
+        "n_equivalent": 2
+       }
+      ]
+     }
+    },
+    "catalog": {
+     "version": "2026-08-07.1",
+     "rule": [
+      [
+       "S:CARBAPENEM"
+      ]
+     ],
+     "groups": [
+      {
+       "group": "ble",
+       "class": "BLEOMYCIN",
+       "subclass": "BLEOMYCIN",
+       "counts_for_rule": false,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "blaKPC",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 9,
+       "n_susceptible": 1
+      },
+      {
+       "group": "blaNDM",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "blaOXA (OXA-48 family)",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 3,
+       "n_susceptible": 0
+      },
+      {
+       "group": "blaOXA (OXA-1 family)",
+       "class": "BETA-LACTAM",
+       "subclass": "BETA-LACTAM",
+       "counts_for_rule": false,
+       "n_resistant": 5,
+       "n_susceptible": 6
+      },
+      {
+       "group": "qacE",
+       "class": "QUATERNARY AMMONIUM",
+       "subclass": "QUATERNARY AMMONIUM",
+       "counts_for_rule": false,
+       "n_resistant": 2,
+       "n_susceptible": 2
+      },
+      {
+       "group": "sul1",
+       "class": "SULFONAMIDE",
+       "subclass": "SULFONAMIDE",
+       "counts_for_rule": false,
+       "n_resistant": 7,
+       "n_susceptible": 5
+      }
+     ]
+    }
+   },
+   "scm_rules": [
+    "presence of blaKPC; GRM's known-gene rule for this drug uses blaKPC",
+    "presence of sul1; GRM's known-gene rule for this drug does not use sul1; one of 3 features that separate the isolates the earlier rules left undecided equally well",
+    "absence of blaOXA; GRM's known-gene rule for this drug uses blaOXA (OXA-48 family) but not blaOXA (OXA-1 family)",
+    "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble); GRM's known-gene rule for this drug uses blaNDM but not ble",
+    "presence of tet(A)",
+    "presence of k-mers matching 4 catalog families (blaKPC, blaNDM, qacE, sul1); GRM's known-gene rule for this drug uses blaKPC and blaNDM but not qacE or sul1",
+    "presence of gyrA"
+   ]
+  },
+  "no_catalog_block": {
+   "why": "The same model in a report without a catalog block. The report cannot say which gene groups GRM's known-gene rule uses, so each term keeps its name and its ties alone.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "sul1"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [
+       "blaOXA"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 4,
+      "catalog_families": [
+       "blaNDM",
+       "ble",
+       "blaAFM"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 5,
+      "catalog_families": [
+       "tet(A)"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 6,
+      "catalog_families": [
+       "sul1",
+       "qacE",
+       "blaKPC",
+       "blaNDM"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 7,
+      "catalog_families": [],
+      "locus": {
+       "gene": "gyrA",
+       "product": "DNA gyrase subunit A",
+       "codons": [
+        83,
+        87
+       ],
+       "nearest": null
+      }
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       },
+       {
+        "feature": 4,
+        "presence": true
+       },
+       {
+        "feature": 5,
+        "presence": true
+       },
+       {
+        "feature": 6,
+        "presence": true
+       },
+       {
+        "feature": 7,
+        "presence": true
+       }
+      ],
+      "steps": [
+       {
+        "n_equivalent": 0
+       },
+       {
+        "n_equivalent": 2
+       }
+      ]
+     }
+    },
+    "catalog": null
+   },
+   "scm_rules": [
+    "presence of blaKPC",
+    "presence of sul1; one of 3 features that separate the isolates the earlier rules left undecided equally well",
+    "absence of blaOXA",
+    "presence of k-mers matching 3 catalog families (blaAFM, blaNDM, ble)",
+    "presence of tet(A)",
+    "presence of k-mers matching 4 catalog families (blaKPC, blaNDM, qacE, sul1)",
+    "presence of gyrA"
+   ]
+  },
+  "a_group_named_alone": {
+   "why": "One family can have a gene group with a subfamily and one without, and the second then carries the family's bare name. Written bare it would stand on both sides of the clause, so it is written 'the group named X alone'. A family whose only group is bare keeps its name. A term whose groups the rule does not use at all reads 'does not use', with 'or' between several.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "aac(6')-Ib"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "catB8/aac(6')-Ib'",
+       "aac(6')-Ib-cr",
+       "aac(6')-Ib",
+       "aac(6')-Ib'"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [
+       "armA"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 4,
+      "catalog_families": [
+       "armA",
+       "rmtB"
+      ],
+      "locus": null
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": true
+       },
+       {
+        "feature": 4,
+        "presence": true
+       }
+      ],
+      "steps": []
+     }
+    },
+    "catalog": {
+     "version": "2026-08-07.1",
+     "rule": [
+      [
+       "S:TOBRAMYCIN",
+       "S:AMINOGLYCOSIDE"
+      ]
+     ],
+     "groups": [
+      {
+       "group": "aac(6')-Ib (AAC(6')-Ib family)",
+       "class": "AMINOGLYCOSIDE",
+       "subclass": "AMINOGLYCOSIDE",
+       "counts_for_rule": true,
+       "n_resistant": 6,
+       "n_susceptible": 1
+      },
+      {
+       "group": "aac(6')-Ib",
+       "class": "AMINOGLYCOSIDE",
+       "subclass": "AMIKACIN/KANAMYCIN/QUINOLONE",
+       "counts_for_rule": false,
+       "n_resistant": 5,
+       "n_susceptible": 3
+      },
+      {
+       "group": "aac(6')-Ib'",
+       "class": "AMINOGLYCOSIDE",
+       "subclass": "GENTAMICIN",
+       "counts_for_rule": false,
+       "n_resistant": 2,
+       "n_susceptible": 2
+      },
+      {
+       "group": "aac(6')-Ib-cr",
+       "class": "AMINOGLYCOSIDE/QUINOLONE",
+       "subclass": "AMIKACIN/KANAMYCIN/QUINOLONE/TOBRAMYCIN",
+       "counts_for_rule": true,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "armA",
+       "class": "AMINOGLYCOSIDE",
+       "subclass": "GENTAMICIN",
+       "counts_for_rule": false,
+       "n_resistant": 3,
+       "n_susceptible": 0
+      },
+      {
+       "group": "catB8/aac(6')-Ib'",
+       "class": "AMINOGLYCOSIDE/PHENICOL",
+       "subclass": "CHLORAMPHENICOL/GENTAMICIN",
+       "counts_for_rule": false,
+       "n_resistant": 1,
+       "n_susceptible": 1
+      },
+      {
+       "group": "rmtB",
+       "class": "AMINOGLYCOSIDE",
+       "subclass": "GENTAMICIN",
+       "counts_for_rule": false,
+       "n_resistant": 2,
+       "n_susceptible": 0
+      }
+     ]
+    }
+   },
+   "scm_rules": [
+    "presence of aac(6')-Ib; GRM's known-gene rule for this drug uses aac(6')-Ib (AAC(6')-Ib family) but not the group named aac(6')-Ib alone",
+    "presence of k-mers matching 4 catalog families (aac(6')-Ib, aac(6')-Ib', aac(6')-Ib-cr, catB8/aac(6')-Ib'); GRM's known-gene rule for this drug uses aac(6')-Ib (AAC(6')-Ib family) and aac(6')-Ib-cr but not the group named aac(6')-Ib alone, aac(6')-Ib' or catB8/aac(6')-Ib'",
+    "presence of armA; GRM's known-gene rule for this drug does not use armA",
+    "presence of k-mers matching 2 catalog families (armA, rmtB); GRM's known-gene rule for this drug does not use armA or rmtB"
+   ]
+  },
+  "gene_groups_out_of_order": {
+   "why": "A report lists its gene-group rows in no fixed order. Here each side of each clause has its rows out of name order: blaOXA (OXA-51 family) before blaOXA (OXA-23 family), blaNDM before blaKPC, sul1 before qacE. Both writers sort the names, so the words are the same whatever the order of the rows; a writer that kept the rows' order would give other words.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaOXA"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "sul1",
+       "blaNDM",
+       "qacE",
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [
+       "qacE",
+       "sul1"
+      ],
+      "locus": null
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": false
+       }
+      ],
+      "steps": []
+     }
+    },
+    "catalog": {
+     "version": "2026-08-07.1",
+     "rule": [
+      [
+       "S:CARBAPENEM"
+      ]
+     ],
+     "groups": [
+      {
+       "group": "sul1",
+       "class": "SULFONAMIDE",
+       "subclass": "SULFONAMIDE",
+       "counts_for_rule": false,
+       "n_resistant": 7,
+       "n_susceptible": 5
+      },
+      {
+       "group": "blaOXA (OXA-51 family)",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 9,
+       "n_susceptible": 8
+      },
+      {
+       "group": "blaNDM",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "qacE",
+       "class": "QUATERNARY AMMONIUM",
+       "subclass": "QUATERNARY AMMONIUM",
+       "counts_for_rule": false,
+       "n_resistant": 2,
+       "n_susceptible": 2
+      },
+      {
+       "group": "blaOXA (OXA-23 family)",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 6,
+       "n_susceptible": 1
+      },
+      {
+       "group": "blaKPC",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 9,
+       "n_susceptible": 1
+      }
+     ]
+    }
+   },
+   "scm_rules": [
+    "presence of blaOXA; GRM's known-gene rule for this drug uses blaOXA (OXA-23 family) and blaOXA (OXA-51 family)",
+    "presence of k-mers matching 4 catalog families (blaKPC, blaNDM, qacE, sul1); GRM's known-gene rule for this drug uses blaKPC and blaNDM but not qacE or sul1",
+    "absence of k-mers matching 2 catalog families (qacE, sul1); GRM's known-gene rule for this drug does not use qacE or sul1"
+   ]
+  },
+  "a_row_without_the_flag": {
+   "why": "A gene-group row that does not say whether the rule uses its group is read as no row: nothing is said of the group, and it is not read as one the rule does not use. Here blaKPC and sul1 have such rows, so the first term gets no clause and the second names blaNDM alone.",
+   "report": {
+    "features": [
+     {
+      "feature": 1,
+      "catalog_families": [
+       "blaKPC"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 2,
+      "catalog_families": [
+       "blaNDM",
+       "sul1"
+      ],
+      "locus": null
+     },
+     {
+      "feature": 3,
+      "catalog_families": [
+       "ble",
+       "sul1"
+      ],
+      "locus": null
+     }
+    ],
+    "models": {
+     "scm": {
+      "rules": [
+       {
+        "feature": 1,
+        "presence": true
+       },
+       {
+        "feature": 2,
+        "presence": true
+       },
+       {
+        "feature": 3,
+        "presence": true
+       }
+      ],
+      "steps": []
+     }
+    },
+    "catalog": {
+     "version": "2026-08-07.1",
+     "rule": [
+      [
+       "S:CARBAPENEM"
+      ]
+     ],
+     "groups": [
+      {
+       "group": "blaKPC",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "n_resistant": 9,
+       "n_susceptible": 1
+      },
+      {
+       "group": "blaNDM",
+       "class": "BETA-LACTAM",
+       "subclass": "CARBAPENEM",
+       "counts_for_rule": true,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "ble",
+       "class": "BLEOMYCIN",
+       "subclass": "BLEOMYCIN",
+       "counts_for_rule": false,
+       "n_resistant": 4,
+       "n_susceptible": 0
+      },
+      {
+       "group": "sul1",
+       "class": "SULFONAMIDE",
+       "subclass": "SULFONAMIDE",
+       "n_resistant": 7,
+       "n_susceptible": 5
+      }
+     ]
+    }
+   },
+   "scm_rules": [
+    "presence of blaKPC",
+    "presence of k-mers matching 2 catalog families (blaNDM, sul1); GRM's known-gene rule for this drug uses blaNDM",
+    "presence of k-mers matching 2 catalog families (ble, sul1); GRM's known-gene rule for this drug does not use ble"
+   ]
+  }
+ }
+}
