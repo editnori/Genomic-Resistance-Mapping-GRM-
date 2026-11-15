@@ -106,7 +106,7 @@ enum Command {
         /// Merge this many genomes at a time through column-block partials
         /// instead of opening every kset at once. A multiple of 64. The
         /// matrix files are the same; the ksets are kept.
-        #[arg(long)]
+        #[arg(long, value_parser = parse_column_blocks)]
         column_blocks: Option<usize>,
     },
     /// Cross-validate every learner on each species x drug dataset, fit the
@@ -572,6 +572,13 @@ fn structure(layout: &Layout, slug: &str) -> Result<()> {
         started.elapsed().as_secs_f64()
     );
     Ok(())
+}
+
+/// `grm matrix --column-blocks`: a width `build_matrix` accepts.
+fn parse_column_blocks(s: &str) -> std::result::Result<usize, String> {
+    let width = s.parse::<usize>().map_err(|e| e.to_string())?;
+    grm::species::check_column_blocks(width).map_err(|e| e.to_string())?;
+    Ok(width)
 }
 
 fn matrix(layout: &Layout, slug: &str, min_support: u32) -> Result<()> {
@@ -1344,6 +1351,31 @@ mod tests {
             };
             assert_eq!(parsed, k);
         }
+    }
+
+    #[test]
+    fn matrix_takes_only_a_column_block_width_of_whole_words() {
+        let parse = |w: &str| {
+            Cli::try_parse_from(["grm", "matrix", "--species", "s", "--column-blocks", w])
+        };
+        for w in ["0", "32", "96", "100", "x"] {
+            let err = parse(w).err().unwrap();
+            assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation, "{w}");
+        }
+        // clap reads a leading minus as another flag.
+        assert!(parse("-64").is_err());
+        for w in [64, 128, 4096] {
+            let Command::Matrix { column_blocks, .. } = parse(&w.to_string()).unwrap().command
+            else {
+                panic!("parsed another command");
+            };
+            assert_eq!(column_blocks, Some(w));
+        }
+        let plain = Cli::try_parse_from(["grm", "matrix", "--species", "s"]).unwrap();
+        let Command::Matrix { column_blocks, .. } = plain.command else {
+            panic!("parsed another command");
+        };
+        assert_eq!(column_blocks, None);
     }
 
     const SLUG: &str = "fixture";

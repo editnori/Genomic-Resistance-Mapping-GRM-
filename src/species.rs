@@ -286,6 +286,17 @@ pub fn structure(layout: &Layout, slug: &str) -> Result<Structure> {
     Ok(s)
 }
 
+/// Refuses a `--column-blocks` width that is 0 or not a multiple of 64.
+/// Every block but the last then starts and ends on a word boundary, which
+/// `matrix::write_partial` requires of each block's first column.
+pub fn check_column_blocks(width: usize) -> Result<()> {
+    anyhow::ensure!(
+        width > 0 && width.is_multiple_of(64),
+        "--column-blocks must be a multiple of 64 so blocks join on word boundaries, not {width}"
+    );
+    Ok(())
+}
+
 /// Merges ksets in counted order, which becomes the matrix column order.
 /// `column_blocks` of None opens every kset at once (`matrix::build`).
 /// Some(width) merges through partials of `width` genomes each, which
@@ -297,6 +308,8 @@ pub fn build_matrix(
     min_support: u32,
     column_blocks: Option<usize>,
 ) -> Result<matrix::MatrixSummary> {
+    // A bad width is refused before anything is read, written or removed.
+    column_blocks.map_or(Ok(()), check_column_blocks)?;
     let counted = load_counted(layout, slug)?;
     let digests = counted.kset_digests("matrix")?;
     let kdir = layout.kset_dir(slug);
@@ -351,10 +364,7 @@ fn build_in_blocks(
     min_support: u32,
     threads_chunk: usize,
 ) -> Result<matrix::FeatureMatrix> {
-    anyhow::ensure!(
-        width > 0 && width.is_multiple_of(64),
-        "--column-blocks must be a multiple of 64 so blocks join on word boundaries, not {width}"
-    );
+    check_column_blocks(width)?;
     std::fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
     let mut partials = Vec::new();
     for (block, (paths, columns)) in paths.chunks(width).zip(columns.chunks(width)).enumerate() {
@@ -678,11 +688,18 @@ mod tests {
             assert!(!layout.partials_dir("s").exists(), "width {width}");
             assert!(layout.kset_dir("s").join("g000.kset").exists());
         }
-        // A width off a word boundary is refused, and leaves the matrix alone.
-        for width in [0, 100] {
+        // A width off a word boundary is refused before anything is read,
+        // written or removed: the matrix and a partials folder stay as they
+        // were. 96 is a multiple of 32, so its second block would start off
+        // a word boundary.
+        let partials = layout.partials_dir("s");
+        std::fs::create_dir_all(&partials).unwrap();
+        std::fs::write(partials.join("left.txt"), "a stopped run").unwrap();
+        for width in [0, 32, 96, 100] {
             let err = build_matrix(&layout, "s", 2, Some(width)).err().unwrap();
             assert!(format!("{err:#}").contains("multiple of 64"), "{err:#}");
             assert!(files() == want);
+            assert!(partials.join("left.txt").exists(), "width {width}");
         }
     }
 
