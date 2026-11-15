@@ -13,7 +13,7 @@ escherichia_coli	lasso	pilot	4	3	1	0	2	0.0000	escherichia_coli__cefpodoxime	esch
 escherichia_coli	scm	pilot	25	14	10	6	2	0.0000	escherichia_coli__cefpodoxime	escherichia_coli__ampicillin_sulbactam	meets	2	17	meets	14	meets	21	meets	15	meets	15	21	4	exploratory
 klebsiella_pneumoniae	cart	eight	26	12	7	13	2	0.0000	klebsiella_pneumoniae__cefpodoxime	klebsiella_pneumoniae__polymyxin_b	fails	2	14	meets	12	fails	18	meets			16.5	13	13	fixed in advance
 klebsiella_pneumoniae	lasso	eight	6	4	1	2	1	0.0183	klebsiella_pneumoniae__polymyxin_b	klebsiella_pneumoniae__polymyxin_b	meets	1	5	meets	4	meets	5	meets			9.5	3	3	fixed in advance
-klebsiella_pneumoniae	scm	eight	26	14	10	10	2	0.0000	klebsiella_pneumoniae__cefpodoxime	klebsiella_pneumoniae__polymyxin_b	meets	1	15	meets	14	meets	17	meets			16.5	13	13	fixed in advance
+klebsiella_pneumoniae	scm	eight	26	14	10	10	2	0.0000	klebsiella_pneumoniae__cefpodoxime	klebsiella_pneumoniae__polymyxin_b	meets	1	16	meets	14	meets	17	meets			16.5	13	13	fixed in advance
 neisseria_gonorrhoeae	cart	eight	3	0	0	3	1	0.4906	neisseria_gonorrhoeae__tetracycline		fails	2	0	fails	0	fails	1	fails			7	1	2	fixed in advance
 neisseria_gonorrhoeae	lasso	eight	0	0	0	0	0				not assessable		0	not assessable	0	not assessable	0	not assessable				0	0	fixed in advance
 neisseria_gonorrhoeae	scm	eight	3	0	0	3	1	0.0000	neisseria_gonorrhoeae__tetracycline		fails	2	0	fails	1	fails	2	meets			7	1	2	fixed in advance

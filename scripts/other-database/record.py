@@ -243,8 +243,11 @@ def clopper_pearson(x, n):
 
 
 def ranks(count):
-    """Nearest-rank 2.5th and 97.5th percentiles, as 0-based positions in `count` sorted values."""
-    return math.ceil((1 - LEVEL) / 2 * count) - 1, math.ceil((1 + LEVEL) / 2 * count) - 1
+    """Nearest-rank 2.5th and 97.5th percentiles, as 0-based positions in `count` sorted values.
+
+    ceil(0.025 n) and ceil(0.975 n) in whole numbers: (1 - 0.95) / 2 * 2000 is 50.00000000000004
+    in floating point, and its ceiling would take sorted value 51 where the plan takes value 50."""
+    return -(-count * 25 // 1000) - 1, -(-count * 975 // 1000) - 1
 
 
 def bootstrap(losses):
