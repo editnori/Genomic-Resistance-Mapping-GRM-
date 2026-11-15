@@ -54,6 +54,10 @@ In revision 12, and on an unflagged row of revision 14, a learner row leaves out
 
 In revision 14, a learner row whose split entry carries `null_fits_scored: true` is scored on every genome ([equal-scoring.md](equal-scoring.md)). Each `n` is every genome of the class. In both cases `x` is the rate times `n`, rounded. The known-gene rule has no no-calls.
 
+The file also counts the labels GRM inferred from a MIC (a minimum inhibitory concentration a laboratory measured), from the index field `labels_from_mic_excluded`. A dataset's value is the number of genomes in its species' genome matrix, the genomes GRM downloaded and read for that species, that have no reported resistant or susceptible call for the drug but have a MIC, from which GRM inferred a call with its own cutoff. No learner trains or is scored on those labels (`src/analysis.rs`). A label is one genome and one drug, so one genome can count in several datasets. The count is of labels and datasets. It says nothing about how any isolate should be treated.
+
+The block `labels_from_mic_excluded` gives four counts: the datasets whose index entry holds the field, the datasets without it, the datasets where the value is above zero, and the total of such labels. The last two are over the datasets that hold the field, and they are null when none does. A dataset without the field is counted as without it and never as zero.
+
 **`guidance.json`** comes from `python3 -I scripts/release-summary/guidance.py INDEX.json INTERVALS_DIR`. It reads the release's error rates by the acceptance wording of FDA's 2009 guidance, beside the release's own screen. The section "The guidance's wording" below says what it holds.
 
 **`compare.py`** takes two outputs: `python3 -I scripts/release-summary/compare.py A/uncertainty.json B/uncertainty.json` prints the numbers of two `uncertainty.json` files side by side, one line per statistic. It recomputes nothing.
@@ -152,6 +156,8 @@ The best learner against the known-gene rule, from `catalog.json`, key `bands`:
 The rule has an entry on 253 datasets. Its balanced accuracy is exactly 0.5 on 59 of them: it calls nothing resistant on 29 and everything resistant on 30. These counts are the same in both releases (`catalog.json`, key `rule`).
 
 In both releases the counts of all 6424 error rates of the 3212 intervals rows rebuild from the index with 0 mismatches. In revision 14, 122 learner rows carry the flag, and each of them has a no-call count. (`index-counts.json`.)
+
+In both releases the index records `labels_from_mic_excluded` on 274 of its 274 datasets. On 64 of them GRM inferred at least one label from a MIC and left it out of training and scoring, 1010 labels in all. (`index-counts.json`, key `labels_from_mic_excluded`.)
 
 Between the two releases, only rows that involve boosted trees, the lasso or the best learner change. Those are the two learners that can have a null fit, and the best learner can be one of them ([equal-scoring.md](equal-scoring.md)).
 

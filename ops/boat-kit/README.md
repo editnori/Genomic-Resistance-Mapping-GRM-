@@ -36,6 +36,29 @@ KIT12 adds a stage kind, `addon`, for H-1's k21 and k25 arms. Each runs as a par
 
 drive.sh pins the main part's records as a one-part combine set and sends them through push-data to `/home/user/grm-combine` after the vocabulary. stage.env names the part (`H1_REFERENCE`) and the set's pin (`H1_REFERENCE_SHA256`). On the box, `h1-box.sh` checks that set against its pin before union, verify and the run, and passes `--reference-from` to each. `r11-box.sh` runs an add-on's stage as `h1-box.sh run`. The combine box then takes the add-on box as a part beside its main part.
 
+## Two slow hosts in a row
+
+drive.sh refuses a new box with 78 while the budget ledger's last two rows are slow hosts: "the last two boxes had slow hosts; stop and report". That stays the default.
+
+KIT13 adds `SLOW_PAIR_PASS`. With `SLOW_PAIR_PASS=1`, a stage whose row is SLOW_OK (column 6) passes the stop, and NOTES.md gets a line saying so. A stage that isn't SLOW_OK still stops, and the budget cap still refuses. The ledger still records the new box's host. Unset or 0 keeps the stop, and any other value is refused with 2 before any box. A restart script sets it in the environment, and a run file that sets it wins, since drive.sh sources the run file.
+
+H-1 needed this on 11 Nov 2026. Both S. aureus add-on boxes drew slow hosts, so its combine would have been refused, and with the other boxes closed no fast row could come. Every add-on and combine row was SLOW_OK, and H-1 had no xlarge-hour cap. The run's owner passed the stop with a copy of drive.sh that turned the stop into a note, run through a restart script. `SLOW_PAIR_PASS=1` gives that restart the kit's own drive.sh, for SLOW_OK rows only.
+
+## Host class: what the speed test measures
+
+`r11-box.sh host` times the source's release lib tests (`cargo test --release --lib`, built before the clock starts) and calls the host slow above `SLOW_LIB_SECS` (60 s). H-1's 28 host steps of 9 to 11 Nov 2026, from the run's drive notes:
+
+| Class | Boxes | Lib tests |
+|---|---:|---|
+| fast | 22 | 5.5 to 54.1 s, median 26.4 s |
+| slow | 6 | 77.6 to 936.8 s, median 168.5 s |
+
+One CPU model spreads across the line. AMD Ryzen 9 9950X hosts took 5.5 to 93.9 s over 16 boxes, one of them slow. AMD EPYC 4585PX hosts took 27.0 to 242.3 s over 7 boxes, four of them slow.
+
+N. gonorrhoeae's main part ran on two EPYC 4585PX hosts. The test took 54.1 s on 9 Nov (fast) and 242.3 s on 11 Nov (slow), 4.48 times as long. Over the 82 arm and dataset pairs both boxes wrote, the 11 Nov box took a median 1.29 times as long (0.84 to 6.89). The median by arm runs from 1.02 (k-h) to 2.98 (k-p), and the default arm's is 1.45. The 11 Nov box finished the stage in 1 h 24 min, between the stage table's fast estimate (1.19 h) and its slow estimate (2.04 h).
+
+So the test over-reads. It put that host at 4.48 times its twin while the arms ran 1.29 times as long. On a stage that isn't SLOW_OK, a slow class closes the box with 80: M. tuberculosis's main part drew a host the test timed at 226.9 s, was closed and ran again on the next box. [drafts/host-class-short-arm.md](drafts/host-class-short-arm.md) is the design that classes a host by a short arm instead, with the measurement and tests it needs. It isn't built.
+
 ## Installing
 
 `install-kit10.sh` runs from KIT10's handback dir, which holds these files as `next/*.next` with its SHA256SUMS. Before it changes anything, it checks:
@@ -57,6 +80,8 @@ drive.sh pins the main part's records as a one-part combine set and sends them t
 - `chain-kit11.sh` and `mutants-kit11.py` run KIT11's gates and mutants. They run in KIT10's harness with three additions: `cand/` holds KIT11's `grm-boat.sh` and `drive.sh`, `k10final/` holds KIT10's for the control runs, and the KIT11 tests (`test-runner-kit11.sh`, `test-drive-h1-kit11.sh`) sit in `tests/`.
 - `chain-kit12.sh` and `mutants-kit12.py` run KIT12's gates and mutants in KIT11's harness. `cand/drive.sh` and `kit/` hold KIT12's files, `k11final/` and `k11kit/` hold KIT11's for the control runs, and the KIT12 tests (`test-h1-box-kit12.sh`, `test-drive-h1-kit12.sh`) sit in `tests/`.
 
+- `test-drive-h1-kit13.sh` checks the two-slow-hosts stop and `SLOW_PAIR_PASS` on the stub runner (13 checks), and `mutants-kit13.py` plants six faults in drive.sh for it to catch. Both take their paths as arguments: `test-drive-h1-kit13.sh WORK DRIVE_SH KIT_DIR` and `mutants-kit13.py DRIVE_SH KIT_DIR TEST_SH WORK OUT_JSON`.
+
 The tests run from the harness's paths, which `make-harness.sh` builds. `test-restore-v7.sh.next` and `test-side-re.sh.next` read real restore sets, so round 2's chain ran neither. The other tests use synthetic files and copies from the harness.
 
 GRM's CI doesn't read `ops/boat-kit/`.
@@ -64,3 +89,5 @@ GRM's CI doesn't read `ops/boat-kit/`.
 ## Drafts
 
 `drafts/stages-h1.tsv` and `drafts/run-h1.conf` are drafts of H-1's stage table and run file. Both hold `@@NAME@@` placeholders, and `drive.sh` refuses a run file or stage row with one before it makes any box. The install leaves them out.
+
+`drafts/host-class-short-arm.md` is a design, not code: a host classed by a short arm, the measurement that would set its line, and the tests it needs.
