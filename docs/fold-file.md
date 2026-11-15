@@ -61,7 +61,8 @@ does what it does for a split it drew:
   lasso on a holdout drawn from them;
 - tuning keeps each group of k-mer-identical genomes whole, as the random
   split does (docs/duplicate-isolation.md);
-- every draw is seeded from `seed` and the fold number.
+- every draw is seeded from `seed` and the fold number, the forest's and
+  boosting's own draws too, since a fold file run takes no learner seed.
 
 So a file that repeats the random split a report drew gives that report's
 random-split learner rows. Two tests hold this
@@ -125,9 +126,9 @@ other spacing is another hash.
 ## What the result is not
 
 It is not a dataset report, and `grm report` does not read it. It holds no
-lineage split, catalog baseline, MIC regression or final model, and it scores
-only the genomes the file tests, so its numbers are not comparable with a
-report's unless the file tests every genome.
+lineage split, catalog baseline, MIC regression, final model or fold model,
+and it scores only the genomes the file tests, so its numbers are not
+comparable with a report's unless the file tests every genome.
 
 A partition by date or by study inside one database is a retrospective test
 on that database. It is not a prospective test and not external validation.
@@ -135,3 +136,11 @@ on that database. It is not a prospective test and not external validation.
 Neither `EVALUATION_REVISION` nor the report schema changes: no report gains
 or loses a field, and the default path fits each fold through the same code as
 before.
+
+## Not offered
+
+A fold file run stays at the release's seeds: the argument parser refuses
+`--fold-file` beside `--seed` or `--learner-seed` (docs/fold-draws.md), and a
+test holds this (`learn_refuses_a_fold_file_beside_either_seed_flag`).
+
+- A fold file run at another seed.

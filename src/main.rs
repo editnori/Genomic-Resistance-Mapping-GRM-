@@ -123,8 +123,13 @@ enum Command {
         /// supplies, in place of the random and lineage splits
         /// (docs/fold-file.md). Writes <fold-out>/<dataset>.<scheme>.json,
         /// which records the file's SHA-256, and no report. Takes one
-        /// species; --force replaces an existing result.
-        #[arg(long, requires = "fold_out", conflicts_with = "only")]
+        /// species; --force replaces an existing result. It runs at the
+        /// release's seeds, so --seed and --learner-seed are refused with it.
+        #[arg(
+            long,
+            requires = "fold_out",
+            conflicts_with_all = ["only", "seed", "learner_seed"]
+        )]
         fold_file: Option<PathBuf>,
         /// Directory for the --fold-file result.
         #[arg(long, requires = "fold_file")]
@@ -691,8 +696,9 @@ fn learn_end_line(
 }
 
 /// `grm learn --fold-file`: one dataset of one species on the outer folds a
-/// file supplies (`analysis::evaluate_fold_file`), at the release's seeds.
-/// It ends with its own line, not `learn_end_line`.
+/// file supplies (`analysis::evaluate_fold_file`), at the release's seeds
+/// (the parser refuses `--seed` and `--learner-seed` beside it). It ends
+/// with its own line, not `learn_end_line`.
 fn learn_fold_file(
     layout: &Layout,
     species: &[String],
@@ -2233,6 +2239,48 @@ mod tests {
             "--fold-file names one dataset, so it takes one species, not 2"
         );
         assert!(std::fs::read_dir(dir.path()).unwrap().next().is_none());
+    }
+
+    /// A fold file run stays at the release's seeds: the parser refuses
+    /// `--seed` and `--learner-seed` beside `--fold-file`, even at the
+    /// release's own value, and without them it parses the release's seeds.
+    #[test]
+    fn learn_refuses_a_fold_file_beside_either_seed_flag() {
+        let parse = |rest: &[&str]| {
+            let all = [
+                &["grm", "learn", "--species", "s"][..],
+                &["--fold-file", "f.json", "--fold-out", "o"][..],
+                rest,
+            ]
+            .concat();
+            Cli::try_parse_from(all)
+        };
+        for bad in [
+            &["--seed", "43"][..],
+            &["--seed", "42"][..],
+            &["--learner-seed", "7"][..],
+            &["--seed", "42", "--learner-seed", "7"][..],
+        ] {
+            let error = parse(bad).err().unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::ArgumentConflict,
+                "{bad:?}"
+            );
+        }
+        let Command::Learn {
+            fold_file,
+            seed,
+            learner_seed,
+            ..
+        } = parse(&[]).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!(
+            (fold_file, seed, learner_seed),
+            (Some("f.json".into()), RELEASE_SEED, None)
+        );
     }
 
     /// `grm learn` draws at the release's seed unless told otherwise, and
