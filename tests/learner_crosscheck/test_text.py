@@ -15,6 +15,8 @@ from . import kit
 
 METHODS = kit.ROOT / "web" / "src" / "views" / "MethodsView.tsx"
 SCOPE = "says nothing about clinical performance"
+# The commit that first holds the kit; the run of record (run.json) used a working tree on c435000, which holds none of it.
+KIT_COMMIT = "8a74f167ed60bbebf81eeb525626bc130ef79455"
 MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
 
 
@@ -193,8 +195,8 @@ class ResultReadme(unittest.TestCase):
     def test_no_other_table_row_carries_a_count(self):
         rebuilt = {line for make in kit.TABLES for line in make()}
         other = [line for line in self.text.splitlines() if line.startswith("|") and line not in rebuilt]
-        # the table under "How it was made": its header, its rule and six rows
-        self.assertEqual([line.split("|")[1].strip() for line in other], ["", "---", "GRM", "Compiler", "Panels", "References", "Command", "Run again"])
+        # the table under "How it was made": its header, its rule and seven rows
+        self.assertEqual([line.split("|")[1].strip() for line in other], ["", "---", "GRM", "Kit", "Compiler", "Panels", "References", "Command", "Run again"])
 
     def test_the_sha256_lines(self):
         block = re.findall(r"\n```\n(.*?)\n```\n", self.text, re.S)
@@ -211,6 +213,7 @@ class ResultReadme(unittest.TestCase):
         libraries = versions["libraries"]
         for expected in (
             f"| GRM | `main` at commit `{run['head']}`, evaluation revision {versions['evaluation_revision']}, `src/` tree `{run['src_tree']}`, unchanged by the kit |",
+            f"| Kit | first committed at `{KIT_COMMIT}`, on top of `{run['head'][:7]}`, which holds none of its files.",
             f"| Compiler | {run['rustc'].removeprefix('rustc ').join(['rustc ', ''])}, release build |",
             f"| Panels | the {len(versions['grm_fits_sha256'])} of `tests/data/lasso-stopping-fixtures.txt`, sha256 `{versions['fixtures_sha256']}` |",
             f"Python {versions['python']} with scikit-learn {libraries['scikit-learn']}, XGBoost {libraries['xgboost']} (the CPU wheel) and pyscm-ml {libraries['pyscm-ml']}, "

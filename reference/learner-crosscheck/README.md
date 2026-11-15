@@ -11,6 +11,7 @@ This is a software check on small test panels. It says nothing about clinical pe
 | | |
 |---|---|
 | GRM | `main` at commit `c4350006b1406bf480e5885cf9501b7dd3584324`, evaluation revision 14, `src/` tree `8858b8eb434e5ca0a2ba02457ef1bcc12ed3325f`, unchanged by the kit |
+| Kit | first committed at `8a74f167ed60bbebf81eeb525626bc130ef79455`, on top of `c435000`, which holds none of its files. The run of 14 November used a working tree on `c435000`: of the nine kit files hashed before the first run, eight are as committed, and `main.rs` was reformatted since (below) |
 | Compiler | rustc 1.98.1 (48a229cea 2026-09-01), release build |
 | Panels | the 16 of `tests/data/lasso-stopping-fixtures.txt`, sha256 `7f354884a5dec09bb7e87672d56842f0c3ebd1aa5ef785e4479a83c9a1f99550` |
 | References | Python 3.12.3 with scikit-learn 1.7.2, XGBoost 3.0.5 (the CPU wheel) and pyscm-ml 1.1.2, on numpy 1.26.4 and scipy 1.15.3, each installed from a file named by its sha256; pyscm-ml, which has no Linux wheel, built from that file (`environment.tsv`, `versions.json`) |
@@ -19,7 +20,7 @@ This is a software check on small test panels. It says nothing about clinical pe
 
 The harness wrote the same bytes with 1 and with 8 threads. A first run at 17:28 UTC, in another environment built from the same pinned files, gave the same bytes in `summary.tsv`, `differences.tsv`, `totals.json`, `detail.json` and `versions.json`.
 
-The harness file, `main.rs`, was reformatted with `cargo fmt` after that run: white space, trailing commas and one pair of braces. With the kit committed, the whole check ran again from the committed files, from 17:53:09 to 17:53:25 UTC, and wrote the same bytes in every file here that `run.sh` writes except `run.json`, which holds the commit and the times.
+The harness file, `main.rs`, was reformatted with `cargo fmt` after that run: white space, trailing commas and one pair of braces. With the kit committed, the whole check ran again from the committed files, at commit `13d4efa6757d702a0b67bebe51cb99b6e321e9d1` from 17:53:09 to 17:53:25 UTC, and wrote the same bytes in every file here that `run.sh` writes except `run.json`, which holds the commit and the times.
 
 On 15 November 2026 the kit gained the record and the rule that `PLAN-note-2026-11-15.md` lists, and `run.sh` ran again (`rerun.json`). It wrote `summary.tsv`, `differences.tsv`, `totals.json`, `versions.json` and `exploratory.json` byte for byte as on 14 November, `detail.json` the same apart from one added key for each panel run end to end, `largest_probability_gap_on_the_fitting_samples`, and `environment.tsv` the same apart from three added rows: the environment's pip, the sha256 of the pyscm-ml wheel it built, and the compiler that wheel's extension module names. `end-to-end-trees.tsv` is new. `run.json` stays the record of the run of 14 November.
 
