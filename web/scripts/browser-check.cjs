@@ -36,6 +36,21 @@ const expected = {
   mic: manifest.datasets.filter(d => d.mic_essential_agreement !== null),
 };
 const byId = new Map(manifest.datasets.map(d => [d.id, d]));
+// The MIC constants the slides and the index pages show (#124), from
+// baselines.json beside the index: taken only when its index_sha256 is the
+// SHA-256 of index.json's bytes, its revision is the index's, and every
+// entry names an index row with an MIC model and the same figure; anything
+// else is refused whole (docs/baselines.md, "On the dashboard").
+// Empty for a tree without the file.
+const micConstantsShown = (() => {
+  const file = path.join(FIXTURE, 'baselines.json');
+  if (!fs.existsSync(file)) return new Map();
+  const summary = JSON.parse(fs.readFileSync(file));
+  const digest = require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(FIXTURE, 'index.json'))).digest('hex');
+  const own = summary.index_sha256 === digest && summary.evaluation_revision === manifest.evaluation_revision
+    && summary.datasets.every(e => byId.get(e.dataset)?.mic_essential_agreement != null && byId.get(e.dataset).mic_essential_agreement === e.model);
+  return new Map(own ? summary.datasets.map(e => [e.dataset, e]) : []);
+})();
 const resistantOf = p => (p.counts ? p.counts.tp + p.counts.fn : (byId.get(p.dataset)?.n_resistant ?? 0)) + (p.no_call?.resistant ?? 0);
 const panelIds = [...new Set(manifest.panels.map(p => p.panel))];
 const panelSize = id => manifest.panels.filter(p => p.panel === id).reduce((a, p) => a + resistantOf(p), 0);
@@ -198,8 +213,12 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     check(tag + ' lineage region counts', new RegExp((gaps.length - expected.stats.above5) + ' ≤5( points)?').test(geometry.text) && new RegExp(expected.stats.above5 + ' >5( points)?').test(geometry.text), geometry.text);
   }
   if (finding === 4) {
-    const values = expected.mic.map(d => d.mic_essential_agreement), lo = Math.min(0.8, Math.floor(Math.min(...values) * 10) / 10);
-    wanted = [0.9].map(v => 20 + (v - lo) / (1 - lo) * (geometry.width - 40));
+    // With baselines.json, a solid line at the median of the datasets'
+    // constants follows the 90% line, and the axis reaches down to it.
+    const constants = expected.mic.filter(d => micConstantsShown.has(d.id)).map(d => micConstantsShown.get(d.id).constant);
+    const medianConstant = constants.length === 0 ? [] : [median(constants)];
+    const values = expected.mic.map(d => d.mic_essential_agreement), lo = Math.min(0.8, Math.floor(Math.min(...values, ...medianConstant) * 10) / 10);
+    wanted = [0.9, ...medianConstant].map(v => 20 + (v - lo) / (1 - lo) * (geometry.width - 40));
     check(tag + ' MIC region counts', geometry.text.includes((values.length - expected.stats.micAbove90) + ' <90%') && geometry.text.includes(expected.stats.micAbove90 + ' ≥90%'), geometry.text);
   }
   if (finding === 3) {
@@ -1809,7 +1828,12 @@ async function boundaries(browser) {
       const cdp = await context.newCDPSession(page);
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       page.on('pageerror', error => errors.push({ theme, width, message: error.message }));
-      page.on('response', r => { if (r.status() >= 400 && !r.url().endsWith('/data/research.json') && !(r.status() === 404 && r.url().includes('/data/intervals/'))) errors.push({ theme, width, url: r.url(), status: r.status() }); });
+      // research.json, intervals/ and, since #124, baselines.json and
+      // baselines/<id>.json are optional (docs/baselines.md: "The dashboard
+      // reads the files and the summary as optional"; each index page
+      // requests the summary and each dataset report its own file), so a
+      // 404 for one is the tree without it, not an error.
+      page.on('response', r => { if (r.status() >= 400 && !r.url().endsWith('/data/research.json') && !(r.status() === 404 && /^\/data\/(intervals\/|baselines\.json$|baselines\/)/.test(new URL(r.url()).pathname))) errors.push({ theme, width, url: r.url(), status: r.status() }); });
       const tag = width + '-' + theme;
       try {
         await page.goto(BASE);
