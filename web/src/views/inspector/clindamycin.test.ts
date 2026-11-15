@@ -93,12 +93,29 @@ describe("the mark in the datasets table", () => {
   it("marks a row of the six with its kind in the tooltip, and no other row", () => {
     const mark = renderToStaticMarkup(createElement(ClindamycinMark, { row: { ...row, id: SA, n: file.datasets[SA]!.samples, evaluation: { revision: 14, valid: true, reasons: [] } } }));
     expect(mark).toContain('title="Clindamycin labels by study: measured dependence. The dataset report gives the counts behind it."');
-    expect(text(mark.replace(/<span class="sr-only">[\s\S]*?<\/span>/g, ""))).toBe("Label check");
+    expect(text(mark.replace(/<span class="sr-only">[\s\S]*?<\/span>/g, ""))).toBe("Labels by study");
     const html = render([
       { ...row, id: SA, n: file.datasets[SA]!.samples, evaluation: { revision: 14, valid: true, reasons: [] } },
       { ...row, id: "made_up__drug", evaluation: { revision: 14, valid: true, reasons: [] } },
     ]);
     expect(html.match(/data-clindamycin-mark/g)?.length).toBe(1);
+  });
+
+  it("gives a screen reader the kind, and looks like a quiet label, not a warning", () => {
+    const mark = renderToStaticMarkup(createElement(ClindamycinMark, { row: { ...row, id: SA, n: file.datasets[SA]!.samples, evaluation: { revision: 14, valid: true, reasons: [] } } }));
+    expect(mark).toContain('<span class="sr-only">. Clindamycin labels by study: measured dependence. The dataset report gives the counts behind it.</span>');
+    const cls = /^<span[^>]*class="([^"]*)"/.exec(mark)![1]!.split(" ");
+    expect(cls).toEqual(expect.arrayContaining(["text-muted-text", "font-medium", "cursor-help"]));
+    expect(cls.filter((c) => /coral|semibold|bold|warn|danger/.test(c))).toEqual([]);
+  });
+
+  it("wraps below the drug name rather than over it: the name's row may wrap, and the name may not be squeezed under the mark", () => {
+    const host = document.createElement("div");
+    host.innerHTML = render([{ ...row, id: SA, n: file.datasets[SA]!.samples, evaluation: { revision: 14, valid: true, reasons: [] } }]);
+    const line = host.querySelector("[data-clindamycin-mark]")!.parentElement!;
+    expect(line.className.split(" ")).toEqual(expect.arrayContaining(["flex", "flex-wrap"]));
+    expect(line.firstElementChild!.className).toBe("min-w-0");
+    expect(line.firstElementChild!.querySelector("[data-clindamycin-mark]")).toBeNull();
   });
 
   it("adds nothing to a table of other datasets", () => {

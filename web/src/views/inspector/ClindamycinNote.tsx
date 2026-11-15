@@ -45,7 +45,7 @@ export const ClindamycinMark = ({ row, file = CLINDAMYCIN_LABELS }: { row: Catal
   if (tip === null) return null;
   return (
     <span data-clindamycin-mark="" title={tip} className="shrink-0 cursor-help text-tiny font-medium text-muted-text underline decoration-dotted underline-offset-2">
-      Label check<span className="sr-only">. {tip}</span>
+      Labels by study<span className="sr-only">. {tip}</span>
     </span>
   );
 };
