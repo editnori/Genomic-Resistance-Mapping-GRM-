@@ -217,7 +217,7 @@ export interface MicConstant {
   model: number;
   /** A constant at each training fold's lower median MIC. */
   constant: number;
-  /** A constant at each training fold's most frequent MIC. */
+  /** A constant at the mode of each training fold's exact MICs. */
   mode: number | null;
   /** The held-out predictions confirm the rebuilt folds. */
   confirmed: boolean;

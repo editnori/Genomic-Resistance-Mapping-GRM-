@@ -101,7 +101,7 @@ describe("the dataset report beside its baselines file", () => {
     expect(sentence.textContent).toContain(`the model agrees on ${pct(58 / n)} (58 of ${n}), ${((23 / n) * 100).toFixed(1)} points below it.`);
     expect(sentence.textContent).not.toContain("†");
     const text = document.body.textContent ?? "";
-    expect(text).toContain(`most frequent exact MIC instead, the constant agrees on ${pct(60 / n)} (60 of ${n})`);
+    expect(text).toContain(`At the mode of each training fold's exact MICs instead, the constant agrees on ${pct(60 / n)} (60 of ${n})`);
     expect(text).toContain("2 exact-MIC test isolates here have a k-mer-identical copy in their training fold.");
     // The heatmap's band sentence carries the constant.
     expect(text).toContain(`of the measured MIC: ${pct(58 / n)} of ${n} exact MICs for the model, ${pct(81 / n)} for a constant MIC from the training folds`);

@@ -134,7 +134,7 @@ pub fn lower_median(values: &[i32]) -> Option<i32> {
     sorted.get(sorted.len().checked_sub(1)? / 2).copied()
 }
 
-/// The most frequent value, a tie going to the lowest, and whether another
+/// The value with the highest count, a tie going to the lowest, and whether another
 /// value was as frequent. None when empty.
 pub fn mode(values: &[i32]) -> Option<(i32, bool)> {
     let mut count: BTreeMap<i32, usize> = BTreeMap::new();

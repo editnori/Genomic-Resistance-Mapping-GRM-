@@ -27,7 +27,7 @@ const MicConstant = ({ b }: { b: MicBaseline }) => {
         {confirmed ? "" : <sup aria-hidden="true">†</sup>}; the model agrees on {pct(b.model.essential_agreement)} ({ofText(b.model)}), {leadWords(leadOver(b.model.essential_agreement, median.essential_agreement))}.
       </p>
       <p className="type-note">
-        {b.mode === null ? "" : `At each training fold's most frequent exact MIC instead, the constant agrees on ${pct(b.mode.essential_agreement)} (${ofText(b.mode)}). `}
+        {b.mode === null ? "" : `At the mode of each training fold's exact MICs instead, the constant agrees on ${pct(b.mode.essential_agreement)} (${ofText(b.mode)}). `}
         Each constant is fitted on the fold's training isolates only and scored on its test isolates, on the model's own folds.{" "}
         {copies === 0
           ? "No exact-MIC test isolate here has a k-mer-identical copy in its training fold."
