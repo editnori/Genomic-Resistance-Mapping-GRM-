@@ -34,6 +34,8 @@ Every figure is internal validation: cross-validation on public BV-BRC genomes, 
 
 Read each learner's figures with their split and their evaluation revision. The lineage split holds out whole lineages, and a report records why when that split could not be formed. From revision 14 every learner's figures cover every isolate of the split ([docs/equal-scoring.md](docs/equal-scoring.md)).
 
+In each of the six clindamycin datasets one deposited study holds most or a large share of the disagreements between GRM's known-gene rule and the reported phenotype, and the datasets are of four kinds: measured dependence for `staphylococcus_aureus__clindamycin` and `campylobacter_coli__clindamycin`, one study for `enterococcus_faecium__clindamycin`, class balance with dependence not measured for `campylobacter_jejuni__clindamycin` and `streptococcus_agalactiae__clindamycin`, and no dependence under the plan's rule for `streptococcus_pneumoniae__clindamycin`. [docs/clindamycin-labels.md](docs/clindamycin-labels.md) says what each released clindamycin figure rests on.
+
 ## Givens
 
 [Givens](https://github.com/editnori/givens) is a provisional shared browser of the definitions and assumptions that four projects use: GRM, SigDrug, KSD and CondEvent. Its repository is private for now. GRM's entries there cover evaluation terms only: dataset, split, evaluation revision, report figure, and how a figure reads on newly deposited genomes. They hold no sequence or gene content.

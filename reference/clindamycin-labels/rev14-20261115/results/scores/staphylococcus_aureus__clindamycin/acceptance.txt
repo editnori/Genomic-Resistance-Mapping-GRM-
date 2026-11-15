@@ -1,0 +1,34 @@
+with vs release: sample ids equal and in the same order: True (release 1543, refit 1543)
+with vs release: samples[].resistant equal: True
+with vs release: samples[].catalog_resistant equal: True
+with vs release: samples[].lineage equal: True
+with vs release: input_fingerprint equal: True (93777c20612ae5e4 / 93777c20612ae5e4)
+with vs release: eval_config equal: True
+with vs release: lineage/scm: scores differing 0 of 1543, max abs diff 0
+with vs release: lineage/cart: scores differing 0 of 1543, max abs diff 0
+with vs release: lineage/rf: scores differing 0 of 1543, max abs diff 0
+with vs release: lineage/gbt: scores differing 0 of 1543, max abs diff 0
+with vs release: lineage/lasso: scores differing 0 of 1543, max abs diff 0
+with vs release: lineage/catalog: scores differing 0 of 1543, max abs diff 0
+with vs release: random/scm: scores differing 0 of 1543, max abs diff 0
+with vs release: random/cart: scores differing 0 of 1543, max abs diff 0
+with vs release: random/rf: scores differing 0 of 1543, max abs diff 0
+with vs release: random/gbt: scores differing 0 of 1543, max abs diff 0
+with vs release: random/lasso: scores differing 0 of 1543, max abs diff 0
+with vs release: random/catalog: scores differing 0 of 1543, max abs diff 0
+with vs release: every out-of-fold score equal: True
+cutoff check: released tp, fn, tn, fp recomputed from released scores at >= 0.5: True
+catalog row scores equal samples[].catalog_resistant: True
+without vs with: sample ids = with minus the removed genomes, same order: True (without 884, expected 884, removed listed 659, removed present in with 659)
+without vs with: samples[].resistant equal on every remaining sample: True
+without vs with: samples[].catalog_resistant equal on every remaining sample: True
+without vs with: samples[].lineage equal on every remaining sample: True
+without vs with: eval_config equal: True
+counts.samples: with 1543 without 884
+counts.resistant: with 693 without 325
+counts.susceptible: with 850 without 559
+counts.min_support: with 7 without 4
+counts.lineages: with 43 without 37
+counts.k: with 31 without 31
+counts.features: with 599652 without 463760
+counts.patterns: with 692960 without 694791
