@@ -32,6 +32,15 @@ use std::sync::{Mutex, OnceLock};
 
 static SINK: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
 
+#[cfg(test)]
+thread_local! {
+    /// Tests only: while `capture` runs on a thread, that thread's records
+    /// go here and not to FILE, so a unit test reads its own records
+    /// without setting FILE for every other test of the process.
+    static CAPTURED: std::cell::RefCell<Option<Vec<String>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
 /// Turns the experiment on for this process: every later null fold appends
 /// one line to `path`, which is created if missing. A second call fails.
 pub fn enable(path: &Path) -> Result<()> {
@@ -44,9 +53,30 @@ pub fn enable(path: &Path) -> Result<()> {
         .map_err(|_| anyhow::anyhow!("the null-fold refit file is already set"))
 }
 
-/// Whether `enable` has run in this process.
+/// Whether `enable` has run in this process (or, in a unit test, whether
+/// `capture` runs on this thread).
 pub fn enabled() -> bool {
-    SINK.get().is_some()
+    SINK.get().is_some() || capturing()
+}
+
+#[cfg(not(test))]
+fn capturing() -> bool {
+    false
+}
+
+#[cfg(test)]
+fn capturing() -> bool {
+    CAPTURED.with(|c| c.borrow().is_some())
+}
+
+/// Tests only: runs `f` with the experiment on for this thread alone, and
+/// returns `f`'s result with the lines it would have appended to FILE.
+#[cfg(test)]
+pub(crate) fn capture<R>(f: impl FnOnce() -> R) -> (R, Vec<String>) {
+    CAPTURED.with(|c| *c.borrow_mut() = Some(Vec::new()));
+    let result = f();
+    let lines = CAPTURED.with(|c| c.borrow_mut().take()).unwrap_or_default();
+    (result, lines)
 }
 
 /// One penalty point of a null fold's lasso path and its refit.
@@ -279,15 +309,32 @@ pub(crate) fn record_fold(
 }
 
 fn write(rec: &NullRefit) -> Result<()> {
+    let mut line = serde_json::to_string(rec)?;
+    line.push('\n');
+    #[cfg(test)]
+    if keep_captured(&line) {
+        return Ok(());
+    }
     let Some(sink) = SINK.get() else {
         return Ok(());
     };
-    let mut line = serde_json::to_string(rec)?;
-    line.push('\n');
     let mut file = sink.lock().expect("the null-fold refit file lock");
     file.write_all(line.as_bytes())?;
     file.flush()?;
     Ok(())
+}
+
+/// Tests only: keeps `line` when `capture` runs on this thread, and says
+/// whether it did.
+#[cfg(test)]
+fn keep_captured(line: &str) -> bool {
+    CAPTURED.with(|c| match c.borrow_mut().as_mut() {
+        Some(lines) => {
+            lines.push(line.to_string());
+            true
+        }
+        None => false,
+    })
 }
 
 #[cfg(test)]
@@ -447,5 +494,197 @@ mod tests {
 
     fn best_round_of(trace: &[f64]) -> usize {
         gbt::best_round(trace)
+    }
+
+    fn fixture_context(scheme: &str) -> LassoContext<'_> {
+        LassoContext {
+            dataset: "fixture__fixturemycin",
+            scheme,
+            outer_fold: Some(1),
+        }
+    }
+
+    /// Balanced accuracy of the calls at 0.5 on `mask`, counted here rather
+    /// than through `tree::balanced_error`.
+    fn balanced_accuracy_by_hand(scores: &[f64], y: &Bits, mask: &Bits) -> f64 {
+        let (mut tp, mut p, mut tn, mut n) = (0.0, 0.0, 0.0, 0.0);
+        for i in mask.iter_ones() {
+            if y.contains(i) {
+                p += 1.0;
+                tp += f64::from(u8::from(scores[i] >= 0.5));
+            } else {
+                n += 1.0;
+                tn += f64::from(u8::from(scores[i] < 0.5));
+            }
+        }
+        (tp / p + tn / n) / 2.0
+    }
+
+    /// Checks every point of `arms` against the production steps redone
+    /// here: the tuning holdout of `seed`, features screened on its fitting
+    /// part, the path on that part, the refit on the whole training fold.
+    /// Returns the screened features.
+    fn assert_points_redo_production(
+        x: &BitMatrix,
+        y: &Bits,
+        train: &Bits,
+        cfg: &EvalConfig,
+        test: &[usize],
+        arms: &LassoArms,
+    ) -> Vec<u32> {
+        let (fit, val) = tuning_holdout(train, y, None, "group", LASSO_HOLDOUT, 42).unwrap();
+        let feats = screen(x, y, &fit, cfg.screened_features);
+        let path = lasso::fit_path(x, y, &fit, &feats, cfg.lasso_lambdas, 400);
+        assert_eq!(arms.points.len(), path.len());
+        let lambdas: Vec<f64> = path.iter().map(|m| m.lambda).collect();
+        for (k, (m, p)) in path.iter().zip(&arms.points).enumerate() {
+            let on_x = m.predict_proba(x);
+            assert_eq!(p.lambda, m.lambda, "point {k}");
+            assert_eq!(p.path_weights, m.coef.len(), "point {k}");
+            assert_eq!(
+                p.holdout_log_loss,
+                lasso::log_loss(&on_x, y, &val),
+                "point {k}"
+            );
+            let by_hand = balanced_accuracy_by_hand(&on_x, y, &val);
+            assert!(
+                (p.holdout_balanced_accuracy - by_hand).abs() < 1e-12,
+                "point {k}"
+            );
+            let refit = lasso::refit_path(x, y, train, &feats, &lambdas[..=k]);
+            let r = refit.last().unwrap();
+            assert_eq!(p.refit_weights, r.coef.len(), "point {k}");
+            assert_eq!(p.test_scores, pick(&r.predict_proba(x), test), "point {k}");
+        }
+        assert_eq!(arms.holdout_n, val.count() as usize);
+        assert_eq!(arms.holdout_resistant, val.and(y).count() as usize);
+        feats
+    }
+
+    /// A record counts the fold's training genomes and its resistant ones,
+    /// names its test genomes, and holds the arms of its learner only. The
+    /// counts are worked by hand: genomes 0 to 229 train, every ninth is
+    /// resistant (0, 9, ..., 225), and 230 to 259 are the test genomes.
+    #[test]
+    fn a_record_counts_the_training_genomes_and_names_the_test_genomes() {
+        let (x, y, train, test) = null_lasso_fixture();
+        let cfg = config();
+        let context = fixture_context("random");
+        let (done, lines) =
+            capture(|| record_fold("lasso", &x, &y, &train, None, &cfg, 42, 42, context));
+        done.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].ends_with('\n'));
+        let r: serde_json::Value = serde_json::from_str(&lines[0]).unwrap();
+        assert_eq!(r["dataset"], "fixture__fixturemycin");
+        assert_eq!(r["scheme"], "random");
+        assert_eq!(r["fold"], 1);
+        assert_eq!(r["learner"], "lasso");
+        assert_eq!(r["train_n"], 230);
+        assert_eq!(r["train_resistant"], 26);
+        assert_eq!(r["test"], serde_json::json!((230..260).collect::<Vec<_>>()));
+        assert!(r["gbt"].is_null());
+        let arms = lasso_arms(&x, &y, &train, None, &cfg, 42, context, &test).unwrap();
+        assert_eq!(r["lasso"], serde_json::to_value(&arms).unwrap());
+    }
+
+    /// Each point's holdout balanced accuracy is the path model's, read on
+    /// the holdout and not on the fitting part. On this fixture the two
+    /// differ at some point, so reading the wrong part fails the test.
+    #[test]
+    fn each_points_holdout_balanced_accuracy_is_read_on_the_holdout() {
+        let (x, y, train, test) = null_lasso_fixture();
+        let cfg = config();
+        let context = fixture_context("random");
+        let arms = lasso_arms(&x, &y, &train, None, &cfg, 42, context, &test).unwrap();
+        let feats = assert_points_redo_production(&x, &y, &train, &cfg, &test, &arms);
+        let (fit, val) = tuning_holdout(&train, &y, None, "group", LASSO_HOLDOUT, 42).unwrap();
+        let path = lasso::fit_path(&x, &y, &fit, &feats, cfg.lasso_lambdas, 400);
+        let differ = path.iter().any(|m| {
+            let on_x = m.predict_proba(&x);
+            let gap = balanced_accuracy_by_hand(&on_x, &y, &fit)
+                - balanced_accuracy_by_hand(&on_x, &y, &val);
+            gap.abs() > 1e-9
+        });
+        assert!(differ);
+    }
+
+    /// The lasso arms screen features on the tuning holdout's fitting part
+    /// alone, as production does. Feature 0 marks the resistant fitting
+    /// genomes; feature 1 marks every resistant training genome but two
+    /// fitting ones. Screening one feature picks 0 on the fitting part and
+    /// 1 on the whole training fold, and the two paths differ.
+    #[test]
+    fn the_lasso_arms_screen_features_on_the_fitting_part_alone() {
+        let (_, y, train, test) = null_lasso_fixture();
+        let n = y.len();
+        let (fit, val) = tuning_holdout(&train, &y, None, "group", LASSO_HOLDOUT, 42).unwrap();
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(fit.and(&y).words());
+        let missed: Vec<usize> = fit.and(&y).iter_ones().take(2).collect();
+        let most = train.and(&y).and_not(&Bits::from_indices(n, missed));
+        x.push_row(most.words());
+        let cfg = EvalConfig {
+            screened_features: 1,
+            ..config()
+        };
+        assert_eq!(screen(&x, &y, &fit, 1), [0]);
+        assert_eq!(screen(&x, &y, &train, 1), [1]);
+        let context = fixture_context("random");
+        let arms = lasso_arms(&x, &y, &train, None, &cfg, 42, context, &test).unwrap();
+        assert_eq!(
+            assert_points_redo_production(&x, &y, &train, &cfg, &test, &arms),
+            [0]
+        );
+        let on_train = lasso::fit_path(&x, &y, &fit, &[1], cfg.lasso_lambdas, 400);
+        let losses = |path: &[lasso::LassoModel]| -> Vec<f64> {
+            let loss = |m: &lasso::LassoModel| lasso::log_loss(&m.predict_proba(&x), &y, &val);
+            path.iter().map(loss).collect()
+        };
+        let on_fit = lasso::fit_path(&x, &y, &fit, &[0], cfg.lasso_lambdas, 400);
+        assert_ne!(losses(&on_train), losses(&on_fit));
+    }
+
+    /// The best-round arm keeps the first `best_round` trees: its scores are
+    /// those of a production fit with no patience limit, which keeps that
+    /// many, and one tree more would score otherwise. Feature 0 marks most
+    /// resistant genomes and four rows are noise (seed 4, chosen so that
+    /// the best round comes before the last), so later rounds fit noise.
+    #[test]
+    fn the_best_round_arm_keeps_best_round_trees_and_scores_with_them() {
+        use rand::{Rng, SeedableRng};
+        let n = 80;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        let all = Bits::ones(n);
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(4);
+        let mut x = BitMatrix::with_cols(n);
+        x.push_row(Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0 && i % 10 != 0)).words());
+        for _ in 0..4 {
+            let present: Vec<usize> = (0..n).filter(|_| rng.random_bool(0.5)).collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        let cfg = config();
+        let test: Vec<usize> = (0..n).step_by(7).collect();
+        let arms = gbt_arms(&x, &y, &all, None, "group", &cfg, 42, 42, &test).unwrap();
+        let best = arms.best_round;
+        assert!(0 < best && best < cfg.gbt.rounds, "best round {best}");
+        let (fit, val) = tuning_holdout(&all, &y, None, "group", GBT_HOLDOUT, 42).unwrap();
+        let feats = screen(&x, &y, &fit, cfg.screened_features);
+        let unlimited = GbtParams {
+            seed: 42,
+            patience: cfg.gbt.rounds,
+            ..cfg.gbt
+        };
+        let obj = Objective::Logistic { y: &y };
+        let kept = gbt::fit(&x, &obj, &fit, &val, &feats, &unlimited);
+        assert_eq!(kept.trees.len(), best);
+        let scores = pick(&kept.predict_proba(&x), &test);
+        assert_eq!(arms.best_round_test_scores.as_deref(), Some(&scores[..]));
+        let (full, _) = gbt::fit_traced(&x, &obj, &fit, &val, &feats, &unlimited, false);
+        let one_more = gbt::Gbt {
+            trees: full.trees[..=best].to_vec(),
+            ..full.clone()
+        };
+        assert_ne!(pick(&one_more.predict_proba(&x), &test), scores);
     }
 }

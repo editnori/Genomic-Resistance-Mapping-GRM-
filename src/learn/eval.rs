@@ -4827,4 +4827,167 @@ mod tests {
         let (train, _) = fold_masks(&split.test_fold, cfg.folds).swap_remove(without);
         assert!(train.iter_ones().all(|i| x.get(0, i) == x.get(1, i)));
     }
+
+    /// Synthetic: 120 genomes in 30 lineages of four, every third lineage
+    /// resistant, and rows of noise: eight drawn at random, a copy of row 0
+    /// with the four genomes of lineage 12 flipped, and a row in three
+    /// genomes of three lineages. The matrix is filtered and collapsed at
+    /// `min_support` 3, as `evaluate` requires. A fold that tests one of the
+    /// three genomes drops the last row from its candidates, and the lineage
+    /// fold that tests lineage 12 keeps one copy only, so a fold's
+    /// candidates are not the matrix. The noise seed is one under which both
+    /// boosting and the lasso have null folds on both splits.
+    fn null_fold_fixture() -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let n = 120;
+        let groups: Vec<u32> = (0..n as u32).map(|i| i / 4).collect();
+        let y = Bits::from_indices(n, (0..n).filter(|&i| groups[i].is_multiple_of(3)));
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(20261117);
+        let mut x = BitMatrix::with_cols(n);
+        for _ in 0..8 {
+            let present: Vec<usize> = (0..n).filter(|_| rng.random_bool(0.3)).collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        let copy = (0..n).filter(|&i| x.get(0, i) != (groups[i] == 12));
+        x.push_row(Bits::from_indices(n, copy.collect::<Vec<_>>()).words());
+        x.push_row(Bits::from_indices(n, [5, 47, 77]).words());
+        assert_eq!(training_candidates(&x, &Bits::ones(n), 3).1.len(), x.rows);
+        (x, y, groups)
+    }
+
+    fn null_fold_config() -> EvalConfig {
+        EvalConfig {
+            folds: 3,
+            inner_folds: 2,
+            scm_max_rules: 1,
+            cart_max_depth: 1,
+            forest: ForestParams {
+                n_trees: 2,
+                max_depth: 2,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 30,
+                max_depth: 2,
+                patience: 3,
+                ..Default::default()
+            },
+            screened_features: 6,
+            lasso_lambdas: 8,
+            ..Default::default()
+        }
+    }
+
+    /// The call site of the null-fold experiment (S2 of the review of 15 Nov
+    /// 2026). Each record `evaluate` writes is the arms `null_refit` fits
+    /// when called directly with that outer fold's training candidates, its
+    /// seed (`fold_seed`), its draws seed (`fold_draw_seed`) and its split's
+    /// tuning groups; its counts are the fold's; and there is one record per
+    /// null boosting or lasso fold. The test also shows that each of those
+    /// inputs moves some record, so a wrong one at the call site fails it.
+    #[test]
+    fn each_null_fold_record_is_the_arms_of_that_folds_candidates_seeds_and_groups() {
+        let (x, y, groups) = null_fold_fixture();
+        let min_support = 3;
+        let mut moved = [false; 4];
+        for learner_seed in [None, Some(4242)] {
+            let cfg = EvalConfig {
+                learner_seed,
+                ..null_fold_config()
+            };
+            let run = || {
+                let dataset = "fixture__fixturemycin";
+                evaluate(dataset, &x, &y, &groups, &[], min_support, None, &cfg).unwrap()
+            };
+            let (out, lines) = null_refit::capture(run);
+            let records: Vec<serde_json::Value> = lines
+                .iter()
+                .map(|l| serde_json::from_str(l).unwrap())
+                .collect();
+            let mut null_folds = vec![];
+            for split in &out.splits {
+                for l in split
+                    .learners
+                    .iter()
+                    .filter(|l| l.learner == "gbt" || l.learner == "lasso")
+                {
+                    for (fold, c) in l.fold_complexity.iter().enumerate() {
+                        if *c == 0.0 {
+                            null_folds.push((split.scheme.clone(), fold, l.learner.clone()));
+                        }
+                    }
+                }
+            }
+            let mut keys: Vec<(String, usize, String)> = records
+                .iter()
+                .map(|r| {
+                    let s = |k: &str| r[k].as_str().unwrap().to_string();
+                    (
+                        s("scheme"),
+                        r["fold"].as_u64().unwrap() as usize,
+                        s("learner"),
+                    )
+                })
+                .collect();
+            null_folds.sort();
+            keys.sort();
+            assert_eq!(keys, null_folds, "learner seed {learner_seed:?}");
+            for (scheme, folds) in outer_splits(&y, &groups, &[], &cfg) {
+                let tuning = tuning_groups(scheme, &groups, &[]);
+                let unit = tuning_unit(scheme);
+                for (fi, (train, _)) in fold_masks(&folds, cfg.folds).into_iter().enumerate() {
+                    let (cx, _) = training_candidates(&x, &train, min_support);
+                    let test: Vec<usize> = (0..x.cols).filter(|&i| !train.contains(i)).collect();
+                    let (seed, draws) = (fold_seed(&cfg, fi), fold_draw_seed(&cfg, fi));
+                    let context = test_context(scheme, fi);
+                    let lasso = |x: &BitMatrix, groups: Option<&[u32]>, seed| {
+                        let arms = null_refit::lasso_arms(
+                            x, &y, &train, groups, &cfg, seed, context, &test,
+                        );
+                        value(&arms.unwrap())
+                    };
+                    let gbt = |x: &BitMatrix, groups: Option<&[u32]>, seed, draws| {
+                        let arms = null_refit::gbt_arms(
+                            x, &y, &train, groups, unit, &cfg, seed, draws, &test,
+                        );
+                        value(&arms.unwrap())
+                    };
+                    let here = records
+                        .iter()
+                        .filter(|r| r["scheme"] == scheme && r["fold"] == fi);
+                    for r in here {
+                        let at = format!(
+                            "{scheme} fold {fi} {} learner seed {learner_seed:?}",
+                            r["learner"]
+                        );
+                        assert_eq!(r["dataset"], "fixture__fixturemycin", "{at}");
+                        assert_eq!(r["train_n"], train.count(), "{at}");
+                        assert_eq!(r["train_resistant"], train.and(&y).count(), "{at}");
+                        assert_eq!(r["test"], value(&test), "{at}");
+                        let other = fold_seed(&cfg, fi + 1);
+                        if r["learner"] == "lasso" {
+                            assert!(r["gbt"].is_null(), "{at}");
+                            let want = lasso(&cx, tuning.as_deref(), seed);
+                            assert_eq!(r["lasso"], want, "{at}");
+                            moved[0] |= lasso(&cx, tuning.as_deref(), other) != want;
+                            moved[1] |= lasso(&cx, None, seed) != want;
+                            moved[2] |= lasso(&x, tuning.as_deref(), seed) != want;
+                        } else {
+                            assert_eq!(r["learner"], "gbt", "{at}");
+                            assert!(r["lasso"].is_null(), "{at}");
+                            let want = gbt(&cx, tuning.as_deref(), seed, draws);
+                            assert_eq!(r["gbt"], want, "{at}");
+                            moved[0] |= gbt(&cx, tuning.as_deref(), other, draws) != want;
+                            moved[1] |= gbt(&cx, None, seed, draws) != want;
+                            moved[2] |= gbt(&x, tuning.as_deref(), seed, draws) != want;
+                            moved[3] |= gbt(&cx, tuning.as_deref(), seed, seed) != want;
+                        }
+                    }
+                }
+            }
+        }
+        // The seed, the tuning groups, the candidates and the draws seed
+        // each move some record.
+        assert_eq!(moved, [true; 4]);
+    }
 }

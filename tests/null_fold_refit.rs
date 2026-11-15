@@ -1,6 +1,6 @@
 //! The null-fold experiment flag (`grm learn --exp-null-refit`) changes no
-//! evaluation output and writes one record per null fold. Its own test
-//! binary, because the flag is set once per process.
+//! evaluation output, keeps what FILE held and appends one record per null
+//! fold. Its own test binary, because the flag is set once per process.
 
 use grm::bits::{BitMatrix, Bits};
 use grm::learn::eval::{EvalConfig, EvalOutput, evaluate};
@@ -66,8 +66,11 @@ fn the_flag_changes_no_output_and_records_each_null_fold_once() {
     assert!(!null_refit::enabled());
     let before: Vec<EvalOutput> = [&empty, &partial].map(run).into();
 
+    // FILE holds two lines from an earlier run; the flag appends after them.
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("null-refit.jsonl");
+    let earlier = "{\"an earlier\":\"line\"}\nand a second one\n";
+    std::fs::write(&file, earlier).unwrap();
     null_refit::enable(&file).unwrap();
     assert!(null_refit::enabled());
     assert!(null_refit::enable(&file).is_err());
@@ -78,8 +81,10 @@ fn the_flag_changes_no_output_and_records_each_null_fold_once() {
 
     // One record per null boosting or lasso outer fold, in evaluation order,
     // naming that fold's test samples.
-    let lines: Vec<serde_json::Value> = std::fs::read_to_string(&file)
-        .unwrap()
+    let written = std::fs::read_to_string(&file).unwrap();
+    let appended = written.strip_prefix(earlier).expect("FILE kept its lines");
+    assert!(appended.ends_with('\n'));
+    let lines: Vec<serde_json::Value> = appended
         .lines()
         .map(|l| serde_json::from_str(l).unwrap())
         .collect();
