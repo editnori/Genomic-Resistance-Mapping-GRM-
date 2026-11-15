@@ -84,6 +84,7 @@ src/lib.rs ablate::plan::tests::tuning_groups_and_holdout_shares_are_task_a_s
 src/lib.rs ablate::plan::tests::tuning_groups_give_composite_ids_only_to_random_splits_with_duplicates
 src/lib.rs ablate::plan::tests::unavailable_reasons_are_the_pipelines_words
 src/lib.rs ablate::plan::tests::verify_and_is_available_check_the_plan_structure
+src/lib.rs analysis::tests::a_draw_that_writes_a_report_writes_it_under_draws_and_not_results
 src/lib.rs analysis::tests::a_rebuild_in_reversed_genome_order_recomputes_and_a_new_map_alone_does_not
 src/lib.rs analysis::tests::a_report_with_a_locus_missing_its_annotation_is_recomputed
 src/lib.rs analysis::tests::a_run_at_another_seed_leaves_the_released_reports_alone
@@ -118,6 +119,7 @@ src/lib.rs analysis::tests::reports_of_another_draw_get_a_folder_outside_results
 src/lib.rs analysis::tests::reports_use_the_reported_cohort_and_record_its_counts_and_k
 src/lib.rs analysis::tests::rows_follow_matrix_columns_rather_than_genome_ids
 src/lib.rs analysis::tests::swapping_genomes_with_identical_columns_changes_the_matrix_digest
+src/lib.rs analysis::tests::the_default_input_key_is_the_one_main_computes
 src/lib.rs analysis::tests::the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does
 src/lib.rs analysis::tests::the_log_names_the_best_learner_scored_on_every_isolate
 src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason_without_ksets
@@ -240,8 +242,10 @@ src/lib.rs learn::eval::tests::random_tuning_without_duplicates_is_revision_10s_
 src/lib.rs learn::eval::tests::rows_written_before_revision_14_read_back_unchanged
 src/lib.rs learn::eval::tests::saved_scores_are_held_out_fits_that_reproduce_every_reported_metric
 src/lib.rs learn::eval::tests::scm_cart_boosting_and_lasso_tune_on_the_splits_tuning_groups
+src/lib.rs learn::eval::tests::seed_sums_wrap_at_the_largest_seed
 src/lib.rs learn::eval::tests::serialized_scores_preserve_threshold_calls_and_ranks
 src/lib.rs learn::eval::tests::the_learner_seed_moves_the_forest_and_boosting_and_no_partition
+src/lib.rs learn::eval::tests::the_learner_seed_reaches_boosting_the_final_models_and_the_mic_regression
 src/lib.rs learn::eval::tests::the_recorded_config_leaves_out_seeds_each_fit_replaces
 src/lib.rs learn::eval::tests::tuning_holdout_names_lineages_in_revision_10s_words
 src/lib.rs learn::eval::tests::two_training_groups_are_enough_for_a_grouped_holdout
@@ -465,6 +469,8 @@ src/main.rs tests::curate_draws_round_robin_across_mlst_groups_and_records_the_p
 src/main.rs tests::curate_records_the_legacy_rule_and_its_cap_without_changing_its_choice
 src/main.rs tests::data_written_before_kset_digests_is_recounted_and_rebuilt
 src/main.rs tests::direct_learn_refuses_added_removed_and_reordered_genome_selections
+src/main.rs tests::learn_ends_with_the_release_line_and_a_draw_with_a_line_of_its_own
+src/main.rs tests::learn_evaluates_with_the_budget_and_seeds_its_flags_give
 src/main.rs tests::learn_refuses_a_structure_and_matrix_built_from_other_ksets
 src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
 src/main.rs tests::pipeline_and_learn_take_a_k_and_a_retained_feature_budget

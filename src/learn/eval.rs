@@ -666,9 +666,11 @@ pub(crate) fn fit_lasso_from_path(
 
 /// The seed of every partition drawn inside outer fold `fold` (its inner
 /// folds and tuning holdouts) and, unless `EvalConfig::learner_seed` is set,
-/// of the learners' own draws there.
+/// of the learners' own draws there: `seed + 101 * fold`, wrapping at 2^64
+/// (`ablate::plan::fold_seed`). Every seed sum here wraps, because `--seed`
+/// takes any 64-bit value.
 fn fold_seed(cfg: &EvalConfig, fold: usize) -> u64 {
-    cfg.seed + fold as u64 * 101
+    crate::ablate::plan::fold_seed(cfg.seed, fold)
 }
 
 /// The base seed of the learners' own draws: `EvalConfig::learner_seed`, or
@@ -681,7 +683,7 @@ fn draw_seed(cfg: &EvalConfig) -> u64 {
 /// `fold_seed` on `draw_seed`, so it is `fold_seed` unless
 /// `EvalConfig::learner_seed` is set.
 fn fold_draw_seed(cfg: &EvalConfig, fold: usize) -> u64 {
-    draw_seed(cfg).wrapping_add(fold as u64 * 101)
+    crate::ablate::plan::fold_seed(draw_seed(cfg), fold)
 }
 
 /// One learner's fit on outer fold `fold`'s training samples, scoring every
@@ -1322,7 +1324,7 @@ fn final_models(
         tuning,
         "group",
         cfg,
-        cfg.seed + 13,
+        cfg.seed.wrapping_add(13),
         draws.wrapping_add(13),
     )?;
     Ok(FinalModels {
@@ -1361,7 +1363,7 @@ fn final_plan(
         training_candidates(x, &all, min_support).1.len() == x.rows,
         "final models need a matrix filtered and collapsed on all samples at min_support {min_support}"
     );
-    let inner = training_folds(y, &all, tuning, cfg.inner_folds, cfg.seed + 7);
+    let inner = training_folds(y, &all, tuning, cfg.inner_folds, cfg.seed.wrapping_add(7));
     validate_folds(y, &all, &inner, cfg.inner_folds)
         .context("invalid final-model inner evaluation")?;
     Ok(inner)
@@ -1384,7 +1386,7 @@ fn final_lasso(
         &Bits::ones(x.cols),
         tuning,
         cfg,
-        cfg.seed + 11,
+        cfg.seed.wrapping_add(11),
         LassoContext {
             dataset,
             scheme: "final",
@@ -1437,7 +1439,7 @@ fn evaluate_mic(
             })
             .collect();
         fold_breakpoints.push(infer_breakpoint(&pairs));
-        let (fit_m, val) = holdout(&train, y, 0.15, cfg.seed + fi as u64);
+        let (fit_m, val) = holdout(&train, y, 0.15, cfg.seed.wrapping_add(fi as u64));
         if fit_m.count() == 0 || val.count() == 0 {
             return None;
         }
@@ -3377,6 +3379,199 @@ mod tests {
         };
         assert_eq!(fold_seed(&cfg, 2), 42 + 202);
         assert_eq!(fold_draw_seed(&cfg, 2), 4242 + 202);
+    }
+
+    fn value<T: Serialize>(v: &T) -> serde_json::Value {
+        serde_json::to_value(v).unwrap()
+    }
+
+    /// Synthetic: an exact MIC for each of `draw_fixture`'s genomes, two to
+    /// four doublings for a resistant genome and -1 to 1 for the rest, so
+    /// the MIC regression runs.
+    fn draw_mic(y: &Bits) -> Vec<Option<Mic>> {
+        (0..y.len())
+            .map(|i| {
+                let base = if y.contains(i) { 2 } else { -1 };
+                Some(Mic {
+                    log2: base + (i % 3) as i32,
+                    censor: Censor::Exact,
+                })
+            })
+            .collect()
+    }
+
+    /// The learner seed reaches each of the forest's and boosting's draws:
+    /// boosting's held-out scores on both splits, the final forest's and
+    /// boosting's importance lists, and the MIC regression's boosting. SCM's,
+    /// CART's and the lasso's final models do not move. Every partition still
+    /// comes from `seed`: boosting rebuilt with the evaluation seed's
+    /// early-stopping holdout and the learner seed's column samples gives
+    /// the fits `evaluate` made, in each outer fold and in the final model,
+    /// and a holdout drawn from the learner seed would not.
+    #[test]
+    fn the_learner_seed_reaches_boosting_the_final_models_and_the_mic_regression() {
+        use crate::ablate::plan::fold_seed as seed_of_fold;
+        let (x, y, groups) = draw_fixture();
+        let mic = draw_mic(&y);
+        let run = |learner_seed| {
+            let cfg = EvalConfig {
+                learner_seed,
+                ..draw_config()
+            };
+            let input = MicInput {
+                mic: &mic,
+                breakpoint: None,
+            };
+            evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                &[],
+                1,
+                Some(input),
+                &cfg,
+            )
+            .unwrap()
+        };
+        let (base, twin) = (run(None), run(Some(4242)));
+        for scheme in ["random", "lineage"] {
+            assert_ne!(
+                learner_scores(&base, scheme, "gbt"),
+                learner_scores(&twin, scheme, "gbt"),
+                "{scheme}"
+            );
+        }
+        let (a, b) = (&base.finals, &twin.finals);
+        assert_ne!(value(&a.rf_importance), value(&b.rf_importance));
+        assert_ne!(value(&a.gbt_importance), value(&b.gbt_importance));
+        let predicted = |out: &EvalOutput| value(&out.mic.as_ref().unwrap().predicted);
+        assert_ne!(predicted(&base), predicted(&twin));
+        assert_eq!(value(&a.scm), value(&b.scm));
+        assert_eq!(
+            (value(&a.cart), a.cart_depth),
+            (value(&b.cart), b.cart_depth)
+        );
+        assert_eq!(value(&a.lasso), value(&b.lasso));
+        assert_eq!(value(&a.lasso_fit), value(&b.lasso_fit));
+
+        let cfg = EvalConfig {
+            learner_seed: Some(4242),
+            ..draw_config()
+        };
+        let mut holdout_matters = false;
+        for (scheme, folds) in outer_splits(&y, &groups, &[], &cfg) {
+            let tuning = tuning_groups(scheme, &groups, &[]);
+            let unit = tuning_unit(scheme);
+            for (fi, (train, _)) in fold_masks(&folds, cfg.folds).into_iter().enumerate() {
+                let (cx, _) = training_candidates(&x, &train, 1);
+                let draws = seed_of_fold(4242, fi);
+                let built = |holdout| {
+                    let fit = fit_gbt(
+                        &cx,
+                        &y,
+                        &train,
+                        tuning.as_deref(),
+                        unit,
+                        &cfg,
+                        holdout,
+                        draws,
+                    );
+                    fit.unwrap().0.scores
+                };
+                let context = test_context(scheme, fi);
+                let fit = fit_fold("gbt", &cx, &y, &train, tuning.as_deref(), &cfg, context);
+                let expected = built(seed_of_fold(42, fi));
+                assert_eq!(fit.unwrap().scores, expected, "{scheme} outer fold {fi}");
+                holdout_matters |= built(draws) != expected;
+            }
+        }
+        assert!(holdout_matters);
+        let all = Bits::ones(x.cols);
+        let importance = |holdout| {
+            let fit = fit_gbt(&x, &y, &all, None, "group", &cfg, holdout, 4242 + 13);
+            value(&top_weighted(fit.unwrap().1.importance(), 50))
+        };
+        assert_eq!(value(&b.gbt_importance), importance(42 + 13));
+        assert_ne!(importance(42 + 13), importance(4242 + 13));
+    }
+
+    /// `--seed` takes any 64-bit value, so every seed sum wraps at 2^64:
+    /// the per-fold seeds, the final models' (+7, +11, +13, +17) and the MIC
+    /// regression's (+ fold). The release gate builds without overflow
+    /// checks, where `+` wraps as well, so this pins the wrapped values; a
+    /// debug run of this test is the one that fails on a sum that does not
+    /// wrap.
+    #[test]
+    fn seed_sums_wrap_at_the_largest_seed() {
+        let top = EvalConfig {
+            seed: u64::MAX,
+            ..draw_config()
+        };
+        assert_eq!(fold_seed(&top, 0), u64::MAX);
+        assert_eq!(fold_seed(&top, 1), 100);
+        assert_eq!(fold_seed(&top, 4), 403);
+        assert_eq!(fold_draw_seed(&top, 1), 100);
+        let twin = EvalConfig {
+            learner_seed: Some(u64::MAX),
+            ..draw_config()
+        };
+        assert_eq!(fold_seed(&twin, 1), 42 + 101);
+        assert_eq!(fold_draw_seed(&twin, 1), 100);
+        // Evaluation at the largest seed reaches every sum, the MIC
+        // regression's in each of its folds, and its final models are the
+        // ones fitted at the wrapped seeds.
+        let (x, y, groups) = draw_fixture();
+        let mic = draw_mic(&y);
+        let input = MicInput {
+            mic: &mic,
+            breakpoint: None,
+        };
+        let out = evaluate(
+            "fixture__fixturemycin",
+            &x,
+            &y,
+            &groups,
+            &[],
+            1,
+            Some(input),
+            &top,
+        )
+        .unwrap();
+        assert!(out.mic.is_some());
+        assert!(out.splits.iter().all(|s| s.unavailable_reason.is_none()));
+        let all = Bits::ones(x.cols);
+        assert_eq!(
+            final_plan(&x, &y, None, 1, &top).unwrap(),
+            training_folds(&y, &all, None, top.inner_folds, 6)
+        );
+        let (_, rf) = fit_rf(&x, &y, &all, &top, 16);
+        assert_eq!(
+            value(&out.finals.rf_importance),
+            value(&top_weighted(rf, 50))
+        );
+        let (_, gbt) = fit_gbt(&x, &y, &all, None, "group", &top, 12, 12).unwrap();
+        assert_eq!(
+            value(&out.finals.gbt_importance),
+            value(&top_weighted(gbt.importance(), 50))
+        );
+        let (lasso, _) = fit_lasso_traced(
+            &x,
+            &y,
+            &all,
+            None,
+            &top,
+            10,
+            LassoContext {
+                dataset: "fixture__fixturemycin",
+                scheme: "final",
+                outer_fold: None,
+            },
+            &mut LassoTrace::default(),
+            &mut |_, _| {},
+        )
+        .unwrap();
+        assert_eq!(value(&out.finals.lasso_fit), value(&lasso.lasso_fit));
     }
 
     #[test]
