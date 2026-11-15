@@ -24,6 +24,8 @@ The harness file, `main.rs`, was reformatted with `cargo fmt` after that run: wh
 
 On 15 November 2026 the kit gained the record and the rule that `PLAN-note-2026-11-15.md` lists, and `run.sh` ran again, on x86-64 Linux (`rerun.json`). It wrote `summary.tsv`, `differences.tsv`, `totals.json`, `versions.json` and `exploratory.json` byte for byte as on 14 November, `detail.json` the same apart from one added key for each panel run end to end, `largest_probability_gap_on_the_fitting_samples`, and `environment.tsv` the same apart from three added rows: the environment's pip, the sha256 of the pyscm-ml wheel it built, and the compiler that wheel's extension module names. `end-to-end-trees.tsv` is new. `run.json` stays the record of the run of 14 November.
 
+Later that day `run.sh` gained one more file, `grm.sha256`: the sha256 of each of the 17 files the harness writes, one per panel and `index.json`. It ran at commit `5b8730b894bdd912b3d6c5e3c222479007512686` from 14:21:33 to 14:21:49 UTC, on x86-64 Linux, and wrote every other file here byte for byte as committed, apart from `run.json`. `grm.sha256` is from that run, and its 16 panel lines are the sha256 values `versions.json` gives. `run.json` and `rerun.json` stay the records of the runs above. `scripts/learner-crosscheck/check_fits.sh` sets a build of the harness against this list.
+
 ## The plan
 
 `PLAN.md` was fixed at 17:09:18 UTC, before any learner was fitted on a panel. It names the panels, the settings, each reference, the rule by which a unit matches, and the causes a difference may be given. It sets no pass mark. `PLAN-clarifications.md` was fixed at 17:28:21 UTC, before the first run, and settles 16 places where the plan's words left a choice. Both are here as they were hashed; their sha256 values are at the end of this page. `exploratory.py` and its counts came after the first comparison was read. They are labelled exploratory and no outcome depends on them. `PLAN-note-2026-11-15.md`, written on 15 November 2026 after the result had been read, says which assumption of the plan was wrong, who found it, and what was added after the plan.
@@ -199,7 +201,7 @@ An earlier check of the same kind ran in October 2026 under revision 7. Its file
 - At a node where features tie exactly, no library gives one answer. The reference there is the exact arithmetic of `exact.py`, which is part of this kit and not a library.
 - The tolerance of 1e-5 that separates a tree grown from the same margins from one that came after an earlier tree was chosen after the review's margins had been read. In `end-to-end-trees.tsv` every gap is either at most 1.2e-6 or at least 0.00032, so any tolerance between the two gives the same causes.
 - One platform: x86-64 Linux. The boosted trees take `exp` and `ln` from the platform's math library. The decision tree, the forest and the set covering machine use only arithmetic that IEEE 754 rounds the same way everywhere: the four operations, one square root and comparisons. So another platform could change the last bits of the boosted fits, and with them which feature wins a tie that rounding decides. No other platform was tried.
-- The fits GRM made are not committed, because they take 12 MB. `versions.json` holds the sha256 of each panel's fits, and `run.sh` writes them again.
+- The fits GRM made are not committed, because they take 12 MB. `versions.json` holds the sha256 of each panel's fits, `grm.sha256` that of every file the harness wrote, and `run.sh` writes them again.
 - `tests/learner_crosscheck` checks that these files agree with each other, with this page and with the Methods text of the site. It cannot fit a learner. It does fail when the tree of `src/` at the commit under test is not the tree `run.json` names, or when `src/` holds a change no commit holds, so a change to a learner fails it until `run.sh` runs again. A change outside `src/`, such as a new version of a library in `Cargo.lock`, is not caught.
 
 ## Files
@@ -215,6 +217,7 @@ cd4d1044c3c6659d18d0d44e15e1df59ec5b39b087ed378e6d2db3091a8e38d5  PLAN-note-2026
 15b6458a609d9ea76d7636a392d381348600577df3b33ab58c2db9ae91ca6b90  end-to-end-trees.tsv
 f65b24233768d98e20e812de8fbc0786c7e50b3647ceb277d35a39df1e24bc56  environment.tsv
 f18c073c8e12328550cf7a8292fedbaf740bbe4f6738fd408402deefd902f74b  exploratory.json
+003278ea7dc33e2df81b8114f1ab8fe612742e0b51c927667313e77917944bba  grm.sha256
 a7228320cb88696be1d7d1e7f0b6400326b05efcc971a5bb98ea089a538df402  lasso-suite.txt
 3f8d8df5e1004fce421ca9621c26a397313011666884333e703917c6ab09e570  rerun.json
 4b8449284667b1c9f3d403c4ed9064b165bf20f44c8b52644c930583e400623b  run.json

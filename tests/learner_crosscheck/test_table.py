@@ -289,6 +289,25 @@ class Record(unittest.TestCase):
         for digest in versions["grm_fits_sha256"].values():
             self.assertRegex(digest, "^[0-9a-f]{64}$")
 
+    def test_the_list_names_exactly_the_files_the_harness_writes(self):
+        # grm.sha256, which check_fits.sh sets a build of the harness against: one line per file the harness writes, in
+        # the form sha256sum -c reads, sorted by name
+        lines = (kit.REFERENCE / "grm.sha256").read_text(encoding="ascii").splitlines()
+        for line in lines:
+            self.assertRegex(line, r"^[0-9a-f]{64}  [a-z0-9_]+\.json$")
+        listed = {line[66:]: line[:64] for line in lines}
+        names = [f"{panel['name']}.json" for panel in panels.read(kit.FIXTURES)] + ["index.json"]
+        self.assertEqual([line[66:] for line in lines], sorted(names))
+        self.assertEqual(len(lines), 17)
+        # the panels' lines are the fits the committed tables were made from
+        fits = kit.load("versions.json")["grm_fits_sha256"]
+        self.assertEqual({name: listed[f"{name}.json"] for name in fits}, fits)
+        # and the harness writes one file per panel and index.json, and nothing else
+        source = (kit.KIT / "main.rs").read_text(encoding="utf-8")
+        self.assertEqual(re.findall(r"\bfs::write\(out\.join\((.+?)\), ", source), ['format!("{}.json", p.name)', '"index.json"'])
+        self.assertEqual(source.count("fs::write"), 2)
+        self.assertNotIn("File::create", source)
+
     def test_the_run_record(self):
         # run.json is the run of 14 November 2026; rerun.json the run of 15 November that wrote the record added after the plan
         versions = kit.load("versions.json")
