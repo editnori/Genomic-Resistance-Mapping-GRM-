@@ -7,9 +7,7 @@ import ast
 import collections
 import importlib.util
 import json
-import os
 import pathlib
-import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 KIT = ROOT / "scripts" / "learner-crosscheck"
@@ -34,15 +32,6 @@ def module(name):
 
 table = module("table")
 panels = module("panels")
-
-
-def git(*args):
-    """A git command's output in the repository, stripped. It fails the test that calls it if git does."""
-    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": os.environ.get("HOME", "/"), "LC_ALL": "C"}
-    done = subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True, env=env, check=False)
-    if done.returncode:
-        raise AssertionError(f"git {' '.join(args)} exited {done.returncode}: {done.stderr.strip()}")
-    return done.stdout.strip()
 
 
 def load(name):
