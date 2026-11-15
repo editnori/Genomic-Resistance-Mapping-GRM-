@@ -1,9 +1,10 @@
 """What is written about the learner cross-check, held to the committed result.
 
 Three texts state the result: the Methods view of the site (web/src/views/MethodsView.tsx, the part "Learner
-cross-check"), the README of reference/learner-crosscheck and the README of the kit. Each sentence of the Methods part
-that carries a number is rebuilt here from the result files, and no other sentence of it may carry one. Each table of
-the result's README is rebuilt line for line, and its sha256 lines are checked against the files."""
+cross-check"), the README of reference/learner-crosscheck and the README of the kit. The whole Methods part is held
+here, sentence by sentence and in order: each sentence that carries a number is rebuilt from the result files, and the
+others are written out, so no sentence can be added, dropped or changed unseen. Each table of the result's README is
+rebuilt line for line, and its sha256 lines are checked against the files."""
 
 import hashlib
 import html
@@ -37,7 +38,7 @@ def tree_differs():
 
 
 def sentences():
-    """Every sentence of the Methods part that carries a number, from the result files."""
+    """Every sentence of the Methods part, in order: those with a number from the result files, the others as written."""
     totals = {(row["learner"], row["check"]): row for row in kit.load("totals.json")}
     versions, run = kit.load("versions.json"), kit.load("run.json")
     libraries = versions["libraries"]
@@ -58,8 +59,13 @@ def sentences():
     second = [row for row in record if row["panel"] == other]
     same = [row for row in second if row["cause"] != follows]
     return [
+        "GRM runs its own code for each learner.",
         f"On {day(run['started'])} a check compared each learner with a standard version of the same method on {len(versions['grm_fits_sha256'])} small test panels, "
         f"at revision {versions['evaluation_revision']} of the evaluation (commit {run['head'][:7]}).",
+        f"It was a software check on small test panels, and it {SCOPE}.",
+        "Its plan was fixed before any comparison was read.",
+        "The kit and the result table are in the repository, under scripts/learner-crosscheck and reference/learner-crosscheck.",
+        "Under the plan's rules, no difference was left without a shown cause.",
         f"The set covering machine gave the same model as an independent implementation on all {scm['compared']} fits.",
         f"pyscm-ml {libraries['pyscm-ml']} was asked for its best rules at {kit.detail_sum('scm fits', 'steps_read_against_library')} of the steps GRM took, "
         f"and GRM's rule was among them at {kit.detail_sum('scm fits', 'steps_certified')}.",
@@ -69,6 +75,7 @@ def sentences():
         f"Of the {forest['compared']:,} forest trees, {forest['units_matched']:,} agreed on every node.",
         f"On the other {cart['units_explained']} nodes, and on at least one node of each of the other {forest['units_explained']} trees, "
         "several features had exactly equal gain and GRM did not split on the lowest-numbered one.",
+        "Its code gives equal gains to the lowest-numbered feature, but rounding in its own arithmetic made these equal gains differ in the last digits.",
         f"Set against XGBoost {libraries['xgboost']} one tree at a time, {by_tree['units_matched']:,} of {by_tree['compared']:,} boosted trees were identical.",
         f"Of the other {by_tree['units_explained']}, {causes[('tree by tree', 'leaf set to 0')]} came from the one panel with a single class in training, "
         "where XGBoost sets a leaf below its minimum weight to zero and GRM does not.",
@@ -77,6 +84,7 @@ def sentences():
         f"Run end to end on the {end['compared']} panels with both classes in training, "
         f"the two gave the same number of trees and probabilities within 0.0001 of each other on {end['units_matched']}.",
         f"On {no_tree} panels GRM kept no tree and XGBoost kept one, and the probabilities were equal.",
+        "GRM keeps that difference on purpose: a model with no tree gives no call.",
         f"On the other {end['units_explained'] - no_tree} some trees differed, and a record added after the plan gives each of those trees a cause of its own.",
         f"On one, {len(first)} trees each split a node on another feature that divides the fitting samples into the same two groups, and before each of them the two fits "
         f"still gave the fitting samples the same scores within {tolerance:.5f}, so none followed from an earlier tree.",
@@ -88,21 +96,24 @@ def sentences():
         f"The other {len(second) - len(same)} followed an earlier tree that had moved the scores.",
         "The L1 logistic regression was not compared again.",
         f"Its own tests ran at the same commit and {passed} passed; they require each saved case to converge on the best known fit.",
+        "One more of its tests needs files that are not in the repository and did not run.",
         # history: the check of October 2026 has no file behind it, so these two are held as written
         "An earlier check, in October 2026 under revision 7, reported that the set covering machine, the decision tree and the random forest "
         "matched their reference on all 16 cases.",
         "It also showed that the L1 solver of that time stopped early on some cases, and revision 8 replaced that solver.",
+        "The files of that check are lost, so that statement cannot be checked, and it stays here only as history.",
     ]
 
 
 class Methods(unittest.TestCase):
-    def test_every_sentence_with_a_number_is_the_result_s(self):
+    def test_the_part_is_these_sentences_and_no_other(self):
         text = methods_part()
         for sentence in sentences():
-            with self.subTest(sentence=sentence):
-                self.assertEqual(text.count(sentence), 1)
-                text = text.replace(sentence, "")
-        self.assertIsNone(re.search(r"\d", text), text)
+            self.assertTrue(text.startswith(sentence), f"where the part has {text[:160]!r}..., this test holds the sentence {sentence!r}")
+            text = text.removeprefix(sentence)
+            self.assertRegex(text, "^( |$)", f"the part goes on {text[:80]!r} after {sentence!r}")
+            text = text.removeprefix(" ")
+        self.assertEqual(text, "", "the part has text after the last sentence this test holds")
 
     def test_what_the_sentences_take_for_granted(self):
         differences, detail = kit.differences(), kit.load("detail.json")
