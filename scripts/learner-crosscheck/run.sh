@@ -6,10 +6,12 @@
 # it). OUT is a new folder for the results.
 #
 # It builds the Rust harness, runs it on the 16 saved panels with 1 and with 8
-# threads and requires the same bytes from both, sets the fits against the
-# references (compare.py), and runs the exploratory counts (exploratory.py).
-# It writes OUT/run.json: the commit, the tree of src/, the compiler and the
-# times. It uses at most 8 threads and reads no genome data.
+# threads and requires the same bytes from both, writes OUT/grm.sha256, the
+# sha256 of every file the harness wrote, which check_fits.sh sets a later
+# build against, sets the fits against the references (compare.py), and runs
+# the exploratory counts (exploratory.py). It writes OUT/run.json: the commit,
+# the tree of src/ it built, the compiler and the times. It uses at most 8
+# threads and reads no genome data.
 set -euo pipefail
 
 if [ "$#" -ne 2 ]; then
@@ -40,6 +42,7 @@ RAYON_NUM_THREADS=1 "$harness" "$fixtures" "$out/grm"
 RAYON_NUM_THREADS=8 "$harness" "$fixtures" "$out/grm-8-threads"
 diff -r "$out/grm" "$out/grm-8-threads"
 rm -r "$out/grm-8-threads"
+(cd "$out/grm" && find . -type f -printf '%P\n' | LC_ALL=C sort | xargs -r -d '\n' sha256sum --) > "$out/grm.sha256"
 
 "$python" -I "$here/compare.py" "$fixtures" "$out/grm" "$out" --jobs "$jobs"
 "$python" -I "$here/exploratory.py" "$fixtures" "$out/grm" "$out" > /dev/null

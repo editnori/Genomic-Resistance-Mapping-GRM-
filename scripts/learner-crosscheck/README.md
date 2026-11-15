@@ -4,7 +4,7 @@ GRM runs its own code for each learner. This kit fits each learner on 16 small t
 
 It is a software check on small test panels. It says nothing about clinical performance and nothing about how well a learner predicts resistance. It reads no genome data.
 
-The result of the run of 14 November 2026 is in [`reference/learner-crosscheck`](../../reference/learner-crosscheck/README.md), with the plan that was fixed before any comparison was read. `tests/learner_crosscheck` checks that result's shape and counts and needs none of the libraries below.
+The result of the run of 14 November 2026 is in [`reference/learner-crosscheck`](../../reference/learner-crosscheck/README.md), with the plan that was fixed before any comparison was read. `tests/learner_crosscheck` checks that result's shape and counts and needs none of the libraries below. `check_fits.sh` checks that the result is of the code under test: it needs Rust and none of the libraries.
 
 ## What is compared
 
@@ -36,6 +36,7 @@ No library can be handed GRM's random draws, and scikit-learn breaks equal gains
 | `exploratory.py` | Four counts written after the first comparison was read. No outcome depends on them. | all of them |
 | `check_env.py` | Checks that the environment holds exactly the pinned versions and the pyscm-ml wheel it built, and records that build. | nothing |
 | `run.sh` | The whole check, from this checkout. | all of them |
+| `check_fits.sh` | Builds the harness from the working tree, runs it with 1 and with 8 threads, and fails unless each run writes exactly the files `grm.sha256` of the committed result lists, byte for byte. | Rust 1.98.1 |
 
 ## Run it
 
@@ -57,7 +58,17 @@ Then, with Rust 1.98.1:
 scripts/learner-crosscheck/run.sh ENV OUT
 ```
 
-`OUT` must be a new folder. `run.sh` checks the environment, builds the harness, runs it with 1 and with 8 threads and requires the same bytes from both, runs `compare.py` and `exploratory.py`, and writes `OUT/run.json` with the commit, the tree of `src/`, the compiler and the times. On 14 November 2026 this took 18 seconds with the harness already built, on 8 threads.
+`OUT` must be a new folder. `run.sh` checks the environment, builds the harness, runs it with 1 and with 8 threads and requires the same bytes from both, writes `OUT/grm.sha256` with the sha256 of every file the harness wrote, runs `compare.py` and `exploratory.py`, and writes `OUT/run.json` with the commit, the tree of `src/` it built, the compiler and the times. On 14 November 2026 this took 18 seconds with the harness already built, on 8 threads.
+
+## Is the committed result of this code?
+
+The reference libraries' side of the comparison does not depend on GRM's code; GRM's side is what the harness writes. So the committed result describes the code under test exactly when the harness built from that code writes the files the result was made from. `run.sh` lists them, with their sha256, in `grm.sha256`, and
+
+```sh
+scripts/learner-crosscheck/check_fits.sh
+```
+
+builds the harness from the working tree with `cargo build --release --locked --example learner-crosscheck`, runs it on the 16 panels with 1 and with 8 threads, and sets each run's files against that list. It prints one line and exits 0 when both runs wrote exactly the listed files, byte for byte. Otherwise it names each file that has other bytes, is missing or is not listed, and exits 1. A change under `src/` that moves no fit passes: a new report string, a new catalog reader. A change that moves a fit fails, whether it is in a learner, in the harness, in `Cargo.lock` or in the panel file, until `run.sh` runs again with the reference libraries and its files are committed. So does a new `EVALUATION_REVISION`, which `index.json` records.
 
 XGBoost's wheel prints a warning about an old glibc each time it loads. That is the wheel's own note about how it was built, and it changes no result.
 
@@ -73,13 +84,14 @@ XGBoost's wheel prints a warning about an old glibc each time it loads. That is 
 | `versions.json` | Python, the libraries, the sha256 of the panel file and of each panel's GRM fits. |
 | `exploratory.json` | The exploratory counts. |
 | `run.json`, `environment.tsv` | The commit, the compiler, the times, the pinned and installed versions, and the pyscm-ml build. |
+| `grm.sha256` | The sha256 of each of the 17 files the harness wrote in `grm/`, one per panel and `index.json`, in the form `sha256sum -c` reads from that folder. `check_fits.sh` sets a later build against it. |
 | `grm/`, `panels/` | Every GRM fit and everything each check recorded. These are large and are not committed. |
 
 An outcome is `matched` (the plan's rule held), `explained` (there is a difference and each has a shown cause), `unexplained` (a difference without a shown cause, which is a finding) or `not applicable` (the comparison cannot run on the panel).
 
 `python3 -I scripts/learner-crosscheck/table.py OUT` checks the tables of a run and exits 1 if their counts do not add up.
 
-To replace the committed result, copy the nine files of the table above, without `grm/` and `panels/`, into `reference/learner-crosscheck`, update the sha256 lines and the numbers in its README, and update the expected totals in `tests/learner_crosscheck`. The test suite fails until the tables, the README and the Methods text of the site agree.
+To replace the committed result, copy the ten files of the table above, without `grm/` and `panels/`, into `reference/learner-crosscheck`, update the sha256 lines and the numbers in its README, and update the expected totals in `tests/learner_crosscheck`. The test suite fails until the tables, the README and the Methods text of the site agree, and `check_fits.sh` fails until `grm.sha256` is the new run's.
 
 ## Limits
 

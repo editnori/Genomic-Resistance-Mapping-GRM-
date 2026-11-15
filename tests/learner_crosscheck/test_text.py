@@ -247,7 +247,7 @@ class KitReadme(unittest.TestCase):
         files = sorted(path.name for path in kit.KIT.iterdir() if path.is_file() and path.name != "README.md")
         self.assertEqual(
             files,
-            ["check_env.py", "check_gbt.py", "check_scm.py", "check_trees.py", "compare.py", "exact.py", "exploratory.py", "main.rs", "panels.py",
+            ["check_env.py", "check_fits.sh", "check_gbt.py", "check_scm.py", "check_trees.py", "compare.py", "exact.py", "exploratory.py", "main.rs", "panels.py",
              "requirements-build.txt", "requirements-scm.txt", "requirements.txt", "run.sh", "scm_reference.py", "table.py"],
         )  # fmt: skip
         for name in files:

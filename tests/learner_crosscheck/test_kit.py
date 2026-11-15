@@ -2,8 +2,9 @@
 
 panels.py decodes the panel file, scm_reference.py is the independent set covering machine, exact.py gives a tree's
 split gains as fractions and as GRM computes them, check_env.py reads the pinned requirement files and records the one
-package built here, and table.py finds what is wrong with a result table. compare.py and the three check_*.py files
-need scikit-learn, XGBoost and pyscm-ml and are not run here."""
+package built here, and table.py finds what is wrong with a result table. check_fits.sh runs here with a stand-in for
+cargo and for the harness, and run.sh is held by its lines. compare.py and the three check_*.py files that compare need
+scikit-learn, XGBoost and pyscm-ml and are not run here."""
 
 import contextlib
 import copy
@@ -11,8 +12,10 @@ import hashlib
 import io
 import json
 import pathlib
+import re
 import shutil
 import struct
+import subprocess
 import tempfile
 import unittest
 import zipfile
@@ -413,6 +416,148 @@ class Build(unittest.TestCase):
         self.assertEqual(rows, [])
         self.assertEqual(len(problems), 1)
         self.assertIn("0 wheels of 1.1.2", problems[0])
+
+
+# The line of a kit script that lists a folder's files with their sha256: the folder, the command, and where it goes.
+LISTING = re.compile(r'^ *\(cd "([^"]+)" && (find .*)\)( > "\$out/grm\.sha256")?$')
+
+
+class RunSh(unittest.TestCase):
+    """run.sh needs the reference libraries and is not run here. These are the lines of it that the committed result and
+    check_fits.sh rest on."""
+
+    def setUp(self):
+        self.lines = (kit.KIT / "run.sh").read_text(encoding="utf-8").splitlines()
+
+    def test_it_writes_the_list_as_check_fits_sh_reads_it(self):
+        # grm.sha256 is written from the 1-thread run that compare.py reads, with the command check_fits.sh lists a run with
+        written = [(at, LISTING.match(line)) for at, line in enumerate(self.lines) if LISTING.match(line)]
+        self.assertEqual([(match.group(1), match.group(3)) for _, match in written], [("$out/grm", ' > "$out/grm.sha256"')])
+        self.assertGreater(written[0][0], self.lines.index('diff -r "$out/grm" "$out/grm-8-threads"'))
+        self.assertLess(written[0][0], next(at for at, line in enumerate(self.lines) if "compare.py" in line and not line.startswith("#")))
+        check = (kit.KIT / "check_fits.sh").read_text(encoding="utf-8").splitlines()
+        listed = [LISTING.match(line) for line in check if LISTING.match(line)]
+        self.assertEqual([(match.group(1), match.group(3)) for match in listed], [("$1", None)])
+        self.assertEqual(listed[0].group(2), written[0][1].group(2))
+
+
+class CheckFits(unittest.TestCase):
+    """check_fits.sh, run in a copy of the folders it reads, with a stand-in for cargo and one for the harness, which writes
+    the files the test gives it. The real harness needs a Rust build: CI's rust-test job runs the script with it."""
+
+    FILES = {"a.json": '{"a": 1}\n', "b.json": '{"b": 2}\n', "index.json": '{"panels": []}\n'}
+    LIST = "reference/learner-crosscheck/grm.sha256"
+    RERUN = "Run scripts/learner-crosscheck/run.sh ENV OUT again with the reference libraries and commit its files (scripts/learner-crosscheck/README.md).\n"
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.temp = pathlib.Path(temp.name)
+        self.root = self.temp / "tree"
+        (self.root / "scripts" / "learner-crosscheck").mkdir(parents=True)
+        shutil.copy(kit.KIT / "check_fits.sh", self.root / "scripts" / "learner-crosscheck" / "check_fits.sh")
+        (self.root / "tests" / "data").mkdir(parents=True)
+        (self.root / "tests" / "data" / "lasso-stopping-fixtures.txt").write_text("stand-in\n", encoding="ascii")
+        (self.root / "reference" / "learner-crosscheck").mkdir(parents=True)
+        lines = [f"{hashlib.sha256(text.encode('ascii')).hexdigest()}  {name}\n" for name, text in sorted(self.FILES.items())]
+        (self.root / self.LIST).write_text("".join(lines), encoding="ascii")
+        (self.temp / "bin").mkdir()
+        examples = self.temp / "target" / "release" / "examples"
+        examples.mkdir(parents=True)
+        self.stand_in(self.temp / "bin" / "cargo", 'echo "cargo $*" >> "$CALLS"\nexit "${CARGO_EXIT:-0}"\n')
+        self.stand_in(
+            examples / "learner-crosscheck",
+            'echo "harness RAYON_NUM_THREADS=$RAYON_NUM_THREADS $*" >> "$CALLS"\n'
+            'if [ -n "${HARNESS_EXIT:-}" ]; then echo "stand-in harness: stopped" >&2; exit "$HARNESS_EXIT"; fi\n'
+            'mkdir -p "$2" && cp -R "$WRITTEN/$RAYON_NUM_THREADS/." "$2/"\n',
+        )
+        for threads in (1, 8):
+            self.write(threads, self.FILES)
+
+    def stand_in(self, path, body):
+        path.write_text("#!/bin/sh\n" + body, encoding="ascii")
+        path.chmod(0o755)
+
+    def write(self, threads, files):
+        """What the stand-in harness writes when it runs with RAYON_NUM_THREADS=threads."""
+        folder = self.temp / "written" / str(threads)
+        shutil.rmtree(folder, ignore_errors=True)
+        folder.mkdir(parents=True)
+        for name, text in files.items():
+            (folder / name).write_text(text, encoding="ascii")
+
+    def run_script(self, **env):
+        """(exit code, stdout, stderr, the calls of cargo and the harness)"""
+        base = {
+            "PATH": f"{self.temp / 'bin'}:/usr/bin:/bin", "HOME": str(self.temp), "LC_ALL": "C", "TMPDIR": str(self.temp),
+            "CARGO_TARGET_DIR": str(self.temp / "target"), "CALLS": str(self.temp / "calls"), "WRITTEN": str(self.temp / "written"),
+        }  # fmt: skip
+        script = self.root / "scripts" / "learner-crosscheck" / "check_fits.sh"
+        done = subprocess.run(["bash", str(script)], env=base | env, cwd=self.temp, capture_output=True, text=True, check=False)
+        calls = self.temp / "calls"
+        return done.returncode, done.stdout, done.stderr, calls.read_text(encoding="ascii").splitlines() if calls.exists() else []
+
+    def failed(self, threads, *lines):
+        return f"check_fits.sh: with RAYON_NUM_THREADS={threads}, the harness built from this tree did not write the files {self.LIST} lists:\n" + "".join(
+            f"  {line}\n" for line in lines
+        )
+
+    def test_the_listed_files_pass(self):
+        code, out, err, calls = self.run_script()
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(out, f"check_fits.sh: with 1 and with 8 threads the harness built from this tree wrote the 3 files of {self.LIST}, byte for byte\n")
+        fixtures = re.escape(str(self.root / "tests" / "data" / "lasso-stopping-fixtures.txt"))
+        self.assertEqual(calls[0], "cargo build --release --locked --example learner-crosscheck")
+        self.assertEqual(len(calls), 3)
+        for call, threads in zip(calls[1:], (1, 8)):
+            self.assertRegex(call, rf"^harness RAYON_NUM_THREADS={threads} {fixtures} {re.escape(str(self.temp))}/tmp\.\w+/{threads}$")
+        # the two runs went to a temporary folder, which is gone
+        self.assertEqual(sorted(path.name for path in self.temp.iterdir()), ["bin", "calls", "target", "tree", "written"])
+
+    def test_a_file_with_other_bytes_fails_and_is_named(self):
+        changed = dict(self.FILES, **{"b.json": '{"b": 3}\n'})
+        for threads in (1, 8):
+            self.write(threads, changed)
+        code, out, err, _ = self.run_script()
+        self.assertEqual((code, out), (1, ""))
+        line = f"b.json: other bytes than listed, sha256 {hashlib.sha256(changed['b.json'].encode('ascii')).hexdigest()}"
+        self.assertEqual(err, self.failed(1, line) + self.failed(8, line) + (
+            "check_fits.sh: so the committed result under reference/learner-crosscheck is not of this tree's code. " + self.RERUN
+        ))  # fmt: skip
+
+    def test_a_difference_at_8_threads_alone_fails(self):
+        text = '{"a": 0}\n'
+        self.write(8, dict(self.FILES, **{"a.json": text}))
+        code, _, err, _ = self.run_script()
+        self.assertEqual(code, 1)
+        digest = hashlib.sha256(text.encode("ascii")).hexdigest()
+        self.assertTrue(err.startswith(self.failed(8, f"a.json: other bytes than listed, sha256 {digest}")), err)
+        self.assertTrue(err.endswith(self.RERUN), err)
+
+    def test_a_file_missing_and_a_file_not_listed_fail(self):
+        files = {"b.json": self.FILES["b.json"], "c.json": "{}\n", "index.json": self.FILES["index.json"]}
+        for threads in (1, 8):
+            self.write(threads, files)
+        code, _, err, _ = self.run_script()
+        self.assertEqual(code, 1)
+        self.assertTrue(err.startswith(self.failed(1, "a.json: listed, not written", "c.json: written, not listed")), err)
+        self.assertIn(self.failed(8, "a.json: listed, not written", "c.json: written, not listed"), err)
+
+    def test_a_harness_that_stops_fails(self):
+        code, out, err, calls = self.run_script(HARNESS_EXIT="3")
+        self.assertEqual((code, out, err), (1, "", "stand-in harness: stopped\ncheck_fits.sh: the harness stopped with RAYON_NUM_THREADS=1\n"))
+        self.assertEqual(len(calls), 2)
+
+    def test_no_list_stops_the_check_before_the_build(self):
+        (self.root / self.LIST).unlink()
+        code, out, err, calls = self.run_script()
+        self.assertEqual((code, out, calls), (1, "", []))
+        self.assertEqual(err, f"check_fits.sh: {self.LIST} is missing; run.sh writes it (scripts/learner-crosscheck/README.md)\n")
+
+    def test_a_build_that_fails_stops_the_check(self):
+        code, out, _, calls = self.run_script(CARGO_EXIT="101")
+        self.assertEqual((code, out), (101, ""))
+        self.assertEqual(calls, ["cargo build --release --locked --example learner-crosscheck"])
 
 
 class Problems(unittest.TestCase):
