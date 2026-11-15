@@ -44,26 +44,6 @@ def node_samples(tree, rows, root):
     return sets
 
 
-def float_gain(weights, p, n, pp, pn):
-    """A split's gain in float64, operation for operation as `fit_tree` computes it."""
-
-    def gini(a, b):
-        t = a + b
-        if t == 0.0:
-            return 0.0
-        q = a / t
-        return 2.0 * q * (1.0 - q)
-
-    total = float(weights.n_resistant + weights.n_susceptible)
-    w_pos = total / (2.0 * max(float(weights.n_resistant), 1.0))
-    w_neg = total / (2.0 * max(float(weights.n_susceptible), 1.0))
-    np_, nn = p * w_pos, n * w_neg
-    parent = (np_ + nn) * gini(np_, nn)
-    lp, ln = pp * w_pos, pn * w_neg
-    rp, rn = np_ - lp, nn - ln
-    return parent - (lp + ln) * gini(lp, ln) - (rp + rn) * gini(rp, rn)
-
-
 def stump(x, y, weights, samples, candidates):
     """scikit-learn's one-split tree on a node: None for a leaf, else
     (feature, resistant share where absent, resistant share where present)."""
@@ -182,15 +162,13 @@ def check_tree(tree, rows, x, y, train, max_depth, draws=None):
             what.append(f"scikit-learn's feature {theirs} has not the largest exact gain")
         if not lowest:
             what.append(f"GRM's feature {feature} is not the lowest feature with the largest exact gain")
-            if feature in at:
-                def as_grm(f):
-                    return float_gain(weights, p, n, P.count(pos & rows[f]), P.count(neg & rows[f]))
-
-                if as_grm(feature) != as_grm(at[0]):
-                    cause = "float64 rounding broke an exact tie: GRM's own gains for the two features differ"
-                    evidence = f"features {at[0]} and {feature}: exact gains equal, float64 gains {as_grm(at[0])!r} and {as_grm(feature)!r}"
-                    if samples & rows[at[0]] == samples & ~rows[feature]:
-                        evidence += "; each is present on the node's samples exactly where the other is absent"
+            present = {f: (P.count(pos & rows[f]), P.count(neg & rows[f])) for f in at}
+            cause = exact.tie_cause(weights, p, n, present, feature)
+            if cause:
+                gains = [exact.float_gain(weights, p, n, *present[f]) for f in (at[0], feature)]
+                evidence = f"features {at[0]} and {feature}: exact gains equal, float64 gains {gains[0]!r} and {gains[1]!r}"
+                if samples & rows[at[0]] == samples & ~rows[feature]:
+                    evidence += "; each is present on the node's samples exactly where the other is absent"
         if not values:
             what.append("child values differ")
         out["disagreements"].append({"node": node, "what": "; ".join(what), "cause": cause, "evidence": evidence})

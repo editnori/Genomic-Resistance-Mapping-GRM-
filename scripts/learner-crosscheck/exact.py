@@ -15,9 +15,19 @@ a = p T / (2 P) and b = n T / (2 N), and its Gini impurity times its weight is
 
 The gain of a split is that quantity at the node minus its sum over the two
 children. Sets of samples are ints used as bitsets (panels.py).
+
+GRM itself computes the gain in float64, the present side from its counts and
+the absent side by subtraction, so two features of exactly equal gain can get
+float gains that differ in the last digits. `float_gain` repeats GRM's
+arithmetic, and `tie_cause` says when that rounding explains the feature GRM
+took.
 """
 
 from fractions import Fraction
+
+
+# The cause a tree check gives a node where rounding explains GRM's feature.
+ROUNDING = "float64 rounding broke an exact tie: GRM's own gains for the two features differ"
 
 
 def _count(bits):
@@ -72,3 +82,47 @@ def best(weights, resistant, susceptible, rows, candidates):
         elif g == top:
             at.append(feature)
     return top, at
+
+
+def float_gain(weights, p, n, pp, pn):
+    """A split's gain in float64, operation for operation as `fit_tree` computes it (src/learn/tree.rs).
+
+    The node holds p resistant and n susceptible samples, the present side pp
+    and pn of them. The absent side is found by subtraction.
+    """
+
+    def gini(a, b):
+        t = a + b
+        if t == 0.0:
+            return 0.0
+        q = a / t
+        return 2.0 * q * (1.0 - q)
+
+    total = float(weights.n_resistant + weights.n_susceptible)
+    w_pos = total / (2.0 * max(float(weights.n_resistant), 1.0))
+    w_neg = total / (2.0 * max(float(weights.n_susceptible), 1.0))
+    np_, nn = p * w_pos, n * w_neg
+    parent = (np_ + nn) * gini(np_, nn)
+    lp, ln = pp * w_pos, pn * w_neg
+    rp, rn = np_ - lp, nn - ln
+    return parent - (lp + ln) * gini(lp, ln) - (rp + rn) * gini(rp, rn)
+
+
+def tie_cause(weights, p, n, present, feature):
+    """ROUNDING if GRM's own arithmetic explains its split on `feature`, else "".
+
+    `present` maps each feature of the exact best set to its resistant and
+    susceptible counts on the node's present side; the node holds p resistant
+    and n susceptible samples. GRM keeps the largest float64 gain and gives
+    equal floats to the lower feature. So rounding explains a split on a
+    feature that is not the lowest of the set only when its float gain is
+    above that of every lower member and not below that of any higher one.
+    """
+    if feature not in present or feature == min(present):
+        return ""
+    mine = float_gain(weights, p, n, *present[feature])
+    for other, counts in present.items():
+        theirs = float_gain(weights, p, n, *counts)
+        if (other < feature and not mine > theirs) or (other > feature and mine < theirs):
+            return ""
+    return ROUNDING

@@ -220,6 +220,57 @@ class ExactGains(unittest.TestCase):
         self.assertEqual(exact.best(weights, resistant, susceptible, [row, other], [0, 1])[1], [0, 1])
 
 
+    # A node of 2 resistant samples (0, 1) and 6 susceptible ones (2 to 7), in a tree trained on 2 resistant and 10
+    # susceptible samples. Five features of exactly equal gain 1/2, which GRM's float64 arithmetic rounds three ways.
+    TIE = {
+        1: bits(0, 2),  # present on 1 resistant and 1 susceptible sample: float gain 0.49999999999999956
+        3: bits(2),  # 0 and 1: float gain 0.5
+        4: bits(0, 2),  # a copy of feature 1
+        6: bits(0, 1, 2, 3, 4, 5, 6),  # 2 and 5: float gain 0.5, the float of feature 3 from other counts
+        7: bits(0, 2, 3, 4, 5, 6),  # 1 and 5: float gain 0.5000000000000002
+    }
+
+    def tie(self):
+        weights, resistant, susceptible = exact.Weights(2, 10), bits(0, 1), bits(2, 3, 4, 5, 6, 7)
+        rows = [self.TIE.get(f, 0) for f in range(8)]
+        top, at = exact.best(weights, resistant, susceptible, rows, self.TIE)
+        present = {f: (exact._count(resistant & rows[f]), exact._count(susceptible & rows[f])) for f in at}
+        return weights, top, at, present
+
+    def test_grm_s_float_gain_is_its_own_arithmetic(self):
+        weights, top, at, present = self.tie()
+        self.assertEqual((top, at), (Fraction(1, 2), [1, 3, 4, 6, 7]))
+        floats = {f: exact.float_gain(weights, 2, 6, *present[f]) for f in at}
+        self.assertEqual(floats, {1: 0.49999999999999956, 3: 0.5, 4: 0.49999999999999956, 6: 0.5, 7: 0.5000000000000002})
+
+    def test_rounding_is_a_cause_only_for_grm_s_own_float_argmax(self):
+        weights, _, _, present = self.tie()
+        # feature 7 has the largest float, so GRM's search takes it: rounding explains it
+        self.assertEqual(exact.tie_cause(weights, 2, 6, present, 7), exact.ROUNDING)
+        # the lowest feature of the set is no broken tie
+        self.assertEqual(exact.tie_cause(weights, 2, 6, present, 1), "")
+        # feature 3 beats the lower feature 1 in floats, but the higher feature 7 beats it, so GRM would not take it
+        self.assertEqual(exact.tie_cause(weights, 2, 6, present, 3), "")
+        # a feature outside the set gets no cause
+        self.assertEqual(exact.tie_cause(weights, 2, 6, present, 5), "")
+
+    def test_equal_floats_give_no_rounding_cause(self):
+        # GRM gives equal float gains to the lower feature, so a split on the higher of two equal floats is not what
+        # its rounding does: not on a copy of a feature (4 is 1), and not on other counts that round alike (6 and 3)
+        weights, _, _, present = self.tie()
+        self.assertEqual(exact.tie_cause(weights, 2, 6, {f: present[f] for f in (1, 4)}, 4), "")
+        self.assertEqual(exact.tie_cause(weights, 2, 6, {f: present[f] for f in (1, 3, 6)}, 6), "")
+        # with the lower copy gone, the same feature is GRM's float argmax again
+        self.assertEqual(exact.tie_cause(weights, 2, 6, {f: present[f] for f in (1, 6)}, 6), exact.ROUNDING)
+
+    def test_check_trees_takes_the_rounding_cause_from_here(self):
+        # check_trees.py needs scikit-learn and is not run here, so it must hold no rule of its own for this cause
+        source = (kit.KIT / "check_trees.py").read_text(encoding="utf-8")
+        self.assertEqual(source.count("exact.tie_cause("), 1)
+        self.assertNotIn("rounding broke", source)
+        self.assertNotIn("def float_gain", source)
+
+
 class Pins(unittest.TestCase):
     def test_the_committed_requirement_files(self):
         pins = check_env.pins()

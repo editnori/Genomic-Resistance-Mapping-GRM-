@@ -27,7 +27,7 @@ No library can be handed GRM's random draws, and scikit-learn breaks equal gains
 | `main.rs` | The GRM side, a Cargo example (`learner-crosscheck`). It calls the public functions of `grm::learn` on each panel and writes every fitted model, and every random draw, as JSON. It changes nothing in `src/`. | Rust 1.98.1 |
 | `panels.py` | Decodes the panel file without the Rust code. | nothing |
 | `scm_reference.py` | The independent set covering machine. | nothing |
-| `exact.py` | Exact split gains of a class-weighted Gini tree. | nothing |
+| `exact.py` | Exact split gains of a class-weighted Gini tree, GRM's own float64 gain, and when rounding explains the feature GRM took from an exact tie. | nothing |
 | `check_scm.py` | The set covering machine against `scm_reference.py` and pyscm-ml. | pyscm-ml |
 | `check_trees.py` | The decision tree and the forest against scikit-learn. | scikit-learn |
 | `check_gbt.py` | The boosted trees against XGBoost. | XGBoost |

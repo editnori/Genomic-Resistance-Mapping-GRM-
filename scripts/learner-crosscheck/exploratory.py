@@ -7,7 +7,7 @@ OUT_DIR/exploratory.json. It answers four questions the first reading raised.
 
 1. Is the float64 gain this kit recomputes for a tree split the gain GRM
    stored? It counts the split nodes of every decision tree and forest tree
-   where `check_trees.float_gain` divided by the tree's sample count is
+   where `exact.float_gain` divided by the tree's sample count is
    exactly GRM's stored gain.
 2. Where rounding broke an exact tie in a tree, are the two features present
    on the node's samples exactly where the other is absent?
@@ -53,7 +53,7 @@ def stored_gains(tree, rows, y, train):
         if feature is None:
             continue
         pos, neg = samples & y, samples & ~y
-        gain = check_trees.float_gain(weights, P.count(pos), P.count(neg), P.count(pos & rows[feature]), P.count(neg & rows[feature]))
+        gain = exact.float_gain(weights, P.count(pos), P.count(neg), P.count(pos & rows[feature]), P.count(neg & rows[feature]))
         splits += 1
         same += gain / total == tree["gain"][node]
     return splits, same
