@@ -197,12 +197,15 @@ class KitReadme(unittest.TestCase):
             self.assertIn(name, self.text)
 
     def test_the_install_commands_check_every_hash(self):
-        commands = [line for line in self.text.splitlines() if line.startswith("ENV/bin/pip install ")]
-        self.assertEqual(len(commands), 3)
+        commands = [line for line in self.text.splitlines() if line.startswith("ENV/bin/pip ")]
+        self.assertEqual(len(commands), 4)
+        # the three requirement files, each with its hashes; pyscm-ml is built into ENV/built, where check_env.py reads it
         for command, name in zip(commands, kit.module("check_env").FILES):
             self.assertIn("--no-deps --require-hashes", command)
             self.assertTrue(command.endswith(f"-r scripts/learner-crosscheck/{name}"), command)
-        self.assertIn("--no-build-isolation --no-binary pyscm-ml", commands[2])
+        self.assertTrue(commands[2].startswith("ENV/bin/pip wheel --no-deps --require-hashes --no-build-isolation --no-binary pyscm-ml -w ENV/built "))
+        # then that wheel, and nothing from an index
+        self.assertEqual(commands[3], "ENV/bin/pip install --no-deps --no-index ENV/built/pyscm_ml-1.1.2-*.whl")
 
     def test_it_names_the_versions_that_ran(self):
         libraries = kit.load("versions.json")["libraries"]

@@ -1,17 +1,21 @@
 """The parts of the learner cross-check kit that need no reference library, on cases worked by hand.
 
 panels.py decodes the panel file, scm_reference.py is the independent set covering machine, exact.py gives a tree's
-split gains as fractions, check_env.py reads the pinned requirement files and table.py finds what is wrong with a
-result table. compare.py and the three check_*.py files need scikit-learn, XGBoost and pyscm-ml and are not run here."""
+split gains as fractions and as GRM computes them, check_env.py reads the pinned requirement files and records the one
+package built here, and table.py finds what is wrong with a result table. compare.py and the three check_*.py files
+need scikit-learn, XGBoost and pyscm-ml and are not run here."""
 
 import contextlib
 import copy
+import hashlib
 import io
 import json
 import pathlib
 import shutil
+import struct
 import tempfile
 import unittest
+import zipfile
 from fractions import Fraction
 
 from . import kit
@@ -338,6 +342,77 @@ def small():
     difference("b", "gbt", "tree by tree", "round 1", "equal split")
     difference("b", "gbt", "tree by tree", "round 2", "")
     return summary, differences
+
+
+def elf(comment):
+    """A 64-bit little-endian ELF file of three sections, the null one, .shstrtab and .comment, made by hand."""
+    names = b"\0.shstrtab\0.comment\0"
+    body = names + comment
+    offset = 64 + len(body)
+    header = b"\x7fELF\x02\x01\x01" + bytes(9) + struct.pack("<HHIQQQIHHHHHH", 3, 62, 1, 0, 0, offset, 0, 64, 0, 0, 64, 3, 1)
+    sections = bytes(64)
+    sections += struct.pack("<IIQQQQIIQQ", 1, 3, 0, 0, 64, len(names), 0, 0, 1, 0)
+    sections += struct.pack("<IIQQQQIIQQ", 11, 1, 0x30, 0, 64 + len(names), len(comment), 0, 0, 1, 1)
+    return header + body + sections
+
+
+class Build(unittest.TestCase):
+    """check_env.py's record of the one package built here: the wheel in ENV/built and its compiler."""
+
+    def test_the_compiler_is_read_from_the_comment_section(self):
+        self.assertEqual(check_env.comments(elf(b"GCC: (Example 1) 13.3.0\0clang version 18\0GCC: (Example 1) 13.3.0\0")),
+                         ["GCC: (Example 1) 13.3.0", "clang version 18"])  # fmt: skip
+        self.assertEqual(check_env.comments(elf(b"")), [])
+        with self.assertRaises(ValueError):
+            check_env.comments(b"\x7fELF\x01\x01" + bytes(58))
+
+    def make(self, folder, installed_so=None):
+        """A wheel of pyscm-ml 1.1.2 in folder/built and its files installed under folder/site, as pip would."""
+        so = elf(b"GCC: (Example 1) 13.3.0\0")
+        files = {"pyscm/__init__.py": b"", "pyscm/_scm_utility.so": so, "pyscm_ml-1.1.2.dist-info/RECORD": b"not compared"}
+        (folder / "built").mkdir()
+        with zipfile.ZipFile(folder / "built" / "pyscm_ml-1.1.2-cp312-cp312-linux_x86_64.whl", "w") as archive:
+            for name, body in files.items():
+                archive.writestr(name, body)
+        for name, body in files.items():
+            path = folder / "site" / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(installed_so if installed_so is not None and name.endswith(".so") else body)
+
+        class Installed:
+            version = "1.1.2"
+
+            def locate_file(self, name):
+                return folder / "site" / name
+
+        return Installed()
+
+    def test_the_wheel_and_its_compiler(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = pathlib.Path(temp)
+            rows, problems = check_env.built(folder, self.make(folder))
+            digest = hashlib.sha256((folder / "built" / "pyscm_ml-1.1.2-cp312-cp312-linux_x86_64.whl").read_bytes()).hexdigest()
+        self.assertEqual(problems, [])
+        self.assertEqual(rows, [
+            f"pyscm-ml wheel\tbuilt from the pinned archive\tpyscm_ml-1.1.2-cp312-cp312-linux_x86_64.whl sha256 {digest}",
+            "pyscm-ml compiler\tbuilt from the pinned archive\tGCC: (Example 1) 13.3.0",
+        ])  # fmt: skip
+
+    def test_an_installed_file_that_is_not_the_wheel_s_is_a_problem(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = pathlib.Path(temp)
+            _, problems = check_env.built(folder, self.make(folder, installed_so=elf(b"GCC: (Other) 1\0")))
+        self.assertEqual(problems, ["pyscm-ml: the installed pyscm/_scm_utility.so is not the one in pyscm_ml-1.1.2-cp312-cp312-linux_x86_64.whl"])
+
+    def test_no_wheel_is_a_problem(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = pathlib.Path(temp)
+            installed = self.make(folder)
+            shutil.rmtree(folder / "built")
+            rows, problems = check_env.built(folder, installed)
+        self.assertEqual(rows, [])
+        self.assertEqual(len(problems), 1)
+        self.assertIn("0 wheels of 1.1.2", problems[0])
 
 
 class Problems(unittest.TestCase):

@@ -34,7 +34,7 @@ No library can be handed GRM's random draws, and scikit-learn breaks equal gains
 | `compare.py` | Runs the three checks on every panel and writes the tables. | all of them |
 | `table.py` | The shape of the tables and the counts that follow from them. | nothing |
 | `exploratory.py` | Four counts written after the first comparison was read. No outcome depends on them. | all of them |
-| `check_env.py` | Checks that the environment holds exactly the pinned versions. | nothing |
+| `check_env.py` | Checks that the environment holds exactly the pinned versions and the pyscm-ml wheel it built, and records that build. | nothing |
 | `run.sh` | The whole check, from this checkout. | all of them |
 
 ## Run it
@@ -45,10 +45,11 @@ Python 3.12 on Linux x86-64. The reference libraries go into an environment of t
 python3 -m venv ENV
 ENV/bin/pip install --no-deps --require-hashes -r scripts/learner-crosscheck/requirements-build.txt
 ENV/bin/pip install --no-deps --require-hashes -r scripts/learner-crosscheck/requirements.txt
-ENV/bin/pip install --no-deps --require-hashes --no-build-isolation --no-binary pyscm-ml -r scripts/learner-crosscheck/requirements-scm.txt
+ENV/bin/pip wheel --no-deps --require-hashes --no-build-isolation --no-binary pyscm-ml -w ENV/built -r scripts/learner-crosscheck/requirements-scm.txt
+ENV/bin/pip install --no-deps --no-index ENV/built/pyscm_ml-1.1.2-*.whl
 ```
 
-pyscm-ml 1.1.2 has no Linux wheel, so the third command builds it from its source archive with the setuptools and wheel of the first, and needs a C++ compiler. pyscm-ml is under the GPL, version 3. The kit installs it and calls it; no code of it is in this repository.
+pyscm-ml 1.1.2 has no Linux wheel, so the third command builds one from its source archive with the setuptools and wheel of the first, and needs a C++ compiler. The wheel stays in `ENV/built`, and the fourth command installs it with no index. `check_env.py` writes the wheel's sha256 and the compiler its extension module names into `environment.tsv`, with the version of the environment's pip, which no file pins, and it stops if the installed pyscm-ml is not that wheel. The wheel's bytes depend on the compiler and on the folder `ENV`, so its sha256 records one build and pins nothing. pyscm-ml is under the GPL, version 3. The kit installs it and calls it; no code of it is in this repository.
 
 Then, with Rust 1.98.1:
 
@@ -70,7 +71,7 @@ XGBoost's wheel prints a warning about an old glibc each time it loads. That is 
 | `detail.json` | Each check's further counts per panel, and the settings production would select on the panel. |
 | `versions.json` | Python, the libraries, the sha256 of the panel file and of each panel's GRM fits. |
 | `exploratory.json` | The exploratory counts. |
-| `run.json`, `environment.tsv` | The commit, the compiler, the times, and the pinned and installed versions. |
+| `run.json`, `environment.tsv` | The commit, the compiler, the times, the pinned and installed versions, and the pyscm-ml build. |
 | `grm/`, `panels/` | Every GRM fit and everything each check recorded. These are large and are not committed. |
 
 An outcome is `matched` (the plan's rule held), `explained` (there is a difference and each has a shown cause), `unexplained` (a difference without a shown cause, which is a finding) or `not applicable` (the comparison cannot run on the panel).
