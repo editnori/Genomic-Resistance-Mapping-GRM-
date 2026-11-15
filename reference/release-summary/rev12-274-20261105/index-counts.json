@@ -13,5 +13,11 @@
  "rates_null_in_file": 0,
  "mismatches": 0,
  "examples": [],
- "flag_keys_seen": {}
+ "flag_keys_seen": {},
+ "labels_from_mic_excluded": {
+  "datasets_with_field": 274,
+  "datasets_without_field": 0,
+  "datasets_above_zero": 64,
+  "labels": 1010
+ }
 }

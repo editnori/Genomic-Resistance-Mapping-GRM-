@@ -1,6 +1,6 @@
 # Release summary reference outputs
 
-These files are the outputs of the scripts in `scripts/release-summary/` on two public GRM releases. `docs/release-summary.md` says what each output holds and how each number is made. They were computed on 2026-11-13 at the commit that added them.
+These files are the outputs of the scripts in `scripts/release-summary/` on two public GRM releases. `docs/release-summary.md` says what each output holds and how each number is made. They were computed on 2026-11-13 at the commit that added them. The two `index-counts.json` files were computed again on 2026-11-15, when `index_counts.py` began to count the index's labels inferred from a MIC; every count they held before is unchanged.
 
 ## Inputs
 
@@ -52,12 +52,12 @@ The sha256 of each output, in the form `sha256sum -c` reads from this directory.
 ed3fcce262ae58bc4446c79423a70aff27f2e19e1643bd2d5b8e06147ab406e5  rev12-274-20261105/uncertainty.json
 c9de54d7987b891696ec5711bcaa4e677c11620ff729ffdb01a96cf1a9f0443d  rev12-274-20261105/summary.json
 8982d32ea7a3028f734ca650d38cd92798b1441f2de9b891ae0e31398b51d55a  rev12-274-20261105/catalog.json
-7ce1ea63fb4a89abc8d39ed1991e47c467bc14057e9341cf17e61f9612b6e5fe  rev12-274-20261105/index-counts.json
+c4088f29538ccb75dc31147e3ba78b22fd51258905ac414eae21ab374e216880  rev12-274-20261105/index-counts.json
 f0c0e4e99759b1a7b0b846e23948369adacb21d06b56f63233f1202c14bee55e  rev12-274-20261105/guidance.json
 4f6b0d4181280c0a79ef5a18dde0350ee5d027ed40d0b9580cb935426af7cd03  rev14-274-20261112/uncertainty.json
 7dfc2108b8e8853c438cd2e475703cd185c748bd7d03186c2aff71aced3282db  rev14-274-20261112/summary.json
 2d74fab696e2c7a5bb0814ac86082116d2c787f0440cdf5ba872b302532da6bd  rev14-274-20261112/catalog.json
-b0352b81ddf10dc3f5abaaea39baa1870c3bc54f93f8972603728e30b1d17d52  rev14-274-20261112/index-counts.json
+307935431d2ecdf66274a65e1778ee59cfde9143e028a42f9b0c3898dd13f828  rev14-274-20261112/index-counts.json
 abce2c7c4c5bf940606e747543eded4771a939715a4fdfd7f0bdc9190b6ce14f  rev14-274-20261112/guidance.json
 ```
 
@@ -72,5 +72,7 @@ The same scripts ran from outside the repository before they moved here. `docs/r
 `catalog.json` differs in two counts, the same in both releases. `rule.calls_nothing_resistant` was 32 and is 29, and `rule.calls_everything_resistant` was 31 and is 30. The earlier counts included four rule entries that are not constant calls. The 29 and the 30 do not overlap, and together they are the 59 rules with a balanced accuracy of exactly 0.5.
 
 `index-counts.json` comes from one script where there were two, so its layout is new. Every count the earlier files hold is unchanged. Both files add `revision`, `rule` and `datasets`. The revision-12 file also adds the flag counts, which the earlier revision-12 counter did not print. Both releases have 0 mismatches.
+
+On 2026-11-15 both `index-counts.json` files gained one block, `labels_from_mic_excluded`, read from the same `index.json`. Rebuilt from the same inputs, the other four outputs of each release are byte-identical, and the two `index-counts.json` files differ from the files they replace only by that block.
 
 `guidance.json` is new. No earlier run computed it.
