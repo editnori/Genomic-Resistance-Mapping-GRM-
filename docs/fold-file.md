@@ -42,10 +42,12 @@ one test fold is a plain train and test split. A file with five test folds and
 empty `train` and `unused` is a five-fold cross-validation.
 
 Every genome of the dataset's cohort must be listed exactly once. The cohort
-is the set of genomes `grm learn` evaluates for the dataset: those with a
-reported call that are in the species matrix. Listing the ones left out, under
-`unused`, is what lets the reader tell a deliberate omission from a file made
-for another cohort or cut short.
+is the set of genomes `grm learn` evaluates for the dataset: the genomes in the
+species matrix whose reported call for the drug (the `reported` field of
+`curated/phenotypes.jsonl`) is R or S, is not marked as a conflict
+(`conflict`) and was not inferred from a MIC (`label_from_mic`). Listing the
+ones left out, under `unused`, is what lets the reader tell a deliberate
+omission from a file made for another cohort or cut short.
 
 ## What is supplied and what is not
 
