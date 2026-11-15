@@ -243,7 +243,6 @@ def collect(runs, release):
             sec = [sum(r[(s, learner)]["seconds"] for s in SPLITS if (s, learner) in r) for r in (ra, rb, rd)]
             seconds.append(dict(dataset=i, learner=learner, seconds_main=sec[0], seconds_present=sec[1], seconds_exact=sec[2]))
         traces.extend(trace_rows(i, runs / "C" / f"{i}.trace.jsonl", runs / "E" / f"{i}.trace.jsonl"))
-    inputs.sort()
     return dict(datasets=datasets, measures=measures, seconds=seconds, traces=traces, inputs=inputs, reproduction=reproduction)
 
 
