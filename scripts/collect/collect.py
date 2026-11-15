@@ -9,6 +9,8 @@ run. Standard library only; run it as `python3 -I scripts/collect/collect.py ...
            Walks each PATH (a directory, or one file) and writes LIST, one row per file: path, bytes, sha256, class.
            A path starts with its root's LABEL, so a list reads the same on any machine. --listing takes the rows of
            an existing table (a header naming path, bytes and sha256) in place of a walk: only the table is opened.
+           --strip-prefix P, which ends in "/", is cut off the front of each table path. LIST must not lie under a
+           root, where it would list itself.
   pack     --list LIST --class CLASS --name NAME --out DIR [--root LABEL=PATH]... [--published SHA256FILE]...
            [--max-bytes N] [--compress gz|xz|none]
            Writes the files of one class into NAME.CLASS.partNNN.tar[.gz|.xz], each at most N bytes (1,900,000,000 by
@@ -445,6 +447,17 @@ def cmd_list(a):
     roots = parse_named(a.root, "--root", nested=True)
     if not roots and not a.listing:
         raise Stop(2, "list: give at least one --root LABEL=PATH or one --listing FILE")
+    if a.strip_prefix and not a.strip_prefix.endswith("/"):
+        raise Stop(2, f"list: --strip-prefix must end in '/', so that it cuts whole folders off; read "
+                      f"{a.strip_prefix!r}")
+    out = os.path.realpath(a.out)
+    for label, top in roots.items():
+        if barred_word(label) or barred_on_disk(top):
+            continue  # the walk refuses it, and nothing more is looked at here
+        real = os.path.realpath(top)
+        if out == real or out.startswith(real.rstrip(os.sep) + os.sep):
+            raise Stop(2, f"list: --out {a.out} lies under the root {label}={top}, so the list would list itself; "
+                          f"nothing was written")
     walk = Walk(rules)
     for label, top in roots.items():
         walk.root(label, top)
@@ -680,7 +693,7 @@ class Found:
 
     def __init__(self):
         self.files, self.lists, self.faults = {}, {}, []
-        self.refused, self.odd, self.stray = [], [], []
+        self.refused, self.odd, self.stray, self.empty = [], [], [], []
 
 
 def find_in_folder(top, threads):
@@ -689,7 +702,7 @@ def find_in_folder(top, threads):
     if not os.path.isfile(inner) or os.path.islink(inner):
         raise Stop(2, f"check: {inner} is not there: give the unpacked NAME.CLASS folder, or --parts")
     found.lists[top] = read_text(inner, "the list")
-    paths = {}
+    paths, dirs = {}, []
 
     def walk(real, path):
         with os.scandir(real) as it:
@@ -698,6 +711,7 @@ def find_in_folder(top, threads):
                 if barred_word(child):
                     found.refused.append(child)
                 elif e.is_dir(follow_symlinks=False):
+                    dirs.append(child)
                     walk(e.path, child)
                 elif e.is_file(follow_symlinks=False):
                     paths[child] = e.path
@@ -713,6 +727,10 @@ def find_in_folder(top, threads):
     except OSError as e:
         raise Stop(2, f"check: cannot read {top}: {e}") from None
     found.files = {p: (size, digest, None) for p, (digest, size) in zip(paths, hashed)}
+    # A directory with no file under it is something else under files/ too; the top-most such directory is named.
+    held = {p.rsplit("/", i)[0] for p in paths for i in range(1, p.count("/") + 1)}
+    empty = {d for d in dirs if d not in held}
+    found.empty = sorted(d + "/" for d in empty if d.rpartition("/")[0] not in empty)
     return found
 
 
@@ -847,7 +865,7 @@ def find_in_parts(sums, threads):
             found.lists[name] = r["list"]
         for path, size, digest in r["files"]:
             if path in found.files:
-                found.faults.append(f"{path} is in the archive twice")
+                found.faults.append(f"{repr(path) if unsafe(path) else path} is in the archive twice")
             found.files[path] = (size, digest, n)
         found.refused += r["refused"]
         found.odd += r["odd"]
@@ -919,6 +937,8 @@ def cmd_check(a):
         faults.append(f"{len(found.odd)} links or special files, which an archive does not hold:\n{shown(found.odd)}")
     if found.stray:
         faults.append(f"{len(found.stray)} entries beside {INNER_LIST} and files/:\n{shown(found.stray)}")
+    if found.empty:
+        faults.append(f"{len(found.empty)} directories under files/ hold no file:\n{shown(found.empty)}")
     if faults:
         good = len(rows) - len(missing) - len(wrong_size) - len(wrong_hash) - len(wrong_part)
         for f in faults:
@@ -938,6 +958,10 @@ def cmd_summary(a):
     extra = parse_named(a.hashes, "--hashes")
     if set(places) & set(extra):
         raise Stop(2, f"summary: {sorted(set(places) & set(extra))} is both a --place and a --hashes name")
+    for name in list(places) + list(extra):
+        word = barred_word(name)
+        if word:
+            raise Stop(3, f"summary: refused: the place name {name} holds the barred word {word!r}")
     rows = []  # (place, path, bytes, sha256, class)
     holders = {}  # sha256 -> the places that hold it
     for place, file in places.items():

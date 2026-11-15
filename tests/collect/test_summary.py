@@ -118,6 +118,16 @@ class Copies(unittest.TestCase):
                 self.assertEqual((rc, out), (2, ""))
                 self.assertIn(said, err)
 
+    def test_a_place_name_with_a_barred_word_is_refused(self):
+        d = self.places()
+        for args, said in ((("--place", f"KS50={d / 'a.tsv'}"), "the place name KS50 holds the barred word 'ks50'"),
+                           (("--place", f"a={d / 'a.tsv'}", "--hashes", f"sealed-release={d / 'release.sha256'}"),
+                            "the place name sealed-release holds the barred word 'sealed'")):
+            with self.subTest(said=said):
+                rc, out, err = kit.run("summary", *args)
+                self.assertEqual((rc, out), (3, ""))
+                self.assertEqual(err, f"summary: refused: {said}\n")
+
 
 if __name__ == "__main__":
     unittest.main()

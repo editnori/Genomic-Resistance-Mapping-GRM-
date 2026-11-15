@@ -125,6 +125,12 @@ class AnUnpackedArchive(unittest.TestCase):
         os.symlink(d / "elsewhere", top / "files")
         self.fails(top, "4 listed files are missing (4 of part 001)", good=0)
 
+    def test_a_directory_with_no_file_under_files_is_found(self):
+        d, top = self.unpacked()
+        (top / "files" / "proj" / "added" / "deeper").mkdir(parents=True)
+        (top / "files" / "proj" / "notes" / "empty-dir").mkdir()
+        self.fails(top, "2 directories under files/ hold no file:\n  proj/added/\n  proj/notes/empty-dir/\n", good=4)
+
     def test_anything_beside_the_list_and_the_files_is_found(self):
         d, top = self.unpacked()
         (top / "NOTES.md").write_bytes(b"x")
@@ -295,6 +301,15 @@ class ThePartsWhereTheyLie(unittest.TestCase):
         kit.resum(sums)
         self.fails(sums, "1 listed files are missing (1 of part 001):\n  proj/notes/ledger.md\n",
                    "1 entries beside LIST.tsv and files/:\n  demo.internal-record/LIST.tsv\n")
+
+    def test_a_name_that_is_not_utf_8_found_twice_is_printed_safely(self):
+        d, proj, sums = kit.packed(self)
+        odd = "demo.internal-record/files/proj/notes/\udcff.txt"  # the byte 0xff, which UTF-8 never holds
+        kit.rewrite(kit.parts_of(sums)[0],
+                    lambda n, data: [(n, data)] + ([(odd, b"x"), (odd, b"x")] if n.endswith("/LIST.tsv") else []))
+        kit.resum(sums)
+        self.fails(sums, "check: 'proj/notes/\\udcff.txt' is in the archive twice\n",
+                   "1 files are not in the list:\n  'proj/notes/\\udcff.txt'\n")
 
     def test_a_link_inside_a_part_is_found(self):
         d, proj, sums = kit.packed(self, "internal-record", "none")

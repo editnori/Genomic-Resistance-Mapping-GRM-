@@ -121,6 +121,19 @@ class TheList(unittest.TestCase):
         self.assertEqual((d / "list.tsv").read_text(encoding="utf-8"),
                          kit.list_text([r for r in kit.ROWS if r[0] == "proj/notes/ledger.md" or "/reports/" in r[0]]))
 
+    def test_a_list_written_under_one_of_its_roots_stops_the_list(self):
+        d, proj, rules = kit.project(self)
+        for root, out in ((f"proj={proj}", proj / "list.tsv"), (f"proj={proj}", d / "proj" / "notes" / "l.tsv"),
+                          (f"proj/notes/ledger.md={proj / 'notes' / 'ledger.md'}", proj / "notes" / "ledger.md")):
+            with self.subTest(out=out):
+                before = (proj / "notes" / "ledger.md").read_bytes()
+                rc, stdout, err = kit.run("list", "--rules", rules, "--root", root, "--out", out)
+                self.assertEqual((rc, stdout), (2, ""), err)
+                self.assertEqual(err, f"list: --out {out} lies under the root {root}, so the list would list itself; "
+                                      f"nothing was written\n")
+                self.assertFalse((proj / "list.tsv").exists() or (proj / "notes" / "l.tsv").exists())
+                self.assertEqual((proj / "notes" / "ledger.md").read_bytes(), before)
+
     def test_two_roots_that_give_one_path_stop_the_list(self):
         d, proj, rules = kit.project(self)
         rc, _, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}",
@@ -457,6 +470,15 @@ class ATableInPlaceOfAWalk(unittest.TestCase):
                 ("proj/reports/alpha.json", 1, b"A", "public-result"),
                 ("proj/web/node_modules/pkg/index.js", 2, b"js", "regenerable")]
         self.assertEqual((d / "list.tsv").read_text(encoding="utf-8"), kit.list_text(want))
+
+    def test_a_strip_prefix_that_ends_inside_a_name_stops_the_list(self):
+        d, proj, rules = kit.project(self)
+        rc, out, err = kit.run("list", "--rules", rules, "--listing", self.table(d, [("proj/notes/n.md", b"note")]),
+                               "--strip-prefix", "/far/ho", "--out", d / "list.tsv")
+        self.assertEqual((rc, out), (2, ""))
+        self.assertEqual(err, "list: --strip-prefix must end in '/', so that it cuts whole folders off; "
+                              "read '/far/ho'\n")
+        self.assertFalse((d / "list.tsv").exists())
 
     def test_a_barred_row_stops_the_list_or_is_recorded_by_name(self):
         d, proj, rules = kit.project(self)
