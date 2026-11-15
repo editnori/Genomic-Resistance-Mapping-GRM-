@@ -170,8 +170,8 @@ describe("report leads with revision 7's numbers", () => {
   });
 
   it("names the known-gene catalog with its version, or says the version is not recorded", () => {
-    expect(catalogWords({ ...base, amrfinder_version: "2026-08-14.1" })).toBe("Known-gene catalog: AMRFinderPlus 2026-08-14.1");
-    expect(catalogWords({ ...base, amrfinder_version: "" })).toBe("Known-gene catalog: AMRFinderPlus version not recorded");
+    expect(catalogWords({ ...base, amrfinder_version: "2026-08-14.1" })).toBe("Known-gene catalog: AMRFinderPlus database 2026-08-14.1");
+    expect(catalogWords({ ...base, amrfinder_version: "" })).toBe("Known-gene catalog: AMRFinderPlus database, version not recorded");
   });
 });
 
@@ -224,7 +224,7 @@ describe("What GRM found", () => {
     expect(host.querySelector("h1")?.textContent).toBe("What GRM found");
     // The question comes in words before any chart.
     expect(host.querySelector("header")?.textContent).toContain("asks how well the bacterium's genome, its full DNA sequence, predicts that lab result.");
-    expect(host.querySelector("header")?.textContent).toContain("Known-gene catalog: AMRFinderPlus");
+    expect(host.querySelector("header")?.textContent).toContain("Known-gene catalog: AMRFinderPlus database ");
     expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toEqual([
       "How to read this report",
       "1 Genomes and lab calls",
