@@ -417,6 +417,7 @@ src/lib.rs serve::tests::symlinks_cannot_escape_either_root
 src/lib.rs species::tests::a_recount_never_leaves_the_old_sidecar_beside_a_new_kset
 src/lib.rs species::tests::a_sidecar_from_before_digests_beside_a_kset_of_another_k_takes_the_ksets_count
 src/lib.rs species::tests::a_sidecar_without_a_kset_digest_takes_it_from_the_stored_kset
+src/lib.rs species::tests::column_blocks_write_the_matrix_files_one_merge_writes
 src/lib.rs species::tests::counts_go_stale_when_genomes_txt_selects_other_genomes_with_fasta
 src/lib.rs species::tests::kset_digests_tell_ksets_of_one_size_apart_and_a_recount_repeats_them
 src/lib.rs species::tests::learning_takes_only_the_catalog_the_gene_calls_came_from

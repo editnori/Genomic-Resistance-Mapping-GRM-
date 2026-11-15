@@ -287,10 +287,15 @@ pub fn structure(layout: &Layout, slug: &str) -> Result<Structure> {
 }
 
 /// Merges ksets in counted order, which becomes the matrix column order.
+/// `column_blocks` of None opens every kset at once (`matrix::build`).
+/// Some(width) merges through partials of `width` genomes each, which
+/// writes the same matrix files with `width` ksets open at a time (see
+/// docs/matrix-scaling.md). The ksets are kept either way.
 pub fn build_matrix(
     layout: &Layout,
     slug: &str,
     min_support: u32,
+    column_blocks: Option<usize>,
 ) -> Result<matrix::MatrixSummary> {
     let counted = load_counted(layout, slug)?;
     let digests = counted.kset_digests("matrix")?;
@@ -300,10 +305,64 @@ pub fn build_matrix(
         .iter()
         .map(|g| kdir.join(format!("{}.kset", g.genome_id)))
         .collect();
-    let mut m = matrix::build(&paths, min_support, rayon::current_num_threads() * 2)?;
+    let threads_chunk = rayon::current_num_threads() * 2;
+    let mut m = match column_blocks {
+        None => matrix::build(&paths, min_support, threads_chunk)?,
+        Some(width) => {
+            let columns: Vec<matrix::Column> = counted
+                .genomes
+                .iter()
+                .zip(&digests)
+                .map(|(g, d)| matrix::Column {
+                    name: g.genome_id.clone(),
+                    kset_digest: d.clone(),
+                })
+                .collect();
+            let dir = layout.partials_dir(slug);
+            let built = build_in_blocks(
+                &paths,
+                &columns,
+                counted.k,
+                width,
+                &dir,
+                min_support,
+                threads_chunk,
+            );
+            // The ksets are kept, so the partials are scratch: a rerun
+            // writes them again. A failed merge reports its own error.
+            let removed = std::fs::remove_dir_all(&dir);
+            let m = built?;
+            removed.with_context(|| format!("remove {}", dir.display()))?;
+            m
+        }
+    };
     m.summary.kset_digests = digests;
     m.save(&layout.matrix_dir(slug))?;
     Ok(m.summary)
+}
+
+/// Writes one partial per `width` columns into `dir`, then merges them.
+fn build_in_blocks(
+    paths: &[PathBuf],
+    columns: &[matrix::Column],
+    k: usize,
+    width: usize,
+    dir: &Path,
+    min_support: u32,
+    threads_chunk: usize,
+) -> Result<matrix::FeatureMatrix> {
+    anyhow::ensure!(
+        width > 0 && width.is_multiple_of(64),
+        "--column-blocks must be a multiple of 64 so blocks join on word boundaries, not {width}"
+    );
+    std::fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
+    let mut partials = Vec::new();
+    for (block, (paths, columns)) in paths.chunks(width).zip(columns.chunks(width)).enumerate() {
+        let out = dir.join(format!("block-{block:04}.kpart"));
+        matrix::write_partial(paths, columns, block * width, &out, threads_chunk, 0)?;
+        partials.push(out);
+    }
+    matrix::build_from_partials(&partials, columns, k, min_support, threads_chunk)
 }
 
 /// Stages to rerun before learning so that the gene calls, structure, and
@@ -572,6 +631,60 @@ mod tests {
     }
 
     const SEQ: &str = "ACGTTGCAAGGCTTACCGATAGCTAGGCTTAACGGTACCATGCAGTTCAGGA";
+
+    #[test]
+    fn column_blocks_write_the_matrix_files_one_merge_writes() {
+        use rand::{Rng, SeedableRng};
+        // 150 genomes: two blocks of 64 and one of 22. Each carries a shared
+        // core, one of three group segments, and a segment of its own, so
+        // the matrix has full rows, partly set rows and rare k-mers.
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(29);
+        let mut random = |n: usize| -> String {
+            (0..n)
+                .map(|_| b"ACGT"[rng.random_range(0..4)] as char)
+                .collect()
+        };
+        let core = random(600);
+        let groups = [random(200), random(200), random(200)];
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        std::fs::create_dir_all(layout.fasta_dir()).unwrap();
+        std::fs::create_dir_all(layout.species_dir("s")).unwrap();
+        let ids: Vec<String> = (0..150).map(|g| format!("g{g:03}")).collect();
+        for (g, id) in ids.iter().enumerate() {
+            let seq = format!("{core}N{}N{}", groups[g % 3], random(60));
+            std::fs::write(fasta_path(&layout.fasta_dir(), id), format!(">c\n{seq}\n")).unwrap();
+        }
+        std::fs::write(layout.species_dir("s").join("genomes.txt"), ids.join("\n")).unwrap();
+        count(&layout, "s", 31, None).unwrap();
+
+        let files = || {
+            [
+                "matrix.json",
+                "patterns.bin",
+                "support.bin",
+                "kmer_offsets.bin",
+                "kmers.bin",
+            ]
+            .map(|name| std::fs::read(layout.matrix_dir("s").join(name)).unwrap())
+        };
+        let whole = build_matrix(&layout, "s", 2, None).unwrap();
+        let want = files();
+        assert!(whole.n_patterns >= 3 && whole.kmers_rare > 0 && whole.kmers_core > 0);
+        for width in [64, 128, 4096] {
+            let m = build_matrix(&layout, "s", 2, Some(width)).unwrap();
+            assert_eq!(m.n_patterns, whole.n_patterns, "width {width}");
+            assert!(files() == want, "width {width} wrote other matrix files");
+            assert!(!layout.partials_dir("s").exists(), "width {width}");
+            assert!(layout.kset_dir("s").join("g000.kset").exists());
+        }
+        // A width off a word boundary is refused, and leaves the matrix alone.
+        for width in [0, 100] {
+            let err = build_matrix(&layout, "s", 2, Some(width)).err().unwrap();
+            assert!(format!("{err:#}").contains("multiple of 64"), "{err:#}");
+            assert!(files() == want);
+        }
+    }
 
     #[test]
     fn kset_digests_tell_ksets_of_one_size_apart_and_a_recount_repeats_them() {

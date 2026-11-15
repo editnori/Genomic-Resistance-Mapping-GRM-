@@ -103,6 +103,11 @@ enum Command {
         /// from at least this many).
         #[arg(long, default_value_t = PIPELINE_MIN_SUPPORT)]
         min_support: u32,
+        /// Merge this many genomes at a time through column-block partials
+        /// instead of opening every kset at once. A multiple of 64. The
+        /// matrix files are the same; the ksets are kept.
+        #[arg(long)]
+        column_blocks: Option<usize>,
     },
     /// Cross-validate every learner on each species x drug dataset, fit the
     /// final models, annotate their features, and write one report each.
@@ -322,9 +327,10 @@ fn run(cli: Cli) -> Result<()> {
         Command::Matrix {
             species,
             min_support,
+            column_blocks,
         } => species
             .iter()
-            .try_for_each(|s| matrix(&layout, s, min_support)),
+            .try_for_each(|s| matrix_with(&layout, s, min_support, column_blocks)),
         Command::Learn {
             species,
             only,
@@ -569,8 +575,17 @@ fn structure(layout: &Layout, slug: &str) -> Result<()> {
 }
 
 fn matrix(layout: &Layout, slug: &str, min_support: u32) -> Result<()> {
+    matrix_with(layout, slug, min_support, None)
+}
+
+fn matrix_with(
+    layout: &Layout,
+    slug: &str,
+    min_support: u32,
+    column_blocks: Option<usize>,
+) -> Result<()> {
     let started = std::time::Instant::now();
-    let s = grm::species::build_matrix(layout, slug, min_support)?;
+    let s = grm::species::build_matrix(layout, slug, min_support, column_blocks)?;
     eprintln!(
         "{slug}: {} genomes, {} distinct k-mers, {} kept in {} patterns ({} rare, {} core) in {:.0}s",
         s.genomes.len(),
@@ -1663,7 +1678,7 @@ mod tests {
         // The re-save rewrites three binaries, then cannot create kmers.bin.
         std::fs::remove_file(mx.join("kmers.bin")).unwrap();
         std::fs::create_dir(mx.join("kmers.bin")).unwrap();
-        assert!(grm::species::build_matrix(&layout, SLUG, 2).is_err());
+        assert!(grm::species::build_matrix(&layout, SLUG, 2, None).is_err());
         std::fs::remove_dir(mx.join("kmers.bin")).unwrap();
         count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let rebuilt = FeatureMatrix::load(&mx).unwrap();
