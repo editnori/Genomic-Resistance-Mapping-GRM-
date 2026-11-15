@@ -202,6 +202,8 @@ The saved inputs are not published, so the command cannot be run from public fil
 
 [docs/outside-study-results.md](docs/outside-study-results.md) gives the result of a retrospective test on newly deposited studies from the same database: each revision-12 report's final model, applied unchanged to BV-BRC genomes added after the cohort was built. [docs/outside-study-results-by-species.md](docs/outside-study-results-by-species.md) reads it one species at a time. [docs/outside-study-test.md](docs/outside-study-test.md) is the plan, frozen before any of those genomes was fetched. The output files are in `reference/outside-study/`. The result's section Revision 14 reads the same estimates against the figures the site serves now, from `reference/outside-study-figures/`. `reference/outside-study-models/` holds a digest of each final model in both revisions, and the suite fails if one differs.
 
+[docs/lasso-stopping.md](docs/lasso-stopping.md) gives the lasso's stopping rule and the large-species scan it registered. Its section Revision 14 scan reports the scan of 15 November 2026: the release's lasso code fitted again on the list's 18 datasets, each fit compared with the released reports. The plan, the result files and the scripts are in `reference/lasso-scan/rev14-20261115/`.
+
 [docs/data-collection.md](docs/data-collection.md) shows how to keep one checked copy of the project's files: `scripts/collect/collect.py` lists them with a size, a sha256 and a class, packs one class into archives of at most 1.9 GB, and checks an archive against the list it carries.
 
 ## Checks
