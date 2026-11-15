@@ -1,7 +1,7 @@
 """collect.py check: an archive that is as its list says passes, and each planted difference is named.
 
-Every archive here is packed from the synthetic project of kit.py. The internal-record archive holds 4 files and
-47 bytes (21 + 0 + 16 + 10)."""
+Every archive here is packed from the synthetic project of kit.py. The internal-record archive holds its four
+internal-record files; the sizes the tests expect are computed from kit.ROWS."""
 
 import gzip
 import io
@@ -13,8 +13,8 @@ import unittest
 
 from tests.collect import kit
 
-OK_FOLDER = ("4 files, 47 bytes, class internal-record, every size and sha256 as listed, "
-             "nothing else under files/\n")
+OK_FOLDER = ("{} files, {} bytes, class internal-record, every size and sha256 as listed, "
+             "nothing else under files/\n").format(*kit.counted("internal-record"))
 
 
 class AnUnpackedArchive(unittest.TestCase):
@@ -35,8 +35,9 @@ class AnUnpackedArchive(unittest.TestCase):
         self.assertEqual((rc, err, out), (0, "", f"check: OK {top}: " + OK_FOLDER))
         d, top = self.unpacked("public-result")
         rc, out, err = kit.run("check", top, "--threads", 1)
-        self.assertEqual((rc, out), (0, f"check: OK {top}: 2 files, 41 bytes, class public-result, every size and "
-                                        "sha256 as listed, nothing else under files/\n"))
+        n, size = kit.counted("public-result")
+        self.assertEqual((rc, out), (0, f"check: OK {top}: {n} files, {size} bytes, class public-result, every size "
+                                        "and sha256 as listed, nothing else under files/\n"))
 
     def test_a_folder_named_for_another_class_is_found(self):
         d, top = self.unpacked()

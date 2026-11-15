@@ -21,7 +21,7 @@ BARRED = ("sealed", "held-out", "ks30", "ks50", "vumc", "clinical", "private", "
 JOINED = {"held-out": ("held", "out"), "ks30": ("ks", "30"), "ks50": ("ks", "50"), "sigdrug": ("sig", "drug")}
 EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
-# The synthetic project. The sizes in the comments are counted by hand and the tests use them as written.
+# The synthetic project. The sizes in the comments are for the reader; the tests compute every size from the bytes.
 FILES = {
     "reports/alpha.json": b'{"dataset": "alpha"}\n',  # 21 bytes
     "reports/beta.json": b'{"dataset": "beta"}\n',  # 20
@@ -43,20 +43,39 @@ RULES = ("# synthetic rules\n"
          "regenerable\tproj/env/\n"
          "regenerable\t*.tmp\n"
          "internal-record\t*\n")
+
+
+def size_below(prefix):
+    """The bytes of the synthetic files under prefix, as a regenerable row counts them."""
+    return sum(len(data) for rel, data in FILES.items() if rel.startswith(prefix))
+
+
+def file_row(rel, cls):
+    return f"proj/{rel}", len(FILES[rel]), FILES[rel], cls
+
+
 # The list of the synthetic project: (path, bytes, hashed content or None, class), in the list's order.
 ROWS = [
-    ("proj/build/__pycache__/", 3, None, "regenerable"),
-    ("proj/build/target/", 194, None, "regenerable"),  # 44 + 100 + 50, over two levels
-    ("proj/env/", 11, None, "regenerable"),
-    ("proj/inputs/genome1.fna", 9, FILES["inputs/genome1.fna"], "public-input"),
-    ("proj/notes/alpha-copy.json", 21, FILES["notes/alpha-copy.json"], "internal-record"),
-    ("proj/notes/empty.txt", 0, b"", "internal-record"),
-    ("proj/notes/ledger.md", 16, FILES["notes/ledger.md"], "internal-record"),
-    ("proj/notes/messages/m1.txt", 10, FILES["notes/messages/m1.txt"], "internal-record"),
-    ("proj/reports/alpha.json", 21, FILES["reports/alpha.json"], "public-result"),
-    ("proj/reports/beta.json", 20, FILES["reports/beta.json"], "public-result"),
-    ("proj/scratch/run.tmp", 3, None, "regenerable"),
+    ("proj/build/__pycache__/", size_below("build/__pycache__/"), None, "regenerable"),
+    ("proj/build/target/", size_below("build/target/"), None, "regenerable"),  # over two levels
+    ("proj/env/", size_below("env/"), None, "regenerable"),
+    file_row("inputs/genome1.fna", "public-input"),
+    file_row("notes/alpha-copy.json", "internal-record"),
+    file_row("notes/empty.txt", "internal-record"),
+    file_row("notes/ledger.md", "internal-record"),
+    file_row("notes/messages/m1.txt", "internal-record"),
+    file_row("reports/alpha.json", "public-result"),
+    file_row("reports/beta.json", "public-result"),
+    ("proj/scratch/run.tmp", len(FILES["scratch/run.tmp"]), None, "regenerable"),
 ]
+
+
+def counted(cls):
+    """(entries, bytes) of one class in ROWS."""
+    rows = [r for r in ROWS if r[3] == cls]
+    return len(rows), sum(r[1] for r in rows)
+
+
 # What `list` says of the one directory a marker makes regenerable: build/target/ holds CACHEDIR.TAG and 3 files.
 MARKED = ("list: 1 directories are regenerable for a marker file they hold, so their files go into no archive:\n"
           f"  proj/build/target/  CACHEDIR.TAG  {sum(1 for f in FILES if f.startswith('build/target/'))} files\n")

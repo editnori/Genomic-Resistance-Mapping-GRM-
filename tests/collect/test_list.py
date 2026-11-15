@@ -14,10 +14,10 @@ class TheList(unittest.TestCase):
         rc, out, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "list.tsv")
         self.assertEqual((rc, err), (0, kit.MARKED))
         self.assertEqual((d / "list.tsv").read_text(encoding="utf-8"), kit.list_text())
-        # 21 + 20 public; 21 + 0 + 16 + 10 internal; 9 input; 3 + 194 + 11 + 3 regenerable
-        self.assertEqual(out, "class\tentries\tbytes\npublic-result\t2\t41\ninternal-record\t4\t47\n"
-                              "public-input\t1\t9\nregenerable\t4\t211\n"
-                              f"list: wrote 11 rows to {d / 'list.tsv'}\n")
+        by_class = "".join("{}\t{}\t{}\n".format(cls, *kit.counted(cls))
+                           for cls in ("public-result", "internal-record", "public-input", "regenerable"))
+        self.assertEqual(out, f"class\tentries\tbytes\n{by_class}"
+                              f"list: wrote {len(kit.ROWS)} rows to {d / 'list.tsv'}\n")
 
     def test_the_list_does_not_depend_on_the_threads_or_on_where_the_project_lies(self):
         d, proj, rules = kit.project(self)
