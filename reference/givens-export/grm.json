@@ -613,8 +613,21 @@
           "quote": "Labels inferred from an MIC, using the MIC cutoff that best reproduces the reported calls, stay in the curated phenotypes, marked `label_from_mic`, and no learner trains or is scored on them."
         }
       ],
-      "measured": [],
-      "unmeasured": "No committed file counts the datasets that hold such labels. The released index has the field, and the repository keeps no count of it."
+      "measured": [
+        {
+          "count": 64,
+          "of": 274,
+          "what": "datasets with at least one genome whose label GRM inferred from a MIC and left out of training and scoring, of the datasets whose index entry records that count",
+          "source": "reference/release-summary/rev14-274-20261112/index-counts.json",
+          "basis": "file",
+          "evaluation_revision": 14,
+          "read": {
+            "count": "reference/release-summary/rev14-274-20261112/index-counts.json#/labels_from_mic_excluded/datasets_above_zero",
+            "of": "reference/release-summary/rev14-274-20261112/index-counts.json#/labels_from_mic_excluded/datasets_with_field"
+          },
+          "note": "A count of datasets, read from the released index. A label is one genome and one antibiotic, so one genome can count in several datasets. The count says nothing about how any isolate should be treated."
+        }
+      ]
     }
   ],
   "edges": [
