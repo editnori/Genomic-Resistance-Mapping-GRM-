@@ -1,0 +1,3 @@
+# The set covering machine reference: pyscm-ml 1.1.2, source archive only.
+pyscm-ml==1.1.2 \
+    --hash=sha256:b607a9cc7878439fb3e8503a344f1a4e35e9de64a453e7d932853bf81fe07451
