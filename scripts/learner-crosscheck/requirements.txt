@@ -1,0 +1,19 @@
+# Reference libraries of the learner cross-check. Python 3.12 on Linux x86-64.
+# Every file is named by its sha256 on pypi.org; install with
+#   pip install --no-deps --require-hashes -r requirements.txt
+# xgboost 3.0.5 is the manylinux2014 wheel, the CPU build of that release:
+# --no-deps leaves out its GPU-only dependency nvidia-nccl-cu12.
+numpy==1.26.4 \
+    --hash=sha256:675d61ffbfa78604709862923189bad94014bef562cc35cf61d3a07bba02a7ed
+scipy==1.15.3 \
+    --hash=sha256:271e3713e645149ea5ea3e97b57fdab61ce61333f97cfae392c28ba786f9bb49
+scikit-learn==1.7.2 \
+    --hash=sha256:e5bf3d930aee75a65478df91ac1225ff89cd28e9ac7bd1196853a9229b6adb0b
+joblib==1.5.2 \
+    --hash=sha256:4e1f0bdbb987e6d843c70cf43714cb276623def372df3c22fe5266b2670bc241
+threadpoolctl==3.6.0 \
+    --hash=sha256:43a0b8fd5a2928500110039e43a5eed8480b918967083ea48dc3ab9f13c4a7fb
+six==1.17.0 \
+    --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274
+xgboost==3.0.5 \
+    --hash=sha256:d7f57a04629b52bae91a80e6721b9cdd009b605827a9eca67953675292b4487e

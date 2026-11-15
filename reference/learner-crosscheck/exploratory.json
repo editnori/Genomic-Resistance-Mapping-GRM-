@@ -1,0 +1,133 @@
+{
+ "end_to_end_trees": {
+  "campylobacter_jejuni__ciprofloxacin_lineage_fold0": {
+   "identical": 82,
+   "trees_both_keep": 87
+  },
+  "campylobacter_jejuni__ciprofloxacin_random_fold0": {
+   "identical": 10,
+   "trees_both_keep": 15
+  },
+  "constant_balanced": {
+   "identical": 0,
+   "trees_both_keep": 0
+  },
+  "constant_imbalanced": {
+   "identical": 0,
+   "trees_both_keep": 0
+  },
+  "enterobacter_cloacae__tobramycin_lineage_fold0": {
+   "identical": 26,
+   "trees_both_keep": 26
+  },
+  "enterobacter_cloacae__tobramycin_random_fold0": {
+   "identical": 113,
+   "trees_both_keep": 115
+  },
+  "imbalanced_5pct": {
+   "identical": 47,
+   "trees_both_keep": 47
+  },
+  "marker_dup_constant": {
+   "identical": 39,
+   "trees_both_keep": 39
+  },
+  "planted_logistic": {
+   "identical": 35,
+   "trees_both_keep": 45
+  },
+  "staphylococcus_haemolyticus__fusidic_acid_lineage_fold0": {
+   "identical": 9,
+   "trees_both_keep": 9
+  },
+  "staphylococcus_haemolyticus__fusidic_acid_random_fold0": {
+   "identical": 12,
+   "trees_both_keep": 15
+  },
+  "streptococcus_agalactiae__clindamycin_lineage_fold0": {
+   "identical": 28,
+   "trees_both_keep": 28
+  },
+  "streptococcus_agalactiae__clindamycin_random_fold0": {
+   "identical": 163,
+   "trees_both_keep": 163
+  },
+  "tied_counts": {
+   "identical": 22,
+   "trees_both_keep": 399
+  },
+  "xor_balanced": {
+   "identical": 38,
+   "trees_both_keep": 38
+  }
+ },
+ "end_to_end_trees_total": {
+  "identical": 624,
+  "trees_both_keep": 1026
+ },
+ "equal_splits": {
+  "campylobacter_jejuni__ciprofloxacin_lineage_fold0": {
+   "grm_names_the_higher_feature": 17,
+   "other_way_round": 17,
+   "same_way_round": 0
+  },
+  "campylobacter_jejuni__ciprofloxacin_random_fold0": {
+   "grm_names_the_higher_feature": 15,
+   "other_way_round": 15,
+   "same_way_round": 0
+  },
+  "enterobacter_cloacae__tobramycin_random_fold0": {
+   "grm_names_the_higher_feature": 4,
+   "other_way_round": 4,
+   "same_way_round": 0
+  },
+  "planted_logistic": {
+   "grm_names_the_higher_feature": 1,
+   "other_way_round": 1,
+   "same_way_round": 0
+  },
+  "staphylococcus_haemolyticus__fusidic_acid_lineage_fold0": {
+   "grm_names_the_higher_feature": 14,
+   "other_way_round": 14,
+   "same_way_round": 0
+  },
+  "staphylococcus_haemolyticus__fusidic_acid_random_fold0": {
+   "grm_names_the_higher_feature": 12,
+   "other_way_round": 12,
+   "same_way_round": 0
+  },
+  "streptococcus_agalactiae__clindamycin_random_fold0": {
+   "grm_names_the_higher_feature": 1,
+   "other_way_round": 1,
+   "same_way_round": 0
+  }
+ },
+ "equal_splits_total": {
+  "grm_names_the_higher_feature": 64,
+  "other_way_round": 64,
+  "same_way_round": 0
+ },
+ "label": "exploratory: written after the first comparison was read; no outcome depends on it",
+ "rounding_ties": {
+  "cart": {
+   "features_present_where_the_other_is_absent": 2,
+   "nodes": 5,
+   "other_exact_ties": 3
+  },
+  "rf": {
+   "features_present_where_the_other_is_absent": 246,
+   "nodes": 507,
+   "other_exact_ties": 261
+  }
+ },
+ "stored_gain": {
+  "decision_tree": {
+   "split_nodes": 218,
+   "stored_gain_is_the_recomputed_one": 218
+  },
+  "forest": {
+   "split_nodes": 52941,
+   "stored_gain_is_the_recomputed_one": 52941
+  }
+ }
+}
