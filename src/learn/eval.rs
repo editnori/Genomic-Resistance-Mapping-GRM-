@@ -365,8 +365,8 @@ pub struct FoldScm {
 /// - `scm`: as `FinalModels::scm`'s kind, p and rules;
 /// - `cart`: the tree, as `FinalModels::cart`, grown to its selected depth;
 /// - `rf` and `gbt`: the `TOP_WEIGHTED` features by importance, heaviest
-///   first, as `rf_importance` and `gbt_importance`; a boosted model that
-///   kept no tree has none;
+///   first and equal weights by lower feature first, as `rf_importance` and
+///   `gbt_importance`; a boosted model that kept no tree has none;
 /// - `lasso`: the scored refit, as `FinalModels::lasso`; None when the
 ///   tuning path was empty, and without weights when the refit kept none.
 ///   A lasso fold model that is None or has no weights, like a boosting
@@ -1403,6 +1403,8 @@ fn observed_lasso(
     error.map_or(Ok(()), Err)
 }
 
+/// The `k` heaviest features of `imp`, heaviest first, and among equal
+/// weights the lower feature first.
 fn top_weighted(imp: std::collections::HashMap<u32, f64>, k: usize) -> Vec<WeightedFeature> {
     let mut v: Vec<WeightedFeature> = imp
         .into_iter()
@@ -4094,7 +4096,7 @@ mod tests {
                 );
                 for (name, list) in [("rf", &models.rf[f]), ("gbt", &models.gbt[f])] {
                     assert!(list.len() <= TOP_WEIGHTED);
-                    assert!(list.windows(2).all(|w| w[0].weight >= w[1].weight));
+                    assert!(in_rank_order(list));
                     list.iter().for_each(|w| note(name, w.feature));
                 }
             }
@@ -4174,6 +4176,33 @@ mod tests {
         );
     }
 
+    /// Heaviest first, and among equal weights the lower feature first.
+    fn in_rank_order(list: &[WeightedFeature]) -> bool {
+        list.windows(2).all(|w| {
+            let (a, b) = (&w[0], &w[1]);
+            a.weight > b.weight || (a.weight == b.weight && a.feature < b.feature)
+        })
+    }
+
+    #[test]
+    fn ranked_lists_put_the_lower_feature_first_among_equal_weights() {
+        let importance: std::collections::HashMap<u32, f64> =
+            [(7, 0.5), (3, 0.5), (9, 1.0), (1, 0.25), (5, 0.5), (2, 0.25)]
+                .into_iter()
+                .collect();
+        let ranked = |k: usize| -> Vec<(u32, f64)> {
+            let list = top_weighted(importance.clone(), k);
+            assert!(in_rank_order(&list));
+            list.iter().map(|w| (w.feature, w.weight)).collect()
+        };
+        assert_eq!(
+            ranked(6),
+            [(9, 1.0), (3, 0.5), (5, 0.5), (7, 0.5), (1, 0.25), (2, 0.25)]
+        );
+        // A cut inside a tie keeps the lower features.
+        assert_eq!(ranked(3), [(9, 1.0), (3, 0.5), (5, 0.5)]);
+    }
+
     #[test]
     fn fold_forest_and_boosting_lists_keep_the_fifty_heaviest_features() {
         // Synthetic: 400 samples, half resistant, and 150 rows that each
@@ -4218,6 +4247,7 @@ mod tests {
             for f in 0..cfg.folds {
                 let lengths = (models.rf[f].len(), models.gbt[f].len());
                 assert_eq!(lengths, (50, 50), "{} fold {f}", models.scheme);
+                assert!(in_rank_order(&models.rf[f]) && in_rank_order(&models.gbt[f]));
             }
         }
     }

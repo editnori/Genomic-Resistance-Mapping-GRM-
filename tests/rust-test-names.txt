@@ -247,6 +247,7 @@ src/lib.rs learn::eval::tests::pooling_refuses_a_missing_or_impossible_training_
 src/lib.rs learn::eval::tests::random_tuning_keeps_each_duplicate_group_whole_inside_outer_training
 src/lib.rs learn::eval::tests::random_tuning_that_cannot_keep_duplicates_whole_fails_before_any_fit
 src/lib.rs learn::eval::tests::random_tuning_without_duplicates_is_revision_10s_stratified_tuning
+src/lib.rs learn::eval::tests::ranked_lists_put_the_lower_feature_first_among_equal_weights
 src/lib.rs learn::eval::tests::rows_written_before_revision_14_read_back_unchanged
 src/lib.rs learn::eval::tests::saved_scores_are_held_out_fits_that_reproduce_every_reported_metric
 src/lib.rs learn::eval::tests::scm_cart_boosting_and_lasso_tune_on_the_splits_tuning_groups
