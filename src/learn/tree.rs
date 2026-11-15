@@ -16,7 +16,12 @@
 //! than the tree was grown to gives exactly the tree a depth-limited fit
 //! would have produced: greedy splits above depth d do not depend on the
 //! limit. Cross-validation scores all depths from one fit.
+//!
+//! Among candidates of equal 64-bit gain a node splits on the lowest-numbered
+//! feature. `TieRule::Exact`, an experiment that is off by default, compares
+//! the gains as exact fractions instead (`tie`).
 
+use super::tie::{self, SplitImpurity, Tally, TieRule};
 use super::{fold_masks, sample_indices};
 use crate::bits::{self, BitMatrix, Bits};
 use rand::SeedableRng;
@@ -53,6 +58,8 @@ pub struct TreeParams {
     /// Features drawn at random per node; None evaluates every feature.
     pub max_features: Option<usize>,
     pub seed: u64,
+    /// How equal gains are broken; `TieRule::Float` is production's.
+    pub tie: TieRule,
 }
 
 struct Weights {
@@ -70,7 +77,38 @@ fn gini(p: f64, n: f64) -> f64 {
 }
 
 pub fn fit_tree(x: &BitMatrix, y: &Bits, train: &Bits, params: &TreeParams) -> Tree {
-    let n_pos = train.and(y).count() as f64;
+    let traced = tie::tracing();
+    let mut tally = Tally::default();
+    let tree = grow_tree(x, y, train, params, traced, &mut tally);
+    if traced {
+        tie::record(&tie::FitRecord {
+            learner: "cart",
+            objective: None,
+            rule: params.tie,
+            seed: params.seed,
+            fit_samples: train.count() as usize,
+            max_depth: params.max_depth,
+            rounds: None,
+            trees: vec![tree.digest()],
+            tally,
+        });
+    }
+    tree
+}
+
+/// One tree. When `traced`, every searched node finds both rules' picks and
+/// counts them in `tally`, and splits on `params.tie`'s.
+fn grow_tree(
+    x: &BitMatrix,
+    y: &Bits,
+    train: &Bits,
+    params: &TreeParams,
+    traced: bool,
+    tally: &mut Tally,
+) -> Tree {
+    let fit_pos = train.and(y).count();
+    let fit_counts = (fit_pos, train.count() - fit_pos);
+    let n_pos = fit_pos as f64;
     let n_neg = train.count() as f64 - n_pos;
     let total = n_pos + n_neg;
     let w = Weights {
@@ -110,7 +148,9 @@ pub fn fit_tree(x: &BitMatrix, y: &Bits, train: &Bits, params: &TreeParams) -> T
         let (np, nn) = (pos as f64 * w.pos, (n - pos) as f64 * w.neg);
         let parent = (np + nn) * gini(np, nn);
 
-        let evaluate = |f: u32| -> Option<(f64, u32)> {
+        // A candidate: its 64-bit gain, feature, and the counts of resistant
+        // and susceptible node samples that carry it.
+        let evaluate = |f: u32| -> Option<(f64, u32, (u32, u32))> {
             let row = x.row(f as usize);
             let pp = bits::and_count(row, mask_pos.words());
             let pn = bits::and_count(row, mask_neg.words());
@@ -121,24 +161,58 @@ pub fn fit_tree(x: &BitMatrix, y: &Bits, train: &Bits, params: &TreeParams) -> T
             let (lp, ln) = (pp as f64 * w.pos, pn as f64 * w.neg);
             let (rp, rn) = (np - lp, nn - ln);
             let gain = parent - (lp + ln) * gini(lp, ln) - (rp + rn) * gini(rp, rn);
-            (gain > 1e-12).then_some((gain, f))
+            (gain > 1e-12).then_some((gain, f, (pp, pn)))
         };
-        let better = |a: (f64, u32), b: (f64, u32)| {
-            if a.0 > b.0 || (a.0 == b.0 && a.1 < b.1) {
-                a
-            } else {
-                b
+        let exact = |(gain, f, (pp, pn)): (f64, u32, (u32, u32))| -> tie::Candidate {
+            let absent = (pos - pp, n - pos - pn);
+            (gain, f, SplitImpurity::new((pp, pn), absent, fit_counts))
+        };
+        let best = if traced {
+            let found: Vec<tie::Candidate> = match params.max_features {
+                Some(m) => sample_indices(x.rows, m, &mut rng)
+                    .into_iter()
+                    .filter_map(evaluate)
+                    .map(exact)
+                    .collect(),
+                None => (0..x.rows as u32)
+                    .into_par_iter()
+                    .filter_map(evaluate)
+                    .map(exact)
+                    .collect(),
+            };
+            let by_float = found.iter().copied().reduce(tie::better_float);
+            let by_exact = found.iter().copied().reduce(tie::better_exact);
+            tally.tree_node(&found, by_float, by_exact);
+            match params.tie {
+                TieRule::Float => by_float,
+                TieRule::Exact => by_exact,
             }
-        };
-        let best = match params.max_features {
-            Some(m) => sample_indices(x.rows, m, &mut rng)
-                .into_iter()
-                .filter_map(evaluate)
-                .reduce(better),
-            None => (0..x.rows as u32)
-                .into_par_iter()
-                .filter_map(evaluate)
-                .reduce_with(better),
+            .map(|c| (c.0, c.1))
+        } else {
+            match (params.tie, params.max_features) {
+                (TieRule::Float, Some(m)) => sample_indices(x.rows, m, &mut rng)
+                    .into_iter()
+                    .filter_map(evaluate)
+                    .reduce(tie::better_float)
+                    .map(|c| (c.0, c.1)),
+                (TieRule::Float, None) => (0..x.rows as u32)
+                    .into_par_iter()
+                    .filter_map(evaluate)
+                    .reduce_with(tie::better_float)
+                    .map(|c| (c.0, c.1)),
+                (TieRule::Exact, Some(m)) => sample_indices(x.rows, m, &mut rng)
+                    .into_iter()
+                    .filter_map(evaluate)
+                    .map(exact)
+                    .reduce(tie::better_exact)
+                    .map(|c| (c.0, c.1)),
+                (TieRule::Exact, None) => (0..x.rows as u32)
+                    .into_par_iter()
+                    .filter_map(evaluate)
+                    .map(exact)
+                    .reduce_with(tie::better_exact)
+                    .map(|c| (c.0, c.1)),
+            }
         };
         let Some((gain, feature)) = best else {
             continue;
@@ -189,6 +263,28 @@ impl Tree {
         self.nodes.iter().map(|n| n.depth).max().unwrap_or(0)
     }
 
+    /// FNV-1a digest of every node's value, counts, depth and split.
+    pub fn digest(&self) -> String {
+        tie::digest(self.nodes.iter().flat_map(|n| {
+            let split = n.split.as_ref().map_or([u64::MAX; 4], |s| {
+                [
+                    u64::from(s.feature),
+                    s.gain.to_bits(),
+                    u64::from(s.absent),
+                    u64::from(s.present),
+                ]
+            });
+            [
+                n.value.to_bits(),
+                u64::from(n.n),
+                u64::from(n.n_resistant),
+                u64::from(n.depth),
+            ]
+            .into_iter()
+            .chain(split)
+        }))
+    }
+
     /// Copy of the tree with everything below `max_depth` removed.
     pub fn truncated(&self, max_depth: u32) -> Tree {
         let mut nodes = Vec::new();
@@ -232,6 +328,7 @@ pub fn select_depth(
     inner_folds: &[usize],
     k: usize,
     max_depth: u32,
+    tie: TieRule,
 ) -> (u32, f64) {
     let mut err = vec![0.0; max_depth as usize];
     let masks = fold_masks(inner_folds, k);
@@ -246,6 +343,7 @@ pub fn select_depth(
                 min_leaf: 1,
                 max_features: None,
                 seed: 0,
+                tie,
             },
         );
         for d in 1..=max_depth {
@@ -286,6 +384,10 @@ pub struct ForestParams {
     /// and the outer fold, so a recorded config leaves it out.
     #[serde(skip)]
     pub seed: u64,
+    /// Evaluation sets this per fit from `EvalConfig::tie_rule`, so a
+    /// recorded config leaves it out.
+    #[serde(skip)]
+    pub tie: TieRule,
 }
 
 impl Default for ForestParams {
@@ -296,6 +398,7 @@ impl Default for ForestParams {
             max_depth: 30,
             min_leaf: 1,
             seed: 17,
+            tie: TieRule::Float,
         }
     }
 }
@@ -309,7 +412,8 @@ pub fn fit_forest(x: &BitMatrix, y: &Bits, train: &Bits, params: &ForestParams) 
     let members: Vec<usize> = train.iter_ones().collect();
     let take = ((members.len() as f64) * params.subsample).round() as usize;
     let max_features = ((x.rows as f64).sqrt().ceil() as usize).max(1);
-    let trees = (0..params.n_trees)
+    let traced = tie::tracing();
+    let (trees, tallies): (Vec<Tree>, Vec<Tally>) = (0..params.n_trees)
         .into_par_iter()
         .map(|t| {
             let seed = params.seed.wrapping_mul(1_000_003).wrapping_add(t as u64);
@@ -320,7 +424,8 @@ pub fn fit_forest(x: &BitMatrix, y: &Bits, train: &Bits, params: &ForestParams) 
             let chosen = sample_indices(members.len(), take, &mut rng);
             let mask =
                 Bits::from_indices(train.len(), chosen.into_iter().map(|i| members[i as usize]));
-            fit_tree(
+            let mut tally = Tally::default();
+            let tree = grow_tree(
                 x,
                 y,
                 &mask,
@@ -329,10 +434,29 @@ pub fn fit_forest(x: &BitMatrix, y: &Bits, train: &Bits, params: &ForestParams) 
                     min_leaf: params.min_leaf,
                     max_features: Some(max_features),
                     seed,
+                    tie: params.tie,
                 },
-            )
+                traced,
+                &mut tally,
+            );
+            (tree, tally)
         })
-        .collect();
+        .unzip();
+    if traced {
+        let mut tally = Tally::default();
+        tallies.into_iter().for_each(|t| tally += t);
+        tie::record(&tie::FitRecord {
+            learner: "rf",
+            objective: None,
+            rule: params.tie,
+            seed: params.seed,
+            fit_samples: train.count() as usize,
+            max_depth: params.max_depth,
+            rounds: None,
+            trees: trees.iter().map(Tree::digest).collect(),
+            tally,
+        });
+    }
     Forest { trees }
 }
 
@@ -395,6 +519,7 @@ mod tests {
                 min_leaf: 1,
                 max_features: None,
                 seed: 0,
+                tie: TieRule::Float,
             },
         );
         let scores = tree.predict(&x, 3);
@@ -426,6 +551,7 @@ mod tests {
                 min_leaf: 1,
                 max_features: None,
                 seed: 0,
+                tie: TieRule::Float,
             },
         );
         assert_eq!(tree.nodes.len(), 1);
@@ -537,6 +663,7 @@ mod tests {
                 min_leaf: 1,
                 max_features: None,
                 seed: 0,
+                tie: TieRule::Float,
             },
         );
         assert_eq!(tree.predict(&x, 2), vec![0.5; 15]);
@@ -560,5 +687,149 @@ mod tests {
                 .collect(),
         };
         assert_eq!(forest.predict(&BitMatrix::with_cols(3)), vec![0.5; 3]);
+    }
+
+    /// Synthetic: 2 resistant samples (0, 1) and 3 susceptible (2, 3, 4).
+    /// Feature 0 is on samples 0, 1 and 2, feature 1 on samples 3 and 4: one
+    /// split with its sides swapped, so the exact gains are equal. In 64-bit
+    /// arithmetic feature 0's gain is 1.25 and feature 1's 1.2500000000000004
+    /// (`scripts/find_ties.py` of lane tierule). Sample 5 carries both and is
+    /// not trained on.
+    fn mirrored_pair() -> (BitMatrix, Bits, Bits) {
+        let x = matrix(&[&[0, 1, 2, 5], &[3, 4, 5]], 6);
+        let y = Bits::from_indices(6, [0, 1]);
+        (x, y, Bits::from_indices(6, 0..5))
+    }
+
+    fn stump(tie: TieRule) -> TreeParams {
+        TreeParams {
+            max_depth: 1,
+            min_leaf: 1,
+            max_features: None,
+            seed: 0,
+            tie,
+        }
+    }
+
+    #[test]
+    fn rounding_puts_the_mirrored_feature_first_unless_the_rule_is_exact() {
+        let (x, y, train) = mirrored_pair();
+        let root = |tie| {
+            let t = fit_tree(&x, &y, &train, &stump(tie));
+            (t.nodes[0].split.as_ref().unwrap().feature, t.predict(&x, 1))
+        };
+        let (float, float_scores) = root(TieRule::Float);
+        let (exact, exact_scores) = root(TieRule::Exact);
+        assert_eq!((float, exact), (1, 0));
+        // The trained samples score the same either way; sample 5, which
+        // carries both features, falls on the other side.
+        assert_eq!(float_scores[..5], exact_scores[..5]);
+        assert_eq!((float_scores[5], exact_scores[5]), (0.0, 0.75));
+    }
+
+    #[test]
+    fn the_exact_rule_keeps_a_strictly_better_split() {
+        // Feature 2 separates the classes; the mirrored pair does not.
+        let (_, y, train) = mirrored_pair();
+        let x = matrix(&[&[0, 1, 2, 5], &[3, 4, 5], &[0, 1]], 6);
+        for tie in [TieRule::Float, TieRule::Exact] {
+            let t = fit_tree(&x, &y, &train, &stump(tie));
+            assert_eq!(t.nodes[0].split.as_ref().unwrap().feature, 2, "{tie:?}");
+        }
+    }
+
+    #[test]
+    fn every_forest_root_takes_the_lower_of_the_mirrored_pair_under_the_exact_rule() {
+        // Two features, so each node draws both; every tree holds all five
+        // trained samples.
+        let (x, y, train) = mirrored_pair();
+        let roots = |tie| -> Vec<u32> {
+            let params = ForestParams {
+                n_trees: 8,
+                subsample: 1.0,
+                tie,
+                ..Default::default()
+            };
+            fit_forest(&x, &y, &train, &params)
+                .trees
+                .iter()
+                .map(|t| t.nodes[0].split.as_ref().unwrap().feature)
+                .collect()
+        };
+        assert_eq!(roots(TieRule::Float), vec![1; 8]);
+        assert_eq!(roots(TieRule::Exact), vec![0; 8]);
+    }
+
+    /// Synthetic: random presence bits, the first feature tied to the class
+    /// on 80% of samples.
+    fn noisy(features: usize, samples: usize) -> (BitMatrix, Bits) {
+        use rand::Rng;
+        let mut rng = ChaCha8Rng::seed_from_u64(9);
+        let y = Bits::from_indices(samples, (0..samples).filter(|_| rng.random_bool(0.4)));
+        let mut x = BitMatrix::with_cols(samples);
+        for f in 0..features {
+            let on: Vec<usize> = (0..samples)
+                .filter(|&i| match f {
+                    0 => y.contains(i) != rng.random_bool(0.2),
+                    _ => rng.random_bool(0.4),
+                })
+                .collect();
+            x.push_row(Bits::from_indices(samples, on).words());
+        }
+        (x, y)
+    }
+
+    #[test]
+    fn a_traced_fit_is_the_untraced_fit_and_counts_its_nodes() {
+        let (x, y) = noisy(30, 60);
+        let train = Bits::ones(60);
+        for tie in [TieRule::Float, TieRule::Exact] {
+            for max_features in [None, Some(6)] {
+                let params = TreeParams {
+                    max_depth: 6,
+                    min_leaf: 1,
+                    max_features,
+                    seed: 3,
+                    tie,
+                };
+                let plain = grow_tree(&x, &y, &train, &params, false, &mut Tally::default());
+                let mut tally = Tally::default();
+                let traced = grow_tree(&x, &y, &train, &params, true, &mut tally);
+                assert_eq!(plain.digest(), traced.digest(), "{tie:?} {max_features:?}");
+                let splits = plain.nodes.iter().filter(|n| n.split.is_some()).count();
+                assert!(tally.searched as usize >= splits && splits > 0);
+            }
+        }
+        // The mirrored pair: one searched node, one exact tie, picked apart.
+        let (x, y, train) = mirrored_pair();
+        let mut tally = Tally::default();
+        grow_tree(&x, &y, &train, &stump(TieRule::Float), true, &mut tally);
+        assert_eq!(
+            (
+                tally.searched,
+                tally.exact_tied,
+                tally.differ_tie,
+                tally.differ_order
+            ),
+            (1, 1, 1, 0)
+        );
+    }
+
+    #[test]
+    fn a_tree_digest_changes_with_any_node_field() {
+        let (x, y, train) = mirrored_pair();
+        let t = fit_tree(&x, &y, &train, &stump(TieRule::Float));
+        let base = t.digest();
+        let edits: [fn(&mut Tree); 4] = [
+            |t| t.nodes[0].split.as_mut().unwrap().feature = 0,
+            |t| t.nodes[1].value += 0.25,
+            |t| t.nodes[2].n_resistant += 1,
+            |t| t.nodes[0].split.as_mut().unwrap().gain *= 2.0,
+        ];
+        for (i, edit) in edits.iter().enumerate() {
+            let mut u = t.clone();
+            edit(&mut u);
+            assert_ne!(u.digest(), base, "edit {i}");
+        }
     }
 }

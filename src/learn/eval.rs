@@ -45,6 +45,7 @@
 use super::gbt::{self, GbtParams, Objective};
 use super::lasso;
 use super::scm::{self, Kind, Rule};
+use super::tie::TieRule;
 use super::tree::{self, ForestParams, TreeParams};
 use super::{
     BinaryMetrics, NoCall, binary_metrics, fold_masks, grouped_folds, holdout, isolate_groups,
@@ -71,6 +72,10 @@ pub struct EvalConfig {
     pub screened_features: usize,
     pub lasso_lambdas: usize,
     pub seed: u64,
+    /// The tree learners' tie rule. `TieRule::Exact` is an experiment, off by
+    /// default; a report records the field only when it is on.
+    #[serde(skip_serializing_if = "TieRule::is_float")]
+    pub tie_rule: TieRule,
 }
 
 impl Default for EvalConfig {
@@ -85,6 +90,7 @@ impl Default for EvalConfig {
             screened_features: 4000,
             lasso_lambdas: 30,
             seed: 42,
+            tie_rule: TieRule::Float,
         }
     }
 }
@@ -383,7 +389,15 @@ pub(crate) fn fit_cart(
     inner: &[usize],
     cfg: &EvalConfig,
 ) -> Scored {
-    let (depth, _) = tree::select_depth(x, y, train, inner, cfg.inner_folds, cfg.cart_max_depth);
+    let (depth, _) = tree::select_depth(
+        x,
+        y,
+        train,
+        inner,
+        cfg.inner_folds,
+        cfg.cart_max_depth,
+        cfg.tie_rule,
+    );
     let t = tree::fit_tree(
         x,
         y,
@@ -393,6 +407,7 @@ pub(crate) fn fit_cart(
             min_leaf: 1,
             max_features: None,
             seed: 0,
+            tie: cfg.tie_rule,
         },
     );
     let leaves = t.nodes.iter().filter(|n| n.split.is_none()).count();
@@ -418,7 +433,12 @@ pub(crate) fn fit_rf(
     for &f in &feats {
         screened.push_row(x.row(f as usize));
     }
-    let forest = tree::fit_forest(&screened, y, train, &ForestParams { seed, ..cfg.forest });
+    let params = ForestParams {
+        seed,
+        tie: cfg.tie_rule,
+        ..cfg.forest
+    };
+    let forest = tree::fit_forest(&screened, y, train, &params);
     let importance = forest
         .importance()
         .into_iter()
@@ -470,7 +490,11 @@ fn fit_gbt(
         &fit_m,
         &val,
         &feats,
-        &GbtParams { seed, ..cfg.gbt },
+        &GbtParams {
+            seed,
+            tie: cfg.tie_rule,
+            ..cfg.gbt
+        },
     );
     Ok((
         Scored {
@@ -1254,7 +1278,15 @@ fn final_models(
     let choice = scm::select(x, y, &all, cfg.scm_max_rules, &inner, cfg.inner_folds);
     let model = scm::fit(x, y, &all, choice.kind, choice.p, choice.n_rules, true);
     let importance = scm::rule_importance(&model, x, y, &all);
-    let (depth, _) = tree::select_depth(x, y, &all, &inner, cfg.inner_folds, cfg.cart_max_depth);
+    let (depth, _) = tree::select_depth(
+        x,
+        y,
+        &all,
+        &inner,
+        cfg.inner_folds,
+        cfg.cart_max_depth,
+        cfg.tie_rule,
+    );
     let cart = tree::fit_tree(
         x,
         y,
@@ -1264,6 +1296,7 @@ fn final_models(
             min_leaf: 1,
             max_features: None,
             seed: 0,
+            tie: cfg.tie_rule,
         },
     );
     let (lasso_scored, lasso_model) = final_lasso(
@@ -1408,6 +1441,7 @@ fn evaluate_mic(
             &feats,
             &GbtParams {
                 seed: cfg.seed + fi as u64,
+                tie: cfg.tie_rule,
                 ..cfg.gbt
             },
         );
@@ -1473,6 +1507,23 @@ fn mic_categorical(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_report_records_the_tie_rule_only_when_the_experiment_is_on() {
+        let off = serde_json::to_value(EvalConfig::default()).unwrap();
+        assert!(off.get("tie_rule").is_none());
+        assert!(off["forest"].get("tie").is_none() && off["gbt"].get("tie").is_none());
+        let on = serde_json::to_value(EvalConfig {
+            tie_rule: TieRule::Exact,
+            ..Default::default()
+        })
+        .unwrap();
+        assert_eq!(on["tie_rule"], "exact");
+        assert_eq!(
+            off.as_object().unwrap().len() + 1,
+            on.as_object().unwrap().len()
+        );
+    }
 
     fn small_config() -> EvalConfig {
         EvalConfig {
@@ -2079,8 +2130,15 @@ mod tests {
             ),
             (choice.kind, choice.p, choice.cv_error)
         );
-        let (depth, _) =
-            tree::select_depth(&x, &y, &all, &inner, cfg.inner_folds, cfg.cart_max_depth);
+        let (depth, _) = tree::select_depth(
+            &x,
+            &y,
+            &all,
+            &inner,
+            cfg.inner_folds,
+            cfg.cart_max_depth,
+            cfg.tie_rule,
+        );
         assert_eq!(out.finals.cart_depth, depth);
         let (_, gbt) = fit_gbt(
             &x,

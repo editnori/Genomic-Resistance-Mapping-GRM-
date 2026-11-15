@@ -16,6 +16,7 @@ use crate::learn::eval::{
     MicInput, MicResult, SplitResult,
 };
 use crate::learn::gbt::GbtParams;
+use crate::learn::tie::TieRule;
 use crate::learn::tree::ForestParams;
 use crate::learn::{BinaryMetrics, NoCall, binary_metrics};
 use crate::matrix::{Dataset, FeatureMatrix, MatrixSummary};
@@ -1194,6 +1195,8 @@ fn input_fingerprint(
                 max_depth: forest_depth,
                 min_leaf,
                 seed: forest_seed,
+                // Each fit takes its tie rule from `tie_rule`, hashed below.
+                tie: _,
             },
         gbt:
             GbtParams {
@@ -1205,10 +1208,12 @@ fn input_fingerprint(
                 colsample,
                 patience,
                 seed: gbt_seed,
+                tie: _,
             },
         screened_features,
         lasso_lambdas,
         seed,
+        tie_rule,
     } = cfg;
     for n in [
         *folds,
@@ -1236,6 +1241,11 @@ fn input_fingerprint(
     }
     for n in [*seed, *forest_seed, *gbt_seed] {
         h.u64(n);
+    }
+    // Production's rule adds nothing, so its fingerprints are unchanged; a
+    // report fitted under the experiment never passes for a current one.
+    if *tie_rule == TieRule::Exact {
+        h.str("tie_rule=exact");
     }
     let Cohort {
         rows,
@@ -2475,10 +2485,20 @@ mod tests {
             ("screened_features", |c| c.screened_features += 1),
             ("lasso_lambdas", |c| c.lasso_lambdas += 1),
             ("seed", |c| c.seed += 1),
+            ("tie_rule", |c| c.tie_rule = TieRule::Exact),
         ];
         for (field, edit) in changes {
             assert_ne!(changed(*edit), base, "{field}");
         }
+        // Each fit takes its tie rule from `tie_rule`; the learners' own
+        // copies are not read.
+        assert_eq!(
+            changed(|c| {
+                c.forest.tie = TieRule::Exact;
+                c.gbt.tie = TieRule::Exact;
+            }),
+            base
+        );
     }
 
     #[test]

@@ -10,6 +10,7 @@ pub mod gbt;
 pub mod lasso;
 pub mod planned;
 pub mod scm;
+pub mod tie;
 pub mod tree;
 
 use crate::bits::{self, BitMatrix, Bits};

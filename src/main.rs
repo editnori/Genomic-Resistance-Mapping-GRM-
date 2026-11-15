@@ -119,6 +119,19 @@ enum Command {
         /// (`EvalConfig::screened_features`).
         #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
         screened_features: usize,
+        /// Experiment, off by default: how the decision tree, the forest and
+        /// the boosted trees break ties between equally good features
+        /// (`grm::learn::tie`). `float` is production's rule. A report fitted
+        /// with `exact` says so in `eval_config.tie_rule`, and its input
+        /// fingerprint differs from production's.
+        #[arg(long, value_enum, default_value_t = TieRuleArg::Float)]
+        exp_tie_rule: TieRuleArg,
+        /// Experiment: write one JSON line per tree-learner fit to this file,
+        /// with its nodes searched, the nodes where the two tie rules pick
+        /// different features, and a digest of each tree. The fits are the
+        /// same as without it.
+        #[arg(long)]
+        exp_tie_trace: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -330,9 +343,24 @@ fn run(cli: Cli) -> Result<()> {
             only,
             force,
             screened_features,
-        } => species
-            .iter()
-            .try_for_each(|s| learn(&layout, s, &only, force, screened_features)),
+            exp_tie_rule,
+            exp_tie_trace,
+        } => {
+            if let Some(path) = &exp_tie_trace {
+                grm::learn::tie::start_trace(path)
+                    .with_context(|| format!("create {}", path.display()))?;
+            }
+            species.iter().try_for_each(|s| {
+                learn(
+                    &layout,
+                    s,
+                    &only,
+                    force,
+                    screened_features,
+                    exp_tie_rule.into(),
+                )
+            })
+        }
         Command::Pipeline {
             species,
             workers,
@@ -359,14 +387,15 @@ fn run(cli: Cli) -> Result<()> {
                     },
                 )?;
                 count_to_matrix(&layout, slug, k)?;
-                if let Err(e) = learn(&layout, slug, &[], false, screened_features) {
+                let production = grm::learn::tie::TieRule::Float;
+                if let Err(e) = learn(&layout, slug, &[], false, screened_features, production) {
                     if !e.is::<grm::probes::KsetsUnreadable>() {
                         return Err(e);
                     }
                     eprintln!("{slug}: recounting ksets: {e:#}");
                     count(&layout, slug, k)?;
                     count_to_matrix(&layout, slug, k)?;
-                    learn(&layout, slug, &[], false, screened_features)?;
+                    learn(&layout, slug, &[], false, screened_features, production)?;
                 }
                 if drop_ksets {
                     let dir = layout.kset_dir(slug);
@@ -590,10 +619,12 @@ fn learn(
     only: &[String],
     force: bool,
     screened_features: usize,
+    tie_rule: grm::learn::tie::TieRule,
 ) -> Result<()> {
     grm::species::ensure_selection_counted(layout, slug)?;
     let cfg = grm::learn::eval::EvalConfig {
         screened_features,
+        tie_rule,
         ..Default::default()
     };
     let written = grm::analysis::analyze_species(layout, slug, only, force, &cfg)?;
@@ -754,6 +785,21 @@ impl From<PairingArg> for grm::ablate::arm::Pairing {
             PairingArg::SamePlan => Self::SamePlan,
             PairingArg::K31Groups => Self::K31Groups,
             PairingArg::CommonOuterTestSetBalanced => Self::CommonOuterTestSetBalanced,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum TieRuleArg {
+    Float,
+    Exact,
+}
+
+impl From<TieRuleArg> for grm::learn::tie::TieRule {
+    fn from(t: TieRuleArg) -> Self {
+        match t {
+            TieRuleArg::Float => Self::Float,
+            TieRuleArg::Exact => Self::Exact,
         }
     }
 }
@@ -1522,7 +1568,15 @@ mod tests {
             write_genome_list(&layout, selection);
             let err = format!(
                 "{:#}",
-                learn(&layout, SLUG, &[], false, DEFAULT_SCREENED_FEATURES).unwrap_err()
+                learn(
+                    &layout,
+                    SLUG,
+                    &[],
+                    false,
+                    DEFAULT_SCREENED_FEATURES,
+                    grm::learn::tie::TieRule::Float,
+                )
+                .unwrap_err()
             );
             assert!(
                 err.contains("genomes.txt adds, removes, or reorders"),
@@ -2052,12 +2106,23 @@ mod tests {
             "1000",
         ]);
         let Command::Learn {
-            screened_features, ..
+            screened_features,
+            exp_tie_rule,
+            exp_tie_trace,
+            ..
         } = learn.unwrap().command
         else {
             panic!("parsed another command");
         };
         assert_eq!(screened_features, 1000);
+        // The tie-rule experiment is off unless asked for.
+        assert_eq!((exp_tie_rule, exp_tie_trace), (TieRuleArg::Float, None));
+        let learn =
+            Cli::try_parse_from(["grm", "learn", "--species", "s", "--exp-tie-rule", "exact"]);
+        let Command::Learn { exp_tie_rule, .. } = learn.unwrap().command else {
+            panic!("parsed another command");
+        };
+        assert_eq!(exp_tie_rule, TieRuleArg::Exact);
     }
 
     /// The pipeline's stages follow `--k`: counts, structure and matrix built
