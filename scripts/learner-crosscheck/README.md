@@ -88,3 +88,4 @@ To replace the committed result, copy the nine files of the table above, without
 - Where several features have exactly equal gain, no library gives a single answer, so the reference there is the exact arithmetic of `exact.py`.
 - The harness uses the production defaults. It does not run `grm evaluate`, so the settings production selects inside each fit are recorded but not compared.
 - The L1 logistic regression is not fitted here.
+- The same bytes at 1 and 8 threads, and from run to run, were shown on x86-64 Linux only. The boosted trees take `exp` and `ln` from the platform's math library. The decision tree, the forest and the set covering machine use only arithmetic that IEEE 754 rounds the same way everywhere: the four operations, one square root and comparisons. So another platform could change the last bits of the boosted fits, and with them which feature wins a tie that rounding decides. No other platform was tried.
