@@ -103,6 +103,13 @@ enum Command {
         /// from at least this many).
         #[arg(long, default_value_t = PIPELINE_MIN_SUPPORT)]
         min_support: u32,
+        /// Merge this many genomes at a time through column-block partials
+        /// instead of opening every kset at once. A multiple of 64. The
+        /// matrix files are the same; the ksets are kept. Unlike the default
+        /// merge, it refuses a kset whose genome or digest differs from
+        /// counted.json (docs/matrix-scaling.md).
+        #[arg(long, value_parser = parse_column_blocks)]
+        column_blocks: Option<usize>,
     },
     /// Cross-validate every learner on each species x drug dataset, fit the
     /// final models, annotate their features, and write one report each.
@@ -125,10 +132,12 @@ enum Command {
         /// which records the file's SHA-256, and no report. Takes one
         /// species; --force replaces an existing result. It runs at the
         /// release's seeds, so --seed and --learner-seed are refused with it.
+        /// --exp-null-refit is refused with it too: it records the folds
+        /// grm learn draws.
         #[arg(
             long,
             requires = "fold_out",
-            conflicts_with_all = ["only", "seed", "learner_seed"]
+            conflicts_with_all = ["only", "seed", "learner_seed", "exp_null_refit"]
         )]
         fold_file: Option<PathBuf>,
         /// Directory for the --fold-file result.
@@ -149,6 +158,15 @@ enum Command {
         /// Reports go under draws/seed-<seed>-learner-<learner-seed>/.
         #[arg(long)]
         learner_seed: Option<u64>,
+        /// Experiment, off by default (docs/null-fold-refit.md): also refit
+        /// every boosting and lasso outer fold whose fit is null under the
+        /// fallback settings, and append each one's scores to this JSON-lines
+        /// file. While the file takes every line, the reports equal those of
+        /// a run without it. A line it does not take ends the learn with an
+        /// error naming the file and the fold, before that dataset's report
+        /// is written. Refused beside --fold-file.
+        #[arg(long)]
+        exp_null_refit: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -385,9 +403,10 @@ fn run(cli: Cli) -> Result<()> {
         Command::Matrix {
             species,
             min_support,
+            column_blocks,
         } => species
             .iter()
-            .try_for_each(|s| matrix(&layout, s, min_support)),
+            .try_for_each(|s| matrix_with(&layout, s, min_support, column_blocks)),
         Command::Learn {
             species,
             force,
@@ -410,9 +429,13 @@ fn run(cli: Cli) -> Result<()> {
             screened_features,
             seed,
             learner_seed,
+            exp_null_refit,
             ..
         } => {
             let cfg = learn_config(screened_features, seed, learner_seed);
+            if let Some(path) = &exp_null_refit {
+                grm::learn::null_refit::enable(path)?;
+            }
             species
                 .iter()
                 .try_for_each(|s| learn(&layout, s, &only, force, &cfg))
@@ -713,9 +736,25 @@ fn structure(layout: &Layout, slug: &str) -> Result<()> {
     Ok(())
 }
 
+/// `grm matrix --column-blocks`: a width `build_matrix` accepts.
+fn parse_column_blocks(s: &str) -> std::result::Result<usize, String> {
+    let width = s.parse::<usize>().map_err(|e| e.to_string())?;
+    grm::species::check_column_blocks(width).map_err(|e| e.to_string())?;
+    Ok(width)
+}
+
 fn matrix(layout: &Layout, slug: &str, min_support: u32) -> Result<()> {
+    matrix_with(layout, slug, min_support, None)
+}
+
+fn matrix_with(
+    layout: &Layout,
+    slug: &str,
+    min_support: u32,
+    column_blocks: Option<usize>,
+) -> Result<()> {
     let started = std::time::Instant::now();
-    let s = grm::species::build_matrix(layout, slug, min_support)?;
+    let s = grm::species::build_matrix(layout, slug, min_support, column_blocks)?;
     eprintln!(
         "{slug}: {} genomes, {} distinct k-mers, {} kept in {} patterns ({} rare, {} core) in {:.0}s",
         s.genomes.len(),
@@ -1523,6 +1562,77 @@ mod tests {
         }
     }
 
+    #[test]
+    fn matrix_takes_only_a_column_block_width_of_whole_words() {
+        let parse = |w: &str| {
+            Cli::try_parse_from(["grm", "matrix", "--species", "s", "--column-blocks", w])
+        };
+        for w in ["0", "32", "96", "100", "x"] {
+            let err = parse(w).err().unwrap();
+            assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation, "{w}");
+        }
+        // clap reads a leading minus as another flag.
+        assert!(parse("-64").is_err());
+        for w in [64, 128, 4096] {
+            let Command::Matrix { column_blocks, .. } = parse(&w.to_string()).unwrap().command
+            else {
+                panic!("parsed another command");
+            };
+            assert_eq!(column_blocks, Some(w));
+        }
+        let plain = Cli::try_parse_from(["grm", "matrix", "--species", "s"]).unwrap();
+        let Command::Matrix { column_blocks, .. } = plain.command else {
+            panic!("parsed another command");
+        };
+        assert_eq!(column_blocks, None);
+    }
+
+    /// `grm matrix` from its parsed arguments through `run`: the switch and
+    /// `--min-support` reach the block merge. Only `main`'s `Cli::parse` of
+    /// the process arguments and the printing of an error are left out.
+    #[test]
+    fn matrix_column_blocks_reach_the_block_merge_through_run() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let run_grm = |args: &[&str]| {
+            let cli = Cli::try_parse_from(["grm", "--data", data].iter().chain(args)).unwrap();
+            run(cli).map_err(|e| format!("{e:#}"))
+        };
+        run_grm(&["count", "--species", SLUG]).unwrap();
+        let mx = layout.matrix_dir(SLUG);
+        let files = || {
+            [
+                "matrix.json",
+                "patterns.bin",
+                "support.bin",
+                "kmer_offsets.bin",
+                "kmers.bin",
+            ]
+            .map(|f| std::fs::read(mx.join(f)).unwrap())
+        };
+        // The block merge removes a partials folder it finds; the default
+        // merge leaves it alone. So the folder shows which merge ran.
+        let partials = layout.partials_dir(SLUG);
+        let mut written = Vec::new();
+        for min_support in ["1", "2"] {
+            std::fs::create_dir_all(&partials).unwrap();
+            std::fs::write(partials.join("left.txt"), "a stopped run").unwrap();
+            let plain = ["matrix", "--species", SLUG, "--min-support", min_support];
+            run_grm(&plain).unwrap();
+            assert!(partials.join("left.txt").exists(), "{min_support}");
+            let want = files();
+            run_grm(&[&plain[..], &["--column-blocks", "64"]].concat()).unwrap();
+            assert!(
+                !partials.exists(),
+                "--min-support {min_support} --column-blocks 64 ran the default merge"
+            );
+            assert!(files() == want, "--min-support {min_support}");
+            written.push(want);
+        }
+        assert!(written[0] != written[1]);
+    }
+
     const SLUG: &str = "fixture";
     const GENE: &str = "ATGAAACGTTACGGCATTGCAGGCTTACCGATAGCTTGACCTAGGCATCGATCGGATCCATGCAAGCTTGG";
 
@@ -1855,7 +1965,7 @@ mod tests {
         // The re-save rewrites three binaries, then cannot create kmers.bin.
         std::fs::remove_file(mx.join("kmers.bin")).unwrap();
         std::fs::create_dir(mx.join("kmers.bin")).unwrap();
-        assert!(grm::species::build_matrix(&layout, SLUG, 2).is_err());
+        assert!(grm::species::build_matrix(&layout, SLUG, 2, None).is_err());
         std::fs::remove_dir(mx.join("kmers.bin")).unwrap();
         count_to_matrix(&layout, SLUG, PIPELINE_K).unwrap();
         let rebuilt = FeatureMatrix::load(&mx).unwrap();
@@ -2350,6 +2460,47 @@ mod tests {
             (fold_file, seed, learner_seed),
             (Some("f.json".into()), RELEASE_SEED, None)
         );
+    }
+
+    /// The null-fold experiment records the folds `grm learn` draws, so the
+    /// parser refuses `--exp-null-refit` beside `--fold-file`, before FILE is
+    /// opened, in either order. Without `--fold-file` the flag parses as it
+    /// did.
+    #[test]
+    fn learn_refuses_the_null_fold_refit_beside_a_fold_file() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let refit = ["--exp-null-refit", "r.jsonl"];
+        let fold = ["--fold-file", "f.json", "--fold-out", "o"];
+        for bad in [
+            [&refit[..], &fold[..]].concat(),
+            [&fold[..], &refit[..]].concat(),
+        ] {
+            let error = parse(&bad)
+                .err()
+                .unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::ArgumentConflict,
+                "{bad:?}"
+            );
+            let message = error.to_string();
+            assert!(
+                message.contains("--exp-null-refit") && message.contains("--fold-file"),
+                "{message}"
+            );
+        }
+        let Command::Learn {
+            fold_file,
+            exp_null_refit,
+            ..
+        } = parse(&refit).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((fold_file, exp_null_refit), (None, Some("r.jsonl".into())));
     }
 
     /// `grm learn` draws at the release's seed unless told otherwise, and

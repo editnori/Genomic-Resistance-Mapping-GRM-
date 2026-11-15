@@ -189,6 +189,12 @@ jobs:
           # Reads the committed export under reference/givens-export and the files it is written from; it fits nothing.
           - suite: tests/givens_export
             top: .
+          # Reads the committed files under reference/clindamycin-labels and docs/clindamycin-labels.md; it scores nothing.
+          - suite: tests/clindamycin_labels
+            top: .
+          # Synthetic reports written in the test, and the committed record under reference/tie-rule; it fits nothing.
+          - suite: tests/tie_rule
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}

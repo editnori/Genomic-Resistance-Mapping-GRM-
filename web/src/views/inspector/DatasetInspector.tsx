@@ -26,6 +26,7 @@ import { ModelSection } from "./ModelSection";
 import { MechanismSection } from "./MechanismSection";
 import { MicSection } from "./MicSection";
 import { LineageSection } from "./LineageSection";
+import { ClindamycinNote } from "./ClindamycinNote";
 
 /** The section pills, in body order; each names its section's heading. */
 const JUMPS = [
@@ -210,6 +211,7 @@ const Body = ({
     <ProvisionalNote audit={auditOf(r, current)} />
     <div className="space-y-10">
       <LearnerSection r={r} research={research} intervals={intervalsFor(intervals.status === "ready" ? intervals.data : null, r)} baselines={baselines} />
+      <ClindamycinNote r={r} />
       <ModelSection r={r} row={row} />
       <MechanismSection r={r} />
       <MicSection r={r} research={research} baselines={baselines} />

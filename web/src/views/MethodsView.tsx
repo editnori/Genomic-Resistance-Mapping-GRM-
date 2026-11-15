@@ -25,6 +25,7 @@ import { AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { YearColumns } from "../charts/YearColumns";
 import { LINK, minimumSentence, ReportLine, SectionHeading, selectionCap, showSection, STATUS_LINK } from "./findings";
 import { routeHref } from "../app/router";
+import { ClindamycinMethods } from "./inspector/ClindamycinNote";
 
 /** The anchors other views link to. */
 export const METHODS_ANCHORS = { funnel: "m-funnel", audit: "m-audit", limits: "m-limits" } as const;
@@ -202,6 +203,7 @@ const Labels = ({ manifest }: { manifest: Manifest }) => {
         regression are scored on the same genomes. A genome and antibiotic pair with both an R and an S call is a conflict and gets no label; a pair with only intermediate calls is never
         an R or S label.
       </Detail>
+      <ClindamycinMethods manifest={manifest} />
       <Detail>
         A pair with an MIC but no reported call gets a label from an inferred breakpoint during curation, and no model trains or is scored on that label. A dataset report counts the labels
         it left out in its Method and coverage fold; a report written before that count was added shows it as not recorded. The species view&apos;s resistance profiles and cross-resistance

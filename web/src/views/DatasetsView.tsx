@@ -35,6 +35,7 @@ import { useClipped } from "../ui/useClipped";
 import { HOLD_TARGET, useHold } from "../ui/useHold";
 import { useCountUp } from "../ui/useCountUp";
 import { byFamily, ClassGlyph, ClassKey, ClassName } from "../ui/drugClass";
+import { ClindamycinMark } from "./inspector/ClindamycinNote";
 
 const MIN_N = [
   { id: "0", label: "Any size" },
@@ -268,11 +269,12 @@ export const datasetColumns = (markProvisional: boolean, current: number | undef
     firstDir: "asc",
     cell: (r) => (
       <span className="block">
-        <span className="flex items-baseline gap-x-2">
+        <span className="flex flex-wrap items-baseline gap-x-2">
           <span className="min-w-0">
             <DrugName name={r.antibiotic} />
           </span>
           {markProvisional && !auditOf(r, current).valid ? <strong className="shrink-0 text-tiny font-semibold text-coral-text">Provisional</strong> : null}
+          <ClindamycinMark row={r} />
         </span>
         {/* Species and class wrap to two lines at most; the class, last, is
             what an ellipsis cuts, and the separator stays with the species.
