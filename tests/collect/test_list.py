@@ -1,6 +1,8 @@
 """collect.py list on a synthetic project: the rows, the classes, and what stops it."""
 
 import os
+import subprocess
+import sys
 import unittest
 
 from tests.collect import kit
@@ -382,6 +384,36 @@ class BarredWords(unittest.TestCase):
                 self.assertEqual((rc, out), (3, ""), err)
                 self.assertIn(f"pack: refused: the root {root} holds the barred word {word!r}", err)
         self.assertEqual(sorted(p.name for p in d.iterdir()), ["list.tsv", "proj", "release.sha256", "rules.tsv"])
+
+
+class TheFileSystemEncoding(unittest.TestCase):
+    """Names are read through the file system encoding, so the tool runs only where it is UTF-8."""
+
+    # Runs the tool with sys.getfilesystemencoding() giving another encoding; the locale of this machine is left alone.
+    LATIN1 = ("import runpy, sys; sys.getfilesystemencoding = lambda: 'iso8859-1'; sys.argv = sys.argv[1:]; "
+              "runpy.run_path(sys.argv[0], run_name='__main__')")
+
+    def test_another_encoding_stops_every_command_before_it_reads_anything(self):
+        d, proj, rules = kit.project(self)
+        for args in (("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "l.tsv"),
+                     ("check", d / "x.internal-record"), ("summary", "--place", f"here={d / 'l.tsv'}")):
+            with self.subTest(command=args[0]):
+                p = subprocess.run([sys.executable, "-I", "-B", "-W", "error", "-c", self.LATIN1, str(kit.TOOL),
+                                    *map(str, args)], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+                self.assertEqual((p.returncode, p.stdout), (2, ""), p.stderr)
+                self.assertEqual(p.stderr, "collect: the file system encoding is iso8859-1, not UTF-8, so names would "
+                                           "not be read the same on every machine; nothing was done. Run it under a "
+                                           "UTF-8 locale (LC_ALL=C.UTF-8) or as python3 -I -X utf8 "
+                                           "scripts/collect/collect.py\n")
+        self.assertEqual(sorted(p.name for p in d.iterdir()), ["proj", "rules.tsv"])
+
+    def test_utf_8_under_another_name_runs(self):
+        d, proj, rules = kit.project(self)
+        code = self.LATIN1.replace("'iso8859-1'", "'UTF8'")
+        p = subprocess.run([sys.executable, "-I", "-B", "-W", "error", "-c", code, str(kit.TOOL), "list", "--rules",
+                            str(rules), "--root", f"proj={proj}", "--out", str(d / "l.tsv")],
+                           capture_output=True, text=True, stdin=subprocess.DEVNULL)
+        self.assertEqual((p.returncode, p.stderr), (0, kit.MARKED), p.stdout)
 
 
 class ATableInPlaceOfAWalk(unittest.TestCase):

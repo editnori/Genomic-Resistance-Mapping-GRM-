@@ -68,6 +68,8 @@ MUTANTS = [
     ("check opens a file with a barred name",
      [("                if barred_word(child):\n                    found.refused.append(child)\n                elif",
        "                if False:\n                    found.refused.append(child)\n                elif")]),
+    ("a file system encoding that is not UTF-8 is let through",
+     [('    if codecs.lookup(encoding).name != "utf-8":\n', "    if False:\n")]),
     # Classes.
     ("the last matching rule gives the class, not the first",
      [("        return next((cls for cls, r in self.files if r.match(path)), None)",

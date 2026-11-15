@@ -59,10 +59,14 @@ file gives for a sha256 counts, and an empty file is matched like any other.
 A list holds regular files. A link or a special file stops `list` with its name (--skip-special leaves it out), and
 an empty directory is not recorded.
 
+Names are read as UTF-8: under a file system encoding that is not UTF-8 every command stops with status 2. Set a
+UTF-8 locale (LC_ALL=C.UTF-8) or run python3 -I -X utf8.
+
 Exit status: 0 done; 1 `check` found a difference; 2 an input the command cannot use, named on stderr; 3 a path with
 a barred word.
 """
 import argparse
+import codecs
 import concurrent.futures
 import fnmatch
 import gzip
@@ -1043,6 +1047,13 @@ def parser():
 
 
 def main(argv=None):
+    # Names are read through the file system encoding; under another one a list would not read the same everywhere.
+    encoding = sys.getfilesystemencoding()
+    if codecs.lookup(encoding).name != "utf-8":
+        print(f"collect: the file system encoding is {encoding}, not UTF-8, so names would not be read the same on "
+              f"every machine; nothing was done. Run it under a UTF-8 locale (LC_ALL=C.UTF-8) or as "
+              f"python3 -I -X utf8 scripts/collect/collect.py", file=sys.stderr)
+        return 2
     a = parser().parse_args(argv)
     try:
         # A root is refused inside its command, so that `list` can name it with the rest; every other path here.
