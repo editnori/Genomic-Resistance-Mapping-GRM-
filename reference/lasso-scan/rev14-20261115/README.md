@@ -2,9 +2,9 @@
 
 On 15 November 2026 the lasso of evaluation revision 14 was fitted again on the 18 datasets of the registered large-species scan list, [`scripts/lasso-scan/scan-list.json`](../../../scripts/lasso-scan/scan-list.json), every fit of each, and compared with the reports of the release `rev14-274-20261112`. One fit, MTB delamanid random fold 0, was also measured in depth beside the figures October's diagnosis gave for it. The section "Revision 14 scan" of [docs/lasso-stopping.md](../../../docs/lasso-stopping.md) gives what ran, what it found and its limits. This folder holds the files that section rests on.
 
-This is a software check. Equal scores show that this build and the release compute the same lasso on these datasets. They say nothing about whether the lasso is well calibrated or accurate, and nothing clinical.
+This is a software check. The 57,573 equal scores from fits that keep a weight show that this build and the release compute the same lasso on these datasets; the other 1,045 equal scores are the training prevalence of the four folds that keep no weight, on both sides, and come from no fit. None of this says whether the lasso is well calibrated or accurate, and nothing clinical.
 
-Every file here was copied unchanged from the output of the lane that ran the scan, keeping its paths. `SHA256SUMS` gives the sha256 of each, every line as it stands in that lane's checksum list; `sha256sum -c SHA256SUMS`, run in this folder, checks them.
+Every file here was copied unchanged from the output of the lane that ran the scan, keeping its paths, except the folder `review/`, which holds the files of an independent review of the scan (see [its README](review/README.md)). `SHA256SUMS` gives the sha256 of each, every line of the scan's files as it stands in that lane's checksum list; `sha256sum -c SHA256SUMS`, run in this folder, checks them.
 
 ## How it was made
 
@@ -37,11 +37,12 @@ Every file here was copied unchanged from the output of the lane that ran the sc
 | `results/src-dump.diff` | The only change in the instrumented copy pass 2 ran: one function added to `src/learn/eval.rs` that writes each fit's partition, path, refit and scores | `diff -ru` of the two exported trees |
 | `results/dump.sha256` | sha256 of pass 2's 198 dump files, 49,691,720 bytes in all, which are not kept here | the lane |
 | `results/item5/item5.json`, `item5.log` | The planned one-fit measurement: near twins, then per path point grm's objective against an independent solve by Clarabel 0.9.0 through CVXPY 1.6.0, the KKT residuals and the planned duality bound; the selection, refit and held-out calls; the second solver | `scripts/item5-run2.sh`: 15 workers of `scripts/item5-solve.py`, then `scripts/item5.py` |
-| `results/item5/item5-polish.json`, `item5-polish.log` | Exploratory, chosen at 14:55 UTC after point 11's planned bound was read: a certified optimum at each path point, and grm's distance above it | `scripts/item5-polish.py` |
+| `results/item5/item5-polish.json`, `item5-polish.log` | Exploratory, chosen at 14:55 UTC after point 11's planned bound was read: a certified optimum at each path point, and grm's distance above it. Its dual point lies outside the dual box at 13 of the 30 points, by a factor of at most 1 + 3.18e-13, and certifies only after a final shrink into the box, which the review made (`review/results/item5check.json`) | `scripts/item5-polish.py` |
 | `results/item5/item5-copies.json`, `item5-copies.log` | Exploratory, chosen at 15:31 UTC after the validation losses were read: those losses with the independent solution's weight on each group of exact copies moved to the group's lowest index | `scripts/item5-copies.py` |
 | `results/item5/run2.machine`, `run.rc`, `saga-timebox.txt` | The one-fit run's times and load, its exit codes, and when the second solver was stopped at its 30-minute box | `scripts/item5-run2.sh`; the lane stopped the second solver |
 | `scripts/` | The lane's scripts, as run: `build-species.sh` (one species' matrices), `run-all.sh` (pass 1, the second timing, pass 2), `scan14.py` (the driver), `time-delamanid.sh`, `compare.py`, `item5-solve.py`, `item5-run2.sh`, `item5.py`, `item5-polish.py`, `item5-copies.py` and `tables.py` | the lane |
-| `SHA256SUMS` | sha256 of every other file here except this README | lines copied from the lane's checksum list |
+| `review/` | The independent review's result files that the page quotes, the scripts that wrote them, its plan and that plan's sha256, and a README that says what each is and which sentences of `PLAN.md`, `results/tables.md` and this README the review narrowed | copied from the review's output, except its README |
+| `SHA256SUMS` | sha256 of every other file here except this README | lines copied from the lane's checksum list; for `review/`, lines copied from the review's checksum list with `review/` before each path, and one computed for its README |
 
 In the commands, `S` is the lane's scratch folder and `REL` the unpacked release. The scripts hold that machine's absolute paths. They are kept as the record of what ran, not as a kit to run as they stand. The lane's report does not record the commands that wrote `results/go-no-go-h1.txt`, `results/scan/events.sha256` and `results/dump.sha256`.
 
