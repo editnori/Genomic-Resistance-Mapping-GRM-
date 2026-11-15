@@ -813,6 +813,12 @@ mod tests {
             ),
             (1, 1, 1, 0)
         );
+        // Traced, the exact rule still splits the pair on the lower feature.
+        let exact = stump(TieRule::Exact);
+        let plain = grow_tree(&x, &y, &train, &exact, false, &mut Tally::default());
+        let traced = grow_tree(&x, &y, &train, &exact, true, &mut Tally::default());
+        assert_eq!(traced.digest(), plain.digest());
+        assert_eq!(traced.nodes[0].split.as_ref().unwrap().feature, 0);
     }
 
     #[test]
