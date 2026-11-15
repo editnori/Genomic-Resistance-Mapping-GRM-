@@ -260,13 +260,25 @@ mod tests {
             screened_features: 10,
             ..Default::default()
         };
-        let splits = dataset_splits(&x, &y, &lineage, &[], 3, &cfg).unwrap();
-        let out = evaluate("t", &x, &y, &lineage, &[], 3, None, &cfg).unwrap();
+        // Duplicate groups, each inside one lineage (`synthetic` puts four
+        // samples in each): each must sit whole in one outer fold of the
+        // random plan, as in `evaluate`'s.
+        let duplicates = vec![vec![0, 1, 2], vec![5, 6], vec![40, 41, 42, 43]];
+        let splits = dataset_splits(&x, &y, &lineage, &duplicates, 3, &cfg).unwrap();
+        let out = evaluate("t", &x, &y, &lineage, &duplicates, 3, None, &cfg).unwrap();
         assert_eq!(splits.len(), out.splits.len());
         for (s, e) in splits.iter().zip(&out.splits) {
             assert_eq!(s.plan.scheme.as_str(), e.scheme);
             assert_eq!(s.plan.outer, e.test_fold, "{} outer folds", e.scheme);
             assert_eq!(s.plan.is_available(), e.unavailable_reason.is_none());
+        }
+        let random = &splits[0].plan;
+        assert_eq!(random.scheme, Scheme::Random);
+        for g in &duplicates {
+            assert!(
+                g.iter().all(|&i| random.outer[i] == random.outer[g[0]]),
+                "duplicate group {g:?} split across outer folds"
+            );
         }
     }
 
@@ -293,6 +305,8 @@ mod tests {
                     .map(|r| rows[r as usize])
                     .collect();
                 assert_eq!(s.screened_rows, expect);
+                assert_eq!(s.n_train, train.count() as usize);
+                assert_eq!(s.n_candidates, cx.rows);
                 // Flipping every test label leaves the screen unchanged.
                 let mut flipped = y.clone();
                 for i in (0..80).filter(|&i| !train.contains(i)) {
@@ -326,5 +340,101 @@ mod tests {
             .find(|s| s.plan.scheme == Scheme::Random)
             .unwrap();
         assert_eq!(rnd.screens.len(), cfg.folds);
+    }
+
+    /// The chi-square of a row on the training samples, written out apart
+    /// from `learn::screen`.
+    fn chi_square(row: &Bits, y: &Bits, train: &Bits) -> f64 {
+        let (mut a, mut b, mut c, mut d) = (0f64, 0f64, 0f64, 0f64);
+        for i in (0..y.len()).filter(|&i| train.contains(i)) {
+            match (row.contains(i), y.contains(i)) {
+                (true, true) => a += 1.0,
+                (true, false) => b += 1.0,
+                (false, true) => c += 1.0,
+                (false, false) => d += 1.0,
+            }
+        }
+        let denom = (a + b) * (c + d) * (a + c) * (b + d);
+        if denom == 0.0 {
+            0.0
+        } else {
+            (a + b + c + d) * (a * d - b * c).powi(2) / denom
+        }
+    }
+
+    /// A synthetic matrix of complementary row pairs: a row and its
+    /// complement have the same chi-square on any training samples, so every
+    /// score is tied at least twice, and an odd screen size cuts inside a
+    /// tie. The complement comes first in some pairs and second in others.
+    #[test]
+    fn the_screen_keeps_the_lower_row_of_a_tie_at_the_cut() {
+        let n = 60;
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(7);
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let lineage: Vec<u32> = (0..n).map(|i| (i / 2) as u32).collect();
+        let mut x = BitMatrix::with_cols(n);
+        let mut rows: Vec<Bits> = Vec::new();
+        for p in 0..12 {
+            // Rows that lean towards the label, by a different amount per pair.
+            let lean = 0.05 + 0.03 * p as f64;
+            let row = Bits::from_indices(
+                n,
+                (0..n).filter(|&i| {
+                    rng.random_bool(if y.contains(i) {
+                        0.5 + lean
+                    } else {
+                        0.5 - lean
+                    })
+                }),
+            );
+            let mut comp = Bits::ones(n);
+            for i in 0..n {
+                if row.contains(i) {
+                    comp.remove(i);
+                }
+            }
+            let (first, second) = if p % 2 == 0 { (comp, row) } else { (row, comp) };
+            rows.push(first);
+            rows.push(second);
+        }
+        for r in &rows {
+            x.push_row(r.words());
+        }
+        let cfg = EvalConfig {
+            screened_features: 5,
+            ..Default::default()
+        };
+        let splits = dataset_splits(&x, &y, &lineage, &[], 3, &cfg).unwrap();
+        let mut cuts_in_a_tie = 0;
+        for split in splits.iter().filter(|s| s.plan.is_available()) {
+            for s in &split.screens {
+                let train =
+                    Bits::from_indices(n, (0..n).filter(|&i| split.plan.outer[i] != s.fold));
+                // Every row is a candidate here: distinct, and well inside the
+                // support bounds on any fold's training samples.
+                assert_eq!(s.n_candidates, x.rows);
+                let mut order: Vec<(f64, u32)> = rows
+                    .iter()
+                    .enumerate()
+                    .map(|(r, row)| (chi_square(row, &y, &train), r as u32))
+                    .collect();
+                order.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)));
+                let want: Vec<u32> = order[..5].iter().map(|o| o.1).collect();
+                assert_eq!(
+                    s.screened_rows,
+                    want,
+                    "{} fold {}",
+                    split.plan.scheme.as_str(),
+                    s.fold
+                );
+                // The 5th and 6th rows tie: the cut falls inside the tie, and
+                // the lower of the two rows is the one kept.
+                let (kept, left) = (order[4], order[5]);
+                assert_eq!(kept.0, left.0);
+                assert!(kept.1 < left.1);
+                cuts_in_a_tie += 1;
+            }
+        }
+        assert!(cuts_in_a_tie >= 5, "{cuts_in_a_tie} folds checked");
     }
 }
