@@ -105,7 +105,9 @@ enum Command {
         min_support: u32,
         /// Merge this many genomes at a time through column-block partials
         /// instead of opening every kset at once. A multiple of 64. The
-        /// matrix files are the same; the ksets are kept.
+        /// matrix files are the same; the ksets are kept. Unlike the default
+        /// merge, it refuses a kset whose genome or digest differs from
+        /// counted.json (docs/matrix-scaling.md).
         #[arg(long, value_parser = parse_column_blocks)]
         column_blocks: Option<usize>,
     },
