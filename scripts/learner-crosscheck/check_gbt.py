@@ -7,6 +7,11 @@ fit with every feature offered to every tree.
 
 A tree that is not identical gets a cause from quantities recomputed here in
 float64 from GRM's margin, and again as XGBoost holds them, in float32.
+
+Added on 15 November 2026, after the plan: end to end, every round whose two
+trees are not identical gets a cause of its own (`trees_not_identical`). The
+plan gave the first such tree a cause and took the later ones to follow from
+it, which the review of 15 November found false on one panel.
 """
 
 import json
@@ -21,6 +26,10 @@ LEAF_TOLERANCE = 1e-5
 PROBABILITY_TOLERANCE = 1e-4
 XGB_MIN_SPLIT = 1e-6  # XGBoost's kRtEps: a split needs a loss change above it
 GRM_STOP_MARGIN = 1e-9  # src/learn/gbt.rs: an improvement must exceed it
+# Added on 15 November 2026, after the plan: end to end, margins on the fitting samples
+# within this of each other before a round count as the same state, the tolerance of a leaf.
+MARGIN_TOLERANCE = LEAF_TOLERANCE
+FOLLOWS = "an earlier tree moved the margins"
 
 # GRM's settings (GbtParams) in XGBoost's names. Each tree's features are
 # handed over as that round's columns, so XGBoost itself samples nothing.
@@ -274,6 +283,32 @@ def replay_stop(losses, patience):
     return None
 
 
+def trees_not_identical(ours, theirs, model, x, fitting, labels, weight, columns, params):
+    """Added on 15 November 2026, after the plan. Each round both sides keep whose two trees are not
+    identical, with a cause.
+
+    Before such a round, XGBoost's margin on the fitting samples, from its own trees so far, is set
+    against GRM's. If the two are within MARGIN_TOLERANCE, both grew the round's tree from the same
+    state, and the tree gets its cause as a tree of the tree-by-tree check does, from GRM's margin.
+    If they are further apart, an earlier tree has moved them, and the cause is FOLLOWS. "what" is
+    where the two trees part either way."""
+    rows, margin = [], np.zeros(x.shape[0])
+    data = xgboost.DMatrix(x[fitting], missing=np.nan, nthread=1)
+    for round_, (mine, their) in enumerate(zip(ours, theirs)):
+        if not identical(mine, their):
+            if round_:
+                their_margin = model.predict(data, output_margin=True, iteration_range=(0, round_)).astype(np.float64)
+            else:
+                their_margin = np.zeros(len(fitting))
+            gap = float(np.max(np.abs(margin[fitting] - their_margin)))
+            cause, what, evidence = cause_of(mine, their, State(margin, labels, weight), x, fitting, columns, params)
+            if gap > MARGIN_TOLERANCE:
+                cause, evidence = FOLLOWS, f"before this round the two margins on the fitting samples differ by up to {gap!r}"
+            rows.append({"unit": f"round {round_}", "fitting_margin_gap": gap, "cause": cause, "what": what, "evidence": evidence})
+        add_tree(margin, mine, x)
+    return rows
+
+
 def end_to_end(panel, grm):
     if "error" in grm:
         return {
@@ -285,6 +320,7 @@ def end_to_end(panel, grm):
             "unexplained": 0,
             "detail": {"reason": "production's two-class gate on the tuning holdout: " + grm["error"]},
             "differences": [],
+            "trees": [],
         }
     n, y = panel["n"], panel["y"]
     x = dense(panel)
@@ -320,11 +356,14 @@ def end_to_end(panel, grm):
         "xgboost_trees": kept,
         "xgboost_rounds_run": len(losses),
         "largest_probability_gap": gap,
+        "largest_probability_gap_on_the_fitting_samples": float(np.max(np.abs(probability[fitting].astype(np.float64) - np.array(mine["probability"])[fitting]))),
         "fitting_samples": len(fitting),
         "validation_samples": len(held),
         "grm_trees_at_production_colsample": grm["colsample_production"]["kept"],
     }
-    out = {"units": "panels", "compared": 1, "matched": 0, "explained": 0, "unexplained": 0, "detail": detail, "differences": []}
+    both = min(mine["kept"], kept)
+    trees = trees_not_identical(ours[:both], theirs[:both], model, x, fitting, labels, weight, columns, params)
+    out = {"units": "panels", "compared": 1, "matched": 0, "explained": 0, "unexplained": 0, "detail": detail, "differences": [], "trees": trees}
     if mine["kept"] == kept and gap <= PROBABILITY_TOLERANCE:
         out.update(outcome="matched", matched=1)
         return out

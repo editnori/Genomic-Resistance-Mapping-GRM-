@@ -13,7 +13,9 @@ reference/learner-crosscheck/PLAN.md:
 
 It writes OUT_DIR/summary.tsv, differences.tsv, totals.json (table.py),
 detail.json with each check's further counts, versions.json, and
-OUT_DIR/panels/<panel>.json with everything a check recorded.
+OUT_DIR/panels/<panel>.json with everything a check recorded. Since 15
+November 2026 it also writes end-to-end-trees.tsv (table.py), a record added
+after the plan.
 
 It needs the pinned libraries of requirements.txt and requirements-scm.txt.
 It runs N panels at a time (default 4, at most 8), one thread each. It reads
@@ -115,7 +117,7 @@ def main(argv):
     with concurrent.futures.ProcessPoolExecutor(max_workers=jobs) as pool:
         results = list(pool.map(compare_panel, [fixtures] * len(names), [grm_dir] * len(names), names))
 
-    summary, differences, detail = [], [], {}
+    summary, differences, trees, detail = [], [], [], {}
     for panel, result in zip(panels, results):
         name = panel["name"]
         (out / "panels" / f"{name}.json").write_text(json.dumps(result, indent=1, sort_keys=True) + "\n", encoding="utf-8")
@@ -135,8 +137,10 @@ def main(argv):
             )
             differences += [{"panel": name, "learner": learner, "check": check, **row} for row in entry["differences"]]
             detail[name][f"{learner} {check}"] = entry["detail"]
+        trees += [{"panel": name, **row} for row in result["checks"]["gbt end to end"]["trees"]]
     table.write(out / "summary.tsv", table.SUMMARY_COLUMNS, summary)
     table.write(out / "differences.tsv", table.DIFFERENCE_COLUMNS, differences)
+    table.write(out / "end-to-end-trees.tsv", table.TREE_COLUMNS, trees)
     summary = table.read_summary(out / "summary.tsv")
     found = table.problems(summary, table.read_differences(out / "differences.tsv"), names)
     if found:

@@ -67,6 +67,7 @@ XGBoost's wheel prints a warning about an old glibc each time it loads. That is 
 |---|---|
 | `summary.tsv` | One row per panel and check: the outcome, and the units compared, matched, explained and unexplained. |
 | `differences.tsv` | One row per difference: panel, learner, check, unit, what differs, the cause, and the numbers that show the cause. An empty cause means none could be shown. |
+| `end-to-end-trees.tsv` | Added on 15 November 2026, after the plan. One row per round of an end-to-end boosted fit whose tree is not XGBoost's tree of that round: the largest gap between the two fits' margins on the fitting samples before the round, and a cause for that tree. Within 1e-5 the tree gets a cause as in the tree-by-tree check; further apart the cause is that an earlier tree moved the margins. It decides no outcome. |
 | `totals.json` | Per check: the panels by outcome and the sums of the units. |
 | `detail.json` | Each check's further counts per panel, and the settings production would select on the panel. |
 | `versions.json` | Python, the libraries, the sha256 of the panel file and of each panel's GRM fits. |
@@ -78,7 +79,7 @@ An outcome is `matched` (the plan's rule held), `explained` (there is a differen
 
 `python3 -I scripts/learner-crosscheck/table.py OUT` checks the tables of a run and exits 1 if their counts do not add up.
 
-To replace the committed result, copy the eight files of the table above, without `grm/` and `panels/`, into `reference/learner-crosscheck`, update the sha256 lines and the numbers in its README, and update the expected totals in `tests/learner_crosscheck`. The test suite fails until the tables, the README and the Methods text of the site agree.
+To replace the committed result, copy the nine files of the table above, without `grm/` and `panels/`, into `reference/learner-crosscheck`, update the sha256 lines and the numbers in its README, and update the expected totals in `tests/learner_crosscheck`. The test suite fails until the tables, the README and the Methods text of the site agree.
 
 ## Limits
 

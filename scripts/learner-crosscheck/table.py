@@ -9,6 +9,11 @@ per difference found. `totals.json` holds, per check, the count of panels by
 outcome and the sum of the units compared. Run as a script it prints the
 problems of the tables in DIRECTORY and exits 1 if there is one.
 
+`end-to-end-trees.tsv`, added on 15 November 2026 after the plan, has one row
+per round of an end-to-end boosted fit whose tree is not XGBoost's tree of the
+same round: the largest gap between the two margins on the fitting samples
+before that round, and the round's own cause. It decides no outcome.
+
 An outcome is one of:
 
 - matched: the check's rule in the plan held on the panel;
@@ -33,6 +38,7 @@ CHECKS = (
 OUTCOMES = ("matched", "explained", "unexplained", "not applicable")
 SUMMARY_COLUMNS = ("panel", "samples", "features", "fit_samples", "learner", "check", "outcome", "units", "compared", "matched", "explained", "unexplained")
 DIFFERENCE_COLUMNS = ("panel", "learner", "check", "unit", "what", "cause", "evidence")
+TREE_COLUMNS = ("panel", "unit", "fitting_margin_gap", "cause", "what", "evidence")
 COUNTS = ("samples", "features", "fit_samples", "compared", "matched", "explained", "unexplained")
 # One difference row is one unit here; the tree checks also write rows for scores and free trees.
 ROW_PER_UNIT = (("scm", "fits"), ("gbt", "tree by tree"), ("gbt", "end to end"))
@@ -77,6 +83,13 @@ def read_summary(path):
 
 def read_differences(path):
     return read(path, DIFFERENCE_COLUMNS)
+
+
+def read_trees(path):
+    rows = read(path, TREE_COLUMNS)
+    for row in rows:
+        row["fitting_margin_gap"] = float(row["fitting_margin_gap"])
+    return rows
 
 
 def totals(summary):
