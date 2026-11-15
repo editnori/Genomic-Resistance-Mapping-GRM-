@@ -58,6 +58,22 @@ CAUSES = {
     ("gbt", "end to end", "no tree kept"): 2,
 }
 
+# The record added after the plan on 15 November 2026 (end-to-end-trees.tsv; PLAN-note-2026-11-15.md): each tree that
+# both end-to-end fits keep and that is not identical, as rows per panel and cause. "" is a tree with no cause shown.
+FOLLOWS = "an earlier tree moved the margins"
+TREES = {
+    ("campylobacter_jejuni__ciprofloxacin_lineage_fold0", "equal split"): 5,
+    ("campylobacter_jejuni__ciprofloxacin_random_fold0", "equal split"): 5,
+    ("enterobacter_cloacae__tobramycin_random_fold0", "equal split"): 2,
+    ("planted_logistic", ""): 1,
+    ("planted_logistic", FOLLOWS): 9,
+    ("staphylococcus_haemolyticus__fusidic_acid_random_fold0", "float32 rounding"): 1,
+    ("staphylococcus_haemolyticus__fusidic_acid_random_fold0", FOLLOWS): 2,
+    ("tied_counts", "float32 rounding"): 11,
+    ("tied_counts", ""): 2,
+    ("tied_counts", FOLLOWS): 364,
+}
+
 # What a test of the run record asks for when the result no longer describes the code.
 RERUN = "rerun scripts/learner-crosscheck/run.sh ENV OUT and replace the committed result with its files (scripts/learner-crosscheck/README.md)"
 
@@ -255,26 +271,33 @@ class Record(unittest.TestCase):
             self.assertRegex(digest, "^[0-9a-f]{64}$")
 
     def test_the_run_record(self):
-        run, versions = kit.load("run.json"), kit.load("versions.json")
-        self.assertRegex(run["head"], "^[0-9a-f]{40}$")
-        self.assertRegex(run["src_tree"], "^[0-9a-f]{40}$")
-        self.assertIs(run["src_and_lockfile_as_committed"], True)
-        self.assertIs(run["harness_identical_at_1_and_8_threads"], True)
-        self.assertTrue(run["rustc"].startswith("rustc 1.98.1 "), run["rustc"])
-        stamp = r"^2026-11-14T\d\d:\d\d:\d\dZ$"
-        self.assertRegex(run["started"], stamp)
-        self.assertRegex(run["ended"], stamp)
-        self.assertLess(run["started"], run["ended"])
+        # run.json is the run of 14 November 2026; rerun.json the run of 15 November that wrote the record added after the plan
+        versions = kit.load("versions.json")
+        for name, day in (("run.json", "2026-11-14"), ("rerun.json", "2026-11-15")):
+            with self.subTest(name=name):
+                run = kit.load(name)
+                self.assertEqual(list(run), ["head", "src_tree", "src_and_lockfile_as_committed", "rustc", "harness_identical_at_1_and_8_threads", "started", "ended"])
+                self.assertRegex(run["head"], "^[0-9a-f]{40}$")
+                self.assertRegex(run["src_tree"], "^[0-9a-f]{40}$")
+                self.assertIs(run["src_and_lockfile_as_committed"], True)
+                self.assertIs(run["harness_identical_at_1_and_8_threads"], True)
+                self.assertTrue(run["rustc"].startswith("rustc 1.98.1 "), run["rustc"])
+                stamp = rf"^{day}T\d\d:\d\d:\d\dZ$"
+                self.assertRegex(run["started"], stamp)
+                self.assertRegex(run["ended"], stamp)
+                self.assertLess(run["started"], run["ended"])
         self.assertEqual(versions["evaluation_revision"], 14)
 
     def test_the_result_is_of_the_src_tree_under_test(self):
         # run.json names the tree of src/ that run.sh built. A change to a learner gives another tree, and the
         # committed tables then describe code that is no longer here.
-        tree, run = kit.git("rev-parse", "HEAD:src"), kit.load("run.json")
-        self.assertEqual(
-            run["src_tree"], tree,
-            f"run.json was written for the src/ tree {run['src_tree']}, and src/ at the head is the tree {tree}: {RERUN}",
-        )  # fmt: skip
+        tree = kit.git("rev-parse", "HEAD:src")
+        for name in ("run.json", "rerun.json"):
+            run = kit.load(name)
+            self.assertEqual(
+                run["src_tree"], tree,
+                f"{name} was written for the src/ tree {run['src_tree']}, and src/ at the head is the tree {tree}: {RERUN}",
+            )  # fmt: skip
 
     def test_src_has_no_change_that_no_commit_holds(self):
         changed = kit.git("status", "--porcelain", "--untracked-files=all", "--", "src")
@@ -302,6 +325,14 @@ class Record(unittest.TestCase):
         self.assertEqual(e["end_to_end_trees_total"]["trees_both_keep"], kit.detail_sum("gbt end to end", "grm_trees"))
         self.assertEqual(sorted(e["end_to_end_trees"]), sorted(set(PANELS) - {"one_class_train"}))
 
+    def test_the_note_beside_the_plan_names_the_plan_and_the_record(self):
+        note = (kit.REFERENCE / "PLAN-note-2026-11-15.md").read_text(encoding="utf-8")
+        for name in ("PLAN.md", "PLAN-clarifications.md"):
+            digest = hashlib.sha256((kit.REFERENCE / name).read_bytes()).hexdigest()
+            self.assertIn(f"`{name}` (sha256 `{digest}`)", note)
+        for name in ("end-to-end-trees.tsv", "rerun.json", "detail.json", "environment.tsv"):
+            self.assertIn(f"`{name}`", note)
+
     def test_the_lasso_suite_s_lines(self):
         lines = (kit.REFERENCE / "lasso-suite.txt").read_text(encoding="utf-8").splitlines()
         self.assertEqual(lines[0], "running 29 tests")
@@ -309,6 +340,62 @@ class Record(unittest.TestCase):
         self.assertEqual(collections.Counter(line.split(" ... ", 1)[1].split(",")[0] for line in tests), {"ok": 28, "ignored": 1})
         self.assertEqual([line.split(" ... ")[0] for line in tests if " ... ignored" in line], ["test learn::lasso::tests::mtb_delamanid_fold0_reaches_the_certified_optima"])
         self.assertTrue(lines[-1].startswith("test result: ok. 28 passed; 0 failed; 1 ignored; 0 measured; "), lines[-1])
+
+
+class TreeRecord(unittest.TestCase):
+    """end-to-end-trees.tsv, added after the plan: a cause for each end-to-end tree that differs."""
+
+    def setUp(self):
+        self.rows, self.detail = kit.trees(), kit.load("detail.json")
+        self.constants = kit.constants("check_gbt")
+
+    def test_the_trees_are_the_measured_ones(self):
+        self.assertEqual(collections.Counter((row["panel"], row["cause"]) for row in self.rows), TREES)
+        self.assertEqual(self.constants["FOLLOWS"], FOLLOWS)
+
+    def test_each_tree_both_keep_that_is_not_identical_has_one_row(self):
+        explored = kit.load("exploratory.json")["end_to_end_trees"]
+        count = collections.Counter(row["panel"] for row in self.rows)
+        self.assertLessEqual(set(count), set(explored))
+        for panel, trees in explored.items():
+            self.assertEqual(count[panel], trees["trees_both_keep"] - trees["identical"], panel)
+        names = list(PANELS)
+        self.assertEqual([row["panel"] for row in self.rows], sorted((row["panel"] for row in self.rows), key=names.index))
+        for panel in count:
+            rounds = [int(row["unit"].split()[1]) for row in self.rows if row["panel"] == panel]
+            self.assertEqual(rounds, sorted(set(rounds)), panel)
+            self.assertLess(rounds[-1], min(self.detail[panel]["gbt end to end"]["grm_trees"], self.detail[panel]["gbt end to end"]["xgboost_trees"]))
+        for row in self.rows:
+            self.assertRegex(row["unit"], "^" + UNIT[("gbt", "tree by tree")] + "$")
+
+    def test_a_tree_follows_an_earlier_one_exactly_where_the_margins_had_moved(self):
+        tolerance = self.constants["MARGIN_TOLERANCE"]
+        for row in self.rows:
+            with self.subTest(panel=row["panel"], unit=row["unit"]):
+                self.assertEqual(row["cause"] == FOLLOWS, row["fitting_margin_gap"] > tolerance)
+                split = r"^at root[.a-z]* GRM splits on feature \d+ and XGBoost on feature \d+$"
+                if row["cause"] == FOLLOWS:
+                    self.assertEqual(row["evidence"], f"before this round the two margins on the fitting samples differ by up to {row['fitting_margin_gap']!r}")
+                    self.assertRegex(row["what"], split + r"|^[1-9]\d* leaf values? differs?, the first at root[.a-z]*$")
+                else:
+                    self.assertRegex(row["what"], split)
+                if row["unit"] == "round 0":
+                    self.assertEqual(row["fitting_margin_gap"], 0.0)
+
+    def test_the_first_tree_that_differs_has_the_cause_the_plan_gave_the_panel(self):
+        for row in kit.differences():
+            if row["check"] == "end to end" and row["cause"].startswith("a tree differs ("):
+                first = next(tree for tree in self.rows if tree["panel"] == row["panel"])
+                self.assertEqual(f"a tree differs ({first['cause']})", row["cause"])
+                self.assertEqual(int(first["unit"].split()[1]), self.detail[row["panel"]]["gbt end to end"]["first_tree_not_identical"])
+                self.assertTrue(row["what"].endswith(f"; the first tree that is not identical is {first['unit']}: {first['what']}"), row["what"])
+                self.assertEqual(first["evidence"], row["evidence"])
+
+    def test_the_probabilities_on_the_fitting_samples_are_no_further_apart_than_on_all(self):
+        for panel, checks in self.detail.items():
+            end = checks["gbt end to end"]
+            if "largest_probability_gap" in end:
+                self.assertLessEqual(end["largest_probability_gap_on_the_fitting_samples"], end["largest_probability_gap"], panel)
 
 
 if __name__ == "__main__":

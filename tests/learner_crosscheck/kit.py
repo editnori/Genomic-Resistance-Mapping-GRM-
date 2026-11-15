@@ -3,6 +3,7 @@
 The kit's folder, scripts/learner-crosscheck, is no package name, so its modules are loaded by path. Only the modules
 that need no library are loaded: panels, scm_reference, exact, table and check_env."""
 
+import ast
 import collections
 import importlib.util
 import json
@@ -54,6 +55,26 @@ def summary():
 
 def differences():
     return table.read_differences(REFERENCE / "differences.tsv")
+
+
+def trees():
+    """end-to-end-trees.tsv, the record added on 15 November 2026: each end-to-end boosted tree that differs."""
+    return table.read_trees(REFERENCE / "end-to-end-trees.tsv")
+
+
+def constants(name):
+    """The top-level names a kit file sets to a literal, or to another such name, read without running the file."""
+    found = {}
+    for node in ast.parse((KIT / f"{name}.py").read_text(encoding="utf-8")).body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            if isinstance(node.value, ast.Name) and node.value.id in found:
+                found[node.targets[0].id] = found[node.value.id]
+                continue
+            try:
+                found[node.targets[0].id] = ast.literal_eval(node.value)
+            except ValueError:
+                pass
+    return found
 
 
 def detail_sum(check, key):
@@ -170,7 +191,20 @@ def exploratory_table():
     return ["| Exploratory count, over the 16 panels | Value |", "|---|---:|"] + [f"| {label} | {value:,} |" for label, value in rows]
 
 
-TABLES = (totals_table, panel_table, cause_table, further_table, exploratory_table)
+def tree_record_table():
+    """The README's table of end-to-end-trees.tsv: per panel and cause, the trees and the margin gaps before them."""
+    gaps = collections.defaultdict(list)
+    for row in trees():
+        gaps[(row["panel"], row["cause"] or "none shown")].append(row["fitting_margin_gap"])
+    order = [panel["name"] for panel in panels.read(FIXTURES)]
+    lines = ["| Panel | Cause of the tree | Trees | Smallest margin gap | Largest margin gap |", "|---|---|---:|---:|---:|"]
+    for panel, cause in sorted(gaps, key=lambda key: (order.index(key[0]), key[1])):
+        found = gaps[(panel, cause)]
+        lines.append(f"| `{panel}` | {cause} | {len(found):,} | {min(found):.3g} | {max(found):.3g} |")
+    return lines
+
+
+TABLES = (totals_table, panel_table, cause_table, tree_record_table, further_table, exploratory_table)
 
 if __name__ == "__main__":
     for make in TABLES:

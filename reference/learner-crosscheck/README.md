@@ -4,7 +4,7 @@ GRM runs its own code for each of its five learners. On 14 November 2026 each le
 
 This is a software check on small test panels. It says nothing about clinical performance and nothing about how well a learner predicts resistance. No genome data was read.
 
-**No difference was left without a shown cause.** The differences that have one are below. One of them is a property of GRM's code that its authors may want to change: where several features have exactly equal gain, the trees do not always split on the lowest-numbered one.
+**Under the plan's rules, no difference was left without a shown cause.** The differences that have one are below. One of them is a property of GRM's code that its authors may want to change: where several features have exactly equal gain, the trees do not always split on the lowest-numbered one. A record added after the plan, on 15 November 2026, gives each end-to-end boosted tree that differs a cause of its own, and it shows three trees with none (below).
 
 ## How it was made
 
@@ -15,14 +15,17 @@ This is a software check on small test panels. It says nothing about clinical pe
 | Panels | the 16 of `tests/data/lasso-stopping-fixtures.txt`, sha256 `7f354884a5dec09bb7e87672d56842f0c3ebd1aa5ef785e4479a83c9a1f99550` |
 | References | Python 3.12.3 with scikit-learn 1.7.2, XGBoost 3.0.5 (the CPU wheel) and pyscm-ml 1.1.2, on numpy 1.26.4 and scipy 1.15.3, each installed from a file named by its sha256 (`environment.tsv`, `versions.json`) |
 | Command | `scripts/learner-crosscheck/run.sh ENV OUT`, from 17:32:43 to 17:33:01 UTC on 14 November 2026 (`run.json`) |
+| Run again | `scripts/learner-crosscheck/run.sh ENV OUT` at commit `4e5738868ddb379fc090f49f4f04ee97c1f9ae30`, from 12:36:48 to 12:37:04 UTC on 15 November 2026, in another environment built from the same pinned files (`rerun.json`) |
 
 The harness wrote the same bytes with 1 and with 8 threads. A first run at 17:28 UTC, in another environment built from the same pinned files, gave the same bytes in `summary.tsv`, `differences.tsv`, `totals.json`, `detail.json` and `versions.json`.
 
 The harness file, `main.rs`, was reformatted with `cargo fmt` after that run: white space, trailing commas and one pair of braces. With the kit committed, the whole check ran again from the committed files, from 17:53:09 to 17:53:25 UTC, and wrote the same bytes in every file here that `run.sh` writes except `run.json`, which holds the commit and the times.
 
+On 15 November 2026 the kit gained the record and the rule that `PLAN-note-2026-11-15.md` lists, and `run.sh` ran again (`rerun.json`). It wrote `summary.tsv`, `differences.tsv`, `totals.json`, `versions.json` and `exploratory.json` byte for byte as on 14 November, and `detail.json` the same apart from one added key for each panel run end to end, `largest_probability_gap_on_the_fitting_samples`. `end-to-end-trees.tsv` is new. `run.json` stays the record of the run of 14 November.
+
 ## The plan
 
-`PLAN.md` was fixed at 17:09:18 UTC, before any learner was fitted on a panel. It names the panels, the settings, each reference, the rule by which a unit matches, and the causes a difference may be given. It sets no pass mark. `PLAN-clarifications.md` was fixed at 17:28:21 UTC, before the first run, and settles 16 places where the plan's words left a choice. Both are here as they were hashed; their sha256 values are at the end of this page. `exploratory.py` and its counts came after the first comparison was read. They are labelled exploratory and no outcome depends on them.
+`PLAN.md` was fixed at 17:09:18 UTC, before any learner was fitted on a panel. It names the panels, the settings, each reference, the rule by which a unit matches, and the causes a difference may be given. It sets no pass mark. `PLAN-clarifications.md` was fixed at 17:28:21 UTC, before the first run, and settles 16 places where the plan's words left a choice. Both are here as they were hashed; their sha256 values are at the end of this page. `exploratory.py` and its counts came after the first comparison was read. They are labelled exploratory and no outcome depends on them. `PLAN-note-2026-11-15.md`, written on 15 November 2026 after the result had been read, says which assumption of the plan was wrong, who found it, and what was added after the plan.
 
 ## Result
 
@@ -80,6 +83,27 @@ By panel, the units that matched of those compared:
 **Boosted trees, one tree at a time.** XGBoost grew each round's tree from GRM's own margin, on the features GRM drew for the round. Of 5,200 kept trees, 4,766 were identical. In 368, all on `one_class_train`, XGBoost set a leaf to 0 because its weight was under the minimum child weight, and GRM gave the leaf its value. In 64, the two sides split a node on two features that divide its samples into the same two groups. In 2, the two candidate features differ in 64-bit arithmetic and are equal in XGBoost's 32-bit arithmetic.
 
 **Boosted trees, end to end.** With XGBoost running by itself, early stopping included, 11 of 15 panels gave the same number of trees and probabilities within 0.0001. On `constant_balanced` and `constant_imbalanced` GRM kept no tree and XGBoost kept one, and the probabilities were equal. GRM keeps no tree when none lowers the validation loss, and counts such a model as a no-call (`src/learn/gbt.rs`). On `campylobacter_jejuni__ciprofloxacin_random_fold0` both kept 15 trees, the first tree differed by an equal split, and the probabilities differed by up to 0.0843. On `tied_counts` GRM kept 399 trees and XGBoost 400, the tree of round 1 differed by 32-bit rounding, and the probabilities differed by up to 0.000234.
+
+**Every end-to-end tree that differs, a record added after the plan.** The plan gave a cause to the first tree that differed and took the later ones to follow from it. `end-to-end-trees.tsv` gives each of the 402 trees that both sides keep and that are not identical a cause of its own, on every panel run end to end, matched or not. Before each such round it sets XGBoost's margin on the fitting samples against GRM's. Within 1e-5, both grew the round's tree from the same state, and the tree gets its cause as in the tree-by-tree check. Further apart, an earlier tree has moved the margins.
+
+On `campylobacter_jejuni__ciprofloxacin_random_fold0` the later trees did not follow from the first. Five trees differ, in rounds 0, 1, 2, 3 and 6, each at an equal split of its own, and before each of them the two margins on the fitting samples agree within 1.2e-7. The probabilities differ by up to 0.0843 over all samples and by at most 5.6e-8 on the fitting samples, so the difference lies outside them. On `tied_counts` 377 trees differ. Thirteen grew from margins that agree within 2.9e-7: 11 differ by 32-bit rounding and 2 have no cause shown. The other 364 came after an earlier tree had moved the margins by 0.0027 or more.
+
+Three trees in the record have no cause shown: rounds 13 and 30 of `tied_counts`, and round 0 of `planted_logistic`, a panel that matched. In each, the two features' loss changes are equal in XGBoost's 32-bit arithmetic, and GRM, which gives equal gains to the lower feature, took the higher one, so in its own arithmetic its feature's gain was the larger. The kit recomputes the loss changes in 64-bit arithmetic but sums in another order than GRM, and puts XGBoost's feature above GRM's by 2e-15 or less. The plan's rule for 32-bit rounding asks that GRM's feature be at least as large, so it shows no cause. The kit's rules were not widened after this was read.
+
+By panel and cause (`end-to-end-trees.tsv`; a margin gap is the largest gap on the fitting samples before the round):
+
+| Panel | Cause of the tree | Trees | Smallest margin gap | Largest margin gap |
+|---|---|---:|---:|---:|
+| `campylobacter_jejuni__ciprofloxacin_lineage_fold0` | equal split | 5 | 6.02e-07 | 8.61e-07 |
+| `campylobacter_jejuni__ciprofloxacin_random_fold0` | equal split | 5 | 0 | 1.12e-07 |
+| `enterobacter_cloacae__tobramycin_random_fold0` | equal split | 2 | 5.82e-07 | 1.19e-06 |
+| `planted_logistic` | an earlier tree moved the margins | 9 | 0.000341 | 0.126 |
+| `planted_logistic` | none shown | 1 | 0 | 0 |
+| `staphylococcus_haemolyticus__fusidic_acid_random_fold0` | an earlier tree moved the margins | 2 | 0.000324 | 0.0773 |
+| `staphylococcus_haemolyticus__fusidic_acid_random_fold0` | float32 rounding | 1 | 1.59e-08 | 1.59e-08 |
+| `tied_counts` | an earlier tree moved the margins | 364 | 0.00272 | 0.0678 |
+| `tied_counts` | float32 rounding | 11 | 5.99e-09 | 2.75e-07 |
+| `tied_counts` | none shown | 2 | 1.22e-07 | 2.87e-07 |
 
 ## What this says about GRM
 
@@ -163,6 +187,7 @@ An earlier check of the same kind ran in October 2026 under revision 7. Its file
 - Sixteen small panels. A learner that agrees here can still differ on other inputs.
 - The harness calls the learners with production's default settings. It does not run `grm evaluate`, so the settings production selects inside each fit are recorded in `detail.json` and not compared.
 - At a node where features tie exactly, no library gives one answer. The reference there is the exact arithmetic of `exact.py`, which is part of this kit and not a library.
+- The tolerance of 1e-5 that separates a tree grown from the same margins from one that came after an earlier tree was chosen after the review's margins had been read. In `end-to-end-trees.tsv` every gap is either at most 1.2e-6 or at least 0.00032, so any tolerance between the two gives the same causes.
 - The fits GRM made are not committed, because they take 12 MB. `versions.json` holds the sha256 of each panel's fits, and `run.sh` writes them again.
 - `tests/learner_crosscheck` checks that these files agree with each other, with this page and with the Methods text of the site. It cannot fit a learner. It does fail when the tree of `src/` at the commit under test is not the tree `run.json` names, or when `src/` holds a change no commit holds, so a change to a learner fails it until `run.sh` runs again. A change outside `src/`, such as a new version of a library in `Cargo.lock`, is not caught.
 
@@ -172,12 +197,15 @@ The sha256 of each file, in the form `sha256sum -c` reads from this folder:
 
 ```
 cc839abd2816fa4360408d0e0759ea71108a800600ad04092f98455d251ac75d  PLAN-clarifications.md
+cd4d1044c3c6659d18d0d44e15e1df59ec5b39b087ed378e6d2db3091a8e38d5  PLAN-note-2026-11-15.md
 7c5cf3fabcd1c91d12dcf9dc80dbfeeaee8122b6aa0dabcb986dfa4a7c8909e1  PLAN.md
-882bdb833536a0e092aa8b8840d6d1469fcde310893b9f75cbd3c10638023952  detail.json
+4a6f2d85942a8f85212ba37b8b0fea2c35a7baffe12daea8fcd9a25997a025d4  detail.json
 19eae122edbc1c998ead379aa80002cdac8883c483c1caf5f3ea3efc9ecc4f4b  differences.tsv
+15b6458a609d9ea76d7636a392d381348600577df3b33ab58c2db9ae91ca6b90  end-to-end-trees.tsv
 1f32f76a24d3b94f77b9e0581295ed1e34ff25e4d6dc7e75ccf2432a4ff0da6f  environment.tsv
 f18c073c8e12328550cf7a8292fedbaf740bbe4f6738fd408402deefd902f74b  exploratory.json
 a7228320cb88696be1d7d1e7f0b6400326b05efcc971a5bb98ea089a538df402  lasso-suite.txt
+3f8d8df5e1004fce421ca9621c26a397313011666884333e703917c6ab09e570  rerun.json
 4b8449284667b1c9f3d403c4ed9064b165bf20f44c8b52644c930583e400623b  run.json
 3b2bc04e0d7d4c1398fa52a1f6215d6b3801482eca40357568dc45abab77b73d  summary.tsv
 072f98d19274191c0f5a7312dc27791f872ec1e478ae076442d741249b7ac086  totals.json

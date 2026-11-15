@@ -507,7 +507,7 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
           read. The kit and the result table are in the repository, under scripts/learner-crosscheck and reference/learner-crosscheck.
         </P>
         <p className="prose-measure text-note text-ink">
-          No difference was left without a shown cause. The set covering machine gave the same model as an independent implementation on all 224 fits. pyscm-ml 1.1.2 was asked for its
+          Under the plan&apos;s rules, no difference was left without a shown cause. The set covering machine gave the same model as an independent implementation on all 224 fits. pyscm-ml 1.1.2 was asked for its
           best rules at 435 of the steps GRM took, and GRM&apos;s rule was among them at 405. At the other 30 the library preferred a rule GRM does not have, one that rejects every
           sample or none.
         </p>
@@ -522,8 +522,11 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
           XGBoost sets a leaf below its minimum weight to zero and GRM does not. Another 64 divided the samples into the same two groups with another feature, and 2 followed from
           XGBoost&apos;s single-precision arithmetic. Run end to end on the 15 panels with both classes in training, the two gave the same number of trees and probabilities within
           0.0001 of each other on 11. On 2 panels GRM kept no tree and XGBoost kept one, and the probabilities were equal. GRM keeps that difference on purpose: a model with no tree
-          gives no call. On the other 2 the first tree that differed did so in one of the two ways above, and the later trees followed from it. The largest difference in a probability
-          was 0.084.
+          gives no call. On the other 2 some trees differed, and a record added after the plan gives each of those trees a cause of its own. On one, 5 trees each split a node on
+          another feature that divides the fitting samples into the same two groups, and before each of them the two fits still gave the fitting samples the same scores within
+          0.00001, so none followed from an earlier tree. Its probabilities differed by up to 0.084, the largest difference in the check, and only outside the fitting samples: on
+          those they agreed within 0.0001. On the other, 377 trees differed. Of these, 13 grew from scores that agreed within 0.00001: 11 differed through XGBoost&apos;s
+          single-precision arithmetic, and 2 have no cause shown. The other 364 followed an earlier tree that had moved the scores.
         </p>
         <p className="prose-measure text-note text-ink">
           The L1 logistic regression was not compared again. Its own tests ran at the same commit and 28 passed; they require each saved case to converge on the best known fit. One more

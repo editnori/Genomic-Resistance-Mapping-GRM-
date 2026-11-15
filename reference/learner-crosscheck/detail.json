@@ -24,6 +24,7 @@
    "grm_trees": 87,
    "grm_trees_at_production_colsample": 69,
    "largest_probability_gap": 1.0245511072870528e-07,
+   "largest_probability_gap_on_the_fitting_samples": 1.0245511072870528e-07,
    "validation_samples": 59,
    "xgboost_rounds_run": 112,
    "xgboost_trees": 87
@@ -107,6 +108,7 @@
    "grm_trees": 15,
    "grm_trees_at_production_colsample": 19,
    "largest_probability_gap": 0.08431604490633171,
+   "largest_probability_gap_on_the_fitting_samples": 5.506586309156347e-08,
    "validation_samples": 61,
    "xgboost_rounds_run": 40,
    "xgboost_trees": 15
@@ -190,6 +192,7 @@
    "grm_trees": 0,
    "grm_trees_at_production_colsample": 0,
    "largest_probability_gap": 0.0,
+   "largest_probability_gap_on_the_fitting_samples": 0.0,
    "validation_samples": 10,
    "xgboost_rounds_run": 26,
    "xgboost_trees": 1
@@ -271,6 +274,7 @@
    "grm_trees": 0,
    "grm_trees_at_production_colsample": 0,
    "largest_probability_gap": 0.0,
+   "largest_probability_gap_on_the_fitting_samples": 0.0,
    "validation_samples": 9,
    "xgboost_rounds_run": 26,
    "xgboost_trees": 1
@@ -351,6 +355,7 @@
    "grm_trees": 26,
    "grm_trees_at_production_colsample": 84,
    "largest_probability_gap": 5.250138401802218e-08,
+   "largest_probability_gap_on_the_fitting_samples": 5.250138401802218e-08,
    "validation_samples": 11,
    "xgboost_rounds_run": 51,
    "xgboost_trees": 26
@@ -431,6 +436,7 @@
    "grm_trees": 115,
    "grm_trees_at_production_colsample": 157,
    "largest_probability_gap": 1.1379204301054102e-07,
+   "largest_probability_gap_on_the_fitting_samples": 7.680676855637003e-08,
    "validation_samples": 11,
    "xgboost_rounds_run": 140,
    "xgboost_trees": 115
@@ -513,6 +519,7 @@
    "grm_trees": 47,
    "grm_trees_at_production_colsample": 96,
    "largest_probability_gap": 9.313030557844826e-08,
+   "largest_probability_gap_on_the_fitting_samples": 9.313030557844826e-08,
    "validation_samples": 22,
    "xgboost_rounds_run": 72,
    "xgboost_trees": 47
@@ -593,6 +600,7 @@
    "grm_trees": 39,
    "grm_trees_at_production_colsample": 40,
    "largest_probability_gap": 8.904549808619322e-08,
+   "largest_probability_gap_on_the_fitting_samples": 6.861737733565576e-08,
    "validation_samples": 13,
    "xgboost_rounds_run": 64,
    "xgboost_trees": 39
@@ -738,6 +746,7 @@
    "grm_trees": 45,
    "grm_trees_at_production_colsample": 74,
    "largest_probability_gap": 3.1575890749868663e-06,
+   "largest_probability_gap_on_the_fitting_samples": 3.1575890749868663e-06,
    "validation_samples": 34,
    "xgboost_rounds_run": 70,
    "xgboost_trees": 45
@@ -820,6 +829,7 @@
    "grm_trees": 9,
    "grm_trees_at_production_colsample": 86,
    "largest_probability_gap": 5.8635833966036444e-08,
+   "largest_probability_gap_on_the_fitting_samples": 5.8635833966036444e-08,
    "validation_samples": 14,
    "xgboost_rounds_run": 34,
    "xgboost_trees": 9
@@ -902,6 +912,7 @@
    "grm_trees": 15,
    "grm_trees_at_production_colsample": 16,
    "largest_probability_gap": 6.980377503412738e-05,
+   "largest_probability_gap_on_the_fitting_samples": 6.639035545868976e-05,
    "validation_samples": 14,
    "xgboost_rounds_run": 40,
    "xgboost_trees": 15
@@ -984,6 +995,7 @@
    "grm_trees": 28,
    "grm_trees_at_production_colsample": 31,
    "largest_probability_gap": 3.8978092642416584e-08,
+   "largest_probability_gap_on_the_fitting_samples": 3.8978092642416584e-08,
    "validation_samples": 15,
    "xgboost_rounds_run": 53,
    "xgboost_trees": 28
@@ -1066,6 +1078,7 @@
    "grm_trees": 163,
    "grm_trees_at_production_colsample": 189,
    "largest_probability_gap": 2.0713416992723666e-07,
+   "largest_probability_gap_on_the_fitting_samples": 2.0713416992723666e-07,
    "validation_samples": 17,
    "xgboost_rounds_run": 188,
    "xgboost_trees": 163
@@ -1150,6 +1163,7 @@
    "grm_trees": 399,
    "grm_trees_at_production_colsample": 399,
    "largest_probability_gap": 0.00023352400047937927,
+   "largest_probability_gap_on_the_fitting_samples": 0.00023352400047937927,
    "validation_samples": 13,
    "xgboost_rounds_run": 400,
    "xgboost_trees": 400
@@ -1230,6 +1244,7 @@
    "grm_trees": 38,
    "grm_trees_at_production_colsample": 0,
    "largest_probability_gap": 4.1277666285033376e-08,
+   "largest_probability_gap_on_the_fitting_samples": 4.1277666285033376e-08,
    "validation_samples": 12,
    "xgboost_rounds_run": 63,
    "xgboost_trees": 38

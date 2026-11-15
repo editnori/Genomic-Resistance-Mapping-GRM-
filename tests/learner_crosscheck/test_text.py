@@ -31,6 +31,11 @@ def methods_part():
     return " ".join(html.unescape(re.sub(r"<[^<>]*>", " ", found[0])).split())
 
 
+def tree_differs():
+    """The two panels whose end-to-end difference is a tree that differs, in panel order."""
+    return [row["panel"] for row in kit.differences() if row["check"] == "end to end" and row["cause"].startswith("a tree differs (")]
+
+
 def sentences():
     """Every sentence of the Methods part that carries a number, from the result files."""
     totals = {(row["learner"], row["check"]): row for row in kit.load("totals.json")}
@@ -45,6 +50,13 @@ def sentences():
     lasso = (kit.REFERENCE / "lasso-suite.txt").read_text(encoding="utf-8").splitlines()[-1]
     passed = re.fullmatch(r"test result: ok\. (\d+) passed; 0 failed; 1 ignored; .*", lasso).group(1)
     no_tree = causes[("end to end", "no tree kept")]
+    # the record added on 15 November 2026: each end-to-end tree that differs, with a cause of its own
+    record, constants, detail = kit.trees(), kit.constants("check_gbt"), kit.load("detail.json")
+    tolerance, close, follows = constants["MARGIN_TOLERANCE"], constants["PROBABILITY_TOLERANCE"], constants["FOLLOWS"]
+    one, other = tree_differs()
+    first = [row for row in record if row["panel"] == one]
+    second = [row for row in record if row["panel"] == other]
+    same = [row for row in second if row["cause"] != follows]
     return [
         f"On {day(run['started'])} a check compared each learner with a standard version of the same method on {len(versions['grm_fits_sha256'])} small test panels, "
         f"at revision {versions['evaluation_revision']} of the evaluation (commit {run['head'][:7]}).",
@@ -65,8 +77,15 @@ def sentences():
         f"Run end to end on the {end['compared']} panels with both classes in training, "
         f"the two gave the same number of trees and probabilities within 0.0001 of each other on {end['units_matched']}.",
         f"On {no_tree} panels GRM kept no tree and XGBoost kept one, and the probabilities were equal.",
-        f"On the other {end['units_explained'] - no_tree} the first tree that differed did so in one of the two ways above, and the later trees followed from it.",
-        f"The largest difference in a probability was {max(gaps):.3f}.",
+        f"On the other {end['units_explained'] - no_tree} some trees differed, and a record added after the plan gives each of those trees a cause of its own.",
+        f"On one, {len(first)} trees each split a node on another feature that divides the fitting samples into the same two groups, and before each of them the two fits "
+        f"still gave the fitting samples the same scores within {tolerance:.5f}, so none followed from an earlier tree.",
+        f"Its probabilities differed by up to {detail[one]['gbt end to end']['largest_probability_gap']:.3f}, the largest difference in the check, "
+        f"and only outside the fitting samples: on those they agreed within {close:.4f}.",
+        f"On the other, {len(second)} trees differed.",
+        f"Of these, {len(same)} grew from scores that agreed within {tolerance:.5f}: {sum(row['cause'] == 'float32 rounding' for row in same)} differed through XGBoost's "
+        f"single-precision arithmetic, and {sum(not row['cause'] for row in same)} have no cause shown.",
+        f"The other {len(second) - len(same)} followed an earlier tree that had moved the scores.",
         "The L1 logistic regression was not compared again.",
         f"Its own tests ran at the same commit and {passed} passed; they require each saved case to converge on the best known fit.",
         # history: the check of October 2026 has no file behind it, so these two are held as written
@@ -109,9 +128,30 @@ class Methods(unittest.TestCase):
             if row["cause"] == "no tree kept":
                 end = detail[row["panel"]]["gbt end to end"]
                 self.assertEqual((end["grm_trees"], end["xgboost_trees"], end["largest_probability_gap"]), (0, 1, 0))
-        # "one of the two ways above"
+        # the end-to-end causes are those two and "a tree differs", on two panels
         end = {row["cause"] for row in differences if row["check"] == "end to end"}
         self.assertEqual(end, {"no tree kept", "a tree differs (equal split)", "a tree differs (float32 rounding)"})
+        one, other = tree_differs()
+        constants, record = kit.constants("check_gbt"), kit.trees()
+        tolerance, follows = constants["MARGIN_TOLERANCE"], constants["FOLLOWS"]
+        # "On one, ... trees each split a node on another feature that divides the fitting samples into the same two groups, and
+        # before each of them the two fits still gave the fitting samples the same scores ..., so none followed from an earlier tree."
+        first = [row for row in record if row["panel"] == one]
+        self.assertEqual({row["cause"] for row in first}, {"equal split"})
+        self.assertLessEqual(max(row["fitting_margin_gap"] for row in first), tolerance)
+        # "Its probabilities differed by up to ..., the largest difference in the check, and only outside the fitting samples"
+        gaps = [panel["gbt end to end"].get("largest_probability_gap", 0) for panel in detail.values()]
+        self.assertEqual(detail[one]["gbt end to end"]["largest_probability_gap"], max(gaps))
+        self.assertLessEqual(detail[one]["gbt end to end"]["largest_probability_gap_on_the_fitting_samples"], constants["PROBABILITY_TOLERANCE"])
+        # "On the other, ... trees differed. Of these, ... grew from scores that agreed within ...: ... single-precision ..., and ...
+        # have no cause shown. The other ... followed an earlier tree that had moved the scores."
+        second = [row for row in record if row["panel"] == other]
+        self.assertEqual({row["cause"] for row in second}, {"float32 rounding", "", follows})
+        for row in second:
+            self.assertEqual(row["cause"] == follows, row["fitting_margin_gap"] > tolerance, row)
+        # the first of them is the tree that differences.tsv gives the panel's cause from
+        self.assertEqual(second[0]["cause"], "float32 rounding")
+        self.assertEqual(int(second[0]["unit"].split()[1]), detail[other]["gbt end to end"]["first_tree_not_identical"])
         # "a model with no tree gives no call" is the code's own statement
         gbt = (kit.ROOT / "src" / "learn" / "gbt.rs").read_text(encoding="utf-8")
         self.assertIn("//! A model with no tree is a no-call, by design", gbt)
@@ -119,7 +159,7 @@ class Methods(unittest.TestCase):
     def test_the_part_says_what_the_check_is_and_is_not(self):
         text = methods_part()
         self.assertIn(f"It was a software check on small test panels, and it {SCOPE}.", text)
-        self.assertIn("No difference was left without a shown cause.", text)
+        self.assertIn("Under the plan's rules, no difference was left without a shown cause.", text)
         self.assertIn("under scripts/learner-crosscheck and reference/learner-crosscheck.", text)
         self.assertIn("The files of that check are lost, so that statement cannot be checked, and it stays here only as history.", text)
         self.assertTrue((kit.ROOT / "scripts" / "learner-crosscheck").is_dir())
@@ -142,8 +182,8 @@ class ResultReadme(unittest.TestCase):
     def test_no_other_table_row_carries_a_count(self):
         rebuilt = {line for make in kit.TABLES for line in make()}
         other = [line for line in self.text.splitlines() if line.startswith("|") and line not in rebuilt]
-        # the table under "How it was made": its header, its rule and five rows
-        self.assertEqual([line.split("|")[1].strip() for line in other], ["", "---", "GRM", "Compiler", "Panels", "References", "Command"])
+        # the table under "How it was made": its header, its rule and six rows
+        self.assertEqual([line.split("|")[1].strip() for line in other], ["", "---", "GRM", "Compiler", "Panels", "References", "Command", "Run again"])
 
     def test_the_sha256_lines(self):
         block = re.findall(r"\n```\n(.*?)\n```\n", self.text, re.S)
@@ -156,7 +196,7 @@ class ResultReadme(unittest.TestCase):
             self.assertEqual(listed[name], hashlib.sha256((kit.REFERENCE / name).read_bytes()).hexdigest(), name)
 
     def test_how_it_was_made(self):
-        run, versions = kit.load("run.json"), kit.load("versions.json")
+        run, rerun, versions = kit.load("run.json"), kit.load("rerun.json"), kit.load("versions.json")
         libraries = versions["libraries"]
         for expected in (
             f"| GRM | `main` at commit `{run['head']}`, evaluation revision {versions['evaluation_revision']}, `src/` tree `{run['src_tree']}`, unchanged by the kit |",
@@ -165,6 +205,8 @@ class ResultReadme(unittest.TestCase):
             f"Python {versions['python']} with scikit-learn {libraries['scikit-learn']}, XGBoost {libraries['xgboost']} (the CPU wheel) and pyscm-ml {libraries['pyscm-ml']}, "
             f"on numpy {libraries['numpy']} and scipy {libraries['scipy']}",
             f"from {run['started'][11:19]} to {run['ended'][11:19]} UTC on {day(run['started'])} (`run.json`)",
+            f"| Run again | `scripts/learner-crosscheck/run.sh ENV OUT` at commit `{rerun['head']}`, from {rerun['started'][11:19]} to {rerun['ended'][11:19]} UTC "
+            f"on {day(rerun['started'])}, in another environment built from the same pinned files (`rerun.json`) |",
             f"# Learner cross-check: the result of {day(run['started'])}",
         ):
             with self.subTest(expected=expected):
@@ -172,7 +214,7 @@ class ResultReadme(unittest.TestCase):
 
     def test_it_says_what_the_check_is_and_is_not(self):
         self.assertIn(f"This is a software check on small test panels. It {SCOPE}", self.text)
-        self.assertIn("**No difference was left without a shown cause.**", self.text)
+        self.assertIn("**Under the plan's rules, no difference was left without a shown cause.**", self.text)
         self.assertIn("They are labelled exploratory and no outcome depends on them.", self.text)
         self.assertIn("Exploratory, written after the first comparison was read:", self.text)
 
