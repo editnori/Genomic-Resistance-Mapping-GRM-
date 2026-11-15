@@ -1,0 +1,9 @@
+{
+ "head": "4e5738868ddb379fc090f49f4f04ee97c1f9ae30",
+ "src_tree": "8858b8eb434e5ca0a2ba02457ef1bcc12ed3325f",
+ "src_and_lockfile_as_committed": true,
+ "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+ "harness_identical_at_1_and_8_threads": true,
+ "started": "2026-11-15T12:36:48Z",
+ "ended": "2026-11-15T12:37:04Z"
+}
