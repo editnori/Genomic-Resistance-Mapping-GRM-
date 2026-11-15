@@ -355,7 +355,7 @@ const Scores = ({ manifest }: { manifest: Manifest }) => {
         For each dataset with an MIC model, <code>grm baselines</code> rebuilds the model&apos;s MIC folds: stratified random folds of the isolates with an MIC, drawn with the
         report&apos;s own fold count and seed. They differ from the random split&apos;s folds and hold no lineage out. The rebuilt folds count as confirmed when the groups of
         isolates with bit-identical held-out predictions lie inside one fold each, as they do on the report&apos;s own folds and not on a wrong rebuild. Correct folds can also
-        give one value to isolates of two folds, so a dataset with some groups spanning folds is marked unconfirmed (†), and one whose spanning groups outnumber the groups
+        give one value to isolates of two folds, so a dataset with some groups spanning folds is marked unconfirmed, and one whose spanning groups outnumber the groups
         inside one fold gets no baselines file. Each fold&apos;s exact training MICs give two constants, their lower median and
         their mode (the value with the highest count, a tie going to the lower), and each is scored on the fold&apos;s exact test MICs, the isolates the model is scored on.
         The model itself starts every isolate at a constant of its fit
