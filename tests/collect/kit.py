@@ -57,6 +57,9 @@ ROWS = [
     ("proj/reports/beta.json", 20, FILES["reports/beta.json"], "public-result"),
     ("proj/scratch/run.tmp", 3, None, "regenerable"),
 ]
+# What `list` says of the one directory a marker makes regenerable: build/target/ holds CACHEDIR.TAG and 3 files.
+MARKED = ("list: 1 directories are regenerable for a marker file they hold, so their files go into no archive:\n"
+          f"  proj/build/target/  CACHEDIR.TAG  {sum(1 for f in FILES if f.startswith('build/target/'))} files\n")
 INTERNAL = ["proj/notes/alpha-copy.json", "proj/notes/empty.txt", "proj/notes/ledger.md", "proj/notes/messages/m1.txt"]
 PUBLIC = ["proj/reports/alpha.json", "proj/reports/beta.json"]
 
@@ -130,7 +133,7 @@ def listed(case):
     """The synthetic project with its list written: (folder, project, list)."""
     d, proj, rules = project(case)
     rc, out, err = run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "list.tsv")
-    case.assertEqual((rc, err), (0, ""), out)
+    case.assertEqual((rc, err), (0, MARKED), out)
     return d, proj, d / "list.tsv"
 
 

@@ -32,7 +32,9 @@ builds, caches, environments, and an unpacked copy of an archive that is itself 
 with a trailing slash and the total size of its files, and no file in it is opened. It is known by its name
 (REGENERABLE_DIRS: node_modules, __pycache__), by a file it holds (REGENERABLE_MARKERS: CACHEDIR.TAG, which cargo,
 pytest and other tools write into their build and cache directories, or pyvenv.cfg, a Python environment), or by a
-rules pattern that ends in "/". A name such as target or .cargo alone does not make a directory regenerable.
+rules pattern that ends in "/". A name such as target or .cargo alone does not make a directory regenerable. A
+marker can sit in a folder of records too, so `list` names on stderr each directory a marker made regenerable, with
+the marker and the count of files that go into no archive.
 `refused` is any path holding one of the words in BARRED. The path is read after NFKC and casefold, so letter case
 and letter width do not matter, and the four joined words held-out, ks30, ks50 and sigdrug match with any run of
 characters that are not letters or digits between their halves, or none: held_out, KS-30, sig drug and ks/50 are
@@ -169,7 +171,7 @@ def in_threads(work, items, threads):
 
 class Rules:
     def __init__(self, path):
-        self.files, self.dirs, self.marked = [], [], set()
+        self.files, self.dirs, self.marked = [], [], {}  # marked: a table's directory and the marker it holds
         try:
             with open(path, encoding="utf-8") as f:
                 lines = f.read().split("\n")
@@ -195,12 +197,15 @@ class Rules:
                 self.files.append((cls, compiled))
 
     def regenerable_dir(self, path, real=None):
-        """path is a directory's list path, without the trailing slash; real is where it lies, if it is on disk."""
-        if path.rsplit("/", 1)[-1] in REGENERABLE_DIRS or any(r.match(path + "/") for r in self.dirs):
-            return True
+        """What makes a directory regenerable: "name", "rule", or the name of the marker it holds; None if nothing.
+        path is its list path, without the trailing slash; real is where it lies, if it is on disk."""
+        if path.rsplit("/", 1)[-1] in REGENERABLE_DIRS:
+            return "name"
+        if any(r.match(path + "/") for r in self.dirs):
+            return "rule"
         if real is None:
-            return path in self.marked
-        return any(os.path.lexists(os.path.join(real, m)) for m in REGENERABLE_MARKERS)
+            return self.marked.get(path)
+        return next((m for m in REGENERABLE_MARKERS if os.path.lexists(os.path.join(real, m))), None)
 
     def file_class(self, path):
         return next((cls for cls, r in self.files if r.match(path)), None)
@@ -316,6 +321,7 @@ class Walk:
         self.rules = rules
         self.rows, self.to_hash = [], []
         self.refused, self.special, self.unclassed, self.unnamed = {}, [], [], []
+        self.by_marker = []  # (directory, marker, files left out) of each directory a marker made regenerable
 
     def meet(self, path, real):
         """True if the entry may be looked at. A barred word in its list path or its path on disk refuses it."""
@@ -362,8 +368,12 @@ class Walk:
             if not self.meet(child, e.path):
                 continue
             if e.is_dir(follow_symlinks=False):
-                if self.rules.regenerable_dir(child, e.path):
-                    self.rows.append((child + "/", self.size_below(e.path, child), "-", REGENERABLE))
+                why = self.rules.regenerable_dir(child, e.path)
+                if why:
+                    size, files = self.size_below(e.path, child)
+                    self.rows.append((child + "/", size, "-", REGENERABLE))
+                    if why in REGENERABLE_MARKERS:
+                        self.by_marker.append((child + "/", why, files))
                 else:
                     self.directory(e.path, child)
             elif e.is_file(follow_symlinks=False):
@@ -372,8 +382,8 @@ class Walk:
                 self.special.append(child)
 
     def size_below(self, real, path):
-        """The bytes of the regular files under a regenerable directory. Names are read; no file is opened."""
-        total = 0
+        """(bytes, count) of the regular files under a regenerable directory. Names are read; no file is opened."""
+        total = count = 0
         try:
             with os.scandir(real) as it:
                 entries = list(it)
@@ -385,10 +395,11 @@ class Walk:
             if word:
                 self.refused[child] = word
             elif e.is_dir(follow_symlinks=False):
-                total += self.size_below(e.path, child)
+                below = self.size_below(e.path, child)
+                total, count = total + below[0], count + below[1]
             elif e.is_file(follow_symlinks=False):
-                total += e.stat(follow_symlinks=False).st_size
-        return total
+                total, count = total + e.stat(follow_symlinks=False).st_size, count + 1
+        return total, count
 
     def table(self, file, strip):
         lines = read_text(file, "the table").split("\n")
@@ -401,7 +412,7 @@ class Walk:
             given = (line.split("\t") + [""] * len(header))[col["path"]]
             inside, _, name = given[len(strip):].rpartition("/")
             if name in REGENERABLE_MARKERS and inside and given.startswith(strip):
-                self.rules.marked.add(inside)
+                self.rules.marked[inside] = name
         for n, line in enumerate(lines[1:-1], 2):
             cells = line.split("\t")
             if len(cells) != len(header):
@@ -474,6 +485,14 @@ def cmd_list(a):
     twice = {r[0] for r in walk.rows if r[0] in names or names.add(r[0])}
     if twice:
         raise Stop(2, f"list: {len(twice)} paths are listed by two sources:\n{shown(twice)}")
+    for inside, marker in sorted(rules.marked.items()):
+        files = sum(1 for r in walk.rows if r[0].startswith(inside + "/") and r[3] == REGENERABLE)
+        walk.by_marker.append((inside + "/", marker, files))
+    if walk.by_marker:
+        lines = [f"  {d}  {m}  {n} files" for d, m, n in sorted(walk.by_marker)]
+        more = f"\n  ... and {len(lines) - SHOWN} more" if len(lines) > SHOWN else ""
+        print(f"list: {len(lines)} directories are regenerable for a marker file they hold, so their files go into "
+              f"no archive:\n" + "\n".join(lines[:SHOWN]) + more, file=sys.stderr)
     write_new(a.out, list_text(walk.rows, LIST_HEADER).encode("utf-8"))
     print("class\tentries\tbytes")
     for cls in CLASSES:

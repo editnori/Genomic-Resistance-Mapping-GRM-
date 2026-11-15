@@ -10,7 +10,7 @@ class TheList(unittest.TestCase):
     def test_every_file_has_its_size_sha256_and_class(self):
         d, proj, rules = kit.project(self)
         rc, out, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "list.tsv")
-        self.assertEqual((rc, err), (0, ""))
+        self.assertEqual((rc, err), (0, kit.MARKED))
         self.assertEqual((d / "list.tsv").read_text(encoding="utf-8"), kit.list_text())
         # 21 + 20 public; 21 + 0 + 16 + 10 internal; 9 input; 3 + 194 + 11 + 3 regenerable
         self.assertEqual(out, "class\tentries\tbytes\npublic-result\t2\t41\ninternal-record\t4\t47\n"
@@ -25,7 +25,7 @@ class TheList(unittest.TestCase):
         for threads, top in ((1, proj), (8, proj), (3, other / "elsewhere")):
             rc, _, err = kit.run("list", "--rules", rules, "--root", f"proj={top}", "--out", d / "l.tsv",
                                  "--threads", threads)
-            self.assertEqual((rc, err), (0, ""))
+            self.assertEqual((rc, err), (0, kit.MARKED))
             texts.append((d / "l.tsv").read_bytes())
         self.assertEqual(texts[0], texts[1])
         self.assertEqual(texts[0], texts[2])
@@ -46,10 +46,12 @@ class TheList(unittest.TestCase):
             os.chmod(proj / rel, 0)
         os.symlink("/nonexistent", proj / "build" / "target" / "dangling")
         rc, _, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "list.tsv")
-        self.assertEqual((rc, err), (0, ""))
+        self.assertEqual((rc, err), (0, kit.MARKED))
         self.assertEqual((d / "list.tsv").read_text(encoding="utf-8"), kit.list_text())
 
     def test_a_directory_is_regenerable_by_a_marker_file_and_not_by_a_name_like_target(self):
+        """Each directory a marker made regenerable is named on stderr with its marker and its count of files: a
+        marker can sit in a folder of records too, and a reader must be able to notice it."""
         d = kit.tmp(self)
         kit.write(d / "proj", {
             "a/target/plan.md": b"what we aim at",  # 14 bytes: a folder that is only named target
@@ -60,7 +62,11 @@ class TheList(unittest.TestCase):
         })
         (d / "rules.tsv").write_text("internal-record\t*\n", encoding="utf-8")
         rc, _, err = kit.run("list", "--rules", d / "rules.tsv", "--root", f"proj={d / 'proj'}", "--out", d / "l.tsv")
-        self.assertEqual((rc, err), (0, ""))
+        self.assertEqual((rc, err), (0, "list: 3 directories are regenerable for a marker file they hold, so their "
+                                        "files go into no archive:\n"
+                                        "  proj/b/target/  CACHEDIR.TAG  2 files\n"
+                                        "  proj/c/np/  pyvenv.cfg  2 files\n"
+                                        "  proj/d/.pytest_cache/  CACHEDIR.TAG  1 files\n"))
         self.assertEqual((d / "l.tsv").read_text(encoding="utf-8"), kit.list_text([
             ("proj/a/.cargo/config.toml", 8, b"[build]\n", "internal-record"),
             ("proj/a/target/plan.md", 14, b"what we aim at", "internal-record"),
@@ -68,6 +74,22 @@ class TheList(unittest.TestCase):
             ("proj/c/np/", 21, None, "regenerable"),
             ("proj/d/.pytest_cache/", 44, None, "regenerable"),
         ]))
+
+    def test_records_beside_a_marker_are_named_with_the_marker_and_their_count(self):
+        """A marker of any kind (an empty file, a directory, a dangling link) makes its directory regenerable, so
+        the records beside it go into no archive; list says so on stderr."""
+        d = kit.tmp(self)
+        kit.write(d / "proj", {"analysis/results.tsv": b"r\t1\n", "analysis/plan.md": b"plan\n",
+                               "analysis/pyvenv.cfg": b"", "runs/r1/out.json": b"{}\n", "notes/n.md": b"n\n"})
+        (d / "proj" / "runs" / "r1" / "CACHEDIR.TAG").mkdir()
+        os.symlink(d / "nowhere", d / "proj" / "notes" / "pyvenv.cfg")
+        (d / "rules.tsv").write_text("internal-record\t*\n", encoding="utf-8")
+        rc, out, err = kit.run("list", "--rules", d / "rules.tsv", "--root", f"proj={d / 'proj'}", "--out", d / "l.tsv")
+        self.assertEqual((rc, err), (0, "list: 3 directories are regenerable for a marker file they hold, so their "
+                                        "files go into no archive:\n"
+                                        "  proj/analysis/  pyvenv.cfg  3 files\n"
+                                        "  proj/notes/  pyvenv.cfg  1 files\n"
+                                        "  proj/runs/r1/  CACHEDIR.TAG  1 files\n"), out)
 
     def test_the_first_matching_rule_gives_the_class(self):
         d, proj, rules = kit.project(self)
@@ -203,7 +225,7 @@ class BarredWords(unittest.TestCase):
             os.unlink(proj / "notes" / name)
         os.removedirs(proj / "notes" / "held" / "out")
         rc, out, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "l.tsv")
-        self.assertEqual((rc, err), (0, ""), out)
+        self.assertEqual((rc, err), (0, kit.MARKED), out)
         listed = (d / "l.tsv").read_text(encoding="utf-8")
         for name in kept:
             self.assertIn(f"proj/notes/{name}\t1\t{kit.sha(b'x')}\tinternal-record\n", listed)
@@ -380,7 +402,8 @@ class ATableInPlaceOfAWalk(unittest.TestCase):
                 ("proj/c/target/plan.md", b"plan")]
         rc, out, err = kit.run("list", "--rules", rules, "--listing", self.table(d, rows), "--strip-prefix",
                                "/far/home/", "--out", d / "list.tsv")
-        self.assertEqual((rc, err), (0, ""))
+        self.assertEqual((rc, err), (0, "list: 1 directories are regenerable for a marker file they hold, so their "
+                                        "files go into no archive:\n  proj/b/target/  CACHEDIR.TAG  2 files\n"))
         want = [("proj/a.tmp", 1, b"t", "regenerable"),
                 ("proj/b/target/CACHEDIR.TAG", 9, b"Signature", "regenerable"),  # the marker's own directory
                 ("proj/b/target/debug/x.o", 3, b"obj", "regenerable"),
@@ -437,7 +460,7 @@ class ATableInPlaceOfAWalk(unittest.TestCase):
         table = self.table(d, [("far/notes/n.md", b"note")])
         rc, _, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--listing", table,
                              "--strip-prefix", "/far/home/", "--out", d / "list.tsv")
-        self.assertEqual((rc, err), (0, ""))
+        self.assertEqual((rc, err), (0, kit.MARKED))
         self.assertEqual((d / "list.tsv").read_text(encoding="utf-8"),
                          kit.list_text([("far/notes/n.md", 4, b"note", "internal-record")] + kit.ROWS))
 
