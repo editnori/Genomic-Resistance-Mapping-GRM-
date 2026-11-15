@@ -152,12 +152,9 @@ fn grow_tree(
         let (np, nn) = (pos as f64 * w.pos, (n - pos) as f64 * w.neg);
         let parent = (np + nn) * gini(np, nn);
 
-        // A candidate: its 64-bit gain, feature, and the counts of resistant
-        // and susceptible node samples that carry it.
-        let evaluate = |f: u32| -> Option<(f64, u32, (u32, u32))> {
-            let row = x.row(f as usize);
-            let pp = bits::and_count(row, mask_pos.words());
-            let pn = bits::and_count(row, mask_neg.words());
+        // A candidate's 64-bit gain from the counts of resistant and
+        // susceptible node samples that carry it, if it may split.
+        let gain_of = |pp: u32, pn: u32| -> Option<f64> {
             let present = pp + pn;
             if present < params.min_leaf || n - present < params.min_leaf {
                 return None;
@@ -165,7 +162,25 @@ fn grow_tree(
             let (lp, ln) = (pp as f64 * w.pos, pn as f64 * w.neg);
             let (rp, rn) = (np - lp, nn - ln);
             let gain = parent - (lp + ln) * gini(lp, ln) - (rp + rn) * gini(rp, rn);
-            (gain > 1e-12).then_some((gain, f, (pp, pn)))
+            (gain > 1e-12).then_some(gain)
+        };
+        let counts = |f: u32| -> (u32, u32) {
+            let row = x.row(f as usize);
+            (
+                bits::and_count(row, mask_pos.words()),
+                bits::and_count(row, mask_neg.words()),
+            )
+        };
+        // A candidate: its 64-bit gain, feature, and its counts.
+        let evaluate = |f: u32| -> Option<(f64, u32, (u32, u32))> {
+            let (pp, pn) = counts(f);
+            gain_of(pp, pn).map(|gain| (gain, f, (pp, pn)))
+        };
+        // Production's candidate, gain and feature only: a fit with the flag
+        // off and no trace carries what `main`'s does.
+        let evaluate_float = |f: u32| -> Option<(f64, u32)> {
+            let (pp, pn) = counts(f);
+            gain_of(pp, pn).map(|gain| (gain, f))
         };
         let exact = |(gain, f, (pp, pn)): (f64, u32, (u32, u32))| -> tie::Candidate {
             let absent = (pos - pp, n - pos - pn);
@@ -196,14 +211,12 @@ fn grow_tree(
             match (params.tie, params.max_features) {
                 (TieRule::Float, Some(m)) => sample_indices(x.rows, m, &mut rng)
                     .into_iter()
-                    .filter_map(evaluate)
-                    .reduce(tie::better_float)
-                    .map(|c| (c.0, c.1)),
+                    .filter_map(evaluate_float)
+                    .reduce(tie::better_pair),
                 (TieRule::Float, None) => (0..x.rows as u32)
                     .into_par_iter()
-                    .filter_map(evaluate)
-                    .reduce_with(tie::better_float)
-                    .map(|c| (c.0, c.1)),
+                    .filter_map(evaluate_float)
+                    .reduce_with(tie::better_pair),
                 (TieRule::Exact, Some(m)) => sample_indices(x.rows, m, &mut rng)
                     .into_iter()
                     .filter_map(evaluate)

@@ -156,6 +156,12 @@ pub(crate) fn better_float<T: Copy>(a: (f64, u32, T), b: (f64, u32, T)) -> (f64,
     }
 }
 
+/// `better_float` on (gain, feature) pairs, which carry no counts.
+pub(crate) fn better_pair(a: (f64, u32), b: (f64, u32)) -> (f64, u32) {
+    let (gain, feature, ()) = better_float((a.0, a.1, ()), (b.0, b.1, ()));
+    (gain, feature)
+}
+
 /// The exact rule's choice: the lower exact impurity, then the lower feature.
 pub(crate) fn better_exact(a: Candidate, b: Candidate) -> Candidate {
     match a.2.cmp_exact(&b.2) {
