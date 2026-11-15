@@ -5,10 +5,18 @@
 
 import { useRef } from "react";
 import { ScrollFrame } from "../ui/primitives";
-import { int, mgL } from "../data/format";
+import { int, mgL, pct } from "../data/format";
 import { MarkListbox, TICK_CLASS, useSvgId, useWidth } from "./kit";
 
-export const MicHeatmap = ({ confusion }: { confusion: readonly [number, number, number][] }) => {
+/** The band's share of exact MICs for the model and for a constant MIC from
+ *  the training folds, when a baselines file gives the constant. */
+export interface BandShares {
+  model: number;
+  constant: number;
+  n: number;
+}
+
+export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, number, number][]; band?: BandShares }) => {
   const frame = useRef<HTMLDivElement | null>(null);
   const avail = useWidth(frame);
   const clip = useSvgId("mic-grid");
@@ -94,6 +102,7 @@ export const MicHeatmap = ({ confusion }: { confusion: readonly [number, number,
             <line x1={0} x2={16} y1={6} y2={6} stroke="rgb(var(--ink) / 0.5)" strokeDasharray="3 3" />
           </svg>
           Between the dashed lines: predicted within one doubling dilution of the measured MIC
+          {band === undefined ? "" : `: ${pct(band.model)} of ${int(band.n)} exact MICs for the model, ${pct(band.constant)} for a constant MIC from the training folds`}
         </span>
       </div>
     </div>

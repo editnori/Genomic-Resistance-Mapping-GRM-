@@ -10,6 +10,7 @@ import { BarPill, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../..
 import type { Resource } from "../../data/load";
 import { intervalKey, type RateInterval, type RowIntervals } from "../../data/intervals";
 import { SelectiveResearch } from "./SelectiveResearch";
+import { leadOver, lineageOf, signedPoints, type Baselines, type LineageBaseline } from "../../data/baselines";
 
 const STRIP_MIN = 220;
 
@@ -71,7 +72,35 @@ const uncalledLines = (r: DatasetReport, rows: readonly (LearnerResult | undefin
     ];
   });
 
-export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; research?: Resource<Research>; intervals?: RowIntervals }) => {
+/** What lineage identity alone reaches on each split, in words under the
+ *  table: on the random split the baseline and its unseen share, read beside
+ *  the line under each random-split score; on the lineage split no
+ *  difference, as the baseline has nothing of the lineage to read there. */
+const lineageBaselineText = (random: LineageBaseline | undefined, lineage: LineageBaseline | undefined): string => {
+  const parts: string[] = [];
+  if (random !== undefined)
+    parts.push(
+      `Lineage identity alone, which scores a test genome by the resistant share of its lineage among the fold's training genomes, or by the fold's resistant share when none shares its lineage, reaches ${pct(random.balanced_accuracy)} balanced accuracy on the random split, where ${pct(random.unseen_share)} of test genomes (${int(random.unseen)} of ${int(random.n)}) have a lineage no training genome of their fold shares. The line under each random-split score is that score minus this baseline, in points.`,
+    );
+  if (lineage !== undefined)
+    parts.push(
+      `With lineages held out, ${pct(lineage.unseen_share)} of test genomes (${int(lineage.unseen)} of ${int(lineage.n)}) have a lineage no training genome of their fold shares, so this baseline has nothing of the lineage to read there and no difference is shown.`,
+    );
+  return parts.join(" ");
+};
+
+export const LearnerSection = ({
+  r,
+  research,
+  intervals,
+  baselines = null,
+}: {
+  r: DatasetReport;
+  research?: Resource<Research>;
+  intervals?: RowIntervals;
+  /** The baselines file as pinned to this report (baselinesFor), or null. */
+  baselines?: Baselines | null;
+}) => {
   const [scheme, setScheme] = useState<Scheme>("random");
   const frame = useRef<HTMLDivElement | null>(null);
   const stripBox = useRef<HTMLDivElement | null>(null);
@@ -151,6 +180,9 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
   const uncalled = noCalls ? uncalledLines(r, learners.map(errorsOf), scheme) : [];
   const ciOf = (l: Learner) => intervals?.get(intervalKey(scheme, l));
   const anyInterval = learners.some((l) => ciOf(l) !== undefined);
+  const randomBase = lineageOf(baselines, "random");
+  const lineageBase = lineageOf(baselines, "lineage");
+  const baselineText = lineageBaselineText(randomBase, lineageBase);
 
   return (
     <Section
@@ -196,7 +228,15 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
               {["Random", "Lineages held out", "VME", "ME", ...(extra === null ? [] : [extra]), "AUROC"].map((h) => (
                 <th key={h} scope="col" className="whitespace-nowrap px-2 py-2 text-right text-tiny font-medium text-blue">
                   {h}
-                  {h === "VME" ? <span className="block font-normal text-muted-text">≤1.5%</span> : h === "ME" ? <span className="block font-normal text-muted-text">≤3%</span> : null}
+                  {h === "VME" ? (
+                    <span className="block font-normal text-muted-text">≤1.5%</span>
+                  ) : h === "ME" ? (
+                    <span className="block font-normal text-muted-text">≤3%</span>
+                  ) : h === "Random" && randomBase !== undefined ? (
+                    <span className="block font-normal text-muted-text" data-baseline="lineage-header">
+                      lineage {pct(randomBase.balanced_accuracy)}
+                    </span>
+                  ) : null}
                 </th>
               ))}
             </tr>
@@ -228,7 +268,15 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
                       />
                     </div>
                   </td>
-                  <td className={`px-2 py-1 text-right tabular-nums ${a?.metrics === null ? "text-muted-text" : ""}`}>{baText(a)}</td>
+                  <td className={`px-2 py-1 text-right tabular-nums ${a?.metrics === null ? "text-muted-text" : ""}`}>
+                    {baText(a)}
+                    {randomBase === undefined || baOf(a) === null ? null : (
+                      <span className="block text-tiny text-muted-text" data-baseline="lineage-lead">
+                        {signedPoints(leadOver(baOf(a)!, randomBase.balanced_accuracy))}
+                        <span className="sr-only"> points from lineage identity alone</span>
+                      </span>
+                    )}
+                  </td>
                   <td className={`px-2 py-1 text-right tabular-nums ${b?.metrics === null ? "text-muted-text" : ""}`}>
                     {l === "catalog" ? (
                       <span className="text-muted-text">
@@ -292,6 +340,11 @@ export const LearnerSection = ({ r, research, intervals }: { r: DatasetReport; r
             : " This report scored a fold where boosting kept no tree, or the lasso kept no weight, at 0.5, which the 0.5 cutoff calls resistant; Null folds counts those folds, and every rate includes them."
           : ""}
       </p>
+      {baselineText === "" ? null : (
+        <p className="type-note mt-1.5" data-baseline="lineage-note">
+          {baselineText}
+        </p>
+      )}
       {uncalled.length === 0 ? null : (
         <ul className="type-note mt-1.5 list-disc space-y-0.5 pl-5">
           {uncalled.map((line) => (

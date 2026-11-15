@@ -68,6 +68,7 @@ import {
 } from "../data/derive/inputs";
 import { ONE_STUDY_ALL, OUTSIDE_LEARNERS, OUTSIDE_STUDY, outsidePoints, populationById, populationSummary, type Learner as OutsideLearner, type PopulationSummary } from "../data/derive/outside";
 import { FOCUS_RING, ScrollFrame, type Fit } from "../ui/primitives";
+import { micBaselineSummary, type MicBaselineSummary, type MicConstant } from "../data/baselines";
 import { AUDIT_READING, AUDIT_SCOPE } from "../ui/EvaluationNotice";
 import { PanelEvidence } from "./PanelEvidence";
 
@@ -118,6 +119,9 @@ export interface FindingOptions {
   /** Page only: marks and names open their reports, and the corpus counts
    *  link to their sources. Present passes none, so the deck stays static. */
   nav?: Navigator;
+  /** Each MIC dataset's constant from its baselines file (micConstants);
+   *  absent while the files load or when none was published. */
+  micConstants?: ReadonlyMap<string, MicConstant>;
 }
 
 // ---- links and the status line -------------------------------------------------
@@ -293,11 +297,24 @@ export const catalogLead = (c: CatalogSummary): string => {
 };
 
 /** The MIC lead: what an MIC is, then datasets at the 90% bar, then the
- *  median dataset. */
-export const micLead = (s: MicSummary): string =>
+ *  median dataset, then, with the baselines files, the constant beside it. */
+export const micLead = (s: MicSummary, b?: MicBaselineSummary | null): string =>
   s.n === 0
     ? "No dataset had enough MIC values for MIC regression."
-    : `The MIC (minimum inhibitory concentration) is the lowest drug level, in mg/L, that stops the bacterium growing. Labs test levels that double at each step, and a predicted MIC within one step of the measured one counts as essential agreement. For ${int(s.nAbove90)} of ${plural(s.n, "dataset")}, at least 90% of exact MICs are predicted within one doubling dilution. The median dataset reaches ${pct(s.median)}.`;
+    : `The MIC (minimum inhibitory concentration) is the lowest drug level, in mg/L, that stops the bacterium growing. Labs test levels that double at each step, and a predicted MIC within one step of the measured one counts as essential agreement. For ${int(s.nAbove90)} of ${plural(s.n, "dataset")}, at least 90% of exact MICs are predicted within one doubling dilution. The median dataset reaches ${pct(s.median)}.${
+        b === null || b === undefined || b.covered === 0 ? "" : ` ${micConstantWords(b)}`
+      }`;
+
+/** The model beside a constant MIC from the training folds, as figures. */
+export const micConstantWords = (b: MicBaselineSummary): string => {
+  const over = b.covered === b.n ? `the ${int(b.n)} datasets` : `${int(b.covered)} of the ${int(b.n)} datasets, the ones with a baselines file`;
+  const lead = b.medianLead === null ? "" : `, the model is ${signedWords(b.medianLead)} its dataset's constant by a median of ${points(b.medianLead)},`;
+  return `Set beside a constant MIC taken from each training fold (the lower median of its exact MICs) and scored on the same exact MICs, over ${over} the median agreement is ${pct(b.medianModel)} for the model and ${pct(b.medianConstant)} for the constant${lead} and the model is not above the constant on ${int(b.notAbove)} of ${int(b.covered)}.${
+    b.unconfirmed === 0 ? "" : ` On ${int(b.unconfirmed)} of them the held-out predictions do not confirm the rebuilt folds.`
+  }`;
+};
+
+const signedWords = (lead: number): string => (lead >= 0 ? "above" : "below");
 
 // ---- data ------------------------------------------------------------------------
 
@@ -1162,14 +1179,27 @@ export const micFinding = (m: Manifest, opts: FindingOptions): Finding => {
   const rows = m.datasets;
   const s = micSummary(rows);
   const without = rows.length - s.n;
+  const constants = opts.micConstants;
+  const summary = constants === undefined ? null : micBaselineSummary(rows, constants);
+  const b = summary !== null && summary.covered > 0 ? summary : null;
+  const slide = `For ${int(s.nAbove90)} of ${plural(s.n, "dataset")}, at least 90% of exact MICs are predicted within one doubling dilution.`;
   return {
     id: "mic",
     title: "Predicting the drug level that stops growth (MIC)",
-    result: opts.page || s.n === 0 ? micLead(s) : `For ${int(s.nAbove90)} of ${plural(s.n, "dataset")}, at least 90% of exact MICs are predicted within one doubling dilution.`,
-    figure: s.n === 0 ? null : (fit: PagedFit) => <MicStrip rows={rows} height={fit.height} onOpen={opts.nav?.openDataset} />,
-    caption: `Each dot is one dataset: the share of its exact MICs predicted within one doubling dilution by a model that never trained on that genome (out of fold). An exact MIC is a single measured value, not a bound such as “≤0.25”. 90% is the essential-agreement limit adapted from FDA's 2009 guidance for growth-based susceptibility test systems, as a research screen.${
-      opts.page ? "" : ` Median ${pct(s.median)}.`
-    }`,
+    result:
+      opts.page || s.n === 0
+        ? micLead(s, b)
+        : b === null
+          ? slide
+          : `${slide} A constant MIC from the training folds reaches a median of ${pct(b.medianConstant)} against the model's ${pct(b.medianModel)}; the model is not above it on ${int(b.notAbove)} of ${int(b.covered)}.`,
+    figure: s.n === 0 ? null : (fit: PagedFit) => <MicStrip rows={rows} height={fit.height} onOpen={opts.nav?.openDataset} constants={b === null ? undefined : constants} />,
+    caption: `Each dot is one dataset: the share of its exact MICs predicted within one doubling dilution by a model fitted without that isolate (out of fold). The MIC folds are random and can put a k-mer-identical copy in training. An exact MIC is a single measured value, not a bound such as “≤0.25”.${
+      b === null ? "" : " The solid line is the median over datasets of a constant MIC from each training fold, scored on the same exact MICs; each dataset's own constant is in its tooltip."
+    } ${
+      b === null
+        ? "90% is the essential-agreement limit adapted from FDA's 2009 guidance for growth-based susceptibility test systems, as a research screen."
+        : "90% is an adapted research screen, from the essential-agreement limit in FDA's 2009 guidance for growth-based susceptibility test systems, and the counts at 90% are a description read after the scores."
+    }${opts.page ? "" : ` Median ${pct(s.median)}.`}`,
     note:
       opts.page && without > 0 ? (
         <p className="prose-measure mt-3 text-note text-ink">
