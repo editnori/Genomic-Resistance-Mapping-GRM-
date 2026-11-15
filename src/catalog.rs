@@ -45,6 +45,16 @@ pub fn group_of(family: &str, product: &str) -> String {
     }
 }
 
+/// The family of a group key that `group_of` wrote: the key without its
+/// " (X family)" suffix, or the key itself when it has none.
+pub fn family_of_group(group: &str) -> &str {
+    group
+        .strip_suffix(" family)")
+        .and_then(|rest| rest.rsplit_once(" ("))
+        .filter(|(_, subfamily)| !subfamily.is_empty() && !subfamily.contains(char::is_whitespace))
+        .map_or(group, |(family, _)| family)
+}
+
 pub struct Catalog {
     pub version: String,
     pub genes: Vec<Gene>,
@@ -642,6 +652,27 @@ mod tests {
         assert_eq!(
             group_of("blaOXA", "OXA-48 family class D beta-lactamase OXA-1012"),
             "blaOXA (OXA-48 family)"
+        );
+        // family_of_group reads the family back from either kind of key.
+        for (family, product) in [
+            ("blaOXA", "OXA-48 family class D beta-lactamase OXA-1012"),
+            (
+                "blaKPC",
+                "carbapenem-hydrolyzing class A beta-lactamase KPC-2",
+            ),
+            (
+                "aac(6')-Ib",
+                "aminoglycoside N-acetyltransferase AAC(6')-Ib",
+            ),
+            ("tet(A)", "tetracycline efflux MFS transporter Tet(A)"),
+        ] {
+            assert_eq!(family_of_group(&group_of(family, product)), family);
+        }
+        assert_eq!(family_of_group("blaOXA (OXA-48 family)"), "blaOXA");
+        assert_eq!(family_of_group("aac(6')-Ib"), "aac(6')-Ib");
+        assert_eq!(
+            family_of_group("x (two words family)"),
+            "x (two words family)"
         );
         assert_eq!(
             group_of(
