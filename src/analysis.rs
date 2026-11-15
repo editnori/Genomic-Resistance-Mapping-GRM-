@@ -3666,6 +3666,89 @@ mod tests {
     }
 
     #[test]
+    fn a_genome_can_list_rule_groups_and_be_called_susceptible_under_two_requirements() {
+        // Synthetic: `scan_inputs` as a sulfamethoxazole/trimethoprim
+        // dataset. Every third genome has fixD, a trimethoprim group; every
+        // fifth fixS, a sulfonamide group; every seventh fixC, a carbapenem
+        // group. Genome 0 has all three.
+        let drug = "sulfamethoxazole/trimethoprim";
+        let mut input = scan_inputs();
+        for p in &mut input.phenotypes {
+            p.antibiotic = drug.into();
+        }
+        input.datasets = vec![dataset(drug)];
+        let folate = |group: &str, class: &str| FamilyHit {
+            class: class.into(),
+            subclass: class.into(),
+            ..hit(group)
+        };
+        input.hits = (0..150)
+            .map(|i| {
+                let mut hits = Vec::new();
+                if i % 3 == 0 {
+                    hits.push(folate("fixD", "TRIMETHOPRIM"));
+                }
+                if i % 5 == 0 {
+                    hits.push(folate("fixS", "SULFONAMIDE"));
+                }
+                if i % 7 == 0 {
+                    hits.push(hit("fixC"));
+                }
+                (format!("g{i}"), hits)
+            })
+            .collect();
+        let report = fixture_report(&input);
+        assert_eq!(report.catalog_groups, ["fixD", "fixS", "fixC"]);
+        let catalog = report.catalog.as_ref().unwrap();
+        let rule: Vec<Vec<String>> =
+            vec![vec!["C:TRIMETHOPRIM".into()], vec!["C:SULFONAMIDE".into()]];
+        assert_eq!(catalog.rule, rule);
+        let counted = |s: &Sample| s.rule_groups.clone().expect("the drug has a rule");
+        // A trimethoprim hit alone meets one requirement: the genome lists
+        // its group and is called susceptible. So does a sulfonamide hit
+        // alone. With both, it lists both and is called resistant.
+        let s = &report.samples;
+        assert_eq!(
+            (counted(&s[3]), s[3].catalog_resistant),
+            (vec![0], Some(false))
+        );
+        assert_eq!(
+            (counted(&s[5]), s[5].catalog_resistant),
+            (vec![1], Some(false))
+        );
+        assert_eq!(
+            (counted(&s[15]), s[15].catalog_resistant),
+            (vec![0, 1], Some(true))
+        );
+        assert_eq!(
+            (counted(&s[7]), s[7].catalog_resistant),
+            (vec![], Some(false))
+        );
+        assert_eq!(
+            (counted(&s[0]), s[0].groups.clone()),
+            (vec![0, 1], vec![0, 1, 2])
+        );
+        let mut listed_susceptible = 0;
+        for (i, sample) in s.iter().enumerate() {
+            let own: Vec<u16> = [(3, 0), (5, 1)]
+                .into_iter()
+                .filter(|(every, _)| i % every == 0)
+                .map(|(_, group)| group)
+                .collect();
+            assert_eq!(counted(sample), own, "genome {i}");
+            assert_eq!(sample.catalog_resistant, Some(own.len() == 2), "genome {i}");
+            listed_susceptible +=
+                usize::from(!counted(sample).is_empty() && sample.catalog_resistant == Some(false));
+        }
+        // 50 genomes have fixD and 30 fixS, 10 of them both.
+        let resistant = s
+            .iter()
+            .filter(|s| s.catalog_resistant == Some(true))
+            .count();
+        assert_eq!((listed_susceptible, resistant), (60, 10));
+    }
+
+    #[test]
     fn a_drug_without_a_rule_records_no_rule_groups() {
         assert!(catalog::drug_rule("isoniazid").is_none());
         let report = fixture_report(&rule_inputs("isoniazid", "GENTAMICIN", "TOBRAMYCIN"));

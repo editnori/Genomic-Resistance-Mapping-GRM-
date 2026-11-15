@@ -85,6 +85,7 @@ src/lib.rs ablate::plan::tests::tuning_groups_give_composite_ids_only_to_random_
 src/lib.rs ablate::plan::tests::unavailable_reasons_are_the_pipelines_words
 src/lib.rs ablate::plan::tests::verify_and_is_available_check_the_plan_structure
 src/lib.rs analysis::tests::a_drug_without_a_rule_records_no_rule_groups
+src/lib.rs analysis::tests::a_genome_can_list_rule_groups_and_be_called_susceptible_under_two_requirements
 src/lib.rs analysis::tests::a_groups_flag_follows_its_first_genome_and_rule_groups_each_genomes_own_hit
 src/lib.rs analysis::tests::a_rebuild_in_reversed_genome_order_recomputes_and_a_new_map_alone_does_not
 src/lib.rs analysis::tests::a_report_with_a_locus_missing_its_annotation_is_recomputed
