@@ -164,7 +164,7 @@ An earlier check of the same kind ran in October 2026 under revision 7. Its file
 - The harness calls the learners with production's default settings. It does not run `grm evaluate`, so the settings production selects inside each fit are recorded in `detail.json` and not compared.
 - At a node where features tie exactly, no library gives one answer. The reference there is the exact arithmetic of `exact.py`, which is part of this kit and not a library.
 - The fits GRM made are not committed, because they take 12 MB. `versions.json` holds the sha256 of each panel's fits, and `run.sh` writes them again.
-- `tests/learner_crosscheck` checks that these files agree with each other, with this page and with the Methods text of the site. It cannot fit a learner, so it cannot tell whether the tables are still true of a later commit.
+- `tests/learner_crosscheck` checks that these files agree with each other, with this page and with the Methods text of the site. It cannot fit a learner. It does fail when the tree of `src/` at the commit under test is not the tree `run.json` names, or when `src/` holds a change no commit holds, so a change to a learner fails it until `run.sh` runs again. A change outside `src/`, such as a new version of a library in `Cargo.lock`, is not caught.
 
 ## Files
 

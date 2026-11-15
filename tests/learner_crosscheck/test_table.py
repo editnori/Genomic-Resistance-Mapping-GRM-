@@ -58,6 +58,9 @@ CAUSES = {
     ("gbt", "end to end", "no tree kept"): 2,
 }
 
+# What a test of the run record asks for when the result no longer describes the code.
+RERUN = "rerun scripts/learner-crosscheck/run.sh ENV OUT and replace the committed result with its files (scripts/learner-crosscheck/README.md)"
+
 UNIT = {
     ("scm", "fits"): r"(conjunction|disjunction) p=(0\.1|0\.316|0\.562|1|1\.778|3\.162|10)",
     ("cart", "nodes"): r"node (0|[1-9]\d*)",
@@ -263,6 +266,19 @@ class Record(unittest.TestCase):
         self.assertRegex(run["ended"], stamp)
         self.assertLess(run["started"], run["ended"])
         self.assertEqual(versions["evaluation_revision"], 14)
+
+    def test_the_result_is_of_the_src_tree_under_test(self):
+        # run.json names the tree of src/ that run.sh built. A change to a learner gives another tree, and the
+        # committed tables then describe code that is no longer here.
+        tree, run = kit.git("rev-parse", "HEAD:src"), kit.load("run.json")
+        self.assertEqual(
+            run["src_tree"], tree,
+            f"run.json was written for the src/ tree {run['src_tree']}, and src/ at the head is the tree {tree}: {RERUN}",
+        )  # fmt: skip
+
+    def test_src_has_no_change_that_no_commit_holds(self):
+        changed = kit.git("status", "--porcelain", "--untracked-files=all", "--", "src")
+        self.assertEqual(changed, "", f"src/ has changes outside a commit, so no run.json can name its tree: commit them, then {RERUN}")
 
     def test_the_revision_measured_is_not_ahead_of_the_code(self):
         source = (kit.ROOT / "src" / "analysis.rs").read_text(encoding="utf-8")
