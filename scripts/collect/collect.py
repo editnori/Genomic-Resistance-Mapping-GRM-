@@ -18,7 +18,7 @@ run. Standard library only; run it as `python3 -I scripts/collect/collect.py ...
            DIR is an unpacked NAME.CLASS folder. Every row of LIST.tsv must be a regular file of that size and
            sha256 under files/, and files/ must hold nothing else, and DIR's name must end in the list's class.
            --parts checks the packed parts where they lie, without unpacking: each part's sha256, then every file
-           inside it, read as a stream.
+           inside it, read as a stream. A part file beside the parts file that it does not name fails the check.
            Each part is read to the end of its gzip or xz stream, so the stream's own check (gzip's CRC and length,
            xz's check) is read too; after the last member only the tar end mark, zero bytes, may follow, and nothing
            may follow the compressed stream.
@@ -803,6 +803,12 @@ def find_in_parts(sums, threads):
         parts[number.group(1)] = (os.path.join(os.path.dirname(sums), name), digest, compress)
     if not parts:
         raise Stop(2, f"check: {sums} names no part")
+    # A part file the parts file does not name would go wherever the folder goes, unchecked. Only names are read.
+    named = {os.path.basename(p[0]) for p in parts.values()}
+    beside = sorted(e for e in os.listdir(os.path.dirname(sums) or ".")
+                    if re.fullmatch(r".+\.part[0-9]{3}\.tar(?:\.gz|\.xz)?", e) and e not in named)
+    if beside:
+        found.faults.append(f"{len(beside)} part files lie beside {base}, which does not name them:\n{shown(beside)}")
     present = {n: p for n, p in parts.items() if os.path.isfile(p[0]) and not os.path.islink(p[0])}
     for n in sorted(set(parts) - set(present)):
         found.faults.append(f"the part {os.path.basename(parts[n][0])} is not beside {base}")

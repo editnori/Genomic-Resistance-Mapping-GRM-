@@ -158,7 +158,8 @@ class PublishedByNameAndContent(unittest.TestCase):
             with self.subTest(first=first):
                 d, rc, out, err = self.pack_public(
                     "public-result\tproj/notes/alpha-copy.json\n",
-                    f"{alpha}  {first}\n{alpha}  ./sub/{second}\n{kit.sha(kit.FILES['reports/beta.json'])}  beta.json\n")
+                    f"{alpha}  {first}\n{alpha}  ./sub/{second}\n"
+                    f"{kit.sha(kit.FILES['reports/beta.json'])}  beta.json\n")
                 self.assertEqual((rc, err), (0, ""))
                 self.assertEqual(sorted(kit.members(d / "out" / "demo.public-result.part001.tar.gz")),
                                  ["demo.public-result/LIST.tsv", "demo.public-result/files/proj/notes/alpha-copy.json",

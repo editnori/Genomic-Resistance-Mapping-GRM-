@@ -138,6 +138,8 @@ MUTANTS = [
     ("check DIR does not compare the folder's name with the list's class",
      [("    elif parts is None and not os.path.basename(os.path.normpath(where)).endswith(\".\" + classes[0]):\n",
        "    elif False:\n")]),
+    ("check --parts passes a part file beside it that the parts file does not name",
+     [("    if beside:\n", "    if False:\n")]),
     ("check passes a part that is not there",
      [("        found.faults.append(f\"the part {os.path.basename(parts[n][0])} is not beside {base}\")\n",
        "        pass\n")]),

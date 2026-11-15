@@ -211,6 +211,27 @@ class ThePartsWhereTheyLie(unittest.TestCase):
         part.unlink()
         self.fails(sums, f"the part {part.name} is not beside {sums.name}", "no list could be read")
 
+    def test_a_part_file_the_parts_file_does_not_name_is_found(self):
+        d, proj, sums = kit.packed(self)
+        part = kit.parts_of(sums)[0]
+        shutil.copyfile(part, sums.parent / "demo.internal-record.part002.tar.gz")
+        self.fails(sums, f"1 part files lie beside {sums.name}, which does not name them:\n"
+                         f"  demo.internal-record.part002.tar.gz\n")
+
+    def test_the_parts_of_two_classes_in_one_folder_are_found(self):
+        d, proj, sums = kit.packed(self, "public-result")
+        rc, out, err = kit.run("pack", "--list", d / "list.tsv", "--class", "internal-record", "--name", "demo",
+                               "--out", d / "out", "--root", f"proj={proj}")
+        self.assertEqual((rc, err), (0, ""), out)
+        rc, out, err = kit.run("check", "--parts", sums)
+        self.assertEqual((rc, err), (1, ""), out)
+        self.assertIn(f"1 part files lie beside {sums.name}, which does not name them:\n"
+                      f"  demo.internal-record.part001.tar.gz\n", out)
+        rc, out, err = kit.run("check", "--parts", d / "out" / "demo.internal-record.parts.sha256")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("1 part files lie beside demo.internal-record.parts.sha256, which does not name them:\n"
+                      "  demo.public-result.part001.tar.gz\n", out)
+
     def test_a_change_hidden_by_a_new_parts_file_is_found_by_the_list_inside(self):
         d, proj, sums = kit.packed(self)
         part = kit.parts_of(sums)[0]
