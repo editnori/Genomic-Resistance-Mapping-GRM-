@@ -638,12 +638,30 @@ fn learn(
 ) -> Result<()> {
     grm::species::ensure_selection_counted(layout, slug)?;
     let written = grm::analysis::analyze_species(layout, slug, only, force, cfg)?;
-    eprintln!(
-        "{slug}: {} dataset reports written to {}",
-        written.len(),
-        grm::analysis::reports_dir(layout, slug, cfg).display()
-    );
+    eprintln!("{}", learn_end_line(layout, slug, written.len(), cfg));
     Ok(())
+}
+
+/// The line `grm learn` ends a species with. A run that writes `results/`
+/// ends with the release's own line, which `scripts/metric-audit/audit.py`
+/// reads as the species finished. A draw names its folder, in words that
+/// line's pattern cannot match, so a log that mixes a draw with a release
+/// run never marks the species finished on the draw's line.
+fn learn_end_line(
+    layout: &Layout,
+    slug: &str,
+    written: usize,
+    cfg: &grm::learn::eval::EvalConfig,
+) -> String {
+    let dir = grm::analysis::reports_dir(layout, slug, cfg);
+    if dir == layout.results_dir(slug) {
+        format!("{slug}: {written} dataset reports written")
+    } else {
+        format!(
+            "{slug}: {written} draw reports written to {}",
+            dir.display()
+        )
+    }
 }
 
 fn report(layout: &Layout, kover: &std::path::Path) -> Result<()> {
@@ -2137,6 +2155,31 @@ mod tests {
                 "{flag}"
             );
         }
+    }
+
+    /// At the release's seeds `grm learn` ends with `main`'s line, byte for
+    /// byte, whatever the budget; a draw's line names its folder and does not
+    /// begin with `<slug>: <n> dataset reports written`, the release line
+    /// `scripts/metric-audit/audit.py` reads (its suite tests the pattern
+    /// on the draw lines below).
+    #[test]
+    fn learn_ends_with_the_release_line_and_a_draw_with_a_line_of_its_own() {
+        let layout = Layout::new("root");
+        let line = |screened_features, seed, learner_seed| {
+            let cfg = learn_config(screened_features, seed, learner_seed);
+            learn_end_line(&layout, "fixture_species", 3, &cfg)
+        };
+        let release = "fixture_species: 3 dataset reports written";
+        assert_eq!(line(DEFAULT_SCREENED_FEATURES, RELEASE_SEED, None), release);
+        assert_eq!(line(16000, RELEASE_SEED, None), release);
+        assert_eq!(
+            line(DEFAULT_SCREENED_FEATURES, 43, None),
+            "fixture_species: 3 draw reports written to root/species/fixture_species/draws/seed-43"
+        );
+        assert_eq!(
+            line(DEFAULT_SCREENED_FEATURES, RELEASE_SEED, Some(7)),
+            "fixture_species: 3 draw reports written to root/species/fixture_species/draws/seed-42-learner-7"
+        );
     }
 
     /// The evaluation `grm learn` runs, built from its parsed flags as the
