@@ -114,6 +114,12 @@ class Document(unittest.TestCase):
             f"rebuild from the index with {ia['mismatches']} mismatches.",
             f"In revision 14, {ib['flagged_rows']} learner rows carry the flag, and each of them has a no-call count.",
         ]
+        ma, mb = ia["labels_from_mic_excluded"], ib["labels_from_mic_excluded"]
+        self.assertEqual(ma, mb)
+        sentences.append(
+            f"In both releases the index records `labels_from_mic_excluded` on {ma['datasets_with_field']} of its "
+            f"{ia['datasets']} datasets. On {ma['datasets_above_zero']} of them GRM inferred at least one label from a MIC "
+            f"and left it out of training and scoring, {ma['labels']} labels in all.")
         self.assertEqual((ia["mismatches"], ib["mismatches"]), (0, 0))
         self.assertEqual(ib["flagged_rows"], ib["flagged_with_no_call"])
         for s in sentences:

@@ -18,7 +18,7 @@
       },
       {
         "path": "reference/release-summary/rev12-274-20261105/index-counts.json",
-        "sha256": "7ce1ea63fb4a89abc8d39ed1991e47c467bc14057e9341cf17e61f9612b6e5fe"
+        "sha256": "c4088f29538ccb75dc31147e3ba78b22fd51258905ac414eae21ab374e216880"
       },
       {
         "path": "reference/release-summary/rev12-274-20261105/summary.json",
@@ -30,7 +30,7 @@
       },
       {
         "path": "reference/release-summary/rev14-274-20261112/index-counts.json",
-        "sha256": "b0352b81ddf10dc3f5abaaea39baa1870c3bc54f93f8972603728e30b1d17d52"
+        "sha256": "307935431d2ecdf66274a65e1778ee59cfde9143e028a42f9b0c3898dd13f828"
       },
       {
         "path": "reference/release-summary/rev14-274-20261112/summary.json",
