@@ -84,12 +84,17 @@ src/lib.rs ablate::plan::tests::tuning_groups_and_holdout_shares_are_task_a_s
 src/lib.rs ablate::plan::tests::tuning_groups_give_composite_ids_only_to_random_splits_with_duplicates
 src/lib.rs ablate::plan::tests::unavailable_reasons_are_the_pipelines_words
 src/lib.rs ablate::plan::tests::verify_and_is_available_check_the_plan_structure
+src/lib.rs analysis::tests::a_draw_that_writes_a_report_writes_it_under_draws_and_not_results
+src/lib.rs analysis::tests::a_drug_without_a_rule_records_no_rule_groups
 src/lib.rs analysis::tests::a_fold_file_is_scored_as_written_and_its_result_records_the_files_sha256
 src/lib.rs analysis::tests::a_fold_file_that_does_not_fit_its_dataset_writes_no_result
 src/lib.rs analysis::tests::a_fold_file_that_repeats_the_random_split_gives_the_reports_random_rows
 src/lib.rs analysis::tests::a_fold_file_that_separates_a_genome_from_its_copy_is_refused_by_genome_id
+src/lib.rs analysis::tests::a_genome_can_list_rule_groups_and_be_called_susceptible_under_two_requirements
+src/lib.rs analysis::tests::a_groups_flag_follows_its_first_genome_and_rule_groups_each_genomes_own_hit
 src/lib.rs analysis::tests::a_rebuild_in_reversed_genome_order_recomputes_and_a_new_map_alone_does_not
 src/lib.rs analysis::tests::a_report_with_a_locus_missing_its_annotation_is_recomputed
+src/lib.rs analysis::tests::a_run_at_another_seed_leaves_the_released_reports_alone
 src/lib.rs analysis::tests::an_invalid_report_is_kept_but_never_logged_done
 src/lib.rs analysis::tests::audit_limits_validity_to_internal_cross_validation
 src/lib.rs analysis::tests::base64_matches_known_encoding
@@ -103,6 +108,7 @@ src/lib.rs analysis::tests::fingerprint_ignores_rows_and_fields_the_evaluation_d
 src/lib.rs analysis::tests::fingerprint_tracks_every_evaluation_config_field
 src/lib.rs analysis::tests::fingerprint_tracks_mic_inferred_labels_added_on_a_matrix_genome
 src/lib.rs analysis::tests::fingerprint_tracks_the_dataset_class_minimum
+src/lib.rs analysis::tests::fold_patterns_cover_the_features_scm_cart_and_lasso_name_and_no_others
 src/lib.rs analysis::tests::gene_panels_score_the_drug_s_targets_and_list_uncovered_organisms
 src/lib.rs analysis::tests::genomes_a_fold_file_leaves_unused_set_neither_the_support_floor_nor_the_tuning_groups
 src/lib.rs analysis::tests::kset_duplicates_group_samples_by_digest_in_sample_order
@@ -118,20 +124,25 @@ src/lib.rs analysis::tests::probe_panels_score_called_samples_and_count_no_calls
 src/lib.rs analysis::tests::renumbering_singleton_lineages_changes_the_key_and_not_the_matrix_digest
 src/lib.rs analysis::tests::report_writes_replace_the_whole_file
 src/lib.rs analysis::tests::reports_are_reused_only_at_the_current_revision_and_fingerprint
+src/lib.rs analysis::tests::reports_keep_each_available_splits_fold_models_and_their_patterns
+src/lib.rs analysis::tests::reports_of_another_draw_get_a_folder_outside_results
 src/lib.rs analysis::tests::reports_use_the_reported_cohort_and_record_its_counts_and_k
 src/lib.rs analysis::tests::rows_follow_matrix_columns_rather_than_genome_ids
 src/lib.rs analysis::tests::swapping_genomes_with_identical_columns_changes_the_matrix_digest
+src/lib.rs analysis::tests::the_default_input_key_is_the_one_main_computes
 src/lib.rs analysis::tests::the_lasso_scan_fits_the_report_inputs_as_the_evaluator_does
 src/lib.rs analysis::tests::the_log_names_the_best_learner_scored_on_every_isolate
 src/lib.rs analysis::tests::unsourced_and_unsupported_probe_assays_give_a_reason_without_ksets
 src/lib.rs analysis::tests::unsupported_assays_are_listed_with_their_reason_instead_of_a_panel
 src/lib.rs analysis::tests::write_lasso_scan_fixture_root [ignored]
+src/lib.rs analysis::tests::write_report_fields_fixture_root [ignored]
 src/lib.rs annotate::tests::a_failed_annotation_download_is_recorded_on_the_locus_and_not_cached
 src/lib.rs annotate::tests::a_feature_matching_several_families_is_labelled_with_all_of_them_in_byte_order
 src/lib.rs annotate::tests::the_cached_feature_order_does_not_choose_the_gene
 src/lib.rs bits::tests::set_algebra_and_counts
 src/lib.rs bvbrc::tests::genome_dates_keep_only_their_three_fields
 src/lib.rs bvbrc::tests::parses_mixed_type_fields
+src/lib.rs catalog::tests::a_hit_counts_by_its_own_alleles_class_and_subclass
 src/lib.rs catalog::tests::catalog_loads_both_accessions_and_trims_the_version
 src/lib.rs catalog::tests::catalog_requires_a_nonblank_version
 src/lib.rs catalog::tests::catalog_requires_a_version_file
@@ -211,11 +222,14 @@ src/lib.rs learn::eval::tests::a_learner_with_every_fold_null_predicts_each_fold
 src/lib.rs learn::eval::tests::a_move_that_empties_a_class_from_a_random_fold_fails_the_dataset
 src/lib.rs learn::eval::tests::a_path_without_a_converged_candidate_fails_with_full_context
 src/lib.rs learn::eval::tests::a_row_without_a_null_fit_has_no_called_metrics_and_the_same_numbers
+src/lib.rs learn::eval::tests::a_split_that_did_not_run_keeps_no_fold_models
 src/lib.rs learn::eval::tests::a_supplied_partition_that_cannot_be_scored_fairly_is_refused
 src/lib.rs learn::eval::tests::a_tested_sample_takes_its_own_score_wherever_it_sits_in_the_sample_order
 src/lib.rs learn::eval::tests::a_training_prevalence_of_exactly_one_half_is_a_resistant_call
+src/lib.rs learn::eval::tests::a_weightless_lasso_fold_scored_its_test_samples_at_its_training_prevalence
 src/lib.rs learn::eval::tests::an_empty_lasso_path_is_a_null_fit_without_a_call
 src/lib.rs learn::eval::tests::an_unconverged_final_lasso_refit_fails_with_full_context
+src/lib.rs learn::eval::tests::another_seed_redraws_both_splits_outer_folds_on_the_same_dataset
 src/lib.rs learn::eval::tests::conformal_trades_coverage_for_error
 src/lib.rs learn::eval::tests::duplicate_groups_already_whole_in_their_folds_change_only_random_tuning
 src/lib.rs learn::eval::tests::duplicate_groups_sit_whole_in_one_outer_fold_of_every_split
@@ -226,6 +240,10 @@ src/lib.rs learn::eval::tests::final_model_lasso_failures_name_the_final_fit
 src/lib.rs learn::eval::tests::final_models_tune_on_the_duplicate_groups
 src/lib.rs learn::eval::tests::final_tuning_keeps_each_duplicate_group_whole
 src/lib.rs learn::eval::tests::fitted_models_are_called_even_where_they_score_exactly_one_half
+src/lib.rs learn::eval::tests::fold_forest_and_boosting_lists_keep_the_fifty_heaviest_features
+src/lib.rs learn::eval::tests::fold_models_are_written_in_the_final_models_shapes_under_dataset_rows
+src/lib.rs learn::eval::tests::fold_models_give_each_folds_saved_scores_under_dataset_row_numbers
+src/lib.rs learn::eval::tests::folds_name_the_lowest_row_among_patterns_equal_on_their_training_samples
 src/lib.rs learn::eval::tests::forest_draws_follow_the_evaluation_seed_and_fold
 src/lib.rs learn::eval::tests::held_out_labels_cannot_change_any_training_fit
 src/lib.rs learn::eval::tests::held_out_presence_cannot_change_any_training_fit
@@ -244,12 +262,16 @@ src/lib.rs learn::eval::tests::pooling_refuses_a_missing_or_impossible_training_
 src/lib.rs learn::eval::tests::random_tuning_keeps_each_duplicate_group_whole_inside_outer_training
 src/lib.rs learn::eval::tests::random_tuning_that_cannot_keep_duplicates_whole_fails_before_any_fit
 src/lib.rs learn::eval::tests::random_tuning_without_duplicates_is_revision_10s_stratified_tuning
+src/lib.rs learn::eval::tests::ranked_lists_put_the_lower_feature_first_among_equal_weights
 src/lib.rs learn::eval::tests::roles_that_repeat_a_drawn_split_give_that_splits_scores
 src/lib.rs learn::eval::tests::rows_written_before_revision_14_read_back_unchanged
 src/lib.rs learn::eval::tests::saved_scores_are_held_out_fits_that_reproduce_every_reported_metric
 src/lib.rs learn::eval::tests::scm_cart_boosting_and_lasso_tune_on_the_splits_tuning_groups
+src/lib.rs learn::eval::tests::seed_sums_wrap_at_the_largest_seed
 src/lib.rs learn::eval::tests::serialized_scores_preserve_threshold_calls_and_ranks
 src/lib.rs learn::eval::tests::the_features_and_labels_of_unused_samples_and_the_labels_of_tested_ones_cannot_change_a_folds_scores
+src/lib.rs learn::eval::tests::the_learner_seed_moves_the_forest_and_boosting_and_no_partition
+src/lib.rs learn::eval::tests::the_learner_seed_reaches_boosting_the_final_models_and_the_mic_regression
 src/lib.rs learn::eval::tests::the_recorded_config_leaves_out_seeds_each_fit_replaces
 src/lib.rs learn::eval::tests::tuning_holdout_names_lineages_in_revision_10s_words
 src/lib.rs learn::eval::tests::two_training_groups_are_enough_for_a_grouped_holdout
@@ -396,6 +418,10 @@ src/lib.rs report::tests::a_missing_lineage_learner_row_is_not_full_coverage
 src/lib.rs report::tests::a_missing_or_malformed_kover_comparison_refuses_before_writing
 src/lib.rs report::tests::a_rebuild_removes_files_for_datasets_and_species_it_no_longer_publishes
 src/lib.rs report::tests::a_rule_term_names_every_catalog_family_its_feature_matches
+src/lib.rs report::tests::a_rule_term_names_its_gene_groups_in_one_order_whatever_the_order_of_the_rows
+src/lib.rs report::tests::a_rule_term_outside_the_named_gene_says_how_far_from_it
+src/lib.rs report::tests::a_rule_term_says_which_named_gene_groups_count_for_the_drugs_rule
+src/lib.rs report::tests::a_tied_rule_term_says_how_many_features_separate_the_isolates_equally_well
 src/lib.rs report::tests::index_rows_carry_the_kover_row_for_their_species_and_antibiotic
 src/lib.rs report::tests::iso_dates_match_known_days
 src/lib.rs report::tests::manifest_k_is_the_one_k_every_report_records
@@ -411,6 +437,8 @@ src/lib.rs report::tests::revision_14_rows_with_null_fits_compete_for_best_learn
 src/lib.rs report::tests::the_best_learner_calls_every_random_split_sample
 src/lib.rs report::tests::the_best_learner_needs_full_coverage_on_every_available_split
 src/lib.rs report::tests::the_index_is_schema_2_and_reads_schema_1_reports_beside_schema_2_ones
+src/lib.rs report::tests::the_index_numbers_the_wording_of_its_rule_text
+src/lib.rs report::tests::the_rule_words_of_published_reports [ignored]
 src/lib.rs report::tests::unreadable_result_preserves_the_published_file_and_manifest
 src/lib.rs report::tests::unreadable_structure_preserves_the_published_file_and_manifest
 src/lib.rs research::tests::builds_guarded_entries_from_lane_outputs
@@ -474,8 +502,11 @@ src/main.rs tests::curate_draws_round_robin_across_mlst_groups_and_records_the_p
 src/main.rs tests::curate_records_the_legacy_rule_and_its_cap_without_changing_its_choice
 src/main.rs tests::data_written_before_kset_digests_is_recounted_and_rebuilt
 src/main.rs tests::direct_learn_refuses_added_removed_and_reordered_genome_selections
+src/main.rs tests::learn_ends_with_the_release_line_and_a_draw_with_a_line_of_its_own
+src/main.rs tests::learn_evaluates_with_the_budget_and_seeds_its_flags_give
 src/main.rs tests::learn_refuses_a_structure_and_matrix_built_from_other_ksets
 src/main.rs tests::learn_takes_a_fold_file_only_with_its_output_directory_and_one_species
+src/main.rs tests::learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither
 src/main.rs tests::learn_with_a_fold_file_screens_as_many_features_as_it_is_told
 src/main.rs tests::pipeline_and_learn_take_a_k_and_a_retained_feature_budget
 src/main.rs tests::pipeline_refuses_a_missing_kover_file_with_its_own_remedy

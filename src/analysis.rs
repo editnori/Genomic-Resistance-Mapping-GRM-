@@ -12,8 +12,8 @@ use crate::dna::KmerSpace;
 use crate::fnv::Fnv;
 use crate::layout::{Layout, remove_if_present};
 use crate::learn::eval::{
-    self, EvalConfig, FinalModels, LassoFitAudit, LassoOnlyEvent, LassoProgress, LearnerResult,
-    MicInput, MicResult, SplitResult,
+    self, EvalConfig, FinalModels, FoldSplit, LassoFitAudit, LassoOnlyEvent, LassoProgress,
+    LearnerResult, MicInput, MicResult, SplitResult,
 };
 use crate::learn::gbt::GbtParams;
 use crate::learn::tree::ForestParams;
@@ -33,6 +33,10 @@ use std::time::Instant;
 /// Revision 14 writes none of these nulls on a learner row (it scores null
 /// fits) but keeps schema 2: its one new field, `called_metrics`, is
 /// optional, and a schema-2 reader that ignores it reads every number right.
+/// The same holds for `fold_models` and each sample's `rule_groups`, added
+/// later without a new schema or revision: they record what the evaluation
+/// already computed, and no existing field changes with them
+/// (docs/report-rule-fields.md).
 pub const REPORT_SCHEMA: u32 = 2;
 /// Revision 8 added the lasso solver evidence; revision 9 changes only the
 /// lasso's active-set solve (docs/lasso-stopping.md). Revision 10 adds the
@@ -140,13 +144,39 @@ pub struct Sample {
     /// Indices into `catalog_groups`.
     pub groups: Vec<u16>,
     pub catalog_resistant: Option<bool>,
+    /// The groups of `groups`, in the same order, whose hit in this genome
+    /// counts for the drug's rule (`catalog::counts_for`): the genome's own
+    /// allele of the group has a class or subclass the rule names. Empty
+    /// when none does. Absent when the drug has no rule, where
+    /// `catalog_resistant` is null, and on reports written before the field.
+    ///
+    /// Under a rule with one requirement, `catalog_resistant` is true
+    /// exactly when this list is not empty. A rule with two requirements
+    /// (trimethoprim with a sulfonamide) needs a counting group for each,
+    /// and the list does not say which requirement a group met, so a
+    /// genome called susceptible can list groups.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rule_groups: Option<Vec<u16>>,
 }
 
+/// One catalog gene group among a dataset's samples. A genome has at most
+/// one hit per group, its best-matching allele (`catalog::family_calls`),
+/// and the alleles of one group can carry different classes and subclasses.
+/// `class`, `subclass` and `counts_for_rule` describe one allele: that of
+/// the first sample, in sample order, that has the group. `n_resistant` and
+/// `n_susceptible` count every sample that has it, whatever its allele.
 #[derive(Serialize)]
 pub struct GroupRow {
     pub group: String,
     pub class: String,
     pub subclass: String,
+    /// Whether that first sample's allele counts for the drug's rule
+    /// (`catalog::counts_for`). It is not a statement about every genome
+    /// with the group: where a group's alleles differ in class or subclass,
+    /// some genomes' hits count and others do not, and this flag follows
+    /// whichever sample came first. Each genome's own answer is
+    /// `Sample::rule_groups`. The catalog's call and its metrics read each
+    /// genome's own hits (`Sample::catalog_resistant`) and never this flag.
     pub counts_for_rule: bool,
     pub n_resistant: usize,
     pub n_susceptible: usize,
@@ -189,6 +219,49 @@ pub struct FeatureCard {
     pub bits: String,
 }
 
+/// What each outer fold's model reads, for every split that ran: the record
+/// that lets a reader count whether the folds chose the features the final
+/// models did. It repeats no score and changes none.
+#[derive(Serialize)]
+pub struct FoldModels {
+    /// One entry per split that ran, in `splits` order; a split with an
+    /// `unavailable_reason` fitted no model and has no entry.
+    pub splits: Vec<FoldSplit>,
+    /// The presence pattern of every feature a fold's scm, cart or lasso
+    /// names (`FoldSplit::pattern_features`), ascending by feature, whether
+    /// or not it also has a card in `features`. The forest's and boosting's
+    /// lists are the top of a ranking and their features get no pattern
+    /// here, so those two compare by id alone.
+    pub features: Vec<FoldFeature>,
+}
+
+#[derive(Serialize)]
+pub struct FoldFeature {
+    /// A row of the dataset matrix, as in `models` and `features`.
+    pub feature: u32,
+    /// Presence over samples, encoded as `FeatureCard::bits`.
+    pub bits: String,
+}
+
+/// `splits` with the presence pattern, in `x`, of each feature their scm,
+/// cart and lasso fold models name.
+fn fold_models(splits: Vec<FoldSplit>, x: &BitMatrix) -> FoldModels {
+    let named: BTreeSet<u32> = splits
+        .iter()
+        .flat_map(FoldSplit::pattern_features)
+        .collect();
+    FoldModels {
+        features: named
+            .into_iter()
+            .map(|feature| FoldFeature {
+                feature,
+                bits: base64(x.row(feature as usize)),
+            })
+            .collect(),
+        splits,
+    }
+}
+
 #[derive(Serialize)]
 pub struct DatasetReport {
     pub schema: u32,
@@ -226,6 +299,9 @@ pub struct DatasetReport {
     pub mic: Option<MicResult>,
     pub models: FinalModels,
     pub features: Vec<FeatureCard>,
+    /// Missing on reports written before the fold models were kept: such a
+    /// report records none, which is not a report whose folds fitted none.
+    pub fold_models: FoldModels,
     pub seconds: f64,
 }
 
@@ -663,9 +739,7 @@ pub fn analyze_dataset(
                         group: hit.group.clone(),
                         class: hit.class.clone(),
                         subclass: hit.subclass.clone(),
-                        counts_for_rule: catalog::explain(r, std::slice::from_ref(hit))
-                            .1
-                            .contains(&hit.group),
+                        counts_for_rule: catalog::counts_for(r, hit),
                         n_resistant: 0,
                         n_susceptible: 0,
                     });
@@ -724,6 +798,13 @@ pub fn analyze_dataset(
                 mlst: meta.and_then(|m| m.mlst.clone()),
                 groups: sample_hits[i].iter().map(|h| dict[&h.group]).collect(),
                 catalog_resistant: catalog_calls.as_ref().map(|c| c[i]),
+                rule_groups: rule.as_ref().map(|r| {
+                    sample_hits[i]
+                        .iter()
+                        .filter(|h| catalog::counts_for(r, h))
+                        .map(|h| dict[&h.group])
+                        .collect()
+                }),
             }
         })
         .collect();
@@ -795,6 +876,7 @@ pub fn analyze_dataset(
         mic: out.mic,
         models: out.finals,
         features,
+        fold_models: fold_models(out.fold_models, &ds.x),
         seconds: started.elapsed().as_secs_f64(),
     }))
 }
@@ -1200,9 +1282,27 @@ fn cohort<'a>(spec: &DatasetSpec, phenotypes: &'a [Phenotype], genomes: &[String
     }
 }
 
+/// Where `analyze_species` keeps a species' reports under `cfg`. The
+/// release's seeds (`EvalConfig::default()`'s `seed` and no `learner_seed`)
+/// keep `results/`, the one folder `grm report`, `grm intervals` and
+/// `grm provenance` read. Any other seeds get
+/// `draws/seed-<seed>[-learner-<learner_seed>]/` beside it, so a report of
+/// another fold draw never replaces a released report and is never indexed.
+pub fn reports_dir(layout: &Layout, slug: &str, cfg: &EvalConfig) -> std::path::PathBuf {
+    let release = EvalConfig::default();
+    if (cfg.seed, cfg.learner_seed) == (release.seed, release.learner_seed) {
+        return layout.results_dir(slug);
+    }
+    let name = match cfg.learner_seed {
+        None => format!("seed-{}", cfg.seed),
+        Some(learner) => format!("seed-{}-learner-{learner}", cfg.seed),
+    };
+    layout.species_dir(slug).join("draws").join(name)
+}
+
 /// Runs the species' datasets (or the named subset), largest minority class
 /// first, skipping datasets whose saved report is still current (see
-/// `stale_reason`) unless `force`.
+/// `stale_reason`) unless `force`. Reports go to `reports_dir`.
 pub fn analyze_species(
     layout: &Layout,
     slug: &str,
@@ -1213,7 +1313,7 @@ pub fn analyze_species(
     let (input, catalog) = load_inputs(layout, slug)?;
     let digest = matrix_digest(&input.matrix);
     let client = Client::new();
-    let dir = layout.results_dir(slug);
+    let dir = reports_dir(layout, slug, cfg);
     std::fs::create_dir_all(&dir)?;
     let mut specs: Vec<&DatasetSpec> = input
         .datasets
@@ -1410,6 +1510,7 @@ fn input_fingerprint(
         screened_features,
         lasso_lambdas,
         seed,
+        learner_seed,
     } = cfg;
     for n in [
         *folds,
@@ -1437,6 +1538,12 @@ fn input_fingerprint(
     }
     for n in [*seed, *forest_seed, *gbt_seed] {
         h.u64(n);
+    }
+    // Hashed only when set, so a report written without one, every release
+    // report among them, keeps its key.
+    if let Some(n) = learner_seed {
+        h.bytes(&[1]);
+        h.u64(*n);
     }
     let Cohort {
         rows,
@@ -2676,6 +2783,7 @@ mod tests {
             ("screened_features", |c| c.screened_features += 1),
             ("lasso_lambdas", |c| c.lasso_lambdas += 1),
             ("seed", |c| c.seed += 1),
+            ("learner_seed", |c| c.learner_seed = Some(c.seed)),
         ];
         for (field, edit) in changes {
             assert_ne!(changed(*edit), base, "{field}");
@@ -2900,6 +3008,70 @@ mod tests {
         std::fs::write(&patterns, bytes).unwrap();
         learn(&layout).unwrap();
         assert!(!current.exists());
+    }
+
+    /// The release's seeds keep `results/`; any other evaluation seed or a
+    /// learner seed gets a folder of its own under `draws/`.
+    #[test]
+    fn reports_of_another_draw_get_a_folder_outside_results() {
+        let layout = Layout::new("root");
+        let dir = |seed, learner_seed| {
+            let cfg = EvalConfig {
+                seed,
+                learner_seed,
+                ..Default::default()
+            };
+            reports_dir(&layout, "fixture", &cfg)
+        };
+        let species = layout.species_dir("fixture");
+        assert_eq!(dir(42, None), layout.results_dir("fixture"));
+        assert_eq!(dir(43, None), species.join("draws/seed-43"));
+        assert_eq!(dir(42, Some(42)), species.join("draws/seed-42-learner-42"));
+        assert_eq!(dir(43, Some(7)), species.join("draws/seed-43-learner-7"));
+        // Settings other than the seeds do not move the folder.
+        let budget = EvalConfig {
+            screened_features: 16000,
+            ..Default::default()
+        };
+        assert_eq!(
+            reports_dir(&layout, "fixture", &budget),
+            layout.results_dir("fixture")
+        );
+    }
+
+    /// A run at another seed reads and writes its own folder: the report in
+    /// `results/` keeps its bytes, and a stale report in the draw's folder is
+    /// the one removed. (Neither fixture dataset has 25 genomes per class,
+    /// so a recompute removes the file; see `save_report`.)
+    #[test]
+    fn a_run_at_another_seed_leaves_the_released_reports_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let input = inputs();
+        write_inputs(&layout, &input, "");
+        let (released, saved) = save_report(&layout, &input, None, "meropenem");
+        let draw = EvalConfig {
+            seed: 43,
+            ..Default::default()
+        };
+        // The release's key is not the draw's: at seed 43 the released
+        // report would read as stale and be recomputed if it were looked at.
+        let spec = dataset("meropenem");
+        let digest = matrix_digest(&input.matrix);
+        assert_ne!(
+            input_fingerprint(&input, &spec, None, &draw, digest),
+            key(&input, &spec, None)
+        );
+        let folder = reports_dir(&layout, "fixture", &draw);
+        std::fs::create_dir_all(&folder).unwrap();
+        let stale = folder.join("fixture__meropenem.json");
+        std::fs::write(&stale, &saved).unwrap();
+        analyze_species(&layout, "fixture", &[], false, &draw).unwrap();
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+        assert!(!stale.exists());
+        // And the release's own run still finds its report current.
+        assert!(learn(&layout).unwrap().is_empty());
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
     }
 
     #[test]
@@ -3757,12 +3929,12 @@ mod tests {
         assert_eq!(std::fs::read(&report).unwrap(), saved);
     }
 
-    #[test]
-    fn reports_use_the_reported_cohort_and_record_its_counts_and_k() {
-        let dir = tempfile::tempdir().unwrap();
-        let layout = Layout::new(dir.path());
-        // The default minimum admits 25 reported resistant and 25 reported
-        // susceptible genomes. One MIC-only matrix row stays out.
+    /// Synthetic: 51 genomes, 25 reported resistant and 25 reported
+    /// susceptible to meropenem (the default minimum admits them) and one
+    /// whose label comes from its MIC alone, in ten lineages, with each
+    /// genome's reference assembly and cached features written under
+    /// `layout`.
+    fn reported_inputs(layout: &Layout) -> SpeciesInputs {
         let genomes: Vec<String> = (0..51).map(|i| format!("g{i}")).collect();
         for g in &genomes {
             // Annotation reads a reference assembly and its cached features.
@@ -3782,7 +3954,7 @@ mod tests {
             })
             .collect();
         phenotypes.push(inferred("g50", "meropenem", Call::R));
-        let input = SpeciesInputs {
+        SpeciesInputs {
             matrix: FeatureMatrix {
                 summary: MatrixSummary {
                     k: 21,
@@ -3827,11 +3999,23 @@ mod tests {
             phenotypes,
             genomes: HashMap::new(),
             datasets: vec![],
-        };
-        let spec = DatasetSpec {
+        }
+    }
+
+    fn reported_dataset() -> DatasetSpec {
+        DatasetSpec {
             breakpoint: None,
             ..dataset("meropenem")
-        };
+        }
+    }
+
+    #[test]
+    fn reports_use_the_reported_cohort_and_record_its_counts_and_k() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        // One MIC-only matrix row stays out.
+        let input = reported_inputs(&layout);
+        let spec = reported_dataset();
         let report = analyze_dataset(
             &layout,
             &Client::new(),
@@ -3853,5 +4037,572 @@ mod tests {
         assert_eq!(report.counts.labels_from_mic_excluded, 1);
         assert!(report.samples.iter().all(|s| s.id != "g50" && !s.from_mic));
         assert_eq!(report.input_fingerprint, "fixture key");
+    }
+
+    /// The release's input key does not move with the seed flags: the
+    /// default key of both fixture datasets is the one `main` (852ebc9)
+    /// computes, taken from a build of it. A key that hashed an unset
+    /// learner seed, or any new field at its default, would move every
+    /// released report's key and recompute it.
+    #[test]
+    fn the_default_input_key_is_the_one_main_computes() {
+        let input = inputs();
+        assert_eq!(key(&input, &dataset("meropenem"), None), "4979e60d3c8b1d6a");
+        assert_eq!(
+            key(&input, &dataset("ciprofloxacin"), None),
+            "31fe6bb8b9591f63"
+        );
+    }
+
+    /// A run at another seed on a dataset large enough to report writes the
+    /// draw's report to `draws/seed-43/<id>.json`, and the released
+    /// `results/<id>.json` keeps its bytes.
+    #[test]
+    fn a_draw_that_writes_a_report_writes_it_under_draws_and_not_results() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let mut input = reported_inputs(&layout);
+        input.contigs = input
+            .matrix
+            .summary
+            .genomes
+            .iter()
+            .map(|g| (g.clone(), 1))
+            .collect();
+        input.datasets = vec![reported_dataset()];
+        write_inputs(&layout, &input, "");
+        let id = "fixture__meropenem";
+        assert_eq!(learn(&layout).unwrap(), [id]);
+        let results = layout.results_dir("fixture");
+        let released = results.join(format!("{id}.json"));
+        let saved = std::fs::read(&released).unwrap();
+        let draw = EvalConfig {
+            seed: 43,
+            ..Default::default()
+        };
+        assert_eq!(
+            analyze_species(&layout, "fixture", &[], false, &draw).unwrap(),
+            [id]
+        );
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+        let names = |dir: &std::path::Path| {
+            let mut names: Vec<String> = std::fs::read_dir(dir)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().into_string().unwrap())
+                .collect();
+            names.sort();
+            names
+        };
+        assert_eq!(names(&results), [format!("{id}.json")]);
+        let folder = layout.species_dir("fixture").join("draws/seed-43");
+        assert_eq!(names(&folder), [format!("{id}.json")]);
+        let read = |path: &std::path::Path| {
+            serde_json::from_slice::<serde_json::Value>(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let (release, drawn) = (read(&released), read(&folder.join(format!("{id}.json"))));
+        assert_eq!(release["eval_config"]["seed"], 42);
+        assert_eq!(drawn["eval_config"]["seed"], 43);
+        assert_ne!(drawn["input_fingerprint"], release["input_fingerprint"]);
+        assert_eq!(drawn["samples"], release["samples"]);
+        // Each run then finds its own report current.
+        assert!(learn(&layout).unwrap().is_empty());
+        assert!(
+            analyze_species(&layout, "fixture", &[], false, &draw)
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+    }
+
+    /// A hit of a synthetic aminoglycoside-class group whose allele has
+    /// `subclass`.
+    fn aminoglycoside_hit(group: &str, subclass: &str) -> FamilyHit {
+        FamilyHit {
+            family: group.into(),
+            group: group.into(),
+            allele: format!("{group} ({subclass})"),
+            containment: 1.0,
+            class: "AMINOGLYCOSIDE".into(),
+            subclass: subclass.into(),
+        }
+    }
+
+    /// Synthetic: `scan_inputs` as a dataset of `antibiotic`, with gene
+    /// calls of three made-up groups. Every fourth genome has fixA, whose
+    /// alleles differ: genomes 0, 8, 16, ... have the one of subclass
+    /// `first` and genomes 4, 12, 20, ... the one of subclass `second`.
+    /// Every ninth genome has fixB, subclass AMINOGLYCOSIDE, and every
+    /// fifth fixC, a carbapenem group. Genome 0 has all three.
+    fn rule_inputs(antibiotic: &str, first: &str, second: &str) -> SpeciesInputs {
+        let mut input = scan_inputs();
+        for p in &mut input.phenotypes {
+            p.antibiotic = antibiotic.into();
+        }
+        input.datasets = vec![dataset(antibiotic)];
+        input.hits = (0..150)
+            .map(|i| {
+                let mut hits = Vec::new();
+                if i % 4 == 0 {
+                    let subclass = if i % 8 == 0 { first } else { second };
+                    hits.push(aminoglycoside_hit("fixA", subclass));
+                }
+                if i % 9 == 0 {
+                    hits.push(aminoglycoside_hit("fixB", "AMINOGLYCOSIDE"));
+                }
+                if i % 5 == 0 {
+                    hits.push(hit("fixC"));
+                }
+                (format!("g{i}"), hits)
+            })
+            .collect();
+        input
+    }
+
+    /// Settings small enough for a fixture report in a debug build.
+    fn quick_config() -> EvalConfig {
+        EvalConfig {
+            forest: ForestParams {
+                n_trees: 4,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 5,
+                ..Default::default()
+            },
+            lasso_lambdas: 10,
+            ..Default::default()
+        }
+    }
+
+    /// Annotation reads a reference assembly and its cached features: one
+    /// of each per genome, so a report is computed without the network.
+    fn write_reference_files(layout: &Layout, genomes: &[String]) {
+        for g in genomes {
+            let fasta = crate::bvbrc::fasta_path(&layout.fasta_dir(), g);
+            crate::layout::ensure_parent(&fasta).unwrap();
+            std::fs::write(fasta, format!(">c\n{WILD}\n")).unwrap();
+            let features = layout.features_dir().join(format!("{g}.json"));
+            crate::layout::ensure_parent(&features).unwrap();
+            std::fs::write(features, "[]").unwrap();
+        }
+    }
+
+    /// The report of `input`'s one dataset under `quick_config`.
+    fn fixture_report(input: &SpeciesInputs) -> DatasetReport {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        write_reference_files(&layout, &input.matrix.summary.genomes);
+        let catalog = write_catalog(&layout, "v1");
+        analyze_dataset(
+            &layout,
+            &Client::new(),
+            input,
+            &input.datasets[0],
+            Some(&catalog),
+            &quick_config(),
+            &mut HashMap::new(),
+            "fixture key".into(),
+        )
+        .unwrap()
+        .unwrap()
+    }
+
+    #[test]
+    fn fold_patterns_cover_the_features_scm_cart_and_lasso_name_and_no_others() {
+        let n = 70;
+        let mut x = BitMatrix::with_cols(n);
+        for step in [2, 3, 5, 7, 11] {
+            x.push_row(Bits::from_indices(n, (0..n).step_by(step)).words());
+        }
+        let weighted = |feature: u32| eval::WeightedFeature {
+            feature,
+            weight: 1.0,
+        };
+        let split = |scheme: &str, rule: u32, cut: u32, weight: Option<u32>| FoldSplit {
+            scheme: scheme.into(),
+            scm: vec![eval::FoldScm {
+                kind: crate::learn::scm::Kind::Conjunction,
+                p: 1.0,
+                rules: vec![crate::learn::scm::Rule {
+                    feature: rule,
+                    presence: true,
+                }],
+            }],
+            cart: vec![crate::learn::tree::Tree {
+                nodes: vec![crate::learn::tree::Node {
+                    value: 0.5,
+                    n: 70,
+                    n_resistant: 35,
+                    depth: 0,
+                    split: Some(crate::learn::tree::Split {
+                        feature: cut,
+                        gain: 0.0,
+                        absent: 0,
+                        present: 0,
+                    }),
+                }],
+            }],
+            // Row 0 is in the two rankings alone.
+            rf: vec![vec![weighted(0), weighted(rule)]],
+            gbt: vec![vec![weighted(0)]],
+            lasso: vec![weight.map(|feature| crate::learn::lasso::LassoModel {
+                intercept: 0.0,
+                coef: vec![(feature, 1.0)],
+                lambda: 0.1,
+            })],
+        };
+        // Each of the three learners names a row no other model names: the
+        // lasso row 2, a tree row 3 and an scm row 4. Row 1 is named twice.
+        let kept = fold_models(
+            vec![split("random", 4, 1, Some(2)), split("lineage", 1, 3, None)],
+            &x,
+        );
+        let schemes: Vec<&str> = kept.splits.iter().map(|s| s.scheme.as_str()).collect();
+        assert_eq!(schemes, ["random", "lineage"]);
+        let listed: Vec<(u32, &str)> = kept
+            .features
+            .iter()
+            .map(|f| (f.feature, f.bits.as_str()))
+            .collect();
+        let expected: Vec<(u32, String)> = [1, 2, 3, 4]
+            .into_iter()
+            .map(|f| (f, base64(x.row(f as usize))))
+            .collect();
+        assert_eq!(
+            listed,
+            expected
+                .iter()
+                .map(|(f, b)| (*f, b.as_str()))
+                .collect::<Vec<_>>()
+        );
+        // 70 samples are two words: the pattern is the whole row.
+        assert_eq!(x.row(1).len(), 2);
+    }
+
+    #[test]
+    fn reports_keep_each_available_splits_fold_models_and_their_patterns() {
+        let input = rule_inputs("tobramycin", "GENTAMICIN", "GENTAMICIN/TOBRAMYCIN");
+        let report = fixture_report(&input);
+        let folds = quick_config().folds;
+        let e = eval_inputs(&input, &input.datasets[0]).unwrap().unwrap();
+        let ran: Vec<&str> = report
+            .splits
+            .iter()
+            .filter(|s| s.unavailable_reason.is_none())
+            .map(|s| s.scheme.as_str())
+            .collect();
+        assert_eq!(ran, ["random", "lineage"]);
+        let kept = &report.fold_models;
+        let schemes: Vec<&str> = kept.splits.iter().map(|s| s.scheme.as_str()).collect();
+        assert_eq!(schemes, ran);
+        let mut named = BTreeSet::new();
+        for split in &kept.splits {
+            let sizes = [
+                split.scm.len(),
+                split.cart.len(),
+                split.rf.len(),
+                split.gbt.len(),
+                split.lasso.len(),
+            ];
+            assert_eq!(sizes, [folds; 5]);
+            named.extend(split.pattern_features());
+        }
+        assert!(!named.is_empty());
+        let listed: Vec<u32> = kept.features.iter().map(|f| f.feature).collect();
+        assert_eq!(listed, named.into_iter().collect::<Vec<_>>());
+        for f in &kept.features {
+            assert_eq!(f.bits, base64(e.ds.x.row(f.feature as usize)));
+        }
+        // The field sits beside the final models, after `features` and
+        // before `seconds`, in the text as written; `rule_groups` is a
+        // sample's last key.
+        let text = serde_json::to_string(&report).unwrap();
+        let top = key_order(&text);
+        assert_eq!(
+            top[top.len() - 4..],
+            ["models", "features", "fold_models", "seconds"]
+        );
+        let sample = key_order(&serde_json::to_string(&report.samples[0]).unwrap());
+        assert_eq!(
+            sample[sample.len() - 3..],
+            ["groups", "catalog_resistant", "rule_groups"]
+        );
+        // And the splits' rows keep the keys they had.
+        let json = serde_json::to_value(&report).unwrap();
+        let keys = |v: &serde_json::Value| -> Vec<String> {
+            v.as_object().unwrap().keys().cloned().collect()
+        };
+        assert_eq!(keys(&json["fold_models"]), ["features", "splits"]);
+        assert_eq!(
+            keys(&json["fold_models"]["splits"][0]),
+            ["cart", "gbt", "lasso", "rf", "scheme", "scm"]
+        );
+        assert_eq!(
+            keys(&json["splits"][0]),
+            ["folds", "learners", "n_groups", "scheme", "test_fold"]
+        );
+        assert_eq!((json["schema"].as_u64(), REPORT_SCHEMA), (Some(2), 2));
+        assert_eq!(json["evaluation"]["revision"], 14);
+    }
+
+    /// The keys of the JSON object `text`, in the order the text writes
+    /// them. `serde_json::Value` sorts keys (no `preserve_order`), so it
+    /// cannot show where a key sits.
+    fn key_order(text: &str) -> Vec<String> {
+        struct Keys(Vec<String>);
+        struct Visit;
+        impl<'de> serde::de::Visitor<'de> for Visit {
+            type Value = Keys;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a JSON object")
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Keys, A::Error> {
+                let mut keys = Vec::new();
+                while let Some(key) = map.next_key::<String>()? {
+                    map.next_value::<serde::de::IgnoredAny>()?;
+                    keys.push(key);
+                }
+                Ok(Keys(keys))
+            }
+        }
+        impl<'de> serde::Deserialize<'de> for Keys {
+            fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Keys, D::Error> {
+                d.deserialize_map(Visit)
+            }
+        }
+        serde_json::from_str::<Keys>(text).unwrap().0
+    }
+
+    /// What a report says of fixA under the tobramycin rule when the first
+    /// genome's allele has subclass `first` and the others' `second`: the
+    /// group row's subclass and flag, the genomes whose `rule_groups` name
+    /// fixA, and the genomes a call rebuilt from the group flags gets wrong.
+    fn fix_a_under_tobramycin(first: &str, second: &str) -> (String, bool, Vec<usize>, usize) {
+        let report = fixture_report(&rule_inputs("tobramycin", first, second));
+        assert_eq!(report.catalog_groups, ["fixA", "fixB", "fixC"]);
+        let catalog = report.catalog.as_ref().unwrap();
+        let rule: Vec<Vec<String>> = vec![vec!["S:TOBRAMYCIN".into(), "S:AMINOGLYCOSIDE".into()]];
+        assert_eq!(catalog.rule, rule);
+        let row = |group: &str| catalog.groups.iter().find(|g| g.group == group).unwrap();
+        // fixB always counts and fixC never does, whatever fixA's alleles.
+        assert!(row("fixB").counts_for_rule && !row("fixC").counts_for_rule);
+        assert_eq!(row("fixA").n_resistant + row("fixA").n_susceptible, 38);
+        let mut with_fix_a = Vec::new();
+        let mut flags_wrong = 0;
+        let mut calls = Vec::new();
+        for (i, s) in report.samples.iter().enumerate() {
+            assert_eq!(s.id, format!("g{i}"));
+            let groups: Vec<u16> = [(4, 0), (9, 1), (5, 2)]
+                .into_iter()
+                .filter(|(every, _)| i % every == 0)
+                .map(|(_, group)| group)
+                .collect();
+            assert_eq!(s.groups, groups);
+            let counting = s.rule_groups.as_ref().expect("tobramycin has a rule");
+            // A subset of the genome's groups, in their order.
+            assert!(counting.iter().all(|g| s.groups.contains(g)));
+            assert!(counting.windows(2).all(|w| w[0] < w[1]));
+            assert_eq!(counting.contains(&1), i % 9 == 0);
+            assert!(!counting.contains(&2));
+            // One requirement: the call is whether any hit counts.
+            assert_eq!(s.catalog_resistant, Some(!counting.is_empty()));
+            if counting.contains(&0) {
+                with_fix_a.push(i);
+            }
+            let by_flag = s
+                .groups
+                .iter()
+                .any(|&g| row(&report.catalog_groups[g as usize]).counts_for_rule);
+            flags_wrong += usize::from(Some(by_flag) != s.catalog_resistant);
+            calls.push(s.catalog_resistant.unwrap());
+        }
+        // The published metrics are those of each genome's own call.
+        let truth: Vec<bool> = report.samples.iter().map(|s| s.resistant).collect();
+        let scores: Vec<f64> = calls.iter().map(|&c| c as u8 as f64).collect();
+        assert_eq!(catalog.metrics, binary_metrics(&truth, &scores, 0.5, false));
+        // A group row has the six keys it had: the outside-study replay
+        // compares the rows whole (scripts/outside-study/score.py).
+        let json = serde_json::to_value(&report).unwrap();
+        let keys: Vec<&String> = json["catalog"]["groups"][0]
+            .as_object()
+            .unwrap()
+            .keys()
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                "class",
+                "counts_for_rule",
+                "group",
+                "n_resistant",
+                "n_susceptible",
+                "subclass"
+            ]
+        );
+        assert!(json["samples"][0]["rule_groups"].is_array());
+        (
+            row("fixA").subclass.clone(),
+            row("fixA").counts_for_rule,
+            with_fix_a,
+            flags_wrong,
+        )
+    }
+
+    #[test]
+    fn a_groups_flag_follows_its_first_genome_and_rule_groups_each_genomes_own_hit() {
+        let odd_fours: Vec<usize> = (0..150).filter(|i| i % 8 == 4).collect();
+        let even_fours: Vec<usize> = (0..150).filter(|i| i % 8 == 0).collect();
+        // Genomes with fixA and no fixB: the ones a call rebuilt from the
+        // group flags gets wrong when the flag is not their own answer.
+        let alone = |with: &[usize]| with.iter().filter(|&&i| i % 9 != 0).count();
+
+        // The first genome's allele is gentamicin-only: the row says the
+        // group does not count, and 19 genomes' hits count all the same.
+        let (subclass, flag, counting, flags_wrong) =
+            fix_a_under_tobramycin("GENTAMICIN", "GENTAMICIN/TOBRAMYCIN");
+        assert_eq!((subclass.as_str(), flag), ("GENTAMICIN", false));
+        assert_eq!(counting, odd_fours);
+        assert_eq!((counting.len(), flags_wrong), (19, alone(&odd_fours)));
+
+        // The other way round: the row says the group counts, and the 19
+        // genomes with the gentamicin-only allele are not called by it.
+        let (subclass, flag, counting, flags_wrong) =
+            fix_a_under_tobramycin("GENTAMICIN/TOBRAMYCIN", "GENTAMICIN");
+        assert_eq!((subclass.as_str(), flag), ("GENTAMICIN/TOBRAMYCIN", true));
+        assert_eq!(counting, even_fours);
+        assert_eq!((counting.len(), flags_wrong), (19, alone(&odd_fours)));
+        assert!(alone(&odd_fours) > 0);
+
+        // One allele throughout: the flag is every genome's answer.
+        let (_, flag, counting, flags_wrong) = fix_a_under_tobramycin("TOBRAMYCIN", "TOBRAMYCIN");
+        assert!(flag);
+        assert_eq!((counting.len(), flags_wrong), (38, 0));
+    }
+
+    #[test]
+    fn a_genome_can_list_rule_groups_and_be_called_susceptible_under_two_requirements() {
+        // Synthetic: `scan_inputs` as a sulfamethoxazole/trimethoprim
+        // dataset. Every third genome has fixD, a trimethoprim group; every
+        // fifth fixS, a sulfonamide group; every seventh fixC, a carbapenem
+        // group. Genome 0 has all three.
+        let drug = "sulfamethoxazole/trimethoprim";
+        let mut input = scan_inputs();
+        for p in &mut input.phenotypes {
+            p.antibiotic = drug.into();
+        }
+        input.datasets = vec![dataset(drug)];
+        let folate = |group: &str, class: &str| FamilyHit {
+            class: class.into(),
+            subclass: class.into(),
+            ..hit(group)
+        };
+        input.hits = (0..150)
+            .map(|i| {
+                let mut hits = Vec::new();
+                if i % 3 == 0 {
+                    hits.push(folate("fixD", "TRIMETHOPRIM"));
+                }
+                if i % 5 == 0 {
+                    hits.push(folate("fixS", "SULFONAMIDE"));
+                }
+                if i % 7 == 0 {
+                    hits.push(hit("fixC"));
+                }
+                (format!("g{i}"), hits)
+            })
+            .collect();
+        let report = fixture_report(&input);
+        assert_eq!(report.catalog_groups, ["fixD", "fixS", "fixC"]);
+        let catalog = report.catalog.as_ref().unwrap();
+        let rule: Vec<Vec<String>> =
+            vec![vec!["C:TRIMETHOPRIM".into()], vec!["C:SULFONAMIDE".into()]];
+        assert_eq!(catalog.rule, rule);
+        let counted = |s: &Sample| s.rule_groups.clone().expect("the drug has a rule");
+        // A trimethoprim hit alone meets one requirement: the genome lists
+        // its group and is called susceptible. So does a sulfonamide hit
+        // alone. With both, it lists both and is called resistant.
+        let s = &report.samples;
+        assert_eq!(
+            (counted(&s[3]), s[3].catalog_resistant),
+            (vec![0], Some(false))
+        );
+        assert_eq!(
+            (counted(&s[5]), s[5].catalog_resistant),
+            (vec![1], Some(false))
+        );
+        assert_eq!(
+            (counted(&s[15]), s[15].catalog_resistant),
+            (vec![0, 1], Some(true))
+        );
+        assert_eq!(
+            (counted(&s[7]), s[7].catalog_resistant),
+            (vec![], Some(false))
+        );
+        assert_eq!(
+            (counted(&s[0]), s[0].groups.clone()),
+            (vec![0, 1], vec![0, 1, 2])
+        );
+        let mut listed_susceptible = 0;
+        for (i, sample) in s.iter().enumerate() {
+            let own: Vec<u16> = [(3, 0), (5, 1)]
+                .into_iter()
+                .filter(|(every, _)| i % every == 0)
+                .map(|(_, group)| group)
+                .collect();
+            assert_eq!(counted(sample), own, "genome {i}");
+            assert_eq!(sample.catalog_resistant, Some(own.len() == 2), "genome {i}");
+            listed_susceptible +=
+                usize::from(!counted(sample).is_empty() && sample.catalog_resistant == Some(false));
+        }
+        // 50 genomes have fixD and 30 fixS, 10 of them both.
+        let resistant = s
+            .iter()
+            .filter(|s| s.catalog_resistant == Some(true))
+            .count();
+        assert_eq!((listed_susceptible, resistant), (60, 10));
+    }
+
+    #[test]
+    fn a_drug_without_a_rule_records_no_rule_groups() {
+        assert!(catalog::drug_rule("isoniazid").is_none());
+        let report = fixture_report(&rule_inputs("isoniazid", "GENTAMICIN", "TOBRAMYCIN"));
+        assert!(report.catalog.is_none());
+        assert!(
+            report
+                .samples
+                .iter()
+                .all(|s| s.rule_groups.is_none() && s.catalog_resistant.is_none())
+        );
+        // The groups are still listed; only the rule's reading is absent.
+        assert_eq!(report.samples[0].groups, [0, 1, 2]);
+        let json = serde_json::to_value(&report).unwrap();
+        let sample = json["samples"][0].as_object().unwrap();
+        assert!(!sample.contains_key("rule_groups"));
+        assert!(sample["catalog_resistant"].is_null());
+    }
+
+    /// Writes `rule_inputs` for tobramycin as a data root `grm learn` runs
+    /// on without the network, so the report of two builds can be compared
+    /// field by field (docs/report-rule-fields.md).
+    #[test]
+    #[ignore = "writes a synthetic data root; set GRM_REPORT_FIELDS_FIXTURE to a new directory"]
+    fn write_report_fields_fixture_root() {
+        let root = std::path::PathBuf::from(
+            std::env::var("GRM_REPORT_FIELDS_FIXTURE").expect("set GRM_REPORT_FIELDS_FIXTURE"),
+        );
+        assert!(
+            std::fs::read_dir(&root).map_or(true, |mut d| d.next().is_none()),
+            "{} must be new or empty",
+            root.display()
+        );
+        let layout = Layout::new(&root);
+        let input = rule_inputs("tobramycin", "GENTAMICIN", "GENTAMICIN/TOBRAMYCIN");
+        let catalog = write_catalog(&layout, "v1");
+        write_inputs(&layout, &input, &catalog.calls_version());
+        let genomes = &input.matrix.summary.genomes;
+        write_reference_files(&layout, genomes);
+        // `grm learn` checks the selection against the counts.
+        let selection = layout.species_dir("fixture").join("genomes.txt");
+        std::fs::write(selection, genomes.join("\n") + "\n").unwrap();
     }
 }

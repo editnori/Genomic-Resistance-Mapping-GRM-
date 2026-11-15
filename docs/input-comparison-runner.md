@@ -98,7 +98,7 @@ REVIEW-ICODE-PY's H1 and VERIFY-H1STATS showed that the lineage-cluster test was
 5. **Sentinels.** Every run adds two arms exchangeable with the default. `sentinel-seed-twin` (learner seed 1001) judges rf and gbt, the learners its seed reaches. `sentinel-tuning-twin` (tuning seed 1002) judges scm, cart and the lasso: it keeps the default's outer folds and draws every outer fold's inner folds and both tuning holdouts again (`plan::retuned_plan`). Those draws are the only randomness those learners have. The default's own draw is the same procedure at its own seed (Rust test `a_retuned_plan_keeps_the_outer_folds_and_redraws_tuning`), so the twin is exchangeable with it. VERIFY-H1STATS listed a bootstrap or subsample of each training fold as other options; both train on other data than the default, so they aren't exchangeable with it and would flag real differences. The manifest records `sentinel_learners`. A sentinel's family C contrast is judged on its own p, outside BH (`adjust` none, `p_adj` = p; the manifest's `sentinel_adjust`), so its sensitivity no longer depends on the other arms (VERIFY's M1). When it isn't `inconclusive` for a learner it judges, or isn't produced, K marks that learner's decisions on the species unreliable.
 6. **BH's family.** One family over every non-sentinel lineage contrast of the run's species (REVIEW-ICODE-PY L4). The ruling for H-1's panel was one family over every lineage contrast of every species run. `run.pending_contrasts` gives each run's records before adjustment and `stats.finalize_sets` adjusts several runs' sets as one family, but `run.py combine` joins the parts of one species and calls `stats.finalize` once, so every H-1 report adjusts inside its species. `second_reading.py` reads the panel-wide family beside the reports ([below](#a-second-reading-across-species-11-nov-2026)). K recomputes BH over the planned non-sentinel family C ids.
 7. **Inputs.** Cap and selection are two inputs, so an arm changing both is refused (REVIEW-ICODE-PY L2). A RAW holding `truth.json` (a synthetic root's marker) refuses to run unless the spec says `"synthetic": true`, so a synthetic run can't be recorded as real (L3).
-8. **Stage 2's entry, D3 as amended (ruling 5).** `scripts/input-comparison/stage2.py`: a stage-1 setting enters on a dataset when at least one reliable learner is `improves` on the lineage unit t with its log-loss interval's lower end above the 0.02 margin and its AUROC-delta interval above 0, and no reliable learner is `worse`. Blocks that enter combine by union; of two entering values of one other input, the larger mean log-loss gain wins, then the value nearer the default, then the smaller budget; k joins only after the k add-on. A spec that says `"stage": 2` may hold an arm changing the blocks and one other input, paired by that input's rule (never two inputs besides the blocks, so never k with a cohort change). Stage 2 itself runs later and is exploratory.
+8. **Stage 2's entry, D3 as amended (ruling 5).** `scripts/input-comparison/stage2.py`: a stage-1 setting enters on a dataset when at least one reliable learner is `improves` on the lineage unit t with its log-loss interval's lower end above the 0.02 margin and its AUROC-delta interval above 0, and no reliable learner is `worse`. Blocks that enter combine by union; of two entering values of one other input, the larger mean log-loss gain wins, then the value nearer the default, then the smaller budget; k joins only after the k add-on. A spec that says `"stage": 2` may hold an arm changing the blocks and one other input, paired by that input's rule (never two inputs besides the blocks, so never k with a cohort change). Stage 2 itself runs later and is exploratory. H-1 entered no setting, so its stage 2 is [closed](#stage-2-is-closed-15-nov-2026).
 
 ### The calibration H-1 must pass (ruling 6)
 
@@ -962,7 +962,7 @@ Firm decisions are 23 of 1,945 tested contrasts, 20 of them on rf and 18 of them
 
 On clofazimine and linezolid the reports' AUROC change, averaged over the learners, is below zero (−0.0166 and −0.0261). The five come from the JSON's `dataset_means`. They were read after the results, and no test here stands on them.
 
-The calibration count reads a twin whose redraws were refused as a rejection. A later reading could count those apart, and its rule would have to be fixed before the results it reads. Rule 10 keeps the two faults above, so on a panel its mark separates no decision.
+The calibration count reads a twin whose redraws were refused as a rejection. A later reading could count those apart, and its rule would have to be fixed before the results it reads. That rule is [fixed below](#a-rule-for-a-later-reading-a-twin-whose-redraws-ran-out-15-nov-2026), dated 15 Nov 2026, and nothing has applied it. Rule 10 keeps the two faults above, so on a panel its mark separates no decision.
 
 ## A per-learner reading with calls (11 Nov 2026)
 
@@ -1014,6 +1014,63 @@ On the four H-1 combine folders, the script reads 2,420 lineage rows and 3,615 r
 - **M. tuberculosis clofazimine, cap-4000, scm:** TP 381 and FN 198 under the default go to TP 105 and FN 474, while the log-loss estimate improves by 2.7935.
 - **No-change reference:** the twins have log loss improving while recall falls on up to 9 of 46 datasets per learner. Each cohort arm's counts sit within that range except cap-4000 rf (13 of 49).
 - **The sensitivity reading:** the registered tests give the second reading's 23 firm decisions back (20 on rf). The paired t for every learner gives 32, and the corrected t for every learner gives 5. That count decides nothing.
+
+## A rule for a later reading: a twin whose redraws ran out (15 Nov 2026)
+
+The second reading's calibration count reads a missing twin contrast as a rejection when the default has a result (its Limits, above). This rule is for a later reading. It counts apart a twin contrast that is missing because the retuned twin's redraws ran out.
+
+The rule is this section as committed on 15 Nov 2026, fixed before anyone applies it. A later reading that applies it names that commit, and any change to it is a new rule with its own date. Nothing has applied it, H-1's outputs included, and no number here comes from it.
+
+It was written after H-1's results, and after S. aureus's saved plans were read, where the twin's redraws ran out on three datasets. So on H-1 it is exploratory and decides nothing. A comparison run after this date can apply it as fixed in advance. K's reports, rule 10 and the second reading stay as written.
+
+### The rule
+
+It reads the contrasts the second reading's count reads: the family C contrasts that `report.judging_contrasts` gives for each species' report. Each one falls in exactly one class, tried in this order:
+
+1. **Made.** The record has a p. It counts in n, and it is a rejection when `stats.decide(ci, p)` isn't `inconclusive`. This is the second reading's rule.
+2. **No default.** There is no p, and the report's `manifest.runs` has no run of the contrast's baseline (the default) with status `ok` for its dataset, learner and split. It is left out. This is the second reading's rule.
+3. **Ran out.** There is no p, the default's run is `ok`, and all three of these hold, with the files read from the twin's arm folder for the dataset (`arms/<twin>/<dataset>/` in the combine WORK):
+   - (a) the report's `manifest.runs` has the twin's run for that dataset, learner and split, with status `unavailable`.
+   - (b) `repeats.json` has exactly one entry whose `split` is the contrast's split. That entry's `refused_tuning` holds exactly `max_replacements` entries, and `max_replacements` is 1 or more.
+   - (c) For at least one slot s, from 0 to the length of that entry's `drawn` less 1, `plans/<split>-<s>.retuned.json` holds a `plan.unavailable_reason` that is a string of at least one character.
+
+   It counts in neither k nor n. It counts in `ran_out`.
+4. **No test.** Any other contrast with no p. It counts in n and as a rejection, as in the second reading.
+
+Per species and learner, the count is k rejections out of n, and flagged = P(K ≥ k | n, 0.05) < 0.05, the second reading's tail. With n = 0, flagged is null and no decision of that learner is firm. A decision is firm under this rule when it is the same under both families, on a learner this count leaves unflagged. The panel family and the decisions under each family are the second reading's, since the count changes neither.
+
+The reading prints, per species and learner, k, n, `ran_out`, the tail and the flag beside the second reading's count. It prints the firm decisions under each count. It changes no file it reads.
+
+### Refusals
+
+The reading stops, naming the species, the dataset and the file, when:
+
+- a contrast reaches class 3 and its twin's arm folder has no `resume.json` or no `repeats.json`;
+- (b) holds and the `plans/<split>-<s>.retuned.json` of a slot in `drawn` is missing;
+- a file it reads for class 3 isn't listed in that folder's `resume.json` `outputs`, or its sha256 isn't the one listed there;
+- `repeats.json` has no entry or more than one for the contrast's split, or the entry has no `refused_tuning` or no `max_replacements`;
+- (c) holds and (a) or (b) doesn't. `grm arm` writes a refused final plan only after the replacements run out, and then the twin's runs are unavailable (`src/ablate/arm.rs`), so the folder disagrees with itself.
+
+A refusal stops the reading. It never falls back to the second reading's class.
+
+### What the saved outputs need
+
+To apply the rule to a run's outputs, a reader needs, per species:
+
+- **The combine report:** `report/ablation-report.json`, with `manifest.runs` and `planned_contrasts`. For H-1, the statistics archive of 11 Nov 2026 holds the four.
+- **The twin's arm folders:** for each contrast that reaches class 3, the twin's folder in the combine WORK, with `resume.json`, `repeats.json` and `plans/<split>-<s>.retuned.json` for each slot. For H-1, that archive holds no arm folder. The arm folders, 3.9 GB with the per-genome predictions, stayed in the run's stage folders. None of them was on the machine this rule was written on, so whether they are all still there is unchecked.
+- **Fields from a recent `grm`:** a `repeats.json` with `refused_tuning` and `max_replacements` in each entry, as `grm arm` writes at `31b7edb`. A folder from an older `grm` is refused.
+- **Code:** a script that applies the rule, with tests on hand-made folders for each class and each refusal, written and reviewed before it reads a real output. None is written.
+
+## Stage 2 is closed (15 Nov 2026)
+
+Stage 2 was to join the stage-1 settings that enter on a dataset: the blocks that enter, with the winning value of one other input (item 8 of the decision method). Its premise was that some stage-1 setting would enter. On H-1, none did, so stage 2 is closed without a run. It isn't pending.
+
+- **The entry.** `scripts/input-comparison/stage2.py` enters a setting on a dataset only through a learner that K left reliable on its species: one not in the report's `unreliable`. Rule 10 marks all five learners on all four species. That is 469 contrasts per learner on Salmonella, 241 on S. aureus, 118 on N. gonorrhoeae and 379 on M. tuberculosis, from H-1's reading above (`rule10_contrasts` in `reference/input-comparison/second-reading.json`). With no reliable learner on any species, the entry admits no setting on any of the 72 datasets.
+- **The result.** By the reading plan's tests, no arm beats the default across the four species (H-1's reading, "Result"). So no setting won for the blocks to join.
+- **The second reading doesn't reopen it.** Its 23 firm decisions are 5 improves and 18 worse. The entry reads K's reports, and the reading plan doesn't mention stage 2. Reading the entry through the second reading now would be a rule chosen after the results.
+
+Reopening stage 2 would take a new plan, fixed before its results. H-1's open arm sets are a separate item, and they are running.
 
 ## Cost
 

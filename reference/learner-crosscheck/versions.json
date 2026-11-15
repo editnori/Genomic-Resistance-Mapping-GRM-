@@ -1,0 +1,47 @@
+{
+ "evaluation_revision": 14,
+ "fixtures_sha256": "7f354884a5dec09bb7e87672d56842f0c3ebd1aa5ef785e4479a83c9a1f99550",
+ "grm_fits_sha256": {
+  "campylobacter_jejuni__ciprofloxacin_lineage_fold0": "71f5f960d7a4e3cb6db0a9e862693b992f7f4da2b873a8cebd7e463bb66f9d75",
+  "campylobacter_jejuni__ciprofloxacin_random_fold0": "dee98771519161fe84bbdd35dfe580d381894dae5b241edfa8eeae52fefaf1ae",
+  "constant_balanced": "9bd8f998cc876dca8bb93701cd7dce505fe147424145dced66bfdecee553d9cd",
+  "constant_imbalanced": "287283cdc90ddc60bd2a2eb5b046543b39cdecfb73c1eca88711610e98895790",
+  "enterobacter_cloacae__tobramycin_lineage_fold0": "d5daed6417028c2d84bd2a0a64bd83b16e709245ccb258502778120d97d133d6",
+  "enterobacter_cloacae__tobramycin_random_fold0": "731c3b83e20eae8c75902208bf5ffeb4f0927eb6f075867ea8b7326e27dbe8c6",
+  "imbalanced_5pct": "bef461e33eb3fdf29aa60b0cbd8addb288d32620aeb7341e388d951034ce76f2",
+  "marker_dup_constant": "7e22d327558538dc19685d0abe841b966d7ce8010b2bbf73318e19785daa22da",
+  "one_class_train": "d60aee97ace85d06be722ae5cbcc7b0ebc31ac6cb0bc770666aaf5be83fabaa3",
+  "planted_logistic": "b4ab094ed681d7172e96df2efb080918548e0ca024a79f1e5d58818c5ec23622",
+  "staphylococcus_haemolyticus__fusidic_acid_lineage_fold0": "64c0250e8c8ee3bd66644ba7befc9152566fdaedec104630b4e160789c6112ed",
+  "staphylococcus_haemolyticus__fusidic_acid_random_fold0": "a5326ed954a9b1d24cd13baae175d87e43e2f6884b89695bda841a9b037cea1b",
+  "streptococcus_agalactiae__clindamycin_lineage_fold0": "4ef58557f2ce20a62450e5c1cdcbc1ed89e2f6cd306f36ad916e4da073d4e95b",
+  "streptococcus_agalactiae__clindamycin_random_fold0": "b9f15ad4c2acce454b626f771d63cb942940014510b54e9648182cdc500e949c",
+  "tied_counts": "b6b2632cd02f7ab6fd67060dbdcde07a43a7e6f497423cdd8eff8cbccb665cdd",
+  "xor_balanced": "dfa93b341bc7769722b43abec61565317519a600eb59afd8bbf7b8263499da20"
+ },
+ "libraries": {
+  "joblib": "1.5.2",
+  "numpy": "1.26.4",
+  "pyscm-ml": "1.1.2",
+  "scikit-learn": "1.7.2",
+  "scipy": "1.15.3",
+  "six": "1.17.0",
+  "threadpoolctl": "3.6.0",
+  "xgboost": "3.0.5"
+ },
+ "platform": "Linux-6.8.0-117-generic-x86_64-with-glibc2.39",
+ "python": "3.12.3",
+ "xgboost_build": {
+  "GCC_VERSION": [
+   10,
+   2,
+   1
+  ],
+  "GLIBC_VERSION": [
+   2,
+   17
+  ],
+  "USE_CUDA": false,
+  "USE_OPENMP": true
+ }
+}

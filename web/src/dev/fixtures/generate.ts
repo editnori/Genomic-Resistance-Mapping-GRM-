@@ -29,7 +29,7 @@ import {
   type TreeNode,
 } from "../../data/schema";
 import { encodeBits } from "../../data/bits";
-import { familyLabel } from "../../data/derive/dataset";
+import { indexRuleWords, RULE_TEXT_VERSION } from "../../data/derive/dataset";
 import { binaryMetrics, conformal, normal, rng, rocCurve } from "./stats";
 
 interface GroupDef {
@@ -737,7 +737,6 @@ const buildDataset = (spec: SpeciesSpec, drug: DrugSpec, genomes: Genome[], rand
     lineage: lineage === undefined ? null : lite(lineage.learners.find((x) => x.learner === l)!.metrics!),
   }));
   const best = learnerRows.reduce((a, b) => (b.random.balanced_accuracy > a.random.balanced_accuracy ? b : a));
-  const byId = new Map(features.map((f) => [f.feature, f]));
   const row: CatalogRow = {
     id,
     species: spec.species,
@@ -757,10 +756,7 @@ const buildDataset = (spec: SpeciesSpec, drug: DrugSpec, genomes: Genome[], rand
     learners: learnerRows,
     catalog: catalogMetrics === null ? null : lite(catalogMetrics),
     mic_essential_agreement: mic?.essential_agreement ?? null,
-    scm_rules: scmRules.map((r) => {
-      const f = byId.get(r.feature);
-      return `${r.presence ? "presence of" : "absence of"} ${(f === undefined ? null : familyLabel(f.catalog_families)) ?? f?.locus?.gene ?? f?.locus?.product ?? `feature ${r.feature}`}`;
-    }),
+    scm_rules: scmRules.map((_, k) => indexRuleWords(report, k)),
     panels: panels.map((p) => [p.id, lite(p.metrics)]),
     kover:
       drug.kover === null
@@ -891,6 +887,7 @@ export const buildFixture = (): FixtureSet => {
     generated_at: "2026-10-23T12:00:00Z",
     k: 31,
     amr_records: 18_460,
+    rule_text_version: RULE_TEXT_VERSION,
     amrfinder_version: "2026-08-14.1",
     name_vocabulary: "SigDrug reviewed drug vocabulary",
     funnel: {

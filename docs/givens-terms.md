@@ -2,7 +2,7 @@
 
 GRM gives [Givens](https://github.com/editnori/givens) the terms below, the assumptions a report figure rests on and their counts. `scripts/givens-export/export.py` writes this page and `reference/givens-export/grm.json` from the same sources, so the two hold the same words and numbers. [givens-export.md](givens-export.md) describes the file.
 
-The page holds 22 terms, 24 links between them and 3 assumptions. Their 36 rows of counts split into 28 read from a file and 8 quoted from a document. In 2 entries GRM says what it has not counted, after the words Not counted.
+The page holds 22 terms, 24 links between them and 3 assumptions. Their 37 rows of counts split into 29 read from a file and 8 quoted from a document. In 1 entry GRM says what it has not counted, after the words Not counted.
 
 A change made to this page by hand fails the check. Change `scripts/givens-export/spec.json` or a source, then run the script with `--write`.
 
@@ -120,7 +120,11 @@ A term names its kind in brackets. A state may add a truth state, one of the val
 
 **Label inferred from a MIC and left out** (state, inferred). A label inferred from a measured concentration. It stays in the curated data, marked, and no learner trains or is scored on it. It is part of Dataset. Stated in `README.md`.
 
-**Not counted.** No committed file counts the datasets that hold such labels. The released index has the field, and the repository keeps no count of it.
+| Count | Counted | Revision | Source |
+|---|---|---|---|
+| 64 of 274 | datasets with at least one genome whose label GRM inferred from a MIC and left out of training and scoring, of the datasets whose index entry records that count (a) | 14 | `index-counts.json` |
+
+**Note a.** A count of datasets, read from the released index. A label is one genome and one antibiotic, so one genome can count in several datasets. The count says nothing about how any isolate should be treated.
 
 ## Assumptions
 

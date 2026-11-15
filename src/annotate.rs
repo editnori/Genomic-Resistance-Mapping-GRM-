@@ -44,7 +44,8 @@ pub struct Locus {
     pub gene_strand: Option<String>,
     /// Codon range within the gene (1-based), when inside a CDS.
     pub codons: Option<(u64, u64)>,
-    /// Nearest CDS and distance when the span is intergenic.
+    /// Nearest CDS and distance when the span lies in no CDS. Only CDS
+    /// features are read, so the span may still lie in an RNA gene.
     pub nearest: Option<(String, i64)>,
     /// Contig sequence around the span (forward strand), span in uppercase.
     pub context: String,
