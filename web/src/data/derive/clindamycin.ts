@@ -10,13 +10,14 @@
 // A note is given only for a report the check read: one of the six, at the
 // file's evaluation revision, with the file's sample count. A caller that has
 // a digest of the loaded report's bytes passes it, and the note then also
-// needs it to equal the file's report_sha256; a caller with none (the app
-// parses each report as JSON and keeps no bytes of it today) gets the pin by
-// dataset, revision and sample count alone. The intervals file is pinned more
-// tightly, by revision and each row's confusion counts. The datasets table
-// reads the index, which holds no report bytes, so its mark keeps the pin by
-// dataset, revision and sample count. Any other report, and any report at
-// all when the bundled file does not validate, gets nothing.
+// needs it to equal the file's report_sha256: the dataset report page does,
+// with the SHA-256 data/load.ts takes of each report as it reads it. A caller
+// with none gets the pin by dataset, revision and sample count alone. The
+// intervals file is pinned more tightly, by revision and each row's
+// confusion counts. The datasets table reads the index, which holds no
+// report bytes, so its mark keeps the pin by dataset, revision and sample
+// count. Any other report, and any report at all when the bundled file does
+// not validate, gets nothing.
 //
 // A disagreement is a difference between two readings, and neither is
 // called the error. A change when a study leaves is an association with that

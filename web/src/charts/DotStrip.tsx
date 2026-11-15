@@ -8,7 +8,8 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { CatalogRow } from "../data/schema";
-import { datasetTitle, pct } from "../data/format";
+import { datasetTitle, median, pct } from "../data/format";
+import { leadOver, leadWords, type MicConstant } from "../data/baselines";
 import { largestGaps } from "../data/derive/overview";
 import { REFERENCE_BARS } from "../data/metrics";
 import type { TipLine } from "../ui/HoverTip";
@@ -222,11 +223,30 @@ export const GapSwarm = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
 
 /** Per dataset with an MIC model, the share of exact MICs predicted within
  *  one doubling dilution. Every dataset is drawn. */
-export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]; height?: number; onOpen?(id: string): void }) => {
+export const MicStrip = ({
+  rows,
+  height,
+  onOpen,
+  constants,
+}: {
+  rows: readonly CatalogRow[];
+  height?: number;
+  onOpen?(id: string): void;
+  /** Each dataset's constant MIC from the training folds (micConstants):
+   *  a solid line at their median, and each one in its dataset's tooltip. */
+  constants?: ReadonlyMap<string, MicConstant>;
+}) => {
   const scored = rows.filter((r) => r.mic_essential_agreement !== null);
   const values = scored.map((r) => r.mic_essential_agreement!);
   const atOrAbove = values.filter((v) => v >= REFERENCE_BARS.mic).length;
-  const lo = Math.min(0.8, Math.floor(Math.min(...values) * 10) / 10);
+  const shown = constants === undefined ? [] : scored.flatMap((r) => (constants.has(r.id) ? [constants.get(r.id)!.constant] : []));
+  const medianConstant = median(shown);
+  const lo = Math.min(0.8, Math.floor(Math.min(...values, ...(medianConstant === null ? [] : [medianConstant])) * 10) / 10);
+  const constantTip = (r: CatalogRow): TipLine[] => {
+    const c = constants?.get(r.id);
+    if (c === undefined) return [];
+    return [{ term: "Constant MIC", text: `${pct(c.constant)} from the training folds' median MIC, on the same exact MICs; the model is ${leadWords(leadOver(c.model, c.constant))}.${c.confirmed ? "" : " † The held-out predictions do not confirm the rebuilt folds."}` }];
+  };
   const lowest = [...scored].sort((a, b) => a.mic_essential_agreement! - b.mic_essential_agreement! || a.id.localeCompare(b.id))[0];
   return (
     <DotStrip
@@ -234,12 +254,15 @@ export const MicStrip = ({ rows, height, onOpen }: { rows: readonly CatalogRow[]
       data={scored.map((r) => ({
         id: r.id,
         value: r.mic_essential_agreement!,
-        tip: [{ term: datasetTitle(r), text: `${pct(r.mic_essential_agreement)} of exact MICs predicted within one doubling dilution.` }],
+        tip: [{ term: datasetTitle(r), text: `${pct(r.mic_essential_agreement)} of exact MICs predicted within one doubling dilution.` }, ...constantTip(r)],
       }))}
       domain={[lo, 1]}
       format={(v) => `${Math.round(v * 100)}`}
       axisTitle="Essential agreement: share of exact MICs predicted within one doubling dilution (%). Higher is better."
-      refs={[{ key: "bar", value: REFERENCE_BARS.mic, anchor: "start" }]}
+      refs={[
+        { key: "bar", value: REFERENCE_BARS.mic, anchor: "start" },
+        ...(medianConstant === null ? [] : [{ key: "constant", value: medianConstant, label: `Constant MIC, median ${pct(medianConstant)}`, anchor: "end" as const, solid: true }]),
+      ]}
       regions={[
         { key: "below", label: `${values.length - atOrAbove} <90%`, at: REFERENCE_BARS.mic, anchor: "end" },
         { key: "above", label: `${atOrAbove} ≥90%`, at: REFERENCE_BARS.mic, anchor: "start" },

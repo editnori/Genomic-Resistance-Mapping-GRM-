@@ -307,6 +307,17 @@ enum Command {
     /// that index.json lists, each pinned to its report's SHA-256 and counts.
     /// No report file changes.
     Intervals,
+    /// Write what two predictors that read no genome reach on each dataset
+    /// report's own folds under <data>/report/baselines/, one file per
+    /// dataset report that index.json lists, each pinned to its report's
+    /// SHA-256 and evaluation revision: constants at the training folds'
+    /// median and mode MIC beside the MIC model, and lineage identity beside
+    /// each split; and <data>/report/baselines.json for the pages that show
+    /// many datasets, pinned to index.json's SHA-256. A dataset whose rebuilt
+    /// MIC folds contradict its report is refused alone, and the command
+    /// then exits nonzero. Run it after `grm report`. Fits nothing; no report
+    /// file changes.
+    Baselines,
     /// Write each indexed dataset report's provenance under
     /// <data>/report/provenance/: its samples' BV-BRC dates (`grm fetch
     /// genome-dates`) and record details (curated/provenance.jsonl), pinned to
@@ -562,6 +573,17 @@ fn run(cli: Cli) -> Result<()> {
             let n = grm::intervals::write(&layout.root.join("report"))?;
             eprintln!("intervals written for {n} dataset reports");
             Ok(())
+        }
+        Command::Baselines => {
+            let w = grm::baselines::write(&layout.root.join("report"))?;
+            for r in &w.refused {
+                eprintln!("{r}");
+            }
+            eprintln!(
+                "baselines written for {} dataset reports: {} with an MIC model, {} of them with folds their held-out predictions confirm; {} exact-MIC test isolates on {} datasets have a k-mer-identical copy in their training fold",
+                w.files, w.mic, w.confirmed, w.copies, w.copy_datasets
+            );
+            w.outcome()
         }
         Command::Provenance { check: false } => {
             let n = grm::provenance::write(&layout)?;
