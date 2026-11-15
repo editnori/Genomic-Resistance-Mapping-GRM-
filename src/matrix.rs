@@ -44,7 +44,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// private functions that skip the check (docs/matrix-scaling.md).
 pub const REVIEWED_COLUMNS: usize = 4096;
 
-fn ensure_reviewed(n: usize, max_columns: usize) -> Result<()> {
+/// Refuses more than `max_columns` genomes. `species::build_matrix` calls
+/// it with `REVIEWED_COLUMNS` before it writes any column block.
+pub(crate) fn ensure_reviewed(n: usize, max_columns: usize) -> Result<()> {
     ensure!(
         n <= max_columns,
         "{n} genomes exceed the {max_columns} matrix columns that Dataset::project, the learners and reports have been reviewed for (docs/matrix-scaling.md)"

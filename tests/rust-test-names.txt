@@ -442,6 +442,8 @@ src/lib.rs species::tests::a_sidecar_without_a_kset_digest_takes_it_from_the_sto
 src/lib.rs species::tests::column_blocks_merge_at_the_k_counted_json_records
 src/lib.rs species::tests::column_blocks_merge_under_an_open_file_limit_that_stops_the_stock_build
 src/lib.rs species::tests::column_blocks_open_file_limit_probe [ignored]
+src/lib.rs species::tests::column_blocks_refuse_a_partials_folder_that_is_a_symbolic_link
+src/lib.rs species::tests::column_blocks_refuse_more_genomes_than_the_column_cap_before_writing_a_block
 src/lib.rs species::tests::column_blocks_write_one_merge_s_files_when_the_width_divides_the_genome_count
 src/lib.rs species::tests::column_blocks_write_one_partial_per_block_at_its_columns
 src/lib.rs species::tests::column_blocks_write_the_matrix_files_one_merge_writes

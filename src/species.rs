@@ -308,8 +308,13 @@ pub fn build_matrix(
     min_support: u32,
     column_blocks: Option<usize>,
 ) -> Result<matrix::MatrixSummary> {
-    // A bad width is refused before anything is read, written or removed.
-    column_blocks.map_or(Ok(()), check_column_blocks)?;
+    // A bad width or a linked partials folder is refused before anything
+    // is read, written or removed.
+    let dir = layout.partials_dir(slug);
+    if let Some(width) = column_blocks {
+        check_column_blocks(width)?;
+        refuse_linked_partials(&dir)?;
+    }
     let counted = load_counted(layout, slug)?;
     let digests = counted.kset_digests("matrix")?;
     let kdir = layout.kset_dir(slug);
@@ -322,6 +327,9 @@ pub fn build_matrix(
     let mut m = match column_blocks {
         None => matrix::build(&paths, min_support, threads_chunk)?,
         Some(width) => {
+            // The column cap, before any block is written, as
+            // `matrix::build` checks it before any kset is opened.
+            matrix::ensure_reviewed(paths.len(), matrix::REVIEWED_COLUMNS)?;
             let columns: Vec<matrix::Column> = counted
                 .genomes
                 .iter()
@@ -331,7 +339,6 @@ pub fn build_matrix(
                     kset_digest: d.clone(),
                 })
                 .collect();
-            let dir = layout.partials_dir(slug);
             let built = build_in_blocks(
                 &paths,
                 &columns,
@@ -358,6 +365,20 @@ pub fn build_matrix(
     m.summary.kset_digests = digests;
     m.save(&layout.matrix_dir(slug))?;
     Ok(m.summary)
+}
+
+/// Refuses a partials folder that is a symbolic link: the blocks would be
+/// written at its target, and the removal would remove only the link.
+fn refuse_linked_partials(dir: &Path) -> Result<()> {
+    match std::fs::symlink_metadata(dir) {
+        Ok(meta) if meta.file_type().is_symlink() => anyhow::bail!(
+            "{} is a symbolic link; --column-blocks writes its partials in that folder and then removes it, which would remove only the link and leave the partials at its target. Remove the link or put a plain folder in its place",
+            dir.display()
+        ),
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e).with_context(|| format!("inspect {}", dir.display())),
+    }
 }
 
 /// Writes one partial per `width` columns into `dir`, then merges them.
@@ -795,6 +816,95 @@ mod tests {
         // The next run with the switch removes what it finds.
         build_matrix(&layout, "s", 2, Some(64)).unwrap();
         assert!(!partials.exists());
+    }
+
+    #[test]
+    fn column_blocks_refuse_a_partials_folder_that_is_a_symbolic_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = block_cohort_of(dir.path(), 10, 31);
+        build_matrix(&layout, "s", 2, None).unwrap();
+        let old = matrix_files(&layout);
+        // Someone links the folder to a larger disk.
+        let target = dir.path().join("larger-disk");
+        std::fs::create_dir(&target).unwrap();
+        std::fs::write(target.join("keep.txt"), "kept").unwrap();
+        let partials = layout.partials_dir("s");
+        std::os::unix::fs::symlink(&target, &partials).unwrap();
+        let counted = layout.species_dir("s").join("counted.json");
+        let saved = std::fs::read(&counted).unwrap();
+        // The link is refused before counted.json is read: without it the
+        // message is still the link's.
+        std::fs::remove_file(&counted).unwrap();
+        for round in ["without counted.json", "with counted.json"] {
+            let err = build_matrix(&layout, "s", 2, Some(64)).err().unwrap();
+            let msg = format!("{err:#}");
+            assert!(
+                msg.contains(&format!("{} is a symbolic link", partials.display())),
+                "{round}: {msg}"
+            );
+            assert!(
+                std::fs::symlink_metadata(&partials)
+                    .unwrap()
+                    .file_type()
+                    .is_symlink(),
+                "{round}"
+            );
+            let inside: Vec<_> = std::fs::read_dir(&target)
+                .unwrap()
+                .map(|e| e.unwrap().file_name())
+                .collect();
+            assert_eq!(inside, ["keep.txt"], "{round}");
+            assert!(matrix_files(&layout) == old, "{round}");
+            std::fs::write(&counted, &saved).unwrap();
+        }
+    }
+
+    #[test]
+    fn column_blocks_refuse_more_genomes_than_the_column_cap_before_writing_a_block() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        // counted.json for one genome past the cap, whose ksets were never
+        // written: the cap must stop the run before any is opened. Synthetic.
+        let n = matrix::REVIEWED_COLUMNS + 1;
+        let counted = CountSummary {
+            k: 31,
+            genomes: (0..n)
+                .map(|g| Counted {
+                    genome_id: format!("g{g:04}"),
+                    n_kmers: 1,
+                    stats: SeqStats::default(),
+                    catalog_version: String::new(),
+                    kset_digest: Some(format!("{g:016x}")),
+                    genes: Vec::new(),
+                })
+                .collect(),
+            missing_fasta: Vec::new(),
+            failed: Vec::new(),
+        };
+        std::fs::create_dir_all(layout.species_dir("s")).unwrap();
+        std::fs::write(
+            layout.species_dir("s").join("counted.json"),
+            serde_json::to_vec(&counted).unwrap(),
+        )
+        .unwrap();
+        let partials = layout.partials_dir("s");
+        std::fs::create_dir_all(&partials).unwrap();
+        std::fs::write(partials.join("left.txt"), "a stopped run").unwrap();
+        let cap = format!(
+            "{n} genomes exceed the {} matrix columns",
+            matrix::REVIEWED_COLUMNS
+        );
+        for blocks in [None, Some(64), Some(4096)] {
+            let err = build_matrix(&layout, "s", 2, blocks).err().unwrap();
+            assert!(format!("{err:#}").contains(&cap), "{blocks:?}: {err:#}");
+            // No block was written and nothing was removed.
+            let left: Vec<_> = std::fs::read_dir(&partials)
+                .unwrap()
+                .map(|e| e.unwrap().file_name())
+                .collect();
+            assert_eq!(left, ["left.txt"], "{blocks:?}");
+            assert!(!layout.matrix_dir("s").exists(), "{blocks:?}");
+        }
     }
 
     /// The bytes of every field `FeatureMatrix::save` writes.
