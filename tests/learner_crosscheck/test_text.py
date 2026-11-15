@@ -68,7 +68,7 @@ def sentences():
         "Its plan was fixed before any comparison was read.",
         "The kit and the result table are in the repository, under scripts/learner-crosscheck and reference/learner-crosscheck.",
         "Under the plan's rules, no difference was left without a shown cause.",
-        f"The set covering machine gave the same model as an independent implementation on all {scm['compared']} fits.",
+        f"The set covering machine gave the same model as an independent implementation that follows GRM's tie order and stop rule, on all {scm['compared']} fits.",
         f"pyscm-ml {libraries['pyscm-ml']} was asked for its best rules at {kit.detail_sum('scm fits', 'steps_read_against_library')} of the steps GRM took, "
         f"and GRM's rule was among them at {kit.detail_sum('scm fits', 'steps_certified')}.",
         f"At the other {kit.detail_sum('scm fits', 'steps_dominated')} the library preferred a rule GRM does not have, one that rejects every sample or none.",
@@ -123,7 +123,7 @@ class Methods(unittest.TestCase):
         # "No difference was left without a shown cause."
         self.assertEqual(sum(row["units_unexplained"] + row["panels"]["unexplained"] for row in totals.values()), 0)
         self.assertEqual([row for row in differences if not row["cause"]], [])
-        # "the same model as an independent implementation on all ... fits"
+        # "the same model as an independent implementation that follows GRM's tie order and stop rule, on all ... fits"
         self.assertEqual(kit.detail_sum("scm fits", "independent_same"), totals[("scm", "fits")]["compared"])
         # "at the other ..." steps: certified and dominated are all the steps read
         read = kit.detail_sum("scm fits", "steps_read_against_library")

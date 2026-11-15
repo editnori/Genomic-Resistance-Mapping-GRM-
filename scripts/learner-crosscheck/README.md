@@ -10,7 +10,7 @@ The result of the run of 14 November 2026 is in [`reference/learner-crosscheck`]
 
 | Learner | GRM | Reference |
 |---|---|---|
-| Set covering machine | `scm::fit`, both kinds, 7 values of p, at most 6 rules: 14 fits per panel | `scm_reference.py`, an independent implementation in exact arithmetic, and pyscm-ml 1.1.2 |
+| Set covering machine | `scm::fit`, both kinds, 7 values of p, at most 6 rules: 14 fits per panel | `scm_reference.py`, an independent implementation that follows GRM's tie order and stop rule in exact arithmetic, and pyscm-ml 1.1.2 |
 | Decision tree | `tree::fit_tree`, depth 8 | scikit-learn 1.7.2, one split at a time on each node's samples |
 | Random forest | `tree::fit_forest`, 200 trees | scikit-learn 1.7.2, one split at a time on the samples and the features GRM drew |
 | Boosted trees | `gbt::fit`, 400 rounds | XGBoost 3.0.5, one tree at a time from GRM's margin, and its own run end to end |
@@ -26,7 +26,7 @@ No library can be handed GRM's random draws, and scikit-learn breaks equal gains
 |---|---|---|
 | `main.rs` | The GRM side, a Cargo example (`learner-crosscheck`). It calls the public functions of `grm::learn` on each panel and writes every fitted model, and every random draw, as JSON. It changes nothing in `src/`. | Rust 1.98.1 |
 | `panels.py` | Decodes the panel file without the Rust code. | nothing |
-| `scm_reference.py` | The independent set covering machine. | nothing |
+| `scm_reference.py` | The independent set covering machine. It follows GRM's tie order and stop rule. | nothing |
 | `exact.py` | Exact split gains of a class-weighted Gini tree, GRM's own float64 gain, and when rounding explains the feature GRM took from an exact tie. | nothing |
 | `check_scm.py` | The set covering machine against `scm_reference.py` and pyscm-ml. | pyscm-ml |
 | `check_trees.py` | The decision tree and the forest against scikit-learn. | scikit-learn |

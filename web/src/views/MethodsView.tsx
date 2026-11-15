@@ -507,7 +507,7 @@ const Scope = ({ manifest }: { manifest: Manifest }) => {
           read. The kit and the result table are in the repository, under scripts/learner-crosscheck and reference/learner-crosscheck.
         </P>
         <p className="prose-measure text-note text-ink">
-          Under the plan&apos;s rules, no difference was left without a shown cause. The set covering machine gave the same model as an independent implementation on all 224 fits. pyscm-ml 1.1.2 was asked for its
+          Under the plan&apos;s rules, no difference was left without a shown cause. The set covering machine gave the same model as an independent implementation that follows GRM&apos;s tie order and stop rule, on all 224 fits. pyscm-ml 1.1.2 was asked for its
           best rules at 435 of the steps GRM took, and GRM&apos;s rule was among them at 405. At the other 30 the library preferred a rule GRM does not have, one that rejects every
           sample or none.
         </p>
