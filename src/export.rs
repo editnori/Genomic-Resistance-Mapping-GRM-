@@ -1,38 +1,52 @@
 //! Dataset export for a learner outside GRM: one dataset's projected matrix,
-//! the fold plans `learn::eval::evaluate` scores it on, and each outer fold's
-//! candidate and screened rows, so an outside model can be scored on the same
-//! genomes, folds and screened columns as the five learners without
-//! refitting them (docs/dataset-export.md).
+//! the fold plans `learn::eval::evaluate` scores it on, and the forest's
+//! screened rows for each outer fold, so an outside model can be scored on
+//! the same genomes and folds as the five learners without refitting them
+//! (docs/dataset-export.md). Only the forest reads that screen: boosting and
+//! the lasso screen on the fitting side of their tuning holdouts, and the set
+//! covering machine and the tree read every candidate.
 //!
-//! Nothing here fits a model. The export reads the same inputs `grm learn`
-//! reads (`analysis::arm_inputs`), records the dataset's input fingerprint so
-//! it can be matched to a published report, and writes:
+//! Nothing here fits a model. The export runs the genome-selection check
+//! `grm learn` runs (`species::ensure_selection_counted`), reads the same
+//! inputs (`analysis::arm_inputs`), records the dataset's input fingerprint
+//! and the evaluation revision so it can be matched to a published report,
+//! and writes:
 //!
 //! - `matrix.bin`: the projected matrix, row-major, each row `words` 64-bit
 //!   little-endian words, bit `c % 64` of word `c / 64` set when feature row
 //!   `r` is present in sample `c` (`bits::BitMatrix`);
 //! - `dataset.json`: the samples, labels, lineages, duplicate groups, the
 //!   plans of both schemes (`ablate::plan::fold_plan`, repeat 0 at the
-//!   evaluation seed) and, per available plan and outer fold, the candidate
-//!   rows count and the screened rows, as row indices of `matrix.bin` in
-//!   screen order. The screen is the forest's: `learn::screen` over the
-//!   outer fold's training candidates (`learn::training_candidates`) on its
-//!   training samples.
+//!   evaluation seed) and, per available plan and outer fold, the number of
+//!   training samples, the number of candidate rows and the screened rows,
+//!   as row indices of `matrix.bin` in screen order. The screen is the
+//!   forest's: `learn::screen` over the outer fold's training candidates
+//!   (`learn::training_candidates`) on its training samples.
+//!
+//! It never writes into a dataset directory that exists unless forced, and
+//! then it replaces the two files. Each file is written under a temporary
+//! name and renamed, `dataset.json` last, so a directory without
+//! `dataset.json` is an unfinished export.
 
 use crate::ablate::plan::{FoldPlan, GroupIds, Scheme, fold_plan};
-use crate::analysis;
+use crate::analysis::{self, EVALUATION_REVISION};
 use crate::bits::{BitMatrix, Bits};
-use crate::layout::Layout;
+use crate::curate::DatasetSpec;
+use crate::layout::{Layout, remove_if_present};
 use crate::learn::eval::EvalConfig;
 use crate::learn::{screen, training_candidates};
-use anyhow::{Context, Result, ensure};
+use crate::species;
+use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// The `format` of every `dataset.json` this module writes.
 pub const EXPORT_FORMAT: &str = "grm-dataset-export-v1";
 
-/// One outer fold's columns as the forest sees them.
+/// One outer fold's columns as the forest sees them. The training samples
+/// are those whose outer fold in the plan is not `fold`; the candidate rows
+/// themselves are not written (docs/dataset-export.md says how to recompute
+/// them).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct FoldScreen {
     pub fold: usize,
@@ -40,7 +54,8 @@ pub struct FoldScreen {
     pub n_train: usize,
     /// Rows left after `training_candidates` on this fold's training samples.
     pub n_candidates: usize,
-    /// The screened rows, as indices into the projected matrix, best first.
+    /// The screened rows, as indices into the projected matrix: highest
+    /// chi-square first, and among equal scores the lower row first.
     pub screened_rows: Vec<u32>,
 }
 
@@ -56,6 +71,10 @@ pub struct SplitExport {
 #[derive(Clone, Debug, Serialize)]
 pub struct DatasetExport {
     pub format: String,
+    /// `analysis::EVALUATION_REVISION` of the code that wrote the export. The
+    /// fingerprint covers inputs and settings and no code, so an export pairs
+    /// with a report only when this equals the report's evaluation revision.
+    pub evaluation_revision: u32,
     pub id: String,
     pub species_slug: String,
     pub antibiotic: String,
@@ -79,6 +98,15 @@ pub struct DatasetExport {
     pub splits: Vec<SplitExport>,
 }
 
+/// One dataset `export_species` wrote.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Exported {
+    pub id: String,
+    pub dir: PathBuf,
+    /// The directory existed, and `force` replaced its two files.
+    pub replaced: bool,
+}
+
 /// The matrix as `matrix.bin` stores it.
 pub fn matrix_bytes(x: &BitMatrix) -> Vec<u8> {
     let mut out = Vec::with_capacity(x.data.len() * 8);
@@ -95,7 +123,9 @@ fn sha256_hex(bytes: &[u8]) -> String {
 
 /// The forest's screen of each outer fold of an available plan, as rows of
 /// `x`. Only training samples are read: `training_candidates` and `screen`
-/// both take the fold's training mask.
+/// both take the fold's training mask. Candidates keep matrix row order, so
+/// `screen`'s tie rule (the lower candidate first) is the lower matrix row
+/// first.
 pub fn fold_screens(
     x: &BitMatrix,
     y: &Bits,
@@ -154,25 +184,138 @@ pub fn dataset_splits(
         .collect()
 }
 
+/// Why a species cannot be exported before it is built, with the commands
+/// that build it.
+fn not_built(layout: &Layout, slug: &str) -> String {
+    let species = layout.species_dir(slug);
+    let slug_note = if species.is_dir() {
+        String::new()
+    } else {
+        format!(
+            " There is no folder {}, so check the species slug too.",
+            species.display()
+        )
+    };
+    format!(
+        "{slug} has no matrix in {}. Build the species first: `grm count --species {slug}`, then `grm structure --species {slug}`, then `grm matrix --species {slug}`.{slug_note}",
+        layout.matrix_dir(slug).display()
+    )
+}
+
+/// The datasets `only` names, by antibiotic or id, in curated order; every
+/// dataset when `only` is empty. A name that matches no dataset of the
+/// species stops the export.
+fn selected_datasets<'a>(
+    datasets: &'a [DatasetSpec],
+    slug: &str,
+    only: &[String],
+) -> Result<Vec<&'a DatasetSpec>> {
+    let names = |o: &str, d: &DatasetSpec| o == d.antibiotic || o == d.id;
+    let unmatched: Vec<&str> = only
+        .iter()
+        .map(String::as_str)
+        .filter(|o| !datasets.iter().any(|d| names(o, d)))
+        .collect();
+    ensure!(
+        unmatched.is_empty(),
+        "--only names no dataset of {slug}: {}. Its datasets: {}. Nothing was exported.",
+        unmatched.join(", "),
+        datasets
+            .iter()
+            .map(|d| d.id.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    Ok(datasets
+        .iter()
+        .filter(|d| only.is_empty() || only.iter().any(|o| names(o, d)))
+        .collect())
+}
+
+/// Writes `bytes` to `path` under a temporary name in the same directory,
+/// then renames it into place.
+fn write_renamed(path: &Path, bytes: &[u8]) -> Result<()> {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(".tmp");
+    let tmp = path.with_file_name(name);
+    std::fs::write(&tmp, bytes).with_context(|| format!("write {}", tmp.display()))?;
+    std::fs::rename(&tmp, path)
+        .with_context(|| format!("rename {} to {}", tmp.display(), path.display()))
+}
+
+/// Writes one dataset's two files into `dir`. An earlier `dataset.json` is
+/// removed first and the new one renamed into place last, so the directory
+/// holds a `dataset.json` only when both files are this export's. Every
+/// error names its file.
+fn write_dataset(dir: &Path, matrix: &[u8], json: &[u8]) -> Result<()> {
+    std::fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
+    let done = dir.join("dataset.json");
+    remove_if_present(&done).with_context(|| format!("remove {}", done.display()))?;
+    write_renamed(&dir.join("matrix.bin"), matrix)?;
+    write_renamed(&done, json)
+}
+
 /// Exports every dataset of `slug` (or the ones `only` names, by antibiotic
-/// or id) under `out/<dataset id>/`. Returns the ids written.
+/// or id) under `out/<dataset id>/`, and returns what it wrote.
+///
+/// It stops before writing anything when the species has no matrix, when
+/// `genomes.txt` changed after counting (as `grm learn` does), when a name
+/// in `only` matches no dataset, or, unless `force`, when the directory of
+/// any dataset it would export already exists.
 pub fn export_species(
     layout: &Layout,
     slug: &str,
     only: &[String],
     out: &Path,
     cfg: &EvalConfig,
-) -> Result<Vec<String>> {
+    force: bool,
+) -> Result<Vec<Exported>> {
+    if !layout.matrix_dir(slug).join("matrix.json").exists() {
+        bail!(not_built(layout, slug));
+    }
+    species::ensure_selection_counted(layout, slug)?;
     let (input, catalog) = analysis::load_inputs(layout, slug)?;
+    let specs = selected_datasets(&input.datasets, slug, only)?;
+    // Anything at the path counts, a file or a broken link too.
+    let exists = |id: &str| std::fs::symlink_metadata(out.join(id)).is_ok();
+    let existing: Vec<String> = specs
+        .iter()
+        .filter(|d| exists(&d.id))
+        .map(|d| out.join(&d.id).display().to_string())
+        .collect();
+    if !force && !existing.is_empty() {
+        bail!(
+            "{} dataset {} already {}: {}. An export never writes into one; remove {}, choose another --out, or pass --force to replace matrix.bin and dataset.json. Nothing was exported.",
+            existing.len(),
+            if existing.len() == 1 {
+                "directory"
+            } else {
+                "directories"
+            },
+            if existing.len() == 1 {
+                "exists"
+            } else {
+                "exist"
+            },
+            existing.join(", "),
+            if existing.len() == 1 { "it" } else { "them" },
+        );
+    }
     let digest = analysis::species_digest(&input);
     let mut written = Vec::new();
-    for spec in input
-        .datasets
-        .iter()
-        .filter(|d| only.is_empty() || only.iter().any(|o| *o == d.antibiotic || *o == d.id))
-    {
+    for spec in specs {
+        let dir = out.join(&spec.id);
+        let replaced = exists(&spec.id);
         let Some(e) = analysis::arm_inputs(&input, spec)? else {
-            eprintln!("    {}: too few labeled genomes, not exported", spec.id);
+            if replaced {
+                eprintln!(
+                    "    {}: too few labeled genomes, not exported; {} was left as it was",
+                    spec.id,
+                    dir.display()
+                );
+            } else {
+                eprintln!("    {}: too few labeled genomes, not exported", spec.id);
+            }
             continue;
         };
         let fingerprint =
@@ -181,6 +324,7 @@ pub fn export_species(
         let bytes = matrix_bytes(&e.x);
         let export = DatasetExport {
             format: EXPORT_FORMAT.to_string(),
+            evaluation_revision: EVALUATION_REVISION,
             id: spec.id.clone(),
             species_slug: spec.species_slug.clone(),
             antibiotic: spec.antibiotic.clone(),
@@ -200,15 +344,21 @@ pub fn export_species(
             matrix_sha256: sha256_hex(&bytes),
             splits,
         };
-        let dir = out.join(&spec.id);
-        std::fs::create_dir_all(&dir).with_context(|| format!("create {}", dir.display()))?;
-        std::fs::write(dir.join("matrix.bin"), &bytes)?;
-        std::fs::write(dir.join("dataset.json"), serde_json::to_vec(&export)?)?;
+        write_dataset(&dir, &bytes, &serde_json::to_vec(&export)?)?;
+        let what = if replaced {
+            format!("replaced matrix.bin and dataset.json in {}:", dir.display())
+        } else {
+            "exported".to_string()
+        };
         eprintln!(
-            "    {}: exported {} rows x {} samples, fingerprint {}",
+            "    {}: {what} {} rows x {} samples, fingerprint {}",
             spec.id, export.rows, export.cols, export.input_fingerprint
         );
-        written.push(spec.id.clone());
+        written.push(Exported {
+            id: spec.id.clone(),
+            dir,
+            replaced,
+        });
     }
     Ok(written)
 }
