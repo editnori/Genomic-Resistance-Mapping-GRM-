@@ -330,7 +330,10 @@ class BarredWords(unittest.TestCase):
                      ("check", d / "clinical" / "x.internal-record"),
                      ("check", "--parts", d / "sealed" / "x.internal-record.parts.sha256"),
                      ("summary", "--place", f"here={d / 'sigdrug.tsv'}"),
-                     ("summary", "--place", f"here={d / 'l.tsv'}", "--hashes", f"rel={d / 'ks30.sha256'}")):
+                     ("summary", "--place", f"here={d / 'l.tsv'}", "--hashes", f"rel={d / 'ks30.sha256'}"),
+                     ("pack", "--list", d / "l.tsv", "--class", "public-result", "--name", "x", "--out", d / "o",
+                      "--published", d / "ks50" / "release.sha256"),
+                     ("summary", "--place", f"here={d / 'l.tsv'}", "--out", d / "vumc" / "all.tsv")):
             with self.subTest(args=args[:2]):
                 rc, out, err = kit.run(*args)
                 self.assertEqual((rc, out), (3, ""))
@@ -340,6 +343,15 @@ class BarredWords(unittest.TestCase):
         self.assertEqual(rc, 3)
         self.assertIn("the name KSD-set holds the barred word 'ksd'", err)
         self.assertEqual(sorted(p.name for p in d.iterdir()), ["proj", "rules.tsv"])
+
+    def test_a_barred_label_on_a_clean_place_stops_the_list(self):
+        d = kit.tmp(self)
+        kit.write(d / "proj", {"notes/a.md": b"synthetic\n"})
+        (d / "rules.tsv").write_text("internal-record\t*\n", encoding="utf-8")
+        rc, out, err = kit.run("list", "--rules", d / "rules.tsv", "--root", f"KS50={d / 'proj'}", "--out", d / "l.tsv")
+        self.assertEqual((rc, out), (3, ""), err)
+        self.assertIn("refused: 1 paths hold a barred word; none was opened:\n  KS50  (ks50)\n", err)
+        self.assertFalse((d / "l.tsv").exists())
 
     def test_a_barred_word_before_dot_dot_stops_every_command(self):
         """The path is judged as given: d/sealed/../l.tsv names d/l.tsv, but it holds a barred word. None of the

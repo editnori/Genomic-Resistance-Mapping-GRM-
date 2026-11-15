@@ -110,6 +110,21 @@ class AnUnpackedArchive(unittest.TestCase):
         self.fails(top, "1 listed files are missing", "1 links or special files, which an archive does not hold:\n"
                                                        "  proj/notes/ledger.md\n", good=3)
 
+    def test_a_link_in_place_of_the_list_is_not_followed(self):
+        d, top = self.unpacked()
+        os.rename(top / "LIST.tsv", d / "elsewhere.tsv")
+        os.symlink(d / "elsewhere.tsv", top / "LIST.tsv")
+        rc, out, err = kit.run("check", top)
+        self.assertEqual((rc, out), (2, ""))
+        self.assertEqual(err, f"check: {top / 'LIST.tsv'} is not there: give the unpacked NAME.CLASS folder, "
+                              f"or --parts\n")
+
+    def test_a_link_in_place_of_files_is_not_followed(self):
+        d, top = self.unpacked()
+        os.rename(top / "files", d / "elsewhere")
+        os.symlink(d / "elsewhere", top / "files")
+        self.fails(top, "4 listed files are missing (4 of part 001)", good=0)
+
     def test_anything_beside_the_list_and_the_files_is_found(self):
         d, top = self.unpacked()
         (top / "NOTES.md").write_bytes(b"x")
@@ -264,6 +279,22 @@ class ThePartsWhereTheyLie(unittest.TestCase):
                 kit.rewrite(kit.parts_of(sums)[0], change)
                 kit.resum(sums)
                 self.fails(sums, said)
+
+    def test_a_second_list_in_a_part_is_not_taken(self):
+        """A second LIST.tsv that leaves out ledger.md, in a part that leaves it out too: the first list is the one
+        checked, and the second is an entry beside it."""
+        d, proj, sums = kit.packed(self)
+
+        def change(name, data):
+            if name.endswith("/LIST.tsv"):
+                short = b"".join(ln for ln in data.splitlines(True) if b"/ledger.md\t" not in ln)
+                self.assertEqual(len(short.splitlines()), len(data.splitlines()) - 1)
+                return [(name, data), (name, short)]
+            return [] if name.endswith("ledger.md") else [(name, data)]
+        kit.rewrite(kit.parts_of(sums)[0], change)
+        kit.resum(sums)
+        self.fails(sums, "1 listed files are missing (1 of part 001):\n  proj/notes/ledger.md\n",
+                   "1 entries beside LIST.tsv and files/:\n  demo.internal-record/LIST.tsv\n")
 
     def test_a_link_inside_a_part_is_found(self):
         d, proj, sums = kit.packed(self, "internal-record", "none")
