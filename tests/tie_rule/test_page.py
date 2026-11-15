@@ -28,13 +28,14 @@ def load_record():
 
 R = load_record()
 
-# Where the present rule lives at the tree's commit: file, line, the text that line starts with.
+# Where the present rule lives in the tree: file, the text its line starts with. The page names the functions and no
+# line number, so a change elsewhere in those files moves nothing here.
 CODE = (
-    ("src/learn/tree.rs", 72, "pub fn fit_tree("),
-    ("src/learn/tree.rs", 126, "let better = |a: (f64, u32), b: (f64, u32)| {"),
-    ("src/learn/tree.rs", 308, "pub fn fit_forest("),
-    ("src/learn/gbt.rs", 228, "fn grow("),
-    ("src/learn/gbt.rs", 259, ".reduce_with(|a, b| {"),
+    ("src/learn/tree.rs", "pub fn fit_tree("),
+    ("src/learn/tree.rs", "let better = |a: (f64, u32), b: (f64, u32)| {"),
+    ("src/learn/tree.rs", "pub fn fit_forest("),
+    ("src/learn/gbt.rs", "fn grow("),
+    ("src/learn/gbt.rs", ".reduce_with(|a, b| {"),
 )
 COMPARISON = "if a.0 > b.0 || (a.0 == b.0 && a.1 < b.1) {"
 # Phrases that carry a number and no figure of the record.
@@ -92,9 +93,9 @@ def page_lines():
     run, release, lineage = s["datasets.run"], s["datasets.release"], s["datasets.lineage"]
     lines = []
 
-    lines.append(f"- cart: `fit_tree` in `src/learn/tree.rs` (line {CODE[0][1]}), whose closure `better` (line {CODE[1][1]}) compares two candidates.")
-    lines.append(f"- rf: `fit_forest` (`src/learn/tree.rs`, line {CODE[2][1]}) calls `fit_tree` with the features it draws at each node (`max_features`), so the same closure decides among them.")
-    lines.append(f"- gbt: `grow` in `src/learn/gbt.rs` (line {CODE[3][1]}), whose `reduce_with` (line {CODE[4][1]}) compares two candidates the same way.")
+    lines.append("- cart: `fit_tree` in `src/learn/tree.rs`, whose closure `better` compares two candidates.")
+    lines.append("- rf: `fit_forest` in `src/learn/tree.rs` calls `fit_tree` with the features it draws at each node (`max_features`), so the same closure decides among them.")
+    lines.append("- gbt: `grow` in `src/learn/gbt.rs`, whose `reduce_with` compares two candidates the same way.")
 
     rep = [s[f"reproduction.{k}"] for k in ("main_equals_release", "present_equals_main", "traced_present_equals_present", "traced_exact_equals_exact")]
     assert len(set(rep)) == 1, rep
@@ -110,8 +111,8 @@ def page_lines():
         f"{s['species.not_run']} species with the largest sums unrun: {names(s['species.not_run.names'].split(','))}, "
         f"{s['datasets.not_run']} datasets. They differ from the datasets run: at the median, {n(s['genomes.median.not_run'])} "
         f"genomes against {n(s['genomes.median.run'])}, and {n(s['features.median.not_run'])} features against "
-        f"{n(s['features.median.run'])}, {s['features.median.ratio']:.1f} times as many (`datasets.tsv`). Nothing on this page "
-        "speaks for them."
+        f"{n(s['features.median.run'])}, {s['features.median.ratio']:.1f} times as many (`datasets.tsv`). This page gives no "
+        "figure for them."
     )
     genomes = {L: (s[f"{L}.lineage.genomes"], s[f"{L}.random.genomes"]) for L in R.LEARNERS}
     assert len(set(genomes.values())) == 1, genomes
@@ -195,7 +196,10 @@ def page_lines():
         "The tie effect of a dataset and split is the largest change in balanced accuracy over cart, rf and gbt. Under the present "
         f"rule, the gap from the best learner to the second has a median of {s['order.lineage.median_gap']:.4f} on the lineage "
         f"split and {s['order.random.median_gap']:.4f} on the random split, and the tie effect a median of "
-        f"{s['order.lineage.median_tie_effect']:.4f} and {s['order.random.median_tie_effect']:.4f}. The tie effect is above 0 and "
+        f"{s['order.lineage.median_tie_effect']:.4f} and {s['order.random.median_tie_effect']:.4f}."
+    )
+    lines.append(
+        "The tie effect is above 0 and "
         f"at least the gap on {s['order.lineage.tie_effect_at_least_gap']} of {lineage} datasets (lineage split) and "
         f"{s['order.random.tie_effect_at_least_gap']} of {run} (random split) (`splits.tsv`). There, the difference between the two "
         "best learners is no larger than what the tie rule alone moves."
@@ -212,8 +216,10 @@ def page_lines():
         f"At {n(t[('cart', 'exact_tied_present')])} of the {n(t[('cart', 'searched_present')])} cart nodes searched ({cart_tied}) "
         f"and {n(t[('rf', 'exact_tied_present')])} of the {n(t[('rf', 'searched_present')])} rf nodes ({rf_tied}), more than one "
         "candidate shares the best exact impurity. There the exact rule takes the lowest feature number, and the present rule "
-        "takes it too unless rounding departs, so under both rules the split depends on the order of the matrix rows. Rounding "
-        f"departs at {n(t[('cart', 'differ_present')])} cart nodes "
+        "takes it too unless rounding departs, so under both rules the split depends on the order of the matrix rows."
+    )
+    lines.append(
+        f"Rounding departs at {n(t[('cart', 'differ_present')])} cart nodes "
         f"({pct(t[('cart', 'differ_present')], t[('cart', 'searched_present')])}) and {n(t[('rf', 'differ_present')])} rf nodes "
         f"({pct(t[('rf', 'differ_present')], t[('rf', 'searched_present')])}). Each of them is an exact tie, and at none did "
         "rounding put a strictly worse split first (`traces.tsv`, the present trees)."
@@ -227,22 +233,18 @@ def page_lines():
     )
 
     lines.append(
-        "- **Keep the present rule and merge the flag.** Needs a Methods sentence that ties are broken on 64-bit gains, so the lower "
-        "feature number wins only when two gains are equal to the last bit; tests for the code that passes the rule and the counts "
-        "to the fits, where the review planted faults that every test passed and that change real reports; exact reports kept out "
-        "of results directories, because the site and the index read neither `tie_rule` nor the input fingerprint; and the branch "
-        "binary's lasso time solved first. With the flag off that binary writes `main`'s reports, but took a median of "
-        f"{s['seconds.lasso.median_ratio_present_main']:.2f} times `main`'s lasso seconds per dataset, and "
-        f"{s['seconds.cart.median_ratio_present_main']:.2f} times its cart seconds, on the run's shared machine (`seconds.tsv`). "
-        "The review measured the lasso slowdown again on an idle machine."
+        f"- **Adopt the exact rule at a later revision.** Needs `EVALUATION_REVISION` raised and all {release} datasets fitted "
+        f"again, the {s['datasets.not_run']} not run included, a decision on gbt candidates with equal gains and different groups, "
+        "and the time cost measured on an idle machine."
     )
     lines.append(
-        f"- **Adopt the exact rule at a later revision.** Needs `EVALUATION_REVISION` raised and all {release} datasets fitted "
-        f"again, the {s['datasets.not_run']} not run included; a decision on gbt candidates with equal gains and different groups; "
-        "the site and the index to show `tie_rule` wherever exact and present reports can be read side by side; and the time cost "
-        "measured on an idle machine. On the run's shared machine the exact rule took "
+        "On the run's shared machine the exact rule took "
         f"{s['seconds.cart.median_ratio_exact_present']:.2f} (cart), {s['seconds.rf.median_ratio_exact_present']:.2f} (rf) and "
-        f"{s['seconds.gbt.median_ratio_exact_present']:.2f} (gbt) times the present rule's seconds, median per dataset."
+        f"{s['seconds.gbt.median_ratio_exact_present']:.2f} (gbt) times the present rule's seconds, median per dataset. With the "
+        "flag off the branch's binary writes `main`'s reports, but took a median of "
+        f"{s['seconds.lasso.median_ratio_present_main']:.2f} times `main`'s lasso seconds per dataset, and "
+        f"{s['seconds.cart.median_ratio_present_main']:.2f} times its cart seconds (`seconds.tsv`). "
+        "The review measured the lasso slowdown again on an idle machine."
     )
     lines.append(
         f"- **A rule that does not depend on feature numbers.** Both rules take the lowest number at {cart_tied} of cart and "
@@ -299,17 +301,23 @@ class Page(unittest.TestCase):
         for line in page_lines():
             self.assertEqual(lines.count(line), 1, line)
 
-    def test_the_code_the_page_cites_is_at_those_lines(self):
-        for path, number, start in CODE:
+    def test_the_code_the_page_names_holds_the_present_rule(self):
+        at = []
+        for path, start in CODE:
             source = (ROOT / path).read_text(encoding="utf-8").splitlines()
-            self.assertTrue(source[number - 1].strip().startswith(start), f"{path}:{number} is not {start!r}")
+            found = [i for i, line in enumerate(source) if line.strip().startswith(start)]
+            self.assertEqual(len(found), 1, f"{path} has {len(found)} lines that start with {start!r}")
+            at.append(found[0])
+        # The closure stands between fit_tree and fit_forest, and the reduction after grow.
+        self.assertTrue(at[0] < at[1] < at[2], at)
+        self.assertTrue(at[3] < at[4], at)
         # Both comparisons are the present rule: the larger gain, and a bit-equal gain to the lower feature.
         tree = (ROOT / "src/learn/tree.rs").read_text(encoding="utf-8").splitlines()
         gbt = (ROOT / "src/learn/gbt.rs").read_text(encoding="utf-8").splitlines()
-        self.assertEqual(tree[CODE[1][1]].strip(), COMPARISON)
-        self.assertEqual(gbt[CODE[4][1]].strip(), COMPARISON)
+        self.assertEqual(tree[at[1] + 1].strip(), COMPARISON)
+        self.assertEqual(gbt[at[4] + 1].strip(), COMPARISON)
         # fit_forest's trees take a drawn feature set, so the same closure decides among them.
-        forest = "\n".join(tree[CODE[2][1] - 1 : CODE[2][1] + 30])
+        forest = "\n".join(tree[at[2] : at[2] + 31])
         self.assertIn("fit_tree(", forest)
         self.assertIn("max_features: Some(max_features)", forest)
         # The index's best learner keeps the last of equal maxima, so a tie goes to the later learner.
@@ -358,7 +366,8 @@ class Wiring(unittest.TestCase):
             m = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(m)
             count += loader.loadTestsFromModule(m).countTestCases()
-        self.assertTrue(f"`tests/tie_rule` {count} |" in (ROOT / "docs" / "ci.md").read_text(encoding="utf-8"),
+        document = (ROOT / "docs" / "ci.md").read_text(encoding="utf-8")
+        self.assertTrue(f"`tests/tie_rule` {count} |" in document or f"`tests/tie_rule` {count}," in document,
                         f"docs/ci.md does not give tests/tie_rule its {count} tests")
 
 
