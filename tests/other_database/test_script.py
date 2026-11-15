@@ -69,12 +69,19 @@ class SyntheticRecord(unittest.TestCase):
 
     def test_cart_cells_by_hand(self):
         r = self.ds[("salmonella_enterica__synthomycin", "cart")]
-        # Every genome right at 0.9 or 0.1: every loss is -ln 0.9, and the bootstrap cannot move.
-        self.assertEqual((r["log_loss"], r["log_loss_lo"], r["log_loss_hi"]), (f"{-math.log(0.9):.4f}",) * 3)
+        # SYNTHETIC: every genome right, R at p 0.50 to 0.79 (0.50 is called resistant) and S at p 0.01 to 0.30.
+        losses = [-math.log(0.5 + 0.01 * i) for i in range(30)] + [-math.log(1 - 0.01 * j) for j in range(1, 31)]
+        self.assertEqual(r["log_loss"], f"{sum(losses) / 60:.4f}")
+        self.assertEqual([r[k] for k in ("TP", "FN", "TN", "FP", "specificity")], ["30", "0", "30", "0", "1.0000"])
         # 30 of 30: the Clopper-Pearson lower bound is 0.025 ** (1 / 30).
         self.assertEqual((r["recall_lo"], r["recall_hi"]), (f"{0.025 ** (1 / 30):.4f}", "1.0000"))
-        self.assertEqual(r["lineage_log_loss"], f"{(-math.log(0.8) - math.log(0.7)) / 2:.4f}")
-        self.assertEqual((r["recall_reading"], r["log_loss_reading"]), ("consistent", "better"))
+        # The lineage split: 19 R at 0.8, 1 R at 0.5 and 20 S at 0.3; recall 1.0 only if 0.5 counts as resistant.
+        self.assertEqual(r["lineage_recall"], "1.0000")
+        self.assertEqual(r["lineage_log_loss"], f"{(-19 * math.log(0.8) - math.log(0.5) - 20 * math.log(0.7)) / 40:.4f}")
+        # Log loss 0.3107 with its interval 0.2671 to 0.3555 around the lineage figure 0.3017.
+        self.assertLess(float(r["log_loss_lo"]), float(r["lineage_log_loss"]))
+        self.assertLess(float(r["lineage_log_loss"]), float(r["log_loss_hi"]))
+        self.assertEqual((r["recall_reading"], r["log_loss_reading"], r["holds"]), ("consistent", "consistent", "yes"))
 
     def test_labels_consolidated(self):
         # SYNTHETIC pilot genomes: R and S (conflict), intermediate only, "not defined" only, and a drug no release holds.

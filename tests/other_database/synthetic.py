@@ -64,7 +64,7 @@ def bioproject(slug, i):
     if slug == PILOT:
         # Two BioProjects tie with 30 genomes each: the lower accession, PRJNA9, is the largest.
         return "PRJNA9" if i % 2 == 0 else "PRJNA10"
-    return "PRJNA100" if i < 24 else f"PRJNA{101 + i % 3}"
+    return "PRJNA100" if i < 24 else f"PRJNA{101 + i % 12}"
 
 
 def scm_calls():
@@ -72,11 +72,18 @@ def scm_calls():
     return [1 if i < 27 else 0 for i in range(30)] + [1 if i < 2 else 0 for i in range(30)]
 
 
+def cart_score(i):
+    """CART's p on scored genome i: 0.50 + 0.01 i for the 30 R, 0.01 (i - 29) for the 30 S."""
+    return f"{0.5 + 0.01 * i:.2f}" if i < 30 else f"{0.01 * (i - 29):.2f}"
+
+
 def lineage(fault):
-    """The release's lineage split: 20 R and 20 S samples; SCM recall 16 of 20 and specificity 18 of 20."""
+    """The release's lineage split: 20 R and 20 S samples; SCM recall 16 of 20 and specificity 18 of 20.
+
+    One CART score of an R sample is 0.5 exactly, which the cutoff calls resistant."""
     resistant = [True] * 20 + [False] * 20
     scm = [1.0 if i < 16 else 0.0 for i in range(20)] + [1.0 if i < 2 else 0.0 for i in range(20)]
-    cart = [0.8] * 20 + [0.3] * 20
+    cart = [0.8] * 19 + [0.5] + [0.3] * 20
     metrics = {"sensitivity": 0.8 if fault != "lineage_metric" else 0.81, "specificity": 0.9}
     return resistant, [
         {"learner": "scm", "scores": scm, "metrics": metrics},
@@ -157,9 +164,9 @@ def make(root, fault=None):
             calls = scm_calls()
             for i, (asm, bs) in enumerate(scored):
                 preds.append({"dataset": ds, "genome": asm, "learner": "scm", "call": "resistant" if calls[i] else "susceptible", "score": "", "report_sha256": digest})
-                # CART: right on every genome, at 0.9 and 0.1, so every loss is -ln(0.9).
+                # CART: right on every genome, R at p 0.50 to 0.79 and S at p 0.01 to 0.30, so the losses differ.
                 preds.append({"dataset": ds, "genome": asm, "learner": "cart", "call": "resistant" if i < 30 else "susceptible",
-                              "score": "0.9" if i < 30 else "0.1", "report_sha256": digest})
+                              "score": cart_score(i), "report_sha256": digest})
                 if slug == PILOT and drug == "synthomycin" and i % 3 == 0:
                     # The lasso on a third of the genomes: 10 R and 10 S, too few for the class line.
                     preds.append({"dataset": ds, "genome": asm, "learner": "lasso", "call": "resistant" if i < 30 else "susceptible",

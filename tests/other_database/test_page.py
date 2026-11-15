@@ -128,17 +128,26 @@ class Page(unittest.TestCase):
         self.assertNotRegex(self.text, r"\bline \d")
 
     def test_number_free_claims(self):
+        """Sentences that carry no number but state a fact of the record, rebuilt from it."""
         species = {r["species"]: r for r in read_tsv(RECORD / "species.tsv")}
-        # "steps D1, D2, D4, F1 and Q2 removed none in any species"
-        for r in species.values():
-            for step in ("D1", "D2", "D4", "F1", "Q2_not_judged", "Q2_fail"):
-                self.assertEqual(r[step], "0", (r["species"], step))
-        # "In S. enterica and C. coli most scored genomes share a BioProject with training genomes."
-        for sp in ("salmonella_enterica", "campylobacter_coli"):
-            self.assertGreater(2 * int(species[sp]["shared_bioproject"]), int(species[sp]["scored"]))
-        # "The pilot's readings other than the plan's rule are exploratory"; the eight's fixed in advance.
-        for r in read_tsv(RECORD / "readings.tsv"):
-            self.assertEqual(r["status"], "exploratory" if r["species"] == builder.PILOT else "fixed in advance")
+        # The funnel steps that removed no isolate in any species, Q2's two parts as one step.
+        zero = []
+        for code, _ in record.STEPS:
+            step = "Q2" if code.startswith("Q2") else code
+            if all(r[code] == "0" for r in species.values()) and step not in zero:
+                zero.append(step)
+            elif any(r[code] not in ("0", "") for r in species.values()) and step in zero:
+                zero.remove(step)
+        self.assertIn(f"steps {builder.joined(zero)} removed none in any species.", self.text)
+        # The species where most scored genomes share a BioProject with training genomes.
+        most = [sp for sp in [builder.PILOT] + builder.EIGHT if 2 * int(species[sp]["shared_bioproject"]) > int(species[sp]["scored"])]
+        self.assertIn(f"- In {builder.joined(builder.short(sp) for sp in most)} most scored genomes share a BioProject with training genomes.", self.lines)
+        # The status of the readings: the pilot's chosen after its results, the eight's fixed by ADDENDUM2.md.
+        status = {part: {r["status"] for r in read_tsv(RECORD / "readings.tsv") if r["part"] == part} for part in ("pilot", "eight")}
+        self.assertEqual(status, {"pilot": {"exploratory"}, "eight": {"fixed in advance"}})
+        self.assertIn("The pilot's readings other than the plan's rule are exploratory: its review chose them after", self.text)
+        self.assertIn("Each reading of the pilot other than the plan's rule is exploratory.", self.text)
+        self.assertIn("`ADDENDUM2.md` fixed readings L, C and D before any of their labels was read.", self.text)
         # "SCM, CART and the lasso are scored; RF and GBT are not"
         settings = {r["key"]: r["value"] for r in read_tsv(RECORD / "settings.tsv")}
         self.assertEqual(settings["learners_scored"], "cart;lasso;scm")
