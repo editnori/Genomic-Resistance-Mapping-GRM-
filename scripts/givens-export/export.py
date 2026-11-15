@@ -53,7 +53,8 @@ EDGE_TYPES = {"is_a", "part_of", "value_of", "input_of", "output_of", "guards", 
 _L, _S = "|".join(LEARNERS), "|".join(SPLITS)
 FIELDS = {
     "index-counts.json": re.compile(r"/(datasets|files|rows|learner_rows|flagged_rows|unflagged_with_no_call|"
-                                    r"rates_compared|mismatches)"),
+                                    r"rates_compared|mismatches|"
+                                    r"labels_from_mic_excluded/(datasets_with_field|datasets_above_zero))"),
     "summary.json": re.compile(rf"/datasets|/per_learner|/per_learner/({_L})/(median_lineage|n_both)|/best/n_both|"
                                r"/no_lineage"),
     "guidance.json": re.compile(rf"/datasets|/rows/({_L}):({_S})/(n|fewer_than_every_genome)"),
@@ -565,7 +566,8 @@ def page(module, barred=frozenset()):
         "",
         f"The page holds {len(nodes)} terms, {len(module['edges'])} links between them and {len(givens)} assumptions. "
         f"Their {len(lines)} rows of counts split into {len(lines) - documents} read from a file and {documents} "
-        f"quoted from a document. In {unmeasured} entries GRM says what it has not counted, after the words Not counted.",
+        f"quoted from a document. In {unmeasured} {'entry' if unmeasured == 1 else 'entries'} GRM says what it has not "
+        "counted, after the words Not counted.",
         "",
         f"A change made to this page by hand fails the check. Change `{module['sources']['spec']}` or a source, then "
         "run the script with `--write`.",
