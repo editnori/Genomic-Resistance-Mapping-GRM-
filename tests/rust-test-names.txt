@@ -308,6 +308,7 @@ src/lib.rs learn::lasso::tests::vibrio_cholerae_fold0_converges_at_every_point
 src/lib.rs learn::lasso::tests::violators_tie_to_the_lowest_column
 src/lib.rs learn::null_refit::tests::a_null_lasso_fold_records_every_points_refit_and_both_arms
 src/lib.rs learn::null_refit::tests::a_record_counts_the_training_genomes_and_names_the_test_genomes
+src/lib.rs learn::null_refit::tests::a_refit_that_fails_names_the_dataset_split_learner_and_fold
 src/lib.rs learn::null_refit::tests::best_round_is_the_last_round_that_lowers_the_loss_by_more_than_1e_9
 src/lib.rs learn::null_refit::tests::each_points_holdout_balanced_accuracy_is_read_on_the_holdout
 src/lib.rs learn::null_refit::tests::the_best_round_arm_keeps_best_round_trees_and_scores_with_them
@@ -518,3 +519,4 @@ tests/foldmask_extended.rs extended_foldmask_vectors [ignored]
 tests/kmer_space_extended.rs multi_k_mixer_bijection_large [ignored]
 tests/kmer_space_extended.rs multi_k_space_vectors
 tests/null_fold_refit.rs the_flag_changes_no_output_and_records_each_null_fold_once
+tests/null_fold_refit_full.rs a_file_that_takes_no_line_stops_the_evaluation_and_the_error_names_the_fold

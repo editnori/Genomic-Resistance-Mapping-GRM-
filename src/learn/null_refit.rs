@@ -5,10 +5,12 @@
 //!
 //! Nothing here changes a report. `grm learn --exp-null-refit FILE` turns it
 //! on for that process; without the flag `enabled` is false and evaluation
-//! runs exactly as before. With it, evaluation still scores every null fold
-//! at its training prevalence, as revision 14 does, and only appends one
-//! JSON line per null fold to FILE. docs/null-fold-refit.md describes the
-//! fallbacks and the plan they serve.
+//! gives the same outputs as before. With it, evaluation still scores every
+//! null fold at its training prevalence, as revision 14 does, and appends
+//! one JSON line per null fold to FILE. A line FILE does not take is an
+//! error that names FILE and the fold, and it stops the evaluation: a
+//! skipped record would bias every count taken from FILE.
+//! docs/null-fold-refit.md describes the fallbacks and the plan they serve.
 //!
 //! The fallbacks redo the production fit's own steps on the fold's training
 //! samples, with the same seed, holdout and screened features:
@@ -27,10 +29,16 @@ use crate::bits::{BitMatrix, Bits};
 use anyhow::{Context, Result};
 use serde::Serialize;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
-static SINK: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
+/// FILE, as `enable` opened it, with its path for error messages.
+struct Sink {
+    path: PathBuf,
+    file: Mutex<std::fs::File>,
+}
+
+static SINK: OnceLock<Sink> = OnceLock::new();
 
 #[cfg(test)]
 thread_local! {
@@ -49,7 +57,11 @@ pub fn enable(path: &Path) -> Result<()> {
         .append(true)
         .open(path)
         .with_context(|| format!("opening {}", path.display()))?;
-    SINK.set(Mutex::new(file))
+    let sink = Sink {
+        path: path.to_path_buf(),
+        file: Mutex::new(file),
+    };
+    SINK.set(sink)
         .map_err(|_| anyhow::anyhow!("the null-fold refit file is already set"))
 }
 
@@ -278,6 +290,11 @@ pub(crate) fn record_fold(
 ) -> Result<()> {
     let test: Vec<usize> = (0..x.cols).filter(|&i| !train.contains(i)).collect();
     let fold = context.outer_fold.expect("a null fold is an outer fold");
+    let key = format!(
+        "{}, {} split, {learner}, outer fold {fold}",
+        context.dataset, context.scheme
+    );
+    let refitting = || format!("refitting the null fold of {key}");
     let rec = NullRefit {
         dataset: context.dataset.to_string(),
         scheme: context.scheme.to_string(),
@@ -286,29 +303,37 @@ pub(crate) fn record_fold(
         train_n: train.count() as usize,
         train_resistant: train.and(y).count() as usize,
         lasso: match learner {
-            "lasso" => Some(lasso_arms(x, y, train, groups, cfg, seed, context, &test)?),
+            "lasso" => Some(
+                lasso_arms(x, y, train, groups, cfg, seed, context, &test)
+                    .with_context(refitting)?,
+            ),
             _ => None,
         },
         gbt: match learner {
-            "gbt" => Some(gbt_arms(
-                x,
-                y,
-                train,
-                groups,
-                tuning_unit(context.scheme),
-                cfg,
-                seed,
-                draws,
-                &test,
-            )?),
+            "gbt" => Some(
+                gbt_arms(
+                    x,
+                    y,
+                    train,
+                    groups,
+                    tuning_unit(context.scheme),
+                    cfg,
+                    seed,
+                    draws,
+                    &test,
+                )
+                .with_context(refitting)?,
+            ),
             _ => None,
         },
         test,
     };
-    write(&rec)
+    write(&rec, &key)
 }
 
-fn write(rec: &NullRefit) -> Result<()> {
+/// Appends `rec` to FILE as one line. When FILE does not take the whole
+/// line the error names FILE and the fold (`key`), and the caller stops.
+fn write(rec: &NullRefit, key: &str) -> Result<()> {
     let mut line = serde_json::to_string(rec)?;
     line.push('\n');
     #[cfg(test)]
@@ -318,10 +343,15 @@ fn write(rec: &NullRefit) -> Result<()> {
     let Some(sink) = SINK.get() else {
         return Ok(());
     };
-    let mut file = sink.lock().expect("the null-fold refit file lock");
-    file.write_all(line.as_bytes())?;
-    file.flush()?;
-    Ok(())
+    let mut file = sink.file.lock().expect("the null-fold refit file lock");
+    file.write_all(line.as_bytes())
+        .and_then(|()| file.flush())
+        .with_context(|| {
+            format!(
+                "appending the null-fold record of {key} to {}",
+                sink.path.display()
+            )
+        })
 }
 
 /// Tests only: keeps `line` when `capture` runs on this thread, and says
@@ -686,5 +716,32 @@ mod tests {
             ..full.clone()
         };
         assert_ne!(pick(&one_more.predict_proba(&x), &test), scores);
+    }
+
+    /// A refit that fails names the dataset, the split, the learner and the
+    /// fold. Here every training genome is in one lineage, so neither
+    /// arm can draw its tuning holdout.
+    #[test]
+    fn a_refit_that_fails_names_the_dataset_split_learner_and_fold() {
+        let (x, y, train, _) = null_lasso_fixture();
+        let one_lineage = vec![0; y.len()];
+        let cfg = config();
+        for learner in ["lasso", "gbt"] {
+            let context = fixture_context("lineage");
+            let (done, lines) = capture(|| {
+                let groups = Some(&one_lineage[..]);
+                record_fold(learner, &x, &y, &train, groups, &cfg, 42, 42, context)
+            });
+            let message = format!("{:#}", done.unwrap_err());
+            let named = format!(
+                "refitting the null fold of fixture__fixturemycin, lineage split, {learner}, outer fold 1: "
+            );
+            assert!(message.starts_with(&named), "{message}");
+            assert!(
+                message.contains("tuning needs at least two training"),
+                "{message}"
+            );
+            assert!(lines.is_empty());
+        }
     }
 }

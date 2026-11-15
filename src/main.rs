@@ -137,7 +137,10 @@ enum Command {
         /// Experiment, off by default (docs/null-fold-refit.md): also refit
         /// every boosting and lasso outer fold whose fit is null under the
         /// fallback settings, and append each one's scores to this JSON-lines
-        /// file. Reports are written exactly as without it.
+        /// file. While the file takes every line, the reports equal those of
+        /// a run without it. A line it does not take ends the learn with an
+        /// error naming the file and the fold, before that dataset's report
+        /// is written.
         #[arg(long)]
         exp_null_refit: Option<PathBuf>,
     },
