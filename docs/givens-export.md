@@ -2,11 +2,11 @@
 
 [Givens](https://github.com/editnori/givens) is a provisional shared browser of the definitions and assumptions of four projects. GRM writes its own part to one file, `reference/givens-export/grm.json`, with `scripts/givens-export/export.py`.
 
-The file covers evaluation terms, the assumptions a report figure rests on and aggregate counts. It changes nothing in GRM's engine, and GRM reads nothing from Givens.
+The file covers evaluation terms, the assumptions a report figure rests on and aggregate counts. It changes nothing in GRM's engine, and GRM reads nothing from Givens. [givens-terms.md](givens-terms.md) shows the same entries as a page to read.
 
 ## Contents
 
-It holds 22 definitions, 24 links between them and 3 assumptions. Its 36 measured lines split into 28 read from a file and 8 quoted from a document. GRM has no count for 2 entries, and they say so.
+It holds 22 definitions, 24 links between them and 3 assumptions. Its 36 measured lines split into 28 read from a file and 8 quoted from a document. It marks 2 entries with what GRM has not counted.
 
 The three assumptions:
 
@@ -96,13 +96,20 @@ python3 -I scripts/givens-export/export.py --write
 python3 -I scripts/givens-export/export.py --check
 ```
 
-The first command writes `reference/givens-export/grm.json` and `SHA256SUMS` beside it. That list holds the file's sha256 on one line, as `sha256sum` prints it, so Givens can store it unchanged. The second command prints nothing and exits 1 unless both files are exactly what the script writes. Run the first again after a change to a quoted sentence, to a summary file or to the spec.
+The first command writes `reference/givens-export/grm.json`, `SHA256SUMS` beside it and the page `docs/givens-terms.md`. The list holds the file's sha256 on one line, as `sha256sum` prints it, so Givens can store it unchanged. The second command prints nothing and exits 1 unless all three are exactly what the script writes. Run the first again after a change to a quoted sentence, to a summary file or to the spec.
+
+## Page
+
+`docs/givens-terms.md` holds the file's terms, links, assumptions and counts in the file's order. The script builds it from the export alone. Its own sentences hold no number beyond the totals of the first paragraph, and it passes the same screen as the file.
+
+The page leaves out the quoted sentences and each sha256, which stay in the file. The spec may not quote the page, because the script writes it.
 
 ## Checks
 
 `tests/givens_export` runs in CI and fits nothing. It fails if:
 
 - the committed file differs from what the script writes, or `SHA256SUMS` differs from the file;
+- the page differs from what the script writes, lacks a term, an assumption, a row or a note of the file, or states a number the file lacks;
 - the file breaks a rule that Givens' own check applies to a module;
 - a count of the export differs from the sentence of `docs/outside-study-results.md` or `docs/release-summary.md` that states it;
 - a line's revision differs from the revision its files name;

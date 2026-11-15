@@ -573,10 +573,10 @@
   ],
   "import_rule": [
     "GRM writes this file with scripts/givens-export/export.py. Givens stores it unchanged and names the GRM commit it copied it from.",
-    "A count is over datasets, learner rows or genomes. The file names no dataset, species or antibiotic.",
+    "A measured line is an aggregate, and its text says what it counts. The file names no dataset, species or antibiotic.",
     "A line with basis file is read from a committed summary file, and the export lists that file's sha256.",
     "A line with basis document is quoted from the repository's text. No committed file rebuilds it unless the line names a suite.",
-    "An entry with unmeasured has no count in GRM. Givens shows it as missing and fills in no number.",
+    "An entry with unmeasured says what GRM has not counted. Givens shows that as missing and fills in no number.",
     "A figure is read with its split, its learner and its evaluation revision. A line of revision 12 is never shown as revision 14's.",
     "GRM reads nothing from Givens."
   ],
