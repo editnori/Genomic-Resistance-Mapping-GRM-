@@ -8,11 +8,12 @@
 // manifest or the corpus file at render time; learner settings and fitted
 // details stay in each dataset's report.
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Corpus, Manifest } from "../data/schema";
 import { datasetTitle, int, limitPct, pct, plural } from "../data/format";
 import { BARS, BARS_SCOPE, barWords } from "../data/metrics";
-import { loadErrorText, useCorpus } from "../data/load";
+import { loadErrorText, useCorpus, useMicBaselines } from "../data/load";
+import { micBaselineSummary, micConstants, type MicBaselineSummary } from "../data/baselines";
 import { EQUAL_SCORING_REVISION, manifestAudit, nullFitWords, panelWords } from "../data/derive/evaluation";
 import { classMinimum } from "../data/derive/overview";
 import { ruleWordingNote } from "../data/derive/dataset";
@@ -289,7 +290,25 @@ const wordingSentence = (manifest: Manifest): string => {
     : ` Read by that wording, over the isolates each learner called, the best learner meets on ${int(w.meets)} of ${plural(w.n, "dataset")} with lineages held out. Overview gives the count for each learner. The reading was added after the results were read.`;
 };
 
-const Scores = ({ manifest }: { manifest: Manifest }) => (
+/** The 0.90 counts beside the constant, labelled as a description read
+ *  after the scores; empty without the baselines files. */
+export const constantAt90Sentence = (b: MicBaselineSummary | null): string =>
+  b === null || b.covered === 0
+    ? ""
+    : ` Read after the scores, as a description: on ${b.covered === b.n ? `the ${int(b.n)} datasets with an MIC model` : `the ${int(b.covered)} of ${int(b.n)} datasets with an MIC model that have a baselines file`}, the constant reaches 90% on ${int(b.constantAt90)}, the model on ${int(b.modelAt90)}, and both on ${int(b.bothAt90)}. 90% is an adapted research screen, so a constant can reach it with no genome read.`;
+
+/** The baselines summary for the Methods page, once the files are read. */
+const useMicBaselineSummary = (manifest: Manifest): MicBaselineSummary | null => {
+  const files = useMicBaselines(manifest);
+  return useMemo(
+    () => (files.status === "ready" ? micBaselineSummary(manifest.datasets, micConstants(manifest.datasets, files.data, manifest.evaluation_revision)) : null),
+    [files, manifest],
+  );
+};
+
+const Scores = ({ manifest }: { manifest: Manifest }) => {
+  const baselines = useMicBaselineSummary(manifest);
+  return (
   <MethodsSection id="m-scores" n={3} title="How to read scores">
     <P>
       Every score compares a model&apos;s calls with the lab&apos;s calls on genomes the model never trained on. A call is right when it matches the lab. GRM counts the two
@@ -334,6 +353,23 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
         2009 guidance for growth-based susceptibility test systems, which asks for more than 89.9%; it is a research screen here, with the limits of VME and ME above.
         Calls from the predicted MIC use each training fold&apos;s own empirical threshold and are scored against the reported resistant and susceptible labels.
       </Def>
+      <Def term="Constant MIC" plain="A prediction that reads no genome: every test isolate of a fold gets one MIC, taken from that fold's training isolates.">
+        For each dataset with an MIC model, <code>grm baselines</code> rebuilds the model&apos;s MIC folds: stratified random folds of the isolates with an MIC, drawn with the
+        report&apos;s own fold count and seed. They differ from the random split&apos;s folds and hold no lineage out. The rebuilt folds count as confirmed when the groups of
+        isolates with bit-identical held-out predictions lie inside one fold each, as they do on the report&apos;s own folds and not on a wrong rebuild. Correct folds can also
+        give one value to isolates of two folds, so a dataset with some groups spanning folds is marked unconfirmed, and one whose spanning groups outnumber the groups
+        inside one fold gets no baselines file. Each fold&apos;s exact training MICs give two constants, their lower median and
+        their mode (the value with the highest count, a tie going to the lower), and each is scored on the fold&apos;s exact test MICs, the isolates the model is scored on.
+        The model itself starts every isolate at a constant of its fit
+        part, the upper median of its exact MICs, before its trees adjust it. An essential-agreement figure shows how far the model is above a no-genome constant only when the
+        two are set side by side on the same isolates and folds.{constantAt90Sentence(baselines)}
+      </Def>
+      <Def term="Lineage identity" plain="A prediction that reads only which lineage a genome belongs to.">
+        In each of a split&apos;s own folds, a test genome scores the resistant share of its lineage among the fold&apos;s training genomes, or the resistant share of the fold&apos;s
+        training genomes when none of them shares its lineage, and the scores are pooled and called at 0.5 as a learner&apos;s are. Set beside a learner&apos;s random-split score
+        on the same genomes and folds, it shows how far the learner is above what lineage membership alone reaches; it does not show what the learner reads. With lineages
+        held out no test genome&apos;s lineage is in training, so it has nothing of the lineage to read there.
+      </Def>
       <Def term="AUROC" plain="How well a model's scores rank resistant genomes above susceptible ones: 0.5 is chance, and 1 means every resistant genome ranks above every susceptible one.">
         The area under the receiver operating characteristic (ROC) curve, printed to three decimals in each dataset&apos;s learner table. A dash means the report has no
         AUROC for that learner.
@@ -341,12 +377,14 @@ const Scores = ({ manifest }: { manifest: Manifest }) => (
       <Def term="What each Overview figure counts" plain="Which datasets each Overview figure includes. A median is the middle value when the datasets are lined up by score.">
         The lineage figure draws datasets with both splits. Each row of the learner table counts the datasets where that learner has a score on both splits. The bar counts take the
         datasets where the best learner has both error rates with lineages held out. The known-gene figure draws datasets with a rule and a lineage-held-out result; the PCR panel,
-        datasets with that panel and a best learner; the MIC figure, datasets with an MIC model. Datasets with no best learner are left out of every median of the best learner, and
+        datasets with that panel and a best learner; the MIC figure, datasets with an MIC model, and its constant, those of them in the baselines summary pinned to the bytes of
+        this index. Datasets with no best learner are left out of every median of the best learner, and
         each figure states what it leaves out.
       </Def>
     </Defs>
   </MethodsSection>
-);
+  );
+};
 
 // ---- 4 scope, limitations and audit -------------------------------------------------------
 

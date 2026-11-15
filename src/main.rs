@@ -131,11 +131,21 @@ enum Command {
         /// (docs/fold-file.md). Writes <fold-out>/<dataset>.<scheme>.json,
         /// which records the file's SHA-256, and no report. Takes one
         /// species; --force replaces an existing result. It runs at the
-        /// release's seeds, so --seed and --learner-seed are refused with it.
+        /// release's seeds and tie rule, so --seed, --learner-seed and the
+        /// --exp-tie-* options are refused with it. --exp-null-refit is
+        /// refused with it too: it records the folds grm learn draws.
         #[arg(
             long,
             requires = "fold_out",
-            conflicts_with_all = ["only", "seed", "learner_seed"]
+            conflicts_with_all = [
+                "only",
+                "seed",
+                "learner_seed",
+                "exp_tie_rule",
+                "exp_tie_trace",
+                "exp_tie_out",
+                "exp_null_refit",
+            ]
         )]
         fold_file: Option<PathBuf>,
         /// Directory for the --fold-file result.
@@ -156,6 +166,40 @@ enum Command {
         /// Reports go under draws/seed-<seed>-learner-<learner-seed>/.
         #[arg(long)]
         learner_seed: Option<u64>,
+        /// Experiment, off by default: how the decision tree, the forest and
+        /// the boosted trees break ties between equally good features
+        /// (`grm::learn::tie`). `float` is production's rule. `exact` makes
+        /// the stated tie rule true for cart and rf; for gbt, only between
+        /// splits with the same two groups. A report fitted with `exact` says
+        /// so in `eval_config.tie_rule` and its input fingerprint hashes it,
+        /// so `grm learn` refits it and the metric audit flags it. The site
+        /// reads neither field: `grm report` stops at such a report, and at
+        /// the release's seeds an exact run needs --exp-tie-out.
+        #[arg(long, value_enum, default_value_t = TieRuleArg::Float)]
+        exp_tie_rule: TieRuleArg,
+        /// Experiment: write one JSON line per tree-learner fit to this file,
+        /// with its nodes searched, the nodes where the two tie rules pick
+        /// different features, and a digest of each tree. The fits are the
+        /// same as without it.
+        #[arg(long)]
+        exp_tie_trace: Option<PathBuf>,
+        /// Experiment: write this run's reports to this folder in place of
+        /// results/ or the draw's folder. An --exp-tie-rule exact run at the
+        /// release's seeds needs it: it refuses results/, the folder
+        /// production writes and `grm report` indexes.
+        #[arg(long)]
+        exp_tie_out: Option<PathBuf>,
+        /// Experiment, off by default (docs/null-fold-refit.md): also refit
+        /// every boosting and lasso outer fold whose fit is null under the
+        /// fallback settings, and append each one's scores to this JSON-lines
+        /// file. While the file takes every line, the reports equal those of
+        /// a run without it. A line it does not take ends the learn with an
+        /// error naming the file and the fold, before that dataset's report
+        /// is written. Refused beside --fold-file, and beside the --exp-tie-*
+        /// options: its refits take production's tie rule and would add
+        /// fits to a tie trace.
+        #[arg(long, conflicts_with_all = ["exp_tie_rule", "exp_tie_trace", "exp_tie_out"])]
+        exp_null_refit: Option<PathBuf>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -296,6 +340,17 @@ enum Command {
     /// that index.json lists, each pinned to its report's SHA-256 and counts.
     /// No report file changes.
     Intervals,
+    /// Write what two predictors that read no genome reach on each dataset
+    /// report's own folds under <data>/report/baselines/, one file per
+    /// dataset report that index.json lists, each pinned to its report's
+    /// SHA-256 and evaluation revision: constants at the training folds'
+    /// median and mode MIC beside the MIC model, and lineage identity beside
+    /// each split; and <data>/report/baselines.json for the pages that show
+    /// many datasets, pinned to index.json's SHA-256. A dataset whose rebuilt
+    /// MIC folds contradict its report is refused alone, and the command
+    /// then exits nonzero. Run it after `grm report`. Fits nothing; no report
+    /// file changes.
+    Baselines,
     /// Write each indexed dataset report's provenance under
     /// <data>/report/provenance/: its samples' BV-BRC dates (`grm fetch
     /// genome-dates`) and record details (curated/provenance.jsonl), pinned to
@@ -407,12 +462,27 @@ fn run(cli: Cli) -> Result<()> {
             screened_features,
             seed,
             learner_seed,
+            exp_tie_rule,
+            exp_tie_trace,
+            exp_tie_out,
+            exp_null_refit,
             ..
         } => {
-            let cfg = learn_config(screened_features, seed, learner_seed);
+            let cfg = learn_config(screened_features, seed, learner_seed, exp_tie_rule.into());
+            // Every species is checked before the first fit or trace line.
+            for s in &species {
+                refuse_exact_in_results(&layout, s, &cfg, exp_tie_out.as_deref())?;
+            }
+            if let Some(path) = &exp_tie_trace {
+                grm::learn::tie::start_trace(path)
+                    .with_context(|| format!("create {}", path.display()))?;
+            }
+            if let Some(path) = &exp_null_refit {
+                grm::learn::null_refit::enable(path)?;
+            }
             species
                 .iter()
-                .try_for_each(|s| learn(&layout, s, &only, force, &cfg))
+                .try_for_each(|s| learn_in(&layout, s, &only, force, &cfg, exp_tie_out.as_deref()))
         }
         Command::Pipeline {
             species,
@@ -430,7 +500,7 @@ fn run(cli: Cli) -> Result<()> {
                 species
             };
             // The pipeline is the release's command: it always draws at the
-            // release's seed.
+            // release's seed and breaks ties by production's rule.
             let cfg = grm::learn::eval::EvalConfig {
                 screened_features,
                 ..Default::default()
@@ -548,6 +618,17 @@ fn run(cli: Cli) -> Result<()> {
             eprintln!("intervals written for {n} dataset reports");
             Ok(())
         }
+        Command::Baselines => {
+            let w = grm::baselines::write(&layout.root.join("report"))?;
+            for r in &w.refused {
+                eprintln!("{r}");
+            }
+            eprintln!(
+                "baselines written for {} dataset reports: {} with an MIC model, {} of them with folds their held-out predictions confirm; {} exact-MIC test isolates on {} datasets have a k-mer-identical copy in their training fold",
+                w.files, w.mic, w.confirmed, w.copies, w.copy_datasets
+            );
+            w.outcome()
+        }
         Command::Provenance { check: false } => {
             let n = grm::provenance::write(&layout)?;
             eprintln!("provenance written for {n} dataset reports");
@@ -582,16 +663,18 @@ const DEFAULT_SCREENED_FEATURES: usize = 4000;
 const RELEASE_SEED: u64 = 42;
 
 /// The evaluation `grm learn` runs: the release's settings, with the
-/// screening budget and the seeds its flags give.
+/// screening budget, the seeds and the tie rule its flags give.
 fn learn_config(
     screened_features: usize,
     seed: u64,
     learner_seed: Option<u64>,
+    tie_rule: grm::learn::tie::TieRule,
 ) -> grm::learn::eval::EvalConfig {
     grm::learn::eval::EvalConfig {
         screened_features,
         seed,
         learner_seed,
+        tie_rule,
         ..Default::default()
     }
 }
@@ -738,10 +821,86 @@ fn learn(
     force: bool,
     cfg: &grm::learn::eval::EvalConfig,
 ) -> Result<()> {
+    learn_in(layout, slug, only, force, cfg, None)
+}
+
+/// `learn`, with the reports in `out` when `grm learn --exp-tie-out` names
+/// it. That run ends with a line of its own, which does not begin with the
+/// release line `scripts/metric-audit/audit.py` reads.
+fn learn_in(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &grm::learn::eval::EvalConfig,
+    out: Option<&std::path::Path>,
+) -> Result<()> {
     grm::species::ensure_selection_counted(layout, slug)?;
-    let written = grm::analysis::analyze_species(layout, slug, only, force, cfg)?;
-    eprintln!("{}", learn_end_line(layout, slug, written.len(), cfg));
+    let line = match out {
+        None => {
+            let written = grm::analysis::analyze_species(layout, slug, only, force, cfg)?;
+            learn_end_line(layout, slug, written.len(), cfg)
+        }
+        Some(dir) => {
+            let written = grm::analysis::analyze_species_in(layout, slug, only, force, cfg, dir)?;
+            format!(
+                "{slug}: {} experiment reports written to {}",
+                written.len(),
+                dir.display()
+            )
+        }
+    };
+    eprintln!("{line}");
     Ok(())
+}
+
+/// An `--exp-tie-rule exact` run stops before any fit when its reports would
+/// go to `results/`, the folder production reports are written to and
+/// `grm report` indexes: by default at the release's seeds, or because
+/// `--exp-tie-out` names that folder.
+fn refuse_exact_in_results(
+    layout: &Layout,
+    slug: &str,
+    cfg: &grm::learn::eval::EvalConfig,
+    out: Option<&std::path::Path>,
+) -> Result<()> {
+    if cfg.tie_rule.is_float() {
+        return Ok(());
+    }
+    let results = layout.results_dir(slug);
+    let dir = out.map_or_else(|| grm::analysis::reports_dir(layout, slug, cfg), Into::into);
+    let same = resolved(&dir) == resolved(&results);
+    anyhow::ensure!(
+        !same,
+        "--exp-tie-rule exact would write {slug}'s reports to {}, the folder production reports are written to and `grm report` indexes; name another folder with --exp-tie-out DIR",
+        results.display()
+    );
+    Ok(())
+}
+
+/// `path` made absolute, each part that exists resolved through the file
+/// system, and a `..` after a missing part taken off in the text. Two
+/// spellings of one folder then compare equal before the folder exists,
+/// when `canonicalize` has nothing to resolve.
+fn resolved(path: &std::path::Path) -> PathBuf {
+    let absolute = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
+    let mut out = PathBuf::new();
+    let mut exists = true;
+    for part in absolute.components() {
+        if !exists && part == std::path::Component::ParentDir {
+            out.pop();
+            exists = out.exists();
+            continue;
+        }
+        out.push(part);
+        if exists {
+            match std::fs::canonicalize(&out) {
+                Ok(real) => out = real,
+                Err(_) => exists = false,
+            }
+        }
+    }
+    out
 }
 
 /// The line `grm learn` ends a species with. A run that writes `results/`
@@ -948,6 +1107,21 @@ impl From<PairingArg> for grm::ablate::arm::Pairing {
             PairingArg::SamePlan => Self::SamePlan,
             PairingArg::K31Groups => Self::K31Groups,
             PairingArg::CommonOuterTestSetBalanced => Self::CommonOuterTestSetBalanced,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+enum TieRuleArg {
+    Float,
+    Exact,
+}
+
+impl From<TieRuleArg> for grm::learn::tie::TieRule {
+    fn from(t: TieRuleArg) -> Self {
+        match t {
+            TieRuleArg::Float => Self::Float,
+            TieRuleArg::Exact => Self::Exact,
         }
     }
 }
@@ -2318,6 +2492,8 @@ mod tests {
         ]);
         let Command::Learn {
             screened_features,
+            exp_tie_rule,
+            exp_tie_trace,
             fold_file,
             fold_out,
             ..
@@ -2326,6 +2502,14 @@ mod tests {
             panic!("parsed another command");
         };
         assert_eq!(screened_features, 1000);
+        // The tie-rule experiment is off unless asked for.
+        assert_eq!((exp_tie_rule, exp_tie_trace), (TieRuleArg::Float, None));
+        let learn =
+            Cli::try_parse_from(["grm", "learn", "--species", "s", "--exp-tie-rule", "exact"]);
+        let Command::Learn { exp_tie_rule, .. } = learn.unwrap().command else {
+            panic!("parsed another command");
+        };
+        assert_eq!(exp_tie_rule, TieRuleArg::Exact);
         // Without --fold-file the command is the one it was.
         assert_eq!((fold_file, fold_out), (None, None));
     }
@@ -2363,6 +2547,17 @@ mod tests {
             ][..],
         ] {
             assert!(parse(bad).is_err(), "{bad:?}");
+        }
+        // A fold file runs at production's tie rule: the experiment's
+        // options are refused beside it, `float` named explicitly too.
+        for extra in [
+            &["--exp-tie-rule", "exact"][..],
+            &["--exp-tie-rule", "float"][..],
+            &["--exp-tie-trace", "t.jsonl"][..],
+            &["--exp-tie-out", "x"][..],
+        ] {
+            let args = [&["--fold-file", "f.json", "--fold-out", "o"][..], extra].concat();
+            assert!(parse(&args).is_err(), "{extra:?}");
         }
         // The file names one dataset, so a second species is refused before
         // anything is read.
@@ -2425,6 +2620,78 @@ mod tests {
         );
     }
 
+    /// The null-fold experiment records the folds `grm learn` draws, so the
+    /// parser refuses `--exp-null-refit` beside `--fold-file`, before FILE is
+    /// opened, in either order. Without `--fold-file` the flag parses as it
+    /// did.
+    #[test]
+    fn learn_refuses_the_null_fold_refit_beside_a_fold_file() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let refit = ["--exp-null-refit", "r.jsonl"];
+        let fold = ["--fold-file", "f.json", "--fold-out", "o"];
+        for bad in [
+            [&refit[..], &fold[..]].concat(),
+            [&fold[..], &refit[..]].concat(),
+        ] {
+            let error = parse(&bad)
+                .err()
+                .unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(
+                error.kind(),
+                clap::error::ErrorKind::ArgumentConflict,
+                "{bad:?}"
+            );
+            let message = error.to_string();
+            assert!(
+                message.contains("--exp-null-refit") && message.contains("--fold-file"),
+                "{message}"
+            );
+        }
+        let Command::Learn {
+            fold_file,
+            exp_null_refit,
+            ..
+        } = parse(&refit).unwrap().command
+        else {
+            panic!("parsed another command");
+        };
+        assert_eq!((fold_file, exp_null_refit), (None, Some("r.jsonl".into())));
+    }
+
+    /// The null-fold experiment fits its fallbacks under production's tie
+    /// rule, and those fits would add lines to a tie trace, so the parser
+    /// refuses `--exp-null-refit` beside each option of the tie rule
+    /// experiment, in either order, `float` named explicitly too.
+    #[test]
+    fn learn_refuses_the_null_fold_refit_beside_the_tie_rule_experiment() {
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            Cli::try_parse_from(all)
+        };
+        let refit = ["--exp-null-refit", "r.jsonl"];
+        for tie in [
+            &["--exp-tie-rule", "exact"][..],
+            &["--exp-tie-rule", "float"][..],
+            &["--exp-tie-trace", "t.jsonl"][..],
+            &["--exp-tie-out", "x"][..],
+        ] {
+            for bad in [[&refit[..], tie].concat(), [tie, &refit[..]].concat()] {
+                let error = parse(&bad)
+                    .err()
+                    .unwrap_or_else(|| panic!("{bad:?} parsed"));
+                assert_eq!(
+                    error.kind(),
+                    clap::error::ErrorKind::ArgumentConflict,
+                    "{bad:?}"
+                );
+                assert!(error.to_string().contains("--exp-null-refit"), "{bad:?}");
+            }
+        }
+    }
+
     /// `grm learn` draws at the release's seed unless told otherwise, and
     /// `grm pipeline`, the release's command, takes no seed at all.
     #[test]
@@ -2468,7 +2735,7 @@ mod tests {
     fn learn_ends_with_the_release_line_and_a_draw_with_a_line_of_its_own() {
         let layout = Layout::new("root");
         let line = |screened_features, seed, learner_seed| {
-            let cfg = learn_config(screened_features, seed, learner_seed);
+            let cfg = learn_config(screened_features, seed, learner_seed, Default::default());
             learn_end_line(&layout, "fixture_species", 3, &cfg)
         };
         let release = "fixture_species: 3 dataset reports written";
@@ -2496,12 +2763,19 @@ mod tests {
                 screened_features,
                 seed,
                 learner_seed,
+                exp_tie_rule,
                 ..
             } = Cli::try_parse_from(all).unwrap().command
             else {
                 panic!("parsed another command");
             };
-            serde_json::to_value(learn_config(screened_features, seed, learner_seed)).unwrap()
+            serde_json::to_value(learn_config(
+                screened_features,
+                seed,
+                learner_seed,
+                exp_tie_rule.into(),
+            ))
+            .unwrap()
         };
         let release = || EvalConfig::default();
         let expected = |cfg: EvalConfig| serde_json::to_value(cfg).unwrap();
@@ -2536,6 +2810,15 @@ mod tests {
                 ..release()
             })
         );
+        assert_eq!(
+            config(&["--exp-tie-rule", "exact", "--seed", "43"]),
+            expected(EvalConfig {
+                seed: 43,
+                tie_rule: grm::learn::tie::TieRule::Exact,
+                ..release()
+            })
+        );
+        assert_eq!(config(&["--exp-tie-rule", "float"]), expected(release()));
     }
 
     /// The pipeline's stages follow `--k`: counts, structure and matrix built
@@ -2921,6 +3204,97 @@ mod tests {
         .unwrap();
         assert_eq!(result["eval_config"]["screened_features"], 7);
         assert_eq!(result["counts"]["tested"], 60);
+    }
+
+    /// `grm learn --exp-tie-rule exact` through the command's own path. At
+    /// the release's seeds it would write to results/, so it stops before
+    /// any fit and names --exp-tie-out; naming results/ itself stops it too.
+    /// With another folder the report lands there and records the rule the
+    /// fits ran under, and results/ is not written. A run without the flag
+    /// still writes results/ with no tie rule recorded.
+    #[test]
+    fn an_exact_learn_refuses_results_and_writes_the_rule_to_the_folder_it_names() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, _) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap()).map_err(|e| format!("{e:#}"))
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        let file = format!("{SLUG}__fixturemycin.json");
+        let results = layout.results_dir(SLUG);
+        let exact = ["learn", "--species", SLUG, "--exp-tie-rule", "exact"];
+        let err = grm(&exact).unwrap_err();
+        assert_eq!(
+            err,
+            format!(
+                "--exp-tie-rule exact would write {SLUG}'s reports to {}, the folder production reports are written to and `grm report` indexes; name another folder with --exp-tie-out DIR",
+                results.display()
+            )
+        );
+        assert!(!results.exists());
+        // results/ is not made yet, and another spelling of it is refused all
+        // the same: through a folder that is missing, and through a link.
+        let species = layout.species_dir(SLUG);
+        let mut spellings = vec![species.join("missing").join("..").join("results")];
+        #[cfg(unix)]
+        {
+            let link = dir.path().join("link");
+            std::os::unix::fs::symlink(&species, &link).unwrap();
+            spellings.push(link.join("results"));
+        }
+        for spelling in spellings {
+            let named = [&exact[..], &["--exp-tie-out", spelling.to_str().unwrap()]].concat();
+            assert!(grm(&named).unwrap_err().contains("--exp-tie-out DIR"));
+            assert!(!results.exists() && !species.join("missing").exists());
+        }
+        std::fs::create_dir_all(&results).unwrap();
+        let named = [&exact[..], &["--exp-tie-out", results.to_str().unwrap()]].concat();
+        assert!(grm(&named).unwrap_err().contains("--exp-tie-out DIR"));
+        let out = dir.path().join("exact");
+        let named = [&exact[..], &["--exp-tie-out", out.to_str().unwrap()]].concat();
+        grm(&named).unwrap();
+        let read = |p: std::path::PathBuf| -> serde_json::Value {
+            serde_json::from_slice(&std::fs::read(p).unwrap()).unwrap()
+        };
+        assert_eq!(read(out.join(&file))["eval_config"]["tie_rule"], "exact");
+        assert!(!results.join(&file).exists());
+        grm(&["learn", "--species", SLUG]).unwrap();
+        let production = read(results.join(&file));
+        assert!(production["eval_config"].get("tie_rule").is_none());
+        assert_ne!(
+            production["input_fingerprint"],
+            read(out.join(&file))["input_fingerprint"]
+        );
+    }
+
+    /// From the review of pull request 128: with a relative --data and
+    /// results/ not yet made, an absolute --exp-tie-out naming results/
+    /// passed the guard, since the two spellings differ and neither folder
+    /// could be resolved. The guard now compares the folders themselves.
+    #[test]
+    fn an_exact_learn_refuses_results_under_another_spelling_before_it_exists() {
+        let layout = Layout::new("no-such-data-root");
+        let cfg = grm::learn::eval::EvalConfig {
+            tie_rule: grm::learn::tie::TieRule::Exact,
+            seed: 7,
+            ..Default::default()
+        };
+        let results = std::env::current_dir()
+            .unwrap()
+            .join(layout.results_dir(SLUG));
+        assert!(!results.exists());
+        let refused = |out: &Path| refuse_exact_in_results(&layout, SLUG, &cfg, Some(out)).is_err();
+        assert!(refused(&results));
+        assert!(refused(&results.join("..").join("results")));
+        assert!(refused(&layout.results_dir(SLUG)));
+        assert!(!refused(&results.with_file_name("exact")));
+        // At a seed of its own the run writes to draws/, which the guard
+        // lets through with no folder named.
+        refuse_exact_in_results(&layout, SLUG, &cfg, None).unwrap();
     }
 
     /// The acceptance check of docs/prediction-contract.md: `grm predict`,

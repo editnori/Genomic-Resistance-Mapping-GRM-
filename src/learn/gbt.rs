@@ -25,8 +25,16 @@
 //! a defect (confirmed 5 Nov 2026, DECISIONS X1). The eval.rs tests
 //! `a_boosted_model_that_keeps_no_tree_is_a_null_fit_without_a_call` and
 //! `null_fits_make_no_call_while_fitted_half_scores_are_calls` pin it.
+//!
+//! Among candidates of equal 64-bit gain a node splits on the lowest-numbered
+//! feature. `TieRule::Exact`, an experiment that is off by default, moves a
+//! split only to a lower feature with the same two groups: the
+//! lowest-numbered candidate that divides the node's samples as the pick
+//! does. Candidates with equal gains and different groups still follow
+//! rounding (`tie`).
 
 use super::sample_indices;
+use super::tie::{self, Tally, TieRule};
 use crate::bits::{BitMatrix, Bits};
 use crate::curate::Censor;
 use rand::SeedableRng;
@@ -57,6 +65,10 @@ pub struct GbtParams {
     /// and the outer fold, so a recorded config leaves it out.
     #[serde(skip)]
     pub seed: u64,
+    /// Evaluation sets this per fit from `EvalConfig::tie_rule`, so a
+    /// recorded config leaves it out.
+    #[serde(skip)]
+    pub tie: TieRule,
 }
 
 impl Default for GbtParams {
@@ -70,6 +82,7 @@ impl Default for GbtParams {
             colsample: 0.5,
             patience: 25,
             seed: 23,
+            tie: TieRule::Float,
         }
     }
 }
@@ -97,6 +110,19 @@ pub struct Gbt {
 }
 
 impl GTree {
+    /// FNV-1a digest of every node's split, children, value and gain.
+    pub fn digest(&self) -> String {
+        tie::digest(self.nodes.iter().flat_map(|n| {
+            [
+                n.feature.map_or(u64::MAX, u64::from),
+                u64::from(n.absent),
+                u64::from(n.present),
+                n.value.to_bits(),
+                n.gain.to_bits(),
+            ]
+        }))
+    }
+
     fn add_to(&self, x: &BitMatrix, out: &mut [f64]) {
         let mut stack = vec![(0usize, Bits::ones(x.cols))];
         while let Some((id, mask)) = stack.pop() {
@@ -225,7 +251,17 @@ fn masked_sums(mask: &[u64], row: &[u64], grad: &Grad) -> (f64, f64) {
     (gs, hs)
 }
 
-fn grow(x: &BitMatrix, fit: &Bits, grad: &Grad, candidates: &[u32], p: &GbtParams) -> GTree {
+/// One tree. When `traced`, every searched node also finds the exact rule's
+/// pick and counts it in `tally`; the split follows `p.tie`.
+fn grow(
+    x: &BitMatrix,
+    fit: &Bits,
+    grad: &Grad,
+    candidates: &[u32],
+    p: &GbtParams,
+    traced: bool,
+    tally: &mut Tally,
+) -> GTree {
     let mut nodes = Vec::new();
     let mut stack = vec![(0usize, fit.clone(), 0u32)];
     nodes.push(GNode {
@@ -263,6 +299,32 @@ fn grow(x: &BitMatrix, fit: &Bits, grad: &Grad, candidates: &[u32], p: &GbtParam
                     b
                 }
             });
+        let best = if p.tie.is_float() && !traced {
+            best
+        } else {
+            let lowest = best.map(|(_, f)| {
+                tie::lowest_same_partition(&mask, |g| x.row(g as usize), candidates, f)
+            });
+            if traced {
+                tally.searched += 1;
+                tally.differ_partition += (lowest != best.map(|b| b.1)) as u64;
+            }
+            // The move is decided on the two groups alone. A lower feature
+            // with the same groups has the same child sums in exact
+            // arithmetic, so it meets the floors above exactly when the pick
+            // does, and it is taken even where its rounded sums fell short.
+            // A node with no pick stays whole under both rules.
+            match (p.tie, best, lowest) {
+                (TieRule::Exact, Some((_, f)), Some(g)) if g != f => {
+                    let (gl, hl) = masked_sums(mask.words(), x.row(g as usize), grad);
+                    let (gr, hr) = (gt - gl, ht - hl);
+                    let gain = 0.5
+                        * (gl * gl / (hl + p.lambda) + gr * gr / (hr + p.lambda) - parent_score);
+                    Some((gain, g))
+                }
+                _ => best,
+            }
+        };
         let Some((gain, f)) = best else { continue };
         let row = x.row(f as usize);
         let absent = nodes.len();
@@ -323,6 +385,22 @@ pub fn fit(
     features: &[u32],
     params: &GbtParams,
 ) -> Gbt {
+    fit_traced(x, obj, fit_mask, valid, features, params, true).0
+}
+
+/// `fit`, with the validation loss of the unboosted prior and after each
+/// round. With `early_stop` false, the null-fold experiment's setting
+/// (`learn::null_refit`, off by default), it grows every one of
+/// `params.rounds` trees and keeps them all; `fit` always stops early.
+pub(crate) fn fit_traced(
+    x: &BitMatrix,
+    obj: &Objective,
+    fit_mask: &Bits,
+    valid: &Bits,
+    features: &[u32],
+    params: &GbtParams,
+    early_stop: bool,
+) -> (Gbt, Vec<f64>) {
     let weight = sample_weights(obj, fit_mask);
     let base = match obj {
         Objective::Logistic { .. } => 0.0, // balanced weights put the prior at 1:1
@@ -340,33 +418,75 @@ pub fn fit(
     let mut rng = ChaCha8Rng::seed_from_u64(params.seed);
     let mut trees = Vec::new();
     let (mut best_loss, mut best_len, mut since_best) = (loss(obj, &f, valid, &weight), 0, 0);
+    let mut trace = vec![best_loss];
     let per_tree = ((features.len() as f64 * params.colsample).ceil() as usize).max(1);
+    let traced = tie::tracing();
+    let mut tally = Tally::default();
+    let mut grown = 0;
 
     for _ in 0..params.rounds {
         let grad = gradients(obj, &f, &weight);
         let pick = sample_indices(features.len(), per_tree, &mut rng);
         let candidates: Vec<u32> = pick.into_iter().map(|i| features[i as usize]).collect();
-        let tree = grow(x, fit_mask, &grad, &candidates, params);
+        let tree = grow(x, fit_mask, &grad, &candidates, params, traced, &mut tally);
+        grown += 1;
         tree.add_to(x, &mut f);
         trees.push(tree);
         let l = loss(obj, &f, valid, &weight);
+        trace.push(l);
         if l < best_loss - 1e-9 {
             best_loss = l;
             best_len = trees.len();
             since_best = 0;
         } else {
             since_best += 1;
-            if since_best >= params.patience {
+            if early_stop && since_best >= params.patience {
                 break;
             }
         }
     }
-    trees.truncate(best_len);
-    Gbt {
-        base,
-        trees,
-        logistic: matches!(obj, Objective::Logistic { .. }),
+    if early_stop {
+        trees.truncate(best_len);
     }
+    if traced {
+        tie::record(&tie::FitRecord {
+            learner: "gbt",
+            objective: Some(match obj {
+                Objective::Logistic { .. } => "logistic",
+                Objective::Censored { .. } => "censored",
+            }),
+            rule: params.tie,
+            seed: params.seed,
+            fit_samples: fit_mask.count() as usize,
+            max_depth: params.max_depth,
+            rounds: Some(grown),
+            trees: trees.iter().map(GTree::digest).collect(),
+            tally,
+        });
+    }
+    (
+        Gbt {
+            base,
+            trees,
+            logistic: matches!(obj, Objective::Logistic { .. }),
+        },
+        trace,
+    )
+}
+
+/// The number of leading trees early stopping with no patience limit keeps,
+/// from a `fit_traced` loss trace: the last round that lowered the
+/// validation loss by more than 1e-9 below every earlier one, as `fit` does,
+/// or 0 when none did.
+pub(crate) fn best_round(trace: &[f64]) -> usize {
+    let (mut best_loss, mut best_len) = (trace[0], 0);
+    for (round, &l) in trace.iter().enumerate().skip(1) {
+        if l < best_loss - 1e-9 {
+            best_loss = l;
+            best_len = round;
+        }
+    }
+    best_len
 }
 
 #[cfg(test)]
@@ -495,5 +615,229 @@ mod tests {
             "non-carrier prediction {} should sit at or under its bound",
             pred[1]
         );
+    }
+
+    /// Synthetic gradients (0.1, 0.1, 0.1, -0.1) and unit hessians on four
+    /// fitting samples. Feature 0 is on samples 0 and 1, feature 1 on samples
+    /// 2 and 3: the same two groups. Their 64-bit gains are
+    /// 0.002666666666666666 and 0.002666666666666667 (`scripts/find_gbt_ties.py`
+    /// of lane tierule). Feature 2, on sample 0 alone, divides them otherwise
+    /// and has no gain. Sample 4 carries features 0 and 1 and is not fitted.
+    fn mirrored_gradients() -> (BitMatrix, Grad) {
+        let x = matrix(&[vec![0, 1, 4], vec![2, 3, 4], vec![0]], 5);
+        let grad = Grad {
+            g: vec![0.1, 0.1, 0.1, -0.1, 0.0],
+            h: vec![1.0, 1.0, 1.0, 1.0, 0.0],
+        };
+        (x, grad)
+    }
+
+    fn stump(candidates: &[u32], tie: TieRule, traced: bool) -> (GTree, Tally) {
+        let (x, grad) = mirrored_gradients();
+        let params = GbtParams {
+            max_depth: 1,
+            tie,
+            ..Default::default()
+        };
+        let mut tally = Tally::default();
+        let fit = Bits::from_indices(5, 0..4);
+        let tree = grow(&x, &fit, &grad, candidates, &params, traced, &mut tally);
+        (tree, tally)
+    }
+
+    #[test]
+    fn rounding_puts_the_mirrored_feature_first_unless_the_rule_is_exact() {
+        let (float, _) = stump(&[1, 0], TieRule::Float, false);
+        let (exact, _) = stump(&[1, 0], TieRule::Exact, false);
+        let root = |t: &GTree| (t.nodes[0].feature, t.nodes[0].gain);
+        assert_eq!(root(&float), (Some(1), 0.002666666666666667));
+        assert_eq!(root(&exact), (Some(0), 0.002666666666666666));
+        // The fitted samples get the same leaves either way; sample 4, which
+        // carries both features, falls on the other side.
+        let (x, _) = mirrored_gradients();
+        let (mut a, mut b) = (vec![0.0; 5], vec![0.0; 5]);
+        float.add_to(&x, &mut a);
+        exact.add_to(&x, &mut b);
+        assert_eq!(a[..4], b[..4]);
+        assert_ne!(a[4], b[4]);
+    }
+
+    #[test]
+    fn the_exact_rule_moves_a_split_only_to_the_same_two_groups() {
+        // Without feature 0 among the tree's candidates the pick stays
+        // feature 1: feature 2 divides the samples otherwise.
+        let (exact, _) = stump(&[2, 1], TieRule::Exact, false);
+        assert_eq!(exact.nodes[0].feature, Some(1));
+        // With feature 0 drawn as well, the split moves to it.
+        let (exact, _) = stump(&[2, 1, 0], TieRule::Exact, false);
+        assert_eq!(exact.nodes[0].feature, Some(0));
+    }
+
+    /// The exact rule's move is decided on the two groups alone. Synthetic,
+    /// from the review of pull request 128: 12 fit samples, 3 of them
+    /// resistant, in the first round of a logistic fit. Feature 0 is present
+    /// on 6 susceptible samples and feature 1 on the other 6, so both make
+    /// the same two groups. Added one by one, the 6 susceptible Hessians come
+    /// to 0.9999999999999999, under the floor of 1 (`min_child_weight`), and
+    /// production turns feature 0 away; feature 1's sides are 2.0 and
+    /// 3.0 - 2.0, and it splits. In exact arithmetic the two meet the floor
+    /// together, so the exact rule takes the lower. It moves a split
+    /// production makes and adds none: with feature 0 alone the node stays
+    /// whole under both rules.
+    #[test]
+    fn the_exact_rule_takes_the_same_groups_where_rounding_turns_them_away() {
+        let n = 12;
+        let y = Bits::from_indices(n, [5, 10, 11]);
+        let fit = Bits::ones(n);
+        let obj = Objective::Logistic { y: &y };
+        let w = sample_weights(&obj, &fit);
+        let grad = gradients(&obj, &vec![0.0; n], &w);
+        let low = vec![0, 1, 2, 4, 7, 8];
+        let high: Vec<usize> = (0..n).filter(|i| !low.contains(i)).collect();
+        let x = matrix(&[low, high], n);
+        let present = |f: usize| masked_sums(fit.words(), x.row(f), &grad).1;
+        assert_eq!((present(0), present(1)), (0.9999999999999999, 2.0));
+        let tree = |candidates: &[u32], tie| {
+            let params = GbtParams {
+                max_depth: 1,
+                tie,
+                ..Default::default()
+            };
+            grow(
+                &x,
+                &fit,
+                &grad,
+                candidates,
+                &params,
+                false,
+                &mut Tally::default(),
+            )
+        };
+        let (float, exact) = (tree(&[0, 1], TieRule::Float), tree(&[0, 1], TieRule::Exact));
+        assert_eq!(float.nodes[0].feature, Some(1));
+        assert_eq!(exact.nodes[0].feature, Some(0));
+        // The same samples reach each leaf, so every sample scores the same.
+        let (mut a, mut b) = (vec![0.0; n], vec![0.0; n]);
+        float.add_to(&x, &mut a);
+        exact.add_to(&x, &mut b);
+        assert_eq!(a, b);
+        for tie in [TieRule::Float, TieRule::Exact] {
+            assert_eq!(tree(&[0], tie).nodes[0].feature, None);
+        }
+    }
+
+    /// The exact rule moves a boosted split only to a lower feature with the
+    /// same two groups; two features with equal counts but other samples are
+    /// left to the 64-bit gains, under both rules. Synthetic, from the review
+    /// of lane revtie: in the first round of a logistic fit the gradients
+    /// are equal within a class, so two features present on 3 of 7 resistant
+    /// and 5 of 13 susceptible fit samples have equal gains in exact
+    /// arithmetic. Summed over other samples their 64-bit gains differ in the
+    /// last digits, and both rules split on the larger, feature 1.
+    #[test]
+    fn equal_counts_on_other_samples_follow_the_rounded_gain_under_both_rules() {
+        use rand::Rng;
+        let (np, nn) = (7usize, 13usize);
+        let n = np + nn;
+        // Resistant samples interleaved with susceptible ones, so subsets
+        // with equal counts sum their gradients in different orders.
+        let res_ix: Vec<usize> = (0..np).map(|i| 3 * i + 1).collect();
+        let sus_ix: Vec<usize> = (0..n).filter(|i| !res_ix.contains(i)).collect();
+        let y = Bits::from_indices(n, res_ix.iter().copied());
+        let fit = Bits::ones(n);
+        let obj = Objective::Logistic { y: &y };
+        let w = sample_weights(&obj, &fit);
+        let grad = gradients(&obj, &vec![0.0; n], &w);
+        let p = GbtParams {
+            max_depth: 1,
+            ..Default::default()
+        };
+        let (gt, ht) = (0..n).fold((0.0, 0.0), |(a, b), i| (a + grad.g[i], b + grad.h[i]));
+        let parent = gt * gt / (ht + p.lambda);
+        let gain = |rows: &[usize]| {
+            let b = Bits::from_indices(n, rows.iter().copied());
+            let (gl, hl) = masked_sums(fit.words(), b.words(), &grad);
+            let (gr, hr) = (gt - gl, ht - hl);
+            0.5 * (gl * gl / (hl + p.lambda) + gr * gr / (hr + p.lambda) - parent)
+        };
+        let mut rng = ChaCha8Rng::seed_from_u64(5);
+        let pick = |rng: &mut ChaCha8Rng| -> Vec<usize> {
+            let (mut res, mut sus) = (res_ix.clone(), sus_ix.clone());
+            let mut r: Vec<usize> = (0..3)
+                .map(|_| res.swap_remove(rng.random_range(0..res.len())))
+                .collect();
+            r.extend((0..5).map(|_| sus.swap_remove(rng.random_range(0..sus.len()))));
+            r.sort();
+            r
+        };
+        let (low, high) = (0..10_000)
+            .find_map(|_| {
+                let (a, b) = (pick(&mut rng), pick(&mut rng));
+                let (ga, gb) = (gain(&a), gain(&b));
+                (ga != gb && ga > 1e-9 && gb > 1e-9).then_some(if ga < gb {
+                    (a, b)
+                } else {
+                    (b, a)
+                })
+            })
+            .expect("a pair with unequal 64-bit gains");
+        assert_eq!(low, [3, 4, 8, 11, 12, 14, 16, 19]);
+        assert_eq!(high, [0, 4, 5, 7, 9, 12, 15, 16]);
+        assert_eq!(
+            (gain(&low), gain(&high)),
+            (0.014051146172066311, 0.014051146172066318)
+        );
+        let x = matrix(&[low, high], n);
+        for tie in [TieRule::Float, TieRule::Exact] {
+            let params = GbtParams {
+                max_depth: 1,
+                tie,
+                ..Default::default()
+            };
+            let t = grow(
+                &x,
+                &fit,
+                &grad,
+                &[0, 1],
+                &params,
+                false,
+                &mut Tally::default(),
+            );
+            assert_eq!(
+                (t.nodes[0].feature, t.nodes[0].gain),
+                (Some(1), 0.014051146172066318),
+                "{tie:?}"
+            );
+        }
+    }
+
+    /// The trace's tree digest moves with each field of a node, the gain
+    /// among them, so a traced fit whose gains differ is seen to differ.
+    #[test]
+    fn a_boosted_tree_digest_changes_with_any_node_field() {
+        let (tree, _) = stump(&[1, 0, 2], TieRule::Float, false);
+        let base = tree.digest();
+        let edits: [fn(&mut GTree); 5] = [
+            |t| t.nodes[0].feature = Some(2),
+            |t| t.nodes[0].absent += 1,
+            |t| t.nodes[0].present += 1,
+            |t| t.nodes[1].value += 0.25,
+            |t| t.nodes[0].gain *= 2.0,
+        ];
+        for (i, edit) in edits.iter().enumerate() {
+            let mut u = tree.clone();
+            edit(&mut u);
+            assert_ne!(u.digest(), base, "edit {i}");
+        }
+    }
+
+    #[test]
+    fn a_traced_tree_is_the_untraced_tree_and_counts_the_moved_split() {
+        for tie in [TieRule::Float, TieRule::Exact] {
+            let (plain, _) = stump(&[1, 0, 2], tie, false);
+            let (traced, tally) = stump(&[1, 0, 2], tie, true);
+            assert_eq!(plain.digest(), traced.digest(), "{tie:?}");
+            assert_eq!((tally.searched, tally.differ_partition), (1, 1), "{tie:?}");
+        }
     }
 }

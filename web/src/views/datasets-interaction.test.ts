@@ -33,6 +33,9 @@ let opened: Mock<(id: string) => void>;
 let nav: Navigator;
 
 beforeEach(() => {
+  // The view reads the optional baselines files on mount; each answers 404
+  // here, so the MIC column shows the model alone.
+  vi.stubGlobal("fetch", async () => new Response("", { status: 404 }));
   window.matchMedia = media;
   window.history.replaceState(null, "", "/datasets");
   host = document.createElement("div");
@@ -46,6 +49,7 @@ afterEach(() => {
   act(() => root.unmount());
   host.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   unclip();
 });
 

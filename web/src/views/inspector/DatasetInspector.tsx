@@ -9,8 +9,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { CatalogRow, DatasetReport, EvalConfig, EvaluationAudit, Manifest, Research } from "../../data/schema";
 import { datasetTitle, distance, int, mgL, pct, plural, speciesName } from "../../data/format";
-import { loadErrorText, useDataset, useIntervals, useResearch, type Resource } from "../../data/load";
+import { loadErrorText, useBaselines, useDataset, useIntervals, useReportDigest, useResearch, type Resource } from "../../data/load";
 import { intervalsFor, type Intervals } from "../../data/intervals";
+import { baselinesFor, type Baselines } from "../../data/baselines";
 import { splitAbsence, splitOf } from "../../data/derive/dataset";
 import { auditOf } from "../../data/derive/evaluation";
 import { minClassOf } from "../../data/derive/overview";
@@ -190,15 +191,35 @@ const MethodFold = ({ r, current }: { r: DatasetReport; current?: number }) => {
 /** The inspector's one column, shared by the header and the body. */
 const COLUMN = "mx-auto w-full max-w-[1200px] px-4 sm:px-8";
 
-const Body = ({ r, row, current, research, intervals }: { r: DatasetReport; row?: CatalogRow; current: number | undefined; research: Resource<Research>; intervals: Resource<Intervals> }) => (
+const Body = ({
+  r,
+  row,
+  current,
+  research,
+  intervals,
+  baselines,
+  digest,
+}: {
+  r: DatasetReport;
+  row?: CatalogRow;
+  current: number | undefined;
+  research: Resource<Research>;
+  intervals: Resource<Intervals>;
+  /** The baselines file as pinned to this report, or null. */
+  baselines: Baselines | null;
+  /** The SHA-256 of the report's bytes as this page read them: undefined
+   *  until they are hashed, null when they could not be. The clindamycin
+   *  note shows only for the bytes its check read. */
+  digest: string | null | undefined;
+}) => (
   <div className={`${COLUMN} space-y-8 pb-16 pt-6`}>
     <ProvisionalNote audit={auditOf(r, current)} />
     <div className="space-y-10">
-      <LearnerSection r={r} research={research} intervals={intervalsFor(intervals.status === "ready" ? intervals.data : null, r)} />
-      <ClindamycinNote r={r} />
+      <LearnerSection r={r} research={research} intervals={intervalsFor(intervals.status === "ready" ? intervals.data : null, r)} baselines={baselines} />
+      <ClindamycinNote r={r} digest={digest} />
       <ModelSection r={r} row={row} />
       <MechanismSection r={r} />
-      <MicSection r={r} research={research} />
+      <MicSection r={r} research={research} baselines={baselines} />
       <LineageSection r={r} />
       <MethodFold r={r} current={current} />
     </div>
@@ -222,6 +243,9 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
   // Fetched beside the report; a missing or invalid file reads as no research.
   const research = useResearch();
   const intervals = useIntervals(id);
+  // Optional too, and shown only when pinned to the report's bytes as read.
+  const baselineFile = useBaselines(id);
+  const digest = useReportDigest(id);
   const row = manifest.datasets.find((d) => d.id === id);
   const title = row === undefined ? id : datasetTitle(row);
   // The report's own audit once loaded; the manifest row's copy before.
@@ -302,7 +326,15 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain focus:outline-none"
         >
           {report.status === "ready" ? (
-            <Body r={report.data} row={row} current={manifest.evaluation_revision} research={research} intervals={intervals} />
+            <Body
+              r={report.data}
+              row={row}
+              current={manifest.evaluation_revision}
+              research={research}
+              intervals={intervals}
+              baselines={baselinesFor(baselineFile.status === "ready" ? baselineFile.data : null, report.data, digest)}
+              digest={digest}
+            />
           ) : (
             <div className={`${COLUMN} py-8`}>
               {report.status === "loading" ? (

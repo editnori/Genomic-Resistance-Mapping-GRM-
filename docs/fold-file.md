@@ -141,6 +141,9 @@ before.
 
 A fold file run stays at the release's seeds: the argument parser refuses
 `--fold-file` beside `--seed` or `--learner-seed` (docs/fold-draws.md), and a
-test holds this (`learn_refuses_a_fold_file_beside_either_seed_flag`).
+test holds this (`learn_refuses_a_fold_file_beside_either_seed_flag`). It
+refuses `--fold-file` beside `--exp-null-refit` too, because that experiment
+records the folds `grm learn` draws (docs/null-fold-refit.md;
+`learn_refuses_the_null_fold_refit_beside_a_fold_file`).
 
 - A fold file run at another seed.
