@@ -468,6 +468,18 @@ pub fn training_candidates(x: &BitMatrix, train: &Bits, min_support: u32) -> (Bi
     (sub, rows)
 }
 
+/// Whether `training_candidates` keeps any row of `x` for `train`: some
+/// row's support among training samples lies in
+/// [min_support, |train| - min_support].
+pub fn any_training_candidate(x: &BitMatrix, train: &Bits, min_support: u32) -> bool {
+    assert_eq!(x.cols, train.len());
+    let max = train.count().saturating_sub(min_support);
+    (0..x.rows).any(|f| {
+        let s = bits::and_count(x.row(f), train.words());
+        s >= min_support && s <= max
+    })
+}
+
 /// Ranks features by the chi-square statistic of the 2x2 presence-by-class
 /// table on the training samples, and returns the top `k` feature indices.
 pub fn screen(x: &BitMatrix, y: &Bits, train: &Bits, k: usize) -> Vec<u32> {

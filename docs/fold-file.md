@@ -89,6 +89,10 @@ The command stops before any fit, and writes nothing, when:
 - a fold tests a genome and trains on a k-mer-identical copy of it. The
   refusal names both genomes. Put the copy in the same test fold or under
   `unused`;
+- a fold's training genomes give no candidate feature: none is present in at
+  least the support floor of them and absent from as many. A fit on no
+  feature gives every genome one score, which scm, cart and rf would call as
+  if they had learned it, so the fold is refused rather than scored;
 - an inner fold or a tuning holdout would lack a class;
 - the result file exists and `--force` was not given.
 

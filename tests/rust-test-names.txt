@@ -204,6 +204,7 @@ src/lib.rs kset::tests::read_bucket_rejects_corrupt_payload
 src/lib.rs learn::eval::tests::a_boosted_model_that_keeps_no_tree_is_a_null_fit_without_a_call
 src/lib.rs learn::eval::tests::a_copy_pair_among_unused_samples_cannot_change_a_folds_fits
 src/lib.rs learn::eval::tests::a_failed_lasso_fit_is_reported_with_its_trace_before_it_is_returned
+src/lib.rs learn::eval::tests::a_fold_whose_training_samples_give_no_candidate_feature_is_refused
 src/lib.rs learn::eval::tests::a_grouped_holdout_that_fails_after_its_inner_folds_pass_stops_the_plan
 src/lib.rs learn::eval::tests::a_lasso_refit_that_keeps_no_feature_is_a_null_fit_without_a_call
 src/lib.rs learn::eval::tests::a_learner_with_every_fold_null_predicts_each_folds_prevalence

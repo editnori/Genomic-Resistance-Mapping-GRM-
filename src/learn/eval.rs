@@ -47,9 +47,9 @@ use super::lasso;
 use super::scm::{self, Kind, Rule};
 use super::tree::{self, ForestParams, TreeParams};
 use super::{
-    BinaryMetrics, NoCall, binary_metrics, fold_masks, grouped_folds, holdout, isolate_groups,
-    roc_curve, screen, stratified_folds, train_prevalence, training_candidates, training_folds,
-    tuning_holdout, validate_folds,
+    BinaryMetrics, NoCall, any_training_candidate, binary_metrics, fold_masks, grouped_folds,
+    holdout, isolate_groups, roc_curve, screen, stratified_folds, train_prevalence,
+    training_candidates, training_folds, tuning_holdout, validate_folds,
 };
 use crate::bits::{BitMatrix, Bits};
 use crate::curate::{Breakpoint, Call, Censor, Mic, infer_breakpoint};
@@ -1244,8 +1244,9 @@ pub const DRAWN_SCHEMES: [&str; 2] = ["random", "lineage"];
 ///
 /// A partition is refused before any fit when a fold tests no sample, when a
 /// fold's test or training samples lack a class, when a fold tests a sample
-/// and trains on its k-mer-identical copy, or when an inner fold or tuning
-/// holdout lacks a class. `cfg.folds` is not read: `folds` is the count.
+/// and trains on its k-mer-identical copy, when a fold's training samples
+/// give no candidate feature, or when an inner fold or tuning holdout lacks
+/// a class. `cfg.folds` is not read: `folds` is the count.
 /// Final models and the MIC regression are not fitted.
 #[allow(clippy::too_many_arguments)]
 pub fn evaluate_assigned(
@@ -1317,6 +1318,13 @@ pub fn evaluate_assigned(
                 );
             }
         }
+        // A fit on no candidate would give every sample one score, and scm,
+        // cart and the forest would call it as if it had learned it.
+        ensure!(
+            any_training_candidate(x, &train, min_support),
+            "{scheme} outer fold {f}'s {} training samples give no candidate feature: none is present in at least {min_support} of them and absent from at least {min_support}",
+            train.count()
+        );
         check_fold_tuning(scheme, f, &train, y, tuning.as_deref(), cfg)?;
         counts.push(FoldCounts {
             train: train.count() as usize,
@@ -4337,6 +4345,45 @@ mod tests {
             fold_1_moved |= a.scores[30..] != b.scores[30..];
         }
         assert!(fold_1_moved);
+    }
+
+    #[test]
+    fn a_fold_whose_training_samples_give_no_candidate_feature_is_refused() {
+        // Synthetic: the 120-sample fixture's labels. Samples 0..30 are
+        // tested and the rest train.
+        let (fixture, y, _) = assigned_fixture();
+        let n = fixture.cols;
+        let roles: Vec<Role> = (0..n)
+            .map(|i| if i < 30 { Role::Test(0) } else { Role::Train })
+            .collect();
+        let cfg = small_config();
+        // One feature in every sample and one in samples 0..30 and 118..120:
+        // all 90 training samples carry the first, and 2 carry the second,
+        // under the floor of 3. Neither is a candidate.
+        let matrix = |carriers: std::ops::Range<usize>| {
+            let mut x = BitMatrix::with_cols(n);
+            x.push_row(Bits::ones(n).words());
+            x.push_row(Bits::from_indices(n, (0..30).chain(carriers)).words());
+            x
+        };
+        let x = matrix(118..120);
+        let train = Bits::from_indices(n, 30..n);
+        assert_eq!(training_candidates(&x, &train, 3).0.rows, 0);
+        let error = assigned(&x, &y, &[], &roles, 1, &cfg)
+            .err()
+            .expect("a fold without a candidate feature is refused");
+        assert_eq!(
+            format!("{error:#}"),
+            "supplied outer fold 0's 90 training samples give no candidate feature: none is present in at least 3 of them and absent from at least 3"
+        );
+        // A third training sample with the second feature makes it a
+        // candidate, and the fold is scored.
+        let x = matrix(117..120);
+        assert_eq!(training_candidates(&x, &train, 3).0.rows, 1);
+        let split = assigned(&x, &y, &[], &roles, 1, &cfg).unwrap();
+        assert_eq!(split.folds[0].candidates, 1);
+        // The fixture's own features give the fold candidates.
+        assert!(assigned(&fixture, &y, &[], &roles, 1, &cfg).is_ok());
     }
 
     #[test]
