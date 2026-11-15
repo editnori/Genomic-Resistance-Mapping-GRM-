@@ -2705,4 +2705,162 @@ mod tests {
             );
         }
     }
+
+    /// Ledger action 11: `grm curate` reads `genomes.jsonl` for species, QC
+    /// and MLST groups. Run on a synthetic raw root before and after every
+    /// genome gets a collection date, with each selection rule, it writes the
+    /// same curated files and species files. The one allowance is the key
+    /// order of `qc.json`'s failure map, a `HashMap` written as it iterates,
+    /// which differs between two runs of `main` too; it is compared as JSON.
+    /// No curated file holds the word `collection` or a date text of the
+    /// fixture.
+    #[test]
+    fn collection_dates_leave_every_curated_file_as_it_was() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let data = dir.path().to_str().unwrap();
+        std::fs::create_dir_all(dir.path().join("bvbrc")).unwrap();
+        // Synthetic: 44 genomes of one species with a meropenem call each,
+        // 22 resistant, three that fail QC, and one AST record whose genome
+        // has no metadata line. The label dates are 2019 to 2021, apart
+        // from every collection date below.
+        let ids: Vec<String> = (0..44).map(|i| format!("9990006.{}", 100 + i)).collect();
+        let mut amr = String::new();
+        for (i, id) in ids
+            .iter()
+            .chain(["9990006.999".to_string()].iter())
+            .enumerate()
+        {
+            let record = serde_json::json!({
+                "genome_id": id, "antibiotic": "meropenem",
+                "resistant_phenotype": if i % 2 == 0 { "Resistant" } else { "Susceptible" },
+                "laboratory_typing_method": "Broth dilution", "testing_standard": "CLSI",
+                "testing_standard_year": 2019 + i % 3, "pmid": 30000000 + i % 4,
+                "date_inserted": format!("{}-0{}-1{}T08:00:00Z", 2019 + i % 3, 1 + i % 9, i % 10),
+            });
+            amr += &format!("{record}\n");
+        }
+        std::fs::write(layout.amr(), amr).unwrap();
+        let genomes: Vec<GenomeRecord> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, id)| GenomeRecord {
+                genome_id: id.clone(),
+                species: Some("Escherichia coli".into()),
+                genome_quality: Some(if i == 5 { "Poor" } else { "Good" }.into()),
+                genome_length: (i != 6).then(|| format!("{}", 100_000 + 37 * i)),
+                contigs: Some(if i == 7 { "5000" } else { "80" }.into()),
+                collection_year: (i % 4 != 3).then(|| format!("{}", 2010 + i % 7)),
+                mlst: (i % 5 != 4).then(|| format!("MLST.Escherichia_coli_1.{}", i % 6)),
+                ..Default::default()
+            })
+            .collect();
+        let write_genomes = |records: &[GenomeRecord]| {
+            let lines: Vec<String> = records
+                .iter()
+                .map(|g| serde_json::to_string(g).unwrap())
+                .collect();
+            std::fs::write(layout.genomes(), lines.join("\n") + "\n").unwrap();
+        };
+        // Every kind of collection date: day, month, year, a range, a day
+        // that does not exist, a cut range, and no value.
+        let texts = [
+            "2015-03-12",
+            "2014-05",
+            "1987",
+            "2015-2016",
+            "2017-02-30",
+            "2004-20",
+        ];
+        let dated: Vec<GenomeRecord> = genomes
+            .iter()
+            .enumerate()
+            .map(|(i, g)| GenomeRecord {
+                collection_date: match texts.get(i % 7) {
+                    Some(text) => bvbrc::CollectionDate::parse(text),
+                    None => bvbrc::CollectionDate::Missing,
+                },
+                ..g.clone()
+            })
+            .collect();
+        let curated_and_species = || {
+            let mut files = files_below(&layout.curated());
+            for (path, bytes) in files_below(&dir.path().join("species")) {
+                files.insert(Path::new("species").join(path), bytes);
+            }
+            files
+        };
+        let rules: [&[&str]; 2] = [
+            &[],
+            &[
+                "--selection",
+                "group-round-robin-v1",
+                "--selection-seed",
+                "7",
+            ],
+        ];
+        for rule in rules {
+            let curate = || {
+                let args = [
+                    &[
+                        "grm",
+                        "--data",
+                        data,
+                        "curate",
+                        "--cap",
+                        "30",
+                        "--min-class",
+                        "10",
+                    ][..],
+                    rule,
+                ]
+                .concat();
+                run(Cli::try_parse_from(args).unwrap()).unwrap();
+            };
+            write_genomes(&genomes);
+            assert!(
+                !std::fs::read_to_string(layout.genomes())
+                    .unwrap()
+                    .contains("collection_date")
+            );
+            curate();
+            let before = curated_and_species();
+            write_genomes(&dated);
+            let lines = std::fs::read_to_string(layout.genomes()).unwrap();
+            assert!(lines.lines().all(|l| l.contains(r#""collection_date":"#)));
+            curate();
+            let after = curated_and_species();
+
+            // The fixture reaches every curated file: one dataset, a
+            // selection under the cap, and the three QC failures. The group
+            // rule also writes its plan, `selection.json`.
+            let plan = usize::from(!rule.is_empty());
+            assert_eq!(after.len(), 7 + 1 + plan, "{:?}", after.keys());
+            let datasets: serde_json::Value =
+                serde_json::from_slice(&after[Path::new("datasets.json")]).unwrap();
+            assert_eq!(datasets.as_array().unwrap().len(), 1);
+            let selected = &after[Path::new("species/escherichia_coli/genomes.txt")];
+            assert_eq!(selected.iter().filter(|&&b| b == b'\n').count(), 30);
+            let (_, qc): (serde_json::Value, BTreeMap<String, String>) =
+                serde_json::from_slice(&after[Path::new("qc.json")]).unwrap();
+            assert_eq!(qc.len(), 3, "{qc:?}");
+
+            assert_eq!(
+                after.keys().collect::<Vec<_>>(),
+                before.keys().collect::<Vec<_>>()
+            );
+            for (path, bytes) in &after {
+                if path == Path::new("qc.json") {
+                    let value = |b: &[u8]| serde_json::from_slice::<serde_json::Value>(b).unwrap();
+                    assert_eq!(value(bytes), value(&before[path]), "qc.json");
+                } else {
+                    assert!(bytes == &before[path], "{} changed", path.display());
+                }
+                let text = String::from_utf8_lossy(bytes);
+                for word in texts.iter().chain(&["collection"]) {
+                    assert!(!text.contains(word), "{} holds {word}", path.display());
+                }
+            }
+        }
+    }
 }

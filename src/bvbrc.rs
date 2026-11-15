@@ -365,6 +365,15 @@ impl std::fmt::Display for CollectionDateCounts {
     }
 }
 
+/// The query `fetch_genomes` posts to BV-BRC's `genome` collection for one
+/// batch of genome ids: those ids, the fields of `GENOME_FIELDS`, one page.
+fn genome_query(batch: &[String]) -> String {
+    format!(
+        "in(genome_id,({}))&select({GENOME_FIELDS})&limit({PAGE})",
+        batch.join(",")
+    )
+}
+
 /// Writes one page of BV-BRC's `genome` response as `genomes.jsonl` lines
 /// and counts its collection dates. `GENOME_FIELDS` asks for
 /// `collection_date`, and BV-BRC leaves out a field it has no value for, so
@@ -538,11 +547,7 @@ impl Client {
         let mut total = 0;
         let mut counts = CollectionDateCounts::default();
         for batch in ids.chunks(1000) {
-            let query = format!(
-                "in(genome_id,({}))&select({GENOME_FIELDS})&limit({PAGE})",
-                batch.join(",")
-            );
-            let page: Vec<GenomeRecord> = self.post_rql("genome", &query)?;
+            let page: Vec<GenomeRecord> = self.post_rql("genome", &genome_query(batch))?;
             total += write_genome_page(&mut w, page, &mut counts)?;
             eprintln!("  genome metadata: {total} / {}", ids.len());
         }
@@ -781,6 +786,10 @@ mod tests {
             ("2004-12", month(2004, 12)),
             ("2015", year(2015)),
             ("1934", year(1934)),
+            // A year under 1000 keeps its four digits when written back.
+            ("0999", year(999)),
+            ("0042-07", month(42, 7)),
+            ("0001-01-01", day(1, 1, 1)),
             // A day that does not exist is not moved to one that does.
             ("1900-02-29", None),
             ("2015-02-29", None),
@@ -841,6 +850,67 @@ mod tests {
             2015
         );
         assert_eq!(Precision::Month.as_str(), "month");
+    }
+
+    /// Each month's last day, from a table written out here and not from
+    /// `days_in_month`: it reads as a day and writes back as its text, and
+    /// the day after it is unparsed. February is checked in a common year, a
+    /// leap year, a century that is not a leap year and one that is.
+    #[test]
+    fn each_month_takes_its_last_day_and_refuses_the_next() {
+        const LAST: [u8; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        for year in [2015u16, 2016, 1900, 2000] {
+            for month in 1..=12u8 {
+                let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+                let last = LAST[usize::from(month - 1)] + u8::from(month == 2 && leap);
+                let text = format!("{year:04}-{month:02}-{last:02}");
+                let date = CollectionDate::parse(&text);
+                assert_eq!(date.stated(), day(year, month, last), "{text}");
+                assert_eq!(date.text().as_deref(), Some(text.as_str()));
+                let next = format!("{year:04}-{month:02}-{:02}", last + 1);
+                assert_eq!(
+                    CollectionDate::parse(&next),
+                    CollectionDate::Unparsed(next.clone()),
+                    "{next}"
+                );
+            }
+        }
+    }
+
+    /// The request `fetch_genomes` posts is built by `genome_query`, so this
+    /// reads the query text it sends; the POST itself needs the network and
+    /// is not run. It asks for `collection_year` and `collection_date`, each
+    /// once, and for exactly the fields a `genomes.jsonl` line holds, in the
+    /// order the line holds them.
+    #[test]
+    fn the_genome_request_asks_for_both_collection_fields() {
+        let ids = ["9990005.1".to_string(), "9990005.2".to_string()];
+        let query = genome_query(&ids);
+        let select = query
+            .strip_prefix("in(genome_id,(9990005.1,9990005.2))&select(")
+            .and_then(|rest| rest.strip_suffix(&format!(")&limit({PAGE})")))
+            .unwrap_or_else(|| panic!("{query}"));
+        let fields: Vec<&str> = select.split(',').collect();
+        for name in ["collection_year", "collection_date"] {
+            assert_eq!(fields.iter().filter(|f| **f == name).count(), 1, "{name}");
+        }
+        let record = GenomeRecord {
+            collection_date: CollectionDate::Missing,
+            ..Default::default()
+        };
+        let line = serde_json::to_string(&record).unwrap();
+        let keys = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&line)
+            .unwrap()
+            .len();
+        assert_eq!(fields.len(), keys, "{line}");
+        let at: Vec<usize> = fields
+            .iter()
+            .map(|f| {
+                line.find(&format!("\"{f}\":"))
+                    .unwrap_or_else(|| panic!("{f}"))
+            })
+            .collect();
+        assert!(at.windows(2).all(|w| w[0] < w[1]), "{select}");
     }
 
     /// Synthetic: a `genome` response in BV-BRC's shape, written for this
