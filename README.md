@@ -44,7 +44,7 @@ GRM writes its entries to `reference/givens-export/grm.json` with `scripts/given
 
 Use Linux or WSL with Rust 1.89 or newer, Node.js 22 and npm, and Bash, `flock`, and `nice` for the pipeline launcher. Python 3 is needed only for the report checks.
 
-`.cargo/config.toml` sets `target-cpu=x86-64-v3`, so the learners' bit counting uses the CPU's popcount instruction and the binary runs on any x86-64 CPU with AVX2 (Intel Haswell, AMD Zen and newer). For a long run on the machine that builds it, `RUSTFLAGS="-C target-cpu=native" cargo build --release --locked` builds for that CPU instead; that binary may not start on another CPU.
+`.cargo/config.toml` sets `target-cpu=x86-64-v3`, so the learners' bit counting uses the CPU's popcount instruction and the binary runs on any x86-64 CPU with AVX2 (Intel Haswell, AMD Zen and newer). For a long run on the machine that builds it, `RUSTFLAGS="-C target-cpu=native" cargo build --release --locked` builds for that CPU instead; that binary may not start on another CPU. The release profile in `Cargo.toml` splits the crate into 4 codegen units; [docs/lasso-layout.md](docs/lasso-layout.md) says how the lasso keeps its speed under any split and gives the command that checks it.
 
 ```bash
 cargo build --release --locked
