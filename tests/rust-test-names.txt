@@ -287,6 +287,7 @@ src/lib.rs learn::eval::tests::the_features_and_labels_of_unused_samples_and_the
 src/lib.rs learn::eval::tests::the_learner_seed_moves_the_forest_and_boosting_and_no_partition
 src/lib.rs learn::eval::tests::the_learner_seed_reaches_boosting_the_final_models_and_the_mic_regression
 src/lib.rs learn::eval::tests::the_recorded_config_leaves_out_seeds_each_fit_replaces
+src/lib.rs learn::eval::tests::the_tie_rule_reaches_the_mic_regression
 src/lib.rs learn::eval::tests::tuning_holdout_names_lineages_in_revision_10s_words
 src/lib.rs learn::eval::tests::two_training_groups_are_enough_for_a_grouped_holdout
 src/lib.rs learn::eval::tests::unconverged_lasso_candidates_cannot_win_validation_selection
@@ -298,6 +299,7 @@ src/lib.rs learn::foldfile::tests::a_scheme_that_could_name_a_path_is_refused
 src/lib.rs learn::foldfile::tests::load_names_the_file_it_could_not_read_or_parse
 src/lib.rs learn::foldfile::tests::roles_follow_the_sample_order_whatever_order_the_file_lists
 src/lib.rs learn::foldfile::tests::the_hash_is_of_the_files_bytes_not_of_its_parsed_content
+src/lib.rs learn::gbt::tests::a_boosted_tree_digest_changes_with_any_node_field
 src/lib.rs learn::gbt::tests::a_traced_tree_is_the_untraced_tree_and_counts_the_moved_split
 src/lib.rs learn::gbt::tests::censored_regression_respects_bounds
 src/lib.rs learn::gbt::tests::early_stopping_can_keep_the_unboosted_baseline
@@ -364,11 +366,13 @@ src/lib.rs learn::tie::tests::exact_impurity_orders_splits_as_the_weighted_gini_
 src/lib.rs learn::tie::tests::large_counts_compare_without_overflow
 src/lib.rs learn::tie::tests::mul_wide_is_the_full_product
 src/lib.rs learn::tie::tests::same_partition_sees_equal_and_mirrored_sides_only
+src/lib.rs learn::tie::tests::tally_counts_ties_at_the_best_exact_impurity
 src/lib.rs learn::tie::tests::tally_sorts_differences_into_ties_and_rounding_order
 src/lib.rs learn::tree::tests::a_traced_fit_is_the_untraced_fit_and_counts_its_nodes
 src/lib.rs learn::tree::tests::a_tree_digest_changes_with_any_node_field
 src/lib.rs learn::tree::tests::a_tree_draws_node_features_independently_of_its_subsample
 src/lib.rs learn::tree::tests::balanced_nodes_score_exactly_one_half
+src/lib.rs learn::tree::tests::depth_tuning_grows_its_inner_trees_under_the_rule_it_is_given
 src/lib.rs learn::tree::tests::every_forest_root_takes_the_lower_of_the_mirrored_pair_under_the_exact_rule
 src/lib.rs learn::tree::tests::forest_nodes_stay_leaves_when_no_drawn_feature_can_split
 src/lib.rs learn::tree::tests::forest_scores_are_exact_vote_shares
@@ -377,6 +381,7 @@ src/lib.rs learn::tree::tests::learns_xor_with_depth_two_and_truncates
 src/lib.rs learn::tree::tests::pure_xor_has_no_positive_gain_split_so_the_tree_is_one_leaf
 src/lib.rs learn::tree::tests::rounding_puts_the_mirrored_feature_first_unless_the_rule_is_exact
 src/lib.rs learn::tree::tests::the_exact_rule_keeps_a_strictly_better_split
+src/lib.rs learn::tree::tests::the_exact_rule_weighs_every_node_by_the_fits_class_counts
 src/lib.rs matrix::tests::a_failed_resave_leaves_no_summary
 src/lib.rs matrix::tests::a_kset_that_repeats_a_kmer_is_refused_by_every_path
 src/lib.rs matrix::tests::a_partial_that_fails_after_its_rename_is_removed_again

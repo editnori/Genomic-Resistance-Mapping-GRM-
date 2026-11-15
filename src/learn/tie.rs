@@ -413,6 +413,37 @@ mod tests {
         assert!(!same_partition(mask.words(), &w(&other), present.words()));
     }
 
+    /// The tied count is of candidates at the best exact impurity, which is
+    /// the exact pick's, not the float pick's, when rounding put a worse
+    /// split first.
+    #[test]
+    fn tally_counts_ties_at_the_best_exact_impurity() {
+        let fit = (6, 6);
+        let x = SplitImpurity::new((4, 1), (2, 5), fit);
+        let mirror = SplitImpurity::new((2, 5), (4, 1), fit);
+        let worse = SplitImpurity::new((3, 2), (3, 4), fit);
+        let worse_mirror = SplitImpurity::new((3, 4), (3, 2), fit);
+        assert_eq!(x.cmp_exact(&worse), Ordering::Less);
+        // The best exact impurity is shared, the float pick's is not.
+        let mut t = Tally::default();
+        let c = [
+            (0.4 + f64::EPSILON, 2, worse),
+            (0.4, 5, x),
+            (0.4, 7, mirror),
+        ];
+        t.tree_node(&c, Some(c[0]), Some(c[1]));
+        assert_eq!((t.exact_tied, t.differ_order), (1, 1));
+        // The float pick's impurity is shared, the best exact one is not.
+        let mut t = Tally::default();
+        let d = [
+            (0.4 + f64::EPSILON, 2, worse),
+            (0.4, 3, worse_mirror),
+            (0.39, 5, x),
+        ];
+        t.tree_node(&d, Some(d[0]), Some(d[2]));
+        assert_eq!((t.exact_tied, t.differ_order), (0, 1));
+    }
+
     #[test]
     fn tally_sorts_differences_into_ties_and_rounding_order() {
         let fit = (6, 6);

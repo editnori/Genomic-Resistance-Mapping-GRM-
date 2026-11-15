@@ -763,8 +763,13 @@ mod tests {
     /// Synthetic: random presence bits, the first feature tied to the class
     /// on 80% of samples.
     fn noisy(features: usize, samples: usize) -> (BitMatrix, Bits) {
+        noisy_seeded(features, samples, 9)
+    }
+
+    /// `noisy` from another seed.
+    fn noisy_seeded(features: usize, samples: usize, seed: u64) -> (BitMatrix, Bits) {
         use rand::Rng;
-        let mut rng = ChaCha8Rng::seed_from_u64(9);
+        let mut rng = ChaCha8Rng::seed_from_u64(seed);
         let y = Bits::from_indices(samples, (0..samples).filter(|_| rng.random_bool(0.4)));
         let mut x = BitMatrix::with_cols(samples);
         for f in 0..features {
@@ -777,6 +782,143 @@ mod tests {
             x.push_row(Bits::from_indices(samples, on).words());
         }
         (x, y)
+    }
+
+    /// The exact rule's pick at `node` by brute force: every feature whose
+    /// 64-bit gain under the fit's class weights is above 1e-12, as
+    /// `grow_tree` admits it with `min_leaf` 1, ranked by `SplitImpurity`
+    /// with the class counts `base`, the lower feature on equal fractions.
+    fn exact_pick(
+        x: &BitMatrix,
+        y: &Bits,
+        fit: &Bits,
+        node: &Bits,
+        base: (u32, u32),
+    ) -> Option<u32> {
+        let fit_pos = fit.and(y).count() as f64;
+        let total = fit.count() as f64;
+        let (wp, wn) = (total / (2.0 * fit_pos), total / (2.0 * (total - fit_pos)));
+        let (node_pos, node_neg) = (node.and(y), node.and_not(y));
+        let (pos, n) = (node_pos.count(), node.count());
+        let (np, nn) = (pos as f64 * wp, (n - pos) as f64 * wn);
+        let parent = (np + nn) * gini(np, nn);
+        (0..x.rows as u32)
+            .filter_map(|f| {
+                let row = x.row(f as usize);
+                let pp = bits::and_count(row, node_pos.words());
+                let pn = bits::and_count(row, node_neg.words());
+                if pp + pn == 0 || pp + pn == n {
+                    return None;
+                }
+                let (lp, ln) = (pp as f64 * wp, pn as f64 * wn);
+                let (rp, rn) = (np - lp, nn - ln);
+                let gain = parent - (lp + ln) * gini(lp, ln) - (rp + rn) * gini(rp, rn);
+                let absent = (pos - pp, n - pos - pn);
+                (gain > 1e-12).then(|| (gain, f, SplitImpurity::new((pp, pn), absent, base)))
+            })
+            .reduce(tie::better_exact)
+            .map(|c| c.1)
+    }
+
+    /// Every split node of `tree`, fitted on `fit`, with the fit samples
+    /// that reach it.
+    fn split_nodes<'a>(tree: &'a Tree, x: &BitMatrix, fit: &Bits) -> Vec<(&'a Node, Bits)> {
+        let mut out = Vec::new();
+        let mut stack = vec![(0usize, fit.clone())];
+        while let Some((id, mask)) = stack.pop() {
+            let node = &tree.nodes[id];
+            if let Some(s) = &node.split {
+                let row = x.row(s.feature as usize);
+                stack.push((s.present as usize, mask.and_slice(row)));
+                stack.push((s.absent as usize, mask.and_not_slice(row)));
+                out.push((node, mask));
+            }
+        }
+        out
+    }
+
+    /// Cross-validated balanced error at each depth, from inner trees grown
+    /// under `tie`, as `select_depth` scores them.
+    fn depth_errors(
+        x: &BitMatrix,
+        y: &Bits,
+        folds: &[usize],
+        k: usize,
+        max_depth: u32,
+        tie: TieRule,
+    ) -> Vec<f64> {
+        let mut err = vec![0.0; max_depth as usize];
+        for (fit, val) in fold_masks(folds, k) {
+            let params = TreeParams {
+                max_depth,
+                min_leaf: 1,
+                max_features: None,
+                seed: 0,
+                tie,
+            };
+            let tree = fit_tree(x, y, &fit, &params);
+            for d in 1..=max_depth {
+                err[d as usize - 1] += balanced_error(&tree.predict(x, d), y, &val) / k as f64;
+            }
+        }
+        err
+    }
+
+    /// Below the root a node's class ratio is not the fit's, and the exact
+    /// rule still weighs every node's candidates by the fit's class counts,
+    /// as production's 64-bit gain does. Synthetic (`noisy_seeded(12, 40,
+    /// 2)`): every split is the brute-force exact pick with the fit's
+    /// counts, and at one node below the root the node's own counts would
+    /// pick another feature.
+    #[test]
+    fn the_exact_rule_weighs_every_node_by_the_fits_class_counts() {
+        let (x, y) = noisy_seeded(12, 40, 2);
+        let fit = Bits::ones(40);
+        let fit_counts = (fit.and(&y).count(), fit.and_not(&y).count());
+        let params = TreeParams {
+            max_depth: 6,
+            min_leaf: 1,
+            max_features: None,
+            seed: 0,
+            tie: TieRule::Exact,
+        };
+        let tree = fit_tree(&x, &y, &fit, &params);
+        let mut other_pick_below_root = 0;
+        for (node, mask) in split_nodes(&tree, &x, &fit) {
+            let feature = node.split.as_ref().unwrap().feature;
+            let by_fit = exact_pick(&x, &y, &fit, &mask, fit_counts);
+            assert_eq!(Some(feature), by_fit, "node at depth {}", node.depth);
+            let node_counts = (node.n_resistant, node.n - node.n_resistant);
+            let by_node = exact_pick(&x, &y, &fit, &mask, node_counts);
+            other_pick_below_root += (node.depth > 0 && by_node != by_fit) as u32;
+        }
+        assert_eq!(other_pick_below_root, 1);
+    }
+
+    /// Depth tuning grows its inner trees under the rule it is given.
+    /// Synthetic (`noisy_seeded(12, 40, 2)`, three inner folds): the exact
+    /// rule's inner trees choose depth 2 and production's depth 1, and each
+    /// rule's choice is the lowest error its own inner trees score.
+    #[test]
+    fn depth_tuning_grows_its_inner_trees_under_the_rule_it_is_given() {
+        let (x, y) = noisy_seeded(12, 40, 2);
+        let train = Bits::ones(40);
+        let folds: Vec<usize> = (0..40).map(|i| i % 3).collect();
+        let chosen = |tie| select_depth(&x, &y, &train, &folds, 3, 6, tie);
+        let lowest = |tie| {
+            let err = depth_errors(&x, &y, &folds, 3, 6, tie);
+            let mut best = (1, err[0]);
+            for (d, &e) in err.iter().enumerate().skip(1) {
+                if e < best.1 - 1e-12 {
+                    best = (d as u32 + 1, e);
+                }
+            }
+            best
+        };
+        assert_eq!((chosen(TieRule::Exact).0, chosen(TieRule::Float).0), (2, 1));
+        for tie in [TieRule::Float, TieRule::Exact] {
+            assert_eq!(chosen(tie), lowest(tie), "{tie:?}");
+        }
     }
 
     #[test]

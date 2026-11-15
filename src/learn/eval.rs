@@ -3960,6 +3960,63 @@ mod tests {
     /// early-stopping holdout and the learner seed's column samples gives
     /// the fits `evaluate` made, in each outer fold and in the final model,
     /// and a holdout drawn from the learner seed would not.
+    /// The MIC regression's boosted models take the tie rule too: on this
+    /// synthetic fixture (`wide_fixture(120, 40, 1)`, `draw_mic`) their
+    /// out-of-fold predictions differ between the two rules.
+    #[test]
+    fn the_tie_rule_reaches_the_mic_regression() {
+        let (x, y, groups) = wide_fixture(120, 40, 1);
+        let mic = draw_mic(&y);
+        let predicted = |tie_rule| {
+            let cfg = EvalConfig {
+                tie_rule,
+                screened_features: 40,
+                ..draw_config()
+            };
+            let input = MicInput {
+                mic: &mic,
+                breakpoint: None,
+            };
+            let out = evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                &[],
+                1,
+                Some(input),
+                &cfg,
+            )
+            .unwrap();
+            value(&out.mic.unwrap().predicted)
+        };
+        assert_ne!(predicted(TieRule::Exact), predicted(TieRule::Float));
+    }
+
+    /// `draw_fixture` with `features` features, all but the first two
+    /// present at random on half the samples: with many candidates, small
+    /// boosting nodes meet features that divide them into the same groups.
+    fn wide_fixture(n: usize, features: usize, seed: u64) -> (BitMatrix, Bits, Vec<u32>) {
+        use rand::{Rng, SeedableRng};
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 3 == 0));
+        let groups: Vec<u32> = (0..n as u32).map(|i| i / 5).collect();
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
+        let mut x = BitMatrix::with_cols(n);
+        for f in 0..features {
+            let present: Vec<usize> = (0..n)
+                .filter(|&i| {
+                    if f < 2 {
+                        y.contains(i) != rng.random_bool(0.15)
+                    } else {
+                        rng.random_bool(0.5)
+                    }
+                })
+                .collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        (x, y, groups)
+    }
+
     #[test]
     fn the_learner_seed_reaches_boosting_the_final_models_and_the_mic_regression() {
         use crate::ablate::plan::fold_seed as seed_of_fold;

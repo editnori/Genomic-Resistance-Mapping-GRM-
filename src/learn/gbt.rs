@@ -628,6 +628,26 @@ mod tests {
         assert_eq!(exact.nodes[0].feature, Some(0));
     }
 
+    /// The trace's tree digest moves with each field of a node, the gain
+    /// among them, so a traced fit whose gains differ is seen to differ.
+    #[test]
+    fn a_boosted_tree_digest_changes_with_any_node_field() {
+        let (tree, _) = stump(&[1, 0, 2], TieRule::Float, false);
+        let base = tree.digest();
+        let edits: [fn(&mut GTree); 5] = [
+            |t| t.nodes[0].feature = Some(2),
+            |t| t.nodes[0].absent += 1,
+            |t| t.nodes[0].present += 1,
+            |t| t.nodes[1].value += 0.25,
+            |t| t.nodes[0].gain *= 2.0,
+        ];
+        for (i, edit) in edits.iter().enumerate() {
+            let mut u = tree.clone();
+            edit(&mut u);
+            assert_ne!(u.digest(), base, "edit {i}");
+        }
+    }
+
     #[test]
     fn a_traced_tree_is_the_untraced_tree_and_counts_the_moved_split() {
         for tie in [TieRule::Float, TieRule::Exact] {
