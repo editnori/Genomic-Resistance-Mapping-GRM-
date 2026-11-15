@@ -2899,16 +2899,36 @@ mod tests {
         assert!(done.iter().all(|d| d.replaced), "{done:?}");
         assert_eq!(export_files(&mero), first);
 
-        // Anything at a dataset's path stops it, a file too.
-        let other = dir.path().join("other");
-        std::fs::create_dir_all(&other).unwrap();
-        std::fs::write(other.join(CIPROFLOXACIN), "a file").unwrap();
-        let err = run_export(dir.path(), &other, &[]).unwrap_err();
-        assert!(
-            err.contains(&other.join(CIPROFLOXACIN).display().to_string()),
-            "{err}"
-        );
-        assert!(!other.join(MEROPENEM).exists());
+        // Anything at a dataset's path stops the export before it writes
+        // any dataset, a file or a broken link too, whichever dataset's
+        // path it is.
+        for (n, (id, rest, link)) in [
+            (CIPROFLOXACIN, MEROPENEM, false),
+            (MEROPENEM, CIPROFLOXACIN, false),
+            (CIPROFLOXACIN, MEROPENEM, true),
+            (MEROPENEM, CIPROFLOXACIN, true),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let other = dir.path().join(format!("other-{n}"));
+            std::fs::create_dir_all(&other).unwrap();
+            if link {
+                std::os::unix::fs::symlink(dir.path().join("nowhere"), other.join(id)).unwrap();
+            } else {
+                std::fs::write(other.join(id), "a file").unwrap();
+            }
+            let err = run_export(dir.path(), &other, &[]).unwrap_err();
+            let want = format!(
+                "1 dataset directory already exists: {}.",
+                other.join(id).display()
+            );
+            assert!(err.contains(&want), "{id} link {link}: {err}");
+            assert!(
+                !other.join(rest).exists(),
+                "{id} link {link}: {rest} written"
+            );
+        }
     }
 
     /// Each file is written under a temporary name and renamed, after the
