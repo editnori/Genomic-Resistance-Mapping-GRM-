@@ -2489,6 +2489,73 @@ mod tests {
         (layout, ids)
     }
 
+    /// `grm learn --fold-file` passes `--screened-features` on: the result
+    /// records the value the command was given. The fold file repeats the
+    /// random split the fixture's own report drew, so it is a fair partition.
+    #[test]
+    fn learn_with_a_fold_file_screens_as_many_features_as_it_is_told() {
+        let dir = tempfile::tempdir().unwrap();
+        let (layout, _) = replay_fixture(dir.path());
+        let data = dir.path().to_str().unwrap();
+        let grm = |args: &[&str]| {
+            let all = [&["grm", "--data", data][..], args].concat();
+            run(Cli::try_parse_from(all).unwrap())
+        };
+        grm(&["count", "--species", SLUG]).unwrap();
+        grm(&["structure", "--species", SLUG]).unwrap();
+        grm(&["matrix", "--species", SLUG]).unwrap();
+        grm(&["learn", "--species", SLUG]).unwrap();
+        let report: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(
+                layout
+                    .results_dir(SLUG)
+                    .join(format!("{SLUG}__fixturemycin.json")),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let random = &report["splits"][0];
+        assert_eq!(random["scheme"], "random");
+        let mut test = vec![Vec::new(); random["folds"].as_u64().unwrap() as usize];
+        for (sample, fold) in report["samples"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(random["test_fold"].as_array().unwrap())
+        {
+            test[fold.as_u64().unwrap() as usize].push(sample["id"].clone());
+        }
+        let file = dir.path().join("folds.json");
+        let text = serde_json::json!({
+            "format": "grm-fold-file-v1",
+            "dataset": format!("{SLUG}__fixturemycin"),
+            "scheme": "own-random",
+            "test": test,
+            "train": [],
+            "unused": [],
+        });
+        std::fs::write(&file, serde_json::to_vec(&text).unwrap()).unwrap();
+        let out = dir.path().join("fold-out");
+        grm(&[
+            "learn",
+            "--species",
+            SLUG,
+            "--fold-file",
+            file.to_str().unwrap(),
+            "--fold-out",
+            out.to_str().unwrap(),
+            "--screened-features",
+            "7",
+        ])
+        .unwrap();
+        let result: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(out.join(format!("{SLUG}__fixturemycin.own-random.json"))).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(result["eval_config"]["screened_features"], 7);
+        assert_eq!(result["counts"]["tested"], 60);
+    }
+
     /// The acceptance check of docs/prediction-contract.md: `grm predict`,
     /// from the report `grm learn` wrote and each cohort genome's FASTA,
     /// gives every feature the genome's bit in the report and every genome
