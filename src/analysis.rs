@@ -1148,6 +1148,24 @@ fn stale_reason(report: &serde_json::Value, fingerprint: &str) -> Option<&'stati
 /// column order. Genome metadata, contig counts, and the drug class change
 /// only descriptive report fields, so they are left out. Code changes need a
 /// new EVALUATION_REVISION.
+/// The digest of a species' loaded matrix that every dataset fingerprint
+/// starts from (`dataset_fingerprint`).
+pub fn species_digest(input: &SpeciesInputs) -> u64 {
+    matrix_digest(&input.matrix)
+}
+
+/// The `input_fingerprint` `grm learn` records in a dataset's report for
+/// these inputs and settings; `digest` is `species_digest(input)`.
+pub fn dataset_fingerprint(
+    input: &SpeciesInputs,
+    spec: &DatasetSpec,
+    catalog: Option<&Catalog>,
+    cfg: &EvalConfig,
+    digest: u64,
+) -> String {
+    input_fingerprint(input, spec, catalog, cfg, digest)
+}
+
 fn input_fingerprint(
     input: &SpeciesInputs,
     spec: &DatasetSpec,

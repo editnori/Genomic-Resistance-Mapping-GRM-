@@ -232,6 +232,22 @@ enum Command {
         #[arg(long, default_value = KOVER_RESULTS)]
         kover: PathBuf,
     },
+    /// Write each dataset's projected matrix, its random and lineage fold
+    /// plans, and each outer fold's screened rows under --out/<dataset id>/,
+    /// for a learner outside GRM (docs/dataset-export.md). Fits nothing. The
+    /// species must be counted and built (count, structure, matrix).
+    Export {
+        #[arg(long)]
+        species: String,
+        /// Only these antibiotics or dataset ids.
+        #[arg(long, value_delimiter = ',')]
+        only: Vec<String>,
+        /// Retained-feature budget (see `grm learn`).
+        #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
+        screened_features: usize,
+        #[arg(long)]
+        out: PathBuf,
+    },
     /// Write offline 95% Clopper-Pearson intervals for each learner row's
     /// VME and ME under <data>/report/intervals/, one file per dataset report
     /// that index.json lists, each pinned to its report's SHA-256 and counts.
@@ -431,6 +447,24 @@ fn run(cli: Cli) -> Result<()> {
             out,
         } => predict(&report, &fasta, &kset, matrix.as_deref(), &learners, out),
         Command::Report { kover } => report(&layout, &kover),
+        Command::Export {
+            species,
+            only,
+            screened_features,
+            out,
+        } => {
+            let cfg = grm::learn::eval::EvalConfig {
+                screened_features,
+                ..Default::default()
+            };
+            let ids = grm::export::export_species(&layout, &species, &only, &out, &cfg)?;
+            eprintln!(
+                "{species}: {} datasets exported to {}",
+                ids.len(),
+                out.display()
+            );
+            Ok(())
+        }
         Command::Intervals => {
             let n = grm::intervals::write(&layout.root.join("report"))?;
             eprintln!("intervals written for {n} dataset reports");
