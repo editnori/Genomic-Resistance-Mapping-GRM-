@@ -1,0 +1,29 @@
+{
+ "started_utc": "2026-11-15T14:21:15+00:00",
+ "binary": "/home/user/scratch/lassoscan/target/release/examples/lasso-scan",
+ "binary_sha256": "469f0f0196e0aa8a9456c9c21eaf4eed46ec32fe4c2d4852b58089a1b7909eff",
+ "nproc": 16,
+ "threads": 16,
+ "cpu": "AMD Ryzen 9 9950X 16-Core Processor",
+ "order": [
+  "mycobacterium_tuberculosis__delamanid",
+  "mycobacterium_tuberculosis__linezolid",
+  "mycobacterium_tuberculosis__clofazimine",
+  "mycobacterium_tuberculosis__rifampin",
+  "salmonella_enterica__ampicillin",
+  "salmonella_enterica__tetracycline",
+  "salmonella_enterica__chloramphenicol",
+  "staphylococcus_aureus__erythromycin",
+  "staphylococcus_aureus__clindamycin",
+  "staphylococcus_aureus__penicillin",
+  "klebsiella_pneumoniae__ciprofloxacin",
+  "klebsiella_pneumoniae__piperacillin_tazobactam",
+  "klebsiella_pneumoniae__sulfamethoxazole_trimethoprim",
+  "klebsiella_pneumoniae__gentamicin",
+  "klebsiella_pneumoniae__amikacin",
+  "escherichia_coli__ceftazidime",
+  "escherichia_coli__ampicillin",
+  "escherichia_coli__amoxicillin_clavulanate"
+ ],
+ "dump": null
+}
