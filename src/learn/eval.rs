@@ -4405,7 +4405,7 @@ mod tests {
             .collect();
         let split = assigned(&x, &y, &[], &roles, 1, &small_config()).unwrap();
         assert_eq!(split.tested, (80..111).collect::<Vec<_>>());
-        let label = |i: usize| if i % 3 == 0 { 1.0 } else { 0.0 };
+        let label = |i: usize| if i.is_multiple_of(3) { 1.0 } else { 0.0 };
         let own: Vec<f64> = (80..111).map(label).collect();
         let first: Vec<f64> = (0..31).map(label).collect();
         let reversed: Vec<f64> = own.iter().rev().copied().collect();
