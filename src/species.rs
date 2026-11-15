@@ -868,6 +868,68 @@ mod tests {
     }
 
     #[test]
+    fn a_failed_column_block_merge_leaves_the_old_matrix_and_no_partials() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = block_cohort(dir.path());
+        build_matrix(&layout, "s", 2, None).unwrap();
+        let want = matrix_files(&layout);
+        let partials = layout.partials_dir("s");
+        let kset = |g: usize| layout.kset_dir("s").join(format!("g{g:03}.kset"));
+
+        // What a stopped run leaves: a stray block of another width, a
+        // temporary file and a block without its receipt. The next run
+        // writes its own blocks, merges only those, and removes the rest.
+        std::fs::create_dir_all(&partials).unwrap();
+        std::fs::write(partials.join("block-0009.kpart"), "stale").unwrap();
+        std::fs::write(partials.join("block-0001.kpart.part"), "half").unwrap();
+        std::fs::write(partials.join("block-0002.kpart"), "no receipt").unwrap();
+        build_matrix(&layout, "s", 2, Some(64)).unwrap();
+        assert!(matrix_files(&layout) == want);
+        assert!(!partials.exists());
+
+        // Each failure names its cause, keeps the matrix it found and
+        // leaves no partials, whichever block it strikes.
+        let check = |what: &str, expect: &str| {
+            let err = build_matrix(&layout, "s", 2, Some(64)).err().unwrap();
+            let msg = format!("{err:#}");
+            assert!(msg.contains(expect), "{what}: {msg}");
+            assert!(matrix_files(&layout) == want, "{what}");
+            assert!(!partials.exists(), "{what}");
+        };
+        let saved = std::fs::read(kset(140)).unwrap();
+        std::fs::copy(kset(10), kset(140)).unwrap();
+        check(
+            "another block's kset in the last block",
+            "column 140 expects genome g140, but its kset holds g010",
+        );
+        std::fs::copy(kset(139), kset(140)).unwrap();
+        check(
+            "a kset twice in the last block",
+            "genome g139 is in two columns",
+        );
+        std::fs::write(kset(140), &saved).unwrap();
+
+        // A kset of the right name with other contents: the recount that
+        // counted.json does not describe.
+        let saved = std::fs::read(kset(70)).unwrap();
+        let other = KsetReader::open(&kset(71)).unwrap().read_all().unwrap();
+        kset::write(&kset(70), "g070", &KmerSpace::new(31), &other).unwrap();
+        check(
+            "other contents in the second block",
+            "the kset of g070 (column 70) has digest",
+        );
+        std::fs::write(kset(70), &saved).unwrap();
+
+        std::fs::remove_file(kset(5)).unwrap();
+        check("a missing kset in the first block", "g005.kset");
+        std::fs::copy(kset(100), kset(5)).unwrap();
+        check(
+            "another block's kset in the first block",
+            "column 5 expects genome g005, but its kset holds g100",
+        );
+    }
+
+    #[test]
     fn kset_digests_tell_ksets_of_one_size_apart_and_a_recount_repeats_them() {
         let dir = tempfile::tempdir().unwrap();
         let space = KmerSpace::new(21);
