@@ -119,6 +119,21 @@ enum Command {
         /// (`EvalConfig::screened_features`).
         #[arg(long, default_value_t = DEFAULT_SCREENED_FEATURES, value_parser = RangedU64ValueParser::<usize>::new().range(1..))]
         screened_features: usize,
+        /// Seed of the evaluation's random draws (`EvalConfig::seed`): both
+        /// splits' outer folds, each fit's inner folds and tuning holdouts,
+        /// and the forest's and boosting's own draws. The species matrix,
+        /// the cohort, the lineages and the screening rule do not depend on
+        /// it. Every release ran at the default. Another value scores
+        /// another fold draw and writes its reports under
+        /// <data>/species/<slug>/draws/seed-<seed>/, which `grm report`
+        /// does not read (docs/fold-draws.md).
+        #[arg(long, default_value_t = RELEASE_SEED)]
+        seed: u64,
+        /// Seed the forest's and boosting's own draws with this instead of
+        /// --seed, every partition unchanged (`EvalConfig::learner_seed`).
+        /// Reports go under draws/seed-<seed>-learner-<learner-seed>/.
+        #[arg(long)]
+        learner_seed: Option<u64>,
     },
     /// Run fetch, count, structure, matrix, and learn for each species, then
     /// build the report. Stages skip work that is already on disk.
@@ -330,9 +345,14 @@ fn run(cli: Cli) -> Result<()> {
             only,
             force,
             screened_features,
-        } => species
-            .iter()
-            .try_for_each(|s| learn(&layout, s, &only, force, screened_features)),
+            seed,
+            learner_seed,
+        } => {
+            let cfg = learn_config(screened_features, seed, learner_seed);
+            species
+                .iter()
+                .try_for_each(|s| learn(&layout, s, &only, force, &cfg))
+        }
         Command::Pipeline {
             species,
             workers,
@@ -348,6 +368,12 @@ fn run(cli: Cli) -> Result<()> {
             } else {
                 species
             };
+            // The pipeline is the release's command: it always draws at the
+            // release's seed.
+            let cfg = grm::learn::eval::EvalConfig {
+                screened_features,
+                ..Default::default()
+            };
             for slug in &slugs {
                 // Annotation reads reference assemblies, so the FASTA files
                 // are fetched even when the matrix is already built.
@@ -359,14 +385,14 @@ fn run(cli: Cli) -> Result<()> {
                     },
                 )?;
                 count_to_matrix(&layout, slug, k)?;
-                if let Err(e) = learn(&layout, slug, &[], false, screened_features) {
+                if let Err(e) = learn(&layout, slug, &[], false, &cfg) {
                     if !e.is::<grm::probes::KsetsUnreadable>() {
                         return Err(e);
                     }
                     eprintln!("{slug}: recounting ksets: {e:#}");
                     count(&layout, slug, k)?;
                     count_to_matrix(&layout, slug, k)?;
-                    learn(&layout, slug, &[], false, screened_features)?;
+                    learn(&layout, slug, &[], false, &cfg)?;
                 }
                 if drop_ksets {
                     let dir = layout.kset_dir(slug);
@@ -464,6 +490,25 @@ const PIPELINE_MIN_SUPPORT: u32 = 2;
 
 /// The `--screened-features` default: `EvalConfig::default()`'s budget.
 const DEFAULT_SCREENED_FEATURES: usize = 4000;
+
+/// The `grm learn --seed` default: `EvalConfig::default()`'s seed, which
+/// every release's folds were drawn from.
+const RELEASE_SEED: u64 = 42;
+
+/// The evaluation `grm learn` runs: the release's settings, with the
+/// screening budget and the seeds its flags give.
+fn learn_config(
+    screened_features: usize,
+    seed: u64,
+    learner_seed: Option<u64>,
+) -> grm::learn::eval::EvalConfig {
+    grm::learn::eval::EvalConfig {
+        screened_features,
+        seed,
+        learner_seed,
+        ..Default::default()
+    }
+}
 
 /// Count, structure, and matrix at `k`, each rerun only when `stale_stages`
 /// finds its output out of date.
@@ -589,16 +634,34 @@ fn learn(
     slug: &str,
     only: &[String],
     force: bool,
-    screened_features: usize,
+    cfg: &grm::learn::eval::EvalConfig,
 ) -> Result<()> {
     grm::species::ensure_selection_counted(layout, slug)?;
-    let cfg = grm::learn::eval::EvalConfig {
-        screened_features,
-        ..Default::default()
-    };
-    let written = grm::analysis::analyze_species(layout, slug, only, force, &cfg)?;
-    eprintln!("{slug}: {} dataset reports written", written.len());
+    let written = grm::analysis::analyze_species(layout, slug, only, force, cfg)?;
+    eprintln!("{}", learn_end_line(layout, slug, written.len(), cfg));
     Ok(())
+}
+
+/// The line `grm learn` ends a species with. A run that writes `results/`
+/// ends with the release's own line, which `scripts/metric-audit/audit.py`
+/// reads as the species finished. A draw names its folder, in words that
+/// line's pattern cannot match, so a log that mixes a draw with a release
+/// run never marks the species finished on the draw's line.
+fn learn_end_line(
+    layout: &Layout,
+    slug: &str,
+    written: usize,
+    cfg: &grm::learn::eval::EvalConfig,
+) -> String {
+    let dir = grm::analysis::reports_dir(layout, slug, cfg);
+    if dir == layout.results_dir(slug) {
+        format!("{slug}: {written} dataset reports written")
+    } else {
+        format!(
+            "{slug}: {written} draw reports written to {}",
+            dir.display()
+        )
+    }
 }
 
 fn report(layout: &Layout, kover: &std::path::Path) -> Result<()> {
@@ -1522,7 +1585,7 @@ mod tests {
             write_genome_list(&layout, selection);
             let err = format!(
                 "{:#}",
-                learn(&layout, SLUG, &[], false, DEFAULT_SCREENED_FEATURES).unwrap_err()
+                learn(&layout, SLUG, &[], false, &Default::default()).unwrap_err()
             );
             assert!(
                 err.contains("genomes.txt adds, removes, or reorders"),
@@ -2058,6 +2121,119 @@ mod tests {
             panic!("parsed another command");
         };
         assert_eq!(screened_features, 1000);
+    }
+
+    /// `grm learn` draws at the release's seed unless told otherwise, and
+    /// `grm pipeline`, the release's command, takes no seed at all.
+    #[test]
+    fn learn_takes_a_seed_and_a_learner_seed_and_the_pipeline_takes_neither() {
+        assert_eq!(RELEASE_SEED, grm::learn::eval::EvalConfig::default().seed);
+        let parse = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            let Command::Learn {
+                seed, learner_seed, ..
+            } = Cli::try_parse_from(all)?.command
+            else {
+                panic!("parsed another command");
+            };
+            Ok::<_, clap::Error>((seed, learner_seed))
+        };
+        assert_eq!(parse(&[]).unwrap(), (42, None));
+        assert_eq!(
+            parse(&["--seed", "10622993013839509822"]).unwrap(),
+            (10622993013839509822, None)
+        );
+        assert_eq!(
+            parse(&["--learner-seed", "7"]).unwrap(),
+            (RELEASE_SEED, Some(7))
+        );
+        assert!(parse(&["--seed", "-1"]).is_err());
+        assert!(parse(&["--seed"]).is_err());
+        for flag in ["--seed", "--learner-seed"] {
+            assert!(
+                Cli::try_parse_from(["grm", "pipeline", flag, "43"]).is_err(),
+                "{flag}"
+            );
+        }
+    }
+
+    /// At the release's seeds `grm learn` ends with `main`'s line, byte for
+    /// byte, whatever the budget; a draw's line names its folder and does not
+    /// begin with `<slug>: <n> dataset reports written`, the release line
+    /// `scripts/metric-audit/audit.py` reads (its suite tests the pattern
+    /// on the draw lines below).
+    #[test]
+    fn learn_ends_with_the_release_line_and_a_draw_with_a_line_of_its_own() {
+        let layout = Layout::new("root");
+        let line = |screened_features, seed, learner_seed| {
+            let cfg = learn_config(screened_features, seed, learner_seed);
+            learn_end_line(&layout, "fixture_species", 3, &cfg)
+        };
+        let release = "fixture_species: 3 dataset reports written";
+        assert_eq!(line(DEFAULT_SCREENED_FEATURES, RELEASE_SEED, None), release);
+        assert_eq!(line(16000, RELEASE_SEED, None), release);
+        assert_eq!(
+            line(DEFAULT_SCREENED_FEATURES, 43, None),
+            "fixture_species: 3 draw reports written to root/species/fixture_species/draws/seed-43"
+        );
+        assert_eq!(
+            line(DEFAULT_SCREENED_FEATURES, RELEASE_SEED, Some(7)),
+            "fixture_species: 3 draw reports written to root/species/fixture_species/draws/seed-42-learner-7"
+        );
+    }
+
+    /// The evaluation `grm learn` runs, built from its parsed flags as the
+    /// command builds it: the release's at the defaults, and otherwise the
+    /// release's with the budget and both seeds the flags give.
+    #[test]
+    fn learn_evaluates_with_the_budget_and_seeds_its_flags_give() {
+        use grm::learn::eval::EvalConfig;
+        let config = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            let Command::Learn {
+                screened_features,
+                seed,
+                learner_seed,
+                ..
+            } = Cli::try_parse_from(all).unwrap().command
+            else {
+                panic!("parsed another command");
+            };
+            serde_json::to_value(learn_config(screened_features, seed, learner_seed)).unwrap()
+        };
+        let release = || EvalConfig::default();
+        let expected = |cfg: EvalConfig| serde_json::to_value(cfg).unwrap();
+        assert_eq!(config(&[]), expected(release()));
+        assert_eq!(
+            config(&["--seed", "43"]),
+            expected(EvalConfig {
+                seed: 43,
+                ..release()
+            })
+        );
+        assert_eq!(
+            config(&["--learner-seed", "7"]),
+            expected(EvalConfig {
+                learner_seed: Some(7),
+                ..release()
+            })
+        );
+        assert_eq!(
+            config(&[
+                "--seed",
+                "18446744073709551615",
+                "--learner-seed",
+                "0",
+                "--screened-features",
+                "1000",
+            ]),
+            expected(EvalConfig {
+                seed: u64::MAX,
+                learner_seed: Some(0),
+                screened_features: 1000,
+                ..release()
+            })
+        );
     }
 
     /// The pipeline's stages follow `--k`: counts, structure and matrix built
