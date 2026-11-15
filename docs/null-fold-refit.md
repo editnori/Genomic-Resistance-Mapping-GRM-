@@ -53,7 +53,7 @@ One line per null fold:
 
 The experiment adds one lasso path and refit, or one boosted fit of `rounds` trees, per null fold. It runs outside the fold's timer, so a report's `seconds` leave it out.
 
-Without the flag no output changes, but the time can. In the review of 15 Nov 2026, a release build of this code ran the production lasso 3.9 times slower than a build of `main` on `salmonella_enterica__tetracycline`, with the flag off (30.2 s and 32.4 s against 7.8 s and 8.0 s). Built with one codegen unit, `main` was as slow (31.2 s), so the cause is how the compiler splits the crate into units, not the experiment's code.
+Without the flag no output changes, but the time can: the production lasso's speed turns on how the compiler splits the crate into codegen units. On `salmonella_enterica__tetracycline` with the flag off (15 Nov 2026, release builds, 5 threads, three runs of each build in turn), this branch after its merge of `main` at `41cd616` ran the lasso in 30.0 to 31.1 s, `main` at `41cd616` in 29.9 to 31.2 s, and `main` at `7020d4c` in 7.9 to 8.1 s. So `main` itself slowed between `7020d4c` and `41cd616`, and the branch adds no lasso time that these runs separate from `main`'s. Earlier that day, the review of this branch timed it 3.9 times slower than `main` at `852ebc9` (30.2 s and 32.4 s against 7.8 s and 8.0 s), and found that `main` built with one codegen unit was as slow (31.2 s): the cause is the split into units, not the experiment's code.
 
 ## What it is not
 
