@@ -1,0 +1,11 @@
+index: evaluation_revision=14 datasets=274 clindamycin datasets=6
+drug_names.json: raw names resolved to drug 'clindamycin': ['clindamycin']
+drug_names.json: other raw names that hold 'clindamycin' (not used): []
+genome_amr.jsonl: 1285111 records read; clindamycin records of the six datasets' samples: 5706 over 5376 genomes
+campylobacter_coli__clindamycin: samples=389; curated-row mismatches=0; samples with no raw record carrying the label=0; label records used=423; samples whose source field differs from pmid=0
+campylobacter_jejuni__clindamycin: samples=508; curated-row mismatches=0; samples with no raw record carrying the label=0; label records used=525; samples whose source field differs from pmid=0
+enterococcus_faecium__clindamycin: samples=901; curated-row mismatches=0; samples with no raw record carrying the label=0; label records used=901; samples whose source field differs from pmid=0
+staphylococcus_aureus__clindamycin: samples=1543; curated-row mismatches=0; samples with no raw record carrying the label=0; label records used=1612; samples whose source field differs from pmid=0
+streptococcus_agalactiae__clindamycin: samples=141; curated-row mismatches=0; samples with no raw record carrying the label=0; label records used=141; samples whose source field differs from pmid=0
+streptococcus_pneumoniae__clindamycin: samples=1894; curated-row mismatches=0; samples with no raw record carrying the label=0; label records used=1894; samples whose source field differs from pmid=0
+primary pair: enterococcus_faecium__clindamycin

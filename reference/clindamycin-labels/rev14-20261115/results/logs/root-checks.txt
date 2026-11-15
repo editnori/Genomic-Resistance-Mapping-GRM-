@@ -1,0 +1,20 @@
+checked 2026-11-15T12:00:50Z
+root-with/curated/datasets.json equals public root: yes
+root-with/curated/drug_names.json equals public root: yes
+root-with/curated/funnel.json equals public root: yes
+root-with/curated/phenotypes.jsonl equals public root: yes
+root-with/curated/qc.json equals public root: yes
+root-with/curated/species.json equals public root: yes
+placebo-10-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+placebo-1-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+placebo-2-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+placebo-3-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+placebo-4-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+placebo-5-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+placebo-6-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+placebo-7-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+placebo-8-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+placebo-9-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+without-campylobacter_coli__clindamycin: phenotypes.jsonl lines removed 81, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+without-staphylococcus_aureus__clindamycin: phenotypes.jsonl lines removed 659, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
+without-streptococcus_pneumoniae__clindamycin: phenotypes.jsonl lines removed 1461, added 0, removed lines not a clindamycin row 0; other curated files equal to root-with: yes
