@@ -1221,15 +1221,6 @@ fn stale_reason(report: &serde_json::Value, fingerprint: &str) -> Option<&'stati
     }
 }
 
-/// Identifies what a dataset's evaluation reads apart from code: the species
-/// matrix (`matrix`, from `matrix_digest`, which covers every genome's kset
-/// digest), the antibiotic, its class minimum and breakpoint, the lineage
-/// threshold, the catalog calls version, every `cfg` setting, and, from
-/// `cohort`, the count of MIC-inferred labels left out and each evaluation
-/// row's genome, reported call, MIC, lineage number, and gene calls, in
-/// column order. Genome metadata, contig counts, and the drug class change
-/// only descriptive report fields, so they are left out. Code changes need a
-/// new EVALUATION_REVISION.
 /// The digest of a species' loaded matrix that every dataset fingerprint
 /// starts from (`dataset_fingerprint`).
 pub fn species_digest(input: &SpeciesInputs) -> u64 {
@@ -1248,6 +1239,15 @@ pub fn dataset_fingerprint(
     input_fingerprint(input, spec, catalog, cfg, digest)
 }
 
+/// Identifies what a dataset's evaluation reads apart from code: the species
+/// matrix (`matrix`, from `matrix_digest`, which covers every genome's kset
+/// digest), the antibiotic, its class minimum and breakpoint, the lineage
+/// threshold, the catalog calls version, every `cfg` setting, and, from
+/// `cohort`, the count of MIC-inferred labels left out and each evaluation
+/// row's genome, reported call, MIC, lineage number, and gene calls, in
+/// column order. Genome metadata, contig counts, and the drug class change
+/// only descriptive report fields, so they are left out. Code changes need a
+/// new EVALUATION_REVISION.
 fn input_fingerprint(
     input: &SpeciesInputs,
     spec: &DatasetSpec,
