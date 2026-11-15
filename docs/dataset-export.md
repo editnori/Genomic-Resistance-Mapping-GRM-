@@ -49,6 +49,7 @@ Among rows with an equal score, the lower matrix row comes first. The cut can fa
 - **Unavailable plans.** A plan whose `unavailable_reason` is set keeps its outer folds but has no inner folds, holdouts or screens, and its report has no `test_fold` for that split. Do not score its outer folds: GRM scored no learner on them, so a number made on them has nothing to compare with.
 - **Size and memory.** `matrix.bin` takes `rows` x `words` x 8 bytes. The largest release dataset, `escherichia_coli__ampicillin` (3,078,562 rows x 1,965 genomes), writes 763.5 MB, and its export peaked at 4,962,952 kB of resident memory at 4 threads. All 274 release datasets would write 24.87 GB. The export holds the species matrix, the projected matrix and a byte copy of it in memory at once.
 - **A fold plan is not a fold file.** `splits[].plan.outer` gives one fold number per sample, by position in `samples`, and the plan also carries each outer fold's inner folds and tuning holdouts. A lineage plan turned into a list of genome ids keeps its outer partition but loses its lineage-grouped tuning: inner folds and holdouts drawn again from such a list are not the plan's.
+- **One fold draw.** `grm export` takes no seed flag, so its plans are the release's draw, the one `grm learn` scores without `--seed`. A report that `grm learn --seed` wrote under `draws/` was scored on other folds and has another `input_fingerprint`, so it does not pair with an export ([fold-draws.md](fold-draws.md)).
 
 ## What it does not do
 
