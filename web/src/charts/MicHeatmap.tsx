@@ -102,9 +102,16 @@ export const MicHeatmap = ({ confusion, band }: { confusion: readonly [number, n
             <line x1={0} x2={16} y1={6} y2={6} stroke="rgb(var(--ink) / 0.5)" strokeDasharray="3 3" />
           </svg>
           Between the dashed lines: predicted within one doubling dilution of the measured MIC
-          {band === undefined ? "" : `: ${pct(band.model)} of ${int(band.n)} exact MICs for the model, ${pct(band.constant)} for a constant MIC from the training folds`}
         </span>
       </div>
+      {band === undefined ? null : (
+        // Its own line under the key, at zero width to the grid's column
+        // sizing (w-0 min-w-full), so the figure's column keeps the width the
+        // chart and its key give it and the text beside it keeps its measure.
+        <p className="mt-2 w-0 min-w-full text-tiny text-muted-text" data-baseline="band">
+          Between the dashed lines: {pct(band.model)} of {int(band.n)} exact MICs for the model, {pct(band.constant)} for a constant MIC from the training folds.
+        </p>
+      )}
     </div>
   );
 };

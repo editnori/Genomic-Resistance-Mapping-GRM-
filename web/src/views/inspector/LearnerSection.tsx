@@ -10,7 +10,7 @@ import { BarPill, Dot, LegendItem, ScrollFrame, Section, Segmented } from "../..
 import type { Resource } from "../../data/load";
 import { intervalKey, type RateInterval, type RowIntervals } from "../../data/intervals";
 import { SelectiveResearch } from "./SelectiveResearch";
-import { leadOver, lineageOf, signedPoints, type Baselines, type LineageBaseline } from "../../data/baselines";
+import { leadOver, leadWords, lineageOf, signedPoints, type Baselines, type LineageBaseline } from "../../data/baselines";
 
 const STRIP_MIN = 220;
 
@@ -80,7 +80,7 @@ const lineageBaselineText = (random: LineageBaseline | undefined, lineage: Linea
   const parts: string[] = [];
   if (random !== undefined)
     parts.push(
-      `Lineage identity alone, which scores a test genome by the resistant share of its lineage among the fold's training genomes, or by the fold's resistant share when none shares its lineage, reaches ${pct(random.balanced_accuracy)} balanced accuracy on the random split, where ${pct(random.unseen_share)} of test genomes (${int(random.unseen)} of ${int(random.n)}) have a lineage no training genome of their fold shares. The line under each random-split score is that score minus this baseline, in points.`,
+      `Lineage identity alone, which scores a test genome by the resistant share of its lineage among the fold's training genomes, or by the resistant share of the fold's training genomes when none of them shares its lineage, reaches ${pct(random.balanced_accuracy)} balanced accuracy on the random split, where ${pct(random.unseen_share)} of test genomes (${int(random.unseen)} of ${int(random.n)}) have a lineage no training genome of their fold shares. The line under each random-split score is that score minus this baseline, in points.`,
     );
   if (lineage !== undefined)
     parts.push(
@@ -272,8 +272,8 @@ export const LearnerSection = ({
                     {baText(a)}
                     {randomBase === undefined || baOf(a) === null ? null : (
                       <span className="block text-tiny text-muted-text" data-baseline="lineage-lead">
-                        {signedPoints(leadOver(baOf(a)!, randomBase.balanced_accuracy))}
-                        <span className="sr-only"> points from lineage identity alone</span>
+                        <span aria-hidden="true">{signedPoints(leadOver(baOf(a)!, randomBase.balanced_accuracy))}</span>
+                        <span className="sr-only"> {leadWords(leadOver(baOf(a)!, randomBase.balanced_accuracy), "lineage identity alone")}</span>
                       </span>
                     )}
                   </td>

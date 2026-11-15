@@ -13,18 +13,23 @@ const ofText = (a: Agreement): string => `${int(a.agree)} of ${int(a.n)}`;
 
 /** The model beside a constant MIC from the training folds, from the
  *  dataset's baselines file: the model's figure, the constant's and the
- *  difference in one sentence, then the mode, the copies in training, and a
- *  mark when the held-out predictions do not confirm the rebuilt folds. */
+ *  difference in one sentence, with the folds where the model predicts only
+ *  its start value, then the mode, the copies in training, and a mark when
+ *  the held-out predictions do not confirm the rebuilt folds. */
 const MicConstant = ({ b }: { b: MicBaseline }) => {
   const median = b.median;
   if (median === null) return null;
   const confirmed = b.prediction_check.confirmed;
   const copies = b.exact_with_training_copy;
+  const constantFolds = b.prediction_check.constant_folds.length;
   return (
     <>
       <p data-baseline="mic">
         A constant MIC taken from each training fold, the lower median of its exact MICs, agrees on {pct(median.essential_agreement)} of the same {int(b.n_exact)} exact MICs ({ofText(median)})
         {confirmed ? "" : <sup aria-hidden="true">†</sup>}; the model agrees on {pct(b.model.essential_agreement)} ({ofText(b.model)}), {leadWords(leadOver(b.model.essential_agreement, median.essential_agreement))}.
+        {constantFolds === 0
+          ? ""
+          : ` On ${int(constantFolds)} of the ${int(b.folds)} folds the model predicts only its start value, one MIC for every isolate, so on ${constantFolds === 1 ? "that fold" : "those folds"} it is a constant MIC too.`}
       </p>
       <p className="type-note">
         {b.mode === null ? "" : `At the mode of each training fold's exact MICs instead, the constant agrees on ${pct(b.mode.essential_agreement)} (${ofText(b.mode)}). `}

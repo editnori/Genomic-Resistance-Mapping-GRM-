@@ -6,16 +6,16 @@ import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fixtureFile } from "../../dev/fixtures/files";
-import { lineageEntry, micPart } from "../../dev/fixtures/baselines";
+import { lineageEntry, micPart, summary, summaryEntry } from "../../dev/fixtures/baselines";
 import { parseManifest } from "../../data/validate";
 import { sha256Hex } from "../../data/load";
-import { leadOver, micConstants, parseBaselines, signedPoints, type MicConstant } from "../../data/baselines";
+import { leadOver, leadWords, micConstants, parseMicSummary, signedPoints, type MicConstant } from "../../data/baselines";
 import { pct } from "../../data/format";
 import type { CatalogRow, DatasetReport, Manifest } from "../../data/schema";
 import type { Navigator } from "../../app/router";
 import { ThemeProvider } from "../../theme/ThemeProvider";
 import { DatasetInspector } from "./DatasetInspector";
-import { micFinding, micLead } from "../findings";
+import { micConstantWords, micFinding, micLead } from "../findings";
 import { datasetColumns } from "../DatasetsView";
 import { constantAt90Sentence } from "../MethodsView";
 import { micBaselineSummary } from "../../data/baselines";
@@ -44,7 +44,7 @@ const reportFor = (id: string): DatasetReport & Record<string, unknown> => {
 };
 
 /** A synthetic baselines file for `report`, pinned to `sha`. */
-const fileFor = (report: DatasetReport, sha: string, confirmed = true) => {
+const fileFor = (report: DatasetReport, sha: string, confirmed = true, constantFolds: number[] = []) => {
   const n = report.samples.length;
   const nExact = report.mic!.n_exact;
   const tp = Math.floor(n * 0.3);
@@ -55,7 +55,7 @@ const fileFor = (report: DatasetReport, sha: string, confirmed = true) => {
     dataset: report.id,
     report_sha256: sha,
     evaluation_revision: 14,
-    mic: micPart(nExact, 58, Math.min(nExact, 81), Math.min(nExact, 60), confirmed),
+    mic: { ...micPart(nExact, 58, Math.min(nExact, 81), Math.min(nExact, 60), confirmed), ...(constantFolds.length === 0 ? {} : { prediction_check: { confirmed, groups: confirmed ? 4 : 0, isolates: confirmed ? 9 : 0, spanning: 0, constant_folds: constantFolds } }) },
     lineage: report.splits.map((s) => (s.scheme === "lineage" ? lineageEntry("lineage", n, tp, fp, tn, n, s.folds) : lineageEntry(s.scheme as "random", n, tp, fp, tn, 7, s.folds))),
   };
 };
@@ -103,8 +103,15 @@ describe("the dataset report beside its baselines file", () => {
     const text = document.body.textContent ?? "";
     expect(text).toContain(`At the mode of each training fold's exact MICs instead, the constant agrees on ${pct(60 / n)} (60 of ${n})`);
     expect(text).toContain("2 exact-MIC test isolates here have a k-mer-identical copy in their training fold.");
-    // The heatmap's band sentence carries the constant.
-    expect(text).toContain(`of the measured MIC: ${pct(58 / n)} of ${n} exact MICs for the model, ${pct(81 / n)} for a constant MIC from the training folds`);
+    // The band sentence carries the constant, on its own line under the
+    // heatmap's key and outside the key's row.
+    const band = document.querySelector('[data-baseline="band"]')!;
+    expect(band.textContent).toBe(`Between the dashed lines: ${pct(58 / n)} of ${n} exact MICs for the model, ${pct(81 / n)} for a constant MIC from the training folds.`);
+    expect(band.closest('[aria-label="Heatmap key"]')).toBeNull();
+    expect(band.previousElementSibling?.getAttribute("aria-label")).toBe("Heatmap key");
+    expect(document.querySelector('[aria-label="Heatmap key"]')!.textContent).not.toContain("for the model");
+    // No fold predicts one value for every isolate here.
+    expect(sentence.textContent).not.toContain("start value");
     // The MIC folds are their own draw.
     expect(text).toContain("predicted out of fold on its own stratified random folds, which differ from the random split's and hold no lineage out.");
     expect(text).not.toContain("on the random split. ");
@@ -129,7 +136,13 @@ describe("the dataset report beside its baselines file", () => {
       const ba = Number.parseFloat(tr.querySelectorAll("td")[1]!.firstChild!.textContent!) / 100;
       const l = scored.find((x) => pct(x.metrics!.balanced_accuracy) === pct(ba))!;
       const want = signedPoints(leadOver(l.metrics!.balanced_accuracy, base.balanced_accuracy));
-      expect(lead.textContent).toBe(`${want} points from lineage identity alone`);
+      // The mark is signed; the words read to a screen reader carry the
+      // side instead of a sign.
+      const words = leadWords(leadOver(l.metrics!.balanced_accuracy, base.balanced_accuracy), "lineage identity alone");
+      expect(lead.textContent).toBe(`${want} ${words}`);
+      expect(lead.querySelector('[aria-hidden="true"]')!.textContent).toBe(want);
+      expect(lead.querySelector(".sr-only")!.textContent).toBe(` ${words}`);
+      expect(words).toMatch(l.metrics!.balanced_accuracy > base.balanced_accuracy ? / points? above lineage identity alone$/ : / points? below lineage identity alone$/);
       expect(want.startsWith(l.metrics!.balanced_accuracy > base.balanced_accuracy ? "+" : "−")).toBe(true);
     }
     const note = document.querySelector('[data-baseline="lineage-note"]')!.textContent!;
@@ -161,6 +174,15 @@ describe("the dataset report beside its baselines file", () => {
     expect(marks().length).toBeGreaterThan(0);
   });
 
+  it("says on how many folds the model predicts only its start value", async () => {
+    const report = reportFor("baselines-constant-folds");
+    const sha = await shaOf(JSON.stringify(report));
+    await mount(report, fileFor(report, sha, true, [0, 1, 4]));
+    expect(document.querySelector('[data-baseline="mic"]')!.textContent).toContain(
+      "On 3 of the 5 folds the model predicts only its start value, one MIC for every isolate, so on those folds it is a constant MIC too.",
+    );
+  });
+
   it("marks a dataset whose held-out predictions do not confirm the folds", async () => {
     const report = reportFor("baselines-unconfirmed");
     const sha = await shaOf(JSON.stringify(report));
@@ -172,16 +194,14 @@ describe("the dataset report beside its baselines file", () => {
 
 // ---- the overview, the datasets table and the methods page --------------------
 
+/** The constants of a summary beside the index, one entry per dataset
+ *  `pick` covers, each a whole share of 100 exact MICs. */
 const constantsFor = (rows: readonly CatalogRow[], pick: (k: number) => { model: number; median: number; confirmed?: boolean } | null) => {
-  const files = new Map(
-    rows.flatMap((r, k) => {
-      const p = pick(k);
-      if (r.mic_essential_agreement === null || p === null) return [];
-      const f = parseBaselines({ schema: 1, dataset: r.id, report_sha256: "c".repeat(64), evaluation_revision: 14, mic: micPart(100, p.model, p.median, p.median, p.confirmed ?? true), lineage: [] });
-      return [[r.id, f] as const];
-    }),
-  );
-  return micConstants(rows, files, 14);
+  const entries = rows.flatMap((r, k) => {
+    const p = pick(k);
+    return r.mic_essential_agreement === null || p === null ? [] : [summaryEntry(r.id, p.model / 100, p.median / 100, p.confirmed ?? true)];
+  });
+  return micConstants(rows, parseMicSummary(summary("c".repeat(64), entries)), 14);
 };
 
 describe("the overview's MIC finding beside the constant (synthetic files)", () => {
@@ -202,6 +222,19 @@ describe("the overview's MIC finding beside the constant (synthetic files)", () 
     expect(f.caption).toContain("the counts at 90% are a description read after the scores");
     const slide = micFinding(m, { page: false, micConstants: constants });
     expect(slide.result).toContain(`reaches a median of ${pct(b.medianConstant)} against the model's ${pct(b.medianModel)}`);
+  });
+
+  it("names the datasets a partial summary covers, and reads a level median lead as level", () => {
+    const first = rows.findIndex((r) => r.mic_essential_agreement !== null);
+    const half = constantsFor(rows, (k) => (k === first ? { model: 80 + (k % 15), median: 85 } : null));
+    const b = micBaselineSummary(rows, half);
+    expect(b.covered).toBeLessThan(b.n);
+    expect(micFinding(m, { page: true, micConstants: half }).result).toContain(
+      `over ${b.covered} of the ${b.n} datasets, the ones with a baselines file, the median agreement is ${pct(b.medianModel)} for the model`,
+    );
+    const level = { ...b, medianLead: 0.0004 };
+    expect(micConstantWords(level)).toContain("the model is level with its dataset's constant at the median, and the model is not above");
+    expect(micConstantWords({ ...b, medianLead: -0.021 })).toContain("the model is below its dataset's constant by a median of 2.1 points,");
   });
 
   it("reads as before with no files", () => {
@@ -257,5 +290,9 @@ describe("the methods page's 0.90 count (synthetic files)", () => {
     expect(s).toContain(`the constant reaches 90% on ${b.constantAt90}, the model on ${b.modelAt90}, and both on ${b.bothAt90}`);
     expect(s).toContain("90% is an adapted research screen");
     expect(constantAt90Sentence(null)).toBe("");
+    // A summary that covers some of them names both counts.
+    const some = micBaselineSummary(rows, constantsFor(rows, (k) => (k === 0 ? { model: 92, median: 93 } : null)));
+    expect(constantAt90Sentence(some)).toContain(`on the ${some.covered} of ${some.n} datasets with an MIC model that have a baselines file, the constant reaches 90% on`);
+    expect(s).toContain(`on the ${b.n} datasets with an MIC model, the constant reaches 90% on`);
   });
 });

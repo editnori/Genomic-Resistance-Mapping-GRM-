@@ -7,12 +7,13 @@
 // fold's training genomes, or the fold's training prevalence when the
 // lineage is unseen. The file is optional, and a file that does not
 // describe the report as fetched shows nothing: the dataset report checks
-// the report's SHA-256, and the overview and the datasets table, which read
-// the index alone, check the dataset, the revision and the model's own
-// figure against the index row.
+// the report's SHA-256. The overview, the datasets table, the methods page
+// and the slides read one summary file beside the index instead
+// (baselines.json), pinned to the SHA-256 of index.json's bytes and refused
+// whole when it describes another index.
 
-import { median } from "./format";
-import type { CatalogRow, DatasetReport, Scheme } from "./schema";
+import { median, points } from "./format";
+import type { CatalogRow, DatasetReport, Manifest, Scheme } from "./schema";
 import { ShapeError } from "./validate";
 
 export const BASELINES_SCHEMA = 1;
@@ -35,14 +36,17 @@ export interface FoldConstant {
   mode_tied: boolean;
 }
 
-/** Isolates with bit-identical held-out predictions lie in one rebuilt
- *  fold: `groups` groups of two or more, holding `isolates` isolates, leaving
- *  out folds that predict one value for every isolate (`constant_folds`, as
- *  when boosting keeps no tree). The folds are confirmed when a group exists. */
+/** Groups of two or more isolates with bit-identical held-out predictions,
+ *  against the rebuilt folds: `groups` (I) lie inside one fold, holding
+ *  `isolates` isolates, and `spanning` (X) span folds. Folds that predict one
+ *  value for every isolate (`constant_folds`, as when boosting keeps no tree)
+ *  are left out. The folds are confirmed when X = 0 and I >= 1; a dataset with
+ *  X > I is refused and has no file. */
 export interface PredictionCheck {
   confirmed: boolean;
   groups: number;
   isolates: number;
+  spanning: number;
   constant_folds: number[];
 }
 
@@ -124,10 +128,14 @@ const checkMic = (m: unknown): void => {
   const folds = m.folds;
   const p = m.prediction_check;
   need(
-    isObj(p) && typeof p.confirmed === "boolean" && isCount(p.groups) && isCount(p.isolates) && Array.isArray(p.constant_folds),
-    "baselines mic.prediction_check should be {confirmed, groups, isolates, constant_folds}",
+    isObj(p) && typeof p.confirmed === "boolean" && isCount(p.groups) && isCount(p.isolates) && isCount(p.spanning) && Array.isArray(p.constant_folds),
+    "baselines mic.prediction_check should be {confirmed, groups, isolates, spanning, constant_folds}",
   );
-  need(p.confirmed === p.groups > 0 && p.isolates >= 2 * p.groups && p.isolates <= m.n, "baselines mic.prediction_check: confirmed should mean a group of two or more isolates, all of them isolates with an MIC");
+  need(p.spanning <= p.groups, "baselines mic.prediction_check: a dataset whose groups spanning folds outnumber the groups inside one fold is refused and has no file");
+  need(
+    p.confirmed === (p.groups > 0 && p.spanning === 0) && p.isolates >= 2 * p.groups && p.isolates <= m.n,
+    "baselines mic.prediction_check: confirmed should mean a group of two or more isolates inside one fold and none spanning folds, all of them isolates with an MIC",
+  );
   need(
     (p.constant_folds as unknown[]).every((f, i, a) => isCount(f) && f < folds && (i === 0 || f > (a[i - 1] as number))),
     "baselines mic.prediction_check: constant_folds should be ascending fold numbers",
@@ -203,42 +211,100 @@ export const signedPoints = (lead: number, digits = 1): string => {
 };
 
 /** A lead in words beside the baseline it is measured from: "12.6 points
- *  above it", "3.1 points below it", "level with it". */
-export const leadWords = (lead: number): string => (lead === 0 ? "level with it" : `${(Math.abs(lead) * 100).toFixed(1)} points ${lead > 0 ? "above" : "below"} it`);
+ *  above it", "3.1 points below it", and "level with it" for a lead that
+ *  shows as 0.0 points. */
+export const leadWords = (lead: number, from = "it"): string =>
+  signedPoints(lead) === "0.0" ? `level with ${from}` : `${points(lead)} ${lead > 0 ? "above" : "below"} ${from}`;
 
 /** The lineage baseline of one split, or undefined. */
 export const lineageOf = (b: Baselines | null, scheme: Scheme): LineageBaseline | undefined => b?.lineage.find((s) => s.scheme === scheme);
 
-// ---- the overview and the datasets table ------------------------------------------
+// ---- the overview, the datasets table, the methods page and the slides ------------
 
-/** One dataset's MIC constant, as the index row and the file agree. */
+export const SUMMARY_SCHEMA = 1;
+
+/** One dataset of the summary: its report's SHA-256, the model's agreement
+ *  on exact MICs, the constant at each training fold's lower median, and
+ *  whether the held-out predictions confirm the rebuilt folds. */
+export interface MicSummaryEntry {
+  dataset: string;
+  report_sha256: string;
+  model: number;
+  constant: number;
+  confirmed: boolean;
+}
+
+/** baselines.json beside index.json: the constants of every dataset with
+ *  an MIC model and a baselines file, in one file, pinned to index.json. */
+export interface MicSummary {
+  schema: number;
+  evaluation_revision: number;
+  index_sha256: string;
+  datasets: MicSummaryEntry[];
+}
+
+const isShare = (v: unknown): v is number => typeof v === "number" && v >= 0 && v <= 1;
+const isSha = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
+
+/** baselines.json: the schema this view reads, a SHA-256 pin to the index,
+ *  and one entry per dataset. */
+export function parseMicSummary(raw: unknown): MicSummary {
+  need(isObj(raw), "baselines summary: expected a JSON object");
+  if (raw.schema !== SUMMARY_SCHEMA) throw new ShapeError(`baselines summary is schema ${String(raw.schema)}; this dashboard reads schema ${SUMMARY_SCHEMA}`, raw.schema);
+  need(isCount(raw.evaluation_revision) && isSha(raw.index_sha256), "baselines summary: expected evaluation_revision and a SHA-256 index_sha256");
+  need(Array.isArray(raw.datasets), "baselines summary: datasets should be a list");
+  (raw.datasets as unknown[]).forEach((d, i) =>
+    need(
+      isObj(d) && typeof d.dataset === "string" && isSha(d.report_sha256) && isShare(d.model) && isShare(d.constant) && typeof d.confirmed === "boolean",
+      `baselines summary datasets[${i}] should be {dataset, report_sha256, model, constant, confirmed}`,
+    ),
+  );
+  need(new Set((raw.datasets as Obj[]).map((d) => d.dataset)).size === raw.datasets.length, "baselines summary: one entry per dataset");
+  return raw as unknown as MicSummary;
+}
+
+/** The summary as it describes `manifest`: `indexDigest`, the SHA-256 of
+ *  index.json's bytes as this page read them, equal to its pin, the index's
+ *  revision, and every entry a dataset the index lists with an MIC model and
+ *  the same model figure. Anything else refuses the summary whole, as does
+ *  an unknown digest (undefined while the index loads, null where the
+ *  browser computes none), and the pages show no constant. */
+export const micSummaryFor = (summary: MicSummary | null, manifest: Manifest, indexDigest: string | null | undefined): MicSummary | null => {
+  if (summary === null || indexDigest === null || indexDigest === undefined) return null;
+  if (summary.index_sha256 !== indexDigest || summary.evaluation_revision !== manifest.evaluation_revision) return null;
+  const rows = new Map(manifest.datasets.map((r) => [r.id, r]));
+  const own = summary.datasets.every((d) => {
+    const row = rows.get(d.dataset);
+    return row !== undefined && row.mic_essential_agreement !== null && row.mic_essential_agreement === d.model;
+  });
+  return own ? summary : null;
+};
+
+/** One dataset's MIC constant, as the index row and the summary agree. */
 export interface MicConstant {
   /** The model's agreement on exact MICs, the index row's figure. */
   model: number;
   /** A constant at each training fold's lower median MIC. */
   constant: number;
-  /** A constant at the mode of each training fold's exact MICs. */
-  mode: number | null;
   /** The held-out predictions confirm the rebuilt folds. */
   confirmed: boolean;
 }
 
-/** The constant for an index row, when `file` names that dataset and the
- *  index's revision, and its model figure is the row's own. The index has
- *  no report hash, so this is the check the index allows; the dataset
- *  report checks the hash. */
-export const micConstantFor = (row: CatalogRow, file: Baselines | undefined, revision: number | undefined): MicConstant | null => {
-  if (file === undefined || file.dataset !== row.id || file.evaluation_revision !== revision) return null;
-  const m = file.mic;
-  if (m === null || m.median === null || row.mic_essential_agreement === null || m.model.essential_agreement !== row.mic_essential_agreement) return null;
-  return { model: m.model.essential_agreement, constant: m.median.essential_agreement, mode: m.mode?.essential_agreement ?? null, confirmed: m.prediction_check.confirmed };
+/** The constant for an index row from its summary entry, when the entry's
+ *  model figure is the row's own. */
+export const micConstantFor = (row: CatalogRow, entry: MicSummaryEntry | undefined): MicConstant | null => {
+  if (entry === undefined || entry.dataset !== row.id || row.mic_essential_agreement === null || entry.model !== row.mic_essential_agreement) return null;
+  return { model: entry.model, constant: entry.constant, confirmed: entry.confirmed };
 };
 
-/** The constants of every index row a file covers, by dataset id. */
-export const micConstants = (rows: readonly CatalogRow[], files: ReadonlyMap<string, Baselines>, revision: number | undefined): ReadonlyMap<string, MicConstant> => {
+/** The constants of every index row the summary covers, by dataset id. A
+ *  summary of another revision, or none, gives none. */
+export const micConstants = (rows: readonly CatalogRow[], summary: MicSummary | null, revision: number | undefined): ReadonlyMap<string, MicConstant> => {
   const out = new Map<string, MicConstant>();
+  if (summary === null || summary.evaluation_revision !== revision) return out;
+  const entries = new Map(summary.datasets.map((d) => [d.dataset, d]));
   for (const row of rows) {
-    const c = micConstantFor(row, files.get(row.id), revision);
+    const c = micConstantFor(row, entries.get(row.id));
     if (c !== null) out.set(row.id, c);
   }
   return out;

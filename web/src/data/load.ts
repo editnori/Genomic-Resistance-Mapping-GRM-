@@ -5,7 +5,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { Corpus, DatasetReport, Manifest, Research, SpeciesReport } from "./schema";
 import { ShapeError, parseCorpus, parseDataset, parseManifest, parseResearch, parseSpecies } from "./validate";
 import { parseIntervals, type Intervals } from "./intervals";
-import { parseBaselines, type Baselines } from "./baselines";
+import { micSummaryFor, parseBaselines, parseMicSummary, type Baselines, type MicSummary } from "./baselines";
 
 export type LoadError =
   | { kind: "missing"; path: string }
@@ -79,15 +79,16 @@ export async function sha256Hex(bytes: ArrayBuffer): Promise<string | null> {
 }
 
 /** A dataset report's bytes are hashed as they are read, for the optional
- *  files pinned to them (baselines/<id>.json). */
-const isDatasetPath = (path: string): boolean => path.startsWith("/data/datasets/");
+ *  files pinned to them (baselines/<id>.json), and so are index.json's, for
+ *  the summary pinned to it (baselines.json). */
+const isHashedPath = (path: string): boolean => path === "/data/index.json" || path.startsWith("/data/datasets/");
 
-/** Raw JSON for a /data path, or the error that stopped it. A dataset
- *  report's SHA-256 is computed from the same bytes, beside the parse, and
- *  settles to null when the report cannot be read. */
+/** Raw JSON for a /data path, or the error that stopped it. The SHA-256 of
+ *  a dataset report or of the index is computed from the same bytes, beside
+ *  the parse, and settles to null when the file cannot be read. */
 async function fetchRaw(path: string): Promise<{ ok: true; raw: unknown } | { ok: false; error: LoadError }> {
   const got = await fetchBytes(path);
-  if (isDatasetPath(path)) {
+  if (isHashedPath(path)) {
     if (got.ok) void sha256Hex(got.bytes).then((d) => settleDigest(path, d));
     else settleDigest(path, null);
   }
@@ -175,6 +176,8 @@ export const PATHS = {
   research: "/data/research.json",
   intervals: (id: string) => `/data/intervals/${encodeURIComponent(id)}.json`,
   baselines: (id: string) => `/data/baselines/${encodeURIComponent(id)}.json`,
+  /** The MIC constants of every dataset, beside index.json. */
+  micBaselines: "/data/baselines.json",
 } as const;
 
 export const useManifest = (): Resource<Manifest> => useResource(PATHS.manifest, parseManifest);
@@ -193,10 +196,9 @@ export const useIntervals = (id: string): Resource<Intervals> => useResource(PAT
  *  (baselinesFor). */
 export const useBaselines = (id: string): Resource<Baselines> => useResource(PATHS.baselines(id), parseBaselines);
 
-/** The SHA-256 of dataset `id`'s report as this page read it: undefined
- *  until it has been read and hashed, null when it could not be. */
-export function useReportDigest(id: string): string | null | undefined {
-  const path = PATHS.dataset(id);
+/** The SHA-256 of a hashed file as this page read it: undefined until it
+ *  has been read and hashed, null when it could not be. */
+function useDigest(path: string): string | null | undefined {
   const subscribe = useCallback(
     (onChange: () => void) => {
       const entry = digestEntry(path);
@@ -209,52 +211,25 @@ export function useReportDigest(id: string): string | null | undefined {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
-/** Every baselines file of the datasets with an MIC model, by id, read in
- *  one pass so the overview and the table draw once. A file that is missing
- *  or invalid is left out, and that dataset shows no constant. */
-async function loadMicBaselines(ids: readonly string[]): Promise<Resource<ReadonlyMap<string, Baselines>>> {
-  const files = await Promise.all(
-    ids.map(async (id) => {
-      const got = await fetchRaw(PATHS.baselines(id));
-      if (!got.ok) return null;
-      try {
-        return parseBaselines(got.raw);
-      } catch {
-        return null;
-      }
-    }),
-  );
-  const out = new Map<string, Baselines>();
-  files.forEach((f, i) => {
-    if (f !== null) out.set(ids[i]!, f);
-  });
-  return { status: "ready", data: out };
+/** The SHA-256 of dataset `id`'s report as this page read it: undefined
+ *  until it has been read and hashed, null when it could not be. */
+export function useReportDigest(id: string): string | null | undefined {
+  return useDigest(PATHS.dataset(id));
 }
 
-/** The cache key of one manifest's MIC datasets' files: one entry per set
- *  of ids, so another manifest reads its own. */
-const micBaselinesKey = (ids: readonly string[]): string => `baselines of ${ids.join(" ")}`;
-
-export function useMicBaselines(manifest: Manifest): Resource<ReadonlyMap<string, Baselines>> {
-  const ids = useMemo(() => manifest.datasets.filter((d) => d.mic_essential_agreement !== null).map((d) => d.id), [manifest]);
-  const key = micBaselinesKey(ids);
-  const subscribe = useCallback(
-    (onChange: () => void) => {
-      const entry = entryFor(key);
-      entry.listeners.add(onChange);
-      if (!entry.started) {
-        entry.started = true;
-        void loadMicBaselines(ids).then((state) => {
-          entry.state = state;
-          entry.listeners.forEach((l) => l());
-        });
-      }
-      return () => entry.listeners.delete(onChange);
-    },
-    [key, ids],
-  );
-  const snapshot = useCallback(() => entryFor(key).state as Resource<ReadonlyMap<string, Baselines>>, [key]);
-  return useSyncExternalStore(subscribe, snapshot, snapshot);
+/** The MIC constants of every dataset with an MIC model, from the one
+ *  summary file beside the index (baselines.json), as pinned to `manifest`
+ *  and to the bytes of index.json this page read (micSummaryFor). Ready with
+ *  null when the file is missing or invalid, or describes another index, and
+ *  the pages then show no constant; loading until both the file and the
+ *  index's digest are known, so the pages draw once. */
+export function useMicBaselines(manifest: Manifest): Resource<MicSummary | null> {
+  const file = useResource(PATHS.micBaselines, parseMicSummary);
+  const digest = useDigest(PATHS.manifest);
+  return useMemo(() => {
+    if (file.status === "loading" || digest === undefined) return LOADING;
+    return { status: "ready", data: file.status === "ready" ? micSummaryFor(file.data, manifest, digest) : null };
+  }, [file, digest, manifest]);
 }
 
 /** A load failure in words a visitor can act on. Where the cause is a

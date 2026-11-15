@@ -19,7 +19,7 @@ export const micPart = (nExact: number, model: number, median: number, mode: num
   return {
     folds: 5,
     seed: 42,
-    prediction_check: confirmed ? { confirmed: true, groups: 4, isolates: 9, constant_folds: [] } : { confirmed: false, groups: 0, isolates: 0, constant_folds: [0, 1, 2, 3, 4] },
+    prediction_check: confirmed ? { confirmed: true, groups: 4, isolates: 9, spanning: 0, constant_folds: [] } : { confirmed: false, groups: 0, isolates: 0, spanning: 0, constant_folds: [0, 1, 2, 3, 4] },
     threshold_check: { confirmed: true, checked: 5 },
     exact_with_training_copy: 2,
     n: nExact + 12,
@@ -41,3 +41,14 @@ export const file = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+
+/** One entry of the summary beside the index (baselines.json). */
+export const summaryEntry = (dataset: string, model: number, constant: number, confirmed = true) => ({ confirmed, constant, dataset, model, report_sha256: SHA });
+
+/** A summary pinned to the index bytes with SHA-256 `indexSha`. */
+export const summary = (indexSha: string, datasets: readonly ReturnType<typeof summaryEntry>[], revision = 14) => ({
+  datasets,
+  evaluation_revision: revision,
+  index_sha256: indexSha,
+  schema: 1,
+});

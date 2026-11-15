@@ -293,7 +293,7 @@ const wordingSentence = (manifest: Manifest): string => {
 export const constantAt90Sentence = (b: MicBaselineSummary | null): string =>
   b === null || b.covered === 0
     ? ""
-    : ` Read after the scores, as a description: on ${int(b.covered)} datasets with an MIC model, the constant reaches 90% on ${int(b.constantAt90)}, the model on ${int(b.modelAt90)}, and both on ${int(b.bothAt90)}. 90% is an adapted research screen, so a constant can reach it with no genome read.`;
+    : ` Read after the scores, as a description: on ${b.covered === b.n ? `the ${int(b.n)} datasets with an MIC model` : `the ${int(b.covered)} of ${int(b.n)} datasets with an MIC model that have a baselines file`}, the constant reaches 90% on ${int(b.constantAt90)}, the model on ${int(b.modelAt90)}, and both on ${int(b.bothAt90)}. 90% is an adapted research screen, so a constant can reach it with no genome read.`;
 
 /** The baselines summary for the Methods page, once the files are read. */
 const useMicBaselineSummary = (manifest: Manifest): MicBaselineSummary | null => {
@@ -353,17 +353,19 @@ const Scores = ({ manifest }: { manifest: Manifest }) => {
       </Def>
       <Def term="Constant MIC" plain="A prediction that reads no genome: every test isolate of a fold gets one MIC, taken from that fold's training isolates.">
         For each dataset with an MIC model, <code>grm baselines</code> rebuilds the model&apos;s MIC folds: stratified random folds of the isolates with an MIC, drawn with the
-        report&apos;s own fold count and seed. They differ from the random split&apos;s folds and hold no lineage out. The rebuilt folds count as confirmed when isolates with
-        bit-identical held-out predictions lie in one fold, as one model per fold gives. Each fold&apos;s exact training MICs give two constants, their lower median and
+        report&apos;s own fold count and seed. They differ from the random split&apos;s folds and hold no lineage out. The rebuilt folds count as confirmed when the groups of
+        isolates with bit-identical held-out predictions lie inside one fold each, as they do on the report&apos;s own folds and not on a wrong rebuild. Correct folds can also
+        give one value to isolates of two folds, so a dataset with some groups spanning folds is marked unconfirmed (†), and one whose spanning groups outnumber the groups
+        inside one fold gets no baselines file. Each fold&apos;s exact training MICs give two constants, their lower median and
         their mode (the value with the highest count, a tie going to the lower), and each is scored on the fold&apos;s exact test MICs, the isolates the model is scored on.
         The model itself starts every isolate at a constant of its fit
         part, the upper median of its exact MICs, before its trees adjust it. An essential-agreement figure shows how far the model is above a no-genome constant only when the
         two are set side by side on the same isolates and folds.{constantAt90Sentence(baselines)}
       </Def>
       <Def term="Lineage identity" plain="A prediction that reads only which lineage a genome belongs to.">
-        In each of a split&apos;s own folds, a test genome scores the resistant share of its lineage among the fold&apos;s training genomes, or the fold&apos;s resistant share when
-        no training genome shares its lineage, and the scores are pooled and called at 0.5 as a learner&apos;s are. It separates a model reading the genome from a model reading
-        the population: set beside a learner&apos;s random-split score on the same genomes and folds, it shows how far the learner is above lineage membership alone. With lineages
+        In each of a split&apos;s own folds, a test genome scores the resistant share of its lineage among the fold&apos;s training genomes, or the resistant share of the fold&apos;s
+        training genomes when none of them shares its lineage, and the scores are pooled and called at 0.5 as a learner&apos;s are. Set beside a learner&apos;s random-split score
+        on the same genomes and folds, it shows how far the learner is above what lineage membership alone reaches; it does not show what the learner reads. With lineages
         held out no test genome&apos;s lineage is in training, so it has nothing of the lineage to read there.
       </Def>
       <Def term="AUROC" plain="How well a model's scores rank resistant genomes above susceptible ones: 0.5 is chance, and 1 means every resistant genome ranks above every susceptible one.">
@@ -373,8 +375,8 @@ const Scores = ({ manifest }: { manifest: Manifest }) => {
       <Def term="What each Overview figure counts" plain="Which datasets each Overview figure includes. A median is the middle value when the datasets are lined up by score.">
         The lineage figure draws datasets with both splits. Each row of the learner table counts the datasets where that learner has a score on both splits. The bar counts take the
         datasets where the best learner has both error rates with lineages held out. The known-gene figure draws datasets with a rule and a lineage-held-out result; the PCR panel,
-        datasets with that panel and a best learner; the MIC figure, datasets with an MIC model, and its constant, those of them with a baselines file pinned to the index&apos;s
-        revision and model figure. Datasets with no best learner are left out of every median of the best learner, and
+        datasets with that panel and a best learner; the MIC figure, datasets with an MIC model, and its constant, those of them in the baselines summary pinned to the bytes of
+        this index. Datasets with no best learner are left out of every median of the best learner, and
         each figure states what it leaves out.
       </Def>
     </Defs>

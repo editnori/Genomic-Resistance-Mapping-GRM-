@@ -307,14 +307,21 @@ export const micLead = (s: MicSummary, b?: MicBaselineSummary | null): string =>
 
 /** The model beside a constant MIC from the training folds, as figures. */
 export const micConstantWords = (b: MicBaselineSummary): string => {
-  const over = b.covered === b.n ? `the ${int(b.n)} datasets` : `${int(b.covered)} of the ${int(b.n)} datasets, the ones with a baselines file`;
-  const lead = b.medianLead === null ? "" : `, the model is ${signedWords(b.medianLead)} its dataset's constant by a median of ${points(b.medianLead)},`;
+  const over = b.covered === b.n ? `the ${int(b.n)} datasets` : `${int(b.covered)} of the ${int(b.n)} datasets, the ones with a baselines file,`;
+  const lead =
+    b.medianLead === null
+      ? ""
+      : signedWords(b.medianLead) === "level with"
+        ? `, the model is level with its dataset's constant at the median,`
+        : `, the model is ${signedWords(b.medianLead)} its dataset's constant by a median of ${points(b.medianLead)},`;
   return `Set beside a constant MIC taken from each training fold (the lower median of its exact MICs) and scored on the same exact MICs, over ${over} the median agreement is ${pct(b.medianModel)} for the model and ${pct(b.medianConstant)} for the constant${lead} and the model is not above the constant on ${int(b.notAbove)} of ${int(b.covered)}.${
     b.unconfirmed === 0 ? "" : ` On ${int(b.unconfirmed)} of them the held-out predictions do not confirm the rebuilt folds.`
   }`;
 };
 
-const signedWords = (lead: number): string => (lead >= 0 ? "above" : "below");
+/** "above" or "below" a constant, and "level with" it for a lead that
+ *  shows as 0.0 points. */
+const signedWords = (lead: number): string => (points(lead) === "0.0 points" ? "level with" : lead > 0 ? "above" : "below");
 
 // ---- data ------------------------------------------------------------------------
 
