@@ -2590,10 +2590,10 @@ mod tests {
     /// Its 60 genomes ("562.400" to "562.459") sit in 20 lineages of three,
     /// each lineage with its own copy of one random core, 2% of its bases
     /// drawn again. Each genome also carries short random blocks, each on its
-    /// own contig, so each block is one matrix row for its set of carriers:
+    /// own contig, so each block is one matrix row for the genomes that hold it:
     /// - 24 blocks in three genomes each, the datasets' support floor, so an
-    ///   outer fold that holds out one carrier leaves the block two training
-    ///   carriers;
+    ///   outer fold that holds out one of the three leaves the block in two
+    ///   training genomes;
     /// - 12 blocks in one set of eight genomes and one other genome each,
     ///   which differ from each other only on that genome;
     /// - 40 blocks in random sets.
@@ -2634,20 +2634,20 @@ mod tests {
             .copied()
             .filter(|&g| g != 1 && g != 4)
             .collect();
-        let mut carriers: Vec<Vec<usize>> = Vec::new();
+        let mut holders: Vec<Vec<usize>> = Vec::new();
         for _ in 0..24 {
             let mut set = BTreeSet::new();
             while set.len() < 3 {
                 set.insert(single[rng.random_range(0..single.len())]);
             }
-            carriers.push(set.into_iter().collect());
+            holders.push(set.into_iter().collect());
         }
         let shared: Vec<usize> = (1..=8).map(|i| 6 * i).collect();
         for &extra in single.iter().filter(|g| !shared.contains(g)).take(12) {
-            carriers.push(shared.iter().copied().chain([extra]).collect());
+            holders.push(shared.iter().copied().chain([extra]).collect());
         }
         for _ in 0..40 {
-            carriers.push(
+            holders.push(
                 units
                     .iter()
                     .copied()
@@ -2655,7 +2655,7 @@ mod tests {
                     .collect(),
             );
         }
-        let blocks: Vec<Vec<u8>> = carriers.iter().map(|_| random(&mut rng, 80)).collect();
+        let blocks: Vec<Vec<u8>> = holders.iter().map(|_| random(&mut rng, 80)).collect();
         std::fs::create_dir_all(layout.fasta_dir()).unwrap();
         std::fs::create_dir_all(root.join("bvbrc")).unwrap();
         let (mut amr, mut meta) = (String::new(), String::new());
@@ -2664,7 +2664,7 @@ mod tests {
             let unit = copy_of(g);
             let mut fasta = b">core\n".to_vec();
             fasta.extend(&lineage_cores[unit / 3]);
-            for (j, (set, block)) in carriers.iter().zip(&blocks).enumerate() {
+            for (j, (set, block)) in holders.iter().zip(&blocks).enumerate() {
                 if set.contains(&unit) {
                     fasta.extend(format!("\n>b{j}\n").into_bytes());
                     fasta.extend(block);
