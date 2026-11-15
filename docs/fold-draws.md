@@ -18,6 +18,8 @@ The chi-square screen and the per-fit candidate features have no draw of their o
 
 So another seed is another draw of the folds on the same features and cohort, and it also redraws the forest's and boosting's own randomness. `--learner-seed` separates the two: it seeds the forest's and boosting's own draws and leaves every partition as `--seed` draws it. SCM, CART and the lasso have no draw of their own, so a run that changes only `--learner-seed` reproduces their scores exactly.
 
+A new seed redraws the lineage split only in part. `grouped_folds` shuffles the lineages with the seed and then sorts them by size, largest first, with a stable sort, before it places each in the fold that keeps the classes most even (`learn::grouped_folds`). So the seed decides only the order of lineages of equal size, and the placement after it follows the same rule at every seed. Many genome pairs that share a test fold at seed 42 still share one at another seed. A spread measured over lineage-split draws is what another seed does to the release's lineage split, not what an unrelated lineage partition would do. The random split's stratified folds are redrawn whole.
+
 ## Where the reports go
 
 A run at the release's seeds writes `<data>/species/<slug>/results/`, as before. Any other run writes beside it:
@@ -28,9 +30,14 @@ A run at the release's seeds writes `<data>/species/<slug>/results/`, as before.
 | `grm learn --species S --seed 43` | `species/S/draws/seed-43/` |
 | `grm learn --species S --learner-seed 7` | `species/S/draws/seed-42-learner-7/` |
 
-`grm report`, `grm intervals` and `grm provenance` read `results/` alone, so a draw is never indexed or served, and it never replaces a released report. Each draw's report records its seed in `eval_config.seed`, and `eval_config.learner_seed` when one was set. The field is left out when it is not set, so a release report keeps its bytes and its input key.
+`grm report` copies reports from `results/` alone into `<data>/report/`, and `grm intervals` and `grm provenance` read `<data>/report/`, which only `grm report` fills. So a draw is never indexed or served, and it never replaces a released report. Each draw's report records its seed in `eval_config.seed`, and `eval_config.learner_seed` when one was set. The field is left out when it is not set, so a release report keeps its bytes and its input key.
 
 A draw needs what `grm learn` needs: the species counted and built, and its k-mer sets on disk for a species with a probe assay. A new draw can leave a fold or a tuning partition without a class on a small dataset. The lineage split is then recorded as unavailable in that draw's report. An invalid random split is an error, as it is at seed 42 (docs/duplicate-isolation.md): the species' run stops at that dataset and writes no report for it. The datasets it had not reached can be run one at a time with `--only <id>` and the same seeds.
+
+Two more things a draw shares with a release run:
+
+- **Gene annotation.** A draw whose report needs a genome's gene annotation reads it from `<data>/bvbrc/features/<genome>.json` and, when that file is missing, downloads it and writes it there, outside `draws/`, as a release run does. With every annotation already cached, a draw writes nothing outside its own folder.
+- **One run per seed at a time.** Each report is written to `<id>.json.tmp` and then renamed, so two runs at the same seeds share that temporary file and their writes can interleave. Runs at different seeds write different folders and can run side by side.
 
 ## Repeat seeds and the input comparison
 
