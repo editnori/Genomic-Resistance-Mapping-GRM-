@@ -348,12 +348,7 @@ fn run(cli: Cli) -> Result<()> {
             seed,
             learner_seed,
         } => {
-            let cfg = grm::learn::eval::EvalConfig {
-                screened_features,
-                seed,
-                learner_seed,
-                ..Default::default()
-            };
+            let cfg = learn_config(screened_features, seed, learner_seed);
             species
                 .iter()
                 .try_for_each(|s| learn(&layout, s, &only, force, &cfg))
@@ -499,6 +494,21 @@ const DEFAULT_SCREENED_FEATURES: usize = 4000;
 /// The `grm learn --seed` default: `EvalConfig::default()`'s seed, which
 /// every release's folds were drawn from.
 const RELEASE_SEED: u64 = 42;
+
+/// The evaluation `grm learn` runs: the release's settings, with the
+/// screening budget and the seeds its flags give.
+fn learn_config(
+    screened_features: usize,
+    seed: u64,
+    learner_seed: Option<u64>,
+) -> grm::learn::eval::EvalConfig {
+    grm::learn::eval::EvalConfig {
+        screened_features,
+        seed,
+        learner_seed,
+        ..Default::default()
+    }
+}
 
 /// Count, structure, and matrix at `k`, each rerun only when `stale_stages`
 /// finds its output out of date.
@@ -2127,6 +2137,60 @@ mod tests {
                 "{flag}"
             );
         }
+    }
+
+    /// The evaluation `grm learn` runs, built from its parsed flags as the
+    /// command builds it: the release's at the defaults, and otherwise the
+    /// release's with the budget and both seeds the flags give.
+    #[test]
+    fn learn_evaluates_with_the_budget_and_seeds_its_flags_give() {
+        use grm::learn::eval::EvalConfig;
+        let config = |args: &[&str]| {
+            let all = [&["grm", "learn", "--species", "s"][..], args].concat();
+            let Command::Learn {
+                screened_features,
+                seed,
+                learner_seed,
+                ..
+            } = Cli::try_parse_from(all).unwrap().command
+            else {
+                panic!("parsed another command");
+            };
+            serde_json::to_value(learn_config(screened_features, seed, learner_seed)).unwrap()
+        };
+        let release = || EvalConfig::default();
+        let expected = |cfg: EvalConfig| serde_json::to_value(cfg).unwrap();
+        assert_eq!(config(&[]), expected(release()));
+        assert_eq!(
+            config(&["--seed", "43"]),
+            expected(EvalConfig {
+                seed: 43,
+                ..release()
+            })
+        );
+        assert_eq!(
+            config(&["--learner-seed", "7"]),
+            expected(EvalConfig {
+                learner_seed: Some(7),
+                ..release()
+            })
+        );
+        assert_eq!(
+            config(&[
+                "--seed",
+                "18446744073709551615",
+                "--learner-seed",
+                "0",
+                "--screened-features",
+                "1000",
+            ]),
+            expected(EvalConfig {
+                seed: u64::MAX,
+                learner_seed: Some(0),
+                screened_features: 1000,
+                ..release()
+            })
+        );
     }
 
     /// The pipeline's stages follow `--k`: counts, structure and matrix built

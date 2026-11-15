@@ -3400,6 +3400,102 @@ mod tests {
             .collect()
     }
 
+    /// The learner seed reaches each of the forest's and boosting's draws:
+    /// boosting's held-out scores on both splits, the final forest's and
+    /// boosting's importance lists, and the MIC regression's boosting. SCM's,
+    /// CART's and the lasso's final models do not move. Every partition still
+    /// comes from `seed`: boosting rebuilt with the evaluation seed's
+    /// early-stopping holdout and the learner seed's column samples gives
+    /// the fits `evaluate` made, in each outer fold and in the final model,
+    /// and a holdout drawn from the learner seed would not.
+    #[test]
+    fn the_learner_seed_reaches_boosting_the_final_models_and_the_mic_regression() {
+        use crate::ablate::plan::fold_seed as seed_of_fold;
+        let (x, y, groups) = draw_fixture();
+        let mic = draw_mic(&y);
+        let run = |learner_seed| {
+            let cfg = EvalConfig {
+                learner_seed,
+                ..draw_config()
+            };
+            let input = MicInput {
+                mic: &mic,
+                breakpoint: None,
+            };
+            evaluate(
+                "fixture__fixturemycin",
+                &x,
+                &y,
+                &groups,
+                &[],
+                1,
+                Some(input),
+                &cfg,
+            )
+            .unwrap()
+        };
+        let (base, twin) = (run(None), run(Some(4242)));
+        for scheme in ["random", "lineage"] {
+            assert_ne!(
+                learner_scores(&base, scheme, "gbt"),
+                learner_scores(&twin, scheme, "gbt"),
+                "{scheme}"
+            );
+        }
+        let (a, b) = (&base.finals, &twin.finals);
+        assert_ne!(value(&a.rf_importance), value(&b.rf_importance));
+        assert_ne!(value(&a.gbt_importance), value(&b.gbt_importance));
+        let predicted = |out: &EvalOutput| value(&out.mic.as_ref().unwrap().predicted);
+        assert_ne!(predicted(&base), predicted(&twin));
+        assert_eq!(value(&a.scm), value(&b.scm));
+        assert_eq!(
+            (value(&a.cart), a.cart_depth),
+            (value(&b.cart), b.cart_depth)
+        );
+        assert_eq!(value(&a.lasso), value(&b.lasso));
+        assert_eq!(value(&a.lasso_fit), value(&b.lasso_fit));
+
+        let cfg = EvalConfig {
+            learner_seed: Some(4242),
+            ..draw_config()
+        };
+        let mut holdout_matters = false;
+        for (scheme, folds) in outer_splits(&y, &groups, &[], &cfg) {
+            let tuning = tuning_groups(scheme, &groups, &[]);
+            let unit = tuning_unit(scheme);
+            for (fi, (train, _)) in fold_masks(&folds, cfg.folds).into_iter().enumerate() {
+                let (cx, _) = training_candidates(&x, &train, 1);
+                let draws = seed_of_fold(4242, fi);
+                let built = |holdout| {
+                    let fit = fit_gbt(
+                        &cx,
+                        &y,
+                        &train,
+                        tuning.as_deref(),
+                        unit,
+                        &cfg,
+                        holdout,
+                        draws,
+                    );
+                    fit.unwrap().0.scores
+                };
+                let context = test_context(scheme, fi);
+                let fit = fit_fold("gbt", &cx, &y, &train, tuning.as_deref(), &cfg, context);
+                let expected = built(seed_of_fold(42, fi));
+                assert_eq!(fit.unwrap().scores, expected, "{scheme} outer fold {fi}");
+                holdout_matters |= built(draws) != expected;
+            }
+        }
+        assert!(holdout_matters);
+        let all = Bits::ones(x.cols);
+        let importance = |holdout| {
+            let fit = fit_gbt(&x, &y, &all, None, "group", &cfg, holdout, 4242 + 13);
+            value(&top_weighted(fit.unwrap().1.importance(), 50))
+        };
+        assert_eq!(value(&b.gbt_importance), importance(42 + 13));
+        assert_ne!(importance(42 + 13), importance(4242 + 13));
+    }
+
     /// `--seed` takes any 64-bit value, so every seed sum wraps at 2^64:
     /// the per-fold seeds, the final models' (+7, +11, +13, +17) and the MIC
     /// regression's (+ fold). The release gate builds without overflow

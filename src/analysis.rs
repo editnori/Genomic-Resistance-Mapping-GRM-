@@ -3251,12 +3251,12 @@ mod tests {
         assert_eq!(std::fs::read(&report).unwrap(), saved);
     }
 
-    #[test]
-    fn reports_use_the_reported_cohort_and_record_its_counts_and_k() {
-        let dir = tempfile::tempdir().unwrap();
-        let layout = Layout::new(dir.path());
-        // The default minimum admits 25 reported resistant and 25 reported
-        // susceptible genomes. One MIC-only matrix row stays out.
+    /// Synthetic: 51 genomes, 25 reported resistant and 25 reported
+    /// susceptible to meropenem (the default minimum admits them) and one
+    /// whose label comes from its MIC alone, in ten lineages, with each
+    /// genome's reference assembly and cached features written under
+    /// `layout`.
+    fn reported_inputs(layout: &Layout) -> SpeciesInputs {
         let genomes: Vec<String> = (0..51).map(|i| format!("g{i}")).collect();
         for g in &genomes {
             // Annotation reads a reference assembly and its cached features.
@@ -3276,7 +3276,7 @@ mod tests {
             })
             .collect();
         phenotypes.push(inferred("g50", "meropenem", Call::R));
-        let input = SpeciesInputs {
+        SpeciesInputs {
             matrix: FeatureMatrix {
                 summary: MatrixSummary {
                     k: 21,
@@ -3321,11 +3321,23 @@ mod tests {
             phenotypes,
             genomes: HashMap::new(),
             datasets: vec![],
-        };
-        let spec = DatasetSpec {
+        }
+    }
+
+    fn reported_dataset() -> DatasetSpec {
+        DatasetSpec {
             breakpoint: None,
             ..dataset("meropenem")
-        };
+        }
+    }
+
+    #[test]
+    fn reports_use_the_reported_cohort_and_record_its_counts_and_k() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        // One MIC-only matrix row stays out.
+        let input = reported_inputs(&layout);
+        let spec = reported_dataset();
         let report = analyze_dataset(
             &layout,
             &Client::new(),
@@ -3347,5 +3359,80 @@ mod tests {
         assert_eq!(report.counts.labels_from_mic_excluded, 1);
         assert!(report.samples.iter().all(|s| s.id != "g50" && !s.from_mic));
         assert_eq!(report.input_fingerprint, "fixture key");
+    }
+
+    /// The release's input key does not move with the seed flags: the
+    /// default key of both fixture datasets is the one `main` (852ebc9)
+    /// computes, taken from a build of it. A key that hashed an unset
+    /// learner seed, or any new field at its default, would move every
+    /// released report's key and recompute it.
+    #[test]
+    fn the_default_input_key_is_the_one_main_computes() {
+        let input = inputs();
+        assert_eq!(key(&input, &dataset("meropenem"), None), "4979e60d3c8b1d6a");
+        assert_eq!(
+            key(&input, &dataset("ciprofloxacin"), None),
+            "31fe6bb8b9591f63"
+        );
+    }
+
+    /// A run at another seed on a dataset large enough to report writes the
+    /// draw's report to `draws/seed-43/<id>.json`, and the released
+    /// `results/<id>.json` keeps its bytes.
+    #[test]
+    fn a_draw_that_writes_a_report_writes_it_under_draws_and_not_results() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let mut input = reported_inputs(&layout);
+        input.contigs = input
+            .matrix
+            .summary
+            .genomes
+            .iter()
+            .map(|g| (g.clone(), 1))
+            .collect();
+        input.datasets = vec![reported_dataset()];
+        write_inputs(&layout, &input, "");
+        let id = "fixture__meropenem";
+        assert_eq!(learn(&layout).unwrap(), [id]);
+        let results = layout.results_dir("fixture");
+        let released = results.join(format!("{id}.json"));
+        let saved = std::fs::read(&released).unwrap();
+        let draw = EvalConfig {
+            seed: 43,
+            ..Default::default()
+        };
+        assert_eq!(
+            analyze_species(&layout, "fixture", &[], false, &draw).unwrap(),
+            [id]
+        );
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
+        let names = |dir: &std::path::Path| {
+            let mut names: Vec<String> = std::fs::read_dir(dir)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().into_string().unwrap())
+                .collect();
+            names.sort();
+            names
+        };
+        assert_eq!(names(&results), [format!("{id}.json")]);
+        let folder = layout.species_dir("fixture").join("draws/seed-43");
+        assert_eq!(names(&folder), [format!("{id}.json")]);
+        let read = |path: &std::path::Path| {
+            serde_json::from_slice::<serde_json::Value>(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let (release, drawn) = (read(&released), read(&folder.join(format!("{id}.json"))));
+        assert_eq!(release["eval_config"]["seed"], 42);
+        assert_eq!(drawn["eval_config"]["seed"], 43);
+        assert_ne!(drawn["input_fingerprint"], release["input_fingerprint"]);
+        assert_eq!(drawn["samples"], release["samples"]);
+        // Each run then finds its own report current.
+        assert!(learn(&layout).unwrap().is_empty());
+        assert!(
+            analyze_species(&layout, "fixture", &[], false, &draw)
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(std::fs::read(&released).unwrap(), saved);
     }
 }
