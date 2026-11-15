@@ -1,0 +1,7 @@
+specificity rows that pass the plan rule (staphylococcus_aureus), test 1 on the 11 fold plans:
+random scm change +0.0605 V1 0.8718..0.9129 V3 0.9517..0.9571 test1 yes
+random cart change +0.1075 V1 0.8235..0.8494 V3 0.9374..0.9499 test1 yes
+random rf change +0.0710 V1 0.8576..0.8788 V3 0.9338..0.9445 test1 yes
+random gbt change +0.0533 V1 0.8682..0.8894 V3 0.9356..0.9428 test1 yes
+random catalog change +0.1304 V1 0.8106..0.8106 V3 0.9410..0.9410 test1 yes
+lineage catalog change +0.1304 V1 0.8106..0.8106 V3 0.9410..0.9410 test1 yes

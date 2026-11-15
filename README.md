@@ -34,6 +34,8 @@ Every figure is internal validation: cross-validation on public BV-BRC genomes, 
 
 Read each learner's figures with their split and their evaluation revision. The lineage split holds out whole lineages, and a report records why when that split could not be formed. From revision 14 every learner's figures cover every isolate of the split ([docs/equal-scoring.md](docs/equal-scoring.md)).
 
+In each of the six clindamycin datasets one deposited study holds most or a large share of the disagreements between GRM's known-gene rule and the reported phenotype, and the datasets are of four kinds: measured dependence for `staphylococcus_aureus__clindamycin` and `campylobacter_coli__clindamycin`, one study for `enterococcus_faecium__clindamycin`, class balance with dependence not measured for `campylobacter_jejuni__clindamycin` and `streptococcus_agalactiae__clindamycin`, and no dependence under the plan's rule for `streptococcus_pneumoniae__clindamycin`. [docs/clindamycin-labels.md](docs/clindamycin-labels.md) says what each released clindamycin figure rests on.
+
 ## Givens
 
 [Givens](https://github.com/editnori/givens) is a provisional shared browser of the definitions and assumptions that four projects use: GRM, SigDrug, KSD and CondEvent. Its repository is private for now. GRM's entries there cover evaluation terms only: dataset, split, evaluation revision, report figure, and how a figure reads on newly deposited genomes. They hold no sequence or gene content.
@@ -110,11 +112,13 @@ Every command takes `--data <directory>` (default `data`), and the output paths 
 | Structure | `grm structure --species <slug>` | `species/<slug>/structure.json` |
 | Features | `grm matrix --species <slug>` | `species/<slug>/matrix/` |
 | Evaluate | `grm learn --species <slug>` | `species/<slug>/results/<id>.json` |
+| Evaluate on supplied folds | `grm learn --species <slug> --fold-file <file> --fold-out <dir>` | `<dir>/<dataset>.<scheme>.json` ([docs/fold-file.md](docs/fold-file.md)) |
 | Report | `grm report` | `report/` |
 | Research | `grm research --revision5-reports <dir> --out <file>` | the `--out` file |
 | Intervals | `grm intervals` | `report/intervals/<id>.json` |
 | Provenance | `grm fetch genome-dates`, then `grm provenance` | `bvbrc/genome_dates.jsonl` and its manifest, `report/provenance/<id>.json` |
 | Predict | `grm predict --report <file> --fasta <files>` | JSON lines on standard output, or `--out` ([docs/prediction-contract.md](docs/prediction-contract.md)) |
+| Export | `grm export --species <slug> --out <dir>` | `<dir>/<id>/matrix.bin` and `dataset.json`, for a learner outside GRM ([docs/dataset-export.md](docs/dataset-export.md)) |
 
 `--species` takes comma-separated slugs; `grm pipeline` and `grm fetch fasta` use every curated species without it. `grm learn --species <slug> --only meropenem` learns one antibiotic (`--only` also takes dataset ids), and `--force` recomputes reports even when their inputs have not changed.
 

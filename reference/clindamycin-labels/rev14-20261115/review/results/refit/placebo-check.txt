@@ -1,0 +1,11 @@
+placebo values compared 480 (lane 480), differing 0
+random   rf     recall             change -0.2592 placebo n=10 min -0.2259 max +0.0241 below all: True  rank among 11: 1
+random   rf     balanced_accuracy  change -0.1177 placebo n=10 min -0.0990 max +0.0260 below all: True  rank among 11: 1
+lineage  scm    recall             change -0.1011 placebo n=10 min -0.0511 max +0.0489 below all: True  rank among 11: 1
+lineage  cart   recall             change -0.0812 placebo n=10 min +0.0021 max +0.1021 below all: True  rank among 11: 1
+lineage  rf     recall             change -0.3713 placebo n=10 min -0.1379 max -0.0046 below all: True  rank among 11: 1
+lineage  rf     balanced_accuracy  change -0.1831 placebo n=10 min -0.0604 max +0.0083 below all: True  rank among 11: 1
+lineage  gbt    recall             change -0.1071 placebo n=10 min -0.0238 max +0.0762 below all: True  rank among 11: 1
+lineage  gbt    balanced_accuracy  change -0.0571 placebo n=10 min -0.0194 max +0.0507 below all: True  rank among 11: 1
+lineage  lasso  recall             change -0.1191 placebo n=10 min -0.0025 max +0.0975 below all: True  rank among 11: 1
+rows of 36 whose change lies outside its placebo range: 25

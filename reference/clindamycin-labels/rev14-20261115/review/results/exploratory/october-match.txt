@@ -1,0 +1,14 @@
+without-sa.seed-42.json: lineage scm balanced accuracy V1 0.619079 V2 0.772809 V3 0.851199
+  MATCH 0.772809: without-sa.seed-42.json lineage scm V2 balanced_accuracy
+without-sa.seed-1.json: lineage scm balanced accuracy V1 0.636083 V2 0.799284 V3 0.860537
+without-sa.seed-2.json: lineage scm balanced accuracy V1 0.619079 V2 0.772809 V3 0.610376
+  MATCH 0.772809: without-sa.seed-2.json lineage scm V2 balanced_accuracy
+without-sa.seed-3.json: lineage scm balanced accuracy V1 0.631754 V2 0.794669 V3 0.797889
+without-sa.seed-4.json: lineage scm balanced accuracy V1 0.631754 V2 0.793775 V3 0.830447
+without-sa.seed-5.json: lineage scm balanced accuracy V1 0.620255 V2 0.774597 V3 0.859177
+without-sa.seed-6.json: lineage scm balanced accuracy V1 0.659060 V2 0.787120 V3 0.859177
+without-sa.seed-7.json: lineage scm balanced accuracy V1 0.631299 V2 0.793775 V3 0.614848
+without-sa.seed-8.json: lineage scm balanced accuracy V1 0.658472 V2 0.787120 V3 0.861431
+without-sa.seed-9.json: lineage scm balanced accuracy V1 0.630710 V2 0.791986 V3 0.878211
+without-sa.seed-10.json: lineage scm balanced accuracy V1 0.631754 V2 0.794669 V3 0.861789
+pairs searched: 11
