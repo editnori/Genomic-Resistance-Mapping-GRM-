@@ -198,6 +198,7 @@ const Body = ({
   research,
   intervals,
   baselines,
+  digest,
 }: {
   r: DatasetReport;
   row?: CatalogRow;
@@ -206,12 +207,16 @@ const Body = ({
   intervals: Resource<Intervals>;
   /** The baselines file as pinned to this report, or null. */
   baselines: Baselines | null;
+  /** The SHA-256 of the report's bytes as this page read them: undefined
+   *  until they are hashed, null when they could not be. The clindamycin
+   *  note shows only for the bytes its check read. */
+  digest: string | null | undefined;
 }) => (
   <div className={`${COLUMN} space-y-8 pb-16 pt-6`}>
     <ProvisionalNote audit={auditOf(r, current)} />
     <div className="space-y-10">
       <LearnerSection r={r} research={research} intervals={intervalsFor(intervals.status === "ready" ? intervals.data : null, r)} baselines={baselines} />
-      <ClindamycinNote r={r} />
+      <ClindamycinNote r={r} digest={digest} />
       <ModelSection r={r} row={row} />
       <MechanismSection r={r} />
       <MicSection r={r} research={research} baselines={baselines} />
@@ -328,6 +333,7 @@ export const DatasetInspector = ({ id, manifest, nav }: { id: string; manifest: 
               research={research}
               intervals={intervals}
               baselines={baselinesFor(baselineFile.status === "ready" ? baselineFile.data : null, report.data, digest)}
+              digest={digest}
             />
           ) : (
             <div className={`${COLUMN} py-8`}>
