@@ -175,6 +175,9 @@ jobs:
           # A synthetic project built in the test; the commands of docs/data-collection.md run on it.
           - suite: tests/collect
             top: .
+          # Reads the committed export under reference/givens-export and the files it is written from; it fits nothing.
+          - suite: tests/givens_export
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
