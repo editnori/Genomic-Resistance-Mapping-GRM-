@@ -54,7 +54,8 @@ class OneClassPerArchive(unittest.TestCase):
         (d / "partial.sha256").write_text(f"{kit.sha(kit.FILES['reports/alpha.json'])}  alpha.json\n", encoding="utf-8")
         rc, out, err = kit.run(*base, "--published", d / "partial.sha256")
         self.assertEqual((rc, out), (2, ""))
-        self.assertIn("1 files listed as public-result are in no --published file", err)
+        self.assertIn("1 files listed as public-result stand in no --published file with their sha256 and their "
+                      "name", err)
         self.assertIn("  proj/reports/beta.json\n", err)
         self.assertFalse((d / "out").exists())
         (d / "rest.sha256").write_text(f"{kit.sha(kit.FILES['reports/beta.json'])} *beta.json\n", encoding="utf-8")
@@ -101,6 +102,57 @@ class OneClassPerArchive(unittest.TestCase):
         self.assertEqual(rc, 3)
         self.assertIn("which holds the barred word 'vumc'", err)
         self.assertFalse((d / "out").exists())
+
+
+class PublishedByNameAndContent(unittest.TestCase):
+    """A public file needs its sha256 and its base name together in a --published file. notes/alpha-copy.json holds
+    the bytes of reports/alpha.json under another name, and notes/empty.txt is empty."""
+
+    def pack_public(self, rules_first, published_text):
+        d, proj, rules = kit.project(self)
+        rules.write_text(rules_first + kit.RULES, encoding="utf-8")
+        rc, _, err = kit.run("list", "--rules", rules, "--root", f"proj={proj}", "--out", d / "list.tsv")
+        self.assertEqual(rc, 0, err)
+        (d / "release.sha256").write_text(published_text, encoding="utf-8")
+        rc, out, err = kit.run("pack", "--list", d / "list.tsv", "--class", "public-result", "--name", "demo",
+                               "--out", d / "out", "--root", f"proj={proj}", "--published", d / "release.sha256")
+        return d, rc, out, err
+
+    RELEASE = "".join(f"{kit.sha(kit.FILES[f'reports/{n}'])}  {n}\n" for n in ("alpha.json", "beta.json"))
+
+    def test_an_internal_copy_of_a_published_file_is_not_packed_as_public(self):
+        for rule in ("public-result\tproj/notes/alpha-copy.json\n", "public-result\tproj/*.json\n"):
+            with self.subTest(rule=rule):
+                d, rc, out, err = self.pack_public(rule, self.RELEASE)
+                self.assertEqual((rc, out), (2, ""))
+                self.assertIn("1 files listed as public-result stand in no --published file with their sha256 and "
+                              "their name, so they are not packed as public:\n  proj/notes/alpha-copy.json\n", err)
+                self.assertFalse((d / "out").exists())
+
+    def test_an_empty_file_needs_its_name_too(self):
+        d, rc, out, err = self.pack_public("public-result\tproj/notes/empty.txt\n",
+                                           self.RELEASE + f"{kit.EMPTY_SHA256}  .keep\n")
+        self.assertEqual((rc, out), (2, ""))
+        self.assertIn("  proj/notes/empty.txt\n", err)
+        self.assertFalse((d / "out").exists())
+        d, rc, out, err = self.pack_public("public-result\tproj/notes/empty.txt\n",
+                                           self.RELEASE + f"{kit.EMPTY_SHA256}  data/empty.txt\n")
+        self.assertEqual((rc, err), (0, ""))
+        self.assertIn("demo.public-result/files/proj/notes/empty.txt",
+                      kit.members(d / "out" / "demo.public-result.part001.tar.gz"))
+
+    def test_every_name_a_published_file_gives_for_one_sha256_counts(self):
+        alpha = kit.sha(kit.FILES["reports/alpha.json"])
+        for first, second in (("alpha.json", "alpha-copy.json"), ("alpha-copy.json", "alpha.json")):
+            with self.subTest(first=first):
+                d, rc, out, err = self.pack_public(
+                    "public-result\tproj/notes/alpha-copy.json\n",
+                    f"{alpha}  {first}\n{alpha}  ./sub/{second}\n{kit.sha(kit.FILES['reports/beta.json'])}  beta.json\n")
+                self.assertEqual((rc, err), (0, ""))
+                self.assertEqual(sorted(kit.members(d / "out" / "demo.public-result.part001.tar.gz")),
+                                 ["demo.public-result/LIST.tsv", "demo.public-result/files/proj/notes/alpha-copy.json",
+                                  "demo.public-result/files/proj/reports/alpha.json",
+                                  "demo.public-result/files/proj/reports/beta.json"])
 
 
 class Parts(unittest.TestCase):

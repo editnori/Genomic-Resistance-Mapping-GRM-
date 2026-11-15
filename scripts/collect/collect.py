@@ -39,8 +39,10 @@ A pattern is matched against the whole list path with fnmatch, so "*" also cross
 stops the walk with its name: end the file with "internal-record<TAB>*" to make that the default.
 
 Two classes never share an archive: `pack` takes one class, and `check` fails a list that names two. A public-result
-archive needs a second key. Each of its files must also stand, by sha256, in a --published file (sha256sum format, for
-example the checksum file a release already carries), so a file is not made public by a pattern alone.
+archive needs a second key. Each of its files must also stand in a --published file (sha256sum format: the checksum
+file of a release already published) with its sha256 and its file name together, so a file is not made public by a
+pattern alone. The name compared is the base name, the part after the last "/", on both sides; every name a published
+file gives for a sha256 counts, and an empty file is matched like any other.
 
 A list holds regular files. A link or a special file stops `list` with its name (--skip-special leaves it out), and
 an empty directory is not recorded.
@@ -273,13 +275,17 @@ def parse_named(values, what, nested=False):
 
 
 def read_hashes(path):
-    """{sha256: name} of a sha256sum-format file."""
-    out = {}
+    """[(sha256, name)] of a sha256sum-format file, every line in its order."""
+    out = []
     for n, line in enumerate([ln for ln in read_text(path, "the sha256 file").split("\n") if ln], 1):
         if not (HEX64.match(line[:64]) and line[64:66] in ("  ", " *") and len(line) > 66):
             raise Stop(2, f"{path}:{n}: not a sha256sum line: {line[:80]!r}")
-        out[line[:64]] = line[66:]
+        out.append((line[:64], line[66:]))
     return out
+
+
+def base_name(path):
+    return path.rsplit("/", 1)[-1]
 
 
 # ---- list ----
@@ -545,12 +551,12 @@ def cmd_pack(a):
     if cls == PUBLIC:
         if not a.published:
             raise Stop(2, f"pack: {PUBLIC} needs --published SHA256FILE: a file is public only if a published "
-                          f"checksum file names its sha256")
-        published = set().union(*(read_hashes(p) for p in a.published))
-        missing = [m[0] for m in members if m[2] not in published]
+                          f"checksum file names its sha256 and its name")
+        published = {(digest, base_name(n)) for p in a.published for digest, n in read_hashes(p)}
+        missing = [m[0] for m in members if (m[2], base_name(m[0])) not in published]
         if missing:
-            raise Stop(2, f"pack: {len(missing)} files listed as {PUBLIC} are in no --published file, "
-                          f"so they are not packed as public:\n{shown(missing)}")
+            raise Stop(2, f"pack: {len(missing)} files listed as {PUBLIC} stand in no --published file with their "
+                          f"sha256 and their name, so they are not packed as public:\n{shown(missing)}")
     top = f"{name}.{cls}"
     # Parts are planned on tar bytes. The list's size does not depend on the plan: a part number has three digits.
     inner_size = len(list_text([m[:3] + (cls, "000") for m in members], INNER_HEADER).encode("utf-8"))
@@ -683,7 +689,7 @@ def find_in_parts(sums, threads):
         raise Stop(2, f"check: --parts takes a NAME.CLASS{PARTS_SUFFIX} file, read {base}")
     top = base[:-len(PARTS_SUFFIX)]
     parts = {}
-    for digest, name in read_hashes(sums).items():
+    for digest, name in read_hashes(sums):
         number = re.fullmatch(re.escape(top) + r"\.part([0-9]{3})\.tar(?:\.gz|\.xz)?", name)
         if not number or number.group(1) in parts:
             raise Stop(2, f"check: {sums}: {name!r} is not one part of {top}, or its number is there twice")
@@ -802,7 +808,7 @@ def cmd_summary(a):
                 holders.setdefault(digest, set()).add(place)
     named_only = {}
     for place, file in extra.items():
-        named = set(read_hashes(file))
+        named = {digest for digest, _ in read_hashes(file)}
         named_only[place] = (len(named), sum(d not in holders for d in named))
         for d in named & set(holders):
             holders[d].add(place)
