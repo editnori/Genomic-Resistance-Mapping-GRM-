@@ -564,6 +564,18 @@ mod tests {
         assert!(!counts_for(&tobramycin, &quinolone));
         assert!(counts_for(&drug_rule("amikacin").unwrap(), &quinolone));
         assert!(counts_for(&drug_rule("ciprofloxacin").unwrap(), &quinolone));
+        // A class token reads the class alone: these hits' subclasses do not
+        // name it, and one names it where the class does not.
+        let erythromycin = drug_rule("erythromycin").unwrap();
+        assert_eq!(erythromycin, [["C:MACROLIDE"]]);
+        let macrolide = hit("fixM", "MACROLIDE", "ERYTHROMYCIN");
+        let not_macrolide = hit("fixN", "AMINOGLYCOSIDE", "MACROLIDE");
+        assert!(counts_for(&erythromycin, &macrolide));
+        assert!(!counts_for(&erythromycin, &not_macrolide));
+        for h in [&macrolide, &not_macrolide] {
+            let used = explain(&erythromycin, std::slice::from_ref(h)).1;
+            assert_eq!(counts_for(&erythromycin, h), used.contains(&h.group));
+        }
         // Two alleles of one group answer apart, and each as `explain`
         // lists it for that genome.
         let rules = ["tobramycin", "gentamicin", "ciprofloxacin", "meropenem"];
