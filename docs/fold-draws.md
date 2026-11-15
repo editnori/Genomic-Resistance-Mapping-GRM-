@@ -32,9 +32,9 @@ A run at the release's seeds writes `<data>/species/<slug>/results/`, as before.
 
 A draw needs what `grm learn` needs: the species counted and built, and its k-mer sets on disk for a species with a probe assay. A new draw can leave a fold or a tuning partition without a class on a small dataset. The lineage split is then recorded as unavailable in that draw's report. An invalid random split is an error, as it is at seed 42 (docs/duplicate-isolation.md): the species' run stops at that dataset and writes no report for it. The datasets it had not reached can be run one at a time with `--only <id>` and the same seeds.
 
-## Matching the input comparison
+## Repeat seeds and the input comparison
 
-`grm arm --repeats` draws repeat `r` of a fold plan from `ablate::plan::repeat_seed(42, r)`. `grm learn --seed` at that value scores the same outer folds on both splits, so "draw `r`" means the same partition in a report and in an arm.
+The input comparison's `grm arm --repeats` takes repeat `r`'s seed from `ablate::plan::repeat_seed(42, r)`. `grm learn --seed` can take the same values, so a set of draws can use the arm's repeat seeds:
 
 | Repeat | Seed |
 |---|---|
@@ -42,6 +42,14 @@ A draw needs what `grm learn` needs: the species counted and built, and its k-me
 | 1 | 10622993013839509822 |
 | 2 | 6315510376195533293 |
 | 3 | 1291059630886940069 |
+
+The seeds match; the folds do not. A draw of `grm learn` at a repeat's seed does not score the partition the arm scores at that repeat, at any repeat, repeat 0 included:
+
+- **Folds keyed on genome identity.** A reference arm draws each repeat's plan with `ablate::plan::keyed_fold_plan`, which sends a genome's unit to the outer fold given by a hash of its key and the repeat seed. `grm learn` draws its folds over sample positions (`stratified_folds` and `grouped_folds`, which `ablate::plan::fold_plan` reproduces). The two give different partitions from the same seed.
+- **The random split at repeat 0 only.** The arm scores the lineage split at every repeat and the random split at repeat 0 alone (`ablate::arm::split_repeats`).
+- **Replaced repeats.** A lineage repeat the arm refuses is replaced by a later keyed draw (`ablate::arm::MAX_REPLACEMENTS`), so the arm's draw `r` need not be repeat `r`.
+
+A figure from a `grm learn` draw and a figure from an arm repeat with the same seed are therefore not paired on one partition. The fold-draw experiment of pull request #115 used the repeat seeds only to choose its seeds, and paired none of its draws with an arm.
 
 ## Evaluation revision
 
