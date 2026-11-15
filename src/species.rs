@@ -377,7 +377,16 @@ fn build_in_blocks(
     for (block, (paths, columns)) in paths.chunks(width).zip(columns.chunks(width)).enumerate() {
         let out = dir.join(format!("block-{block:04}.kpart"));
         let first = block * width;
-        let r = matrix::write_partial(paths, columns, first, &out, threads_chunk, 0)?;
+        // A full disk shows up here: the block and its file say where.
+        let r = matrix::write_partial(paths, columns, first, &out, threads_chunk, 0).with_context(
+            || {
+                format!(
+                    "write column block {block} (columns {first}..{}) to {}",
+                    first + columns.len(),
+                    out.display()
+                )
+            },
+        )?;
         eprintln!(
             "  block {block}: columns {first}..{}, {} k-mers ({} in every genome of the block), {} bytes",
             first + columns.len(),
@@ -978,6 +987,17 @@ mod tests {
             "the kset of g070 (column 70) has digest",
         );
         std::fs::write(kset(70), &saved).unwrap();
+
+        // A block file that cannot be written names the block and the file,
+        // as a full disk would.
+        std::fs::create_dir_all(partials.join("block-0001.kpart.part")).unwrap();
+        check(
+            "a second block that cannot be created",
+            &format!(
+                "write column block 1 (columns 64..128) to {}",
+                partials.join("block-0001.kpart").display()
+            ),
+        );
 
         std::fs::remove_file(kset(5)).unwrap();
         check("a missing kset in the first block", "g005.kset");
