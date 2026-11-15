@@ -1,10 +1,13 @@
-"""GRM's export for Givens (reference/givens-export/grm.json) and the script that writes it.
+"""GRM's export for Givens (reference/givens-export/grm.json), its page and the script that writes both.
 
 The file must be exactly what scripts/givens-export/export.py writes from the committed sources. The suite then holds
 the file to the rules Givens' own check applies to a module, to the documents' sentences, and to the export's limits:
 a number is read from a file or quoted from a document, a missing count says so, and no dataset, species, antibiotic
 or sequence is named. The planted faults run the script on a changed copy of its spec or of its source files. The
 tests name a few species and antibiotics, because each of those names must stop the script.
+
+docs/givens-terms.md is the same export as a page. The suite reads the page back and compares every term, assumption,
+row, note and list with the file, so the page can neither drop an entry nor state a number the file lacks.
 """
 
 import contextlib
@@ -18,11 +21,13 @@ import re
 import shutil
 import tempfile
 import unittest
+import unittest.mock
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 KIT = ROOT / "scripts" / "givens-export"
 FILE = ROOT / "reference" / "givens-export" / "grm.json"
 SUMS = ROOT / "reference" / "givens-export" / "SHA256SUMS"
+PAGE = ROOT / "docs" / "givens-terms.md"
 
 
 def load_export():
@@ -87,6 +92,78 @@ def data_names():
 
 def given(spec, tail):
     return next(g for g in spec["assumptions"] if g["id"] == f"grm:given/{tail}")
+
+
+def cells(row):
+    return [c.strip() for c in row.strip().strip("|").split("|")]
+
+
+def numbers(cell):
+    """The numbers of a cell, in the order the cell gives them."""
+    return [float(n.replace(",", "")) for n in re.findall(r"\d[\d,]*(?:\.\d+)?", cell)]
+
+
+def spans(cell):
+    return re.findall(r"`([^`]+)`", cell)
+
+
+def stop(sentence):
+    return sentence if sentence.endswith((".", "?", "!")) else sentence + "."
+
+
+def joined(parts):
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def part(page, name):
+    """One part of the page, from its heading to the next one."""
+    body = page[page.index(f"\n## {name}\n"):]
+    end = body.find("\n## ", 4)
+    return body if end < 0 else body[:end]
+
+
+def page_entries(page):
+    """The page's terms and assumptions in order, each with the rows, parts, notes and uncounted text under it."""
+    entries = []
+    for name in ("Terms", "Assumptions"):
+        for raw in part(page, name).split("\n")[2:]:
+            if raw.startswith("**Note "):
+                letter, note = re.fullmatch(r"\*\*Note ([a-z])\.\*\* (.*)", raw).groups()
+                assert letter not in entries[-1]["notes"], raw
+                entries[-1]["notes"][letter] = note
+            elif raw.startswith("**Not counted.** "):
+                assert "uncounted" not in entries[-1], raw
+                entries[-1]["uncounted"] = raw[len("**Not counted.** "):]
+            elif raw.startswith("**"):
+                entries.append({"part": name, "lead": raw, "rows": [], "parts": {}, "notes": {}})
+            elif raw.startswith("| ") and raw not in ("| Count | Counted | Revision | Source |", "| Part | Text |"):
+                got = cells(raw)
+                assert len(got) in (2, 4), raw
+                if len(got) == 2:
+                    entries[-1]["parts"][got[0]] = got[1]
+                else:
+                    entries[-1]["rows"].append(got)
+            else:
+                assert raw in ("", "| Count | Counted | Revision | Source |", "|---|---|---|---|", "| Part | Text |",
+                               "|---|---|"), raw
+    return entries
+
+
+def written(module):
+    """The words of the export that the page writes as they are."""
+    for n in module["nodes"]:
+        yield from (n["label"], n["definition"])
+    for g in module["assumptions"]:
+        yield from (g["statement"], g["hidden_in"], g["when_false"])
+    for x in module["nodes"] + module["assumptions"]:
+        if "unmeasured" in x:
+            yield x["unmeasured"]
+        for measured in x["measured"]:
+            yield measured["what"]
+            if "note" in measured:
+                yield measured["note"]
+    yield from module["import_rule"]
+    yield from module["left_out"]
 
 
 class Committed(unittest.TestCase):
@@ -204,6 +281,21 @@ class Numbers(unittest.TestCase):
                         self.assertEqual({revision[p] for p in revision if p in v["read"]}, {v["evaluation_revision"]})
                 else:
                     self.assertEqual({revision[p] for p in x["source"].split("; ")}, {x["evaluation_revision"]})
+
+    def test_a_median_is_over_the_same_splits_under_each_revision(self):
+        # A median's line reads its denominator from one revision's file. The other revision's file must agree.
+        medians = [x for _, x in LINES if "values" in x]
+        self.assertEqual(len(medians), 2)
+        for x in medians:
+            self.assertEqual(len({v["evaluation_revision"] for v in x["values"]}), len(x["values"]))
+            for value in x["values"]:
+                with self.subTest(read=value["read"]):
+                    path, pointer = value["read"].split("#")
+                    self.assertTrue(pointer.endswith("/median_lineage"))
+                    learner = json.loads(text(path))
+                    for key in pointer.strip("/").split("/")[:-1]:
+                        learner = learner[key]
+                    self.assertEqual((learner["n_both"], learner["median_lineage"]), (x["of"], value["value"]))
 
     def test_the_counts_add_up(self):
         same = "grm:given/learners-scored-on-same-genomes"
@@ -533,18 +625,20 @@ class Limits(unittest.TestCase):
                 self.assertEqual(E.main(["export.py", "--check", str(other)]), 1)
             self.assertIn("the file differs", said.getvalue())
 
-    def test_the_command_writes_and_checks_both_files(self):
+    def test_the_command_writes_and_checks_every_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = copied(tmp)
-            export, sums = root / E.EXPORT, root / E.SUMS
+            export, sums, page = root / E.EXPORT, root / E.SUMS, root / E.PAGE
             with contextlib.redirect_stderr(io.StringIO()) as said:
                 self.assertEqual(E.main(["export.py", "--check"], root), 1)
-            self.assertEqual(said.getvalue().count("the file differs"), 2)
+            self.assertEqual(said.getvalue().count("the file differs"), 3)
             self.assertEqual(E.main(["export.py", "--write"], root), 0)
-            self.assertEqual((export.read_bytes(), sums.read_bytes()), (FILE.read_bytes(), SUMS.read_bytes()))
+            self.assertEqual((export.read_bytes(), sums.read_bytes(), page.read_bytes()),
+                             (FILE.read_bytes(), SUMS.read_bytes(), PAGE.read_bytes()))
             self.assertEqual(E.main(["export.py", "--check"], root), 0)
             for path, other in ((sums, sums.read_text(encoding="utf-8").replace("  ", " ")),
-                                (export, export.read_text(encoding="utf-8").replace('"count": 32,', '"count": 33,'))):
+                                (export, export.read_text(encoding="utf-8").replace('"count": 32,', '"count": 33,')),
+                                (page, page.read_text(encoding="utf-8").replace("| 32 of 81 |", "| 33 of 81 |"))):
                 with self.subTest(changed=path.name):
                     kept = path.read_bytes()
                     path.write_text(other, encoding="utf-8")
@@ -557,21 +651,209 @@ class Limits(unittest.TestCase):
                 E.main(["export.py", "--write", str(export)], root)
 
 
+class Page(unittest.TestCase):
+    """docs/givens-terms.md: the export's terms, assumptions and counts, for a person to read."""
+
+    def rows(self, entry, got):
+        """The rows under one entry of the page are the entry's measured lines, in order."""
+        self.assertEqual(len(got["rows"]), len(entry["measured"]))
+        for x, (count, what, revision, source) in zip(entry["measured"], got["rows"], strict=True):
+            with self.subTest(line=x["what"]):
+                marker = re.search(r" \(([a-z])\)$", what)
+                self.assertEqual(what[: marker.start()] if marker else what, x["what"])
+                self.assertEqual(got["notes"].get(marker.group(1)) if marker else None,
+                                 stop(x["note"]) if "note" in x else None)
+                if "values" in x:
+                    self.assertEqual(numbers(count), [v["value"] for v in x["values"]] + [x["of"]])
+                    self.assertEqual(numbers(revision), [v["evaluation_revision"] for v in x["values"]])
+                    self.assertIn(", over ", count)
+                else:
+                    self.assertEqual(numbers(count), [x["count"]] + ([] if x["of"] is None else [x["of"]]))
+                    self.assertEqual(numbers(revision), [x["evaluation_revision"]])
+                    self.assertEqual(" of " in count, x["of"] is not None)
+                names = [p if x["basis"] == "document" else p.rsplit("/", 1)[-1] for p in x["source"].split("; ")]
+                self.assertEqual(spans(source),
+                                 list(dict.fromkeys(names)) + ([x["rebuilt_by"]] if "rebuilt_by" in x else []))
+                self.assertEqual("rebuilt by" in source, "rebuilt_by" in x)
+        self.assertEqual(sorted(got["notes"].values()),
+                         sorted({stop(x["note"]) for x in entry["measured"] if "note" in x}))
+        self.assertEqual(got.get("uncounted"), stop(entry["unmeasured"]) if "unmeasured" in entry else None)
+
+    def test_the_page_is_what_the_script_writes(self):
+        page = PAGE.read_text(encoding="utf-8")
+        written_files = E.outputs()
+        self.assertEqual(sorted(written_files), sorted([E.EXPORT, E.SUMS, E.PAGE]))
+        self.assertEqual(page, written_files[E.PAGE])
+        # The export alone gives the page: the script reads no other file for it.
+        self.assertEqual(page, E.page(MODULE))
+        self.assertEqual(page, E.page(MODULE, data_names() | E._vocabulary(ROOT)))
+        self.assertEqual(re.findall(r"^#+ .*$", page, re.M), ["# Givens terms", "## Key", "## Terms", "## Assumptions",
+                                                              "## Rules", "## Left out", "## Sources"])
+        self.assertIsNone(re.search(r"\b20\d\d-\d\d-\d\dT|\b[0-9a-f]{40}\b", page),
+                          "the page names no commit and no time")
+
+    def test_every_term_stands_with_its_words_and_its_rows(self):
+        found = [x for x in page_entries(text("docs/givens-terms.md")) if x["part"] == "Terms"]
+        labels = {n["id"]: n["label"] for n in MODULE["nodes"]}
+        self.assertEqual(len(found), len(MODULE["nodes"]))
+        self.assertEqual(set(E.LINKS), E.EDGE_TYPES)
+        self.assertEqual(len(set(E.LINKS.values())), len(E.LINKS))
+        for n, got in zip(MODULE["nodes"], found, strict=True):
+            with self.subTest(term=n["id"]):
+                kind = n["kind"] + (f", {n['truth_state']}" if "truth_state" in n else "")
+                links = [f"{E.LINKS[e['type']]} {labels[e['to']]}" for e in MODULE["edges"] if e["from"] == n["id"]]
+                sources = joined([f"`{p}`" for p in n["source"].split("; ")])
+                self.assertEqual(got["lead"], " ".join(
+                    [f"**{n['label']}** ({kind}). {stop(n['definition'])}"]
+                    + ([f"It {joined(links)}."] if links else []) + [f"Stated in {sources}."]))
+                self.assertEqual(got["parts"], {})
+                self.rows(n, got)
+        self.assertEqual(sum(len(x["rows"]) for x in found), sum(len(n["measured"]) for n in MODULE["nodes"]))
+
+    def test_every_assumption_stands_with_its_parts_and_its_rows(self):
+        found = [x for x in page_entries(text("docs/givens-terms.md")) if x["part"] == "Assumptions"]
+        labels = {n["id"]: n["label"] for n in MODULE["nodes"]}
+        self.assertEqual(len(found), len(MODULE["assumptions"]))
+        for g, got in zip(MODULE["assumptions"], found, strict=True):
+            with self.subTest(assumption=g["id"]):
+                self.assertEqual(got["lead"], f"**Assumption.** {stop(g['statement'])}")
+                self.assertEqual(list(got["parts"]), ["Hidden in", "If false", "Under", "Stated in"])
+                self.assertEqual(got["parts"]["Hidden in"], g["hidden_in"])
+                self.assertEqual(got["parts"]["If false"], g["when_false"])
+                self.assertEqual(got["parts"]["Under"], joined([labels[u] for u in g["under"]]))
+                self.assertEqual(spans(got["parts"]["Stated in"]), g["source"].split("; "))
+                self.rows(g, got)
+        self.assertEqual(sum(len(x["rows"]) for x in page_entries(text("docs/givens-terms.md"))), len(LINES))
+
+    def test_the_lists_and_the_sources_are_the_file_s(self):
+        page = text("docs/givens-terms.md")
+        self.assertEqual(re.findall(r"^- (.*)$", part(page, "Rules"), re.M), [stop(x) for x in MODULE["import_rule"]])
+        self.assertEqual(re.findall(r"^- (.*)$", part(page, "Left out"), re.M), [stop(x) for x in MODULE["left_out"]])
+        rows = [cells(r) for r in part(page, "Sources").split("\n") if r.startswith("| `")]
+        self.assertEqual([spans(r[2]) for r in rows], [[f["path"]] for f in MODULE["sources"]["files"]])
+        for name, revision, path in rows:
+            with self.subTest(file=path):
+                # The revision is the one the file names for itself.
+                doc = json.loads(text(spans(path)[0]))
+                self.assertEqual(int(revision), doc.get("evaluation_revision", doc.get("revision")))
+                self.assertEqual(spans(name), [spans(path)[0].rsplit("/", 1)[-1]])
+        self.assertEqual(spans(part(page, "Sources").strip().split("\n")[-1]), MODULE["sources"]["documents"])
+
+    def test_the_page_states_no_number_of_its_own(self):
+        page = text("docs/givens-terms.md")
+        documents = sum(x["basis"] == "document" for _, x in LINES)
+        unmeasured = sum("unmeasured" in x for x in ENTRIES.values())
+        sentence = (f"The page holds {len(MODULE['nodes'])} terms, {len(MODULE['edges'])} links between them and "
+                    f"{len(MODULE['assumptions'])} assumptions. Their {len(LINES)} rows of counts split into "
+                    f"{len(LINES) - documents} read from a file and {documents} quoted from a document. In {unmeasured} "
+                    f"entries GRM says what it has not counted, after the words Not counted.")
+        self.assertEqual(page.count(sentence), 1)
+        # Outside that sentence and the rows, a digit stands only inside words the page took from the file.
+        prose = "\n".join(r for r in page.replace(sentence, "").split("\n") if not r.startswith("|"))
+        prose = re.sub(r"`[^`]*`|\]\([^)]*\)", "", prose)
+        self.assertRegex(prose, r"\d")
+        for words in sorted(set(written(MODULE)), key=len, reverse=True):
+            prose = prose.replace(words, "")
+        self.assertIsNone(re.search(r"\d", prose), prose)
+
+    def test_the_page_names_nothing_the_file_leaves_out(self):
+        barred = data_names() | E._vocabulary(ROOT)
+        edits = {
+            "a label": lambda m: m["nodes"][0].update(label="Meropenem dataset"),
+            "a definition": lambda m: m["nodes"][0].update(definition="One dataset of Escherichia coli."),
+            "a row": lambda m: m["assumptions"][0]["measured"][0].update(what="datasets of E. coli"),
+            "a note": lambda m: m["assumptions"][1]["measured"][4].update(note="Read for the glycopeptides."),
+            "what is not counted": lambda m: m["assumptions"][0].update(unmeasured="No count for tylosin."),
+            "a statement": lambda m: m["assumptions"][0].update(statement="A carbapenem dataset has no copy."),
+            "a rule": lambda m: m["import_rule"].append("Show the rifampicin rows first."),
+            "the left-out list": lambda m: m["left_out"].append("The klebsiella pneumoniae rows."),
+        }
+        for where, edit in edits.items():
+            with self.subTest(named_in=where):
+                module = copy.deepcopy(MODULE)
+                edit(module)
+                self.assertNotEqual(module, MODULE)
+                with self.assertRaisesRegex(E.Fault, "the page may not name"):
+                    E.page(module, barred)
+        module = copy.deepcopy(MODULE)
+        module["nodes"][0].update(definition="A dataset read as ACGTACGTACGTACGT.")
+        with self.assertRaisesRegex(E.Fault, "the page holds no sequence"):
+            E.page(module, barred)
+        # The words the script adds pass the same screen on the way to the committed page.
+        with unittest.mock.patch.dict(E.LINKS, {"part_of": "is part of the carbapenem"}):
+            with self.assertRaisesRegex(E.Fault, "the page may not name 'carbapenem'"):
+                E.outputs()
+
+    def test_the_page_writes_the_file_s_words_as_they_are(self):
+        # A mark of Markdown in a word of the file would change a table or the type, so it stops the script.
+        fields = {
+            "label": lambda m, t: m["nodes"][0].update(label=t),
+            "definition": lambda m, t: m["nodes"][0].update(definition=t),
+            "what": lambda m, t: m["nodes"][0]["measured"][0].update(what=t),
+            "note": lambda m, t: m["assumptions"][1]["measured"][4].update(note=t),
+            "unmeasured": lambda m, t: m["assumptions"][0].update(unmeasured=t),
+            "statement": lambda m, t: m["assumptions"][0].update(statement=t),
+            "hidden_in": lambda m, t: m["assumptions"][0].update(hidden_in=t),
+            "when_false": lambda m, t: m["assumptions"][0].update(when_false=t),
+            "import_rule": lambda m, t: m["import_rule"].append(t),
+            "left_out": lambda m, t: m["left_out"].append(t),
+        }
+        for field, edit in fields.items():
+            with self.subTest(field=field):
+                module = copy.deepcopy(MODULE)
+                edit(module, "rows of one | two kinds")
+                with self.assertRaisesRegex(E.Fault, "no Markdown mark"):
+                    E.page(module)
+        for mark in "*_`|<>[]#\\~\n":
+            with self.subTest(mark=mark):
+                module = copy.deepcopy(MODULE)
+                module["nodes"][0].update(definition=f"One species {mark} one antibiotic.")
+                with self.assertRaisesRegex(E.Fault, "no Markdown mark"):
+                    E.page(module)
+        for words in written(MODULE):
+            self.assertIsNone(E.MARK.search(words), words)
+
+    def test_the_page_backs_no_entry_and_a_file_has_one_revision(self):
+        # The script writes the page, so a quote from it would rest an entry on itself.
+        self.assertTrue(E.DOCUMENT.fullmatch(E.PAGE))
+        with self.assertRaisesRegex(E.Fault, "backs no entry"):
+            E.build_module(changed(lambda s: node(s, "grm:dataset")["quotes"].append(
+                {"path": E.PAGE, "quote": "One species with one antibiotic, and the genomes"})))
+        # A row names a summary file by its file name and its revision, so one file has one revision.
+        module = copy.deepcopy(MODULE)
+        line = next(x for n in module["nodes"] for x in n["measured"]
+                    if x["source"] == "reference/release-summary/rev14-274-20261112/index-counts.json")
+        line.update(evaluation_revision=12)
+        with self.assertRaisesRegex(E.Fault, "one evaluation revision"):
+            E.page(module)
+        # A note is written once under its table and named by a letter, so an entry has as many notes as letters.
+        module = copy.deepcopy(MODULE)
+        measured = module["assumptions"][1]["measured"]
+        module["assumptions"][1]["measured"] = [dict(measured[0], note=f"Note of row {i}.") for i in range(27)]
+        with self.assertRaisesRegex(E.Fault, "more notes than the page has letters"):
+            E.page(module)
+        module["assumptions"][1]["measured"].pop()
+        self.assertIn("**Note z.** Note of row 25.", E.page(module))
+
+
 class Wiring(unittest.TestCase):
     def test_the_suite_is_in_ci_and_its_document(self):
         self.assertIn("          - suite: tests/givens_export\n            top: .\n", text(".github/workflows/ci.yml"))
         tests = sum(len(unittest.defaultTestLoader.getTestCaseNames(case))
-                    for case in (Committed, Shape, Numbers, Missing, Limits, Wiring))
+                    for case in (Committed, Shape, Numbers, Missing, Limits, Page, Wiring))
         self.assertIn(f"`tests/givens_export` {tests}", text("docs/ci.md"))
 
     def test_the_readme_and_the_page_name_the_file(self):
         readme = text("README.md")
-        part = readme[readme.index("\n## Givens\n"):]
-        part = part[: part.index("\n## ", 4)]
-        for name in ("reference/givens-export/grm.json", "scripts/givens-export/export.py", "docs/givens-export.md"):
-            self.assertIn(name, part)
-        self.assertIn("GRM reads nothing from Givens", part)
+        section = part(readme, "Givens")
+        for name in ("reference/givens-export/grm.json", "scripts/givens-export/export.py", "docs/givens-export.md",
+                     "docs/givens-terms.md"):
+            self.assertIn(name, section)
+        self.assertIn("GRM reads nothing from Givens", section)
         page = text("docs/givens-export.md")
+        for name in ("`docs/givens-terms.md`", "(givens-terms.md)"):
+            self.assertIn(name, page)
+        self.assertIn("(../../docs/givens-terms.md)", text("reference/givens-export/README.md"))
         documents = sum(x["basis"] == "document" for _, x in LINES)
         unmeasured = sum("unmeasured" in x for x in ENTRIES.values())
         for sentence in (
@@ -579,7 +861,7 @@ class Wiring(unittest.TestCase):
             f"{len(MODULE['assumptions'])} assumptions.",
             f"Its {len(LINES)} measured lines split into {len(LINES) - documents} read from a file and {documents} "
             f"quoted from a document.",
-            f"GRM has no count for {unmeasured} entries, and they say so.",
+            f"It marks {unmeasured} entries with what GRM has not counted.",
         ):
             with self.subTest(sentence=sentence):
                 self.assertIn(sentence, page)

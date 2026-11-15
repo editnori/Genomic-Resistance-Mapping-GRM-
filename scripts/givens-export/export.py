@@ -5,10 +5,12 @@ evaluation terms, the assumptions a report figure rests on, and aggregate counts
 file.
 
   python3 -I scripts/givens-export/export.py            prints the export
-  python3 -I scripts/givens-export/export.py --write    writes reference/givens-export/grm.json and its SHA256SUMS
-  python3 -I scripts/givens-export/export.py --check    exits 1 unless both committed files are what --write gives
+  python3 -I scripts/givens-export/export.py --write    writes the export, its SHA256SUMS and the page
+  python3 -I scripts/givens-export/export.py --check    exits 1 unless the three committed files are what --write gives
 
-With --check FILE it compares that one file with the export's text. A check prints nothing when the files agree.
+The export is reference/givens-export/grm.json, with SHA256SUMS beside it. The page is docs/givens-terms.md: the same
+terms, assumptions and counts for a person to read, written from the export and from no other source. With --check FILE
+the script compares that one file with the export's text. A check prints nothing when the files agree.
 
 The words come from spec.json beside this script. Every number comes from one of two places:
 
@@ -37,6 +39,7 @@ SPEC = pathlib.Path(__file__).resolve().with_name("spec.json")
 FORMAT = "grm-givens-export/1"
 EXPORT = "reference/givens-export/grm.json"
 SUMS = "reference/givens-export/SHA256SUMS"
+PAGE = "docs/givens-terms.md"
 
 LEARNERS = ("scm", "cart", "rf", "gbt", "lasso")
 SPLITS = ("random", "lineage")
@@ -131,6 +134,8 @@ class Sources:
     def document(self, path):
         if not DOCUMENT.fullmatch(path):
             raise Fault(f"{path}: a quote comes from README.md or a page under docs/")
+        if path == PAGE:
+            raise Fault(f"{path}: the script writes this page, so it backs no entry")
         if path not in self._text:
             self._text[path] = self._bytes(path).decode("utf-8")
         self.documents.add(path)
@@ -384,6 +389,11 @@ def screen(module, barred):
 
 def build_module(spec, root=ROOT):
     """The export as a dict, from a spec dict. Raises Fault when a rule is broken."""
+    return _built(spec, root)[0]
+
+
+def _built(spec, root):
+    """The export as a dict, with the names its screen bars."""
     _keys("spec", spec, MODULE_KEYS, MODULE_KEYS)
     if spec["id"] != "grm" or spec["namespace"] != "grm":
         raise Fault("the export is GRM's: id and namespace are grm")
@@ -447,14 +457,18 @@ def build_module(spec, root=ROOT):
         raise Fault(f"files names {', '.join(unused)}, and no line reads it")
     module.update(nodes=nodes, edges=edges, assumptions=givens, import_rule=list(spec["import_rule"]),
                   left_out=list(spec["left_out"]))
-    screen(module, _barred(root, src) | _vocabulary(root))
-    return module
+    barred = _barred(root, src) | _vocabulary(root)
+    screen(module, barred)
+    return module, barred
+
+
+def _text(module):
+    return json.dumps(module, indent=2, ensure_ascii=False) + "\n"
 
 
 def build(root=ROOT, spec_path=SPEC):
     """The export's text."""
-    spec = json.loads(pathlib.Path(spec_path).read_text(encoding="utf-8"))
-    return json.dumps(build_module(spec, root), indent=2, ensure_ascii=False) + "\n"
+    return outputs(root, spec_path)[EXPORT]
 
 
 def sums(text):
@@ -462,19 +476,182 @@ def sums(text):
     return f"{hashlib.sha256(text.encode('utf-8')).hexdigest()}  {EXPORT}\n"
 
 
+# The page. Its words and numbers are the export's; the sentences around them are written here and hold no number.
+LINKS = {"is_a": "is a kind of", "part_of": "is part of", "value_of": "is a value of", "input_of": "is an input of",
+         "output_of": "is an output of", "guards": "guards", "depends_on": "depends on",
+         "measured_by": "is measured by", "contrasts_with": "contrasts with", "compared_with": "is compared with"}
+ROW = "| Count | Counted | Revision | Source |\n|---|---|---|---|"
+LETTERS = "abcdefghijklmnopqrstuvwxyz"
+MARK = re.compile(r"[*_`|<>\[\]#\\~]")
+
+
+def _plain(text):
+    """A string of the export as the page writes it: unchanged, so it may hold no Markdown mark."""
+    if MARK.search(text) or "\n" in text:
+        raise Fault(f"the page writes these words as they are, so they hold no Markdown mark: {text!r}")
+    return text
+
+
+def _stop(text):
+    return _plain(text) if text.endswith((".", "?", "!")) else _plain(text) + "."
+
+
+def _and(parts):
+    return parts[0] if len(parts) == 1 else f"{', '.join(parts[:-1])} and {parts[-1]}"
+
+
+def _files(source):
+    """A line's sources as the page names them: a document's path, or the name of a summary file."""
+    return _and([f"`{p}`" for p in dict.fromkeys(
+        p if DOCUMENT.fullmatch(p) else p.rsplit("/", 1)[-1] for p in source.split("; "))])
+
+
+def _counted(entry):
+    """What follows an entry's words: a row for each measured line, each note once, and what GRM has not counted."""
+    out, notes = [], []
+    for x in entry["measured"]:
+        what = _plain(x["what"])
+        if x.get("note"):
+            if x["note"] not in notes:
+                notes.append(x["note"])
+            if len(notes) > len(LETTERS):
+                raise Fault("an entry has more notes than the page has letters for")
+            what += f" ({LETTERS[notes.index(x['note'])]})"
+        where = _files(x["source"]) + (f", rebuilt by `{x['rebuilt_by']}`" if x.get("rebuilt_by") else "")
+        if "values" in x:
+            count = _and([f"{v['value']:,}" for v in x["values"]]) + f", over {x['of']:,}"
+            revision = _and([str(v["evaluation_revision"]) for v in x["values"]])
+        else:
+            count = f"{x['count']:,}" + ("" if x["of"] is None else f" of {x['of']:,}")
+            revision = str(x["evaluation_revision"])
+        out.append(f"| {count} | {what} | {revision} | {where} |")
+    if out:
+        out = ["", ROW, *out]
+    for letter, note in zip(LETTERS, notes, strict=False):
+        out += ["", f"**Note {letter}.** {_stop(note)}"]
+    if "unmeasured" in entry:
+        out += ["", f"**Not counted.** {_stop(entry['unmeasured'])}"]
+    return out
+
+
+def _revisions(module):
+    """The evaluation revision of each summary file, as the lines that read it give it."""
+    found = {}
+    for entry in module["nodes"] + module["assumptions"]:
+        for x in entry["measured"]:
+            if x["basis"] != "file":
+                continue
+            reads = ([(v["evaluation_revision"], v["read"]) for v in x.get("values", [])]
+                     or [(x["evaluation_revision"], x["source"])])
+            for revision, text in reads:
+                for path in re.findall(r"[\w./-]+\.json", text):
+                    found.setdefault(path, set()).add(revision)
+    return found
+
+
+def page(module, barred=frozenset()):
+    """The page's text, from the export as a dict. Raises Fault when the page would name what the export leaves out."""
+    nodes, givens = module["nodes"], module["assumptions"]
+    labels = {n["id"]: _plain(n["label"]) for n in nodes}
+    lines = [x for entry in nodes + givens for x in entry["measured"]]
+    documents = sum(x["basis"] == "document" for x in lines)
+    unmeasured = sum("unmeasured" in entry for entry in nodes + givens)
+    out = [
+        "# Givens terms",
+        "",
+        "GRM gives [Givens](https://github.com/editnori/givens) the terms below, the assumptions a report figure rests "
+        f"on and their counts. `{module['sources']['program']}` writes this page and `{EXPORT}` from the same sources, "
+        "so the two hold the same words and numbers. [givens-export.md](givens-export.md) describes the file.",
+        "",
+        f"The page holds {len(nodes)} terms, {len(module['edges'])} links between them and {len(givens)} assumptions. "
+        f"Their {len(lines)} rows of counts split into {len(lines) - documents} read from a file and {documents} "
+        f"quoted from a document. In {unmeasured} entries GRM says what it has not counted, after the words Not counted.",
+        "",
+        f"A change made to this page by hand fails the check. Change `{module['sources']['spec']}` or a source, then "
+        "run the script with `--write`.",
+        "",
+        "## Key",
+        "",
+        "A row gives a count, what it counts, the evaluation revision of the count and its source.",
+        "",
+        "- **File.** The script read the number from a committed summary file. The row names the file, and Sources "
+        "gives the path for each revision.",
+        "- **Document.** The script found the number in a sentence of that document, and the export holds the "
+        "sentence. No committed file rebuilds the number unless the row names a suite.",
+        "- **Median.** A median has no count. Its row gives the value under each revision, in the order of the "
+        "Revision cell, and the number of splits the median covers.",
+        "- **Note.** A letter in brackets points to the note under the table.",
+        "",
+        "A term names its kind in brackets. A state may add a truth state, one of the values Givens keeps apart, such "
+        "as missing or inferred. A term's links name other terms of this page, and an assumption sits under the terms "
+        "it bears on.",
+        "",
+        "## Terms",
+    ]
+    for n in nodes:
+        links = [f"{LINKS[e['type']]} {labels[e['to']]}" for e in module["edges"] if e["from"] == n["id"]]
+        kind = n["kind"] + (f", {n['truth_state']}" if "truth_state" in n else "")
+        words = [f"**{labels[n['id']]}** ({kind}). {_stop(n['definition'])}"]
+        if links:
+            words.append(f"It {_and(links)}.")
+        words.append(f"Stated in {_files(n['source'])}.")
+        out += ["", " ".join(words), *_counted(n)]
+    out += ["", "## Assumptions"]
+    for g in givens:
+        out += ["", f"**Assumption.** {_stop(g['statement'])}", "",
+                "| Part | Text |", "|---|---|",
+                f"| Hidden in | {_plain(g['hidden_in'])} |",
+                f"| If false | {_plain(g['when_false'])} |",
+                f"| Under | {_and([labels[u] for u in g['under']])} |",
+                f"| Stated in | {_files(g['source'])} |",
+                *_counted(g)]
+    out += ["", "## Rules", "",
+            "The export carries these rules for whoever shows its entries. In them, the file is the export.", ""]
+    out += [f"- {_stop(x)}" for x in module["import_rule"]]
+    out += ["", "## Left out", "", "The export and this page never hold:", ""]
+    out += [f"- {_stop(x)}" for x in module["left_out"]]
+    out += ["", "## Sources", "",
+            "A row names a summary file by its file name. It means the file of the row's revision.", "",
+            "| File | Revision | Path |", "|---|---|---|"]
+    revisions = _revisions(module)
+    for f in module["sources"]["files"]:
+        if len(revisions.get(f["path"], ())) != 1:
+            raise Fault(f"{f['path']}: the page needs one evaluation revision for the file")
+        out.append(f"| `{f['path'].rsplit('/', 1)[-1]}` | {min(revisions[f['path']])} | `{f['path']}` |")
+    out += ["", "The export lists each file's hash. It also holds the sentence each term and each quoted number rests "
+            f"on. The quoted documents are {_and([f'`{d}`' for d in module['sources']['documents']])}.", ""]
+    text = "\n".join(out)
+    prose = re.sub(r"`[^`\n]*`|\]\([^)\n]*\)", " ", text)
+    hit = _names(frozenset(barred)).search(prose.lower()) if barred else None
+    if hit:
+        raise Fault(f"the page may not name {hit.group(0)!r}")
+    if re.search(r"[ACGTacgt]{12,}", prose):
+        raise Fault("the page holds no sequence")
+    return text
+
+
+def outputs(root=ROOT, spec_path=SPEC):
+    """The text of each committed file the script writes, by its path from the repository root."""
+    spec = json.loads(pathlib.Path(spec_path).read_text(encoding="utf-8"))
+    module, barred = _built(spec, root)
+    text = _text(module)
+    return {EXPORT: text, SUMS: sums(text), PAGE: page(module, barred)}
+
+
 def main(argv, root=ROOT):
     args, root = argv[1:], pathlib.Path(root)
     if args not in ([], ["--write"], ["--check"]) and not (len(args) == 2 and args[0] == "--check"):
         raise SystemExit(__doc__)
     try:
-        text = build(root)
+        written = outputs(root)
     except Fault as fault:
         print(f"givens export: {fault}", file=sys.stderr)
         return 1
     if not args:
-        sys.stdout.write(text)
+        sys.stdout.write(written[EXPORT])
         return 0
-    wanted = {root / EXPORT: text, root / SUMS: sums(text)} if len(args) == 1 else {pathlib.Path(args[1]): text}
+    wanted = ({root / path: text for path, text in written.items()} if len(args) == 1
+              else {pathlib.Path(args[1]): written[EXPORT]})
     if args == ["--write"]:
         for path, want in wanted.items():
             path.write_bytes(want.encode("utf-8"))
