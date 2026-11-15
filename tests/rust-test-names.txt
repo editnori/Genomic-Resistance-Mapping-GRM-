@@ -436,10 +436,13 @@ src/lib.rs serve::tests::serves_bounded_single_byte_ranges
 src/lib.rs serve::tests::symlinks_cannot_escape_either_root
 src/lib.rs species::tests::a_failed_column_block_merge_leaves_the_old_matrix_and_no_partials
 src/lib.rs species::tests::a_recount_never_leaves_the_old_sidecar_beside_a_new_kset
+src/lib.rs species::tests::a_run_without_column_blocks_leaves_the_partials_folder_alone
 src/lib.rs species::tests::a_sidecar_from_before_digests_beside_a_kset_of_another_k_takes_the_ksets_count
 src/lib.rs species::tests::a_sidecar_without_a_kset_digest_takes_it_from_the_stored_kset
+src/lib.rs species::tests::column_blocks_merge_at_the_k_counted_json_records
 src/lib.rs species::tests::column_blocks_merge_under_an_open_file_limit_that_stops_the_stock_build
 src/lib.rs species::tests::column_blocks_open_file_limit_probe [ignored]
+src/lib.rs species::tests::column_blocks_write_one_merge_s_files_when_the_width_divides_the_genome_count
 src/lib.rs species::tests::column_blocks_write_one_partial_per_block_at_its_columns
 src/lib.rs species::tests::column_blocks_write_the_matrix_files_one_merge_writes
 src/lib.rs species::tests::counts_go_stale_when_genomes_txt_selects_other_genomes_with_fasta

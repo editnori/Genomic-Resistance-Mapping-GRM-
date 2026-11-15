@@ -677,6 +677,11 @@ mod tests {
     /// core, one of three group segments, and a segment of its own, so the
     /// matrix has full rows, partly set rows and rare k-mers. Synthetic.
     fn block_cohort(root: &Path) -> Layout {
+        block_cohort_of(root, 150, 31)
+    }
+
+    /// `block_cohort` with `n` genomes counted at `k`. Synthetic.
+    fn block_cohort_of(root: &Path, n: usize, k: usize) -> Layout {
         use rand::{Rng, SeedableRng};
         let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(29);
         let mut random = |n: usize| -> String {
@@ -689,14 +694,38 @@ mod tests {
         let layout = Layout::new(root);
         std::fs::create_dir_all(layout.fasta_dir()).unwrap();
         std::fs::create_dir_all(layout.species_dir("s")).unwrap();
-        let ids: Vec<String> = (0..150).map(|g| format!("g{g:03}")).collect();
+        let ids: Vec<String> = (0..n).map(|g| format!("g{g:03}")).collect();
         for (g, id) in ids.iter().enumerate() {
             let seq = format!("{core}N{}N{}", groups[g % 3], random(60));
             std::fs::write(fasta_path(&layout.fasta_dir(), id), format!(">c\n{seq}\n")).unwrap();
         }
         std::fs::write(layout.species_dir("s").join("genomes.txt"), ids.join("\n")).unwrap();
-        count(&layout, "s", 31, None).unwrap();
+        count(&layout, "s", k, None).unwrap();
         layout
+    }
+
+    /// At each width the block merge writes the five files the default
+    /// merge writes at `min_support`, and leaves no partials. Returns the
+    /// default merge's summary and files.
+    fn blocks_write_one_merge_s_files(
+        layout: &Layout,
+        min_support: u32,
+        widths: &[usize],
+    ) -> (matrix::MatrixSummary, [Vec<u8>; 5]) {
+        let whole = build_matrix(layout, "s", min_support, None).unwrap();
+        let want = matrix_files(layout);
+        for &width in widths {
+            let at = format!("min-support {min_support}, width {width}");
+            let m = build_matrix(layout, "s", min_support, Some(width)).unwrap();
+            assert_eq!(m.n_patterns, whole.n_patterns, "{at}");
+            assert!(
+                matrix_files(layout) == want,
+                "{at} wrote other matrix files"
+            );
+            assert!(!layout.partials_dir("s").exists(), "{at}");
+            assert!(layout.kset_dir("s").join("g000.kset").exists(), "{at}");
+        }
+        (whole, want)
     }
 
     #[test]
@@ -704,16 +733,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let layout = block_cohort(dir.path());
         let files = || matrix_files(&layout);
-        let whole = build_matrix(&layout, "s", 2, None).unwrap();
-        let want = files();
+        // At min-support 1 the merge keeps rows that 2 drops, so a block
+        // merge that kept 2 would write other files.
+        let (at1, files1) = blocks_write_one_merge_s_files(&layout, 1, &[64, 128, 4096]);
+        let (whole, want) = blocks_write_one_merge_s_files(&layout, 2, &[64, 128, 4096]);
+        assert!(at1.kmers_kept > whole.kmers_kept && files1 != want);
         assert!(whole.n_patterns >= 3 && whole.kmers_rare > 0 && whole.kmers_core > 0);
-        for width in [64, 128, 4096] {
-            let m = build_matrix(&layout, "s", 2, Some(width)).unwrap();
-            assert_eq!(m.n_patterns, whole.n_patterns, "width {width}");
-            assert!(files() == want, "width {width} wrote other matrix files");
-            assert!(!layout.partials_dir("s").exists(), "width {width}");
-            assert!(layout.kset_dir("s").join("g000.kset").exists());
-        }
         // A width off a word boundary is refused before anything is read,
         // written or removed: the matrix and a partials folder stay as they
         // were. 96 is a multiple of 32, so its second block would start off
@@ -727,6 +752,40 @@ mod tests {
             assert!(files() == want);
             assert!(partials.join("left.txt").exists(), "width {width}");
         }
+    }
+
+    #[test]
+    fn column_blocks_write_one_merge_s_files_when_the_width_divides_the_genome_count() {
+        let dir = tempfile::tempdir().unwrap();
+        // 128 genomes: two full blocks of 64, or one of 128, and no short
+        // last block.
+        let layout = block_cohort_of(dir.path(), 128, 31);
+        for min_support in [1, 2] {
+            blocks_write_one_merge_s_files(&layout, min_support, &[64, 128]);
+        }
+    }
+
+    #[test]
+    fn column_blocks_merge_at_the_k_counted_json_records() {
+        let dir = tempfile::tempdir().unwrap();
+        // Two blocks, of 64 and 6, counted at k = 21.
+        let layout = block_cohort_of(dir.path(), 70, 21);
+        let (whole, _) = blocks_write_one_merge_s_files(&layout, 2, &[64]);
+        assert_eq!(whole.k, 21);
+    }
+
+    #[test]
+    fn a_run_without_column_blocks_leaves_the_partials_folder_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = block_cohort_of(dir.path(), 10, 31);
+        let partials = layout.partials_dir("s");
+        std::fs::create_dir_all(&partials).unwrap();
+        std::fs::write(partials.join("left.txt"), "a stopped run").unwrap();
+        build_matrix(&layout, "s", 2, None).unwrap();
+        assert!(partials.join("left.txt").exists());
+        // The next run with the switch removes what it finds.
+        build_matrix(&layout, "s", 2, Some(64)).unwrap();
+        assert!(!partials.exists());
     }
 
     /// The bytes of every field `FeatureMatrix::save` writes.
