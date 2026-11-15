@@ -4175,6 +4175,54 @@ mod tests {
     }
 
     #[test]
+    fn fold_forest_and_boosting_lists_keep_the_fifty_heaviest_features() {
+        // Synthetic: 400 samples, half resistant, and 150 rows that each
+        // follow the label with a quarter of the samples flipped, so the
+        // forest and boosting spread their weight over many more than 50
+        // features.
+        use rand::{Rng, SeedableRng};
+        let n = 400;
+        let y = Bits::from_indices(n, (0..n).filter(|i| i % 2 == 0));
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(41);
+        let mut x = BitMatrix::with_cols(n);
+        for _ in 0..150 {
+            let present: Vec<usize> = (0..n)
+                .filter(|&i| y.contains(i) != rng.random_bool(0.25))
+                .collect();
+            x.push_row(Bits::from_indices(n, present).words());
+        }
+        let groups: Vec<u32> = (0..n).map(|i| (i / 2) as u32).collect();
+        let cfg = EvalConfig {
+            forest: ForestParams {
+                n_trees: 40,
+                max_depth: 4,
+                ..Default::default()
+            },
+            gbt: GbtParams {
+                rounds: 60,
+                max_depth: 4,
+                patience: 60,
+                ..Default::default()
+            },
+            screened_features: 150,
+            ..small_config()
+        };
+        let out = evaluate("fixture__fixturemycin", &x, &y, &groups, &[], 3, None, &cfg).unwrap();
+        // The cap the docs give, and the final models' cap.
+        assert_eq!(TOP_WEIGHTED, 50);
+        assert_eq!(out.finals.rf_importance.len(), 50);
+        assert_eq!(out.finals.gbt_importance.len(), 50);
+        assert_eq!(out.fold_models.len(), 2);
+        for models in &out.fold_models {
+            assert_eq!((models.rf.len(), models.gbt.len()), (cfg.folds, cfg.folds));
+            for f in 0..cfg.folds {
+                let lengths = (models.rf[f].len(), models.gbt[f].len());
+                assert_eq!(lengths, (50, 50), "{} fold {f}", models.scheme);
+            }
+        }
+    }
+
+    #[test]
     fn a_split_that_did_not_run_keeps_no_fold_models() {
         let n = 80;
         let y = Bits::from_indices(n, 0..40);

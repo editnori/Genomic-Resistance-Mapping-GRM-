@@ -225,6 +225,7 @@ src/lib.rs learn::eval::tests::final_model_lasso_failures_name_the_final_fit
 src/lib.rs learn::eval::tests::final_models_tune_on_the_duplicate_groups
 src/lib.rs learn::eval::tests::final_tuning_keeps_each_duplicate_group_whole
 src/lib.rs learn::eval::tests::fitted_models_are_called_even_where_they_score_exactly_one_half
+src/lib.rs learn::eval::tests::fold_forest_and_boosting_lists_keep_the_fifty_heaviest_features
 src/lib.rs learn::eval::tests::fold_models_are_written_in_the_final_models_shapes_under_dataset_rows
 src/lib.rs learn::eval::tests::fold_models_give_each_folds_saved_scores_under_dataset_row_numbers
 src/lib.rs learn::eval::tests::folds_name_the_lowest_row_among_patterns_equal_on_their_training_samples
