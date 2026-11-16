@@ -40,6 +40,8 @@ layouts=(profile one-unit sixteen-units)
 declare -A units=([profile]="" [one-unit]=1 [sixteen-units]=16)
 
 failed=0
+# One result per layout, printed after the three builds' output.
+results=()
 for layout in "${layouts[@]}"; do
     if [ -n "${units[$layout]}" ]; then
         (cd "$root" && CARGO_PROFILE_RELEASE_CODEGEN_UNITS=${units[$layout]} \
@@ -54,7 +56,7 @@ for layout in "${layouts[@]}"; do
     read -r addr size < <(nm -C --print-size "$bin" |
         awk -v s="$symbol" '$3 ~ /^[tT]$/ && $4 == s { print $1, $2; exit }') || true
     if [ -z "$addr" ]; then
-        echo "$layout: FAIL, $symbol is not a function of its own (inlined or renamed)"
+        results+=("$layout: FAIL, $symbol is not a function of its own (inlined or renamed)")
         failed=1
         continue
     fi
@@ -62,16 +64,21 @@ for layout in "${layouts[@]}"; do
     stop=$((start + 16#$size))
     objdump -d --no-show-raw-insn --start-address="$start" --stop-address="$stop" "$bin" \
         > "$work/column_sum-$layout.txt"
+    # Each instruction line of objdump -d starts with its address, a colon and a tab.
+    count=$(grep -cE $'^ *[0-9a-f]+:\t' "$work/column_sum-$layout.txt" || true)
     spills=$(grep -E '%xmm[0-9]+.*\(%r[sb]p\)|\(%r[sb]p\).*%xmm[0-9]+' "$work/column_sum-$layout.txt" || true)
-    if [ -n "$spills" ]; then
-        echo "$layout: FAIL, $symbol moves a floating-point register to or from the stack:"
-        echo "$spills"
+    if [ "$count" -eq 0 ]; then
+        results+=("$layout: FAIL, objdump read no instruction of $symbol")
+        failed=1
+    elif [ -n "$spills" ]; then
+        results+=("$layout: FAIL, $symbol moves a floating-point register to or from the stack:" "$spills")
         failed=1
     else
-        echo "$layout: ok, $symbol is $((16#$size)) bytes and keeps its total in a register"
+        results+=("$layout: ok, $symbol is $((16#$size)) bytes, $count instructions read, none moves a floating-point register to or from the stack")
     fi
 done
 echo "machine code of each build's $symbol in $work/column_sum-*.txt"
+printf '%s\n' "${results[@]}"
 if [ "$#" -eq 0 ] || [ "$failed" -ne 0 ]; then
     exit "$failed"
 fi

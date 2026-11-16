@@ -23,7 +23,9 @@ On `salmonella_enterica__tetracycline` at 5 threads (AMD EPYC 9455, Rust 1.98.1,
 
 ## Check
 
-`scripts/lasso-layout/check.sh` builds `grm` from the working tree with the release profile, with one codegen unit and with 16 codegen units, and checks in each build that `column_sum` is a function of its own and that none of its instructions moves a floating-point register to or from the stack. It needs `nm` and `objdump` and exits 1 when a build fails. Run it after a change to `lasso.rs`, to the release profile or to the toolchain:
+`scripts/lasso-layout/check.sh` builds `grm` from the working tree with the release profile, with one codegen unit and with 16 codegen units, and checks in each build that `column_sum` is a function of its own and that none of its instructions moves a floating-point register to or from the stack. It needs `nm` and `objdump` and exits 1 when a build fails.
+
+CI runs it on every push and pull request, in the `lasso-layout` job (docs/ci.md); the timing below is run by hand. To run it locally:
 
 ```bash
 scripts/lasso-layout/check.sh
