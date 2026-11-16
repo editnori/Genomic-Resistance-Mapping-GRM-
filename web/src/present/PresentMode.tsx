@@ -7,19 +7,23 @@
 // and page keys, and the outline for a direct jump; a click on a slide does
 // nothing. A figure too dense for the canvas at its minimum row height
 // continues onto further slides that repeat its title, answer, and caption,
-// so nothing scrolls and no label shrinks. An off-screen copy of each such
-// slide measures how many pages it needs. The header, slide, and footer
-// share one column. A fixed figure sits one set gap under the answer at
-// every width rather than centred in what is left, so a short slide has no
-// band of empty space above its figure. No title or outline label is cut
-// off: on a phone they wrap, and the footer puts the outline on its own row
-// above Previous and Next.
+// so nothing scrolls and no label shrinks. Every other figure slide whose
+// title, answer, figure at its least height and caption do not fit one page
+// takes a second page: page 1 keeps the title, the answer and the figure,
+// and page 2 shows the title and the caption (paging.ts decides). An
+// off-screen copy of each figure slide measures what it needs. The header,
+// slide, and footer share one column. A fixed figure sits one set gap under
+// the answer at every width rather than centred in what is left, so a short
+// slide has no band of empty space above its figure. No title or outline
+// label is cut off: on a phone they wrap, and the footer puts the outline on
+// its own row above Previous and Next.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import type { Manifest } from "../data/schema";
 import { datasetTitle, dateText, pct } from "../data/format";
 import { manifestAudit } from "../data/derive/evaluation";
 import { GrmMark } from "../app/Mark";
+import { MeasuringCopy } from "../charts/kit";
 import { ModalDialog } from "../ui/ModalDialog";
 import { Dropdown } from "../ui/Dropdown";
 import { ACTION_BUTTON, type Fit, type SlidePart } from "../ui/primitives";
@@ -30,6 +34,7 @@ import { RuleFigure, ruleDataset, ruleLineageScore } from "./figures";
 import { primerSteps } from "../views/primer";
 import { useMicBaselines } from "../data/load";
 import { micConstants } from "../data/baselines";
+import { ONE_PAGE, pageShows, readSlideFit, samePlan, slidePlan, type PageShows, type SlidePlan } from "./paging";
 
 const COLUMN = "mx-auto w-full max-w-[72rem] px-4 sm:px-8";
 /** A fixed figure's box, live and measuring alike: top-aligned, one gap
@@ -55,7 +60,8 @@ interface FigureSlide {
   fill?: (fit: PagedFit) => ReactNode;
   /** A figure that keeps its own height, centered with its caption under it. */
   fixed?: (paging: Paging) => ReactNode;
-  /** The figure may continue onto further slides. */
+  /** A filling figure that pages its own rows (it reports its page count
+   *  through onPages); a fixed figure says so with data-continues instead. */
   continues: boolean;
 }
 
@@ -66,13 +72,21 @@ interface Frame {
   slide: Slide;
   page: number;
   pages: number;
+  /** What this page shows of its slide. */
+  shows: PageShows;
 }
 
 type Stage = (part: SlidePart, node: ReactNode, grow: boolean) => ReactNode;
 
-/** The beats a figure slide stages, in order: its answer, its figure, its
- *  caption. A continuation stages only its figure; the rest is already read. */
-const partsOf = (s: FigureSlide): SlidePart[] => [...(s.result === undefined ? [] : (["result"] as const)), "figure", "caption"];
+/** The beats a figure slide's page stages, in order: its answer, its
+ *  figure, its caption. A continuation stages only its figure; the rest is
+ *  already read. A caption split's first page stages the answer and the
+ *  figure, and its second page the caption alone. */
+const partsOf = (s: FigureSlide, page: number, shows: PageShows): SlidePart[] => {
+  if (shows === "caption") return ["caption"];
+  if (page > 0) return ["figure"];
+  return [...(s.result === undefined ? [] : (["result"] as const)), "figure", ...(shows === "all" ? (["caption"] as const) : [])];
+};
 
 const frameTitle = (f: Frame): string => (f.pages > 1 ? `${f.slide.title} (${f.page + 1} of ${f.pages})` : f.slide.title);
 
@@ -118,50 +132,44 @@ const FitBox = ({ figure, live }: { figure: (fit: Fit) => ReactNode; live: boole
     return () => observer.disconnect();
   }, []);
   return (
-    <div ref={ref} data-figure-fit={live ? "" : undefined} className="relative min-h-0 min-w-0 flex-1">
+    <div ref={ref} data-figure-fit={live ? "" : undefined} data-measure-slot={live ? undefined : ""} className="relative min-h-0 min-w-0 flex-1">
       {fit !== null ? figure(fit) : null}
     </div>
   );
 };
 
-/** Off screen: whether a fixed figure and its caption fit the slide's box
- *  as one page; two pages when they do not and the figure marks itself
- *  data-continues. An unlaid box reports one. */
-const FixedMeasure = ({ figure, caption, onPages }: { figure: ReactNode; caption: string; onPages(pages: number): void }) => {
-  const box = useRef<HTMLDivElement | null>(null);
-  const content = useRef<HTMLDivElement | null>(null);
-  useLayoutEffect(() => {
-    const b = box.current;
-    const c = content.current;
-    if (b === null || c === null) return undefined;
-    const read = () => {
-      const style = getComputedStyle(b);
-      const room = b.clientHeight - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0);
-      const overflows = b.clientHeight > 0 && c.offsetHeight > room + 1;
-      onPages(overflows && c.querySelector("[data-continues]") !== null ? 2 : 1);
-    };
-    read();
-    const observer = new ResizeObserver(read);
-    observer.observe(b);
-    observer.observe(c);
-    return () => observer.disconnect();
-  }, [onPages]);
-  return (
-    <div ref={box} data-fixed-box="" className={FIXED_BOX}>
-      <div ref={content} className="min-w-0">
-        <div className="min-w-0">{figure}</div>
-        <p className="prose-measure mt-6 text-note text-muted-text">{caption}</p>
-      </div>
-    </div>
-  );
-};
-
 /** One figure slide's layout: title, answer, figure, caption. The live
- *  slide stages each beat; the measuring copy reports its page count. */
-const SlideBody = ({ slide, paging, stage, measure }: { slide: FigureSlide; paging: Paging; stage: Stage; measure?: (pages: number) => void }) => {
-  const live = measure === undefined;
+ *  slide stages each beat and shows what its page holds; the measuring copy
+ *  (`measuring`) lays out the whole slide as one page and marks the figure's
+ *  box and the caption for readSlideFit. */
+const SlideBody = ({
+  slide,
+  paging,
+  stage,
+  shows = "all",
+  measuring = false,
+  onPages,
+}: {
+  slide: FigureSlide;
+  paging: Paging;
+  stage: Stage;
+  shows?: PageShows;
+  measuring?: boolean;
+  /** A measuring copy of a figure that pages its own rows: where it reports
+   *  its page count. */
+  onPages?(pages: number): void;
+}) => {
+  const live = !measuring;
   const Tag = live ? "section" : "div";
   const fill = slide.fill;
+  const caption = (gap: string) =>
+    stage(
+      "caption",
+      <p data-caption={live ? "" : undefined} data-measure-caption={live ? undefined : ""} className={`prose-measure ${gap} text-note text-muted-text`}>
+        {slide.caption}
+      </p>,
+      false,
+    );
   return (
     <Tag aria-labelledby={live ? `${slide.id}-title` : undefined} className="flex h-full min-h-0 flex-col">
       <h2 id={live ? `${slide.id}-title` : undefined} className="text-body font-semibold text-muted-text">
@@ -169,44 +177,32 @@ const SlideBody = ({ slide, paging, stage, measure }: { slide: FigureSlide; pagi
       </h2>
       {/* A phone's slide sets the answer a size down, so the figure keeps
           the height its labels need; figure labels never shrink. */}
-      {slide.result === undefined
+      {slide.result === undefined || shows === "caption"
         ? null
         : stage("result", <p className="mt-2 max-w-[56rem] text-[1.5rem]/[1.15] font-semibold tracking-[-0.014em] text-ink sm:text-stat">{slide.result}</p>, false)}
-      {fill !== undefined ? (
+      {shows === "caption" ? (
+        caption("mt-3")
+      ) : fill !== undefined ? (
         <>
           {stage(
             "figure",
             <div data-figure={live ? "" : undefined} className="mt-4 flex h-full min-h-0 flex-1 flex-col">
-              <FitBox live={live} figure={(fit) => fill({ ...fit, page: paging.page, pages: paging.pages, onPages: measure })} />
+              <FitBox live={live} figure={(fit) => fill({ ...fit, page: paging.page, pages: paging.pages, onPages })} />
             </div>,
             true,
           )}
-          {stage(
-            "caption",
-            <p data-caption={live ? "" : undefined} className="prose-measure mt-3 text-note text-muted-text">
-              {slide.caption}
-            </p>,
-            false,
-          )}
+          {shows === "all" ? caption("mt-3") : null}
         </>
-      ) : measure !== undefined ? (
-        <FixedMeasure figure={slide.fixed?.(paging)} caption={slide.caption} onPages={measure} />
       ) : (
         <div data-fixed-box="" className={FIXED_BOX}>
           {stage(
             "figure",
-            <div data-figure className="min-w-0">
+            <div data-figure={live ? "" : undefined} data-measure-slot={live ? undefined : ""} className="min-w-0">
               {slide.fixed?.(paging)}
             </div>,
             false,
           )}
-          {stage(
-            "caption",
-            <p data-caption className="prose-measure mt-6 text-note text-muted-text">
-              {slide.caption}
-            </p>,
-            false,
-          )}
+          {shows === "all" ? caption("mt-6") : null}
         </div>
       )}
     </Tag>
@@ -216,6 +212,126 @@ const SlideBody = ({ slide, paging, stage, measure }: { slide: FigureSlide; pagi
 /** The measuring copy's beats: each in the same box the live slide's reveal
  *  would give it, shown at once. */
 const plain: Stage = (_part, node, grow) => <div className={grow ? "flex min-h-0 flex-1 flex-col" : undefined}>{node}</div>;
+
+/** What the footer shows on a page: its outline label, its beat count, and
+ *  whether it is the last page (Finish for Next). */
+interface FooterFace {
+  label: string;
+  steps: number;
+  last: boolean;
+}
+
+/** Off screen: one figure slide laid out as one page, above a copy of the
+ *  footer row its first page shows, so the copy has the room that page has
+ *  on screen whichever page is showing now. A figure that pages its own
+ *  rows reports its page count itself; for every other slide the copy reads
+ *  its four heights and slidePlan decides, again whenever the slide, its
+ *  text or its figure changes size. */
+const MeasuredSlide = ({ slide, footer, onPlan }: { slide: FigureSlide; footer: FooterFace; onPlan(plan: SlidePlan): void }) => {
+  const box = useRef<HTMLDivElement | null>(null);
+  const own = slide.fill !== undefined && slide.continues;
+  const onPages = useCallback((pages: number) => onPlan({ pages, caption: "each" }), [onPlan]);
+  useLayoutEffect(() => {
+    const root = box.current?.firstElementChild;
+    if (own || root === null || root === undefined) return undefined;
+    const read = () => onPlan(slidePlan(readSlideFit(root), root.querySelector("[data-continues]") !== null));
+    const resize = new ResizeObserver(read);
+    const watch = () => {
+      resize.disconnect();
+      for (const e of [root, ...root.querySelectorAll("h2, p, [data-measure-slot], [data-measure-slot] > *")]) resize.observe(e);
+    };
+    // A figure that draws once its box is measured adds its parts later, and
+    // one that redraws in a box of the same size changes their attributes.
+    const added = new MutationObserver(() => {
+      watch();
+      read();
+    });
+    added.observe(root, { childList: true, subtree: true, attributes: true, characterData: true });
+    watch();
+    read();
+    return () => {
+      added.disconnect();
+      resize.disconnect();
+    };
+  }, [own, onPlan]);
+  return (
+    <div className="absolute inset-0 flex flex-col">
+      <div className={`${COLUMN} relative min-h-0 flex-1`}>
+        <div ref={box} data-slide-measure={slide.id} className="absolute inset-0 px-4 py-4 sm:px-8">
+          <MeasuringCopy.Provider value>
+            <SlideBody slide={slide} paging={{ page: 0, pages: undefined }} stage={plain} measuring onPages={own ? onPages : undefined} />
+          </MeasuringCopy.Provider>
+        </div>
+      </div>
+      <div data-footer-measure="" className="shrink-0 border-t border-hair">
+        <FooterRow options={[{ id: "0", label: footer.label }]} value={0} steps={footer.steps} stage={0} first={false} last={footer.last} />
+      </div>
+    </div>
+  );
+};
+
+/** The footer's row: Previous, the outline with the beat ticks, Next. One
+ *  row from sm up; on a phone the outline takes the first row and Previous
+ *  and Next the second, under the thumb. The live footer and its off-screen
+ *  copies share it, so a copy is as tall as the footer on its page. */
+const FooterRow = ({
+  options,
+  value,
+  steps,
+  stage,
+  first,
+  last,
+  status,
+  onPrevious,
+  onNext,
+  onJump,
+}: {
+  options: { id: string; label: string }[];
+  value: number;
+  steps: number;
+  stage: number;
+  first: boolean;
+  last: boolean;
+  /** The live footer's words for a screen reader; a copy has none. */
+  status?: string;
+  onPrevious?(): void;
+  onNext?(): void;
+  onJump?(index: number): void;
+}) => (
+  <div className={`${COLUMN} grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3`}>
+    <button type="button" onClick={onPrevious} disabled={first} className={`${ACTION_BUTTON} col-start-1 row-start-2 justify-self-start sm:row-start-1`}>
+      Previous
+    </button>
+    <span className="col-span-3 col-start-1 row-start-1 flex min-w-0 items-center justify-center gap-3 sm:col-span-1 sm:col-start-2">
+      {status === undefined ? null : (
+        <span role="status" aria-live="polite" className="sr-only">
+          {status}
+        </span>
+      )}
+      {/* The control gives way first: its title wraps, the ticks keep their
+          width. */}
+      <span className="min-w-0">
+        <Dropdown
+          ariaLabel="Go to slide"
+          options={options}
+          mode={{ kind: "one", value: String(value), onSelect: (v) => onJump?.(Number(v)) }}
+          wrap
+        />
+      </span>
+      {steps > 1 ? (
+        <span aria-hidden="true" data-beats={status === undefined ? undefined : ""} className="flex shrink-0 items-center gap-1">
+          {Array.from({ length: steps }, (_, s) => (
+            <span key={s} className={`block size-1.5 rounded-full transition-colors duration-fast ease-out ${s < stage ? "bg-blue" : "bg-ink/[0.14]"}`} />
+          ))}
+        </span>
+      ) : null}
+    </span>
+    <button type="button" onClick={onNext} className={`${ACTION_BUTTON} col-start-3 row-start-2 justify-self-end sm:row-start-1`}>
+      {last ? "Finish" : "Next"}
+    </button>
+  </div>
+);
+
 
 const SlideView = ({
   frame,
@@ -231,7 +347,7 @@ const SlideView = ({
   onStage(stage: number, steps: number): void;
 }) => {
   const { slide } = frame;
-  const parts = slide.kind === "figure" ? (frame.page > 0 ? (["figure"] as SlidePart[]) : partsOf(slide)) : [];
+  const parts = slide.kind === "figure" ? partsOf(slide, frame.page, frame.shows) : [];
   // The title slide waits for the mark to assemble before the words land.
   const timeline = useSlideTimeline(slide.kind === "title" ? 2 : parts.length, slide.kind === "title" ? [900, 900] : undefined);
   useEffect(() => {
@@ -251,7 +367,12 @@ const SlideView = ({
   };
   return (
     <div className={`h-full min-h-0 ${direction === 1 ? "slide-step-forward" : "slide-step-back"}`}>
-      {slide.kind === "title" ? <TitleSlide manifest={manifest} timeline={timeline} /> : <SlideBody slide={slide} paging={{ page: frame.page, pages: frame.pages }} stage={stage} />}
+      {slide.kind === "title" ? (
+        <TitleSlide manifest={manifest} timeline={timeline} />
+      ) : (
+        // A caption split's figure is one page of its own.
+        <SlideBody slide={slide} paging={frame.shows === "all" ? { page: frame.page, pages: frame.pages } : { page: 0, pages: 1 }} stage={stage} shows={frame.shows} />
+      )}
     </div>
   );
 };
@@ -296,25 +417,26 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
     ];
   }, [manifest, constants]);
 
-  // Pages per continuing slide, as the off-screen copies measure them.
-  const [measured, setMeasured] = useState<Record<string, number>>({});
-  const continuing = slides.filter((s): s is FigureSlide => s.kind === "figure" && s.continues);
-  const continuingKey = continuing.map((s) => s.id).join(" ");
+  // Each figure slide's plan, as its off-screen copy measures it.
+  const [measured, setMeasured] = useState<Record<string, SlidePlan>>({});
+  const figures = slides.filter((s): s is FigureSlide => s.kind === "figure");
+  const figuresKey = figures.map((s) => s.id).join(" ");
   const reporters = useMemo(
     () =>
       Object.fromEntries(
-        continuingKey
+        figuresKey
           .split(" ")
           .filter((id) => id !== "")
-          .map((id) => [id, (n: number) => setMeasured((m) => (m[id] === n ? m : { ...m, [id]: n }))]),
-      ) as Record<string, (n: number) => void>,
-    [continuingKey],
+          .map((id) => [id, (plan: SlidePlan) => setMeasured((m) => (samePlan(m[id], plan) ? m : { ...m, [id]: plan }))]),
+      ) as Record<string, (plan: SlidePlan) => void>,
+    [figuresKey],
   );
   const frames: Frame[] = useMemo(
     () =>
       slides.flatMap((slide) => {
-        const pages = slide.kind === "figure" && slide.continues ? Math.max(1, measured[slide.id] ?? 1) : 1;
-        return Array.from({ length: pages }, (_, page) => ({ slide, page, pages }));
+        const plan = slide.kind === "figure" ? (measured[slide.id] ?? ONE_PAGE) : ONE_PAGE;
+        const pages = Math.max(1, plan.pages);
+        return Array.from({ length: pages }, (_, page) => ({ slide, page, pages, shows: pageShows(plan, page) }));
       }),
     [slides, measured],
   );
@@ -330,6 +452,17 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
   const index = Math.max(0, found);
   const frame = frames[index]!;
   const last = index === frames.length - 1;
+  const outline = frames.map((f, i) => ({ id: String(i), label: `${i + 1} · ${frameTitle(f)}` }));
+  // The footer a slide's first page shows. A figure that pages its own rows
+  // is measured under its first page's label; any other slide under the
+  // label it has as one page, the page its copy lays out.
+  const footerOf = (s: FigureSlide): FooterFace => {
+    const at = Math.max(0, frames.findIndex((f) => f.slide.id === s.id));
+    const f = frames[at]!;
+    return s.fill !== undefined && s.continues
+      ? { label: outline[at]!.label, steps: partsOf(s, 0, f.shows).length, last: at === frames.length - 1 }
+      : { label: `${at + 1} · ${s.title}`, steps: partsOf(s, 0, "all").length, last: s === slides[slides.length - 1] };
+  };
 
   const jump = useCallback(
     (next: number) => {
@@ -382,50 +515,34 @@ export const PresentMode = ({ manifest, onClose }: { manifest: Manifest; onClose
             Close
           </button>
         </header>
-        <main className={`${COLUMN} relative min-h-0 flex-1 py-4`}>
-          <SlideView key={`${frame.slide.id}-${frame.page}`} frame={frame} manifest={manifest} direction={direction} timelineRef={timelineRef} onStage={onStage} />
-          <div aria-hidden="true" inert className="pointer-events-none invisible absolute inset-0 overflow-hidden">
-            {continuing.map((s) => (
-              <div key={s.id} className="absolute inset-0 px-4 py-4 sm:px-8">
-                <SlideBody slide={s} paging={{ page: 0, pages: undefined }} stage={plain} measure={reporters[s.id]} />
-              </div>
-            ))}
-          </div>
-        </main>
-        <footer className="shrink-0 border-t border-hair">
-          {/* One row from sm up; on a phone the outline takes the first row
-              and Previous and Next the second, under the thumb. */}
-          <div className={`${COLUMN} grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3`}>
-            <button type="button" onClick={() => jump(index - 1)} disabled={index === 0} className={`${ACTION_BUTTON} col-start-1 row-start-2 justify-self-start sm:row-start-1`}>
-              Previous
-            </button>
-            <span className="col-span-3 col-start-1 row-start-1 flex min-w-0 items-center justify-center gap-3 sm:col-span-1 sm:col-start-2">
-              <span role="status" aria-live="polite" className="sr-only">
-                Slide {index + 1} of {frames.length}: {frameTitle(frame)}
-              </span>
-              {/* The control gives way first: its title wraps, the ticks
-                  keep their width. */}
-              <span className="min-w-0">
-                <Dropdown
-                  ariaLabel="Go to slide"
-                  options={frames.map((f, i) => ({ id: String(i), label: `${i + 1} · ${frameTitle(f)}` }))}
-                  mode={{ kind: "one", value: String(index), onSelect: (v) => jump(Number(v)) }}
-                  wrap
-                />
-              </span>
-              {beat.steps > 1 ? (
-                <span aria-hidden="true" data-beats="" className="flex shrink-0 items-center gap-1">
-                  {Array.from({ length: beat.steps }, (_, s) => (
-                    <span key={s} className={`block size-1.5 rounded-full transition-colors duration-fast ease-out ${s < beat.stage ? "bg-blue" : "bg-ink/[0.14]"}`} />
-                  ))}
-                </span>
-              ) : null}
-            </span>
-            <button type="button" onClick={advance} className={`${ACTION_BUTTON} col-start-3 row-start-2 justify-self-end sm:row-start-1`}>
-              {last ? "Finish" : "Next"}
-            </button>
-          </div>
-        </footer>
+        {/* The slide and the footer share this box, so the copies below can
+            lay out over both. */}
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <main className={`${COLUMN} min-h-0 flex-1 py-4`}>
+            <SlideView key={`${frame.slide.id}-${frame.page}`} frame={frame} manifest={manifest} direction={direction} timelineRef={timelineRef} onStage={onStage} />
+            {/* Off screen, over the slide and the footer: each figure slide as
+                one page, above the footer row its first page shows. */}
+            <div aria-hidden="true" inert className="pointer-events-none invisible absolute inset-0 overflow-hidden">
+              {figures.map((s) => (
+                <MeasuredSlide key={s.id} slide={s} footer={footerOf(s)} onPlan={reporters[s.id]!} />
+              ))}
+            </div>
+          </main>
+          <footer className="shrink-0 border-t border-hair">
+            <FooterRow
+              options={outline}
+              value={index}
+              steps={beat.steps}
+              stage={beat.stage}
+              first={index === 0}
+              last={last}
+              status={`Slide ${index + 1} of ${frames.length}: ${frameTitle(frame)}`}
+              onPrevious={() => jump(index - 1)}
+              onNext={advance}
+              onJump={jump}
+            />
+          </footer>
+        </div>
       </div>
     </ModalDialog>
   );

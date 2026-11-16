@@ -107,7 +107,7 @@ it("opens the deck on its title slide, then the primer, then the finding slides,
   const titles = ["Genomic Resistance Mapping", ...primerSteps(base).map((s) => s.title), ...FINDINGS.map((f) => f(base, { page: false }).title), "One rule a person can read"];
   expect(titles).toHaveLength(DECK);
   expect(dialog.textContent).not.toContain("Choose a deck");
-  const selector = dialog.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+  const selector = dialog.querySelector<HTMLButtonElement>('footer [role="combobox"]')!;
   expect(selector.getAttribute("aria-label")).toBe("Go to slide: 1 · Genomic Resistance Mapping");
   await act(async () => selector.click());
   expect([...document.querySelectorAll('[role="option"]')].map((o) => o.textContent)).toEqual(titles.map((t, i) => `${i + 1} · ${t}`));
@@ -174,16 +174,27 @@ it("shows the rule's sequence inline, never in a second dialog", async () => {
 });
 
 /** Gives every element the same laid-out box, as a browser would at one
- *  size: happy-dom lays nothing out. `tall` makes a fixed slide's content
- *  taller than its box. */
+ *  size: happy-dom lays nothing out. `tall` makes the rule slide's figure,
+ *  in the deck's one-page copy of that slide, three times the slide's
+ *  height; every other copy reads as unlaid, so it fits. */
 const layout = ({ height, tall = false }: { height: number; tall?: boolean }) => {
   const define = (key: string, get: (this: HTMLElement) => number) => Object.defineProperty(HTMLElement.prototype, key, { configurable: true, get });
   define("clientHeight", () => height);
   define("clientWidth", () => 600);
-  define("offsetHeight", function () {
-    return tall && this.parentElement?.hasAttribute("data-fixed-box") === true ? height * 3 : 40;
-  });
-  return () => ["clientHeight", "clientWidth", "offsetHeight"].forEach((key) => delete (HTMLElement.prototype as unknown as Record<string, unknown>)[key]);
+  define("offsetHeight", () => 40);
+  const rect = Element.prototype.getBoundingClientRect;
+  const box = (top: number, h: number) => ({ x: 0, y: top, top, left: 0, right: 600, bottom: top + h, width: 600, height: h, toJSON: () => ({}) }) as DOMRect;
+  Element.prototype.getBoundingClientRect = function (this: Element) {
+    const copy = this.closest('[data-slide-measure="rule"]');
+    if (!tall || copy === null) return rect.call(this);
+    if (this === copy.firstElementChild) return box(0, height);
+    if (this.parentElement?.hasAttribute("data-measure-slot") === true) return box(0, height * 3);
+    return rect.call(this);
+  };
+  return () => {
+    ["clientHeight", "clientWidth", "offsetHeight"].forEach((key) => delete (HTMLElement.prototype as unknown as Record<string, unknown>)[key]);
+    Element.prototype.getBoundingClientRect = rect;
+  };
 };
 
 describe("continuation slides", () => {
@@ -232,7 +243,7 @@ describe("continuation slides", () => {
       expect(section.querySelector("[data-caption]")?.textContent).toBe(caption);
     }
     expect(seen.sort()).toEqual(Array.from({ length: 15 }, (_, k) => `p${k}`).sort());
-    const selector = dialog.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+    const selector = dialog.querySelector<HTMLButtonElement>('footer [role="combobox"]')!;
     await act(async () => selector.click());
     // The outline's options, not the open chart's keyboard option.
     const labels = [...document.querySelectorAll('[role="option"]')].map((o) => o.textContent ?? "").filter((t) => /^\d+ · /.test(t));

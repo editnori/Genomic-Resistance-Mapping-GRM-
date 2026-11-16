@@ -5,7 +5,7 @@
 // 2px surface ring, solid hairline grids, tick and label text at the 12px
 // rank.
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { TIP_SURFACE, TipBody, type TipLine } from "../ui/HoverTip";
 import { useTheme } from "../theme/ThemeProvider";
 import { FOCUS_RING, GhostButton } from "../ui/primitives";
@@ -264,6 +264,11 @@ export const nearestMark = (marks: readonly { x: number; y: number }[], px: numb
   return best;
 };
 
+/** True inside a deck's off-screen measuring copy of a slide: a chart there
+ *  draws its plot with no keyboard layer, so the copy, which no one reads or
+ *  reaches, adds no listbox or option to the page. */
+export const MeasuringCopy = createContext(false);
+
 /** The keyboard and pointer layer over an SVG chart's marks: one tab stop, a
  *  listbox whose active descendant, one id per mark, carries the mark's
  *  words. Arrows step one mark, PageUp and PageDown a tenth, Home and End go
@@ -277,7 +282,8 @@ export const nearestMark = (marks: readonly { x: number; y: number }[], px: numb
  *  `after` sits under the chart and above the strip (an axis title).
  *  `canOpen` says which marks have a dataset to open; the strip offers
  *  Open dataset only for those (every mark when it is not given).
- *  `marks` come in keyboard order. */
+ *  `marks` come in keyboard order. Inside a MeasuringCopy it draws the same
+ *  boxes with no keyboard layer. */
 export const MarkListbox = ({
   label,
   marks,
@@ -299,6 +305,7 @@ export const MarkListbox = ({
   children: ReactNode;
 }) => {
   const markAt = (x: number, y: number) => (hit === undefined ? nearestMark(marks, x, y) : hit(x, y));
+  const measuring = useContext(MeasuringCopy);
   const optionId = useId();
   const [cursor, setCursor] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
@@ -343,6 +350,14 @@ export const MarkListbox = ({
     setCursor(next);
   };
 
+  if (measuring) {
+    return (
+      <div className="relative">
+        <div className="rounded-md">{children}</div>
+        {after}
+      </div>
+    );
+  }
   const previewIndex = hover ?? (focused && !tipOff ? at : null);
   const preview = previewIndex === null ? undefined : marks[previewIndex];
   const strip = onOpen !== undefined;
