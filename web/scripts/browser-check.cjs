@@ -243,6 +243,9 @@ const measure = () => {
     // The caption as a screen reader meets it: not hidden from it, painted,
     // and after the slide's title in the reading order.
     captionHeard: caption ? caption.closest('[aria-hidden="true"], [inert]') === null && getComputedStyle(caption).visibility === 'visible' && (section.querySelector('h2') === null || (section.querySelector('h2').compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0) : false,
+    // Every figure slide's one-page copy, each of which decides its slide's
+    // pages: a caption page, or the pages of a figure that pages its rows.
+    copyWidths: main ? [...main.querySelectorAll('[data-slide-measure]')].map(e => e.firstElementChild?.clientWidth ?? null) : [],
     head: slot ? slot.getBoundingClientRect().top - sectionTop : null, svgs: section ? [...section.querySelectorAll('svg')].length : 0, title: section?.querySelector('h2')?.textContent ?? null, text: section?.textContent ?? '', copy,
   };
 };
@@ -1551,6 +1554,8 @@ async function present(page, tag, width, height) {
   const slideName = label => label.replace(/^\d+ · /, '').replace(/ \(\d+ of \d+\)$/, '').trim();
   const panelSeen = [];
   const inputsSeen = [];
+  // The widest gap, over every page, between a copy's width and the live slide's.
+  let copyWidthOff = 0;
   const wordingSeen = [];
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
@@ -1565,6 +1570,7 @@ async function present(page, tag, width, height) {
     await shot(page, tag + '-slide-' + (slide + 1));
     check(tag + ' slide ' + (slide + 1) + ' selected in the outline', await slideNumber(dialog) === slide + 1, await slideNumber(dialog));
     const m = await page.evaluate(measure);
+    copyWidthOff = Math.max(copyWidthOff, ...m.copyWidths.map(w => w === null || m.section === null ? Infinity : Math.abs(w - m.section.width)));
     check(tag + ' slide ' + (slide + 1) + ' true viewport', m.viewport[0] === width && m.viewport[1] === height, m.viewport);
     check(tag + ' slide ' + (slide + 1) + ' fits', m.main.scrollHeight <= m.main.height + 1 && m.main.scrollWidth <= m.main.width + 1 && m.section.scrollHeight <= m.section.height + 1, m);
     check(tag + ' slide ' + (slide + 1) + ' brand and title share an edge', m.titleX !== null && m.brandX !== null && Math.abs(m.titleX - m.brandX) <= 1, { titleX: m.titleX, brandX: m.brandX });
@@ -1688,7 +1694,8 @@ async function present(page, tag, width, height) {
     runs[runs.length - 1].pages.push([Number(p[1]), Number(p[2])]);
   });
   const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
-  check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  // The copies decide those pages, so each must lay out as wide as the slide.
+  check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed && copyWidthOff <= 1, { slideCount, labels, copyWidthOff });
   check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
   check(tag + ' input pages together show every row once, in order', JSON.stringify(inputsSeen) === JSON.stringify(inputsExpected.map(e => e.id)), { seen: inputsSeen });
   // The bars slide's caption gives the best learner's count by the
