@@ -107,6 +107,44 @@ jobs:
           restore-keys: cargo-doc-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-
       - run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked
 
+  lasso-layout:
+    name: Lasso layout check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --no-self-update
+          rustc --version | grep -F "rustc $RUSTUP_TOOLCHAIN "
+          grep -qw avx2 /proc/cpuinfo || { echo "::error::.cargo/config.toml builds for x86-64-v3, which needs AVX2"; exit 1; }
+      - name: Check for nm and objdump
+        run: |
+          for t in nm objdump; do
+            command -v "$t" > /dev/null || { echo "::error::$t not found: scripts/lasso-layout/check.sh reads machine code with binutils"; exit 1; }
+          done
+          nm --version | sed -n 1p
+          objdump --version | sed -n 1p
+      # Cargo's registry and git checkouts only: each of the three builds starts
+      # from an empty target directory under GRM_LAYOUT_WORK.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: cargo-lasso-layout-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-lasso-layout-${{ runner.os }}-${{ env.RUSTUP_TOOLCHAIN }}-
+      # Builds grm in three layouts and reads column_sum's machine code in each;
+      # it times nothing (docs/lasso-layout.md). Every push and pull request runs
+      # it, since the slowdown it guards against came from code outside lasso.rs.
+      - name: Check the lasso's column sum in three layouts
+        env:
+          GRM_LAYOUT_WORK: ${{ runner.temp }}/lasso-layout
+        run: bash scripts/lasso-layout/check.sh
+
   metric-audit:
     name: Metric audit and lasso scan
     runs-on: ubuntu-24.04
