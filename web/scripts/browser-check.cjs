@@ -219,6 +219,8 @@ const measure = () => {
   const slot = fit ?? figure;
   // The deck's one-page copy of this slide, read by the rule of "figure
   // above caption" and "fits": whether one page holds the four parts.
+  // The copy must lay out as wide and as low as the live slide, or its
+  // reading says nothing about the live page.
   const id = section?.getAttribute('aria-labelledby')?.replace(/-title$/, '') ?? null;
   const copyRoot = id === null ? null : main.querySelector('[data-slide-measure="' + id + '"]')?.firstElementChild ?? null;
   const copy = (() => {
@@ -231,7 +233,7 @@ const measure = () => {
     const fitBox = box.closest('[data-fixed-box]') === null ? box : null;
     const figureOverCaption = bottom > cap.getBoundingClientRect().y - 8 || (fitBox !== null && fitBox.scrollHeight > fitBox.clientHeight + 1);
     const pastSlide = copyRoot.scrollHeight > copyRoot.clientHeight + 1;
-    return { id, parts: true, head: box.getBoundingClientRect().top - top, figureBottom: bottom - top, captionTop: cap.getBoundingClientRect().y - top, room: copyRoot.clientHeight, scroll: copyRoot.scrollHeight, figureOverCaption, pastSlide, caption: cap.textContent };
+    return { id, parts: true, head: box.getBoundingClientRect().top - top, figureBottom: bottom - top, captionTop: cap.getBoundingClientRect().y - top, room: copyRoot.clientHeight, width: copyRoot.clientWidth, scroll: copyRoot.scrollHeight, figureOverCaption, pastSlide, caption: cap.textContent };
   })();
   const sectionTop = section?.getBoundingClientRect().top ?? 0;
   return {
@@ -1614,7 +1616,7 @@ async function present(page, tag, width, height) {
     } else if (pageKind === 'figure') {
       const copyHolds = m.copy !== null && m.copy.parts && !m.copy.figureOverCaption && !m.copy.pastSlide;
       check(tag + ' slide ' + (slide + 1) + ' figure page: the figure whole, no caption, and the caption page next', pageAt !== null && Number(pageAt[1]) < Number(pageAt[2]) && m.figureWhole && !(m.copy?.caption && m.text.includes(m.copy.caption)), { label: labels[slide], figureWhole: m.figureWhole, contentBottom: m.contentBottom, section: m.section, fit: m.fit });
-      check(tag + ' slide ' + (slide + 1) + ' takes a caption page only when one page cannot hold its title, answer, figure and caption', m.copy !== null && m.copy.parts && !copyHolds && m.head !== null && Math.abs(m.copy.head - m.head) <= 1, { copy: m.copy, liveHead: m.head });
+      check(tag + ' slide ' + (slide + 1) + ' takes a caption page only when one page cannot hold its title, answer, figure and caption', m.copy !== null && m.copy.parts && !copyHolds && m.head !== null && Math.abs(m.copy.head - m.head) <= 1 && m.section !== null && Math.abs(m.copy.width - m.section.width) <= 1, { copy: m.copy, liveHead: m.head, liveWidth: m.section?.width ?? null });
     } else {
       const before = labels[slide - 1] ?? '';
       const prev = /\((\d+) of (\d+)\)$/.exec(before);
