@@ -144,20 +144,24 @@ The check's last block, `baselineChecks`, reads the baselines files, the summary
 - the same pages with `index.json` or a report served with one byte more, which must show no constant, baseline or note;
 - the width of the MIC text column beside the heatmap on every MIC dataset: 300 px or more at 1024 px and 500 px or more at 1440 px (at `1721a08` the narrowest was 310 and 536 px, on P. aeruginosa vs meropenem).
 
-A 404 for `baselines.json` or `baselines/<id>.json` is the tree without them, not an error. `GRM_CHECK_PART=baselines` runs that block alone, for a quick pass on one page change; its result file says `part: "baselines"`, and only a run of every part stands for the check.
+A 404 for `baselines.json` or `baselines/<id>.json` is the tree without them, not an error. `GRM_CHECK_PART=baselines` runs that block alone, for a quick pass on one page change, and `GRM_CHECK_PART=present` runs Present alone at each size and theme; the result file says `part: "baselines"` or `part: "present"`, and only a run of every part stands for the check.
 
-On 15 November 2026 the check at `e9732c1` ran this way on six trees, with Chrome 151.0.7922.108, playwright-core 1.56.1 and Node 22.23.2, the preview and the browser in one network namespace with loopback only. Checks passed of those run, each with 0 script errors:
+Present runs at 1280x720, 1440x900, 390x844 and 1024x768, in both themes. A figure slide whose title, answer, figure and caption do not fit one page takes a second page (`web/src/present/paging.ts`): page 1 shows the title, the answer and the figure, and page 2 the title and the caption. `figure above caption` reads every page that shows its slide whole, as before. On a slide split this way, the check reads page 1 for the whole figure and no caption, page 2 for the same title and the whole caption with no figure, and the deck's one-page copy of the slide, laid out as wide and as low as the live page, for proof that one page could not hold it.
 
-| Tree | Passed | Skipped |
-|---|---|---|
-| synthetic `base` | 2201 of 2201 | 69 |
-| synthetic `r11` | 2213 of 2213 | 57 |
-| synthetic `wide` | 2223 of 2223 | 57 |
-| synthetic `full` | 2249 of 2251 | 40 |
-| rev14 as released | 2352 of 2352 | 6 |
-| rev14 after `grm baselines` | 2360 of 2362 | 3 |
+On 15 November 2026 the check at `e9732c1` ran this way on six trees, and on 16 November the check and the app at `e127ff6`, with Chrome 151.0.7922.108, playwright-core 1.56.1 and Node 22.23.2, the preview and the browser in one network namespace with loopback only. Checks passed of those run, each with 0 script errors:
 
-Each skip names what the tree lacks, such as a release summary for a synthetic revision or a file with `confirmed: false` in the release, or, on the release, the 138 reports with neither an MIC model nor a clindamycin entry, left out to bound the run. The two failures on each tree with `baselines.json` are one page defect: at 390 px, in both themes, the MIC slide's longer headline and caption leave its strip less height than it draws, so the axis prints over the caption (`slide 13` or `slide 14 figure above caption`). It is not fixed.
+| Tree | `e9732c1` | Skipped | `e127ff6` | Skipped |
+|---|---|---|---|---|
+| synthetic `base` | 2201 of 2201 | 69 | 2655 of 2655 | 71 |
+| synthetic `r11` | 2213 of 2213 | 57 | 2667 of 2667 | 59 |
+| synthetic `wide` | 2223 of 2223 | 57 | 2677 of 2677 | 59 |
+| synthetic `full` | 2249 of 2251 | 40 | 2727 of 2727 | 42 |
+| rev14 as released | 2352 of 2352 | 6 | 2834 of 2834 | 6 |
+| rev14 after `grm baselines` | 2360 of 2362 | 3 | 2866 of 2866 | 3 |
+
+Each skip names what the tree lacks, such as a release summary for a synthetic revision or a file with `confirmed: false` in the release, or, on the release, the 138 reports with neither an MIC model nor a clindamycin entry, left out to bound the run. The checks added since `e9732c1` are Present at 1024x768 in both themes (454 on each synthetic tree; 482 on the release, whose panel slide takes two pages at that size), and on the two trees with `baselines.json` 22 at 390x844: the MIC slide's second page in each theme takes the 9 checks every page gets, and its two pages take the 3 checks of a caption split in place of one `figure above caption`. The two skips more on each synthetic tree are the 1024x768 pair of the bars slide's wording check, which needs a release summary.
+
+At `e9732c1` the two failures on each tree with `baselines.json` were one page defect: at 390 px, in both themes, the MIC slide's longer headline and caption left its strip less height than it draws, so the axis printed over the caption (`slide 13` or `slide 14 figure above caption`). It is fixed since `48dd11a`: on those two trees at 390 px the MIC slide takes two pages in both themes, the title, the answer and the whole strip on the first, and the title and the whole caption on the second. No other slide's page count changed at the four sizes where the check reads every slide. In a shorter window, such as 1280x560, where the check reads only "Newly deposited genomes" and "Input settings against the default", "The five learners compared" also takes a caption page on every tree, and the MIC slide on the two trees with `baselines.json`; there the rule slide's first page still runs its caption past the slide (108.5 px on the synthetic trees, 113.84 px on the release), as at `e9732c1`.
 
 ## Publish a released tree
 
