@@ -236,6 +236,9 @@ jobs:
           # SYNTHETIC inputs built in the test, the committed record under reference/other-database and docs/other-database-test.md.
           - suite: tests/other_database
             top: .
+          # Reads the workflow, check.sh, src/learn/lasso.rs, docs/ci.md and docs/lasso-layout.md; it builds nothing.
+          - suite: tests/lasso_layout
+            top: .
     env:
       SUITE: ${{ matrix.suite }}
       TOP: ${{ matrix.top }}
