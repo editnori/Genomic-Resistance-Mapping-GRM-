@@ -348,6 +348,7 @@ src/lib.rs learn::lasso::tests::a_hidden_fall_steps_to_the_first_crossing_only_w
 src/lib.rs learn::lasso::tests::an_exchange_must_lower_the_objective_by_more_than_rounding
 src/lib.rs learn::lasso::tests::an_irls_step_that_raises_the_objective_is_halved
 src/lib.rs learn::lasso::tests::campylobacter_failures_reach_the_reference_optimum
+src/lib.rs learn::lasso::tests::column_sum_adds_in_row_order
 src/lib.rs learn::lasso::tests::every_point_is_reported_as_it_is_solved
 src/lib.rs learn::lasso::tests::exact_copies_share_one_coefficient_and_leave_the_objective_unchanged
 src/lib.rs learn::lasso::tests::features_constant_on_fitting_samples_get_no_weight

@@ -453,6 +453,14 @@ fn representatives(columns: &[Vec<u32>]) -> Vec<usize> {
         .collect()
 }
 
+/// The sum of `q` over the rows of `col`, in row order. Out of line, so the
+/// running total stays in a register however the crate is split
+/// (docs/lasso-layout.md).
+#[inline(never)]
+fn column_sum(col: &[u32], q: &[f64]) -> f64 {
+    col.iter().map(|&j| q[j as usize]).sum()
+}
+
 /// The largest violation of the penalized objective's optimality conditions
 /// at `beta` with linear predictor `eta`, on the standardized scale: the
 /// intercept's gradient, and for each column with a carrier, with g its
@@ -996,7 +1004,7 @@ impl<'a> Wls<'a> {
             if self.rep[k] != k || col.is_empty() || beta[k] != 0.0 || blocked[k] {
                 continue;
             }
-            let g: f64 = col.iter().map(|&j| q[j as usize]).sum();
+            let g = column_sum(col, &q);
             let v = (g.abs() - self.pen(k)) / self.prob.sd[k];
             if v.is_nan() {
                 return None;
@@ -2732,6 +2740,16 @@ mod tests {
                 assert_eq!((b0, beta), (-0.5, vec![0.5, 0.5, 0.0, 0.0]));
             }
         }
+    }
+
+    #[test]
+    fn column_sum_adds_in_row_order() {
+        // 2^53 + 1 rounds back to 2^53, so the ones are lost when the large
+        // row comes first and kept when they come first.
+        let big = 2f64.powi(53);
+        let q = [big, 1.0, 1.0];
+        assert_eq!(column_sum(&[0, 1, 2], &q), big);
+        assert_eq!(column_sum(&[1, 2, 0], &q), big + 2.0);
     }
 
     #[test]
