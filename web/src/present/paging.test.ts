@@ -100,7 +100,7 @@ describe("reading the one-page copy", () => {
     document.body.innerHTML = "";
   });
 
-  it("reads the head to the figure's box, the lowest mark the figure draws, and the caption with its gap and the space under it", () => {
+  it("reads the head to the figure's box, the lowest mark the figure draws, and the caption with its gap, not the padding under it", () => {
     document.body.innerHTML = `<div id="root"><h2>Title</h2><p>Answer</p><div id="box" style="padding-bottom: 16px"><div data-measure-slot=""><div id="fig"><svg><text id="low">80</text></svg><span class="sr-only" id="sr">every dot</span></div></div><p data-measure-caption="" style="margin-top: 24px">Caption</p></div></div>`;
     const at: Record<string, DOMRect> = { root: box(100, 663), fig: box(367.25, 150), low: box(500, 34.03), sr: box(900, 1) };
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
@@ -113,7 +113,7 @@ describe("reading the one-page copy", () => {
     expect(fit.head).toBeCloseTo(267.25, 5);
     // The axis label at 534.03 is the lowest mark; the screen-reader line is not drawn.
     expect(fit.figure).toBeCloseTo(166.78, 5);
-    expect(fit.caption).toBeCloseTo(235.25 + 24 + 16, 5);
+    expect(fit.caption).toBeCloseTo(235.25 + 24, 5);
   });
 
   it("reads nothing before the figure's box and the caption are there", () => {

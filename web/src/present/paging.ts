@@ -20,8 +20,9 @@ export interface SlideFit {
   /** The figure as drawn in the box one page leaves it: its least height
    *  when that box is smaller. */
   figure: number;
-  /** The caption with the gap above it and any space the slide keeps under
-   *  it. */
+  /** The caption with the gap above it. A box's padding under the caption
+   *  is left out: the caption may reach into it, as the live slide lets it,
+   *  without anything past the slide. */
   caption: number;
 }
 
@@ -72,14 +73,10 @@ export const readSlideFit = (root: Element): SlideFit | null => {
     const b = e.getBoundingClientRect();
     if (b.width > 0 || b.height > 0) bottom = Math.max(bottom, b.bottom);
   }
-  // Space the slide keeps under the caption: the bottom padding of each box
-  // between the caption and the slide.
-  let under = 0;
-  for (let e = caption.parentElement; e !== null && e !== root; e = e.parentElement) under += px(getComputedStyle(e).paddingBottom);
   return {
     room: r.height,
     head: s.top - r.top,
     figure: bottom - s.top,
-    caption: caption.getBoundingClientRect().height + px(getComputedStyle(caption).marginTop) + under,
+    caption: caption.getBoundingClientRect().height + px(getComputedStyle(caption).marginTop),
   };
 };
