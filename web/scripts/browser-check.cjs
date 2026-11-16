@@ -15,21 +15,31 @@
 // which the user rejected; the primer and drug-class marks have their own
 // checks. So do Present's whole deck title and outline label, its footer rows
 // and fixed-figure gap, the primer's split tracks, and every species'
-// population map (compact below seven blocks).
+// population map (compact below seven blocks). A slide whose title, answer,
+// figure and caption do not fit one page shows them on two: page 1 the
+// figure whole and no caption, page 2 the title and the whole caption; the
+// deck's one-page copy of that slide ([data-slide-measure]) must show that
+// one page could not hold them, read by the same rule as "figure above
+// caption".
 // The no-genome baselines (#124) and the clindamycin labels (#125) have
 // their own block, baselineChecks, after the rest. GRM_CHECK_PART=baselines
-// runs that block alone, for a quick pass on one page change; the receipt
-// then says part "baselines", and only a run of every part (part "all")
-// stands for the check.
+// runs that block alone, for a quick pass on one page change, and
+// GRM_CHECK_PART=present runs only Present at each width and theme (at
+// 1024x768 Present is all a run of every part opens too); the
+// receipt then says part "baselines" or "present", and only a run of every
+// part (part "all") stands for the check.
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(process.argv[2]);
 const OUT = process.argv[3], BASE = process.argv[4], FIXTURE = process.argv[5];
-const PART = process.env.GRM_CHECK_PART === 'baselines' ? 'baselines' : 'all';
+const PART = ['baselines', 'present'].includes(process.env.GRM_CHECK_PART) ? process.env.GRM_CHECK_PART : 'all';
 fs.mkdirSync(OUT, { recursive: true });
 const manifest = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'index.json')));
 const checks = [], screenshots = [], errors = [];
 const check = (name, pass, actual) => checks.push({ name, pass: Boolean(pass), actual });
+// Each slide's caption as a page showing the whole slide gave it, by title,
+// for the caption pages at the narrower widths that follow.
+const captionsSeen = {};
 // Checks a tree gives nothing to test, named in the receipt rather than
 // dropped from the total without a word.
 const skipped = [];
@@ -205,7 +215,34 @@ const measure = () => {
   const visible = e => !e.closest('[role="tooltip"]') && !e.classList.contains('sr-only') && e.getClientRects().length > 0;
   const contentBottom = Math.max(0, ...[...(figure?.querySelectorAll('*') ?? [])].filter(visible).map(e => e.getBoundingClientRect().bottom));
   const figureBox = figure?.getBoundingClientRect();
-  return { viewport: [innerWidth, innerHeight], main: rect(main), section: rect(section), fit: rect(fit), contentBottom, caption: rect(caption), figureTop: figureBox?.top ?? null, mainTop: main?.getBoundingClientRect().top ?? null, textOutside, marks: section?.querySelectorAll('[data-dataset]').length ?? 0, titleX: section?.querySelector('h2')?.getBoundingClientRect().x ?? null, brandX: document.querySelector('dialog.presentation-dialog header svg')?.getBoundingClientRect().x ?? null };
+  // The figure's box on this page: a filling figure's fit, else the figure.
+  const slot = fit ?? figure;
+  // The deck's one-page copy of this slide, read by the rule of "figure
+  // above caption" and "fits": whether one page holds the four parts.
+  const id = section?.getAttribute('aria-labelledby')?.replace(/-title$/, '') ?? null;
+  const copyRoot = id === null ? null : main.querySelector('[data-slide-measure="' + id + '"]')?.firstElementChild ?? null;
+  const copy = (() => {
+    if (copyRoot === null) return null;
+    const box = copyRoot.querySelector('[data-measure-slot]'), cap = copyRoot.querySelector('[data-measure-caption]');
+    if (box === null || cap === null) return { id, parts: false };
+    const top = copyRoot.getBoundingClientRect().top;
+    const bottom = Math.max(0, ...[...box.querySelectorAll('*')].filter(visible).map(e => e.getBoundingClientRect().bottom));
+    // A filling figure's box is its fit; a fixed figure sits in the fixed box.
+    const fitBox = box.closest('[data-fixed-box]') === null ? box : null;
+    const figureOverCaption = bottom > cap.getBoundingClientRect().y - 8 || (fitBox !== null && fitBox.scrollHeight > fitBox.clientHeight + 1);
+    const pastSlide = copyRoot.scrollHeight > copyRoot.clientHeight + 1;
+    return { id, parts: true, head: box.getBoundingClientRect().top - top, figureBottom: bottom - top, captionTop: cap.getBoundingClientRect().y - top, room: copyRoot.clientHeight, scroll: copyRoot.scrollHeight, figureOverCaption, pastSlide, caption: cap.textContent };
+  })();
+  const sectionTop = section?.getBoundingClientRect().top ?? 0;
+  return {
+    viewport: [innerWidth, innerHeight], main: rect(main), section: rect(section), fit: rect(fit), contentBottom, caption: rect(caption), figureTop: figureBox?.top ?? null, mainTop: main?.getBoundingClientRect().top ?? null, textOutside, marks: section?.querySelectorAll('[data-dataset]').length ?? 0, titleX: section?.querySelector('h2')?.getBoundingClientRect().x ?? null, brandX: document.querySelector('dialog.presentation-dialog header svg')?.getBoundingClientRect().x ?? null,
+    hasFigure: figure !== null && figure !== undefined, hasCaption: caption !== null && caption !== undefined, captionText: caption?.textContent ?? null, captionWhole: caption ? caption.scrollHeight <= caption.clientHeight + 1 && caption.getBoundingClientRect().bottom <= (section?.getBoundingClientRect().bottom ?? 0) + 1 : false,
+    figureWhole: figure ? contentBottom <= (section?.getBoundingClientRect().bottom ?? 0) + 1 && (fit === null || fit.scrollHeight <= fit.clientHeight + 1) : false,
+    // The caption as a screen reader meets it: not hidden from it, painted,
+    // and after the slide's title in the reading order.
+    captionHeard: caption ? caption.closest('[aria-hidden="true"], [inert]') === null && getComputedStyle(caption).visibility === 'visible' && (section.querySelector('h2') === null || (section.querySelector('h2').compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0) : false,
+    head: slot ? slot.getBoundingClientRect().top - sectionTop : null, svgs: section ? [...section.querySelectorAll('svg')].length : 0, title: section?.querySelector('h2')?.textContent ?? null, text: section?.textContent ?? '', copy,
+  };
 };
 
 async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = false) {
@@ -1504,17 +1541,22 @@ async function present(page, tag, width, height) {
   }
   await page.keyboard.press('Escape');
   const labels = [];
+  const titles = [];
+  const pageKinds = [];
+  // A slide's name in the outline, without its number or its page.
+  const slideName = label => label.replace(/^\d+ · /, '').replace(/ \(\d+ of \d+\)$/, '').trim();
   const panelSeen = [];
   const inputsSeen = [];
   const wordingSeen = [];
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
+    titles.push(title);
     if ((title ?? '').startsWith('Newly deposited genomes')) {
       const plots = await page.evaluate(outsidePlots);
       check(tag + ' slide ' + (slide + 1) + ' outside plots: no two axis labels touching', plots.length >= 2 && plots.every(p => p.touching.length === 0), plots);
     }
-    { const w = ((await dialog.locator('main').textContent()) ?? '').replace(/\s+/g, ' ').match(/By the guidance's own wording, read after the results, it meets on ([\d,]+)\./); if (w !== null) wordingSeen.push(toCount(w[1])); }
+    { const w = ((await dialog.locator('main section').first().textContent()) ?? '').replace(/\s+/g, ' ').match(/By the guidance's own wording, read after the results, it meets on ([\d,]+)\./); if (w !== null) wordingSeen.push(toCount(w[1])); }
     labels.push(await slideSelect.textContent());
     await shot(page, tag + '-slide-' + (slide + 1));
     check(tag + ' slide ' + (slide + 1) + ' selected in the outline', await slideNumber(dialog) === slide + 1, await slideNumber(dialog));
@@ -1558,7 +1600,26 @@ async function present(page, tag, width, height) {
       const want = ['dataset', 'feature', 'splits', 'errors', 'scope'][slide - 1];
       check(tag + ' slide ' + (slide + 1) + ' primer step with its figure and no controls of its own', primer.figure === want && primer.interactive === 0, { ...primer, title });
     }
-    check(tag + ' slide ' + (slide + 1) + ' figure above caption', m.contentBottom <= m.caption.y - 8 && (m.fit === null || m.fit.scrollHeight <= m.fit.height + 1), { contentBottom: m.contentBottom, caption: m.caption, fit: m.fit });
+    // A page with both shows the figure above its caption. A slide too tall
+    // for one page shows the figure whole on page 1 with no caption, and the
+    // title and the whole caption on page 2; one page must not have held them.
+    const pageAt = /\((\d+) of (\d+)\)$/.exec(labels[slide] ?? '');
+    const pageKind = m.hasFigure && m.hasCaption ? 'whole' : m.hasFigure ? 'figure' : m.hasCaption ? 'caption' : 'none';
+    pageKinds[slide] = pageKind;
+    if (pageKind === 'whole' || pageKind === 'none') {
+      check(tag + ' slide ' + (slide + 1) + ' figure above caption', pageKind === 'whole' && m.contentBottom <= m.caption.y - 8 && (m.fit === null || m.fit.scrollHeight <= m.fit.height + 1), { contentBottom: m.contentBottom, caption: m.caption, fit: m.fit, pageKind });
+      if (pageKind === 'whole') captionsSeen[title] = m.captionText;
+    } else if (pageKind === 'figure') {
+      const copyHolds = m.copy !== null && m.copy.parts && !m.copy.figureOverCaption && !m.copy.pastSlide;
+      check(tag + ' slide ' + (slide + 1) + ' figure page: the figure whole, no caption, and the caption page next', pageAt !== null && Number(pageAt[1]) < Number(pageAt[2]) && m.figureWhole && !(m.copy?.caption && m.text.includes(m.copy.caption)), { label: labels[slide], figureWhole: m.figureWhole, contentBottom: m.contentBottom, section: m.section, fit: m.fit });
+      check(tag + ' slide ' + (slide + 1) + ' takes a caption page only when one page cannot hold its title, answer, figure and caption', m.copy !== null && m.copy.parts && !copyHolds && m.head !== null && Math.abs(m.copy.head - m.head) <= 1, { copy: m.copy, liveHead: m.head });
+    } else {
+      const before = labels[slide - 1] ?? '';
+      const prev = /\((\d+) of (\d+)\)$/.exec(before);
+      const seen = captionsSeen[title] ?? null;
+      const want = m.copy?.caption ?? null;
+      check(tag + ' slide ' + (slide + 1) + ' caption page: the title and the whole caption, no figure', pageAt !== null && pageAt[1] === pageAt[2] && prev !== null && Number(prev[1]) === Number(pageAt[1]) - 1 && pageKinds[slide - 1] === 'figure' && slideName(before) === slideName(labels[slide] ?? '') && m.title === titles[slide - 1] && m.captionWhole && m.captionHeard && want !== null && m.captionText === want && (seen === null || seen === m.captionText) && m.svgs === 0 && m.marks === 0, { label: labels[slide], before, beforeKind: pageKinds[slide - 1] ?? null, title: m.title, titleBefore: titles[slide - 1], captionWhole: m.captionWhole, captionHeard: m.captionHeard, caption: m.caption, sameAsCopy: m.captionText === want, sameAsOnePage: seen === null ? 'no one-page view yet' : seen === m.captionText, svgs: m.svgs, marks: m.marks });
+    }
     check(tag + ' slide ' + (slide + 1) + ' labels inside', m.textOutside.length === 0, m.textOutside);
     const finding = title.includes('unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('(MIC)') ? 4 : 0;
     // A paged panel figure draws its share of the rows on each page; the
@@ -1567,10 +1628,11 @@ async function present(page, tag, width, height) {
     const panelPer = paged === null ? expected.panels.length : Math.ceil(expected.panels.length / Number(paged[2]));
     const panelShown = paged === null ? expected.panels.length : Math.min(panelPer, expected.panels.length - (Number(paged[1]) - 1) * panelPer);
     const count = [0, expected.paired.length, expected.catalog.length, panelShown, expected.mic.length][finding] ?? 0;
-    if (finding > 0) check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title, page: paged?.[0] ?? null });
-    await referenceChecks(page, tag, finding, panelSeen, paged !== null);
+    // A caption page draws no figure; its figure page is checked instead.
+    if (finding > 0 && pageKind !== 'caption') check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title, page: paged?.[0] ?? null });
+    if (pageKind !== 'caption') await referenceChecks(page, tag, finding, panelSeen, paged !== null);
     if (title === 'Genomes and lab calls') {
-      const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
+      const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].filter(li => li.closest('[data-slide-measure]') === null).map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);
     }
@@ -2076,8 +2138,12 @@ async function baselineChecks(browser) {
     const firstNote = results.find(r => r.ok && r.note !== null)?.id;
     const firstFile = results.find(r => r.ok && r.level !== undefined)?.id;
     const altered = [...new Set([firstNote, firstFile].filter(Boolean))];
-    if (firstNote === undefined) skipped.push({ check: tag + ' clindamycin note drops for report bytes other than those pinned', reason: 'no report in this tree has the note' });
-    if (firstFile === undefined) skipped.push({ check: tag + ' baselines drop for report bytes other than those pinned', reason: 'no report in this tree has a pinned baselines file' });
+    // A skip says which it is: no report has the thing at all, or some have
+    // it and none showed it as its files give ("dataset reports" fails then).
+    const withNote = results.filter(r => r.note != null).length, withMic = results.filter(r => reportExpect(r.id).mic !== null).length;
+    const noneRight = (n, what) => n + ' report' + (n === 1 ? '' : 's') + ' opened ' + (n === 1 ? 'has ' : 'have ') + what + ', and none showed what its files give (see "dataset reports")';
+    if (firstNote === undefined) skipped.push({ check: tag + ' clindamycin note drops for report bytes other than those pinned', reason: withNote === 0 ? 'no report in this tree has the note' : noneRight(withNote, 'the note') });
+    if (firstFile === undefined) skipped.push({ check: tag + ' baselines drop for report bytes other than those pinned', reason: withMic === 0 ? 'no report opened has a pinned baselines file with an MIC constant' : noneRight(withMic, 'a pinned baselines file with an MIC constant') });
     for (const id of altered) {
       const glob = '**/data/datasets/' + id + '.json';
       await page.route(glob, async route => { const res = await route.fetch(); await route.fulfill({ response: res, body: Buffer.concat([await res.body(), Buffer.from('\n')]) }); });
@@ -2105,7 +2171,9 @@ async function baselineChecks(browser) {
   try {
     const favicon = await fetch(BASE + '/favicon.svg');
     check('favicon is the mark', favicon.ok && (favicon.headers.get('content-type') ?? '').includes('svg') && (await favicon.text()).includes('#ff8c66'), favicon.status);
-    for (const [width, height] of PART === 'all' ? [[1280, 720], [1440, 900], [390, 844]] : []) for (const theme of ['light', 'dark']) {
+    // 1024x768 presents the deck alone: a tablet held sideways, between the
+    // phone and the laptop widths the pages are checked at.
+    for (const [width, height] of PART !== 'baselines' ? [[1280, 720], [1440, 900], [390, 844], [1024, 768]] : []) for (const theme of ['light', 'dark']) {
       const context = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion: 'reduce' });
       // Init scripts also run on each new page's first about:blank, which has
       // no storage, so touching localStorage there is a page error. Every
@@ -2121,6 +2189,7 @@ async function baselineChecks(browser) {
         await page.goto(BASE);
         await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
         await present(page, tag, width, height);
+        if (PART === 'present' || width === 1024) { await context.close(); continue; }
         if (width === 1280) { await interactions(page, tag, width); await widestIntervalFit(page, tag); await stripFit(page, tag); await panelFit(page, tag, width); await context.close(); continue; }
         for (const [route, title, key] of [['/', 'What GRM found', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/methods', 'Data & Methods', 'methods']]) {
           await page.goto(BASE + route);
@@ -2153,7 +2222,7 @@ async function baselineChecks(browser) {
       await shortSlides(browser);
       await normalMotion(browser);
     }
-    await baselineChecks(browser);
+    if (PART !== 'present') await baselineChecks(browser);
   } finally { await browser.close(); }
   const receipt = { part: PART, source: { fixture: FIXTURE, schema: manifest.schema, generated: manifest.generated_at, revision: manifest.evaluation_revision, datasets: expected.datasets, panelRows: manifest.panels.length }, independent: expected.stats, stateRows: stateRows.map(([d, w]) => [d.id, w]), skipped, checks, screenshots, errors, passed: checks.every(c => c.pass) && errors.length === 0 };
   fs.writeFileSync(path.join(OUT, 'receipt.json'), JSON.stringify(receipt, null, 2));
