@@ -28,11 +28,12 @@ vi.mock("./paging", async (importOriginal) => {
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
-/** The MIC slide at 390x844, revision 14 after `grm baselines`: the figure's
- *  box is 120.5 px and the strip draws 167.03. */
-const MIC_390: SlideFit = { room: 663, head: 267.25, figure: 167.03, caption: 275.25 };
-/** The same slide on the synthetic `full` shape: a box of 148.09 px. */
-const MIC_390_FULL: SlideFit = { room: 663, head: 239.66, figure: 167.03, caption: 275.25 };
+/** The MIC slide at 390x844, revision 14 after `grm baselines`, above its
+ *  own first page's footer row, whose two-line outline label leaves the copy
+ *  645.25 px: the figure's box is 102.75 px and the strip draws 167.03. */
+const MIC_390: SlideFit = { room: 645.25, head: 267.25, figure: 167.03, caption: 275.25 };
+/** The same slide on the synthetic `full` shape: a box of 130.34 px. */
+const MIC_390_FULL: SlideFit = { room: 645.25, head: 239.66, figure: 167.03, caption: 275.25 };
 /** At 1024x768 the strip fills the 247.88 px it is given. */
 const MIC_1024: SlideFit = { room: 623, head: 180.88, figure: 247.52, caption: 194.25 };
 /** At 1280x720, 0.35 px to spare without the slack. */
@@ -186,7 +187,7 @@ describe("the deck pages a slide by slidePlan", () => {
   it("puts the MIC slide's figure on page 1 under its title and answer, and its caption alone under the title on page 2", async () => {
     const { status, go, section, beats } = await open(MIC_390);
     // The frame read the copy and asked slidePlan.
-    expect(vi.mocked(slidePlan)).toHaveBeenCalledWith({ room: 663, head: 267.25, figure: expect.closeTo(167.03, 6), caption: 275.25 }, false);
+    expect(vi.mocked(slidePlan)).toHaveBeenCalledWith({ room: 645.25, head: 267.25, figure: expect.closeTo(167.03, 6), caption: 275.25 }, false);
     // The copy lays out above a copy of the footer row the slide shows as one
     // page, so its room is that page's whichever page is showing.
     const footer = document.querySelector('[data-slide-measure="mic"]')!.parentElement!.nextElementSibling!;
