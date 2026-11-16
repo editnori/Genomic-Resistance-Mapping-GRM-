@@ -26,8 +26,8 @@
 // runs that block alone, for a quick pass on one page change, and
 // GRM_CHECK_PART=present runs only Present at each width and theme (at
 // 1024x768 Present is all a run of every part opens too); the
-// receipt then says part "baselines" or "present", and only a run of every
-// part (part "all") stands for the check.
+// result file then says part "baselines" or "present", and only a run of
+// every part (part "all") stands for the check.
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(process.argv[2]);
@@ -460,7 +460,9 @@ const GUIDANCE = (() => {
   }
   return null;
 })();
-const GUIDANCE_MISSING = 'no reference/release-summary/*/guidance.json has this tree\'s revision ' + manifest.evaluation_revision + ', generation time ' + manifest.generated_at + ' and ' + manifest.datasets.length + ' datasets';
+const GUIDANCE_MISSING = manifest.evaluation_revision === undefined
+  ? 'this tree\'s index.json has no evaluation_revision, so no reference/release-summary/*/guidance.json, each for one revision, can match it'
+  : 'no reference/release-summary/*/guidance.json has this tree\'s revision ' + manifest.evaluation_revision + ', generation time ' + manifest.generated_at + ' and ' + manifest.datasets.length + ' datasets';
 /** One row of the release summary as the page counts it: datasets with both
  *  rates, those that meet the wording, and the M. tuberculosis datasets
  *  among those. */
