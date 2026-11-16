@@ -25,7 +25,7 @@ The `lasso-layout` job runs `scripts/lasso-layout/check.sh` with no argument, so
 
 The job fails unless `column_sum` is a function of its own in each build and none of its instructions moves a floating-point register to or from the stack. The script ends with one line per layout, and a failure names the layout and the instruction. The job has no path filter, since the slowdown it guards against came from code outside `src/learn/lasso.rs`.
 
-It checks for `nm` and `objdump` before the builds and installs nothing: on Ubuntu 24.04 both come from the package `binutils-x86-64-linux-gnu`, which also contains the linker `ld` that the builds link with. From an empty work directory at `CARGO_BUILD_JOBS=4`, two runs of the job's command on a 16-core AMD Ryzen 9 9950X took 380 s and 320 s (16 Nov 2026). The job's timeout is 45 minutes.
+It checks for `nm` and `objdump` before the builds and installs nothing: on Ubuntu 24.04 both come from the package `binutils-x86-64-linux-gnu`, which also contains the linker `ld` that the builds link with. On the hosted runner, with no cache to restore, the job's first two runs took 324 s and 263 s (16 Nov 2026). The job's timeout is 20 minutes, about three times the slower run.
 
 ## Rust test names
 
