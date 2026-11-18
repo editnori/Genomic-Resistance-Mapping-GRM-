@@ -15,15 +15,35 @@
 // which the user rejected; the primer and drug-class marks have their own
 // checks. So do Present's whole deck title and outline label, its footer rows
 // and fixed-figure gap, the primer's split tracks, and every species'
-// population map (compact below seven blocks).
+// population map (compact below seven blocks). A slide whose title, answer,
+// figure and caption do not fit one page shows them on two: page 1 the
+// figure whole and no caption, page 2 the title and the whole caption; the
+// deck's one-page copy of that slide ([data-slide-measure]) must show that
+// one page could not hold them, read by the same rule as "figure above
+// caption". The copies themselves are held on every page: one per figure
+// slide, each as wide as the live slide, with the same room on every page,
+// and that room the live slide's height where its slide shows whole on one
+// page. Checks of the live slide read inside its section (LIVE_SLIDE), never
+// a copy.
+// The no-genome baselines (#124) and the clindamycin labels (#125) have
+// their own block, baselineChecks, after the rest. GRM_CHECK_PART=baselines
+// runs that block alone, for a quick pass on one page change, and
+// GRM_CHECK_PART=present runs only Present at each width and theme (at
+// 1024x768 Present is all a run of every part opens too); the
+// result file then says part "baselines" or "present", and only a run of
+// every part (part "all") stands for the check.
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(process.argv[2]);
 const OUT = process.argv[3], BASE = process.argv[4], FIXTURE = process.argv[5];
+const PART = ['baselines', 'present'].includes(process.env.GRM_CHECK_PART) ? process.env.GRM_CHECK_PART : 'all';
 fs.mkdirSync(OUT, { recursive: true });
 const manifest = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'index.json')));
 const checks = [], screenshots = [], errors = [];
 const check = (name, pass, actual) => checks.push({ name, pass: Boolean(pass), actual });
+// Each slide's caption as a page showing the whole slide gave it, by title,
+// for the caption pages at the narrower widths that follow.
+const captionsSeen = {};
 // Checks a tree gives nothing to test, named in the receipt rather than
 // dropped from the total without a word.
 const skipped = [];
@@ -36,6 +56,21 @@ const expected = {
   mic: manifest.datasets.filter(d => d.mic_essential_agreement !== null),
 };
 const byId = new Map(manifest.datasets.map(d => [d.id, d]));
+// The MIC constants the slides and the index pages show (#124), from
+// baselines.json beside the index: taken only when its index_sha256 is the
+// SHA-256 of index.json's bytes, its revision is the index's, and every
+// entry names an index row with an MIC model and the same figure; anything
+// else is refused whole (docs/baselines.md, "On the dashboard").
+// Empty for a tree without the file.
+const micConstantsShown = (() => {
+  const file = path.join(FIXTURE, 'baselines.json');
+  if (!fs.existsSync(file)) return new Map();
+  const summary = JSON.parse(fs.readFileSync(file));
+  const digest = require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(FIXTURE, 'index.json'))).digest('hex');
+  const own = summary.index_sha256 === digest && summary.evaluation_revision === manifest.evaluation_revision
+    && summary.datasets.every(e => byId.get(e.dataset)?.mic_essential_agreement != null && byId.get(e.dataset).mic_essential_agreement === e.model);
+  return new Map(own ? summary.datasets.map(e => [e.dataset, e]) : []);
+})();
 const resistantOf = p => (p.counts ? p.counts.tp + p.counts.fn : (byId.get(p.dataset)?.n_resistant ?? 0)) + (p.no_call?.resistant ?? 0);
 const panelIds = [...new Set(manifest.panels.map(p => p.panel))];
 const panelSize = id => manifest.panels.filter(p => p.panel === id).reduce((a, p) => a + resistantOf(p), 0);
@@ -140,6 +175,11 @@ const isLimitsHref = href => href === '/#limits' || href === '#limits' || href =
 // so a fast machine reads as early as before; the deadline only decides how
 // slow a machine may be before the check calls the state missing.
 const STATE_MS = 10000;
+// The slide on screen in Present. The deck lays each figure slide out again
+// off screen, as one page, to measure it ([data-slide-measure]); those copies
+// draw the same figures in a div, never a section, so a query scoped here
+// reads the live slide alone.
+const LIVE_SLIDE = 'dialog.presentation-dialog main section';
 // The inspector's freshness window for a launch point (FRESH_MS in
 // web/src/ui/launch.ts), read from the app's own source so the two cannot
 // drift apart.
@@ -184,12 +224,54 @@ const measure = () => {
   const visible = e => !e.closest('[role="tooltip"]') && !e.classList.contains('sr-only') && e.getClientRects().length > 0;
   const contentBottom = Math.max(0, ...[...(figure?.querySelectorAll('*') ?? [])].filter(visible).map(e => e.getBoundingClientRect().bottom));
   const figureBox = figure?.getBoundingClientRect();
-  return { viewport: [innerWidth, innerHeight], main: rect(main), section: rect(section), fit: rect(fit), contentBottom, caption: rect(caption), figureTop: figureBox?.top ?? null, mainTop: main?.getBoundingClientRect().top ?? null, textOutside, marks: section?.querySelectorAll('[data-dataset]').length ?? 0, titleX: section?.querySelector('h2')?.getBoundingClientRect().x ?? null, brandX: document.querySelector('dialog.presentation-dialog header svg')?.getBoundingClientRect().x ?? null };
+  // The figure's box on this page: a filling figure's fit, else the figure.
+  const slot = fit ?? figure;
+  // The deck's one-page copy of this slide, read by the rule of "figure
+  // above caption" and "fits": whether one page holds the four parts.
+  // The copy must lay out as wide and as low as the live slide, or its
+  // reading says nothing about the live page.
+  const id = section?.getAttribute('aria-labelledby')?.replace(/-title$/, '') ?? null;
+  const copyRoot = id === null ? null : main.querySelector('[data-slide-measure="' + id + '"]')?.firstElementChild ?? null;
+  const copy = (() => {
+    if (copyRoot === null) return null;
+    const box = copyRoot.querySelector('[data-measure-slot]'), cap = copyRoot.querySelector('[data-measure-caption]');
+    if (box === null || cap === null) return { id, parts: false };
+    const top = copyRoot.getBoundingClientRect().top;
+    const bottom = Math.max(0, ...[...box.querySelectorAll('*')].filter(visible).map(e => e.getBoundingClientRect().bottom));
+    // A filling figure's box is its fit; a fixed figure sits in the fixed box.
+    const fitBox = box.closest('[data-fixed-box]') === null ? box : null;
+    const figureOverCaption = bottom > cap.getBoundingClientRect().y - 8 || (fitBox !== null && fitBox.scrollHeight > fitBox.clientHeight + 1);
+    const pastSlide = copyRoot.scrollHeight > copyRoot.clientHeight + 1;
+    return { id, parts: true, head: box.getBoundingClientRect().top - top, figureBottom: bottom - top, captionTop: cap.getBoundingClientRect().y - top, room: copyRoot.clientHeight, width: copyRoot.clientWidth, scroll: copyRoot.scrollHeight, figureOverCaption, pastSlide, caption: cap.textContent };
+  })();
+  const sectionTop = section?.getBoundingClientRect().top ?? 0;
+  return {
+    viewport: [innerWidth, innerHeight], main: rect(main), section: rect(section), fit: rect(fit), contentBottom, caption: rect(caption), figureTop: figureBox?.top ?? null, mainTop: main?.getBoundingClientRect().top ?? null, textOutside, marks: section?.querySelectorAll('[data-dataset]').length ?? 0, titleX: section?.querySelector('h2')?.getBoundingClientRect().x ?? null, brandX: document.querySelector('dialog.presentation-dialog header svg')?.getBoundingClientRect().x ?? null,
+    hasFigure: figure !== null && figure !== undefined, hasCaption: caption !== null && caption !== undefined, captionText: caption?.textContent ?? null, captionWhole: caption ? caption.scrollHeight <= caption.clientHeight + 1 && caption.getBoundingClientRect().bottom <= (section?.getBoundingClientRect().bottom ?? 0) + 1 : false,
+    figureWhole: figure ? contentBottom <= (section?.getBoundingClientRect().bottom ?? 0) + 1 && (fit === null || fit.scrollHeight <= fit.clientHeight + 1) : false,
+    // The caption as a screen reader meets it: not hidden from it, painted,
+    // and after the slide's title in the reading order.
+    captionHeard: caption ? caption.closest('[aria-hidden="true"], [inert]') === null && getComputedStyle(caption).visibility === 'visible' && (section.querySelector('h2') === null || (section.querySelector('h2').compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0) : false,
+    // Every figure slide's one-page copy, each of which decides its slide's
+    // pages: a caption page, or the pages of a figure that pages its rows.
+    // Its slide's id, and the width and height it lays that slide out in.
+    liveId: id,
+    copies: main ? [...main.querySelectorAll('[data-slide-measure]')].map(e => ({ id: e.getAttribute('data-slide-measure'), width: e.firstElementChild?.clientWidth ?? null, room: e.firstElementChild?.clientHeight ?? null })) : [],
+    head: slot ? slot.getBoundingClientRect().top - sectionTop : null, svgs: section ? [...section.querySelectorAll('svg')].length : 0, title: section?.querySelector('h2')?.textContent ?? null, text: section?.textContent ?? '', copy,
+  };
 };
 
 async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = false) {
   if (![1, 2, 3, 4].includes(finding)) return;
-  const geometry = await page.locator('dialog.presentation-dialog main svg:not(.grm-mark)').first().evaluate(svg => ({ width: svg.getBoundingClientRect().width, height: svg.getBoundingClientRect().height, refs: [...svg.querySelectorAll('line[aria-hidden="true"]')].map(l => ({ x: Number(l.getAttribute('x1')), y: Number(l.getAttribute('y1')) })), ids: [...svg.querySelectorAll('[data-dataset]')].map(e => e.getAttribute('data-dataset')), text: svg.textContent }));
+  // The live slide's first chart, never a copy's. A slide that draws none
+  // gives an empty reading, which every check below fails.
+  const first = LIVE_SLIDE + ' svg:not(.grm-mark)';
+  await page.locator(first).first().waitFor({ state: 'attached', timeout: STATE_MS }).catch(() => {});
+  const geometry = await page.evaluate(sel => {
+    const svg = document.querySelector(sel);
+    if (svg === null) return { drawn: false, width: 0, height: 0, refs: [], ids: [], text: '' };
+    return { drawn: true, width: svg.getBoundingClientRect().width, height: svg.getBoundingClientRect().height, refs: [...svg.querySelectorAll('line[aria-hidden="true"]')].map(l => ({ x: Number(l.getAttribute('x1')), y: Number(l.getAttribute('y1')) })), ids: [...svg.querySelectorAll('[data-dataset]')].map(e => e.getAttribute('data-dataset')), text: svg.textContent };
+  }, first);
   const close = (actual, want) => Math.abs(actual - want) <= 1.5;
   let wanted = [];
   if (finding === 1) {
@@ -198,8 +280,12 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     check(tag + ' lineage region counts', new RegExp((gaps.length - expected.stats.above5) + ' ≤5( points)?').test(geometry.text) && new RegExp(expected.stats.above5 + ' >5( points)?').test(geometry.text), geometry.text);
   }
   if (finding === 4) {
-    const values = expected.mic.map(d => d.mic_essential_agreement), lo = Math.min(0.8, Math.floor(Math.min(...values) * 10) / 10);
-    wanted = [0.9].map(v => 20 + (v - lo) / (1 - lo) * (geometry.width - 40));
+    // With baselines.json, a solid line at the median of the datasets'
+    // constants follows the 90% line, and the axis reaches down to it.
+    const constants = expected.mic.filter(d => micConstantsShown.has(d.id)).map(d => micConstantsShown.get(d.id).constant);
+    const medianConstant = constants.length === 0 ? [] : [median(constants)];
+    const values = expected.mic.map(d => d.mic_essential_agreement), lo = Math.min(0.8, Math.floor(Math.min(...values, ...medianConstant) * 10) / 10);
+    wanted = [0.9, ...medianConstant].map(v => 20 + (v - lo) / (1 - lo) * (geometry.width - 40));
     check(tag + ' MIC region counts', geometry.text.includes((values.length - expected.stats.micAbove90) + ' <90%') && geometry.text.includes(expected.stats.micAbove90 + ' ≥90%'), geometry.text);
   }
   if (finding === 3) {
@@ -232,7 +318,7 @@ async function referenceChecks(page, tag, finding, panelSeen = [], panelPaged = 
     // there is no reference line at all.
     check(tag + ' catalog 50% reference', drawn && (lo < 0.5 ? at50.length > 0 : geometry.refs.length === 0), { lo, drawn, marks: geometry.ids.length, refs: geometry.refs });
     check(tag + ' catalog region counts', geometry.text.includes(expected.stats.catalogAhead + ' ahead by more than 2') && geometry.text.includes(expected.stats.catalogWithin + ' within 2 points') && geometry.text.includes(expected.stats.catalogBehind + ' behind by more than 2'), geometry.text);
-  } else check(tag + ' finding ' + finding + ' reference positions', wanted.length === geometry.refs.length && wanted.every((x, i) => close(geometry.refs[i].x, x)), { wanted, actual: geometry.refs });
+  } else check(tag + ' finding ' + finding + ' reference positions', geometry.drawn && wanted.length === geometry.refs.length && wanted.every((x, i) => close(geometry.refs[i].x, x)), { wanted, actual: geometry.refs, drawn: geometry.drawn });
 }
 
 /** Judged values are plain text with accessible state words, not pills. */
@@ -398,7 +484,9 @@ const GUIDANCE = (() => {
   }
   return null;
 })();
-const GUIDANCE_MISSING = 'no reference/release-summary/*/guidance.json has this tree\'s revision ' + manifest.evaluation_revision + ', generation time ' + manifest.generated_at + ' and ' + manifest.datasets.length + ' datasets';
+const GUIDANCE_MISSING = manifest.evaluation_revision === undefined
+  ? 'this tree\'s index.json has no evaluation_revision, so no reference/release-summary/*/guidance.json, each for one revision, can match it'
+  : 'no reference/release-summary/*/guidance.json has this tree\'s revision ' + manifest.evaluation_revision + ', generation time ' + manifest.generated_at + ' and ' + manifest.datasets.length + ' datasets';
 /** One row of the release summary as the page counts it: datasets with both
  *  rates, those that meet the wording, and the M. tuberculosis datasets
  *  among those. */
@@ -1479,17 +1567,26 @@ async function present(page, tag, width, height) {
   }
   await page.keyboard.press('Escape');
   const labels = [];
+  const titles = [];
+  const pageKinds = [];
+  // A slide's name in the outline, without its number or its page.
+  const slideName = label => label.replace(/^\d+ · /, '').replace(/ \(\d+ of \d+\)$/, '').trim();
   const panelSeen = [];
   const inputsSeen = [];
+  // What each page shows of the deck's one-page copies (see the check after
+  // the loop): the live slide's id, its size, whether it shows its slide
+  // whole on one page, and each copy's id, width and room.
+  const copyReads = [];
   const wordingSeen = [];
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
     const title = await dialog.locator('main h2').first().textContent();
+    titles.push(title);
     if ((title ?? '').startsWith('Newly deposited genomes')) {
       const plots = await page.evaluate(outsidePlots);
       check(tag + ' slide ' + (slide + 1) + ' outside plots: no two axis labels touching', plots.length >= 2 && plots.every(p => p.touching.length === 0), plots);
     }
-    { const w = ((await dialog.locator('main').textContent()) ?? '').replace(/\s+/g, ' ').match(/By the guidance's own wording, read after the results, it meets on ([\d,]+)\./); if (w !== null) wordingSeen.push(toCount(w[1])); }
+    { const w = ((await dialog.locator('main section').first().textContent()) ?? '').replace(/\s+/g, ' ').match(/By the guidance's own wording, read after the results, it meets on ([\d,]+)\./); if (w !== null) wordingSeen.push(toCount(w[1])); }
     labels.push(await slideSelect.textContent());
     await shot(page, tag + '-slide-' + (slide + 1));
     check(tag + ' slide ' + (slide + 1) + ' selected in the outline', await slideNumber(dialog) === slide + 1, await slideNumber(dialog));
@@ -1533,7 +1630,29 @@ async function present(page, tag, width, height) {
       const want = ['dataset', 'feature', 'splits', 'errors', 'scope'][slide - 1];
       check(tag + ' slide ' + (slide + 1) + ' primer step with its figure and no controls of its own', primer.figure === want && primer.interactive === 0, { ...primer, title });
     }
-    check(tag + ' slide ' + (slide + 1) + ' figure above caption', m.contentBottom <= m.caption.y - 8 && (m.fit === null || m.fit.scrollHeight <= m.fit.height + 1), { contentBottom: m.contentBottom, caption: m.caption, fit: m.fit });
+    // A page with both shows the figure above its caption. A slide too tall
+    // for one page shows the figure whole on page 1 with no caption, and the
+    // title and the whole caption on page 2; one page must not have held them.
+    const pageAt = /\((\d+) of (\d+)\)$/.exec(labels[slide] ?? '');
+    const pageKind = m.hasFigure && m.hasCaption ? 'whole' : m.hasFigure ? 'figure' : m.hasCaption ? 'caption' : 'none';
+    pageKinds[slide] = pageKind;
+    // A slide shown whole on one page: its figure and caption, and no
+    // "(k of n)" in its label.
+    copyReads.push({ slide: slide + 1, liveId: m.liveId, onePage: pageKind === 'whole' && pageAt === null, section: m.section === null ? null : { width: m.section.width, height: m.section.height }, copies: m.copies });
+    if (pageKind === 'whole' || pageKind === 'none') {
+      check(tag + ' slide ' + (slide + 1) + ' figure above caption', pageKind === 'whole' && m.contentBottom <= m.caption.y - 8 && (m.fit === null || m.fit.scrollHeight <= m.fit.height + 1), { contentBottom: m.contentBottom, caption: m.caption, fit: m.fit, pageKind });
+      if (pageKind === 'whole') captionsSeen[title] = m.captionText;
+    } else if (pageKind === 'figure') {
+      const copyHolds = m.copy !== null && m.copy.parts && !m.copy.figureOverCaption && !m.copy.pastSlide;
+      check(tag + ' slide ' + (slide + 1) + ' figure page: the figure whole, no caption, and the caption page next', pageAt !== null && Number(pageAt[1]) < Number(pageAt[2]) && m.figureWhole && !(m.copy?.caption && m.text.includes(m.copy.caption)), { label: labels[slide], figureWhole: m.figureWhole, contentBottom: m.contentBottom, section: m.section, fit: m.fit });
+      check(tag + ' slide ' + (slide + 1) + ' takes a caption page only when one page cannot hold its title, answer, figure and caption', m.copy !== null && m.copy.parts && !copyHolds && m.head !== null && Math.abs(m.copy.head - m.head) <= 1 && m.section !== null && Math.abs(m.copy.width - m.section.width) <= 1, { copy: m.copy, liveHead: m.head, liveWidth: m.section?.width ?? null });
+    } else {
+      const before = labels[slide - 1] ?? '';
+      const prev = /\((\d+) of (\d+)\)$/.exec(before);
+      const seen = captionsSeen[title] ?? null;
+      const want = m.copy?.caption ?? null;
+      check(tag + ' slide ' + (slide + 1) + ' caption page: the title and the whole caption, no figure', pageAt !== null && pageAt[1] === pageAt[2] && prev !== null && Number(prev[1]) === Number(pageAt[1]) - 1 && pageKinds[slide - 1] === 'figure' && slideName(before) === slideName(labels[slide] ?? '') && m.title === titles[slide - 1] && m.captionWhole && m.captionHeard && want !== null && m.captionText === want && (seen === null || seen === m.captionText) && m.svgs === 0 && m.marks === 0, { label: labels[slide], before, beforeKind: pageKinds[slide - 1] ?? null, title: m.title, titleBefore: titles[slide - 1], captionWhole: m.captionWhole, captionHeard: m.captionHeard, caption: m.caption, sameAsCopy: m.captionText === want, sameAsOnePage: seen === null ? 'no one-page view yet' : seen === m.captionText, svgs: m.svgs, marks: m.marks });
+    }
     check(tag + ' slide ' + (slide + 1) + ' labels inside', m.textOutside.length === 0, m.textOutside);
     const finding = title.includes('unseen lineages') ? 1 : title.includes('Known-gene rules') ? 2 : title.includes('PCR panel') ? 3 : title.includes('(MIC)') ? 4 : 0;
     // A paged panel figure draws its share of the rows on each page; the
@@ -1542,10 +1661,11 @@ async function present(page, tag, width, height) {
     const panelPer = paged === null ? expected.panels.length : Math.ceil(expected.panels.length / Number(paged[2]));
     const panelShown = paged === null ? expected.panels.length : Math.min(panelPer, expected.panels.length - (Number(paged[1]) - 1) * panelPer);
     const count = [0, expected.paired.length, expected.catalog.length, panelShown, expected.mic.length][finding] ?? 0;
-    if (finding > 0) check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title, page: paged?.[0] ?? null });
-    await referenceChecks(page, tag, finding, panelSeen, paged !== null);
+    // A caption page draws no figure; its figure page is checked instead.
+    if (finding > 0 && pageKind !== 'caption') check(tag + ' slide ' + (slide + 1) + ' all dataset marks', m.marks === count, { actual: m.marks, expected: count, title, page: paged?.[0] ?? null });
+    if (pageKind !== 'caption') await referenceChecks(page, tag, finding, panelSeen, paged !== null);
     if (title === 'Genomes and lab calls') {
-      const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
+      const stats = await page.evaluate(() => [...document.querySelectorAll('dialog.presentation-dialog main ol li')].filter(li => li.closest('[data-slide-measure]') === null).map(li => { const v = li.firstElementChild; const r = v.getBoundingClientRect(); return { text: v.textContent, left: r.left, right: r.right, top: r.top, bottom: r.bottom, cellRight: li.getBoundingClientRect().right, scroll: v.scrollWidth, client: v.clientWidth }; }));
       const apart = stats.every((a, i) => stats.every((b, j) => i === j || a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top));
       check(tag + ' corpus counts do not overlap', stats.length === 4 && apart && stats.every(s => s.right <= s.cellRight + 1 && s.scroll <= s.client + 1), stats);
     }
@@ -1598,6 +1718,25 @@ async function present(page, tag, width, height) {
   });
   const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
   check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  // The copies decide those pages, so the check holds them on every page
+  // past the title. There is one per figure slide: the fifteen slides after
+  // the title, by the ids the live slides carry. Each lays out as wide as
+  // the live slide. Each lays out under the footer its own slide's first
+  // page shows, whichever page is showing now, so its room is the same on
+  // every page; and where its slide shows whole on one page, under the same
+  // footer, that room is the live slide's height.
+  const figureIds = [...new Set(copyReads.map(r => r.liveId).filter(id => id !== null))].sort();
+  const copyIdsOff = copyReads.filter(r => JSON.stringify(r.copies.map(c => c.id).sort()) !== JSON.stringify(figureIds)).map(r => ({ slide: r.slide, copies: r.copies.map(c => c.id) }));
+  const widthOff = copyReads.flatMap(r => r.copies.filter(c => c.width === null || r.section === null || Math.abs(c.width - r.section.width) > 1).map(c => ({ slide: r.slide, id: c.id, width: c.width, live: r.section?.width ?? null })));
+  const roomOff = figureIds.flatMap(id => {
+    const rooms = copyReads.map(r => ({ slide: r.slide, room: r.copies.find(c => c.id === id)?.room ?? null }));
+    const whole = copyReads.find(r => r.liveId === id && r.onePage && r.section !== null);
+    const want = whole === undefined ? null : whole.section.height;
+    const known = rooms.filter(r => r.room !== null).map(r => r.room);
+    const bad = rooms.some(r => r.room === null) || (known.length > 0 && Math.max(...known) - Math.min(...known) > 1) || (want !== null && known.some(v => Math.abs(v - want) > 1));
+    return bad ? [{ id, live: want, onePageSlide: whole?.slide ?? null, min: Math.min(...known), max: Math.max(...known), off: rooms.filter(r => r.room === null || (want !== null && Math.abs(r.room - want) > 1)).slice(0, 4) }] : [];
+  });
+  check(tag + ' one-page copies: one per figure slide, as wide as the live slide on every page, and as low as the slide each measures', figureIds.length === BASE_SLIDES - 1 && copyIdsOff.length === 0 && widthOff.length === 0 && roomOff.length === 0, { figureSlides: figureIds.length, copiesPerPage: copyReads.length === 0 ? null : copyReads[0].copies.length, copyIdsOff: copyIdsOff.slice(0, 4), widthOff: widthOff.slice(0, 6), roomOff: roomOff.slice(0, 6), onePageSlides: copyReads.filter(r => r.onePage).length });
   check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
   check(tag + ' input pages together show every row once, in order', JSON.stringify(inputsSeen) === JSON.stringify(inputsExpected.map(e => e.id)), { seen: inputsSeen });
   // The bars slide's caption gives the best learner's count by the
@@ -1787,11 +1926,303 @@ async function boundaries(browser) {
   await settle(page);
   for (const [slide, selector, name] of [[3, '[data-hidden], [data-hidden-swatch]', 'splits'], [4, '[data-error]', 'errors']]) {
     await goSlide(page, deck, slide);
-    const marks = await page.evaluate((selector) => [...document.querySelectorAll('dialog.presentation-dialog main ' + selector)].map(e => ({ adjust: getComputedStyle(e).forcedColorAdjust, fill: getComputedStyle(e).backgroundColor })), selector);
+    // The live slide's marks alone: its copy in the deck and the overview's
+    // primer behind the deck carry the same marks. Every part of the
+    // selector list is read inside the live slide.
+    const marks = await page.evaluate(({ live, selector }) => [...(document.querySelector(live)?.querySelectorAll(selector) ?? [])].map(e => ({ adjust: getComputedStyle(e).forcedColorAdjust, fill: getComputedStyle(e).backgroundColor })), { live: LIVE_SLIDE, selector });
     check('forced colors: ' + name + ' semantic fills stay visible', marks.length > 0 && marks.every(m => m.adjust === 'none' && m.fill !== 'rgba(0, 0, 0, 0)' && m.fill !== 'transparent'), marks);
     await shot(page, 'forced-colors-primer-' + name);
   }
   await context.close();
+}
+
+// ---- No-genome baselines (#124) and the clindamycin labels (#125) ---------
+// Expectations come from the tree's own files and the bundled labels file,
+// never from app code: index.json's bytes, baselines.json, each
+// baselines/<id>.json and each report's bytes, read with the pins
+// docs/baselines.md gives ("The file", "The summary"), and
+// web/src/data/clindamycin-labels.json, read with the pins
+// docs/clindamycin-labels.md gives. The files are taken as valid; the check
+// applies the pins, not the parser. Wording is the merged descriptions':
+// a share to one decimal, a lead in signed points ("+18.3", "−2.1", "0.0")
+// and in words ("12.6 points above it", "level with it" at a lead that
+// shows as 0.0).
+const sha256 = bytes => require('node:crypto').createHash('sha256').update(bytes).digest('hex');
+const pctText = v => (v * 100).toFixed(1) + '%';
+const intText = n => Math.round(n).toLocaleString('en-US');
+const signedPointsText = lead => { const v = (Math.abs(lead) * 100).toFixed(1); return Number(v) === 0 ? '0.0' : (lead > 0 ? '+' : '−') + v; };
+const leadText = (lead, from) => { const v = (Math.abs(lead) * 100).toFixed(1); return signedPointsText(lead) === '0.0' ? 'level with ' + from : v + (v === '1.0' ? ' point ' : ' points ') + (lead > 0 ? 'above ' : 'below ') + from; };
+const LEARNER_WORDS = { scm: 'Set covering machine', cart: 'Decision tree (CART)', rf: 'Random forest', gbt: 'Gradient boosted trees', lasso: 'L1 logistic regression', catalog: 'Known-gene catalog' };
+const CLINDAMYCIN = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/data/clindamycin-labels.json')));
+// The datasets table pins a mark by dataset, revision and sample count; the
+// dataset report pins its note by the same and the report's SHA-256 too.
+const clindamycinRow = d => { const e = CLINDAMYCIN.datasets[d.id]; return e !== undefined && d.evaluation?.revision === CLINDAMYCIN.evaluation_revision && d.n === e.samples ? e : null; };
+const TREE = (() => {
+  const summaryFile = path.join(FIXTURE, 'baselines.json');
+  const summary = fs.existsSync(summaryFile) ? JSON.parse(fs.readFileSync(summaryFile)) : null;
+  // micConstantsShown applies the summary's pins; own is whether it holds.
+  const constants = micConstantsShown, own = constants.size > 0;
+  const covered = expected.mic.map(d => constants.get(d.id)).filter(e => e !== undefined);
+  const dir = path.join(FIXTURE, 'baselines');
+  const files = new Set(fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => n.endsWith('.json')).map(n => n.slice(0, -5)).filter(id => byId.has(id)) : []);
+  const words = covered.length === 0 ? null : {
+    covered: covered.length, n: expected.mic.length,
+    medianModel: median(covered.map(e => e.model)), medianConstant: median(covered.map(e => e.constant)),
+    notAbove: covered.filter(e => e.model - e.constant <= 0).length, unconfirmed: covered.filter(e => !e.confirmed).length,
+    constantAt90: covered.filter(e => e.constant >= 0.9).length, modelAt90: covered.filter(e => e.model >= 0.9).length,
+  };
+  return { summary, own, constants, files, words, any: summary !== null || files.size > 0 };
+})();
+// What a dataset report should show, from its bytes and its baselines file.
+const reportExpect = id => {
+  const bytes = fs.readFileSync(path.join(FIXTURE, 'datasets', id + '.json'));
+  const r = JSON.parse(bytes), digest = sha256(bytes);
+  let file = null;
+  if (TREE.files.has(id)) {
+    const f = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'baselines', id + '.json')));
+    if (f.dataset === id && f.evaluation_revision === r.evaluation?.revision && f.report_sha256 === digest) file = f;
+  }
+  const mic = file?.mic != null && r.mic !== null && file.mic.n_exact === r.mic.n_exact && file.mic.model.essential_agreement === r.mic.essential_agreement && file.mic.median !== null ? file.mic : null;
+  const random = r.splits.find(s => s.scheme === 'random');
+  const base = random === undefined ? undefined : file?.lineage.find(s => s.scheme === 'random' && s.folds === random.folds && s.n === r.samples.length);
+  const learners = (random?.learners ?? []).map(l => ({ name: LEARNER_WORDS[l.learner] ?? l.learner, ba: l.metrics?.balanced_accuracy ?? null }));
+  const c = CLINDAMYCIN.datasets[id];
+  const note = c !== undefined && r.evaluation?.revision === CLINDAMYCIN.evaluation_revision && r.counts.samples === c.samples && digest === c.report_sha256 ? c.kind : null;
+  return { id, hasMic: r.mic !== null, filePinned: file !== null, mic, base, learners, note };
+};
+const OPTIONAL_404 = [/\/data\/intervals\//, /\/data\/baselines\.json$/, /\/data\/baselines\//];
+// A response the check counts as an error: 400 or above, except
+// research.json, and a 404 for an optional file the pages read as not
+// published (intervals/, and since #124 baselines.json and baselines/).
+const responseError = r => r.status() >= 400 && !r.url().endsWith('/data/research.json') && !(r.status() === 404 && OPTIONAL_404.some(re => re.test(new URL(r.url()).pathname)));
+// The text column beside the MIC heatmap, at each width: the floor every
+// MIC dataset must keep. At 1721a08 the narrowest was 310 px at 1024 and
+// 536 px at 1440 (rev14 with baselines files, P. aeruginosa vs meropenem);
+// with w-0 min-w-full taken off the line under the heatmap's key, that
+// line's text sets the figure's column and the narrowest falls to 248 and
+// 474 px. The floors sit between. A column under 240 px is a page defect in
+// its own right, listed apart.
+const MIC_TEXT_FLOORS = { 1024: 300, 1440: 500 };
+
+async function baselineContext(browser, width, height, theme, consoleErrors) {
+  const context = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion: 'reduce' });
+  await context.addInitScript(t => { if (/^https?:$/.test(location.protocol)) localStorage.setItem('grm-theme', t); }, theme);
+  const page = await context.newPage();
+  page.on('pageerror', error => errors.push({ part: 'baselines', theme, width, message: error.message }));
+  page.on('response', r => { if (responseError(r)) errors.push({ part: 'baselines', theme, width, url: r.url(), status: r.status() }); });
+  page.on('console', m => { if (m.type() === 'error') consoleErrors.push({ text: m.text(), url: m.location()?.url ?? '' }); });
+  return { context, page };
+}
+
+// One page load of an index page, with every /data request it made.
+async function loadCounting(page, route, ready) {
+  const seen = [];
+  const onRequest = q => { const p = new URL(q.url()).pathname; if (p.startsWith('/data/')) seen.push(p); };
+  page.on('request', onRequest);
+  await page.goto(BASE + route, { waitUntil: 'networkidle', timeout: 120000 });
+  await ready();
+  await page.waitForLoadState('networkidle');
+  await settle(page);
+  page.off('request', onRequest);
+  return { summary: seen.filter(p => p === '/data/baselines.json').length, perDataset: seen.filter(p => p.startsWith('/data/baselines/')).length, reports: seen.filter(p => p.startsWith('/data/datasets/')).length };
+}
+
+// The overview, the datasets table and the methods page: one request for
+// the summary and none per dataset, each MIC constant and clindamycin mark
+// as the files give them, and the summary's sentences. `own` is whether the
+// summary should hold: false for a tree without one, and for the index
+// served with other bytes.
+async function indexPages(page, tag, own) {
+  const rows = manifest.datasets.length;
+  const counts = {};
+  counts.overview = await loadCounting(page, '/', () => page.locator('#corpus').waitFor());
+  const overview = await page.evaluate(() => document.querySelector('[data-view-scroll]')?.textContent ?? document.body.textContent);
+  counts.datasets = await loadCounting(page, '/datasets', () => page.getByRole('region', { name: 'Datasets', exact: true }).waitFor());
+  // Show all is kept for the session, so a second visit may have no button.
+  const showAll = page.getByRole('button', { name: 'Show all ' + rows.toLocaleString('en-US'), exact: true });
+  if (rows > 25 && await showAll.count() > 0) { await showAll.click(); await settle(page); }
+  const table = await page.getByRole('region', { name: 'Datasets', exact: true }).evaluate(region => [...region.querySelectorAll('tbody tr[data-row-key]')].map(tr => {
+    const c = tr.querySelector('[data-baseline="mic-constant"]');
+    const shown = c === null ? null : (() => { const x = c.cloneNode(true); x.querySelectorAll('.sr-only').forEach(s => s.remove()); return x.textContent; })();
+    return { id: tr.getAttribute('data-row-key'), mark: tr.querySelectorAll('[data-clindamycin-mark]').length, markText: tr.querySelector('[data-clindamycin-mark]')?.textContent ?? null, shown, sr: c === null ? null : [...c.querySelectorAll('.sr-only')].map(s => s.textContent).join('|') };
+  }));
+  counts.methods = await loadCounting(page, '/methods', () => page.getByRole('heading', { name: /Models and evaluation/ }).waitFor());
+  const methods = await page.evaluate(() => document.querySelector('[data-view-scroll]')?.textContent ?? document.body.textContent);
+  for (const [key, c] of Object.entries(counts)) check(tag + ' ' + key + ' requests the baselines summary once and no dataset file', c.summary === 1 && c.perDataset === 0, c);
+
+  const wantMarks = manifest.datasets.filter(d => clindamycinRow(d) !== null).map(d => d.id).sort();
+  const marks = table.filter(t => t.mark > 0);
+  check(tag + ' clindamycin mark on exactly the rows the bundled file pins', table.length === rows && JSON.stringify(marks.map(t => t.id).sort()) === JSON.stringify(wantMarks) && marks.every(t => t.mark === 1 && t.markText.startsWith('Labels by study')), { rows: table.length, want: wantMarks, got: marks.map(t => t.id) });
+  const wantConstant = id => { const e = own ? TREE.constants.get(id) : undefined; return e === undefined ? null : { shown: pctText(e.constant) + (e.confirmed ? ' c' : ' c†'), sr: 'constant MIC ' + (e.confirmed ? '' : '|, folds not confirmed by the held-out predictions') }; };
+  const wrong = table.filter(t => { const w = wantConstant(t.id); return w === null ? t.shown !== null : t.shown !== w.shown || t.sr !== w.sr; });
+  const shownN = table.filter(t => t.shown !== null).length;
+  check(tag + ' MIC constant cells equal baselines.json' + (own ? '' : ' (none: the summary does not hold)'), wrong.length === 0 && shownN === (own ? TREE.constants.size : 0), { shown: shownN, wrong: wrong.slice(0, 5).map(t => ({ ...t, want: wantConstant(t.id) })) });
+  const unconfirmed = own ? [...TREE.constants.values()].filter(e => !e.confirmed).map(e => e.dataset) : [];
+  if (unconfirmed.length > 0) check(tag + ' unconfirmed folds marked c† with their words in the table', unconfirmed.every(id => { const t = table.find(x => x.id === id); return t?.shown?.endsWith(' c†') && t.sr.includes('folds not confirmed by the held-out predictions'); }), unconfirmed);
+  else if (own) skipped.push({ check: tag + ' unconfirmed folds marked c† in the table', reason: 'every dataset in baselines.json is confirmed' });
+
+  const w = own ? TREE.words : null;
+  const sentence = overview.includes('Set beside a constant MIC');
+  if (w === null) check(tag + ' overview shows no MIC constant', !sentence && !overview.includes('constant MIC from the training folds'), sentence);
+  else {
+    const over = w.covered === w.n ? `over the ${intText(w.n)} datasets` : `over ${intText(w.covered)} of the ${intText(w.n)} datasets, the ones with a baselines file,`;
+    const parts = [over, `the median agreement is ${pctText(w.medianModel)} for the model and ${pctText(w.medianConstant)} for the constant`, `the model is not above the constant on ${intText(w.notAbove)} of ${intText(w.covered)}`];
+    const unc = `On ${intText(w.unconfirmed)} of them the held-out predictions do not confirm the rebuilt folds.`;
+    check(tag + ' overview MIC constant sentence gives the summary\'s medians and counts', sentence && parts.every(p => overview.includes(p)) && overview.includes(unc) === (w.unconfirmed > 0), { parts, missing: parts.filter(p => !overview.includes(p)), unconfirmed: w.unconfirmed });
+  }
+  const at90 = methods.includes('Read after the scores, as a description');
+  if (w === null) check(tag + ' methods shows no MIC constant count', !at90, at90);
+  else check(tag + ' methods counts datasets at 90% as the summary gives them', at90 && methods.includes(`the constant reaches 90% on ${intText(w.constantAt90)}, the model on ${intText(w.modelAt90)}`), { constantAt90: w.constantAt90, modelAt90: w.modelAt90 });
+}
+
+// One dataset report: the MIC sentence and the band under the heatmap, the
+// learner table's lineage baseline and leads, the clindamycin note, and the
+// width of the MIC text column at 1440 and then 1024 px.
+async function reportPage(page, want, tag, widths) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(BASE + '/datasets?dataset=' + want.id, { waitUntil: 'networkidle', timeout: 180000 });
+  await page.locator('#ds-learners').waitFor({ timeout: 60000 });
+  if (want.hasMic) await page.getByRole('region', { name: 'Measured and predicted MIC' }).waitFor({ timeout: 60000 });
+  if (want.mic !== null) await page.locator('[data-baseline="band"]').waitFor({ timeout: 15000 }).catch(() => {});
+  if (want.base !== undefined) await page.locator('[data-baseline="lineage-header"]').waitFor({ timeout: 15000 }).catch(() => {});
+  if (want.note !== null) await page.locator('[data-clindamycin-note]').waitFor({ timeout: 15000 }).catch(() => {});
+  await page.waitForLoadState('networkidle');
+  await settle(page); await page.waitForTimeout(150);
+  // The report opens as a dialog over the datasets table, whose own MIC
+  // constants are not the report's: read inside the dialog only.
+  const got = await page.evaluate(() => {
+    const root = document.querySelector('#ds-learners')?.closest('dialog') ?? document;
+    const q = s => root.querySelector(s);
+    const table = [...root.querySelectorAll('#ds-learners table')].find(t => [...t.querySelectorAll('thead th')].some(th => th.textContent.startsWith('Random')));
+    const rows = [...(table?.querySelectorAll('tbody tr') ?? [])].map(tr => {
+      const lead = tr.querySelector('[data-baseline="lineage-lead"]');
+      return { name: tr.querySelector('th[scope="row"]')?.childNodes[0]?.textContent?.trim() ?? null, shown: lead?.querySelector('[aria-hidden="true"]')?.textContent ?? null, sr: lead?.querySelector('.sr-only')?.textContent ?? null };
+    });
+    return { marks: root.querySelectorAll('[data-baseline]').length, header: q('[data-baseline="lineage-header"]')?.textContent ?? null, rows, mic: q('[data-baseline="mic"]')?.textContent ?? null, dagger: q('[data-baseline="mic"] sup') !== null, daggerNote: (q('#ds-mic')?.textContent ?? '').includes('† The held-out predictions do not confirm the rebuilt MIC folds'), band: q('[data-baseline="band"]')?.textContent?.trim() ?? null, notes: [...root.querySelectorAll('[data-clindamycin-note]')].map(n => n.getAttribute('data-clindamycin-note')) };
+  });
+  const out = { id: want.id, ok: true, problems: [], note: want.note };
+  const fail = (what, detail) => { out.ok = false; out.problems.push({ what, ...detail }); };
+  if (want.mic === null) { if (got.mic !== null || got.band !== null) fail('MIC constant shown without a pinned file', { mic: got.mic, band: got.band }); }
+  else {
+    const m = want.mic, lead = m.model.essential_agreement - m.median.essential_agreement;
+    const band = `Between the dashed lines: ${pctText(m.model.essential_agreement)} of ${intText(m.n_exact)} exact MICs for the model, ${pctText(m.median.essential_agreement)} for a constant MIC from the training folds.`;
+    const parts = [`agrees on ${pctText(m.median.essential_agreement)} of the same ${intText(m.n_exact)} exact MICs (${intText(m.median.agree)} of ${intText(m.median.n)})`, `the model agrees on ${pctText(m.model.essential_agreement)} (${intText(m.model.agree)} of ${intText(m.model.n)}), ${leadText(lead, 'it')}.`];
+    if (got.band !== band) fail('band', { want: band, got: got.band });
+    if (got.mic === null || !parts.every(p => got.mic.includes(p))) fail('MIC sentence', { want: parts, got: got.mic });
+    if (got.dagger !== !m.prediction_check.confirmed || got.daggerNote !== !m.prediction_check.confirmed) fail('unconfirmed mark', { confirmed: m.prediction_check.confirmed, dagger: got.dagger, note: got.daggerNote });
+    out.level = signedPointsText(lead) === '0.0';
+    out.unconfirmed = !m.prediction_check.confirmed;
+  }
+  if (want.base === undefined) {
+    if (got.header !== null || got.rows.some(r => r.shown !== null)) fail('lineage baseline shown without a pinned file', { header: got.header });
+  } else {
+    if (got.header !== 'lineage ' + pctText(want.base.balanced_accuracy)) fail('lineage header', { want: 'lineage ' + pctText(want.base.balanced_accuracy), got: got.header });
+    const named = got.rows.filter(r => Object.values(LEARNER_WORDS).includes(r.name));
+    for (const l of want.learners) {
+      const row = named.find(r => r.name === l.name);
+      const lead = l.ba === null ? null : l.ba - want.base.balanced_accuracy;
+      const w = lead === null ? { shown: null, sr: null } : { shown: signedPointsText(lead), sr: ' ' + leadText(lead, 'lineage identity alone') };
+      if (row === undefined || row.shown !== w.shown || row.sr !== w.sr) fail('lineage lead', { learner: l.name, want: w, got: row ?? null });
+      if (lead !== null && signedPointsText(lead) === '0.0') out.levelLineage = true;
+    }
+  }
+  if (!want.filePinned && got.marks > 0) fail('baseline marks without a pinned file', { marks: got.marks });
+  if (JSON.stringify(got.notes) !== JSON.stringify(want.note === null ? [] : [want.note])) fail('clindamycin note', { want: want.note, got: got.notes });
+  if (widths !== undefined && want.hasMic) {
+    const column = () => page.evaluate(() => {
+      const grid = document.querySelector('#ds-mic .grid');
+      const text = grid === null ? null : [...grid.children].find(c => c.querySelector('[aria-label="Heatmap key"]') === null && !c.matches('[aria-label="Heatmap key"]'));
+      return text ? Math.round(text.getBoundingClientRect().width * 10) / 10 : null;
+    });
+    widths[1440].push({ id: want.id, width: await column() });
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await settle(page); await page.waitForTimeout(100);
+    widths[1024].push({ id: want.id, width: await column() });
+  }
+  return out;
+}
+
+async function baselineChecks(browser) {
+  const consoleErrors = [];
+  const { context, page } = await baselineContext(browser, 1440, 900, 'light', consoleErrors);
+  const tag = 'baselines';
+  try {
+    await indexPages(page, tag, TREE.own);
+    // A summary pinned to another index: the same index.json with one more
+    // byte, so its SHA-256 differs and the pages must refuse the summary.
+    if (TREE.summary !== null) {
+      await page.route('**/data/index.json', async route => { const res = await route.fetch(); await route.fulfill({ response: res, body: Buffer.concat([await res.body(), Buffer.from('\n')]) }); });
+      await indexPages(page, tag + ' index with other bytes', false);
+      await page.unroute('**/data/index.json');
+    } else skipped.push({ check: tag + ' a summary pinned to another index shows no constant', reason: 'no baselines.json in this tree' });
+
+    // Every dataset on a tree of 60 or fewer; on a larger one, every dataset
+    // with an MIC model and every one the clindamycin file names.
+    const small = manifest.datasets.length <= 60;
+    const visit = manifest.datasets.filter(d => small || d.mic_essential_agreement !== null || CLINDAMYCIN.datasets[d.id] !== undefined).map(d => d.id);
+    if (!small) skipped.push({ check: tag + ' lineage baseline on datasets with no MIC model and no clindamycin entry', reason: `not opened on a tree of ${manifest.datasets.length} datasets: ${manifest.datasets.length - visit.length} reports left out to bound the run` });
+    const widths = { 1024: [], 1440: [] }, results = [];
+    for (const id of visit) results.push(await reportPage(page, reportExpect(id), tag, widths).catch(e => ({ id, ok: false, problems: [{ what: 'error', message: String(e).slice(0, 300) }] })));
+    const bad = results.filter(r => !r.ok);
+    const pinned = results.filter(r => r.level !== undefined).length;
+    check(tag + ' dataset reports: MIC sentence, band, lineage header and leads, clindamycin note equal the files', bad.length === 0, { opened: results.length, withMicFile: pinned, bad: bad.slice(0, 8) });
+    const level = results.filter(r => r.level === true).map(r => r.id), levelLineage = results.filter(r => r.levelLineage === true).map(r => r.id);
+    if (level.length > 0) check(tag + ' "level with it" at an MIC lead of 0', level.every(id => !bad.some(b => b.id === id)), level);
+    else skipped.push({ check: tag + ' "level with it" at an MIC lead of 0', reason: 'no pinned MIC file in this tree has a lead that shows as 0.0' });
+    if (levelLineage.length > 0) check(tag + ' "level with lineage identity alone" at a lineage lead of 0', levelLineage.every(id => !bad.some(b => b.id === id)), levelLineage);
+    else skipped.push({ check: tag + ' "level with lineage identity alone" at a lineage lead of 0', reason: 'no learner in this tree is level with its pinned lineage baseline' });
+    const unconfirmed = results.filter(r => r.unconfirmed === true).map(r => r.id);
+    if (unconfirmed.length > 0) check(tag + ' unconfirmed folds marked † with the note on the report', unconfirmed.every(id => !bad.some(b => b.id === id)), unconfirmed);
+    else skipped.push({ check: tag + ' unconfirmed folds marked † on the report', reason: 'no pinned MIC file in this tree has confirmed: false' });
+    const notes = results.filter(r => CLINDAMYCIN.datasets[r.id] !== undefined).map(r => r.id);
+    if (notes.length === 0) skipped.push({ check: tag + ' clindamycin note on the reports the bundled file names', reason: 'this tree has none of the ' + Object.keys(CLINDAMYCIN.datasets).length + ' datasets the file names' });
+
+    // The MIC text column: the narrowest dataset at each width. Skipped only
+    // when no report with an MIC model was read at that width; a reading of
+    // null (no column found) fails, so a selector that matches nothing fails
+    // with the count of null readings rather than passing as a skip.
+    for (const width of [1024, 1440]) {
+      if (widths[width].length === 0) { skipped.push({ check: tag + ' MIC text column width at ' + width + 'px', reason: 'no dataset with an MIC model in this tree' }); continue; }
+      const all = widths[width].filter(w => w.width !== null);
+      const least = all.reduce((a, w) => (a === null || w.width < a.width ? w : a), null);
+      const floor = MIC_TEXT_FLOORS[width];
+      const nulls = widths[width].length - all.length;
+      check(tag + ' MIC text column at ' + width + 'px keeps ' + floor + 'px on every MIC dataset', nulls === 0 && least !== null && least.width >= floor, { datasets: widths[width].length, nulls, nullIds: widths[width].filter(w => w.width === null).slice(0, 8).map(w => w.id), narrowest: least, under: all.filter(w => w.width < floor), under240: all.filter(w => w.width < 240) });
+    }
+    const narrow = widths[1024].filter(w => w.width !== null).sort((a, b) => a.width - b.width)[0];
+    if (narrow !== undefined) { await page.setViewportSize({ width: 1024, height: 900 }); await page.goto(BASE + '/datasets?dataset=' + narrow.id, { waitUntil: 'networkidle', timeout: 180000 }); await page.getByRole('region', { name: 'Measured and predicted MIC' }).waitFor({ timeout: 60000 }); await scrollTo(page, '#ds-mic'); await shot(page, '1024-baselines-narrowest-mic'); }
+
+    // Report bytes other than those pinned: the clindamycin note and the
+    // baselines file must both drop.
+    const firstNote = results.find(r => r.ok && r.note !== null)?.id;
+    const firstFile = results.find(r => r.ok && r.level !== undefined)?.id;
+    const altered = [...new Set([firstNote, firstFile].filter(Boolean))];
+    // A skip says which it is: no report has the thing at all, or some have
+    // it and none showed it as its files give ("dataset reports" fails then).
+    const withNote = results.filter(r => r.note != null).length, withMic = results.filter(r => reportExpect(r.id).mic !== null).length;
+    const noneRight = (n, what) => n + ' report' + (n === 1 ? '' : 's') + ' opened ' + (n === 1 ? 'has ' : 'have ') + what + ', and none showed what its files give (see "dataset reports")';
+    if (firstNote === undefined) skipped.push({ check: tag + ' clindamycin note drops for report bytes other than those pinned', reason: withNote === 0 ? 'no report in this tree has the note' : noneRight(withNote, 'the note') });
+    if (firstFile === undefined) skipped.push({ check: tag + ' baselines drop for report bytes other than those pinned', reason: withMic === 0 ? 'no report opened has a pinned baselines file with an MIC constant' : noneRight(withMic, 'a pinned baselines file with an MIC constant') });
+    for (const id of altered) {
+      const glob = '**/data/datasets/' + id + '.json';
+      await page.route(glob, async route => { const res = await route.fetch(); await route.fulfill({ response: res, body: Buffer.concat([await res.body(), Buffer.from('\n')]) }); });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(BASE + '/datasets?dataset=' + id, { waitUntil: 'networkidle', timeout: 180000 });
+      await page.locator('#ds-learners').waitFor({ timeout: 60000 });
+      await page.waitForLoadState('networkidle'); await settle(page); await page.waitForTimeout(300);
+      const got = await page.evaluate(() => { const root = document.querySelector('#ds-learners')?.closest('dialog') ?? document; return { notes: root.querySelectorAll('[data-clindamycin-note]').length, marks: root.querySelectorAll('[data-baseline]').length }; });
+      check(tag + ' report bytes other than those pinned show no clindamycin note and no baseline: ' + id, got.notes === 0 && got.marks === 0, got);
+      await page.unroute(glob);
+    }
+  } catch (error) { errors.push({ part: 'baselines', message: error.stack }); }
+  await context.close();
+  // With no baselines files the pages show none, and the console holds
+  // nothing but the browser's own line for each 404 of an optional file.
+  const optional = e => /^Failed to load resource: the server responded with a status of 404/.test(e.text) && [/\/data\/research\.json$/, ...OPTIONAL_404].some(re => re.test(new URL(e.url || BASE).pathname));
+  const byPath = {};
+  for (const e of consoleErrors) { const k = optional(e) ? '404 ' + new URL(e.url).pathname.replace(/^(\/data\/(?:baselines|intervals)\/)[^/]+$/, '$1*') : 'other'; byPath[k] = (byPath[k] ?? 0) + 1; }
+  const extra = consoleErrors.filter(e => !optional(e));
+  check('baselines console errors are only 404s of optional files' + (TREE.any ? '' : ' (a tree with no baselines files)'), extra.length === 0, { all: consoleErrors.length, byPath, extra: extra.slice(0, 5) });
 }
 
 (async () => {
@@ -1799,7 +2230,9 @@ async function boundaries(browser) {
   try {
     const favicon = await fetch(BASE + '/favicon.svg');
     check('favicon is the mark', favicon.ok && (favicon.headers.get('content-type') ?? '').includes('svg') && (await favicon.text()).includes('#ff8c66'), favicon.status);
-    for (const [width, height] of [[1280, 720], [1440, 900], [390, 844]]) for (const theme of ['light', 'dark']) {
+    // 1024x768 presents the deck alone: a tablet held sideways, between the
+    // phone and the laptop widths the pages are checked at.
+    for (const [width, height] of PART !== 'baselines' ? [[1280, 720], [1440, 900], [390, 844], [1024, 768]] : []) for (const theme of ['light', 'dark']) {
       const context = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion: 'reduce' });
       // Init scripts also run on each new page's first about:blank, which has
       // no storage, so touching localStorage there is a page error. Every
@@ -1809,12 +2242,13 @@ async function boundaries(browser) {
       const cdp = await context.newCDPSession(page);
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       page.on('pageerror', error => errors.push({ theme, width, message: error.message }));
-      page.on('response', r => { if (r.status() >= 400 && !r.url().endsWith('/data/research.json') && !(r.status() === 404 && r.url().includes('/data/intervals/'))) errors.push({ theme, width, url: r.url(), status: r.status() }); });
+      page.on('response', r => { if (responseError(r)) errors.push({ theme, width, url: r.url(), status: r.status() }); });
       const tag = width + '-' + theme;
       try {
         await page.goto(BASE);
         await page.getByRole('heading', { name: 'What GRM found', exact: true }).waitFor();
         await present(page, tag, width, height);
+        if (PART === 'present' || width === 1024) { await context.close(); continue; }
         if (width === 1280) { await interactions(page, tag, width); await widestIntervalFit(page, tag); await stripFit(page, tag); await panelFit(page, tag, width); await context.close(); continue; }
         for (const [route, title, key] of [['/', 'What GRM found', 'overview'], ['/datasets', 'Datasets', 'datasets'], ['/species/' + speciesSlug, speciesName, 'species'], ['/methods', 'Data & Methods', 'methods']]) {
           await page.goto(BASE + route);
@@ -1842,11 +2276,14 @@ async function boundaries(browser) {
       } catch (error) { errors.push({ theme, width, message: error.stack }); }
       await context.close();
     }
-    await boundaries(browser);
-    await shortSlides(browser);
-    await normalMotion(browser);
+    if (PART === 'all') {
+      await boundaries(browser);
+      await shortSlides(browser);
+      await normalMotion(browser);
+    }
+    if (PART !== 'present') await baselineChecks(browser);
   } finally { await browser.close(); }
-  const receipt = { source: { fixture: FIXTURE, schema: manifest.schema, generated: manifest.generated_at, revision: manifest.evaluation_revision, datasets: expected.datasets, panelRows: manifest.panels.length }, independent: expected.stats, stateRows: stateRows.map(([d, w]) => [d.id, w]), skipped, checks, screenshots, errors, passed: checks.every(c => c.pass) && errors.length === 0 };
+  const receipt = { part: PART, source: { fixture: FIXTURE, schema: manifest.schema, generated: manifest.generated_at, revision: manifest.evaluation_revision, datasets: expected.datasets, panelRows: manifest.panels.length }, independent: expected.stats, stateRows: stateRows.map(([d, w]) => [d.id, w]), skipped, checks, screenshots, errors, passed: checks.every(c => c.pass) && errors.length === 0 };
   fs.writeFileSync(path.join(OUT, 'receipt.json'), JSON.stringify(receipt, null, 2));
   console.log(JSON.stringify({ passed: receipt.passed, checks: checks.length, skipped, failures: checks.filter(c => !c.pass).map(c => ({ name: c.name, actual: c.actual })), errors, screenshots: screenshots.length }, null, 2));
   process.exitCode = receipt.passed ? 0 : 1;
