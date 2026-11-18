@@ -20,7 +20,11 @@
 // figure whole and no caption, page 2 the title and the whole caption; the
 // deck's one-page copy of that slide ([data-slide-measure]) must show that
 // one page could not hold them, read by the same rule as "figure above
-// caption".
+// caption". The copies themselves are held on every page: one per figure
+// slide, each as wide as the live slide, with the same room on every page,
+// and that room the live slide's height where its slide shows whole on one
+// page. Checks of the live slide read inside its section (LIVE_SLIDE), never
+// a copy.
 // The no-genome baselines (#124) and the clindamycin labels (#125) have
 // their own block, baselineChecks, after the rest. GRM_CHECK_PART=baselines
 // runs that block alone, for a quick pass on one page change, and
@@ -250,7 +254,9 @@ const measure = () => {
     captionHeard: caption ? caption.closest('[aria-hidden="true"], [inert]') === null && getComputedStyle(caption).visibility === 'visible' && (section.querySelector('h2') === null || (section.querySelector('h2').compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0) : false,
     // Every figure slide's one-page copy, each of which decides its slide's
     // pages: a caption page, or the pages of a figure that pages its rows.
-    copyWidths: main ? [...main.querySelectorAll('[data-slide-measure]')].map(e => e.firstElementChild?.clientWidth ?? null) : [],
+    // Its slide's id, and the width and height it lays that slide out in.
+    liveId: id,
+    copies: main ? [...main.querySelectorAll('[data-slide-measure]')].map(e => ({ id: e.getAttribute('data-slide-measure'), width: e.firstElementChild?.clientWidth ?? null, room: e.firstElementChild?.clientHeight ?? null })) : [],
     head: slot ? slot.getBoundingClientRect().top - sectionTop : null, svgs: section ? [...section.querySelectorAll('svg')].length : 0, title: section?.querySelector('h2')?.textContent ?? null, text: section?.textContent ?? '', copy,
   };
 };
@@ -1567,8 +1573,10 @@ async function present(page, tag, width, height) {
   const slideName = label => label.replace(/^\d+ · /, '').replace(/ \(\d+ of \d+\)$/, '').trim();
   const panelSeen = [];
   const inputsSeen = [];
-  // The widest gap, over every page, between a copy's width and the live slide's.
-  let copyWidthOff = 0;
+  // What each page shows of the deck's one-page copies (see the check after
+  // the loop): the live slide's id, its size, whether it shows its slide
+  // whole on one page, and each copy's id, width and room.
+  const copyReads = [];
   const wordingSeen = [];
   for (let slide = 0; slide < slideCount; slide++) {
     await goSlide(page, dialog, slide);
@@ -1583,7 +1591,6 @@ async function present(page, tag, width, height) {
     await shot(page, tag + '-slide-' + (slide + 1));
     check(tag + ' slide ' + (slide + 1) + ' selected in the outline', await slideNumber(dialog) === slide + 1, await slideNumber(dialog));
     const m = await page.evaluate(measure);
-    copyWidthOff = Math.max(copyWidthOff, ...m.copyWidths.map(w => w === null || m.section === null ? Infinity : Math.abs(w - m.section.width)));
     check(tag + ' slide ' + (slide + 1) + ' true viewport', m.viewport[0] === width && m.viewport[1] === height, m.viewport);
     check(tag + ' slide ' + (slide + 1) + ' fits', m.main.scrollHeight <= m.main.height + 1 && m.main.scrollWidth <= m.main.width + 1 && m.section.scrollHeight <= m.section.height + 1, m);
     check(tag + ' slide ' + (slide + 1) + ' brand and title share an edge', m.titleX !== null && m.brandX !== null && Math.abs(m.titleX - m.brandX) <= 1, { titleX: m.titleX, brandX: m.brandX });
@@ -1629,6 +1636,9 @@ async function present(page, tag, width, height) {
     const pageAt = /\((\d+) of (\d+)\)$/.exec(labels[slide] ?? '');
     const pageKind = m.hasFigure && m.hasCaption ? 'whole' : m.hasFigure ? 'figure' : m.hasCaption ? 'caption' : 'none';
     pageKinds[slide] = pageKind;
+    // A slide shown whole on one page: its figure and caption, and no
+    // "(k of n)" in its label.
+    copyReads.push({ slide: slide + 1, liveId: m.liveId, onePage: pageKind === 'whole' && pageAt === null, section: m.section === null ? null : { width: m.section.width, height: m.section.height }, copies: m.copies });
     if (pageKind === 'whole' || pageKind === 'none') {
       check(tag + ' slide ' + (slide + 1) + ' figure above caption', pageKind === 'whole' && m.contentBottom <= m.caption.y - 8 && (m.fit === null || m.fit.scrollHeight <= m.fit.height + 1), { contentBottom: m.contentBottom, caption: m.caption, fit: m.fit, pageKind });
       if (pageKind === 'whole') captionsSeen[title] = m.captionText;
@@ -1707,8 +1717,26 @@ async function present(page, tag, width, height) {
     runs[runs.length - 1].pages.push([Number(p[1]), Number(p[2])]);
   });
   const wellFormed = runs.every(r => r.pages.length === r.pages[0][1] && r.pages.every(([k, n], i) => k === i + 1 && n === r.pages[0][1]));
-  // The copies decide those pages, so each must lay out as wide as the slide.
-  check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed && copyWidthOff <= 1, { slideCount, labels, copyWidthOff });
+  check(tag + ' expected slide count: sixteen slides plus each figure page past the first, labelled in order', slideCount === BASE_SLIDES + pages.filter(p => p[1] !== '1').length && wellFormed, { slideCount, labels });
+  // The copies decide those pages, so the check holds them on every page
+  // past the title. There is one per figure slide: the fifteen slides after
+  // the title, by the ids the live slides carry. Each lays out as wide as
+  // the live slide. Each lays out under the footer its own slide's first
+  // page shows, whichever page is showing now, so its room is the same on
+  // every page; and where its slide shows whole on one page, under the same
+  // footer, that room is the live slide's height.
+  const figureIds = [...new Set(copyReads.map(r => r.liveId).filter(id => id !== null))].sort();
+  const copyIdsOff = copyReads.filter(r => JSON.stringify(r.copies.map(c => c.id).sort()) !== JSON.stringify(figureIds)).map(r => ({ slide: r.slide, copies: r.copies.map(c => c.id) }));
+  const widthOff = copyReads.flatMap(r => r.copies.filter(c => c.width === null || r.section === null || Math.abs(c.width - r.section.width) > 1).map(c => ({ slide: r.slide, id: c.id, width: c.width, live: r.section?.width ?? null })));
+  const roomOff = figureIds.flatMap(id => {
+    const rooms = copyReads.map(r => ({ slide: r.slide, room: r.copies.find(c => c.id === id)?.room ?? null }));
+    const whole = copyReads.find(r => r.liveId === id && r.onePage && r.section !== null);
+    const want = whole === undefined ? null : whole.section.height;
+    const known = rooms.filter(r => r.room !== null).map(r => r.room);
+    const bad = rooms.some(r => r.room === null) || (known.length > 0 && Math.max(...known) - Math.min(...known) > 1) || (want !== null && known.some(v => Math.abs(v - want) > 1));
+    return bad ? [{ id, live: want, onePageSlide: whole?.slide ?? null, min: Math.min(...known), max: Math.max(...known), off: rooms.filter(r => r.room === null || (want !== null && Math.abs(r.room - want) > 1)).slice(0, 4) }] : [];
+  });
+  check(tag + ' one-page copies: one per figure slide, as wide as the live slide on every page, and as low as the slide each measures', figureIds.length === BASE_SLIDES - 1 && copyIdsOff.length === 0 && widthOff.length === 0 && roomOff.length === 0, { figureSlides: figureIds.length, copiesPerPage: copyReads.length === 0 ? null : copyReads[0].copies.length, copyIdsOff: copyIdsOff.slice(0, 4), widthOff: widthOff.slice(0, 6), roomOff: roomOff.slice(0, 6), onePageSlides: copyReads.filter(r => r.onePage).length });
   check(tag + ' panel pages together draw every lead-panel dataset once', panelSeen.length === expected.panels.length && JSON.stringify([...panelSeen].sort()) === JSON.stringify(expected.panels.map(p => p.dataset).sort()), { seen: panelSeen.length, expected: expected.panels.length });
   check(tag + ' input pages together show every row once, in order', JSON.stringify(inputsSeen) === JSON.stringify(inputsExpected.map(e => e.id)), { seen: inputsSeen });
   // The bars slide's caption gives the best learner's count by the
