@@ -302,9 +302,9 @@ class Numbers(unittest.TestCase):
         left_out, rows = of(same, "left genomes without a call")
         self.assertEqual((left_out, rows), (122, 2710))
         self.assertEqual(of(same, "boosted trees' rows")[0] + of(same, "lasso's rows")[0], left_out)
-        self.assertEqual(of(same, "scored on every genome under the flag"), (left_out, rows))
+        self.assertEqual(of(same, "each scored on every genome"), (left_out, rows))
         self.assertEqual(of(same, "still count fewer genomes"), (0, rows))
-        self.assertEqual(of("grm:state/scored_at_prevalence", "carry the flag"), (left_out, rows))
+        self.assertEqual(of("grm:state/scored_at_prevalence", "with at least one such fold"), (left_out, rows))
         self.assertEqual(of("grm:learner_row", "learner rows in the release"), (rows, rows))
         random, datasets = of("grm:split/random", "random split")
         lineage = of("grm:split/lineage", "lineage split")[0]
@@ -354,7 +354,7 @@ class Numbers(unittest.TestCase):
             with self.subTest(sentence=sentence):
                 self.assertIn(sentence, results)
         same_genomes = "grm:given/learners-scored-on-same-genomes"
-        flagged = of(same_genomes, "scored on every genome under the flag")[0]
+        flagged = of(same_genomes, "each scored on every genome")[0]
         self.assertIn(f"In revision 14, the {flagged} learner rows that carry the flag are scored on every genome",
                       text("docs/release-summary.md"))
         mic, datasets = of("grm:state/label_from_mic_excluded", "inferred from a MIC")
@@ -379,7 +379,7 @@ class Numbers(unittest.TestCase):
         for path, edit, entry, what in ((E.OUTSIDE, flip, "grm:given/figure-holds-on-new-studies",
                                          "set covering machine holds, on genomes"),
                                         (SPEC["files"]["index14"], one_less, "grm:state/scored_at_prevalence",
-                                         "carry the flag")):
+                                         "with at least one such fold")):
             with self.subTest(file=path), tempfile.TemporaryDirectory() as tmp:
                 root = copied(tmp)
                 doc = json.loads((root / path).read_text(encoding="utf-8"))

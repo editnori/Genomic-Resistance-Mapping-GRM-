@@ -1,0 +1,23 @@
+key	value
+bootstrap_draws	2000
+bootstrap_generator	Python random.Random(seed).choices
+bootstrap_seed	1
+clip	0.0001
+cutoff	0.5
+estimable	at least 25 R and 25 S labelled genomes with a call, and a lineage figure in the release
+evaluation_revision	14
+holds	recall not below and log loss not worse than the release's lineage split
+learners_not_scored	gbt;rf (the release holds their importances only)
+learners_scored	cart;lasso;scm
+level	0.95
+min_class	25
+pass_rule	meets when it holds on more than half of at least 3 estimable datasets; not assessable under 3
+percentiles	nearest rank: sorted values 50 and 1950 of 2000
+reading_C	class-balanced log loss, stratified bootstrap, lineage figure fixed
+reading_D	BioProject cluster bootstrap of the scored side, lineage figure fixed
+reading_L	the lineage figure with its own interval
+reading_T	pilot only: two-sample 95% interval of each difference (z 1.96)
+recall_interval	Clopper-Pearson
+release	rev14-274-20261112
+resample_order	labelled genomes with a call, by assembly accession
+tie_rule	a tie on the largest BioProject goes to the lower accession

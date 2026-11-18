@@ -16,6 +16,7 @@ use crate::learn::eval::{
     LearnerResult, MicInput, MicResult, SplitResult,
 };
 use crate::learn::gbt::GbtParams;
+use crate::learn::tie::TieRule;
 use crate::learn::tree::ForestParams;
 use crate::learn::{BinaryMetrics, NoCall, binary_metrics};
 use crate::matrix::{Dataset, FeatureMatrix, MatrixSummary};
@@ -1310,11 +1311,30 @@ pub fn analyze_species(
     force: bool,
     cfg: &EvalConfig,
 ) -> Result<Vec<String>> {
+    analyze_species_in(
+        layout,
+        slug,
+        only,
+        force,
+        cfg,
+        &reports_dir(layout, slug, cfg),
+    )
+}
+
+/// `analyze_species` with its reports kept in `dir`, the folder
+/// `grm learn --exp-tie-out` names, in place of `reports_dir`.
+pub fn analyze_species_in(
+    layout: &Layout,
+    slug: &str,
+    only: &[String],
+    force: bool,
+    cfg: &EvalConfig,
+    dir: &std::path::Path,
+) -> Result<Vec<String>> {
     let (input, catalog) = load_inputs(layout, slug)?;
     let digest = matrix_digest(&input.matrix);
     let client = Client::new();
-    let dir = reports_dir(layout, slug, cfg);
-    std::fs::create_dir_all(&dir)?;
+    std::fs::create_dir_all(dir)?;
     let mut specs: Vec<&DatasetSpec> = input
         .datasets
         .iter()
@@ -1513,6 +1533,8 @@ fn input_fingerprint(
                 max_depth: forest_depth,
                 min_leaf,
                 seed: forest_seed,
+                // Each fit takes its tie rule from `tie_rule`, hashed below.
+                tie: _,
             },
         gbt:
             GbtParams {
@@ -1524,11 +1546,13 @@ fn input_fingerprint(
                 colsample,
                 patience,
                 seed: gbt_seed,
+                tie: _,
             },
         screened_features,
         lasso_lambdas,
         seed,
         learner_seed,
+        tie_rule,
     } = cfg;
     for n in [
         *folds,
@@ -1562,6 +1586,11 @@ fn input_fingerprint(
     if let Some(n) = learner_seed {
         h.bytes(&[1]);
         h.u64(*n);
+    }
+    // Production's rule adds nothing, so its fingerprints are unchanged; a
+    // report fitted under the experiment never passes for a current one.
+    if *tie_rule == TieRule::Exact {
+        h.str("tie_rule=exact");
     }
     let Cohort {
         rows,
@@ -2802,10 +2831,34 @@ mod tests {
             ("lasso_lambdas", |c| c.lasso_lambdas += 1),
             ("seed", |c| c.seed += 1),
             ("learner_seed", |c| c.learner_seed = Some(c.seed)),
+            ("tie_rule", |c| c.tie_rule = TieRule::Exact),
         ];
         for (field, edit) in changes {
             assert_ne!(changed(*edit), base, "{field}");
         }
+        // Each fit takes its tie rule from `tie_rule`; the learners' own
+        // copies are not read.
+        assert_eq!(
+            changed(|c| {
+                c.forest.tie = TieRule::Exact;
+                c.gbt.tie = TieRule::Exact;
+            }),
+            base
+        );
+    }
+
+    #[test]
+    fn the_default_fingerprint_is_the_one_main_computes() {
+        // Pinned from main at 852ebc9 on the same fixture, so a flag that is
+        // off cannot move a production fingerprint. Rewrite the value only
+        // with a change that moves the fingerprint on purpose.
+        let input = inputs();
+        let spec = dataset("meropenem");
+        let cfg = EvalConfig::default();
+        assert_eq!(
+            input_fingerprint(&input, &spec, None, &cfg, matrix_digest(&input.matrix)),
+            "4979e60d3c8b1d6a"
+        );
     }
 
     #[test]

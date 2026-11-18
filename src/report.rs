@@ -8,6 +8,10 @@
 //!   species/\<slug>.json    genome map, dendrogram, resistance strings per
 //!                           genome, cross-resistance pairs
 //!   datasets/\<id>.json     the per-dataset report as `grm learn` wrote it
+//!
+//! A report of the tie rule experiment (`grm learn --exp-tie-rule exact`,
+//! which records `eval_config.tie_rule`) stops the build: see
+//! `refuse_experiment_report`.
 
 use crate::bvbrc::{self, AmrRecord, GenomeRecord};
 use crate::curate::{Breakpoint, Call, DatasetSpec, Funnel, Phenotype};
@@ -723,6 +727,23 @@ fn top_counts<'a>(items: impl Iterator<Item = &'a str>, k: usize) -> Vec<(String
     v
 }
 
+/// A report whose `eval_config.tie_rule` is present and is not production's
+/// rule was fitted under the tie rule experiment. Neither the site nor the
+/// index reads that field, so the build stops at the report, before
+/// publishing it or writing `index.json`, and names its file. Production
+/// reports leave the field out.
+fn refuse_experiment_report(report: &Value, src: &Path) -> Result<()> {
+    let production = serde_json::to_value(crate::learn::tie::TieRule::Float)?;
+    match report.get("eval_config").and_then(|c| c.get("tie_rule")) {
+        Some(rule) if *rule != production => anyhow::bail!(
+            "{}: eval_config.tie_rule is {rule}, not production's {production}; a report of the tie rule experiment (grm learn --exp-tie-rule) is never indexed, so move it out of {}",
+            src.display(),
+            src.parent().unwrap_or(src).display()
+        ),
+        _ => Ok(()),
+    }
+}
+
 /// Builds every dashboard file under `<data>/report/` and returns its path.
 pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf> {
     let kover = kover_benchmark(legacy_kover, REPORT_KOVER_REMEDY)?;
@@ -788,6 +809,7 @@ pub fn build(layout: &Layout, legacy_kover: &Path) -> Result<std::path::PathBuf>
             };
             let report: Value = serde_json::from_slice(&bytes)
                 .with_context(|| format!("parse {}", src.display()))?;
+            refuse_experiment_report(&report, &src)?;
             let file = format!("{}.json", spec.id);
             publish(&out_dir.join("datasets").join(&file), &bytes)?;
             dataset_files.insert(file);
@@ -1245,6 +1267,50 @@ mod tests {
         let index: Value =
             serde_json::from_slice(&std::fs::read(out.join("index.json")).unwrap()).unwrap();
         assert_eq!(index["datasets"].as_array().unwrap().len(), 1);
+    }
+
+    /// A report of the tie rule experiment stops the build by name, before
+    /// it is published or any index is written; production reports, with no
+    /// `tie_rule` or with production's, build as before.
+    #[test]
+    fn an_experiment_report_stops_the_index_and_names_its_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let layout = Layout::new(dir.path());
+        let kover = dir.path().join("kover.json");
+        let report = |eval_config: Value| serde_json::json!({"counts": {"samples": 7, "resistant": 3}, "eval_config": eval_config});
+        let exact = report(serde_json::json!({"seed": 42, "tie_rule": "exact"}));
+        write_reports(
+            &layout,
+            &[
+                ("meropenem", report(serde_json::json!({"seed": 42}))),
+                ("imipenem", exact.clone()),
+            ],
+        );
+        let err = format!("{:#}", build(&layout, &kover).unwrap_err());
+        let file = layout
+            .results_dir("escherichia_coli")
+            .join("escherichia_coli__imipenem.json");
+        assert!(err.starts_with(&format!("{}: ", file.display())), "{err}");
+        assert!(err.contains("eval_config.tie_rule is \"exact\""), "{err}");
+        let out = layout.root.join("report");
+        assert!(!out.join("index.json").exists());
+        assert!(
+            !out.join("datasets/escherichia_coli__imipenem.json")
+                .exists()
+        );
+        // Any value other than production's stops it, a malformed one too.
+        for rule in [serde_json::json!("Exact"), serde_json::json!(null)] {
+            let r = report(serde_json::json!({"tie_rule": rule}));
+            std::fs::write(&file, serde_json::to_vec(&r).unwrap()).unwrap();
+            assert!(build(&layout, &kover).is_err(), "{rule}");
+        }
+        // Production's rule, written or left out, builds.
+        let float = report(serde_json::json!({"seed": 42, "tie_rule": "float"}));
+        std::fs::write(&file, serde_json::to_vec(&float).unwrap()).unwrap();
+        build(&layout, &kover).unwrap();
+        let index: Value =
+            serde_json::from_slice(&std::fs::read(out.join("index.json")).unwrap()).unwrap();
+        assert_eq!(index["datasets"].as_array().unwrap().len(), 2);
     }
 
     #[test]

@@ -1,0 +1,10 @@
+species	assigned	predictions_written	first_label_request	last_label_request	label_requests	answered_200	biosamples_asked	scored_biosamples	asked_equals_scored	first_at_or_after_predictions	plan_file	first_after_plan_file	unrecorded_before_plan	unrecorded_first	unrecorded_last	unrecorded_bytes
+acinetobacter_baumannii	by BioSample	2026-11-15T18:55:41Z	2026-11-15T18:55:41Z	2026-11-15T18:55:49Z	6	6	267	267	yes	yes	ADDENDUM2.md	yes				
+campylobacter_coli	by BioSample	2026-11-15T18:40:12Z	2026-11-15T18:40:12Z	2026-11-15T18:40:42Z	21	21	1002	1002	yes	yes	ADDENDUM2.md	yes				
+campylobacter_jejuni	by BioSample	2026-11-15T18:34:27Z	2026-11-15T18:34:27Z	2026-11-15T18:37:13Z	52	49	2431	2431	yes	yes	ADDENDUM2.md	yes				
+escherichia_coli	by time	2026-11-15T14:30:42Z	2026-11-15T14:30:42Z	2026-11-15T14:32:37Z	78	78				yes	PLAN.md	yes	6	2026-11-15T12:04:27Z	2026-11-15T12:05:23Z	67;304;67;271;285;64
+klebsiella_pneumoniae	by BioSample	2026-11-15T18:13:53Z	2026-11-15T18:13:54Z	2026-11-15T18:14:44Z	31	31	1535	1535	yes	yes	ADDENDUM2.md	yes				
+neisseria_gonorrhoeae	by BioSample	2026-11-15T18:41:14Z	2026-11-15T18:41:14Z	2026-11-15T18:41:25Z	5	5	243	243	yes	yes	ADDENDUM2.md	yes				
+pseudomonas_aeruginosa	by BioSample	2026-11-15T18:52:35Z	2026-11-15T18:52:35Z	2026-11-15T18:52:50Z	11	11	526	526	yes	yes	ADDENDUM2.md	yes				
+salmonella_enterica	by BioSample	2026-11-15T17:49:47Z	2026-11-15T17:49:48Z	2026-11-15T17:51:35Z	49	48	2377	2377	yes	yes	ADDENDUM2.md	yes				
+staphylococcus_aureus	by BioSample	2026-11-15T18:22:14Z	2026-11-15T18:22:15Z	2026-11-15T18:23:49Z	24	22	1099	1099	yes	yes	ADDENDUM2.md	yes				

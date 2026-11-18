@@ -12,6 +12,8 @@ With `--exp-null-refit FILE`, `grm learn` writes the same reports as without it,
 
 The flag is refused beside `--fold-file` ([fold-file.md](fold-file.md)): the argument parser stops before FILE is opened, and `learn::eval::evaluate_assigned` refuses to run while the experiment is on. A record names every sample outside a fold's training samples as its test samples, which a fold file's unused genomes would make wrong, and the records are read against the drawn splits of the dataset reports.
 
+The flag is also refused beside the tie rule experiment's options, `--exp-tie-rule`, `--exp-tie-trace` and `--exp-tie-out` ([tie-rule.md](tie-rule.md)). The fallbacks are fitted under production's tie rule, and their fits would add lines to a tie trace. The argument parser stops before FILE is opened, and `learn::null_refit::record_fold` refuses a fold whose evaluation has another rule.
+
 `EVALUATION_REVISION` and the report schema do not change, because no report field changes. `tests/null_fold_refit.rs` checks that an evaluation with the flag equals one without it on every field except wall-clock `seconds`, and that FILE keeps the lines it held. A test in `learn::eval` checks that each record is what the fallbacks fit when called directly with that fold's candidates, seeds and tuning groups.
 
 ## FILE
