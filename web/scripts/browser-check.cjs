@@ -2149,13 +2149,17 @@ async function baselineChecks(browser) {
     const notes = results.filter(r => CLINDAMYCIN.datasets[r.id] !== undefined).map(r => r.id);
     if (notes.length === 0) skipped.push({ check: tag + ' clindamycin note on the reports the bundled file names', reason: 'this tree has none of the ' + Object.keys(CLINDAMYCIN.datasets).length + ' datasets the file names' });
 
-    // The MIC text column: the narrowest dataset at each width.
+    // The MIC text column: the narrowest dataset at each width. Skipped only
+    // when no report with an MIC model was read at that width; a reading of
+    // null (no column found) fails, so a selector that matches nothing fails
+    // with the count of null readings rather than passing as a skip.
     for (const width of [1024, 1440]) {
+      if (widths[width].length === 0) { skipped.push({ check: tag + ' MIC text column width at ' + width + 'px', reason: 'no dataset with an MIC model in this tree' }); continue; }
       const all = widths[width].filter(w => w.width !== null);
       const least = all.reduce((a, w) => (a === null || w.width < a.width ? w : a), null);
-      if (least === null) { skipped.push({ check: tag + ' MIC text column width at ' + width + 'px', reason: 'no dataset with an MIC model in this tree' }); continue; }
       const floor = MIC_TEXT_FLOORS[width];
-      check(tag + ' MIC text column at ' + width + 'px keeps ' + floor + 'px on every MIC dataset', all.length === widths[width].length && least.width >= floor, { datasets: all.length, narrowest: least, under: all.filter(w => w.width < floor), under240: all.filter(w => w.width < 240) });
+      const nulls = widths[width].length - all.length;
+      check(tag + ' MIC text column at ' + width + 'px keeps ' + floor + 'px on every MIC dataset', nulls === 0 && least !== null && least.width >= floor, { datasets: widths[width].length, nulls, nullIds: widths[width].filter(w => w.width === null).slice(0, 8).map(w => w.id), narrowest: least, under: all.filter(w => w.width < floor), under240: all.filter(w => w.width < 240) });
     }
     const narrow = widths[1024].filter(w => w.width !== null).sort((a, b) => a.width - b.width)[0];
     if (narrow !== undefined) { await page.setViewportSize({ width: 1024, height: 900 }); await page.goto(BASE + '/datasets?dataset=' + narrow.id, { waitUntil: 'networkidle', timeout: 180000 }); await page.getByRole('region', { name: 'Measured and predicted MIC' }).waitFor({ timeout: 60000 }); await scrollTo(page, '#ds-mic'); await shot(page, '1024-baselines-narrowest-mic'); }
