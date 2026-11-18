@@ -1,0 +1,76 @@
+learner	family	rule	pairs	cost	answer
+scm	SR	either	25	25	shown
+scm	SR	both	25	6	not shown
+scm	SR	recall	25	6	not shown
+scm	SR	loss	25	25	shown
+scm	SR	balanced	25	25	shown
+scm	SM	either	5	5	shown
+scm	SM	both	5	0	not shown
+scm	SM	recall	5	0	not shown
+scm	SM	loss	5	5	shown
+scm	SM	balanced	5	5	shown
+scm	MR	either	25	3	not shown
+scm	MR	both	25	0	not shown
+scm	MR	recall	25	0	not shown
+scm	MR	loss	25	3	not shown
+scm	MR	balanced	25	4	not shown
+cart	SR	either	25	25	shown
+cart	SR	both	25	19	not shown
+cart	SR	recall	25	19	not shown
+cart	SR	loss	25	25	shown
+cart	SR	balanced	25	25	shown
+cart	SM	either	5	5	shown
+cart	SM	both	5	5	shown
+cart	SM	recall	5	5	shown
+cart	SM	loss	5	5	shown
+cart	SM	balanced	5	5	shown
+cart	MR	either	25	10	not shown
+cart	MR	both	25	0	not shown
+cart	MR	recall	25	1	not shown
+cart	MR	loss	25	9	not shown
+cart	MR	balanced	25	11	not shown
+rf	SR	either	25	25	shown
+rf	SR	both	25	25	shown
+rf	SR	recall	25	25	shown
+rf	SR	loss	25	25	shown
+rf	SR	balanced	25	25	shown
+rf	SM	either	5	5	shown
+rf	SM	both	5	3	not shown
+rf	SM	recall	5	3	not shown
+rf	SM	loss	5	5	shown
+rf	SM	balanced	5	5	shown
+rf	MR	either	25	25	shown
+rf	MR	both	25	7	not shown
+rf	MR	recall	25	7	not shown
+rf	MR	loss	25	25	shown
+rf	MR	balanced	25	25	shown
+gbt	SR	either	25	25	shown
+gbt	SR	both	25	25	shown
+gbt	SR	recall	25	25	shown
+gbt	SR	loss	25	25	shown
+gbt	SR	balanced	25	25	shown
+gbt	SM	either	5	5	shown
+gbt	SM	both	5	3	not shown
+gbt	SM	recall	5	3	not shown
+gbt	SM	loss	5	5	shown
+gbt	SM	balanced	5	5	shown
+gbt	MR	either	25	22	shown
+gbt	MR	both	25	7	not shown
+gbt	MR	recall	25	7	not shown
+gbt	MR	loss	25	22	shown
+gbt	MR	balanced	25	24	shown
+lasso	SR	either	25	25	shown
+lasso	SR	both	25	15	not shown
+lasso	SR	recall	25	15	not shown
+lasso	SR	loss	25	25	shown
+lasso	SR	balanced	25	25	shown
+lasso	SM	either	5	5	shown
+lasso	SM	both	5	3	not shown
+lasso	SM	recall	5	3	not shown
+lasso	SM	loss	5	5	shown
+lasso	SM	balanced	5	5	shown
+lasso	MR	either	25	17	not shown
+lasso	MR	both	25	1	not shown
+lasso	MR	recall	25	1	not shown
+lasso	MR	loss	25	17	not shown
+lasso	MR	balanced	25	21	shown

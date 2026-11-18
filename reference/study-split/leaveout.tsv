@@ -1,0 +1,161 @@
+left_out	learner	family	pairs	recall_worse	loss_worse	cost	answer
+acinetobacter_baumannii	scm	SR	25	7	25	25	shown
+acinetobacter_baumannii	scm	SM	5	0	5	5	shown
+acinetobacter_baumannii	scm	MR	25	1	3	4	not shown
+acinetobacter_baumannii	cart	SR	25	16	25	25	shown
+acinetobacter_baumannii	cart	SM	5	4	5	5	shown
+acinetobacter_baumannii	cart	MR	25	1	7	8	not shown
+acinetobacter_baumannii	rf	SR	25	25	25	25	shown
+acinetobacter_baumannii	rf	SM	5	4	5	5	shown
+acinetobacter_baumannii	rf	MR	25	14	25	25	shown
+acinetobacter_baumannii	gbt	SR	25	25	25	25	shown
+acinetobacter_baumannii	gbt	SM	5	4	5	5	shown
+acinetobacter_baumannii	gbt	MR	25	11	18	20	shown
+acinetobacter_baumannii	lasso	SR	25	15	25	25	shown
+acinetobacter_baumannii	lasso	SM	5	3	5	5	shown
+acinetobacter_baumannii	lasso	MR	25	2	14	15	not shown
+acinetobacter_baumannii	all	SR	25	-	-	25	-
+enterobacter_cloacae	scm	SR	25	5	25	25	shown
+enterobacter_cloacae	scm	SM	5	2	5	5	shown
+enterobacter_cloacae	scm	MR	25	0	3	3	not shown
+enterobacter_cloacae	cart	SR	25	21	25	25	shown
+enterobacter_cloacae	cart	SM	5	5	5	5	shown
+enterobacter_cloacae	cart	MR	25	2	14	16	not shown
+enterobacter_cloacae	rf	SR	25	17	25	25	shown
+enterobacter_cloacae	rf	SM	5	2	5	5	shown
+enterobacter_cloacae	rf	MR	25	6	25	25	shown
+enterobacter_cloacae	gbt	SR	25	23	25	25	shown
+enterobacter_cloacae	gbt	SM	5	4	5	5	shown
+enterobacter_cloacae	gbt	MR	25	7	19	20	shown
+enterobacter_cloacae	lasso	SR	25	15	25	25	shown
+enterobacter_cloacae	lasso	SM	5	3	5	5	shown
+enterobacter_cloacae	lasso	MR	25	1	20	20	shown
+enterobacter_cloacae	all	SR	25	-	-	25	-
+enterococcus_faecium	scm	SR	25	8	25	25	shown
+enterococcus_faecium	scm	SM	5	1	5	5	shown
+enterococcus_faecium	scm	MR	25	0	3	3	not shown
+enterococcus_faecium	cart	SR	25	17	25	25	shown
+enterococcus_faecium	cart	SM	5	5	5	5	shown
+enterococcus_faecium	cart	MR	25	1	8	9	not shown
+enterococcus_faecium	rf	SR	25	25	25	25	shown
+enterococcus_faecium	rf	SM	5	4	5	5	shown
+enterococcus_faecium	rf	MR	25	6	25	25	shown
+enterococcus_faecium	gbt	SR	25	25	25	25	shown
+enterococcus_faecium	gbt	SM	5	4	5	5	shown
+enterococcus_faecium	gbt	MR	25	7	23	23	shown
+enterococcus_faecium	lasso	SR	25	17	25	25	shown
+enterococcus_faecium	lasso	SM	5	3	5	5	shown
+enterococcus_faecium	lasso	MR	25	0	16	16	not shown
+enterococcus_faecium	all	SR	25	-	-	25	-
+escherichia_coli	scm	SR	25	4	25	25	shown
+escherichia_coli	scm	SM	5	0	5	5	shown
+escherichia_coli	scm	MR	25	0	2	2	not shown
+escherichia_coli	cart	SR	25	8	24	24	shown
+escherichia_coli	cart	SM	5	2	5	5	shown
+escherichia_coli	cart	MR	25	1	7	8	not shown
+escherichia_coli	rf	SR	25	14	25	25	shown
+escherichia_coli	rf	SM	5	2	5	5	shown
+escherichia_coli	rf	MR	25	6	25	25	shown
+escherichia_coli	gbt	SR	25	21	25	25	shown
+escherichia_coli	gbt	SM	5	3	5	5	shown
+escherichia_coli	gbt	MR	25	6	18	19	not shown
+escherichia_coli	lasso	SR	25	8	25	25	shown
+escherichia_coli	lasso	SM	5	3	5	5	shown
+escherichia_coli	lasso	MR	25	1	13	13	not shown
+escherichia_coli	all	SR	25	-	-	25	-
+klebsiella_pneumoniae	scm	SR	25	4	25	25	shown
+klebsiella_pneumoniae	scm	SM	5	0	5	5	shown
+klebsiella_pneumoniae	scm	MR	25	0	2	2	not shown
+klebsiella_pneumoniae	cart	SR	25	8	24	24	shown
+klebsiella_pneumoniae	cart	SM	5	2	5	5	shown
+klebsiella_pneumoniae	cart	MR	25	1	7	8	not shown
+klebsiella_pneumoniae	rf	SR	25	14	25	25	shown
+klebsiella_pneumoniae	rf	SM	5	2	5	5	shown
+klebsiella_pneumoniae	rf	MR	25	6	25	25	shown
+klebsiella_pneumoniae	gbt	SR	25	21	25	25	shown
+klebsiella_pneumoniae	gbt	SM	5	3	5	5	shown
+klebsiella_pneumoniae	gbt	MR	25	7	19	21	shown
+klebsiella_pneumoniae	lasso	SR	25	8	25	25	shown
+klebsiella_pneumoniae	lasso	SM	5	3	5	5	shown
+klebsiella_pneumoniae	lasso	MR	25	0	15	15	not shown
+klebsiella_pneumoniae	all	SR	25	-	-	25	-
+mycobacterium_tuberculosis	scm	SR	25	8	25	25	shown
+mycobacterium_tuberculosis	scm	SM	5	0	5	5	shown
+mycobacterium_tuberculosis	scm	MR	25	0	3	3	not shown
+mycobacterium_tuberculosis	cart	SR	25	20	25	25	shown
+mycobacterium_tuberculosis	cart	SM	5	5	5	5	shown
+mycobacterium_tuberculosis	cart	MR	25	2	11	12	not shown
+mycobacterium_tuberculosis	rf	SR	25	25	25	25	shown
+mycobacterium_tuberculosis	rf	SM	5	4	5	5	shown
+mycobacterium_tuberculosis	rf	MR	25	7	25	25	shown
+mycobacterium_tuberculosis	gbt	SR	25	25	25	25	shown
+mycobacterium_tuberculosis	gbt	SM	5	4	5	5	shown
+mycobacterium_tuberculosis	gbt	MR	25	9	23	23	shown
+mycobacterium_tuberculosis	lasso	SR	25	17	25	25	shown
+mycobacterium_tuberculosis	lasso	SM	5	3	5	5	shown
+mycobacterium_tuberculosis	lasso	MR	25	2	15	15	not shown
+mycobacterium_tuberculosis	all	SR	25	-	-	25	-
+pseudomonas_aeruginosa	scm	SR	25	7	25	25	shown
+pseudomonas_aeruginosa	scm	SM	5	0	5	5	shown
+pseudomonas_aeruginosa	scm	MR	25	0	4	4	not shown
+pseudomonas_aeruginosa	cart	SR	25	16	25	25	shown
+pseudomonas_aeruginosa	cart	SM	5	3	5	5	shown
+pseudomonas_aeruginosa	cart	MR	25	4	14	15	not shown
+pseudomonas_aeruginosa	rf	SR	25	22	25	25	shown
+pseudomonas_aeruginosa	rf	SM	5	4	5	5	shown
+pseudomonas_aeruginosa	rf	MR	25	7	25	25	shown
+pseudomonas_aeruginosa	gbt	SR	25	24	25	25	shown
+pseudomonas_aeruginosa	gbt	SM	5	3	5	5	shown
+pseudomonas_aeruginosa	gbt	MR	25	7	21	21	shown
+pseudomonas_aeruginosa	lasso	SR	25	20	25	25	shown
+pseudomonas_aeruginosa	lasso	SM	5	4	5	5	shown
+pseudomonas_aeruginosa	lasso	MR	25	0	18	18	not shown
+pseudomonas_aeruginosa	all	SR	25	-	-	25	-
+salmonella_enterica	scm	SR	25	9	25	25	shown
+salmonella_enterica	scm	SM	5	1	5	5	shown
+salmonella_enterica	scm	MR	25	0	3	3	not shown
+salmonella_enterica	cart	SR	25	19	25	25	shown
+salmonella_enterica	cart	SM	5	5	5	5	shown
+salmonella_enterica	cart	MR	25	1	10	11	not shown
+salmonella_enterica	rf	SR	25	25	25	25	shown
+salmonella_enterica	rf	SM	5	4	5	5	shown
+salmonella_enterica	rf	MR	25	6	25	25	shown
+salmonella_enterica	gbt	SR	25	25	25	25	shown
+salmonella_enterica	gbt	SM	5	3	5	5	shown
+salmonella_enterica	gbt	MR	25	8	23	23	shown
+salmonella_enterica	lasso	SR	25	16	25	25	shown
+salmonella_enterica	lasso	SM	5	3	5	5	shown
+salmonella_enterica	lasso	MR	25	1	16	16	not shown
+salmonella_enterica	all	SR	25	-	-	25	-
+staphylococcus_aureus	scm	SR	25	4	25	25	shown
+staphylococcus_aureus	scm	SM	5	0	5	5	shown
+staphylococcus_aureus	scm	MR	25	0	4	4	not shown
+staphylococcus_aureus	cart	SR	25	11	24	24	shown
+staphylococcus_aureus	cart	SM	5	3	5	5	shown
+staphylococcus_aureus	cart	MR	25	1	9	10	not shown
+staphylococcus_aureus	rf	SR	25	23	25	25	shown
+staphylococcus_aureus	rf	SM	5	3	5	5	shown
+staphylococcus_aureus	rf	MR	25	6	25	25	shown
+staphylococcus_aureus	gbt	SR	25	21	25	25	shown
+staphylococcus_aureus	gbt	SM	5	3	5	5	shown
+staphylococcus_aureus	gbt	MR	25	7	22	22	shown
+staphylococcus_aureus	lasso	SR	25	9	25	25	shown
+staphylococcus_aureus	lasso	SM	5	3	5	5	shown
+staphylococcus_aureus	lasso	MR	25	0	14	14	not shown
+staphylococcus_aureus	all	SR	25	-	-	25	-
+two-large	scm	SR	25	0	24	24	shown
+two-large	scm	SM	5	0	5	5	shown
+two-large	scm	MR	25	0	0	0	not shown
+two-large	cart	SR	25	1	22	22	shown
+two-large	cart	SM	5	0	5	5	shown
+two-large	cart	MR	25	0	5	5	not shown
+two-large	rf	SR	25	4	25	25	shown
+two-large	rf	SM	5	2	5	5	shown
+two-large	rf	MR	25	3	21	21	shown
+two-large	gbt	SR	25	12	25	25	shown
+two-large	gbt	SM	5	3	5	5	shown
+two-large	gbt	MR	25	4	13	14	not shown
+two-large	lasso	SR	25	4	25	25	shown
+two-large	lasso	SM	5	1	5	5	shown
+two-large	lasso	MR	25	0	8	8	not shown
+two-large	all	SR	25	-	-	25	-
