@@ -132,6 +132,7 @@ comparable with a report's unless the file tests every genome.
 
 A partition by date or by study inside one database is a retrospective test
 on that database. It is not a prospective test and not external validation.
+[study-split.md](study-split.md) gives two such experiments at revision 14.
 
 Neither `EVALUATION_REVISION` nor the report schema changes: no report gains
 or loses a field, and the default path fits each fold through the same code as
