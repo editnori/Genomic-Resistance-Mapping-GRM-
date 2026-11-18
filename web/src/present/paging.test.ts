@@ -252,3 +252,112 @@ describe("the deck pages a slide by slidePlan", () => {
     expect(status).toContain(`of ${DECK}`);
   });
 });
+
+// ---- planning again after mount ---------------------------------------------
+
+/** Every ResizeObserver the deck makes, with the boxes it watches. happy-dom's
+ *  never calls back, so a test fires these itself, as a browser does when a
+ *  watched box changes size. */
+const watchers = new Set<RecordingResizeObserver>();
+class RecordingResizeObserver {
+  readonly targets = new Set<Element>();
+  constructor(readonly callback: ResizeObserverCallback) {
+    watchers.add(this);
+  }
+  observe(target: Element) {
+    this.targets.add(target);
+  }
+  unobserve(target: Element) {
+    this.targets.delete(target);
+  }
+  disconnect() {
+    this.targets.clear();
+  }
+}
+
+const MIC_COPY = '[data-slide-measure="mic"]';
+
+/** A box inside the MIC slide's one-page copy changes size: every observer
+ *  watching one is called, and nothing else happens. */
+const resizeMicCopy = () =>
+  act(async () => {
+    for (const w of watchers) {
+      const inside = [...w.targets].filter((t) => t.closest(MIC_COPY) !== null);
+      if (inside.length > 0) w.callback(inside.map((target) => ({ target }) as ResizeObserverEntry), w as unknown as ResizeObserver);
+    }
+  });
+
+/** Something inside the MIC slide's copy changes, as a late font or file
+ *  changes its text: an attribute on its title, which only a mutation
+ *  observer on the copy sees (happy-dom delivers the record in a microtask). */
+let touches = 0;
+const touchMicCopy = () =>
+  act(async () => {
+    document.querySelector(`${MIC_COPY} h2`)!.setAttribute("data-touched", String(++touches));
+    await Promise.resolve();
+  });
+
+describe("the deck plans a slide again when its copy changes after mount", () => {
+  const mic = micFinding(withMic, { page: false });
+  /** The MIC slide whole on one page, with the slack to spare. */
+  const FITS: SlideFit = { room: 708.5, head: 267.25, figure: 167, caption: 275.25 };
+  afterEach(() => watchers.clear());
+
+  it("pages the slide again when a box in its copy changes size, read from page 1 and from page 2", async () => {
+    vi.stubGlobal("ResizeObserver", RecordingResizeObserver);
+    // The copy reads this object's heights whenever it is measured.
+    const fit = { ...MIC_390 };
+    const { status, go, section } = await open(fit);
+    await go(MIC_AT);
+    expect(status()).toBe(`Slide ${MIC_AT} of ${DECK + 1}: ${mic.title} (1 of 2)`);
+    // The slide now fits one page: the deck has one page fewer, and the
+    // reader stays on the slide, now whole.
+    Object.assign(fit, FITS);
+    await resizeMicCopy();
+    expect(status()).toBe(`Slide ${MIC_AT} of ${DECK}: ${mic.title}`);
+    expect(section().querySelector("[data-caption]")?.textContent).toBe(mic.caption);
+    expect(section().querySelector("[data-figure] svg")).not.toBeNull();
+    // It no longer fits: two pages again, the reader on the first.
+    Object.assign(fit, MIC_390);
+    await resizeMicCopy();
+    expect(status()).toBe(`Slide ${MIC_AT} of ${DECK + 1}: ${mic.title} (1 of 2)`);
+    expect(section().querySelector("[data-caption]")).toBeNull();
+    // From the caption page: when the slide stops splitting, the reader
+    // stands on its one page.
+    await go(MIC_AT + 1);
+    expect(status()).toBe(`Slide ${MIC_AT + 1} of ${DECK + 1}: ${mic.title} (2 of 2)`);
+    Object.assign(fit, FITS);
+    await resizeMicCopy();
+    expect(status()).toBe(`Slide ${MIC_AT} of ${DECK}: ${mic.title}`);
+    expect(section().querySelector("[data-caption]")?.textContent).toBe(mic.caption);
+    expect(section().querySelector("[data-figure] svg")).not.toBeNull();
+  });
+
+  it("pages the slide again when its copy's content changes, and keeps the reader on the slide they are reading", async () => {
+    // Recorded and never fired here: only the copy's mutation observer reads.
+    vi.stubGlobal("ResizeObserver", RecordingResizeObserver);
+    const fit = { ...FITS };
+    const { status, go, section } = await open(fit);
+    await go(MIC_AT);
+    expect(status()).toBe(`Slide ${MIC_AT} of ${DECK}: ${mic.title}`);
+    // Its parts grow past the slide: a second page, the reader on the first.
+    Object.assign(fit, MIC_390);
+    await touchMicCopy();
+    expect(status()).toBe(`Slide ${MIC_AT} of ${DECK + 1}: ${mic.title} (1 of 2)`);
+    expect(section().querySelector("[data-caption]")).toBeNull();
+    await go(MIC_AT + 1);
+    expect(status()).toBe(`Slide ${MIC_AT + 1} of ${DECK + 1}: ${mic.title} (2 of 2)`);
+    // They fit again, read from page 2: the reader stands on its one page.
+    Object.assign(fit, FITS);
+    await touchMicCopy();
+    expect(status()).toBe(`Slide ${MIC_AT} of ${DECK}: ${mic.title}`);
+    expect(section().querySelector("[data-caption]")?.textContent).toBe(mic.caption);
+    // On the next slide: the MIC slide's new page moves it one number on, and
+    // the reader with it.
+    await go(MIC_AT + 1);
+    expect(status()).toContain(`Slide ${MIC_AT + 1} of ${DECK}: Newly deposited genomes`);
+    Object.assign(fit, MIC_390);
+    await touchMicCopy();
+    expect(status()).toContain(`Slide ${MIC_AT + 2} of ${DECK + 1}: Newly deposited genomes`);
+  });
+});
