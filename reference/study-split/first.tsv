@@ -1,0 +1,70 @@
+learner	contrast	measure	reading	keep	changed_without
+scm	study	recall	not shown	9	-
+scm	study	specificity	worse	9	-
+scm	study	balanced_accuracy	worse	9	-
+scm	study	log_loss	worse	9	-
+scm	study	error_rate	worse	9	-
+scm	lineage	recall	worse	9	-
+scm	lineage	specificity	not shown	8	enterobacter_cloacae
+scm	lineage	balanced_accuracy	worse	9	-
+scm	lineage	log_loss	worse	9	-
+scm	lineage	error_rate	worse	9	-
+scm	study-lineage	recall	better	3	acinetobacter_baumannii,enterobacter_cloacae,enterococcus_faecium,klebsiella_pneumoniae,pseudomonas_aeruginosa,salmonella_enterica
+scm	study-lineage	specificity	worse	9	-
+scm	study-lineage	balanced_accuracy	not shown	9	-
+scm	study-lineage	log_loss	not shown	9	-
+scm	study-lineage	error_rate	not shown	9	-
+scm	study	rule	cost	9	-
+cart	study	recall	not shown	9	-
+cart	study	specificity	worse	9	-
+cart	study	balanced_accuracy	worse	9	-
+cart	study	log_loss	worse	9	-
+cart	lineage	recall	worse	9	-
+cart	lineage	specificity	not shown	8	enterobacter_cloacae
+cart	lineage	balanced_accuracy	worse	9	-
+cart	lineage	log_loss	worse	9	-
+cart	study-lineage	recall	not shown	8	escherichia_coli
+cart	study-lineage	specificity	not shown	9	-
+cart	study-lineage	balanced_accuracy	not shown	8	escherichia_coli
+cart	study-lineage	log_loss	worse	5	acinetobacter_baumannii,escherichia_coli,klebsiella_pneumoniae,pseudomonas_aeruginosa
+cart	study	rule	cost	9	-
+rf	study	recall	worse	9	-
+rf	study	specificity	worse	9	-
+rf	study	balanced_accuracy	worse	9	-
+rf	study	log_loss	worse	9	-
+rf	lineage	recall	worse	9	-
+rf	lineage	specificity	not shown	9	-
+rf	lineage	balanced_accuracy	worse	9	-
+rf	lineage	log_loss	worse	9	-
+rf	study-lineage	recall	not shown	7	klebsiella_pneumoniae,salmonella_enterica
+rf	study-lineage	specificity	worse	9	-
+rf	study-lineage	balanced_accuracy	not shown	9	-
+rf	study-lineage	log_loss	not shown	9	-
+rf	study	rule	cost	9	-
+gbt	study	recall	worse	9	-
+gbt	study	specificity	worse	9	-
+gbt	study	balanced_accuracy	worse	9	-
+gbt	study	log_loss	worse	9	-
+gbt	lineage	recall	worse	9	-
+gbt	lineage	specificity	worse	9	-
+gbt	lineage	balanced_accuracy	worse	9	-
+gbt	lineage	log_loss	worse	9	-
+gbt	study-lineage	recall	better	9	-
+gbt	study-lineage	specificity	worse	7	escherichia_coli,klebsiella_pneumoniae
+gbt	study-lineage	balanced_accuracy	better	3	acinetobacter_baumannii,enterobacter_cloacae,enterococcus_faecium,mycobacterium_tuberculosis,pseudomonas_aeruginosa,salmonella_enterica
+gbt	study-lineage	log_loss	not shown	9	-
+gbt	study	rule	cost	9	-
+lasso	study	recall	not shown	6	enterobacter_cloacae,enterococcus_faecium,pseudomonas_aeruginosa
+lasso	study	specificity	worse	9	-
+lasso	study	balanced_accuracy	worse	9	-
+lasso	study	log_loss	worse	9	-
+lasso	lineage	recall	worse	9	-
+lasso	lineage	specificity	not shown	9	-
+lasso	lineage	balanced_accuracy	worse	9	-
+lasso	lineage	log_loss	worse	9	-
+lasso	study-lineage	recall	better	9	-
+lasso	study-lineage	specificity	worse	9	-
+lasso	study-lineage	balanced_accuracy	not shown	8	escherichia_coli
+lasso	study-lineage	log_loss	not shown	8	escherichia_coli
+lasso	study	rule	cost	9	-
+all	study	experiment	cost shown	9	-
