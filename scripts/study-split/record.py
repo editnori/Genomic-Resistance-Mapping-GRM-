@@ -1338,8 +1338,9 @@ def on_disk(out):
 def listed_names(out):
     """The names an earlier record at out lists in its SHA256SUMS, or a stop if out is not a target to write into.
 
-    A target is a missing or empty directory, or one that holds a SHA256SUMS this script could have written. Any
-    other directory stops the script before it writes or deletes anything."""
+    A target is a missing or empty directory, or an earlier record of this script: a SHA256SUMS that lists README.md,
+    beside a README.md whose first line is this record's title. Any other directory, another record among them, stops
+    the script before it writes or deletes anything."""
     out = Path(out)
     if not out.exists():
         return set()
@@ -1360,6 +1361,12 @@ def listed_names(out):
         need(not name.startswith("/") and "" not in parts and "." not in parts and ".." not in parts,
              f"{sums}: {name}: not a name inside the record; nothing written")
         names.add(name)
+    readme = out / "README.md"
+    title = README.split("\n", 1)[0]
+    need("README.md" in names and readme.is_file()
+         and readme.read_bytes().split(b"\n", 1)[0] == title.encode("utf-8"),
+         f"{out}: its SHA256SUMS lists no README.md titled {title!r}, so no earlier record of this script; "
+         "nothing written")
     return names
 
 

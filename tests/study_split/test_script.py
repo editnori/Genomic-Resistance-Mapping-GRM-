@@ -351,6 +351,32 @@ class SyntheticRecord(unittest.TestCase):
         self.assertIn("not a name inside the record", err)
         self.assertEqual(set(files(work)), set(before) | {"SHA256SUMS"})
 
+    def test_out_refuses_another_record(self):
+        # Another record holds a SHA256SUMS of its own; the script must not take it for an earlier record of its own.
+        source = ROOT / "reference" / "other-database"
+        self.assertTrue((source / "SHA256SUMS").is_file())
+        copy = pathlib.Path(self.root, "other-database")
+        shutil.copytree(source, copy)
+        before = files(copy)
+        rc, err = run(self.inputs, "--out", str(copy))
+        self.assertEqual(rc, 2)
+        self.assertIn("lists no README.md titled", err)
+        self.assertEqual(files(copy), before)
+        shutil.rmtree(copy)
+        # An earlier record of this script whose README.md lost its title is refused the same way.
+        work = pathlib.Path(self.root, "retitled")
+        self.assertEqual(run(self.inputs, "--out", str(work))[0], 0)
+        readme = work / "README.md"
+        readme.write_text("# Another record\n" + readme.read_text(encoding="utf-8").split("\n", 1)[1], encoding="utf-8")
+        (work / "stale.tsv").write_text("x\n", encoding="utf-8")
+        sums = work / "SHA256SUMS"
+        sums.write_text(sums.read_text(encoding="utf-8") + "0" * 64 + "  stale.tsv\n", encoding="utf-8")
+        before = files(work)
+        rc, err = run(self.inputs, "--out", str(work))
+        self.assertEqual(rc, 2)
+        self.assertIn("lists no README.md titled", err)
+        self.assertEqual(files(work), before)
+
     def test_out_one_level_too_high_leaves_the_other_records(self):
         # The repository's reference/ holds this record beside the others, and no SHA256SUMS of its own.
         source = ROOT / "reference"
