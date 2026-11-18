@@ -320,10 +320,25 @@ describe("continuation slides", () => {
     expect(status()).toBe(`Slide ${SPLIT} of ${SPLIT}: One rule a person can read (2 of 2)`);
     expect(dialog.querySelector("main section .seq")).not.toBeNull();
     expect(dialog.querySelector("main section")?.textContent).not.toContain("Resistant isolates carrying it");
+    // The rule keeps its caption on both pages: on page 2 it is there, heard,
+    // and read after the slide's title, as on page 1.
+    const captionOf = () => {
+      const section = dialog.querySelector("main section")!;
+      const caption = section.querySelector("[data-caption]");
+      return {
+        text: caption?.textContent ?? "",
+        heard: caption !== null && caption.closest('[aria-hidden="true"], [inert]') === null,
+        after: caption !== null && (section.querySelector("h2")!.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+      };
+    };
+    const page2 = captionOf();
+    expect(page2.text).toContain("This learner writes short yes-or-no rules.");
+    expect(page2).toEqual({ text: page2.text, heard: true, after: true });
     await act(async () => dialog.querySelector("main")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
     expect(status()).toBe(`Slide ${SPLIT - 1} of ${SPLIT}: One rule a person can read (1 of 2)`);
     expect(dialog.querySelector("main section .seq")).toBeNull();
     expect(dialog.querySelector("main section")?.textContent).toContain("Resistant isolates carrying it");
     expect(dialog.querySelector("main section")?.textContent).toContain("The rule's sequence follows on the next slide.");
+    expect(captionOf()).toEqual(page2);
   });
 });
