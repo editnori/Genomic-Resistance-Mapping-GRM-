@@ -1553,7 +1553,7 @@ fn build_matrix_disk_sparse_with(
                 .map(|id| kdir.join(format!("{id}.kset")))
                 .collect();
             lane.check_dir(&run_dir)?;
-            matrix::write_partial(
+            matrix::write_partial_confined(
                 &paths,
                 &block_expectations(&counted, first, end).0,
                 first,
@@ -1610,7 +1610,7 @@ fn build_matrix_disk_sparse_with(
         summary: m.summary.clone(),
     };
     lane.create_dir_all(&matrix_dir, true)?;
-    m.save_with_reserve(&matrix_dir, reserve)?;
+    m.save_confined(&matrix_dir, reserve)?;
     drop(m);
     let summary = verify_saved_sparse(&matrix_dir, &saved)?;
     run.saved = Some(saved);

@@ -25,6 +25,17 @@ use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Component, Path, PathBuf};
 
+/// How a writer shared by the stock commands and `--disk-sparse` treats
+/// links, chosen by its caller. `Stock` writes as every command without
+/// `--disk-sparse` always has: through a linked directory, and at a link
+/// where a file belongs, with the same temporaries and messages. `Confined`
+/// refuses those links as described above.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Writes {
+    Stock,
+    Confined,
+}
+
 /// The data root as given and as resolved.
 #[derive(Clone, Debug)]
 pub struct Lane {
