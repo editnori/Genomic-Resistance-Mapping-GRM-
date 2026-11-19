@@ -117,7 +117,7 @@ src/lib.rs analysis::tests::learn_recomputes_a_current_report_whose_audit_is_inv
 src/lib.rs analysis::tests::learn_refuses_a_structure_or_matrix_not_built_from_the_counts
 src/lib.rs analysis::tests::learn_refuses_counts_recorded_before_kset_digests
 src/lib.rs analysis::tests::learn_refuses_gene_calls_from_another_catalog_or_one_that_no_longer_loads
-src/lib.rs analysis::tests::learn_writes_reports_only_through_real_directories_below_the_root
+src/lib.rs analysis::tests::learn_writes_reports_through_a_linked_results_or_species_directory
 src/lib.rs analysis::tests::mutant_majority_cohorts_keep_wild_type_calls
 src/lib.rs analysis::tests::probe_assays_fail_instead_of_dropping_their_panel_without_ksets
 src/lib.rs analysis::tests::probe_assays_fail_on_a_kset_counted_at_another_k
@@ -438,6 +438,7 @@ src/lib.rs matrix::tests::a_kset_that_repeats_a_kmer_is_refused_by_every_path
 src/lib.rs matrix::tests::a_partial_that_fails_after_its_rename_is_removed_again
 src/lib.rs matrix::tests::a_resave_is_checked_against_its_peak_not_its_net_change
 src/lib.rs matrix::tests::a_save_is_durable_before_it_returns_and_a_failed_one_leaves_no_summary
+src/lib.rs matrix::tests::a_stock_save_writes_through_links_and_in_place_and_a_confined_save_does_not
 src/lib.rs matrix::tests::bench_block_case [ignored]
 src/lib.rs matrix::tests::bench_case [ignored]
 src/lib.rs matrix::tests::bench_merge_resources [ignored]
@@ -548,7 +549,8 @@ src/lib.rs serve::tests::rejects_methods_other_than_get_and_head
 src/lib.rs serve::tests::serves_bounded_single_byte_ranges
 src/lib.rs serve::tests::symlinks_cannot_escape_either_root
 src/lib.rs species::sparse_tests::a_linked_data_root_is_resolved_once_and_a_linked_kept_kset_is_only_read
-src/lib.rs species::sparse_tests::a_stock_count_refuses_linked_lane_files_before_any_work
+src/lib.rs species::sparse_tests::a_stock_count_reads_and_writes_through_linked_lane_files_as_before
+src/lib.rs species::sparse_tests::a_stock_count_records_no_sketch_from_sidecars_a_sparse_run_wrote
 src/lib.rs species::sparse_tests::a_stock_count_that_counts_no_genome_records_the_failures_as_main_does
 src/lib.rs species::sparse_tests::a_stock_count_writes_counted_json_and_sidecars_without_sketches
 src/lib.rs species::sparse_tests::an_interrupted_cleanups_empty_run_directory_is_removed
@@ -663,6 +665,7 @@ src/main.rs tests::required_catalog_rejects_incomplete_inputs_unless_allowed
 src/main.rs tests::selection_flags_are_refused_where_they_do_not_apply
 src/main.rs tests::species_check_and_curate_reach_a_fixed_point
 src/main.rs tests::stages_built_by_hand_at_another_k_or_min_support_are_rebuilt
+src/main.rs tests::the_pipeline_command_counts_at_the_k_it_is_given
 src/main.rs tests::the_pipeline_counts_and_builds_at_the_k_it_is_given
 tests/ablation_composition.rs a_toy_k_arm_composes_the_plan_blocks_encoder_and_boosting
 tests/foldmask_extended.rs extended_foldmask_smoke
